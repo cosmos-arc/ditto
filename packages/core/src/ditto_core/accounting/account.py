@@ -7,6 +7,8 @@ from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+from ditto_kernel.identity import InstrumentId
+
 from ditto_core.accounting.cash import CashBook
 from ditto_core.accounting.order_book import (
     OrderBook,
@@ -39,7 +41,7 @@ class AccountView:
 
     """
 
-    positions: MappingProxyType[str, Position]
+    positions: MappingProxyType[InstrumentId, Position]
     cash: CashBook
     total_value: float
     nav: float
@@ -62,7 +64,7 @@ class Account:
 
     """
 
-    positions: dict[str, Position] = field(default_factory=dict, init=False)
+    positions: dict[InstrumentId, Position] = field(default_factory=dict, init=False)
     _cash: CashBook = field(
         default_factory=lambda: CashBook(available=0.0, settled=0.0, frozen=0.0),
         init=False,
@@ -72,7 +74,7 @@ class Account:
 
     def __init__(
         self,
-        positions: dict[str, Position] | None = None,
+        positions: dict[InstrumentId, Position] | None = None,
         cash: CashBook | None = None,
         order_book: OrderBook | None = None,
     ) -> None:
@@ -151,7 +153,7 @@ class Account:
         fill: FillEvent,
         settle_date: str,
         *,
-        on_frozen: Callable[[str, str, int], None] | None = None,
+        on_frozen: Callable[[InstrumentId, str, int], None] | None = None,
     ) -> None:
         """
         应用成交事件，更新持仓和现金。
@@ -174,7 +176,7 @@ class Account:
         self,
         fill: FillEvent,
         settle_date: str,
-        on_frozen: Callable[[str, str, int], None] | None,
+        on_frozen: Callable[[InstrumentId, str, int], None] | None,
     ) -> None:
         """更新持仓 — BUY 时注册冻结, SELL 时扣减 available_quantity。"""
         iid = fill.instrument_id

@@ -42,7 +42,7 @@ from ditto_core.execution.rules import (
 
 
 def _make_instrument_rules(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     lot_size: int = 100,
 ) -> InstrumentRules:
     """构造 InstrumentRules 元组。"""
@@ -78,7 +78,7 @@ def _make_instrument_rules(
 
 
 def _make_snapshot(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     close: float = 10.0,
     prev_close: float = 10.0,
     limit_up: float | None = 11.0,
@@ -101,24 +101,24 @@ def _make_snapshot(
 
 
 @pytest.fixture
-def rules() -> dict[str, InstrumentRules]:
+def rules() -> dict[int, InstrumentRules]:
     return {
-        "ETF-001": _make_instrument_rules("ETF-001"),
-        "ETF-002": _make_instrument_rules("ETF-002", lot_size=200),
+        1: _make_instrument_rules(1),
+        2: _make_instrument_rules(2, lot_size=200),
     }
 
 
 @pytest.fixture
-def snapshots() -> dict[str, MarketSnapshot]:
+def snapshots() -> dict[int, MarketSnapshot]:
     return {
-        "ETF-001": _make_snapshot(
-            "ETF-001",
+        1: _make_snapshot(
+            1,
             close=10.0,
             limit_up=11.0,
             limit_down=9.0,
         ),
-        "ETF-002": _make_snapshot(
-            "ETF-002",
+        2: _make_snapshot(
+            2,
             close=20.0,
             limit_up=22.0,
             limit_down=18.0,
@@ -157,8 +157,8 @@ def buying_power_model() -> CashAccountBuyingPower:
 @pytest.fixture
 def empty_context(
     account_view: AccountView,
-    rules: dict[str, InstrumentRules],
-    snapshots: dict[str, MarketSnapshot],
+    rules: dict[int, InstrumentRules],
+    snapshots: dict[int, MarketSnapshot],
     fee_model: SimpleFeeModel,
     buying_power_model: CashAccountBuyingPower,
 ) -> PreTradeContext:
@@ -173,7 +173,7 @@ def empty_context(
 
 def _buy_order(
     order_id: str = "o-1",
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     quantity: int = 100,
     price: float | None = None,
     order_type: OrderType = OrderType.MARKET,
@@ -190,7 +190,7 @@ def _buy_order(
 
 def _sell_order(
     order_id: str = "o-sell",
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     quantity: int = 100,
 ) -> Order:
     return Order(
@@ -235,26 +235,26 @@ class TestOrderCheckResult:
 
 class TestPreTradeContextHelpers:
     def test_price_for_existing(self, empty_context: PreTradeContext) -> None:
-        assert empty_context.price_for("ETF-001") == 10.0
-        assert empty_context.price_for("ETF-002") == 20.0
+        assert empty_context.price_for(1) == 10.0
+        assert empty_context.price_for(2) == 20.0
 
     def test_price_for_missing(self, empty_context: PreTradeContext) -> None:
-        assert empty_context.price_for("ETF-UNKNOWN") is None
+        assert empty_context.price_for(999) is None
 
     def test_lot_size_for_existing(self, empty_context: PreTradeContext) -> None:
-        assert empty_context.lot_size_for("ETF-001") == 100
-        assert empty_context.lot_size_for("ETF-002") == 200
+        assert empty_context.lot_size_for(1) == 100
+        assert empty_context.lot_size_for(2) == 200
 
     def test_lot_size_for_missing(self, empty_context: PreTradeContext) -> None:
-        assert empty_context.lot_size_for("ETF-UNKNOWN") == 100
+        assert empty_context.lot_size_for(999) == 100
 
     def test_fee_schedule_for_existing(self, empty_context: PreTradeContext) -> None:
-        fs = empty_context.fee_schedule_for("ETF-001")
+        fs = empty_context.fee_schedule_for(1)
         assert fs.commission_rate == 0.0003
         assert fs.min_commission == 5.0
 
     def test_fee_schedule_for_missing(self, empty_context: PreTradeContext) -> None:
-        fs = empty_context.fee_schedule_for("ETF-UNKNOWN")
+        fs = empty_context.fee_schedule_for(999)
         assert fs.commission_rate == 0.0003  # 默认值
 
     def test_estimate_order_cost(self, empty_context: PreTradeContext) -> None:
@@ -267,7 +267,7 @@ class TestPreTradeContextHelpers:
         self,
         empty_context: PreTradeContext,
     ) -> None:
-        order = _buy_order(instrument_id="ETF-UNKNOWN", quantity=100)
+        order = _buy_order(instrument_id=999, quantity=100)
         assert empty_context.estimate_order_cost(order) == 0.0
 
     def test_frozen(self, empty_context: PreTradeContext) -> None:
@@ -307,7 +307,7 @@ class TestPreTradeContext:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=500,
             available_quantity=500,
             average_cost=10.0,
@@ -317,7 +317,7 @@ class TestPreTradeContext:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({"ETF-001": pos}),
+            positions=MappingProxyType({1: pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=505_000.0,
             nav=505_000.0,
@@ -336,7 +336,7 @@ class TestPreTradeContext:
         sell = _sell_order(quantity=200)
         new_ctx = ctx.with_order_accepted(sell)
 
-        assert new_ctx.account_view.positions["ETF-001"].available_quantity == 300
+        assert new_ctx.account_view.positions[1].available_quantity == 300
 
     def test_sell_does_not_exceed_available(
         self,
@@ -346,7 +346,7 @@ class TestPreTradeContext:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -356,7 +356,7 @@ class TestPreTradeContext:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({"ETF-001": pos}),
+            positions=MappingProxyType({1: pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=501_000.0,
             nav=501_000.0,
@@ -375,7 +375,7 @@ class TestPreTradeContext:
         sell = _sell_order(quantity=200)
         new_ctx = ctx.with_order_accepted(sell)
 
-        assert new_ctx.account_view.positions["ETF-001"].available_quantity == 0
+        assert new_ctx.account_view.positions[1].available_quantity == 0
 
     def test_rolling_context_second_order_sees_first(
         self,
@@ -396,7 +396,7 @@ class TestPreTradeContext:
         empty_context: PreTradeContext,
     ) -> None:
         """Order with no price data -> context unchanged。"""
-        order = _buy_order(instrument_id="ETF-UNKNOWN", quantity=100)
+        order = _buy_order(instrument_id=999, quantity=100)
         new_ctx = empty_context.with_order_accepted(order)
 
         assert (
@@ -437,7 +437,7 @@ class TestNoShortSellCheck:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=500,
             available_quantity=500,
             average_cost=10.0,
@@ -447,7 +447,7 @@ class TestNoShortSellCheck:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({"ETF-001": pos}),
+            positions=MappingProxyType({1: pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=505_000.0,
             nav=505_000.0,
@@ -485,7 +485,7 @@ class TestNoShortSellCheck:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=50,
             available_quantity=50,
             average_cost=10.0,
@@ -495,7 +495,7 @@ class TestNoShortSellCheck:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({"ETF-001": pos}),
+            positions=MappingProxyType({1: pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=500_500.0,
             nav=500_500.0,
@@ -576,7 +576,7 @@ class TestPriceValidityCheck:
         """无市场快照时直接放行。"""
         check = PriceValidityCheck()
         order = _buy_order(
-            instrument_id="ETF-UNKNOWN",
+            instrument_id=999,
             order_type=OrderType.LIMIT,
             price=100.0,
         )
@@ -587,8 +587,8 @@ class TestPriceValidityCheck:
     def test_no_price_limit_accepts(self) -> None:
         """无涨跌停信息（如 IPO 前五日）时直接放行。"""
         snapshots = {
-            "ETF-001": _make_snapshot(
-                "ETF-001",
+            1: _make_snapshot(
+                1,
                 close=10.0,
                 limit_up=None,
                 limit_down=None,
@@ -604,7 +604,7 @@ class TestPriceValidityCheck:
                 pending_buy_value=0.0,
                 order_book=OrderBookReadOnly({}),
             ),
-            rules={"ETF-001": _make_instrument_rules("ETF-001")},
+            rules={1: _make_instrument_rules(1)},
             market_snapshots=snapshots,
             fee_model=SimpleFeeModel(),
             buying_power_model=CashAccountBuyingPower(),
@@ -663,7 +663,7 @@ class TestLotSizeCheck:
     def test_per_instrument_lot_size(self, empty_context: PreTradeContext) -> None:
         """ETF-002 lot_size=200，50 -> resize to 200。"""
         check = LotSizeCheck()
-        order = _buy_order(instrument_id="ETF-002", quantity=50)
+        order = _buy_order(instrument_id=2, quantity=50)
         result = check.check_order(order, empty_context)
 
         assert result.decision == Decision.RESIZE
@@ -675,7 +675,7 @@ class TestLotSizeCheck:
     ) -> None:
         """无规则标的默认 lot_size=100。"""
         check = LotSizeCheck()
-        order = _buy_order(instrument_id="ETF-UNKNOWN", quantity=50)
+        order = _buy_order(instrument_id=999, quantity=50)
         result = check.check_order(order, empty_context)
 
         assert result.decision == Decision.RESIZE
@@ -731,9 +731,9 @@ class TestBuyingPowerCheck:
                 pending_buy_value=0.0,
                 order_book=OrderBookReadOnly({}),
             ),
-            rules={"ETF-001": _make_instrument_rules("ETF-001")},
+            rules={1: _make_instrument_rules(1)},
             market_snapshots={
-                "ETF-001": _make_snapshot("ETF-001", close=10.0),
+                1: _make_snapshot(1, close=10.0),
             },
             fee_model=SimpleFeeModel(),
             buying_power_model=CashAccountBuyingPower(),
@@ -789,7 +789,7 @@ class TestConcentrationPreCheck:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=15000,
             available_quantity=15000,
             average_cost=10.0,
@@ -799,7 +799,7 @@ class TestConcentrationPreCheck:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({"ETF-001": pos}),
+            positions=MappingProxyType({1: pos}),
             cash=CashBook(available=850_000.0, settled=850_000.0, frozen=0.0),
             total_value=1_000_000.0,
             nav=1_000_000.0,
@@ -824,7 +824,7 @@ class TestConcentrationPreCheck:
     def test_no_position_no_price_accepts(self, empty_context: PreTradeContext) -> None:
         """无价格信息时直接放行。"""
         check = ConcentrationPreCheck(max_weight=0.20)
-        order = _buy_order(instrument_id="ETF-UNKNOWN", quantity=100)
+        order = _buy_order(instrument_id=999, quantity=100)
         result = check.check_order(order, empty_context)
 
         assert result.decision == Decision.ACCEPT
@@ -841,8 +841,8 @@ class TestConcentrationPreCheck:
                 pending_buy_value=0.0,
                 order_book=OrderBookReadOnly({}),
             ),
-            rules={"ETF-001": _make_instrument_rules("ETF-001")},
-            market_snapshots={"ETF-001": _make_snapshot("ETF-001", close=10.0)},
+            rules={1: _make_instrument_rules(1)},
+            market_snapshots={1: _make_snapshot(1, close=10.0)},
             fee_model=SimpleFeeModel(),
             buying_power_model=CashAccountBuyingPower(),
         )
@@ -954,7 +954,7 @@ class TestDailyTurnoverPreCheck:
     def test_no_price_accepts(self, empty_context: PreTradeContext) -> None:
         """无价格信息时直接放行。"""
         check = DailyTurnoverPreCheck(max_turnover=0.30)
-        order = _buy_order(instrument_id="ETF-UNKNOWN", quantity=100)
+        order = _buy_order(instrument_id=999, quantity=100)
         result = check.check_order(order, empty_context)
 
         assert result.decision == Decision.ACCEPT
@@ -971,8 +971,8 @@ class TestDailyTurnoverPreCheck:
                 pending_buy_value=0.0,
                 order_book=OrderBookReadOnly({}),
             ),
-            rules={"ETF-001": _make_instrument_rules("ETF-001")},
-            market_snapshots={"ETF-001": _make_snapshot("ETF-001", close=10.0)},
+            rules={1: _make_instrument_rules(1)},
+            market_snapshots={1: _make_snapshot(1, close=10.0)},
             fee_model=SimpleFeeModel(),
             buying_power_model=CashAccountBuyingPower(),
         )

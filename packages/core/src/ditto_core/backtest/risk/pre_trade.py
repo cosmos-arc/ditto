@@ -20,6 +20,10 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Protocol
 
+from ditto_kernel.identity import (
+    InstrumentId as _InstrumentId,
+)
+
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.buying_power import BuyingPowerModel
 from ditto_core.accounting.cash import CashBook
@@ -32,6 +36,10 @@ from ditto_core.accounting.order_book import (
 from ditto_core.execution.reality import FeeModel
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.execution.rules import FeeSchedule, InstrumentRules
+
+# Re-export: runtime usage prevents linter removal
+# under `from __future__ import annotations`
+InstrumentId = _InstrumentId
 
 __all__ = [
     "BuyingPowerCheck",
@@ -85,34 +93,34 @@ class PreTradeContext:
     """
 
     account_view: AccountView
-    rules: dict[str, InstrumentRules]
-    market_snapshots: dict[str, MarketSnapshot]
+    rules: dict[InstrumentId, InstrumentRules]
+    market_snapshots: dict[InstrumentId, MarketSnapshot]
     fee_model: FeeModel
     buying_power_model: BuyingPowerModel
     pending_tickets: tuple[OrderTicket, ...] = ()
 
     # -- 辅助方法 ---------------------------------------------------------
 
-    def price_for(self, iid: str) -> float | None:
+    def price_for(self, iid: InstrumentId) -> float | None:
         """从 market_snapshots 获取 close price。"""
         snapshot = self.market_snapshots.get(iid)
         if snapshot is None:
             return None
         return snapshot.close
 
-    def lot_size_for(self, iid: str) -> int:
+    def lot_size_for(self, iid: InstrumentId) -> int:
         """从 rules[iid][0].lot_size 获取，默认 100。"""
         instrument_rules = self.rules.get(iid)
         if instrument_rules is None:
             return 100
         return instrument_rules[0].lot_size
 
-    def fee_schedule_for(self, iid: str) -> FeeSchedule:
+    def fee_schedule_for(self, iid: InstrumentId) -> FeeSchedule:
         """从 rules[iid][2] 获取。"""
         instrument_rules = self.rules.get(iid)
         if instrument_rules is None:
             return FeeSchedule(
-                instrument_id="",
+                instrument_id=InstrumentId(0),
                 as_of_date="",
                 commission_rate=0.0003,
                 min_commission=5.0,

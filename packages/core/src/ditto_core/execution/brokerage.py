@@ -11,6 +11,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 
+from ditto_kernel.identity import InstrumentId
+
 from ditto_core.accounting.account import Account, AccountView
 from ditto_core.accounting.order_book import (
     Order,
@@ -53,7 +55,7 @@ class ProcessInput:
 
     step_time: datetime
     trade_date: str
-    bars: dict[str, MarketSnapshot]
+    bars: dict[InstrumentId, MarketSnapshot]
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +92,10 @@ class Brokerage(Protocol):
 # ---------------------------------------------------------------------------
 
 
-def _default_rules_getter(instrument_id: str, trade_date: str) -> InstrumentRules:
+def _default_rules_getter(
+    instrument_id: InstrumentId,
+    trade_date: str,
+) -> InstrumentRules:
     """默认规则获取 — 用于无 rules_getter 时的 fallback。"""
     return (
         InstrumentDefinition(
@@ -151,7 +156,7 @@ class BacktestBrokerage:
         self._rules_getter = rules_getter or _default_rules_getter
         self._fill_counter = 0
         # T+1 冻结: {instrument_id: {settle_date: frozen_qty}}
-        self._frozen_quantities: dict[str, dict[str, int]] = {}
+        self._frozen_quantities: dict[InstrumentId, dict[str, int]] = {}
         # 最近一次 process_pending 的 trade_date (用于 T+0 即时解冻)
         self._current_trade_date: str = ""
 
@@ -340,7 +345,7 @@ class BacktestBrokerage:
 
     def _register_frozen(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         settle_date: str,
         quantity: int,
     ) -> None:

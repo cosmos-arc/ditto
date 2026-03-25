@@ -6,11 +6,11 @@ from typing import Annotated
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_datahub.services.metadata_service import MetadataService
+from ditto_kernel.enums import AssetClass
 from fastapi import APIRouter, HTTPException, Query
 
 from ditto_port.models.common import APIResponse
 from ditto_port.models.metadata import (
-    AssetClass,
     Instrument,
     to_instrument,
     to_instrument_list,

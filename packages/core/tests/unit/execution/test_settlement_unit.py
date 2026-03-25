@@ -1,13 +1,13 @@
 """SettlementModel unit tests — SimpleSettlementModel + AShareSettlementModel."""
 
 import pytest
-from ditto_core.accounting.order_book import OrderDirection
 from ditto_core.accounting.position import Position
 from ditto_core.execution.reality.settlement import (
     AShareSettlementModel,
     SimpleSettlementModel,
 )
 from ditto_core.execution.rules import TradingRuleSet
+from ditto_kernel.enums import OrderSide as OrderDirection
 
 # ---------------------------------------------------------------------------
 # Test fixtures
@@ -27,7 +27,7 @@ _CALENDAR = (
 )
 
 _T1_RULE = TradingRuleSet(
-    instrument_id="ETF-001",
+    instrument_id=1,
     as_of_date="2026-03-02",
     settlement_cycle=1,
     fund_settlement_cycle=1,
@@ -37,7 +37,7 @@ _T1_RULE = TradingRuleSet(
 )
 
 _T0_RULE = TradingRuleSet(
-    instrument_id="ETF-CROSS",
+    instrument_id=99,
     as_of_date="2026-03-02",
     settlement_cycle=0,
     fund_settlement_cycle=0,
@@ -47,7 +47,7 @@ _T0_RULE = TradingRuleSet(
 )
 
 _POSITION = Position(
-    instrument_id="ETF-001",
+    instrument_id=1,
     quantity=1000,
     available_quantity=500,
     average_cost=10.0,
@@ -67,14 +67,14 @@ class TestSimpleSettlementModel:
     def test_always_tradable(self) -> None:
         model = SimpleSettlementModel()
         assert model.is_tradable(
-            "ETF-001",
+            1,
             "2026-03-01",
             OrderDirection.BUY,
             _POSITION,
             _T1_RULE,
         )
         assert model.is_tradable(
-            "ETF-001",
+            1,
             "2026-03-01",
             OrderDirection.SELL,
             _POSITION,
@@ -96,7 +96,7 @@ class TestAShareSettlementModel:
     def test_buy_always_tradable(self) -> None:
         model = AShareSettlementModel()
         assert model.is_tradable(
-            "ETF-001",
+            1,
             "2026-03-02",
             OrderDirection.BUY,
             _POSITION,
@@ -106,7 +106,7 @@ class TestAShareSettlementModel:
     def test_t0_sell_tradable(self) -> None:
         model = AShareSettlementModel()
         assert model.is_tradable(
-            "ETF-CROSS",
+            99,
             "2026-03-02",
             OrderDirection.SELL,
             _POSITION,
@@ -117,7 +117,7 @@ class TestAShareSettlementModel:
         """SettlementModel 总是返回 True, 冻结逻辑在 Brokerage 层。"""
         model = AShareSettlementModel()
         assert model.is_tradable(
-            "ETF-001",
+            1,
             "2026-03-02",
             OrderDirection.SELL,
             _POSITION,
@@ -127,7 +127,7 @@ class TestAShareSettlementModel:
     def test_no_position_sell_tradable(self) -> None:
         model = AShareSettlementModel()
         assert model.is_tradable(
-            "ETF-001",
+            1,
             "2026-03-02",
             OrderDirection.SELL,
             None,

@@ -1,6 +1,8 @@
 """DataHub models for data transfer objects."""
 
 # DataHub 层自己的 models
+from ditto_kernel.enums import AssetClass, Exchange, OrderSide, RunStatus
+
 from ditto_datahub.models.common import (
     AssetClassType,
     Dataset,
@@ -22,7 +24,6 @@ from ditto_datahub.models.derived import (
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_datahub.models.enums import AssetClass, Exchange
 from ditto_datahub.models.factors import (
     FACTOR_CLASS_FUNDAMENTAL,
     FACTOR_CLASS_MACRO,
@@ -101,7 +102,13 @@ from ditto_datahub.models.strategy import (
     StrategyArtifactRecord,
     StrategySpecRecord,
 )
-from ditto_datahub.models.trading import Order, OrderSide, OrderStatus, Trade
+from ditto_datahub.models.strategy_audit import (
+    AuditRecordType,
+    PreTradeDecisionPayload,
+    RiskScanPayload,
+)
+from ditto_datahub.models.strategy_run import StrategyRunRecord
+from ditto_datahub.models.trading import Order, OrderStatus, Trade
 
 __all__ = [
     "BAR_ENRICHED_SCHEMA",
@@ -127,6 +134,7 @@ __all__ = [
     "ArtifactKind",
     "AssetClass",
     "AssetClassType",
+    "AuditRecordType",
     "CalendarDay",
     "CertificationReportRecord",
     "CompatibilityManifestRecord",
@@ -176,10 +184,13 @@ __all__ = [
     "OrderStatus",
     "Portfolio",
     "Position",
+    "PreTradeDecisionPayload",
     "ResearchDatasetSnapshotRecord",
     "ResearchDatasetSpecRecord",
     "ResearchSpineSnapshotRecord",
     "ResearchSpineSpecRecord",
+    "RiskScanPayload",
+    "RunStatus",
     "ShadowDiffReportRecord",
     "ShadowTraceRecordRecord",
     "Signal",
@@ -187,6 +198,7 @@ __all__ = [
     "Source",
     "StockExtension",
     "StrategyArtifactRecord",
+    "StrategyRunRecord",
     "StrategySpecRecord",
     "Trade",
     "WriteResult",

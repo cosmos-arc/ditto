@@ -109,6 +109,8 @@ unfixable = []
 "apps/port/src/ditto_port/services/derived/research.py" = ["S608"]
 # EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
 "packages/core/src/ditto_core/backtest/engine.py" = ["PLR0913"]
+# Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
+"packages/core/src/ditto_core/portfolio/report_views.py" = ["D102"]
 
 # 测试文件 - 最宽松
 "tests/**/*.py" = [
@@ -274,6 +276,7 @@ reportImplicitStringConcatenation = "error"
 extraPaths = [
     "packages/core/src",
     "packages/infra/src",
+    "packages/kernel/src",
     "packages/datahub/src",
     "apps/port/src",
 ]
@@ -290,6 +293,7 @@ python_functions = ["test_*"]
 pythonpath = [
     "packages/core/src",
     "packages/infra/src",
+    "packages/kernel/src",
     "packages/datahub/src",
     "apps/port/src",
 ]
@@ -368,6 +372,7 @@ tag_format = "v$version"
 version_files = [
     "packages/core/src/ditto_core/__init__.py:__version__",
     "packages/infra/src/ditto_infra/__init__.py:__version__",
+    "packages/kernel/src/ditto_kernel/__init__.py:__version__",
     "packages/datahub/src/ditto_datahub/__init__.py:__version__",
 ]
 update_changelog_on_bump = true

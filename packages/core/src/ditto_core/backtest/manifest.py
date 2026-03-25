@@ -17,6 +17,7 @@ from dataclasses import asdict, dataclass
 from enum import StrEnum
 
 import orjson
+from ditto_kernel.identity import InstrumentId
 
 from ditto_core.execution.rules import (
     InstrumentDefinition,
@@ -28,6 +29,7 @@ __all__ = [
     "RuleRefCollector",
     "RunManifest",
     "RunMode",
+    "hash_config",
     "serialize_manifest",
 ]
 
@@ -66,7 +68,7 @@ class RuleRef:
 
     """
 
-    instrument_id: str
+    instrument_id: InstrumentId
     definition_version: str
     trading_rule_as_of: str
     fee_schedule_as_of: str
@@ -105,13 +107,13 @@ class RunManifest:
     strategy_version: str
     mode: RunMode
     created_at: str
-    input_refs: tuple[str, ...] = ()
+    input_refs: tuple[InstrumentId, ...] = ()
     parameter_overrides: tuple[str, ...] = ()
     rule_refs: tuple[RuleRef, ...] = ()
     artifacts: tuple[str, ...] = ()
     config_hash: str = ""
     engine_version: str = ""
-    rule_resolution_policy: str = "first_observed"
+    rule_resolution_policy: str = "as_of_date"
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +135,22 @@ def _hash_definition(defn: InstrumentDefinition) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:8]
 
 
+def hash_config(
+    start_date: str,
+    end_date: str,
+    initial_cash: float,
+    strategy_id: str,
+    rebalance_freq: str,
+    engine_version: str,
+) -> str:
+    """对 EngineConfig 关键字段做 SHA-256, 返回前 16 位 hex。"""
+    payload = (
+        f"{start_date}|{end_date}|{initial_cash}"
+        f"|{strategy_id}|{rebalance_freq}|{engine_version}"
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
 # ---------------------------------------------------------------------------
 # RuleRefCollector
 # ---------------------------------------------------------------------------
@@ -147,7 +165,7 @@ class RuleRefCollector:
     """
 
     def __init__(self) -> None:
-        self._refs: dict[tuple[str, str, str, str], RuleRef] = {}
+        self._refs: dict[tuple[InstrumentId, str, str, str], RuleRef] = {}
 
     @property
     def rule_refs(self) -> tuple[RuleRef, ...]:
@@ -158,7 +176,7 @@ class RuleRefCollector:
     def observe(
         self,
         date: str,
-        rules: dict[str, InstrumentRules] | None,
+        rules: dict[InstrumentId, InstrumentRules] | None,
     ) -> None:
         """
         观察当日规则 — 收集新 key, 忽略已存在的 key (F3).

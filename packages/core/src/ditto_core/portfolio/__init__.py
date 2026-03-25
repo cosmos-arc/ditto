@@ -26,9 +26,17 @@ from ditto_core.portfolio.constraints import (
     MaxWeightConstraint,
     MinWeightConstraint,
 )
+from ditto_core.portfolio.report_views import (
+    AggregatedTradeStatsView,
+    AlphaStatsView,
+    BacktestReportView,
+)
 
 __all__ = [
+    "AggregatedTradeStatsView",
     "AllocationStage",
+    "AlphaStatsView",
+    "BacktestReportView",
     "Constraint",
     "ConstraintAdjustment",
     "ConstraintChecker",

@@ -1,7 +1,7 @@
 # ditto-datahub
 
-**版本**: v0.17.0
-**最后更新**: 2026-03-23
+**版本**: v0.18.0
+**最后更新**: 2026-03-24
 **状态**: ✅ 稳定
 
 ## 概要
@@ -497,6 +497,13 @@ result = service.get_valuation_metrics(
   - `instrument_rule_provider.py`: InstrumentRuleProvider（三层规则组装）
   - `strategy_catalog_service.py`: StrategyCatalogService（Spec CRUD + 发布治理）
   - `strategy_artifact_service.py`: StrategyArtifactService（产物生命周期管理）
+  - `strategy_run_service.py`: StrategyRunService（策略运行记录 CRUD）
+
+- `services/audit/`: 审计域（执行审计日志持久化）
+  - `execution_audit_service.py`: ExecutionAuditService（审计记录写入 SQLite）
+
+- `models/strategy_run.py`: StrategyRunRecord（运行记录模型）
+- `models/strategy_audit.py`: AuditRecordType / PreTradeDecisionPayload / RiskScanPayload
 
 **三层规则 (R6)**：
 - `DefinitionRecord`: 标的静态定义（asset_class, exchange, tick_size, lot_size 等）
@@ -830,6 +837,13 @@ bars/
 - [Port 层重构计划](../../../../docs/plans/2026-02-02-port-layer-refactor.md)
 
 ## 变更记录
+
+### v0.18.0 (2026-03-24)
+**新增** — Strategy 运行与审计支持
+- `services/strategy/strategy_run_service.py`: StrategyRunService（运行记录 CRUD）
+- `services/audit/execution_audit_service.py`: ExecutionAuditService（审计日志持久化）
+- `models/strategy_run.py`: StrategyRunRecord（RunStatus 枚举 + 运行记录模型）
+- `models/strategy_audit.py`: AuditRecordType / PreTradeDecisionPayload / RiskScanPayload
 
 ### v0.17.0 (2026-03-23)
 **新增** — Strategy 域控制面服务

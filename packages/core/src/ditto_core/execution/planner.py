@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
 
+from ditto_kernel.identity import InstrumentId
+
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.order_book import (
     Order,
@@ -25,7 +27,7 @@ from ditto_core.accounting.order_book import (
 )
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.execution.rules import InstrumentRules
-from ditto_core.strategy.models import TargetPortfolio
+from ditto_core.execution.targets import TargetPortfolioLike
 
 __all__ = [
     "BlockSeverity",
@@ -79,7 +81,7 @@ class BlockedOrder:
 
     """
 
-    instrument_id: str
+    instrument_id: InstrumentId
     direction: OrderDirection
     intended_quantity: int
     reason: str
@@ -119,12 +121,12 @@ class ExecutionPlanner(Protocol):
 
     def plan(
         self,
-        target: TargetPortfolio,
+        target: TargetPortfolioLike,
         account_view: AccountView,
         trade_date: str,
-        rules: dict[str, InstrumentRules] | None = None,
-        market_snapshots: dict[str, MarketSnapshot] | None = None,
-        locked_instruments: set[str] | None = None,
+        rules: dict[InstrumentId, InstrumentRules] | None = None,
+        market_snapshots: dict[InstrumentId, MarketSnapshot] | None = None,
+        locked_instruments: set[InstrumentId] | None = None,
     ) -> ExecutionPlan:
         """根据 target 和 account_view 生成执行计划。"""
         ...
@@ -156,12 +158,12 @@ class SimpleExecutionPlanner:
 
     def plan(
         self,
-        target: TargetPortfolio,
+        target: TargetPortfolioLike,
         account_view: AccountView,
         trade_date: str,
-        rules: dict[str, InstrumentRules] | None = None,
-        market_snapshots: dict[str, MarketSnapshot] | None = None,
-        locked_instruments: set[str] | None = None,
+        rules: dict[InstrumentId, InstrumentRules] | None = None,
+        market_snapshots: dict[InstrumentId, MarketSnapshot] | None = None,
+        locked_instruments: set[InstrumentId] | None = None,
     ) -> ExecutionPlan:
         """生成执行计划。"""
         locked = locked_instruments or set()
@@ -200,8 +202,8 @@ class SimpleExecutionPlanner:
 
     def _get_lot_size(
         self,
-        instrument_rules: dict[str, InstrumentRules],
-        iid: str,
+        instrument_rules: dict[InstrumentId, InstrumentRules],
+        iid: InstrumentId,
     ) -> int:
         """获取标的 lot_size，优先使用 InstrumentDefinition。"""
         if iid in instrument_rules:
@@ -210,8 +212,8 @@ class SimpleExecutionPlanner:
 
     @staticmethod
     def _get_estimated_price(
-        market: dict[str, MarketSnapshot],
-        iid: str,
+        market: dict[InstrumentId, MarketSnapshot],
+        iid: InstrumentId,
     ) -> float:
         """获取预估价格。"""
         snap = market.get(iid)
@@ -221,9 +223,9 @@ class SimpleExecutionPlanner:
 
     @staticmethod
     def _pre_check(
-        iid: str,
+        iid: InstrumentId,
         diff_qty: int,
-        market: dict[str, MarketSnapshot],
+        market: dict[InstrumentId, MarketSnapshot],
     ) -> BlockedOrder | None:
         """市场预检 — 停牌、涨跌停。返回 BlockedOrder 表示应阻止。"""
         snap = market.get(iid)
@@ -290,9 +292,11 @@ class SimpleExecutionPlanner:
     # -- pending delta ----------------------------------------------------
 
     @staticmethod
-    def _compute_pending_delta(order_book: OrderBookReadOnly) -> dict[str, int]:
+    def _compute_pending_delta(
+        order_book: OrderBookReadOnly,
+    ) -> dict[InstrumentId, int]:
         """计算 pending 订单的净数量变动。"""
-        delta: dict[str, int] = {}
+        delta: dict[InstrumentId, int] = {}
         for ticket in order_book.get_pending():
             iid = ticket.order.instrument_id
             if ticket.order.direction == OrderDirection.BUY:
@@ -325,13 +329,13 @@ class SimpleExecutionPlanner:
 
     def _compute_diff(
         self,
-        target: TargetPortfolio,
+        target: TargetPortfolioLike,
         account_view: AccountView,
-        pending_delta: dict[str, int],
-        locked_instruments: set[str],
-        all_instruments: set[str],
-        instrument_rules: dict[str, InstrumentRules],
-        market_snapshots: dict[str, MarketSnapshot],
+        pending_delta: dict[InstrumentId, int],
+        locked_instruments: set[InstrumentId],
+        all_instruments: set[InstrumentId],
+        instrument_rules: dict[InstrumentId, InstrumentRules],
+        market_snapshots: dict[InstrumentId, MarketSnapshot],
     ) -> tuple[list[Order], list[BlockedOrder]]:
         """计算目标与实际持仓的差异，生成 orders + blocked_orders。"""
         orders: list[Order] = []
@@ -371,12 +375,12 @@ class SimpleExecutionPlanner:
 
     def _instrument_diff(
         self,
-        iid: str,
-        target: TargetPortfolio,
+        iid: InstrumentId,
+        target: TargetPortfolioLike,
         account_view: AccountView,
-        pending_delta: dict[str, int],
-        instrument_rules: dict[str, InstrumentRules],
-        market_snapshots: dict[str, MarketSnapshot],
+        pending_delta: dict[InstrumentId, int],
+        instrument_rules: dict[InstrumentId, InstrumentRules],
+        market_snapshots: dict[InstrumentId, MarketSnapshot],
     ) -> _DiffResult | None:
         """计算单个标的的 diff。返回 None 表示无需调仓。"""
         weight = target.positions.get(iid, 0.0)
@@ -401,8 +405,8 @@ class SimpleExecutionPlanner:
     def _handle_buy(
         self,
         dr: _DiffResult,
-        iid: str,
-        locked_instruments: set[str],
+        iid: InstrumentId,
+        locked_instruments: set[InstrumentId],
         orders: list[Order],
         blocked: list[BlockedOrder],
     ) -> None:
@@ -429,10 +433,10 @@ class SimpleExecutionPlanner:
     def _handle_sell(
         self,
         dr: _DiffResult,
-        iid: str,
+        iid: InstrumentId,
         account_view: AccountView,
-        pending_delta: dict[str, int],
-        instrument_rules: dict[str, InstrumentRules],
+        pending_delta: dict[InstrumentId, int],
+        instrument_rules: dict[InstrumentId, InstrumentRules],
         orders: list[Order],
         blocked: list[BlockedOrder],
     ) -> None:
@@ -474,7 +478,7 @@ class SimpleExecutionPlanner:
 
     def _make_order(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         direction: OrderDirection,
         quantity: int,
     ) -> Order:
@@ -495,7 +499,7 @@ class SimpleExecutionPlanner:
     @staticmethod
     def _calc_turnover(
         orders: list[Order],
-        market: dict[str, MarketSnapshot],
+        market: dict[InstrumentId, MarketSnapshot],
     ) -> float:
         """计算预估成交额。"""
         turnover = 0.0
@@ -508,7 +512,7 @@ class SimpleExecutionPlanner:
     @staticmethod
     def _calc_cost(
         turnover: float,
-        instrument_rules: dict[str, InstrumentRules],
+        instrument_rules: dict[InstrumentId, InstrumentRules],
     ) -> float:
         """计算预估交易成本 (使用各标的最大费率)。"""
         if not instrument_rules or turnover == 0:

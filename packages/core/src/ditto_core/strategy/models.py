@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ditto_kernel.identity import InstrumentId
+
 __all__ = [
     "RebalancePlan",
     "SignalSnapshot",
@@ -108,7 +110,7 @@ class SignalSnapshot:
     trade_date: str
     strategy_id: str
     run_id: str
-    signals: dict[str, float] = field(default_factory=dict)
+    signals: dict[InstrumentId, float] = field(default_factory=dict)
     valid_until: str | None = None
 
 
@@ -129,7 +131,7 @@ class TargetPortfolio:
     trade_date: str
     strategy_id: str
     run_id: str
-    positions: dict[str, float] = field(default_factory=dict)
+    positions: dict[InstrumentId, float] = field(default_factory=dict)
     cash_target: float = 0.0
 
 
@@ -151,6 +153,6 @@ class RebalancePlan:
     trade_date: str
     strategy_id: str
     run_id: str
-    target_weights: dict[str, float] = field(default_factory=dict)
+    target_weights: dict[InstrumentId, float] = field(default_factory=dict)
     executed: bool = False
     execution_date: str | None = None

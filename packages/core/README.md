@@ -1,168 +1,242 @@
 # ditto-core
 
-**版本**: v0.2.0
-**最后更新**: 2026-01-23
-**状态**: 🔄 开发中
+**版本**: v0.9.0
+**最后更新**: 2026-03-24
+**状态**: ✅ 策略引擎 + 回测闭环
 
 ## 概要
 
-量化交易系统核心引擎，提供回测引擎、组合管理、策略框架、市场识别、因子系统和风险管理。
+量化交易系统核心引擎，提供策略引擎（Pipeline + Stage 架构）、回测引擎（EngineLoop 日历步进）、执行层（Brokerage + Reality Model）、组合构建、Expression DSL 编译器、因子评估体系和数据质量引擎。
 
 ## 核心功能
 
-- **回测引擎**: 向量化 Fast 引擎 + 事件驱动 Production 引擎
-- **组合管理**: 多策略协调、持仓管理、风险控制
-- **策略框架**: 抽象策略基类、信号生成、订单执行
-- **市场识别**: Regime（牛/震荡/熊）引擎 + 自适应阈值
-- **因子系统**: 多因子计算 + 健康度监控
-- **风险管理**: 三层 Kill Switch + 回撤速度检测
+- **策略引擎**: Pipeline + Stage 架构，内置 8 个 Stage + 4 个策略模板
+- **回测引擎**: EngineLoop 日历步进 + PreTrade（6 规则）/ PostTrade（4 Guard）
+- **执行层**: ExecutionPlanner + BacktestBrokerage + TradeBuilder（FIFO/FlatToFlat）+ Reality Model
+- **组合构建**: WeightAllocator（等权/评分/波动率倒数）+ ConstraintChecker
+- **共享账户**: Account / CashBook / OrderBook / Position frozen 契约层
+- **Expression DSL**: Pratt Parser 编译器，44 算子，Polars 向量化执行
+- **因子评估**: IC / ICIR / Fama-MacBeth / Regime IC / Performance Attribution + 尾部风险
+- **数据质量**: DQ Engine + L1/L2/L3/CrossSource 检查器
 
 ## 架构
 
 ```
 ┌─────────────────────────────────────┐
-│         apps/port                 │
-│     (FastAPI 服务层)                  │
+│         apps/port                   │
+│     (FastAPI 应用层)                  │
 ├─────────────────────────────────────┤
 │         ditto-core                  │  ← 当前层
-│  ┌──────────┐  ┌──────────┐         │
-│  │ Engine   │  │Strategy  │         │
-│  │ - Regime │  │- Base    │         │
-│  │ - Factor │  │- Signal  │         │
-│  │ - Backtest│ │- Order   │         │
-│  │ - Risk   │  │          │         │
-│  └──────────┘  └──────────┘         │
-│  ┌──────────┐                       │
-│  │Portfolio │                       │
-│  │- Manager │                       │
-│  │- Builder │                       │
-│  └──────────┘                       │
+│  ┌──────────┐  ┌──────────┐        │
+│  │ strategy │  │execution │        │
+│  │ Pipeline │  │ Planner  │        │
+│  │ Stages   │  │ Brokerage│        │
+│  │ Templates│  │ TradeBld │        │
+│  └──────────┘  └──────────┘        │
+│  ┌──────────┐  ┌──────────┐        │
+│  │backtest  │  │portfolio │        │
+│  │EngineLoop│  │Allocator │        │
+│  │ PreTrade │  │Constraint│        │
+│  │PostTrade │  │Compare   │        │
+│  └──────────┘  └──────────┘        │
+│  ┌──────────┐  ┌──────────┐        │
+│  │engine    │  │accounting│        │
+│  │Expr DSL  │  │ Account  │        │
+│  │Evaluator │  │ CashBook │        │
+│  │Materializ│  │ OrderBook│        │
+│  └──────────┘  └──────────┘        │
+│  ┌──────────┐                      │
+│  │quality   │                      │
+│  │DQ Engine │                      │
+│  │Checkers  │                      │
+│  └──────────┘                      │
 ├─────────────────────────────────────┤
 │        ditto-datahub                │
 │     (数据访问层)                      │
 ├─────────────────────────────────────┤
-│      ditto-foundation               │
+│        ditto-infra                  │
 │     (基础设施层)                      │
 └─────────────────────────────────────┘
 ```
 
-**依赖方向**: 仅依赖 `ditto-datahub` 和 `ditto-foundation`
+**依赖方向**: 仅依赖 `ditto-datahub` 和 `ditto-infra`
 
 ## 核心模块
 
-### Engine - 引擎层
+### strategy/ — 策略决策层
 
 | 模块 | 职责 | 状态 |
 |------|------|------|
-| `RegimeEngine` | 市场状态识别（牛/震荡/熊）+ 自适应阈值 | 🔄 规划中 |
-| `FactorEngine` | 多因子计算（RS/Value/Vol/Crowding） | 🔄 规划中 |
-| `RotationEngine` | 行业轮动策略 + TopN 选择 | 🔄 规划中 |
-| `FastBacktester` | 向量化回测引擎 | 🔄 规划中 |
-| `ProductionBacktester` | 事件驱动回测引擎 | 🔄 规划中 |
-| `RiskEngine` | 三层 Kill Switch + 回撤速度检测 | 🔄 规划中 |
+| `StrategySpec` | 策略完整定义（语义契约） | ✅ |
+| `StrategyTemplate` | 策略模板蓝图 | ✅ |
+| `StrategyVersion` | 策略版本管理 | ✅ |
+| `StrategyRun` | 策略运行记录 | ✅ |
+| `StrategyContext` | 运行时上下文（风控锁定） | ✅ |
+| `DecisionStage` | Pipeline 阶段 Protocol | ✅ |
+| `StrategyPipeline` | 策略流水线编排 | ✅ |
+| `StrategyInputBundle` | Pipeline 输入数据包 | ✅ |
+| `SignalSnapshot` | 信号快照 | ✅ |
+| `TargetPortfolio` | 目标持仓 | ✅ |
+| `RebalancePlan` | 调仓计划数据对象 | ✅ |
+| `validate_spec_params` | StrategySpec 参数校验 | ✅ |
 
-### Portfolio - 组合管理层
+**内置 Stages**:
+
+| Stage | 职责 | 状态 |
+|-------|------|------|
+| `UniverseStage` | 标的池白名单过滤 | ✅ |
+| `SignalStage` | 信号值附加 | ✅ |
+| `ScoringStage` | 信号 → 评分转换（Mean/Rank/Percentile） | ✅ |
+| `FilteringStage` | 条件过滤（FilterCondition） | ✅ |
+| `SelectionStage` | Top-K 选择 | ✅ |
+| `RiskLockFilter` | 风控锁定标的过滤 | ✅ |
+| `TrendFilterStage` | 趋势方向过滤 | ✅ |
+| `RegimeStage` | 市场状态检测（MA 交叉 / 波动率阈值） | ✅ |
+
+**策略模板**:
+
+| 模板 | 职责 | 状态 |
+|------|------|------|
+| `build_etf_rotation_pipeline` | ETF 行业轮动 | ✅ |
+| `build_etf_trend_swing_pipeline` | ETF 趋势追踪（含 TrailingStop） | ✅ |
+| `build_stock_sector_rotation_pipeline` | 股票板块轮动 | ✅ |
+| `build_stock_selection_trend_pipeline` | 多因子股票选股 | ✅ |
+
+### execution/ — 执行层
 
 | 模块 | 职责 | 状态 |
 |------|------|------|
-| `PortfolioManager` | 多策略协调 + 持仓管理 | 🔄 规划中 |
-| `PortfolioBuilder` | 组合构建 + 权重分配 | 🔄 规划中 |
-| `PositionManager` | 持仓跟踪 + 盈亏计算 | 🔄 规划中 |
-| `InverseVolAllocator` | 波动率倒数加权分配 | ✅ Phase 5 |
+| `ExecutionPlanner` | 订单执行规划（SimpleExecutionPlanner） | ✅ |
+| `BacktestBrokerage` | 回测经纪商（T+1 冻结、批内滚动更新） | ✅ |
+| `TradeBuilder` | 成交匹配（FifoTradeBuilder / FlatToFlatTradeBuilder） | ✅ |
+| `rules.py` | InstrumentDefinition / TradingRuleSet / FeeSchedule | ✅ |
+| `reality/` | Reality Model（佣金/滑点/成交/结算） | ✅ |
+| `fills.py` | FillOutcome（Filled / NoFill 联合类型） | ✅ |
 
-### Strategy - 策略层
-
-| 模块 | 职责 | 状态 |
-|------|------|------|
-| `StrategySpec` | 策略完整定义（语义契约） | ✅ Phase 0 |
-| `StrategyTemplate` | 策略模板蓝图 | ✅ Phase 0 |
-| `StrategyVersion` | 策略版本管理 | ✅ Phase 0 |
-| `StrategyRun` | 策略运行记录 | ✅ Phase 0 |
-| `StrategyContext` | 运行时上下文（风控锁定） | ✅ Phase 0 |
-| `DecisionStage` | Pipeline 阶段 Protocol | ✅ Phase 0 |
-| `SignalSnapshot` | 信号快照 | ✅ Phase 0 |
-| `TargetPortfolio` | 目标持仓 | ✅ Phase 0 |
-| `Pipeline` | 策略流水线编排 | ✅ Phase 1 |
-| `TrendFilterStage` | 趋势方向过滤 Stage | ✅ Phase 5 |
-| `TrailingStopStage` | 追踪止损 Stage | ✅ Phase 5 |
-| `RegimeStage` | 市场状态检测 Stage（MA 交叉 / 波动率阈值） | ✅ Phase 6 |
-| `validate_spec_params` | StrategySpec 参数校验 | ✅ Phase 6 |
-| `RebalancePlan` | 调仓计划数据对象 | ✅ Phase 6 |
-| `ETFTrendSwingConfig` | ETF 趋势追踪模板配置 | ✅ Phase 5 |
-
-### Accounting - 共享账户契约层
+### backtest/ — 回测引擎
 
 | 模块 | 职责 | 状态 |
 |------|------|------|
-| `Account` / `AccountView` | 账户（可变/只读快照） | ✅ Phase 0 |
-| `CashBook` | 资金账本 | ✅ Phase 0 |
-| `OrderBook` / `Order` | 订单簿 | ✅ Phase 0 |
-| `Position` | 持仓 | ✅ Phase 0 |
-| `BuyingPowerModel` | 购买力模型 Protocol | ✅ Phase 0 |
+| `EngineLoop` | 日历步进回测主循环 | ✅ |
+| `ParquetDataFeed` | Parquet 数据源适配（DataFeed Protocol） | ✅ |
+| `EngineConfig` | 回测配置（日期/资金/模式/频率/匹配方式） | ✅ |
+| `BacktestReport` | 回测报告（NAV/收益/回撤/Sharpe/Calmar/CVaR） | ✅ |
+| `RunManifest` | 运行清单（规则引用、输入引用、配置哈希） | ✅ |
+| `pre_trade.py` | PreTrade 6 条规则（NoShortSell/PriceValidity/LotSize/BuyingPower/Concentration/DailyTurnover） | ✅ |
+| `post_trade.py` | PostTrade 4 个 Guard（MaxDrawdown/SingleLoss/Concentration/MarketAnomaly） | ✅ |
+| `statistics.py` | AlphaStatistics / PortfolioStatistics / TradeStatistics | ✅ |
+| `serialization.py` | BacktestReportSerializer（SQLite 存储） | ✅ |
+| `audit/` | ExecutionAuditCollector（账户快照/成交/风控/审计） | ✅ |
+
+### portfolio/ — 组合构建层
+
+| 模块 | 职责 | 状态 |
+|------|------|------|
+| `WeightAllocator` | Protocol — 权重分配接口 | ✅ |
+| `EqualWeightAllocator` | 等权分配 | ✅ |
+| `ScoreWeightAllocator` | 评分加权分配 | ✅ |
+| `InverseVolAllocator` | 波动率倒数加权 | ✅ |
+| `ConstraintChecker` | 约束检查（按 priority 排序） | ✅ |
+| `MaxWeightConstraint` | 最大权重约束 | ✅ |
+| `MinWeightConstraint` | 最小权重约束 | ✅ |
+| `MaxPositionsConstraint` | 最大持仓数约束 | ✅ |
+| `AllocationStage` | DecisionStage 适配器（权重分配） | ✅ |
+| `ConstraintStage` | DecisionStage 适配器（约束检查） | ✅ |
+| `compare_reports()` | 回测报告对比（MetricsDelta） | ✅ |
+
+### accounting/ — 共享账户契约层
+
+| 模块 | 职责 | 状态 |
+|------|------|------|
+| `Account` / `AccountView` | 账户（可变/只读快照） | ✅ |
+| `CashBook` | 资金账本 | ✅ |
+| `OrderBook` / `OrderBookReadOnly` | 订单簿 | ✅ |
+| `Order` / `OrderTicket` | 订单 | ✅ |
+| `Position` | 持仓 | ✅ |
+| `BuyingPowerModel` | 购买力模型 Protocol | ✅ |
+
+### engine/ — Expression DSL 与因子评估
+
+| 模块 | 职责 | 状态 |
+|------|------|------|
+| `ExpressionCompiler` | Pratt Parser → AST → Polars 表达式（44 算子） | ✅ |
+| `FactorEvaluator` | 因子评估编排（IC/FM/暴露分析/Regime IC） | ✅ |
+| `DerivedSpec` | 统一语义合约（feature/factor/signal/label） | ✅ |
+| `DerivedExecutionPlanner` | 物化执行规划（计算窗口、分区） | ✅ |
+| `PublicationSafety` | 发布安全（认证、兼容性、Shadow Diff） | ✅ |
+| `factor_analysis` | Fama-MacBeth、暴露分析、正交化 | ✅ |
+| `compile_cache` | 两级编译缓存（内存 + SQLite） | ✅ |
+
+### quality/ — 数据质量引擎
+
+| 模块 | 职责 | 状态 |
+|------|------|------|
+| `QualityEngine` | DQ 检查引擎编排 | ✅ |
+| `technical.py` | L1 技术检查（非空、唯一、外键） | ✅ |
+| `business.py` | L2 业务检查（OHLC 一致性、涨跌幅限制） | ✅ |
+| `statistical.py` | L3 统计检查（Z-score、完整性） | ✅ |
+| `cross_source.py` | 跨源校验 | ✅ |
+| `spec.py` | DQ 规则配置模型 | ✅ |
+| `golden.py` | Golden Dataset 验证 | ✅ |
 
 ## 使用示例
 
-### 基本用法
+### 策略 Pipeline
 
 ```python
-from ditto_core.engine import RegimeEngine, FactorEngine
-from ditto_core.portfolio import PortfolioManager
-from ditto_datahub import DataHub
-
-# 初始化 DataHub
-hub = DataHub()
-
-# Regime 识别
-regime_engine = RegimeEngine(hub)
-regime_result = regime_engine.calc_regime_for_range(
-    start_date="2024-01-01",
-    end_date="2024-01-31",
-    index_code="000300.SH"
+from ditto_core.strategy import (
+    StrategySpec,
+    StrategyPipeline,
+    StrategyInputBundle,
 )
-
-# 因子计算
-factor_engine = FactorEngine(hub)
-factors = factor_engine.calc_factors(
-    universe=["510300.SH", "510500.SH"],
-    start_date="2024-01-01",
-    end_date="2024-01-31"
+from ditto_core.strategy.templates import (
+    ETFRotationConfig,
+    build_etf_rotation_pipeline,
 )
-
-# 组合管理
-portfolio_mgr = PortfolioManager(hub)
-portfolio = portfolio_mgr.build_portfolio(
-    strategy_name="etf_rotation",
-    rebalance_date="2024-01-31",
-    regime="bull"
-)
-```
-
-### 回测示例
-
-```python
-from ditto_core.engine import FastBacktester
-from ditto_core.strategy import RotationStrategy
 
 # 定义策略
-strategy = RotationStrategy(
+spec = StrategySpec(name="etf_rotation", ...)
+
+# 从模板构建 Pipeline
+config = ETFRotationConfig(
     top_n=3,
-    rebalance_freq="monthly"
+    rebalance_freq="monthly",
+)
+pipeline = build_etf_rotation_pipeline(config)
+
+# 运行 Pipeline
+result = pipeline.run(bundle)
+print(result.target_portfolio)  # TargetPortfolio
+```
+
+### 回测
+
+```python
+from ditto_core.backtest import (
+    EngineLoop,
+    EngineConfig,
+    ParquetDataFeed,
+)
+from ditto_core.execution import BacktestBrokerage
+from ditto_core.accounting import Account
+
+# 配置回测
+config = EngineConfig(
+    start_date="2024-01-01",
+    end_date="2024-12-31",
+    initial_cash=1_000_000,
 )
 
 # 运行回测
-backtester = FastBacktester(hub)
-result = backtester.run(
-    strategy=strategy,
-    start_date="2023-01-01",
-    end_date="2024-01-31",
-    initial_capital=1_000_000
-)
+engine = EngineLoop(config)
+data_feed = ParquetDataFeed(...)
+account = Account(cash=1_000_000)
+result = engine.run(data_feed, pipeline, account)
 
-# 查看结果
-print(f"总收益: {result.total_return:.2%}")
-print(f"年化收益: {result.annual_return:.2%}")
-print(f"最大回撤: {result.max_drawdown:.2%}")
-print(f"夏普比率: {result.sharpe_ratio:.2f}")
+# 查看报告
+report = result.report
+print(f"Sharpe: {report.alpha.sharpe:.2f}")
+print(f"Max DD: {report.alpha.max_drawdown:.2%}")
 ```
 
 ## 核心设计原则
@@ -187,16 +261,11 @@ df = hub.market.query(
 
 ### 2. 涨跌停感知
 
-回测引擎必须过滤涨跌停无法成交的情况：
+回测引擎通过 PreTrade 规则过滤涨跌停无法成交的情况：
 
 ```python
-def is_limit_price(bar: Bar) -> bool:
-    return bar.close == bar.high or bar.close == bar.low
-
-filtered_orders = [
-    order for order in orders
-    if not is_limit_price(order.bar)
-]
+# PriceValidity 规则自动过滤涨跌停
+# BacktestBrokerage 通过 MarketSnapshot.is_limit_up/is_limit_down 判断
 ```
 
 ### 3. 向量化优先
@@ -217,15 +286,16 @@ df = (
 )
 ```
 
-### 4. 双引擎对齐
+### 4. Pipeline + Stage 架构
 
-Fast 与 Production 引擎必须对齐，误差 ≤ 0.1%：
+策略通过 Pipeline 编排，每个 Stage 接收 DecisionFrame（polars DataFrame），通过列名约定流转：
 
 ```python
-fast_result = FastBacktester(hub).run(strategy, ...)
-prod_result = ProductionBacktester(hub).run(strategy, ...)
+# 列名约定: instrument_id (必须), signal_value, score, weight, reason_codes
+from ditto_core.strategy import StrategyPipeline, StrategyInputBundle
 
-assert abs(fast_result.total_return - prod_result.total_return) < 0.001
+pipeline = StrategyPipeline(stages=[universe, signal, scoring, selection])
+result = pipeline.run(bundle)
 ```
 
 ## 策略说明
@@ -247,30 +317,42 @@ assert abs(fast_result.total_return - prod_result.total_return) < 0.001
 
 ### 风险管理
 
-**三层 Kill Switch**：
+**PreTrade 事前风控**:
 
-| Level | 触发条件 | 操作 | 恢复条件 |
-|-------|---------|------|----------|
-| 1 | 回撤 ≥ 10% | 停止新开仓 | 回撤 < 8% |
-| 2 | 回撤 ≥ 18% | 强制减仓 50% | 人工确认 |
-| 3 | 回撤 ≥ 20% | 强制清仓 | 策略重构评审 |
+| 规则 | 职责 |
+|------|------|
+| NoShortSell | 禁止卖空 |
+| PriceValidity | 涨跌停/停牌过滤 |
+| LotSize | 最小交易单位取整 |
+| BuyingPower | 购买力检查 |
+| Concentration | 单票集中度限制 |
+| DailyTurnover | 日换手率限制 |
 
-**仓位限制**（Regime驱动）：
+**PostTrade 事后风控**:
 
-| Regime | 总仓位 | 单票上限 |
-|--------|--------|----------|
-| Bull   | 70-90% | 15% |
-| Osc    | 50-70% | 12% |
-| Bear   | 10-40% | 10% |
+| Guard | 职责 |
+|-------|------|
+| MaxDrawdown | 组合最大回撤检测 |
+| SingleLoss | 单标的亏损检测 |
+| Concentration | 持仓集中度检测 |
+| MarketAnomaly | 市场异常波动检测 |
 
 ## 相关文档
 
-- [引擎设计文档](../../docs/design/03_engine_design.md)
-- [风险宪法](../../docs/design/08_risk_constitution.md)
-- [系统设计总览](../../docs/design/01_system_design.md)
-- [PIT 安全指南](../../.claude/skills/pit-guide/SKILL.md)
+- [v3 系统设计](../../docs/plans/2026-03-21-strategy-engine-system-design-v3.md)
+- [Phase 2 实施计划](../../docs/plans/2026-03-22-strategy-engine-phase2-00-master.md)
+- [Phase 2-5 路线图](../../docs/plans/2026-03-21-strategy-engine-phase2-5-roadmap.md)
+- [Core 层规范](CLAUDE.md)
+- [PIT 安全指南](../../.claude/rules/pit.md)
 
 ## 变更记录
+
+### v0.9.0 (2026-03-24)
+**改进**
+- README 文档全面更新，反映当前代码库实际状态
+- 新增 execution/、backtest/、quality/、engine/、accounting/ 模块详细说明
+- 修正架构图（ditto-foundation → ditto-infra）
+- 更新使用示例为实际 API
 
 ### v0.8.0 (2026-03-23)
 **新增** — Phase 6: Gap 补齐 + 质量加固 Sprint
@@ -324,18 +406,3 @@ assert abs(fast_result.total_return - prod_result.total_return) < 0.001
 - `StrategyRun` / `StrategyTemplate` / `StrategyVersion` / `SignalSnapshot` / `TargetPortfolio`
 - `StrategyContext`（可变运行时上下文）+ `DecisionStage` Protocol（Pipeline 阶段接口）
 - 32 个单元测试，98.07% 覆盖率
-
-### v0.2.0 (2026-01-23)
-**新增**
-- README 标准化，添加版本、日期、状态元数据
-- 添加变更记录部分
-
-**改进**
-- 完善模块说明
-- 添加核心设计原则文档
-
-### v0.1.0 (2025-12-08)
-**新增**
-- 初始核心模块结构
-- 架构设计文档
-- 策略框架定义

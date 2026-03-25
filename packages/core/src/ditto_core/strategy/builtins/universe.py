@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import polars as pl
+from ditto_kernel.identity import InstrumentId
 
 from ditto_core.strategy.context import StrategyContext
 
@@ -21,7 +22,7 @@ class UniverseStage:
 
     """
 
-    instrument_ids: frozenset[str]
+    instrument_ids: frozenset[InstrumentId]
 
     def process(
         self,

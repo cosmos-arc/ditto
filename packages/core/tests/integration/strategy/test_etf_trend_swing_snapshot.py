@@ -145,7 +145,7 @@ class TestTrailingStopTrigger:
             f
             for f in result.fills
             if f.event_time.strftime("%Y-%m-%d") == "2026-01-09"
-            and f.instrument_id == "ETF-001"
+            and f.instrument_id == 1
         ]
         sell_fills = [f for f in day5_fills if f.direction.value == "sell"]
         # 由于 Day 5 close=9.0 < stop_price=9.2，trailing stop 应触发卖出

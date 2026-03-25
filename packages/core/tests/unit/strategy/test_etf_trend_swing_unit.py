@@ -41,7 +41,7 @@ def empty_context() -> StrategyContext:
 def context_with_positions() -> StrategyContext:
     """带持仓成本的上下文。"""
     return StrategyContext(
-        positions={"159915.SZ": 0.80, "510300.SH": 4.10},
+        positions={1: 0.80, 2: 4.10},
     )
 
 
@@ -50,7 +50,7 @@ def allocated_frame() -> pl.DataFrame:
     """已分配权重的 DecisionFrame（TrailingStop 输入）。"""
     return pl.DataFrame(
         {
-            "instrument_id": ["159915.SZ", "510300.SH", "159949.SZ"],
+            "instrument_id": [1, 2, 3],
             "close": [0.76, 4.25, 1.50],
             "weight": [0.333, 0.333, 0.333],
         }
@@ -106,7 +106,7 @@ class TestTrailingStopStage:
         """价格在止损线上方，不触发止损。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["159915.SZ", "510300.SH"],
+                "instrument_id": [1, 2],
                 "close": [0.79, 4.00],
                 "weight": [0.5, 0.5],
             }
@@ -124,7 +124,7 @@ class TestTrailingStopStage:
         """价格跌破止损线时权重归零。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["159915.SZ", "510300.SH"],
+                "instrument_id": [1, 2],
                 "close": [0.70, 4.25],
                 "weight": [0.5, 0.5],
             }
@@ -139,8 +139,8 @@ class TestTrailingStopStage:
                 strict=True,
             ),
         )
-        assert weights["159915.SZ"] == 0.0
-        assert weights["510300.SH"] == 0.5
+        assert weights[1] == 0.0
+        assert weights[2] == 0.5
 
     def test_stop_triggered_adds_reason_codes(
         self,
@@ -149,7 +149,7 @@ class TestTrailingStopStage:
         """止损触发时添加 trailing_stop reason_codes。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["159915.SZ", "510300.SH"],
+                "instrument_id": [1, 2],
                 "close": [0.70, 4.25],
                 "weight": [0.5, 0.5],
             }
@@ -165,9 +165,9 @@ class TestTrailingStopStage:
                 strict=True,
             ),
         )
-        assert "trailing_stop" in codes_map["159915.SZ"]
-        # 510300.SH not triggered, should have null reason_codes
-        assert codes_map["510300.SH"] is None
+        assert "trailing_stop" in codes_map[1]
+        # 2 not triggered, should have null reason_codes
+        assert codes_map[2] is None
 
     def test_position_not_in_frame_ignored(
         self,
@@ -176,7 +176,7 @@ class TestTrailingStopStage:
         """持仓标的不在 frame 中时被忽略。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["159949.SZ"],
+                "instrument_id": [3],
                 "close": [1.50],
                 "weight": [1.0],
             }
@@ -192,7 +192,7 @@ class TestTrailingStopStage:
         """frame 中无价格列时原样返回。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["159915.SZ", "510300.SH"],
+                "instrument_id": [1, 2],
                 "weight": [0.5, 0.5],
             }
         )
@@ -212,7 +212,7 @@ class TestTrailingStopStage:
                 "weight": [],
             },
             schema={
-                "instrument_id": pl.Utf8,
+                "instrument_id": pl.Int64,
                 "close": pl.Float64,
                 "weight": pl.Float64,
             },
@@ -228,7 +228,7 @@ class TestTrailingStopStage:
         """多个持仓同时触发止损。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["159915.SZ", "510300.SH"],
+                "instrument_id": [1, 2],
                 "close": [0.70, 3.50],
                 "weight": [0.5, 0.5],
             }
@@ -304,7 +304,7 @@ class TestBuildETFTrendSwingPipeline:
         empty_context: StrategyContext,
     ) -> None:
         """端到端运行 Pipeline 并验证 TargetPortfolio。"""
-        ids = ["ETF001", "ETF002", "ETF003"]
+        ids = [20, 21, 22]
         instruments = pl.DataFrame({"instrument_id": ids})
         market_data = pl.DataFrame(
             {
@@ -342,8 +342,8 @@ class TestBuildETFTrendSwingPipeline:
 
         # ETF003 has negative signal, filtered by TrendFilter (long, threshold=0)
         assert len(target.positions) == 2
-        assert "ETF001" in target.positions
-        assert "ETF002" in target.positions
+        assert 20 in target.positions
+        assert 21 in target.positions
         # Equal weight: 1.0 / 2 = 0.5
-        assert target.positions["ETF001"] == pytest.approx(0.5)
-        assert target.positions["ETF002"] == pytest.approx(0.5)
+        assert target.positions[20] == pytest.approx(0.5)
+        assert target.positions[21] == pytest.approx(0.5)

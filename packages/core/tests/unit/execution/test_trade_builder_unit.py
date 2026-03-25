@@ -6,7 +6,7 @@ from types import MappingProxyType
 import pytest
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.order_book import OrderBookReadOnly, OrderDirection
+from ditto_core.accounting.order_book import OrderBookReadOnly
 from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.trade_builder import (
     FifoTradeBuilder,
@@ -14,6 +14,7 @@ from ditto_core.execution.trade_builder import (
     TradeMatchingMethod,
     TradeRecord,
 )
+from ditto_kernel.enums import OrderSide as OrderDirection
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -37,7 +38,7 @@ def account_view() -> AccountView:
 def _fill(
     fill_id: str,
     order_id: str = "order-1",
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     direction: OrderDirection = OrderDirection.BUY,
     quantity: int = 100,
     price: float = 10.0,
@@ -69,7 +70,7 @@ class TestTradeRecord:
     def test_frozen(self) -> None:
         record = TradeRecord(
             trade_id="t-1",
-            instrument_id="ETF-001",
+            instrument_id=1,
             direction=OrderDirection.BUY,
             entry_date="2026-03-01",
             exit_date=None,
@@ -113,7 +114,7 @@ class TestFifoBasic:
 
         open_trades = builder.get_open_trades()
         assert len(open_trades) == 1
-        assert open_trades[0].instrument_id == "ETF-001"
+        assert open_trades[0].instrument_id == 1
         assert open_trades[0].quantity == 100
         assert open_trades[0].entry_price == 10.0
         assert open_trades[0].direction == OrderDirection.BUY
@@ -363,16 +364,12 @@ class TestFifoMultiInstrument:
         """Sell instrument A only matches buys of instrument A."""
         builder = FifoTradeBuilder()
 
-        buy_a = _fill(
-            "f-1", order_id="o-1", instrument_id="ETF-A", quantity=100, price=10.0
-        )
-        buy_b = _fill(
-            "f-2", order_id="o-2", instrument_id="ETF-B", quantity=200, price=20.0
-        )
+        buy_a = _fill("f-1", order_id="o-1", instrument_id=2, quantity=100, price=10.0)
+        buy_b = _fill("f-2", order_id="o-2", instrument_id=3, quantity=200, price=20.0)
         sell_a = _fill(
             "f-3",
             order_id="o-3",
-            instrument_id="ETF-A",
+            instrument_id=2,
             direction=OrderDirection.SELL,
             quantity=100,
             price=11.0,
@@ -385,11 +382,11 @@ class TestFifoMultiInstrument:
 
         closed = builder.get_closed_trades()
         assert len(closed) == 1
-        assert closed[0].instrument_id == "ETF-A"
+        assert closed[0].instrument_id == 2
 
         open_trades = builder.get_open_trades()
         assert len(open_trades) == 1
-        assert open_trades[0].instrument_id == "ETF-B"
+        assert open_trades[0].instrument_id == 3
 
     def test_sell_with_no_open_is_ignored(self, account_view: AccountView) -> None:
         """Sell for instrument with no open positions is a no-op."""
@@ -421,7 +418,7 @@ class TestFlatToFlatBasic:
 
         open_trades = builder.get_open_trades()
         assert len(open_trades) == 1
-        assert open_trades[0].instrument_id == "ETF-001"
+        assert open_trades[0].instrument_id == 1
         assert open_trades[0].quantity == 100
         assert open_trades[0].entry_price == pytest.approx(10.0)
         assert open_trades[0].direction == OrderDirection.BUY
@@ -767,7 +764,7 @@ class TestFlatToFlatMultiInstrument:
         buy_a = _fill(
             "f-1",
             order_id="o-a1",
-            instrument_id="ETF-A",
+            instrument_id=2,
             quantity=100,
             price=10.0,
             fee=5.0,
@@ -775,7 +772,7 @@ class TestFlatToFlatMultiInstrument:
         buy_b = _fill(
             "f-2",
             order_id="o-b1",
-            instrument_id="ETF-B",
+            instrument_id=3,
             quantity=200,
             price=20.0,
             fee=10.0,
@@ -783,7 +780,7 @@ class TestFlatToFlatMultiInstrument:
         sell_a = _fill(
             "f-3",
             order_id="o-a2",
-            instrument_id="ETF-A",
+            instrument_id=2,
             direction=OrderDirection.SELL,
             quantity=100,
             price=11.0,
@@ -797,11 +794,11 @@ class TestFlatToFlatMultiInstrument:
 
         closed = builder.get_closed_trades()
         assert len(closed) == 1
-        assert closed[0].instrument_id == "ETF-A"
+        assert closed[0].instrument_id == 2
 
         open_trades = builder.get_open_trades()
         assert len(open_trades) == 1
-        assert open_trades[0].instrument_id == "ETF-B"
+        assert open_trades[0].instrument_id == 3
         assert open_trades[0].quantity == 200
 
 

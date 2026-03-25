@@ -21,7 +21,7 @@ from ditto_core.execution.rules import (
 # ---------------------------------------------------------------------------
 
 ETF_DEFINITION = InstrumentDefinition(
-    instrument_id="159915.SZ",
+    instrument_id=1,
     asset_class="etf",
     exchange="XSHE",
     currency="CNY",
@@ -33,7 +33,7 @@ ETF_DEFINITION = InstrumentDefinition(
 )
 
 STOCK_DEFINITION = InstrumentDefinition(
-    instrument_id="600000.SH",
+    instrument_id=2,
     asset_class="stock",
     exchange="XSHG",
     currency="CNY",
@@ -45,7 +45,7 @@ STOCK_DEFINITION = InstrumentDefinition(
 )
 
 TRADING_RULE = TradingRuleSet(
-    instrument_id="159915.SZ",
+    instrument_id=1,
     as_of_date="2026-01-01",
     settlement_cycle=1,
     fund_settlement_cycle=1,
@@ -55,7 +55,7 @@ TRADING_RULE = TradingRuleSet(
 )
 
 ETF_FEE = FeeSchedule(
-    instrument_id="159915.SZ",
+    instrument_id=1,
     as_of_date="2026-01-01",
     commission_rate=0.0003,
     min_commission=5.0,
@@ -80,7 +80,7 @@ class TestInstrumentDefinition:
 
     def test_st_lifecycle(self) -> None:
         defn = InstrumentDefinition(
-            instrument_id="600123.SH",
+            instrument_id=3,
             asset_class="stock",
             exchange="XSHG",
             currency="CNY",
@@ -95,7 +95,7 @@ class TestInstrumentDefinition:
     def test_new_fields_default_to_none(self) -> None:
         """ipo_date / delisting_date 默认为 None（向后兼容）。"""
         defn = InstrumentDefinition(
-            instrument_id="600000.SH",
+            instrument_id=2,
             asset_class="stock",
             exchange="XSHG",
             currency="CNY",
@@ -111,7 +111,7 @@ class TestInstrumentDefinition:
     def test_new_fields_with_values(self) -> None:
         """可显式传入 ipo_date / delisting_date。"""
         defn = InstrumentDefinition(
-            instrument_id="600000.SH",
+            instrument_id=2,
             asset_class="stock",
             exchange="XSHG",
             currency="CNY",
@@ -129,7 +129,7 @@ class TestInstrumentDefinition:
     def test_ipo_date_only(self) -> None:
         """只传 ipo_date 时 delisting_date 保持 None。"""
         defn = InstrumentDefinition(
-            instrument_id="159915.SZ",
+            instrument_id=1,
             asset_class="etf",
             exchange="XSHE",
             currency="CNY",
@@ -151,7 +151,7 @@ class TestTradingRuleSet:
 
     def test_no_price_limit(self) -> None:
         rule = TradingRuleSet(
-            instrument_id="600999.SH",
+            instrument_id=4,
             as_of_date="2026-01-01",
             settlement_cycle=1,
             fund_settlement_cycle=1,
@@ -172,7 +172,7 @@ class TestFeeSchedule:
 
     def test_create_stock_fee(self) -> None:
         fee = FeeSchedule(
-            instrument_id="600000.SH",
+            instrument_id=2,
             as_of_date="2026-01-01",
             commission_rate=0.0003,
             min_commission=5.0,
@@ -217,38 +217,38 @@ class TestInMemoryRuleProviderBasic:
     """InMemoryRuleProvider 基本 dict 查询。"""
 
     def test_get_definition_found(self) -> None:
-        provider = InMemoryRuleProvider(definitions={"ETF-001": ETF_DEFINITION})
-        result = provider.get_definition("ETF-001")
+        provider = InMemoryRuleProvider(definitions={100: ETF_DEFINITION})
+        result = provider.get_definition(100)
         assert result is not None
-        assert result.instrument_id == "159915.SZ"
+        assert result.instrument_id == 1
 
     def test_get_definition_not_found(self) -> None:
         provider = InMemoryRuleProvider()
-        assert provider.get_definition("MISSING") is None
+        assert provider.get_definition(999) is None
 
     def test_get_trading_rule_found(self) -> None:
         provider = InMemoryRuleProvider(
-            trading_rules={"159915.SZ": [TRADING_RULE]},
+            trading_rules={1: [TRADING_RULE]},
         )
-        result = provider.get_trading_rule("159915.SZ", "2026-01-05")
+        result = provider.get_trading_rule(1, "2026-01-05")
         assert result is not None
         assert result.settlement_cycle == 1
 
     def test_get_trading_rule_not_found(self) -> None:
         provider = InMemoryRuleProvider()
-        assert provider.get_trading_rule("MISSING", "2026-01-05") is None
+        assert provider.get_trading_rule(999, "2026-01-05") is None
 
     def test_get_fee_schedule_found(self) -> None:
         provider = InMemoryRuleProvider(
-            fee_schedules={"159915.SZ": [ETF_FEE]},
+            fee_schedules={1: [ETF_FEE]},
         )
-        result = provider.get_fee_schedule("159915.SZ", "2026-01-05")
+        result = provider.get_fee_schedule(1, "2026-01-05")
         assert result is not None
         assert result.commission_rate == 0.0003
 
     def test_get_fee_schedule_not_found(self) -> None:
         provider = InMemoryRuleProvider()
-        assert provider.get_fee_schedule("MISSING", "2026-01-05") is None
+        assert provider.get_fee_schedule(999, "2026-01-05") is None
 
 
 # ---------------------------------------------------------------------------
@@ -261,14 +261,14 @@ class TestInMemoryRuleProviderGetRules:
 
     def test_get_rules_all_found(self) -> None:
         provider = InMemoryRuleProvider(
-            definitions={"ETF-001": ETF_DEFINITION},
-            trading_rules={"ETF-001": [TRADING_RULE]},
-            fee_schedules={"ETF-001": [ETF_FEE]},
+            definitions={100: ETF_DEFINITION},
+            trading_rules={100: [TRADING_RULE]},
+            fee_schedules={100: [ETF_FEE]},
         )
-        result = provider.get_rules("2026-01-05", ["ETF-001"])
-        assert "ETF-001" in result
-        defn, rule, fee = result["ETF-001"]
-        assert defn.instrument_id == "159915.SZ"
+        result = provider.get_rules("2026-01-05", [100])
+        assert 100 in result
+        defn, rule, fee = result[100]
+        assert defn.instrument_id == 1
         assert rule.settlement_cycle == 1
         assert fee.commission_rate == 0.0003
 
@@ -276,21 +276,21 @@ class TestInMemoryRuleProviderGetRules:
         """缺少 definition 的标的不出现在结果中。"""
         provider = InMemoryRuleProvider(
             definitions={},
-            trading_rules={"ETF-001": [TRADING_RULE]},
-            fee_schedules={"ETF-001": [ETF_FEE]},
+            trading_rules={100: [TRADING_RULE]},
+            fee_schedules={100: [ETF_FEE]},
         )
-        result = provider.get_rules("2026-01-05", ["ETF-001"])
-        assert "ETF-001" not in result
+        result = provider.get_rules("2026-01-05", [100])
+        assert 100 not in result
 
     def test_get_rules_missing_rule_skipped(self) -> None:
         """缺少 trading_rule 的标的不出现在结果中。"""
         provider = InMemoryRuleProvider(
-            definitions={"ETF-001": ETF_DEFINITION},
+            definitions={100: ETF_DEFINITION},
             trading_rules={},
-            fee_schedules={"ETF-001": [ETF_FEE]},
+            fee_schedules={100: [ETF_FEE]},
         )
-        result = provider.get_rules("2026-01-05", ["ETF-001"])
-        assert "ETF-001" not in result
+        result = provider.get_rules("2026-01-05", [100])
+        assert 100 not in result
 
     def test_get_rules_empty_ids(self) -> None:
         provider = InMemoryRuleProvider()
@@ -309,7 +309,7 @@ class TestInMemoryRuleProviderPIT:
     def test_pit_selects_latest_before_date(self) -> None:
         """as_of_date 选择 <= 该日期的最新版本。"""
         rule_v1 = TradingRuleSet(
-            instrument_id="ETF-001",
+            instrument_id=100,
             as_of_date="2026-01-01",
             settlement_cycle=1,
             fund_settlement_cycle=1,
@@ -318,7 +318,7 @@ class TestInMemoryRuleProviderPIT:
             call_auction_sessions=("open",),
         )
         rule_v2 = TradingRuleSet(
-            instrument_id="ETF-001",
+            instrument_id=100,
             as_of_date="2026-03-01",
             settlement_cycle=0,  # T+0
             fund_settlement_cycle=0,
@@ -327,22 +327,22 @@ class TestInMemoryRuleProviderPIT:
             call_auction_sessions=("open",),
         )
         provider = InMemoryRuleProvider(
-            trading_rules={"ETF-001": [rule_v1, rule_v2]},
+            trading_rules={100: [rule_v1, rule_v2]},
         )
         # as_of_date = 2026-02-01 → 应选择 v1 (2026-01-01)
-        result = provider.get_trading_rule("ETF-001", "2026-02-01")
+        result = provider.get_trading_rule(100, "2026-02-01")
         assert result is not None
         assert result.settlement_cycle == 1
 
         # as_of_date = 2026-03-15 → 应选择 v2 (2026-03-01)
-        result = provider.get_trading_rule("ETF-001", "2026-03-15")
+        result = provider.get_trading_rule(100, "2026-03-15")
         assert result is not None
         assert result.settlement_cycle == 0
 
     def test_pit_no_version_before_date(self) -> None:
         """as_of_date 早于所有版本 → 返回 None。"""
         rule = TradingRuleSet(
-            instrument_id="ETF-001",
+            instrument_id=100,
             as_of_date="2026-03-01",
             settlement_cycle=1,
             fund_settlement_cycle=1,
@@ -351,15 +351,15 @@ class TestInMemoryRuleProviderPIT:
             call_auction_sessions=("open",),
         )
         provider = InMemoryRuleProvider(
-            trading_rules={"ETF-001": [rule]},
+            trading_rules={100: [rule]},
         )
-        result = provider.get_trading_rule("ETF-001", "2026-01-01")
+        result = provider.get_trading_rule(100, "2026-01-01")
         assert result is None
 
     def test_pit_fee_schedule_multi_version(self) -> None:
         """FeeSchedule 多版本 PIT 选择。"""
         fee_v1 = FeeSchedule(
-            instrument_id="ETF-001",
+            instrument_id=100,
             as_of_date="2026-01-01",
             commission_rate=0.0003,
             min_commission=5.0,
@@ -367,7 +367,7 @@ class TestInMemoryRuleProviderPIT:
             transfer_fee_rate=0.0,
         )
         fee_v2 = FeeSchedule(
-            instrument_id="ETF-001",
+            instrument_id=100,
             as_of_date="2026-06-01",
             commission_rate=0.0002,
             min_commission=5.0,
@@ -375,20 +375,20 @@ class TestInMemoryRuleProviderPIT:
             transfer_fee_rate=0.0,
         )
         provider = InMemoryRuleProvider(
-            fee_schedules={"ETF-001": [fee_v1, fee_v2]},
+            fee_schedules={100: [fee_v1, fee_v2]},
         )
-        result = provider.get_fee_schedule("ETF-001", "2026-04-01")
+        result = provider.get_fee_schedule(100, "2026-04-01")
         assert result is not None
         assert result.commission_rate == 0.0003
 
-        result = provider.get_fee_schedule("ETF-001", "2026-07-01")
+        result = provider.get_fee_schedule(100, "2026-07-01")
         assert result is not None
         assert result.commission_rate == 0.0002
 
     def test_pit_boundary_exclusive(self) -> None:
         """as_of_date = as_of_date of record → 包含该记录。"""
         rule = TradingRuleSet(
-            instrument_id="ETF-001",
+            instrument_id=100,
             as_of_date="2026-03-01",
             settlement_cycle=1,
             fund_settlement_cycle=1,
@@ -397,10 +397,10 @@ class TestInMemoryRuleProviderPIT:
             call_auction_sessions=("open",),
         )
         provider = InMemoryRuleProvider(
-            trading_rules={"ETF-001": [rule]},
+            trading_rules={100: [rule]},
         )
         # as_of_date 恰好等于记录的 as_of_date → 包含
-        result = provider.get_trading_rule("ETF-001", "2026-03-01")
+        result = provider.get_trading_rule(100, "2026-03-01")
         assert result is not None
 
 

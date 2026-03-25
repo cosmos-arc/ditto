@@ -35,7 +35,7 @@ class _RecordingStage:
 class _AddWeightStage:
     """给 frame 添加 weight 列，权重值固定为给定的 mapping。"""
 
-    def __init__(self, weights: dict[str, float]) -> None:
+    def __init__(self, weights: dict[int, float]) -> None:
         self._weights = weights
 
     def process(
@@ -106,7 +106,7 @@ def empty_context() -> StrategyContext:
 def sample_instruments() -> pl.DataFrame:
     return pl.DataFrame(
         {
-            "instrument_id": ["159915.SZ", "510300.SH", "159949.SZ"],
+            "instrument_id": [1, 2, 3],
         }
     )
 
@@ -115,7 +115,7 @@ def sample_instruments() -> pl.DataFrame:
 def sample_market_data() -> pl.DataFrame:
     return pl.DataFrame(
         {
-            "instrument_id": ["159915.SZ", "510300.SH", "159949.SZ"],
+            "instrument_id": [1, 2, 3],
             "close": [1.0, 2.0, 3.0],
         }
     )
@@ -125,7 +125,7 @@ def sample_market_data() -> pl.DataFrame:
 def sample_signal_values() -> pl.DataFrame:
     return pl.DataFrame(
         {
-            "instrument_id": ["159915.SZ", "510300.SH", "159949.SZ"],
+            "instrument_id": [1, 2, 3],
             "signal_value": [0.85, 0.62, 0.41],
         }
     )
@@ -313,7 +313,7 @@ class TestStrategyPipeline:
         pipeline = StrategyPipeline(stages=[stage1, stage2, stage3])
 
         ctx = StrategyContext()
-        ctx.lock_instrument("159915.SZ", "max_drawdown")
+        ctx.lock_instrument(1, "max_drawdown")
         bundle = _make_input_bundle(
             instruments=sample_instruments,
             market_data=sample_market_data,
@@ -330,7 +330,7 @@ class TestStrategyPipeline:
         assert stage3.received_contexts[0] is ctx
 
         # Context mutation is visible to later stages
-        assert stage1.received_contexts[0].is_locked("159915.SZ")
+        assert stage1.received_contexts[0].is_locked(1)
 
     def test_target_portfolio_from_final_frame_with_weights(
         self,
@@ -338,7 +338,7 @@ class TestStrategyPipeline:
         sample_instruments: pl.DataFrame,
         sample_market_data: pl.DataFrame,
     ) -> None:
-        weights = {"159915.SZ": 0.4, "510300.SH": 0.35, "159949.SZ": 0.25}
+        weights = {1: 0.4, 2: 0.35, 3: 0.25}
         stage = _AddWeightStage(weights)
         pipeline = StrategyPipeline(stages=[stage])
         bundle = _make_input_bundle(
@@ -348,9 +348,9 @@ class TestStrategyPipeline:
         target = pipeline.run(empty_context, bundle)
 
         assert isinstance(target, TargetPortfolio)
-        assert target.positions["159915.SZ"] == pytest.approx(0.4)
-        assert target.positions["510300.SH"] == pytest.approx(0.35)
-        assert target.positions["159949.SZ"] == pytest.approx(0.25)
+        assert target.positions[1] == pytest.approx(0.4)
+        assert target.positions[2] == pytest.approx(0.35)
+        assert target.positions[3] == pytest.approx(0.25)
 
     def test_target_portfolio_equal_weight_fallback(
         self,
@@ -378,7 +378,7 @@ class TestStrategyPipeline:
         sample_instruments: pl.DataFrame,
         sample_market_data: pl.DataFrame,
     ) -> None:
-        weights = {"159915.SZ": 0.5, "510300.SH": 0.3, "159949.SZ": 0.2}
+        weights = {1: 0.5, 2: 0.3, 3: 0.2}
         stage = _AddWeightStage(weights)
         pipeline = StrategyPipeline(stages=[stage])
         bundle = _make_input_bundle(

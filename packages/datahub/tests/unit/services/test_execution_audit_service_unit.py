@@ -1,4 +1,8 @@
-"""Tests for ExecutionAuditService — SQLite audit log persistence."""
+"""Tests for ExecutionAuditService — SQLite audit log persistence.
+
+使用 DataHub 本地 DTO (RiskScanPayload / PreTradeDecisionPayload)，
+不再依赖 Core 审计记录类型。
+"""
 
 from __future__ import annotations
 
@@ -6,11 +10,10 @@ from collections.abc import Generator
 
 import orjson
 import pytest
-from ditto_core.backtest.audit.records import (
-    PreTradeDecisionRecord,
-    RiskScanRecord,
+from ditto_datahub.models.strategy_audit import (
+    PreTradeDecisionPayload,
+    RiskScanPayload,
 )
-from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
 from ditto_datahub.services.audit.execution_audit_service import ExecutionAuditService
 from ditto_infra.foundation import SQLitePool
 
@@ -34,15 +37,15 @@ def audit_service(tmp_path: object) -> Generator[ExecutionAuditService, None, No
 # ---------------------------------------------------------------------------
 
 
-def _make_risk_record(
+def _make_risk_payload(
     trade_date: str = "2026-03-20",
     rule_id: str = "max_drawdown",
     instrument_id: str = "510300.SH",
-    severity: RiskSeverity = RiskSeverity.WARNING,
-    action_taken: RiskActionType = RiskActionType.ALERT,
-) -> RiskScanRecord:
-    """Create a RiskScanRecord for testing."""
-    return RiskScanRecord(
+    severity: str = "warning",
+    action_taken: str = "alert",
+) -> RiskScanPayload:
+    """Create a RiskScanPayload for testing."""
+    return RiskScanPayload(
         trade_date=trade_date,
         rule_id=rule_id,
         instrument_id=instrument_id,
@@ -54,15 +57,15 @@ def _make_risk_record(
     )
 
 
-def _make_pre_trade_record(
+def _make_pre_trade_payload(
     trade_date: str = "2026-03-20",
     order_id: str = "ORD-001",
     instrument_id: str = "510300.SH",
     direction: str = "buy",
     decision: str = "accepted",
-) -> PreTradeDecisionRecord:
-    """Create a PreTradeDecisionRecord for testing."""
-    return PreTradeDecisionRecord(
+) -> PreTradeDecisionPayload:
+    """Create a PreTradeDecisionPayload for testing."""
+    return PreTradeDecisionPayload(
         trade_date=trade_date,
         order_id=order_id,
         instrument_id=instrument_id,
@@ -125,7 +128,7 @@ class TestSaveRiskLog:
 
     def test_saves_single_record(self, audit_service: ExecutionAuditService) -> None:
         """save_risk_log should insert one record and return count 1."""
-        rec = _make_risk_record()
+        rec = _make_risk_payload()
         count = audit_service.save_risk_log("run-001", (rec,))
 
         assert count == 1
@@ -138,8 +141,10 @@ class TestSaveRiskLog:
 
     def test_saves_multiple_records(self, audit_service: ExecutionAuditService) -> None:
         """save_risk_log should insert multiple records and return count."""
-        rec1 = _make_risk_record(trade_date="2026-03-20", rule_id="max_drawdown")
-        rec2 = _make_risk_record(trade_date="2026-03-21", rule_id="concentration_limit")
+        rec1 = _make_risk_payload(trade_date="2026-03-20", rule_id="max_drawdown")
+        rec2 = _make_risk_payload(
+            trade_date="2026-03-21", rule_id="concentration_limit"
+        )
         count = audit_service.save_risk_log("run-001", (rec1, rec2))
 
         assert count == 2
@@ -150,7 +155,7 @@ class TestSaveRiskLog:
         self, audit_service: ExecutionAuditService
     ) -> None:
         """Payload should be orjson-serialized dict of the record fields."""
-        rec = _make_risk_record()
+        rec = _make_risk_payload()
         audit_service.save_risk_log("run-001", (rec,))
 
         rows = audit_service.query("run-001")
@@ -171,7 +176,7 @@ class TestSaveRiskLog:
         self, audit_service: ExecutionAuditService
     ) -> None:
         """Records saved under different run_ids should not mix."""
-        rec = _make_risk_record()
+        rec = _make_risk_payload()
         audit_service.save_risk_log("run-A", (rec,))
         audit_service.save_risk_log("run-B", (rec,))
 
@@ -189,7 +194,7 @@ class TestSavePreTradeLog:
 
     def test_saves_single_record(self, audit_service: ExecutionAuditService) -> None:
         """save_pre_trade_log should insert one record and return count 1."""
-        rec = _make_pre_trade_record()
+        rec = _make_pre_trade_payload()
         count = audit_service.save_pre_trade_log("run-001", (rec,))
 
         assert count == 1
@@ -202,7 +207,7 @@ class TestSavePreTradeLog:
         self, audit_service: ExecutionAuditService
     ) -> None:
         """Payload should be orjson-serialized dict of the record fields."""
-        rec = _make_pre_trade_record()
+        rec = _make_pre_trade_payload()
         audit_service.save_pre_trade_log("run-001", (rec,))
 
         rows = audit_service.query("run-001", record_type="pre_trade_decision")
@@ -222,7 +227,7 @@ class TestSavePreTradeLog:
 
     def test_saves_rejected_record(self, audit_service: ExecutionAuditService) -> None:
         """save_pre_trade_log should handle rejected decisions (final_quantity=0)."""
-        rec = PreTradeDecisionRecord(
+        rec = PreTradeDecisionPayload(
             trade_date="2026-03-20",
             order_id="ORD-REJ",
             instrument_id="159915.SZ",
@@ -253,15 +258,15 @@ class TestQuery:
 
     def _seed_data(self, svc: ExecutionAuditService) -> None:
         """Insert sample data across run_ids, dates, and types."""
-        risk1 = _make_risk_record(trade_date="2026-03-18", rule_id="max_drawdown")
-        risk2 = _make_risk_record(
+        risk1 = _make_risk_payload(trade_date="2026-03-18", rule_id="max_drawdown")
+        risk2 = _make_risk_payload(
             trade_date="2026-03-20", rule_id="concentration_limit"
         )
-        risk3 = _make_risk_record(trade_date="2026-03-22", rule_id="max_drawdown")
+        risk3 = _make_risk_payload(trade_date="2026-03-22", rule_id="max_drawdown")
 
-        pt1 = _make_pre_trade_record(trade_date="2026-03-18", order_id="ORD-001")
-        pt2 = _make_pre_trade_record(trade_date="2026-03-20", order_id="ORD-002")
-        pt3 = _make_pre_trade_record(trade_date="2026-03-22", order_id="ORD-003")
+        pt1 = _make_pre_trade_payload(trade_date="2026-03-18", order_id="ORD-001")
+        pt2 = _make_pre_trade_payload(trade_date="2026-03-20", order_id="ORD-002")
+        pt3 = _make_pre_trade_payload(trade_date="2026-03-22", order_id="ORD-003")
 
         svc.save_risk_log("run-A", (risk1, risk2, risk3))
         svc.save_pre_trade_log("run-A", (pt1, pt2, pt3))
@@ -356,7 +361,7 @@ class TestQuery:
         self, audit_service: ExecutionAuditService
     ) -> None:
         """query result rows should contain all table columns."""
-        rec = _make_risk_record()
+        rec = _make_risk_payload()
         audit_service.save_risk_log("run-001", (rec,))
 
         rows = audit_service.query("run-001")
@@ -376,9 +381,9 @@ class TestQuery:
         self, audit_service: ExecutionAuditService
     ) -> None:
         """query results should be ordered by trade_date ASC, id ASC."""
-        risk1 = _make_risk_record(trade_date="2026-03-22")
-        risk2 = _make_risk_record(trade_date="2026-03-20")
-        risk3 = _make_risk_record(trade_date="2026-03-18")
+        risk1 = _make_risk_payload(trade_date="2026-03-22")
+        risk2 = _make_risk_payload(trade_date="2026-03-20")
+        risk3 = _make_risk_payload(trade_date="2026-03-18")
         # Insert in non-chronological order
         audit_service.save_risk_log("run-001", (risk1, risk2, risk3))
 
@@ -391,7 +396,7 @@ class TestQuery:
         self, audit_service: ExecutionAuditService
     ) -> None:
         """query with record_type that has no matching records returns empty."""
-        audit_service.save_risk_log("run-001", (_make_risk_record(),))
+        audit_service.save_risk_log("run-001", (_make_risk_payload(),))
 
         rows = audit_service.query("run-001", record_type="pre_trade_decision")
         assert rows == []
@@ -402,7 +407,7 @@ class TestQuery:
         """query with date range that doesn't overlap data returns empty."""
         audit_service.save_risk_log(
             "run-001",
-            (_make_risk_record(trade_date="2026-03-20"),),
+            (_make_risk_payload(trade_date="2026-03-20"),),
         )
 
         rows = audit_service.query(

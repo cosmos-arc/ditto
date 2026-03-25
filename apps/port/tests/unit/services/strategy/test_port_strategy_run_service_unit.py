@@ -43,7 +43,7 @@ def _make_target_portfolio(
         trade_date=trade_date,
         strategy_id=strategy_id,
         run_id=run_id,
-        positions={"ETF-001": 0.6, "ETF-002": 0.3},
+        positions={1: 0.6, 2: 0.3},
         cash_target=0.1,
     )
 
@@ -54,9 +54,9 @@ def _make_fake_slice(trade_date: str = TRADE_DATE) -> Slice:
         step_time=datetime(2026, 1, 15, 9, 30),
         trade_date=trade_date,
         bars={
-            "ETF-001": MarketSnapshot(
+            1: MarketSnapshot(
                 trade_date=trade_date,
-                instrument_id="ETF-001",
+                instrument_id=1,
                 open=10.0,
                 high=10.5,
                 low=9.8,
@@ -88,10 +88,10 @@ def _make_mock_assembler() -> MagicMock:
         trade_date=TRADE_DATE,
         strategy_id="default",
         run_id="",
-        instruments=pl.DataFrame({"instrument_id": ["ETF-001"]}),
+        instruments=pl.DataFrame({"instrument_id": [1]}),
         market_data=pl.DataFrame(
             {
-                "instrument_id": ["ETF-001"],
+                "instrument_id": [1],
                 "open": [10.0],
                 "high": [10.5],
                 "low": [9.8],
@@ -99,9 +99,7 @@ def _make_mock_assembler() -> MagicMock:
                 "volume": [1000000.0],
             }
         ),
-        signal_values=pl.DataFrame(
-            {"instrument_id": ["ETF-001"], "signal_value": [0.02]}
-        ),
+        signal_values=pl.DataFrame({"instrument_id": [1], "signal_value": [0.02]}),
         parameters={},
         benchmark_close=3000.0,
     )
@@ -113,6 +111,7 @@ def _make_service(
     pipeline: MagicMock | None = None,
     assembler: MagicMock | None = None,
     artifact_service: StrategyArtifactService | None = None,
+    run_service: MagicMock | None = None,
 ) -> StrategyRunService:
     """创建 StrategyRunService 实例（依赖均为 mock）。"""
     if config is None:
@@ -122,6 +121,7 @@ def _make_service(
         pipeline=pipeline or _make_mock_pipeline(),
         assembler=assembler or _make_mock_assembler(),
         artifact_service=artifact_service,
+        run_service=run_service,
     )
 
 
@@ -255,8 +255,101 @@ class TestRecommendationMode:
 
         artifact = mock_artifact_service.save_artifact.call_args[0][0]
         assert artifact.metadata["trade_date"] == TRADE_DATE
-        assert artifact.metadata["positions"] == {"ETF-001": 0.6, "ETF-002": 0.3}
+        assert artifact.metadata["positions"] == {1: 0.6, 2: 0.3}
         assert artifact.metadata["cash_target"] == 0.1
+
+    def test_recommendation_mode_manages_run_lifecycle(self) -> None:
+        """RECOMMENDATION 模式应创建并推进 run 生命周期。"""
+        mock_artifact_service = MagicMock(spec=StrategyArtifactService)
+        mock_run_service = MagicMock()
+        target = _make_target_portfolio(run_id="run-001")
+        service = StrategyRunService(
+            config=StrategyRunServiceConfig(
+                strategy_id="momentum-etf",
+                strategy_version="2026.03",
+                run_id="run-001",
+                mode=StrategyRunMode.RECOMMENDATION,
+            ),
+            pipeline=_make_mock_pipeline(target),
+            assembler=_make_mock_assembler(),
+            artifact_service=mock_artifact_service,
+            run_service=mock_run_service,
+        )
+
+        result = service.run(TRADE_DATE, _make_fake_slice())
+
+        assert result.run_id == "run-001"
+        mock_run_service.create_run.assert_called_once_with(
+            run_id="run-001",
+            strategy_id="momentum-etf",
+            strategy_version="2026.03",
+            mode="recommendation",
+        )
+        mock_run_service.mark_running.assert_called_once_with("run-001")
+        mock_run_service.mark_completed.assert_called_once_with("run-001")
+        mock_run_service.mark_failed.assert_not_called()
+
+    def test_auto_generated_run_id_flows_into_assembler_and_lifecycle(self) -> None:
+        """空 run_id 时生成的真实 run_id 应传给 assembler 与 lifecycle。"""
+        mock_run_service = MagicMock()
+        mock_assembler = _make_mock_assembler()
+        slice_ = _make_fake_slice()
+        service = StrategyRunService(
+            config=StrategyRunServiceConfig(
+                strategy_id="momentum-etf",
+                run_id="",
+                mode=StrategyRunMode.RECOMMENDATION,
+            ),
+            pipeline=_make_mock_pipeline(),
+            assembler=mock_assembler,
+            run_service=mock_run_service,
+        )
+
+        result = service.run(TRADE_DATE, slice_)
+
+        create_run_kwargs = mock_run_service.create_run.call_args.kwargs
+        generated_run_id = create_run_kwargs["run_id"]
+        assert result.run_id == generated_run_id
+        assert len(generated_run_id) == 8
+        mock_assembler.assemble.assert_called_once_with(
+            TRADE_DATE,
+            slice_,
+            run_id=generated_run_id,
+        )
+        mock_run_service.mark_running.assert_called_once_with(generated_run_id)
+        mock_run_service.mark_completed.assert_called_once_with(generated_run_id)
+
+    def test_pipeline_failure_marks_run_failed(self) -> None:
+        """pipeline 抛错时应将 run 标记为 failed，并保留原始错误消息。"""
+        mock_run_service = MagicMock()
+        mock_pipeline = _make_mock_pipeline()
+        mock_pipeline.run.side_effect = RuntimeError("pipeline exploded")
+        service = StrategyRunService(
+            config=StrategyRunServiceConfig(
+                strategy_id="momentum-etf",
+                run_id="run-001",
+                mode=StrategyRunMode.RECOMMENDATION,
+            ),
+            pipeline=mock_pipeline,
+            assembler=_make_mock_assembler(),
+            run_service=mock_run_service,
+        )
+
+        with pytest.raises(RuntimeError, match="pipeline exploded"):
+            service.run(TRADE_DATE, _make_fake_slice())
+
+        mock_run_service.create_run.assert_called_once_with(
+            run_id="run-001",
+            strategy_id="momentum-etf",
+            strategy_version="",
+            mode="recommendation",
+        )
+        mock_run_service.mark_running.assert_called_once_with("run-001")
+        mock_run_service.mark_failed.assert_called_once_with(
+            "run-001",
+            "pipeline exploded",
+        )
+        mock_run_service.mark_completed.assert_not_called()
 
 
 class TestRunId:
@@ -301,9 +394,13 @@ class TestAssemblerAndPipelineCalls:
         service = _make_service(assembler=mock_assembler)
         slice_ = _make_fake_slice()
 
-        service.run(TRADE_DATE, slice_)
+        result = service.run(TRADE_DATE, slice_)
 
-        mock_assembler.assemble.assert_called_once_with(TRADE_DATE, slice_)
+        mock_assembler.assemble.assert_called_once_with(
+            TRADE_DATE,
+            slice_,
+            run_id=result.run_id,
+        )
 
     def test_pipeline_called_with_context_and_bundle(self) -> None:
         """pipeline.run() 使用 StrategyContext 和 input_bundle 调用。"""

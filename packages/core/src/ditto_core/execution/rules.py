@@ -14,6 +14,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
 
+from ditto_kernel.identity import InstrumentId
+
 __all__ = [
     "FeeSchedule",
     "InMemoryRuleProvider",
@@ -46,7 +48,7 @@ class InstrumentDefinition:
 
     """
 
-    instrument_id: str
+    instrument_id: InstrumentId
     asset_class: str
     exchange: str
     currency: str
@@ -75,7 +77,7 @@ class TradingRuleSet:
 
     """
 
-    instrument_id: str
+    instrument_id: InstrumentId
     as_of_date: str
     settlement_cycle: int
     fund_settlement_cycle: int
@@ -99,7 +101,7 @@ class FeeSchedule:
 
     """
 
-    instrument_id: str
+    instrument_id: InstrumentId
     as_of_date: str
     commission_rate: float
     min_commission: float
@@ -114,7 +116,7 @@ class FeeSchedule:
 type InstrumentRules = tuple[InstrumentDefinition, TradingRuleSet, FeeSchedule]
 """三层规则元组 — (定义, 交易规则, 费用结构)。"""
 
-type RulesGetter = Callable[[str, str], InstrumentRules]
+type RulesGetter = Callable[[InstrumentId, str], InstrumentRules]
 """规则获取函数 — (instrument_id, trade_date) → InstrumentRules。"""
 
 
@@ -164,14 +166,14 @@ class InstrumentRuleProvider(Protocol):
 
     def get_definition(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
     ) -> InstrumentDefinition | None:
         """获取标的静态定义，不存在返回 None。"""
         ...
 
     def get_trading_rule(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         as_of_date: str,
     ) -> TradingRuleSet | None:
         """PIT 查询交易规则，不存在返回 None。"""
@@ -179,7 +181,7 @@ class InstrumentRuleProvider(Protocol):
 
     def get_fee_schedule(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         as_of_date: str,
     ) -> FeeSchedule | None:
         """PIT 查询费率，不存在返回 None。"""
@@ -188,8 +190,8 @@ class InstrumentRuleProvider(Protocol):
     def get_rules(
         self,
         as_of_date: str,
-        instrument_ids: list[str],
-    ) -> dict[str, InstrumentRules]:
+        instrument_ids: list[InstrumentId],
+    ) -> dict[InstrumentId, InstrumentRules]:
         """批量获取三层规则。缺失规则返回空 dict（不 raise）。"""
         ...
 
@@ -209,9 +211,9 @@ class InMemoryRuleProvider:
 
     def __init__(
         self,
-        definitions: dict[str, InstrumentDefinition] | None = None,
-        trading_rules: dict[str, list[TradingRuleSet]] | None = None,
-        fee_schedules: dict[str, list[FeeSchedule]] | None = None,
+        definitions: dict[InstrumentId, InstrumentDefinition] | None = None,
+        trading_rules: dict[InstrumentId, list[TradingRuleSet]] | None = None,
+        fee_schedules: dict[InstrumentId, list[FeeSchedule]] | None = None,
     ) -> None:
         self._definitions = definitions or {}
         self._trading_rules = trading_rules or {}
@@ -221,14 +223,14 @@ class InMemoryRuleProvider:
 
     def get_definition(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
     ) -> InstrumentDefinition | None:
         """获取标的静态定义，不存在返回 None。"""
         return self._definitions.get(instrument_id)
 
     def get_trading_rule(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         as_of_date: str,
     ) -> TradingRuleSet | None:
         """PIT 查询交易规则，不存在返回 None。"""
@@ -236,7 +238,7 @@ class InMemoryRuleProvider:
 
     def get_fee_schedule(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         as_of_date: str,
     ) -> FeeSchedule | None:
         """PIT 查询费率，不存在返回 None。"""
@@ -245,10 +247,10 @@ class InMemoryRuleProvider:
     def get_rules(
         self,
         as_of_date: str,
-        instrument_ids: list[str],
-    ) -> dict[str, InstrumentRules]:
+        instrument_ids: list[InstrumentId],
+    ) -> dict[InstrumentId, InstrumentRules]:
         """批量获取三层规则。缺失规则返回空 dict（不 raise）。"""
-        result: dict[str, InstrumentRules] = {}
+        result: dict[InstrumentId, InstrumentRules] = {}
         for iid in instrument_ids:
             defn = self.get_definition(iid)
             rule = self.get_trading_rule(iid, as_of_date)
@@ -261,8 +263,8 @@ class InMemoryRuleProvider:
 
     @staticmethod
     def _find_pit[T](
-        store: dict[str, list[T]],
-        instrument_id: str,
+        store: dict[InstrumentId, list[T]],
+        instrument_id: InstrumentId,
         as_of_date: str,
     ) -> T | None:
         """

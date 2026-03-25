@@ -10,7 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from ditto_core.accounting.order_book import Order, OrderDirection, OrderType
+from ditto_kernel.enums import OrderSide as OrderDirection
+
+from ditto_core.accounting.order_book import Order, OrderType
 from ditto_core.execution.fills import Filled, FillEvent, FillOutcome, NoFill
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.execution.rules import InstrumentDefinition, TradingRuleSet

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ditto_kernel.identity import InstrumentId
+
 __all__ = ["StrategyContext"]
 
 
@@ -22,25 +24,25 @@ class StrategyContext:
 
     """
 
-    risk_locked_instruments: dict[str, tuple[str, str | None]] = field(
+    risk_locked_instruments: dict[InstrumentId, tuple[str, str | None]] = field(
         default_factory=dict,
     )
-    positions: dict[str, float] = field(default_factory=dict)
+    positions: dict[InstrumentId, float] = field(default_factory=dict)
 
     def lock_instrument(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         reason: str,
         cooldown_until: str | None = None,
     ) -> None:
         """锁定标的。cooldown_until 为 None 时当日有效，否则跨日有效。"""
         self.risk_locked_instruments[instrument_id] = (reason, cooldown_until)
 
-    def is_locked(self, instrument_id: str) -> bool:
+    def is_locked(self, instrument_id: InstrumentId) -> bool:
         """检查标的是否被锁定。"""
         return instrument_id in self.risk_locked_instruments
 
-    def get_locked_instruments(self) -> set[str]:
+    def get_locked_instruments(self) -> set[InstrumentId]:
         """返回所有被锁定标的 ID 集合。"""
         return set(self.risk_locked_instruments.keys())
 

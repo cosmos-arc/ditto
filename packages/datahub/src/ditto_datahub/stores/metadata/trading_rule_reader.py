@@ -7,8 +7,11 @@ from dataclasses import dataclass
 
 import orjson
 from ditto_infra.foundation import SQLitePool, logger, traced
+from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 from ditto_datahub.stores.metadata._pit_base import PITRecordReader
+
+InstrumentId = _InstrumentId
 
 __all__ = ["SQLiteTradingRuleReader", "TradingRuleReader", "TradingRuleRecord"]
 
@@ -18,7 +21,7 @@ __all__ = ["SQLiteTradingRuleReader", "TradingRuleReader", "TradingRuleRecord"]
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS trading_rule (
-    instrument_id TEXT NOT NULL,
+    instrument_id INTEGER NOT NULL,
     as_of_date TEXT NOT NULL,
     settlement_cycle INT NOT NULL,
     fund_settlement_cycle INT NOT NULL,
@@ -77,7 +80,7 @@ class TradingRuleRecord:
 
     """
 
-    instrument_id: str
+    instrument_id: InstrumentId
     as_of_date: str
     settlement_cycle: int
     fund_settlement_cycle: int
@@ -131,7 +134,11 @@ class SQLiteTradingRuleReader(PITRecordReader[TradingRuleRecord]):
             )
         self._pool.commit()
 
-    def get(self, instrument_id: str, as_of_date: str) -> TradingRuleRecord | None:
+    def get(
+        self,
+        instrument_id: InstrumentId,
+        as_of_date: str,
+    ) -> TradingRuleRecord | None:
         """
         PIT 查询: 获取指定标的在 as_of_date 时有效的记录.
 
@@ -152,7 +159,7 @@ class SQLiteTradingRuleReader(PITRecordReader[TradingRuleRecord]):
     def _row_to_record(self, row: sqlite3.Row) -> TradingRuleRecord:
         """将数据库行转换为 TradingRuleRecord."""
         return TradingRuleRecord(
-            instrument_id=row["instrument_id"],
+            instrument_id=InstrumentId(row["instrument_id"]),
             as_of_date=row["as_of_date"],
             settlement_cycle=row["settlement_cycle"],
             fund_settlement_cycle=row["fund_settlement_cycle"],

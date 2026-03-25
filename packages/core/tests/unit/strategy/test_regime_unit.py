@@ -37,7 +37,7 @@ class TestRegimeStage:
         """MA_CROSS 方法：short_ma > long_ma * (1+threshold) 时标记为 bull。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "ma_short": [1.12, 1.05, 1.20],
                 "ma_long": [1.00, 1.00, 1.00],
             }
@@ -56,7 +56,7 @@ class TestRegimeStage:
         """MA_CROSS 方法：short_ma < long_ma * (1-threshold) 时标记为 bear。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B"],
+                "instrument_id": [10, 11],
                 "ma_short": [0.88, 0.95],
                 "ma_long": [1.00, 1.00],
             }
@@ -73,7 +73,7 @@ class TestRegimeStage:
         """MA_CROSS 方法：ratio 在阈值范围内时标记为 neutral。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "ma_short": [1.005, 1.00, 0.995],
                 "ma_long": [1.00, 1.00, 1.00],
             }
@@ -92,7 +92,7 @@ class TestRegimeStage:
         """MA_CROSS 方法：使用自定义列名。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "sma_5": [1.10],
                 "sma_20": [1.00],
             }
@@ -109,7 +109,7 @@ class TestRegimeStage:
         """MA_CROSS 方法：使用自定义阈值。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B"],
+                "instrument_id": [10, 11],
                 "ma_short": [1.05, 0.95],
                 "ma_long": [1.00, 1.00],
             }
@@ -127,7 +127,7 @@ class TestRegimeStage:
         """VOLATILITY_THRESHOLD 方法：vol < low_threshold 时标记为 bull。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B"],
+                "instrument_id": [10, 11],
                 "volatility": [0.10, 0.14],
             }
         )
@@ -141,7 +141,7 @@ class TestRegimeStage:
         """VOLATILITY_THRESHOLD 方法：vol > high_threshold 时标记为 bear。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B"],
+                "instrument_id": [10, 11],
                 "volatility": [0.31, 0.50],
             }
         )
@@ -155,7 +155,7 @@ class TestRegimeStage:
         """VOLATILITY_THRESHOLD 方法：vol 在阈值之间时标记为 neutral。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B"],
+                "instrument_id": [10, 11],
                 "volatility": [0.15, 0.30],
             }
         )
@@ -171,7 +171,7 @@ class TestRegimeStage:
         """VOLATILITY_THRESHOLD 方法：使用自定义列名。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "realized_vol": [0.10],
             }
         )
@@ -189,7 +189,7 @@ class TestRegimeStage:
         """VOLATILITY_THRESHOLD 方法：使用自定义阈值。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "volatility": [0.05, 0.20, 0.40],
             }
         )
@@ -228,7 +228,7 @@ class TestRegimeStageBoundary:
                 "ma_long": [],
             },
             schema={
-                "instrument_id": pl.Utf8,
+                "instrument_id": pl.Int64,
                 "ma_short": pl.Float64,
                 "ma_long": pl.Float64,
             },
@@ -240,7 +240,7 @@ class TestRegimeStageBoundary:
 
     def test_missing_ma_columns(self, empty_context: StrategyContext) -> None:
         """MA_CROSS 方法：缺少 MA 列时填充 default_regime。"""
-        frame = pl.DataFrame({"instrument_id": ["A", "B"]})
+        frame = pl.DataFrame({"instrument_id": [10, 11]})
         stage = RegimeStage(method=RegimeMethod.MA_CROSS)
         result = stage.process(frame, empty_context)
         regimes = result["regime"].to_list()
@@ -252,7 +252,7 @@ class TestRegimeStageBoundary:
         empty_context: StrategyContext,
     ) -> None:
         """VOLATILITY_THRESHOLD 方法：缺少 volatility 列时填充 default_regime。"""
-        frame = pl.DataFrame({"instrument_id": ["A", "B"]})
+        frame = pl.DataFrame({"instrument_id": [10, 11]})
         stage = RegimeStage(method=RegimeMethod.VOLATILITY_THRESHOLD)
         result = stage.process(frame, empty_context)
         regimes = result["regime"].to_list()
@@ -263,7 +263,7 @@ class TestRegimeStageBoundary:
         """MA_CROSS 方法：MA 列包含 null 时，对应行标记为 default_regime。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "ma_short": [1.10, None, 0.88],
                 "ma_long": [1.00, 1.00, None],
             }
@@ -285,7 +285,7 @@ class TestRegimeStageBoundary:
         """VOLATILITY_THRESHOLD 方法：vol 列含 null 时，对应行标记为 default_regime。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "volatility": [0.10, None, 0.40],
             }
         )
@@ -303,7 +303,7 @@ class TestRegimeStageBoundary:
         """单行 frame：正确识别 regime。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "ma_short": [1.05],
                 "ma_long": [1.00],
             }
@@ -317,7 +317,7 @@ class TestRegimeStageBoundary:
         """多标的 frame：所有标的获得相同 regime（市场级判断）。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["159915.SZ", "510300.SH", "159949.SZ", "510500.SH"],
+                "instrument_id": [1, 2, 3, 6],
                 "ma_short": [1.12, 1.12, 1.12, 1.12],
                 "ma_long": [1.00, 1.00, 1.00, 1.00],
             }
@@ -329,7 +329,7 @@ class TestRegimeStageBoundary:
 
     def test_custom_default_regime(self, empty_context: StrategyContext) -> None:
         """自定义 default_regime：缺失列时填充指定的默认值。"""
-        frame = pl.DataFrame({"instrument_id": ["A"]})
+        frame = pl.DataFrame({"instrument_id": [10]})
         stage = RegimeStage(
             method=RegimeMethod.MA_CROSS,
             default_regime=RegimeLabel.BULL,
@@ -341,7 +341,7 @@ class TestRegimeStageBoundary:
         """自定义 output_column：输出到指定列名。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "ma_short": [1.05],
                 "ma_long": [1.00],
             }
@@ -362,7 +362,7 @@ class TestRegimeStageBoundary:
         """MA_CROSS 方法：ratio 恰好等于 1+threshold 时为 neutral（不含边界）。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "ma_short": [1.01],
                 "ma_long": [1.00],
             }
@@ -379,7 +379,7 @@ class TestRegimeStageBoundary:
         """MA_CROSS 方法：ratio 恰好等于 1-threshold 时为 neutral（不含边界）。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "ma_short": [0.99],
                 "ma_long": [1.00],
             }
@@ -396,7 +396,7 @@ class TestRegimeStageBoundary:
         """VOLATILITY_THRESHOLD 方法：vol 恰好等于 low_threshold 时为 neutral。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "volatility": [0.15],
             }
         )
@@ -412,7 +412,7 @@ class TestRegimeStageBoundary:
         """VOLATILITY_THRESHOLD 方法：vol 恰好等于 high_threshold 时为 neutral。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "volatility": [0.30],
             }
         )

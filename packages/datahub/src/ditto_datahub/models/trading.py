@@ -13,12 +13,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
+from ditto_kernel.enums import OrderSide as _KernelOrderSide
 
-class OrderSide(StrEnum):
-    """订单方向."""
-
-    BUY = "buy"
-    SELL = "sell"
+# OrderSide 已迁移到 ditto_kernel.enums，此处 re-export 保持向后兼容
+OrderSide = _KernelOrderSide
 
 
 class OrderStatus(StrEnum):

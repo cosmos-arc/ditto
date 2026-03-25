@@ -13,7 +13,7 @@ from types import MappingProxyType
 import pytest
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.order_book import OrderBookReadOnly, OrderDirection
+from ditto_core.accounting.order_book import OrderBookReadOnly
 from ditto_core.accounting.position import Position
 from ditto_core.backtest.statistics import (
     ExecutionAuditCollector,
@@ -32,6 +32,7 @@ from ditto_core.backtest.statistics import (
     compute_portfolio_statistics,
 )
 from ditto_core.execution.fills import FillEvent
+from ditto_kernel.enums import OrderSide as OrderDirection
 
 # ---------------------------------------------------------------------------
 # _daily_returns_from_navs
@@ -473,7 +474,7 @@ class TestCostMetrics:
         return FillEvent(
             fill_id="f-1",
             order_id="o-1",
-            instrument_id="ETF-001",
+            instrument_id=1,
             direction=OrderDirection.BUY,
             filled_quantity=qty,
             fill_price=price,
@@ -577,7 +578,7 @@ def _make_account_view(
     nav: float = 100_000.0,
     exposure: float = 60_000.0,
     cash: float = 40_000.0,
-    positions: dict[str, Position] | None = None,
+    positions: dict[int, Position] | None = None,
 ) -> AccountView:
     """构造 AccountView 快照，用于 PortfolioStatistics 测试."""
     cash_book = CashBook(available=cash, settled=cash, frozen=0.0)

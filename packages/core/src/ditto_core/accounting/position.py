@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ditto_kernel.identity import InstrumentId
+
 __all__ = ["Position"]
 
 
@@ -13,7 +15,7 @@ class Position:
     单个标的的持仓状态。
 
     Attributes:
-        instrument_id: 标的 ID（如 "159915.SZ"）
+        instrument_id: 标的 ID
         quantity: 总持仓数量（股数）
         available_quantity: 可卖数量（扣除 T+1 冻结）
         average_cost: 加权平均成本
@@ -24,7 +26,7 @@ class Position:
 
     """
 
-    instrument_id: str
+    instrument_id: InstrumentId
     quantity: int
     available_quantity: int
     average_cost: float

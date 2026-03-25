@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ditto_core.accounting.order_book import Order, OrderDirection
+from ditto_kernel.enums import OrderSide as OrderDirection
+
+from ditto_core.accounting.order_book import Order
 from ditto_core.execution.rules import FeeSchedule
 
 __all__ = ["AShareFeeModel", "FeeModel", "SimpleFeeModel"]

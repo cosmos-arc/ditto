@@ -14,7 +14,7 @@ from ditto_core.backtest.data_feed import ParquetDataFeed
 
 def _write_basic_parquet(
     path: Path,
-    instrument_id: str,
+    instrument_id: int,
     dates: list[str],
     *,
     suspended_indices: set[int] | None = None,
@@ -39,7 +39,7 @@ def _write_basic_parquet(
 
 def _make_feed(
     tmp_path: Path,
-    instrument_ids: list[str],
+    instrument_ids: list[int],
     start_date: str = "2026-03-01",
     end_date: str = "2026-03-31",
 ) -> ParquetDataFeed:
@@ -63,17 +63,17 @@ class TestTradingDaysReturnsSortedDates:
         """trading_days returns sorted unique dates filtered to [start, end]."""
         _write_basic_parquet(
             tmp_path,
-            "ETF-001",
+            1,
             ["2026-03-01", "2026-03-03", "2026-03-05"],
         )
         _write_basic_parquet(
             tmp_path,
-            "ETF-002",
+            2,
             ["2026-03-02", "2026-03-03", "2026-03-04"],
         )
         feed = _make_feed(
             tmp_path,
-            ["ETF-001", "ETF-002"],
+            [1, 2],
             start_date="2026-03-02",
             end_date="2026-03-04",
         )
@@ -88,18 +88,18 @@ class TestGetSliceReturnsCorrectBars:
         """get_slice returns Slice with correct MarketSnapshot values."""
         _write_basic_parquet(
             tmp_path,
-            "ETF-001",
+            1,
             ["2026-03-01"],
         )
-        feed = _make_feed(tmp_path, ["ETF-001"])
+        feed = _make_feed(tmp_path, [1])
         result = feed.get_slice("2026-03-01")
 
         assert result.trade_date == "2026-03-01"
         assert result.step_time.hour == 15
         assert result.step_time.minute == 0
-        assert "ETF-001" in result.bars
+        assert 1 in result.bars
 
-        bar = result.bars["ETF-001"]
+        bar = result.bars[1]
         assert bar.open == 10.0
         assert bar.high == 10.5
         assert bar.low == 9.8
@@ -121,10 +121,10 @@ class TestGetSliceMissingDate:
         """get_slice for a non-existent date returns Slice with empty bars."""
         _write_basic_parquet(
             tmp_path,
-            "ETF-001",
+            1,
             ["2026-03-01"],
         )
-        feed = _make_feed(tmp_path, ["ETF-001"])
+        feed = _make_feed(tmp_path, [1])
         result = feed.get_slice("2026-03-10")
 
         assert result.trade_date == "2026-03-10"
@@ -137,13 +137,13 @@ class TestGetSliceFiltersByDate:
     def test_get_slice_filters_by_date(self, tmp_path: Path) -> None:
         """get_slice for a specific date only includes that date's data."""
         dates = ["2026-03-01", "2026-03-02", "2026-03-03"]
-        _write_basic_parquet(tmp_path, "ETF-001", dates)
-        feed = _make_feed(tmp_path, ["ETF-001"])
+        _write_basic_parquet(tmp_path, 1, dates)
+        feed = _make_feed(tmp_path, [1])
         result = feed.get_slice("2026-03-02")
 
         assert result.trade_date == "2026-03-02"
         assert len(result.bars) == 1
-        bar = result.bars["ETF-001"]
+        bar = result.bars[1]
         # Date index 1: open = 10.0 + 1 = 11.0
         assert bar.open == 11.0
         assert bar.close == 11.2
@@ -156,26 +156,26 @@ class TestInstrumentWithNoDataForDate:
         """get_slice for a date only present in one file includes that instrument."""
         _write_basic_parquet(
             tmp_path,
-            "ETF-001",
+            1,
             ["2026-03-01", "2026-03-02"],
         )
         _write_basic_parquet(
             tmp_path,
-            "ETF-002",
+            2,
             ["2026-03-03", "2026-03-04"],
         )
-        feed = _make_feed(tmp_path, ["ETF-001", "ETF-002"])
+        feed = _make_feed(tmp_path, [1, 2])
         result = feed.get_slice("2026-03-01")
 
-        assert "ETF-001" in result.bars
-        assert "ETF-002" not in result.bars
+        assert 1 in result.bars
+        assert 2 not in result.bars
         assert len(result.bars) == 1
 
-        # Verify the reverse: ETF-002 has data on 2026-03-03
+        # Verify the reverse: instrument 2 has data on 2026-03-03
         result2 = feed.get_slice("2026-03-03")
-        assert "ETF-001" not in result2.bars
-        assert "ETF-002" in result2.bars
-        assert result2.bars["ETF-002"].close == 10.2
+        assert 1 not in result2.bars
+        assert 2 in result2.bars
+        assert result2.bars[2].close == 10.2
 
 
 class TestSuspendedInstrumentIncluded:
@@ -185,15 +185,15 @@ class TestSuspendedInstrumentIncluded:
         """is_suspended=True instrument is still included in Slice.bars."""
         _write_basic_parquet(
             tmp_path,
-            "ETF-001",
+            1,
             ["2026-03-01", "2026-03-02"],
             suspended_indices={1},
         )
-        feed = _make_feed(tmp_path, ["ETF-001"])
+        feed = _make_feed(tmp_path, [1])
         result = feed.get_slice("2026-03-02")
 
-        assert "ETF-001" in result.bars
-        assert result.bars["ETF-001"].is_suspended is True
+        assert 1 in result.bars
+        assert result.bars[1].is_suspended is True
 
 
 class TestOptionalColumnsPreserved:
@@ -216,11 +216,11 @@ class TestOptionalColumnsPreserved:
                 "limit_down": [9.0],
                 "avg_volume_20d": [90_000.0],
             },
-        ).write_parquet(tmp_path / "ETF-001.parquet")
-        feed = _make_feed(tmp_path, ["ETF-001"])
+        ).write_parquet(tmp_path / "1.parquet")
+        feed = _make_feed(tmp_path, [1])
         result = feed.get_slice("2026-03-01")
 
-        bar = result.bars["ETF-001"]
+        bar = result.bars[1]
         assert bar.limit_up == 11.2
         assert bar.limit_down == 9.0
         assert bar.avg_volume_20d == 90_000.0
@@ -231,7 +231,7 @@ class TestMissingParquetFile:
 
     def test_missing_parquet_file(self, tmp_path: Path) -> None:
         """Non-existent parquet file is silently skipped."""
-        feed = _make_feed(tmp_path, ["ETF-NONEXIST"])
+        feed = _make_feed(tmp_path, [999])
         days = feed.trading_days()
         assert days == []
 

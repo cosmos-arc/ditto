@@ -3,10 +3,11 @@
 from datetime import datetime
 
 import pytest
-from ditto_core.accounting.order_book import Order, OrderDirection
+from ditto_core.accounting.order_book import Order
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.execution.reality.slippage import FixedBpsSlippage, VolumeShareSlippage
 from ditto_core.execution.rules import InstrumentDefinition
+from ditto_kernel.enums import OrderSide as OrderDirection
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -16,7 +17,7 @@ from ditto_core.execution.rules import InstrumentDefinition
 def _order(
     direction: OrderDirection = OrderDirection.BUY,
     quantity: int = 100,
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
 ) -> Order:
     return Order(
         order_id="ORD-001",
@@ -35,7 +36,7 @@ def _market_snapshot(
 ) -> MarketSnapshot:
     return MarketSnapshot(
         trade_date="2026-03-01",
-        instrument_id="ETF-001",
+        instrument_id=1,
         open=10.0,
         high=10.5,
         low=9.5,
@@ -48,7 +49,7 @@ def _market_snapshot(
 
 
 _DEFINITION = InstrumentDefinition(
-    instrument_id="ETF-001",
+    instrument_id=1,
     asset_class="etf",
     exchange="XSHE",
     currency="CNY",

@@ -11,12 +11,16 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import StrEnum
 
+from ditto_kernel.enums import OrderSide
+from ditto_kernel.identity import InstrumentId
+
 __all__ = [
     "Order",
     "OrderBook",
     "OrderBookReadOnly",
     "OrderDirection",
     "OrderEvent",
+    "OrderSide",
     "OrderStatus",
     "OrderTicket",
     "OrderType",
@@ -33,11 +37,8 @@ class OrderType(StrEnum):
     MARKET_ON_CLOSE = "market_on_close"
 
 
-class OrderDirection(StrEnum):
-    """订单方向。"""
-
-    BUY = "buy"
-    SELL = "sell"
+# OrderDirection 已统一至 ditto_kernel.OrderSide，此处保留别名以向后兼容。
+OrderDirection = OrderSide
 
 
 class OrderStatus(StrEnum):
@@ -85,7 +86,7 @@ class Order:
     """
 
     order_id: str
-    instrument_id: str
+    instrument_id: InstrumentId
     order_type: OrderType
     direction: OrderDirection
     quantity: int

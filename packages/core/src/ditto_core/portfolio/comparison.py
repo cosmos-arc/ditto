@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_core.backtest.statistics import AlphaStatistics, BacktestReport
+from ditto_core.portfolio.report_views import BacktestReportView
 
 __all__ = [
     "MetricsDelta",
@@ -102,8 +102,8 @@ _LOWER_IS_BETTER: frozenset[str] = frozenset(
 
 
 def compare_reports(
-    baseline: BacktestReport,
-    compare: BacktestReport,
+    baseline: BacktestReportView,
+    compare: BacktestReportView,
 ) -> StrategyComparisonReport:
     """
     比较两个回测报告，生成差异报告.
@@ -116,8 +116,8 @@ def compare_reports(
         StrategyComparisonReport 实例.
 
     """
-    b_alpha: AlphaStatistics = baseline.alpha_stats
-    c_alpha: AlphaStatistics = compare.alpha_stats
+    b_alpha = baseline.alpha_stats
+    c_alpha = compare.alpha_stats
 
     delta = MetricsDelta(
         annualized_return=c_alpha.annualized_return - b_alpha.annualized_return,

@@ -20,13 +20,20 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 import polars as pl
+from ditto_kernel.identity import InstrumentId
 
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.buying_power import CashAccountBuyingPower
 from ditto_core.accounting.order_book import Order
 from ditto_core.backtest.data_feed import DataFeed, Slice
-from ditto_core.backtest.manifest import RuleRefCollector, RunManifest, RunMode
+from ditto_core.backtest.manifest import (
+    RuleRefCollector,
+    RunManifest,
+    RunMode,
+    hash_config,
+)
 from ditto_core.backtest.risk.post_trade import (
+    PORTFOLIO_WIDE_ID,
     PostTradeRiskGuard,
     RiskActionType,
 )
@@ -92,7 +99,9 @@ class EngineConfig:
         mode: 运行模式
         trade_matching: 成交匹配算法
         strategy_id: 策略 ID
+        strategy_version: 策略版本
         strategy_run_id: 策略运行 ID
+        parameter_overrides: 参数覆盖列表
         rebalance_freq: 调仓频率 (daily / weekly / monthly)
         engine_version: 引擎版本号 (用于 manifest/diff 追踪)
 
@@ -101,11 +110,13 @@ class EngineConfig:
     start_date: str
     end_date: str
     initial_cash: float
-    benchmark_id: str | None = None
+    benchmark_id: InstrumentId | None = None
     mode: EngineMode = EngineMode.BACKTEST
     trade_matching: TradeMatchingMethod = TradeMatchingMethod.FIFO
     strategy_id: str = "default"
+    strategy_version: str = ""
     strategy_run_id: str = ""
+    parameter_overrides: tuple[str, ...] = ()
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
 
@@ -213,6 +224,7 @@ class EngineLoop:
         self._strategy_context = StrategyContext()
         self._rule_ref_collector = RuleRefCollector()
         self._trading_days: tuple[str, ...] = ()
+        self._input_instruments: set[InstrumentId] = set()
 
         # TradeBuilder — 根据 config.trade_matching 创建成交匹配器
         if config.trade_matching == TradeMatchingMethod.FLAT_TO_FLAT:
@@ -247,13 +259,26 @@ class EngineLoop:
                     self._audit_collector.record_closed_trade(trade)
                     self._recorded_trade_ids.add(trade.trade_id)
 
-        # 构建运行清单 — RuleRefCollector 积累的 rule_refs
+        # 构建运行清单 — 真实治理字段
+        input_refs = tuple(sorted(self._input_instruments))
+        config_hash = hash_config(
+            start_date=self._config.start_date,
+            end_date=self._config.end_date,
+            initial_cash=self._config.initial_cash,
+            strategy_id=self._config.strategy_id,
+            rebalance_freq=self._config.rebalance_freq,
+            engine_version=self._config.engine_version,
+        )
         manifest = RunManifest(
             run_id=run_id,
             strategy_id=self._config.strategy_id,
-            strategy_version="",
+            strategy_version=self._config.strategy_version,
             mode=RunMode.BACKTEST,
+            input_refs=input_refs,
+            parameter_overrides=self._config.parameter_overrides,
             rule_refs=self._rule_ref_collector.rule_refs,
+            config_hash=config_hash,
+            engine_version=self._config.engine_version,
             created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         )
 
@@ -274,6 +299,9 @@ class EngineLoop:
         """执行单日步骤。"""
         slice_ = self._data_feed.get_slice(date)
         account_view = self._brokerage.get_account()
+
+        # 收集输入标的 — 用于 manifest input_refs
+        self._input_instruments.update(slice_.bars.keys())
 
         # 每日清除到期锁定 — cooldown 未到期的锁定保留
         self._strategy_context.clear_locks(date)
@@ -303,7 +331,7 @@ class EngineLoop:
                 if (
                     action.action_type
                     in (RiskActionType.REDUCE_POSITION, RiskActionType.LIQUIDATE)
-                    and action.instrument_id != "*"
+                    and action.instrument_id != PORTFOLIO_WIDE_ID
                 ):
                     self._strategy_context.lock_instrument(
                         action.instrument_id,
@@ -438,7 +466,7 @@ class EngineLoop:
         self,
         date: str,
         slice_: Slice,
-    ) -> dict[str, InstrumentRules] | None:
+    ) -> dict[InstrumentId, InstrumentRules] | None:
         """通过 RuleProvider 获取三层规则，无 provider 返回 None。"""
         if self._rule_provider is None:
             return None
@@ -473,7 +501,7 @@ class EngineLoop:
         self,
         account_view: AccountView,
         slice_: Slice,
-        rules: dict[str, InstrumentRules] | None,
+        rules: dict[InstrumentId, InstrumentRules] | None,
     ) -> PreTradeContext:
         """构建 PreTrade 校验上下文 (V3)。"""
         if self._fee_model is None:

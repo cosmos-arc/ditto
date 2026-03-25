@@ -6,9 +6,12 @@ import sqlite3
 
 import orjson
 from ditto_infra.foundation import SQLitePool, logger, traced
+from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 from ditto_datahub.stores.metadata._pit_base import PITRecordWriter
 from ditto_datahub.stores.metadata.trading_rule_reader import TradingRuleRecord
+
+InstrumentId = _InstrumentId
 
 __all__ = ["SQLiteTradingRuleWriter", "TradingRuleWriter"]
 
@@ -18,7 +21,7 @@ __all__ = ["SQLiteTradingRuleWriter", "TradingRuleWriter"]
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS trading_rule (
-    instrument_id TEXT NOT NULL,
+    instrument_id INTEGER NOT NULL,
     as_of_date TEXT NOT NULL,
     settlement_cycle INT NOT NULL,
     fund_settlement_cycle INT NOT NULL,
@@ -96,7 +99,7 @@ class SQLiteTradingRuleWriter(PITRecordWriter[TradingRuleRecord]):
     def _row_to_record(self, row: sqlite3.Row) -> TradingRuleRecord:
         """将数据库行转换为 TradingRuleRecord."""
         return TradingRuleRecord(
-            instrument_id=row["instrument_id"],
+            instrument_id=InstrumentId(row["instrument_id"]),
             as_of_date=row["as_of_date"],
             settlement_cycle=row["settlement_cycle"],
             fund_settlement_cycle=row["fund_settlement_cycle"],

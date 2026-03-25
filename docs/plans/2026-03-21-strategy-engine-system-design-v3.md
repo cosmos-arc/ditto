@@ -18,6 +18,26 @@
 
 ---
 
+## 2026-03-24 实现状态注记
+
+截至 2026-03-24，这份设计稿对应的主链实现已经不再停留在 Core 层：
+
+- `RunManifest`、artifact 落盘、`strategy_run` 持久化控制面已经接通
+- Port 层已有 `StrategyRuntimeBuilder`、`BacktestRuntimeBuilder`、`StrategySliceBuilder`
+- Port 层已有统一 `StrategyFacade`，可从 published catalog 直接触发
+  `research` / `recommendation` / `backtest`
+- CLI 已新增 `ditto strategy research|recommend|backtest` 外层入口
+
+仍未完全收口的设计项：
+
+- ~~`instrument_id` 的全仓统一语义仍未最终定型~~ **已收敛 (2026-03-25)**：
+  Core / Port / DataHub 全层统一使用 `InstrumentId = NewType("InstrumentId", int)`，
+  详见 [instrument-id-unification-v2](2026-03-25-instrument-id-unification-v2-implementation-plan.md)
+- `StrategyComparisonReport` 仍是基础版，统计显著性和更强解释型输出未完成
+- 若继续推进 API/job flow 级别产品化入口，建议在本设计稿基础上另起实施文档
+
+---
+
 ## v2 → v3 修订追踪
 
 ### 必修项（源自 v2.1 R1-R12）

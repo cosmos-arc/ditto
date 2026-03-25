@@ -20,7 +20,7 @@ from ditto_core.accounting.order_book import (
 
 def _make_order(
     order_id: str = "ORD-001",
-    instrument_id: str = "159915.SZ",
+    instrument_id: int = 1,
     quantity: int = 100,
     price: float | None = None,
 ) -> Order:
@@ -41,7 +41,7 @@ class TestOrder:
     def test_create_market_order(self) -> None:
         order = _make_order()
         assert order.order_id == "ORD-001"
-        assert order.instrument_id == "159915.SZ"
+        assert order.instrument_id == 1
         assert order.quantity == 100
         assert order.price is None
         assert order.direction == OrderDirection.BUY

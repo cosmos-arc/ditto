@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ditto_kernel.identity import InstrumentId
+
 from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
 
 __all__ = [
@@ -25,7 +27,7 @@ class RiskScanRecord:
     Attributes:
         trade_date: 交易日期 (YYYY-MM-DD)
         rule_id: 触发规则标识符
-        instrument_id: 标的 ID ("*" 表示全组合)
+        instrument_id: 标的 ID (0 表示全组合)
         severity: 严重程度 (RiskSeverity 枚举)
         action_taken: 采取的动作 (RiskActionType 枚举)
         detail: 风险描述
@@ -36,7 +38,7 @@ class RiskScanRecord:
 
     trade_date: str
     rule_id: str
-    instrument_id: str
+    instrument_id: InstrumentId
     severity: RiskSeverity
     action_taken: RiskActionType
     detail: str
@@ -64,7 +66,7 @@ class PreTradeDecisionRecord:
 
     trade_date: str
     order_id: str
-    instrument_id: str
+    instrument_id: InstrumentId
     direction: str
     original_quantity: int
     final_quantity: int

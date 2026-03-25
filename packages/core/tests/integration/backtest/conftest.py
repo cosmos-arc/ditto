@@ -52,7 +52,7 @@ from ditto_core.strategy.templates.etf_rotation import (
 INITIAL_CASH = 1_000_000.0
 
 # 3 个 ETF 标的
-INSTRUMENT_IDS = ["ETF-001", "ETF-002", "ETF-003"]
+INSTRUMENT_IDS = [1, 2, 3]
 
 # 3 个交易日
 TRADE_DATES_3 = ["2026-01-05", "2026-01-06", "2026-01-07"]
@@ -120,50 +120,50 @@ def _make_market_df_with_limits(
     )
 
 
-def generate_3day_data() -> dict[str, pl.DataFrame]:
+def generate_3day_data() -> dict[int, pl.DataFrame]:
     """3 日测试数据 — 价格稳定，方便确定性验证。"""
     return {
-        "ETF-001": _make_market_df(
+        1: _make_market_df(
             TRADE_DATES_3,
             [10.0, 10.2, 10.1],
         ),
-        "ETF-002": _make_market_df(
+        2: _make_market_df(
             TRADE_DATES_3,
             [20.0, 19.8, 20.1],
         ),
-        "ETF-003": _make_market_df(
+        3: _make_market_df(
             TRADE_DATES_3,
             [5.0, 5.1, 4.9],
         ),
     }
 
 
-def generate_5day_data() -> dict[str, pl.DataFrame]:
+def generate_5day_data() -> dict[int, pl.DataFrame]:
     """5 日测试数据 — 包含价格波动。"""
     return {
-        "ETF-001": _make_market_df(
+        1: _make_market_df(
             TRADE_DATES_5,
             [10.0, 10.2, 10.1, 10.3, 10.5],
         ),
-        "ETF-002": _make_market_df(
+        2: _make_market_df(
             TRADE_DATES_5,
             [20.0, 19.8, 20.1, 20.5, 20.3],
         ),
-        "ETF-003": _make_market_df(
+        3: _make_market_df(
             TRADE_DATES_5,
             [5.0, 5.1, 4.9, 5.2, 5.3],
         ),
     }
 
 
-def generate_limit_up_data() -> dict[str, pl.DataFrame]:
+def generate_limit_up_data() -> dict[int, pl.DataFrame]:
     """涨停场景 — Day 1 正常买入，Day 2 涨停（买入失败），Day 3 正常。
 
     ETF-001: Day 2 close=11.0 (涨停价=11.0, prev_close=10.0, +10%)
     ETF-002/003: 正常波动，不受涨跌停影响
     """
     return {
-        "ETF-001": _make_market_df_with_limits(
+        1: _make_market_df_with_limits(
             TRADE_DATES_3,
             close_prices=[10.0, 11.0, 10.5],
             limit_ups=[11.0, 11.0, 11.55],
@@ -171,25 +171,25 @@ def generate_limit_up_data() -> dict[str, pl.DataFrame]:
             high_prices=[10.1, 11.0, 10.6],
             low_prices=[9.9, 10.8, 10.4],
         ),
-        "ETF-002": _make_market_df(
+        2: _make_market_df(
             TRADE_DATES_3,
             [20.0, 19.8, 20.1],
         ),
-        "ETF-003": _make_market_df(
+        3: _make_market_df(
             TRADE_DATES_3,
             [5.0, 5.1, 4.9],
         ),
     }
 
 
-def generate_limit_down_data() -> dict[str, pl.DataFrame]:
+def generate_limit_down_data() -> dict[int, pl.DataFrame]:
     """跌停场景 — Day 1 正常买入，Day 2 跌停（卖出失败），Day 3 正常。
 
     ETF-001: Day 2 close=9.0 (跌停价=9.0, prev_close=10.0, -10%)
     ETF-002/003: 正常波动，不受涨跌停影响
     """
     return {
-        "ETF-001": _make_market_df_with_limits(
+        1: _make_market_df_with_limits(
             TRADE_DATES_3,
             close_prices=[10.0, 9.0, 9.5],
             limit_ups=[11.0, 9.9, 10.45],
@@ -197,25 +197,25 @@ def generate_limit_down_data() -> dict[str, pl.DataFrame]:
             high_prices=[10.1, 9.1, 9.6],
             low_prices=[9.9, 9.0, 9.4],
         ),
-        "ETF-002": _make_market_df(
+        2: _make_market_df(
             TRADE_DATES_3,
             [20.0, 19.8, 20.1],
         ),
-        "ETF-003": _make_market_df(
+        3: _make_market_df(
             TRADE_DATES_3,
             [5.0, 5.1, 4.9],
         ),
     }
 
 
-def generate_st_data() -> dict[str, pl.DataFrame]:
+def generate_st_data() -> dict[int, pl.DataFrame]:
     """ST 场景 — ETF-001 为 ST 标的（5% 涨跌停），ETF-002/003 正常。
 
     ETF-001: limit_up=10.5, limit_down=9.5 (prev_close=10.0, ±5%)
     Day 2: close=10.5 (涨停)
     """
     return {
-        "ETF-001": _make_market_df_with_limits(
+        1: _make_market_df_with_limits(
             TRADE_DATES_3,
             close_prices=[10.0, 10.5, 10.3],
             limit_ups=[10.5, 10.5, 11.025],
@@ -223,11 +223,11 @@ def generate_st_data() -> dict[str, pl.DataFrame]:
             high_prices=[10.1, 10.5, 10.4],
             low_prices=[9.9, 10.4, 10.2],
         ),
-        "ETF-002": _make_market_df(
+        2: _make_market_df(
             TRADE_DATES_3,
             [20.0, 19.8, 20.1],
         ),
-        "ETF-003": _make_market_df(
+        3: _make_market_df(
             TRADE_DATES_3,
             [5.0, 5.1, 4.9],
         ),
@@ -236,7 +236,7 @@ def generate_st_data() -> dict[str, pl.DataFrame]:
 
 def write_parquet_data(
     tmp_path: Path,
-    data: dict[str, pl.DataFrame],
+    data: dict[int, pl.DataFrame],
 ) -> Path:
     """将测试数据写入 parquet 文件，返回数据目录。"""
     data_dir = tmp_path / "market_data"
@@ -252,7 +252,7 @@ def write_parquet_data(
 
 
 @pytest.fixture
-def three_day_data() -> dict[str, pl.DataFrame]:
+def three_day_data() -> dict[int, pl.DataFrame]:
     """3 日市场数据。"""
     return generate_3day_data()
 
@@ -260,7 +260,7 @@ def three_day_data() -> dict[str, pl.DataFrame]:
 @pytest.fixture
 def three_day_parquet_dir(
     tmp_path: Path,
-    three_day_data: dict[str, pl.DataFrame],
+    three_day_data: dict[int, pl.DataFrame],
 ) -> Path:
     """3 日 parquet 数据目录。"""
     return write_parquet_data(tmp_path, three_day_data)
@@ -356,7 +356,7 @@ def assembled_engine_loop(
 
 
 @pytest.fixture
-def five_day_data() -> dict[str, pl.DataFrame]:
+def five_day_data() -> dict[int, pl.DataFrame]:
     """5 日市场数据。"""
     return generate_5day_data()
 
@@ -364,7 +364,7 @@ def five_day_data() -> dict[str, pl.DataFrame]:
 @pytest.fixture
 def five_day_parquet_dir(
     tmp_path: Path,
-    five_day_data: dict[str, pl.DataFrame],
+    five_day_data: dict[int, pl.DataFrame],
 ) -> Path:
     """5 日 parquet 数据目录。"""
     return write_parquet_data(tmp_path, five_day_data)
@@ -450,7 +450,7 @@ def ashare_fee_model() -> AShareFeeModel:
 
 
 @pytest.fixture
-def limit_up_data() -> dict[str, pl.DataFrame]:
+def limit_up_data() -> dict[int, pl.DataFrame]:
     """涨停场景市场数据。"""
     return generate_limit_up_data()
 
@@ -458,7 +458,7 @@ def limit_up_data() -> dict[str, pl.DataFrame]:
 @pytest.fixture
 def limit_up_parquet_dir(
     tmp_path: Path,
-    limit_up_data: dict[str, pl.DataFrame],
+    limit_up_data: dict[int, pl.DataFrame],
 ) -> Path:
     """涨停场景 parquet 数据目录。"""
     return write_parquet_data(tmp_path, limit_up_data)
@@ -510,7 +510,7 @@ def limit_up_engine_loop(
 
 
 @pytest.fixture
-def limit_down_data() -> dict[str, pl.DataFrame]:
+def limit_down_data() -> dict[int, pl.DataFrame]:
     """跌停场景市场数据。"""
     return generate_limit_down_data()
 
@@ -518,7 +518,7 @@ def limit_down_data() -> dict[str, pl.DataFrame]:
 @pytest.fixture
 def limit_down_parquet_dir(
     tmp_path: Path,
-    limit_down_data: dict[str, pl.DataFrame],
+    limit_down_data: dict[int, pl.DataFrame],
 ) -> Path:
     """跌停场景 parquet 数据目录。"""
     return write_parquet_data(tmp_path, limit_down_data)
@@ -570,7 +570,7 @@ def limit_down_engine_loop(
 
 
 @pytest.fixture
-def st_data() -> dict[str, pl.DataFrame]:
+def st_data() -> dict[int, pl.DataFrame]:
     """ST 场景市场数据 — 5% 涨跌停。"""
     return generate_st_data()
 
@@ -578,7 +578,7 @@ def st_data() -> dict[str, pl.DataFrame]:
 @pytest.fixture
 def st_parquet_dir(
     tmp_path: Path,
-    st_data: dict[str, pl.DataFrame],
+    st_data: dict[int, pl.DataFrame],
 ) -> Path:
     """ST 场景 parquet 数据目录。"""
     return write_parquet_data(tmp_path, st_data)
@@ -604,7 +604,7 @@ def st_engine_loop(
     ashare_brokerage_model: BrokerageModel,
     ashare_fee_model: AShareFeeModel,
 ) -> EngineLoop:
-    """ST 场景回测引擎 — ETF-001 为 ST 标的（5% 涨跌停）。"""
+    """ST 场景回测引擎 — 标的 1 为 ST 标的（5% 涨跌停）。"""
     account = Account(
         cash=CashBook(
             available=INITIAL_CASH,

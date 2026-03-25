@@ -20,20 +20,14 @@ from ditto_core.portfolio.allocation import (
 def five_instrument_frame() -> pl.DataFrame:
     return pl.DataFrame(
         {
-            "instrument_id": [
-                "159915.SZ",
-                "510300.SH",
-                "159949.SZ",
-                "510050.SH",
-                "159919.SZ",
-            ],
+            "instrument_id": [1, 2, 3, 4, 5],
         }
     )
 
 
 @pytest.fixture
 def single_instrument_frame() -> pl.DataFrame:
-    return pl.DataFrame({"instrument_id": ["159915.SZ"]})
+    return pl.DataFrame({"instrument_id": [1]})
 
 
 @pytest.fixture
@@ -191,7 +185,7 @@ class TestEqualWeightBoundary:
 
     def test_large_instrument_count(self) -> None:
         """100 个标的 → 每个权重 = 0.01。"""
-        ids = [f"{i:06d}.SZ" for i in range(100)]
+        ids = list(range(100))
         frame = pl.DataFrame({"instrument_id": ids})
         allocator = EqualWeightAllocator()
         result = allocator.allocate(frame)

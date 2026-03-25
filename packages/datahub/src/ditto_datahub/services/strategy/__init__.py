@@ -9,9 +9,13 @@ from ditto_datahub.services.strategy.strategy_artifact_service import (
 from ditto_datahub.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
+from ditto_datahub.services.strategy.strategy_run_service import (
+    StrategyRunService,
+)
 
 __all__ = [
     "InstrumentRuleProvider",
     "StrategyArtifactService",
     "StrategyCatalogService",
+    "StrategyRunService",
 ]

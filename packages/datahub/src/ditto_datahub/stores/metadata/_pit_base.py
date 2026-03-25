@@ -9,6 +9,10 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from ditto_kernel.identity import InstrumentId as _InstrumentId
+
+InstrumentId = _InstrumentId
+
 __all__ = ["PITRecord", "PITRecordReader", "PITRecordWriter"]
 
 
@@ -23,7 +27,7 @@ class PITRecord(Protocol):
     """
 
     @property
-    def instrument_id(self) -> str: ...
+    def instrument_id(self) -> InstrumentId: ...
 
     @property
     def effective_from(self) -> str: ...
@@ -42,7 +46,7 @@ class PITRecordReader[RecordT: PITRecord]:
         """加载记录列表（V1 内存实现）."""
         self._records = list(records)
 
-    def get(self, instrument_id: str, as_of_date: str) -> RecordT | None:
+    def get(self, instrument_id: InstrumentId, as_of_date: str) -> RecordT | None:
         """
         PIT 查询: 获取指定标的在 as_of_date 时有效的记录.
 

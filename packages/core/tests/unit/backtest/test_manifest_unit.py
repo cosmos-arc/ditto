@@ -27,7 +27,7 @@ from ditto_core.execution.rules import (
 
 
 def _make_definition(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     tick_size: float = 0.001,
     lot_size: int = 100,
 ) -> InstrumentDefinition:
@@ -45,7 +45,7 @@ def _make_definition(
 
 
 def _make_trading_rule(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     as_of_date: str = "2025-01-01",
     settlement_cycle: int = 1,
 ) -> TradingRuleSet:
@@ -61,7 +61,7 @@ def _make_trading_rule(
 
 
 def _make_fee_schedule(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     as_of_date: str = "2025-01-01",
     commission_rate: float = 0.0003,
 ) -> FeeSchedule:
@@ -76,7 +76,7 @@ def _make_fee_schedule(
 
 
 def _make_rules(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     trading_rule_as_of: str = "2025-01-01",
     fee_as_of: str = "2025-01-01",
     tick_size: float = 0.001,
@@ -96,13 +96,13 @@ def _make_manifest(
         strategy_id="momentum-etf",
         strategy_version="1.0.0",
         mode=RunMode.BACKTEST,
-        input_refs=("market_bars:ETF-001", "market_bars:ETF-002"),
+        input_refs=(1, 2),
         parameter_overrides=(),
         rule_refs=rule_refs or (),
         artifacts=(),
         config_hash="abc123",
         engine_version="0.1.0",
-        rule_resolution_policy="first_observed",
+        rule_resolution_policy="as_of_date",
         created_at="2026-03-22T10:00:00Z",
     )
 
@@ -130,7 +130,7 @@ class TestRuleRefFrozen:
 
     def test_frozen(self) -> None:
         ref = RuleRef(
-            instrument_id="ETF-001",
+            instrument_id=1,
             definition_version="a1b2c3d4",
             trading_rule_as_of="2025-01-01",
             fee_schedule_as_of="2025-01-01",
@@ -138,11 +138,11 @@ class TestRuleRefFrozen:
             fee_schedule_effective_to="",
         )
         with pytest.raises(AttributeError):
-            ref.instrument_id = "ETF-002"  # type: ignore[misc]
+            ref.instrument_id = 2  # type: ignore[misc]
 
     def test_equality(self) -> None:
         r1 = RuleRef(
-            instrument_id="ETF-001",
+            instrument_id=1,
             definition_version="a1b2c3d4",
             trading_rule_as_of="2025-01-01",
             fee_schedule_as_of="2025-01-01",
@@ -150,7 +150,7 @@ class TestRuleRefFrozen:
             fee_schedule_effective_to="",
         )
         r2 = RuleRef(
-            instrument_id="ETF-001",
+            instrument_id=1,
             definition_version="a1b2c3d4",
             trading_rule_as_of="2025-01-01",
             fee_schedule_as_of="2025-01-01",
@@ -182,7 +182,7 @@ class TestRunManifestFrozen:
         assert manifest.artifacts == ()
         assert manifest.config_hash == ""
         assert manifest.engine_version == ""
-        assert manifest.rule_resolution_policy == "first_observed"
+        assert manifest.rule_resolution_policy == "as_of_date"
 
 
 # ---------------------------------------------------------------------------
@@ -199,8 +199,8 @@ class TestRuleRefCollectorBasic:
 
     def test_single_observe(self) -> None:
         collector = RuleRefCollector()
-        rules: dict[str, InstrumentRules] = {
-            "ETF-001": _make_rules("ETF-001"),
+        rules: dict[int, InstrumentRules] = {
+            1: _make_rules(1),
         }
         collector.observe("2026-03-01", rules)
         assert len(collector.rule_refs) == 1
@@ -208,9 +208,9 @@ class TestRuleRefCollectorBasic:
     def test_two_instruments_same_version(self) -> None:
         """Two instruments with same definition/timing produce 2 refs."""
         collector = RuleRefCollector()
-        rules: dict[str, InstrumentRules] = {
-            "ETF-001": _make_rules("ETF-001"),
-            "ETF-002": _make_rules("ETF-002"),
+        rules: dict[int, InstrumentRules] = {
+            1: _make_rules(1),
+            2: _make_rules(2),
         }
         collector.observe("2026-03-01", rules)
         assert len(collector.rule_refs) == 2
@@ -219,12 +219,12 @@ class TestRuleRefCollectorBasic:
         """F3: same key observed again → first version kept."""
         collector = RuleRefCollector()
 
-        rules_day1: dict[str, InstrumentRules] = {
-            "ETF-001": _make_rules("ETF-001", trading_rule_as_of="2025-01-01"),
+        rules_day1: dict[int, InstrumentRules] = {
+            1: _make_rules(1, trading_rule_as_of="2025-01-01"),
         }
-        rules_day2: dict[str, InstrumentRules] = {
-            "ETF-001": _make_rules(
-                "ETF-001",
+        rules_day2: dict[int, InstrumentRules] = {
+            1: _make_rules(
+                1,
                 trading_rule_as_of="2025-01-01",  # same key
             ),
         }
@@ -248,23 +248,19 @@ class TestRuleRefCollectorCrossRuleChangeDay:
         collector = RuleRefCollector()
 
         # Day 1: settlement_cycle=1, fee_as_of=2025-01-01
-        rules_v1: dict[str, InstrumentRules] = {
-            "ETF-001": (
-                _make_definition("ETF-001", tick_size=0.001),
-                _make_trading_rule(
-                    "ETF-001", as_of_date="2025-01-01", settlement_cycle=1
-                ),
-                _make_fee_schedule("ETF-001", as_of_date="2025-01-01"),
+        rules_v1: dict[int, InstrumentRules] = {
+            1: (
+                _make_definition(1, tick_size=0.001),
+                _make_trading_rule(1, as_of_date="2025-01-01", settlement_cycle=1),
+                _make_fee_schedule(1, as_of_date="2025-01-01"),
             ),
         }
         # Day 2: settlement_cycle=1, fee_as_of=2025-06-15 (fee changed)
-        rules_v2: dict[str, InstrumentRules] = {
-            "ETF-001": (
-                _make_definition("ETF-001", tick_size=0.001),
-                _make_trading_rule(
-                    "ETF-001", as_of_date="2025-01-01", settlement_cycle=1
-                ),
-                _make_fee_schedule("ETF-001", as_of_date="2025-06-15"),
+        rules_v2: dict[int, InstrumentRules] = {
+            1: (
+                _make_definition(1, tick_size=0.001),
+                _make_trading_rule(1, as_of_date="2025-01-01", settlement_cycle=1),
+                _make_fee_schedule(1, as_of_date="2025-06-15"),
             ),
         }
 
@@ -283,11 +279,11 @@ class TestRuleRefCollectorCrossRuleChangeDay:
         """If definition changes (different tick_size), new ref is added."""
         collector = RuleRefCollector()
 
-        rules_v1: dict[str, InstrumentRules] = {
-            "ETF-001": _make_rules("ETF-001", tick_size=0.001),
+        rules_v1: dict[int, InstrumentRules] = {
+            1: _make_rules(1, tick_size=0.001),
         }
-        rules_v2: dict[str, InstrumentRules] = {
-            "ETF-001": _make_rules("ETF-001", tick_size=0.01),
+        rules_v2: dict[int, InstrumentRules] = {
+            1: _make_rules(1, tick_size=0.01),
         }
 
         collector.observe("2026-03-01", rules_v1)
@@ -332,7 +328,7 @@ class TestSerializeManifest:
         manifest = _make_manifest(
             rule_refs=(
                 RuleRef(
-                    instrument_id="ETF-001",
+                    instrument_id=1,
                     definition_version="a1b2c3d4",
                     trading_rule_as_of="2025-01-01",
                     fee_schedule_as_of="2025-01-01",
@@ -361,7 +357,7 @@ class TestSerializeManifest:
         manifest = _make_manifest(
             rule_refs=(
                 RuleRef(
-                    instrument_id="ETF-002",
+                    instrument_id=2,
                     definition_version="z9",
                     trading_rule_as_of="2025-06-01",
                     fee_schedule_as_of="2025-06-01",
@@ -369,7 +365,7 @@ class TestSerializeManifest:
                     fee_schedule_effective_to="",
                 ),
                 RuleRef(
-                    instrument_id="ETF-001",
+                    instrument_id=1,
                     definition_version="a1",
                     trading_rule_as_of="2025-01-01",
                     fee_schedule_as_of="2025-01-01",
@@ -382,8 +378,8 @@ class TestSerializeManifest:
         parsed = orjson.loads(result)
         refs = parsed["rule_refs"]
         # ETF-001 before ETF-002
-        assert refs[0]["instrument_id"] == "ETF-001"
-        assert refs[1]["instrument_id"] == "ETF-002"
+        assert refs[0]["instrument_id"] == 1
+        assert refs[1]["instrument_id"] == 2
 
     def test_time_field_rfc3339(self) -> None:
         """Time fields are RFC3339 UTC format."""
@@ -394,7 +390,7 @@ class TestSerializeManifest:
     def test_manifest_with_multiple_refs_roundtrip(self) -> None:
         """Serialize and deserialize preserves all fields."""
         ref1 = RuleRef(
-            instrument_id="ETF-001",
+            instrument_id=1,
             definition_version="a1b2c3d4",
             trading_rule_as_of="2025-01-01",
             fee_schedule_as_of="2025-01-01",
@@ -402,7 +398,7 @@ class TestSerializeManifest:
             fee_schedule_effective_to="",
         )
         ref2 = RuleRef(
-            instrument_id="ETF-002",
+            instrument_id=2,
             definition_version="e5f6g7h8",
             trading_rule_as_of="2025-06-15",
             fee_schedule_as_of="2025-06-15",
@@ -414,13 +410,13 @@ class TestSerializeManifest:
             strategy_id="strat",
             strategy_version="2.0",
             mode=RunMode.BACKTEST,
-            input_refs=("bar:ETF-001",),
+            input_refs=(1,),
             parameter_overrides=("lookback=20",),
             rule_refs=(ref1, ref2),
             artifacts=("trade_log.csv",),
             config_hash="hash1",
             engine_version="0.2.0",
-            rule_resolution_policy="first_observed",
+            rule_resolution_policy="as_of_date",
             created_at="2026-03-22T10:00:00Z",
         )
 
@@ -429,7 +425,7 @@ class TestSerializeManifest:
 
         assert parsed["run_id"] == "run-001"
         assert parsed["mode"] == "backtest"
-        assert parsed["input_refs"] == ["bar:ETF-001"]
+        assert parsed["input_refs"] == [1]
         assert parsed["parameter_overrides"] == ["lookback=20"]
         assert parsed["artifacts"] == ["trade_log.csv"]
         assert len(parsed["rule_refs"]) == 2
@@ -447,42 +443,42 @@ class TestCollectorToManifestIntegration:
     def test_collector_refs_into_manifest(self) -> None:
         """RuleRefCollector.rule_refs can be passed directly to RunManifest."""
         collector = RuleRefCollector()
-        rules: dict[str, InstrumentRules] = {
-            "ETF-001": _make_rules("ETF-001"),
+        rules: dict[int, InstrumentRules] = {
+            1: _make_rules(1),
         }
         collector.observe("2026-03-01", rules)
 
         manifest = _make_manifest(rule_refs=collector.rule_refs)
         assert len(manifest.rule_refs) == 1
-        assert manifest.rule_refs[0].instrument_id == "ETF-001"
+        assert manifest.rule_refs[0].instrument_id == 1
 
         # Should serialize cleanly
         result = serialize_manifest(manifest)
-        assert "ETF-001" in result
+        assert '"instrument_id": 1' in result
 
     def test_collector_end_to_end_across_days(self) -> None:
         """Multi-day backtest: collector accumulates refs across rule changes."""
         collector = RuleRefCollector()
 
-        # Day 1: ETF-001 with rule v1
-        rules_day1: dict[str, InstrumentRules] = {
-            "ETF-001": _make_rules(
-                "ETF-001",
+        # Day 1: instrument 1 with rule v1
+        rules_day1: dict[int, InstrumentRules] = {
+            1: _make_rules(
+                1,
                 trading_rule_as_of="2025-01-01",
                 fee_as_of="2025-01-01",
             ),
         }
         collector.observe("2026-03-01", rules_day1)
 
-        # Day 2: ETF-001 fee changes, ETF-002 appears
-        rules_day2: dict[str, InstrumentRules] = {
-            "ETF-001": _make_rules(
-                "ETF-001",
+        # Day 2: instrument 1 fee changes, instrument 2 appears
+        rules_day2: dict[int, InstrumentRules] = {
+            1: _make_rules(
+                1,
                 trading_rule_as_of="2025-01-01",
                 fee_as_of="2025-06-15",
             ),
-            "ETF-002": _make_rules(
-                "ETF-002",
+            2: _make_rules(
+                2,
                 trading_rule_as_of="2025-03-01",
                 fee_as_of="2025-03-01",
             ),

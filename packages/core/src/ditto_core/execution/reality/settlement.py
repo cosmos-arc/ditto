@@ -12,7 +12,9 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Protocol
 
-from ditto_core.accounting.order_book import OrderDirection
+from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.identity import InstrumentId
+
 from ditto_core.accounting.position import Position
 from ditto_core.execution.rules import TradingRuleSet
 
@@ -24,7 +26,7 @@ class SettlementModel(Protocol):
 
     def is_tradable(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         trade_date: str,
         direction: OrderDirection,
         position: Position | None,
@@ -47,7 +49,7 @@ class SimpleSettlementModel:
 
     def is_tradable(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         trade_date: str,
         direction: OrderDirection,
         position: Position | None,
@@ -89,7 +91,7 @@ class AShareSettlementModel:
 
     def is_tradable(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         trade_date: str,
         direction: OrderDirection,
         position: Position | None,

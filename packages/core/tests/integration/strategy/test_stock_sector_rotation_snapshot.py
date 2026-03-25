@@ -36,23 +36,23 @@ from .conftest import (
 # 行业映射 — instrument_id → (sector_id, is_sector)
 # ---------------------------------------------------------------------------
 
-_SECTOR_MAP: dict[str, tuple[str, bool]] = {
+_SECTOR_MAP: dict[int, tuple[int, bool]] = {
     # 行业 ETF
-    "SEC-FINANCE": ("SEC-FINANCE", True),
-    "SEC-TECH": ("SEC-TECH", True),
-    "SEC-HEALTH": ("SEC-HEALTH", True),
+    100: (100, True),  # 金融
+    101: (101, True),  # 科技
+    102: (102, True),  # 医药
     # 金融行业个股
-    "FIN-STK-001": ("SEC-FINANCE", False),
-    "FIN-STK-002": ("SEC-FINANCE", False),
-    "FIN-STK-003": ("SEC-FINANCE", False),
+    110: (100, False),
+    111: (100, False),
+    112: (100, False),
     # 科技行业个股
-    "TECH-STK-001": ("SEC-TECH", False),
-    "TECH-STK-002": ("SEC-TECH", False),
-    "TECH-STK-003": ("SEC-TECH", False),
+    120: (101, False),
+    121: (101, False),
+    122: (101, False),
     # 医药行业个股
-    "HEALTH-STK-001": ("SEC-HEALTH", False),
-    "HEALTH-STK-002": ("SEC-HEALTH", False),
-    "HEALTH-STK-003": ("SEC-HEALTH", False),
+    130: (102, False),
+    131: (102, False),
+    132: (102, False),
 }
 
 
@@ -213,7 +213,7 @@ class TestTenDaySnapshot:
         result = engine.run()
 
         assert result.account_view is not None
-        sector_etf_ids = {"SEC-FINANCE", "SEC-TECH", "SEC-HEALTH"}
+        sector_etf_ids = {100, 101, 102}  # 行业 ETF instrument_id
         for iid in result.account_view.positions:
             assert iid not in sector_etf_ids, f"最终持仓不应包含行业 ETF: {iid}"
 
@@ -224,7 +224,7 @@ class TestTenDaySnapshot:
 
         assert result.account_view is not None
         for iid in result.account_view.positions:
-            assert iid.startswith(("FIN-", "TECH-", "HEALTH-")), f"持仓 {iid} 不是个股"
+            assert iid >= 110, f"持仓 {iid} 不是个股"
 
     def test_position_count_within_limit(self, tmp_path: Path) -> None:
         """最终持仓数 <= top_sectors * stocks_per_sector。"""
@@ -252,9 +252,7 @@ class TestSectorSwitching:
 
         # 至少有 TECH 或 FINANCE 行业的个股被交易
         tech_or_finance_fills = [
-            f
-            for f in result.fills
-            if f.instrument_id.startswith(("TECH-STK-", "FIN-STK-"))
+            f for f in result.fills if f.instrument_id in (110, 111, 112, 120, 121, 122)
         ]
         assert len(tech_or_finance_fills) > 0, "Week1 应有 TECH 或 FINANCE 行业个股成交"
 
@@ -273,7 +271,7 @@ class TestSectorSwitching:
             f
             for f in result.fills
             if f.event_time.strftime("%Y-%m-%d") in week2_dates
-            and f.instrument_id.startswith("HEALTH-STK-")
+            and f.instrument_id in (130, 131, 132)
         ]
         assert len(health_fills) > 0, "Week2 应有 HEALTH 行业个股成交"
 

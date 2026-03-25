@@ -10,7 +10,7 @@ class TestPosition:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="159915.SZ",
+            instrument_id=1,
             quantity=1000,
             available_quantity=0,  # T+1: 买入当日不可卖
             average_cost=0.4520,
@@ -19,7 +19,7 @@ class TestPosition:
             realized_pnl=0.0,
             total_fees=2.26,
         )
-        assert pos.instrument_id == "159915.SZ"
+        assert pos.instrument_id == 1
         assert pos.quantity == 1000
         assert pos.available_quantity == 0
         assert pos.average_cost == 0.4520
@@ -29,7 +29,7 @@ class TestPosition:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="159915.SZ",
+            instrument_id=1,
             quantity=1000,
             available_quantity=0,
             average_cost=0.4520,
@@ -45,7 +45,7 @@ class TestPosition:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="159915.SZ",
+            instrument_id=1,
             quantity=1000,
             available_quantity=0,
             average_cost=0.4520,
@@ -68,7 +68,7 @@ class TestPosition:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="159915.SZ",
+            instrument_id=1,
             quantity=500,
             available_quantity=500,
             average_cost=0.4520,

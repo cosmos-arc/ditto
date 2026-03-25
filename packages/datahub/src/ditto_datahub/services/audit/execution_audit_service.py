@@ -1,9 +1,11 @@
 """
 ExecutionAuditService — SQLite 审计日志持久化.
 
-将回测运行中的 RiskScanRecord 和 PreTradeDecisionRecord 序列化写入
+将回测运行中的 RiskScanPayload 和 PreTradeDecisionPayload 序列化写入
 SQLite 的 execution_audit 表，并提供按 run_id / record_type / date_range
 的查询接口。
+
+注意：本服务使用 DataHub 本地 DTO (strategy_audit)，不依赖 Core 包。
 """
 
 from __future__ import annotations
@@ -12,11 +14,12 @@ import dataclasses
 from typing import Any
 
 import orjson
-from ditto_core.backtest.audit.records import (
-    PreTradeDecisionRecord,
-    RiskScanRecord,
-)
 from ditto_infra.foundation import SQLitePool, logger, traced
+
+from ditto_datahub.models.strategy_audit import (
+    PreTradeDecisionPayload,
+    RiskScanPayload,
+)
 
 __all__ = [
     "ExecutionAuditService",
@@ -64,8 +67,8 @@ class ExecutionAuditService:
     """
     回测执行审计日志服务.
 
-    负责将风控扫描记录 (RiskScanRecord) 和盘前决策记录
-    (PreTradeDecisionRecord) 持久化到 SQLite，并提供带过滤条件的查询。
+    负责将风控扫描记录 (RiskScanPayload) 和盘前决策记录
+    (PreTradeDecisionPayload) 持久化到 SQLite，并提供带过滤条件的查询。
     """
 
     def __init__(self, pool: SQLitePool) -> None:
@@ -95,14 +98,14 @@ class ExecutionAuditService:
     def save_risk_log(
         self,
         run_id: str,
-        records: tuple[RiskScanRecord, ...],
+        records: tuple[RiskScanPayload, ...],
     ) -> int:
         """
         批量保存风控扫描记录.
 
         Args:
             run_id: 回测运行 ID.
-            records: RiskScanRecord 不可变元组.
+            records: RiskScanPayload 不可变元组.
 
         Returns:
             成功插入的记录数.
@@ -138,14 +141,14 @@ class ExecutionAuditService:
     def save_pre_trade_log(
         self,
         run_id: str,
-        records: tuple[PreTradeDecisionRecord, ...],
+        records: tuple[PreTradeDecisionPayload, ...],
     ) -> int:
         """
         批量保存盘前决策记录.
 
         Args:
             run_id: 回测运行 ID.
-            records: PreTradeDecisionRecord 不可变元组.
+            records: PreTradeDecisionPayload 不可变元组.
 
         Returns:
             成功插入的记录数.

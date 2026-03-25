@@ -39,7 +39,7 @@ def _account_view(
     nav: float = 100_000.0,
     exposure: float = 60_000.0,
     cash: float = 40_000.0,
-    positions: dict[str, Position] | None = None,
+    positions: dict[int, Position] | None = None,
 ) -> AccountView:
     """Build an AccountView with sensible defaults."""
     cash_book = CashBook(available=cash, settled=cash, frozen=0.0)
@@ -57,7 +57,7 @@ def _account_view(
 
 def _fill_event(
     fill_id: str = "f-1",
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     direction: OrderDirection = OrderDirection.BUY,
 ) -> FillEvent:
     return FillEvent(
@@ -77,7 +77,7 @@ def _fill_event(
 
 def _trade_record(
     trade_id: str = "trade-1",
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     exit_date: str | None = "2026-01-10",
 ) -> TradeRecord:
     return TradeRecord(
@@ -109,7 +109,7 @@ def _closed_trade(
     """Build a closed TradeRecord with explicit PnL values."""
     return TradeRecord(
         trade_id=trade_id,
-        instrument_id="ETF-001",
+        instrument_id=1,
         direction=direction,
         entry_date="2026-01-01",
         exit_date="2026-01-06",
@@ -135,7 +135,7 @@ class TestRecordFill:
     def test_record_fill_returns_both(self) -> None:
         collector = ExecutionAuditCollector()
         fill1 = _fill_event(fill_id="f-1")
-        fill2 = _fill_event(fill_id="f-2", instrument_id="ETF-002")
+        fill2 = _fill_event(fill_id="f-2", instrument_id=2)
 
         collector.record_fill(fill1)
         collector.record_fill(fill2)
@@ -183,7 +183,7 @@ class TestRecordClosedTrade:
         trade1 = _trade_record(trade_id="trade-1")
         trade2 = _trade_record(
             trade_id="trade-2",
-            instrument_id="ETF-002",
+            instrument_id=2,
         )
 
         collector.record_closed_trade(trade1)
@@ -248,7 +248,7 @@ class TestComputeTradeStatistics:
         collector.record_closed_trade(
             _trade_record(
                 trade_id="trade-2",
-                instrument_id="ETF-002",
+                instrument_id=2,
                 exit_date=None,
             ),
         )
@@ -259,7 +259,7 @@ class TestComputeTradeStatistics:
         # Closed trade
         ts1 = trade_stats[0]
         assert ts1.trade_id == "trade-1"
-        assert ts1.instrument_id == "ETF-001"
+        assert ts1.instrument_id == 1
         assert ts1.direction == "buy"
         assert ts1.entry_date == "2026-01-05"
         assert ts1.exit_date == "2026-01-10"
@@ -272,7 +272,7 @@ class TestComputeTradeStatistics:
         # Open trade
         ts2 = trade_stats[1]
         assert ts2.trade_id == "trade-2"
-        assert ts2.instrument_id == "ETF-002"
+        assert ts2.instrument_id == 2
         assert ts2.exit_date is None
         assert ts2.holding_days is None
         assert ts2.return_pct is None
@@ -311,8 +311,8 @@ class TestPortfolioStatisticsWithCashRatio:
             exposure=60_000.0,
             cash=40_000.0,
             positions={
-                "ETF-001": Position(
-                    instrument_id="ETF-001",
+                1: Position(
+                    instrument_id=1,
                     quantity=6000,
                     available_quantity=6000,
                     average_cost=10.0,
@@ -351,7 +351,7 @@ class TestPortfolioStatisticsWithCashRatio:
         with pytest.raises(AttributeError):
             TradeStatistics(
                 trade_id="t-1",
-                instrument_id="ETF-001",
+                instrument_id=1,
                 direction="buy",
                 entry_date="2026-01-01",
                 exit_date=None,
@@ -853,7 +853,7 @@ class TestBacktestReport:
         risk_record = RiskScanRecord(
             trade_date="2026-01-01",
             rule_id="max_drawdown",
-            instrument_id="*",
+            instrument_id=0,
             severity=RiskSeverity.EMERGENCY,
             action_taken=RiskActionType.LIQUIDATE,
             detail="drawdown exceeded",
@@ -874,7 +874,7 @@ class TestBacktestReport:
         decision = PreTradeDecisionRecord(
             trade_date="2026-01-01",
             order_id="o-1",
-            instrument_id="510300.SH",
+            instrument_id=1,
             direction="buy",
             original_quantity=500,
             final_quantity=500,
@@ -899,7 +899,7 @@ class TestRiskScanRecord:
         record = RiskScanRecord(
             trade_date="2026-01-15",
             rule_id="max_drawdown",
-            instrument_id="*",
+            instrument_id=0,
             severity=RiskSeverity.EMERGENCY,
             action_taken=RiskActionType.LIQUIDATE,
             detail="组合回撤 25.00% 超过紧急阈值 20.00%",
@@ -913,7 +913,7 @@ class TestRiskScanRecord:
         record = RiskScanRecord(
             trade_date="2026-01-15",
             rule_id="test",
-            instrument_id="510300.SH",
+            instrument_id=1,
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.ALERT,
             detail="test",
@@ -928,7 +928,7 @@ class TestRiskScanRecord:
         record = RiskScanRecord(
             trade_date="2026-01-15",
             rule_id="test",
-            instrument_id="*",
+            instrument_id=0,
             severity=RiskSeverity.CRITICAL,
             action_taken=RiskActionType.REDUCE_POSITION,
             detail="test",
@@ -943,7 +943,7 @@ class TestRiskScanRecord:
         record = RiskScanRecord(
             trade_date="2026-01-15",
             rule_id="test",
-            instrument_id="*",
+            instrument_id=0,
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.REDUCE_POSITION,
             detail="test",
@@ -958,7 +958,7 @@ class TestRiskScanRecord:
         record = RiskScanRecord(
             trade_date="2026-01-15",
             rule_id="test",
-            instrument_id="*",
+            instrument_id=0,
             severity=RiskSeverity.EMERGENCY,
             action_taken=RiskActionType.LIQUIDATE,
             detail="test",
@@ -979,7 +979,7 @@ class TestPreTradeDecisionRecord:
         record = PreTradeDecisionRecord(
             trade_date="2026-01-15",
             order_id="o-1",
-            instrument_id="510300.SH",
+            instrument_id=1,
             direction="buy",
             original_quantity=500,
             final_quantity=500,
@@ -994,7 +994,7 @@ class TestPreTradeDecisionRecord:
         record = PreTradeDecisionRecord(
             trade_date="2026-01-15",
             order_id="o-1",
-            instrument_id="510300.SH",
+            instrument_id=1,
             direction="buy",
             original_quantity=500,
             final_quantity=500,
@@ -1007,7 +1007,7 @@ class TestPreTradeDecisionRecord:
         record = PreTradeDecisionRecord(
             trade_date="2026-01-15",
             order_id="o-1",
-            instrument_id="510300.SH",
+            instrument_id=1,
             direction="buy",
             original_quantity=150,
             final_quantity=200,
@@ -1032,7 +1032,7 @@ class TestRiskLogRecording:
             RiskScanRecord(
                 trade_date="2026-01-15",
                 rule_id="max_drawdown",
-                instrument_id="*",
+                instrument_id=0,
                 severity=RiskSeverity.EMERGENCY,
                 action_taken=RiskActionType.LIQUIDATE,
                 detail="组合回撤 25.00%",
@@ -1042,7 +1042,7 @@ class TestRiskLogRecording:
             RiskScanRecord(
                 trade_date="2026-01-15",
                 rule_id="single_loss_limit",
-                instrument_id="510300.SH",
+                instrument_id=1,
                 severity=RiskSeverity.CRITICAL,
                 action_taken=RiskActionType.REDUCE_POSITION,
                 detail="510300.SH 亏损 20.00%",
@@ -1072,7 +1072,7 @@ class TestRiskLogRecording:
                 RiskScanRecord(
                     trade_date="2026-01-15",
                     rule_id="test",
-                    instrument_id="*",
+                    instrument_id=0,
                     severity=RiskSeverity.WARNING,
                     action_taken=RiskActionType.ALERT,
                     detail="d",
@@ -1087,7 +1087,7 @@ class TestRiskLogRecording:
                 RiskScanRecord(
                     trade_date="2026-01-16",
                     rule_id="test",
-                    instrument_id="*",
+                    instrument_id=0,
                     severity=RiskSeverity.WARNING,
                     action_taken=RiskActionType.ALERT,
                     detail="d",
@@ -1112,7 +1112,7 @@ class TestPreTradeLogRecording:
             PreTradeDecisionRecord(
                 trade_date="2026-01-15",
                 order_id="o-1",
-                instrument_id="510300.SH",
+                instrument_id=1,
                 direction="buy",
                 original_quantity=500,
                 final_quantity=500,
@@ -1122,7 +1122,7 @@ class TestPreTradeLogRecording:
             PreTradeDecisionRecord(
                 trade_date="2026-01-15",
                 order_id="o-2",
-                instrument_id="159915.SZ",
+                instrument_id=2,
                 direction="sell",
                 original_quantity=200,
                 final_quantity=0,
@@ -1149,7 +1149,7 @@ class TestPreTradeLogRecording:
             PreTradeDecisionRecord(
                 trade_date="2026-01-15",
                 order_id="o-1",
-                instrument_id="510300.SH",
+                instrument_id=1,
                 direction="buy",
                 original_quantity=150,
                 final_quantity=200,

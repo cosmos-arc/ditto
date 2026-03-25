@@ -35,7 +35,7 @@ def sample_instruments() -> pl.DataFrame:
     """3-row DecisionFrame with instrument_id only."""
     return pl.DataFrame(
         {
-            "instrument_id": ["159915.SZ", "510300.SH", "159949.SZ"],
+            "instrument_id": [1, 2, 3],
         }
     )
 
@@ -45,7 +45,7 @@ def sample_instruments_with_signal() -> pl.DataFrame:
     """3-row DecisionFrame with instrument_id and momentum signal."""
     return pl.DataFrame(
         {
-            "instrument_id": ["159915.SZ", "510300.SH", "159949.SZ"],
+            "instrument_id": [1, 2, 3],
             "momentum": [0.85, 0.62, 0.41],
         }
     )
@@ -56,7 +56,7 @@ def sample_instruments_with_score() -> pl.DataFrame:
     """3-row DecisionFrame with instrument_id and score."""
     return pl.DataFrame(
         {
-            "instrument_id": ["159915.SZ", "510300.SH", "159949.SZ"],
+            "instrument_id": [1, 2, 3],
             "score": [0.9, 0.7, 0.3],
         }
     )
@@ -84,7 +84,7 @@ class TestUniverseStage:
         empty_context: StrategyContext,
     ) -> None:
         """白名单包含所有标的时应原样返回。"""
-        ids = frozenset({"159915.SZ", "510300.SH", "159949.SZ"})
+        ids = frozenset({1, 2, 3})
         stage = UniverseStage(instrument_ids=ids)
         result = stage.process(sample_instruments, empty_context)
         assert result.shape == (3, 1)
@@ -96,7 +96,7 @@ class TestUniverseStage:
         empty_context: StrategyContext,
     ) -> None:
         """白名单只包含部分标的时，应保留匹配的行。"""
-        ids = frozenset({"159915.SZ", "510300.SH"})
+        ids = frozenset({1, 2})
         stage = UniverseStage(instrument_ids=ids)
         result = stage.process(sample_instruments, empty_context)
         assert result.shape == (2, 1)
@@ -107,7 +107,7 @@ class TestUniverseStage:
         empty_context: StrategyContext,
     ) -> None:
         """frame 中没有 instrument_id 列时应由 Polars 抛出错误。"""
-        stage = UniverseStage(instrument_ids=frozenset({"159915.SZ"}))
+        stage = UniverseStage(instrument_ids=frozenset({1}))
         bad_frame = pl.DataFrame({"name": ["a", "b"]})
         with pytest.raises(pl.ColumnNotFoundError):
             stage.process(bad_frame, empty_context)
@@ -138,7 +138,7 @@ class TestSignalStage:
         """source_column=None 且 signal_column 已在 frame 中时，原样返回。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["159915.SZ"],
+                "instrument_id": [1],
                 "signal_value": [0.5],
             }
         )
@@ -165,7 +165,7 @@ class TestSignalStage:
         """空 frame 不应报错。"""
         empty_frame = pl.DataFrame(
             {"instrument_id": []},
-            schema={"instrument_id": pl.Utf8},
+            schema={"instrument_id": pl.Int64},
         )
         stage = SignalStage(signal_column="signal_value", source_column=None)
         result = stage.process(empty_frame, empty_context)
@@ -186,7 +186,7 @@ class TestScoringStage:
         """RAW 模式：score = signal_value 直接复制。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["159915.SZ", "510300.SH"],
+                "instrument_id": [1, 2],
                 "signal_value": [0.85, 0.62],
             }
         )
@@ -201,7 +201,7 @@ class TestScoringStage:
         """RANK 模式：score = rank / count (百分位排名)。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "signal_value": [10.0, 30.0, 20.0],
             }
         )
@@ -220,7 +220,7 @@ class TestScoringStage:
         """ZSCORE 模式：score = (value - mean) / std。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "signal_value": [1.0, 2.0, 3.0],
             }
         )
@@ -240,7 +240,7 @@ class TestScoringStage:
         """ascending=True 时 rank 方向反转（小值排名靠前得分高）。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "signal_value": [10.0, 30.0, 20.0],
             }
         )
@@ -263,7 +263,7 @@ class TestScoringStage:
         """signal_value 中包含 null 时，对应 score 应为 null。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "signal_value": [1.0, None, 3.0],
             }
         )
@@ -278,7 +278,7 @@ class TestScoringStage:
         """全部 signal_value 为 null 时，全部 score 应为 null。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B"],
+                "instrument_id": [10, 11],
                 "signal_value": [None, None],
             }
         )
@@ -308,7 +308,7 @@ class TestScoringStage:
         """ZSCORE 模式下 std=0（所有值相同）时，score 应为 0。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "signal_value": [5.0, 5.0, 5.0],
             }
         )
@@ -340,7 +340,7 @@ class TestFilteringStage:
         """单条过滤条件应正确过滤。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C", "D"],
+                "instrument_id": [10, 11, 12, 13],
                 "score": [0.9, 0.5, 0.3, 0.7],
             }
         )
@@ -355,7 +355,7 @@ class TestFilteringStage:
         )
         result = stage.process(frame, empty_context)
         assert result.shape == (3, 2)
-        assert set(result["instrument_id"].to_list()) == {"A", "B", "D"}
+        assert set(result["instrument_id"].to_list()) == {10, 11, 13}
 
     def test_multiple_conditions_and(
         self,
@@ -364,7 +364,7 @@ class TestFilteringStage:
         """多条条件应为 AND 组合。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C", "D"],
+                "instrument_id": [10, 11, 12, 13],
                 "score": [0.9, 0.5, 0.3, 0.7],
             }
         )
@@ -384,7 +384,7 @@ class TestFilteringStage:
         )
         result = stage.process(frame, empty_context)
         assert result.shape == (2, 2)
-        assert set(result["instrument_id"].to_list()) == {"B", "D"}
+        assert set(result["instrument_id"].to_list()) == {11, 13}
 
     def test_exclude_nulls_true(
         self,
@@ -393,7 +393,7 @@ class TestFilteringStage:
         """exclude_nulls=True 时排除 null 值。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "score": [0.5, None, 0.8],
             }
         )
@@ -408,7 +408,7 @@ class TestFilteringStage:
         )
         result = stage.process(frame, empty_context)
         assert result.shape == (2, 2)
-        assert set(result["instrument_id"].to_list()) == {"A", "C"}
+        assert set(result["instrument_id"].to_list()) == {10, 12}
 
     def test_exclude_nulls_false(
         self,
@@ -417,7 +417,7 @@ class TestFilteringStage:
         """exclude_nulls=False 时保留 null 值行。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "score": [0.5, None, 0.8],
             }
         )
@@ -493,7 +493,7 @@ class TestSelectionStage:
         """null score 应排在最后（nulls_last=True）。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C", "D"],
+                "instrument_id": [10, 11, 12, 13],
                 "score": [0.9, None, 0.3, 0.7],
             }
         )
@@ -510,7 +510,7 @@ class TestSelectionStage:
         """ascending=True 时小值优先。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "score": [0.9, 0.3, 0.7],
             }
         )
@@ -529,7 +529,7 @@ class TestSelectionStage:
                 "instrument_id": [],
                 "score": [],
             },
-            schema={"instrument_id": pl.Utf8, "score": pl.Float64},
+            schema={"instrument_id": pl.Int64, "score": pl.Float64},
         )
         stage = SelectionStage(top_k=5, score_column="score")
         result = stage.process(empty_frame, empty_context)
@@ -549,14 +549,14 @@ class TestTrendFilterStage:
         """long 方向保留 signal >= threshold 的标的。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C", "D"],
+                "instrument_id": [10, 11, 12, 13],
                 "signal_value": [0.05, 0.12, -0.03, 0.0],
             }
         )
         stage = TrendFilterStage(threshold=0.05, direction="long")
         result = stage.process(frame, empty_context)
-        # A=0.05>=0.05, B=0.12>=0.05, C=-0.03 filtered, D=0.0<0.05 filtered
-        assert set(result["instrument_id"].to_list()) == {"A", "B"}
+        # 10=0.05>=0.05, 11=0.12>=0.05, 12=-0.03 filtered, 13=0.0<0.05 filtered
+        assert set(result["instrument_id"].to_list()) == {10, 11}
 
     def test_long_direction_filters_negative_signals(
         self,
@@ -565,14 +565,14 @@ class TestTrendFilterStage:
         """long 方向过滤掉 signal < threshold 的标的。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "signal_value": [0.05, -0.10, 0.0],
             }
         )
         stage = TrendFilterStage(threshold=0.05, direction="long")
         result = stage.process(frame, empty_context)
-        # Only A meets signal_value >= 0.05; B is negative, C is 0.0 < 0.05
-        assert set(result["instrument_id"].to_list()) == {"A"}
+        # Only 10 meets signal_value >= 0.05; 11 is negative, 12 is 0.0 < 0.05
+        assert set(result["instrument_id"].to_list()) == {10}
 
     def test_short_direction_keeps_negative_signals(
         self,
@@ -581,13 +581,13 @@ class TestTrendFilterStage:
         """short 方向保留 signal <= -threshold 的标的。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C", "D"],
+                "instrument_id": [10, 11, 12, 13],
                 "signal_value": [0.05, -0.12, -0.03, 0.0],
             }
         )
         stage = TrendFilterStage(threshold=0.05, direction="short")
         result = stage.process(frame, empty_context)
-        assert set(result["instrument_id"].to_list()) == {"B"}
+        assert set(result["instrument_id"].to_list()) == {11}
 
     def test_both_direction_keeps_strong_signals(
         self,
@@ -596,13 +596,13 @@ class TestTrendFilterStage:
         """both 方向保留 |signal| >= threshold 的标的。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C", "D", "E"],
+                "instrument_id": [10, 11, 12, 13, 14],
                 "signal_value": [0.15, -0.12, 0.02, -0.01, 0.10],
             }
         )
         stage = TrendFilterStage(threshold=0.10, direction="both")
         result = stage.process(frame, empty_context)
-        assert set(result["instrument_id"].to_list()) == {"A", "B", "E"}
+        assert set(result["instrument_id"].to_list()) == {10, 11, 14}
 
     def test_threshold_zero_keeps_all_positive(
         self,
@@ -611,13 +611,13 @@ class TestTrendFilterStage:
         """threshold=0 时 long 方向保留所有非负信号。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "signal_value": [0.0, 0.05, -0.01],
             }
         )
         stage = TrendFilterStage(threshold=0.0, direction="long")
         result = stage.process(frame, empty_context)
-        assert set(result["instrument_id"].to_list()) == {"A", "B"}
+        assert set(result["instrument_id"].to_list()) == {10, 11}
 
     def test_empty_frame_no_error(
         self,
@@ -626,7 +626,7 @@ class TestTrendFilterStage:
         """空 frame 不报错。"""
         frame = pl.DataFrame(
             {"instrument_id": [], "signal_value": []},
-            schema={"instrument_id": pl.Utf8, "signal_value": pl.Float64},
+            schema={"instrument_id": pl.Int64, "signal_value": pl.Float64},
         )
         stage = TrendFilterStage(threshold=0.0, direction="long")
         result = stage.process(frame, empty_context)
@@ -637,7 +637,7 @@ class TestTrendFilterStage:
         empty_context: StrategyContext,
     ) -> None:
         """signal_column 不存在时由 Polars 抛出错误。"""
-        frame = pl.DataFrame({"instrument_id": ["A", "B"]})
+        frame = pl.DataFrame({"instrument_id": [10, 11]})
         stage = TrendFilterStage(threshold=0.0, direction="long")
         with pytest.raises(pl.ColumnNotFoundError):
             stage.process(frame, empty_context)
@@ -661,7 +661,7 @@ class TestFilteringStageBoundary:
         """空 frame 带过滤条件不应崩溃，仍返回空 frame。"""
         empty_frame = pl.DataFrame(
             {"instrument_id": [], "score": []},
-            schema={"instrument_id": pl.Utf8, "score": pl.Float64},
+            schema={"instrument_id": pl.Int64, "score": pl.Float64},
         )
         stage = FilteringStage(
             conditions=(
@@ -679,7 +679,7 @@ class TestFilteringStageBoundary:
         """所有行被过滤掉时应返回空 frame。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "score": [0.1, 0.2, 0.3],
             }
         )
@@ -702,7 +702,7 @@ class TestFilteringStageBoundary:
         """min_value > max_value 矛盾条件：没有行能同时满足，返回空 frame。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C"],
+                "instrument_id": [10, 11, 12],
                 "score": [0.3, 0.5, 0.7],
             }
         )
@@ -723,7 +723,7 @@ class TestFilteringStageBoundary:
         """仅有 exclude_nulls 条件（无 min/max）时，保留非 null 行。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A", "B", "C", "D"],
+                "instrument_id": [10, 11, 12, 13],
                 "score": [0.5, None, 0.8, None],
             }
         )
@@ -738,7 +738,7 @@ class TestFilteringStageBoundary:
         )
         result = stage.process(frame, empty_context)
         assert result.shape == (2, 2)
-        assert set(result["instrument_id"].to_list()) == {"A", "C"}
+        assert set(result["instrument_id"].to_list()) == {10, 12}
 
     def test_frozen(self) -> None:
         """FilteringStage 是 frozen dataclass，不可修改属性。"""
@@ -769,7 +769,7 @@ class TestScoringStageBoundary:
         """空 frame：返回空 frame，带 score 列。"""
         empty_frame = pl.DataFrame(
             {"instrument_id": [], "signal_value": []},
-            schema={"instrument_id": pl.Utf8, "signal_value": pl.Float64},
+            schema={"instrument_id": pl.Int64, "signal_value": pl.Float64},
         )
         stage = ScoringStage(method=method, output_column="score")
         result = stage.process(empty_frame, empty_context)
@@ -780,7 +780,7 @@ class TestScoringStageBoundary:
         """RAW 模式单行：score = signal_value。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "signal_value": [0.42],
             }
         )
@@ -792,7 +792,7 @@ class TestScoringStageBoundary:
         """RANK 模式单行：score = 1.0（rank/count = 1/1）。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "signal_value": [0.42],
             }
         )
@@ -804,7 +804,7 @@ class TestScoringStageBoundary:
         """ZSCORE 模式单行：std(ddof=1) 为 null，score 应为 null。"""
         frame = pl.DataFrame(
             {
-                "instrument_id": ["A"],
+                "instrument_id": [10],
                 "signal_value": [0.42],
             }
         )
@@ -838,13 +838,13 @@ class TestRiskLockFilter:
         """部分标的被锁定时应过滤掉锁定行。"""
         ctx = StrategyContext(
             risk_locked_instruments={
-                "159915.SZ": ("stop_loss", None),
+                1: ("stop_loss", None),
             },
         )
         stage = RiskLockFilter()
         result = stage.process(sample_instruments, ctx)
         assert result.shape == (2, 1)
-        assert set(result["instrument_id"].to_list()) == {"510300.SH", "159949.SZ"}
+        assert set(result["instrument_id"].to_list()) == {2, 3}
 
     def test_all_locked(
         self,
@@ -853,9 +853,9 @@ class TestRiskLockFilter:
         """所有标的被锁定时应返回空 frame。"""
         ctx = StrategyContext(
             risk_locked_instruments={
-                "159915.SZ": ("stop_loss", None),
-                "510300.SH": ("stop_loss", None),
-                "159949.SZ": ("stop_loss", None),
+                1: ("stop_loss", None),
+                2: ("stop_loss", None),
+                3: ("stop_loss", None),
             },
         )
         stage = RiskLockFilter()
@@ -866,12 +866,12 @@ class TestRiskLockFilter:
         """空 frame 加锁定列表仍返回空 frame。"""
         ctx = StrategyContext(
             risk_locked_instruments={
-                "159915.SZ": ("stop_loss", None),
+                1: ("stop_loss", None),
             },
         )
         empty_frame = pl.DataFrame(
             {"instrument_id": []},
-            schema={"instrument_id": pl.Utf8},
+            schema={"instrument_id": pl.Int64},
         )
         stage = RiskLockFilter()
         result = stage.process(empty_frame, ctx)
@@ -901,18 +901,18 @@ class TestFullPipelineIntegration:
         frame = pl.DataFrame(
             {
                 "instrument_id": [
-                    "A",
-                    "B",
-                    "C",
-                    "D",
-                    "E",
+                    10,
+                    11,
+                    12,
+                    13,
+                    14,
                 ],
                 "momentum": [0.1, 0.8, 0.5, 0.9, 0.2],
             }
         )
 
-        # Stage 1: Universe - 保留 A, B, C, D
-        universe = UniverseStage(instrument_ids=frozenset({"A", "B", "C", "D"}))
+        # Stage 1: Universe - 保留 10, 11, 12, 13
+        universe = UniverseStage(instrument_ids=frozenset({10, 11, 12, 13}))
 
         # Stage 2: Signal - 将 momentum 重命名为 signal_value
         signal = SignalStage(
@@ -942,9 +942,9 @@ class TestFullPipelineIntegration:
         for stage in [universe, signal, scoring, filtering, selection]:
             result = stage.process(result, empty_context)
 
-        # Assert: D(0.9) rank=1/4=0.25, B(0.8) rank=2/4=0.5,
-        #         C(0.5) rank=3/4=0.75, A(0.1) rank=4/4=1.0
-        # Filter score >= 0.4: A(1.0), C(0.75), B(0.5) -- D(0.25) excluded
-        # Top 2: A(1.0) and C(0.75)
+        # Assert: 13(0.9) rank=1/4=0.25, 11(0.8) rank=2/4=0.5,
+        #         12(0.5) rank=3/4=0.75, 10(0.1) rank=4/4=1.0
+        # Filter score >= 0.4: 10(1.0), 12(0.75), 11(0.5) -- 13(0.25) excluded
+        # Top 2: 10(1.0) and 12(0.75)
         assert result.shape == (2, 4)  # instrument_id, momentum, signal_value, score
-        assert set(result["instrument_id"].to_list()) == {"A", "C"}
+        assert set(result["instrument_id"].to_list()) == {10, 12}

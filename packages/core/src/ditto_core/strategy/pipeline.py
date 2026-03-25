@@ -7,7 +7,7 @@ DecisionFrame 是 Pipeline 各阶段间流转的 ``pl.DataFrame``，通过列名
 传递信息（不做运行时 schema 校验）。
 
 必选列:
-  instrument_id: str    — 标的 ID
+  instrument_id: InstrumentId (int) — 标的 ID
 
 可选列（由各 Stage 按需添加）:
   signal_value: float   — 信号值（SignalStage）
@@ -31,10 +31,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 import polars as pl
+from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 from ditto_core.strategy.context import StrategyContext
 from ditto_core.strategy.models import TargetPortfolio
 from ditto_core.strategy.protocols import DecisionStage
+
+# Runtime re-export to prevent linter removal under `from __future__ import annotations`
+InstrumentId = _InstrumentId
 
 __all__ = ["StrategyInputBundle", "StrategyPipeline"]
 
@@ -142,12 +146,16 @@ class StrategyPipeline:
 
         if "weight" in frame.columns:
             rows = frame.select("instrument_id", "weight").rows()
-            positions: dict[str, float] = {str(row[0]): float(row[1]) for row in rows}
+            positions: dict[InstrumentId, float] = {
+                InstrumentId(row[0]): float(row[1]) for row in rows
+            }
         else:
             # Equal weight fallback
             equal_weight = 1.0 / n_rows
             ids = frame.get_column("instrument_id").to_list()
-            positions = {str(instrument_id): equal_weight for instrument_id in ids}
+            positions = {
+                InstrumentId(instrument_id): equal_weight for instrument_id in ids
+            }
 
         return TargetPortfolio(
             trade_date=input_bundle.trade_date,

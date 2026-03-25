@@ -34,7 +34,7 @@ from ditto_core.strategy.models import TargetPortfolio
 
 
 def _make_position(
-    instrument_id: str = "510300.SH",
+    instrument_id: int = 1,
     quantity: int = 1000,
     average_cost: float = 4.0,
     market_value: float = 5000.0,
@@ -54,7 +54,7 @@ def _make_position(
 
 def _make_account_view(
     nav: float = 100000.0,
-    positions: dict[str, Position] | None = None,
+    positions: dict[int, Position] | None = None,
 ) -> AccountView:
     pos = positions or {}
     cash = CashBook(available=50000.0, settled=50000.0, frozen=0.0)
@@ -70,7 +70,7 @@ def _make_account_view(
 
 
 def _make_bar(
-    instrument_id: str = "510300.SH",
+    instrument_id: int = 1,
     close: float = 4.5,
     prev_close: float = 4.3,
 ) -> MarketSnapshot:
@@ -87,7 +87,7 @@ def _make_bar(
     )
 
 
-def _make_slice(bars: dict[str, MarketSnapshot] | None = None) -> Slice:
+def _make_slice(bars: dict[int, MarketSnapshot] | None = None) -> Slice:
     return Slice(
         trade_date="2026-01-15",
         step_time=datetime(2026, 1, 15, 15, 0),
@@ -104,7 +104,7 @@ class TestRiskAction:
     def test_frozen_immutability(self) -> None:
         action = RiskAction(
             action_type=RiskActionType.ALERT,
-            instrument_id="510300.SH",
+            instrument_id=1,
             severity=RiskSeverity.WARNING,
             rule_id="test_rule",
             detail="test detail",
@@ -112,12 +112,12 @@ class TestRiskAction:
             threshold=0.10,
         )
         with pytest.raises(AttributeError):
-            action.instrument_id = "changed"  # type: ignore[misc]
+            action.instrument_id = 99  # type: ignore[misc]
 
     def test_default_optional_fields(self) -> None:
         action = RiskAction(
             action_type=RiskActionType.ALERT,
-            instrument_id="*",
+            instrument_id=0,
             severity=RiskSeverity.WARNING,
             rule_id="test",
             detail="d",
@@ -170,7 +170,7 @@ class TestMaxDrawdownRule:
         assert len(actions) == 1
         assert actions[0].action_type == RiskActionType.ALERT
         assert actions[0].severity == RiskSeverity.WARNING
-        assert actions[0].instrument_id == "*"
+        assert actions[0].instrument_id == 0
         assert actions[0].rule_id == "max_drawdown"
 
     def test_emergency_threshold_triggers_liquidate(self) -> None:
@@ -185,7 +185,7 @@ class TestMaxDrawdownRule:
         assert len(actions) == 1
         assert actions[0].action_type == RiskActionType.LIQUIDATE
         assert actions[0].severity == RiskSeverity.EMERGENCY
-        assert actions[0].instrument_id == "*"
+        assert actions[0].instrument_id == 0
 
     def test_peak_nav_tracks_across_scans(self) -> None:
         rule = MaxDrawdownRule(warning_threshold=0.10, emergency_threshold=0.20)
@@ -244,10 +244,10 @@ class TestSingleLossLimitRule:
 
     def test_position_not_in_loss_returns_empty(self) -> None:
         rule = SingleLossLimitRule(threshold=0.15)
-        pos = _make_position(instrument_id="510300.SH", average_cost=4.0)
-        bar = _make_bar(instrument_id="510300.SH", close=4.5, prev_close=4.3)
-        view = _make_account_view(nav=100000.0, positions={"510300.SH": pos})
-        sl = _make_slice(bars={"510300.SH": bar})
+        pos = _make_position(instrument_id=1, average_cost=4.0)
+        bar = _make_bar(instrument_id=1, close=4.5, prev_close=4.3)
+        view = _make_account_view(nav=100000.0, positions={1: pos})
+        sl = _make_slice(bars={1: bar})
 
         actions = rule.scan(view, sl)
 
@@ -256,26 +256,26 @@ class TestSingleLossLimitRule:
     def test_position_loss_exceeds_threshold(self) -> None:
         rule = SingleLossLimitRule(threshold=0.15)
         pos = _make_position(
-            instrument_id="510300.SH",
+            instrument_id=1,
             average_cost=4.0,
         )
         # Price at 3.0 -> loss = (3.0-4.0)/4.0 = 25% > 15%
-        bar = _make_bar(instrument_id="510300.SH", close=3.0, prev_close=3.2)
-        view = _make_account_view(nav=100000.0, positions={"510300.SH": pos})
-        sl = _make_slice(bars={"510300.SH": bar})
+        bar = _make_bar(instrument_id=1, close=3.0, prev_close=3.2)
+        view = _make_account_view(nav=100000.0, positions={1: pos})
+        sl = _make_slice(bars={1: bar})
 
         actions = rule.scan(view, sl)
 
         assert len(actions) == 1
         assert actions[0].action_type == RiskActionType.REDUCE_POSITION
         assert actions[0].severity == RiskSeverity.CRITICAL
-        assert actions[0].instrument_id == "510300.SH"
+        assert actions[0].instrument_id == 1
         assert actions[0].rule_id == "single_loss_limit"
 
     def test_position_without_bar_data_skipped(self) -> None:
         rule = SingleLossLimitRule(threshold=0.15)
-        pos = _make_position(instrument_id="510300.SH", average_cost=4.0)
-        view = _make_account_view(nav=100000.0, positions={"510300.SH": pos})
+        pos = _make_position(instrument_id=1, average_cost=4.0)
+        view = _make_account_view(nav=100000.0, positions={1: pos})
         sl = _make_slice(bars={})  # No bar data for position
 
         actions = rule.scan(view, sl)
@@ -286,13 +286,13 @@ class TestSingleLossLimitRule:
         """Position at exactly the threshold boundary (not exceeded) -> no action."""
         rule = SingleLossLimitRule(threshold=0.15)
         pos = _make_position(
-            instrument_id="510300.SH",
+            instrument_id=1,
             average_cost=4.0,
         )
         # Loss limit = 4.0 * (1 - 0.15) = 3.4. Price at 3.4 = exactly threshold.
-        bar = _make_bar(instrument_id="510300.SH", close=3.4, prev_close=3.5)
-        view = _make_account_view(nav=100000.0, positions={"510300.SH": pos})
-        sl = _make_slice(bars={"510300.SH": bar})
+        bar = _make_bar(instrument_id=1, close=3.4, prev_close=3.5)
+        view = _make_account_view(nav=100000.0, positions={1: pos})
+        sl = _make_slice(bars={1: bar})
 
         actions = rule.scan(view, sl)
 
@@ -300,20 +300,20 @@ class TestSingleLossLimitRule:
 
     def test_multiple_positions_some_in_loss(self) -> None:
         rule = SingleLossLimitRule(threshold=0.15)
-        pos1 = _make_position(instrument_id="510300.SH", average_cost=4.0)
-        pos2 = _make_position(instrument_id="159915.SZ", average_cost=1.0)
-        bar1 = _make_bar(instrument_id="510300.SH", close=3.0, prev_close=3.2)
-        bar2 = _make_bar(instrument_id="159915.SZ", close=1.1, prev_close=1.0)
+        pos1 = _make_position(instrument_id=1, average_cost=4.0)
+        pos2 = _make_position(instrument_id=2, average_cost=1.0)
+        bar1 = _make_bar(instrument_id=1, close=3.0, prev_close=3.2)
+        bar2 = _make_bar(instrument_id=2, close=1.1, prev_close=1.0)
         view = _make_account_view(
             nav=100000.0,
-            positions={"510300.SH": pos1, "159915.SZ": pos2},
+            positions={1: pos1, 2: pos2},
         )
-        sl = _make_slice(bars={"510300.SH": bar1, "159915.SZ": bar2})
+        sl = _make_slice(bars={1: bar1, 2: bar2})
 
         actions = rule.scan(view, sl)
 
         assert len(actions) == 1
-        assert actions[0].instrument_id == "510300.SH"
+        assert actions[0].instrument_id == 1
 
     def test_invalid_threshold_raises(self) -> None:
         with pytest.raises(ValueError, match="threshold must be positive"):
@@ -339,8 +339,8 @@ class TestConcentrationLimitRule:
 
     def test_position_under_limit_returns_empty(self) -> None:
         rule = ConcentrationLimitRule(max_weight=0.20)
-        pos = _make_position(instrument_id="510300.SH", market_value=10000.0)
-        view = _make_account_view(nav=100000.0, positions={"510300.SH": pos})
+        pos = _make_position(instrument_id=1, market_value=10000.0)
+        view = _make_account_view(nav=100000.0, positions={1: pos})
         sl = _make_slice()
 
         actions = rule.scan(view, sl)
@@ -349,8 +349,8 @@ class TestConcentrationLimitRule:
 
     def test_position_over_limit_returns_action(self) -> None:
         rule = ConcentrationLimitRule(max_weight=0.20)
-        pos = _make_position(instrument_id="510300.SH", market_value=30000.0)
-        view = _make_account_view(nav=100000.0, positions={"510300.SH": pos})
+        pos = _make_position(instrument_id=1, market_value=30000.0)
+        view = _make_account_view(nav=100000.0, positions={1: pos})
         sl = _make_slice()
 
         actions = rule.scan(view, sl)
@@ -358,13 +358,13 @@ class TestConcentrationLimitRule:
         assert len(actions) == 1
         assert actions[0].action_type == RiskActionType.REDUCE_POSITION
         assert actions[0].severity == RiskSeverity.WARNING
-        assert actions[0].instrument_id == "510300.SH"
+        assert actions[0].instrument_id == 1
         assert actions[0].rule_id == "concentration_limit"
 
     def test_zero_nav_returns_empty(self) -> None:
         rule = ConcentrationLimitRule(max_weight=0.20)
-        pos = _make_position(instrument_id="510300.SH", market_value=10000.0)
-        view = _make_account_view(nav=0.0, positions={"510300.SH": pos})
+        pos = _make_position(instrument_id=1, market_value=10000.0)
+        view = _make_account_view(nav=0.0, positions={1: pos})
         sl = _make_slice()
 
         actions = rule.scan(view, sl)
@@ -374,8 +374,8 @@ class TestConcentrationLimitRule:
     def test_position_at_exact_limit_returns_empty(self) -> None:
         """Weight exactly at limit (20%) -> no action (must be >, not >=)."""
         rule = ConcentrationLimitRule(max_weight=0.20)
-        pos = _make_position(instrument_id="510300.SH", market_value=20000.0)
-        view = _make_account_view(nav=100000.0, positions={"510300.SH": pos})
+        pos = _make_position(instrument_id=1, market_value=20000.0)
+        view = _make_account_view(nav=100000.0, positions={1: pos})
         sl = _make_slice()
 
         actions = rule.scan(view, sl)
@@ -406,9 +406,9 @@ class TestMarketAnomalyRule:
 
     def test_normal_return_returns_empty(self) -> None:
         rule = MarketAnomalyRule(threshold=0.05)
-        bar = _make_bar(instrument_id="510300.SH", close=4.35, prev_close=4.30)
+        bar = _make_bar(instrument_id=1, close=4.35, prev_close=4.30)
         view = _make_account_view(nav=100000.0)
-        sl = _make_slice(bars={"510300.SH": bar})
+        sl = _make_slice(bars={1: bar})
 
         actions = rule.scan(view, sl)
 
@@ -416,34 +416,34 @@ class TestMarketAnomalyRule:
 
     def test_large_positive_return_triggers_alert(self) -> None:
         rule = MarketAnomalyRule(threshold=0.05)
-        bar = _make_bar(instrument_id="510300.SH", close=4.80, prev_close=4.30)
+        bar = _make_bar(instrument_id=1, close=4.80, prev_close=4.30)
         view = _make_account_view(nav=100000.0)
-        sl = _make_slice(bars={"510300.SH": bar})
+        sl = _make_slice(bars={1: bar})
 
         actions = rule.scan(view, sl)
 
         assert len(actions) == 1
         assert actions[0].action_type == RiskActionType.ALERT
-        assert actions[0].instrument_id == "510300.SH"
+        assert actions[0].instrument_id == 1
         assert actions[0].rule_id == "market_anomaly"
 
     def test_large_negative_return_triggers_alert(self) -> None:
         rule = MarketAnomalyRule(threshold=0.05)
-        bar = _make_bar(instrument_id="510300.SH", close=3.80, prev_close=4.30)
+        bar = _make_bar(instrument_id=1, close=3.80, prev_close=4.30)
         view = _make_account_view(nav=100000.0)
-        sl = _make_slice(bars={"510300.SH": bar})
+        sl = _make_slice(bars={1: bar})
 
         actions = rule.scan(view, sl)
 
         assert len(actions) == 1
         assert actions[0].action_type == RiskActionType.ALERT
-        assert actions[0].instrument_id == "510300.SH"
+        assert actions[0].instrument_id == 1
 
     def test_zero_prev_close_skipped(self) -> None:
         rule = MarketAnomalyRule(threshold=0.05)
-        bar = _make_bar(instrument_id="510300.SH", close=4.50, prev_close=0.0)
+        bar = _make_bar(instrument_id=1, close=4.50, prev_close=0.0)
         view = _make_account_view(nav=100000.0)
-        sl = _make_slice(bars={"510300.SH": bar})
+        sl = _make_slice(bars={1: bar})
 
         actions = rule.scan(view, sl)
 
@@ -454,7 +454,7 @@ class TestMarketAnomalyRule:
         rule = MarketAnomalyRule(threshold=0.05)
         bar = MarketSnapshot(
             trade_date="2026-01-15",
-            instrument_id="510300.SH",
+            instrument_id=1,
             open=4.5,
             high=4.5,
             low=4.5,
@@ -464,7 +464,7 @@ class TestMarketAnomalyRule:
             amount=4500000.0,
         )
         view = _make_account_view(nav=100000.0)
-        sl = _make_slice(bars={"510300.SH": bar})
+        sl = _make_slice(bars={1: bar})
 
         actions = rule.scan(view, sl)
 
@@ -472,16 +472,16 @@ class TestMarketAnomalyRule:
 
     def test_multiple_bars_some_anomaly(self) -> None:
         rule = MarketAnomalyRule(threshold=0.05)
-        bar1 = _make_bar(instrument_id="510300.SH", close=4.35, prev_close=4.30)
-        bar2 = _make_bar(instrument_id="159915.SZ", close=5.50, prev_close=5.00)
+        bar1 = _make_bar(instrument_id=1, close=4.35, prev_close=4.30)
+        bar2 = _make_bar(instrument_id=2, close=5.50, prev_close=5.00)
         view = _make_account_view(nav=100000.0)
-        sl = _make_slice(bars={"510300.SH": bar1, "159915.SZ": bar2})
+        sl = _make_slice(bars={1: bar1, 2: bar2})
 
         actions = rule.scan(view, sl)
 
         # 159915.SZ: abs(5.5/5.0 - 1) = 10% > 5%
         assert len(actions) == 1
-        assert actions[0].instrument_id == "159915.SZ"
+        assert actions[0].instrument_id == 2
 
     def test_invalid_threshold_raises(self) -> None:
         with pytest.raises(ValueError, match="threshold must be positive"):
@@ -511,7 +511,7 @@ class TestCompositePostTradeGuard:
         mock_rule1 = Mock(spec=PostTradeRiskGuard)
         action1 = RiskAction(
             action_type=RiskActionType.ALERT,
-            instrument_id="510300.SH",
+            instrument_id=1,
             severity=RiskSeverity.WARNING,
             rule_id="rule_1",
             detail="test",
@@ -524,7 +524,7 @@ class TestCompositePostTradeGuard:
         mock_rule2 = Mock(spec=PostTradeRiskGuard)
         action2 = RiskAction(
             action_type=RiskActionType.REDUCE_POSITION,
-            instrument_id="159915.SZ",
+            instrument_id=2,
             severity=RiskSeverity.CRITICAL,
             rule_id="rule_2",
             detail="test",
@@ -533,7 +533,7 @@ class TestCompositePostTradeGuard:
         )
         action3 = RiskAction(
             action_type=RiskActionType.LIQUIDATE,
-            instrument_id="*",
+            instrument_id=0,
             severity=RiskSeverity.EMERGENCY,
             rule_id="rule_2",
             detail="test",
@@ -551,9 +551,9 @@ class TestCompositePostTradeGuard:
         actions = guard.scan(view, sl)
 
         assert len(actions) == 3
-        assert actions[0].instrument_id == "510300.SH"
-        assert actions[1].instrument_id == "159915.SZ"
-        assert actions[2].instrument_id == "*"
+        assert actions[0].instrument_id == 1
+        assert actions[1].instrument_id == 2
+        assert actions[2].instrument_id == 0
 
     def test_real_rules_combined(self) -> None:
         """Real rule instances combined via CompositePostTradeGuard."""
@@ -568,10 +568,10 @@ class TestCompositePostTradeGuard:
         guard.scan(view_peak, sl)
 
         # Now: NAV=85k (15% drawdown) + concentrated position
-        pos = _make_position(instrument_id="510300.SH", market_value=30000.0)
+        pos = _make_position(instrument_id=1, market_value=30000.0)
         view_dd = _make_account_view(
             nav=85000.0,
-            positions={"510300.SH": pos},
+            positions={1: pos},
         )
         actions = guard.scan(view_dd, sl)
 
@@ -611,7 +611,7 @@ def _make_mock_plan() -> Mock:
 
 
 def _make_target_portfolio(
-    positions: dict[str, float] | None = None,
+    positions: dict[int, float] | None = None,
 ) -> TargetPortfolio:
     """创建 mock TargetPortfolio。"""
     return TargetPortfolio(
@@ -631,7 +631,7 @@ class TestEngineLoopPostTradeIntegration:
         data_feed, pipeline, planner, brokerage, pre_trade_check, fee_model = (
             self._setup_common_mocks(
                 trading_days=["2026-01-15"],
-                target=_make_target_portfolio({"510300.SH": 0.3}),
+                target=_make_target_portfolio({1: 0.3}),
                 plan=_make_mock_plan(),
             )
         )
@@ -640,7 +640,7 @@ class TestEngineLoopPostTradeIntegration:
         mock_guard.scan.return_value = [
             RiskAction(
                 action_type=RiskActionType.REDUCE_POSITION,
-                instrument_id="510300.SH",
+                instrument_id=1,
                 severity=RiskSeverity.CRITICAL,
                 rule_id="single_loss_limit",
                 detail="510300.SH loss exceeds 15%",
@@ -660,14 +660,14 @@ class TestEngineLoopPostTradeIntegration:
         )
 
         call_kwargs = planner.plan.call_args[1]
-        assert "510300.SH" in call_kwargs["locked_instruments"]
+        assert 1 in call_kwargs["locked_instruments"]
 
     def test_no_post_trade_guard_no_locks(self) -> None:
         """post_trade_guard=None → planner.plan 收到空 locked_instruments。"""
         data_feed, pipeline, planner, brokerage, pre_trade_check, fee_model = (
             self._setup_common_mocks(
                 trading_days=["2026-01-15"],
-                target=_make_target_portfolio({"510300.SH": 0.3}),
+                target=_make_target_portfolio({1: 0.3}),
                 plan=_make_mock_plan(),
             )
         )
@@ -688,7 +688,7 @@ class TestEngineLoopPostTradeIntegration:
     def test_daily_locks_cleared_at_start_of_each_step(self) -> None:
         """每日 _step 开始时 _locked_instruments 被清空。"""
         plan = _make_mock_plan()
-        captured_locks: list[set[str]] = []
+        captured_locks: list[set[int]] = []
 
         def capture_plan(**kwargs: object) -> Mock:
             captured_locks.append(set(kwargs["locked_instruments"]))  # type: ignore[index]
@@ -697,7 +697,7 @@ class TestEngineLoopPostTradeIntegration:
         data_feed, pipeline, planner, brokerage, pre_trade_check, fee_model = (
             self._setup_common_mocks(
                 trading_days=["2026-01-15", "2026-01-16"],
-                target=_make_target_portfolio({"510300.SH": 0.3}),
+                target=_make_target_portfolio({1: 0.3}),
                 plan=plan,
                 planner_side_effect=capture_plan,
             )
@@ -708,7 +708,7 @@ class TestEngineLoopPostTradeIntegration:
             [
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
-                    instrument_id="510300.SH",
+                    instrument_id=1,
                     severity=RiskSeverity.CRITICAL,
                     rule_id="test",
                     detail="test",
@@ -730,8 +730,8 @@ class TestEngineLoopPostTradeIntegration:
         )
 
         assert planner.plan.call_count == 2
-        assert "510300.SH" in captured_locks[0]
-        assert "510300.SH" not in captured_locks[1]
+        assert 1 in captured_locks[0]
+        assert 1 not in captured_locks[1]
 
     def test_wildcard_instrument_id_not_added_to_locks(self) -> None:
         """LIQUIDATE with instrument_id='*' 不应加入 locked_instruments。"""
@@ -748,7 +748,7 @@ class TestEngineLoopPostTradeIntegration:
         mock_guard.scan.return_value = [
             RiskAction(
                 action_type=RiskActionType.LIQUIDATE,
-                instrument_id="*",
+                instrument_id=0,
                 severity=RiskSeverity.EMERGENCY,
                 rule_id="max_drawdown",
                 detail="portfolio drawdown exceeds 20%",
@@ -784,7 +784,7 @@ class TestEngineLoopPostTradeIntegration:
         mock_guard.scan.return_value = [
             RiskAction(
                 action_type=RiskActionType.ALERT,
-                instrument_id="510300.SH",
+                instrument_id=1,
                 severity=RiskSeverity.WARNING,
                 rule_id="market_anomaly",
                 detail="510300.SH return exceeds 5%",
@@ -809,7 +809,7 @@ class TestEngineLoopPostTradeIntegration:
     def test_cooldown_lock_persists_to_next_day(self) -> None:
         """带 cooldown_until 的锁定在次日仍然生效。"""
         plan = _make_mock_plan()
-        captured_locks: list[set[str]] = []
+        captured_locks: list[set[int]] = []
 
         def capture_plan(**kwargs: object) -> Mock:
             captured_locks.append(set(kwargs["locked_instruments"]))  # type: ignore[index]
@@ -818,7 +818,7 @@ class TestEngineLoopPostTradeIntegration:
         data_feed, pipeline, planner, brokerage, pre_trade_check, fee_model = (
             self._setup_common_mocks(
                 trading_days=["2026-01-15", "2026-01-16"],
-                target=_make_target_portfolio({"510300.SH": 0.3}),
+                target=_make_target_portfolio({1: 0.3}),
                 plan=plan,
                 planner_side_effect=capture_plan,
             )
@@ -829,7 +829,7 @@ class TestEngineLoopPostTradeIntegration:
             [
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
-                    instrument_id="510300.SH",
+                    instrument_id=1,
                     severity=RiskSeverity.CRITICAL,
                     rule_id="single_loss_limit",
                     detail="loss exceeds 15%",
@@ -852,13 +852,13 @@ class TestEngineLoopPostTradeIntegration:
         )
 
         assert planner.plan.call_count == 2
-        assert "510300.SH" in captured_locks[0]
-        assert "510300.SH" in captured_locks[1]
+        assert 1 in captured_locks[0]
+        assert 1 in captured_locks[1]
 
     def test_cooldown_lock_cleared_on_expiry(self) -> None:
         """cooldown_until 到期日的次日锁定被清除。"""
         plan = _make_mock_plan()
-        captured_locks: list[set[str]] = []
+        captured_locks: list[set[int]] = []
 
         def capture_plan(**kwargs: object) -> Mock:
             captured_locks.append(set(kwargs["locked_instruments"]))  # type: ignore[index]
@@ -867,7 +867,7 @@ class TestEngineLoopPostTradeIntegration:
         data_feed, pipeline, planner, brokerage, pre_trade_check, fee_model = (
             self._setup_common_mocks(
                 trading_days=["2026-01-15", "2026-01-16", "2026-01-17"],
-                target=_make_target_portfolio({"510300.SH": 0.3}),
+                target=_make_target_portfolio({1: 0.3}),
                 plan=plan,
                 planner_side_effect=capture_plan,
             )
@@ -878,7 +878,7 @@ class TestEngineLoopPostTradeIntegration:
             [
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
-                    instrument_id="510300.SH",
+                    instrument_id=1,
                     severity=RiskSeverity.CRITICAL,
                     rule_id="single_loss_limit",
                     detail="loss exceeds 15%",
@@ -902,14 +902,14 @@ class TestEngineLoopPostTradeIntegration:
         )
 
         assert planner.plan.call_count == 3
-        assert "510300.SH" in captured_locks[0]
-        assert "510300.SH" in captured_locks[1]
-        assert "510300.SH" not in captured_locks[2]
+        assert 1 in captured_locks[0]
+        assert 1 in captured_locks[1]
+        assert 1 not in captured_locks[2]
 
     def test_same_day_lock_and_cooldown_coexist(self) -> None:
         """当日锁定和跨日 cooldown 可以同时存在。"""
         plan = _make_mock_plan()
-        captured_locks: list[set[str]] = []
+        captured_locks: list[set[int]] = []
 
         def capture_plan(**kwargs: object) -> Mock:
             captured_locks.append(set(kwargs["locked_instruments"]))  # type: ignore[index]
@@ -918,7 +918,7 @@ class TestEngineLoopPostTradeIntegration:
         data_feed, pipeline, planner, brokerage, pre_trade_check, fee_model = (
             self._setup_common_mocks(
                 trading_days=["2026-01-15", "2026-01-16"],
-                target=_make_target_portfolio({"510300.SH": 0.3, "159915.SZ": 0.2}),
+                target=_make_target_portfolio({1: 0.3, 2: 0.2}),
                 plan=plan,
                 planner_side_effect=capture_plan,
             )
@@ -929,7 +929,7 @@ class TestEngineLoopPostTradeIntegration:
             [
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
-                    instrument_id="510300.SH",
+                    instrument_id=1,
                     severity=RiskSeverity.CRITICAL,
                     rule_id="single_loss_limit",
                     detail="loss exceeds 15%",
@@ -939,7 +939,7 @@ class TestEngineLoopPostTradeIntegration:
                 ),
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
-                    instrument_id="159915.SZ",
+                    instrument_id=2,
                     severity=RiskSeverity.CRITICAL,
                     rule_id="concentration_limit",
                     detail="concentration exceeds 20%",
@@ -961,10 +961,10 @@ class TestEngineLoopPostTradeIntegration:
         )
 
         assert planner.plan.call_count == 2
-        assert "510300.SH" in captured_locks[0]
-        assert "159915.SZ" in captured_locks[0]
-        assert "510300.SH" in captured_locks[1]
-        assert "159915.SZ" not in captured_locks[1]
+        assert 1 in captured_locks[0]
+        assert 2 in captured_locks[0]
+        assert 1 in captured_locks[1]
+        assert 2 not in captured_locks[1]
 
     # -- helpers -------------------------------------------------------------
 

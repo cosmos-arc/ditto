@@ -82,9 +82,9 @@ class TestThreeDaySnapshot:
             f.instrument_id for f in day1_fills if f.direction.value == "buy"
         }
         assert len(buy_instruments) == 3
-        assert "ETF-001" in buy_instruments
-        assert "ETF-002" in buy_instruments
-        assert "ETF-003" in buy_instruments
+        assert 1 in buy_instruments
+        assert 2 in buy_instruments
+        assert 3 in buy_instruments
 
     def test_account_view_not_none(
         self,
@@ -139,9 +139,9 @@ class TestFiveDaySnapshot:
         result = five_day_engine_loop.run()
 
         price_ranges = {
-            "ETF-001": (4.9, 10.6),
-            "ETF-002": (9.8, 20.6),
-            "ETF-003": (2.4, 5.4),
+            1: (4.9, 10.6),
+            2: (9.8, 20.6),
+            3: (2.4, 5.4),
         }
         for fill in result.fills:
             low, high = price_ranges[fill.instrument_id]
@@ -162,17 +162,17 @@ class TestFiveDaySnapshot:
 
 
 class TestLimitUpSnapshot:
-    """涨停场景快照 — Day 2 ETF-001 涨停（买入失败）。"""
+    """涨停场景快照 — Day 2 标的 1 涨停（买入失败）。"""
 
     def test_day1_normal_buy(self, limit_up_engine_loop: EngineLoop) -> None:
-        """Day 1 正常买入 ETF-001（未涨停）。"""
+        """Day 1 正常买入标的 1（未涨停）。"""
         result = limit_up_engine_loop.run()
 
         day1_fills = [
             f
             for f in result.fills
             if f.event_time.strftime("%Y-%m-%d") == "2026-01-05"
-            and f.instrument_id == "ETF-001"
+            and f.instrument_id == 1
             and f.direction.value == "buy"
         ]
         assert len(day1_fills) > 0
@@ -181,14 +181,14 @@ class TestLimitUpSnapshot:
         self,
         limit_up_engine_loop: EngineLoop,
     ) -> None:
-        """Day 2 ETF-001 涨停 — 买入订单不成交。"""
+        """Day 2 标的 1 涨停 — 买入订单不成交。"""
         result = limit_up_engine_loop.run()
 
         day2_fills = [
             f
             for f in result.fills
             if f.event_time.strftime("%Y-%m-%d") == "2026-01-06"
-            and f.instrument_id == "ETF-001"
+            and f.instrument_id == 1
             and f.direction.value == "buy"
         ]
         assert len(day2_fills) == 0
@@ -204,29 +204,29 @@ class TestLimitUpSnapshot:
         self,
         limit_up_engine_loop: EngineLoop,
     ) -> None:
-        """ETF-002/003 不受涨跌停影响，正常交易。"""
+        """标的 2/3 不受涨跌停影响，正常交易。"""
         result = limit_up_engine_loop.run()
 
         day1_fills = [
             f for f in result.fills if f.event_time.strftime("%Y-%m-%d") == "2026-01-05"
         ]
         buys = {f.instrument_id for f in day1_fills if f.direction.value == "buy"}
-        assert "ETF-002" in buys
-        assert "ETF-003" in buys
+        assert 2 in buys
+        assert 3 in buys
 
 
 class TestLimitDownSnapshot:
-    """跌停场景快照 — Day 2 ETF-001 跌停（卖出失败）。"""
+    """跌停场景快照 — Day 2 标的 1 跌停（卖出失败）。"""
 
     def test_day1_normal_buy(self, limit_down_engine_loop: EngineLoop) -> None:
-        """Day 1 正常买入 ETF-001（未跌停）。"""
+        """Day 1 正常买入标的 1（未跌停）。"""
         result = limit_down_engine_loop.run()
 
         day1_fills = [
             f
             for f in result.fills
             if f.event_time.strftime("%Y-%m-%d") == "2026-01-05"
-            and f.instrument_id == "ETF-001"
+            and f.instrument_id == 1
             and f.direction.value == "buy"
         ]
         assert len(day1_fills) > 0
@@ -235,14 +235,14 @@ class TestLimitDownSnapshot:
         self,
         limit_down_engine_loop: EngineLoop,
     ) -> None:
-        """Day 2 ETF-001 跌停 — 卖出订单不成交。"""
+        """Day 2 标的 1 跌停 — 卖出订单不成交。"""
         result = limit_down_engine_loop.run()
 
         day2_fills = [
             f
             for f in result.fills
             if f.event_time.strftime("%Y-%m-%d") == "2026-01-06"
-            and f.instrument_id == "ETF-001"
+            and f.instrument_id == 1
             and f.direction.value == "sell"
         ]
         assert len(day2_fills) == 0
@@ -266,7 +266,7 @@ class TestLimitDownSnapshot:
 
 
 class TestSTSnapshot:
-    """ST 场景快照 — ETF-001 为 ST 标的（5% 涨跌停）。"""
+    """ST 场景快照 — 标的 1 为 ST 标的（5% 涨跌停）。"""
 
     def test_day1_normal_buy(self, st_engine_loop: EngineLoop) -> None:
         """Day 1 正常买入 ST 标的（未涨停）。"""
@@ -276,7 +276,7 @@ class TestSTSnapshot:
             f
             for f in result.fills
             if f.event_time.strftime("%Y-%m-%d") == "2026-01-05"
-            and f.instrument_id == "ETF-001"
+            and f.instrument_id == 1
             and f.direction.value == "buy"
         ]
         assert len(day1_fills) > 0
@@ -292,7 +292,7 @@ class TestSTSnapshot:
             f
             for f in result.fills
             if f.event_time.strftime("%Y-%m-%d") == "2026-01-06"
-            and f.instrument_id == "ETF-001"
+            and f.instrument_id == 1
             and f.direction.value == "buy"
         ]
         assert len(day2_fills) == 0
@@ -308,15 +308,15 @@ class TestSTSnapshot:
         self,
         st_engine_loop: EngineLoop,
     ) -> None:
-        """非 ST 标的（ETF-002/003）正常交易。"""
+        """非 ST 标的（标的 2/3）正常交易。"""
         result = st_engine_loop.run()
 
         day1_fills = [
             f for f in result.fills if f.event_time.strftime("%Y-%m-%d") == "2026-01-05"
         ]
         buys = {f.instrument_id for f in day1_fills if f.direction.value == "buy"}
-        assert "ETF-002" in buys
-        assert "ETF-003" in buys
+        assert 2 in buys
+        assert 3 in buys
 
     def test_final_positions(self, st_engine_loop: EngineLoop) -> None:
         """最终仍有 3 个持仓（ST 不影响持仓数量）。"""

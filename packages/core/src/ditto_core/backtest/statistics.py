@@ -12,6 +12,8 @@ import math
 import statistics
 from dataclasses import dataclass, replace
 
+from ditto_kernel.identity import InstrumentId
+
 from ditto_core.backtest.audit import (
     ExecutionAuditCollector,
     PreTradeDecisionRecord,
@@ -93,7 +95,7 @@ class TradeStatistics:
     """
 
     trade_id: str
-    instrument_id: str
+    instrument_id: InstrumentId
     direction: str
     entry_date: str
     exit_date: str | None

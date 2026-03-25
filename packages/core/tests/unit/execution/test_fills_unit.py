@@ -6,8 +6,8 @@ from dataclasses import FrozenInstanceError
 from datetime import datetime
 
 import pytest
-from ditto_core.accounting.order_book import OrderDirection
 from ditto_core.execution.fills import Filled, FillEvent, FillOutcome, NoFill
+from ditto_kernel.enums import OrderSide as OrderDirection
 
 # ---------------------------------------------------------------------------
 # Shared fixture data — FillEvent is constructed identically in 5 tests.
@@ -16,7 +16,7 @@ from ditto_core.execution.fills import Filled, FillEvent, FillOutcome, NoFill
 _FILL_EVENT = FillEvent(
     fill_id="FILL-001",
     order_id="ORD-001",
-    instrument_id="159915.SZ",
+    instrument_id=1,
     direction=OrderDirection.BUY,
     filled_quantity=100,
     fill_price=0.452,

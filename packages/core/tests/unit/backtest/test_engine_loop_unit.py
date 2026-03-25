@@ -51,7 +51,7 @@ def _make_account_view(cash: CashBook | None = None) -> AccountView:
 
 
 def _make_snapshot(
-    iid: str = "ETF-001",
+    iid: int = 1,
     close: float = 10.0,
 ) -> MarketSnapshot:
     return MarketSnapshot(
@@ -67,8 +67,8 @@ def _make_snapshot(
     )
 
 
-def _make_slice(date: str, bars: dict[str, MarketSnapshot] | None = None) -> Slice:
-    bars = bars or {"ETF-001": _make_snapshot()}
+def _make_slice(date: str, bars: dict[int, MarketSnapshot] | None = None) -> Slice:
+    bars = bars or {1: _make_snapshot()}
     return Slice(
         trade_date=date,
         step_time=datetime(2026, 3, 1, 15, 0),
@@ -81,13 +81,13 @@ def _make_target(date: str = "2026-03-01") -> TargetPortfolio:
         trade_date=date,
         strategy_id="default",
         run_id="run-001",
-        positions={"ETF-001": 0.5},
+        positions={1: 0.5},
         cash_target=0.5,
     )
 
 
 def _make_order(
-    iid: str = "ETF-001",
+    iid: int = 1,
     qty: int = 100,
     direction: OrderDirection = OrderDirection.BUY,
 ) -> Order:
@@ -104,7 +104,7 @@ def _make_fill(fill_id: str = "fill-001") -> FillEvent:
     return FillEvent(
         fill_id=fill_id,
         order_id="order-001",
-        instrument_id="ETF-001",
+        instrument_id=1,
         direction=OrderDirection.BUY,
         filled_quantity=100,
         fill_price=10.0,
@@ -388,8 +388,8 @@ class TestRollingContextUpdates:
         pipeline = Mock()
         pipeline.run.return_value = _make_target()
 
-        order1 = _make_order(iid="ETF-001")
-        order2 = _make_order(iid="ETF-002")
+        order1 = _make_order(iid=1)
+        order2 = _make_order(iid=2)
         planner = Mock()
         plan = Mock(
             plan_id="plan-001",
@@ -447,8 +447,8 @@ class TestProcessInputConversion:
 
         config = _make_config()
         bars = {
-            "ETF-001": _make_snapshot(iid="ETF-001", close=10.0),
-            "ETF-002": _make_snapshot(iid="ETF-002", close=20.0),
+            1: _make_snapshot(iid=1, close=10.0),
+            2: _make_snapshot(iid=2, close=20.0),
         }
         slice_data = Slice(
             trade_date="2026-03-01",
@@ -497,10 +497,10 @@ class TestProcessInputConversion:
         assert isinstance(call_arg, ProcessInput)
         assert call_arg.step_time == datetime(2026, 3, 1, 15, 0)
         assert call_arg.trade_date == "2026-03-01"
-        assert "ETF-001" in call_arg.bars
-        assert "ETF-002" in call_arg.bars
-        assert call_arg.bars["ETF-001"].close == 10.0
-        assert call_arg.bars["ETF-002"].close == 20.0
+        assert 1 in call_arg.bars
+        assert 2 in call_arg.bars
+        assert call_arg.bars[1].close == 10.0
+        assert call_arg.bars[2].close == 20.0
 
 
 class TestRuleProviderInjection:
@@ -512,8 +512,8 @@ class TestRuleProviderInjection:
 
         config = _make_config()
         bars = {
-            "ETF-001": _make_snapshot(iid="ETF-001"),
-            "ETF-002": _make_snapshot(iid="ETF-002"),
+            1: _make_snapshot(iid=1),
+            2: _make_snapshot(iid=2),
         }
         data_feed = Mock()
         data_feed.trading_days.return_value = ["2026-03-01"]
@@ -542,7 +542,7 @@ class TestRuleProviderInjection:
         fee_model = Mock()
 
         rule_provider = Mock(spec=InstrumentRuleProvider)
-        rules = {"ETF-001": ("defn", "rule", "fee"), "ETF-002": ("defn", "rule", "fee")}
+        rules = {1: ("defn", "rule", "fee"), 2: ("defn", "rule", "fee")}
         rule_provider.get_rules.return_value = rules
 
         loop = EngineLoop(
@@ -559,7 +559,7 @@ class TestRuleProviderInjection:
         # rule_provider.get_rules called with correct args
         rule_provider.get_rules.assert_called_once_with(
             "2026-03-01",
-            ["ETF-001", "ETF-002"],
+            [1, 2],
         )
 
         # planner.plan received rules

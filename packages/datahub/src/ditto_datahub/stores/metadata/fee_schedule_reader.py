@@ -6,8 +6,11 @@ import sqlite3
 from dataclasses import dataclass
 
 from ditto_infra.foundation import SQLitePool, logger, traced
+from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 from ditto_datahub.stores.metadata._pit_base import PITRecordReader
+
+InstrumentId = _InstrumentId
 
 __all__ = ["FeeScheduleReader", "FeeScheduleRecord", "SQLiteFeeScheduleReader"]
 
@@ -17,7 +20,7 @@ __all__ = ["FeeScheduleReader", "FeeScheduleRecord", "SQLiteFeeScheduleReader"]
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS fee_schedule (
-    instrument_id TEXT NOT NULL,
+    instrument_id INTEGER NOT NULL,
     as_of_date TEXT NOT NULL,
     commission_rate REAL NOT NULL,
     min_commission REAL NOT NULL,
@@ -71,7 +74,7 @@ class FeeScheduleRecord:
 
     """
 
-    instrument_id: str
+    instrument_id: InstrumentId
     as_of_date: str
     commission_rate: float
     min_commission: float
@@ -123,7 +126,11 @@ class SQLiteFeeScheduleReader(PITRecordReader[FeeScheduleRecord]):
             )
         self._pool.commit()
 
-    def get(self, instrument_id: str, as_of_date: str) -> FeeScheduleRecord | None:
+    def get(
+        self,
+        instrument_id: InstrumentId,
+        as_of_date: str,
+    ) -> FeeScheduleRecord | None:
         """
         PIT 查询: 获取指定标的在 as_of_date 时有效的记录.
 
@@ -144,7 +151,7 @@ class SQLiteFeeScheduleReader(PITRecordReader[FeeScheduleRecord]):
     def _row_to_record(self, row: sqlite3.Row) -> FeeScheduleRecord:
         """将数据库行转换为 FeeScheduleRecord."""
         return FeeScheduleRecord(
-            instrument_id=row["instrument_id"],
+            instrument_id=InstrumentId(row["instrument_id"]),
             as_of_date=row["as_of_date"],
             commission_rate=row["commission_rate"],
             min_commission=row["min_commission"],

@@ -57,6 +57,7 @@ from ditto_core.execution.rules import (
     TradingRuleSet,
     default_price_limit_pct,
 )
+from ditto_core.execution.targets import TargetPortfolioLike
 from ditto_core.execution.trade_builder import (
     FifoTradeBuilder,
     FlatToFlatTradeBuilder,
@@ -108,6 +109,7 @@ __all__ = [
     "SimpleFillModel",
     "SimpleSettlementModel",
     "SlippageModel",
+    "TargetPortfolioLike",
     "TradeBuilder",
     "TradeMatchingMethod",
     "TradeRecord",

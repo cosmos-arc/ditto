@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ditto_kernel.identity import InstrumentId as _InstrumentId
+
 from ditto_datahub.stores.metadata.fee_schedule_reader import (
     FeeScheduleReader,
     FeeScheduleRecord,
@@ -19,6 +21,8 @@ from ditto_datahub.stores.metadata.trading_rule_reader import (
     TradingRuleReader,
     TradingRuleRecord,
 )
+
+InstrumentId = _InstrumentId
 
 __all__ = ["DefinitionRecord", "InstrumentRuleProvider"]
 
@@ -41,7 +45,7 @@ class DefinitionRecord:
 
     """
 
-    instrument_id: str
+    instrument_id: InstrumentId
     asset_class: str
     exchange: str
     currency: str
@@ -74,7 +78,7 @@ class InstrumentRuleProvider:
         trading_rule_reader: TradingRuleReader | None = None,
         fee_schedule_reader: FeeScheduleReader | None = None,
     ) -> None:
-        self._definitions: dict[str, DefinitionRecord] = {}
+        self._definitions: dict[InstrumentId, DefinitionRecord] = {}
         self._trading_rule_reader = trading_rule_reader or TradingRuleReader()
         self._fee_schedule_reader = fee_schedule_reader or FeeScheduleReader()
 
@@ -94,13 +98,13 @@ class InstrumentRuleProvider:
 
     # ── 查询方法 ──
 
-    def get_definition(self, instrument_id: str) -> DefinitionRecord | None:
+    def get_definition(self, instrument_id: InstrumentId) -> DefinitionRecord | None:
         """获取标的静态定义，不存在返回 None."""
         return self._definitions.get(instrument_id)
 
     def get_trading_rule(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         as_of_date: str,
     ) -> TradingRuleRecord | None:
         """PIT 查询交易规则，不存在返回 None."""
@@ -108,7 +112,7 @@ class InstrumentRuleProvider:
 
     def get_fee_schedule(
         self,
-        instrument_id: str,
+        instrument_id: InstrumentId,
         as_of_date: str,
     ) -> FeeScheduleRecord | None:
         """PIT 查询费率，不存在返回 None."""
@@ -117,8 +121,8 @@ class InstrumentRuleProvider:
     def get_rules(
         self,
         as_of_date: str,
-        instrument_ids: list[str],
-    ) -> dict[str, InstrumentRules]:
+        instrument_ids: list[InstrumentId],
+    ) -> dict[InstrumentId, InstrumentRules]:
         """
         批量获取三层规则（返回 Record，由调用方转换为 Core 模型）.
 
@@ -133,7 +137,7 @@ class InstrumentRuleProvider:
             ValueError: 某个标的缺少规则数据.
 
         """
-        result: dict[str, InstrumentRules] = {}
+        result: dict[InstrumentId, InstrumentRules] = {}
         for iid in instrument_ids:
             defn = self.get_definition(iid)
             trading_rule = self.get_trading_rule(iid, as_of_date)

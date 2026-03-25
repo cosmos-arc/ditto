@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from ditto_kernel.enums import OrderSide as OrderDirection
+
 from ditto_core.accounting.account import AccountView
-from ditto_core.accounting.order_book import OrderDirection
 
 __all__ = ["BuyingPowerModel", "CashAccountBuyingPower"]
 

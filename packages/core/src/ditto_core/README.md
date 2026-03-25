@@ -200,7 +200,7 @@ result = regime_engine.calc_regime_for_range(
 # === 因子计算 ===
 factor_engine = FactorEngine(hub)
 factors = factor_engine.calc_factors(
-    universe=["510300.SH", "510500.SH"],
+    universe=[InstrumentId(2_000_001), InstrumentId(2_000_002)],
     start_date="2024-01-01",
     end_date="2024-01-31"
 )

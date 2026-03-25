@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 import polars as pl
+from ditto_kernel.identity import InstrumentId
 
 from ditto_core.execution.reality.market import MarketSnapshot
 
@@ -40,7 +41,7 @@ class Slice:
 
     trade_date: str
     step_time: datetime
-    bars: dict[str, MarketSnapshot]
+    bars: dict[InstrumentId, MarketSnapshot]
     benchmark_close: float | None = None
 
 
@@ -78,7 +79,7 @@ class ParquetDataFeed:
     def __init__(
         self,
         data_dir: str | Path,
-        instrument_ids: list[str],
+        instrument_ids: list[InstrumentId],
         start_date: str,
         end_date: str,
     ) -> None:
@@ -87,16 +88,16 @@ class ParquetDataFeed:
         self._start_date = start_date
         self._end_date = end_date
         # Lazy-loaded: instrument_id → pl.DataFrame
-        self._data: dict[str, pl.DataFrame] | None = None
+        self._data: dict[InstrumentId, pl.DataFrame] | None = None
 
     # -- private helpers ---------------------------------------------------
 
-    def _load(self) -> dict[str, pl.DataFrame]:
+    def _load(self) -> dict[InstrumentId, pl.DataFrame]:
         """Lazy-load all parquet files into memory."""
         if self._data is not None:
             return self._data
 
-        data: dict[str, pl.DataFrame] = {}
+        data: dict[InstrumentId, pl.DataFrame] = {}
         for iid in self._instrument_ids:
             path = self._data_dir / f"{iid}.parquet"
             if not path.exists():
@@ -109,7 +110,7 @@ class ParquetDataFeed:
     @staticmethod
     def _row_to_snapshot(
         date: str,
-        iid: str,
+        iid: InstrumentId,
         row: dict[str, Any],
     ) -> MarketSnapshot:
         """Convert a polars row dict (from ``to_dicts()``) to a MarketSnapshot."""
@@ -161,7 +162,7 @@ class ParquetDataFeed:
         date_obj = datetime.strptime(date, "%Y-%m-%d")
         step_time = date_obj.replace(hour=15, minute=0, second=0)
 
-        bars: dict[str, MarketSnapshot] = {}
+        bars: dict[InstrumentId, MarketSnapshot] = {}
         for iid, df in data.items():
             row = df.filter(pl.col("trade_date") == date)
             if row.height == 0:

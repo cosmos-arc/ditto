@@ -55,7 +55,7 @@ from .conftest import (
 
 
 def _make_market_snapshot(
-    instrument_id: str,
+    instrument_id: int,
     close: float,
     low: float | None = None,
     high: float | None = None,
@@ -76,7 +76,7 @@ def _make_market_snapshot(
 
 
 def _make_process_input(
-    bars: dict[str, MarketSnapshot],
+    bars: dict[int, MarketSnapshot],
     trade_date: str = "2026-01-05",
 ) -> ProcessInput:
     """构建 ProcessInput 用于直接调用 BacktestBrokerage。"""
@@ -88,7 +88,7 @@ def _make_process_input(
 
 
 def _make_instrument_rules(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     lot_size: int = 100,
 ) -> InstrumentRules:
     """构造 InstrumentRules 元组。"""
@@ -125,12 +125,12 @@ def _make_instrument_rules(
 
 def _make_pre_trade_context(
     account_view: AccountView,
-    close_prices: dict[str, float] | None = None,
+    close_prices: dict[int, float] | None = None,
     fee_model: SimpleFeeModel | None = None,
     lot_size: int = 100,
 ) -> PreTradeContext:
     """构建 V3 PreTradeContext — 便捷 helper。"""
-    prices = close_prices or {"ETF-001": 10.0}
+    prices = close_prices or {1: 10.0}
     rules = {iid: _make_instrument_rules(iid, lot_size) for iid in prices}
     snapshots = {
         iid: _make_market_snapshot(iid, close) for iid, close in prices.items()
@@ -162,7 +162,7 @@ class TestFrozenImmutability:
         """OrderTicket frozen 不可直接修改。"""
         order = Order(
             order_id="o-1",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
@@ -176,7 +176,7 @@ class TestFrozenImmutability:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -186,7 +186,7 @@ class TestFrozenImmutability:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({"ETF-001": pos}),
+            positions=MappingProxyType({1: pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=501_000.0,
             nav=501_000.0,
@@ -195,7 +195,7 @@ class TestFrozenImmutability:
             order_book=OrderBookReadOnly({}),
         )
         with pytest.raises(TypeError):
-            view.positions["ETF-002"] = pos  # type: ignore[index]
+            view.positions[2] = pos  # type: ignore[index]
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +210,7 @@ class TestTerminalState:
         """FILLED 状态的 OrderTicket 不能撤销。"""
         order = Order(
             order_id="o-1",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
@@ -240,7 +240,7 @@ class TestTerminalState:
         """INVALID 状态也不能撤销。"""
         order = Order(
             order_id="o-1",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
@@ -285,18 +285,18 @@ class TestNoFillNoFillEvent:
 
         order = Order(
             order_id="o-missing",
-            instrument_id="ETF-999",  # 不存在
+            instrument_id=999,  # 不存在
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
         )
         brokerage.place_order(order)
 
-        # bars 中没有 ETF-999
+        # bars 中没有 999
         process_input = _make_process_input(
             bars={
-                "ETF-001": _make_market_snapshot(
-                    "ETF-001",
+                1: _make_market_snapshot(
+                    1,
                     close=10.0,
                     low=9.9,
                     high=10.1,
@@ -319,13 +319,13 @@ class TestRiskLockClears:
     def test_risk_lock_cleared_on_new_context(self) -> None:
         """新建 StrategyContext 不继承前一次的锁定。"""
         ctx1 = StrategyContext()
-        ctx1.lock_instrument("ETF-001", "stop-loss")
+        ctx1.lock_instrument(1, "stop-loss")
 
-        assert ctx1.is_locked("ETF-001")
+        assert ctx1.is_locked(1)
 
         # 新建 context — 锁定自动清除
         ctx2 = StrategyContext()
-        assert not ctx2.is_locked("ETF-001")
+        assert not ctx2.is_locked(1)
 
 
 # ---------------------------------------------------------------------------
@@ -350,12 +350,12 @@ class TestRollingPreTradeContext:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={"ETF-001": 10.0},
+            close_prices={1: 10.0},
         )
 
         order1 = Order(
             order_id="o-1",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
@@ -365,7 +365,7 @@ class TestRollingPreTradeContext:
 
         order2 = Order(
             order_id="o-2",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
@@ -387,7 +387,7 @@ class TestPendingAwarePlanner:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=500,
             available_quantity=500,
             average_cost=10.0,
@@ -400,7 +400,7 @@ class TestPendingAwarePlanner:
         ob = OrderBook()
         sell_order = Order(
             order_id="pending-sell",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.SELL,
             quantity=500,
@@ -412,7 +412,7 @@ class TestPendingAwarePlanner:
         ob.submit(sell_ticket)
 
         view = AccountView(
-            positions=MappingProxyType({"ETF-001": pos}),
+            positions=MappingProxyType({1: pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=505_000.0,
             nav=505_000.0,
@@ -471,7 +471,7 @@ class TestPlannerLock:
             trade_date="2026-01-05",
             strategy_id="test",
             run_id="run",
-            positions={"ETF-001": 0.3, "ETF-002": 0.3, "ETF-003": 0.4},
+            positions={1: 0.3, 2: 0.3, 3: 0.4},
         )
 
         planner = SimpleExecutionPlanner()
@@ -480,16 +480,16 @@ class TestPlannerLock:
             target=target,
             account_view=view,
             trade_date="2026-01-05",
-            locked_instruments={"ETF-001"},
+            locked_instruments={1},
         )
 
         # ETF-001 应被 blocked，不生成 buy order
-        buy_orders = [o for o in plan.orders if o.instrument_id == "ETF-001"]
+        buy_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert len(buy_orders) == 0
 
         # ETF-001 应出现在 blocked_orders 中
         blocked_iids = {b.instrument_id for b in plan.blocked_orders}
-        assert "ETF-001" in blocked_iids
+        assert 1 in blocked_iids
 
         # ETF-002, ETF-003 正常生成 buy orders
         assert len(plan.orders) == 2
@@ -516,7 +516,7 @@ class TestResizeRecheck:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={"ETF-001": 10.0},
+            close_prices={1: 10.0},
         )
         composite = CompositePreTradeCheck(
             checks=(LotSizeCheck(), BuyingPowerCheck()),
@@ -525,7 +525,7 @@ class TestResizeRecheck:
         # 350 → resize to 400 → cost 4000 + fee > 3500 → reject
         order = Order(
             order_id="o-resize",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=350,
@@ -560,7 +560,7 @@ class TestCashConservation:
 
         order = Order(
             order_id="o-buy",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
@@ -569,8 +569,8 @@ class TestCashConservation:
 
         process_input = _make_process_input(
             bars={
-                "ETF-001": _make_market_snapshot(
-                    "ETF-001",
+                1: _make_market_snapshot(
+                    1,
                     close=10.0,
                     low=9.9,
                     high=10.1,
@@ -602,7 +602,7 @@ class TestCashConservation:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=200,
             available_quantity=200,
             average_cost=10.0,
@@ -612,7 +612,7 @@ class TestCashConservation:
             total_fees=0.0,
         )
         account = Account(
-            positions={"ETF-001": pos},
+            positions={1: pos},
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
         )
         brokerage = BacktestBrokerage(account=account)
@@ -622,7 +622,7 @@ class TestCashConservation:
 
         order = Order(
             order_id="o-sell",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.SELL,
             quantity=100,
@@ -631,8 +631,8 @@ class TestCashConservation:
 
         process_input = _make_process_input(
             bars={
-                "ETF-001": _make_market_snapshot(
-                    "ETF-001",
+                1: _make_market_snapshot(
+                    1,
                     close=11.0,
                     low=10.9,
                     high=11.1,
@@ -664,7 +664,7 @@ class TestNoOversell:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -674,7 +674,7 @@ class TestNoOversell:
             total_fees=0.0,
         )
         account = Account(
-            positions={"ETF-001": pos},
+            positions={1: pos},
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
         )
         brokerage = BacktestBrokerage(account=account)
@@ -682,7 +682,7 @@ class TestNoOversell:
         # Try to sell 200 — only 100 available
         order = Order(
             order_id="o-oversell",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.SELL,
             quantity=200,
@@ -691,8 +691,8 @@ class TestNoOversell:
 
         process_input = _make_process_input(
             bars={
-                "ETF-001": _make_market_snapshot(
-                    "ETF-001",
+                1: _make_market_snapshot(
+                    1,
                     close=10.0,
                     low=9.9,
                     high=10.1,
@@ -712,7 +712,7 @@ class TestNoOversell:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -722,7 +722,7 @@ class TestNoOversell:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({"ETF-001": pos}),
+            positions=MappingProxyType({1: pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=501_000.0,
             nav=501_000.0,
@@ -732,12 +732,12 @@ class TestNoOversell:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={"ETF-001": 10.0},
+            close_prices={1: 10.0},
         )
 
         sell = Order(
             order_id="o-sell",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.SELL,
             quantity=100,
@@ -745,7 +745,7 @@ class TestNoOversell:
         new_ctx = ctx.with_order_accepted(sell)
 
         # available_quantity should be 0 (clamped)
-        assert new_ctx.account_view.positions["ETF-001"].available_quantity == 0
+        assert new_ctx.account_view.positions[1].available_quantity == 0
 
 
 # ---------------------------------------------------------------------------
@@ -779,7 +779,7 @@ class TestStatsPostFillSnapshot:
         # Execute a buy
         order = Order(
             order_id="o-buy",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
@@ -788,8 +788,8 @@ class TestStatsPostFillSnapshot:
 
         process_input = _make_process_input(
             bars={
-                "ETF-001": _make_market_snapshot(
-                    "ETF-001",
+                1: _make_market_snapshot(
+                    1,
                     close=10.0,
                     low=9.9,
                     high=10.1,
@@ -822,7 +822,7 @@ class TestPriceLimitInvariants:
 
     def _make_snapshot_with_limits(
         self,
-        instrument_id: str,
+        instrument_id: int,
         close: float,
         limit_up: float | None,
         limit_down: float | None,
@@ -860,7 +860,7 @@ class TestPriceLimitInvariants:
         # ETF-001: close=11.0 = limit_up (prev=10.0, +10%)
         order = Order(
             order_id="o-buy",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
@@ -868,13 +868,13 @@ class TestPriceLimitInvariants:
         brokerage.place_order(order)
 
         snapshot = self._make_snapshot_with_limits(
-            "ETF-001",
+            1,
             close=11.0,
             limit_up=11.0,
             limit_down=9.0,
             prev_close=10.0,
         )
-        process_input = _make_process_input(bars={"ETF-001": snapshot})
+        process_input = _make_process_input(bars={1: snapshot})
         fills = brokerage.process_pending(process_input)
 
         assert len(fills) == 0
@@ -885,7 +885,7 @@ class TestPriceLimitInvariants:
         from ditto_core.execution.reality import AShareFillModel
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -895,7 +895,7 @@ class TestPriceLimitInvariants:
             total_fees=0.0,
         )
         account = Account(
-            positions={"ETF-001": pos},
+            positions={1: pos},
             cash=CashBook(
                 available=500_000.0,
                 settled=500_000.0,
@@ -908,7 +908,7 @@ class TestPriceLimitInvariants:
         # ETF-001: close=9.0 = limit_down (prev=10.0, -10%)
         order = Order(
             order_id="o-sell",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.SELL,
             quantity=100,
@@ -916,13 +916,13 @@ class TestPriceLimitInvariants:
         brokerage.place_order(order)
 
         snapshot = self._make_snapshot_with_limits(
-            "ETF-001",
+            1,
             close=9.0,
             limit_up=11.0,
             limit_down=9.0,
             prev_close=10.0,
         )
-        process_input = _make_process_input(bars={"ETF-001": snapshot})
+        process_input = _make_process_input(bars={1: snapshot})
         fills = brokerage.process_pending(process_input)
 
         assert len(fills) == 0
@@ -933,7 +933,7 @@ class TestPriceLimitInvariants:
         from ditto_core.execution.reality import AShareFillModel
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -943,7 +943,7 @@ class TestPriceLimitInvariants:
             total_fees=0.0,
         )
         account = Account(
-            positions={"ETF-001": pos},
+            positions={1: pos},
             cash=CashBook(
                 available=500_000.0,
                 settled=500_000.0,
@@ -955,7 +955,7 @@ class TestPriceLimitInvariants:
 
         order = Order(
             order_id="o-sell",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.SELL,
             quantity=100,
@@ -963,13 +963,13 @@ class TestPriceLimitInvariants:
         brokerage.place_order(order)
 
         snapshot = self._make_snapshot_with_limits(
-            "ETF-001",
+            1,
             close=11.0,
             limit_up=11.0,
             limit_down=9.0,
             prev_close=10.0,
         )
-        process_input = _make_process_input(bars={"ETF-001": snapshot})
+        process_input = _make_process_input(bars={1: snapshot})
         fills = brokerage.process_pending(process_input)
 
         assert len(fills) == 1
@@ -991,7 +991,7 @@ class TestPriceLimitInvariants:
 
         order = Order(
             order_id="o-buy",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
@@ -999,13 +999,13 @@ class TestPriceLimitInvariants:
         brokerage.place_order(order)
 
         snapshot = self._make_snapshot_with_limits(
-            "ETF-001",
+            1,
             close=9.0,
             limit_up=11.0,
             limit_down=9.0,
             prev_close=10.0,
         )
-        process_input = _make_process_input(bars={"ETF-001": snapshot})
+        process_input = _make_process_input(bars={1: snapshot})
         fills = brokerage.process_pending(process_input)
 
         assert len(fills) == 1
@@ -1017,7 +1017,7 @@ class TestPriceLimitInvariants:
         from ditto_core.execution.reality import AShareFillModel
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -1027,7 +1027,7 @@ class TestPriceLimitInvariants:
             total_fees=0.0,
         )
         account = Account(
-            positions={"ETF-001": pos},
+            positions={1: pos},
             cash=CashBook(
                 available=500_000.0,
                 settled=500_000.0,
@@ -1039,14 +1039,14 @@ class TestPriceLimitInvariants:
 
         sell_order = Order(
             order_id="o-sell",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.SELL,
             quantity=100,
         )
         buy_order = Order(
             order_id="o-buy",
-            instrument_id="ETF-002",
+            instrument_id=2,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=100,
@@ -1055,19 +1055,19 @@ class TestPriceLimitInvariants:
         brokerage.place_order(buy_order)
 
         snapshot_1 = self._make_snapshot_with_limits(
-            "ETF-001",
+            1,
             close=10.0,
             limit_up=None,
             limit_down=None,
         )
         snapshot_2 = self._make_snapshot_with_limits(
-            "ETF-002",
+            2,
             close=20.0,
             limit_up=None,
             limit_down=None,
         )
         process_input = _make_process_input(
-            bars={"ETF-001": snapshot_1, "ETF-002": snapshot_2},
+            bars={1: snapshot_1, 2: snapshot_2},
         )
         fills = brokerage.process_pending(process_input)
 
@@ -1099,14 +1099,14 @@ class TestLotSizeRounding:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={"ETF-001": 10.0},
+            close_prices={1: 10.0},
         )
         composite = CompositePreTradeCheck(checks=(LotSizeCheck(),))
 
         # 50 股 → resize to 100
         order = Order(
             order_id="o-resize",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=50,
@@ -1132,13 +1132,13 @@ class TestLotSizeRounding:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={"ETF-001": 10.0},
+            close_prices={1: 10.0},
         )
         composite = CompositePreTradeCheck(checks=(LotSizeCheck(),))
 
         order = Order(
             order_id="o-ok",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.BUY,
             quantity=300,
@@ -1152,7 +1152,7 @@ class TestLotSizeRounding:
         from ditto_core.accounting.position import Position
 
         pos = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=350,
             available_quantity=350,
             average_cost=10.0,
@@ -1162,7 +1162,7 @@ class TestLotSizeRounding:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({"ETF-001": pos}),
+            positions=MappingProxyType({1: pos}),
             cash=CashBook(
                 available=500_000.0,
                 settled=500_000.0,
@@ -1176,14 +1176,14 @@ class TestLotSizeRounding:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={"ETF-001": 10.0},
+            close_prices={1: 10.0},
         )
         composite = CompositePreTradeCheck(checks=(LotSizeCheck(),))
 
         # 卖出 350（含零股）→ 不被 resize
         order = Order(
             order_id="o-sell-350",
-            instrument_id="ETF-001",
+            instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderDirection.SELL,
             quantity=350,
@@ -1227,10 +1227,10 @@ class TestSuspendedE2E:
             write_parquet_data,
         )
 
-        # 构建数据: ETF-001 全程停牌, ETF-002/003 正常
-        suspended_data: dict[str, pl.DataFrame] = {}
+        # 构建数据: 标的 1 全程停牌, 标的 2/3 正常
+        suspended_data: dict[int, pl.DataFrame] = {}
         for iid in INSTRUMENT_IDS:
-            if iid == "ETF-001":
+            if iid == 1:
                 # 全部日期 is_suspended=True
                 df = pl.DataFrame(
                     {
@@ -1301,16 +1301,16 @@ class TestSuspendedE2E:
         )
         result = engine.run()
 
-        # 验证: ETF-001 不产生任何成交
-        suspended_fills = [f for f in result.fills if f.instrument_id == "ETF-001"]
+        # 验证: 标的 1 不产生任何成交
+        suspended_fills = [f for f in result.fills if f.instrument_id == 1]
         assert len(suspended_fills) == 0, (
-            f"停牌标的 ETF-001 不应产生成交, 实际 {len(suspended_fills)} 笔"
+            f"停牌标的 1 不应产生成交, 实际 {len(suspended_fills)} 笔"
         )
 
-        # 验证: 审计收集器中 ETF-001 无成交
+        # 验证: 审计收集器中标的 1 无成交
         audit_fills = collector.get_fills()
-        suspended_audit_fills = [f for f in audit_fills if f.instrument_id == "ETF-001"]
-        assert len(suspended_audit_fills) == 0, "审计收集器中 ETF-001 不应有成交记录"
+        suspended_audit_fills = [f for f in audit_fills if f.instrument_id == 1]
+        assert len(suspended_audit_fills) == 0, "审计收集器中标的 1 不应有成交记录"
 
 
 # ---------------------------------------------------------------------------
@@ -1349,7 +1349,7 @@ class TestExitOrderRules:
         # 构建数据 — ETF-003 价格表现最差（持续下跌），top_k=2 会排除它
         data = generate_3day_data()
         # 确保 ETF-003 跌幅最大 → 会被 top_k=2 排除
-        data["ETF-003"] = pl.DataFrame(
+        data[3] = pl.DataFrame(
             {
                 "trade_date": TRADE_DATES_3,
                 "open": [5.0, 4.8, 4.5],
@@ -1373,7 +1373,7 @@ class TestExitOrderRules:
 
         # 创建已有持仓 — ETF-001 持有 1000 股
         pos_etf001 = Position(
-            instrument_id="ETF-001",
+            instrument_id=1,
             quantity=1000,
             available_quantity=1000,
             average_cost=10.0,
@@ -1383,7 +1383,7 @@ class TestExitOrderRules:
             total_fees=0.0,
         )
         account = Account(
-            positions={"ETF-001": pos_etf001},
+            positions={1: pos_etf001},
             cash=CashBook(
                 available=INITIAL_CASH,
                 settled=INITIAL_CASH,
@@ -1450,9 +1450,9 @@ class TestExitOrderRules:
         # ETF-001 已持有且权重已分配 → PreTrade 会有 buy/resize 决策
         # ETF-003 不在 top_k 中 → 如果 Day 1 被买入则 Day 2 会被卖出
         pre_trade_log = collector.get_pre_trade_log()
-        etf001_decisions = [d for d in pre_trade_log if d.instrument_id == "ETF-001"]
+        etf001_decisions = [d for d in pre_trade_log if d.instrument_id == 1]
         assert len(etf001_decisions) > 0, (
-            "ETF-001 应有 PreTrade 决策记录 — 证明三层规则被正确加载"
+            "标的 1 应有 PreTrade 决策记录 — 证明三层规则被正确加载"
         )
 
         # 验证: manifest 包含 rule_refs
@@ -1513,9 +1513,9 @@ class TestRuleRefsPreserved:
             fee_schedules[iid] = [rules[2]]
 
         # ETF-001 有 3 个 trading_rule 版本 — 不同 as_of_date
-        trading_rules["ETF-001"] = [
+        trading_rules[1] = [
             TradingRuleSet(
-                instrument_id="ETF-001",
+                instrument_id=1,
                 as_of_date="2025-12-01",
                 settlement_cycle=1,
                 fund_settlement_cycle=1,
@@ -1524,7 +1524,7 @@ class TestRuleRefsPreserved:
                 call_auction_sessions=("open", "close"),
             ),
             TradingRuleSet(
-                instrument_id="ETF-001",
+                instrument_id=1,
                 as_of_date="2026-01-03",
                 settlement_cycle=1,
                 fund_settlement_cycle=0,
@@ -1533,7 +1533,7 @@ class TestRuleRefsPreserved:
                 call_auction_sessions=("open", "close"),
             ),
             TradingRuleSet(
-                instrument_id="ETF-001",
+                instrument_id=1,
                 as_of_date="2026-01-06",
                 settlement_cycle=0,
                 fund_settlement_cycle=0,
@@ -1601,12 +1601,10 @@ class TestRuleRefsPreserved:
         # Day 1 (01-05): PIT 查询 → 2026-01-03 版本（最新 <= 01-05）
         # Day 2 (01-06): PIT 查询 → 2026-01-06 版本（新 key，被记录）
         # Day 3 (01-07): PIT 查询 → 2026-01-06 版本（已存在，不重复记录）
-        # 所以 ETF-001 应有 2 个不同的 trading_rule_as_of
-        etf001_refs = [
-            r for r in result.manifest.rule_refs if r.instrument_id == "ETF-001"
-        ]
+        # 所以标的 1 应有 2 个不同的 trading_rule_as_of
+        etf001_refs = [r for r in result.manifest.rule_refs if r.instrument_id == 1]
         assert len(etf001_refs) >= 2, (
-            f"ETF-001 应至少有 2 个不同版本的 rule_refs (F3 first_observed), "
+            f"标的 1 应至少有 2 个不同版本的 rule_refs (F3 first_observed), "
             f"实际 {len(etf001_refs)} 个: "
             f"{[r.trading_rule_as_of for r in etf001_refs]}"
         )

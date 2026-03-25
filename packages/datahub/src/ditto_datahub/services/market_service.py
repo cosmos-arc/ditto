@@ -88,10 +88,7 @@ class MarketBarsQuery:
     end: str | None = None
     adj: AdjType = AdjType.NONE
     asof: str | None = None
-    asset_class: (
-        Literal["stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"]
-        | None
-    ) = None
+    asset_class: str | None = None
     with_ticker: bool = False
     with_status: bool = False
     raw: bool = False
@@ -153,10 +150,7 @@ class MarketService:
         adj: AdjType = AdjType.NONE,
         with_ticker: bool = False,
         with_status: bool = False,
-        asset_class: Literal[
-            "stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"
-        ]
-        | None = None,
+        asset_class: str | None = None,
         limit: int | None = None,
     ) -> pl.DataFrame:
         """
@@ -308,9 +302,7 @@ class MarketService:
         instrument_ids: list[int],
         start: date | None,
         end: date | None,
-        asset_class: Literal[
-            "stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"
-        ],
+        asset_class: str,
     ) -> pl.DataFrame:
         """
         加载核心行情数据（不含复权和增强）.
@@ -369,12 +361,7 @@ class MarketService:
 
     def _resolve_instrument_ids_and_asset_class(
         self, query: MarketBarsQuery
-    ) -> tuple[
-        list[int],
-        Literal[
-            "stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"
-        ],
-    ]:
+    ) -> tuple[list[int], str]:
         """
         解析 Instrument ID 列表和资产类别.
 

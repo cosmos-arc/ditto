@@ -10,7 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from ditto_core.accounting.order_book import OrderDirection
+from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.identity import InstrumentId
 
 __all__ = [
     "FillEvent",
@@ -71,7 +72,7 @@ class FillEvent:
 
     fill_id: str
     order_id: str
-    instrument_id: str
+    instrument_id: InstrumentId
     direction: OrderDirection
     filled_quantity: int
     fill_price: float

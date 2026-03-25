@@ -1,5 +1,7 @@
 """Models 包。"""
 
+from ditto_kernel.enums import AssetClass
+
 from ditto_port.models.capital import (
     Margin,
     MarginQuery,
@@ -88,7 +90,6 @@ from ditto_port.models.market import (
     to_bar_list,
 )
 from ditto_port.models.metadata import (
-    AssetClass,
     Instrument,
     InstrumentQuery,
     to_instrument,

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from enum import Enum, StrEnum
 from typing import Literal, NamedTuple, cast
 
-from ditto_datahub.models.enums import AssetClass
+from ditto_kernel.enums import AssetClass
 
 # 资产类别类型别名
 type AssetClassType = Literal[

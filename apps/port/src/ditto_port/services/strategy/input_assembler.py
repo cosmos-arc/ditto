@@ -67,6 +67,7 @@ class StrategyInputAssembler:
         slice_: Slice,
         *,
         valid_until: str | None = None,
+        run_id: str | None = None,
     ) -> StrategyInputBundle:
         """
         从 Slice 构建 StrategyInputBundle.
@@ -79,6 +80,7 @@ class StrategyInputAssembler:
             slice_: 当日市场数据切片
             valid_until: 信号有效期截止日期 (YYYY-MM-DD)，若早于
                 trade_date 则视为过期，bundle 中 signal_values 为 None
+            run_id: 覆盖默认 run_id，用于在运行前固化真实 run_id
 
         Returns:
             包含标的列表、市场数据、信号值的 StrategyInputBundle
@@ -116,7 +118,7 @@ class StrategyInputAssembler:
         return StrategyInputBundle(
             trade_date=trade_date,
             strategy_id=self._strategy_id,
-            run_id=self._run_id,
+            run_id=self._run_id if run_id is None else run_id,
             instruments=instruments,
             market_data=pl.DataFrame(market_rows),
             signal_values=None if signals_expired else pl.DataFrame(signal_rows),

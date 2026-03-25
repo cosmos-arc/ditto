@@ -19,6 +19,7 @@ from ditto_port.services.derived import (
 )
 from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
+from ditto_port.services.strategy.facade import StrategyFacade
 
 
 @dataclass(frozen=True)
@@ -50,3 +51,10 @@ class MaterializationBundle:
     invalidation_service: InvalidationCascadeOrchestrator
     publication_facade: DerivedPublicationFacade
     research_dataset_facade: ResearchDatasetFacade
+
+
+@dataclass(frozen=True)
+class StrategyBundle:
+    """策略上下文组合包。"""
+
+    strategy_facade: StrategyFacade

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import pytest
-from ditto_core.accounting.order_book import Order, OrderDirection, OrderType
+from ditto_core.accounting.order_book import Order, OrderType
 from ditto_core.execution.fills import Filled, FillOutcome, NoFill
 from ditto_core.execution.reality.fill import (
     AShareFillModel,
@@ -13,6 +13,7 @@ from ditto_core.execution.reality.fill import (
 )
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.execution.rules import InstrumentDefinition, TradingRuleSet
+from ditto_kernel.enums import OrderSide as OrderDirection
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -24,7 +25,7 @@ def _order(
     direction: OrderDirection = OrderDirection.BUY,
     quantity: int = 100,
     price: float | None = None,
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     order_id: str = "ORD-001",
 ) -> Order:
     return Order(
@@ -42,7 +43,7 @@ def _market_snapshot(
     close: float = 10.5,
     low: float = 10.0,
     high: float = 11.0,
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     limit_up: float | None = None,
     limit_down: float | None = None,
     is_suspended: bool = False,
@@ -66,7 +67,7 @@ def _market_snapshot(
 
 
 _DEFINITION = InstrumentDefinition(
-    instrument_id="ETF-001",
+    instrument_id=1,
     asset_class="etf",
     exchange="XSHE",
     currency="CNY",
@@ -78,7 +79,7 @@ _DEFINITION = InstrumentDefinition(
 )
 
 _TRADING_RULE = TradingRuleSet(
-    instrument_id="ETF-001",
+    instrument_id=1,
     as_of_date="2026-03-01",
     settlement_cycle=1,
     fund_settlement_cycle=1,

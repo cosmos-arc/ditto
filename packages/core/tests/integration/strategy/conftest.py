@@ -66,32 +66,25 @@ TRADE_DATES_10 = [
 ]
 
 # ETF 标的（etf_trend_swing, etf_rotation 使用）
-ETF_INSTRUMENT_IDS = ["ETF-001", "ETF-002", "ETF-003", "ETF-004", "ETF-005"]
+ETF_INSTRUMENT_IDS = [1, 2, 3, 4, 5]
 
 # 个股标的（stock_selection_trend 使用）
-STOCK_INSTRUMENT_IDS = [
-    "STK-001",
-    "STK-002",
-    "STK-003",
-    "STK-004",
-    "STK-005",
-    "STK-006",
-]
+STOCK_INSTRUMENT_IDS = [10, 11, 12, 13, 14, 15]
 
 # 行业轮动标的（stock_sector_rotation 使用）— 包含行业 ETF + 个股
 SECTOR_INSTRUMENT_IDS = [
-    "SEC-FINANCE",  # 行业 ETF
-    "SEC-TECH",  # 行业 ETF
-    "SEC-HEALTH",  # 行业 ETF
-    "FIN-STK-001",  # 金融行业个股
-    "FIN-STK-002",  # 金融行业个股
-    "FIN-STK-003",  # 金融行业个股
-    "TECH-STK-001",  # 科技行业个股
-    "TECH-STK-002",  # 科技行业个股
-    "TECH-STK-003",  # 科技行业个股
-    "HEALTH-STK-001",  # 医药行业个股
-    "HEALTH-STK-002",  # 医药行业个股
-    "HEALTH-STK-003",  # 医药行业个股
+    100,  # 行业 ETF — 金融
+    101,  # 行业 ETF — 科技
+    102,  # 行业 ETF — 医药
+    110,  # 金融行业个股
+    111,  # 金融行业个股
+    112,  # 金融行业个股
+    120,  # 科技行业个股
+    121,  # 科技行业个股
+    122,  # 科技行业个股
+    130,  # 医药行业个股
+    131,  # 医药行业个股
+    132,  # 医药行业个股
 ]
 
 
@@ -127,7 +120,7 @@ def _make_market_df(
 
 def write_parquet_data(
     tmp_path: Path,
-    data: dict[str, pl.DataFrame],
+    data: dict[int, pl.DataFrame],
 ) -> Path:
     """将测试数据写入 parquet 文件，返回数据目录。"""
     data_dir = tmp_path / "market_data"
@@ -142,71 +135,71 @@ def write_parquet_data(
 # ---------------------------------------------------------------------------
 
 
-def make_etf_5day_data() -> dict[str, pl.DataFrame]:
+def make_etf_5day_data() -> dict[int, pl.DataFrame]:
     """5 日 ETF 测试数据 — 包含追踪止损触发场景.
 
-    ETF-001: Day 5 跌幅 > 8%（触发 trailing stop）
+    标的 1: Day 5 跌幅 > 8%（触发 trailing stop）
     其他: 稳定上涨
     """
     return {
-        "ETF-001": _make_market_df(
+        1: _make_market_df(
             TRADE_DATES_5,
             [10.0, 10.2, 10.3, 10.1, 9.0],  # Day 5 暴跌触发止损
         ),
-        "ETF-002": _make_market_df(
+        2: _make_market_df(
             TRADE_DATES_5,
             [20.0, 20.5, 21.0, 21.2, 21.5],
         ),
-        "ETF-003": _make_market_df(
+        3: _make_market_df(
             TRADE_DATES_5,
             [5.0, 5.1, 5.2, 5.3, 5.4],
         ),
-        "ETF-004": _make_market_df(
+        4: _make_market_df(
             TRADE_DATES_5,
             [15.0, 15.3, 15.5, 15.8, 16.0],
         ),
-        "ETF-005": _make_market_df(
+        5: _make_market_df(
             TRADE_DATES_5,
             [8.0, 8.2, 8.1, 8.3, 8.5],
         ),
     }
 
 
-def make_stock_10day_data() -> dict[str, pl.DataFrame]:
+def make_stock_10day_data() -> dict[int, pl.DataFrame]:
     """10 日个股测试数据 — 包含多因子和调仓频率场景.
 
     信号值从 Day1-Day10 略有波动，但保持正值。
     Week2 (Day 6-10) 的信号值变化用于验证 weekly 调仓。
     """
     return {
-        "STK-001": _make_market_df(
+        10: _make_market_df(
             TRADE_DATES_10,
             [10.0, 10.2, 10.1, 10.3, 10.5, 10.6, 10.4, 10.8, 11.0, 11.2],
         ),
-        "STK-002": _make_market_df(
+        11: _make_market_df(
             TRADE_DATES_10,
             [20.0, 20.5, 20.3, 20.8, 21.0, 21.2, 21.5, 21.0, 21.8, 22.0],
         ),
-        "STK-003": _make_market_df(
+        12: _make_market_df(
             TRADE_DATES_10,
             [5.0, 5.1, 5.2, 5.1, 5.3, 5.4, 5.2, 5.5, 5.6, 5.8],
         ),
-        "STK-004": _make_market_df(
+        13: _make_market_df(
             TRADE_DATES_10,
             [15.0, 14.8, 15.1, 14.9, 15.2, 15.0, 14.7, 15.3, 15.5, 15.1],
         ),
-        "STK-005": _make_market_df(
+        14: _make_market_df(
             TRADE_DATES_10,
             [8.0, 8.2, 8.3, 8.1, 8.4, 8.5, 8.6, 8.3, 8.7, 8.9],
         ),
-        "STK-006": _make_market_df(
+        15: _make_market_df(
             TRADE_DATES_10,
             [12.0, 12.1, 11.9, 12.3, 12.5, 12.2, 12.4, 12.6, 12.8, 13.0],
         ),
     }
 
 
-def make_sector_10day_data() -> dict[str, pl.DataFrame]:
+def make_sector_10day_data() -> dict[int, pl.DataFrame]:
     """10 日行业轮动测试数据 — 包含行业切换场景.
 
     行业 ETF 价格趋势:
@@ -215,56 +208,56 @@ def make_sector_10day_data() -> dict[str, pl.DataFrame]:
 
     个股价格跟随行业趋势。
     """
-    data: dict[str, pl.DataFrame] = {
+    data: dict[int, pl.DataFrame] = {
         # Week1: TECH 领涨, Week2: HEALTH 领涨
-        "SEC-TECH": _make_market_df(
+        101: _make_market_df(
             TRADE_DATES_10,
             [10.0, 10.5, 11.0, 11.5, 12.0, 12.1, 12.0, 11.8, 11.5, 11.2],
         ),
-        "SEC-FINANCE": _make_market_df(
+        100: _make_market_df(
             TRADE_DATES_10,
             [10.0, 10.3, 10.5, 10.8, 11.0, 10.9, 10.7, 10.5, 10.2, 10.0],
         ),
-        "SEC-HEALTH": _make_market_df(
+        102: _make_market_df(
             TRADE_DATES_10,
             [10.0, 10.1, 10.2, 10.3, 10.5, 10.8, 11.2, 11.5, 11.8, 12.0],
         ),
         # 金融行业个股
-        "FIN-STK-001": _make_market_df(
+        110: _make_market_df(
             TRADE_DATES_10,
             [20.0, 20.6, 21.0, 21.5, 22.0, 21.8, 21.4, 21.0, 20.4, 20.0],
         ),
-        "FIN-STK-002": _make_market_df(
+        111: _make_market_df(
             TRADE_DATES_10,
             [15.0, 15.4, 15.8, 16.0, 16.5, 16.3, 16.0, 15.5, 15.2, 14.8],
         ),
-        "FIN-STK-003": _make_market_df(
+        112: _make_market_df(
             TRADE_DATES_10,
             [8.0, 8.3, 8.5, 8.8, 9.0, 8.8, 8.5, 8.2, 7.8, 7.5],
         ),
         # 科技行业个股
-        "TECH-STK-001": _make_market_df(
+        120: _make_market_df(
             TRADE_DATES_10,
             [30.0, 31.5, 33.0, 34.5, 36.0, 36.2, 36.0, 35.5, 34.8, 34.0],
         ),
-        "TECH-STK-002": _make_market_df(
+        121: _make_market_df(
             TRADE_DATES_10,
             [25.0, 26.2, 27.5, 28.5, 30.0, 30.1, 29.8, 29.3, 28.5, 28.0],
         ),
-        "TECH-STK-003": _make_market_df(
+        122: _make_market_df(
             TRADE_DATES_10,
             [18.0, 18.9, 19.8, 20.7, 21.6, 21.7, 21.5, 21.0, 20.5, 20.0],
         ),
         # 医药行业个股
-        "HEALTH-STK-001": _make_market_df(
+        130: _make_market_df(
             TRADE_DATES_10,
             [12.0, 12.1, 12.2, 12.4, 12.6, 13.0, 13.5, 13.9, 14.2, 14.5],
         ),
-        "HEALTH-STK-002": _make_market_df(
+        131: _make_market_df(
             TRADE_DATES_10,
             [22.0, 22.2, 22.5, 22.7, 23.0, 23.8, 24.5, 25.0, 25.5, 26.0],
         ),
-        "HEALTH-STK-003": _make_market_df(
+        132: _make_market_df(
             TRADE_DATES_10,
             [16.0, 16.2, 16.4, 16.6, 16.8, 17.2, 17.8, 18.2, 18.6, 19.0],
         ),
@@ -279,8 +272,8 @@ def make_sector_10day_data() -> dict[str, pl.DataFrame]:
 
 def build_snapshot_engine(
     tmp_path: Path,
-    data: dict[str, pl.DataFrame],
-    instrument_ids: list[str],
+    data: dict[int, pl.DataFrame],
+    instrument_ids: list[int],
     pipeline: StrategyPipeline,
     start_date: str,
     end_date: str,

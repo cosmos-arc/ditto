@@ -43,7 +43,7 @@ from ditto_core.strategy.models import TargetPortfolio
 
 
 def _account_view(
-    positions: dict[str, Position] | None = None,
+    positions: dict[int, Position] | None = None,
     pending_tickets: dict[str, OrderTicket] | None = None,
     nav: float = 100_000.0,
     exposure: float = 0.0,
@@ -63,7 +63,7 @@ def _account_view(
 
 
 def _position(
-    instrument_id: str,
+    instrument_id: int,
     quantity: int = 100,
     market_value: float = 10000.0,
 ) -> Position:
@@ -83,7 +83,7 @@ def _position(
 
 def _pending_buy(
     order_id: str,
-    instrument_id: str,
+    instrument_id: int,
     quantity: int,
 ) -> OrderTicket:
     """创建一个未成交的买单."""
@@ -99,7 +99,7 @@ def _pending_buy(
 
 def _pending_sell(
     order_id: str,
-    instrument_id: str,
+    instrument_id: int,
     quantity: int,
 ) -> OrderTicket:
     """创建一个未成交的卖单."""
@@ -114,7 +114,7 @@ def _pending_sell(
 
 
 def _target(
-    positions: dict[str, float] | None = None,
+    positions: dict[int, float] | None = None,
     cash_target: float = 0.0,
 ) -> TargetPortfolio:
     """创建用于测试的 TargetPortfolio (weight → quantity 由 planner 按 nav 计算)."""
@@ -144,18 +144,18 @@ def _target_qty(weight: float, nav: float = 100_000.0, lot_size: int = 100) -> i
 class TestBlockedOrder:
     def test_frozen(self) -> None:
         bo = BlockedOrder(
-            instrument_id="ETF-001",
+            instrument_id=1,
             direction=OrderDirection.BUY,
             intended_quantity=100,
             reason="risk_locked",
             severity=BlockSeverity.BLOCK,
         )
         with pytest.raises(AttributeError):
-            bo.instrument_id = "ETF-002"  # type: ignore[misc]
+            bo.instrument_id = 2  # type: ignore[misc]
 
     def test_severity_values(self) -> None:
         bo_block = BlockedOrder(
-            instrument_id="ETF-001",
+            instrument_id=1,
             direction=OrderDirection.BUY,
             intended_quantity=100,
             reason="risk_locked",
@@ -164,7 +164,7 @@ class TestBlockedOrder:
         assert bo_block.severity is BlockSeverity.BLOCK
 
         bo_defer = BlockedOrder(
-            instrument_id="ETF-001",
+            instrument_id=1,
             direction=OrderDirection.BUY,
             intended_quantity=100,
             reason="price_limit",
@@ -227,7 +227,7 @@ class TestFirstBuild:
     def test_first_buy_creates_orders(self) -> None:
         """target = {ETF-001: 0.5, ETF-002: 0.3}, nav=100K, lot=100."""
         av = _account_view()
-        target = _target({"ETF-001": 0.5, "ETF-002": 0.3})
+        target = _target({1: 0.5, 2: 0.3})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -239,14 +239,14 @@ class TestFirstBuild:
         assert plan.trade_date == "2026-03-21"
         assert plan.plan_id.startswith("plan-")
         orders = {o.instrument_id: o for o in plan.orders}
-        assert set(orders.keys()) == {"ETF-001", "ETF-002"}
+        assert set(orders.keys()) == {1, 2}
 
         # ETF-001: 0.5 * 100K = 50000 / 100 = 500 lots → 50000
-        assert orders["ETF-001"].direction == OrderDirection.BUY
-        assert orders["ETF-001"].quantity == 50000
+        assert orders[1].direction == OrderDirection.BUY
+        assert orders[1].quantity == 50000
         # ETF-002: 0.3 * 100K = 30000 / 100 = 300 lots → 30000
-        assert orders["ETF-002"].direction == OrderDirection.BUY
-        assert orders["ETF-002"].quantity == 30000
+        assert orders[2].direction == OrderDirection.BUY
+        assert orders[2].quantity == 30000
         assert len(plan.blocked_orders) == 0
 
     def test_empty_target_no_orders(self) -> None:
@@ -276,8 +276,8 @@ class TestNoRebalance:
         """当前持仓 30000 股, target weight 对应 30000 股 → 无订单."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=30000,
                     market_value=30000.0,
                 ),
@@ -285,7 +285,7 @@ class TestNoRebalance:
             exposure=30000.0,
         )
         # 0.3 * 100K = 30000 → 与 position 匹配
-        target = _target({"ETF-001": 0.3})
+        target = _target({1: 0.3})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -310,15 +310,15 @@ class TestExitPosition:
         """ETF-001 在 position 中但不在 target 中 → 全部卖出."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=30000,
                     market_value=30000.0,
                 ),
             },
             exposure=30000.0,
         )
-        target = _target({"ETF-002": 0.5})
+        target = _target({2: 0.5})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -328,13 +328,13 @@ class TestExitPosition:
         )
 
         # ETF-001 应该被卖出（exit）
-        sell_orders = [o for o in plan.orders if o.instrument_id == "ETF-001"]
+        sell_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert len(sell_orders) == 1
         assert sell_orders[0].direction == OrderDirection.SELL
         assert sell_orders[0].quantity == 30000
 
         # ETF-002 应该被买入
-        buy_orders = [o for o in plan.orders if o.instrument_id == "ETF-002"]
+        buy_orders = [o for o in plan.orders if o.instrument_id == 2]
         assert len(buy_orders) == 1
         assert buy_orders[0].direction == OrderDirection.BUY
 
@@ -342,15 +342,15 @@ class TestExitPosition:
         """target weight = 0 → 清仓."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=20000,
                     market_value=20000.0,
                 ),
             },
             exposure=20000.0,
         )
-        target = _target({"ETF-001": 0.0})
+        target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -367,8 +367,8 @@ class TestExitPosition:
         """减仓: 当前 30000 股 → target 需要 20000 股 → 卖出 10000."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=30000,
                     market_value=30000.0,
                 ),
@@ -376,7 +376,7 @@ class TestExitPosition:
             exposure=30000.0,
         )
         # 0.2 * 100K = 20000
-        target = _target({"ETF-001": 0.2})
+        target = _target({1: 0.2})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -402,8 +402,8 @@ class TestPendingAware:
         """已有 pending sell 10000 股 → effective_qty 减少，不重复卖出."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=30000,
                     market_value=30000.0,
                 ),
@@ -411,7 +411,7 @@ class TestPendingAware:
             pending_tickets={
                 "pending-sell-1": _pending_sell(
                     "pending-sell-1",
-                    "ETF-001",
+                    1,
                     10000,
                 ),
             },
@@ -419,7 +419,7 @@ class TestPendingAware:
         )
         # effective_qty = 30000 + (-10000) = 20000
         # target: 0.2 * 100K = 20000 → 完全匹配
-        target = _target({"ETF-001": 0.2})
+        target = _target({1: 0.2})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -434,8 +434,8 @@ class TestPendingAware:
         """已有 pending buy 10000 股 → effective_qty 增加."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=10000,
                     market_value=10000.0,
                 ),
@@ -443,7 +443,7 @@ class TestPendingAware:
             pending_tickets={
                 "pending-buy-1": _pending_buy(
                     "pending-buy-1",
-                    "ETF-001",
+                    1,
                     10000,
                 ),
             },
@@ -451,7 +451,7 @@ class TestPendingAware:
         )
         # effective_qty = 10000 + 10000 = 20000
         # target: 0.2 * 100K = 20000 → 完全匹配
-        target = _target({"ETF-001": 0.2})
+        target = _target({1: 0.2})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -466,8 +466,8 @@ class TestPendingAware:
         """pending sell 导致 effective_qty < target → 需要额外买入."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=30000,
                     market_value=30000.0,
                 ),
@@ -475,7 +475,7 @@ class TestPendingAware:
             pending_tickets={
                 "pending-sell-1": _pending_sell(
                     "pending-sell-1",
-                    "ETF-001",
+                    1,
                     10000,
                 ),
             },
@@ -483,7 +483,7 @@ class TestPendingAware:
         )
         # effective_qty = 30000 + (-10000) = 20000
         # target: 0.3 * 100K = 30000 → 需要买入 10000
-        target = _target({"ETF-001": 0.3})
+        target = _target({1: 0.3})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -508,20 +508,20 @@ class TestPlannerLock:
     def test_locked_instrument_blocked(self) -> None:
         """ETF-001 被锁定且 target 要买入 → BlockedOrder."""
         av = _account_view()
-        target = _target({"ETF-001": 0.5})
+        target = _target({1: 0.5})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
             target=target,
             account_view=av,
             trade_date="2026-03-21",
-            locked_instruments={"ETF-001"},
+            locked_instruments={1},
         )
 
         assert len(plan.orders) == 0
         assert len(plan.blocked_orders) == 1
         bo = plan.blocked_orders[0]
-        assert bo.instrument_id == "ETF-001"
+        assert bo.instrument_id == 1
         assert bo.direction == OrderDirection.BUY
         assert bo.reason == "risk_locked"
         assert bo.severity is BlockSeverity.BLOCK
@@ -531,26 +531,26 @@ class TestPlannerLock:
         """ETF-001 被锁定，但 target 要卖出 → 允许卖出，不产生 BlockedOrder."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=30000,
                     market_value=30000.0,
                 ),
             },
             exposure=30000.0,
         )
-        target = _target({"ETF-001": 0.0})
+        target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
             target=target,
             account_view=av,
             trade_date="2026-03-21",
-            locked_instruments={"ETF-001"},
+            locked_instruments={1},
         )
 
         assert len(plan.blocked_orders) == 0
-        sell_orders = [o for o in plan.orders if o.instrument_id == "ETF-001"]
+        sell_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert len(sell_orders) == 1
         assert sell_orders[0].direction == OrderDirection.SELL
         assert sell_orders[0].quantity == 30000
@@ -568,9 +568,9 @@ class TestMixedScenario:
         """ETF-001 加仓, ETF-002 减仓, ETF-003 清仓, ETF-004 新入场."""
         av = _account_view(
             positions={
-                "ETF-001": _position("ETF-001", quantity=20000, market_value=20000.0),
-                "ETF-002": _position("ETF-002", quantity=30000, market_value=30000.0),
-                "ETF-003": _position("ETF-003", quantity=10000, market_value=10000.0),
+                1: _position(1, quantity=20000, market_value=20000.0),
+                2: _position(2, quantity=30000, market_value=30000.0),
+                3: _position(3, quantity=10000, market_value=10000.0),
             },
             exposure=60000.0,
         )
@@ -578,7 +578,7 @@ class TestMixedScenario:
         # ETF-002: 当前 30000, target 0.2*100K=20000 → 卖出 10000
         # ETF-003: 当前 10000, 不在 target → 清仓 10000
         # ETF-004: 当前 0, target 0.1*100K=10000 → 买入 10000
-        target = _target({"ETF-001": 0.3, "ETF-002": 0.2, "ETF-004": 0.1})
+        target = _target({1: 0.3, 2: 0.2, 4: 0.1})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -588,23 +588,23 @@ class TestMixedScenario:
         )
 
         orders = {o.instrument_id: o for o in plan.orders}
-        assert set(orders.keys()) == {"ETF-001", "ETF-002", "ETF-003", "ETF-004"}
+        assert set(orders.keys()) == {1, 2, 3, 4}
 
         # ETF-001: 加仓 10000
-        assert orders["ETF-001"].direction == OrderDirection.BUY
-        assert orders["ETF-001"].quantity == 10000
+        assert orders[1].direction == OrderDirection.BUY
+        assert orders[1].quantity == 10000
 
         # ETF-002: 减仓 10000
-        assert orders["ETF-002"].direction == OrderDirection.SELL
-        assert orders["ETF-002"].quantity == 10000
+        assert orders[2].direction == OrderDirection.SELL
+        assert orders[2].quantity == 10000
 
         # ETF-003: 清仓
-        assert orders["ETF-003"].direction == OrderDirection.SELL
-        assert orders["ETF-003"].quantity == 10000
+        assert orders[3].direction == OrderDirection.SELL
+        assert orders[3].quantity == 10000
 
         # ETF-004: 新入场
-        assert orders["ETF-004"].direction == OrderDirection.BUY
-        assert orders["ETF-004"].quantity == 10000
+        assert orders[4].direction == OrderDirection.BUY
+        assert orders[4].quantity == 10000
 
 
 # ---------------------------------------------------------------------------
@@ -620,7 +620,7 @@ class TestLotSizeRounding:
         av = _account_view(nav=95000.0)
         # 0.33 * 95000 = 31350 → floor(31350/100)*100 = 31300
         # 0.11 * 95000 = 10450 → floor(10450/100)*100 = 10400
-        target = _target({"ETF-001": 0.33, "ETF-002": 0.11})
+        target = _target({1: 0.33, 2: 0.11})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -630,13 +630,13 @@ class TestLotSizeRounding:
         )
 
         orders = {o.instrument_id: o for o in plan.orders}
-        assert orders["ETF-001"].quantity == 31300
-        assert orders["ETF-002"].quantity == 10400
+        assert orders[1].quantity == 31300
+        assert orders[2].quantity == 10400
 
     def test_custom_lot_size(self) -> None:
         """自定义 lot_size = 200 (通过构造参数)."""
         av = _account_view(nav=100000.0)
-        target = _target({"ETF-001": 0.3})
+        target = _target({1: 0.3})
 
         planner = SimpleExecutionPlanner(default_lot_size=200)
         plan = planner.plan(
@@ -653,7 +653,7 @@ class TestLotSizeRounding:
         """weight * nav 不足一手 → 不生成订单."""
         av = _account_view(nav=100_000.0)
         # 0.0005 * 100K = 50 < 100 → 不够一手
-        target = _target({"ETF-001": 0.0005})
+        target = _target({1: 0.0005})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -668,7 +668,7 @@ class TestLotSizeRounding:
         """weight * nav 恰好等于一手 → 生成一手."""
         av = _account_view(nav=100_000.0)
         # 0.001 * 100K = 100 = 1 lot → 恰好一手
-        target = _target({"ETF-001": 0.001})
+        target = _target({1: 0.001})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -693,17 +693,17 @@ class TestPlanStatistics:
         """turnover = sum(|order.quantity| * MarketSnapshot.close)."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=20000,
                     market_value=20000.0,
                 ),
             },
             exposure=20000.0,
         )
-        target = _target({"ETF-001": 0.3})
+        target = _target({1: 0.3})
         # no price → target_qty=30000, current=20000, diff=10000 BUY
-        market = {"ETF-001": _market_snapshot(close=1.0)}
+        market = {1: _market_snapshot(close=1.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -720,17 +720,17 @@ class TestPlanStatistics:
         """cost = turnover * fee_rate (from FeeSchedule)."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=20000,
                     market_value=20000.0,
                 ),
             },
             exposure=20000.0,
         )
-        rules = {"ETF-001": _instrument_rules("ETF-001", commission_rate=0.001)}
-        target = _target({"ETF-001": 0.3})
-        market = {"ETF-001": _market_snapshot(close=1.0)}
+        rules = {1: _instrument_rules(1, commission_rate=0.001)}
+        target = _target({1: 0.3})
+        market = {1: _market_snapshot(close=1.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -759,12 +759,12 @@ class TestEdgeCases:
             pending_tickets={
                 "pending-sell-all": _pending_sell(
                     "pending-sell-all",
-                    "ETF-001",
+                    1,
                     500,
                 ),
             },
         )
-        target = _target({"ETF-002": 0.5})
+        target = _target({2: 0.5})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -776,14 +776,14 @@ class TestEdgeCases:
         # ETF-001 不在 position, effective_qty = 0 + (-500) = -500
         # target_qty = 0, diff = -500 → effective_qty < 0, 不产生卖单
         assert len(plan.orders) == 1
-        assert plan.orders[0].instrument_id == "ETF-002"
+        assert plan.orders[0].instrument_id == 2
 
     def test_locked_and_not_in_target(self) -> None:
         """锁定标的不在 target 中 → 不产生 BlockedOrder，正常卖出."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=10000,
                     market_value=10000.0,
                 ),
@@ -797,7 +797,7 @@ class TestEdgeCases:
             target=target,
             account_view=av,
             trade_date="2026-03-21",
-            locked_instruments={"ETF-001"},
+            locked_instruments={1},
         )
 
         # ETF-001 不在 target，weight = 0, 需要卖出
@@ -810,7 +810,7 @@ class TestEdgeCases:
     def test_default_lot_size(self) -> None:
         """未提供 rules 时使用默认 lot_size = 100."""
         av = _account_view(nav=100_000.0)
-        target = _target({"ETF-001": 0.5})
+        target = _target({1: 0.5})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -826,7 +826,7 @@ class TestEdgeCases:
     def test_plan_id_increments(self) -> None:
         """多次调用 plan()，plan_id 应递增."""
         av = _account_view()
-        target = _target({"ETF-001": 0.1})
+        target = _target({1: 0.1})
 
         planner = SimpleExecutionPlanner()
         plan1 = planner.plan(
@@ -846,8 +846,8 @@ class TestEdgeCases:
         """卖出数量不超过 effective_qty."""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=10000,
                     market_value=10000.0,
                 ),
@@ -856,7 +856,7 @@ class TestEdgeCases:
         )
         # target = 0, 需要卖出 10000
         # effective_qty = 10000, sell = min(10000, 10000) = 10000
-        target = _target({"ETF-001": 0.0})
+        target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -875,7 +875,7 @@ class TestEdgeCases:
 
 
 def _definition(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     lot_size: int = 100,
 ) -> InstrumentDefinition:
     return InstrumentDefinition(
@@ -892,7 +892,7 @@ def _definition(
 
 
 def _trading_rule(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     settlement_cycle: int = 0,
 ) -> TradingRuleSet:
     return TradingRuleSet(
@@ -907,7 +907,7 @@ def _trading_rule(
 
 
 def _fee_schedule(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     commission_rate: float = 0.0,
 ) -> FeeSchedule:
     return FeeSchedule(
@@ -921,7 +921,7 @@ def _fee_schedule(
 
 
 def _instrument_rules(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     lot_size: int = 100,
     settlement_cycle: int = 0,
     commission_rate: float = 0.0,
@@ -934,7 +934,7 @@ def _instrument_rules(
 
 
 def _market_snapshot(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     close: float = 10.0,
     is_suspended: bool = False,
     limit_up: float | None = None,
@@ -965,11 +965,11 @@ class TestProtocolUpgrade:
     """Protocol 签名升级为三层规则 dict + market_snapshots。"""
 
     def test_plan_accepts_instrument_rules(self) -> None:
-        """plan() 接受 dict[str, InstrumentRules] 类型的 rules。"""
+        """plan() 接受 dict[int, InstrumentRules] 类型的 rules。"""
         av = _account_view()
-        target = _target({"ETF-001": 0.5})
-        rules = {"ETF-001": _instrument_rules()}
-        snap = {"ETF-001": _market_snapshot()}
+        target = _target({1: 0.5})
+        rules = {1: _instrument_rules()}
+        snap = {1: _market_snapshot()}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -985,7 +985,7 @@ class TestProtocolUpgrade:
     def test_plan_none_rules_uses_defaults(self) -> None:
         """rules=None 时使用默认 lot_size=100。"""
         av = _account_view()
-        target = _target({"ETF-001": 0.5})
+        target = _target({1: 0.5})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1004,10 +1004,10 @@ class TestProtocolUpgrade:
         """不同标的使用不同 lot_size (从 InstrumentDefinition 读取)。"""
         av = _account_view()
         rules = {
-            "ETF-001": _instrument_rules("ETF-001", lot_size=200),
-            "ETF-002": _instrument_rules("ETF-002", lot_size=100),
+            1: _instrument_rules(1, lot_size=200),
+            2: _instrument_rules(2, lot_size=100),
         }
-        target = _target({"ETF-001": 0.5, "ETF-002": 0.5})
+        target = _target({1: 0.5, 2: 0.5})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1019,9 +1019,9 @@ class TestProtocolUpgrade:
 
         orders = {o.instrument_id: o for o in plan.orders}
         # ETF-001: 50000, floor(50000/200)*200 = 50000
-        assert orders["ETF-001"].quantity == 50000
+        assert orders[1].quantity == 50000
         # ETF-002: 50000, floor(50000/100)*100 = 50000
-        assert orders["ETF-002"].quantity == 50000
+        assert orders[2].quantity == 50000
 
 
 # ---------------------------------------------------------------------------
@@ -1036,8 +1036,8 @@ class TestTPlusOne:
         """T+1 标的: position.quantity=1000, available=500 → 最多卖 500。"""
         av = _account_view(
             positions={
-                "ETF-001": Position(
-                    instrument_id="ETF-001",
+                1: Position(
+                    instrument_id=1,
                     quantity=1000,
                     available_quantity=500,
                     average_cost=10.0,
@@ -1049,8 +1049,8 @@ class TestTPlusOne:
             },
             exposure=10000.0,
         )
-        rules = {"ETF-001": _instrument_rules("ETF-001", settlement_cycle=1)}
-        target = _target({"ETF-001": 0.0})  # 全部清仓
+        rules = {1: _instrument_rules(1, settlement_cycle=1)}
+        target = _target({1: 0.0})  # 全部清仓
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1061,7 +1061,7 @@ class TestTPlusOne:
         )
 
         # 实际卖出 500（available_quantity），剩余 500 被 blocked
-        sell_orders = [o for o in plan.orders if o.instrument_id == "ETF-001"]
+        sell_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert sum(o.quantity for o in sell_orders) == 500
         assert len(plan.blocked_orders) == 1
         assert plan.blocked_orders[0].reason == "t_plus1_not_sellable"
@@ -1072,8 +1072,8 @@ class TestTPlusOne:
         """T+0 标的: 可卖出全部 quantity。"""
         av = _account_view(
             positions={
-                "ETF-001": Position(
-                    instrument_id="ETF-001",
+                1: Position(
+                    instrument_id=1,
                     quantity=1000,
                     available_quantity=500,
                     average_cost=10.0,
@@ -1085,8 +1085,8 @@ class TestTPlusOne:
             },
             exposure=10000.0,
         )
-        rules = {"ETF-001": _instrument_rules("ETF-001", settlement_cycle=0)}
-        target = _target({"ETF-001": 0.0})
+        rules = {1: _instrument_rules(1, settlement_cycle=0)}
+        target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1096,7 +1096,7 @@ class TestTPlusOne:
             rules=rules,
         )
 
-        sell_orders = [o for o in plan.orders if o.instrument_id == "ETF-001"]
+        sell_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert sum(o.quantity for o in sell_orders) == 1000
         assert len(plan.blocked_orders) == 0
 
@@ -1104,8 +1104,8 @@ class TestTPlusOne:
         """无规则时 T+1 不生效（使用 effective_qty 上限）。"""
         av = _account_view(
             positions={
-                "ETF-001": Position(
-                    instrument_id="ETF-001",
+                1: Position(
+                    instrument_id=1,
                     quantity=1000,
                     available_quantity=500,
                     average_cost=10.0,
@@ -1117,7 +1117,7 @@ class TestTPlusOne:
             },
             exposure=10000.0,
         )
-        target = _target({"ETF-001": 0.0})
+        target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1127,7 +1127,7 @@ class TestTPlusOne:
         )
 
         # 无规则: sell capped at effective_qty (1000)
-        sell_orders = [o for o in plan.orders if o.instrument_id == "ETF-001"]
+        sell_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert sum(o.quantity for o in sell_orders) == 1000
 
 
@@ -1142,8 +1142,8 @@ class TestLimitUpDown:
     def test_buy_at_limit_up_blocked(self) -> None:
         """买入 + 涨停 → BlockedOrder(reason=limit_up_no_buy)。"""
         av = _account_view()
-        target = _target({"ETF-001": 0.5})
-        market = {"ETF-001": _market_snapshot(close=11.0, limit_up=11.0)}
+        target = _target({1: 0.5})
+        market = {1: _market_snapshot(close=11.0, limit_up=11.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1162,12 +1162,12 @@ class TestLimitUpDown:
         """卖出 + 跌停 → BlockedOrder(reason=limit_down_no_sell)。"""
         av = _account_view(
             positions={
-                "ETF-001": _position("ETF-001", quantity=10000, market_value=10000.0),
+                1: _position(1, quantity=10000, market_value=10000.0),
             },
             exposure=10000.0,
         )
-        target = _target({"ETF-001": 0.0})
-        market = {"ETF-001": _market_snapshot(close=10.0, limit_down=10.0)}
+        target = _target({1: 0.0})
+        market = {1: _market_snapshot(close=10.0, limit_down=10.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1185,12 +1185,12 @@ class TestLimitUpDown:
         """卖出 + 涨停 → 允许卖出。"""
         av = _account_view(
             positions={
-                "ETF-001": _position("ETF-001", quantity=10000, market_value=10000.0),
+                1: _position(1, quantity=10000, market_value=10000.0),
             },
             exposure=10000.0,
         )
-        target = _target({"ETF-001": 0.0})
-        market = {"ETF-001": _market_snapshot(close=11.0, limit_up=11.0)}
+        target = _target({1: 0.0})
+        market = {1: _market_snapshot(close=11.0, limit_up=11.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1200,15 +1200,15 @@ class TestLimitUpDown:
             market_snapshots=market,
         )
 
-        sell_orders = [o for o in plan.orders if o.instrument_id == "ETF-001"]
+        sell_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert len(sell_orders) == 1
         assert sell_orders[0].direction == OrderDirection.SELL
 
     def test_buy_at_limit_down_allowed(self) -> None:
         """买入 + 跌停 → 允许买入。"""
         av = _account_view()
-        target = _target({"ETF-001": 0.5})
-        market = {"ETF-001": _market_snapshot(close=10.0, limit_down=10.0)}
+        target = _target({1: 0.5})
+        market = {1: _market_snapshot(close=10.0, limit_down=10.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1218,15 +1218,15 @@ class TestLimitUpDown:
             market_snapshots=market,
         )
 
-        buy_orders = [o for o in plan.orders if o.instrument_id == "ETF-001"]
+        buy_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert len(buy_orders) == 1
         assert buy_orders[0].direction == OrderDirection.BUY
 
     def test_no_limit_info_treats_as_normal(self) -> None:
         """limit_up=None / limit_down=None → 正常交易。"""
         av = _account_view()
-        target = _target({"ETF-001": 0.5})
-        market = {"ETF-001": _market_snapshot(close=11.0)}
+        target = _target({1: 0.5})
+        market = {1: _market_snapshot(close=11.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1251,8 +1251,8 @@ class TestSuspended:
     def test_buy_suspended_blocked(self) -> None:
         """买入 + 停牌 → BlockedOrder(reason=suspended, severity=block)。"""
         av = _account_view()
-        target = _target({"ETF-001": 0.5})
-        market = {"ETF-001": _market_snapshot(is_suspended=True)}
+        target = _target({1: 0.5})
+        market = {1: _market_snapshot(is_suspended=True)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1271,12 +1271,12 @@ class TestSuspended:
         """卖出 + 停牌 → BlockedOrder(reason=suspended)。"""
         av = _account_view(
             positions={
-                "ETF-001": _position("ETF-001", quantity=10000, market_value=10000.0),
+                1: _position(1, quantity=10000, market_value=10000.0),
             },
             exposure=10000.0,
         )
-        target = _target({"ETF-001": 0.0})
-        market = {"ETF-001": _market_snapshot(is_suspended=True)}
+        target = _target({1: 0.0})
+        market = {1: _market_snapshot(is_suspended=True)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1293,7 +1293,7 @@ class TestSuspended:
     def test_no_snapshot_no_suspend_check(self) -> None:
         """无 MarketSnapshot → 不执行停牌检查。"""
         av = _account_view()
-        target = _target({"ETF-001": 0.5})
+        target = _target({1: 0.5})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1317,8 +1317,8 @@ class TestRounding100Plus1:
         """买入 50 → 100 (最小1手)。"""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=10000,
                     market_value=10000.0,
                 ),
@@ -1329,7 +1329,7 @@ class TestRounding100Plus1:
         # current = 10000, diff = 5000 - 10000 = -5000 → 卖出
         # 需要 diff > 0: target > current
         # 0.15 * 100K = 15000, diff = 15000 - 10000 = 5000 → 买入 5000
-        target = _target({"ETF-001": 0.15})
+        target = _target({1: 0.15})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1341,7 +1341,7 @@ class TestRounding100Plus1:
         buy_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == "ETF-001" and o.direction == OrderDirection.BUY
+            if o.instrument_id == 1 and o.direction == OrderDirection.BUY
         ]
         assert len(buy_orders) == 1
         assert buy_orders[0].quantity == 5000
@@ -1350,8 +1350,8 @@ class TestRounding100Plus1:
         """diff_qty = 50 → round up to lot_size = 100。"""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=29500,
                     market_value=29500.0,
                 ),
@@ -1360,7 +1360,7 @@ class TestRounding100Plus1:
         )
         # target = 0.3 * 100K = 30000, diff = 30000 - 29500 = 500
         # 500 >= 100 → no rounding up needed
-        target = _target({"ETF-001": 0.3})
+        target = _target({1: 0.3})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1372,7 +1372,7 @@ class TestRounding100Plus1:
         buy_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == "ETF-001" and o.direction == OrderDirection.BUY
+            if o.instrument_id == 1 and o.direction == OrderDirection.BUY
         ]
         assert len(buy_orders) == 1
         assert buy_orders[0].quantity == 500
@@ -1381,15 +1381,15 @@ class TestRounding100Plus1:
         """卖出 350 → 整手 300 + 零股 50（2 笔订单）。"""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=350,
                     market_value=3500.0,
                 ),
             },
             exposure=3500.0,
         )
-        target = _target({"ETF-001": 0.0})
+        target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1401,7 +1401,7 @@ class TestRounding100Plus1:
         sell_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == "ETF-001" and o.direction == OrderDirection.SELL
+            if o.instrument_id == 1 and o.direction == OrderDirection.SELL
         ]
         quantities = sorted([o.quantity for o in sell_orders])
         assert len(sell_orders) == 2
@@ -1411,15 +1411,15 @@ class TestRounding100Plus1:
         """卖出 300 → 1 笔订单（无零股）。"""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=300,
                     market_value=3000.0,
                 ),
             },
             exposure=3000.0,
         )
-        target = _target({"ETF-001": 0.0})
+        target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1431,7 +1431,7 @@ class TestRounding100Plus1:
         sell_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == "ETF-001" and o.direction == OrderDirection.SELL
+            if o.instrument_id == 1 and o.direction == OrderDirection.SELL
         ]
         assert len(sell_orders) == 1
         assert sell_orders[0].quantity == 300
@@ -1440,15 +1440,15 @@ class TestRounding100Plus1:
         """卖出 50 → 1 笔零股订单。"""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=50,
                     market_value=500.0,
                 ),
             },
             exposure=500.0,
         )
-        target = _target({"ETF-001": 0.0})
+        target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1460,7 +1460,7 @@ class TestRounding100Plus1:
         sell_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == "ETF-001" and o.direction == OrderDirection.SELL
+            if o.instrument_id == 1 and o.direction == OrderDirection.SELL
         ]
         assert len(sell_orders) == 1
         assert sell_orders[0].quantity == 50
@@ -1478,8 +1478,8 @@ class TestCombinedScenarios:
         """T+1 + 零股: quantity=350, available=300 → 卖 200+100, block 50。"""
         av = _account_view(
             positions={
-                "ETF-001": Position(
-                    instrument_id="ETF-001",
+                1: Position(
+                    instrument_id=1,
                     quantity=350,
                     available_quantity=300,
                     average_cost=10.0,
@@ -1491,8 +1491,8 @@ class TestCombinedScenarios:
             },
             exposure=3500.0,
         )
-        rules = {"ETF-001": _instrument_rules("ETF-001", settlement_cycle=1)}
-        target = _target({"ETF-001": 0.0})
+        rules = {1: _instrument_rules(1, settlement_cycle=1)}
+        target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1506,7 +1506,7 @@ class TestCombinedScenarios:
         sell_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == "ETF-001" and o.direction == OrderDirection.SELL
+            if o.instrument_id == 1 and o.direction == OrderDirection.SELL
         ]
         assert sum(o.quantity for o in sell_orders) == 300
         # 300 = 200 (round) + 100 (round), no odd lots
@@ -1518,8 +1518,8 @@ class TestCombinedScenarios:
         """不变量: T+1 标的卖出总量 <= available_quantity。"""
         av = _account_view(
             positions={
-                "ETF-001": Position(
-                    instrument_id="ETF-001",
+                1: Position(
+                    instrument_id=1,
                     quantity=5000,
                     available_quantity=1000,
                     average_cost=10.0,
@@ -1531,8 +1531,8 @@ class TestCombinedScenarios:
             },
             exposure=50000.0,
         )
-        rules = {"ETF-001": _instrument_rules("ETF-001", settlement_cycle=1)}
-        target = _target({"ETF-001": 0.0})
+        rules = {1: _instrument_rules(1, settlement_cycle=1)}
+        target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1545,16 +1545,16 @@ class TestCombinedScenarios:
         sell_total = sum(
             o.quantity
             for o in plan.orders
-            if o.instrument_id == "ETF-001" and o.direction == OrderDirection.SELL
+            if o.instrument_id == 1 and o.direction == OrderDirection.SELL
         )
         assert sell_total <= 1000
 
     def test_suspended_takes_priority_over_limit_up(self) -> None:
         """停牌优先于涨跌停检查。"""
         av = _account_view()
-        target = _target({"ETF-001": 0.5})
+        target = _target({1: 0.5})
         market = {
-            "ETF-001": _market_snapshot(
+            1: _market_snapshot(
                 is_suspended=True,
                 limit_up=11.0,
                 close=11.0,
@@ -1585,18 +1585,18 @@ class TestEstimatedPriceFromSnapshot:
         """turnover 使用 MarketSnapshot.close 作为价格。"""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=10000,
                     market_value=10000.0,
                 ),
             },
             exposure=10000.0,
         )
-        target = _target({"ETF-001": 0.3})
+        target = _target({1: 0.3})
         # price=1.5 → target_value=30000, target_shares=20000, target_qty=20000
         # current=10000, diff=10000 BUY → turnover=10000*1.5=15000
-        market = {"ETF-001": _market_snapshot(close=1.5)}
+        market = {1: _market_snapshot(close=1.5)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1613,18 +1613,18 @@ class TestEstimatedPriceFromSnapshot:
         """cost 使用 FeeSchedule 中的费率。"""
         av = _account_view(
             positions={
-                "ETF-001": _position(
-                    "ETF-001",
+                1: _position(
+                    1,
                     quantity=10000,
                     market_value=10000.0,
                 ),
             },
             exposure=10000.0,
         )
-        rules = {"ETF-001": _instrument_rules("ETF-001", commission_rate=0.001)}
-        target = _target({"ETF-001": 0.3})
+        rules = {1: _instrument_rules(1, commission_rate=0.001)}
+        target = _target({1: 0.3})
         # price=1.5 → target_qty=20000, current=10000, diff=10000 BUY
-        market = {"ETF-001": _market_snapshot(close=1.5)}
+        market = {1: _market_snapshot(close=1.5)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(

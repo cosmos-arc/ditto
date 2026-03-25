@@ -30,6 +30,7 @@ from ditto_datahub.services.strategy.strategy_artifact_service import (
 )
 
 from ditto_port.services.strategy.input_assembler import StrategyInputAssembler
+from ditto_port.services.strategy.lifecycle import RunLifecycleService
 
 __all__ = [
     "StrategyRunMode",
@@ -58,6 +59,7 @@ class StrategyRunServiceConfig:
 
     Attributes:
         strategy_id: 策略 ID
+        strategy_version: 策略版本
         run_id: 运行 ID (空字符串时自动生成)
         mode: 运行模式 (research / recommendation)
         spec: 策略定义（可选，设置后 run() 会先校验参数）
@@ -65,6 +67,7 @@ class StrategyRunServiceConfig:
     """
 
     strategy_id: str = "default"
+    strategy_version: str = ""
     run_id: str = ""
     mode: StrategyRunMode = StrategyRunMode.RESEARCH
     spec: StrategySpec | None = None
@@ -114,6 +117,7 @@ class StrategyRunService:
         pipeline: 策略 Pipeline
         assembler: 输入组装器
         artifact_service: 策略产物持久化服务 (RECOMMENDATION 模式使用)
+        run_service: 策略运行生命周期服务
 
     """
 
@@ -124,11 +128,13 @@ class StrategyRunService:
         assembler: StrategyInputAssembler,
         *,
         artifact_service: StrategyArtifactService | None = None,
+        run_service: RunLifecycleService | None = None,
     ) -> None:
         self._config = config
         self._pipeline = pipeline
         self._assembler = assembler
         self._artifact_service = artifact_service
+        self._run_service = run_service
 
     @property
     def mode(self) -> StrategyRunMode:
@@ -147,20 +153,40 @@ class StrategyRunService:
             StrategyRunResult 包含 TargetPortfolio。
 
         """
-        # 校验 spec 参数
+        run_id = self._resolve_run_id()
+        run_svc = self._run_service
+        if run_svc is not None:
+            run_svc.create_run(
+                run_id=run_id,
+                strategy_id=self._config.strategy_id,
+                strategy_version=self._config.strategy_version,
+                mode=str(self._config.mode),
+            )
+            run_svc.mark_running(run_id)
+
+        try:
+            return self._execute_run(trade_date, slice_, run_id=run_id)
+        except Exception as exc:
+            if run_svc is not None:
+                run_svc.mark_failed(run_id, str(exc))
+            raise
+
+    def _execute_run(
+        self,
+        trade_date: str,
+        slice_: Slice,
+        *,
+        run_id: str,
+    ) -> StrategyRunResult:
+        """执行策略核心运行逻辑。"""
         if self._config.spec is not None:
             self._validate_params(self._config.spec)
 
-        run_id = self._config.run_id or uuid.uuid4().hex[:8]
+        input_bundle = self._assembler.assemble(trade_date, slice_, run_id=run_id)
 
-        # 组装输入
-        input_bundle = self._assembler.assemble(trade_date, slice_)
-
-        # 运行 Pipeline
         context = StrategyContext()
         target = self._pipeline.run(context, input_bundle)
 
-        # 构建 result
         result = StrategyRunResult(
             run_id=run_id,
             trade_date=trade_date,
@@ -169,11 +195,21 @@ class StrategyRunService:
             mode=self._config.mode,
         )
 
-        # RECOMMENDATION 模式: 持久化信号
         if self._config.mode == StrategyRunMode.RECOMMENDATION:
             self._persist_signal(run_id, trade_date, target)
 
+        run_svc = self._run_service
+        if run_svc is not None:
+            run_svc.mark_completed(run_id)
+
         return result
+
+    def _resolve_run_id(self) -> str:
+        """在运行前固化真实 run_id。"""
+        configured_run_id = self._config.run_id
+        if configured_run_id:
+            return configured_run_id
+        return uuid.uuid4().hex[:8]
 
     # -- internal validation -------------------------------------------------
 

@@ -13,8 +13,10 @@ from datetime import date
 from enum import StrEnum
 from typing import Protocol
 
+from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.identity import InstrumentId
+
 from ditto_core.accounting.account import AccountView
-from ditto_core.accounting.order_book import OrderDirection
 from ditto_core.execution.fills import FillEvent
 
 __all__ = [
@@ -48,7 +50,7 @@ class TradeRecord:
     """一笔完整交易 — 从 entry fill 到 exit fill。"""
 
     trade_id: str
-    instrument_id: str
+    instrument_id: InstrumentId
     direction: OrderDirection
     entry_date: str
     exit_date: str | None
@@ -99,7 +101,7 @@ class _OpenEntry:
     """FIFO 匹配的可变跟踪条目。"""
 
     trade_id: str
-    instrument_id: str
+    instrument_id: InstrumentId
     direction: OrderDirection
     entry_date: date
     entry_price: float
@@ -119,7 +121,7 @@ class FifoTradeBuilder:
 
     def __init__(self) -> None:
         # instrument_id → FIFO queue of open entries
-        self._open: dict[str, deque[_OpenEntry]] = {}
+        self._open: dict[InstrumentId, deque[_OpenEntry]] = {}
         self._closed: list[TradeRecord] = []
         self._counter = 0
 
@@ -192,7 +194,7 @@ class FifoTradeBuilder:
 
     def _match_sell(
         self,
-        iid: str,
+        iid: InstrumentId,
         fill_date: date,
         fill: FillEvent,
     ) -> None:
@@ -252,7 +254,7 @@ class FifoTradeBuilder:
 class _InstrumentAccumulator:
     """FLAT_TO_FLAT per-instrument accumulation tracker."""
 
-    instrument_id: str
+    instrument_id: InstrumentId
     entry_order_ids: list[str]
     exit_order_ids: list[str]
     net_quantity: int = 0  # positive = long, 0 = flat
@@ -277,7 +279,7 @@ class FlatToFlatTradeBuilder:
     """FLAT_TO_FLAT 成交匹配 — 按品种 VWAP 累积，净仓位归零时输出一笔交易。"""
 
     def __init__(self) -> None:
-        self._accumulators: dict[str, _InstrumentAccumulator] = {}
+        self._accumulators: dict[InstrumentId, _InstrumentAccumulator] = {}
         self._closed: list[TradeRecord] = []
         self._counter = 0
 
@@ -370,7 +372,7 @@ class FlatToFlatTradeBuilder:
         self._counter += 1
         return f"trade-{self._counter}"
 
-    def _get_or_create(self, instrument_id: str) -> _InstrumentAccumulator:
+    def _get_or_create(self, instrument_id: InstrumentId) -> _InstrumentAccumulator:
         if instrument_id not in self._accumulators:
             self._accumulators[instrument_id] = _InstrumentAccumulator(
                 instrument_id=instrument_id,

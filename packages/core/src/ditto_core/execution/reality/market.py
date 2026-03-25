@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ditto_kernel.identity import InstrumentId
+
 __all__ = ["MarketSnapshot"]
 
 
@@ -35,7 +37,7 @@ class MarketSnapshot:
     """
 
     trade_date: str
-    instrument_id: str
+    instrument_id: InstrumentId
     open: float
     high: float
     low: float

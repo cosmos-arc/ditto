@@ -7,7 +7,6 @@ from pathlib import Path
 
 import orjson
 import polars as pl
-from ditto_core.accounting.order_book import OrderDirection
 from ditto_core.backtest.audit.records import PreTradeDecisionRecord, RiskScanRecord
 from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
 from ditto_core.backtest.serialization import serialize
@@ -20,6 +19,7 @@ from ditto_core.backtest.statistics import (
 )
 from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.trade_builder import TradeRecord
+from ditto_kernel.enums import OrderSide as OrderDirection
 
 # ---------------------------------------------------------------------------
 # Test data factories
@@ -57,7 +57,7 @@ def _make_trade_stats() -> list[TradeStatistics]:
     return [
         TradeStatistics(
             trade_id="T-001",
-            instrument_id="510300.SH",
+            instrument_id=1,
             direction="buy",
             entry_date="2026-03-20",
             exit_date="2026-03-21",
@@ -121,7 +121,7 @@ def _make_trade_log() -> list[TradeRecord]:
     return [
         TradeRecord(
             trade_id="T-001",
-            instrument_id="510300.SH",
+            instrument_id=1,
             direction=OrderDirection.BUY,
             entry_date="2026-03-20",
             exit_date="2026-03-21",
@@ -144,7 +144,7 @@ def _make_fill_log() -> list[FillEvent]:
         FillEvent(
             fill_id="F-001",
             order_id="ORD-001",
-            instrument_id="510300.SH",
+            instrument_id=1,
             direction=OrderDirection.BUY,
             filled_quantity=1000,
             fill_price=4.0,
@@ -177,7 +177,7 @@ def _make_pre_trade_log() -> list[PreTradeDecisionRecord]:
         PreTradeDecisionRecord(
             trade_date="2026-03-20",
             order_id="ORD-001",
-            instrument_id="510300.SH",
+            instrument_id=1,
             direction="buy",
             original_quantity=1000,
             final_quantity=1000,
@@ -194,7 +194,7 @@ def _make_report(
     with_fills: bool = True,
     with_risk: bool = False,
     with_pre_trade: bool = False,
-    instrument_id: str = "510300.SH",
+    instrument_id: int = 1,
 ) -> BacktestReport:
     return BacktestReport(
         run_id="test-run-001",
@@ -289,7 +289,7 @@ class TestSerializeFull:
 
         df = pl.read_parquet(tmp_path / "trade_log.parquet")
         assert len(df) == 1
-        assert df[0, "instrument_id"] == "510300.SH"
+        assert df[0, "instrument_id"] == 1
         assert df[0, "direction"] == "buy"
 
     def test_fill_log_parquet_content(self, tmp_path: Path) -> None:
@@ -298,7 +298,7 @@ class TestSerializeFull:
 
         df = pl.read_parquet(tmp_path / "fill_log.parquet")
         assert len(df) == 1
-        assert df[0, "instrument_id"] == "510300.SH"
+        assert df[0, "instrument_id"] == 1
         assert df[0, "fill_price"] == 4.0
 
     def test_nav_series_content(self, tmp_path: Path) -> None:
@@ -321,8 +321,9 @@ class TestSerializeFull:
 class TestSerializeEdgeCases:
     """serialize edge cases."""
 
-    def test_special_chars_instrument_id(self, tmp_path: Path) -> None:
-        report = _make_report(instrument_id="159915.SZ/ETF")
+    def test_large_instrument_id(self, tmp_path: Path) -> None:
+        """Large integer instrument_id should serialize correctly."""
+        report = _make_report(instrument_id=999999)
         result = serialize(report, tmp_path)
 
         data = orjson.loads(result.read_bytes())

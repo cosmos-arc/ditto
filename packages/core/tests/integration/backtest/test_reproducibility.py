@@ -73,7 +73,7 @@ from .conftest import (
 
 
 def _default_rules_getter(
-    instrument_id: str,
+    instrument_id: int,
     trade_date: str,
 ) -> InstrumentRules:
     """默认规则 — 与 BacktestBrokerage._default_rules_getter 一致。"""
@@ -110,7 +110,7 @@ def _default_rules_getter(
 
 
 def _ashare_rules_getter(
-    instrument_id: str,
+    instrument_id: int,
     trade_date: str,
 ) -> InstrumentRules:
     """A 股规则 — 包含印花税 (仅卖出) + 过户费。"""
@@ -148,7 +148,7 @@ def _ashare_rules_getter(
 
 def _build_engine_loop(
     tmp_path: Path,
-    data: dict[str, pl.DataFrame],
+    data: dict[int, pl.DataFrame],
     config: EngineConfig,
     pipeline: Any,
     fee_model: SimpleFeeModel | AShareFeeModel,
@@ -193,7 +193,7 @@ def _build_engine_loop(
 
 def _build_audited_engine_loop(
     tmp_path: Path,
-    data: dict[str, pl.DataFrame],
+    data: dict[int, pl.DataFrame],
     config: EngineConfig,
     pipeline: Any,
     fee_model: SimpleFeeModel | AShareFeeModel,
@@ -266,7 +266,7 @@ class _AuditedEngineLoop(EngineLoop):
         self._audit_collector.record_account_view(date, account_view_after)
 
 
-def _fill_key(fill: FillEvent) -> tuple[str, str, int, float, float]:
+def _fill_key(fill: FillEvent) -> tuple[int, str, int, float, float]:
     """提取 FillEvent 的业务关键字段（排除 UUID）。"""
     return (
         fill.instrument_id,
@@ -294,7 +294,7 @@ class RunDiff:
     nav_delta: float
     nav_delta_pct: float
     total_fee_delta: float
-    affected_instruments: set[str]
+    affected_instruments: set[int]
     affected_dates: set[str]
     fill_count_diff: int
     extra_fills_in_a: set[str]
@@ -335,14 +335,14 @@ def compute_run_diff(
     extra_in_b = keys_b - keys_a
 
     # 影响标的 — 两个运行中 fill 标识不同的 instrument
-    affected_instruments: set[str] = set()
+    affected_instruments: set[int] = set()
     affected_dates: set[str] = set()
 
     all_diff_keys = extra_in_a | extra_in_b
     for key in all_diff_keys:
         parts = key.split("|")
         if len(parts) == 3:
-            affected_instruments.add(parts[0])
+            affected_instruments.add(int(parts[0]))
             affected_dates.add(parts[2])
 
     # 额外添加费用不同但标识相同的标的
@@ -359,7 +359,7 @@ def compute_run_diff(
         if abs(fee_map_a.get(k, 0.0) - fee_map_b.get(k, 0.0)) > 1e-10:
             parts = k.split("|")
             if len(parts) == 3:
-                affected_instruments.add(parts[0])
+                affected_instruments.add(int(parts[0]))
                 affected_dates.add(parts[2])
 
     return RunDiff(
@@ -408,7 +408,7 @@ def composite_pre_trade_check() -> CompositePreTradeCheck:
 
 
 @pytest.fixture
-def three_day_test_data() -> dict[str, pl.DataFrame]:
+def three_day_test_data() -> dict[int, pl.DataFrame]:
     """3 日测试数据。"""
     return generate_3day_data()
 
@@ -419,7 +419,7 @@ def two_identical_engine_loops(
     three_day_config: EngineConfig,
     etf_pipeline: Any,
     composite_pre_trade_check: CompositePreTradeCheck,
-    three_day_test_data: dict[str, pl.DataFrame],
+    three_day_test_data: dict[int, pl.DataFrame],
 ) -> tuple[EngineLoop, EngineLoop]:
     """构建两个独立但配置完全相同的 EngineLoop 实例。"""
     data = three_day_test_data
@@ -525,7 +525,7 @@ class TestReproducibilityLayer1:
         three_day_config: EngineConfig,
         etf_pipeline: Any,
         composite_pre_trade_check: CompositePreTradeCheck,
-        three_day_test_data: dict[str, pl.DataFrame],
+        three_day_test_data: dict[int, pl.DataFrame],
     ) -> None:
         """两次运行的 nav_series 逐日完全一致 — 验证整个 NAV 轨迹的确定性。"""
         data = three_day_test_data
@@ -577,7 +577,7 @@ class TestReproducibilityLayer1:
         three_day_config: EngineConfig,
         etf_pipeline: Any,
         composite_pre_trade_check: CompositePreTradeCheck,
-        three_day_test_data: dict[str, pl.DataFrame],
+        three_day_test_data: dict[int, pl.DataFrame],
     ) -> None:
         """同 engine_version 两次运行 → nav_series 一致。"""
         data = three_day_test_data
@@ -622,6 +622,48 @@ class TestReproducibilityLayer1:
 
         assert report1.nav_series == report2.nav_series
 
+    def test_manifest_captures_strategy_metadata_and_inputs(
+        self,
+        tmp_path: Path,
+        etf_pipeline: Any,
+        composite_pre_trade_check: CompositePreTradeCheck,
+        three_day_test_data: dict[int, pl.DataFrame],
+    ) -> None:
+        """manifest 应冻结策略版本、参数覆盖、输入引用与配置哈希。"""
+        config = EngineConfig(
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+            initial_cash=INITIAL_CASH,
+            mode=EngineMode.BACKTEST,
+            strategy_id="test-etf-rotation",
+            strategy_version="2026.03",
+            strategy_run_id="run-manifest-meta",
+            parameter_overrides=("top_k=3", "cash_target=0.0"),
+            engine_version="0.2.0",
+        )
+        loop = _build_engine_loop(
+            tmp_path,
+            three_day_test_data,
+            config,
+            etf_pipeline,
+            SimpleFeeModel(),
+            composite_pre_trade_check,
+            instance_id=0,
+        )
+
+        result = loop.run()
+
+        assert result.manifest is not None
+        assert result.manifest.strategy_version == "2026.03"
+        assert result.manifest.parameter_overrides == (
+            "top_k=3",
+            "cash_target=0.0",
+        )
+        assert result.manifest.rule_resolution_policy == "as_of_date"
+        assert result.manifest.engine_version == "0.2.0"
+        assert result.manifest.config_hash != ""
+        assert result.manifest.input_refs == tuple(sorted(INSTRUMENT_IDS))
+
 
 # ---------------------------------------------------------------------------
 # Task 3A.2: Layer 2 — 版本变更 diff report
@@ -637,7 +679,7 @@ class TestReproducibilityLayer2:
         three_day_config: EngineConfig,
         etf_pipeline: Any,
         composite_pre_trade_check: CompositePreTradeCheck,
-        three_day_test_data: dict[str, pl.DataFrame],
+        three_day_test_data: dict[int, pl.DataFrame],
     ) -> None:
         """不同 fee model + fee_schedule → fills 中的 fee 字段不同。"""
         data = three_day_test_data
@@ -691,7 +733,7 @@ class TestReproducibilityLayer2:
         three_day_config: EngineConfig,
         etf_pipeline: Any,
         composite_pre_trade_check: CompositePreTradeCheck,
-        three_day_test_data: dict[str, pl.DataFrame],
+        three_day_test_data: dict[int, pl.DataFrame],
     ) -> None:
         """不同 fee model → final_nav 不同（费用差异影响 NAV）。"""
         data = three_day_test_data
@@ -754,7 +796,7 @@ class TestReproducibilityLayer2:
         three_day_config: EngineConfig,
         etf_pipeline: Any,
         composite_pre_trade_check: CompositePreTradeCheck,
-        three_day_test_data: dict[str, pl.DataFrame],
+        three_day_test_data: dict[int, pl.DataFrame],
     ) -> None:
         """不同 fee model → compute_run_diff 精确量化差异。"""
         data = three_day_test_data
@@ -843,17 +885,17 @@ class TestProofTests:
             strategy_version="1.0.0",
             mode=RunMode.BACKTEST,
             created_at="2026-01-07T12:00:00Z",
-            input_refs=("market://parquet/ETF-001", "market://parquet/ETF-002"),
+            input_refs=(1, 2),
             parameter_overrides=("top_k=3",),
             rule_refs=(
                 RuleRef(
-                    instrument_id="ETF-001",
+                    instrument_id=1,
                     definition_version="a1b2c3d4",
                     trading_rule_as_of="2026-01-01",
                     fee_schedule_as_of="2026-01-01",
                 ),
                 RuleRef(
-                    instrument_id="ETF-002",
+                    instrument_id=2,
                     definition_version="e5f6g7h8",
                     trading_rule_as_of="2026-01-01",
                     fee_schedule_as_of="2026-01-01",
@@ -870,19 +912,19 @@ class TestProofTests:
     def test_rule_refs_sorted_and_diffable(self) -> None:
         """rule_refs 稳定排序 → diff 可定位变更。"""
         rule_a = RuleRef(
-            instrument_id="ETF-002",
+            instrument_id=2,
             definition_version="e5f6g7h8",
             trading_rule_as_of="2026-01-01",
             fee_schedule_as_of="2026-01-01",
         )
         rule_b = RuleRef(
-            instrument_id="ETF-001",
+            instrument_id=1,
             definition_version="a1b2c3d4",
             trading_rule_as_of="2026-01-01",
             fee_schedule_as_of="2026-01-01",
         )
         rule_c = RuleRef(
-            instrument_id="ETF-003",
+            instrument_id=3,
             definition_version="11223344",
             trading_rule_as_of="2026-01-01",
             fee_schedule_as_of="2026-01-01",
@@ -900,9 +942,7 @@ class TestProofTests:
         json_v1 = serialize_manifest(manifest_v1)
         parsed_v1 = orjson.loads(json_v1)
         ref_ids_v1 = [r["instrument_id"] for r in parsed_v1["rule_refs"]]
-        assert ref_ids_v1 == ["ETF-001", "ETF-002"], (
-            "rule_refs should be sorted by instrument_id"
-        )
+        assert ref_ids_v1 == [1, 2], "rule_refs should be sorted by instrument_id"
 
         manifest_v2 = RunManifest(
             run_id="test-diff-v2",
@@ -916,7 +956,7 @@ class TestProofTests:
         json_v2 = serialize_manifest(manifest_v2)
         parsed_v2 = orjson.loads(json_v2)
         ref_ids_v2 = [r["instrument_id"] for r in parsed_v2["rule_refs"]]
-        assert ref_ids_v2 == ["ETF-001", "ETF-002", "ETF-003"]
+        assert ref_ids_v2 == [1, 2, 3]
 
         assert ref_ids_v1 != ref_ids_v2, "Added rule_ref should be detectable"
         assert ref_ids_v1 == ref_ids_v2[:2], "Existing refs should remain unchanged"
@@ -928,7 +968,7 @@ class TestProofTests:
         decision = PreTradeDecisionRecord(
             trade_date="2026-01-05",
             order_id="order-001",
-            instrument_id="ETF-001",
+            instrument_id=1,
             direction="buy",
             original_quantity=1500,
             final_quantity=1400,
@@ -943,7 +983,7 @@ class TestProofTests:
 
         recorded = log[0]
         assert recorded.check_sequence == ("lot_size", "buying_power")
-        assert recorded.instrument_id == "ETF-001"
+        assert recorded.instrument_id == 1
         assert recorded.original_quantity == 1500
         assert recorded.final_quantity == 1400
         assert recorded.decision == "resized"

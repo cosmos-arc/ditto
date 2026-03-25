@@ -21,10 +21,13 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
 
+from ditto_kernel.identity import InstrumentId
+
 from ditto_core.accounting.account import AccountView
 from ditto_core.backtest.data_feed import Slice
 
 __all__ = [
+    "PORTFOLIO_WIDE_ID",
     "CompositePostTradeGuard",
     "ConcentrationLimitRule",
     "MarketAnomalyRule",
@@ -59,6 +62,12 @@ class RiskSeverity(StrEnum):
 
 
 # ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+PORTFOLIO_WIDE_ID: InstrumentId = InstrumentId(0)
+
+# ---------------------------------------------------------------------------
 # Data Models
 # ---------------------------------------------------------------------------
 
@@ -70,7 +79,7 @@ class RiskAction:
 
     Attributes:
         action_type: 行为类型 (REDUCE_POSITION / LIQUIDATE / ALERT)
-        instrument_id: 标的 ID ("*" 表示全组合)
+        instrument_id: 标的 ID (0 表示全组合)
         severity: 严重程度
         rule_id: 触发规则的标识符
         detail: 风险描述
@@ -82,7 +91,7 @@ class RiskAction:
     """
 
     action_type: RiskActionType
-    instrument_id: str
+    instrument_id: InstrumentId
     severity: RiskSeverity
     rule_id: str
     detail: str
@@ -186,7 +195,7 @@ class MaxDrawdownRule:
         return [
             RiskAction(
                 action_type=action_type,
-                instrument_id="*",
+                instrument_id=PORTFOLIO_WIDE_ID,
                 severity=severity,
                 rule_id="max_drawdown",
                 detail=f"组合回撤 {drawdown:.2%} 超过{level}阈值 {threshold:.2%}",

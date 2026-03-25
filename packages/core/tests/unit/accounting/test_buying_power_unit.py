@@ -5,7 +5,7 @@ from ditto_core.accounting.buying_power import (
     CashAccountBuyingPower,
 )
 from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.order_book import OrderDirection
+from ditto_kernel.enums import OrderSide as OrderDirection
 
 
 class TestBuyingPowerModel:

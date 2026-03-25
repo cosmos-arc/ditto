@@ -38,7 +38,7 @@ def _account(initial_cash: float = 1_000_000.0) -> Account:
 
 def _order(
     order_id: str = "ORD-001",
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     order_type: OrderType = OrderType.MARKET,
     direction: OrderDirection = OrderDirection.BUY,
     quantity: int = 1000,
@@ -56,7 +56,7 @@ def _order(
 
 
 def _market_snapshot(
-    instrument_id: str = "ETF-001",
+    instrument_id: int = 1,
     close: float = 10.5,
     low: float = 10.0,
     high: float = 11.0,
@@ -76,12 +76,12 @@ def _market_snapshot(
 
 def _process_input(
     step_time: datetime | None = None,
-    bars: dict[str, MarketSnapshot] | None = None,
+    bars: dict[int, MarketSnapshot] | None = None,
 ) -> ProcessInput:
     return ProcessInput(
         step_time=step_time or datetime(2026, 3, 1, 15, 0),
         trade_date="2026-01-01",
-        bars=bars or {"ETF-001": _market_snapshot()},
+        bars=bars or {1: _market_snapshot()},
     )
 
 
@@ -165,8 +165,8 @@ class TestProcessMarketOrder:
 
         view = brokerage.get_account()
         # Position created
-        assert "ETF-001" in view.positions
-        pos = view.positions["ETF-001"]
+        assert 1 in view.positions
+        pos = view.positions[1]
         assert pos.quantity == 1000
         assert pos.average_cost == pytest.approx(10.5)
 
@@ -283,7 +283,7 @@ class TestNoFillRetryable:
         # Use settlement model to simulate a scenario where order stays pending
         # Since our current models don't produce can_retry=True naturally,
         # we test indirectly: process with no bars for this instrument
-        order = _order(instrument_id="ETF-NODATA")
+        order = _order(instrument_id=999)
         brokerage.place_order(order)
         sd = _process_input(bars={})  # No bars → order stays pending
         fills = brokerage.process_pending(sd)
@@ -404,7 +404,7 @@ class TestCashConservation:
         brokerage.process_pending(_process_input())
 
         view = brokerage.get_account()
-        assert "ETF-001" not in view.positions
+        assert 1 not in view.positions
 
 
 # ---------------------------------------------------------------------------
@@ -418,19 +418,19 @@ class TestMultipleFills:
         brokerage: BacktestBrokerage,
     ) -> None:
         order1 = _order(order_id="ORD-1")
-        order2 = _order(order_id="ORD-2", instrument_id="ETF-002")
+        order2 = _order(order_id="ORD-2", instrument_id=2)
         brokerage.place_order(order1)
         brokerage.place_order(order2)
         sd = _process_input(
             bars={
-                "ETF-001": _market_snapshot(
-                    instrument_id="ETF-001",
+                1: _market_snapshot(
+                    instrument_id=1,
                     close=10.5,
                     low=10.0,
                     high=11.0,
                 ),
-                "ETF-002": _market_snapshot(
-                    instrument_id="ETF-002",
+                2: _market_snapshot(
+                    instrument_id=2,
                     close=20.0,
                     low=19.0,
                     high=21.0,
@@ -461,7 +461,7 @@ class TestSettlementIntegration:
 
         model = SimpleSettlementModel()
         rule = TradingRuleSet(
-            instrument_id="ETF-001",
+            instrument_id=1,
             as_of_date="2026-03-01",
             settlement_cycle=0,
             fund_settlement_cycle=0,
@@ -471,7 +471,7 @@ class TestSettlementIntegration:
         )
         assert (
             model.is_tradable(
-                "ETF-001",
+                1,
                 "2026-03-01",
                 OrderDirection.BUY,
                 None,
@@ -481,7 +481,7 @@ class TestSettlementIntegration:
         )
         assert (
             model.is_tradable(
-                "ETF-001",
+                1,
                 "2020-01-01",
                 OrderDirection.SELL,
                 None,
@@ -506,7 +506,7 @@ _TRADING_CALENDAR = (
 
 
 def _t1_rules_getter(
-    instrument_id: str,
+    instrument_id: int,
     trade_date: str,
 ) -> tuple[InstrumentDefinition, TradingRuleSet, FeeSchedule]:
     """返回 T+1 规则 (settlement_cycle=1)。"""
@@ -544,15 +544,15 @@ def _t1_rules_getter(
 
 def _t1_process_input(
     trade_date: str,
-    bars: dict[str, MarketSnapshot] | None = None,
+    bars: dict[int, MarketSnapshot] | None = None,
 ) -> ProcessInput:
     """创建 T+1 场景的 ProcessInput。"""
     dt_parts = trade_date.split("-")
     step_time = datetime(int(dt_parts[0]), int(dt_parts[1]), int(dt_parts[2]), 15, 0)
     default_bars = {
-        "ETF-001": MarketSnapshot(
+        1: MarketSnapshot(
             trade_date=trade_date,
-            instrument_id="ETF-001",
+            instrument_id=1,
             open=10.5,
             high=11.0,
             low=10.0,
@@ -596,7 +596,7 @@ class TestT1FreezeBasic:
         t1_brokerage.process_pending(_t1_process_input("2026-03-02"))
 
         view = t1_brokerage.get_account()
-        pos = view.positions["ETF-001"]
+        pos = view.positions[1]
         assert pos.quantity == 1000
         # T+1: 当日买入的份额不可卖
         assert pos.available_quantity == 0
@@ -611,7 +611,7 @@ class TestT1FreezeBasic:
         brokerage.process_pending(_process_input())
 
         view = brokerage.get_account()
-        pos = view.positions["ETF-001"]
+        pos = view.positions[1]
         assert pos.quantity == 1000
         assert pos.available_quantity == 1000
 
@@ -628,14 +628,14 @@ class TestT1FreezeThaw:
 
         # T 日检查
         view = t1_brokerage.get_account()
-        assert view.positions["ETF-001"].available_quantity == 0
+        assert view.positions[1].available_quantity == 0
 
         # T+1 日 (下一个交易日)
         t1_brokerage.process_pending(_t1_process_input("2026-03-03"))
 
         # 解冻后 available_quantity 恢复
         view = t1_brokerage.get_account()
-        assert view.positions["ETF-001"].available_quantity == 1000
+        assert view.positions[1].available_quantity == 1000
 
     def test_sell_after_thaw(self, t1_brokerage: BacktestBrokerage) -> None:
         """T+1 日解冻后可以卖出全部份额。"""
@@ -651,7 +651,7 @@ class TestT1FreezeThaw:
         assert len(fills) == 1
 
         view = t1_brokerage.get_account()
-        assert "ETF-001" not in view.positions
+        assert 1 not in view.positions
 
     def test_cannot_sell_on_t_day(self, t1_brokerage: BacktestBrokerage) -> None:
         """T 日买入的份额, 当日卖出因 available_quantity=0 应被阻止。
@@ -697,7 +697,7 @@ class TestT1FreezePartialSell:
         t1_brokerage.process_pending(_t1_process_input("2026-03-03"))
 
         view = t1_brokerage.get_account()
-        pos = view.positions["ETF-001"]
+        pos = view.positions[1]
         assert pos.quantity == 1000
         # 500 from day1 thawed, 500 from day2 frozen
         assert pos.available_quantity == 500
@@ -737,9 +737,9 @@ class TestT1FreezeMultiInstrument:
         )
 
         bars_day1 = {
-            "ETF-001": MarketSnapshot(
+            1: MarketSnapshot(
                 trade_date="2026-03-02",
-                instrument_id="ETF-001",
+                instrument_id=1,
                 open=10.5,
                 high=11.0,
                 low=10.0,
@@ -748,9 +748,9 @@ class TestT1FreezeMultiInstrument:
                 volume=1_000_000.0,
                 amount=10_000_000.0,
             ),
-            "ETF-002": MarketSnapshot(
+            2: MarketSnapshot(
                 trade_date="2026-03-02",
-                instrument_id="ETF-002",
+                instrument_id=2,
                 open=20.0,
                 high=21.0,
                 low=19.0,
@@ -761,22 +761,22 @@ class TestT1FreezeMultiInstrument:
             ),
         }
 
-        buy1 = _order(order_id="BUY-1", instrument_id="ETF-001", quantity=500)
-        buy2 = _order(order_id="BUY-2", instrument_id="ETF-002", quantity=300)
+        buy1 = _order(order_id="BUY-1", instrument_id=1, quantity=500)
+        buy2 = _order(order_id="BUY-2", instrument_id=2, quantity=300)
         brk.place_order(buy1)
         brk.place_order(buy2)
         brk.process_pending(_t1_process_input("2026-03-02", bars=bars_day1))
 
         view = brk.get_account()
-        assert view.positions["ETF-001"].available_quantity == 0
-        assert view.positions["ETF-002"].available_quantity == 0
+        assert view.positions[1].available_quantity == 0
+        assert view.positions[2].available_quantity == 0
 
         # T+1 解冻
         brk.process_pending(_t1_process_input("2026-03-03", bars=bars_day1))
 
         view = brk.get_account()
-        assert view.positions["ETF-001"].available_quantity == 500
-        assert view.positions["ETF-002"].available_quantity == 300
+        assert view.positions[1].available_quantity == 500
+        assert view.positions[2].available_quantity == 300
 
 
 class TestT1FreezeSettlementCycle0:
@@ -784,7 +784,7 @@ class TestT1FreezeSettlementCycle0:
 
     def _t0_rules_getter(
         self,
-        instrument_id: str,
+        instrument_id: int,
         trade_date: str,
     ) -> tuple[InstrumentDefinition, TradingRuleSet, FeeSchedule]:
         """返回 T+0 规则 (settlement_cycle=0)。"""
@@ -837,7 +837,7 @@ class TestT1FreezeSettlementCycle0:
         brk.process_pending(_t1_process_input("2026-03-02"))
 
         view = brk.get_account()
-        pos = view.positions["ETF-001"]
+        pos = view.positions[1]
         assert pos.quantity == 1000
         assert pos.available_quantity == 1000
 
@@ -864,7 +864,7 @@ class TestT1FreezeSettlementCycle0:
         assert len(fills) == 1
 
         view = brk.get_account()
-        assert "ETF-001" not in view.positions
+        assert 1 not in view.positions
 
 
 class TestT1FreezeSellDeduction:
@@ -886,6 +886,6 @@ class TestT1FreezeSellDeduction:
         t1_brokerage.process_pending(_t1_process_input("2026-03-03"))
 
         view = t1_brokerage.get_account()
-        pos = view.positions["ETF-001"]
+        pos = view.positions[1]
         assert pos.quantity == 600
         assert pos.available_quantity == 600

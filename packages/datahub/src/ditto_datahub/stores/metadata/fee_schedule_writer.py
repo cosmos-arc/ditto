@@ -5,9 +5,12 @@ from __future__ import annotations
 import sqlite3
 
 from ditto_infra.foundation import SQLitePool, logger, traced
+from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 from ditto_datahub.stores.metadata._pit_base import PITRecordWriter
 from ditto_datahub.stores.metadata.fee_schedule_reader import FeeScheduleRecord
+
+InstrumentId = _InstrumentId
 
 __all__ = ["FeeScheduleWriter", "SQLiteFeeScheduleWriter"]
 
@@ -17,7 +20,7 @@ __all__ = ["FeeScheduleWriter", "SQLiteFeeScheduleWriter"]
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS fee_schedule (
-    instrument_id TEXT NOT NULL,
+    instrument_id INTEGER NOT NULL,
     as_of_date TEXT NOT NULL,
     commission_rate REAL NOT NULL,
     min_commission REAL NOT NULL,
@@ -91,7 +94,7 @@ class SQLiteFeeScheduleWriter(PITRecordWriter[FeeScheduleRecord]):
     def _row_to_record(self, row: sqlite3.Row) -> FeeScheduleRecord:
         """将数据库行转换为 FeeScheduleRecord."""
         return FeeScheduleRecord(
-            instrument_id=row["instrument_id"],
+            instrument_id=InstrumentId(row["instrument_id"]),
             as_of_date=row["as_of_date"],
             commission_rate=row["commission_rate"],
             min_commission=row["min_commission"],

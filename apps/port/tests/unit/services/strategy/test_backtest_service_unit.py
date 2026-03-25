@@ -9,7 +9,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from ditto_core.backtest.audit import ExecutionAuditCollector
 from ditto_core.backtest.engine import EngineConfig, EngineLoop, EngineResult
+from ditto_core.backtest.manifest import RunManifest, RunMode
 from ditto_core.backtest.statistics import BacktestReport
+from ditto_kernel.identity import InstrumentId
 from ditto_port.services.strategy.backtest_service import (
     BacktestService,
     BacktestServiceConfig,
@@ -25,12 +27,14 @@ def _make_engine_result(
     run_id: str = "run-001",
     period: tuple[str, str] = ("2026-01-01", "2026-03-01"),
     final_nav: float = 1_100_000.0,
+    manifest: RunManifest | None = None,
 ) -> EngineResult:
     """创建最小 EngineResult 用于测试。"""
     return EngineResult(
         run_id=run_id,
         period=period,
         final_nav=final_nav,
+        manifest=manifest,
     )
 
 
@@ -96,6 +100,7 @@ class TestBacktestServiceConfig:
         """默认值正确。"""
         config = BacktestServiceConfig()
         assert config.strategy_id == "default"
+        assert config.strategy_version == ""
         assert config.run_id == ""
         assert config.start_date == ""
         assert config.end_date == ""
@@ -103,19 +108,24 @@ class TestBacktestServiceConfig:
         assert config.benchmark_id is None
         assert config.rebalance_freq == "daily"
         assert config.engine_version == "0.1.0"
+        assert config.parameter_overrides == ()
 
     def test_custom_values(self) -> None:
         """自定义值正确。"""
         config = _make_service_config(
             strategy_id="my-strategy",
             run_id="run-123",
+            strategy_version="2026.03",
             initial_cash=5_000_000.0,
-            benchmark_id="CSI300",
+            benchmark_id=InstrumentId(3_000_001),
+            parameter_overrides=("top_k=5",),
         )
         assert config.strategy_id == "my-strategy"
+        assert config.strategy_version == "2026.03"
         assert config.run_id == "run-123"
         assert config.initial_cash == 5_000_000.0
-        assert config.benchmark_id == "CSI300"
+        assert config.benchmark_id == InstrumentId(3_000_001)
+        assert config.parameter_overrides == ("top_k=5",)
 
     def test_frozen(self) -> None:
         """BacktestServiceConfig 是 frozen，不可变。"""
@@ -238,7 +248,7 @@ class TestBacktestServiceRun:
             start_date="2025-06-01",
             end_date="2025-12-31",
             initial_cash=2_000_000.0,
-            benchmark_id="CSI500",
+            benchmark_id=InstrumentId(3_000_002),
             rebalance_freq="weekly",
         )
         service = _make_minimal_service(config=config)
@@ -312,6 +322,44 @@ class TestAuditPersistence:
 
         # No error should occur — service should skip persistence gracefully
 
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    def test_run_maps_portfolio_wide_id_to_asterisk(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """PORTFOLIO_WIDE_ID 在持久化时应映射为 '*'。"""
+        from ditto_core.backtest.audit import RiskScanRecord
+        from ditto_core.backtest.risk.post_trade import (
+            PORTFOLIO_WIDE_ID,
+            RiskActionType,
+            RiskSeverity,
+        )
+
+        record = RiskScanRecord(
+            trade_date="2026-01-10",
+            rule_id="max_drawdown",
+            instrument_id=PORTFOLIO_WIDE_ID,
+            severity=RiskSeverity.WARNING,
+            action_taken=RiskActionType.ALERT,
+            detail="组合回撤 5.00% 超过警告阈值 10.00%",
+            current_value=0.05,
+            threshold=0.10,
+        )
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.risk_log = (record,)
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_audit = MagicMock()
+        service = _make_minimal_service(audit_service=mock_audit)
+        service.run()
+
+        call_args = mock_audit.save_risk_log.call_args
+        payloads = call_args[0][1]
+        assert payloads[0].instrument_id == "*"
+
 
 # ---------------------------------------------------------------------------
 # Tests: Artifact persistence
@@ -322,10 +370,17 @@ class TestArtifactPersistence:
     """测试策略产物持久化。"""
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch(
+        "ditto_port.services.strategy.backtest_service.write_backtest_artifacts",
+        return_value={
+            "backtest_report": Path("/tmp/ditto/run-001/backtest_report.json"),
+        },
+    )
     @patch("ditto_port.services.strategy.backtest_service.build_report")
     def test_run_persists_artifact_when_artifact_service_provided(
         self,
         mock_build_report: MagicMock,
+        mock_write_artifacts: MagicMock,
         mock_engine_run: MagicMock,
     ) -> None:
         """提供 artifact_service 时，BacktestReport 被持久化为 artifact。"""
@@ -333,6 +388,7 @@ class TestArtifactPersistence:
         fake_report.run_id = "run-001"
         fake_report.final_nav = 1_100_000.0
         fake_report.period = ("2026-01-01", "2026-03-01")
+        fake_report.initial_cash = 1_000_000.0
         fake_report.aggregated_trade_stats = MagicMock(total_trades=42)
         fake_report.alpha_stats = MagicMock(
             sharpe_ratio=1.5,
@@ -350,6 +406,7 @@ class TestArtifactPersistence:
         )
         service.run()
 
+        mock_write_artifacts.assert_called_once()
         mock_artifact.save_artifact.assert_called_once()
         call_arg = mock_artifact.save_artifact.call_args[0][0]
         assert call_arg.strategy_id == "momentum-etf"
@@ -375,14 +432,18 @@ class TestArtifactPersistence:
         # No error should occur
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_port.services.strategy.backtest_service.serialize")
+    @patch(
+        "ditto_port.services.strategy.backtest_service.write_backtest_artifacts",
+        return_value={
+            "backtest_report": Path("/tmp/test/run-001/backtest_report.json"),
+        },
+    )
     @patch("ditto_port.services.strategy.backtest_service.build_report")
     def test_run_serializes_report_when_artifact_dir_provided(
         self,
         mock_build_report: MagicMock,
-        mock_serialize: MagicMock,
+        mock_write_artifacts: MagicMock,
         mock_engine_run: MagicMock,
-        tmp_path: Path,
     ) -> None:
         """提供 artifact_dir 时，报告序列化到文件，file_path 非空。"""
         fake_report = MagicMock(spec=BacktestReport)
@@ -401,12 +462,10 @@ class TestArtifactPersistence:
         fake_report.pre_trade_log = ()
         mock_build_report.return_value = fake_report
 
-        mock_serialize.return_value = tmp_path / "run-001" / "backtest_report.json"
-
         mock_artifact = MagicMock()
         options = BacktestServiceOptions(
             artifact_service=mock_artifact,
-            artifact_dir=str(tmp_path),
+            artifact_dir="/tmp/test",
         )
         service = _make_minimal_service(
             config=_make_service_config(strategy_id="momentum-etf", run_id="run-001"),
@@ -416,22 +475,30 @@ class TestArtifactPersistence:
 
         service.run()
 
-        mock_serialize.assert_called_once()
-        call_args = mock_serialize.call_args[0]
-        assert call_args[0] is fake_report
+        mock_write_artifacts.assert_called_once()
+        call_args = mock_write_artifacts.call_args
+        assert call_args[0][0] is fake_report
+        assert call_args[1]["output_dir"] == Path("/tmp/test/run-001")
         mock_artifact.save_artifact.assert_called_once()
         call_arg = mock_artifact.save_artifact.call_args[0][0]
         assert call_arg.file_path != ""
         assert "backtest_report.json" in call_arg.file_path
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch(
+        "ditto_port.services.strategy.backtest_service.write_backtest_artifacts",
+        return_value={
+            "backtest_report": Path("/tmp/ditto/run-001/backtest_report.json"),
+        },
+    )
     @patch("ditto_port.services.strategy.backtest_service.build_report")
-    def test_run_artifact_without_dir_has_empty_file_path(
+    def test_run_artifact_without_dir_still_writes_file(
         self,
         mock_build_report: MagicMock,
+        mock_write_artifacts: MagicMock,
         mock_engine_run: MagicMock,
     ) -> None:
-        """未提供 artifact_dir 时，file_path 为空字符串。"""
+        """未提供 artifact_dir 时，artifact 仍写入默认目录，file_path 非空。"""
         fake_report = MagicMock(spec=BacktestReport)
         fake_report.run_id = "run-001"
         fake_report.final_nav = 1_100_000.0
@@ -455,9 +522,70 @@ class TestArtifactPersistence:
         )
         service.run()
 
+        mock_write_artifacts.assert_called_once()
+        call_args = mock_write_artifacts.call_args
+        assert call_args[0][0] is fake_report
+        assert call_args[1]["output_dir"] is None
         mock_artifact.save_artifact.assert_called_once()
         call_arg = mock_artifact.save_artifact.call_args[0][0]
-        assert call_arg.file_path == ""
+        assert call_arg.file_path != ""
+        assert "backtest_report" in call_arg.file_path
+
+    @patch(
+        "ditto_port.services.strategy.backtest_service.write_backtest_artifacts",
+        return_value={
+            "backtest_report": Path("/tmp/ditto/run-001/backtest_report.json"),
+            "manifest": Path("/tmp/ditto/run-001/manifest.json"),
+        },
+    )
+    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    def test_run_passes_engine_manifest_to_artifact_writer(
+        self,
+        mock_build_report: MagicMock,
+        mock_write_artifacts: MagicMock,
+    ) -> None:
+        """artifact writer 接收 EngineLoop 生成的 manifest。"""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.run_id = "run-001"
+        fake_report.final_nav = 1_100_000.0
+        fake_report.period = ("2026-01-01", "2026-03-01")
+        fake_report.initial_cash = 1_000_000.0
+        fake_report.aggregated_trade_stats = MagicMock(total_trades=42)
+        fake_report.alpha_stats = MagicMock(
+            sharpe_ratio=1.5,
+            max_drawdown=-5.2,
+        )
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        manifest = RunManifest(
+            run_id="run-001",
+            strategy_id="momentum-etf",
+            strategy_version="2026.03",
+            mode=RunMode.BACKTEST,
+            created_at="2026-03-24T10:00:00Z",
+            input_refs=("ETF-001",),
+            parameter_overrides=("top_k=3",),
+            config_hash="cfg-123",
+            engine_version="0.2.0",
+        )
+        engine_result = _make_engine_result(run_id="run-001", manifest=manifest)
+
+        mock_artifact = MagicMock()
+        service = _make_minimal_service(
+            config=_make_service_config(
+                strategy_id="momentum-etf",
+                run_id="run-001",
+            ),
+            artifact_service=mock_artifact,
+        )
+
+        with patch.object(EngineLoop, "run", return_value=engine_result):
+            service.run()
+
+        call_kwargs = mock_write_artifacts.call_args.kwargs
+        assert call_kwargs["manifest"] == manifest
 
 
 # ---------------------------------------------------------------------------
@@ -492,6 +620,30 @@ class TestRunIdPropagation:
         # build_report called with run_id
         call_kwargs = mock_build_report.call_args[1]
         assert call_kwargs["run_id"] == "run-xyz"
+
+    @patch.object(EngineLoop, "__init__", return_value=None)
+    @patch.object(EngineLoop, "run")
+    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    def test_empty_run_id_is_generated_before_engine_construction(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+        mock_engine_init: MagicMock,
+    ) -> None:
+        """Config.run_id 为空时，先生成 run_id 再传给 EngineConfig。"""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.run_id = "generated-run"
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+        mock_engine_run.return_value = _make_engine_result(run_id="generated-run")
+
+        config = _make_service_config(run_id="")
+        service = _make_minimal_service(config=config)
+        service.run()
+
+        engine_config = mock_engine_init.call_args.kwargs["config"]
+        assert engine_config.strategy_run_id != ""
 
     @patch.object(EngineLoop, "__init__", return_value=None)
     @patch.object(EngineLoop, "run")
