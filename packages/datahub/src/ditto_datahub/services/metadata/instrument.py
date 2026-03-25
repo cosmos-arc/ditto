@@ -650,6 +650,7 @@ class InstrumentService:
                 standard_ticker=standard_ticker,
                 asset_class=asset_class or "stock",
                 source=source,
+                asof=asof,
             )
         except IdentifierNotFoundError:
             return None
@@ -669,6 +670,7 @@ class InstrumentService:
         instrument_id: int | None = None,
         asset_class: str = "stock",
         source: str = "tushare",
+        asof: str | None = None,
     ) -> str:
         """
         将任意标识符解析为 source_ticker.
@@ -681,6 +683,7 @@ class InstrumentService:
             instrument_id: 内部 ID（如 1000001）
             asset_class: 资产类型（stock | etf | index）
             source: 数据源名称（如 "tushare"）
+            asof: Point-in-Time 日期，None 表示当前
 
         Returns:
             source_ticker 字符串
@@ -694,7 +697,7 @@ class InstrumentService:
         # 优先级 1: instrument_id
         if instrument_id is not None:
             result = self._instrument_reader.get_source_ticker(
-                instrument_id, source, None
+                instrument_id, source, asof
             )
             if result is None:
                 raise IdentifierNotFoundError(
@@ -709,7 +712,7 @@ class InstrumentService:
 
         # 优先级 3: ticker
         if ticker is not None:
-            return self._resolve_from_ticker(ticker, asset_class, source)
+            return self._resolve_from_ticker(ticker, asset_class, source, asof)
 
         raise ValueError("必须指定 ticker / standard_ticker / instrument_id 之一")
 
@@ -729,7 +732,9 @@ class InstrumentService:
         transformer = self._exchange_transformers.get(source)
         return transformer.from_standard(standard_ticker)
 
-    def _resolve_from_ticker(self, ticker: str, asset_class: str, source: str) -> str:
+    def _resolve_from_ticker(
+        self, ticker: str, asset_class: str, source: str, asof: str | None = None
+    ) -> str:
         """
         从裸 ticker 解析 source_ticker.
 
@@ -737,6 +742,7 @@ class InstrumentService:
             ticker: 裸代码
             asset_class: 资产类型
             source: 数据源名称
+            asof: Point-in-Time 日期，None 表示当前
 
         Returns:
             source_ticker 字符串
@@ -747,7 +753,12 @@ class InstrumentService:
 
         """
         df = self._instrument_reader.find_securities(
-            SecurityQuery(asset_class=asset_class, is_active=True, source=source),
+            SecurityQuery(
+                asset_class=asset_class,
+                is_active=True if asof is None else None,
+                source=source,
+                asof=asof,
+            ),
         )
 
         if df.is_empty():

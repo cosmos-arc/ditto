@@ -83,6 +83,7 @@ class TestResolveIdentifier:
             ticker=None,
             source="tushare",
             asset_class="stock",
+            asof=None,
         )
 
     def test_standard_ticker_resolution(self) -> None:

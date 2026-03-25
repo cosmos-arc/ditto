@@ -434,6 +434,7 @@ class MetadataService:
         instrument_id: int | None = None,
         asset_class: str = "stock",
         source: str = "tushare",
+        asof: str | None = None,
     ) -> str:
         """将任意标识符解析为 source_ticker。委托到 InstrumentService."""
         return self._instrument.resolve_source_ticker(
@@ -442,6 +443,7 @@ class MetadataService:
             instrument_id,
             asset_class,
             source,
+            asof,
         )
 
     # ============ list_date 更新（→ InstrumentService） ============

@@ -13,6 +13,7 @@ def resolve_instrument_identifier(
     ticker: str | None,
     source: str = "tushare",
     asset_class: str = "stock",
+    asof: str | None = None,
 ) -> int | None:
     """
     解析标识符为 canonical instrument_id.
@@ -30,4 +31,5 @@ def resolve_instrument_identifier(
         ticker=ticker,
         source=source,
         asset_class=asset_class,
+        asof=asof,
     )

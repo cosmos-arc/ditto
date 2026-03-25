@@ -42,6 +42,7 @@ def _resolve_identifier(
     instrument_id: int | None,
     ticker: str | None,
     standard_ticker: str | None,
+    as_of_date: str | None = None,
 ) -> int | None:
     """
     解析标识符为 canonical instrument_id.
@@ -61,6 +62,7 @@ def _resolve_identifier(
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
+        asof=as_of_date,
     )
 
 
@@ -145,6 +147,7 @@ def get_financials(
             instrument_id=instrument_id,
             ticker=ticker,
             standard_ticker=standard_ticker,
+            as_of_date=as_of_date,
         )
         if resolved_id is None:
             typer.echo("未找到匹配的标的")
@@ -212,6 +215,7 @@ def get_dividend(
             instrument_id=instrument_id,
             ticker=ticker,
             standard_ticker=standard_ticker,
+            as_of_date=as_of_date,
         )
         if resolved_id is None:
             typer.echo("未找到匹配的标的")

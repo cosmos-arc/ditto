@@ -33,6 +33,7 @@ def _resolve_identifier(
     instrument_id: int | None,
     standard_ticker: str | None,
     ticker: str | None,
+    as_of_date: date | None = None,
 ) -> int | None:
     """
     解析标识符为 canonical instrument_id.
@@ -59,6 +60,7 @@ def _resolve_identifier(
             instrument_id=instrument_id,
             standard_ticker=standard_ticker,
             ticker=ticker,
+            asof=as_of_date.isoformat() if as_of_date else None,
         )
     except AmbiguousTickerError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -96,6 +98,7 @@ async def get_financials(
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
+        as_of_date=as_of_date,
     )
 
     if resolved_id is None:
@@ -155,6 +158,7 @@ async def get_dividend(
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
+        as_of_date=as_of_date,
     )
 
     if resolved_id is None:
