@@ -37,7 +37,7 @@ class BalanceSheetReader:
         self._client = client
 
     @traced("data.balance_sheet_query")
-    def get(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+    def get(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
         """
         Query balance sheet data as of a specific date (PIT query).
 

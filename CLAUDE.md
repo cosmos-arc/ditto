@@ -63,8 +63,15 @@
 
 ### 架构原则
 ```
-依赖方向: core → datahub → foundation
-          apps/port → datahub → foundation
+依赖层级（从高到低）:
+  ditto_port → ditto_core → ditto_kernel → ditto_datahub → ditto_infra
+
+允许的跨层依赖:
+  - port 可以直接依赖 datahub.models/services/sources
+  - port 可以直接依赖 infra.foundation
+  - port 禁止直接依赖 datahub.stores/runtime（仅 registry 例外）
+
+详细约束见 .importlinter 配置
 ```
 
 - **边界检查**：`pixi run -e dev arch-check`
@@ -74,6 +81,7 @@
 详细分层规范：
 - Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
 - DataHub → [packages/datahub/CLAUDE.md](packages/datahub/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
+- Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
 - Core → [packages/core/CLAUDE.md](packages/core/CLAUDE.md)
 - Port → [apps/port/CLAUDE.md](apps/port/CLAUDE.md)
 
@@ -193,6 +201,35 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 
 ---
 
+## Boundaries
+
+### ✅ Always do（无需询问）
+- 使用 `Read` 工具读文件（禁止 cat）
+- 使用 `Edit` 工具编辑（禁止 sed）
+- 使用 `Write` 工具写文件（禁止 echo/cat >）
+- 重构前使用 Grep 查找引用
+- 遵循 TDD 流程（RED → GREEN → REFACTOR）
+
+### ⚠️ Ask first（需要人工批准）
+- 数据库 schema 变更
+- 添加新依赖
+- CI/CD 配置修改
+- 修改架构边界
+- 修改环境配置文件
+
+### 🚫 Never do（硬性禁止）
+- **使用 pandas**（必须用 polars）
+- **使用 json**（必须用 orjson）
+- **使用 pip/poetry/conda**（必须用 pixi）
+- 使用 `TYPE_CHECKING` 延迟导入解决循环依赖（必须重构代码及架构）
+- 跳过 basedpyright、ruff、pre-commit 检测（禁止修改相关配置、使用 --no-verify 提交）
+- 直接提交到 main 分支
+- 提交 secrets
+- 使用 Bash 命令进行文件读写改操作
+- `rolling_mean(20)` 不指定 `closed="left"`（详见 [pit.md](.claude/rules/pit.md)）
+
+---
+
 ## 附录：详细参考
 
 ### 项目架构
@@ -200,7 +237,8 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 ```
 ditto/
 ├── packages/           # 核心包
-│   ├── foundation/    # 基础设施
+│   ├── infra/        # 基础设施
+│   ├── kernel/       # 共享内核（零业务行为类型）
 │   ├── datahub/       # 数据访问层
 │   └── core/          # 核心引擎
 ├── apps/              # 应用

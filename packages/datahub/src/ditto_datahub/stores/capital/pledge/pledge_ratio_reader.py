@@ -24,7 +24,7 @@ class PledgeRatioReader:
         self._client = client
 
     @traced("data.pledge_ratio_query")
-    def get(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+    def get(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
         """
         查询股权质押数据（PIT 查询）.
 

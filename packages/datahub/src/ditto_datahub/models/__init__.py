@@ -1,6 +1,8 @@
 """DataHub models for data transfer objects."""
 
 # DataHub 层自己的 models
+from ditto_kernel.enums import AssetClass, Exchange, OrderSide, RunStatus
+
 from ditto_datahub.models.common import (
     AssetClassType,
     Dataset,
@@ -22,7 +24,6 @@ from ditto_datahub.models.derived import (
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_datahub.models.enums import AssetClass, Exchange
 from ditto_datahub.models.factors import (
     FACTOR_CLASS_FUNDAMENTAL,
     FACTOR_CLASS_MACRO,
@@ -93,8 +94,23 @@ from ditto_datahub.models.source_codes import (
     VIX_CODE_TO_INSTRUMENT_ID,
 )
 from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteStoreResult
-from ditto_datahub.models.strategy import MarketState, Signal, SignalType
-from ditto_datahub.models.trading import Order, OrderSide, OrderStatus, Trade
+from ditto_datahub.models.strategy import (
+    ArtifactKind,
+    MarketState,
+    Signal,
+    SignalType,
+    StrategyArtifactRecord,
+    StrategySpecRecord,
+)
+from ditto_datahub.models.strategy_audit import (
+    AuditRecordType,
+    PreTradeDecisionPayload,
+    RiskScanPayload,
+)
+from ditto_datahub.models.strategy_run import StrategyRunRecord
+
+# deprecated: Order/OrderStatus 请使用 Core 层 ditto_core.accounting.order_book
+from ditto_datahub.models.trading import Order, OrderStatus, Trade
 
 __all__ = [
     "BAR_ENRICHED_SCHEMA",
@@ -117,8 +133,10 @@ __all__ = [
     "METAL_CODE_ALIASES",
     "QUOTE_SCHEMA",
     "VIX_CODE_TO_INSTRUMENT_ID",
+    "ArtifactKind",
     "AssetClass",
     "AssetClassType",
+    "AuditRecordType",
     "CalendarDay",
     "CertificationReportRecord",
     "CompatibilityManifestRecord",
@@ -168,16 +186,22 @@ __all__ = [
     "OrderStatus",
     "Portfolio",
     "Position",
+    "PreTradeDecisionPayload",
     "ResearchDatasetSnapshotRecord",
     "ResearchDatasetSpecRecord",
     "ResearchSpineSnapshotRecord",
     "ResearchSpineSpecRecord",
+    "RiskScanPayload",
+    "RunStatus",
     "ShadowDiffReportRecord",
     "ShadowTraceRecordRecord",
     "Signal",
     "SignalType",
     "Source",
     "StockExtension",
+    "StrategyArtifactRecord",
+    "StrategyRunRecord",
+    "StrategySpecRecord",
     "Trade",
     "WriteResult",
     "WriteStoreResult",

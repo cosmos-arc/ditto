@@ -8,6 +8,7 @@ Composition Root 模式：所有依赖在应用入口点（apps/port/）组装�
 - infra/    : Infrastructure 层（配置、观测、通知）
 - core/     : Core 层（DQ 引擎）
 - datahub/  : DataHub 层（数据源、Store、Service）
+- port/     : Port 层（应用编排服务工厂）
 - contexts/ : 上下文组合包（解决 ARCH-003/004）
 """
 
@@ -17,8 +18,10 @@ Composition Root 模式：所有依赖在应用入口点（apps/port/）组装�
 from .contexts import (
     IngestionBundle,
     MaterializationBundle,
+    StrategyBundle,
     create_ingestion_bundle,
     create_materialization_bundle,
+    create_strategy_bundle,
 )
 from .core import QualityProvider
 
@@ -38,6 +41,7 @@ from .infra import (
     NotificationProvider,
     ObservabilityProvider,
 )
+from .port import StrategyProvider
 
 __all__ = [
     "CapitalProvider",
@@ -54,6 +58,9 @@ __all__ = [
     "QualityProvider",
     "RuntimeProvider",
     "SourcesProvider",
+    "StrategyBundle",
+    "StrategyProvider",
     "create_ingestion_bundle",
     "create_materialization_bundle",
+    "create_strategy_bundle",
 ]

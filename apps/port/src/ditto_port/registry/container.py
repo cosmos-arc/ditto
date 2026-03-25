@@ -11,6 +11,7 @@ from dishka import (
 from .core import get_core_providers
 from .datahub import get_datahub_providers
 from .infra import get_infra_providers
+from .port import get_port_providers
 
 __all__ = ["make_app_container", "make_async_app_container"]
 
@@ -21,6 +22,7 @@ def _get_base_providers() -> tuple[Provider, ...]:
         *get_infra_providers(),  # Infrastructure 层
         *get_core_providers(),  # Core 层
         *get_datahub_providers(),  # DataHub 层
+        *get_port_providers(),  # Port 层
     )
 
 

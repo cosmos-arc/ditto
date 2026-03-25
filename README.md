@@ -1,50 +1,70 @@
 # Ditto: 量化投资系统
 
-**版本**: v0.7.0
-**最后更新**: 2026-03-19
-**状态**: 🔄 开发中
+**版本**: v0.9.0
+**最后更新**: 2026-03-24
+**状态**: ✅ 策略引擎 + 回测闭环
 
 ## 概要
 
-Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行业轮动策略，采用工业级标准开发，追求长期稳定 Alpha。
+Ditto 是一个面向 A 股市场的全栈量化投资平台，专注于 ETF 行业轮动策略，采用工业级标准开发，追求长期稳定 Alpha。对标 QuantConnect LEAN 架构，分 Core / DataHub / Infra 三层核心包 + Port 应用层。
 
 ## 核心功能
 
-- **行业轮动策略**: 基于 Regime 识别的 ETF 行业轮动
-- **多因子模型**: 相对强弱、估值、波动率、拥挤度等因子
-- **因子评估体系**: IC 分析、Fama-MacBeth 回归、Regime IC、Performance Attribution
-- **严格风控**: 三层 Kill Switch 机制，回撤速度检测
-- **双引擎回测**: Fast 向量化引擎 + Production 事件驱动引擎
-- **数据质量**: 多源校验，PIT 安全，复权分离存储，发布 DQ 增强约束
-- **ML 增强**: 机器学习因子权重学习（Phase 3+）
+- **策略引擎**: Pipeline + Stage 架构，内置 8 个 Stage + 4 个策略模板
+- **回测引擎**: EngineLoop 日历步进 + PreTrade（6 规则）/ PostTrade（4 Guard）
+- **执行层**: ExecutionPlanner + BacktestBrokerage + TradeBuilder + Reality Model（佣金/滑点/结算）
+- **组合构建**: WeightAllocator（等权/评分/波动率倒数）+ ConstraintChecker
+- **Expression DSL**: Pratt Parser 编译器，44 算子，Polars 向量化执行
+- **因子评估**: IC / ICIR / Fama-MacBeth / Regime IC / Performance Attribution
+- **数据质量**: 多源校验，PIT 安全，复权分离存储，L1-L4 检查器
+- **衍生数据**: 物化编排 + 发布安全（Shadow Diff / Certification）
+- **任务调度**: Prefect 3 编排（摄取/回填/修补/物化/发布）
+- **CLI**: Typer-based 命令行（ditto init/ingest/backfill/query）
 
 ## 架构
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Web UI        │    │   FastAPI       │    │   Core Engines  │
-│   (Next.js)     │◄──►│   Application   │◄──►│   - Regime      │
-│                 │    │   Services      │    │   - Factor      │
-│ - 仪表盘        │    │                 │    │   - Rotation    │
-│ - 回测分析      │    │ - RotationSvc   │    │   - Backtest    │
-│ - 调仓计划      │    │ - RiskSvc       │    │   - Risk        │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                       │
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │   External      │    │   Data Layer    │
-                       │   APIs          │◄──►│   - DataHub      │
-                       │                 │    │   - Accessor     │
-                       │ - Tushare       │    │   - Store       │
-                       │ - FRED          │    │   - Runtime      │
-                       │ - MINIQMT       │    │   - PIT Safe     │
-                       └─────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌───────────────────────────────────────┐
+│   Web UI        │    │   FastAPI Application (port/)          │
+│   (Next.js)     │◄──►│   - API Routes                        │
+│   Phase 4+      │    │   - CLI (Typer)                       │
+└─────────────────┘    │   - Prefect Flows                     │
+                       │   - DI (Dishka)                       │
+                       │   - Services: Ingestion/Strategy/     │
+                       │               Derived                  │
+                       └───────────────────┬───────────────────┘
+                                           │
+┌──────────────────────────────────────────┼──────────────────────────┐
+│ ditto-core                                                               │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐               │
+│  │ strategy │ │execution │ │backtest  │ │portfolio │               │
+│  │ Pipeline │ │ Planner  │ │EngineLoop│ │Allocator │               │
+│  │ Stages   │ │ Brokerage│ │ PreTrade │ │Constraint│               │
+│  │ Templates│ │ TradeBld │ │PostTrade │ │ Compare  │               │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘               │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐                           │
+│  │engine    │ │accounting│ │quality   │                           │
+│  │ Expr DSL │ │ Account  │ │ DQ Engine│                           │
+│  │ Evaluator│ │ CashBook │ │ Checkers │                           │
+│  └──────────┘ └──────────┘ └──────────┘                           │
+├───────────────────────────────────────────────────────────────────┤
+│ ditto-datahub                                                            │
+│  CQRS: Sources → Services → Readers/Writers (Parquet/SQLite) → Runtime │
+│  7 域: Metadata / Market / Fundamental / Capital / Macro / Features / Factors │
+├───────────────────────────────────────────────────────────────────┤
+│ ditto-infra                                                              │
+│  Config / DB(SQLite) / Cache(cachebox) / Concurrency(FileLock) /        │
+│  Observability(loguru+OTel) / Notification(Telegram+Email+Webhook)       │
+└───────────────────────────────────────────────────────────────────┘
 ```
+
+**依赖方向**: `port → core → datahub → infra`（单向依赖，import-linter 强制检查）
 
 ## 快速开始
 
 ### 环境要求
 
-- Python 3.12+
+- Python 3.12+ (实际使用 3.13)
 - Pixi (包管理器)
 - Windows/Linux/macOS
 
@@ -66,7 +86,6 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
    系统采用双层环境架构，配置文件按环境分组在 `config/` 目录：
 
    ```bash
-   # 配置文件结构（按需修改）
    config/
    ├── development/    # 开发环境配置
    ├── testing/        # 测试环境配置
@@ -76,13 +95,11 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
    设置运行时环境（默认为 development）：
    ```bash
    export ENVIRONMENT=development  # Linux/macOS
-   # 或
-   set ENVIRONMENT=development     # Windows
    ```
 
    **注意**：Tushare token 需要通过 keyring 或 `~/.ditto/secrets.toml` 配置
    ```bash
-   # 方式1: Keyring（推荐）
+   # Keyring（推荐）
    pixi run -e dev python -c "
    import keyring
    keyring.set_password('ditto', 'tushare', 'your_token_here')
@@ -91,42 +108,39 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 
 4. **初始化数据库**
    ```bash
-   pixi run python scripts/init_db.py
+   pixi run -e dev ditto init db
    ```
 
 5. **启动服务**
    ```bash
-   pixi run server
+   pixi run -e dev dev      # 开发模式（热重载）
+   pixi run server          # 生产模式（4 workers）
    ```
 
 ### 开发命令
 
 ```bash
-# 代码质量检查
-pixi run lint          # 运行 ruff 检查
-pixi run lint --fix    # 自动修复问题
-pixi run fmt           # 格式化代码
-pixi run type          # 运行 basedpyright 类型检查
+# 代码质量
+pixi run -e dev lint          # ruff 检查
+pixi run -e dev lint --fix    # 自动修复
+pixi run -e dev fmt           # 格式化
+pixi run -e dev type          # basedpyright 类型检查
 
 # 测试
-pixi run test              # 运行所有测试
-pixi run test --unit       # 只运行单元测试
-pixi run test --integration # 只运行集成测试
-pixi run test --fast       # 快速测试（跳过慢速）
-pixi run test tests/test_specific.py  # 运行特定测试
+pixi run -e dev test              # 单元测试（并行）
+pixi run -e dev test --unit       # 只运行单元测试
+pixi run -e dev test --integration # 只运行集成测试
+pixi run -e dev test --fast       # 快速测试（跳过慢速）
+pixi run -e dev test --snapshot   # 支持 inline-snapshot
 
 # 快速验证（开发时）
-pixi run check         # lint + fmt + type + test --fast
+pixi run -e dev check          # lint + fmt + type + test --fast + arch-check
 
 # 完整检查（CI 用）
-pixi run ci            # 完整的 CI 检查
+pixi run -e dev ci             # 完整 CI 流水线
 
-# 数据更新
-pixi run update-data    # 更新市场数据
-
-# 开发模式启动
-pixi run dev            # 启动开发服务器（热重载）
-pixi run server         # 启动生产服务器
+# 架构边界检查
+pixi run -e dev arch-check     # import-linter 分层依赖检查
 ```
 
 ## 项目结构
@@ -134,45 +148,50 @@ pixi run server         # 启动生产服务器
 ```
 ditto/
 ├── apps/
-│   ├── port/                  # FastAPI 后端服务
+│   ├── port/                  # 应用层（FastAPI + Prefect + CLI）
 │   │   ├── src/
 │   │   │   ├── api/           # API 路由
+│   │   │   ├── cli/           # Typer CLI 命令
+│   │   │   ├── jobs/          # Prefect 任务编排
 │   │   │   ├── services/      # 应用服务
-│   │   │   ├── models/        # 数据模型
+│   │   │   │   ├── ingestion/ # 数据摄取
+│   │   │   │   ├── strategy/  # 策略运行
+│   │   │   │   └── derived/   # 衍生数据
+│   │   │   ├── registry/      # Dishka DI 容器
 │   │   │   └── main.py        # 启动入口
-│   │   └── tests/             # 服务器测试
-│   └── web/                   # Next.js 前端 (Phase 1+)
+│   │   └── tests/             # 测试
+│   └── web/                   # Next.js 前端 (Phase 4+，待实现)
 ├── packages/
-│   ├── core/                  # 核心业务逻辑
-│   │   ├── src/
-│   │   │   ├── engine/        # 核心引擎
-│   │   │   ├── factors/       # 因子系统
-│   │   │   ├── strategy/      # 策略实现
-│   │   │   ├── backtest/      # 回测引擎
-│   │   │   ├── risk/          # 风控引擎
-│   │   │   └── portfolio/     # 组合管理
-│   │   └── tests/             # 核心模块测试
-│   ├── datahub/               # 数据访问层
-│   │   ├── src/
-│   │   │   ├── hub.py         # DataHub 统一入口
-│   │   │   ├── accessors/     # 业务聚合
-│   │   │   ├── stores/        # 数据存储
-│   │   │   └── runtime/       # 运行时支持
-│   │   └── tests/             # 数据层测试
-│   └── infra/               # 基础设施层
-│       ├── src/
-│       │   ├── config/        # 配置管理
-│       │   ├── logging/       # 日志系统
-│       │   └── types/         # 类型定义
-├── data/                      # 数据存储
-│   ├── meta/                  # SQLite 元数据
-│   ├── stock_daily/           # 股票日线
-│   ├── etf_daily/             # ETF 日线
-│   ├── fx_daily/              # 外汇日线
-│   ├── commodity_daily/       # 大宗商品日线
-│   └── freezes/               # 冻结点
+│   ├── core/                  # 核心业务逻辑（纯函数，无 I/O）
+│   │   ├── src/ditto_core/
+│   │   │   ├── strategy/      # 策略引擎（Pipeline + Stage + 模板）
+│   │   │   ├── execution/     # 执行层（Brokerage + Planner + Reality Model）
+│   │   │   ├── backtest/      # 回测引擎（EngineLoop + PreTrade + PostTrade）
+│   │   │   ├── portfolio/     # 组合构建（Allocator + Constraint）
+│   │   │   ├── accounting/    # 共享账户契约（Account + CashBook + OrderBook）
+│   │   │   ├── engine/        # Expression DSL + 因子评估 + 物化
+│   │   │   └── quality/       # 数据质量引擎（L1-L4 检查器）
+│   │   └── tests/
+│   ├── datahub/               # 数据访问层（CQRS + PIT）
+│   │   ├── src/ditto_datahub/
+│   │   │   ├── services/      # 域服务（6 Facade + Strategy + Audit）
+│   │   │   ├── stores/        # 存储层（Reader/Writer 分离）
+│   │   │   ├── sources/       # 数据源（Tushare / FRED / TDX）
+│   │   │   ├── models/        # 数据模型（50+ Record）
+│   │   │   └── runtime/       # 运行时支持（SQL/PIT/Freeze）
+│   │   └── tests/
+│   └── infra/                 # 基础设施层（零业务逻辑）
+│       ├── src/ditto_infra/
+│       │   ├── foundation/    # 基础模块（config/db/cache/concurrency/observability）
+│       │   └── services/      # 基础服务（notification）
+│       └── tests/
+├── config/                    # 环境配置（development/testing/production）
 ├── docs/                      # 项目文档
+│   ├── adr/                   # 架构决策记录
 │   ├── design/                # 设计文档
+│   ├── plans/                 # 实施计划
+│   ├── reviews/               # 评审文档
+│   ├── research/              # 研究文档
 │   └── sprints/               # Sprint 计划
 ├── scripts/                   # 工具脚本
 └── tests/                     # E2E 测试
@@ -181,104 +200,109 @@ ditto/
 ## 开发路线图
 
 ### Phase 0: 环境与数据打底 ✅
-- [x] 项目脚手架搭建
-- [x] 开发环境配置（pixi + pre-commit）
-- [x] 基础依赖安装
+- [x] 项目脚手架 + pixi + pre-commit
+- [x] Infra 层（config/db/cache/concurrency/observability）
 
-### Phase 0.5: 数据质量验证 🔄
-- [x] Sprint 1: 数据层实现（DataHub + Repository）
-  - 实现统一数据入口（DataHub Facade）
-  - 实现SID标识体系
-  - 实现Point-in-Time语义
-  - Golden Dataset验证
+### Phase 0.5: 数据质量验证 ✅
+- [x] DataHub（CQRS + 7 域 + PIT 安全 + SourceSchema）
+- [x] 多数据源（Tushare / FRED / TDX）
+- [x] Golden Dataset 验证
 
-### Phase 1: 回测闭环与调仓计划
-- [ ] Sprint 2: 核心引擎实现
-  - RegimeEngine（自适应阈值）
-  - FactorEngine（4个核心因子）
-  - Strategy框架（多策略协调）
-  - PortfolioManager（组合管理）
+### Phase 1: 策略引擎 ✅
+- [x] Accounting 契约层（Account / CashBook / OrderBook / Position）
+- [x] Strategy 决策层（StrategySpec / Pipeline / DecisionStage Protocol）
+- [x] 内置 Stages（Universe / Signal / Scoring / Filtering / Selection / RiskLock / Trend / Regime）
+- [x] Portfolio 构建（WeightAllocator / ConstraintChecker）
+- [x] 策略模板（etf_rotation / etf_trend_swing / stock_sector_rotation / stock_selection_trend）
+- [x] Expression DSL 编译器 + 因子评估指标体系
 
-- [ ] Sprint 3: 回测与风控
-  - FastBacktester（向量化）
-  - ProductionBacktester（事件驱动）
-  - 对齐测试（误差<0.1%）
-  - RiskEngine（三级Kill Switch）
+### Phase 2: 回测闭环 ✅
+- [x] Execution 层（Planner / Brokerage / TradeBuilder / Reality Models）
+- [x] Backtest EngineLoop + ParquetDataFeed
+- [x] PreTrade 风控（6 规则）+ PostTrade Guards（4 个）
+- [x] BacktestReport + RunManifest + 审计收集
+- [x] Port 层编排（BacktestService / StrategyRunService / ArtifactWriter）
+- [x] T+1 冻结逻辑 + 批内滚动更新
 
-### Phase 2: 实盘接入（规划中）
-- [ ] BrokerAdapter实现
+### Phase 3: 实盘接入（规划中）
+- [ ] BrokerAdapter 实现
 - [ ] 纸面交易验证
 - [ ] 实盘小资金测试
 
-### Phase 3: ML增强（规划中）
+### Phase 4: ML 增强（远期规划）
 - [ ] 因子权重学习
-- [ ] 可转债策略
 - [ ] 多策略组合
+- [ ] 可转债策略
+
+## 技术栈
+
+| 类别 | 技术 |
+|------|------|
+| 语言 | Python 3.13 |
+| 数据处理 | polars, duckdb |
+| API | fastapi, pydantic, orjson |
+| ASGI | granian |
+| 任务 | prefect 3.4+ |
+| DI | dishka |
+| CLI | typer |
+| 日志 | loguru |
+| 链路追踪 | opentelemetry |
+| 缓存 | cachebox |
+| 重试 | tenacity |
+| 限流 | limits |
+| 存储 | parquet, sqlite |
+| 包管理 | pixi |
+| 测试 | pytest, hypothesis, respx, inline-snapshot |
+| 类型检查 | basedpyright |
+| 代码质量 | ruff |
 
 ## 相关文档
 
-- [设计文档](docs/design/README.md) - 系统架构设计
-- [Sprint 规划](docs/sprints/README.md) - 迭代计划
-- [ADR](docs/adr/README.md) - 架构决策记录
+- [CLAUDE.md](CLAUDE.md) — 项目开发规范
+- [v3 策略引擎系统设计](docs/plans/2026-03-21-strategy-engine-system-design-v3.md)
+- [Phase 2 实施计划](docs/plans/2026-03-22-strategy-engine-phase2-00-master.md)
+- [Phase 2-5 路线图](docs/plans/2026-03-21-strategy-engine-phase2-5-roadmap.md)
+- [设计文档](docs/design/README.md) — 系统架构设计
+- [Sprint 规划](docs/sprints/README.md) — 迭代计划
+- [ADR](docs/adr/README.md) — 架构决策记录
+- [packages/core/CLAUDE.md](packages/core/CLAUDE.md) — Core 层规范
+- [packages/datahub/CLAUDE.md](packages/datahub/CLAUDE.md) — DataHub 层规范
+- [apps/port/CLAUDE.md](apps/port/CLAUDE.md) — Port 层规范
+- [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md) — Infra 层规范
 
 ## 变更记录
 
+### v0.9.0 (2026-03-24)
+**改进**
+- README 文档全面更新，反映当前代码库实际状态
+- 更新架构图、项目结构、路线图、开发命令
+- 新增技术栈表格
+- 补充 v3 策略引擎系统设计和各层 CLAUDE.md 文档链接
+
+### v0.8.0 (2026-03-23)
+**新增** — Phase 6: Gap 补齐 + 质量加固 Sprint
+- RegimeStage（市场状态检测）、validate_spec_params()、RebalancePlan
+- DataHub 控制面：StrategyCatalogService + StrategyArtifactService
+- 62 个新测试，3849 个测试全部通过，84.82% 覆盖率
+
 ### v0.7.0 (2026-03-19)
 **新增**
-- **评估指标增强**（Layer 4 Phase 1-3）:
-  - `periods_per_year` 可配置化（默认 244）
-  - Sharpe 纳入无风险利率、Calmar Ratio
-  - 尾部风险指标（CVaR 95/99, 偏度, 超额峰度, 最大单日损失）
-  - Grinold-Kahn IR（Gordon Ritter 自相关修正）
-  - Fama-MacBeth 两步回归（支持多因子）
-  - 因子暴露分析（正交化 + 相关矩阵 + 残差 IC）
-  - Regime-Adjusted IC（Markov Regime Switching + 转移矩阵）
-  - IC 趋势监测（OLS 线性回归）
-  - Performance Attribution（Selection/Timing/Interaction 分解）
-- **发布安全 DQ 增强**: 覆盖率、均值/标准差/偏度、分布漂移、值跳跃率、最大连续空值
-- **失效传播韧性**（Layer 4 Phase 4-5）:
-  - 修复失败不终止（`RepairBatchResult`）
-  - 死信队列（3 次重试后转入 dead_letter）
-  - 优先级队列（signal > factor > label > feature）
-  - 跨事件去重（NOT EXISTS + 子集范围自动愈合）
-
-**改进**
-- 修复 `_estimate_avg_turnover` 运算符优先级 bug
-- 合并重复 `get_risk_factors()` 调用
+- **评估指标增强**: periods_per_year 可配置化、Sharpe 纳入无风险利率、Calmar Ratio
+- **尾部风险指标**: CVaR 95/99, 偏度, 超额峰度, 最大单日损失
+- **Grinold-Kahn IR**: Gordon Ritter 自相关修正
+- **Fama-MacBeth**: 两步回归（支持多因子）
+- **Regime-Adjusted IC**: Markov Regime Switching + 转移矩阵
+- **Performance Attribution**: Selection/Timing/Interaction 分解
+- **发布安全 DQ 增强**: 覆盖率、均值/标准差/偏度、分布漂移
+- **失效传播韧性**: 修复失败不终止、死信队列、优先级队列、跨事件去重
 
 ### v0.6.0 (2026-03-01)
 **新增**
-- FRED 数据源集成（美国宏观数据：GDP、CPI、失业率等）
+- FRED 数据源集成（美国宏观数据）
 - 外汇（FX）日线数据存储与 API
 - 大宗商品（Commodity）日线数据存储与 API（含 VIX 指数）
 - Exchange 层重构：协议 + DI 注入模式
 - 全局时区工具（zoneinfo + DST 处理）
-
-**改进**
-- FRED Adapter 基类抽取，消除重复代码
-- 宏观数据 PIT 语义修正（knowledge_date 使用观测日期）
-- API 路由实现完整查询逻辑（不再占位）
-
-### v0.5.0 (2026-01-23)
-**新增**
-- README 标准化，添加版本、日期、状态元数据
-- 添加变更记录部分
-
-**改进**
-- 完善文档结构说明
-- 更新开发命令说明
-
-### v0.4.0 (2025-12-27)
-**新增**
-- Sprint 1 P0 任务全部完成
-- DataHub Facade 实现
-- SqlEngine 实现
-
-### v0.1.0 (2025-12-08)
-**新增**
-- 初始项目结构
-- 基础依赖配置
-- 核心设计文档
 
 ## 免责声明
 

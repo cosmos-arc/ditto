@@ -6,7 +6,10 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_datahub.errors import AmbiguousTickerError, NoIdentifierProvidedError
 from ditto_datahub.services.fundamental_service import FundamentalService
+from ditto_datahub.services.metadata_service import MetadataService
+from ditto_infra.foundation import logger
 from fastapi import APIRouter, HTTPException, Query
 
 from ditto_port.models.common import APIResponse
@@ -19,8 +22,55 @@ from ditto_port.models.fundamental import (
     to_dividend_list,
     to_financial_list,
 )
+from ditto_port.models.identifier import resolve_instrument_identifier
 
 router = APIRouter(prefix="/fundamental", tags=["fundamental"])
+
+
+def _resolve_identifier(
+    metadata_service: MetadataService,
+    *,
+    instrument_id: int | None,
+    standard_ticker: str | None,
+    ticker: str | None,
+    as_of_date: date | None = None,
+) -> int | None:
+    """
+    解析标识符为 canonical instrument_id.
+
+    至少提供一个标识符（instrument_id / standard_ticker / ticker），
+    委托给共享的 resolve_instrument_identifier 进行统一解析。
+
+    Returns:
+        解析后的 canonical instrument_id (int)，查不到返回 None.
+
+    Raises:
+        HTTPException: 标识符缺失或解析失败时.
+
+    """
+    if not any([instrument_id, standard_ticker, ticker]):
+        raise HTTPException(
+            status_code=422,
+            detail="必须提供 instrument_id、standard_ticker 或 ticker 之一",
+        )
+
+    try:
+        return resolve_instrument_identifier(
+            metadata_service,
+            instrument_id=instrument_id,
+            standard_ticker=standard_ticker,
+            ticker=ticker,
+            asof=as_of_date.isoformat() if as_of_date else None,
+        )
+    except AmbiguousTickerError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except NoIdentifierProvidedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error resolving fundamental identifier")
+        raise HTTPException(
+            status_code=500, detail="Failed to resolve identifier"
+        ) from exc
 
 
 @router.get("/financials/{report_type}", response_model=APIResponse[list[Financial]])
@@ -28,40 +78,50 @@ router = APIRouter(prefix="/fundamental", tags=["fundamental"])
 async def get_financials(
     report_type: FinancialType,
     service: Annotated[FundamentalService, FromComponent()],
-    instrument_id: str = Query(..., description="标的 ID"),
+    metadata_service: Annotated[MetadataService, FromComponent()],
+    instrument_id: int | None = Query(None, description="Canonical 标的 ID"),
+    ticker: str | None = Query(None, description="裸代码, 如 000001"),
+    standard_ticker: str | None = Query(None, description="标准代码, 如 000001.XSHE"),
     as_of_date: date = Query(..., description="PIT 查询日期"),
 ) -> APIResponse[list[Financial]]:
     """
     获取财务报表数据.
 
-    Args:
-        report_type: 财务报表类型 (balance_sheet/income_statement/cash_flow)
-        service: FundamentalService 依赖注入
-        instrument_id: 标的 ID
-        as_of_date: PIT 查询日期
-
-    Returns:
-        APIResponse 包含财务报表数据列表
+    标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
+    - instrument_id: 内部 ID，如 1000001
+    - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
+    - ticker: 裸代码，如 "000001"
 
     """
+    resolved_id = _resolve_identifier(
+        metadata_service,
+        instrument_id=instrument_id,
+        standard_ticker=standard_ticker,
+        ticker=ticker,
+        as_of_date=as_of_date,
+    )
+
+    if resolved_id is None:
+        return APIResponse(data=[])
+
     # 根据报表类型调用对应的方法（在线程池中执行，避免阻塞事件循环）
     df = None
     if report_type == FinancialType.BALANCE_SHEET:
         df = await asyncio.to_thread(
             service.get_balance_sheet,
-            instrument_id,
+            resolved_id,
             as_of_date,
         )
     elif report_type == FinancialType.INCOME_STATEMENT:
         df = await asyncio.to_thread(
             service.get_income_statement,
-            instrument_id,
+            resolved_id,
             as_of_date,
         )
     elif report_type == FinancialType.CASH_FLOW:
         df = await asyncio.to_thread(
             service.get_cash_flow,
-            instrument_id,
+            resolved_id,
             as_of_date,
         )
 
@@ -78,23 +138,34 @@ async def get_financials(
 @inject
 async def get_dividend(
     service: Annotated[FundamentalService, FromComponent()],
-    instrument_id: str = Query(..., description="标的 ID"),
+    metadata_service: Annotated[MetadataService, FromComponent()],
+    instrument_id: int | None = Query(None, description="Canonical 标的 ID"),
+    ticker: str | None = Query(None, description="裸代码, 如 000001"),
+    standard_ticker: str | None = Query(None, description="标准代码, 如 000001.XSHE"),
     as_of_date: date = Query(..., description="PIT 查询日期"),
 ) -> APIResponse[list[Dividend]]:
     """
     获取分红数据.
 
-    Args:
-        service: FundamentalService 依赖注入
-        instrument_id: 标的 ID
-        as_of_date: PIT 查询日期
-
-    Returns:
-        APIResponse 包含分红数据列表
+    标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
+    - instrument_id: 内部 ID，如 1000001
+    - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
+    - ticker: 裸代码，如 "000001"
 
     """
+    resolved_id = _resolve_identifier(
+        metadata_service,
+        instrument_id=instrument_id,
+        standard_ticker=standard_ticker,
+        ticker=ticker,
+        as_of_date=as_of_date,
+    )
+
+    if resolved_id is None:
+        return APIResponse(data=[])
+
     # 调用 service（在线程池中执行，避免阻塞事件循环）
-    df = await asyncio.to_thread(service.get_dividend, instrument_id, as_of_date)
+    df = await asyncio.to_thread(service.get_dividend, resolved_id, as_of_date)
 
     if df is None or df.is_empty():
         return APIResponse(data=[])
@@ -109,21 +180,20 @@ async def get_dividend(
 @inject
 async def list_corporate_actions(
     service: Annotated[FundamentalService, FromComponent()],
-    instrument_id: str = Query(..., description="标的 ID"),
+    metadata_service: Annotated[MetadataService, FromComponent()],
+    instrument_id: int | None = Query(None, description="Canonical 标的 ID"),
+    ticker: str | None = Query(None, description="裸代码, 如 000001"),
+    standard_ticker: str | None = Query(None, description="标准代码, 如 000001.XSHE"),
     start_date: date = Query(..., description="开始日期"),
     end_date: date = Query(..., description="结束日期"),
 ) -> APIResponse[list[CorporateAction]]:
     """
     查询公司行动列表.
 
-    Args:
-        service: FundamentalService 依赖注入
-        instrument_id: 标的 ID
-        start_date: 开始日期
-        end_date: 结束日期
-
-    Returns:
-        APIResponse 包含公司行动列表
+    标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
+    - instrument_id: 内部 ID，如 1000001
+    - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
+    - ticker: 裸代码，如 "000001"
 
     Raises:
         HTTPException: 400 如果 start_date > end_date
@@ -139,10 +209,20 @@ async def list_corporate_actions(
             ),
         )
 
+    resolved_id = _resolve_identifier(
+        metadata_service,
+        instrument_id=instrument_id,
+        standard_ticker=standard_ticker,
+        ticker=ticker,
+    )
+
+    if resolved_id is None:
+        return APIResponse(data=[])
+
     # 调用 service（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(
         service.list_corporate_actions,
-        instrument_id,
+        resolved_id,
         start_date,
         end_date,
     )

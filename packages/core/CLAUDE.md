@@ -24,9 +24,12 @@ ditto_core/
 │   ├── config.py      # DQ 配置
 │   ├── report.py      # 检查报告
 │   └── severity.py    # 严重程度
-├── engine/            # 核心引擎（Phase 1 已实现 — 表达式编译器、因子定义、评估指标、物化模型）
-├── portfolio/         # 组合管理（待实现）
-└── strategy/          # 策略框架（待实现）
+├── engine/            # 核心引擎（表达式编译器、因子定义、评估指标、物化模型）
+├── accounting/        # 共享账户契约层（Account / CashBook / OrderBook / Position）
+├── execution/         # 执行层（Planner / Brokerage / TradeBuilder / Reality Model）
+├── strategy/          # 策略决策层（StrategySpec / Pipeline / 内置 Stages / 策略模板）
+├── backtest/          # 回测引擎（EngineLoop / Manifest / Statistics / Audit / Serialization）
+└── portfolio/         # 组合构建（WeightAllocator / ConstraintChecker / compare_reports）
 ```
 
 ## 子领域规范
@@ -56,14 +59,68 @@ ditto_core/
 - 编排流程在 Application（获取数据、调用计算、保存结果）
 - 存储在 DataHub（parquet 文件）
 
-### Strategy（策略）
+### Accounting（共享账户契约层）
 
-**职责**：策略逻辑、信号生成
+**职责**：Position / CashBook / OrderBook / Account / AccountView / BuyingPowerModel
 
 **关键点**：
-- 策略基类在 Core
-- 信号生成逻辑在 Core
-- 交易执行编排在 Port
+- 纯数据结构层，frozen dataclass + Protocol
+- Account 是唯一可变对象（内部替换 frozen 引用）
+- AccountView 是只读快照，供上层安全消费
+- 详见 v3 设计文档 §3.1-§3.6
+
+### Execution（执行层）
+
+**职责**：ExecutionPlanner / BacktestBrokerage / TradeBuilder / Reality Model / InstrumentDefinition / FillOutcome
+
+**关键点**：
+- InstrumentDefinition / TradingRuleSet / FeeSchedule 是 frozen dataclass
+- FillOutcome 是显式联合类型（Filled / NoFill）
+- BacktestBrokerage 实现 T+1 冻结逻辑和批内滚动更新
+- TradeBuilder 支持 FIFO / FlatToFlat 两种匹配方式
+- Reality Model 处理佣金/滑点/成交/结算
+- 详见 v3 设计文档 §4.3, §5.1
+
+### Strategy（策略决策层）
+
+**职责**：StrategySpec / StrategyRun / StrategyContext / DecisionStage Protocol / StrategyPipeline / 内置 Stages / 策略模板
+
+**关键点**：
+- StrategySpec 是策略的完整语义契约
+- DecisionStage 是 Protocol，Pipeline 通过它分发
+- StrategyPipeline 顺序编排 Stages，纯函数无状态
+- 内置 Stages: Universe / Signal / Scoring / Filtering / Selection / RiskLockFilter / TrendFilter / RegimeStage
+- 4 个策略模板: etf_rotation / etf_trend_swing / stock_sector_rotation / stock_selection_trend
+- etf_trend_swing 包含 TrailingStopStage（追踪止损，向量化 polars join）
+- DecisionFrame 通过列名约定流转，不做运行时 schema 校验
+- `validation.py` 提供 `validate_spec_params()` 独立参数校验函数
+- 详见 v3 设计文档 §2, §6.1, §9.1
+
+### Portfolio（组合构建层）
+
+**职责**：WeightAllocator / ConstraintChecker / AllocationStage / ConstraintStage
+
+**关键点**：
+- WeightAllocator Protocol 定义权重分配接口
+- EqualWeightAllocator / ScoreWeightAllocator / InverseVolAllocator 三种内置分配策略
+- ConstraintChecker 按 priority 升序执行约束
+- MaxWeight / MinWeight / MaxPositions 三种内置约束
+- AllocationStage / ConstraintStage 是 DecisionStage 适配器
+- 详见 v3 设计文档 §2.2, §9.1
+
+### Backtest（回测引擎）
+
+**职责**：EngineLoop / EngineConfig / ParquetDataFeed / BacktestReport / RunManifest / PreTrade / PostTrade / Statistics / Audit / Serialization
+
+**关键点**：
+- EngineLoop 日历步进回测主循环，逐日推进
+- PreTrade 6 条规则：NoShortSell / PriceValidity / LotSize / BuyingPower / Concentration / DailyTurnover
+- PostTrade 4 个 Guard：MaxDrawdown / SingleLoss / Concentration / MarketAnomaly
+- BacktestReport 包含 NAV / 收益 / 回撤 / Sharpe / Calmar / CVaR 等指标
+- RunManifest 记录运行清单（规则引用、输入引用、配置哈希）
+- ExecutionAuditCollector 收集账户快照/成交/风控审计
+- BacktestReportSerializer 支持 SQLite 存储
+- 详见 v3 设计文档 §7, §8
 
 ### Risk（风险管理）
 
@@ -79,6 +136,7 @@ ditto_core/
 ```
 ┌─────────────────────────────────────┐
 │  Core 可依赖                        │
+│  core → kernel ✅                   │
 │  core → datahub ✅                  │
 │  core → infra ✅                    │
 └─────────────────────────────────────┘
@@ -129,9 +187,15 @@ class QualityEngine:
 packages/core/
 ├── src/ditto_core/
 └── tests/
-    ├── unit/           # 单元测试
-    │   └── quality/
-    └── integration/    # 集成测试
+    ├── unit/
+    │   ├── accounting/
+    │   ├── backtest/
+    │   ├── engine/
+    │   ├── execution/
+    │   ├── portfolio/
+    │   ├── quality/
+    │   └── strategy/
+    └── integration/
 ```
 
 ### 运行测试

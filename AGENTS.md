@@ -1,4 +1,4 @@
-# AGENTS.md
+# Ditto 项目指南
 
 ## 北极星原则
 
@@ -67,9 +67,9 @@
   ditto_port → ditto_core → ditto_datahub → ditto_infra
 
 允许的跨层依赖:
-  - port 可以直接依赖 datahub.models/services
+  - port 可以直接依赖 datahub.models/services/sources
   - port 可以直接依赖 infra.foundation
-  - port 禁止直接依赖 datahub.stores/sources/runtime（仅 registry 例外）
+  - port 禁止直接依赖 datahub.stores/runtime（仅 registry 例外）
 
 详细约束见 .importlinter 配置
 ```
@@ -79,10 +79,10 @@
 - **禁止循环依赖**：必须重构架构，禁止 `TYPE_CHECKING` 延迟导入
 
 详细分层规范：
-- Foundation → [foundation.md](.claude/rules/foundation.md)
-- DataHub → [datahub.md](.claude/rules/datahub.md) | [pit.md](.claude/rules/pit.md)
-- Core → [core.md](.claude/rules/core.md)
-- Server → [server.md](.claude/rules/server.md)
+- Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
+- DataHub → [packages/datahub/CLAUDE.md](packages/datahub/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
+- Core → [packages/core/CLAUDE.md](packages/core/CLAUDE.md)
+- Port → [apps/port/CLAUDE.md](apps/port/CLAUDE.md)
 
 ### 允许的依赖（严格限制）
 
@@ -180,6 +180,7 @@ Edit <file>        # 现在才修改
 | 连续 Edit | Read → Edit |
 | Edit 失败后直接重试 | 调用 systematic-debugging |
 | 不读代码直接改 | 先理解再修改 |
+| TYPE_CHECKING解决循环引用 | 重构解决 |
 
 ---
 
@@ -235,7 +236,7 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 ```
 ditto/
 ├── packages/           # 核心包
-│   ├── foundation/    # 基础设施
+│   ├── infra/        # 基础设施
 │   ├── datahub/       # 数据访问层
 │   └── core/          # 核心引擎
 ├── apps/              # 应用
@@ -265,20 +266,4 @@ ditto/
 | 测试执行 | `dev` | `testing` | `pixi run -e dev pytest` |
 | 生产部署 | `default` | `production` | `pixi run server` |
 
-> **注意**：`DITTO_ENV` 已弃用，请使用 `ENVIRONMENT`。
-
----
-
-## Complete Specification Reference
-
-| 规范 | 路径 |
-|------|------|
-| 主配置 | [.claude/CLAUDE.md](.claude/CLAUDE.md) |
-| Python 核心规范 | [.claude/rules/core.md](.claude/rules/core.md) |
-| 测试规范 | [.claude/rules/python-test.md](.claude/rules/python-test.md) |
-| 工作流 | [.claude/rules/workflow.md](.claude/rules/workflow.md) |
-| Foundation 层规范 | [.claude/rules/foundation.md](.claude/rules/foundation.md) |
-| DataHub 层规范 | [.claude/rules/datahub.md](.claude/rules/datahub.md) |
-| Server 层规范 | [.claude/rules/server.md](.claude/rules/server.md) |
-| Pitfalls 避坑指南 | [.claude/rules/pit.md](.claude/rules/pit.md) |
-| noqa/type:ignore 规范 | [.claude/rules/noqa-ignore.md](.claude/rules/noqa-ignore.md) |
+> **注意**：`DITTO_ENV` 已弃用，请使用 `ENVIRONMENT`。代码中应使用 `get_environment()` 统一入口获取环境。

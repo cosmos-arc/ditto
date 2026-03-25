@@ -42,37 +42,37 @@ class FundamentalService:
     # get_* - Single record queries (PIT)
 
     def get_balance_sheet(
-        self, instrument_id: str, as_of_date: date
+        self, instrument_id: int, as_of_date: date
     ) -> pl.DataFrame | None:
         """Get balance sheet for instrument on date (PIT query)."""
         df = self._read_ports.balance_sheet.get(instrument_id, as_of_date)
         return None if df.is_empty() else df
 
     def get_income_statement(
-        self, instrument_id: str, as_of_date: date
+        self, instrument_id: int, as_of_date: date
     ) -> pl.DataFrame | None:
         """Get income statement for instrument on date (PIT query)."""
         df = self._read_ports.income_statement.get(instrument_id, as_of_date)
         return None if df.is_empty() else df
 
     def get_cash_flow(
-        self, instrument_id: str, as_of_date: date
+        self, instrument_id: int, as_of_date: date
     ) -> pl.DataFrame | None:
         """Get cash flow for instrument on date (PIT query)."""
         df = self._read_ports.cash_flow.get(instrument_id, as_of_date)
         return None if df.is_empty() else df
 
-    def get_dividend(self, instrument_id: str, as_of_date: date) -> pl.DataFrame | None:
+    def get_dividend(self, instrument_id: int, as_of_date: date) -> pl.DataFrame | None:
         """Get dividend data for instrument on date (PIT query)."""
         df = self._read_ports.dividend.get(instrument_id, as_of_date)
         return None if df.is_empty() else df
 
-    def get_forecast(self, instrument_id: str, as_of_date: date) -> pl.DataFrame | None:
+    def get_forecast(self, instrument_id: int, as_of_date: date) -> pl.DataFrame | None:
         """Get forecast data for instrument on date (PIT query)."""
         df = self._read_ports.forecast.get(instrument_id, as_of_date)
         return None if df.is_empty() else df
 
-    def get_express(self, instrument_id: str, as_of_date: date) -> pl.DataFrame | None:
+    def get_express(self, instrument_id: int, as_of_date: date) -> pl.DataFrame | None:
         """Get express report for instrument on date (PIT query)."""
         df = self._read_ports.express.get(instrument_id, as_of_date)
         return None if df.is_empty() else df
@@ -80,7 +80,7 @@ class FundamentalService:
     # list_* - Multi record queries
 
     def list_corporate_actions(
-        self, instrument_id: str, start_date: date, end_date: date
+        self, instrument_id: int, start_date: date, end_date: date
     ) -> pl.DataFrame:
         """List corporate actions for instrument in date range."""
         return self._read_ports.corporate_actions.get(

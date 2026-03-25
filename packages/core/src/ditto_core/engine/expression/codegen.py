@@ -627,6 +627,22 @@ def _rolling(
     entity_keys: list[str],
     source: str,
 ) -> pl.Expr:
+    """
+    Construct a PIT-safe rolling expression.
+
+    Uses ``shift(1)`` to prevent look-ahead bias: the rolling window
+    operates on data up to *T-1* rather than including the current row *T*.
+
+    **Window semantics**
+
+    ``shift(1) + rolling(window)`` consumes data in ``[T-window, T-1]``
+    (exactly *window* historical data points, excluding the current row).
+
+    This is equivalent to ``rolling(window, closed="left")`` — both
+    approaches yield the same number of data points and neither leaks
+    future information.  The ``shift(1)`` strategy is preferred here
+    because it composes cleanly with polars' ``.over()`` partitioning.
+    """
     window = _read_int_literal(raw_arguments, index, source=source)
     _require_positive(window, raw_arguments[index].span, source=source)
     shifted = argument.shift(1)

@@ -8,6 +8,7 @@ from typing import Any
 import orjson
 import typer
 from ditto_datahub.services.fundamental_service import FundamentalService
+from ditto_datahub.services.metadata_service import MetadataService
 from rich.console import Console
 from rich.table import Table
 
@@ -18,6 +19,7 @@ from ditto_port.models.fundamental import (
     to_dividend_list,
     to_financial_list,
 )
+from ditto_port.models.identifier import resolve_instrument_identifier
 
 _TABLE_DISPLAY_LIMIT = 20
 
@@ -26,10 +28,42 @@ console = Console()
 
 
 @contextmanager
-def _get_fundamental_service() -> Generator[FundamentalService, None, None]:
-    """获取 FundamentalService 实例."""
+def _get_services() -> Generator[
+    tuple[FundamentalService, MetadataService], None, None
+]:
+    """获取 FundamentalService 和 MetadataService 实例."""
     with create_cli_host() as bundle:
-        yield bundle.fundamental_service
+        yield bundle.fundamental_service, bundle.metadata_service
+
+
+def _resolve_identifier(
+    metadata_service: MetadataService,
+    *,
+    instrument_id: int | None,
+    ticker: str | None,
+    standard_ticker: str | None,
+    as_of_date: str | None = None,
+) -> int | None:
+    """
+    解析标识符为 canonical instrument_id.
+
+    至少提供一个标识符，委托给共享的 resolve_instrument_identifier。
+
+    Returns:
+        解析后的 canonical instrument_id (int)，查不到返回 None.
+
+    """
+    if not any([instrument_id, standard_ticker, ticker]):
+        typer.echo("错误: 必须提供 --instrument-id、--ticker 或 --standard-ticker 之一")
+        raise typer.Exit(code=1)
+
+    return resolve_instrument_identifier(
+        metadata_service,
+        instrument_id=instrument_id,
+        standard_ticker=standard_ticker,
+        ticker=ticker,
+        asof=as_of_date,
+    )
 
 
 def _output_json(items: list[Any]) -> None:
@@ -62,11 +96,17 @@ def _validate_date_range(start_date: str, end_date: str) -> None:
 
 @app.command("financials")
 def get_financials(
-    instrument_id: str = typer.Option(..., "--instrument-id", "-i", help="标的 ID"),
+    instrument_id: int | None = typer.Option(
+        None, "--instrument-id", "-i", help="Canonical 标的 ID"
+    ),
+    ticker: str | None = typer.Option(None, "--ticker", "-t", help="裸代码, 如 000001"),
+    standard_ticker: str | None = typer.Option(
+        None, "--standard-ticker", "-s", help="标准代码, 如 000001.XSHE"
+    ),
     report_type: str = typer.Option(
         "balance_sheet",
         "--type",
-        "-t",
+        "-r",
         help="报表类型 (balance_sheet/income_statement/cash_flow)",
     ),
     as_of_date: str = typer.Option(..., "--date", "-d", help="PIT 查询日期"),
@@ -75,9 +115,13 @@ def get_financials(
     """
     查询财务报表数据.
 
-    示例:
-        ditto query fundamental financials -i 1 -t balance_sheet --date 2024-12-31
-        ditto query fundamental financials -i 1 -t income_statement --date 2024-12-31
+    标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
+        ditto query fundamental financials -i 1000001
+            -r balance_sheet --date 2024-12-31
+        ditto query fundamental financials -s 000001.XSHE
+            -r balance_sheet --date 2024-12-31
+        ditto query fundamental financials -t 000001
+            -r balance_sheet --date 2024-12-31
 
     """
     type_map = {
@@ -97,14 +141,25 @@ def get_financials(
     financial_type = type_map[report_type]
     as_of = _parse_date(as_of_date).date()
 
-    with _get_fundamental_service() as service:
+    with _get_services() as (service, metadata_service):
+        resolved_id = _resolve_identifier(
+            metadata_service,
+            instrument_id=instrument_id,
+            ticker=ticker,
+            standard_ticker=standard_ticker,
+            as_of_date=as_of_date,
+        )
+        if resolved_id is None:
+            typer.echo("未找到匹配的标的")
+            return
+
         df = None
         if financial_type == FinancialType.BALANCE_SHEET:
-            df = service.get_balance_sheet(instrument_id, as_of)
+            df = service.get_balance_sheet(resolved_id, as_of)
         elif financial_type == FinancialType.INCOME_STATEMENT:
-            df = service.get_income_statement(instrument_id, as_of)
+            df = service.get_income_statement(resolved_id, as_of)
         elif financial_type == FinancialType.CASH_FLOW:
-            df = service.get_cash_flow(instrument_id, as_of)
+            df = service.get_cash_flow(resolved_id, as_of)
 
         if df is None or df.is_empty():
             typer.echo("未找到财务数据")
@@ -134,20 +189,39 @@ def get_financials(
 
 @app.command("dividend")
 def get_dividend(
-    instrument_id: str = typer.Option(..., "--instrument-id", "-i", help="标的 ID"),
+    instrument_id: int | None = typer.Option(
+        None, "--instrument-id", "-i", help="Canonical 标的 ID"
+    ),
+    ticker: str | None = typer.Option(None, "--ticker", "-t", help="裸代码, 如 000001"),
+    standard_ticker: str | None = typer.Option(
+        None, "--standard-ticker", "-s", help="标准代码, 如 000001.XSHE"
+    ),
     as_of_date: str = typer.Option(..., "--date", "-d", help="PIT 查询日期"),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
     查询分红数据.
 
-    示例:
-        ditto query fundamental dividend -i 1 --date 2024-12-31
+    标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
+        ditto query fundamental dividend -i 1000001 --date 2024-12-31
+        ditto query fundamental dividend -s 000001.XSHE --date 2024-12-31
+        ditto query fundamental dividend -t 000001 --date 2024-12-31
 
     """
     as_of = _parse_date(as_of_date).date()
-    with _get_fundamental_service() as service:
-        df = service.get_dividend(instrument_id, as_of)
+    with _get_services() as (service, metadata_service):
+        resolved_id = _resolve_identifier(
+            metadata_service,
+            instrument_id=instrument_id,
+            ticker=ticker,
+            standard_ticker=standard_ticker,
+            as_of_date=as_of_date,
+        )
+        if resolved_id is None:
+            typer.echo("未找到匹配的标的")
+            return
+
+        df = service.get_dividend(resolved_id, as_of)
 
         if df is None or df.is_empty():
             typer.echo("未找到分红数据")
@@ -176,24 +250,43 @@ def get_dividend(
 
 @app.command("corporate-actions")
 def list_corporate_actions(
-    instrument_id: str = typer.Option(..., "--instrument-id", "-i", help="标的 ID"),
-    start_date: str = typer.Option(..., "--start-date", "-s", help="开始日期"),
+    instrument_id: int | None = typer.Option(
+        None, "--instrument-id", "-i", help="Canonical 标的 ID"
+    ),
+    ticker: str | None = typer.Option(None, "--ticker", "-t", help="裸代码, 如 000001"),
+    standard_ticker: str | None = typer.Option(
+        None, "--standard-ticker", "-s", help="标准代码, 如 000001.XSHE"
+    ),
+    start_date: str = typer.Option(..., "--start-date", help="开始日期"),
     end_date: str = typer.Option(..., "--end-date", "-e", help="结束日期"),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
     查询公司行动列表.
 
-    示例:
-        ditto query fundamental corporate-actions -i 1 -s 2024-01-01 -e 2024-12-31
+    标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
+        ditto query fundamental corporate-actions -i 1
+            --start-date 2024-01-01 -e 2024-12-31
+        ditto query fundamental corporate-actions -t 000001
+            --start-date 2024-01-01 -e 2024-12-31
 
     """
     _validate_date_range(start_date, end_date)
     start = _parse_date(start_date).date()
     end = _parse_date(end_date).date()
 
-    with _get_fundamental_service() as service:
-        df = service.list_corporate_actions(instrument_id, start, end)
+    with _get_services() as (service, metadata_service):
+        resolved_id = _resolve_identifier(
+            metadata_service,
+            instrument_id=instrument_id,
+            ticker=ticker,
+            standard_ticker=standard_ticker,
+        )
+        if resolved_id is None:
+            typer.echo("未找到匹配的标的")
+            return
+
+        df = service.list_corporate_actions(resolved_id, start, end)
 
         if df.is_empty():
             typer.echo("未找到公司行动数据")

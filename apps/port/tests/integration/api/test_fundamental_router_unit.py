@@ -1,6 +1,6 @@
 """Tests for Fundamental API router.
 
-使用 FastAPI TestClient 测试路由，mock FundamentalService.
+使用 FastAPI TestClient 测试路由，mock FundamentalService 和 MetadataService.
 """
 
 from unittest.mock import MagicMock
@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_datahub.services.fundamental_service import FundamentalService
+from ditto_datahub.services.metadata_service import MetadataService
 from ditto_port.api.routes.fundamental import router
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -20,7 +21,18 @@ def mock_fundamental_service() -> MagicMock:
 
 
 @pytest.fixture
-def app(mock_fundamental_service: MagicMock) -> FastAPI:
+def mock_metadata_service() -> MagicMock:
+    """创建 mock MetadataService."""
+    mock = MagicMock(spec=MetadataService)
+    mock.resolve_instrument_identifier.return_value = 1_000_001
+    return mock
+
+
+@pytest.fixture
+def app(
+    mock_fundamental_service: MagicMock,
+    mock_metadata_service: MagicMock,
+) -> FastAPI:
     """创建测试 FastAPI 应用."""
     app = FastAPI()
 
@@ -37,6 +49,11 @@ def app(mock_fundamental_service: MagicMock) -> FastAPI:
         def get_fundamental_service(self) -> FundamentalService:
             """返回 mock FundamentalService."""
             return mock_fundamental_service
+
+        @provide
+        def get_metadata_service(self) -> MetadataService:
+            """返回 mock MetadataService."""
+            return mock_metadata_service
 
     container = make_async_container(TestProvider())
     setup_dishka(container=container, app=app)
@@ -65,7 +82,7 @@ class TestGetFinancials:
         # Arrange
         mock_fundamental_service.get_balance_sheet.return_value = pl.DataFrame(
             {
-                "instrument_id": ["1"],
+                "instrument_id": [1_000_001],
                 "report_date": ["2024-03-31"],
                 "data": [{"total_assets": 1000000.0}],
             }
@@ -75,7 +92,7 @@ class TestGetFinancials:
         response = client.get(
             "/api/v1/fundamental/financials/balance_sheet",
             params={
-                "instrument_id": "1",
+                "instrument_id": 1000001,
                 "as_of_date": "2024-03-31",
             },
         )
@@ -85,7 +102,7 @@ class TestGetFinancials:
         data = response.json()
         assert "data" in data
         assert len(data["data"]) == 1
-        assert data["data"][0]["instrument_id"] == "1"
+        assert data["data"][0]["instrument_id"] == 1000001
 
     def test_get_income_statement(
         self,
@@ -96,7 +113,7 @@ class TestGetFinancials:
         # Arrange
         mock_fundamental_service.get_income_statement.return_value = pl.DataFrame(
             {
-                "instrument_id": ["1"],
+                "instrument_id": [1_000_001],
                 "report_date": ["2024-03-31"],
                 "data": [{"revenue": 500000.0}],
             }
@@ -106,7 +123,7 @@ class TestGetFinancials:
         response = client.get(
             "/api/v1/fundamental/financials/income_statement",
             params={
-                "instrument_id": "1",
+                "instrument_id": 1000001,
                 "as_of_date": "2024-03-31",
             },
         )
@@ -126,7 +143,7 @@ class TestGetFinancials:
         # Arrange
         mock_fundamental_service.get_cash_flow.return_value = pl.DataFrame(
             {
-                "instrument_id": ["1"],
+                "instrument_id": [1_000_001],
                 "report_date": ["2024-03-31"],
                 "data": [{"operating_cash_flow": 300000.0}],
             }
@@ -136,7 +153,7 @@ class TestGetFinancials:
         response = client.get(
             "/api/v1/fundamental/financials/cash_flow",
             params={
-                "instrument_id": "1",
+                "instrument_id": 1000001,
                 "as_of_date": "2024-03-31",
             },
         )
@@ -160,7 +177,7 @@ class TestGetFinancials:
         response = client.get(
             "/api/v1/fundamental/financials/balance_sheet",
             params={
-                "instrument_id": "99999",
+                "instrument_id": 99999,
                 "as_of_date": "2024-03-31",
             },
         )
@@ -181,7 +198,7 @@ class TestGetFinancials:
         response = client.get(
             "/api/v1/fundamental/financials/invalid_type",
             params={
-                "instrument_id": "1",
+                "instrument_id": 1000001,
                 "as_of_date": "2024-03-31",
             },
         )
@@ -203,7 +220,7 @@ class TestGetDividend:
         # Arrange
         mock_fundamental_service.get_dividend.return_value = pl.DataFrame(
             {
-                "instrument_id": ["1"],
+                "instrument_id": [1_000_001],
                 "announce_date": ["2024-03-31"],
                 "dividend_type": ["cash"],
                 "amount": [0.5],
@@ -214,7 +231,7 @@ class TestGetDividend:
         response = client.get(
             "/api/v1/fundamental/dividend",
             params={
-                "instrument_id": "1",
+                "instrument_id": 1000001,
                 "as_of_date": "2024-03-31",
             },
         )
@@ -224,7 +241,7 @@ class TestGetDividend:
         data = response.json()
         assert "data" in data
         assert len(data["data"]) == 1
-        assert data["data"][0]["instrument_id"] == "1"
+        assert data["data"][0]["instrument_id"] == 1000001
         assert data["data"][0]["amount"] == 0.5
 
     def test_get_dividend_empty_result(
@@ -240,7 +257,7 @@ class TestGetDividend:
         response = client.get(
             "/api/v1/fundamental/dividend",
             params={
-                "instrument_id": "99999",
+                "instrument_id": 99999,
                 "as_of_date": "2024-03-31",
             },
         )
@@ -277,7 +294,7 @@ class TestListCorporateActions:
         # Arrange
         mock_fundamental_service.list_corporate_actions.return_value = pl.DataFrame(
             {
-                "instrument_id": ["1", "1"],
+                "instrument_id": [1_000_001, 1_000_001],
                 "action_date": ["2024-01-15", "2024-03-31"],
                 "action_type": ["dividend", "split"],
                 "description": ["现金分红", "1:2 股票拆分"],
@@ -288,7 +305,7 @@ class TestListCorporateActions:
         response = client.get(
             "/api/v1/fundamental/corporate-actions",
             params={
-                "instrument_id": "1",
+                "instrument_id": 1000001,
                 "start_date": "2024-01-01",
                 "end_date": "2024-03-31",
             },
@@ -315,7 +332,7 @@ class TestListCorporateActions:
         response = client.get(
             "/api/v1/fundamental/corporate-actions",
             params={
-                "instrument_id": "99999",
+                "instrument_id": 99999,
                 "start_date": "2024-01-01",
                 "end_date": "2024-03-31",
             },
@@ -337,7 +354,7 @@ class TestListCorporateActions:
         response = client.get(
             "/api/v1/fundamental/corporate-actions",
             params={
-                "instrument_id": "1",
+                "instrument_id": 1000001,
                 "start_date": "2024-03-31",
                 "end_date": "2024-01-01",
             },
@@ -371,7 +388,7 @@ class TestListCorporateActions:
         response = client.get(
             "/api/v1/fundamental/corporate-actions",
             params={
-                "instrument_id": "1",
+                "instrument_id": 1000001,
                 "start_date": "2024-03-31",
                 "end_date": "2024-03-31",
             },

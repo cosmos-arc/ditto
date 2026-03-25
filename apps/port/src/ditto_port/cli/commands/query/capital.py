@@ -8,6 +8,7 @@ from typing import Any
 import orjson
 import typer
 from ditto_datahub.services.capital_service import CapitalService
+from ditto_datahub.services.metadata_service import MetadataService
 from rich.console import Console
 from rich.table import Table
 
@@ -16,6 +17,7 @@ from ditto_port.models.capital import (
     to_margin_list,
     to_valuation_list,
 )
+from ditto_port.models.identifier import resolve_instrument_identifier
 
 _TABLE_DISPLAY_LIMIT = 20
 
@@ -24,10 +26,40 @@ console = Console()
 
 
 @contextmanager
-def _get_capital_service() -> Generator[CapitalService, None, None]:
-    """获取 CapitalService 实例."""
+def _get_services() -> Generator[tuple[CapitalService, MetadataService], None, None]:
+    """获取 CapitalService 和 MetadataService 实例."""
     with create_cli_host() as bundle:
-        yield bundle.capital_service
+        yield bundle.capital_service, bundle.metadata_service
+
+
+def _resolve_identifier(
+    metadata_service: MetadataService,
+    *,
+    instrument_id: int | None,
+    ticker: str | None,
+    standard_ticker: str | None,
+    as_of_date: str | None = None,
+) -> int | None:
+    """
+    解析标识符为 canonical instrument_id.
+
+    至少提供一个标识符，委托给共享的 resolve_instrument_identifier。
+
+    Returns:
+        解析后的 canonical instrument_id (int)，查不到返回 None.
+
+    """
+    if not any([instrument_id, standard_ticker, ticker]):
+        typer.echo("错误: 必须提供 --instrument-id、--ticker 或 --standard-ticker 之一")
+        raise typer.Exit(code=1)
+
+    return resolve_instrument_identifier(
+        metadata_service,
+        instrument_id=instrument_id,
+        standard_ticker=standard_ticker,
+        ticker=ticker,
+        asof=as_of_date,
+    )
 
 
 def _output_json(items: list[Any]) -> None:
@@ -48,20 +80,38 @@ def _parse_date(value: str) -> datetime:
 
 @app.command("margin")
 def get_margin(
-    instrument_id: str = typer.Option(..., "--instrument-id", "-i", help="标的 ID"),
+    instrument_id: int | None = typer.Option(
+        None, "--instrument-id", "-i", help="Canonical 标的 ID"
+    ),
+    ticker: str | None = typer.Option(None, "--ticker", "-t", help="裸代码, 如 000001"),
+    standard_ticker: str | None = typer.Option(
+        None, "--standard-ticker", "-s", help="标准代码, 如 000001.XSHE"
+    ),
     as_of_date: str = typer.Option(..., "--date", "-d", help="PIT 查询日期"),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
     查询融资融券数据.
 
-    示例:
-        ditto query capital margin -i 1 --date 2024-12-31
+    标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
+        ditto query capital margin -i 1000001 --date 2024-12-31
+        ditto query capital margin -s 000001.XSHE --date 2024-12-31
+        ditto query capital margin -t 000001 --date 2024-12-31
 
     """
     as_of = _parse_date(as_of_date).date()
-    with _get_capital_service() as service:
-        df = service.get_margin_trading(instrument_id, as_of)
+    with _get_services() as (service, metadata_service):
+        resolved_id = _resolve_identifier(
+            metadata_service,
+            instrument_id=instrument_id,
+            ticker=ticker,
+            standard_ticker=standard_ticker,
+            as_of_date=as_of_date,
+        )
+        if resolved_id is None:
+            typer.echo("未找到匹配的标的")
+            return
+        df = service.get_margin_trading(resolved_id, as_of)
 
         if df.is_empty():
             typer.echo("未找到融资融券数据")
@@ -101,20 +151,38 @@ def get_margin(
 
 @app.command("valuation")
 def get_valuation(
-    instrument_id: str = typer.Option(..., "--instrument-id", "-i", help="标的 ID"),
+    instrument_id: int | None = typer.Option(
+        None, "--instrument-id", "-i", help="Canonical 标的 ID"
+    ),
+    ticker: str | None = typer.Option(None, "--ticker", "-t", help="裸代码, 如 000001"),
+    standard_ticker: str | None = typer.Option(
+        None, "--standard-ticker", "-s", help="标准代码, 如 000001.XSHE"
+    ),
     as_of_date: str = typer.Option(..., "--date", "-d", help="PIT 查询日期"),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
     查询估值指标数据.
 
-    示例:
-        ditto query capital valuation -i 1 --date 2024-12-31
+    标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
+        ditto query capital valuation -i 1000001 --date 2024-12-31
+        ditto query capital valuation -s 000001.XSHE --date 2024-12-31
+        ditto query capital valuation -t 000001 --date 2024-12-31
 
     """
     as_of = _parse_date(as_of_date).date()
-    with _get_capital_service() as service:
-        df = service.get_valuation_metrics(instrument_id, as_of)
+    with _get_services() as (service, metadata_service):
+        resolved_id = _resolve_identifier(
+            metadata_service,
+            instrument_id=instrument_id,
+            ticker=ticker,
+            standard_ticker=standard_ticker,
+            as_of_date=as_of_date,
+        )
+        if resolved_id is None:
+            typer.echo("未找到匹配的标的")
+            return
+        df = service.get_valuation_metrics(resolved_id, as_of)
 
         if df.is_empty():
             typer.echo("未找到估值指标数据")

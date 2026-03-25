@@ -36,14 +36,12 @@ from ditto_datahub.models.publication_safety import (
     DerivedMinimalDQSummaryRecord,
 )
 from ditto_datahub.services.derived.artifact_persistence_service import (
+    ArtifactMetadataParams,
     ArtifactPersistenceService,
 )
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
 from ditto_datahub.services.publication_safety_record_service import (
     PublicationSafetyRecordService,
-)
-from ditto_datahub.stores.runtime.derived_artifact_writer import (
-    ArtifactMetadataParams,
 )
 
 from ditto_port.services.derived.materialization import (

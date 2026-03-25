@@ -17,6 +17,7 @@ Port 层是 **Application Layer（应用层）**，负责：
 
 ```
 ditto_port/
+├── api/               # API 路由
 ├── cli/               # CLI 命令
 │   ├── commands/      # 命令实现
 │   │   ├── ingest/    # 数据摄入命令
@@ -26,8 +27,13 @@ ditto_port/
 ├── jobs/              # Prefect 任务
 │   ├── flows/         # Flow 定义
 │   └── tasks/         # Task 实现
-├── services/          # 应用服务（待实现）
-└── registry/          # DI 容器配置
+├── models/            # 数据模型
+├── registry/          # DI 容器（Dishka）
+├── services/          # 应用服务
+│   ├── ingestion/     # 数据摄取（Coordinator / Backfill / DataWriter / Quality）
+│   ├── strategy/      # 策略运行（BacktestService / StrategyRunService / InputAssembler / ArtifactWriter）
+│   └── derived/       # 衍生数据（MaterializationOrchestrator / QueryFacade / EvaluationFacade）
+└── main.py            # 启动入口
 ```
 
 ## 依赖规则
@@ -98,21 +104,9 @@ reader = BarsReader(...)  # ❌
 | 隐式依赖 | 显式 `wait_for` |
 | 无限重试 | `max_attempts=3` |
 
-## 数据摄入 T0/T1/T2/T3
+## 数据摄入
 
-| 层级 | 职责 | 调度时机 |
-|------|------|----------|
-| T0 | 元数据（calendar, basic） | 每日 8:00-9:00 |
-| T1 | 增量数据（daily bars） | 交易日 18:00 |
-| T2 | 空洞扫描 + 回填 | 每日凌晨 2:00 |
-| T3 | 质量检查 | T1 完成后 |
-
-### 游标管理
-
-| 操作 | 说明 |
-|------|------|
-| 检查 `last_attempted` | 失败重试前 |
-| 更新 `last_success` | 成功写入后 |
+Port 层通过 `services/ingestion/` 编排数据摄取流程，具体 T0/T1/T2/T3 分层规则和游标管理详见 [DataHub 层规范](../../packages/datahub/CLAUDE.md)。
 
 ## CLI 规范
 
@@ -120,25 +114,27 @@ reader = BarsReader(...)  # ❌
 
 ```bash
 # 数据摄入
-pixi run ingest daily --date 2024-01-15
-pixi run ingest backfill --start 2024-01-01 --end 2024-01-31
+pixi run -e dev ditto ingest metadata --date 2024-01-15
+pixi run -e dev ditto ingest market --date 2024-01-15
+
+# 历史回填
+pixi run -e dev ditto backfill metadata --start 2024-01-01 --end 2024-01-31
 
 # 查询
-pixi run query bars --instrument 000001.SZ --start 2024-01-01
+pixi run -e dev ditto query market --instrument 510300.SH --start 2024-01-01
 ```
 
 ### 命令实现规范
 
 ```python
 # ✅ 正确：命令只负责参数解析和调用服务
-@click.command()
-@click.option("--date", required=True)
+@app.command()
 def daily(date: str):
     service = get_ingestion_service()
     service.ingest_daily(date)
 
 # ❌ 错误：命令包含业务逻辑
-@click.command()
+@app.command()
 def daily(date: str):
     # 不应在 CLI 中写业务逻辑
     data = fetch_data(date)
@@ -161,7 +157,9 @@ apps/port/
 ### 运行测试
 
 ```bash
-pixi run -e dev pytest apps/port/tests/
+pixi run -e dev test              # 单元测试（并行）
+pixi run -e dev test --unit       # 只运行单元测试
+pixi run -e dev test --integration # 只运行集成测试
 ```
 
 ## 判断决策树

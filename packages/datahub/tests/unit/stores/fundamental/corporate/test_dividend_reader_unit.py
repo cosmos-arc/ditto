@@ -70,7 +70,7 @@ class TestDividendReader:
         client.commit()
 
         # Act
-        result = dividend_reader.get("600000", date(2024, 6, 20))
+        result = dividend_reader.get(600000, date(2024, 6, 20))
 
         # Assert
         assert len(result) == 1
@@ -84,7 +84,7 @@ class TestDividendReader:
     ) -> None:
         """Test that get returns empty DataFrame for empty table."""
         # Act
-        result = dividend_reader.get("600000", date(2024, 6, 20))
+        result = dividend_reader.get(600000, date(2024, 6, 20))
 
         # Assert
         assert len(result) == 0
@@ -115,7 +115,7 @@ class TestDividendReader:
         client.commit()
 
         # Act
-        result = dividend_reader.get("600000", date(2024, 6, 20))
+        result = dividend_reader.get(600000, date(2024, 6, 20))
 
         # Assert
         assert len(result) == 0
@@ -163,10 +163,10 @@ class TestDividendReader:
         client.commit()
 
         # Act - Query before second version effective date
-        result_old = dividend_reader.get("600000", date(2024, 6, 20))
+        result_old = dividend_reader.get(600000, date(2024, 6, 20))
 
         # Act - Query after second version effective date
-        result_new = dividend_reader.get("600000", date(2024, 7, 5))
+        result_new = dividend_reader.get(600000, date(2024, 7, 5))
 
         # Assert
         assert len(result_old) == 1
@@ -202,7 +202,7 @@ class TestDividendReader:
         client.commit()
 
         # Act - Query on effective_to date (version should be excluded)
-        result = dividend_reader.get("600000", date(2024, 7, 1))
+        result = dividend_reader.get(600000, date(2024, 7, 1))
 
         # Assert
         assert len(result) == 0

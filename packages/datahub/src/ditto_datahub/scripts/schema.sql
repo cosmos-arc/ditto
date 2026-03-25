@@ -228,6 +228,53 @@ CREATE TABLE IF NOT EXISTS universe_rebalance (
 );
 CREATE INDEX IF NOT EXISTS idx_rebalance_date ON universe_rebalance(universe_id, rebalance_date);
 
+-- 策略目录控制面
+CREATE TABLE IF NOT EXISTS strategy_spec (
+    strategy_id       TEXT NOT NULL,
+    version           INTEGER NOT NULL,
+    name              TEXT NOT NULL,
+    spec_json         TEXT NOT NULL,
+    status            TEXT NOT NULL DEFAULT 'draft',
+    tags              TEXT NOT NULL DEFAULT '',
+    created_at        TEXT NOT NULL DEFAULT '',
+    updated_at        TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (strategy_id, version)
+);
+CREATE INDEX IF NOT EXISTS idx_spec_status ON strategy_spec(status);
+CREATE INDEX IF NOT EXISTS idx_spec_strategy_id ON strategy_spec(strategy_id);
+
+-- 策略产物控制面
+CREATE TABLE IF NOT EXISTS strategy_artifact (
+    artifact_id       TEXT PRIMARY KEY,
+    strategy_id       TEXT NOT NULL,
+    run_id            TEXT NOT NULL,
+    artifact_type     TEXT NOT NULL,
+    file_path         TEXT NOT NULL DEFAULT '',
+    metadata          TEXT NOT NULL DEFAULT '{}',
+    status            TEXT NOT NULL DEFAULT 'active',
+    created_at        TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_artifact_strategy_id
+    ON strategy_artifact(strategy_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_status
+    ON strategy_artifact(status);
+
+-- 策略运行控制面
+CREATE TABLE IF NOT EXISTS strategy_run (
+    run_id            TEXT PRIMARY KEY,
+    strategy_id       TEXT NOT NULL,
+    strategy_version  TEXT NOT NULL DEFAULT '',
+    mode              TEXT NOT NULL DEFAULT 'backtest',
+    status            TEXT NOT NULL DEFAULT 'pending',
+    started_at        TEXT NOT NULL DEFAULT '',
+    completed_at      TEXT NOT NULL DEFAULT '',
+    error_message     TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_strategy_run_strategy_id
+    ON strategy_run(strategy_id);
+CREATE INDEX IF NOT EXISTS idx_strategy_run_status
+    ON strategy_run(status);
+
 -- 指数成分股权重（PIT support）
 CREATE TABLE IF NOT EXISTS index_weight (
     index_id       TEXT NOT NULL,

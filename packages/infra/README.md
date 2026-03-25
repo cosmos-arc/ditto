@@ -1,7 +1,7 @@
 # ditto-infra
 
-**版本**: v0.1.0
-**最后更新**: 2026-02-17
+**版本**: v0.1.1
+**最后更新**: 2026-03-24
 **状态**: ✅ 稳定
 
 ## 概要
@@ -40,6 +40,10 @@ ditto_infra/
 │   ├── db/              # 数据库连接
 │   ├── observability/   # 可观测性
 │   └── util/            # 通用工具
+│       ├── dates.py         # 日期工具
+│       ├── io.py            # IO 工具
+│       ├── ticker_utils.py  # Ticker 工具
+│       └── checksum.py      # 校验和计算
 └── services/            # 基础服务
     └── notification/    # 通知服务
 ```

@@ -356,6 +356,7 @@ environments:
       - pypi: ./packages/core
       - pypi: ./packages/datahub
       - pypi: ./packages/infra
+      - pypi: ./packages/kernel
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -654,6 +655,7 @@ environments:
       - pypi: ./packages/core
       - pypi: ./packages/datahub
       - pypi: ./packages/infra
+      - pypi: ./packages/kernel
   dev:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -1108,6 +1110,7 @@ environments:
       - pypi: ./packages/core
       - pypi: ./packages/datahub
       - pypi: ./packages/infra
+      - pypi: ./packages/kernel
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -1504,6 +1507,7 @@ environments:
       - pypi: ./packages/core
       - pypi: ./packages/datahub
       - pypi: ./packages/infra
+      - pypi: ./packages/kernel
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
   build_number: 20
@@ -2787,17 +2791,26 @@ packages:
 - pypi: ./packages/core
   name: ditto-core
   version: 0.1.0
-  sha256: c1baf6966daa7729a4fd0f3db3b1631ff79845af4464bcaee271777e3ef81bbc
+  sha256: 125b710d76873a44409d2df10261e950673537234bcc891541b8a9bb920812b2
+  requires_dist:
+  - ditto-kernel
   requires_python: '>=3.13'
 - pypi: ./packages/datahub
   name: ditto-datahub
   version: 0.1.0
-  sha256: 455c18d7f857a36d148f664e6cbe44a6ca15e5129d5bb9ae9aac362381ef4ceb
+  sha256: 5bc852d0f966fe2640950c044a7216c346af489e0064c0afbd64a745638a8177
+  requires_dist:
+  - ditto-kernel
   requires_python: '>=3.13'
 - pypi: ./packages/infra
   name: ditto-infra
   version: 0.1.0
   sha256: 57f7392d12d5e932397728d12a8a6c416c6491ea219921227977a4e09f49b607
+  requires_python: '>=3.13'
+- pypi: ./packages/kernel
+  name: ditto-kernel
+  version: 0.1.0
+  sha256: f47a4780024268dacab63379782bc6f5b4cf3c1fab137d185d8ae090d3f350ae
   requires_python: '>=3.13'
 - pypi: ./apps/port
   name: ditto-port

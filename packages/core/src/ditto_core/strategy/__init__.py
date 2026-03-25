@@ -1,7 +1,76 @@
 """
-策略模块.
+Strategy — 策略决策层.
 
-包含策略抽象和具体实现
+Phase 0: specs, models, context, protocols.
+Phase 1: pipeline, builtins, templates.
+
+Note: 模板（ETFRotationConfig 等）从 ditto_core.strategy.templates 导入，
+避免 portfolio ↔ strategy 循环依赖。
 """
 
-__all__: list[str] = []
+from ditto_core.strategy.builtins import (
+    FilterCondition,
+    FilteringStage,
+    RegimeLabel,
+    RegimeMethod,
+    RegimeStage,
+    RiskLockFilter,
+    ScoringMethod,
+    ScoringStage,
+    SelectionStage,
+    SignalStage,
+    TrendFilterStage,
+    UniverseStage,
+)
+from ditto_core.strategy.context import StrategyContext
+from ditto_core.strategy.models import (
+    RebalancePlan,
+    SignalSnapshot,
+    StrategyRun,
+    StrategyTemplate,
+    StrategyVersion,
+    TargetPortfolio,
+)
+from ditto_core.strategy.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_core.strategy.protocols import DecisionStage
+from ditto_core.strategy.specs import (
+    ConstraintSpec,
+    CostModelSpec,
+    ExecutionSpec,
+    ParamConstraint,
+    ScorerSpec,
+    SelectorSpec,
+    StrategySpec,
+)
+
+__all__ = [
+    "ConstraintSpec",
+    "CostModelSpec",
+    "DecisionStage",
+    "ExecutionSpec",
+    "FilterCondition",
+    "FilteringStage",
+    "ParamConstraint",
+    "RebalancePlan",
+    "RegimeLabel",
+    "RegimeMethod",
+    "RegimeStage",
+    "RiskLockFilter",
+    "ScorerSpec",
+    "ScoringMethod",
+    "ScoringStage",
+    "SelectionStage",
+    "SelectorSpec",
+    "SignalSnapshot",
+    "SignalStage",
+    "StrategyContext",
+    "StrategyInputBundle",
+    "StrategyPipeline",
+    "StrategyRun",
+    "StrategySpec",
+    "StrategyTemplate",
+    "StrategyVersion",
+    "TargetPortfolio",
+    "TrendFilterStage",
+    "UniverseStage",
+]

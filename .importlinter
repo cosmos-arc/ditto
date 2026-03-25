@@ -13,6 +13,7 @@ root_packages =
     ditto_datahub
     ditto_core
     ditto_port
+    ditto_kernel
 
 # 不包含外部包
 include_external_packages = false
@@ -27,11 +28,26 @@ exclude_type_checking_imports = true
 name = Layered Architecture
 type = layers
 # 从高层到低层：Port → Core → DataHub → Infra
+# Kernel 在最底层，但 layers 检查不包含它（Kernel 无业务依赖，被所有层依赖）
 layers =
     ditto_port
     ditto_core
     ditto_datahub
     ditto_infra
+
+# ═══════════════════════════════════════════════════════════════════
+# Kernel 层隔离：禁止依赖其他层
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:kernel-isolation]
+name = Kernel must not depend on other layers
+type = forbidden
+source_modules =
+    ditto_kernel.**
+forbidden_modules =
+    ditto_core.**
+    ditto_datahub.**
+    ditto_port.**
+    ditto_infra.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Infra 层隔离：禁止依赖其他层
@@ -45,6 +61,7 @@ forbidden_modules =
     ditto_datahub.**
     ditto_core.**
     ditto_port.**
+    ditto_kernel.**
 
 # ═══════════════════════════════════════════════════════════════════
 # DataHub 层边界：禁止依赖 Core/Port
@@ -59,21 +76,31 @@ forbidden_modules =
     ditto_port.**
 
 # ═══════════════════════════════════════════════════════════════════
-# Core 层边界：仅可依赖 DataHub models
-# 注意：这使用 ignore_imports + unmatched_ignore_imports_alerting = none
-# 来允许 Core 导入 DataHub.models
+# Core ↔ DataHub 边界：双向禁止互相依赖
+# 两者均可依赖 ditto_kernel
+# Core 保留对 ditto_datahub.errors 的 re-export 依赖
 # ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:core-datahub-boundary]
-name = Core can only depend on DataHub models
+[importlinter:contract:core-must-not-depend-on-datahub]
+name = Core must not depend on DataHub (except errors)
 type = forbidden
 source_modules =
     ditto_core.**
 forbidden_modules =
     ditto_datahub.**
-# 忽略对 models 和 errors 的依赖
 ignore_imports =
-    ditto_core.** -> ditto_datahub.models.*
+    ditto_core.** -> ditto_kernel.*
     ditto_core.** -> ditto_datahub.errors
+unmatched_ignore_imports_alerting = none
+
+[importlinter:contract:datahub-must-not-depend-on-core]
+name = DataHub must not depend on Core
+type = forbidden
+source_modules =
+    ditto_datahub.**
+forbidden_modules =
+    ditto_core.**
+ignore_imports =
+    ditto_datahub.** -> ditto_kernel.*
 unmatched_ignore_imports_alerting = none
 
 # ═══════════════════════════════════════════════════════════════════
@@ -108,4 +135,5 @@ ancestors =
     ditto_datahub
     ditto_core
     ditto_port
+    ditto_kernel
 depth = 10

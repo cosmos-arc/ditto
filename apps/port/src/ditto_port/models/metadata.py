@@ -2,7 +2,6 @@
 Metadata 域 API 模型.
 
 包含:
-- AssetClass: 资产类别枚举
 - InstrumentQuery: 查询参数模型
 - Instrument: 响应模型
 - to_instrument: 转换函数
@@ -11,27 +10,12 @@ Metadata 域 API 模型.
 
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import Any
 
 import polars as pl
+from ditto_kernel.enums import AssetClass
+from ditto_kernel.identity import InstrumentId
 from pydantic import BaseModel, ConfigDict, Field
-
-
-class AssetClass(StrEnum):
-    """
-    资产类别枚举.
-
-    Attributes:
-        STOCK: 股票
-        ETF: 交易所交易基金
-        INDEX: 指数
-
-    """
-
-    STOCK = "stock"
-    ETF = "etf"
-    INDEX = "index"
 
 
 class InstrumentQuery(BaseModel):
@@ -72,7 +56,7 @@ class Instrument(BaseModel):
 
     """
 
-    instrument_id: int = Field(description="标的 ID")
+    instrument_id: InstrumentId = Field(description="标的 ID")
     ticker: str = Field(description="裸代码")
     name: str = Field(description="证券名称")
     asset_class: AssetClass = Field(description="资产类别")
@@ -103,7 +87,7 @@ def to_instrument(row: dict[str, Any]) -> Instrument:
     is_active = bool(is_active_raw) if is_active_raw is not None else True
 
     return Instrument(
-        instrument_id=row["instrument_id"],
+        instrument_id=InstrumentId(row["instrument_id"]),
         ticker=row["ticker"],
         name=row["name"],
         asset_class=AssetClass(row["asset_class"]),
@@ -135,7 +119,6 @@ def to_instrument_list(df: pl.DataFrame) -> list[Instrument]:
 
 
 __all__ = [
-    "AssetClass",
     "Instrument",
     "InstrumentQuery",
     "to_instrument",

@@ -21,11 +21,27 @@ from ditto_datahub.services import (
     QualityRecordService,
     ResearchCatalogService,
 )
+from ditto_datahub.services.audit import ExecutionAuditService
 from ditto_datahub.services.publication_safety_record_service import (
     PublicationSafetyRuntimeStores,
 )
 from ditto_datahub.services.source_service import SourceService
+from ditto_datahub.services.strategy.strategy_artifact_service import (
+    StrategyArtifactService,
+)
+from ditto_datahub.services.strategy.strategy_catalog_service import (
+    StrategyCatalogService,
+)
+from ditto_datahub.services.strategy.strategy_run_service import StrategyRunService
 from ditto_datahub.sources.source import DataSources
+from ditto_datahub.stores.metadata import (
+    SQLiteStrategyArtifactReader,
+    SQLiteStrategyArtifactWriter,
+    SQLiteStrategyRunReader,
+    SQLiteStrategyRunWriter,
+    SQLiteStrategySpecReader,
+    SQLiteStrategySpecWriter,
+)
 from ditto_datahub.stores.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
@@ -113,6 +129,13 @@ class RuntimeProvider(Provider):
         return FreezeService(freeze_manager=freeze_manager)
 
     @provide
+    def execution_audit_service(self, sqlite_pool: SQLitePool) -> ExecutionAuditService:
+        """执行审计日志服务（自动初始化 schema）。"""
+        service = ExecutionAuditService(sqlite_pool)
+        service.init_schema()
+        return service
+
+    @provide
     def file_lock(self, settings: DataStoreSettings) -> FileLockManager:
         """文件锁管理器."""
         lock_dir = settings.data_root / "locks"
@@ -163,6 +186,42 @@ class RuntimeProvider(Provider):
     ) -> SQLiteResearchCatalogWriter:
         """Research 控制面写入器."""
         return SQLiteResearchCatalogWriter(sqlite_client)
+
+    @provide
+    def strategy_spec_reader(self, sqlite_pool: SQLitePool) -> SQLiteStrategySpecReader:
+        """策略目录控制面读取器."""
+        return SQLiteStrategySpecReader(sqlite_pool)
+
+    @provide
+    def strategy_spec_writer(self, sqlite_pool: SQLitePool) -> SQLiteStrategySpecWriter:
+        """策略目录控制面写入器."""
+        return SQLiteStrategySpecWriter(sqlite_pool)
+
+    @provide
+    def strategy_artifact_reader(
+        self,
+        sqlite_pool: SQLitePool,
+    ) -> SQLiteStrategyArtifactReader:
+        """策略产物控制面读取器."""
+        return SQLiteStrategyArtifactReader(sqlite_pool)
+
+    @provide
+    def strategy_artifact_writer(
+        self,
+        sqlite_pool: SQLitePool,
+    ) -> SQLiteStrategyArtifactWriter:
+        """策略产物控制面写入器."""
+        return SQLiteStrategyArtifactWriter(sqlite_pool)
+
+    @provide
+    def strategy_run_reader(self, sqlite_pool: SQLitePool) -> SQLiteStrategyRunReader:
+        """策略运行控制面读取器."""
+        return SQLiteStrategyRunReader(sqlite_pool)
+
+    @provide
+    def strategy_run_writer(self, sqlite_pool: SQLitePool) -> SQLiteStrategyRunWriter:
+        """策略运行控制面写入器."""
+        return SQLiteStrategyRunWriter(sqlite_pool)
 
     @provide
     def comparison_reader(self, settings: DataStoreSettings) -> ComparisonReader:
@@ -298,6 +357,42 @@ class RuntimeProvider(Provider):
         return ResearchCatalogService(
             catalog_reader=research_catalog_reader,
             catalog_writer=research_catalog_writer,
+        )
+
+    @provide
+    def strategy_catalog_service(
+        self,
+        strategy_spec_reader: SQLiteStrategySpecReader,
+        strategy_spec_writer: SQLiteStrategySpecWriter,
+    ) -> StrategyCatalogService:
+        """策略目录服务."""
+        return StrategyCatalogService(
+            reader=strategy_spec_reader,
+            writer=strategy_spec_writer,
+        )
+
+    @provide
+    def strategy_artifact_service(
+        self,
+        strategy_artifact_reader: SQLiteStrategyArtifactReader,
+        strategy_artifact_writer: SQLiteStrategyArtifactWriter,
+    ) -> StrategyArtifactService:
+        """策略产物服务."""
+        return StrategyArtifactService(
+            reader=strategy_artifact_reader,
+            writer=strategy_artifact_writer,
+        )
+
+    @provide
+    def strategy_run_service(
+        self,
+        strategy_run_reader: SQLiteStrategyRunReader,
+        strategy_run_writer: SQLiteStrategyRunWriter,
+    ) -> StrategyRunService:
+        """策略运行生命周期服务."""
+        return StrategyRunService(
+            reader=strategy_run_reader,
+            writer=strategy_run_writer,
         )
 
     @provide

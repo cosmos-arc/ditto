@@ -24,7 +24,7 @@ class ValuationMetricsReader:
         self._client = client
 
     @traced("data.valuation_metrics_query")
-    def get(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+    def get(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
         """
         查询估值指标数据（PIT 查询）.
 

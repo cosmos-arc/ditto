@@ -1,7 +1,7 @@
 # ditto-datahub
 
-**版本**: v0.15.0
-**最后更新**: 2026-02-10
+**版本**: v0.18.0
+**最后更新**: 2026-03-24
 **状态**: ✅ 稳定
 
 ## 概要
@@ -158,6 +158,8 @@ store = BarsStore(config.data_root)
 | `TechnicalIndicatorMetadataReader` | `TechnicalIndicatorMetadataWriter` | 技术指标元数据 | SQLite |
 | `FactorReader` | `FactorWriter` | 因子信号 | Parquet (按年分区) |
 | `FactorMetadataReader` | `FactorMetadataWriter` | 因子元数据 | SQLite |
+| `TradingRuleReader` | `TradingRuleWriter` | 交易规则 | 内存 (PIT, V1) |
+| `FeeScheduleReader` | `FeeScheduleWriter` | 费率表 | 内存 (PIT, V1) |
 
 ### 域级组织
 
@@ -489,6 +491,31 @@ result = service.get_valuation_metrics(
 - **可扩展**: 新增域不影响现有域的实现
 - **易测试**: 每个域可独立测试
 
+#### Strategy 域
+
+- `services/strategy/`: Strategy 域（策略规则组装 + 策略目录服务）
+  - `instrument_rule_provider.py`: InstrumentRuleProvider（三层规则组装）
+  - `strategy_catalog_service.py`: StrategyCatalogService（Spec CRUD + 发布治理）
+  - `strategy_artifact_service.py`: StrategyArtifactService（产物生命周期管理）
+  - `strategy_run_service.py`: StrategyRunService（策略运行记录 CRUD）
+
+- `services/audit/`: 审计域（执行审计日志持久化）
+  - `execution_audit_service.py`: ExecutionAuditService（审计记录写入 SQLite）
+
+- `models/strategy_run.py`: StrategyRunRecord（运行记录模型）
+- `models/strategy_audit.py`: AuditRecordType / PreTradeDecisionPayload / RiskScanPayload
+
+**三层规则 (R6)**：
+- `DefinitionRecord`: 标的静态定义（asset_class, exchange, tick_size, lot_size 等）
+- `TradingRuleRecord`: 交易规则（PIT 版本化 — settlement_cycle, price_limit_pct 等）
+- `FeeScheduleRecord`: 费率表（PIT 版本化 — commission_rate, stamp_duty_rate 等）
+
+**策略目录**：
+- `StrategySpecRecord`: 策略 Spec 存储记录（strategy_id, name, spec_json, version, status）
+- `StrategyArtifactRecord`: 策略产物记录（artifact_id, strategy_id, run_id, artifact_type, file_path）
+- `StrategyCatalogService`: Spec CRUD + `publish_spec()`（draft → published 状态治理）
+- `StrategyArtifactService`: 产物 CRUD + `archive_artifact()`（active → archived）
+
 ### Helpers 层
 
 纯函数工具模块（无状态、可测试、可组合）：
@@ -810,6 +837,31 @@ bars/
 - [Port 层重构计划](../../../../docs/plans/2026-02-02-port-layer-refactor.md)
 
 ## 变更记录
+
+### v0.18.0 (2026-03-24)
+**新增** — Strategy 运行与审计支持
+- `services/strategy/strategy_run_service.py`: StrategyRunService（运行记录 CRUD）
+- `services/audit/execution_audit_service.py`: ExecutionAuditService（审计日志持久化）
+- `models/strategy_run.py`: StrategyRunRecord（RunStatus 枚举 + 运行记录模型）
+- `models/strategy_audit.py`: AuditRecordType / PreTradeDecisionPayload / RiskScanPayload
+
+### v0.17.0 (2026-03-23)
+**新增** — Strategy 域控制面服务
+- `models/strategy.py`: StrategySpecRecord（策略 Spec 存储）、StrategyArtifactRecord（策略产物记录）
+- `services/strategy/strategy_catalog_service.py`: StrategyCatalogService（Spec CRUD + DRAFT/PUBLISHED 状态治理）
+- `services/strategy/strategy_artifact_service.py`: StrategyArtifactService（产物 CRUD + 生命周期管理）
+- 21 个新测试（catalog 10 + artifact 11），全部通过
+
+### v0.16.0 (2026-03-21)
+**新增** — Phase 0 Part 4: DataHub 层策略规则支持
+- `TradingRuleReader` / `TradingRuleWriter`: PIT 版本化交易规则存储 (V1 内存实现)
+- `FeeScheduleReader` / `FeeScheduleWriter`: PIT 版本化费率表存储 (V1 内存实现)
+- `_pit_base.py`: 泛型 PIT 基类 (`PITRecordReader[RecordT]`, `PITRecordWriter[RecordT]`, `PITRecord` Protocol)
+- `InstrumentRuleProvider`: 三层规则组装 (`DefinitionRecord`, `TradingRuleRecord`, `FeeScheduleRecord`)
+- 26 个单元测试覆盖边界条件（effective_from/effective_to、版本选择、空值处理）
+
+**设计决策**
+- DataHub 层不依赖 Core 层，返回 Records 由调用方转换为 Core 模型
 
 ### v0.15.0 (2026-02-10)
 **破坏性重构**

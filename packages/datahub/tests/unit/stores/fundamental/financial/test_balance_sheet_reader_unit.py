@@ -77,7 +77,7 @@ class TestBalanceSheetReader:
         client.commit()
 
         # Act
-        result = balance_sheet_reader.get("600000", date(2024, 5, 15))
+        result = balance_sheet_reader.get(600000, date(2024, 5, 15))
 
         # Assert
         assert len(result) == 1
@@ -91,7 +91,7 @@ class TestBalanceSheetReader:
     ) -> None:
         """Test that get returns empty DataFrame for empty table."""
         # Act
-        result = balance_sheet_reader.get("600000", date(2024, 5, 15))
+        result = balance_sheet_reader.get(600000, date(2024, 5, 15))
 
         # Assert
         assert len(result) == 0
@@ -126,7 +126,7 @@ class TestBalanceSheetReader:
         client.commit()
 
         # Act
-        result = balance_sheet_reader.get("600000", date(2024, 5, 15))
+        result = balance_sheet_reader.get(600000, date(2024, 5, 15))
 
         # Assert
         assert len(result) == 0
@@ -182,10 +182,10 @@ class TestBalanceSheetReader:
         client.commit()
 
         # Act - Query before second version effective date
-        result_old = balance_sheet_reader.get("600000", date(2024, 5, 15))
+        result_old = balance_sheet_reader.get(600000, date(2024, 5, 15))
 
         # Act - Query after second version effective date
-        result_new = balance_sheet_reader.get("600000", date(2024, 6, 15))
+        result_new = balance_sheet_reader.get(600000, date(2024, 6, 15))
 
         # Assert
         assert len(result_old) == 1
@@ -225,7 +225,7 @@ class TestBalanceSheetReader:
         client.commit()
 
         # Act - Query on effective_to date (version should be excluded)
-        result = balance_sheet_reader.get("600000", date(2024, 6, 1))
+        result = balance_sheet_reader.get(600000, date(2024, 6, 1))
 
         # Assert
         assert len(result) == 0

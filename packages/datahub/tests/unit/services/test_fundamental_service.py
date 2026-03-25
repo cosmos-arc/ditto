@@ -76,15 +76,15 @@ class TestFundamentalServiceGetMethods:
         self, service: FundamentalService, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_balance_sheet returns DataFrame when data exists."""
-        test_df = pl.DataFrame({"instrument_id": ["000001.SZ"], "total_assets": [1000]})
+        test_df = pl.DataFrame({"instrument_id": [1_000_001], "total_assets": [1000]})
         mock_readers["balance_sheet"].get.return_value = test_df
 
-        result = service.get_balance_sheet("000001.SZ", date(2024, 1, 1))
+        result = service.get_balance_sheet(1_000_001, date(2024, 1, 1))
 
         assert result is not None
         assert result.equals(test_df)
         mock_readers["balance_sheet"].get.assert_called_once_with(
-            "000001.SZ", date(2024, 1, 1)
+            1_000_001, date(2024, 1, 1)
         )
 
     def test_get_balance_sheet_returns_none_when_empty(
@@ -93,7 +93,7 @@ class TestFundamentalServiceGetMethods:
         """Test get_balance_sheet returns None when no data found."""
         mock_readers["balance_sheet"].get.return_value = pl.DataFrame()
 
-        result = service.get_balance_sheet("000001.SZ", date(2024, 1, 1))
+        result = service.get_balance_sheet(1_000_001, date(2024, 1, 1))
 
         assert result is None
 
@@ -101,10 +101,10 @@ class TestFundamentalServiceGetMethods:
         self, service: FundamentalService, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_income_statement returns DataFrame when data exists."""
-        test_df = pl.DataFrame({"instrument_id": ["000001.SZ"], "revenue": [500]})
+        test_df = pl.DataFrame({"instrument_id": [1_000_001], "revenue": [500]})
         mock_readers["income_statement"].get.return_value = test_df
 
-        result = service.get_income_statement("000001.SZ", date(2024, 1, 1))
+        result = service.get_income_statement(1_000_001, date(2024, 1, 1))
 
         assert result is not None
         assert result.equals(test_df)
@@ -115,7 +115,7 @@ class TestFundamentalServiceGetMethods:
         """Test get_income_statement returns None when no data found."""
         mock_readers["income_statement"].get.return_value = pl.DataFrame()
 
-        result = service.get_income_statement("000001.SZ", date(2024, 1, 1))
+        result = service.get_income_statement(1_000_001, date(2024, 1, 1))
 
         assert result is None
 
@@ -124,11 +124,11 @@ class TestFundamentalServiceGetMethods:
     ) -> None:
         """Test get_cash_flow returns DataFrame when data exists."""
         test_df = pl.DataFrame(
-            {"instrument_id": ["000001.SZ"], "operating_cash_flow": [200]}
+            {"instrument_id": [1_000_001], "operating_cash_flow": [200]}
         )
         mock_readers["cash_flow"].get.return_value = test_df
 
-        result = service.get_cash_flow("000001.SZ", date(2024, 1, 1))
+        result = service.get_cash_flow(1_000_001, date(2024, 1, 1))
 
         assert result is not None
         assert result.equals(test_df)
@@ -139,7 +139,7 @@ class TestFundamentalServiceGetMethods:
         """Test get_cash_flow returns None when no data found."""
         mock_readers["cash_flow"].get.return_value = pl.DataFrame()
 
-        result = service.get_cash_flow("000001.SZ", date(2024, 1, 1))
+        result = service.get_cash_flow(1_000_001, date(2024, 1, 1))
 
         assert result is None
 
@@ -148,11 +148,11 @@ class TestFundamentalServiceGetMethods:
     ) -> None:
         """Test get_dividend returns DataFrame when data exists."""
         test_df = pl.DataFrame(
-            {"instrument_id": ["000001.SZ"], "dividend_per_share": [0.5]}
+            {"instrument_id": [1_000_001], "dividend_per_share": [0.5]}
         )
         mock_readers["dividend"].get.return_value = test_df
 
-        result = service.get_dividend("000001.SZ", date(2024, 1, 1))
+        result = service.get_dividend(1_000_001, date(2024, 1, 1))
 
         assert result is not None
         assert result.equals(test_df)
@@ -163,7 +163,7 @@ class TestFundamentalServiceGetMethods:
         """Test get_dividend returns None when no data found."""
         mock_readers["dividend"].get.return_value = pl.DataFrame()
 
-        result = service.get_dividend("000001.SZ", date(2024, 1, 1))
+        result = service.get_dividend(1_000_001, date(2024, 1, 1))
 
         assert result is None
 
@@ -173,14 +173,14 @@ class TestFundamentalServiceGetMethods:
         """Test get_forecast returns DataFrame when data exists."""
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["000001.SZ"],
+                "instrument_id": [1_000_001],
                 "profit_range_min": [100],
                 "profit_range_max": [150],
             }
         )
         mock_readers["forecast"].get.return_value = test_df
 
-        result = service.get_forecast("000001.SZ", date(2024, 1, 1))
+        result = service.get_forecast(1_000_001, date(2024, 1, 1))
 
         assert result is not None
         assert result.equals(test_df)
@@ -191,7 +191,7 @@ class TestFundamentalServiceGetMethods:
         """Test get_forecast returns None when no data found."""
         mock_readers["forecast"].get.return_value = pl.DataFrame()
 
-        result = service.get_forecast("000001.SZ", date(2024, 1, 1))
+        result = service.get_forecast(1_000_001, date(2024, 1, 1))
 
         assert result is None
 
@@ -199,12 +199,10 @@ class TestFundamentalServiceGetMethods:
         self, service: FundamentalService, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_express returns DataFrame when data exists."""
-        test_df = pl.DataFrame(
-            {"instrument_id": ["000001.SZ"], "report_type": ["快报"]}
-        )
+        test_df = pl.DataFrame({"instrument_id": [1_000_001], "report_type": ["快报"]})
         mock_readers["express"].get.return_value = test_df
 
-        result = service.get_express("000001.SZ", date(2024, 1, 1))
+        result = service.get_express(1_000_001, date(2024, 1, 1))
 
         assert result is not None
         assert result.equals(test_df)
@@ -215,7 +213,7 @@ class TestFundamentalServiceGetMethods:
         """Test get_express returns None when no data found."""
         mock_readers["express"].get.return_value = pl.DataFrame()
 
-        result = service.get_express("000001.SZ", date(2024, 1, 1))
+        result = service.get_express(1_000_001, date(2024, 1, 1))
 
         assert result is None
 
@@ -256,7 +254,7 @@ class TestFundamentalServiceListMethods:
 
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["000001.SZ"],
+                "instrument_id": [1_000_001],
                 "action_type": ["分红"],
                 "announcement_date": [date(2024, 1, 1)],
             }
@@ -264,12 +262,12 @@ class TestFundamentalServiceListMethods:
         corporate_actions_reader.get.return_value = test_df
 
         result = service.list_corporate_actions(
-            "000001.SZ", date(2024, 1, 1), date(2024, 1, 31)
+            1_000_001, date(2024, 1, 1), date(2024, 1, 31)
         )
 
         assert result.equals(test_df)
         corporate_actions_reader.get.assert_called_once_with(
-            "000001.SZ", date(2024, 1, 1), date(2024, 1, 31)
+            1_000_001, date(2024, 1, 1), date(2024, 1, 31)
         )
 
 
@@ -311,7 +309,7 @@ class TestFundamentalServiceSaveMethods:
     @pytest.fixture
     def sample_df(self) -> pl.DataFrame:
         """Create sample DataFrame for testing."""
-        return pl.DataFrame({"instrument_id": ["000001.SZ"], "value": [100]})
+        return pl.DataFrame({"instrument_id": [1_000_001], "value": [100]})
 
     def test_save_balance_sheet(
         self, service: FundamentalService, sample_df: pl.DataFrame
