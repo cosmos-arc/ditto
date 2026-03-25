@@ -14,12 +14,12 @@ from dataclasses import dataclass, replace
 
 from ditto_kernel.identity import InstrumentId
 
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.backtest.audit import (
     ExecutionAuditCollector,
     PreTradeDecisionRecord,
     RiskScanRecord,
 )
-from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.trade_builder import TradeRecord
 
 __all__ = [

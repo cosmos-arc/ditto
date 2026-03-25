@@ -6,7 +6,7 @@ import pytest
 from ditto_core.accounting.order_book import Order
 from ditto_core.execution.reality.fee import AShareFeeModel, SimpleFeeModel
 from ditto_core.execution.rules import FeeSchedule
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -14,7 +14,7 @@ from ditto_kernel.enums import OrderSide as OrderDirection
 
 
 def _order(
-    direction: OrderDirection = OrderDirection.BUY,
+    direction: OrderSide = OrderSide.BUY,
     quantity: int = 100,
     instrument_id: int = 1,
 ) -> Order:
@@ -83,8 +83,8 @@ class TestSimpleFeeModel:
 
     def test_sell_same_as_buy(self) -> None:
         model = SimpleFeeModel()
-        buy_order = _order(direction=OrderDirection.BUY, quantity=50_000)
-        sell_order = _order(direction=OrderDirection.SELL, quantity=50_000)
+        buy_order = _order(direction=OrderSide.BUY, quantity=50_000)
+        sell_order = _order(direction=OrderSide.SELL, quantity=50_000)
         buy_fee = model.estimate(buy_order, 10.0, _FEE_SCHEDULE)
         sell_fee = model.estimate(sell_order, 10.0, _FEE_SCHEDULE)
         assert buy_fee == pytest.approx(sell_fee)
@@ -139,7 +139,7 @@ class TestAShareFeeModel:
     def test_etf_sell_no_stamp_duty(self) -> None:
         """ETF 卖出: commission=5.0, stamp=0, transfer=0。"""
         model = AShareFeeModel()
-        order = _order(direction=OrderDirection.SELL, quantity=100)
+        order = _order(direction=OrderSide.SELL, quantity=100)
         fee = model.calculate(order, 10.0, 100, _FEE_ETF)
         assert fee == pytest.approx(5.0)
 
@@ -153,14 +153,14 @@ class TestAShareFeeModel:
     def test_stock_sell_with_stamp_duty(self) -> None:
         """股票卖出 100@10: commission=5, stamp=0.5, transfer=0.01。"""
         model = AShareFeeModel()
-        order = _order(direction=OrderDirection.SELL, quantity=100)
+        order = _order(direction=OrderSide.SELL, quantity=100)
         fee = model.calculate(order, 10.0, 100, _FEE_STOCK)
         assert fee == pytest.approx(5.51)
 
     def test_large_trade_commission_exceeds_minimum(self) -> None:
         """大额卖出 50000@10: commission=150, stamp=250, transfer=5。"""
         model = AShareFeeModel()
-        order = _order(direction=OrderDirection.SELL, quantity=50_000)
+        order = _order(direction=OrderSide.SELL, quantity=50_000)
         fee = model.calculate(order, 10.0, 50_000, _FEE_STOCK)
         # commission = max(5, 500000*0.0003) = 150
         # stamp = 500000 * 0.0005 = 250
@@ -170,7 +170,7 @@ class TestAShareFeeModel:
     def test_estimate_matches_calculate(self) -> None:
         """estimate 和 calculate 对相同参数返回相同值。"""
         model = AShareFeeModel()
-        order = _order(direction=OrderDirection.SELL, quantity=1000)
+        order = _order(direction=OrderSide.SELL, quantity=1000)
         calc = model.calculate(order, 10.0, 1000, _FEE_STOCK)
         est = model.estimate(order, 10.0, _FEE_STOCK)
         assert est == pytest.approx(calc)
@@ -190,6 +190,6 @@ class TestAShareFeeModel:
     def test_etf_large_sell(self) -> None:
         """ETF 大额卖出: 只有佣金，无印花税+过户费。"""
         model = AShareFeeModel()
-        order = _order(direction=OrderDirection.SELL, quantity=50_000)
+        order = _order(direction=OrderSide.SELL, quantity=50_000)
         fee = model.calculate(order, 10.0, 50_000, _FEE_ETF)
         assert fee == pytest.approx(150.0)

@@ -19,6 +19,7 @@ from ditto_port.models.fundamental import (
     to_dividend_list,
     to_financial_list,
 )
+from ditto_port.models.identifier import resolve_instrument_identifier
 
 _TABLE_DISPLAY_LIMIT = 20
 
@@ -45,7 +46,7 @@ def _resolve_identifier(
     """
     解析标识符为 canonical instrument_id.
 
-    至少提供一个标识符，委托给 MetadataService.resolve_instrument_identifier。
+    至少提供一个标识符，委托给共享的 resolve_instrument_identifier。
 
     Returns:
         解析后的 canonical instrument_id (int)，查不到返回 None.
@@ -55,12 +56,11 @@ def _resolve_identifier(
         typer.echo("错误: 必须提供 --instrument-id、--ticker 或 --standard-ticker 之一")
         raise typer.Exit(code=1)
 
-    return metadata_service.resolve_instrument_identifier(
+    return resolve_instrument_identifier(
+        metadata_service,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
-        source="tushare",
-        asset_class="stock",
     )
 
 

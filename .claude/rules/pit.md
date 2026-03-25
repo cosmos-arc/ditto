@@ -152,3 +152,18 @@ pl.col("factor").rank().over("trade_date")
 | PIT 验证 | @pytest.mark.pit | pytest -m pit |
 | 数据摄入 | @pytest.mark.ingestion | pytest -m ingestion |
 | 集成测试 | @pytest.mark.integration | pytest -m integration |
+
+## 表达式引擎 rolling 语义
+
+表达式编译器 (`codegen.py`) 中所有 rolling 函数通过 `shift(1)` 预防数据泄漏：
+
+```python
+shifted = argument.shift(1)
+return builder(shifted, window).over(entity_keys)
+```
+
+**窗口语义**: `shift(1) + rolling(window)` 使用 `[T-window, T-1]` 范围的数据，
+与 `rolling(window, closed="left")` 等价（都是 window 个历史数据点，不含当日 T）。
+
+**用户代码规范**: 在策略代码中直接调用 polars API 时，必须使用 `closed="left"` 或 `shift(1)`。
+表达式引擎已从编译器层面保证 PIT 安全，用户无需额外处理。

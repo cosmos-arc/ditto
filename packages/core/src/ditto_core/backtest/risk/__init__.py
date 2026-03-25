@@ -1,5 +1,7 @@
 """Backtest risk — PreTrade 校验规则 + PostTrade 组合风控扫描。"""
 
+from __future__ import annotations
+
 from ditto_core.backtest.risk.post_trade import (
     CompositePostTradeGuard,
     ConcentrationLimitRule,

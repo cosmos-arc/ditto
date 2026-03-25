@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ditto_kernel.enums import RiskScope
 from ditto_kernel.identity import InstrumentId
 
-from ditto_core.backtest.risk.post_trade import RiskActionType, RiskScope, RiskSeverity
+from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
 
 __all__ = [
     "PreTradeDecisionRecord",

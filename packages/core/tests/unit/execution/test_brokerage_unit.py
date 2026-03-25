@@ -7,7 +7,7 @@ from ditto_core.accounting.account import Account
 from ditto_core.accounting.cash import CashBook
 from ditto_core.accounting.order_book import (
     Order,
-    OrderDirection,
+    OrderSide,
     OrderStatus,
     OrderType,
 )
@@ -40,7 +40,7 @@ def _order(
     order_id: str = "ORD-001",
     instrument_id: int = 1,
     order_type: OrderType = OrderType.MARKET,
-    direction: OrderDirection = OrderDirection.BUY,
+    direction: OrderSide = OrderSide.BUY,
     quantity: int = 1000,
     price: float | None = None,
 ) -> Order:
@@ -125,7 +125,7 @@ class TestPlaceOrder:
     def test_place_limit_sell(self, brokerage: BacktestBrokerage) -> None:
         order = _order(
             order_type=OrderType.LIMIT,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             price=11.0,
         )
         ticket = brokerage.place_order(order)
@@ -220,7 +220,7 @@ class TestProcessMarketWithSlippage:
         # 再卖出
         sell_order = _order(
             order_id="SELL-1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=1000,
         )
         brk.place_order(sell_order)
@@ -379,7 +379,7 @@ class TestCashConservation:
         # Now sell
         sell = _order(
             order_id="SELL-1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=1000,
         )
         brokerage.place_order(sell)
@@ -397,7 +397,7 @@ class TestCashConservation:
 
         sell = _order(
             order_id="SELL-1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=1000,
         )
         brokerage.place_order(sell)
@@ -473,7 +473,7 @@ class TestSettlementIntegration:
             model.is_tradable(
                 1,
                 "2026-03-01",
-                OrderDirection.BUY,
+                OrderSide.BUY,
                 None,
                 rule,
             )
@@ -483,7 +483,7 @@ class TestSettlementIntegration:
             model.is_tradable(
                 1,
                 "2020-01-01",
-                OrderDirection.SELL,
+                OrderSide.SELL,
                 None,
                 rule,
             )
@@ -645,7 +645,7 @@ class TestT1FreezeThaw:
         t1_brokerage.process_pending(_t1_process_input("2026-03-02"))
 
         # T+1 日解冻 + 卖出
-        sell = _order(order_id="SELL-1", direction=OrderDirection.SELL, quantity=1000)
+        sell = _order(order_id="SELL-1", direction=OrderSide.SELL, quantity=1000)
         t1_brokerage.place_order(sell)
         fills = t1_brokerage.process_pending(_t1_process_input("2026-03-03"))
         assert len(fills) == 1
@@ -668,7 +668,7 @@ class TestT1FreezeThaw:
 
         # T 日尝试卖出 — 因 SimpleSettlementModel always tradable,
         # 订单不会被 settlement 拦截, 但 available_quantity=0
-        sell = _order(order_id="SELL-1", direction=OrderDirection.SELL, quantity=1000)
+        sell = _order(order_id="SELL-1", direction=OrderSide.SELL, quantity=1000)
         t1_brokerage.place_order(sell)
         # settlement_model.is_tradable returns True for SELL in AShare model,
         # 所以 sell 会进入 fill 流程。但我们通过 _apply_fill 保护:
@@ -703,14 +703,14 @@ class TestT1FreezePartialSell:
         assert pos.available_quantity == 500
 
         # Day 2: 尝试卖出 800, 只有 500 可用
-        sell = _order(order_id="SELL-1", direction=OrderDirection.SELL, quantity=800)
+        sell = _order(order_id="SELL-1", direction=OrderSide.SELL, quantity=800)
         t1_brokerage.place_order(sell)
         fills = t1_brokerage.process_pending(_t1_process_input("2026-03-03"))
         # 不成交 (available < sell_qty)
         assert len(fills) == 0
 
         # Day 2: 尝试卖出 500 (刚好可用)
-        sell2 = _order(order_id="SELL-2", direction=OrderDirection.SELL, quantity=500)
+        sell2 = _order(order_id="SELL-2", direction=OrderSide.SELL, quantity=500)
         t1_brokerage.place_order(sell2)
         fills2 = t1_brokerage.process_pending(_t1_process_input("2026-03-03"))
         # 注意: sell 订单在 order_book 中仍然是 SUBMITTED (被跳过),
@@ -858,7 +858,7 @@ class TestT1FreezeSettlementCycle0:
         brk.place_order(buy)
         brk.process_pending(_t1_process_input("2026-03-02"))
 
-        sell = _order(order_id="SELL-1", direction=OrderDirection.SELL, quantity=1000)
+        sell = _order(order_id="SELL-1", direction=OrderSide.SELL, quantity=1000)
         brk.place_order(sell)
         fills = brk.process_pending(_t1_process_input("2026-03-02"))
         assert len(fills) == 1
@@ -881,7 +881,7 @@ class TestT1FreezeSellDeduction:
         t1_brokerage.process_pending(_t1_process_input("2026-03-03"))
 
         # 卖出 400
-        sell = _order(order_id="SELL-1", direction=OrderDirection.SELL, quantity=400)
+        sell = _order(order_id="SELL-1", direction=OrderSide.SELL, quantity=400)
         t1_brokerage.place_order(sell)
         t1_brokerage.process_pending(_t1_process_input("2026-03-03"))
 

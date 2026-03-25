@@ -6,7 +6,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_datahub.errors import AmbiguousTickerError
+from ditto_datahub.errors import AmbiguousTickerError, NoIdentifierProvidedError
 from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_infra.foundation import logger
@@ -22,6 +22,7 @@ from ditto_port.models.fundamental import (
     to_dividend_list,
     to_financial_list,
 )
+from ditto_port.models.identifier import resolve_instrument_identifier
 
 router = APIRouter(prefix="/fundamental", tags=["fundamental"])
 
@@ -37,7 +38,7 @@ def _resolve_identifier(
     解析标识符为 canonical instrument_id.
 
     至少提供一个标识符（instrument_id / standard_ticker / ticker），
-    委托给 MetadataService.resolve_instrument_identifier 进行统一解析。
+    委托给共享的 resolve_instrument_identifier 进行统一解析。
 
     Returns:
         解析后的 canonical instrument_id (int)，查不到返回 None.
@@ -53,25 +54,21 @@ def _resolve_identifier(
         )
 
     try:
-        result = metadata_service.resolve_instrument_identifier(
+        return resolve_instrument_identifier(
+            metadata_service,
             instrument_id=instrument_id,
             standard_ticker=standard_ticker,
             ticker=ticker,
-            source="tushare",
-            asset_class="stock",
         )
     except AmbiguousTickerError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except NoIdentifierProvidedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        exc_name = type(exc).__name__
-        if exc_name == "NoIdentifierProvidedError":
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
         logger.exception("Unexpected error resolving fundamental identifier")
         raise HTTPException(
             status_code=500, detail="Failed to resolve identifier"
         ) from exc
-
-    return result  # int | None
 
 
 @router.get("/financials/{report_type}", response_model=APIResponse[list[Financial]])

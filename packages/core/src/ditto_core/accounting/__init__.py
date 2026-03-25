@@ -7,11 +7,11 @@ Accounting — 共享账户契约层.
 from ditto_core.accounting.account import Account, AccountView
 from ditto_core.accounting.buying_power import BuyingPowerModel, CashAccountBuyingPower
 from ditto_core.accounting.cash import CashBook
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.accounting.order_book import (
     Order,
     OrderBook,
     OrderBookReadOnly,
-    OrderDirection,
     OrderEvent,
     OrderStatus,
     OrderTicket,
@@ -26,10 +26,10 @@ __all__ = [
     "BuyingPowerModel",
     "CashAccountBuyingPower",
     "CashBook",
+    "FillEvent",
     "Order",
     "OrderBook",
     "OrderBookReadOnly",
-    "OrderDirection",
     "OrderEvent",
     "OrderStatus",
     "OrderTicket",

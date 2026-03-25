@@ -20,7 +20,14 @@ OrderSide = _KernelOrderSide
 
 
 class OrderStatus(StrEnum):
-    """订单状态."""
+    """
+    订单状态.
+
+    .. deprecated::
+        DataHub 层不再独立定义订单状态枚举，请使用 Core 层的权威定义：
+        ``from ditto_core.accounting.order_book import OrderStatus``
+        本定义仅保留向后兼容，未来版本将移除。
+    """
 
     PENDING = "pending"
     FILLED = "filled"
@@ -35,6 +42,11 @@ class Order:
     订单模型.
 
     支持状态管理和业务规则验证。
+
+    .. deprecated::
+        DataHub 层不再独立定义订单模型，请使用 Core 层的权威定义：
+        ``from ditto_core.accounting.order_book import Order``
+        本定义仅保留向后兼容，未来版本将移除。
 
     Attributes:
         order_id: 订单唯一标识

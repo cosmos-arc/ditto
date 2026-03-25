@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 from ditto_core.accounting.order_book import Order
 from ditto_core.execution.reality.market import MarketSnapshot
@@ -53,7 +53,7 @@ class FixedBpsSlippage:
     ) -> float:
         """估算滑点金额（含符号）。"""
         amount = market.close * self.bps / 10_000
-        if order.direction == OrderDirection.BUY:
+        if order.direction == OrderSide.BUY:
             return amount
         return -amount
 
@@ -100,6 +100,6 @@ class VolumeShareSlippage:
             bps = self.base_bps
 
         amount = market.close * bps / 10_000
-        if order.direction == OrderDirection.BUY:
+        if order.direction == OrderSide.BUY:
             return amount
         return -amount

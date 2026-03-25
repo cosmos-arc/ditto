@@ -13,6 +13,7 @@ from types import MappingProxyType
 import pytest
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.cash import CashBook
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.accounting.order_book import OrderBookReadOnly
 from ditto_core.accounting.position import Position
 from ditto_core.backtest.statistics import (
@@ -31,8 +32,7 @@ from ditto_core.backtest.statistics import (
     _sortino_ratio,
     compute_portfolio_statistics,
 )
-from ditto_core.execution.fills import FillEvent
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------
 # _daily_returns_from_navs
@@ -475,7 +475,7 @@ class TestCostMetrics:
             fill_id="f-1",
             order_id="o-1",
             instrument_id=1,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             filled_quantity=qty,
             fill_price=price,
             fee=fee,

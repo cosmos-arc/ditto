@@ -8,7 +8,7 @@ from ditto_core.accounting.cash import CashBook
 from ditto_core.accounting.order_book import (
     Order,
     OrderBookReadOnly,
-    OrderDirection,
+    OrderSide,
     OrderStatus,
     OrderTicket,
     OrderType,
@@ -91,7 +91,7 @@ def _pending_buy(
         order_id=order_id,
         instrument_id=instrument_id,
         order_type=OrderType.MARKET,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         quantity=quantity,
     )
     return OrderTicket(order=order, status=OrderStatus.SUBMITTED)
@@ -107,7 +107,7 @@ def _pending_sell(
         order_id=order_id,
         instrument_id=instrument_id,
         order_type=OrderType.MARKET,
-        direction=OrderDirection.SELL,
+        direction=OrderSide.SELL,
         quantity=quantity,
     )
     return OrderTicket(order=order, status=OrderStatus.SUBMITTED)
@@ -145,7 +145,7 @@ class TestBlockedOrder:
     def test_frozen(self) -> None:
         bo = BlockedOrder(
             instrument_id=1,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             intended_quantity=100,
             reason="risk_locked",
             severity=BlockSeverity.BLOCK,
@@ -156,7 +156,7 @@ class TestBlockedOrder:
     def test_severity_values(self) -> None:
         bo_block = BlockedOrder(
             instrument_id=1,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             intended_quantity=100,
             reason="risk_locked",
             severity=BlockSeverity.BLOCK,
@@ -165,7 +165,7 @@ class TestBlockedOrder:
 
         bo_defer = BlockedOrder(
             instrument_id=1,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             intended_quantity=100,
             reason="price_limit",
             severity=BlockSeverity.DEFER,
@@ -242,10 +242,10 @@ class TestFirstBuild:
         assert set(orders.keys()) == {1, 2}
 
         # ETF-001: 0.5 * 100K = 50000 / 100 = 500 lots → 50000
-        assert orders[1].direction == OrderDirection.BUY
+        assert orders[1].direction == OrderSide.BUY
         assert orders[1].quantity == 50000
         # ETF-002: 0.3 * 100K = 30000 / 100 = 300 lots → 30000
-        assert orders[2].direction == OrderDirection.BUY
+        assert orders[2].direction == OrderSide.BUY
         assert orders[2].quantity == 30000
         assert len(plan.blocked_orders) == 0
 
@@ -330,13 +330,13 @@ class TestExitPosition:
         # ETF-001 应该被卖出（exit）
         sell_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert len(sell_orders) == 1
-        assert sell_orders[0].direction == OrderDirection.SELL
+        assert sell_orders[0].direction == OrderSide.SELL
         assert sell_orders[0].quantity == 30000
 
         # ETF-002 应该被买入
         buy_orders = [o for o in plan.orders if o.instrument_id == 2]
         assert len(buy_orders) == 1
-        assert buy_orders[0].direction == OrderDirection.BUY
+        assert buy_orders[0].direction == OrderSide.BUY
 
     def test_target_weight_zero_exits(self) -> None:
         """target weight = 0 → 清仓."""
@@ -360,7 +360,7 @@ class TestExitPosition:
         )
 
         assert len(plan.orders) == 1
-        assert plan.orders[0].direction == OrderDirection.SELL
+        assert plan.orders[0].direction == OrderSide.SELL
         assert plan.orders[0].quantity == 20000
 
     def test_reduce_position(self) -> None:
@@ -386,7 +386,7 @@ class TestExitPosition:
         )
 
         assert len(plan.orders) == 1
-        assert plan.orders[0].direction == OrderDirection.SELL
+        assert plan.orders[0].direction == OrderSide.SELL
         assert plan.orders[0].quantity == 10000  # 30000 - 20000
 
 
@@ -493,7 +493,7 @@ class TestPendingAware:
         )
 
         assert len(plan.orders) == 1
-        assert plan.orders[0].direction == OrderDirection.BUY
+        assert plan.orders[0].direction == OrderSide.BUY
         assert plan.orders[0].quantity == 10000
 
 
@@ -522,7 +522,7 @@ class TestPlannerLock:
         assert len(plan.blocked_orders) == 1
         bo = plan.blocked_orders[0]
         assert bo.instrument_id == 1
-        assert bo.direction == OrderDirection.BUY
+        assert bo.direction == OrderSide.BUY
         assert bo.reason == "risk_locked"
         assert bo.severity is BlockSeverity.BLOCK
         assert bo.intended_quantity == 50000  # 0.5 * 100K
@@ -552,7 +552,7 @@ class TestPlannerLock:
         assert len(plan.blocked_orders) == 0
         sell_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert len(sell_orders) == 1
-        assert sell_orders[0].direction == OrderDirection.SELL
+        assert sell_orders[0].direction == OrderSide.SELL
         assert sell_orders[0].quantity == 30000
 
 
@@ -591,19 +591,19 @@ class TestMixedScenario:
         assert set(orders.keys()) == {1, 2, 3, 4}
 
         # ETF-001: 加仓 10000
-        assert orders[1].direction == OrderDirection.BUY
+        assert orders[1].direction == OrderSide.BUY
         assert orders[1].quantity == 10000
 
         # ETF-002: 减仓 10000
-        assert orders[2].direction == OrderDirection.SELL
+        assert orders[2].direction == OrderSide.SELL
         assert orders[2].quantity == 10000
 
         # ETF-003: 清仓
-        assert orders[3].direction == OrderDirection.SELL
+        assert orders[3].direction == OrderSide.SELL
         assert orders[3].quantity == 10000
 
         # ETF-004: 新入场
-        assert orders[4].direction == OrderDirection.BUY
+        assert orders[4].direction == OrderSide.BUY
         assert orders[4].quantity == 10000
 
 
@@ -804,7 +804,7 @@ class TestEdgeCases:
         # 锁定不影响卖出操作
         assert len(plan.blocked_orders) == 0
         assert len(plan.orders) == 1
-        assert plan.orders[0].direction == OrderDirection.SELL
+        assert plan.orders[0].direction == OrderSide.SELL
         assert plan.orders[0].quantity == 10000
 
     def test_default_lot_size(self) -> None:
@@ -1202,7 +1202,7 @@ class TestLimitUpDown:
 
         sell_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert len(sell_orders) == 1
-        assert sell_orders[0].direction == OrderDirection.SELL
+        assert sell_orders[0].direction == OrderSide.SELL
 
     def test_buy_at_limit_down_allowed(self) -> None:
         """买入 + 跌停 → 允许买入。"""
@@ -1220,7 +1220,7 @@ class TestLimitUpDown:
 
         buy_orders = [o for o in plan.orders if o.instrument_id == 1]
         assert len(buy_orders) == 1
-        assert buy_orders[0].direction == OrderDirection.BUY
+        assert buy_orders[0].direction == OrderSide.BUY
 
     def test_no_limit_info_treats_as_normal(self) -> None:
         """limit_up=None / limit_down=None → 正常交易。"""
@@ -1341,7 +1341,7 @@ class TestRounding100Plus1:
         buy_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == 1 and o.direction == OrderDirection.BUY
+            if o.instrument_id == 1 and o.direction == OrderSide.BUY
         ]
         assert len(buy_orders) == 1
         assert buy_orders[0].quantity == 5000
@@ -1372,7 +1372,7 @@ class TestRounding100Plus1:
         buy_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == 1 and o.direction == OrderDirection.BUY
+            if o.instrument_id == 1 and o.direction == OrderSide.BUY
         ]
         assert len(buy_orders) == 1
         assert buy_orders[0].quantity == 500
@@ -1401,7 +1401,7 @@ class TestRounding100Plus1:
         sell_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == 1 and o.direction == OrderDirection.SELL
+            if o.instrument_id == 1 and o.direction == OrderSide.SELL
         ]
         quantities = sorted([o.quantity for o in sell_orders])
         assert len(sell_orders) == 2
@@ -1431,7 +1431,7 @@ class TestRounding100Plus1:
         sell_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == 1 and o.direction == OrderDirection.SELL
+            if o.instrument_id == 1 and o.direction == OrderSide.SELL
         ]
         assert len(sell_orders) == 1
         assert sell_orders[0].quantity == 300
@@ -1460,7 +1460,7 @@ class TestRounding100Plus1:
         sell_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == 1 and o.direction == OrderDirection.SELL
+            if o.instrument_id == 1 and o.direction == OrderSide.SELL
         ]
         assert len(sell_orders) == 1
         assert sell_orders[0].quantity == 50
@@ -1506,7 +1506,7 @@ class TestCombinedScenarios:
         sell_orders = [
             o
             for o in plan.orders
-            if o.instrument_id == 1 and o.direction == OrderDirection.SELL
+            if o.instrument_id == 1 and o.direction == OrderSide.SELL
         ]
         assert sum(o.quantity for o in sell_orders) == 300
         # 300 = 200 (round) + 100 (round), no odd lots
@@ -1545,7 +1545,7 @@ class TestCombinedScenarios:
         sell_total = sum(
             o.quantity
             for o in plan.orders
-            if o.instrument_id == 1 and o.direction == OrderDirection.SELL
+            if o.instrument_id == 1 and o.direction == OrderSide.SELL
         )
         assert sell_total <= 1000
 

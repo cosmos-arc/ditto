@@ -6,15 +6,15 @@ from types import MappingProxyType
 import pytest
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.cash import CashBook
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.accounting.order_book import OrderBookReadOnly
-from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.trade_builder import (
     FifoTradeBuilder,
     FlatToFlatTradeBuilder,
     TradeMatchingMethod,
     TradeRecord,
 )
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -39,7 +39,7 @@ def _fill(
     fill_id: str,
     order_id: str = "order-1",
     instrument_id: int = 1,
-    direction: OrderDirection = OrderDirection.BUY,
+    direction: OrderSide = OrderSide.BUY,
     quantity: int = 100,
     price: float = 10.0,
     fee: float = 5.0,
@@ -71,7 +71,7 @@ class TestTradeRecord:
         record = TradeRecord(
             trade_id="t-1",
             instrument_id=1,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             entry_date="2026-03-01",
             exit_date=None,
             entry_price=10.0,
@@ -117,7 +117,7 @@ class TestFifoBasic:
         assert open_trades[0].instrument_id == 1
         assert open_trades[0].quantity == 100
         assert open_trades[0].entry_price == 10.0
-        assert open_trades[0].direction == OrderDirection.BUY
+        assert open_trades[0].direction == OrderSide.BUY
         assert open_trades[0].exit_date is None
 
     def test_buy_then_sell_creates_closed_trade(
@@ -128,7 +128,7 @@ class TestFifoBasic:
         sell = _fill(
             "f-2",
             order_id="o-sell",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             event_time=datetime(2026, 3, 5),
@@ -178,7 +178,7 @@ class TestFifoMultiEntry:
         sell = _fill(
             "f-3",
             order_id="o-3",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=12.0,
             event_time=datetime(2026, 3, 5),
@@ -214,7 +214,7 @@ class TestFifoPartialClose:
         sell = _fill(
             "f-2",
             order_id="o-2",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=50,
             price=11.0,
             event_time=datetime(2026, 3, 3),
@@ -244,7 +244,7 @@ class TestFifoPartialClose:
         sell = _fill(
             "f-3",
             order_id="o-3",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=150,
             price=13.0,
             fee=6.0,
@@ -303,7 +303,7 @@ class TestFifoFlush:
         sell = _fill(
             "f-2",
             order_id="o-2",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             event_time=datetime(2026, 3, 5),
@@ -334,7 +334,7 @@ class TestFifoExcessSell:
         sell = _fill(
             "f-2",
             order_id="o-2",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=200,
             price=12.0,
             fee=5.0,
@@ -370,7 +370,7 @@ class TestFifoMultiInstrument:
             "f-3",
             order_id="o-3",
             instrument_id=2,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             event_time=datetime(2026, 3, 5),
@@ -395,7 +395,7 @@ class TestFifoMultiInstrument:
         sell = _fill(
             "f-1",
             order_id="o-1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
         )
@@ -421,7 +421,7 @@ class TestFlatToFlatBasic:
         assert open_trades[0].instrument_id == 1
         assert open_trades[0].quantity == 100
         assert open_trades[0].entry_price == pytest.approx(10.0)
-        assert open_trades[0].direction == OrderDirection.BUY
+        assert open_trades[0].direction == OrderSide.BUY
         assert open_trades[0].exit_date is None
         assert open_trades[0].exit_price is None
 
@@ -437,7 +437,7 @@ class TestFlatToFlatBasic:
         sell = _fill(
             "f-2",
             order_id="o-sell",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             fee=5.0,
@@ -493,7 +493,7 @@ class TestFlatToFlatMultiBuy:
         sell = _fill(
             "f-3",
             order_id="o-s1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=200,
             price=15.0,
             fee=8.0,
@@ -548,7 +548,7 @@ class TestFlatToFlatMultiSell:
         sell1 = _fill(
             "f-2",
             order_id="o-s1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             fee=4.0,
@@ -557,7 +557,7 @@ class TestFlatToFlatMultiSell:
         sell2 = _fill(
             "f-3",
             order_id="o-s2",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=200,
             price=14.0,
             fee=6.0,
@@ -600,7 +600,7 @@ class TestFlatToFlatPartial:
         sell = _fill(
             "f-2",
             order_id="o-s1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             fee=5.0,
@@ -633,7 +633,7 @@ class TestFlatToFlatPartial:
         sell1 = _fill(
             "f-2",
             order_id="o-s1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             fee=5.0,
@@ -642,7 +642,7 @@ class TestFlatToFlatPartial:
         sell2 = _fill(
             "f-3",
             order_id="o-s2",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=12.0,
             fee=5.0,
@@ -711,7 +711,7 @@ class TestFlatToFlatFlush:
         sell = _fill(
             "f-2",
             order_id="o-s1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             fee=5.0,
@@ -736,7 +736,7 @@ class TestFlatToFlatFlush:
         sell = _fill(
             "f-2",
             order_id="o-s1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             fee=5.0,
@@ -781,7 +781,7 @@ class TestFlatToFlatMultiInstrument:
             "f-3",
             order_id="o-a2",
             instrument_id=2,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             fee=5.0,
@@ -815,7 +815,7 @@ class TestFlatToFlatExcessSell:
         sell = _fill(
             "f-1",
             order_id="o-s1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
             fee=5.0,
@@ -842,7 +842,7 @@ class TestFlatToFlatExcessSell:
         sell = _fill(
             "f-2",
             order_id="o-s1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=200,
             price=12.0,
             fee=6.0,
@@ -897,7 +897,7 @@ class TestFlatToFlatFees:
         sell1 = _fill(
             "f-3",
             order_id="o-s1",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=13.0,
             fee=3.5,
@@ -906,7 +906,7 @@ class TestFlatToFlatFees:
         sell2 = _fill(
             "f-4",
             order_id="o-s2",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
             price=14.0,
             fee=4.5,

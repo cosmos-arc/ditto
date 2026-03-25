@@ -8,11 +8,11 @@ ExecutionAuditCollector — 回测审计数据收集器.
 from __future__ import annotations
 
 from ditto_core.accounting.account import AccountView
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.backtest.audit.records import (
     PreTradeDecisionRecord,
     RiskScanRecord,
 )
-from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.trade_builder import TradeRecord
 
 __all__ = [

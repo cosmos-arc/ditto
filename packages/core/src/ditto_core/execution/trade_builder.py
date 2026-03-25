@@ -13,11 +13,11 @@ from datetime import date
 from enum import StrEnum
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
 
 from ditto_core.accounting.account import AccountView
-from ditto_core.execution.fills import FillEvent
+from ditto_core.accounting.fills import FillEvent
 
 __all__ = [
     "FifoTradeBuilder",
@@ -51,7 +51,7 @@ class TradeRecord:
 
     trade_id: str
     instrument_id: InstrumentId
-    direction: OrderDirection
+    direction: OrderSide
     entry_date: str
     exit_date: str | None
     entry_price: float
@@ -102,7 +102,7 @@ class _OpenEntry:
 
     trade_id: str
     instrument_id: InstrumentId
-    direction: OrderDirection
+    direction: OrderSide
     entry_date: date
     entry_price: float
     entry_fee: float
@@ -132,12 +132,12 @@ class FifoTradeBuilder:
         iid = fill.instrument_id
         fill_date = fill.event_time.date()
 
-        if fill.direction == OrderDirection.BUY:
+        if fill.direction == OrderSide.BUY:
             self._open.setdefault(iid, deque()).append(
                 _OpenEntry(
                     trade_id=self._next_id(),
                     instrument_id=iid,
-                    direction=OrderDirection.BUY,
+                    direction=OrderSide.BUY,
                     entry_date=fill_date,
                     entry_price=fill.fill_price,
                     entry_fee=fill.fee,
@@ -147,7 +147,7 @@ class FifoTradeBuilder:
                 ),
             )
 
-        elif fill.direction == OrderDirection.SELL:
+        elif fill.direction == OrderSide.SELL:
             self._match_sell(iid, fill_date, fill)
 
     def get_open_trades(self) -> tuple[TradeRecord, ...]:
@@ -290,7 +290,7 @@ class FlatToFlatTradeBuilder:
         iid = fill.instrument_id
         fill_date = fill.event_time.date()
 
-        if fill.direction == OrderDirection.BUY:
+        if fill.direction == OrderSide.BUY:
             acc = self._get_or_create(iid)
             acc.net_quantity += fill.filled_quantity
             acc.buy_quantity += fill.filled_quantity
@@ -301,7 +301,7 @@ class FlatToFlatTradeBuilder:
                 acc.first_entry_date = fill_date
             acc.last_entry_date = fill_date
 
-        elif fill.direction == OrderDirection.SELL:
+        elif fill.direction == OrderSide.SELL:
             acc = self._accumulators.get(iid)
             if not acc or acc.net_quantity <= 0:
                 return
@@ -337,7 +337,7 @@ class FlatToFlatTradeBuilder:
                 TradeRecord(
                     trade_id=self._next_id(),
                     instrument_id=acc.instrument_id,
-                    direction=OrderDirection.BUY,
+                    direction=OrderSide.BUY,
                     entry_date=(
                         acc.first_entry_date.isoformat() if acc.first_entry_date else ""
                     ),
@@ -406,7 +406,7 @@ class FlatToFlatTradeBuilder:
             TradeRecord(
                 trade_id=self._next_id(),
                 instrument_id=acc.instrument_id,
-                direction=OrderDirection.BUY,
+                direction=OrderSide.BUY,
                 entry_date=(
                     acc.first_entry_date.isoformat() if acc.first_entry_date else ""
                 ),

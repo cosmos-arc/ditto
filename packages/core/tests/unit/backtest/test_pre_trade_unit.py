@@ -9,7 +9,7 @@ from ditto_core.accounting.cash import CashBook
 from ditto_core.accounting.order_book import (
     Order,
     OrderBookReadOnly,
-    OrderDirection,
+    OrderSide,
     OrderStatus,
     OrderTicket,
     OrderType,
@@ -182,7 +182,7 @@ def _buy_order(
         order_id=order_id,
         instrument_id=instrument_id,
         order_type=order_type,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         quantity=quantity,
         price=price,
     )
@@ -197,7 +197,7 @@ def _sell_order(
         order_id=order_id,
         instrument_id=instrument_id,
         order_type=OrderType.MARKET,
-        direction=OrderDirection.SELL,
+        direction=OrderSide.SELL,
         quantity=quantity,
     )
 

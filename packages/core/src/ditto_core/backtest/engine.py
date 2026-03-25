@@ -24,6 +24,7 @@ from ditto_kernel.identity import InstrumentId
 
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.buying_power import CashAccountBuyingPower
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.accounting.order_book import Order
 from ditto_core.backtest.data_feed import DataFeed, Slice
 from ditto_core.backtest.manifest import (
@@ -48,7 +49,6 @@ from ditto_core.backtest.statistics import (
     RiskScanRecord,
 )
 from ditto_core.execution.brokerage import Brokerage, ProcessInput
-from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.planner import ExecutionPlanner
 from ditto_core.execution.reality import FeeModel
 from ditto_core.execution.rules import InstrumentRuleProvider, InstrumentRules
@@ -480,15 +480,19 @@ class EngineLoop:
         根据配置判断是否为调仓日.
 
         daily: 每日
-        weekly: 每周一 (weekday == 0)
+        weekly: 每自然周第一个交易日（基于 trading_days 判断 ISO week 跨越）
         monthly: 每月第一个交易日
         """
         if self._config.rebalance_freq == "daily":
             return True
 
         if self._config.rebalance_freq == "weekly":
-            parsed = datetime.strptime(date, "%Y-%m-%d")
-            return parsed.weekday() == 0
+            idx = self._trading_days.index(date)
+            if idx == 0:
+                return True
+            curr = datetime.strptime(date, "%Y-%m-%d")
+            prev = datetime.strptime(self._trading_days[idx - 1], "%Y-%m-%d")
+            return curr.isocalendar()[1] != prev.isocalendar()[1]
 
         if self._config.rebalance_freq == "monthly":
             month_prefix = date[:7]

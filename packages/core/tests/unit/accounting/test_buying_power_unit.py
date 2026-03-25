@@ -5,7 +5,7 @@ from ditto_core.accounting.buying_power import (
     CashAccountBuyingPower,
 )
 from ditto_core.accounting.cash import CashBook
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 
 class TestBuyingPowerModel:
@@ -21,7 +21,7 @@ class TestBuyingPowerModel:
         )
         view = account.get_view()
         model = CashAccountBuyingPower()
-        result = model.available_buying_power(view, OrderDirection.BUY)
+        result = model.available_buying_power(view, OrderSide.BUY)
         assert result == 100000.0
 
     def test_cash_account_buy_for_sell(self) -> None:
@@ -32,7 +32,7 @@ class TestBuyingPowerModel:
         )
         view = account.get_view()
         model = CashAccountBuyingPower()
-        result = model.available_buying_power(view, OrderDirection.SELL)
+        result = model.available_buying_power(view, OrderSide.SELL)
         assert result == 0.0
 
     def test_cash_account_excludes_frozen(self) -> None:
@@ -43,5 +43,5 @@ class TestBuyingPowerModel:
         )
         view = account.get_view()
         model = CashAccountBuyingPower()
-        result = model.available_buying_power(view, OrderDirection.BUY)
+        result = model.available_buying_power(view, OrderSide.BUY)
         assert result == 90000.0

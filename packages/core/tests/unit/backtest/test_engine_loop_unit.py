@@ -10,10 +10,11 @@ from unittest.mock import Mock
 import pytest
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.cash import CashBook
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.accounting.order_book import (
     Order,
     OrderBookReadOnly,
-    OrderDirection,
+    OrderSide,
     OrderType,
 )
 from ditto_core.backtest.data_feed import MarketSnapshot, Slice
@@ -22,7 +23,6 @@ from ditto_core.backtest.risk.pre_trade import (
     Decision,
     OrderCheckResult,
 )
-from ditto_core.execution.fills import FillEvent
 from ditto_core.strategy.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------
@@ -89,7 +89,7 @@ def _make_target(date: str = "2026-03-01") -> TargetPortfolio:
 def _make_order(
     iid: int = 1,
     qty: int = 100,
-    direction: OrderDirection = OrderDirection.BUY,
+    direction: OrderSide = OrderSide.BUY,
 ) -> Order:
     return Order(
         order_id="order-001",
@@ -105,7 +105,7 @@ def _make_fill(fill_id: str = "fill-001") -> FillEvent:
         fill_id=fill_id,
         order_id="order-001",
         instrument_id=1,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         filled_quantity=100,
         fill_price=10.0,
         fee=5.0,
@@ -675,20 +675,32 @@ class TestIsRebalanceDay:
     def test_weekly_monday_true(self) -> None:
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)
-        # 2026-03-02 is Monday
+        loop._trading_days = tuple(DAYS)
+        # 2026-03-02 is Monday; prev trading day 2026-03-01 is Sunday (ISO week 9 vs 9)
+        # 但 2026-03-01 isocalendar() week 9, 2026-03-02 isocalendar() week 10
         assert loop._is_rebalance_day("2026-03-02") is True
 
     def test_weekly_tuesday_false(self) -> None:
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)
-        # 2026-03-03 is Tuesday
+        loop._trading_days = tuple(DAYS)
+        # 2026-03-03 is Tuesday; prev trading day 2026-03-02 is Monday (same ISO week)
         assert loop._is_rebalance_day("2026-03-03") is False
 
-    def test_weekly_invalid_date_raises(self) -> None:
-        """非标准日期格式 → weekly 模式下 strptime 抛出 ValueError."""
+    def test_weekly_first_trading_day_of_week(self) -> None:
+        """当周无周一交易日（如节假日），第一个交易日仍为 rebalance day。"""
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)
-        with pytest.raises(ValueError, match="time data"):
+        # 2026-03-01 is Sunday (ISO week 9), 2026-03-04 is Wednesday (ISO week 10)
+        loop._trading_days = ("2026-03-01", "2026-03-04")
+        assert loop._is_rebalance_day("2026-03-04") is True
+
+    def test_weekly_invalid_date_raises(self) -> None:
+        """date 不在 trading_days 中 → weekly 模式下 .index() 抛出 ValueError."""
+        config = replace(_make_config(), rebalance_freq="weekly")
+        loop = _make_engine_loop(config=config)
+        loop._trading_days = tuple(DAYS)
+        with pytest.raises(ValueError):
             loop._is_rebalance_day("not-a-date")
 
     def test_monthly_first_day_of_month(self) -> None:

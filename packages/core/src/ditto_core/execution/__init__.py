@@ -6,22 +6,21 @@ Phase 2: brokerage, trade_builder, planner, reality/.
 Phase 3: ProcessInput, MarketSnapshot (moved from backtest).
 """
 
+from ditto_core.accounting.order_book import (
+    Order,
+    OrderBook,
+    OrderBookReadOnly,
+    OrderEvent,
+    OrderStatus,
+    OrderTicket,
+    OrderType,
+)
 from ditto_core.execution.brokerage import BacktestBrokerage, Brokerage, ProcessInput
 from ditto_core.execution.fills import (
     Filled,
     FillEvent,
     FillOutcome,
     NoFill,
-)
-from ditto_core.execution.orders import (
-    Order,
-    OrderBook,
-    OrderBookReadOnly,
-    OrderDirection,
-    OrderEvent,
-    OrderStatus,
-    OrderTicket,
-    OrderType,
 )
 from ditto_core.execution.planner import (
     BlockedOrder,
@@ -96,7 +95,6 @@ __all__ = [
     "Order",
     "OrderBook",
     "OrderBookReadOnly",
-    "OrderDirection",
     "OrderEvent",
     "OrderStatus",
     "OrderTicket",

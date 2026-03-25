@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 import polars as pl
@@ -45,7 +45,7 @@ class MarketServiceDataFeed:
         self._trading_days: list[str] | None = None
         self._bars_by_date: dict[str, dict[InstrumentId, MarketSnapshot]] | None = None
         self._benchmark_close_by_date: dict[str, float] | None = None
-        self._display_map: dict[InstrumentId, str] = field(default_factory=dict)
+        self._display_map: dict[InstrumentId, str] = {}
 
     def trading_days(self) -> list[str]:
         """返回回测区间内交易日列表。"""

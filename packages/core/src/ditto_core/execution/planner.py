@@ -16,15 +16,16 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
 
+from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
 
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.order_book import (
     Order,
     OrderBookReadOnly,
-    OrderDirection,
     OrderType,
 )
+from ditto_core.execution.reality.constants import DEFAULT_LOT_SIZE
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.execution.rules import InstrumentRules
 from ditto_core.execution.targets import TargetPortfolioLike
@@ -36,8 +37,6 @@ __all__ = [
     "ExecutionPlanner",
     "SimpleExecutionPlanner",
 ]
-
-_DEFAULT_LOT_SIZE = 100
 
 
 @dataclass(frozen=True)
@@ -82,7 +81,7 @@ class BlockedOrder:
     """
 
     instrument_id: InstrumentId
-    direction: OrderDirection
+    direction: OrderSide
     intended_quantity: int
     reason: str
     severity: BlockSeverity
@@ -152,7 +151,7 @@ class SimpleExecutionPlanner:
 
     """
 
-    def __init__(self, default_lot_size: int = _DEFAULT_LOT_SIZE) -> None:
+    def __init__(self, default_lot_size: int = DEFAULT_LOT_SIZE) -> None:
         self._counter = 0
         self._default_lot_size = default_lot_size
 
@@ -233,7 +232,7 @@ class SimpleExecutionPlanner:
             return None
 
         if snap.is_suspended:
-            direction = OrderDirection.BUY if diff_qty > 0 else OrderDirection.SELL
+            direction = OrderSide.BUY if diff_qty > 0 else OrderSide.SELL
             return BlockedOrder(
                 instrument_id=iid,
                 direction=direction,
@@ -245,7 +244,7 @@ class SimpleExecutionPlanner:
         if diff_qty > 0 and snap.limit_up is not None and snap.close >= snap.limit_up:
             return BlockedOrder(
                 instrument_id=iid,
-                direction=OrderDirection.BUY,
+                direction=OrderSide.BUY,
                 intended_quantity=diff_qty,
                 reason="limit_up_no_buy",
                 severity=BlockSeverity.DEFER,
@@ -258,7 +257,7 @@ class SimpleExecutionPlanner:
         ):
             return BlockedOrder(
                 instrument_id=iid,
-                direction=OrderDirection.SELL,
+                direction=OrderSide.SELL,
                 intended_quantity=-diff_qty,
                 reason="limit_down_no_sell",
                 severity=BlockSeverity.DEFER,
@@ -299,9 +298,9 @@ class SimpleExecutionPlanner:
         delta: dict[InstrumentId, int] = {}
         for ticket in order_book.get_pending():
             iid = ticket.order.instrument_id
-            if ticket.order.direction == OrderDirection.BUY:
+            if ticket.order.direction == OrderSide.BUY:
                 delta[iid] = delta.get(iid, 0) + ticket.leaves_quantity
-            elif ticket.order.direction == OrderDirection.SELL:
+            elif ticket.order.direction == OrderSide.SELL:
                 delta[iid] = delta.get(iid, 0) - ticket.leaves_quantity
         return delta
 
@@ -419,7 +418,7 @@ class SimpleExecutionPlanner:
             blocked.append(
                 BlockedOrder(
                     instrument_id=iid,
-                    direction=OrderDirection.BUY,
+                    direction=OrderSide.BUY,
                     intended_quantity=rounded,
                     reason="risk_locked",
                     severity=BlockSeverity.BLOCK,
@@ -427,7 +426,7 @@ class SimpleExecutionPlanner:
             )
         elif rounded > 0:
             orders.append(
-                self._make_order(iid, OrderDirection.BUY, rounded),
+                self._make_order(iid, OrderSide.BUY, rounded),
             )
 
     def _handle_sell(
@@ -461,7 +460,7 @@ class SimpleExecutionPlanner:
                     blocked.append(
                         BlockedOrder(
                             instrument_id=iid,
-                            direction=OrderDirection.SELL,
+                            direction=OrderSide.SELL,
                             intended_quantity=sell_qty - actual_sell,
                             reason="t_plus1_not_sellable",
                             severity=BlockSeverity.DEFER,
@@ -471,7 +470,7 @@ class SimpleExecutionPlanner:
         if actual_sell > 0:
             for qty in self._sell_quantities(actual_sell, dr.lot_size):
                 orders.append(
-                    self._make_order(iid, OrderDirection.SELL, qty),
+                    self._make_order(iid, OrderSide.SELL, qty),
                 )
 
     # -- order creation & statistics ---------------------------------------
@@ -479,7 +478,7 @@ class SimpleExecutionPlanner:
     def _make_order(
         self,
         instrument_id: InstrumentId,
-        direction: OrderDirection,
+        direction: OrderSide,
         quantity: int,
     ) -> Order:
         """创建 Order 对象。"""

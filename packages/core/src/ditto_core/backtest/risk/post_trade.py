@@ -21,10 +21,12 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
 
+from ditto_kernel.enums import RiskScope
 from ditto_kernel.identity import InstrumentId
 
 from ditto_core.accounting.account import AccountView
 from ditto_core.backtest.data_feed import Slice
+from ditto_core.backtest.risk._validation import validate_weight
 
 __all__ = [
     "CompositePostTradeGuard",
@@ -59,13 +61,6 @@ class RiskSeverity(StrEnum):
     WARNING = "warning"
     CRITICAL = "critical"
     EMERGENCY = "emergency"
-
-
-class RiskScope(StrEnum):
-    """风控扫描范围。"""
-
-    INSTRUMENT = "instrument"
-    PORTFOLIO = "portfolio"
 
 
 # ---------------------------------------------------------------------------
@@ -285,8 +280,7 @@ class ConcentrationLimitRule:
     """
 
     def __init__(self, max_weight: float = 0.20) -> None:
-        if not 0.0 < max_weight <= 1.0:
-            raise ValueError(f"max_weight must be in (0, 1], got {max_weight}")
+        validate_weight(max_weight, "max_weight")
         self._max_weight = max_weight
 
     def scan(

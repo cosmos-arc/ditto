@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 from ditto_core.accounting.account import AccountView
 
@@ -17,7 +17,7 @@ class BuyingPowerModel(Protocol):
     def available_buying_power(
         self,
         account: AccountView,
-        direction: OrderDirection,
+        direction: OrderSide,
     ) -> float:
         """查询可用购买力。"""
         ...
@@ -34,9 +34,9 @@ class CashAccountBuyingPower:
     def available_buying_power(
         self,
         account: AccountView,
-        direction: OrderDirection,
+        direction: OrderSide,
     ) -> float:
         """查询可用购买力。"""
-        if direction == OrderDirection.SELL:
+        if direction == OrderSide.SELL:
             return 0.0
         return account.cash.available

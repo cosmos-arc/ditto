@@ -64,7 +64,7 @@
 ### 架构原则
 ```
 依赖层级（从高到低）:
-  ditto_port → ditto_core → ditto_datahub → ditto_infra
+  ditto_port → ditto_core → ditto_kernel → ditto_datahub → ditto_infra
 
 允许的跨层依赖:
   - port 可以直接依赖 datahub.models/services/sources
@@ -81,6 +81,7 @@
 详细分层规范：
 - Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
 - DataHub → [packages/datahub/CLAUDE.md](packages/datahub/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
+- Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
 - Core → [packages/core/CLAUDE.md](packages/core/CLAUDE.md)
 - Port → [apps/port/CLAUDE.md](apps/port/CLAUDE.md)
 
@@ -237,6 +238,7 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 ditto/
 ├── packages/           # 核心包
 │   ├── infra/        # 基础设施
+│   ├── kernel/       # 共享内核（零业务行为类型）
 │   ├── datahub/       # 数据访问层
 │   └── core/          # 核心引擎
 ├── apps/              # 应用

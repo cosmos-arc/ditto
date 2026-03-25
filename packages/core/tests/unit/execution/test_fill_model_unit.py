@@ -13,7 +13,7 @@ from ditto_core.execution.reality.fill import (
 )
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.execution.rules import InstrumentDefinition, TradingRuleSet
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -22,7 +22,7 @@ from ditto_kernel.enums import OrderSide as OrderDirection
 
 def _order(
     order_type: OrderType = OrderType.MARKET,
-    direction: OrderDirection = OrderDirection.BUY,
+    direction: OrderSide = OrderSide.BUY,
     quantity: int = 100,
     price: float | None = None,
     instrument_id: int = 1,
@@ -172,7 +172,7 @@ class TestSimpleFillModel:
     def test_market_sell_fills_at_close(self) -> None:
         """SELL 方向: MARKET 单也以 close 成交 (无滑点)。"""
         model = SimpleFillModel()
-        order = _order(direction=OrderDirection.SELL)
+        order = _order(direction=OrderSide.SELL)
         market = _market_snapshot(close=10.5)
         result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
         assert isinstance(result, Filled)
@@ -196,7 +196,7 @@ class TestAShareFillModel:
 
     def test_limit_up_buy_no_fill(self) -> None:
         model = AShareFillModel()
-        order = _order(direction=OrderDirection.BUY)
+        order = _order(direction=OrderSide.BUY)
         market = _market_snapshot(close=11.0, high=11.0, limit_up=11.0)
         result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
         assert isinstance(result, NoFill)
@@ -205,7 +205,7 @@ class TestAShareFillModel:
 
     def test_limit_down_sell_no_fill(self) -> None:
         model = AShareFillModel()
-        order = _order(direction=OrderDirection.SELL)
+        order = _order(direction=OrderSide.SELL)
         market = _market_snapshot(close=10.0, low=10.0, limit_down=10.0)
         result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
         assert isinstance(result, NoFill)
@@ -214,7 +214,7 @@ class TestAShareFillModel:
 
     def test_limit_up_sell_fills(self) -> None:
         model = AShareFillModel()
-        order = _order(direction=OrderDirection.SELL)
+        order = _order(direction=OrderSide.SELL)
         market = _market_snapshot(close=11.0, high=11.0, limit_up=11.0)
         result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
         assert isinstance(result, Filled)
@@ -222,7 +222,7 @@ class TestAShareFillModel:
 
     def test_limit_down_buy_fills(self) -> None:
         model = AShareFillModel()
-        order = _order(direction=OrderDirection.BUY)
+        order = _order(direction=OrderSide.BUY)
         market = _market_snapshot(close=10.0, low=10.0, limit_down=10.0)
         result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
         assert isinstance(result, Filled)
@@ -262,7 +262,7 @@ class TestAShareFillModel:
     def test_no_limit_up_info_treats_as_normal(self) -> None:
         """limit_up=None 视为正常, 不触发涨停规则。"""
         model = AShareFillModel()
-        order = _order(direction=OrderDirection.BUY)
+        order = _order(direction=OrderSide.BUY)
         market = _market_snapshot(close=11.0, high=11.0, limit_up=None)
         result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
         assert isinstance(result, Filled)
@@ -270,7 +270,7 @@ class TestAShareFillModel:
     def test_no_limit_down_info_treats_as_normal(self) -> None:
         """limit_down=None 视为正常, 不触发跌停规则。"""
         model = AShareFillModel()
-        order = _order(direction=OrderDirection.SELL)
+        order = _order(direction=OrderSide.SELL)
         market = _market_snapshot(close=10.0, low=10.0, limit_down=None)
         result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
         assert isinstance(result, Filled)
@@ -340,7 +340,7 @@ class FillScenario:
 
     name: str
     order_type: OrderType
-    direction: OrderDirection
+    direction: OrderSide
     is_suspended: bool = False
     limit_up: float | None = None
     limit_down: float | None = None
@@ -358,13 +358,13 @@ A_SHARE_FILL_SCENARIOS: list[FillScenario] = [
     FillScenario(
         name="normal_market_buy_fills",
         order_type=OrderType.MARKET,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         should_fill=True,
     ),
     FillScenario(
         name="suspended_market_buy_no_fill",
         order_type=OrderType.MARKET,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         is_suspended=True,
         should_fill=False,
         expected_reason="suspended",
@@ -373,7 +373,7 @@ A_SHARE_FILL_SCENARIOS: list[FillScenario] = [
     FillScenario(
         name="limit_up_market_buy_no_fill",
         order_type=OrderType.MARKET,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         close=11.0,
         high=11.0,
         limit_up=11.0,
@@ -384,7 +384,7 @@ A_SHARE_FILL_SCENARIOS: list[FillScenario] = [
     FillScenario(
         name="limit_down_market_sell_no_fill",
         order_type=OrderType.MARKET,
-        direction=OrderDirection.SELL,
+        direction=OrderSide.SELL,
         close=10.0,
         low=10.0,
         limit_down=10.0,
@@ -395,7 +395,7 @@ A_SHARE_FILL_SCENARIOS: list[FillScenario] = [
     FillScenario(
         name="limit_up_market_sell_fills",
         order_type=OrderType.MARKET,
-        direction=OrderDirection.SELL,
+        direction=OrderSide.SELL,
         close=11.0,
         high=11.0,
         limit_up=11.0,
@@ -404,7 +404,7 @@ A_SHARE_FILL_SCENARIOS: list[FillScenario] = [
     FillScenario(
         name="limit_down_market_buy_fills",
         order_type=OrderType.MARKET,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         close=10.0,
         low=10.0,
         limit_down=10.0,
@@ -414,14 +414,14 @@ A_SHARE_FILL_SCENARIOS: list[FillScenario] = [
     FillScenario(
         name="limit_buy_at_exact_low_boundary_fills",
         order_type=OrderType.LIMIT,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         order_price=10.0,
         should_fill=True,
     ),
     FillScenario(
         name="limit_buy_below_low_no_fill",
         order_type=OrderType.LIMIT,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         order_price=9.5,
         should_fill=False,
         expected_reason="price_out_of_range",
@@ -430,7 +430,7 @@ A_SHARE_FILL_SCENARIOS: list[FillScenario] = [
     FillScenario(
         name="stop_market_unsupported_no_fill",
         order_type=OrderType.STOP_MARKET,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         should_fill=False,
         expected_reason="unsupported_order_type",
         expected_can_retry=False,

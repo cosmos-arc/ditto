@@ -10,9 +10,13 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 from ditto_core.accounting.order_book import Order
+from ditto_core.execution.reality.constants import (
+    DEFAULT_COMMISSION_RATE,
+    DEFAULT_MIN_COMMISSION,
+)
 from ditto_core.execution.rules import FeeSchedule
 
 __all__ = ["AShareFeeModel", "FeeModel", "SimpleFeeModel"]
@@ -45,7 +49,7 @@ class SimpleFeeModel:
     """
     简单手续费模型 — fallback + 测试用.
 
-    fee = max(5.0, abs(price * quantity) * 0.0003)
+    fee = max(DEFAULT_MIN_COMMISSION, abs(price * quantity) * DEFAULT_COMMISSION_RATE)
 
     忽略 fee_schedule 参数, 保持 Phase 2 简单逻辑。
     """
@@ -58,7 +62,8 @@ class SimpleFeeModel:
         fee_schedule: FeeSchedule,
     ) -> float:
         """计算实际成交手续费。"""
-        return max(5.0, abs(fill_price * fill_quantity) * 0.0003)
+        amount = abs(fill_price * fill_quantity)
+        return max(DEFAULT_MIN_COMMISSION, amount * DEFAULT_COMMISSION_RATE)
 
     def estimate(
         self,
@@ -67,7 +72,8 @@ class SimpleFeeModel:
         fee_schedule: FeeSchedule,
     ) -> float:
         """估算手续费（预交易）。"""
-        return max(5.0, abs(estimated_price * order.quantity) * 0.0003)
+        amount = abs(estimated_price * order.quantity)
+        return max(DEFAULT_MIN_COMMISSION, amount * DEFAULT_COMMISSION_RATE)
 
 
 class AShareFeeModel:
@@ -113,7 +119,7 @@ class AShareFeeModel:
     def _compute_fee(
         price: float,
         quantity: int,
-        direction: OrderDirection,
+        direction: OrderSide,
         fee_schedule: FeeSchedule,
     ) -> float:
         """核心费用计算 — 佣金 + 印花税(仅卖出) + 过户费。"""
@@ -125,7 +131,7 @@ class AShareFeeModel:
         transfer = amount * fee_schedule.transfer_fee_rate
 
         stamp = 0.0
-        if direction == OrderDirection.SELL:
+        if direction == OrderSide.SELL:
             stamp = amount * fee_schedule.stamp_duty_rate
 
         return commission + stamp + transfer

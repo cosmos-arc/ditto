@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
 
 from ditto_core.accounting.position import Position
@@ -28,7 +28,7 @@ class SettlementModel(Protocol):
         self,
         instrument_id: InstrumentId,
         trade_date: str,
-        direction: OrderDirection,
+        direction: OrderSide,
         position: Position | None,
         trading_rule: TradingRuleSet,
     ) -> bool:
@@ -51,11 +51,11 @@ class SimpleSettlementModel:
         self,
         instrument_id: InstrumentId,
         trade_date: str,
-        direction: OrderDirection,
+        direction: OrderSide,
         position: Position | None,
         trading_rule: TradingRuleSet,
     ) -> bool:
-        """始终返回 True。"""
+        """始终返回 True。仅满足 SettlementModel Protocol 接口契约。"""
         return True
 
     def settle_date(
@@ -93,11 +93,17 @@ class AShareSettlementModel:
         self,
         instrument_id: InstrumentId,
         trade_date: str,
-        direction: OrderDirection,
+        direction: OrderSide,
         position: Position | None,
         trading_rule: TradingRuleSet,
     ) -> bool:
-        """买入始终可交易; 卖出可交易性由 Brokerage 冻结逻辑控制。"""
+        """
+        A 股场景始终返回 True。
+
+        卖出可交易性由 Brokerage 的冻结份额（frozen_quantity）机制控制，
+        而非 SettlementModel。本方法仅满足 SettlementModel Protocol 接口契约。
+
+        """
         return True
 
     def settle_date(

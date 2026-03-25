@@ -7,7 +7,7 @@ from ditto_core.accounting.order_book import Order
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.execution.reality.slippage import FixedBpsSlippage, VolumeShareSlippage
 from ditto_core.execution.rules import InstrumentDefinition
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -15,7 +15,7 @@ from ditto_kernel.enums import OrderSide as OrderDirection
 
 
 def _order(
-    direction: OrderDirection = OrderDirection.BUY,
+    direction: OrderSide = OrderSide.BUY,
     quantity: int = 100,
     instrument_id: int = 1,
 ) -> Order:
@@ -79,7 +79,7 @@ class TestFixedBpsSlippage:
     def test_sell_slippage_negative(self) -> None:
         model = FixedBpsSlippage(bps=2.0)
         slippage = model.estimate(
-            _order(direction=OrderDirection.SELL),
+            _order(direction=OrderSide.SELL),
             _market_snapshot(close=10.0),
             _DEFINITION,
         )
@@ -155,7 +155,7 @@ class TestVolumeShareSlippage:
     def test_sell_slippage_negative(self) -> None:
         model = VolumeShareSlippage()
         slippage = model.estimate(
-            _order(direction=OrderDirection.SELL, quantity=100),
+            _order(direction=OrderSide.SELL, quantity=100),
             _market_snapshot(close=10.0, avg_volume_20d=1_000_000),
             _DEFINITION,
         )

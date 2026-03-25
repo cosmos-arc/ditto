@@ -7,7 +7,7 @@ from datetime import datetime
 
 import pytest
 from ditto_core.execution.fills import Filled, FillEvent, FillOutcome, NoFill
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------
 # Shared fixture data — FillEvent is constructed identically in 5 tests.
@@ -17,7 +17,7 @@ _FILL_EVENT = FillEvent(
     fill_id="FILL-001",
     order_id="ORD-001",
     instrument_id=1,
-    direction=OrderDirection.BUY,
+    direction=OrderSide.BUY,
     filled_quantity=100,
     fill_price=0.452,
     fee=2.26,

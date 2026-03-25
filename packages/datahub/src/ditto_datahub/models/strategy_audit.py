@@ -11,19 +11,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from ditto_kernel.enums import RiskScope
+
 
 class AuditRecordType(StrEnum):
     """审计记录类型。"""
 
     RISK_SCAN = "risk_scan"
     PRE_TRADE_DECISION = "pre_trade_decision"
-
-
-class RiskScope(StrEnum):
-    """风控扫描范围。"""
-
-    INSTRUMENT = "instrument"
-    PORTFOLIO = "portfolio"
 
 
 @dataclass(frozen=True)

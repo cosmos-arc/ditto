@@ -7,7 +7,7 @@ from ditto_core.execution.reality.settlement import (
     SimpleSettlementModel,
 )
 from ditto_core.execution.rules import TradingRuleSet
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------
 # Test fixtures
@@ -69,14 +69,14 @@ class TestSimpleSettlementModel:
         assert model.is_tradable(
             1,
             "2026-03-01",
-            OrderDirection.BUY,
+            OrderSide.BUY,
             _POSITION,
             _T1_RULE,
         )
         assert model.is_tradable(
             1,
             "2026-03-01",
-            OrderDirection.SELL,
+            OrderSide.SELL,
             _POSITION,
             _T1_RULE,
         )
@@ -98,7 +98,7 @@ class TestAShareSettlementModel:
         assert model.is_tradable(
             1,
             "2026-03-02",
-            OrderDirection.BUY,
+            OrderSide.BUY,
             _POSITION,
             _T1_RULE,
         )
@@ -108,7 +108,7 @@ class TestAShareSettlementModel:
         assert model.is_tradable(
             99,
             "2026-03-02",
-            OrderDirection.SELL,
+            OrderSide.SELL,
             _POSITION,
             _T0_RULE,
         )
@@ -119,7 +119,7 @@ class TestAShareSettlementModel:
         assert model.is_tradable(
             1,
             "2026-03-02",
-            OrderDirection.SELL,
+            OrderSide.SELL,
             _POSITION,
             _T1_RULE,
         )
@@ -129,7 +129,7 @@ class TestAShareSettlementModel:
         assert model.is_tradable(
             1,
             "2026-03-02",
-            OrderDirection.SELL,
+            OrderSide.SELL,
             None,
             _T1_RULE,
         )

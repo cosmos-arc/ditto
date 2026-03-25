@@ -16,6 +16,7 @@ import polars as pl
 import pytest
 from ditto_core.accounting.account import Account
 from ditto_core.accounting.cash import CashBook
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.backtest.data_feed import ParquetDataFeed
 from ditto_core.backtest.engine import (
     EngineConfig,
@@ -41,7 +42,6 @@ from ditto_core.backtest.statistics import (
     build_report,
 )
 from ditto_core.execution.brokerage import BacktestBrokerage
-from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.planner import SimpleExecutionPlanner
 from ditto_core.execution.reality import (
     AShareFeeModel,

@@ -5,20 +5,17 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
-from typing import TYPE_CHECKING
 
+from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
 
 from ditto_core.accounting.cash import CashBook
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.accounting.order_book import (
     OrderBook,
     OrderBookReadOnly,
-    OrderDirection,
 )
 from ditto_core.accounting.position import Position
-
-if TYPE_CHECKING:
-    from ditto_core.execution.fills import FillEvent
 
 __all__ = ["Account", "AccountView"]
 
@@ -128,7 +125,7 @@ class Account:
         """计算未完成买入订单的预计金额 (leaves_quantity * price)。"""
         total = 0.0
         for ticket in self.order_book.get_pending():
-            if ticket.order.direction == OrderDirection.BUY:
+            if ticket.order.direction == OrderSide.BUY:
                 total += ticket.leaves_quantity * (ticket.order.price or 0.0)
         return total
 
@@ -184,7 +181,7 @@ class Account:
         price = fill.fill_price
         qty = fill.filled_quantity
 
-        if fill.direction == OrderDirection.BUY:
+        if fill.direction == OrderSide.BUY:
             if existing is not None:
                 total_qty = existing.quantity + qty
                 avg_cost = (
@@ -213,7 +210,7 @@ class Account:
             if on_frozen is not None:
                 on_frozen(iid, settle_date, qty)
 
-        elif fill.direction == OrderDirection.SELL:
+        elif fill.direction == OrderSide.SELL:
             if existing is not None:
                 new_qty = existing.quantity - qty
                 new_avail = existing.available_quantity - qty
@@ -239,7 +236,7 @@ class Account:
         fee = fill.fee
         amount = price * qty
 
-        if fill.direction == OrderDirection.BUY:
+        if fill.direction == OrderSide.BUY:
             new_available = cash.available - amount - fee
             new_settled = cash.settled - fee
             self.cash = CashBook(
@@ -247,7 +244,7 @@ class Account:
                 settled=new_settled,
                 frozen=cash.frozen,
             )
-        elif fill.direction == OrderDirection.SELL:
+        elif fill.direction == OrderSide.SELL:
             new_available = cash.available + amount - fee
             new_settled = cash.settled + amount - fee
             self.cash = CashBook(

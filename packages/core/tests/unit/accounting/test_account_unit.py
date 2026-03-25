@@ -8,9 +8,9 @@ from datetime import datetime
 import pytest
 from ditto_core.accounting.account import Account
 from ditto_core.accounting.cash import CashBook
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.accounting.position import Position
-from ditto_core.execution.fills import FillEvent
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -19,7 +19,7 @@ from ditto_kernel.enums import OrderSide as OrderDirection
 
 def _make_fill(
     instrument_id: int = 1,
-    direction: OrderDirection = OrderDirection.BUY,
+    direction: OrderSide = OrderSide.BUY,
     filled_quantity: int = 1000,
     fill_price: float = 10.5,
     fee: float = 5.0,
@@ -278,7 +278,7 @@ class TestAccountApplyFillSell:
         )
         account = _make_account(positions={1: existing})
         fill = _make_fill(
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             filled_quantity=400,
             fill_price=12.0,
             fee=3.0,
@@ -308,7 +308,7 @@ class TestAccountApplyFillSell:
         )
         account = _make_account(positions={1: existing})
         fill = _make_fill(
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             filled_quantity=1000,
             fill_price=11.0,
             fee=3.0,
@@ -332,7 +332,7 @@ class TestAccountApplyFillSell:
         )
         account = _make_account(cash=100000.0, positions={1: existing})
         fill = _make_fill(
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             filled_quantity=500,
             fill_price=12.0,
             fee=3.0,
@@ -360,7 +360,7 @@ class TestAccountApplyFillSell:
         )
         account = _make_account(positions={1: existing})
         fill = _make_fill(
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             filled_quantity=300,
             fill_price=12.0,
             fee=3.0,
@@ -386,7 +386,7 @@ class TestAccountApplyFillSell:
         )
         account = _make_account(positions={1: existing})
         fill = _make_fill(
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             filled_quantity=500,
             fill_price=8.0,
             fee=3.0,
@@ -416,7 +416,7 @@ class TestAccountApplyFillSell:
         )
         account = _make_account(positions={1: existing})
         fill = _make_fill(
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             filled_quantity=500,
             fill_price=12.0,
             fee=3.0,
@@ -470,7 +470,7 @@ class TestAccountApplyFillEdgeCases:
         sell_fill = _make_fill(
             fill_id="fill-2",
             order_id="ORD-002",
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             filled_quantity=1000,
             fill_price=11.0,
             fee=5.0,
@@ -500,7 +500,7 @@ class TestAccountApplyFillEdgeCases:
         """SELL: 仓位不存在时无操作 (Brokerage 应在调用前检查)。"""
         account = _make_account()
         fill = _make_fill(
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             filled_quantity=1000,
             fill_price=10.0,
             fee=5.0,

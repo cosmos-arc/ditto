@@ -6,9 +6,10 @@ from types import MappingProxyType
 import pytest
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.cash import CashBook
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.accounting.order_book import (
     OrderBookReadOnly,
-    OrderDirection,
+    OrderSide,
 )
 from ditto_core.accounting.position import Position
 from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
@@ -27,7 +28,6 @@ from ditto_core.backtest.statistics import (
     compute_portfolio_statistics,
     compute_trade_statistics,
 )
-from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.trade_builder import TradeRecord
 
 # ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ def _account_view(
 def _fill_event(
     fill_id: str = "f-1",
     instrument_id: int = 1,
-    direction: OrderDirection = OrderDirection.BUY,
+    direction: OrderSide = OrderSide.BUY,
 ) -> FillEvent:
     return FillEvent(
         fill_id=fill_id,
@@ -83,7 +83,7 @@ def _trade_record(
     return TradeRecord(
         trade_id=trade_id,
         instrument_id=instrument_id,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         entry_date="2026-01-05",
         exit_date=exit_date,
         entry_price=10.0,
@@ -104,7 +104,7 @@ def _closed_trade(
     gross_pnl: float,
     holding_days: int,
     return_pct: float,
-    direction: OrderDirection = OrderDirection.BUY,
+    direction: OrderSide = OrderSide.BUY,
 ) -> TradeRecord:
     """Build a closed TradeRecord with explicit PnL values."""
     return TradeRecord(
@@ -496,7 +496,7 @@ class TestAggregatedTradeStatistics:
                 gross_pnl=-50.0,
                 holding_days=2,
                 return_pct=-1.0,
-                direction=OrderDirection.SELL,
+                direction=OrderSide.SELL,
             ),
         )
         stats = compute_aggregated_trade_statistics(collector)

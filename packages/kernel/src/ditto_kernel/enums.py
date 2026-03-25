@@ -9,7 +9,7 @@
 
 from enum import StrEnum
 
-__all__ = ["AssetClass", "Exchange", "OrderSide", "RunStatus"]
+__all__ = ["AssetClass", "Exchange", "OrderSide", "RiskScope", "RunStatus"]
 
 
 class AssetClass(StrEnum):
@@ -60,6 +60,13 @@ class OrderSide(StrEnum):
 
     BUY = "buy"
     SELL = "sell"
+
+
+class RiskScope(StrEnum):
+    """风控扫描范围。"""
+
+    INSTRUMENT = "instrument"
+    PORTFOLIO = "portfolio"
 
 
 class RunStatus(StrEnum):

@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 from ditto_core.accounting.order_book import Order, OrderType
 from ditto_core.execution.fills import Filled, FillEvent, FillOutcome, NoFill
@@ -65,16 +65,8 @@ class SimpleFillModel:
         trading_rule: TradingRuleSet,
     ) -> FillOutcome:
         """尝试成交。"""
-        if order.order_type == OrderType.MARKET:
-            fill_price = market.close
-            return _make_filled(order, fill_price)
-
-        if order.order_type == OrderType.LIMIT:
-            limit_price = order.price
-            if limit_price is None or not (market.low <= limit_price <= market.high):
-                return NoFill(reason="price_out_of_range", can_retry=False)
-            return _make_filled(order, limit_price)
-
+        if order.order_type in (OrderType.MARKET, OrderType.LIMIT):
+            return _fill_market_or_limit(order, market)
         return NoFill(reason="unsupported_order_type", can_retry=False)
 
 
@@ -185,33 +177,39 @@ class AShareFillModel:
         )
 
         # 涨停 + 买入 或 跌停 + 卖出 → 无法成交
-        if (at_limit_up and order.direction == OrderDirection.BUY) or (
-            at_limit_down and order.direction == OrderDirection.SELL
+        if (at_limit_up and order.direction == OrderSide.BUY) or (
+            at_limit_down and order.direction == OrderSide.SELL
         ):
             reason = "limit_up_no_buy" if at_limit_up else "limit_down_no_sell"
             return NoFill(reason=reason, can_retry=True)
 
-        # MARKET / LIMIT 单 — 使用 _fill_by_type 统一分发
+        # MARKET / LIMIT 单 — 使用共享函数
         if order.order_type in (OrderType.MARKET, OrderType.LIMIT):
-            return self._fill_by_type(order, market)
+            return _fill_market_or_limit(order, market)
 
         return None
 
-    def _fill_by_type(self, order: Order, market: MarketSnapshot) -> FillOutcome:
-        """MARKET / LIMIT 成交逻辑。"""
-        if order.order_type == OrderType.MARKET:
-            return _make_filled(order, market.close)
-
-        # LIMIT 单
-        limit_price = order.price
-        if limit_price is None or not (market.low <= limit_price <= market.high):
-            return NoFill(reason="price_out_of_range", can_retry=False)
-        return _make_filled(order, limit_price)
-
 
 # ---------------------------------------------------------------------------
-# Shared helper
+# Shared helpers
 # ---------------------------------------------------------------------------
+
+
+def _fill_market_or_limit(order: Order, market: MarketSnapshot) -> FillOutcome:
+    """
+    MARKET / LIMIT 通用成交逻辑。
+
+    - MARKET 单: 以 close 成交
+    - LIMIT 单: 限价在 [low, high] 内以限价成交; 否则 NoFill
+    """
+    if order.order_type == OrderType.MARKET:
+        return _make_filled(order, market.close)
+
+    # LIMIT 单
+    limit_price = order.price
+    if limit_price is None or not (market.low <= limit_price <= market.high):
+        return NoFill(reason="price_out_of_range", can_retry=False)
+    return _make_filled(order, limit_price)
 
 
 def _make_filled(

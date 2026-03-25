@@ -20,6 +20,7 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Protocol
 
+from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import (
     InstrumentId as _InstrumentId,
 )
@@ -29,11 +30,16 @@ from ditto_core.accounting.buying_power import BuyingPowerModel
 from ditto_core.accounting.cash import CashBook
 from ditto_core.accounting.order_book import (
     Order,
-    OrderDirection,
     OrderTicket,
     OrderType,
 )
+from ditto_core.backtest.risk._validation import validate_weight
 from ditto_core.execution.reality import FeeModel
+from ditto_core.execution.reality.constants import (
+    DEFAULT_COMMISSION_RATE,
+    DEFAULT_LOT_SIZE,
+    DEFAULT_MIN_COMMISSION,
+)
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.execution.rules import FeeSchedule, InstrumentRules
 
@@ -109,10 +115,10 @@ class PreTradeContext:
         return snapshot.close
 
     def lot_size_for(self, iid: InstrumentId) -> int:
-        """从 rules[iid][0].lot_size 获取，默认 100。"""
+        """从 rules[iid][0].lot_size 获取，默认 DEFAULT_LOT_SIZE。"""
         instrument_rules = self.rules.get(iid)
         if instrument_rules is None:
-            return 100
+            return DEFAULT_LOT_SIZE
         return instrument_rules[0].lot_size
 
     def fee_schedule_for(self, iid: InstrumentId) -> FeeSchedule:
@@ -122,8 +128,8 @@ class PreTradeContext:
             return FeeSchedule(
                 instrument_id=InstrumentId(0),
                 as_of_date="",
-                commission_rate=0.0003,
-                min_commission=5.0,
+                commission_rate=DEFAULT_COMMISSION_RATE,
+                min_commission=DEFAULT_MIN_COMMISSION,
                 stamp_duty_rate=0.0,
                 transfer_fee_rate=0.0,
             )
@@ -147,7 +153,7 @@ class PreTradeContext:
 
         estimated_cost = self.estimate_order_cost(order)
 
-        if order.direction == OrderDirection.BUY:
+        if order.direction == OrderSide.BUY:
             new_cash = CashBook(
                 available=self.account_view.cash.available - estimated_cost,
                 settled=self.account_view.cash.settled,
@@ -254,7 +260,7 @@ class NoShortSellCheck:
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """卖出时检查持仓数量是否充足。"""
-        if order.direction == OrderDirection.BUY:
+        if order.direction == OrderSide.BUY:
             return _accept(order.order_id)
 
         position = context.account_view.positions.get(order.instrument_id)
@@ -328,7 +334,7 @@ class LotSizeCheck:
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """检查数量是否满足手数要求，不满足则 resize。"""
-        if order.direction == OrderDirection.SELL:
+        if order.direction == OrderSide.SELL:
             return _accept(order.order_id)
 
         lot_size = context.lot_size_for(order.instrument_id)
@@ -369,7 +375,7 @@ class BuyingPowerCheck:
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """检查购买力是否充足。"""
-        if order.direction == OrderDirection.SELL:
+        if order.direction == OrderSide.SELL:
             return _accept(order.order_id)
 
         cost = context.estimate_order_cost(order)
@@ -400,8 +406,7 @@ class ConcentrationPreCheck:
     """集中度校验 — 单标的持仓占比 <= max_weight（默认 20%）。"""
 
     def __init__(self, max_weight: float = 0.20) -> None:
-        if not 0.0 < max_weight <= 1.0:
-            raise ValueError(f"max_weight must be in (0, 1], got {max_weight}")
+        validate_weight(max_weight, "max_weight")
         self._max_weight = max_weight
 
     def check_order(
@@ -410,7 +415,7 @@ class ConcentrationPreCheck:
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """检查单标的持仓占比是否超限。"""
-        if order.direction == OrderDirection.SELL:
+        if order.direction == OrderSide.SELL:
             return _accept(order.order_id)
 
         nav = context.account_view.nav
@@ -458,7 +463,7 @@ class DailyTurnoverPreCheck:
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """检查日累计换手率是否超限。"""
-        if order.direction == OrderDirection.SELL:
+        if order.direction == OrderSide.SELL:
             return _accept(order.order_id)
 
         nav = context.account_view.nav
@@ -468,7 +473,7 @@ class DailyTurnoverPreCheck:
         # 累计已提交买入金额
         pending_amount = 0.0
         for ticket in context.pending_tickets:
-            if ticket.order.direction == OrderDirection.BUY:
+            if ticket.order.direction == OrderSide.BUY:
                 ticket_price = context.price_for(ticket.order.instrument_id)
                 if ticket_price is not None:
                     pending_amount += ticket.leaves_quantity * ticket_price

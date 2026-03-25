@@ -17,7 +17,7 @@ from ditto_datahub.stores.runtime.derived_artifact_writer import (
     DerivedArtifactWriter,
 )
 
-__all__ = ["ArtifactPersistenceService"]
+__all__ = ["ArtifactMetadataParams", "ArtifactPersistenceService"]
 
 
 class ArtifactPersistenceService:

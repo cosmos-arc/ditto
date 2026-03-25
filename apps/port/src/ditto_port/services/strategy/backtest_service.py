@@ -41,7 +41,6 @@ from ditto_datahub.models.strategy import ArtifactKind, StrategyArtifactRecord
 from ditto_datahub.models.strategy_audit import (
     PreTradeDecisionPayload,
     RiskScanPayload,
-    RiskScope,
 )
 from ditto_datahub.services.audit import ExecutionAuditService
 from ditto_datahub.services.strategy.strategy_artifact_service import (
@@ -53,11 +52,6 @@ from ditto_port.services.strategy.artifact_writer import write_backtest_artifact
 from ditto_port.services.strategy.lifecycle import RunLifecycleService
 
 __all__ = ["BacktestService", "BacktestServiceConfig", "BacktestServiceOptions"]
-
-
-def _to_dh_scope(core_scope: object) -> RiskScope:
-    """将 Core RiskScope 转换为 DataHub 层 RiskScope。"""
-    return RiskScope(str(core_scope))
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +279,7 @@ class BacktestService:
                 instrument_id=(
                     int(r.instrument_id) if r.instrument_id is not None else None
                 ),
-                scope=_to_dh_scope(r.scope),
+                scope=r.scope,
                 severity=str(r.severity),
                 action_taken=str(r.action_taken),
                 detail=r.detail,

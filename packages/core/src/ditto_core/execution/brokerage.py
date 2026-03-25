@@ -11,12 +11,12 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 
+from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
 
 from ditto_core.accounting.account import Account, AccountView
 from ditto_core.accounting.order_book import (
     Order,
-    OrderDirection,
     OrderEvent,
     OrderStatus,
     OrderTicket,
@@ -24,6 +24,11 @@ from ditto_core.accounting.order_book import (
 )
 from ditto_core.execution.fills import Filled, FillEvent, NoFill
 from ditto_core.execution.reality import BrokerageModel
+from ditto_core.execution.reality.constants import (
+    DEFAULT_COMMISSION_RATE,
+    DEFAULT_LOT_SIZE,
+    DEFAULT_MIN_COMMISSION,
+)
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.execution.rules import (
     FeeSchedule,
@@ -104,7 +109,7 @@ def _default_rules_getter(
             exchange="XSHE",
             currency="CNY",
             tick_size=0.001,
-            lot_size=100,
+            lot_size=DEFAULT_LOT_SIZE,
             multiplier=1.0,
             board_segment="main",
             lifecycle_state="normal",
@@ -121,8 +126,8 @@ def _default_rules_getter(
         FeeSchedule(
             instrument_id=instrument_id,
             as_of_date=trade_date,
-            commission_rate=0.0003,
-            min_commission=5.0,
+            commission_rate=DEFAULT_COMMISSION_RATE,
+            min_commission=DEFAULT_MIN_COMMISSION,
             stamp_duty_rate=0.0,
             transfer_fee_rate=0.0,
         ),
@@ -223,7 +228,7 @@ class BacktestBrokerage:
 
             # 卖出时检查可用份额
             if (
-                ticket.order.direction == OrderDirection.SELL
+                ticket.order.direction == OrderSide.SELL
                 and position is not None
                 and ticket.leaves_quantity > position.available_quantity
             ):

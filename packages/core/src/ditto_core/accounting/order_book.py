@@ -18,7 +18,6 @@ __all__ = [
     "Order",
     "OrderBook",
     "OrderBookReadOnly",
-    "OrderDirection",
     "OrderEvent",
     "OrderSide",
     "OrderStatus",
@@ -35,10 +34,6 @@ class OrderType(StrEnum):
     LIMIT = "limit"
     STOP_MARKET = "stop_market"
     MARKET_ON_CLOSE = "market_on_close"
-
-
-# OrderDirection 已统一至 ditto_kernel.OrderSide，此处保留别名以向后兼容。
-OrderDirection = OrderSide
 
 
 class OrderStatus(StrEnum):
@@ -88,7 +83,7 @@ class Order:
     order_id: str
     instrument_id: InstrumentId
     order_type: OrderType
-    direction: OrderDirection
+    direction: OrderSide
     quantity: int
     price: float | None = None
     stop_price: float | None = None

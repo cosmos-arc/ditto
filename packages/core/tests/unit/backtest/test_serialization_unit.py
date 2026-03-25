@@ -7,6 +7,7 @@ from pathlib import Path
 
 import orjson
 import polars as pl
+from ditto_core.accounting.fills import FillEvent
 from ditto_core.backtest.audit.records import PreTradeDecisionRecord, RiskScanRecord
 from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
 from ditto_core.backtest.serialization import serialize
@@ -17,9 +18,8 @@ from ditto_core.backtest.statistics import (
     PortfolioStatistics,
     TradeStatistics,
 )
-from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.trade_builder import TradeRecord
-from ditto_kernel.enums import OrderSide as OrderDirection
+from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------
 # Test data factories
@@ -122,7 +122,7 @@ def _make_trade_log() -> list[TradeRecord]:
         TradeRecord(
             trade_id="T-001",
             instrument_id=1,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             entry_date="2026-03-20",
             exit_date="2026-03-21",
             entry_price=4.0,
@@ -145,7 +145,7 @@ def _make_fill_log() -> list[FillEvent]:
             fill_id="F-001",
             order_id="ORD-001",
             instrument_id=1,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             filled_quantity=1000,
             fill_price=4.0,
             fee=5.0,

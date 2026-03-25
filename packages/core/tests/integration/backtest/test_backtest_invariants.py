@@ -16,8 +16,8 @@ from ditto_core.accounting.order_book import (
     Order,
     OrderBook,
     OrderBookReadOnly,
-    OrderDirection,
     OrderEvent,
+    OrderSide,
     OrderStatus,
     OrderTicket,
     OrderType,
@@ -164,7 +164,7 @@ class TestFrozenImmutability:
             order_id="o-1",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         ticket = OrderTicket(order=order, status=OrderStatus.SUBMITTED)
@@ -212,7 +212,7 @@ class TestTerminalState:
             order_id="o-1",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         ticket = OrderTicket(order=order, status=OrderStatus.SUBMITTED)
@@ -242,7 +242,7 @@ class TestTerminalState:
             order_id="o-1",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         ticket = OrderTicket(order=order, status=OrderStatus.SUBMITTED)
@@ -287,7 +287,7 @@ class TestNoFillNoFillEvent:
             order_id="o-missing",
             instrument_id=999,  # 不存在
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         brokerage.place_order(order)
@@ -357,7 +357,7 @@ class TestRollingPreTradeContext:
             order_id="o-1",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         ctx1 = ctx.with_order_accepted(order1)
@@ -367,7 +367,7 @@ class TestRollingPreTradeContext:
             order_id="o-2",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         ctx2 = ctx1.with_order_accepted(order2)
@@ -402,7 +402,7 @@ class TestPendingAwarePlanner:
             order_id="pending-sell",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=500,
         )
         sell_ticket = OrderTicket(
@@ -441,7 +441,7 @@ class TestPendingAwarePlanner:
 
         # effective_qty = 500 (current) + (-500) (pending delta) = 0
         # diff = 0 - 0 = 0 → no new sell order
-        sell_orders = [o for o in plan.orders if o.direction == OrderDirection.SELL]
+        sell_orders = [o for o in plan.orders if o.direction == OrderSide.SELL]
         assert len(sell_orders) == 0
 
 
@@ -527,7 +527,7 @@ class TestResizeRecheck:
             order_id="o-resize",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=350,
         )
         result = composite.check_order(order, ctx)
@@ -562,7 +562,7 @@ class TestCashConservation:
             order_id="o-buy",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         brokerage.place_order(order)
@@ -624,7 +624,7 @@ class TestCashConservation:
             order_id="o-sell",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
         )
         brokerage.place_order(order)
@@ -684,7 +684,7 @@ class TestNoOversell:
             order_id="o-oversell",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=200,
         )
         brokerage.place_order(order)
@@ -739,7 +739,7 @@ class TestNoOversell:
             order_id="o-sell",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
         )
         new_ctx = ctx.with_order_accepted(sell)
@@ -781,7 +781,7 @@ class TestStatsPostFillSnapshot:
             order_id="o-buy",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         brokerage.place_order(order)
@@ -862,7 +862,7 @@ class TestPriceLimitInvariants:
             order_id="o-buy",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         brokerage.place_order(order)
@@ -910,7 +910,7 @@ class TestPriceLimitInvariants:
             order_id="o-sell",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
         )
         brokerage.place_order(order)
@@ -957,7 +957,7 @@ class TestPriceLimitInvariants:
             order_id="o-sell",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
         )
         brokerage.place_order(order)
@@ -993,7 +993,7 @@ class TestPriceLimitInvariants:
             order_id="o-buy",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         brokerage.place_order(order)
@@ -1041,14 +1041,14 @@ class TestPriceLimitInvariants:
             order_id="o-sell",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=100,
         )
         buy_order = Order(
             order_id="o-buy",
             instrument_id=2,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=100,
         )
         brokerage.place_order(sell_order)
@@ -1108,7 +1108,7 @@ class TestLotSizeRounding:
             order_id="o-resize",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=50,
         )
         result = composite.check_order(order, ctx)
@@ -1140,7 +1140,7 @@ class TestLotSizeRounding:
             order_id="o-ok",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.BUY,
+            direction=OrderSide.BUY,
             quantity=300,
         )
         result = composite.check_order(order, ctx)
@@ -1185,7 +1185,7 @@ class TestLotSizeRounding:
             order_id="o-sell-350",
             instrument_id=1,
             order_type=OrderType.MARKET,
-            direction=OrderDirection.SELL,
+            direction=OrderSide.SELL,
             quantity=350,
         )
         result = composite.check_order(order, ctx)

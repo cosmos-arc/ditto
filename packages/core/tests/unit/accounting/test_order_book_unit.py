@@ -9,8 +9,8 @@ import pytest
 from ditto_core.accounting.order_book import (
     Order,
     OrderBook,
-    OrderDirection,
     OrderEvent,
+    OrderSide,
     OrderStatus,
     OrderTicket,
     OrderType,
@@ -29,7 +29,7 @@ def _make_order(
         order_id=order_id,
         instrument_id=instrument_id,
         order_type=OrderType.MARKET,
-        direction=OrderDirection.BUY,
+        direction=OrderSide.BUY,
         quantity=quantity,
         price=price,
         created_at=datetime(2026, 1, 15, 10, 30, 0),
@@ -44,7 +44,7 @@ class TestOrder:
         assert order.instrument_id == 1
         assert order.quantity == 100
         assert order.price is None
-        assert order.direction == OrderDirection.BUY
+        assert order.direction == OrderSide.BUY
 
     def test_order_is_frozen(self) -> None:
         order = _make_order()
