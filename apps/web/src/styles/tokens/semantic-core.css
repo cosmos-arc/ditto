@@ -1,0 +1,60 @@
+/*
+ * Ditto Design Tokens — Semantic Core
+ *
+ * Surface / Text / Border / Ring 四组基础语义 Token。
+ * 按 :root（light）和 .dark（dark-first）分别完整映射。
+ */
+
+/* ── Light 主题（:root） ── */
+:root {
+	/* Surface 层级 */
+	--color-surface-app: oklch(0.985 0 0);
+	--color-surface-panel: oklch(1 0 0);
+	--color-surface-elevated: oklch(1 0 0);
+	--color-surface-hover: oklch(0 0 0 / 4%);
+	--color-surface-selected: oklch(0 0 0 / 7%);
+	--color-surface-pressed: oklch(0 0 0 / 10%);
+
+	/* Text 层级 */
+	--color-text-primary: oklch(0.145 0 0);
+	--color-text-secondary: oklch(0.4 0 0);
+	--color-text-muted: oklch(0.6 0 0);
+
+	/* Border / Ring */
+	--color-border-subtle: oklch(0 0 0 / 7%);
+	--color-border-default: oklch(0 0 0 / 12%);
+	--color-border-strong: oklch(0 0 0 / 20%);
+	--color-border-input: oklch(0 0 0 / 18%);
+	--color-ring-focus: oklch(0.5 0.18 260);
+
+	/* Accent — 品牌/主操作色 */
+	--color-accent-primary: oklch(0.5 0.18 260);
+	--color-text-on-accent: oklch(0.985 0 0);
+}
+
+/* ── Dark 主题（.dark） ── */
+.dark {
+	/* Surface 层级 */
+	--color-surface-app: oklch(0.14 0 0);
+	--color-surface-panel: oklch(0.18 0 0);
+	--color-surface-elevated: oklch(0.22 0 0);
+	--color-surface-hover: oklch(1 0 0 / 6%);
+	--color-surface-selected: oklch(1 0 0 / 10%);
+	--color-surface-pressed: oklch(1 0 0 / 15%);
+
+	/* Text 层级 */
+	--color-text-primary: oklch(0.985 0 0);
+	--color-text-secondary: oklch(0.7 0 0);
+	--color-text-muted: oklch(0.45 0 0);
+
+	/* Border / Ring */
+	--color-border-subtle: oklch(1 0 0 / 7%);
+	--color-border-default: oklch(1 0 0 / 12%);
+	--color-border-strong: oklch(1 0 0 / 20%);
+	--color-border-input: oklch(1 0 0 / 18%);
+	--color-ring-focus: oklch(0.6 0.15 260);
+
+	/* Accent — 品牌/主操作色 */
+	--color-accent-primary: oklch(0.6 0.15 260);
+	--color-text-on-accent: oklch(0.985 0 0);
+}

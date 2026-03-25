@@ -1,0 +1,42 @@
+/*
+ * Ditto Design Tokens — Grid
+ *
+ * AG Grid 桥接 + 密度策略。
+ * 不进入 @theme inline，图表/网格通过 CSS 变量消费。
+ */
+
+/* ── 选中行（带 accent 气质） ── */
+:root,
+.dark {
+	--grid-row-selected: oklch(0.6 0.15 260 / 12%);
+}
+
+/* ── 密度变量（compact 为默认） ── */
+:root {
+	--grid-row-height: 32px;
+	--grid-header-height: 36px;
+	--grid-cell-padding-x: 8px;
+	--grid-cell-padding-y: 4px;
+	--grid-font-size: 13px;
+	--grid-size: 2px;
+}
+
+/* ── Comfortable 密度 ── */
+[data-grid-density="comfortable"] {
+	--grid-row-height: 40px;
+	--grid-header-height: 44px;
+	--grid-cell-padding-x: 12px;
+	--grid-cell-padding-y: 8px;
+	--grid-font-size: 13px;
+	--grid-size: 4px;
+}
+
+/* ── Ultra-compact 密度（专业模式，需用户显式 opt-in） ── */
+[data-grid-density="ultra-compact"] {
+	--grid-row-height: 26px;
+	--grid-header-height: 30px;
+	--grid-cell-padding-x: 6px;
+	--grid-cell-padding-y: 2px;
+	--grid-font-size: 11px;
+	--grid-size: 1px;
+}
