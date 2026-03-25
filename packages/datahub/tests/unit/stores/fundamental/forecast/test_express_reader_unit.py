@@ -70,7 +70,7 @@ class TestExpressReader:
         client.commit()
 
         # Act
-        result = express_reader.get("600000", date(2024, 5, 15))
+        result = express_reader.get(600000, date(2024, 5, 15))
 
         # Assert
         assert len(result) == 1
@@ -85,7 +85,7 @@ class TestExpressReader:
     ) -> None:
         """Test that get returns empty DataFrame for empty table."""
         # Act
-        result = express_reader.get("600000", date(2024, 5, 15))
+        result = express_reader.get(600000, date(2024, 5, 15))
 
         # Assert
         assert len(result) == 0
@@ -117,7 +117,7 @@ class TestExpressReader:
         client.commit()
 
         # Act
-        result = express_reader.get("600000", date(2024, 5, 15))
+        result = express_reader.get(600000, date(2024, 5, 15))
 
         # Assert
         assert len(result) == 0
@@ -167,10 +167,10 @@ class TestExpressReader:
         client.commit()
 
         # Act - Query before second version effective date
-        result_old = express_reader.get("600000", date(2024, 5, 15))
+        result_old = express_reader.get(600000, date(2024, 5, 15))
 
         # Act - Query after second version effective date
-        result_new = express_reader.get("600000", date(2024, 6, 15))
+        result_new = express_reader.get(600000, date(2024, 6, 15))
 
         # Assert
         assert len(result_old) == 1
@@ -207,7 +207,7 @@ class TestExpressReader:
         client.commit()
 
         # Act - Query on effective_to date (version should be excluded)
-        result = express_reader.get("600000", date(2024, 6, 1))
+        result = express_reader.get(600000, date(2024, 6, 1))
 
         # Assert
         assert len(result) == 0

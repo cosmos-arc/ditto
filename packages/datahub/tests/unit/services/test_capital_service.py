@@ -36,12 +36,12 @@ class TestCapitalServiceGetMethods:
 
         # Act
         result = service.get_margin_trading(
-            instrument_id="1", as_of_date=date(2024, 1, 1)
+            instrument_id=1, as_of_date=date(2024, 1, 1)
         )
 
         # Assert
         assert isinstance(result, pl.DataFrame)
-        mock_reader.get.assert_called_once_with("1", date(2024, 1, 1))
+        mock_reader.get.assert_called_once_with(1, date(2024, 1, 1))
 
     def test_get_pledge_ratio_delegates_to_reader(self, mocker: MockerFixture) -> None:
         """Test get_pledge_ratio() delegates to PledgeRatioReader."""
@@ -65,13 +65,11 @@ class TestCapitalServiceGetMethods:
         service = CapitalService(read_ports=read_ports, write_ports=write_ports)
 
         # Act
-        result = service.get_pledge_ratio(
-            instrument_id="1", as_of_date=date(2024, 1, 1)
-        )
+        result = service.get_pledge_ratio(instrument_id=1, as_of_date=date(2024, 1, 1))
 
         # Assert
         assert isinstance(result, pl.DataFrame)
-        mock_reader.get.assert_called_once_with("1", date(2024, 1, 1))
+        mock_reader.get.assert_called_once_with(1, date(2024, 1, 1))
 
     def test_get_valuation_metrics_delegates_to_reader(
         self, mocker: MockerFixture
@@ -98,12 +96,12 @@ class TestCapitalServiceGetMethods:
 
         # Act
         result = service.get_valuation_metrics(
-            instrument_id="1", as_of_date=date(2024, 1, 1)
+            instrument_id=1, as_of_date=date(2024, 1, 1)
         )
 
         # Assert
         assert isinstance(result, pl.DataFrame)
-        mock_reader.get.assert_called_once_with("1", date(2024, 1, 1))
+        mock_reader.get.assert_called_once_with(1, date(2024, 1, 1))
 
     def test_get_index_composition_delegates_to_reader(
         self, mocker: MockerFixture
@@ -111,7 +109,7 @@ class TestCapitalServiceGetMethods:
         """Test get_index_composition() delegates to IndexCompositionReader."""
         # Arrange
         mock_reader = mocker.Mock()
-        expected_df = pl.DataFrame({"index_id": [1], "constituent_id": [2]})
+        expected_df = pl.DataFrame({"index_id": ["399300.XSHE"], "constituent_id": [2]})
         mock_reader.get = mocker.Mock(return_value=expected_df)
 
         read_ports = CapitalReadPorts(
@@ -130,12 +128,12 @@ class TestCapitalServiceGetMethods:
 
         # Act
         result = service.get_index_composition(
-            index_id="1", as_of_date=date(2024, 1, 1)
+            index_id="399300.XSHE", as_of_date=date(2024, 1, 1)
         )
 
         # Assert
         assert isinstance(result, pl.DataFrame)
-        mock_reader.get.assert_called_once_with("1", date(2024, 1, 1))
+        mock_reader.get.assert_called_once_with("399300.XSHE", date(2024, 1, 1))
 
 
 class TestCapitalServiceSaveMethods:

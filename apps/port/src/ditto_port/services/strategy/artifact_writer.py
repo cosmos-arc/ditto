@@ -48,7 +48,8 @@ def enrich_record_with_symbol(
     如果 ``display_map`` 中无对应映射，则 ``instrument_symbol`` 值为空字符串。
     """
     d: dict[str, object] = dataclasses.asdict(record)
-    d["instrument_symbol"] = display_map.get(record.instrument_id, "")
+    iid = record.instrument_id
+    d["instrument_symbol"] = display_map.get(iid, "") if iid is not None else ""
     return d
 
 

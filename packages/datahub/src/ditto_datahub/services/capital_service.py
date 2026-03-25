@@ -41,7 +41,7 @@ class CapitalService:
 
     # Query methods (get_*)
 
-    def get_margin_trading(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+    def get_margin_trading(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
         """
         Query margin trading data for an instrument.
 
@@ -55,7 +55,7 @@ class CapitalService:
         """
         return self._read_ports.margin_trading.get(instrument_id, as_of_date)
 
-    def get_pledge_ratio(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+    def get_pledge_ratio(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
         """
         Query pledge ratio data for an instrument.
 
@@ -70,7 +70,7 @@ class CapitalService:
         return self._read_ports.pledge_ratio.get(instrument_id, as_of_date)
 
     def get_valuation_metrics(
-        self, instrument_id: str, as_of_date: date
+        self, instrument_id: int, as_of_date: date
     ) -> pl.DataFrame:
         """
         Query valuation metrics data for an instrument.

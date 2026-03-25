@@ -199,6 +199,16 @@ class IdentifierNotFoundError(IdentifierError):
         super().__init__(message, details)
 
 
+class NoIdentifierProvidedError(IdentifierError):
+    """
+    未提供任何标识符异常.
+
+    当 resolve_instrument_identifier() 未收到任何有效标识符时抛出.
+    """
+
+    pass
+
+
 class AmbiguousTickerError(IdentifierError):
     """
     Ticker 不唯一异常.
@@ -338,6 +348,7 @@ __all__ = [
     "IdentifierError",
     "IdentifierNotFoundError",
     "InstrumentIdNotFoundError",
+    "NoIdentifierProvidedError",
     "PartitionNotFoundError",
     "SchemaValidationError",
     "TradingDateNotFoundError",

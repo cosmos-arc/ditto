@@ -105,6 +105,7 @@ class TestRiskAction:
         action = RiskAction(
             action_type=RiskActionType.ALERT,
             instrument_id=1,
+            scope="instrument",
             severity=RiskSeverity.WARNING,
             rule_id="test_rule",
             detail="test detail",
@@ -117,7 +118,8 @@ class TestRiskAction:
     def test_default_optional_fields(self) -> None:
         action = RiskAction(
             action_type=RiskActionType.ALERT,
-            instrument_id=0,
+            instrument_id=1,
+            scope="instrument",
             severity=RiskSeverity.WARNING,
             rule_id="test",
             detail="d",
@@ -126,6 +128,36 @@ class TestRiskAction:
         )
         assert action.cooldown_until_date is None
         assert action.target_quantity is None
+
+    def test_portfolio_wide_action_has_none_instrument_id(self) -> None:
+        """Portfolio-wide actions use instrument_id=None, scope='portfolio'."""
+        action = RiskAction(
+            action_type=RiskActionType.LIQUIDATE,
+            instrument_id=None,
+            scope="portfolio",
+            severity=RiskSeverity.EMERGENCY,
+            rule_id="max_drawdown",
+            detail="drawdown exceeded",
+            current_value=0.25,
+            threshold=0.20,
+        )
+        assert action.instrument_id is None
+        assert action.scope == "portfolio"
+
+    def test_instrument_action_has_concrete_instrument_id(self) -> None:
+        """Instrument-scoped actions use concrete instrument_id, scope='instrument'."""
+        action = RiskAction(
+            action_type=RiskActionType.REDUCE_POSITION,
+            instrument_id=1,
+            scope="instrument",
+            severity=RiskSeverity.CRITICAL,
+            rule_id="single_loss_limit",
+            detail="loss exceeded",
+            current_value=0.20,
+            threshold=0.15,
+        )
+        assert action.instrument_id == 1
+        assert action.scope == "instrument"
 
 
 class TestRiskActionType:
@@ -170,7 +202,8 @@ class TestMaxDrawdownRule:
         assert len(actions) == 1
         assert actions[0].action_type == RiskActionType.ALERT
         assert actions[0].severity == RiskSeverity.WARNING
-        assert actions[0].instrument_id == 0
+        assert actions[0].instrument_id is None
+        assert actions[0].scope == "portfolio"
         assert actions[0].rule_id == "max_drawdown"
 
     def test_emergency_threshold_triggers_liquidate(self) -> None:
@@ -185,7 +218,8 @@ class TestMaxDrawdownRule:
         assert len(actions) == 1
         assert actions[0].action_type == RiskActionType.LIQUIDATE
         assert actions[0].severity == RiskSeverity.EMERGENCY
-        assert actions[0].instrument_id == 0
+        assert actions[0].instrument_id is None
+        assert actions[0].scope == "portfolio"
 
     def test_peak_nav_tracks_across_scans(self) -> None:
         rule = MaxDrawdownRule(warning_threshold=0.10, emergency_threshold=0.20)
@@ -512,6 +546,7 @@ class TestCompositePostTradeGuard:
         action1 = RiskAction(
             action_type=RiskActionType.ALERT,
             instrument_id=1,
+            scope="instrument",
             severity=RiskSeverity.WARNING,
             rule_id="rule_1",
             detail="test",
@@ -525,6 +560,7 @@ class TestCompositePostTradeGuard:
         action2 = RiskAction(
             action_type=RiskActionType.REDUCE_POSITION,
             instrument_id=2,
+            scope="instrument",
             severity=RiskSeverity.CRITICAL,
             rule_id="rule_2",
             detail="test",
@@ -533,7 +569,8 @@ class TestCompositePostTradeGuard:
         )
         action3 = RiskAction(
             action_type=RiskActionType.LIQUIDATE,
-            instrument_id=0,
+            instrument_id=None,
+            scope="portfolio",
             severity=RiskSeverity.EMERGENCY,
             rule_id="rule_2",
             detail="test",
@@ -552,8 +589,11 @@ class TestCompositePostTradeGuard:
 
         assert len(actions) == 3
         assert actions[0].instrument_id == 1
+        assert actions[0].scope == "instrument"
         assert actions[1].instrument_id == 2
-        assert actions[2].instrument_id == 0
+        assert actions[1].scope == "instrument"
+        assert actions[2].instrument_id is None
+        assert actions[2].scope == "portfolio"
 
     def test_real_rules_combined(self) -> None:
         """Real rule instances combined via CompositePostTradeGuard."""
@@ -641,6 +681,7 @@ class TestEngineLoopPostTradeIntegration:
             RiskAction(
                 action_type=RiskActionType.REDUCE_POSITION,
                 instrument_id=1,
+                scope="instrument",
                 severity=RiskSeverity.CRITICAL,
                 rule_id="single_loss_limit",
                 detail="510300.SH loss exceeds 15%",
@@ -709,6 +750,7 @@ class TestEngineLoopPostTradeIntegration:
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
                     instrument_id=1,
+                    scope="instrument",
                     severity=RiskSeverity.CRITICAL,
                     rule_id="test",
                     detail="test",
@@ -734,7 +776,7 @@ class TestEngineLoopPostTradeIntegration:
         assert 1 not in captured_locks[1]
 
     def test_wildcard_instrument_id_not_added_to_locks(self) -> None:
-        """LIQUIDATE with instrument_id='*' 不应加入 locked_instruments。"""
+        """LIQUIDATE with scope='portfolio' 不应加入 locked_instruments。"""
         data_feed, pipeline, planner, brokerage, pre_trade_check, fee_model = (
             self._setup_common_mocks(
                 trading_days=["2026-01-15"],
@@ -748,7 +790,8 @@ class TestEngineLoopPostTradeIntegration:
         mock_guard.scan.return_value = [
             RiskAction(
                 action_type=RiskActionType.LIQUIDATE,
-                instrument_id=0,
+                instrument_id=None,
+                scope="portfolio",
                 severity=RiskSeverity.EMERGENCY,
                 rule_id="max_drawdown",
                 detail="portfolio drawdown exceeds 20%",
@@ -785,6 +828,7 @@ class TestEngineLoopPostTradeIntegration:
             RiskAction(
                 action_type=RiskActionType.ALERT,
                 instrument_id=1,
+                scope="instrument",
                 severity=RiskSeverity.WARNING,
                 rule_id="market_anomaly",
                 detail="510300.SH return exceeds 5%",
@@ -830,6 +874,7 @@ class TestEngineLoopPostTradeIntegration:
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
                     instrument_id=1,
+                    scope="instrument",
                     severity=RiskSeverity.CRITICAL,
                     rule_id="single_loss_limit",
                     detail="loss exceeds 15%",
@@ -879,6 +924,7 @@ class TestEngineLoopPostTradeIntegration:
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
                     instrument_id=1,
+                    scope="instrument",
                     severity=RiskSeverity.CRITICAL,
                     rule_id="single_loss_limit",
                     detail="loss exceeds 15%",
@@ -930,6 +976,7 @@ class TestEngineLoopPostTradeIntegration:
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
                     instrument_id=1,
+                    scope="instrument",
                     severity=RiskSeverity.CRITICAL,
                     rule_id="single_loss_limit",
                     detail="loss exceeds 15%",
@@ -940,6 +987,7 @@ class TestEngineLoopPostTradeIntegration:
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
                     instrument_id=2,
+                    scope="instrument",
                     severity=RiskSeverity.CRITICAL,
                     rule_id="concentration_limit",
                     detail="concentration exceeds 20%",

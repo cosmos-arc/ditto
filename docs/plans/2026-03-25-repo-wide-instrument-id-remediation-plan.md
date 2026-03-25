@@ -1,5 +1,7 @@
 # Repo-Wide Instrument ID Remediation Plan
 
+> **⚠️ SUPERSEDED** — 该计划已被 [Instrument ID 全仓收口执行计划](2026-03-25-instrument-id-remediation-execution.md) 完全替代并实施。保留仅供历史参考。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** 在全仓范围内彻底收口 `instrument_id` 语义，使内部运行时与数据访问统一使用 canonical `InstrumentId(int)`，外部输入边界显式区分 `instrument_id` / `standard_ticker` / `ticker` / `source_ticker`，消除“同名不同义”的接口与实现。

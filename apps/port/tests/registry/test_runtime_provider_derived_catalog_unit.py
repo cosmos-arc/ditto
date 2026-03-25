@@ -8,7 +8,7 @@ from ditto_datahub.models.strategy import (
     StrategyArtifactRecord,
     StrategySpecRecord,
 )
-from ditto_datahub.models.strategy_audit import RiskScanPayload
+from ditto_datahub.models.strategy_audit import RiskScanPayload, RiskScope
 from ditto_datahub.services import DerivedCatalogService
 from ditto_datahub.services.audit import ExecutionAuditService
 from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
@@ -217,7 +217,8 @@ class TestRuntimeProviderDerivedCatalog:
                 RiskScanPayload(
                     trade_date="2026-03-24",
                     rule_id="max_drawdown",
-                    instrument_id="510300.SH",
+                    instrument_id=510300,
+                    scope=RiskScope.INSTRUMENT,
                     severity="warning",
                     action_taken="log_only",
                     detail="drawdown near threshold",

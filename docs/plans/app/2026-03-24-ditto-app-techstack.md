@@ -1,6 +1,6 @@
 # Ditto 前端技术选型清单 — 冻结版
 
-> 基于 [2026-03-24-ditto-web-product-design.md](../research/2026-03-24-ditto-web-product-design.md) 产品设计方案，经评估后冻结的技术选型。
+> 基于 [2026-03-24-ditto-app-product-design.md](../research/2026-03-24-ditto-app-product-design.md) 产品设计方案，经评估后冻结的技术选型。
 > 决策日期：2026-03-24
 
 ---
@@ -282,7 +282,7 @@ Anthropic 已收购 Bun 团队（2026 年）。开源许可证和社区不受影
 
 ### 7.3 与产品设计方案的差异
 
-相比 [产品设计文档](../research/2026-03-24-ditto-web-product-design.md) 中提到的 `Next.js 15 + React 18`：
+相比 [产品设计文档](../research/2026-03-24-ditto-app-product-design.md) 中提到的 `Next.js 15 + React 18`：
 
 | 原方案 | 冻结方案 | 变更原因 |
 |--------|---------|----------|

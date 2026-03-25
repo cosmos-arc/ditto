@@ -11,8 +11,13 @@ from typing import Any, Literal
 import polars as pl
 from ditto_infra.foundation import logger, traced
 from ditto_infra.foundation.util.checksum import ChecksumCompute
+from ditto_kernel.identity import InstrumentId
 
-from ditto_datahub.errors import AmbiguousTickerError, IdentifierNotFoundError
+from ditto_datahub.errors import (
+    AmbiguousTickerError,
+    IdentifierNotFoundError,
+    NoIdentifierProvidedError,
+)
 from ditto_datahub.models.metadata import (
     InstrumentExtension,
     InstrumentRegistration,
@@ -589,6 +594,72 @@ class InstrumentService:
         return result
 
     # ============ 标识符解析 ============
+
+    @traced("metadata.identity.resolve_instrument_identifier")
+    def resolve_instrument_identifier(
+        self,
+        *,
+        instrument_id: int | None = None,
+        standard_ticker: str | None = None,
+        ticker: str | None = None,
+        asset_class: str | None = None,
+        source: str,
+        asof: str | None = None,
+    ) -> InstrumentId | None:
+        """
+        统一标识符解析入口.
+
+        将 instrument_id / standard_ticker / ticker 中的一种解析为
+        类型安全的 InstrumentId。查不到返回 None（正常流程）。
+
+        优先级: instrument_id > standard_ticker > ticker
+
+        Args:
+            instrument_id: 内部 ID（如 1000001）.
+            standard_ticker: Ditto 标准格式（如 "000001.XSHE"）.
+            ticker: 裸代码（如 "000001"）.
+            asset_class: 资产类型（stock | etf | index），ticker 解析时必需.
+            source: 数据源名称（如 "tushare"）.
+            asof: 时间点日期 (YYYY-MM-DD).
+
+        Returns:
+            InstrumentId 类型安全的证券标识符，查不到返回 None.
+
+        Raises:
+            NoIdentifierProvidedError: 未提供任何标识符.
+            AmbiguousTickerError: ticker 不唯一.
+
+        """
+        if instrument_id is not None:
+            # 查询存在性，不存在返回 None
+            record = self._instrument_reader.get_by_instrument_id(instrument_id)
+            if record is None:
+                return None
+            return InstrumentId(instrument_id)
+
+        # 至少需要一个非 instrument_id 标识符
+        if standard_ticker is None and ticker is None:
+            raise NoIdentifierProvidedError(
+                "未提供任何标识符 (instrument_id / standard_ticker / ticker)"
+            )
+
+        # 复用 resolve_source_ticker 得到 source_ticker，再解析为 instrument_id
+        try:
+            source_ticker = self.resolve_source_ticker(
+                ticker=ticker,
+                standard_ticker=standard_ticker,
+                asset_class=asset_class or "stock",
+                source=source,
+            )
+        except IdentifierNotFoundError:
+            return None
+
+        resolved_id = self._instrument_reader.resolve_instrument_id(
+            source_ticker, source, asof
+        )
+        if resolved_id is None:
+            return None
+        return InstrumentId(resolved_id)
 
     @traced("metadata.identity.resolve_source_ticker")
     def resolve_source_ticker(

@@ -329,18 +329,19 @@ class TestAuditPersistence:
         mock_build_report: MagicMock,
         mock_engine_run: MagicMock,
     ) -> None:
-        """PORTFOLIO_WIDE_ID 在持久化时应映射为 '*'。"""
+        """Portfolio-wide 风控记录在持久化时 instrument_id=None, scope='portfolio'。"""
         from ditto_core.backtest.audit import RiskScanRecord
         from ditto_core.backtest.risk.post_trade import (
-            PORTFOLIO_WIDE_ID,
             RiskActionType,
+            RiskScope,
             RiskSeverity,
         )
 
         record = RiskScanRecord(
             trade_date="2026-01-10",
             rule_id="max_drawdown",
-            instrument_id=PORTFOLIO_WIDE_ID,
+            instrument_id=None,
+            scope=RiskScope.PORTFOLIO,
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.ALERT,
             detail="组合回撤 5.00% 超过警告阈值 10.00%",
@@ -358,7 +359,8 @@ class TestAuditPersistence:
 
         call_args = mock_audit.save_risk_log.call_args
         payloads = call_args[0][1]
-        assert payloads[0].instrument_id == "*"
+        assert payloads[0].instrument_id is None
+        assert payloads[0].scope == "portfolio"
 
 
 # ---------------------------------------------------------------------------

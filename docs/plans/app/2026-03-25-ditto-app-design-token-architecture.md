@@ -1,6 +1,6 @@
 # Ditto Design Token 架构设计
 
-> 基于 [产品设计方案](../research/2026-03-24-ditto-web-product-design.md) 和 [技术选型清单](../research/2026-03-24-ditto-web-techstack.md)，为 Ditto 量化交易平台前端定义 Design Token 体系。
+> 基于 [产品设计方案](../research/2026-03-24-ditto-app-product-design.md) 和 [技术选型清单](../research/2026-03-24-ditto-app-techstack.md)，为 Ditto 量化交易平台前端定义 Design Token 体系。
 > 状态：设计中（迭代中）
 > 决策日期：2026-03-25
 
@@ -141,18 +141,7 @@ Level   L 值      用途直觉
 
 ### 2.4 图表系列色（独立色板，非 UI ramp）
 
-图表需要"相邻曲线一眼分开"，色相分布与 UI 色板不同，补入 cyan/teal/rose：
-
-```
-Chart-1    oklch(0.65 0.20 25)     Red — 策略净值 A
-Chart-2    oklch(0.70 0.16 155)    Green — 策略净值 B
-Chart-3    oklch(0.62 0.19 260)    Blue — 基准指数
-Chart-4    oklch(0.70 0.14 195)    Cyan — 超额收益
-Chart-5    oklch(0.65 0.17 310)    Rose — 因子暴露
-Chart-6    oklch(0.60 0.16 85)     Amber — 信号标记
-Chart-7    oklch(0.62 0.17 295)    Violet — 风控阈值
-Chart-8    oklch(0.65 0.15 175)    Teal — 补充系列
-```
+图表需要"相邻曲线一眼分开"，色相分布与 UI 色板不同，补入 cyan/teal/rose。完整定义见 [10.4 通用多曲线色板](#104-通用多曲线色板8-色)。
 
 ### 2.5 扩展路径
 
@@ -381,9 +370,310 @@ Token                          Dark                      Light                  
 
 ---
 
-## 7. 调研参考
+## 8. Typography — 字体体系
 
-### 7.1 业界对标平台
+### 8.1 字体选择
+
+| 角色 | 字体 | 理由 |
+|------|------|------|
+| UI 文字 | **Inter** | 屏幕专用，9 种字重，x-height 适中，内置 tabular-nums OpenType 特性 |
+| 技术型字段 | **JetBrains Mono** | 等宽、0O/1lI 可区分，用于订单号、日志、ticker、终端式字段 |
+
+> Inter 和 JetBrains Mono 均为 SIL OFL 免费开源字体。
+
+### 8.2 数字策略（两层）
+
+**默认数字样式**：Inter + `tabular-nums` + `lining-nums`
+- 适用：表格数值、KPI 卡片、图表轴刻度、收益率、价格、持仓量
+- 效果：数字等宽对齐，但保持 sans-serif 的紧凑与舒适
+- 实现：Tailwind utility `font-sans tabular-nums`
+
+**技术型字段**：JetBrains Mono
+- 适用：订单号、成交 ID、日志输出、原始 ticker、代码片段
+- 效果：字符辨识优先于阅读舒适
+- 实现：Tailwind utility `font-mono`
+
+> **不要把"所有数值"默认切到 mono**。大部分研究页、看板页、回测页应保持 sans + tabular-nums 的专业金融产品观感，而非 IDE 观感。
+
+### 8.3 字号阶梯
+
+```
+Token                          值                  Tailwind 映射       用途
+──────────────────────────────────────────────────────────────────────────
+--font-size-page-title         20px (1.25rem)      text-xl             页面标题
+--font-size-section-header     14px (0.875rem)     text-sm semibold     面板标题、区块头
+--font-size-body-default       14px (0.875rem)     text-sm             正文默认（设置页、对话框、帮助）
+--font-size-body-compact       13px (0.8125rem)    text-[13px]         紧凑正文（交易台、列表、持仓、监控）
+--font-size-label              12px (0.75rem)      text-xs             标签、表头、轴刻度
+--font-size-caption            11px (0.6875rem)    text-[11px]         次标、图例、脚注
+--font-size-kpi                28px (1.75rem)      text-[28px]         大数字展示（Dashboard KPI）
+```
+
+> body 分两层：default 14px 用于非核心阅读区域，compact 13px 用于高密度专业页面。
+> 表格单行密集行用 1.25 行高；双行或中英混排单元格用 1.3–1.4。
+
+### 8.4 行高 / 字重
+
+```
+Token                          值           用途
+──────────────────────────────────────────────────────
+--line-height-tight            1.25         密集表格单行
+--line-height-default          1.40         正文默认
+--line-height-relaxed          1.60         表单说明、帮助文本
+--font-weight-default          400          正文
+--font-weight-medium           500          表头、标签强调
+--font-weight-semibold         600          区块标题
+--font-weight-bold             700          KPI 数字、页面标题
+```
+
+### 8.5 Tailwind 注册
+
+```css
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+}
+```
+
+---
+
+## 9. Motion — 动效体系
+
+### 9.1 设计原则
+
+> 量化/监控产品里动画不是为了炫，而是为了"提醒变化但不惊扰"。
+
+**允许**：状态切换过渡（hover/focus/selected/展开收起）、Toast 出入、面板展开收起、图表加载渐显。
+
+**禁止**：数字滚动/计数动画、价格跳动动画、骨架屏 shimmer、大面积脉冲/呼吸效果。
+
+### 9.2 时长 / 缓动函数
+
+```
+Token                          值                              用途
+──────────────────────────────────────────────────────────────────────
+--duration-fast                100ms                           hover、focus、微交互
+--duration-normal              200ms                           面板展开、tab 切换
+--duration-slow                350ms                           页面转场、大型面板动画
+
+--ease-standard                cubic-bezier(0.4, 0, 0.2, 1)    标准过渡
+--ease-emphasized              cubic-bezier(0.2, 0, 0, 1)      强调进场
+--ease-decelerate              cubic-bezier(0, 0, 0.2, 1)      减速退出
+```
+
+### 9.3 实时数据闪烁策略
+
+```
+Token                          值                              行为
+──────────────────────────────────────────────────────────────────────
+--motion-flash-duration        300ms                           闪烁持续时间
+--motion-flash-up-color        var(--color-market-up-bg)        涨时闪烁色
+--motion-flash-down-color      var(--color-market-down-bg)      跌时闪烁色
+--motion-flash-enabled         1                               允许闪烁（默认）
+```
+
+**规则**：
+- 闪烁 = 短暂背景色高亮（300ms），不做数字变形/缩放/位移
+- 用户可通过 `--motion-flash-enabled: 0` 全局关闭
+- WebSocket 推送频率 > 10/s 时自动降级为"仅更新值、不闪烁"
+- **单点闪烁不超过 3 次/秒**（WCAG 安全线）
+- **爆发式更新合并到一帧**：同一单元格的多条 tick 合并为一次闪烁，不逐条触发
+
+### 9.4 Reduced Motion（token 级关停）
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+    --motion-flash-enabled: 0;
+  }
+}
+```
+
+> 不使用全局 `* { animation-duration: 0.01ms !important }` 硬清空。
+> 通过 token 级关停，全系统仍由 token 驱动，行为可控，且不会误杀第三方组件的必要过渡（如焦点提示、透明度变化）。
+> 图表、grid、toast 可根据各自 token 做差异化降级。
+
+---
+
+## 10. Charts Token — 图表色板
+
+图表不是普通 UI，需要独立于 UI Primitive 的色板体系。按三类消费场景拆分。
+**不进入 `@theme inline`**，图表库通过 `getComputedStyle()` 在运行时读取 CSS 变量。
+
+### 10.1 基础 UI（坐标轴 / 网格 / 交互元素）
+
+```
+Token                          Dark                       Light                      用途
+──────────────────────────────────────────────────────────────────────────────
+--chart-axis-line              oklch(1 0 0 / 15%)        oklch(0 0 0 / 15%)        坐标轴线
+--chart-grid-line              oklch(1 0 0 / 6%)         oklch(0 0 0 / 6%)         网格线
+--chart-crosshair              oklch(1 0 0 / 20%)        oklch(0 0 0 / 20%)        十字光标
+--chart-crosshair-label-bg     oklch(0.30 0 0)           oklch(0.95 0 0)           十字光标标签背景
+--chart-tooltip-bg             oklch(0.22 0 0)           oklch(1 0 0)               Tooltip 背景
+--chart-tooltip-border         oklch(1 0 0 / 12%)        oklch(0 0 0 / 12%)        Tooltip 边框
+--chart-selection              oklch(0.60 0.15 260 / 20%)oklch(0.50 0.18 260 / 15%)框选区域
+--chart-zero-line              oklch(1 0 0 / 25%)        oklch(0 0 0 / 25%)        零线（仅用于语义 0 基准）
+```
+
+> `--chart-zero-line` 仅用于收益率图、超额收益图、振荡指标中的**语义 0 基准线**，不用于普通坐标轴 baseline。
+
+### 10.2 市场序列（K 线 / 成交量 / 均线）
+
+```
+Token                          值                         用途
+──────────────────────────────────────────────────────────────────────
+--chart-candle-up              oklch(0.68 0.22 25)        K 线阳线（涨）
+--chart-candle-down            oklch(0.72 0.17 155)       K 线阴线（跌）
+--chart-volume                 oklch(0.55 0.08 260)       成交量柱（默认色）
+--chart-volume-up              oklch(0.68 0.22 25 / 60%)  涨日成交量
+--chart-volume-down            oklch(0.72 0.17 155 / 60%) 跌日成交量
+```
+
+**均线约定**（颜色 + 线型双重区分，不单靠颜色）：
+
+```
+Token                          值                         线型
+──────────────────────────────────────────────────────────────────────
+--chart-ma-5                   oklch(0.70 0.18 25)        实线, 1.5px
+--chart-ma-10                  oklch(0.70 0.14 85)        实线, 1.5px
+--chart-ma-20                  oklch(0.60 0.15 260)       实线, 1.5px
+--chart-ma-60                  oklch(0.62 0.15 310)       虚线, 1.5px
+```
+
+> WCAG 要求不能仅用颜色传达信息。均线通过线型（实线/虚线）和颜色双重区分，色弱用户可依靠线型辨识。
+
+### 10.3 策略序列（净值 / 基准 / 信号 / 风控）
+
+策略序列**不复用市场红绿语法**，形成独立视觉语法：
+
+```
+Token                          值                         用途
+──────────────────────────────────────────────────────────────────────
+--chart-strategy-nav           oklch(0.60 0.16 260)       策略净值曲线（蓝系）
+--chart-benchmark              oklch(0.55 0.05 260)       基准指数（灰蓝）
+--chart-excess-return          oklch(0.70 0.14 195)       超额收益（cyan/teal）
+--chart-drawdown-fill          oklch(0.60 0.12 310 / 40%) 回撤区间填充（低饱和紫红）
+--chart-signal-buy-marker      oklch(0.65 0.16 260)       买入信号标记
+--chart-signal-sell-marker     oklch(0.65 0.18 310)       卖出信号标记
+--chart-risk-threshold         oklch(0.72 0.16 55)        风控阈值线（amber/orange）
+--chart-factor-exposure        oklch(0.65 0.15 175)       因子暴露（teal）
+```
+
+> 图中"绩效 / 基准 / 超额 / 回撤 / 风控"形成清晰视觉语法，不与 K 线涨跌红绿混淆。
+
+### 10.4 通用多曲线色板（8 色）
+
+```
+Token                          值                         预设用途
+──────────────────────────────────────────────────────────────────────
+--chart-series-1               oklch(0.65 0.20 25)        曲线 A
+--chart-series-2               oklch(0.70 0.16 155)       曲线 B
+--chart-series-3               oklch(0.62 0.19 260)       曲线 C
+--chart-series-4               oklch(0.70 0.14 195)       曲线 D
+--chart-series-5               oklch(0.65 0.17 310)       曲线 E
+--chart-series-6               oklch(0.60 0.16 85)        曲线 F
+--chart-series-7               oklch(0.62 0.17 295)       曲线 G
+--chart-series-8               oklch(0.65 0.15 175)       曲线 H
+```
+
+> 色相分布补入 cyan(195) / teal(175) / rose(310)，相邻曲线色相间距 > 50°，一眼可分。
+> 多线图建议配合线宽（1px / 1.5px / 2px）或 dash 规则做辅助区分。
+
+---
+
+## 11. Grid Token — AG Grid 桥接 + 密度策略
+
+### 11.1 桥接原则
+
+**单一路径**：`themeQuartz.withParams()` 作为 AG Grid 主题主入口，参数值直接引用 Ditto CSS 变量。
+CSS 层仅保留密度切换和少量 JS API 不方便表达的细节覆盖。不在 JS 和 CSS 两边同时维护同一组参数。
+
+### 11.2 主题工厂（主路径）
+
+```typescript
+import { themeQuartz } from "ag-grid-community";
+
+export function createDittoGridTheme() {
+  return themeQuartz.withParams({
+    // 色彩：直接引用 Ditto semantic CSS 变量
+    backgroundColor: "var(--color-surface-app)",
+    foregroundColor: "var(--color-text-primary)",
+    headerBackgroundColor: "var(--color-surface-panel)",
+    headerTextColor: "var(--color-text-secondary)",
+    borderColor: "var(--color-border-default)",
+    // 行交互：三档明确分离
+    rowHoverColor: "var(--color-surface-hover)",
+    oddRowBackgroundColor: "oklch(1 0 0 / 3%)",         // 极轻斑马纹，不与 hover 混淆
+    selectedRowBackgroundColor: "var(--grid-row-selected)", // 带 accent 的选中态（CSS 定义）
+    // 焦点与强调
+    accentColor: "var(--color-ring-focus)",
+    // 字体
+    fontFamily: "var(--font-sans)",
+    fontSize: "var(--grid-font-size, 13px)",
+  });
+}
+```
+
+### 11.3 CSS 补充层（密度 + 少量细修）
+
+```css
+.ag-theme-ditto {
+  /* 选中行：带 accent 气质，不是普通 surface 选中块 */
+  --grid-row-selected: oklch(0.60 0.15 260 / 12%);
+
+  /* 密度变量（由 data-attribute 切换） */
+  --grid-row-height: 32px;
+  --grid-header-height: 36px;
+  --grid-cell-padding-x: 8px;
+  --grid-cell-padding-y: 4px;
+  --grid-font-size: 13px;
+  --grid-size: 2px;
+}
+```
+
+### 11.4 密度策略（三档）
+
+```
+Token                          comfortable    compact(默认) ultra-compact(专业)
+──────────────────────────────────────────────────────────────────────────────
+--grid-row-height              40px           32px           26px
+--grid-header-height           44px           36px           30px
+--grid-cell-padding-x          12px           8px            6px
+--grid-cell-padding-y          8px            4px            2px
+--grid-font-size               13px           13px           11px
+--grid-size                    4px            2px            1px
+```
+
+**切换方式**：
+
+```css
+:root { --grid-row-height: 32px; /* compact 为默认 */ }
+
+[data-grid-density="comfortable"] {
+  --grid-row-height: 40px;
+  --grid-header-height: 44px;
+  /* ... */
+}
+
+[data-grid-density="ultra-compact"] {
+  --grid-row-height: 26px;
+  --grid-header-height: 30px;
+  /* ... */
+}
+```
+
+> compact（32px）为默认主力档，适用于持仓/订单/监控等多数页面。
+> ultra-compact（26px）标为"专业模式/高密监控"，需用户显式 opt-in（AG Grid 在极低行高下会压缩排序图标、筛选器、触控命中空间）。
+> comfortable（40px）用于研究分析页、详情页等低密度阅读场景。
+
+---
+
+## 12. 调研参考
+
+### 12.1 业界对标平台
 
 | 平台 | 参考点 |
 |------|--------|
@@ -393,7 +683,7 @@ Token                          Dark                      Light                  
 | Interactive Brokers TWS | 多图同步、快捷键、可停靠面板 |
 | RiceQuant / JoinQuant | A 股红涨绿跌、中文 UI、因子分析可视化 |
 
-### 7.2 关键设计原则（从业界提炼）
+### 12.2 关键设计原则（从业界提炼）
 
 - 暗色主题默认，A 股红涨绿跌
 - 模块化面板布局，可拖拽/调整大小
@@ -401,10 +691,10 @@ Token                          Dark                      Light                  
 - 钻取层级：组合 → 行业 → 标的 → 交易 → 指标
 - 跨图表时间同步：缩放一个图表，所有图表联动
 - 高频流绕开 React 渲染链（Lightweight Charts / ECharts imperative API）
-- 数字右对齐 + tabular-nums + monospace 字体
+- 数字右对齐 + tabular-nums（默认 sans，mono 仅限技术型字段）
 - 实时更新用闪烁高亮，禁止数字滚动动画
 
-### 7.3 技术栈约束
+### 12.3 技术栈约束
 
 - shadcn/ui v4：CSS variables 主题 + CVA 变体 + `data-slot` 精确样式化
 - Tailwind CSS 4.x：`@theme inline` 注册 utility，CSS-first 配置

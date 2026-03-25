@@ -37,7 +37,7 @@ class IncomeStatementReader:
         self._client = client
 
     @traced("data.income_statement_query")
-    def get(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+    def get(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
         """
         Query income statement data as of a specific date (PIT query).
 

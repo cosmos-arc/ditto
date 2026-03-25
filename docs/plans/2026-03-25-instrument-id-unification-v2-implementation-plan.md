@@ -1,5 +1,7 @@
 # Instrument ID Semantics Unification v2 Implementation Plan
 
+> **⚠️ SUPERSEDED** — 该计划已被 [Instrument ID 全仓收口执行计划](2026-03-25-instrument-id-remediation-execution.md) 完全替代并实施。保留仅供历史参考。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** 统一 `instrument_id` 在 DataHub / Core / Port 三层中的语义，将 Core 热路径从 source_ticker（str）切换为 canonical `InstrumentId`（int），建立可长期演进的单一身份模型。

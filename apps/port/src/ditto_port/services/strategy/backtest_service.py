@@ -29,7 +29,7 @@ from ditto_core.backtest.engine import (
     EngineOptions,
 )
 from ditto_core.backtest.manifest import RunManifest
-from ditto_core.backtest.risk.post_trade import PORTFOLIO_WIDE_ID, PostTradeRiskGuard
+from ditto_core.backtest.risk.post_trade import PostTradeRiskGuard
 from ditto_core.backtest.risk.pre_trade import CompositePreTradeCheck
 from ditto_core.backtest.statistics import BacktestReport, build_report
 from ditto_core.execution.brokerage import Brokerage
@@ -41,6 +41,7 @@ from ditto_datahub.models.strategy import ArtifactKind, StrategyArtifactRecord
 from ditto_datahub.models.strategy_audit import (
     PreTradeDecisionPayload,
     RiskScanPayload,
+    RiskScope,
 )
 from ditto_datahub.services.audit import ExecutionAuditService
 from ditto_datahub.services.strategy.strategy_artifact_service import (
@@ -53,14 +54,10 @@ from ditto_port.services.strategy.lifecycle import RunLifecycleService
 
 __all__ = ["BacktestService", "BacktestServiceConfig", "BacktestServiceOptions"]
 
-PORTFOLIO_WIDE_TOKEN = "*"  # noqa: S105
 
-
-def _instrument_id_to_token(instrument_id: InstrumentId) -> str:
-    """Core InstrumentId → 持久化 token。全组合事件映射为 '*'。"""
-    if instrument_id == PORTFOLIO_WIDE_ID:
-        return PORTFOLIO_WIDE_TOKEN
-    return str(instrument_id)
+def _to_dh_scope(core_scope: object) -> RiskScope:
+    """将 Core RiskScope 转换为 DataHub 层 RiskScope。"""
+    return RiskScope(str(core_scope))
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +282,10 @@ class BacktestService:
             RiskScanPayload(
                 trade_date=r.trade_date,
                 rule_id=r.rule_id,
-                instrument_id=_instrument_id_to_token(r.instrument_id),
+                instrument_id=(
+                    int(r.instrument_id) if r.instrument_id is not None else None
+                ),
+                scope=_to_dh_scope(r.scope),
                 severity=str(r.severity),
                 action_taken=str(r.action_taken),
                 detail=r.detail,
@@ -298,7 +298,7 @@ class BacktestService:
             PreTradeDecisionPayload(
                 trade_date=r.trade_date,
                 order_id=r.order_id,
-                instrument_id=str(r.instrument_id),
+                instrument_id=int(r.instrument_id),
                 direction=r.direction,
                 original_quantity=r.original_quantity,
                 final_quantity=r.final_quantity,

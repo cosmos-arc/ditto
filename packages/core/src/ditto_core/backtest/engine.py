@@ -33,9 +33,9 @@ from ditto_core.backtest.manifest import (
     hash_config,
 )
 from ditto_core.backtest.risk.post_trade import (
-    PORTFOLIO_WIDE_ID,
     PostTradeRiskGuard,
     RiskActionType,
+    RiskScope,
 )
 from ditto_core.backtest.risk.pre_trade import (
     CompositePreTradeCheck,
@@ -318,6 +318,7 @@ class EngineLoop:
                             trade_date=date,
                             rule_id=action.rule_id,
                             instrument_id=action.instrument_id,
+                            scope=action.scope,
                             severity=action.severity,
                             action_taken=action.action_type,
                             detail=action.detail,
@@ -331,7 +332,8 @@ class EngineLoop:
                 if (
                     action.action_type
                     in (RiskActionType.REDUCE_POSITION, RiskActionType.LIQUIDATE)
-                    and action.instrument_id != PORTFOLIO_WIDE_ID
+                    and action.scope == RiskScope.INSTRUMENT
+                    and action.instrument_id is not None
                 ):
                     self._strategy_context.lock_instrument(
                         action.instrument_id,

@@ -14,6 +14,7 @@ from typing import Any, Literal
 
 import polars as pl
 from ditto_infra.foundation import logger
+from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 from ditto_datahub.models.metadata import InstrumentRegistration
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
@@ -46,6 +47,7 @@ from ditto_datahub.stores.metadata.universe import (
 
 # 向后兼容：测试文件导入 _compute_calendar_enrichment
 _compute_calendar_enrichment = compute_calendar_enrichment
+InstrumentId = _InstrumentId
 
 __all__ = ["MetadataService", "_compute_calendar_enrichment"]
 
@@ -404,6 +406,26 @@ class MetadataService:
         )
 
     # ============ 标识符解析（→ InstrumentService） ============
+
+    def resolve_instrument_identifier(
+        self,
+        *,
+        instrument_id: int | None = None,
+        standard_ticker: str | None = None,
+        ticker: str | None = None,
+        asset_class: str | None = None,
+        source: str,
+        asof: str | None = None,
+    ) -> InstrumentId | None:
+        """统一标识符解析入口。委托到 InstrumentService。"""
+        return self._instrument.resolve_instrument_identifier(
+            instrument_id=instrument_id,
+            standard_ticker=standard_ticker,
+            ticker=ticker,
+            asset_class=asset_class,
+            source=source,
+            asof=asof,
+        )
 
     def resolve_source_ticker(
         self,

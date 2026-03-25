@@ -27,7 +27,6 @@ from ditto_core.accounting.account import AccountView
 from ditto_core.backtest.data_feed import Slice
 
 __all__ = [
-    "PORTFOLIO_WIDE_ID",
     "CompositePostTradeGuard",
     "ConcentrationLimitRule",
     "MarketAnomalyRule",
@@ -35,6 +34,7 @@ __all__ = [
     "PostTradeRiskGuard",
     "RiskAction",
     "RiskActionType",
+    "RiskScope",
     "RiskSeverity",
     "SingleLossLimitRule",
 ]
@@ -61,11 +61,12 @@ class RiskSeverity(StrEnum):
     EMERGENCY = "emergency"
 
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
+class RiskScope(StrEnum):
+    """风控扫描范围。"""
 
-PORTFOLIO_WIDE_ID: InstrumentId = InstrumentId(0)
+    INSTRUMENT = "instrument"
+    PORTFOLIO = "portfolio"
+
 
 # ---------------------------------------------------------------------------
 # Data Models
@@ -79,7 +80,8 @@ class RiskAction:
 
     Attributes:
         action_type: 行为类型 (REDUCE_POSITION / LIQUIDATE / ALERT)
-        instrument_id: 标的 ID (0 表示全组合)
+        instrument_id: 标的 ID (None 表示全组合)
+        scope: 扫描范围 (instrument / portfolio)
         severity: 严重程度
         rule_id: 触发规则的标识符
         detail: 风险描述
@@ -91,7 +93,8 @@ class RiskAction:
     """
 
     action_type: RiskActionType
-    instrument_id: InstrumentId
+    instrument_id: InstrumentId | None
+    scope: RiskScope
     severity: RiskSeverity
     rule_id: str
     detail: str
@@ -195,7 +198,8 @@ class MaxDrawdownRule:
         return [
             RiskAction(
                 action_type=action_type,
-                instrument_id=PORTFOLIO_WIDE_ID,
+                instrument_id=None,
+                scope=RiskScope.PORTFOLIO,
                 severity=severity,
                 rule_id="max_drawdown",
                 detail=f"组合回撤 {drawdown:.2%} 超过{level}阈值 {threshold:.2%}",
@@ -250,6 +254,7 @@ class SingleLossLimitRule:
                     RiskAction(
                         action_type=RiskActionType.REDUCE_POSITION,
                         instrument_id=position.instrument_id,
+                        scope=RiskScope.INSTRUMENT,
                         severity=RiskSeverity.CRITICAL,
                         rule_id="single_loss_limit",
                         detail=(
@@ -303,6 +308,7 @@ class ConcentrationLimitRule:
                     RiskAction(
                         action_type=RiskActionType.REDUCE_POSITION,
                         instrument_id=position.instrument_id,
+                        scope=RiskScope.INSTRUMENT,
                         severity=RiskSeverity.WARNING,
                         rule_id="concentration_limit",
                         detail=(
@@ -355,6 +361,7 @@ class MarketAnomalyRule:
                     RiskAction(
                         action_type=RiskActionType.ALERT,
                         instrument_id=instrument_id,
+                        scope=RiskScope.INSTRUMENT,
                         severity=RiskSeverity.WARNING,
                         rule_id="market_anomaly",
                         detail=(

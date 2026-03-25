@@ -8,7 +8,8 @@
 - **创建**: 2026-03-25
 - **前置计划**: [repo-wide-instrument-id-remediation-plan](2026-03-25-repo-wide-instrument-id-remediation-plan.md)
 - **审计报告**: [instrument-id-unification-post-audit](../reviews/2026-03-25-instrument-id-unification-post-audit.md)
-- **状态**: 未开始
+- **完成**: 2026-03-25
+- **状态**: ✅ COMPLETED
 
 ## 背景
 
@@ -397,15 +398,15 @@ Task 2 / Task 3 / Task 4 可并行（Task 2、3 依赖 Task 1，Task 4 仅依赖
 
 ## 验收标准
 
-- [ ] `packages/datahub/src` 和 `apps/port/src` 中不再存在 query/service/api/model 级 `instrument_id: str`
-- [ ] Capital / Fundamental API 与 CLI 支持 `instrument_id` / `standard_ticker` / `ticker` 三种输入
-- [ ] DataHub Capital / Fundamental readers 与 services 统一使用 `int instrument_id`
-- [ ] Audit 层不再用字符串 `instrument_id` 混合表示真实主键与组合级 sentinel
-- [ ] Core 层无 `PORTFOLIO_WIDE_ID` 哨兵值残留
-- [ ] benchmark 路径不再二次 resolve
-- [ ] factory display_map 正确透传到 artifact 输出
-- [ ] grep guard 测试通过
-- [ ] `pixi run -e dev ci` 全绿
+- [x] `packages/datahub/src` 和 `apps/port/src` 中不再存在 query/service/api/model 级 `instrument_id: str`
+- [x] Capital / Fundamental API 与 CLI 支持 `instrument_id` / `standard_ticker` / `ticker` 三种输入
+- [x] DataHub Capital / Fundamental readers 与 services 统一使用 `int instrument_id`
+- [x] Audit 层不再用字符串 `instrument_id` 混合表示真实主键与组合级 sentinel
+- [x] Core 层无 `PORTFOLIO_WIDE_ID` 哨兵值残留
+- [x] benchmark 路径不再二次 resolve
+- [x] factory display_map 正确透传到 artifact 输出
+- [x] grep guard 测试通过
+- [x] `pixi run -e dev check` 全绿（lint 0 errors, type 0 errors, 4174 tests passed, 8/8 arch contracts kept）
 
 ## 风险
 

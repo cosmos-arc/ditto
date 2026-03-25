@@ -162,7 +162,8 @@ def _make_risk_log() -> list[RiskScanRecord]:
         RiskScanRecord(
             trade_date="2026-03-20",
             rule_id="max_drawdown",
-            instrument_id="*",
+            instrument_id=None,
+            scope="portfolio",
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.ALERT,
             detail="drawdown test",

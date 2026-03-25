@@ -40,7 +40,7 @@ class CorporateActionsReader:
     @traced("data.corporate_actions_query")
     def get(
         self,
-        instrument_id: str,
+        instrument_id: int,
         start_date: date | None = None,
         end_date: date | None = None,
     ) -> pl.DataFrame:

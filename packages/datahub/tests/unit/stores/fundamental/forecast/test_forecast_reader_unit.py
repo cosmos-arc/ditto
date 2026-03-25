@@ -59,7 +59,7 @@ class TestForecastReader:
              profit_range_min, profit_range_max)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             [
-                "600000.SH",
+                600000,
                 date(2024, 6, 30),
                 date(2024, 4, 20),
                 date(2024, 4, 21),
@@ -72,11 +72,12 @@ class TestForecastReader:
         client.commit()
 
         # Act
-        result = forecast_reader.get("600000.SH", date(2024, 5, 1))
+        result = forecast_reader.get(600000, date(2024, 5, 1))
 
         # Assert
         assert len(result) == 1
-        assert result["instrument_id"][0] == "600000.SH"
+        # SQLite TEXT column returns string regardless of insert type
+        assert result["instrument_id"][0] == "600000"
         assert result["type"][0] == "预增"
         assert result["profit_range_min"][0] == 1000000.0
         assert result["profit_range_max"][0] == 1200000.0
@@ -84,7 +85,7 @@ class TestForecastReader:
     def test_get_empty_table(self, forecast_reader: ForecastReader) -> None:
         """Test that get returns empty DataFrame for empty table."""
         # Act
-        result = forecast_reader.get("600000.SH", date(2024, 5, 1))
+        result = forecast_reader.get(600000, date(2024, 5, 1))
 
         # Assert
         assert len(result) == 0
@@ -103,7 +104,7 @@ class TestForecastReader:
              profit_range_min, profit_range_max)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             [
-                "600001.SH",
+                600001,
                 date(2024, 6, 30),
                 date(2024, 4, 20),
                 date(2024, 4, 21),
@@ -116,7 +117,7 @@ class TestForecastReader:
         client.commit()
 
         # Act
-        result = forecast_reader.get("600000.SH", date(2024, 5, 1))
+        result = forecast_reader.get(600000, date(2024, 5, 1))
 
         # Assert
         assert len(result) == 0
@@ -135,7 +136,7 @@ class TestForecastReader:
              profit_range_min, profit_range_max)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             [
-                "600000.SH",
+                600000,
                 date(2024, 6, 30),
                 date(2024, 4, 20),
                 date(2024, 4, 21),
@@ -153,7 +154,7 @@ class TestForecastReader:
              profit_range_min, profit_range_max)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             [
-                "600000.SH",
+                600000,
                 date(2024, 6, 30),
                 date(2024, 4, 25),
                 date(2024, 5, 1),
@@ -166,10 +167,10 @@ class TestForecastReader:
         client.commit()
 
         # Act - Query before second version effective date
-        result_old = forecast_reader.get("600000.SH", date(2024, 4, 25))
+        result_old = forecast_reader.get(600000, date(2024, 4, 25))
 
         # Act - Query after second version effective date
-        result_new = forecast_reader.get("600000.SH", date(2024, 5, 5))
+        result_new = forecast_reader.get(600000, date(2024, 5, 5))
 
         # Assert
         assert len(result_old) == 1
@@ -193,7 +194,7 @@ class TestForecastReader:
              profit_range_min, profit_range_max)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             [
-                "600000.SH",
+                600000,
                 date(2024, 6, 30),
                 date(2024, 4, 20),
                 date(2024, 4, 21),
@@ -206,7 +207,7 @@ class TestForecastReader:
         client.commit()
 
         # Act - Query on effective_to date (version should be excluded)
-        result = forecast_reader.get("600000.SH", date(2024, 5, 1))
+        result = forecast_reader.get(600000, date(2024, 5, 1))
 
         # Assert
         assert len(result) == 0
@@ -225,7 +226,7 @@ class TestForecastReader:
              profit_range_min, profit_range_max)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             [
-                "600000.SH",
+                600000,
                 date(2024, 3, 31),
                 date(2024, 4, 10),
                 date(2024, 4, 11),
@@ -242,7 +243,7 @@ class TestForecastReader:
              profit_range_min, profit_range_max)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             [
-                "600000.SH",
+                600000,
                 date(2024, 6, 30),
                 date(2024, 4, 20),
                 date(2024, 4, 21),
@@ -255,7 +256,7 @@ class TestForecastReader:
         client.commit()
 
         # Act
-        result = forecast_reader.get("600000.SH", date(2024, 5, 1))
+        result = forecast_reader.get(600000, date(2024, 5, 1))
 
         # Assert
         assert len(result) == 2
@@ -277,7 +278,7 @@ class TestForecastReader:
              profit_range_min, profit_range_max)
             VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)""",
             [
-                "600000.SH",
+                600000,
                 date(2024, 6, 30),
                 date(2024, 4, 20),
                 date(2024, 4, 21),
@@ -288,7 +289,7 @@ class TestForecastReader:
         client.commit()
 
         # Act
-        result = forecast_reader.get("600000.SH", date(2024, 5, 1))
+        result = forecast_reader.get(600000, date(2024, 5, 1))
 
         # Assert
         assert len(result) == 1

@@ -49,8 +49,8 @@ class TestFinancialQuery:
         """验证必须字段: instrument_id, as_of_date."""
         from ditto_port.models.fundamental import FinancialQuery
 
-        query = FinancialQuery(instrument_id="1", as_of_date=date(2024, 1, 1))
-        assert query.instrument_id == "1"
+        query = FinancialQuery(instrument_id=1, as_of_date=date(2024, 1, 1))
+        assert query.instrument_id == 1
         assert query.as_of_date == date(2024, 1, 1)
 
     def test_custom_values(self) -> None:
@@ -58,10 +58,10 @@ class TestFinancialQuery:
         from ditto_port.models.fundamental import FinancialQuery
 
         query = FinancialQuery(
-            instrument_id="600000",
+            instrument_id=600000,
             as_of_date=date(2024, 3, 31),
         )
-        assert query.instrument_id == "600000"
+        assert query.instrument_id == 600000
         assert query.as_of_date == date(2024, 3, 31)
 
     def test_instrument_id_required(self) -> None:
@@ -90,13 +90,13 @@ class TestFinancial:
         from ditto_port.models.fundamental import Financial
 
         financial = Financial(
-            instrument_id="1",
+            instrument_id=1,
             report_date="2024-03-31",
             report_type="balance_sheet",
             data={"total_assets": 1000000.0, "total_liabilities": 500000.0},
         )
 
-        assert financial.instrument_id == "1"
+        assert financial.instrument_id == 1
         assert financial.report_date == "2024-03-31"
         assert financial.report_type == "balance_sheet"
         assert financial.data["total_assets"] == 1000000.0
@@ -106,14 +106,14 @@ class TestFinancial:
         from ditto_port.models.fundamental import Financial
 
         financial = Financial(
-            instrument_id="1",
+            instrument_id=1,
             report_date="2024-03-31",
             report_type="balance_sheet",
             data={"total_assets": 1000000.0},
         )
 
         data = financial.model_dump()
-        assert data["instrument_id"] == "1"
+        assert data["instrument_id"] == 1
         assert data["report_date"] == "2024-03-31"
         assert data["report_type"] == "balance_sheet"
         assert data["data"]["total_assets"] == 1000000.0
@@ -128,7 +128,7 @@ class TestToFinancial:
         from ditto_port.models.fundamental import FinancialType, to_financial
 
         row: dict[str, Any] = {
-            "instrument_id": "1",
+            "instrument_id": 1,
             "report_date": "2024-03-31",
             "report_type": "balance_sheet",
             "data": {"total_assets": 1000000.0, "total_liabilities": 500000.0},
@@ -136,7 +136,7 @@ class TestToFinancial:
 
         financial = to_financial(row, FinancialType.BALANCE_SHEET)
 
-        assert financial.instrument_id == "1"
+        assert financial.instrument_id == 1
         assert financial.report_date == "2024-03-31"
         assert financial.report_type == "balance_sheet"
         assert financial.data["total_assets"] == 1000000.0
@@ -160,7 +160,7 @@ class TestToFinancialList:
 
         df = pl.DataFrame(
             {
-                "instrument_id": ["1"],
+                "instrument_id": [1],
                 "report_date": ["2024-03-31"],
                 "data": [{"total_assets": 1000000.0}],
             }
@@ -169,7 +169,7 @@ class TestToFinancialList:
         result = to_financial_list(df, FinancialType.BALANCE_SHEET)
 
         assert len(result) == 1
-        assert result[0].instrument_id == "1"
+        assert result[0].instrument_id == 1
         assert result[0].report_date == "2024-03-31"
 
 
@@ -181,8 +181,8 @@ class TestDividendQuery:
         """验证必须字段: instrument_id, as_of_date."""
         from ditto_port.models.fundamental import DividendQuery
 
-        query = DividendQuery(instrument_id="1", as_of_date=date(2024, 1, 1))
-        assert query.instrument_id == "1"
+        query = DividendQuery(instrument_id=1, as_of_date=date(2024, 1, 1))
+        assert query.instrument_id == 1
         assert query.as_of_date == date(2024, 1, 1)
 
     def test_instrument_id_required(self) -> None:
@@ -203,13 +203,13 @@ class TestDividend:
         from ditto_port.models.fundamental import Dividend
 
         dividend = Dividend(
-            instrument_id="1",
+            instrument_id=1,
             announce_date="2024-03-31",
             dividend_type="cash",
             amount=0.5,
         )
 
-        assert dividend.instrument_id == "1"
+        assert dividend.instrument_id == 1
         assert dividend.announce_date == "2024-03-31"
         assert dividend.dividend_type == "cash"
         assert dividend.amount == 0.5
@@ -224,7 +224,7 @@ class TestToDividend:
         from ditto_port.models.fundamental import to_dividend
 
         row: dict[str, Any] = {
-            "instrument_id": "1",
+            "instrument_id": 1,
             "announce_date": "2024-03-31",
             "dividend_type": "cash",
             "amount": 0.5,
@@ -232,7 +232,7 @@ class TestToDividend:
 
         dividend = to_dividend(row)
 
-        assert dividend.instrument_id == "1"
+        assert dividend.instrument_id == 1
         assert dividend.announce_date == "2024-03-31"
         assert dividend.dividend_type == "cash"
         assert dividend.amount == 0.5
@@ -260,11 +260,11 @@ class TestCorporateActionsQuery:
         from ditto_port.models.fundamental import CorporateActionsQuery
 
         query = CorporateActionsQuery(
-            instrument_id="1",
+            instrument_id=1,
             start_date=date(2024, 1, 1),
             end_date=date(2024, 3, 31),
         )
-        assert query.instrument_id == "1"
+        assert query.instrument_id == 1
         assert query.start_date == date(2024, 1, 1)
         assert query.end_date == date(2024, 3, 31)
 
@@ -274,7 +274,7 @@ class TestCorporateActionsQuery:
 
         # start_date == end_date 应该有效
         query = CorporateActionsQuery(
-            instrument_id="1",
+            instrument_id=1,
             start_date=date(2024, 1, 15),
             end_date=date(2024, 1, 15),
         )
@@ -287,7 +287,7 @@ class TestCorporateActionsQuery:
 
         with pytest.raises(ValidationError) as exc_info:
             CorporateActionsQuery(
-                instrument_id="1",
+                instrument_id=1,
                 start_date=date(2024, 3, 31),
                 end_date=date(2024, 1, 1),
             )
@@ -315,13 +315,13 @@ class TestCorporateAction:
         from ditto_port.models.fundamental import CorporateAction
 
         action = CorporateAction(
-            instrument_id="1",
+            instrument_id=1,
             action_date="2024-03-31",
             action_type="split",
             description="1:2 股票拆分",
         )
 
-        assert action.instrument_id == "1"
+        assert action.instrument_id == 1
         assert action.action_date == "2024-03-31"
         assert action.action_type == "split"
         assert action.description == "1:2 股票拆分"
@@ -336,7 +336,7 @@ class TestToCorporateAction:
         from ditto_port.models.fundamental import to_corporate_action
 
         row: dict[str, Any] = {
-            "instrument_id": "1",
+            "instrument_id": 1,
             "action_date": "2024-03-31",
             "action_type": "split",
             "description": "1:2 股票拆分",
@@ -344,7 +344,7 @@ class TestToCorporateAction:
 
         action = to_corporate_action(row)
 
-        assert action.instrument_id == "1"
+        assert action.instrument_id == 1
         assert action.action_date == "2024-03-31"
         assert action.action_type == "split"
         assert action.description == "1:2 股票拆分"
@@ -368,7 +368,7 @@ class TestToCorporateActionList:
 
         df = pl.DataFrame(
             {
-                "instrument_id": ["1", "1"],
+                "instrument_id": [1, 1],
                 "action_date": ["2024-01-15", "2024-03-31"],
                 "action_type": ["dividend", "split"],
                 "description": ["现金分红", "1:2 股票拆分"],

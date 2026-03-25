@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS execution_audit (
     run_id      TEXT    NOT NULL,
     trade_date  TEXT    NOT NULL,
     record_type TEXT    NOT NULL,
-    instrument_id TEXT,
+    instrument_id INTEGER NULL,
+    instrument_scope TEXT NOT NULL DEFAULT 'instrument',
     payload     TEXT    NOT NULL,
     created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
 );
@@ -52,12 +53,14 @@ _CREATE_INDEX_RUN_TYPE = (
 )
 
 _INSERT_SQL = """
-INSERT INTO execution_audit (run_id, trade_date, record_type, instrument_id, payload)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO execution_audit
+    (run_id, trade_date, record_type, instrument_id, instrument_scope, payload)
+VALUES (?, ?, ?, ?, ?, ?)
 """
 
 _BASE_SELECT = """
-SELECT id, run_id, trade_date, record_type, instrument_id, payload, created_at
+SELECT id, run_id, trade_date, record_type,
+       instrument_id, instrument_scope, payload, created_at
 FROM execution_audit
 WHERE run_id = ?
 """
@@ -83,11 +86,26 @@ class ExecutionAuditService:
 
     @traced("audit.init_schema")
     def init_schema(self) -> None:
-        """创建 execution_audit 表和索引（幂等操作）。"""
+        """
+        创建 execution_audit 表和索引（幂等操作）。
+
+        对于已存在但缺少 instrument_scope 列的旧表，自动执行
+        ALTER TABLE ADD COLUMN 补齐。
+        """
         conn = self._pool.get_connection()
         conn.executescript(
             _CREATE_TABLE + _CREATE_INDEX_RUN_DATE + _CREATE_INDEX_RUN_TYPE
         )
+        # Legacy migration: add instrument_scope if missing
+        cursor = conn.execute("PRAGMA table_info(execution_audit)")
+        columns = {row[1] for row in cursor.fetchall()}
+        if "instrument_scope" not in columns:
+            _ADD_COL = (
+                "ALTER TABLE execution_audit "
+                "ADD COLUMN instrument_scope "
+                "TEXT NOT NULL DEFAULT 'instrument'"
+            )
+            conn.execute(_ADD_COL)
         self._pool.commit()
         logger.debug(
             "execution_audit schema initialized",
@@ -124,6 +142,7 @@ class ExecutionAuditService:
                     rec.trade_date,
                     "risk_scan",
                     rec.instrument_id,
+                    str(rec.scope),
                     payload,
                 ),
             )
@@ -167,6 +186,7 @@ class ExecutionAuditService:
                     rec.trade_date,
                     "pre_trade_decision",
                     rec.instrument_id,
+                    "instrument",
                     payload,
                 ),
             )

@@ -37,7 +37,7 @@ class ForecastReader:
         self._client = client
 
     @traced("data.forecast_query")
-    def get(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+    def get(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
         """
         Query forecast data as of a specific date (PIT query).
 

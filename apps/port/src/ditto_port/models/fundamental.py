@@ -48,7 +48,7 @@ class FinancialQuery(BaseModel):
 
     """
 
-    instrument_id: str = Field(description="标的 ID")
+    instrument_id: int = Field(description="标的 ID")
     as_of_date: date = Field(description="PIT 查询日期")
 
     model_config = ConfigDict(
@@ -69,7 +69,7 @@ class Financial(BaseModel):
 
     """
 
-    instrument_id: str = Field(description="标的 ID")
+    instrument_id: int = Field(description="标的 ID")
     report_date: str = Field(description="报告期")
     report_type: str = Field(description="报表类型")
     data: dict[str, Any] = Field(description="财务数据字典")
@@ -90,7 +90,7 @@ class DividendQuery(BaseModel):
 
     """
 
-    instrument_id: str = Field(description="标的 ID")
+    instrument_id: int = Field(description="标的 ID")
     as_of_date: date = Field(description="PIT 查询日期")
 
     model_config = ConfigDict(
@@ -111,7 +111,7 @@ class Dividend(BaseModel):
 
     """
 
-    instrument_id: str = Field(description="标的 ID")
+    instrument_id: int = Field(description="标的 ID")
     announce_date: str = Field(description="公告日期")
     dividend_type: str = Field(description="分红类型")
     amount: float = Field(description="分红金额")
@@ -133,7 +133,7 @@ class CorporateActionsQuery(BaseModel):
 
     """
 
-    instrument_id: str = Field(description="标的 ID")
+    instrument_id: int = Field(description="标的 ID")
     start_date: date = Field(description="开始日期")
     end_date: date = Field(description="结束日期")
 
@@ -172,7 +172,7 @@ class CorporateAction(BaseModel):
 
     """
 
-    instrument_id: str = Field(description="标的 ID")
+    instrument_id: int = Field(description="标的 ID")
     action_date: str = Field(description="行动日期")
     action_type: str = Field(description="行动类型")
     description: str = Field(description="行动描述")
@@ -196,7 +196,7 @@ def to_financial(row: dict[str, Any], report_type: FinancialType) -> Financial:
 
     """
     return Financial(
-        instrument_id=str(row["instrument_id"]),
+        instrument_id=int(row["instrument_id"]),
         report_date=str(row.get("report_date", "")),
         report_type=report_type.value,
         data=row.get("data", {}),
@@ -237,7 +237,7 @@ def to_dividend(row: dict[str, Any]) -> Dividend:
 
     """
     return Dividend(
-        instrument_id=str(row["instrument_id"]),
+        instrument_id=int(row["instrument_id"]),
         announce_date=str(row.get("announce_date", "")),
         dividend_type=str(row.get("dividend_type", "")),
         amount=float(row.get("amount", 0.0)),
@@ -277,7 +277,7 @@ def to_corporate_action(row: dict[str, Any]) -> CorporateAction:
 
     """
     return CorporateAction(
-        instrument_id=str(row["instrument_id"]),
+        instrument_id=int(row["instrument_id"]),
         action_date=str(row.get("action_date", "")),
         action_type=str(row.get("action_type", "")),
         description=str(row.get("description", "")),

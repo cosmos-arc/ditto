@@ -39,7 +39,7 @@ Ditto 后端 API 已具备数据查询、回测执行、因子分析等能力，
 ## 2. 站点地图（Sitemap）
 
 ```
-Ditto Web Application
+Ditto App Application
 │
 ├── /                           # 首页 Dashboard
 │

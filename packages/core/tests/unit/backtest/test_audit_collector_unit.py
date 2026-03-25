@@ -853,7 +853,8 @@ class TestBacktestReport:
         risk_record = RiskScanRecord(
             trade_date="2026-01-01",
             rule_id="max_drawdown",
-            instrument_id=0,
+            instrument_id=None,
+            scope="portfolio",
             severity=RiskSeverity.EMERGENCY,
             action_taken=RiskActionType.LIQUIDATE,
             detail="drawdown exceeded",
@@ -899,7 +900,8 @@ class TestRiskScanRecord:
         record = RiskScanRecord(
             trade_date="2026-01-15",
             rule_id="max_drawdown",
-            instrument_id=0,
+            instrument_id=None,
+            scope="portfolio",
             severity=RiskSeverity.EMERGENCY,
             action_taken=RiskActionType.LIQUIDATE,
             detail="组合回撤 25.00% 超过紧急阈值 20.00%",
@@ -914,6 +916,7 @@ class TestRiskScanRecord:
             trade_date="2026-01-15",
             rule_id="test",
             instrument_id=1,
+            scope="instrument",
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.ALERT,
             detail="test",
@@ -928,7 +931,8 @@ class TestRiskScanRecord:
         record = RiskScanRecord(
             trade_date="2026-01-15",
             rule_id="test",
-            instrument_id=0,
+            instrument_id=None,
+            scope="portfolio",
             severity=RiskSeverity.CRITICAL,
             action_taken=RiskActionType.REDUCE_POSITION,
             detail="test",
@@ -943,7 +947,8 @@ class TestRiskScanRecord:
         record = RiskScanRecord(
             trade_date="2026-01-15",
             rule_id="test",
-            instrument_id=0,
+            instrument_id=None,
+            scope="portfolio",
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.REDUCE_POSITION,
             detail="test",
@@ -958,7 +963,8 @@ class TestRiskScanRecord:
         record = RiskScanRecord(
             trade_date="2026-01-15",
             rule_id="test",
-            instrument_id=0,
+            instrument_id=None,
+            scope="portfolio",
             severity=RiskSeverity.EMERGENCY,
             action_taken=RiskActionType.LIQUIDATE,
             detail="test",
@@ -967,6 +973,38 @@ class TestRiskScanRecord:
         )
         assert record.severity == "emergency"
         assert record.action_taken == "liquidate"
+
+    def test_portfolio_wide_record_has_none_instrument_id(self) -> None:
+        """Portfolio-wide record: instrument_id=None, scope='portfolio'."""
+        record = RiskScanRecord(
+            trade_date="2026-01-15",
+            rule_id="max_drawdown",
+            instrument_id=None,
+            scope="portfolio",
+            severity=RiskSeverity.WARNING,
+            action_taken=RiskActionType.ALERT,
+            detail="组合回撤",
+            current_value=0.12,
+            threshold=0.10,
+        )
+        assert record.instrument_id is None
+        assert record.scope == "portfolio"
+
+    def test_instrument_record_has_concrete_instrument_id(self) -> None:
+        """Instrument-scoped record: concrete instrument_id, scope='instrument'."""
+        record = RiskScanRecord(
+            trade_date="2026-01-15",
+            rule_id="single_loss_limit",
+            instrument_id=1,
+            scope="instrument",
+            severity=RiskSeverity.CRITICAL,
+            action_taken=RiskActionType.REDUCE_POSITION,
+            detail="亏损超限",
+            current_value=-0.20,
+            threshold=-0.15,
+        )
+        assert record.instrument_id == 1
+        assert record.scope == "instrument"
 
 
 # ---------------------------------------------------------------------------
@@ -1032,7 +1070,8 @@ class TestRiskLogRecording:
             RiskScanRecord(
                 trade_date="2026-01-15",
                 rule_id="max_drawdown",
-                instrument_id=0,
+                instrument_id=None,
+                scope="portfolio",
                 severity=RiskSeverity.EMERGENCY,
                 action_taken=RiskActionType.LIQUIDATE,
                 detail="组合回撤 25.00%",
@@ -1043,6 +1082,7 @@ class TestRiskLogRecording:
                 trade_date="2026-01-15",
                 rule_id="single_loss_limit",
                 instrument_id=1,
+                scope="instrument",
                 severity=RiskSeverity.CRITICAL,
                 action_taken=RiskActionType.REDUCE_POSITION,
                 detail="510300.SH 亏损 20.00%",
@@ -1072,7 +1112,8 @@ class TestRiskLogRecording:
                 RiskScanRecord(
                     trade_date="2026-01-15",
                     rule_id="test",
-                    instrument_id=0,
+                    instrument_id=None,
+                    scope="portfolio",
                     severity=RiskSeverity.WARNING,
                     action_taken=RiskActionType.ALERT,
                     detail="d",
@@ -1087,7 +1128,8 @@ class TestRiskLogRecording:
                 RiskScanRecord(
                     trade_date="2026-01-16",
                     rule_id="test",
-                    instrument_id=0,
+                    instrument_id=None,
+                    scope="portfolio",
                     severity=RiskSeverity.WARNING,
                     action_taken=RiskActionType.ALERT,
                     detail="d",

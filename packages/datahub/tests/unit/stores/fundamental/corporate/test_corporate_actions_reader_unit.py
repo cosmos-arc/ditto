@@ -67,7 +67,7 @@ class TestCorporateActionsReader:
         client.commit()
 
         # Act
-        result = corporate_actions_reader.get("600000")
+        result = corporate_actions_reader.get(600000)
 
         # Assert
         assert len(result) == 1
@@ -84,7 +84,7 @@ class TestCorporateActionsReader:
     ) -> None:
         """Test that get returns empty DataFrame for empty table."""
         # Act
-        result = corporate_actions_reader.get("600000")
+        result = corporate_actions_reader.get(600000)
 
         # Assert
         assert len(result) == 0
@@ -114,7 +114,7 @@ class TestCorporateActionsReader:
         client.commit()
 
         # Act
-        result = corporate_actions_reader.get("600000")
+        result = corporate_actions_reader.get(600000)
 
         # Assert
         assert len(result) == 0
@@ -156,7 +156,7 @@ class TestCorporateActionsReader:
         client.commit()
 
         # Act - Query from May 1st onwards
-        result = corporate_actions_reader.get("600000", start_date=date(2024, 5, 1))
+        result = corporate_actions_reader.get(600000, start_date=date(2024, 5, 1))
 
         # Assert - Should only include the split (announcement_date >= 2024-05-01)
         assert len(result) == 1
@@ -199,7 +199,7 @@ class TestCorporateActionsReader:
         client.commit()
 
         # Act - Query up to May 1st
-        result = corporate_actions_reader.get("600000", end_date=date(2024, 5, 1))
+        result = corporate_actions_reader.get(600000, end_date=date(2024, 5, 1))
 
         # Assert - Should only include the dividend (announcement_date <= 2024-05-01)
         assert len(result) == 1
@@ -256,7 +256,7 @@ class TestCorporateActionsReader:
 
         # Act - Query from April 1st to April 30th
         result = corporate_actions_reader.get(
-            "600000",
+            600000,
             start_date=date(2024, 4, 1),
             end_date=date(2024, 4, 30),
         )
@@ -315,7 +315,7 @@ class TestCorporateActionsReader:
         client.commit()
 
         # Act
-        result = corporate_actions_reader.get("600000")
+        result = corporate_actions_reader.get(600000)
 
         # Assert - Should return 3 actions ordered by announcement_date DESC
         assert len(result) == 3
@@ -348,7 +348,7 @@ class TestCorporateActionsReader:
         client.commit()
 
         # Act
-        result = corporate_actions_reader.get("600000")
+        result = corporate_actions_reader.get(600000)
 
         # Assert
         assert len(result) == 1

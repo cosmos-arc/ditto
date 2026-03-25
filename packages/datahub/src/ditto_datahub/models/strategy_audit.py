@@ -19,6 +19,13 @@ class AuditRecordType(StrEnum):
     PRE_TRADE_DECISION = "pre_trade_decision"
 
 
+class RiskScope(StrEnum):
+    """风控扫描范围。"""
+
+    INSTRUMENT = "instrument"
+    PORTFOLIO = "portfolio"
+
+
 @dataclass(frozen=True)
 class RiskScanPayload:
     """
@@ -27,7 +34,8 @@ class RiskScanPayload:
     Attributes:
         trade_date: 交易日期 (YYYY-MM-DD)
         rule_id: 触发规则标识符
-        instrument_id: 标的 ID ("*" 表示全组合)
+        instrument_id: 标的 ID (None 表示全组合)
+        scope: 扫描范围 (instrument / portfolio)
         severity: 严重程度 ("warning" / "critical" / "emergency")
         action_taken: 采取的动作 ("reduce_position" / "liquidate" / "alert")
         detail: 风险描述
@@ -38,7 +46,8 @@ class RiskScanPayload:
 
     trade_date: str
     rule_id: str
-    instrument_id: str
+    instrument_id: int | None
+    scope: RiskScope
     severity: str
     action_taken: str
     detail: str
@@ -66,7 +75,7 @@ class PreTradeDecisionPayload:
 
     trade_date: str
     order_id: str
-    instrument_id: str
+    instrument_id: int
     direction: str
     original_quantity: int
     final_quantity: int
@@ -79,4 +88,5 @@ __all__ = [
     "AuditRecordType",
     "PreTradeDecisionPayload",
     "RiskScanPayload",
+    "RiskScope",
 ]

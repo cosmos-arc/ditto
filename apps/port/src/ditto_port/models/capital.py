@@ -28,7 +28,7 @@ class MarginQuery(BaseModel):
 
     """
 
-    instrument_id: str = Field(description="标的 ID")
+    instrument_id: int = Field(description="标的 ID")
     as_of_date: date = Field(description="时间点查询日期")
 
     model_config = ConfigDict(
@@ -51,7 +51,7 @@ class Margin(BaseModel):
 
     """
 
-    instrument_id: str = Field(description="标的 ID")
+    instrument_id: int = Field(description="标的 ID")
     trade_date: str = Field(description="交易日期")
     margin_buy_balance: float = Field(description="融资余额")
     short_sell_balance: float = Field(description="融券余额")
@@ -77,7 +77,7 @@ def to_margin(row: dict[str, Any]) -> Margin:
 
     """
     return Margin(
-        instrument_id=str(row["instrument_id"]),
+        instrument_id=int(row["instrument_id"]),
         trade_date=row["trade_date"],
         margin_buy_balance=row["margin_buy_balance"],
         short_sell_balance=row["short_sell_balance"],
@@ -117,7 +117,7 @@ class ValuationQuery(BaseModel):
 
     """
 
-    instrument_id: str = Field(description="标的 ID")
+    instrument_id: int = Field(description="标的 ID")
     as_of_date: date = Field(description="时间点查询日期")
 
     model_config = ConfigDict(
@@ -141,7 +141,7 @@ class Valuation(BaseModel):
 
     """
 
-    instrument_id: str = Field(description="标的 ID")
+    instrument_id: int = Field(description="标的 ID")
     trade_date: str = Field(description="交易日期")
     pe_ratio: float | None = Field(default=None, description="市盈率")
     pb_ratio: float = Field(description="市净率")
@@ -168,7 +168,7 @@ def to_valuation(row: dict[str, Any]) -> Valuation:
 
     """
     return Valuation(
-        instrument_id=str(row["instrument_id"]),
+        instrument_id=int(row["instrument_id"]),
         trade_date=row["trade_date"],
         pe_ratio=row.get("pe_ratio"),
         pb_ratio=row.get("pb_ratio") or 0.0,

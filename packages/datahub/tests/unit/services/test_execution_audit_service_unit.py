@@ -13,6 +13,7 @@ import pytest
 from ditto_datahub.models.strategy_audit import (
     PreTradeDecisionPayload,
     RiskScanPayload,
+    RiskScope,
 )
 from ditto_datahub.services.audit.execution_audit_service import ExecutionAuditService
 from ditto_infra.foundation import SQLitePool
@@ -40,7 +41,8 @@ def audit_service(tmp_path: object) -> Generator[ExecutionAuditService, None, No
 def _make_risk_payload(
     trade_date: str = "2026-03-20",
     rule_id: str = "max_drawdown",
-    instrument_id: str = "510300.SH",
+    instrument_id: int | None = 510300,
+    scope: RiskScope = RiskScope.INSTRUMENT,
     severity: str = "warning",
     action_taken: str = "alert",
 ) -> RiskScanPayload:
@@ -49,6 +51,7 @@ def _make_risk_payload(
         trade_date=trade_date,
         rule_id=rule_id,
         instrument_id=instrument_id,
+        scope=scope,
         severity=severity,
         action_taken=action_taken,
         detail="组合回撤 12.00% 超过警告阈值 10.00%",
@@ -60,7 +63,7 @@ def _make_risk_payload(
 def _make_pre_trade_payload(
     trade_date: str = "2026-03-20",
     order_id: str = "ORD-001",
-    instrument_id: str = "510300.SH",
+    instrument_id: int = 510300,
     direction: str = "buy",
     decision: str = "accepted",
 ) -> PreTradeDecisionPayload:
@@ -117,6 +120,51 @@ class TestInitSchema:
         cursor = conn.execute("SELECT COUNT(*) FROM execution_audit")
         assert cursor.fetchone()[0] == 0
 
+    def test_migrates_legacy_table_missing_instrument_scope(
+        self, tmp_path: object
+    ) -> None:
+        """init_schema should add instrument_scope to legacy tables.
+
+        Simulates a pre-existing execution_audit table that lacks the
+        instrument_scope column. After init_schema(), save_risk_log()
+        and query() must work correctly.
+        """
+        pool = SQLitePool(str(tmp_path / "legacy_audit.db"))
+        conn = pool.get_connection()
+        # Create legacy table WITHOUT instrument_scope
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS execution_audit ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "run_id TEXT NOT NULL, "
+            "trade_date TEXT NOT NULL, "
+            "record_type TEXT NOT NULL, "
+            "instrument_id INTEGER NULL, "
+            "payload TEXT NOT NULL, "
+            "created_at TEXT NOT NULL DEFAULT (datetime('now'))"
+            ")"
+        )
+        pool.commit()
+
+        svc = ExecutionAuditService(pool)
+        svc.init_schema()
+
+        # Verify column now exists
+        cursor = conn.execute("PRAGMA table_info(execution_audit)")
+        columns = {row[1] for row in cursor.fetchall()}
+        assert "instrument_scope" in columns
+
+        # Verify save_risk_log works on migrated table
+        rec = _make_risk_payload()
+        count = svc.save_risk_log("legacy-run", (rec,))
+        assert count == 1
+
+        # Verify query returns correct data
+        rows = svc.query("legacy-run")
+        assert len(rows) == 1
+        assert rows[0]["instrument_scope"] == "instrument"
+
+        pool.close()
+
 
 # ---------------------------------------------------------------------------
 # Tests: save_risk_log
@@ -137,7 +185,8 @@ class TestSaveRiskLog:
         assert rows[0]["run_id"] == "run-001"
         assert rows[0]["trade_date"] == "2026-03-20"
         assert rows[0]["record_type"] == "risk_scan"
-        assert rows[0]["instrument_id"] == "510300.SH"
+        assert rows[0]["instrument_id"] == 510300
+        assert rows[0]["instrument_scope"] == "instrument"
 
     def test_saves_multiple_records(self, audit_service: ExecutionAuditService) -> None:
         """save_risk_log should insert multiple records and return count."""
@@ -201,7 +250,8 @@ class TestSavePreTradeLog:
         rows = audit_service.query("run-001", record_type="pre_trade_decision")
         assert len(rows) == 1
         assert rows[0]["record_type"] == "pre_trade_decision"
-        assert rows[0]["instrument_id"] == "510300.SH"
+        assert rows[0]["instrument_id"] == 510300
+        assert rows[0]["instrument_scope"] == "instrument"
 
     def test_serializes_payload_with_orjson(
         self, audit_service: ExecutionAuditService
@@ -230,7 +280,7 @@ class TestSavePreTradeLog:
         rec = PreTradeDecisionPayload(
             trade_date="2026-03-20",
             order_id="ORD-REJ",
-            instrument_id="159915.SZ",
+            instrument_id=159915,
             direction="buy",
             original_quantity=500,
             final_quantity=0,
@@ -372,6 +422,7 @@ class TestQuery:
             "trade_date",
             "record_type",
             "instrument_id",
+            "instrument_scope",
             "payload",
             "created_at",
         }

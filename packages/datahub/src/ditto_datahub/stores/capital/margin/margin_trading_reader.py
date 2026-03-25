@@ -24,7 +24,7 @@ class MarginTradingReader:
         self._client = client
 
     @traced("data.margin_trading_query")
-    def get(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+    def get(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
         """
         查询融资融券数据（PIT 查询）.
 

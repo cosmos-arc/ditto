@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from ditto_kernel.identity import InstrumentId
 
-from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
+from ditto_core.backtest.risk.post_trade import RiskActionType, RiskScope, RiskSeverity
 
 __all__ = [
     "PreTradeDecisionRecord",
@@ -27,7 +27,8 @@ class RiskScanRecord:
     Attributes:
         trade_date: 交易日期 (YYYY-MM-DD)
         rule_id: 触发规则标识符
-        instrument_id: 标的 ID (0 表示全组合)
+        instrument_id: 标的 ID (None 表示全组合)
+        scope: 扫描范围 (instrument / portfolio)
         severity: 严重程度 (RiskSeverity 枚举)
         action_taken: 采取的动作 (RiskActionType 枚举)
         detail: 风险描述
@@ -38,7 +39,8 @@ class RiskScanRecord:
 
     trade_date: str
     rule_id: str
-    instrument_id: InstrumentId
+    instrument_id: InstrumentId | None
+    scope: RiskScope
     severity: RiskSeverity
     action_taken: RiskActionType
     detail: str
