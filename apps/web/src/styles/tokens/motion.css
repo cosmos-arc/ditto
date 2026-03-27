@@ -1,34 +1,39 @@
 /*
- * Ditto Design Tokens — Motion
+ * Ditto Design Tokens v2 — Motion
  *
  * 动效体系：状态切换过渡允许，数字滚动/价格闪烁/骨架屏闪光禁止。
  * Reduced Motion 通过 token 级关停实现。
  */
 
 :root {
-	/* 时长 */
-	--duration-fast: 100ms;
-	--duration-normal: 200ms;
-	--duration-slow: 350ms;
+	/* Duration — 5 tiers */
+	--duration-instant: 80ms;
+	--duration-fast: 140ms;
+	--duration-normal: 220ms;
+	--duration-slow: 320ms;
+	--duration-xslow: 480ms;
 
-	/* 缓动函数 */
-	--ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-	--ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
-	--ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+	/* Easing — 4 curves */
+	--ease-standard: cubic-bezier(0.2, 0, 0, 1);
+	--ease-decelerate: cubic-bezier(0, 0, 0, 1);
+	--ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+	--ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
 
-	/* 实时数据闪烁策略 */
-	--motion-flash-duration: 300ms;
-	--motion-flash-up-color: var(--color-market-up-bg);
-	--motion-flash-down-color: var(--color-market-down-bg);
-	--motion-flash-enabled: 1;
+	/* Flash / Live Update */
+	--flash-up: rgba(216,92,92,0.18);
+	--flash-down: rgba(67,163,111,0.18);
+	--flash-neutral: rgba(95,143,245,0.10);
+	--flash-fade-duration: 900ms;
+	--flash-enabled: 1;
 }
 
-/* Reduced Motion — token 级关停 */
 @media (prefers-reduced-motion: reduce) {
 	:root {
+		--duration-instant: 0ms;
 		--duration-fast: 0ms;
 		--duration-normal: 0ms;
 		--duration-slow: 0ms;
-		--motion-flash-enabled: 0;
+		--duration-xslow: 0ms;
+		--flash-enabled: 0;
 	}
 }

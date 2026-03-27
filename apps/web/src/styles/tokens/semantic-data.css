@@ -1,0 +1,72 @@
+/*
+ * Ditto Design Tokens v2 — Semantic Data
+ *
+ * 数据新鲜度：fresh → recent → stale → delayed → missing → backfilling。
+ * 独立于 system 域，数据延迟 ≠ 系统异常。
+ */
+
+/* ── Light Theme (temporary placeholders) ── */
+:root {
+	/* Fresh */
+	--color-data-fresh-fg: oklch(0.5 0.15 155);
+	--color-data-fresh-bg: oklch(0.5 0.15 155 / 8%);
+	--color-data-fresh-border: oklch(0.5 0.15 155 / 20%);
+
+	/* Recent */
+	--color-data-recent-fg: oklch(0.55 0.15 155);
+	--color-data-recent-bg: oklch(0.55 0.15 155 / 8%);
+	--color-data-recent-border: oklch(0.55 0.15 155 / 20%);
+
+	/* Stale */
+	--color-data-stale-fg: oklch(0.6 0.12 80);
+	--color-data-stale-bg: oklch(0.6 0.12 80 / 8%);
+	--color-data-stale-border: oklch(0.6 0.12 80 / 20%);
+
+	/* Delayed */
+	--color-data-delayed-fg: oklch(0.55 0.14 50);
+	--color-data-delayed-bg: oklch(0.55 0.14 50 / 8%);
+	--color-data-delayed-border: oklch(0.55 0.14 50 / 20%);
+
+	/* Missing */
+	--color-data-missing-fg: oklch(0.4 0 0);
+	--color-data-missing-bg: oklch(0.4 0 0 / 8%);
+	--color-data-missing-border: oklch(0.4 0 0 / 20%);
+
+	/* Backfilling */
+	--color-data-backfilling-fg: oklch(0.5 0.15 262);
+	--color-data-backfilling-bg: oklch(0.5 0.15 262 / 8%);
+	--color-data-backfilling-border: oklch(0.5 0.15 262 / 20%);
+}
+
+/* ── Dark Theme (var() refs) ── */
+.dark {
+	/* Fresh */
+	--color-data-fresh-fg: var(--color-green-600);
+	--color-data-fresh-bg: var(--color-green-100);
+	--color-data-fresh-border: var(--color-green-300);
+
+	/* Recent */
+	--color-data-recent-fg: var(--color-green-500);
+	--color-data-recent-bg: var(--color-green-50);
+	--color-data-recent-border: var(--color-green-200);
+
+	/* Stale */
+	--color-data-stale-fg: var(--color-amber-600);
+	--color-data-stale-bg: var(--color-amber-100);
+	--color-data-stale-border: var(--color-amber-300);
+
+	/* Delayed */
+	--color-data-delayed-fg: var(--color-orange-600);
+	--color-data-delayed-bg: var(--color-orange-100);
+	--color-data-delayed-border: var(--color-orange-300);
+
+	/* Missing */
+	--color-data-missing-fg: var(--color-neutral-700);
+	--color-data-missing-bg: var(--color-neutral-100);
+	--color-data-missing-border: var(--color-neutral-300);
+
+	/* Backfilling */
+	--color-data-backfilling-fg: var(--color-blue-600);
+	--color-data-backfilling-bg: var(--color-blue-50);
+	--color-data-backfilling-border: var(--color-blue-300);
+}

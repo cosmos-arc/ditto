@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Ditto | Institutional Quantitative Terminal</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: {
+            "headline": ["'Inter'", "sans-serif"],
+            "body": ["'Inter'", "sans-serif"],
+            "label": ["'Inter'", "sans-serif"],
+            "mono": ["'IBM Plex Mono'", "monospace"],
+          },
+          borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+          transitionDuration: {
+            "instant": "80ms",
+            "fast": "140ms",
+            "normal": "220ms",
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    /* ── Ditto Design Token v2 — Design Reference Mirror ── */
+    :root {
+      color-scheme: dark;
+      --ditto-text-primary: #dde6ee;
+      --ditto-text-secondary: #c3c6d5;
+      --ditto-text-muted: #91a3b5;
+      --ditto-text-disabled: #5c6575;
+
+      --ditto-surface-app: #0f141a;
+      --ditto-surface-chrome: #0e1319;
+      --ditto-surface-canvas: #171c22;
+      --ditto-surface-panel: #1b2026;
+      --ditto-surface-elevated: #1b2026;
+      --ditto-surface-raised: #252a31;
+
+      --ditto-border-subtle: #2b3a49;
+      --ditto-border-default: #434653;
+      --ditto-border-strong: #8d909e;
+      --ditto-border-subtle-alpha: rgba(67, 70, 83, 0.3);
+
+      --ditto-primary: #5f8ff5;
+      --ditto-primary-light: #b0c6ff;
+      --ditto-primary-dim: #8baaf8;
+      --ditto-on-primary-container: #002863;
+      --ditto-primary-subtle: rgba(95, 143, 245, 0.10);
+
+      --ditto-secondary: #67d4f5;
+      --ditto-secondary-container: #1b9dbc;
+      --ditto-secondary-subtle: rgba(27, 157, 188, 0.10);
+
+      --ditto-market-up: #43a36f;
+      --ditto-market-up-subtle: rgba(67, 163, 111, 0.10);
+      --ditto-market-up-bg: #122019;
+      --ditto-market-up-border: #244731;
+
+      --ditto-market-down: #d85c5c;
+      --ditto-market-down-subtle: rgba(216, 92, 92, 0.10);
+
+      --ditto-risk-watch: #d9a85b;
+      --ditto-risk-watch-subtle: rgba(217, 168, 91, 0.10);
+
+      --ditto-risk-elevated: #ffb68e;
+      --ditto-risk-elevated-subtle: rgba(255, 182, 142, 0.10);
+
+      --ditto-risk-breach: #d85c5c;
+
+      --ditto-model-accepted: #b497e7;
+      --ditto-model-accepted-subtle: rgba(180, 151, 231, 0.10);
+
+      --ditto-state-hover: #17202a;
+      --ditto-state-selected: rgba(95, 143, 245, 0.05);
+      --ditto-state-focus-ring: rgba(95, 143, 245, 0.5);
+    }
+
+    /* ── Utility classes consuming tokens ── */
+    .bg-surface-chrome { background-color: var(--ditto-surface-chrome); }
+    .bg-surface-canvas { background-color: var(--ditto-surface-canvas); }
+    .bg-surface-panel { background-color: var(--ditto-surface-panel); }
+    .bg-surface-elevated { background-color: var(--ditto-surface-elevated); }
+    .bg-surface-raised { background-color: var(--ditto-surface-raised); }
+
+    .bg-state-hover { background-color: var(--ditto-state-hover); }
+    .bg-state-selected { background-color: var(--ditto-state-selected); }
+
+    .bg-primary-subtle { background-color: var(--ditto-primary-subtle); }
+    .bg-secondary-subtle { background-color: var(--ditto-secondary-subtle); }
+    .bg-market-up-subtle { background-color: var(--ditto-market-up-subtle); }
+    .bg-market-up-bg { background-color: var(--ditto-market-up-bg); }
+    .bg-market-down-subtle { background-color: var(--ditto-market-down-subtle); }
+    .bg-risk-watch-subtle { background-color: var(--ditto-risk-watch-subtle); }
+    .bg-risk-elevated-subtle { background-color: var(--ditto-risk-elevated-subtle); }
+    .bg-model-accepted-subtle { background-color: var(--ditto-model-accepted-subtle); }
+
+    .text-text-primary { color: var(--ditto-text-primary); }
+    .text-text-secondary { color: var(--ditto-text-secondary); }
+    .text-text-muted { color: var(--ditto-text-muted); }
+    .text-text-muted-60 { color: color-mix(in oklab, var(--ditto-text-muted) 60%, transparent); }
+
+    .text-ditto-primary { color: var(--ditto-primary); }
+    .text-ditto-primary-light { color: var(--ditto-primary-light); }
+    .text-ditto-primary-dim { color: var(--ditto-primary-dim); }
+    .text-on-primary-container { color: var(--ditto-on-primary-container); }
+    .text-ditto-secondary { color: var(--ditto-secondary); }
+    .text-market-up { color: var(--ditto-market-up); }
+    .text-market-down { color: var(--ditto-market-down); }
+    .text-risk-watch { color: var(--ditto-risk-watch); }
+    .text-risk-elevated { color: var(--ditto-risk-elevated); }
+    .text-risk-breach { color: var(--ditto-risk-breach); }
+    .text-model-accepted { color: var(--ditto-model-accepted); }
+
+    .border-border-subtle { border-color: var(--ditto-border-subtle); }
+    .border-border-subtle-alpha { border-color: var(--ditto-border-subtle-alpha); }
+    .border-border-default { border-color: var(--ditto-border-default); }
+    .border-border-strong { border-color: var(--ditto-border-strong); }
+    .border-ditto-secondary-container { border-color: var(--ditto-secondary-container); }
+    .border-ditto-primary { border-color: var(--ditto-primary); }
+    .border-market-up { border-color: var(--ditto-market-up); }
+    .border-market-down { border-color: var(--ditto-market-down); }
+    .border-risk-watch { border-color: var(--ditto-risk-watch); }
+    .border-risk-elevated { border-color: var(--ditto-risk-elevated); }
+    .border-risk-breach { border-color: var(--ditto-risk-breach); }
+    .border-model-accepted { border-color: var(--ditto-model-accepted); }
+
+    /* ── Base ── */
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-size: 18px;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--ditto-surface-app);
+      color: var(--ditto-text-primary);
+    }
+    .mono { font-family: 'IBM Plex Mono', monospace; }
+
+    /* ── Scrollbar ── */
+    .custom-scrollbar { scrollbar-width: thin; scrollbar-color: var(--ditto-border-subtle) transparent; }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--ditto-border-subtle); border-radius: 10px; }
+
+    .no-shadow { box-shadow: none !important; }
+
+    /* ── Focus visible ── */
+    :focus-visible {
+      outline: 2px solid var(--ditto-state-focus-ring);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* ── Responsive sidebar ── */
+    @media (max-width: 767px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-scrim.open { display: block; }
+      .main-canvas { margin-left: 0 !important; }
+    }
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .sidebar { width: 48px !important; }
+      .sidebar .nav-label,
+      .sidebar .sidebar-title,
+      .sidebar .sidebar-subtitle,
+      .sidebar .sidebar-section-label { display: none; }
+      .sidebar .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
+      .main-canvas { margin-left: 48px !important; }
+    }
+
+    /* ── Motion sensitivity ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ── Text overflow safety ── */
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+    /* ── Touch target safety ── */
+    .nav-item { min-height: 44px; }
+    [role="tab"] { min-height: 44px; display: flex; align-items: center; }
+    header button[aria-label] { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      z-index: 100;
+      padding: 0.5rem 1rem;
+      background: var(--ditto-primary);
+      color: var(--ditto-text-primary);
+      font-weight: 700;
+      font-size: 0.875rem;
+      border-radius: 0.375rem;
+      transform: translateY(-100%);
+      transition: transform 140ms;
+    }
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body class="overflow-hidden selection:bg-ditto-primary/30">
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center h-12 px-4 bg-surface-chrome border-b border-border-subtle">
+  <div class="flex items-center gap-6">
+    <!-- Mobile hamburger -->
+    <button class="md:hidden p-1.5 text-text-muted hover:bg-state-hover rounded" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar-nav" onclick="toggleSidebar()">
+      <span class="material-symbols-outlined">menu</span>
+    </button>
+    <span class="text-xl font-bold text-text-primary tracking-tighter font-headline">Ditto</span>
+    <nav class="hidden md:flex items-center gap-4" aria-label="Environment">
+      <a class="text-ditto-primary border-b-2 border-ditto-primary px-2 py-2.5 pb-1 text-[13px] tracking-tight leading-tight font-medium" href="#" aria-current="page">Dev</a>
+      <a class="text-text-muted hover:text-text-primary transition-colors duration-fast px-2 py-2.5 text-[13px] tracking-tight leading-tight font-medium" href="#">Staging</a>
+      <a class="text-text-muted hover:text-text-primary transition-colors duration-fast px-2 py-2.5 text-[13px] tracking-tight leading-tight font-medium" href="#">Prod</a>
+    </nav>
+  </div>
+  <div class="flex items-center gap-4">
+    <div class="relative group hidden sm:block">
+      <label for="global-search" class="sr-only">Search instrument, jump to page, or execute command</label>
+      <span class="absolute inset-y-0 left-3 flex items-center text-text-muted pointer-events-none">
+        <span class="material-symbols-outlined" style="font-size: 16px;">search</span>
+      </span>
+      <div class="flex items-center bg-state-hover border border-border-subtle-alpha rounded-md pr-2">
+        <input id="global-search" class="bg-transparent border-none pl-9 py-1.5 text-xs w-[320px] focus:ring-0 text-text-primary" placeholder="Search instrument, jump to page, or execute command..." type="text"/>
+        <div class="flex items-center gap-1.5 opacity-40">
+          <span class="bg-surface-raised text-[9px] px-1 rounded font-mono">&#8984;</span>
+          <span class="bg-surface-raised text-[9px] px-1 rounded font-mono">K</span>
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="p-1.5 text-text-muted hover:bg-state-hover rounded transition-colors duration-fast" aria-label="Schedule">
+        <span class="material-symbols-outlined">schedule</span>
+      </button>
+      <button class="p-1.5 text-text-muted hover:bg-state-hover rounded transition-colors duration-fast" aria-label="Notifications">
+        <span class="material-symbols-outlined">notifications</span>
+      </button>
+      <button class="p-1.5 text-text-muted hover:bg-state-hover rounded transition-colors duration-fast" aria-label="Account">
+        <span class="material-symbols-outlined">account_circle</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile sidebar scrim -->
+<div class="sidebar-scrim fixed inset-0 z-30 bg-black/50 hidden" aria-hidden="true" onclick="toggleSidebar()"></div>
+
+<!-- SideNavBar -->
+<aside id="sidebar-nav" class="sidebar fixed left-0 top-12 h-[calc(100%-48px)] w-60 z-40 flex flex-col py-2 bg-surface-chrome border-r border-border-subtle font-body text-xs font-medium tracking-normal transition-transform duration-normal md:translate-x-0" aria-label="Main navigation">
+  <div class="px-4 py-3 mb-2 flex flex-col gap-0.5">
+    <div class="text-lg font-black text-text-primary sidebar-title font-headline">Ditto Terminal</div>
+    <div class="text-[10px] text-text-muted uppercase tracking-widest sidebar-subtitle">Institutional Grade</div>
+  </div>
+  <nav class="flex-1 px-2 space-y-1">
+    <a class="nav-item flex items-center gap-3 px-3 py-2 bg-state-selected text-white border-r-[1.5px] border-ditto-primary transition-all duration-fast" href="#" aria-current="page">
+      <span class="material-symbols-outlined text-white">home</span>
+      <span class="nav-label">Home</span>
+    </a>
+    <a class="nav-item flex items-center gap-3 px-3 py-2 text-text-muted hover:bg-state-hover hover:text-text-primary transition-all duration-fast" href="#">
+      <span class="material-symbols-outlined">query_stats</span>
+      <span class="nav-label">Markets</span>
+    </a>
+    <a class="nav-item flex items-center gap-3 px-3 py-2 text-text-muted hover:bg-state-hover hover:text-text-primary transition-all duration-fast" href="#">
+      <span class="material-symbols-outlined">science</span>
+      <span class="nav-label">Research</span>
+    </a>
+    <a class="nav-item flex items-center gap-3 px-3 py-2 text-text-muted hover:bg-state-hover hover:text-text-primary transition-all duration-fast" href="#">
+      <span class="material-symbols-outlined">pie_chart</span>
+      <span class="nav-label">Portfolio</span>
+    </a>
+    <a class="nav-item flex items-center gap-3 px-3 py-2 text-text-muted hover:bg-state-hover hover:text-text-primary transition-all duration-fast" href="#">
+      <span class="material-symbols-outlined">psychology</span>
+      <span class="nav-label">AI</span>
+    </a>
+    <a class="nav-item flex items-center gap-3 px-3 py-2 text-text-muted hover:bg-state-hover hover:text-text-primary transition-all duration-fast" href="#">
+      <span class="material-symbols-outlined">settings_input_component</span>
+      <span class="nav-label">Platform</span>
+    </a>
+  </nav>
+  <div class="mt-auto px-2 space-y-1 border-t border-border-subtle pt-2">
+    <a class="nav-item flex items-center gap-3 px-3 py-2 text-text-muted hover:bg-state-hover hover:text-text-primary transition-all duration-fast" href="#">
+      <span class="material-symbols-outlined">help</span>
+      <span class="nav-label">Support</span>
+    </a>
+    <a class="nav-item flex items-center gap-3 px-3 py-2 text-text-muted hover:bg-state-hover hover:text-text-primary transition-all duration-fast" href="#">
+      <span class="material-symbols-outlined">settings</span>
+      <span class="nav-label">Settings</span>
+    </a>
+  </div>
+</aside>
+
+<!-- Main Canvas -->
+<main id="main-content" class="main-canvas ml-60 mt-12 h-[calc(100vh-48px)] p-6 overflow-y-auto custom-scrollbar bg-surface-app">
+
+  <!-- Control Center Banner -->
+  <div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-center bg-surface-canvas px-4 py-3 rounded-xl border border-border-subtle-alpha">
+    <div class="border-r border-border-subtle-alpha pr-4">
+      <div class="flex justify-between items-start">
+        <div class="text-[10px] text-text-muted uppercase font-bold tracking-wider mb-0.5">Total Assets (USD)</div>
+        <div class="text-[9px] text-ditto-primary-light/60 font-mono">YTD +12.4%</div>
+      </div>
+      <div class="text-2xl font-black mono text-text-primary truncate" title="$12,842,091.44">$12,842,091.44</div>
+    </div>
+    <div class="border-r border-border-subtle-alpha px-4">
+      <div class="flex justify-between items-start">
+        <div class="text-[10px] text-text-muted uppercase font-bold tracking-wider mb-0.5">Today's PnL</div>
+        <div class="text-[9px] text-text-muted font-mono">Realized P&amp;L</div>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <span class="text-2xl font-black mono text-market-up">+$142,502.10</span>
+        <span class="text-[10px] font-medium text-market-up bg-market-up-bg px-1.5 py-0.5 rounded border border-market-up-border">+1.12%</span>
+      </div>
+    </div>
+    <div class="border-r border-border-subtle-alpha px-4">
+      <div class="text-[10px] text-text-muted uppercase font-bold tracking-wider mb-1">Market Regime</div>
+      <div class="flex items-center gap-2">
+        <span class="flex items-center gap-1.5 px-2 py-0.5 bg-secondary-subtle text-ditto-secondary text-[11px] font-bold rounded-full border border-ditto-secondary-container/30 uppercase tracking-tighter">
+          <span class="w-1.5 h-1.5 rounded-full bg-ditto-secondary animate-pulse" aria-hidden="true"></span>
+          Low Volatility Expansion
+        </span>
+      </div>
+    </div>
+    <div class="pl-4 flex justify-end">
+      <button class="bg-primary-subtle hover:bg-ditto-primary/20 text-ditto-primary border border-ditto-primary/40 text-[10px] font-bold px-3 py-1 rounded-md transition-all flex items-center gap-1.5">
+        <span class="material-symbols-outlined" style="font-size: 14px;" aria-hidden="true">add</span>
+        NEW ORDER
+      </button>
+    </div>
+  </div>
+
+  <!-- 2x2 Workbench Layout -->
+  <div class="grid grid-cols-12 gap-6 mb-4">
+
+    <!-- Positions & Next Actions -->
+    <section class="col-span-12 lg:col-span-7 bg-surface-panel rounded-xl border border-border-subtle-alpha flex flex-col h-[380px]" aria-labelledby="positions-heading">
+      <div class="px-4 py-2 border-b border-border-subtle-alpha flex justify-between items-center bg-surface-raised/20">
+        <h3 id="positions-heading" class="text-xs font-bold flex items-center gap-2">
+          <span class="material-symbols-outlined text-ditto-primary" style="font-size: 16px;" aria-hidden="true">layers</span>
+          Positions &amp; Next Actions
+        </h3>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-text-muted font-mono">Real-time update active</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-market-up" aria-hidden="true"></span>
+        </div>
+      </div>
+      <div class="flex-1 overflow-auto custom-scrollbar">
+        <table class="w-full text-left border-collapse table-fixed">
+          <caption class="sr-only">Current trading positions with unrealized profit/loss and suggested actions</caption>
+          <thead class="sticky top-0 bg-surface-canvas/80 backdrop-blur-sm z-10">
+            <tr class="text-[9px] text-text-muted uppercase font-medium border-b border-border-subtle-alpha">
+              <th scope="col" class="px-4 py-1.5">Ticker</th>
+              <th scope="col" class="px-4 py-1.5 text-right font-mono">Size</th>
+              <th scope="col" class="px-4 py-1.5 text-right font-mono">Avg Price</th>
+              <th scope="col" class="px-4 py-1.5 text-right font-mono">PnL (Unrealized)</th>
+              <th scope="col" class="px-4 py-1.5">Suggested Action</th>
+            </tr>
+          </thead>
+          <tbody class="text-xs mono">
+            <tr class="border-b border-border-subtle/10 hover:bg-white/5 transition-colors">
+              <td class="px-4 py-2.5 font-bold text-white text-[13px] font-body min-w-0">NVDA.US</td>
+              <td class="px-4 py-2.5 text-right text-text-primary">1,200</td>
+              <td class="px-4 py-2.5 text-right text-text-muted-60">118.42</td>
+              <td class="px-4 py-2.5 text-right text-market-up font-black text-[13px]">+$24,192.00</td>
+              <td class="px-4 py-2.5">
+                <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-bold">TRIM @ $145</span>
+              </td>
+            </tr>
+            <tr class="border-b border-border-subtle/10 hover:bg-white/5 transition-colors">
+              <td class="px-4 py-2.5 font-bold text-white text-[13px] font-body min-w-0">BTC-USD</td>
+              <td class="px-4 py-2.5 text-right text-text-primary">4.50</td>
+              <td class="px-4 py-2.5 text-right text-text-muted-60">62,104.00</td>
+              <td class="px-4 py-2.5 text-right text-market-down font-black text-[13px]">-$1,840.45</td>
+              <td class="px-4 py-2.5">
+                <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[10px] font-bold">HEDGE VOL</span>
+              </td>
+            </tr>
+            <tr class="border-b border-border-subtle/10 hover:bg-white/5 transition-colors">
+              <td class="px-4 py-2.5 font-bold text-white text-[13px] font-body min-w-0">AAPL.US</td>
+              <td class="px-4 py-2.5 text-right text-text-primary">2,500</td>
+              <td class="px-4 py-2.5 text-right text-text-muted-60">224.15</td>
+              <td class="px-4 py-2.5 text-right text-market-up font-black text-[13px]">+$5,102.20</td>
+              <td class="px-4 py-2.5">
+                <span class="px-2 py-0.5 rounded bg-neutral-500/10 text-neutral-500 border border-neutral-500/20 text-[10px] font-bold uppercase">Hold</span>
+              </td>
+            </tr>
+            <tr class="border-b border-border-subtle/10 hover:bg-white/5 transition-colors">
+              <td class="px-4 py-2.5 font-bold text-white text-[13px] font-body min-w-0">ETH-USD</td>
+              <td class="px-4 py-2.5 text-right text-text-primary">82.00</td>
+              <td class="px-4 py-2.5 text-right text-text-muted-60">2,412.18</td>
+              <td class="px-4 py-2.5 text-right text-market-down font-black text-[13px]">-$12,401.00</td>
+              <td class="px-4 py-2.5">
+                <span class="px-2 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20 text-[10px] font-bold">CLOSE POSITION</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Risk & Alerts -->
+    <section class="col-span-12 lg:col-span-5 bg-surface-panel rounded-xl border border-border-subtle-alpha flex flex-col h-[380px]" aria-labelledby="risk-heading">
+      <div class="px-4 py-2 border-b border-border-subtle-alpha flex justify-between items-center bg-surface-raised/20">
+        <h3 id="risk-heading" class="text-xs font-bold flex items-center gap-2">
+          <span class="material-symbols-outlined text-risk-elevated" style="font-size: 16px;" aria-hidden="true">warning</span>
+          Risk &amp; Critical Alerts
+        </h3>
+        <button class="text-[10px] font-bold text-ditto-primary hover:underline">VIEW ALL</button>
+      </div>
+      <div class="p-4 space-y-4 flex-1 overflow-y-auto custom-scrollbar">
+        <!-- Risk Indicator -->
+        <div class="border-b border-border-subtle/20 pb-4">
+          <div class="flex justify-between items-end mb-2">
+            <span class="text-[10px] text-text-muted font-bold uppercase">Exposure Risk (VaR)</span>
+            <span class="text-[15px] font-black mono text-risk-elevated">Elevated</span>
+          </div>
+          <div class="h-1.5 w-full bg-[#2B3A49] rounded-full overflow-hidden" role="progressbar" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100" aria-label="VaR exposure at 72% of daily limit">
+            <div class="h-full bg-risk-elevated w-[72%]"></div>
+          </div>
+          <div class="flex justify-between mt-1.5 text-[9px] text-text-muted font-mono">
+            <span>95% Confidence</span>
+            <span class="text-text-primary font-bold">$422,100 Daily Limit</span>
+          </div>
+        </div>
+        <!-- Alert Items -->
+        <div class="space-y-4">
+          <div class="flex items-start gap-3 border-l-[3px] border-red-500 pl-3" role="alert">
+            <div class="flex-1">
+              <div class="text-xs font-bold text-white line-clamp-2">Margin Call Warning: Account ...4922</div>
+              <div class="text-[11px] text-text-muted leading-normal mt-0.5">Equity ratio below <span class="text-red-400 font-mono font-bold">12%</span> threshold. Immediate action required.</div>
+              <div class="mt-2 text-[9px] text-text-muted font-mono uppercase tracking-widest">4 minutes ago</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 border-l-[3px] border-amber-500 pl-3" role="alert">
+            <div class="flex-1">
+              <div class="text-xs font-bold text-white line-clamp-2">Portfolio Beta Drift</div>
+              <div class="text-[11px] text-text-muted leading-normal mt-0.5">Beta vs SPY increased to <span class="text-amber-400 font-mono font-bold">1.42</span>. Diversification impact: <span class="text-red-400">-4.2%</span>.</div>
+              <div class="mt-2 text-[9px] text-text-muted font-mono uppercase tracking-widest">1 hour ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- Market Snapshot (Index Cards) -->
+  <div class="col-span-12 lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Index Card 1: S&P 500 -->
+    <article class="bg-surface-panel rounded-xl border border-border-subtle-alpha p-4 relative overflow-hidden">
+      <div class="flex justify-between items-start mb-3">
+        <div>
+          <div class="text-[10px] text-text-muted font-bold uppercase tracking-widest">S&amp;P 500</div>
+          <div class="text-xl font-black mono text-text-primary">5,432.12</div>
+        </div>
+        <span class="px-1.5 py-0.5 bg-market-up-subtle text-market-up text-[10px] font-bold rounded border border-market-up/20">+0.85%</span>
+      </div>
+      <div class="space-y-2 mt-4 pt-4 border-t border-border-subtle/20">
+        <div class="flex justify-between items-center text-[10px]">
+          <span class="text-text-muted">Sentiment</span>
+          <span class="font-bold text-market-up uppercase tracking-tighter">Bullish</span>
+        </div>
+        <div class="flex justify-between items-center text-[10px]">
+          <span class="text-text-muted">Vol Status</span>
+          <span class="font-mono text-text-primary">Low (12.4)</span>
+        </div>
+        <div class="flex justify-between items-center text-[10px]">
+          <span class="text-text-muted">vs 5D Avg</span>
+          <span class="font-mono text-market-up">+1.2%</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Index Card 2: Nasdaq 100 -->
+    <article class="bg-surface-panel rounded-xl border border-border-subtle-alpha p-4 relative overflow-hidden">
+      <div class="flex justify-between items-start mb-3">
+        <div>
+          <div class="text-[10px] text-text-muted font-bold uppercase tracking-widest">Nasdaq 100</div>
+          <div class="text-xl font-black mono text-text-primary">19,211.50</div>
+        </div>
+        <span class="px-1.5 py-0.5 bg-market-up-subtle text-market-up text-[10px] font-bold rounded border border-market-up/20">+1.24%</span>
+      </div>
+      <div class="space-y-2 mt-4 pt-4 border-t border-border-subtle/20">
+        <div class="flex justify-between items-center text-[10px]">
+          <span class="text-text-muted">Sentiment</span>
+          <span class="font-bold text-market-up uppercase tracking-tighter">Bullish</span>
+        </div>
+        <div class="flex justify-between items-center text-[10px]">
+          <span class="text-text-muted">Vol Status</span>
+          <span class="font-mono text-text-primary">Medium (18.1)</span>
+        </div>
+        <div class="flex justify-between items-center text-[10px]">
+          <span class="text-text-muted">vs 5D Avg</span>
+          <span class="font-mono text-market-up">+2.8%</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Index Card 3: VIX Index -->
+    <article class="bg-surface-panel rounded-xl border border-border-subtle-alpha p-4 relative overflow-hidden">
+      <div class="flex justify-between items-start mb-3">
+        <div>
+          <div class="text-[10px] text-text-muted font-bold uppercase tracking-widest">VIX Index</div>
+          <div class="text-xl font-black mono text-text-primary">12.82</div>
+        </div>
+        <span class="px-1.5 py-0.5 bg-market-down-subtle text-market-down text-[10px] font-bold rounded border border-market-down/20">-2.40%</span>
+      </div>
+      <div class="space-y-2 mt-4 pt-4 border-t border-border-subtle/20">
+        <div class="flex justify-between items-center text-[10px]">
+          <span class="text-text-muted">Sentiment</span>
+          <span class="font-bold text-market-down uppercase tracking-tighter">Bearish</span>
+        </div>
+        <div class="flex justify-between items-center text-[10px]">
+          <span class="text-text-muted">Vol Status</span>
+          <span class="font-mono text-text-primary">Extremely Low</span>
+        </div>
+        <div class="flex justify-between items-center text-[10px]">
+          <span class="text-text-muted">vs 5D Avg</span>
+          <span class="font-mono text-market-down">-4.2%</span>
+        </div>
+      </div>
+    </article>
+  </div>
+
+    <!-- Pending Tasks -->
+    <section class="col-span-12 lg:col-span-4 bg-surface-panel rounded-xl border border-border-subtle-alpha flex flex-col" aria-labelledby="tasks-heading">
+      <div class="px-4 py-2 border-b border-border-subtle-alpha flex justify-between items-center bg-surface-raised/20">
+        <h3 id="tasks-heading" class="text-xs font-bold flex items-center gap-2">
+          <span class="material-symbols-outlined text-ditto-secondary" style="font-size: 16px;" aria-hidden="true">inbox</span>
+          Pending Tasks
+        </h3>
+        <span class="bg-ditto-primary text-on-primary-container text-[10px] font-black px-1.5 rounded-full" aria-label="3 pending tasks">3</span>
+      </div>
+      <div class="flex-1 p-3 space-y-2">
+        <div class="flex items-center gap-3 p-2 bg-surface-canvas rounded-lg border border-border-subtle/20 hover:border-ditto-primary/40 transition-all cursor-pointer group" role="button" tabindex="0">
+          <span class="material-symbols-outlined text-text-muted group-hover:text-ditto-primary" aria-hidden="true">check_circle</span>
+          <div class="flex-1">
+            <div class="text-xs font-medium text-text-primary">Review Backtest #8421</div>
+            <div class="text-[10px] text-text-muted font-mono">Status: Completed &bull; Alpha: 1.22</div>
+          </div>
+          <span class="material-symbols-outlined text-text-muted" style="font-size: 14px;" aria-hidden="true">chevron_right</span>
+        </div>
+        <div class="flex items-center gap-3 p-2 bg-surface-canvas rounded-lg border border-border-subtle/20 hover:border-ditto-primary/40 transition-all cursor-pointer group" role="button" tabindex="0">
+          <span class="material-symbols-outlined text-text-muted" aria-hidden="true">check_circle</span>
+          <div class="flex-1">
+            <div class="text-xs font-medium text-text-primary">Approve Q3 Rebalance</div>
+            <div class="text-[10px] text-text-muted font-mono">14 Symbols &bull; Est. Cost: $1,240</div>
+          </div>
+          <span class="material-symbols-outlined text-text-muted" style="font-size: 14px;" aria-hidden="true">chevron_right</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Strategy Workbench -->
+  <section class="bg-surface-panel rounded-xl border border-border-subtle-alpha overflow-hidden" aria-labelledby="strategy-heading">
+    <div class="px-4 md:px-6 py-4 border-b border-border-subtle-alpha flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-raised/10">
+      <div>
+        <h2 id="strategy-heading" class="text-md font-bold text-text-primary flex items-center gap-2">
+          <span class="material-symbols-outlined text-ditto-primary" aria-hidden="true">terminal</span>
+          Strategy Workbench
+        </h2>
+        <p class="text-[11px] text-text-muted">Integrated research environment for active signals and model performance.</p>
+      </div>
+      <div class="flex gap-4">
+        <nav class="flex items-center gap-6" aria-label="Strategy tabs" role="tablist">
+          <button class="text-[11px] font-bold text-ditto-primary border-b-2 border-ditto-primary px-3 pb-1 tracking-wider" aria-selected="true" aria-controls="tabpanel-signals" id="tab-signals" role="tab">ACTIVE SIGNALS</button>
+          <button class="text-[11px] font-bold text-text-muted hover:text-text-primary transition-colors px-3 py-2 tracking-wider" aria-selected="false" aria-controls="tabpanel-backtests" id="tab-backtests" role="tab" tabindex="-1">MODEL BACKTESTS</button>
+          <button class="text-[11px] font-bold text-text-muted hover:text-text-primary transition-colors px-3 py-2 tracking-wider" aria-selected="false" aria-controls="tabpanel-insights" id="tab-insights" role="tab" tabindex="-1">AI INSIGHTS</button>
+        </nav>
+        <button class="p-1.5 text-text-muted hover:text-text-primary" aria-label="Filter settings">
+          <span class="material-symbols-outlined" style="font-size: 18px;" aria-hidden="true">tune</span>
+        </button>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-12">
+
+      <!-- Signal Workspace (Primary) -->
+      <div id="tabpanel-signals" class="md:col-span-5 p-4 md:p-6 border-b md:border-b-0 md:border-r border-border-subtle/20 bg-ditto-primary/[0.02]" role="tabpanel" aria-labelledby="tab-signals" tabindex="0">
+        <div class="flex justify-between items-center mb-6">
+          <span class="text-[10px] font-black text-ditto-primary tracking-widest uppercase">Signal Feed</span>
+          <span class="text-[10px] font-mono text-text-muted bg-surface-canvas px-2 py-0.5 rounded border border-border-subtle/20">Confidence Index: 88%</span>
+        </div>
+        <div class="flex items-center gap-6 mb-6">
+          <img class="w-16 h-16 rounded-xl object-cover border border-ditto-primary/30 ring-4 ring-ditto-primary/5" alt="Financial chart visualization showing candlestick patterns and trend lines" width="64" height="64" loading="lazy" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPCuKL9U2qGazX1wixuoIU-CpNVFi5tRkWs94o1AgqLWhWvhfr1Ii9iYxnw6hCzRTiem79v5N1wOCV8raVXWvHV4e0tvfhggc35gmFHKE7_Dh5Z5By1DB7JCzXG9Mgd_H2N8jlih7lJoirx0_JLXZgfUdOy8AVcCmk6sJJYg9Q2vtduq1pKQWlrHs3yAMP_HEKSEZm_yNGeUrqFDHSGgze3hqw8ceS17IuS1YojKVUBOsDKG3X8UQWdYUjnTOplvOFgeeGj3XrPJY"/>
+          <div>
+            <div class="text-xl font-black text-text-primary mono leading-none mb-2">TECH.OVERLAY</div>
+            <div class="text-xs text-market-up font-bold flex items-center gap-1.5">
+              <span class="material-symbols-outlined" style="font-size: 16px;" aria-hidden="true">arrow_upward</span> STRONG BUY SIGNAL
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-text-muted leading-relaxed italic mb-6">
+          "High relative strength index coupled with breakout volume suggests a <span class="text-text-primary font-bold">4.2% upside</span> in the next 72 hours. Stochastic oscillators confirm trend durability."
+        </p>
+        <button class="w-full py-2 bg-ditto-primary text-on-primary-container text-[11px] font-bold rounded-lg hover:bg-ditto-primary/90 transition-all uppercase tracking-widest">
+          Execute Strategy
+        </button>
+      </div>
+
+      <!-- Backtest Workspace (Supporting) -->
+      <div id="tabpanel-backtests" class="md:col-span-4 p-4 md:p-6 border-b md:border-b-0 md:border-r border-border-subtle/20" role="tabpanel" aria-labelledby="tab-backtests" tabindex="0" hidden>
+        <div class="flex justify-between items-center mb-6">
+          <span class="text-[10px] font-black text-risk-watch tracking-widest uppercase">Latest Run</span>
+          <span class="text-[10px] font-mono text-text-muted">ID: #4401_VAL</span>
+        </div>
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div class="bg-surface-canvas p-3 rounded-lg border border-border-subtle/10">
+            <div class="text-[9px] text-text-muted uppercase font-bold mb-1">Sharpe Ratio</div>
+            <div class="text-lg font-black mono text-text-primary">2.42</div>
+          </div>
+          <div class="bg-surface-canvas p-3 rounded-lg border border-border-subtle/10">
+            <div class="text-[9px] text-text-muted uppercase font-bold mb-1">Max Drawdown</div>
+            <div class="text-lg font-black mono text-text-primary">-8.1%</div>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between text-[10px] text-text-muted">
+            <span>Strategy: Vol-Arb v2</span>
+            <span>Status: Verified</span>
+          </div>
+          <div class="h-1.5 w-full bg-surface-canvas rounded-full overflow-hidden border border-border-subtle/10" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100" aria-label="Backtest confidence at 85%">
+            <div class="h-full bg-gradient-to-r from-ditto-primary/40 via-ditto-primary to-ditto-primary/40 w-[85%]"></div>
+          </div>
+        </div>
+        <button class="w-full mt-6 py-2 border border-border-subtle/30 text-text-muted hover:text-text-primary hover:border-border-default active:scale-[0.98] text-[11px] font-bold rounded-lg transition-all uppercase tracking-widest">
+          Analytics Report
+        </button>
+      </div>
+
+      <!-- AI Findings Workspace (Supporting) -->
+      <div id="tabpanel-insights" class="md:col-span-3 p-4 md:p-6 bg-surface-raised/5" role="tabpanel" aria-labelledby="tab-insights" tabindex="0" hidden>
+        <div class="flex justify-between items-center mb-6">
+          <span class="text-[10px] font-black text-model-accepted tracking-widest uppercase">Sentiment Scan</span>
+          <span class="flex h-2 w-2 rounded-full bg-model-accepted animate-pulse" aria-hidden="true"></span>
+        </div>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-border-subtle/10">
+            <div class="flex flex-col">
+              <span class="text-[11px] font-medium text-text-primary">Consumer Disc.</span>
+              <span class="text-[9px] text-text-muted font-mono">Retail Flow</span>
+            </div>
+            <span class="text-[11px] text-market-up font-black uppercase">Bullish</span>
+          </div>
+          <div class="flex items-center justify-between pb-3 border-b border-border-subtle/10">
+            <div class="flex flex-col">
+              <span class="text-[11px] font-medium text-text-primary">Energy Sector</span>
+              <span class="text-[9px] text-text-muted font-mono">Options Orderbook</span>
+            </div>
+            <span class="text-[11px] text-market-down font-black uppercase">Bearish</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col">
+              <span class="text-[11px] font-medium text-text-primary">Yield Curve</span>
+              <span class="text-[9px] text-text-muted font-mono">Macro Anomaly</span>
+            </div>
+            <span class="text-[11px] text-amber-500 font-black uppercase">Alert</span>
+          </div>
+        </div>
+        <div class="mt-8 p-3 bg-model-accepted-subtle rounded-lg border border-model-accepted/20">
+          <div class="flex items-center gap-2 text-model-accepted">
+            <span class="material-symbols-outlined" style="font-size: 14px;" aria-hidden="true">psychology</span>
+            <span class="text-[9px] font-bold uppercase tracking-tight">AI Agent analyzing global macro...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar-nav');
+    const scrim = document.querySelector('.sidebar-scrim');
+    const btn = document.querySelector('[aria-controls="sidebar-nav"]');
+    const isOpen = sidebar.classList.toggle('open');
+    scrim.classList.toggle('open', isOpen);
+    scrim.setAttribute('aria-hidden', String(!isOpen));
+    btn.setAttribute('aria-expanded', String(isOpen));
+    if (isOpen) sidebar.querySelector('a')?.focus();
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const sidebar = document.getElementById('sidebar-nav');
+      if (sidebar?.classList.contains('open')) {
+        toggleSidebar();
+        document.querySelector('[aria-controls="sidebar-nav"]')?.focus();
+      }
+    }
+  });
+
+  // WAI-ARIA Tab pattern: arrow key navigation
+  document.querySelectorAll('[role="tablist"]').forEach(tablist => {
+    const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+    tablist.addEventListener('keydown', (e) => {
+      const idx = tabs.indexOf(document.activeElement);
+      if (idx === -1) return;
+      let next;
+      switch (e.key) {
+        case 'ArrowRight': case 'ArrowDown': next = (idx + 1) % tabs.length; break;
+        case 'ArrowLeft': case 'ArrowUp': next = (idx - 1 + tabs.length) % tabs.length; break;
+        case 'Home': next = 0; break;
+        case 'End': next = tabs.length - 1; break;
+        default: return;
+      }
+      e.preventDefault();
+      tabs[next].focus();
+      tabs[next].click();
+    });
+  });
+
+  // Enter/Space activation for role="button" elements
+  document.querySelectorAll('[role="button"]').forEach(el => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        el.click();
+      }
+    });
+  });
+</script>
+</body>
+</html>

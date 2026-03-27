@@ -17,7 +17,7 @@ describe("DashboardShell", () => {
 
 	it("侧边栏包含 Ditto 品牌标识", () => {
 		render(<DashboardShell />);
-		expect(screen.getByText("Ditto")).toBeInTheDocument();
+		expect(screen.getByText("Ditto Terminal")).toBeInTheDocument();
 	});
 
 	it("渲染主内容区域", () => {
@@ -35,8 +35,9 @@ describe("DashboardShell", () => {
 		const nav = screen.getByRole("navigation");
 		expect(nav).toHaveTextContent("Dashboard");
 		expect(nav).toHaveTextContent("行情数据");
+		expect(nav).toHaveTextContent("因子研究");
+		expect(nav).toHaveTextContent("组合管理");
 		expect(nav).toHaveTextContent("策略中心");
-		expect(nav).toHaveTextContent("回测中心");
 		expect(nav).toHaveTextContent("风控中心");
 	});
 
@@ -73,12 +74,15 @@ describe("DashboardShell", () => {
 		expect(screen.getByRole("button", { name: "ultra-compact" })).toBeInTheDocument();
 	});
 
-	it("展示四色域 Token 卡片", () => {
+	it("展示六域 Token 卡片", () => {
 		render(<DashboardShell />);
-		expect(screen.getByText("四色域 Token")).toBeInTheDocument();
+		expect(screen.getByText("六域 Token")).toBeInTheDocument();
 		expect(screen.getByText("涨 Up")).toBeInTheDocument();
 		expect(screen.getByText("跌 Down")).toBeInTheDocument();
-		expect(screen.getByText("Buy")).toBeInTheDocument();
+		expect(screen.getByText("Filled")).toBeInTheDocument();
+		expect(screen.getByText("Online")).toBeInTheDocument();
+		expect(screen.getByText("Fresh")).toBeInTheDocument();
+		expect(screen.getByText("Accepted")).toBeInTheDocument();
 	});
 
 	it("展示 shadcn/ui 组件卡片", () => {
@@ -93,6 +97,9 @@ describe("DashboardShell", () => {
 		render(<DashboardShell />);
 		expect(screen.getByText("Surface 层级")).toBeInTheDocument();
 		expect(screen.getByText("surface-app")).toBeInTheDocument();
+		expect(screen.getByText("surface-chrome")).toBeInTheDocument();
 		expect(screen.getByText("surface-elevated")).toBeInTheDocument();
+		expect(screen.getByText("surface-raised")).toBeInTheDocument();
+		expect(screen.getByText("surface-active")).toBeInTheDocument();
 	});
 });

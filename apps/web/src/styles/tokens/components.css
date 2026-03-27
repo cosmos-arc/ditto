@@ -1,0 +1,159 @@
+/*
+ * Ditto Design Tokens v2 — Components
+ *
+ * 组件级语义 token，引用 Semantic Core 和 Domain Semantic。
+ * 按 @theme inline 注册或通过 CSS 变量消费。
+ */
+
+:root,
+.dark {
+	/* ── Page ── */
+	--component-page-bg: var(--color-surface-app);
+	--component-page-section-gap-y: var(--spacing-16);
+	--component-page-block-gap-y: var(--spacing-10);
+	--component-page-content-max-width: 1600px;
+
+	/* ── Panel ── */
+	--component-panel-bg: var(--color-surface-panel);
+	--component-panel-bg-elevated: var(--color-surface-elevated);
+	--component-panel-border: var(--color-border-subtle);
+	--component-panel-border-strong: var(--color-border-default);
+	--component-panel-radius: var(--radius-xl);
+	--component-panel-padding-x: var(--spacing-8);
+	--component-panel-padding-y: var(--spacing-8);
+	--component-panel-shadow: var(--shadow-none);
+
+	/* ── Card ── */
+	--component-card-bg: var(--color-surface-panel);
+	--component-card-bg-hover: var(--color-surface-elevated);
+	--component-card-border: var(--color-border-subtle);
+	--component-card-radius: var(--radius-lg);
+	--component-card-padding-x: var(--spacing-6);
+	--component-card-padding-y: var(--spacing-6);
+
+	/* ── Toolbar ── */
+	--component-toolbar-bg: var(--color-surface-canvas);
+	--component-toolbar-border-bottom: var(--color-border-subtle);
+	--component-toolbar-control-gap: var(--spacing-4);
+	--component-toolbar-height-md: 44px;
+	--component-toolbar-height-sm: 36px;
+
+	/* ── Input ── */
+	--component-input-bg: var(--color-surface-raised);
+	--component-input-bg-hover: var(--color-surface-active);
+	--component-input-text: var(--color-text-primary);
+	--component-input-placeholder: var(--color-text-muted);
+	--component-input-border: var(--color-border-subtle);
+	--component-input-border-hover: var(--color-border-default);
+	--component-input-border-focus: var(--color-border-focus);
+	--component-input-radius: var(--radius-md);
+	--component-input-height-md: 36px;
+	--component-input-height-sm: 30px;
+	--component-input-padding-x: var(--spacing-4);
+
+	/* ── Button ── */
+	--component-button-primary-bg: var(--color-blue-500);
+	--component-button-primary-bg-hover: var(--color-blue-400);
+	--component-button-primary-text: var(--color-text-inverse);
+	--component-button-primary-border: var(--color-blue-500);
+	--component-button-secondary-bg: var(--color-surface-raised);
+	--component-button-secondary-bg-hover: var(--color-surface-active);
+	--component-button-secondary-text: var(--color-text-primary);
+	--component-button-secondary-border: var(--color-border-subtle);
+	--component-button-ghost-bg: transparent;
+	--component-button-ghost-bg-hover: var(--color-state-hover-bg);
+	--component-button-ghost-text: var(--color-text-secondary);
+	--component-button-ghost-border: transparent;
+	--component-button-danger-bg: var(--color-red-500);
+	--component-button-danger-bg-hover: var(--color-red-400);
+	--component-button-danger-text: var(--color-text-inverse);
+	--component-button-danger-border: var(--color-red-500);
+	--component-button-height-md: 36px;
+	--component-button-height-sm: 30px;
+	--component-button-radius: var(--radius-md);
+	--component-button-padding-x-md: var(--spacing-5);
+	--component-button-padding-x-sm: var(--spacing-4);
+
+	/* ── Tabs ── */
+	--component-tabs-text: var(--color-text-secondary);
+	--component-tabs-text-active: var(--color-text-primary);
+	--component-tabs-bg-hover: var(--color-state-hover-bg);
+	--component-tabs-bg-active: var(--color-state-selected-soft-bg);
+	--component-tabs-indicator: var(--color-blue-500);
+	--component-tabs-radius: var(--radius-md);
+	--component-tabs-height: 34px;
+	--component-tabs-gap: var(--spacing-2);
+
+	/* ── Badge ── */
+	--component-badge-neutral-fg: var(--color-text-secondary);
+	--component-badge-neutral-bg: var(--color-surface-raised);
+	--component-badge-neutral-border: var(--color-border-subtle);
+	--component-badge-info-fg: var(--color-blue-600);
+	--component-badge-info-bg: var(--color-blue-50);
+	--component-badge-info-border: var(--color-blue-300);
+	--component-badge-success-fg: var(--color-green-600);
+	--component-badge-success-bg: var(--color-green-100);
+	--component-badge-success-border: var(--color-green-300);
+	--component-badge-warning-fg: var(--color-amber-600);
+	--component-badge-warning-bg: var(--color-amber-100);
+	--component-badge-warning-border: var(--color-amber-300);
+	--component-badge-danger-fg: var(--color-red-600);
+	--component-badge-danger-bg: var(--color-red-100);
+	--component-badge-danger-border: var(--color-red-300);
+	--component-badge-radius: var(--radius-round);
+	--component-badge-height: 22px;
+	--component-badge-padding-x: var(--spacing-3);
+
+	/* ── Toast ── */
+	--component-toast-bg: var(--color-surface-elevated);
+	--component-toast-border: var(--color-border-default);
+	--component-toast-text: var(--color-text-primary);
+	--component-toast-shadow: var(--shadow-overlay);
+	--component-toast-radius: var(--radius-lg);
+	--component-toast-info-accent: var(--color-blue-500);
+	--component-toast-success-accent: var(--color-green-600);
+	--component-toast-warning-accent: var(--color-amber-600);
+	--component-toast-danger-accent: var(--color-red-600);
+
+	/* ── KPI ── */
+	--component-kpi-bg: var(--color-surface-panel);
+	--component-kpi-border: var(--color-border-subtle);
+	--component-kpi-radius: var(--radius-lg);
+	--component-kpi-value-font-size-sm: var(--font-size-kpi-sm);
+	--component-kpi-value-font-size-md: var(--font-size-kpi-md);
+	--component-kpi-value-font-size-lg: var(--font-size-kpi-lg);
+	--component-kpi-value-weight: var(--font-weight-semibold);
+	--component-kpi-value-color: var(--color-text-primary);
+	--component-kpi-label-font-size: var(--font-size-sm);
+	--component-kpi-label-color: var(--color-text-secondary);
+	--component-kpi-meta-font-size: var(--font-size-xs);
+	--component-kpi-meta-color: var(--color-text-muted);
+	--component-kpi-change-neutral: var(--color-text-secondary);
+	--component-kpi-change-market-up: var(--color-market-up-fg);
+	--component-kpi-change-market-down: var(--color-market-down-fg);
+	--component-kpi-change-risk-watch: var(--color-risk-watch-fg);
+	--component-kpi-change-risk-breach: var(--color-risk-breach-fg);
+
+	/* ── Sidebar ── */
+	--component-sidebar-bg: var(--color-surface-chrome);
+	--component-sidebar-border-right: var(--color-border-subtle);
+	--component-sidebar-item-text: var(--color-text-secondary);
+	--component-sidebar-item-text-active: var(--color-text-primary);
+	--component-sidebar-item-bg-hover: var(--color-state-hover-bg);
+	--component-sidebar-item-bg-active: var(--color-state-selected-soft-bg);
+	--component-sidebar-item-indicator: var(--color-blue-500);
+	--component-sidebar-section-label: var(--color-text-muted);
+
+	/* ── Topbar ── */
+	--component-topbar-bg: var(--color-surface-chrome);
+	--component-topbar-border-bottom: var(--color-border-subtle);
+	--component-topbar-text: var(--color-text-secondary);
+	--component-topbar-text-strong: var(--color-text-primary);
+	--component-topbar-height: 48px;
+
+	/* ── Inspector ── */
+	--component-inspector-bg: var(--color-surface-panel);
+	--component-inspector-border-left: var(--color-border-subtle);
+	--component-inspector-width-default: 360px;
+	--component-inspector-width-wide: 420px;
+}

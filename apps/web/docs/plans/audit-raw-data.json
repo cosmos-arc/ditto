@@ -1,0 +1,2254 @@
+{
+  "timestamp": "2026-03-27T13:39:11.003Z",
+  "tokenReference": {
+    "colorCount": 362,
+    "spacingCount": 15,
+    "radiusCount": 8,
+    "shadowCount": 5,
+    "motionCount": 14,
+    "typographyCount": 10
+  },
+  "prototypes": {
+    "home_overview_final_refinement": {
+      "filePath": "docs/designs/stitch/home_overview_final_refinement/code.html",
+      "lineCount": 735,
+      "hexColors": [
+        "#0E1319",
+        "#0F141A",
+        "#122019",
+        "#171C22",
+        "#17202A",
+        "#1B2026",
+        "#244731",
+        "#252A31",
+        "#2B3A49",
+        "#434653",
+        "#43A36F",
+        "#5C6575",
+        "#5CC8E8",
+        "#5F8FF5",
+        "#8BAAF8",
+        "#8D909E",
+        "#91A3B5",
+        "#B497E7",
+        "#C3C6D5",
+        "#D17D4A",
+        "#D85C5C",
+        "#D9A85B",
+        "#DEE3EB"
+      ],
+      "cssVariables": [
+        {
+          "name": "ditto-text-primary",
+          "value": "#dee3eb",
+          "full": "--ditto-text-primary: #dee3eb;"
+        },
+        {
+          "name": "ditto-text-secondary",
+          "value": "#c3c6d5",
+          "full": "--ditto-text-secondary: #c3c6d5;"
+        },
+        {
+          "name": "ditto-text-muted",
+          "value": "#91a3b5",
+          "full": "--ditto-text-muted: #91a3b5;"
+        },
+        {
+          "name": "ditto-text-disabled",
+          "value": "#5c6575",
+          "full": "--ditto-text-disabled: #5c6575;"
+        },
+        {
+          "name": "ditto-surface-app",
+          "value": "#0f141a",
+          "full": "--ditto-surface-app: #0f141a;"
+        },
+        {
+          "name": "ditto-surface-chrome",
+          "value": "#0e1319",
+          "full": "--ditto-surface-chrome: #0e1319;"
+        },
+        {
+          "name": "ditto-surface-canvas",
+          "value": "#171c22",
+          "full": "--ditto-surface-canvas: #171c22;"
+        },
+        {
+          "name": "ditto-surface-panel",
+          "value": "#1b2026",
+          "full": "--ditto-surface-panel: #1b2026;"
+        },
+        {
+          "name": "ditto-surface-elevated",
+          "value": "#1b2026",
+          "full": "--ditto-surface-elevated: #1b2026;"
+        },
+        {
+          "name": "ditto-surface-raised",
+          "value": "#252a31",
+          "full": "--ditto-surface-raised: #252a31;"
+        },
+        {
+          "name": "ditto-border-subtle",
+          "value": "#2b3a49",
+          "full": "--ditto-border-subtle: #2b3a49;"
+        },
+        {
+          "name": "ditto-border-default",
+          "value": "#434653",
+          "full": "--ditto-border-default: #434653;"
+        },
+        {
+          "name": "ditto-border-strong",
+          "value": "#8d909e",
+          "full": "--ditto-border-strong: #8d909e;"
+        },
+        {
+          "name": "ditto-primary",
+          "value": "#5f8ff5",
+          "full": "--ditto-primary: #5f8ff5;"
+        },
+        {
+          "name": "ditto-primary-dim",
+          "value": "#8baaf8",
+          "full": "--ditto-primary-dim: #8baaf8;"
+        },
+        {
+          "name": "ditto-primary-subtle",
+          "value": "rgba(95, 143, 245, 0.10)",
+          "full": "--ditto-primary-subtle: rgba(95, 143, 245, 0.10);"
+        },
+        {
+          "name": "ditto-secondary",
+          "value": "#5cc8e8",
+          "full": "--ditto-secondary: #5cc8e8;"
+        },
+        {
+          "name": "ditto-secondary-subtle",
+          "value": "rgba(92, 200, 232, 0.10)",
+          "full": "--ditto-secondary-subtle: rgba(92, 200, 232, 0.10);"
+        },
+        {
+          "name": "ditto-market-up",
+          "value": "#43a36f",
+          "full": "--ditto-market-up: #43a36f;"
+        },
+        {
+          "name": "ditto-market-up-subtle",
+          "value": "rgba(67, 163, 111, 0.10)",
+          "full": "--ditto-market-up-subtle: rgba(67, 163, 111, 0.10);"
+        },
+        {
+          "name": "ditto-market-up-bg",
+          "value": "#122019",
+          "full": "--ditto-market-up-bg: #122019;"
+        },
+        {
+          "name": "ditto-market-up-border",
+          "value": "#244731",
+          "full": "--ditto-market-up-border: #244731;"
+        },
+        {
+          "name": "ditto-market-down",
+          "value": "#d85c5c",
+          "full": "--ditto-market-down: #d85c5c;"
+        },
+        {
+          "name": "ditto-market-down-subtle",
+          "value": "rgba(216, 92, 92, 0.10)",
+          "full": "--ditto-market-down-subtle: rgba(216, 92, 92, 0.10);"
+        },
+        {
+          "name": "ditto-risk-watch",
+          "value": "#d9a85b",
+          "full": "--ditto-risk-watch: #d9a85b;"
+        },
+        {
+          "name": "ditto-risk-watch-subtle",
+          "value": "rgba(217, 168, 91, 0.10)",
+          "full": "--ditto-risk-watch-subtle: rgba(217, 168, 91, 0.10);"
+        },
+        {
+          "name": "ditto-risk-elevated",
+          "value": "#d17d4a",
+          "full": "--ditto-risk-elevated: #d17d4a;"
+        },
+        {
+          "name": "ditto-risk-elevated-subtle",
+          "value": "rgba(209, 125, 74, 0.10)",
+          "full": "--ditto-risk-elevated-subtle: rgba(209, 125, 74, 0.10);"
+        },
+        {
+          "name": "ditto-risk-breach",
+          "value": "#d85c5c",
+          "full": "--ditto-risk-breach: #d85c5c;"
+        },
+        {
+          "name": "ditto-model-accepted",
+          "value": "#b497e7",
+          "full": "--ditto-model-accepted: #b497e7;"
+        },
+        {
+          "name": "ditto-model-accepted-subtle",
+          "value": "rgba(180, 151, 231, 0.10)",
+          "full": "--ditto-model-accepted-subtle: rgba(180, 151, 231, 0.10);"
+        },
+        {
+          "name": "ditto-state-hover",
+          "value": "#17202a",
+          "full": "--ditto-state-hover: #17202a;"
+        },
+        {
+          "name": "ditto-state-selected",
+          "value": "rgba(95, 143, 245, 0.05)",
+          "full": "--ditto-state-selected: rgba(95, 143, 245, 0.05);"
+        },
+        {
+          "name": "ditto-state-focus-ring",
+          "value": "rgba(95, 143, 245, 0.5)",
+          "full": "--ditto-state-focus-ring: rgba(95, 143, 245, 0.5);"
+        }
+      ],
+      "fontFamilies": [
+        "Inter",
+        "IBM Plex Mono",
+        "Material Symbols Outlined",
+        ""
+      ],
+      "arbitrarySizes": [
+        "0",
+        "0.5",
+        "1",
+        "1.5",
+        "10px",
+        "11px",
+        "12",
+        "13px",
+        "16",
+        "2",
+        "2.5",
+        "3",
+        "320px",
+        "4",
+        "40vw",
+        "6",
+        "60",
+        "72%",
+        "8",
+        "85%",
+        "9",
+        "95",
+        "9px",
+        "calc(100%-48px)",
+        "calc(100vh-48px)"
+      ],
+      "borderRadius": [
+        "0.375rem",
+        "10px",
+        "4px",
+        "DEFAULT: 0.25rem",
+        "bg",
+        "border",
+        "font",
+        "full: 9999px",
+        "lg: 0.5rem",
+        "transition",
+        "xl: 0.75rem"
+      ],
+      "boxShadow": [],
+      "transitions": [
+        "all",
+        "colors",
+        "config: \"instant\": \"80ms\",\n            \"fast\": \"140ms\",\n            \"normal\": \"220ms\",",
+        "duration",
+        "fast",
+        "iteration",
+        "normal",
+        "transform",
+        "transform 140ms"
+      ],
+      "tailwindConfig": "{\n      darkMode: \"class\",\n      theme: {\n        extend: {\n          fontFamily: {\n            \"headline\": [\"'Inter'\", \"sans-serif\"],\n            \"body\": [\"'Inter'\", \"sans-serif\"],\n            \"label\": [\"'Inter'\", \"sans-serif\"],\n            \"mono\": [\"'IBM Plex Mono'\", \"monospace\"],\n          },\n          borderRadius: { \"DEFAULT\": \"0.25rem\", \"lg\": \"0.5rem\", \"xl\": \"0.75rem\", \"full\": \"9999px\" },\n          transitionDuration: {\n            \"instant\": \"80ms\",\n            \"fast\": \"140ms\",\n            \"normal\": \"220ms\",\n          },\n        },\n      },\n    }",
+      "colorMatches": [
+        {
+          "prototypeHex": "#0E1319",
+          "matchType": "near",
+          "nearestTokenHex": "#141515",
+          "tokens": [
+            "color-neutral-0"
+          ],
+          "distance": 7.5
+        },
+        {
+          "prototypeHex": "#0F141A",
+          "matchType": "near",
+          "nearestTokenHex": "#141515",
+          "tokens": [
+            "color-neutral-0"
+          ],
+          "distance": 7.1
+        },
+        {
+          "prototypeHex": "#122019",
+          "matchType": "near",
+          "nearestTokenHex": "#171919",
+          "tokens": [
+            "color-cyan-50"
+          ],
+          "distance": 8.6
+        },
+        {
+          "prototypeHex": "#171C22",
+          "matchType": "near",
+          "nearestTokenHex": "#1B1D20",
+          "tokens": [
+            "color-blue-100"
+          ],
+          "distance": 4.6
+        },
+        {
+          "prototypeHex": "#17202A",
+          "matchType": "near",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 9.6
+        },
+        {
+          "prototypeHex": "#1B2026",
+          "matchType": "near",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 4.6
+        },
+        {
+          "prototypeHex": "#244731",
+          "matchType": "none",
+          "nearestTokenHex": "#2E3233",
+          "tokens": [
+            "color-cyan-500"
+          ],
+          "distance": 23.3
+        },
+        {
+          "prototypeHex": "#252A31",
+          "matchType": "near",
+          "nearestTokenHex": "#25292D",
+          "tokens": [
+            "color-text-link",
+            "color-icon-active",
+            "color-border-focus",
+            "color-state-focus-ring"
+          ],
+          "distance": 4.1
+        },
+        {
+          "prototypeHex": "#2B3A49",
+          "matchType": "none",
+          "nearestTokenHex": "#333537",
+          "tokens": [
+            "color-blue-700"
+          ],
+          "distance": 20.3
+        },
+        {
+          "prototypeHex": "#434653",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 29.2
+        },
+        {
+          "prototypeHex": "#43A36F",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 118
+        },
+        {
+          "prototypeHex": "#5C6575",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 80.5
+        },
+        {
+          "prototypeHex": "#5CC8E8",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 227.1
+        },
+        {
+          "prototypeHex": "#5F8FF5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 208.7
+        },
+        {
+          "prototypeHex": "#8BAAF8",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 235
+        },
+        {
+          "prototypeHex": "#8D909E",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 155.8
+        },
+        {
+          "prototypeHex": "#91A3B5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 183.6
+        },
+        {
+          "prototypeHex": "#B497E7",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 231.2
+        },
+        {
+          "prototypeHex": "#C3C6D5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 249.8
+        },
+        {
+          "prototypeHex": "#D17D4A",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 166
+        },
+        {
+          "prototypeHex": "#D85C5C",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 165.2
+        },
+        {
+          "prototypeHex": "#D9A85B",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 196.1
+        },
+        {
+          "prototypeHex": "#DEE3EB",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 294.6
+        }
+      ]
+    },
+    "market_overview_professional_terminal_v1": {
+      "filePath": "docs/designs/stitch/market_overview_professional_terminal_v1/code.html",
+      "lineCount": 490,
+      "hexColors": [
+        "#0B0F14",
+        "#0E1319",
+        "#10161D",
+        "#121820",
+        "#122019",
+        "#17202A",
+        "#1B2530",
+        "#244731",
+        "#2B3A49",
+        "#3D8C62",
+        "#434653",
+        "#43A36F",
+        "#5F8FF5",
+        "#6C8195",
+        "#B34D4D",
+        "#DDE6EE"
+      ],
+      "cssVariables": [],
+      "fontFamilies": [
+        "Inter",
+        "IBM Plex Mono",
+        "Material Symbols Outlined",
+        ""
+      ],
+      "arbitrarySizes": [
+        "#0B0F14",
+        "#434653",
+        "#43A36F",
+        "#5f8ff5",
+        "#6C8195",
+        "#DDE6EE",
+        "0",
+        "0.5",
+        "0_0_10px_rgba(61,140,98,0.4)",
+        "0_0_8px_rgba(179,77,77,0.5)",
+        "0_0_8px_rgba(61,140,98,0.5)",
+        "1",
+        "1.5",
+        "10",
+        "10px",
+        "11",
+        "11px",
+        "12",
+        "12px",
+        "13px",
+        "14",
+        "14px",
+        "16px",
+        "18px",
+        "1px",
+        "2",
+        "2.5",
+        "24",
+        "28%",
+        "3",
+        "4",
+        "44",
+        "500px",
+        "56",
+        "6",
+        "72%",
+        "75%",
+        "8",
+        "80",
+        "8px",
+        "9px"
+      ],
+      "borderRadius": [
+        "0px",
+        "DEFAULT: 0.125rem",
+        "bg",
+        "border",
+        "flex",
+        "font",
+        "full: 9999px",
+        "hover",
+        "lg: 0.25rem",
+        "overflow",
+        "p",
+        "transition",
+        "xl: 0.5rem"
+      ],
+      "boxShadow": [],
+      "transitions": [
+        "all",
+        "all 0.2s ease",
+        "colors"
+      ],
+      "tailwindConfig": "{\n        darkMode: \"class\",\n        theme: {\n          extend: {\n            colors: {\n              \"surface\": \"#0B0F14\",\n              \"primary\": \"#5f8ff5\",\n              \"background\": \"#0B0F14\",\n              \"surface-container\": \"#0E1319\",\n              \"surface-container-high\": \"#17202A\",\n              \"outline\": \"#434653\",\n              \"market-up\": \"#3D8C62\",\n              \"market-down\": \"#B34D4D\",\n              \"market-neutral\": \"#434653\",\n              \"text-main\": \"#DDE6EE\",\n              \"text-muted\": \"#6C8195\"\n            },\n            fontFamily: {\n              \"headline\": [\"Inter\", \"sans-serif\"],\n              \"body\": [\"Inter\", \"sans-serif\"],\n              \"mono\": [\"IBM Plex Mono\", \"monospace\"]\n            },\n            borderRadius: {\"DEFAULT\": \"0.125rem\", \"lg\": \"0.25rem\", \"xl\": \"0.5rem\", \"full\": \"9999px\"},\n          },\n        },\n      }",
+      "colorMatches": [
+        {
+          "prototypeHex": "#0B0F14",
+          "matchType": "near",
+          "nearestTokenHex": "#131313",
+          "tokens": [
+            "color-text-primary",
+            "color-surface-inverse"
+          ],
+          "distance": 9
+        },
+        {
+          "prototypeHex": "#0E1319",
+          "matchType": "near",
+          "nearestTokenHex": "#141515",
+          "tokens": [
+            "color-neutral-0"
+          ],
+          "distance": 7.5
+        },
+        {
+          "prototypeHex": "#10161D",
+          "matchType": "near",
+          "nearestTokenHex": "#161718",
+          "tokens": [
+            "color-neutral-50"
+          ],
+          "distance": 7.9
+        },
+        {
+          "prototypeHex": "#121820",
+          "matchType": "near",
+          "nearestTokenHex": "#181A1D",
+          "tokens": [
+            "color-blue-50"
+          ],
+          "distance": 7
+        },
+        {
+          "prototypeHex": "#122019",
+          "matchType": "near",
+          "nearestTokenHex": "#171919",
+          "tokens": [
+            "color-cyan-50"
+          ],
+          "distance": 8.6
+        },
+        {
+          "prototypeHex": "#17202A",
+          "matchType": "near",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 9.6
+        },
+        {
+          "prototypeHex": "#1B2530",
+          "matchType": "none",
+          "nearestTokenHex": "#25292D",
+          "tokens": [
+            "color-text-link",
+            "color-icon-active",
+            "color-border-focus",
+            "color-state-focus-ring"
+          ],
+          "distance": 11.2
+        },
+        {
+          "prototypeHex": "#244731",
+          "matchType": "none",
+          "nearestTokenHex": "#2E3233",
+          "tokens": [
+            "color-cyan-500"
+          ],
+          "distance": 23.3
+        },
+        {
+          "prototypeHex": "#2B3A49",
+          "matchType": "none",
+          "nearestTokenHex": "#333537",
+          "tokens": [
+            "color-blue-700"
+          ],
+          "distance": 20.3
+        },
+        {
+          "prototypeHex": "#3D8C62",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 91.3
+        },
+        {
+          "prototypeHex": "#434653",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 29.2
+        },
+        {
+          "prototypeHex": "#43A36F",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 118
+        },
+        {
+          "prototypeHex": "#5F8FF5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 208.7
+        },
+        {
+          "prototypeHex": "#6C8195",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 125.8
+        },
+        {
+          "prototypeHex": "#B34D4D",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 123.9
+        },
+        {
+          "prototypeHex": "#DDE6EE",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 297.6
+        }
+      ]
+    },
+    "research_overview": {
+      "filePath": "docs/designs/stitch/research_overview/code.html",
+      "lineCount": 419,
+      "hexColors": [
+        "#001944",
+        "#001F27",
+        "#002863",
+        "#002D6E",
+        "#002E3A",
+        "#003642",
+        "#00429A",
+        "#004E5F",
+        "#0A0F14",
+        "#0B0F14",
+        "#0E1319",
+        "#0F141A",
+        "#10161D",
+        "#131A22",
+        "#171C22",
+        "#17202A",
+        "#1B2026",
+        "#1B9DBC",
+        "#205ABD",
+        "#252A31",
+        "#2B3A49",
+        "#2C3137",
+        "#30353C",
+        "#331200",
+        "#353A40",
+        "#385062",
+        "#434653",
+        "#43A36F",
+        "#4B1E00",
+        "#532200",
+        "#5F8FF5",
+        "#67D4F5",
+        "#690005",
+        "#753405",
+        "#82A9FF",
+        "#8D909E",
+        "#91A3B5",
+        "#93000A",
+        "#B0C6FF",
+        "#B3EBFF",
+        "#C3C6D5",
+        "#D0A04A",
+        "#D17D4A",
+        "#D85C5C",
+        "#D9E2FF",
+        "#DDE6EE",
+        "#DEE3EB",
+        "#FFB4AB",
+        "#FFB68E",
+        "#FFDAD6",
+        "#FFDBC9"
+      ],
+      "cssVariables": [],
+      "fontFamilies": [
+        "Inter",
+        "IBM Plex Mono",
+        "Material Symbols Outlined"
+      ],
+      "arbitrarySizes": [
+        "#5f8ff5",
+        "#91A3B5",
+        "#DDE6EE",
+        "0",
+        "0.5",
+        "1",
+        "1.5",
+        "10",
+        "10px",
+        "11px",
+        "12px",
+        "13px",
+        "2",
+        "2.5",
+        "240px",
+        "3",
+        "4",
+        "48px",
+        "6",
+        "600px",
+        "8",
+        "calc(100%-48px)"
+      ],
+      "borderRadius": [
+        "2px",
+        "DEFAULT: 0.25rem",
+        "bg",
+        "full: 9999px",
+        "hover",
+        "lg: 0.5rem",
+        "text",
+        "xl: 0.75rem"
+      ],
+      "boxShadow": [
+        "sm",
+        "xl"
+      ],
+      "transitions": [
+        "140ms",
+        "80ms",
+        "all",
+        "colors",
+        "opacity",
+        "transform"
+      ],
+      "tailwindConfig": "{\n      darkMode: \"class\",\n      theme: {\n        extend: {\n          colors: {\n            \"surface-container-high\": \"#252a31\",\n            \"tertiary-container\": \"#d17d4a\",\n            \"secondary-fixed-dim\": \"#67d4f5\",\n            \"primary-container\": \"#5f8ff5\",\n            \"on-error\": \"#690005\",\n            \"secondary-fixed\": \"#b3ebff\",\n            \"on-background\": \"#dee3eb\",\n            \"secondary-container\": \"#1b9dbc\",\n            \"on-tertiary-container\": \"#4b1e00\",\n            \"surface-container-low\": \"#171c22\",\n            \"on-tertiary-fixed\": \"#331200\",\n            \"outline\": \"#8d909e\",\n            \"surface-container\": \"#1b2026\",\n            \"on-tertiary-fixed-variant\": \"#753405\",\n            \"primary\": \"#b0c6ff\",\n            \"error-container\": \"#93000a\",\n            \"surface-container-lowest\": \"#0a0f14\",\n            \"tertiary-fixed-dim\": \"#ffb68e\",\n            \"background\": \"#0f141a\",\n            \"inverse-primary\": \"#205abd\",\n            \"tertiary-fixed\": \"#ffdbc9\",\n            \"on-surface\": \"#dee3eb\",\n            \"inverse-surface\": \"#dee3eb\",\n            \"secondary\": \"#67d4f5\",\n            \"primary-fixed\": \"#d9e2ff\",\n            \"on-primary-container\": \"#002863\",\n            \"error\": \"#ffb4ab\",\n            \"on-secondary-fixed\": \"#001f27\",\n            \"tertiary\": \"#ffb68e\",\n            \"surface-tint\": \"#b0c6ff\",\n            \"on-primary-fixed\": \"#001944\",\n            \"on-primary\": \"#002d6e\",\n            \"surface-dim\": \"#0f141a\",\n            \"outline-variant\": \"#434653\",\n            \"surface\": \"#0f141a\",\n            \"primary-fixed-dim\": \"#b0c6ff\",\n            \"on-secondary\": \"#003642\",\n            \"on-surface-variant\": \"#c3c6d5\",\n            \"surface-variant\": \"#30353c\",\n            \"on-error-container\": \"#ffdad6\",\n            \"surface-bright\": \"#353a40\",\n            \"on-secondary-fixed-variant\": \"#004e5f\",\n            \"on-tertiary\": \"#532200\",\n            \"on-secondary-container\": \"#002e3a\",\n            \"inverse-on-surface\": \"#2c3137\",\n            \"surface-container-highest\": \"#30353c\",\n            \"on-primary-fixed-variant\": \"#00429a\",\n            // Semantic Core Overlays from Design System\n            \"neutral-0\": \"#0B0F14\",\n            \"neutral-25\": \"#0E1319\",\n            \"neutral-50\": \"#10161D\",\n            \"neutral-75\": \"#131A22\",\n            \"neutral-100\": \"#17202A\",\n            \"neutral-300\": \"#2B3A49\",\n            \"neutral-400\": \"#385062\",\n            \"neutral-700\": \"#91A3B5\",\n            \"blue-500\": \"#5F8FF5\",\n            \"blue-600\": \"#82A9FF\",\n            \"red-500\": \"#D85C5C\",\n            \"green-500\": \"#43A36F\",\n            \"amber-500\": \"#D0A04A\",\n          },\n          fontFamily: {\n            \"headline\": [\"Inter\"],\n            \"body\": [\"Inter\"],\n            \"label\": [\"Inter\"],\n            \"mono\": [\"IBM Plex Mono\"]\n          },\n          borderRadius: {\"DEFAULT\": \"0.25rem\", \"lg\": \"0.5rem\", \"xl\": \"0.75rem\", \"full\": \"9999px\"},\n        },\n      },\n    }",
+      "colorMatches": [
+        {
+          "prototypeHex": "#001944",
+          "matchType": "none",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 44.8
+        },
+        {
+          "prototypeHex": "#001F27",
+          "matchType": "none",
+          "nearestTokenHex": "#181A1D",
+          "tokens": [
+            "color-blue-50"
+          ],
+          "distance": 26.5
+        },
+        {
+          "prototypeHex": "#002863",
+          "matchType": "none",
+          "nearestTokenHex": "#25292D",
+          "tokens": [
+            "color-text-link",
+            "color-icon-active",
+            "color-border-focus",
+            "color-state-focus-ring"
+          ],
+          "distance": 65.5
+        },
+        {
+          "prototypeHex": "#002D6E",
+          "matchType": "none",
+          "nearestTokenHex": "#2C2F33",
+          "tokens": [
+            "color-blue-500"
+          ],
+          "distance": 73.6
+        },
+        {
+          "prototypeHex": "#002E3A",
+          "matchType": "none",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 39.3
+        },
+        {
+          "prototypeHex": "#003642",
+          "matchType": "none",
+          "nearestTokenHex": "#25292D",
+          "tokens": [
+            "color-text-link",
+            "color-icon-active",
+            "color-border-focus",
+            "color-state-focus-ring"
+          ],
+          "distance": 44.5
+        },
+        {
+          "prototypeHex": "#00429A",
+          "matchType": "none",
+          "nearestTokenHex": "#333537",
+          "tokens": [
+            "color-blue-700"
+          ],
+          "distance": 112.1
+        },
+        {
+          "prototypeHex": "#004E5F",
+          "matchType": "none",
+          "nearestTokenHex": "#333537",
+          "tokens": [
+            "color-blue-700"
+          ],
+          "distance": 69.5
+        },
+        {
+          "prototypeHex": "#0A0F14",
+          "matchType": "near",
+          "nearestTokenHex": "#131313",
+          "tokens": [
+            "color-text-primary",
+            "color-surface-inverse"
+          ],
+          "distance": 9.9
+        },
+        {
+          "prototypeHex": "#0B0F14",
+          "matchType": "near",
+          "nearestTokenHex": "#131313",
+          "tokens": [
+            "color-text-primary",
+            "color-surface-inverse"
+          ],
+          "distance": 9
+        },
+        {
+          "prototypeHex": "#0E1319",
+          "matchType": "near",
+          "nearestTokenHex": "#141515",
+          "tokens": [
+            "color-neutral-0"
+          ],
+          "distance": 7.5
+        },
+        {
+          "prototypeHex": "#0F141A",
+          "matchType": "near",
+          "nearestTokenHex": "#141515",
+          "tokens": [
+            "color-neutral-0"
+          ],
+          "distance": 7.1
+        },
+        {
+          "prototypeHex": "#10161D",
+          "matchType": "near",
+          "nearestTokenHex": "#161718",
+          "tokens": [
+            "color-neutral-50"
+          ],
+          "distance": 7.9
+        },
+        {
+          "prototypeHex": "#131A22",
+          "matchType": "near",
+          "nearestTokenHex": "#181A1D",
+          "tokens": [
+            "color-blue-50"
+          ],
+          "distance": 7.1
+        },
+        {
+          "prototypeHex": "#171C22",
+          "matchType": "near",
+          "nearestTokenHex": "#1B1D20",
+          "tokens": [
+            "color-blue-100"
+          ],
+          "distance": 4.6
+        },
+        {
+          "prototypeHex": "#17202A",
+          "matchType": "near",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 9.6
+        },
+        {
+          "prototypeHex": "#1B2026",
+          "matchType": "near",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 4.6
+        },
+        {
+          "prototypeHex": "#1B9DBC",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 166.3
+        },
+        {
+          "prototypeHex": "#205ABD",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 137.3
+        },
+        {
+          "prototypeHex": "#252A31",
+          "matchType": "near",
+          "nearestTokenHex": "#25292D",
+          "tokens": [
+            "color-text-link",
+            "color-icon-active",
+            "color-border-focus",
+            "color-state-focus-ring"
+          ],
+          "distance": 4.1
+        },
+        {
+          "prototypeHex": "#2B3A49",
+          "matchType": "none",
+          "nearestTokenHex": "#333537",
+          "tokens": [
+            "color-blue-700"
+          ],
+          "distance": 20.3
+        },
+        {
+          "prototypeHex": "#2C3137",
+          "matchType": "near",
+          "nearestTokenHex": "#2C2F33",
+          "tokens": [
+            "color-blue-500"
+          ],
+          "distance": 4.5
+        },
+        {
+          "prototypeHex": "#30353C",
+          "matchType": "near",
+          "nearestTokenHex": "#333537",
+          "tokens": [
+            "color-blue-700"
+          ],
+          "distance": 5.8
+        },
+        {
+          "prototypeHex": "#331200",
+          "matchType": "none",
+          "nearestTokenHex": "#1B1818",
+          "tokens": [
+            "color-red-50"
+          ],
+          "distance": 34.5
+        },
+        {
+          "prototypeHex": "#353A40",
+          "matchType": "near",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 7.8
+        },
+        {
+          "prototypeHex": "#385062",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 45.7
+        },
+        {
+          "prototypeHex": "#434653",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 29.2
+        },
+        {
+          "prototypeHex": "#43A36F",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 118
+        },
+        {
+          "prototypeHex": "#4B1E00",
+          "matchType": "none",
+          "nearestTokenHex": "#2C2423",
+          "tokens": [
+            "color-risk-locked-fg"
+          ],
+          "distance": 47.1
+        },
+        {
+          "prototypeHex": "#532200",
+          "matchType": "none",
+          "nearestTokenHex": "#2C2423",
+          "tokens": [
+            "color-risk-locked-fg"
+          ],
+          "distance": 52.4
+        },
+        {
+          "prototypeHex": "#5F8FF5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 208.7
+        },
+        {
+          "prototypeHex": "#67D4F5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 246.4
+        },
+        {
+          "prototypeHex": "#690005",
+          "matchType": "none",
+          "nearestTokenHex": "#2C2423",
+          "tokens": [
+            "color-risk-locked-fg"
+          ],
+          "distance": 76.9
+        },
+        {
+          "prototypeHex": "#753405",
+          "matchType": "none",
+          "nearestTokenHex": "#352D2C",
+          "tokens": [
+            "color-market-up-fg-soft"
+          ],
+          "distance": 75.3
+        },
+        {
+          "prototypeHex": "#82A9FF",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 237.3
+        },
+        {
+          "prototypeHex": "#8D909E",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 155.8
+        },
+        {
+          "prototypeHex": "#91A3B5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 183.6
+        },
+        {
+          "prototypeHex": "#93000A",
+          "matchType": "none",
+          "nearestTokenHex": "#352D2C",
+          "tokens": [
+            "color-market-up-fg-soft"
+          ],
+          "distance": 109.6
+        },
+        {
+          "prototypeHex": "#B0C6FF",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 268.9
+        },
+        {
+          "prototypeHex": "#B3EBFF",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 291.2
+        },
+        {
+          "prototypeHex": "#C3C6D5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 249.8
+        },
+        {
+          "prototypeHex": "#D0A04A",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 182.1
+        },
+        {
+          "prototypeHex": "#D17D4A",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 166
+        },
+        {
+          "prototypeHex": "#D85C5C",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 165.2
+        },
+        {
+          "prototypeHex": "#D9E2FF",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 303.8
+        },
+        {
+          "prototypeHex": "#DDE6EE",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 297.6
+        },
+        {
+          "prototypeHex": "#DEE3EB",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 294.6
+        },
+        {
+          "prototypeHex": "#FFB4AB",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 257.8
+        },
+        {
+          "prototypeHex": "#FFB68E",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 247.5
+        },
+        {
+          "prototypeHex": "#FFDAD6",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 297.9
+        },
+        {
+          "prototypeHex": "#FFDBC9",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 291.9
+        }
+      ]
+    },
+    "trading_overview": {
+      "filePath": "docs/designs/stitch/trading_overview/code.html",
+      "lineCount": 407,
+      "hexColors": [
+        "#001944",
+        "#001F27",
+        "#002863",
+        "#002D6E",
+        "#002E3A",
+        "#003642",
+        "#00429A",
+        "#004E5F",
+        "#0A0F14",
+        "#0B0F14",
+        "#0E1319",
+        "#0F141A",
+        "#171C22",
+        "#17202A",
+        "#1B2026",
+        "#1B9DBC",
+        "#205ABD",
+        "#252A31",
+        "#2B3A49",
+        "#2C3137",
+        "#30353C",
+        "#331200",
+        "#353A40",
+        "#385062",
+        "#434653",
+        "#43A36F",
+        "#4B1E00",
+        "#532200",
+        "#5F8FF5",
+        "#67D4F5",
+        "#690005",
+        "#753405",
+        "#8D909E",
+        "#91A3B5",
+        "#93000A",
+        "#B0C6FF",
+        "#B3EBFF",
+        "#C3C6D5",
+        "#D17D4A",
+        "#D85C5C",
+        "#D9E2FF",
+        "#DDE6EE",
+        "#DEE3EB",
+        "#FFB4AB",
+        "#FFB68E",
+        "#FFDAD6",
+        "#FFDBC9"
+      ],
+      "cssVariables": [],
+      "fontFamilies": [
+        "Inter",
+        "IBM Plex Mono",
+        "Material Symbols Outlined"
+      ],
+      "arbitrarySizes": [
+        "#5f8ff5",
+        "#91A3B5",
+        "#DDE6EE",
+        "0",
+        "0.5",
+        "1",
+        "1.5",
+        "10px",
+        "11px",
+        "12px",
+        "13px",
+        "14%",
+        "2",
+        "2.5",
+        "240px",
+        "3",
+        "300px",
+        "4",
+        "400px",
+        "45%",
+        "48",
+        "48px",
+        "6",
+        "8",
+        "calc(100%-48px)"
+      ],
+      "borderRadius": [
+        "2px",
+        "DEFAULT: 0.25rem",
+        "border",
+        "full: 9999px",
+        "lg: 0.5rem",
+        "px",
+        "text",
+        "transition",
+        "xl: 0.75rem"
+      ],
+      "boxShadow": [],
+      "transitions": [
+        "140ms",
+        "80ms",
+        "all",
+        "colors"
+      ],
+      "tailwindConfig": "{\n        darkMode: \"class\",\n        theme: {\n          extend: {\n            colors: {\n              \"surface-container-high\": \"#252a31\",\n              \"tertiary-container\": \"#d17d4a\",\n              \"secondary-fixed-dim\": \"#67d4f5\",\n              \"primary-container\": \"#5f8ff5\",\n              \"on-error\": \"#690005\",\n              \"secondary-fixed\": \"#b3ebff\",\n              \"on-background\": \"#dee3eb\",\n              \"secondary-container\": \"#1b9dbc\",\n              \"on-tertiary-container\": \"#4b1e00\",\n              \"surface-container-low\": \"#171c22\",\n              \"on-tertiary-fixed\": \"#331200\",\n              \"outline\": \"#8d909e\",\n              \"surface-container\": \"#1b2026\",\n              \"on-tertiary-fixed-variant\": \"#753405\",\n              \"primary\": \"#b0c6ff\",\n              \"error-container\": \"#93000a\",\n              \"surface-container-lowest\": \"#0a0f14\",\n              \"tertiary-fixed-dim\": \"#ffb68e\",\n              \"background\": \"#0f141a\",\n              \"inverse-primary\": \"#205abd\",\n              \"tertiary-fixed\": \"#ffdbc9\",\n              \"on-surface\": \"#dee3eb\",\n              \"inverse-surface\": \"#dee3eb\",\n              \"secondary\": \"#67d4f5\",\n              \"primary-fixed\": \"#d9e2ff\",\n              \"on-primary-container\": \"#002863\",\n              \"error\": \"#ffb4ab\",\n              \"on-secondary-fixed\": \"#001f27\",\n              \"tertiary\": \"#ffb68e\",\n              \"surface-tint\": \"#b0c6ff\",\n              \"on-primary-fixed\": \"#001944\",\n              \"on-primary\": \"#002d6e\",\n              \"surface-dim\": \"#0f141a\",\n              \"outline-variant\": \"#434653\",\n              \"surface\": \"#0f141a\",\n              \"primary-fixed-dim\": \"#b0c6ff\",\n              \"on-secondary\": \"#003642\",\n              \"on-surface-variant\": \"#c3c6d5\",\n              \"surface-variant\": \"#30353c\",\n              \"on-error-container\": \"#ffdad6\",\n              \"surface-bright\": \"#353a40\",\n              \"on-secondary-fixed-variant\": \"#004e5f\",\n              \"on-tertiary\": \"#532200\",\n              \"on-secondary-container\": \"#002e3a\",\n              \"inverse-on-surface\": \"#2c3137\",\n              \"surface-container-highest\": \"#30353c\",\n              \"on-primary-fixed-variant\": \"#00429a\"\n            },\n            fontFamily: {\n              \"headline\": [\"Inter\", \"sans-serif\"],\n              \"body\": [\"Inter\", \"sans-serif\"],\n              \"label\": [\"Inter\", \"sans-serif\"],\n              \"mono\": [\"IBM Plex Mono\", \"monospace\"]\n            },\n            borderRadius: {\"DEFAULT\": \"0.25rem\", \"lg\": \"0.5rem\", \"xl\": \"0.75rem\", \"full\": \"9999px\"},\n          },\n        },\n      }",
+      "colorMatches": [
+        {
+          "prototypeHex": "#001944",
+          "matchType": "none",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 44.8
+        },
+        {
+          "prototypeHex": "#001F27",
+          "matchType": "none",
+          "nearestTokenHex": "#181A1D",
+          "tokens": [
+            "color-blue-50"
+          ],
+          "distance": 26.5
+        },
+        {
+          "prototypeHex": "#002863",
+          "matchType": "none",
+          "nearestTokenHex": "#25292D",
+          "tokens": [
+            "color-text-link",
+            "color-icon-active",
+            "color-border-focus",
+            "color-state-focus-ring"
+          ],
+          "distance": 65.5
+        },
+        {
+          "prototypeHex": "#002D6E",
+          "matchType": "none",
+          "nearestTokenHex": "#2C2F33",
+          "tokens": [
+            "color-blue-500"
+          ],
+          "distance": 73.6
+        },
+        {
+          "prototypeHex": "#002E3A",
+          "matchType": "none",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 39.3
+        },
+        {
+          "prototypeHex": "#003642",
+          "matchType": "none",
+          "nearestTokenHex": "#25292D",
+          "tokens": [
+            "color-text-link",
+            "color-icon-active",
+            "color-border-focus",
+            "color-state-focus-ring"
+          ],
+          "distance": 44.5
+        },
+        {
+          "prototypeHex": "#00429A",
+          "matchType": "none",
+          "nearestTokenHex": "#333537",
+          "tokens": [
+            "color-blue-700"
+          ],
+          "distance": 112.1
+        },
+        {
+          "prototypeHex": "#004E5F",
+          "matchType": "none",
+          "nearestTokenHex": "#333537",
+          "tokens": [
+            "color-blue-700"
+          ],
+          "distance": 69.5
+        },
+        {
+          "prototypeHex": "#0A0F14",
+          "matchType": "near",
+          "nearestTokenHex": "#131313",
+          "tokens": [
+            "color-text-primary",
+            "color-surface-inverse"
+          ],
+          "distance": 9.9
+        },
+        {
+          "prototypeHex": "#0B0F14",
+          "matchType": "near",
+          "nearestTokenHex": "#131313",
+          "tokens": [
+            "color-text-primary",
+            "color-surface-inverse"
+          ],
+          "distance": 9
+        },
+        {
+          "prototypeHex": "#0E1319",
+          "matchType": "near",
+          "nearestTokenHex": "#141515",
+          "tokens": [
+            "color-neutral-0"
+          ],
+          "distance": 7.5
+        },
+        {
+          "prototypeHex": "#0F141A",
+          "matchType": "near",
+          "nearestTokenHex": "#141515",
+          "tokens": [
+            "color-neutral-0"
+          ],
+          "distance": 7.1
+        },
+        {
+          "prototypeHex": "#171C22",
+          "matchType": "near",
+          "nearestTokenHex": "#1B1D20",
+          "tokens": [
+            "color-blue-100"
+          ],
+          "distance": 4.6
+        },
+        {
+          "prototypeHex": "#17202A",
+          "matchType": "near",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 9.6
+        },
+        {
+          "prototypeHex": "#1B2026",
+          "matchType": "near",
+          "nearestTokenHex": "#1F2225",
+          "tokens": [
+            "color-blue-200"
+          ],
+          "distance": 4.6
+        },
+        {
+          "prototypeHex": "#1B9DBC",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 166.3
+        },
+        {
+          "prototypeHex": "#205ABD",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 137.3
+        },
+        {
+          "prototypeHex": "#252A31",
+          "matchType": "near",
+          "nearestTokenHex": "#25292D",
+          "tokens": [
+            "color-text-link",
+            "color-icon-active",
+            "color-border-focus",
+            "color-state-focus-ring"
+          ],
+          "distance": 4.1
+        },
+        {
+          "prototypeHex": "#2B3A49",
+          "matchType": "none",
+          "nearestTokenHex": "#333537",
+          "tokens": [
+            "color-blue-700"
+          ],
+          "distance": 20.3
+        },
+        {
+          "prototypeHex": "#2C3137",
+          "matchType": "near",
+          "nearestTokenHex": "#2C2F33",
+          "tokens": [
+            "color-blue-500"
+          ],
+          "distance": 4.5
+        },
+        {
+          "prototypeHex": "#30353C",
+          "matchType": "near",
+          "nearestTokenHex": "#333537",
+          "tokens": [
+            "color-blue-700"
+          ],
+          "distance": 5.8
+        },
+        {
+          "prototypeHex": "#331200",
+          "matchType": "none",
+          "nearestTokenHex": "#1B1818",
+          "tokens": [
+            "color-red-50"
+          ],
+          "distance": 34.5
+        },
+        {
+          "prototypeHex": "#353A40",
+          "matchType": "near",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 7.8
+        },
+        {
+          "prototypeHex": "#385062",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 45.7
+        },
+        {
+          "prototypeHex": "#434653",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 29.2
+        },
+        {
+          "prototypeHex": "#43A36F",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 118
+        },
+        {
+          "prototypeHex": "#4B1E00",
+          "matchType": "none",
+          "nearestTokenHex": "#2C2423",
+          "tokens": [
+            "color-risk-locked-fg"
+          ],
+          "distance": 47.1
+        },
+        {
+          "prototypeHex": "#532200",
+          "matchType": "none",
+          "nearestTokenHex": "#2C2423",
+          "tokens": [
+            "color-risk-locked-fg"
+          ],
+          "distance": 52.4
+        },
+        {
+          "prototypeHex": "#5F8FF5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 208.7
+        },
+        {
+          "prototypeHex": "#67D4F5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 246.4
+        },
+        {
+          "prototypeHex": "#690005",
+          "matchType": "none",
+          "nearestTokenHex": "#2C2423",
+          "tokens": [
+            "color-risk-locked-fg"
+          ],
+          "distance": 76.9
+        },
+        {
+          "prototypeHex": "#753405",
+          "matchType": "none",
+          "nearestTokenHex": "#352D2C",
+          "tokens": [
+            "color-market-up-fg-soft"
+          ],
+          "distance": 75.3
+        },
+        {
+          "prototypeHex": "#8D909E",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 155.8
+        },
+        {
+          "prototypeHex": "#91A3B5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 183.6
+        },
+        {
+          "prototypeHex": "#93000A",
+          "matchType": "none",
+          "nearestTokenHex": "#352D2C",
+          "tokens": [
+            "color-market-up-fg-soft"
+          ],
+          "distance": 109.6
+        },
+        {
+          "prototypeHex": "#B0C6FF",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 268.9
+        },
+        {
+          "prototypeHex": "#B3EBFF",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 291.2
+        },
+        {
+          "prototypeHex": "#C3C6D5",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 249.8
+        },
+        {
+          "prototypeHex": "#D17D4A",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 166
+        },
+        {
+          "prototypeHex": "#D85C5C",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 165.2
+        },
+        {
+          "prototypeHex": "#D9E2FF",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 303.8
+        },
+        {
+          "prototypeHex": "#DDE6EE",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 297.6
+        },
+        {
+          "prototypeHex": "#DEE3EB",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 294.6
+        },
+        {
+          "prototypeHex": "#FFB4AB",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 257.8
+        },
+        {
+          "prototypeHex": "#FFB68E",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 247.5
+        },
+        {
+          "prototypeHex": "#FFDAD6",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 297.9
+        },
+        {
+          "prototypeHex": "#FFDBC9",
+          "matchType": "none",
+          "nearestTokenHex": "#3A3A3A",
+          "tokens": [
+            "color-neutral-950",
+            "color-text-inverse",
+            "color-surface-app",
+            "color-surface-panel",
+            "color-surface-elevated",
+            "color-surface-raised",
+            "color-overlay-popover-surface"
+          ],
+          "distance": 291.9
+        }
+      ]
+    }
+  }
+}

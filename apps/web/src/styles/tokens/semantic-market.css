@@ -1,64 +1,80 @@
 /*
- * Ditto Design Tokens — Semantic Market
+ * Ditto Design Tokens v2 — Semantic Market
  *
- * A 股涨跌色（红=涨，绿=跌）+ 策略信号色（blue/violet/gray）。
- * 信号色迁出红绿家族，与市场涨跌视觉上一眼可分。
+ * 市场涨跌色 + 中性行情色。
+ * 支持 CN（红涨绿跌）和 Global（绿涨红跌）模式切换。
+ * 组件只认 market.up / market.down，由 [data-market-locale] 决定映射。
+ * 信号色（buy/sell）已归入 chart.series.strategy，不在此文件。
  */
 
-/* ── Light 主题 ── */
+/* ── Light Theme — CN Mode (default, temporary placeholders) ── */
 :root {
-	/* A 股涨跌 — fg / bg / stroke 三位一体 */
-	--color-market-up-fg: oklch(0.6 0.22 25);
-	--color-market-up-bg: oklch(0.6 0.22 25 / 8%);
-	--color-market-up-stroke: oklch(0.6 0.22 25 / 25%);
+	/* Up — 红涨 (CN) */
+	--color-market-up-fg: oklch(0.55 0.18 25);
+	--color-market-up-fg-soft: oklch(0.65 0.22 25);
+	--color-market-up-bg: oklch(0.55 0.18 25 / 8%);
+	--color-market-up-border: oklch(0.55 0.18 25 / 20%);
+	--color-market-up-flash: oklch(0.55 0.18 25 / 18%);
 
-	--color-market-down-fg: oklch(0.6 0.17 155);
-	--color-market-down-bg: oklch(0.6 0.17 155 / 8%);
-	--color-market-down-stroke: oklch(0.6 0.17 155 / 25%);
+	/* Down — 绿跌 (CN) */
+	--color-market-down-fg: oklch(0.5 0.15 155);
+	--color-market-down-fg-soft: oklch(0.6 0.17 155);
+	--color-market-down-bg: oklch(0.5 0.15 155 / 8%);
+	--color-market-down-border: oklch(0.5 0.15 155 / 20%);
+	--color-market-down-flash: oklch(0.5 0.15 155 / 18%);
 
-	--color-market-flat-fg: oklch(0.5 0.01 0);
-	--color-market-flat-bg: oklch(0 0 0 / 4%);
-	--color-market-flat-stroke: oklch(0 0 0 / 10%);
+	/* Flat */
+	--color-market-flat-fg: oklch(0.4 0 0);
+	--color-market-flat-bg: oklch(0.4 0 0 / 8%);
+	--color-market-flat-border: oklch(0.4 0 0 / 20%);
 
-	/* 信号色 — buy=blue, sell=violet, hold=gray */
-	--color-signal-buy-fg: oklch(0.5 0.18 260);
-	--color-signal-buy-bg: oklch(0.5 0.18 260 / 8%);
-	--color-signal-buy-stroke: oklch(0.5 0.18 260 / 25%);
-
-	--color-signal-sell-fg: oklch(0.48 0.2 310);
-	--color-signal-sell-bg: oklch(0.48 0.2 310 / 8%);
-	--color-signal-sell-stroke: oklch(0.48 0.2 310 / 25%);
-
-	--color-signal-hold-fg: oklch(0.5 0.01 0);
-	--color-signal-hold-bg: oklch(0 0 0 / 4%);
-	--color-signal-hold-stroke: oklch(0 0 0 / 10%);
+	/* Neutral */
+	--color-market-neutral-fg: oklch(0.5 0.15 262);
+	--color-market-neutral-bg: oklch(0.5 0.15 262 / 8%);
+	--color-market-neutral-border: oklch(0.5 0.15 262 / 20%);
 }
 
-/* ── Dark 主题 ── */
+/* ── Dark Theme — CN Mode (default, var() refs) ── */
 .dark {
-	/* A 股涨跌 */
-	--color-market-up-fg: oklch(0.68 0.22 25);
-	--color-market-up-bg: oklch(0.68 0.22 25 / 12%);
-	--color-market-up-stroke: oklch(0.68 0.22 25 / 30%);
+	/* Up — 红涨 (CN) */
+	--color-market-up-fg: var(--color-red-500);
+	--color-market-up-fg-soft: var(--color-red-400);
+	--color-market-up-bg: var(--color-red-50);
+	--color-market-up-border: var(--color-red-300);
+	--color-market-up-flash: rgba(216,92,92,0.18);
 
-	--color-market-down-fg: oklch(0.72 0.17 155);
-	--color-market-down-bg: oklch(0.72 0.17 155 / 12%);
-	--color-market-down-stroke: oklch(0.72 0.17 155 / 30%);
+	/* Down — 绿跌 (CN) */
+	--color-market-down-fg: var(--color-green-500);
+	--color-market-down-fg-soft: var(--color-green-400);
+	--color-market-down-bg: var(--color-green-50);
+	--color-market-down-border: var(--color-green-300);
+	--color-market-down-flash: rgba(67,163,111,0.18);
 
-	--color-market-flat-fg: oklch(0.6 0.01 0);
-	--color-market-flat-bg: oklch(1 0 0 / 5%);
-	--color-market-flat-stroke: oklch(1 0 0 / 12%);
+	/* Flat */
+	--color-market-flat-fg: var(--color-neutral-700);
+	--color-market-flat-bg: var(--color-neutral-75);
+	--color-market-flat-border: var(--color-neutral-300);
 
-	/* 信号色 */
-	--color-signal-buy-fg: oklch(0.68 0.16 260);
-	--color-signal-buy-bg: oklch(0.68 0.16 260 / 12%);
-	--color-signal-buy-stroke: oklch(0.68 0.16 260 / 30%);
+	/* Neutral */
+	--color-market-neutral-fg: var(--color-blue-500);
+	--color-market-neutral-bg: rgba(95,143,245,0.10);
+	--color-market-neutral-border: var(--color-blue-300);
+}
 
-	--color-signal-sell-fg: oklch(0.65 0.18 310);
-	--color-signal-sell-bg: oklch(0.65 0.18 310 / 12%);
-	--color-signal-sell-stroke: oklch(0.65 0.18 310 / 30%);
+/* ── Global Mode — swap up/down (both themes) ── */
+[data-market-locale="global"] .dark,
+[data-market-locale="global"]:root {
+	/* Up — 绿涨 (Global) */
+	--color-market-up-fg: var(--color-green-500);
+	--color-market-up-fg-soft: var(--color-green-400);
+	--color-market-up-bg: var(--color-green-50);
+	--color-market-up-border: var(--color-green-300);
+	--color-market-up-flash: rgba(67,163,111,0.18);
 
-	--color-signal-hold-fg: oklch(0.6 0.01 0);
-	--color-signal-hold-bg: oklch(1 0 0 / 5%);
-	--color-signal-hold-stroke: oklch(1 0 0 / 12%);
+	/* Down — 红跌 (Global) */
+	--color-market-down-fg: var(--color-red-500);
+	--color-market-down-fg-soft: var(--color-red-400);
+	--color-market-down-bg: var(--color-red-50);
+	--color-market-down-border: var(--color-red-300);
+	--color-market-down-flash: rgba(216,92,92,0.18);
 }

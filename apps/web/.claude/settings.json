@@ -1,31 +1,33 @@
 {
-	"permissions": {
-		"allow": [
-			"Read(**)",
-			"Write(**)",
-			"Edit(**)",
-			"LSP(**)",
-			"Skill(**)",
-			"Glob(**)",
-			"Grep(**)",
-			"Task(**)",
-			"TodoWrite(**)",
-			"AskUserQuestion(**)",
-			"Bash(bun *)",
-			"Bash(git *)",
-			"Bash(gh *)"
-		],
-		"deny": [
-			"Bash(rm -rf *)",
-			"Bash(sudo *)",
-			"Bash(chmod 777 *)",
-			"Bash(git push --force *)",
-			"Bash(git reset --hard *)"
-		]
-	},
-	"enabledPlugins": {
-		"superpowers@superpowers-marketplace": true,
-		"code-simplifier@claude-plugins-official": true,
-		"code-review@claude-plugins-official": true
-	}
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(**)",
+      "Edit(**)",
+      "LSP(**)",
+      "Skill(**)",
+      "Glob(**)",
+      "Grep(**)",
+      "Task(**)",
+      "TodoWrite(**)",
+      "AskUserQuestion(**)",
+      "Bash(bun *)",
+      "Bash(git *)",
+      "Bash(gh *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(chmod 777 *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)"
+    ]
+  },
+  "enabledPlugins": {
+    "superpowers@superpowers-marketplace": true,
+    "code-simplifier@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "impeccable@impeccable": true
+  }
 }

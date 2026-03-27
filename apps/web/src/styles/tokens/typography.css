@@ -1,28 +1,42 @@
 /*
- * Ditto Design Tokens — Typography
+ * Ditto Design Tokens v2 — Typography
  *
- * Inter（UI）+ JetBrains Mono（技术字段）。
- * 默认数字样式：Inter + tabular-nums + lining-nums。
+ * Inter + IBM Plex Sans（UI）/ IBM Plex Mono + JetBrains Mono（技术字段）。
+ * 默认数字样式：tabular-nums + lining-nums。
  */
 
 :root {
-	/* 字号阶梯 */
-	--font-size-page-title: 20px;
-	--font-size-section-header: 14px;
-	--font-size-body-default: 14px;
-	--font-size-body-compact: 13px;
-	--font-size-label: 12px;
-	--font-size-caption: 11px;
-	--font-size-kpi: 28px;
+	/* Font Family */
+	--font-family-sans: 'Inter', 'IBM Plex Sans', 'Segoe UI', sans-serif;
+	--font-family-mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
 
-	/* 行高 */
-	--line-height-tight: 1.25;
-	--line-height-default: 1.4;
-	--line-height-relaxed: 1.6;
+	/* Font Size — 12 steps */
+	--font-size-xs: 11px;
+	--font-size-sm: 12px;
+	--font-size-md: 13px;
+	--font-size-lg: 14px;
+	--font-size-xl: 16px;
+	--font-size-xxl: 18px;
+	--font-size-display-sm: 20px;
+	--font-size-display-md: 24px;
+	--font-size-display-lg: 28px;
+	--font-size-kpi-sm: 24px;
+	--font-size-kpi-md: 32px;
+	--font-size-kpi-lg: 40px;
 
-	/* 字重 */
-	--font-weight-default: 400;
+	/* Font Weight */
+	--font-weight-regular: 400;
 	--font-weight-medium: 500;
 	--font-weight-semibold: 600;
 	--font-weight-bold: 700;
+
+	/* Line Height */
+	--font-line-height-tight: 1.2;
+	--font-line-height-normal: 1.4;
+	--font-line-height-relaxed: 1.6;
+
+	/* Letter Spacing */
+	--font-tracking-tight: -0.02em;
+	--font-tracking-normal: 0;
+	--font-tracking-wide: 0.02em;
 }

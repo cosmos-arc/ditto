@@ -1,74 +1,173 @@
 /*
- * Ditto Design Tokens — Primitive Layer
+ * Ditto Design Tokens v2 — Primitive Layer
  *
- * 去业务化的原始值：色板色阶、灰阶。
+ * 去业务化的原始值：色板色阶、灰阶、透明度、间距、圆角、阴影、动效。
  * 组件不直接引用 Primitive，通过 Semantic Token 消费。
- * 基于 Design Token 架构设计文档。
+ * 主题无关，仅 :root。
  */
 
-/* ── 彩色色阶（6 级 × 6 色相） ── */
-
 :root {
-	/* Red */
-	--color-red-50: oklch(0.97 0.02 25);
-	--color-red-100: oklch(0.92 0.06 25);
-	--color-red-200: oklch(0.85 0.12 25);
-	--color-red-300: oklch(0.75 0.18 25);
-	--color-red-400: oklch(0.65 0.22 25);
-	--color-red-500: oklch(0.55 0.24 25);
+	/* ── Neutral（15 级） — 对齐 MD3 Dark Theme 色板 ── */
 
-	/* Green */
-	--color-green-50: oklch(0.97 0.02 155);
-	--color-green-100: oklch(0.92 0.05 155);
-	--color-green-200: oklch(0.85 0.1 155);
-	--color-green-300: oklch(0.78 0.13 155);
-	--color-green-400: oklch(0.7 0.16 155);
-	--color-green-500: oklch(0.6 0.17 155);
+	--color-neutral-0: oklch(0.167 0.012 254);     /* #0B0F14 surface-container-lowest */
+	--color-neutral-25: oklch(0.184 0.015 253);    /* #0E1319 sidebar / chrome */
+	--color-neutral-50: oklch(0.197 0.017 253);    /* #10161D */
+	--color-neutral-75: oklch(0.224 0.014 253);    /* #171c22 surface-container-low */
+	--color-neutral-100: oklch(0.241 0.014 253);   /* #1b2026 surface-container */
+	--color-neutral-150: oklch(0.283 0.015 257);   /* #252a31 surface-container-high */
+	--color-neutral-200: oklch(0.327 0.014 257);   /* #30353c surface-variant */
+	--color-neutral-300: oklch(0.342 0.033 249);   /* #2B3A49 border */
+	--color-neutral-400: oklch(0.396 0.022 275);   /* #434653 outline-variant */
+	--color-neutral-500: oklch(0.419 0.042 241);   /* #385062 */
+	--color-neutral-600: oklch(0.655 0.021 276);   /* #8D909E outline */
+	--color-neutral-700: oklch(0.707 0.033 248);   /* #91A3B5 inactive text */
+	--color-neutral-800: oklch(0.829 0.021 277);   /* #C3C6D5 on-surface-variant */
+	--color-neutral-900: oklch(0.914 0.012 260);   /* #dee3eb on-surface */
+	--color-neutral-950: oklch(0.98 0.01 248);     /* near white */
 
-	/* Amber — 压低 chroma 防荧光感 */
-	--color-amber-50: oklch(0.98 0.02 85);
-	--color-amber-100: oklch(0.94 0.05 85);
-	--color-amber-200: oklch(0.88 0.08 85);
-	--color-amber-300: oklch(0.82 0.12 85);
-	--color-amber-400: oklch(0.75 0.13 85);
-	--color-amber-500: oklch(0.65 0.13 85);
+	/* ── Blue（8 级） — 50→700 亮度递增 ── */
 
-	/* Blue */
-	--color-blue-50: oklch(0.97 0.01 260);
-	--color-blue-100: oklch(0.93 0.04 260);
-	--color-blue-200: oklch(0.86 0.08 260);
-	--color-blue-300: oklch(0.75 0.14 260);
-	--color-blue-400: oklch(0.62 0.19 260);
-	--color-blue-500: oklch(0.5 0.21 260);
+	--color-blue-50: oklch(0.24 0.06 262);
+	--color-blue-100: oklch(0.29 0.08 262);
+	--color-blue-200: oklch(0.37 0.11 261);
+	--color-blue-300: oklch(0.48 0.13 262);
+	--color-blue-400: oklch(0.58 0.14 263);
+	--color-blue-500: oklch(0.664 0.161 264);      /* #5F8FF5 primary-container */
+	--color-blue-600: oklch(0.742 0.132 265);      /* #82A9FF */
+	--color-blue-700: oklch(0.830 0.084 268);      /* #b0c6ff primary accent */
 
-	/* Violet */
-	--color-violet-50: oklch(0.97 0.01 295);
-	--color-violet-100: oklch(0.93 0.04 295);
-	--color-violet-200: oklch(0.86 0.08 295);
-	--color-violet-300: oklch(0.75 0.14 295);
-	--color-violet-400: oklch(0.62 0.19 295);
-	--color-violet-500: oklch(0.5 0.21 295);
+	/* ── Cyan（7 级） ── */
 
-	/* Purple */
-	--color-purple-50: oklch(0.97 0.01 320);
-	--color-purple-100: oklch(0.92 0.05 320);
-	--color-purple-200: oklch(0.84 0.09 320);
-	--color-purple-300: oklch(0.72 0.14 320);
-	--color-purple-400: oklch(0.58 0.18 320);
-	--color-purple-500: oklch(0.48 0.18 320);
+	--color-cyan-50: oklch(0.22 0.02 226);
+	--color-cyan-100: oklch(0.29 0.04 222);
+	--color-cyan-200: oklch(0.41 0.07 230);
+	--color-cyan-300: oklch(0.52 0.09 225);
+	--color-cyan-400: oklch(0.64 0.10 221);
+	--color-cyan-500: oklch(0.73 0.11 220);
+	--color-cyan-600: oklch(0.79 0.09 219);
+	--color-cyan-700: oklch(0.818 0.110 220);      /* #67d4f5 secondary accent */
 
-	/* ── 中性灰阶（12 级，非线性） ── */
-	/* 低亮度区域更密，服务于暗色面板层次区分 */
-	--color-neutral-0: oklch(0.985 0 0);
-	--color-neutral-1: oklch(0.955 0 0);
-	--color-neutral-2: oklch(0.9 0 0);
-	--color-neutral-3: oklch(0.8 0 0);
-	--color-neutral-4: oklch(0.7 0 0);
-	--color-neutral-5: oklch(0.6 0 0);
-	--color-neutral-6: oklch(0.5 0 0);
-	--color-neutral-7: oklch(0.4 0 0);
-	--color-neutral-8: oklch(0.3 0 0);
-	--color-neutral-9: oklch(0.22 0 0);
-	--color-neutral-10: oklch(0.18 0 0);
-	--color-neutral-11: oklch(0.14 0 0);
+	/* ── Red（7 级） ── */
+
+	--color-red-50: oklch(0.22 0.04 9);
+	--color-red-100: oklch(0.26 0.04 7);
+	--color-red-200: oklch(0.30 0.05 12);
+	--color-red-300: oklch(0.40 0.09 12);
+	--color-red-400: oklch(0.48 0.10 14);
+	--color-red-500: oklch(0.63 0.16 23);
+	--color-red-600: oklch(0.67 0.15 22);
+	--color-red-700: oklch(0.83 0.07 19);
+
+	/* ── Green（7 级） ── */
+
+	--color-green-50: oklch(0.23 0.02 162);
+	--color-green-100: oklch(0.26 0.03 162);
+	--color-green-200: oklch(0.26 0.03 162);
+	--color-green-300: oklch(0.36 0.06 155);
+	--color-green-400: oklch(0.45 0.07 157);
+	--color-green-500: oklch(0.64 0.12 157);
+	--color-green-600: oklch(0.71 0.13 153);
+	--color-green-700: oklch(0.82 0.08 156);
+
+	/* ── Amber（7 级） ── */
+
+	--color-amber-50: oklch(0.22 0.02 76);
+	--color-amber-100: oklch(0.26 0.03 78);
+	--color-amber-200: oklch(0.27 0.03 76);
+	--color-amber-300: oklch(0.36 0.04 78);
+	--color-amber-400: oklch(0.47 0.06 81);
+	--color-amber-500: oklch(0.73 0.12 80);
+	--color-amber-600: oklch(0.76 0.11 77);
+	--color-amber-700: oklch(0.85 0.09 84);
+
+	/* ── Orange（8 级） ── */
+
+	--color-orange-50: oklch(0.22 0.03 47);
+	--color-orange-100: oklch(0.26 0.03 55);
+	--color-orange-200: oklch(0.28 0.04 60);
+	--color-orange-300: oklch(0.37 0.06 48);
+	--color-orange-400: oklch(0.46 0.07 48);
+	--color-orange-500: oklch(0.72 0.13 50);
+	--color-orange-600: oklch(0.72 0.12 49);
+	--color-orange-700: oklch(0.836 0.101 50);      /* #ffb68e tertiary accent */
+
+	/* ── Purple（7 级） ── */
+
+	--color-purple-50: oklch(0.22 0.03 305);
+	--color-purple-100: oklch(0.25 0.03 297);
+	--color-purple-200: oklch(0.26 0.02 307);
+	--color-purple-300: oklch(0.36 0.06 300);
+	--color-purple-400: oklch(0.45 0.08 299);
+	--color-purple-500: oklch(0.73 0.12 300);
+	--color-purple-600: oklch(0.79 0.09 300);
+	--color-purple-700: oklch(0.88 0.05 300);
+
+	/* ── Alpha Transparency ── */
+
+	--alpha-white-2: rgba(255, 255, 255, 0.02);
+	--alpha-white-3: rgba(255, 255, 255, 0.03);
+	--alpha-white-4: rgba(255, 255, 255, 0.04);
+	--alpha-white-6: rgba(255, 255, 255, 0.06);
+	--alpha-white-8: rgba(255, 255, 255, 0.08);
+	--alpha-white-10: rgba(255, 255, 255, 0.10);
+	--alpha-white-12: rgba(255, 255, 255, 0.12);
+	--alpha-white-16: rgba(255, 255, 255, 0.16);
+	--alpha-white-24: rgba(255, 255, 255, 0.24);
+	--alpha-white-28: rgba(255, 255, 255, 0.28);
+	--alpha-black-48: rgba(0, 0, 0, 0.48);
+	--alpha-black-56: rgba(0, 0, 0, 0.56);
+	--alpha-black-64: rgba(0, 0, 0, 0.64);
+	--alpha-black-72: rgba(0, 0, 0, 0.72);
+
+	/* ── Spacing ── */
+
+	--spacing-0: 0;
+	--spacing-1: 2px;
+	--spacing-2: 4px;
+	--spacing-3: 6px;
+	--spacing-4: 8px;
+	--spacing-5: 10px;
+	--spacing-6: 12px;
+	--spacing-8: 16px;
+	--spacing-10: 20px;
+	--spacing-12: 24px;
+	--spacing-14: 28px;
+	--spacing-16: 32px;
+	--spacing-20: 40px;
+	--spacing-24: 48px;
+	--spacing-32: 64px;
+
+	/* ── Radius ── */
+
+	--radius-none: 0;
+	--radius-xs: 4px;
+	--radius-sm: 6px;
+	--radius-md: 8px;
+	--radius-lg: 10px;
+	--radius-xl: 12px;
+	--radius-xxl: 16px;
+	--radius-round: 999px;
+
+	/* ── Shadow ── */
+
+	--shadow-none: none;
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.18);
+	--shadow-md: 0 6px 18px rgba(0, 0, 0, 0.28);
+	--shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.36);
+	--shadow-overlay: 0 16px 40px rgba(0, 0, 0, 0.44);
+
+	/* ── Motion Duration ── */
+
+	--duration-instant: 80ms;
+	--duration-fast: 140ms;
+	--duration-normal: 220ms;
+	--duration-slow: 320ms;
+	--duration-xslow: 480ms;
+
+	/* ── Motion Easing ── */
+
+	--ease-standard: cubic-bezier(0.2, 0, 0, 1);
+	--ease-decelerate: cubic-bezier(0, 0, 0, 1);
+	--ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+	--ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
 }

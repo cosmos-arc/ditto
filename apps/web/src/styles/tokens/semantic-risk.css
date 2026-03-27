@@ -1,44 +1,62 @@
 /*
- * Ditto Design Tokens — Semantic Risk
+ * Ditto Design Tokens v2 — Semantic Risk
  *
- * 风险等级：低(teal) → 中(amber) → 高(orange) → 临界(red)。
- * 等级递进设计，不与 status 共用色相。
+ * 风险等级：normal → watch → elevated → breach → locked。
+ * 独立于 system/data/model 域，禁止跨域共用。
  */
 
-/* ── Light 主题 ── */
+/* ── Light Theme (temporary placeholders) ── */
 :root {
-	--color-risk-low-fg: oklch(0.5 0.14 195);
-	--color-risk-low-bg: oklch(0.5 0.14 195 / 8%);
-	--color-risk-low-stroke: oklch(0.5 0.14 195 / 25%);
+	/* Normal */
+	--color-risk-normal-fg: oklch(0.4 0 0);
+	--color-risk-normal-bg: oklch(0.4 0 0 / 8%);
+	--color-risk-normal-border: oklch(0.4 0 0 / 20%);
 
-	--color-risk-medium-fg: oklch(0.6 0.13 85);
-	--color-risk-medium-bg: oklch(0.6 0.13 85 / 8%);
-	--color-risk-medium-stroke: oklch(0.6 0.13 85 / 25%);
+	/* Watch */
+	--color-risk-watch-fg: oklch(0.6 0.12 80);
+	--color-risk-watch-bg: oklch(0.6 0.12 80 / 8%);
+	--color-risk-watch-border: oklch(0.6 0.12 80 / 20%);
 
-	--color-risk-high-fg: oklch(0.58 0.18 55);
-	--color-risk-high-bg: oklch(0.58 0.18 55 / 8%);
-	--color-risk-high-stroke: oklch(0.58 0.18 55 / 25%);
+	/* Elevated */
+	--color-risk-elevated-fg: oklch(0.55 0.14 50);
+	--color-risk-elevated-bg: oklch(0.55 0.14 50 / 8%);
+	--color-risk-elevated-border: oklch(0.55 0.14 50 / 20%);
 
-	--color-risk-critical-fg: oklch(0.55 0.22 25);
-	--color-risk-critical-bg: oklch(0.55 0.22 25 / 8%);
-	--color-risk-critical-stroke: oklch(0.55 0.22 25 / 25%);
+	/* Breach */
+	--color-risk-breach-fg: oklch(0.55 0.18 25);
+	--color-risk-breach-bg: oklch(0.55 0.18 25 / 8%);
+	--color-risk-breach-border: oklch(0.55 0.18 25 / 20%);
+
+	/* Locked */
+	--color-risk-locked-fg: oklch(0.45 0.18 25);
+	--color-risk-locked-bg: oklch(0.45 0.18 25 / 8%);
+	--color-risk-locked-border: oklch(0.45 0.18 25 / 20%);
 }
 
-/* ── Dark 主题 ── */
+/* ── Dark Theme (var() refs) ── */
 .dark {
-	--color-risk-low-fg: oklch(0.65 0.12 195);
-	--color-risk-low-bg: oklch(0.65 0.12 195 / 12%);
-	--color-risk-low-stroke: oklch(0.65 0.12 195 / 30%);
+	/* Normal */
+	--color-risk-normal-fg: var(--color-neutral-700);
+	--color-risk-normal-bg: var(--color-neutral-75);
+	--color-risk-normal-border: var(--color-neutral-300);
 
-	--color-risk-medium-fg: oklch(0.75 0.13 85);
-	--color-risk-medium-bg: oklch(0.75 0.13 85 / 12%);
-	--color-risk-medium-stroke: oklch(0.75 0.13 85 / 30%);
+	/* Watch */
+	--color-risk-watch-fg: var(--color-amber-500);
+	--color-risk-watch-bg: var(--color-amber-100);
+	--color-risk-watch-border: var(--color-amber-300);
 
-	--color-risk-high-fg: oklch(0.72 0.16 55);
-	--color-risk-high-bg: oklch(0.72 0.16 55 / 12%);
-	--color-risk-high-stroke: oklch(0.72 0.16 55 / 30%);
+	/* Elevated */
+	--color-risk-elevated-fg: var(--color-orange-500);
+	--color-risk-elevated-bg: var(--color-orange-100);
+	--color-risk-elevated-border: var(--color-orange-300);
 
-	--color-risk-critical-fg: oklch(0.68 0.22 25);
-	--color-risk-critical-bg: oklch(0.68 0.22 25 / 12%);
-	--color-risk-critical-stroke: oklch(0.68 0.22 25 / 30%);
+	/* Breach */
+	--color-risk-breach-fg: var(--color-red-600);
+	--color-risk-breach-bg: var(--color-red-100);
+	--color-risk-breach-border: var(--color-red-400);
+
+	/* Locked */
+	--color-risk-locked-fg: var(--color-red-700);
+	--color-risk-locked-bg: var(--color-red-200);
+	--color-risk-locked-border: var(--color-red-500);
 }

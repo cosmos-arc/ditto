@@ -9,6 +9,7 @@ dist/
 
 # TypeScript
 *.tsbuildinfo
+src/routeTree.gen.ts
 
 # Environment variables
 .env
