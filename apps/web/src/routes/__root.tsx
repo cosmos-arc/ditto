@@ -6,9 +6,5 @@ export const Route = createRootRoute({
 });
 
 function RootLayout(): ReactNode {
-	return (
-		<>
-			<Outlet />
-		</>
-	);
+	return <Outlet />;
 }
