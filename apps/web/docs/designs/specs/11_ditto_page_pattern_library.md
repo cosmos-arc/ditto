@@ -205,7 +205,10 @@ Global Command Center 是 Ditto 的全局起点。
 
 ### 5.2 适用页面
 
-- `/markets`
+- `/markets`（Radar 变体）
+- `/markets/a-shares`（Radar 变体）
+- `/markets/hk`（Radar 变体）
+- `/markets/us`（Radar 变体）
 - `/markets/screener`
 - `/markets/watchlist`
 - `/markets/map`
@@ -256,9 +259,43 @@ Global Command Center 是 Ditto 的全局起点。
 
 主仪表是主图。
 
-适用：Markets overview、Risk dashboard、Regime lab、Backtest compare
+适用：Risk dashboard、Regime lab、Backtest compare
 
-**C. Mixed Analytical Workspace**
+**C. Market Radar Workspace**（Radar 子变体）
+
+> **详细设计**：[全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)
+
+主工作面是 Market Cards + Cross-Market Matrix + Macro Drivers 的组合，不是单一主表/主图。
+
+适用于跨市场扫描和单市场结构扫描——以"扫 → 比 → 选"为核心动词的页面。
+
+适用：`/markets`（全市场总览）、`/markets/a-shares`、`/markets/hk`、`/markets/us`
+
+核心特征：
+- 双层 Context（Context Bar + Scope Strip）
+- 70% 主工作面 + 30% Right Rail
+- Right Rail 聚焦风险、事件、下钻推荐
+- 底部 Tab Band（资金轮动 / 事件日历 / AI 解读）
+- 页面动词是 scan / compare / drill down
+
+推荐骨架：
+
+```
+┌ Rail ┬───────────────────────────────────────────────────────────────┐
+│      │ Workspace Header                                              │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ Context Bar                                                   │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ Scope Strip                                                   │
+│      ├───────────────────────────────────┬───────────────────────────┤
+│      │ Main Stage (70%)                  │ Right Rail (30%)          │
+│      │ Market Cards / Matrix / Drivers   │ 脉搏 / 风险 / 事件 / 下钻   │
+│      ├───────────────────────────────────┴───────────────────────────┤
+│      │ Bottom Tab Band                                               │
+└──────┴───────────────────────────────────────────────────────────────┘
+```
+
+**D. Mixed Analytical Workspace**
 
 表图并存，但主次仍需明确。
 

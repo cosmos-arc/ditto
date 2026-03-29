@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Home</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base → semantic → domain → interaction → density → style) -->
+  <link rel="stylesheet" href="../shared/tokens-base.css">
+  <link rel="stylesheet" href="../shared/tokens-semantic.css">
+  <link rel="stylesheet" href="../shared/tokens-domain.css">
+  <link rel="stylesheet" href="../shared/tokens-interaction.css">
+  <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="../shared/layout-base.css">
+
+  <!-- Mock Data -->
+  <script src="../shared/mock-data.js"></script>
+
+  <style>
+    /* Style label for comparison */
+    .style-label {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    :root {
+      /* ── Dense typography (shift -1 step) ── */
+      --font-size-10: 0.5625rem;   /* 9px */
+      --font-size-11: 0.625rem;    /* 10px */
+      --font-size-12: 0.6875rem;   /* 11px */
+      --font-size-13: 0.75rem;     /* 12px */
+      --font-size-14: 0.8125rem;   /* 13px */
+      --font-size-16: 0.875rem;    /* 14px */
+      --font-size-18: 1rem;        /* 16px */
+      --font-size-20: 1.125rem;    /* 18px */
+
+      /* ── Dense spacing (4pt grid, tighter) ── */
+      --space-2:  0.125rem;
+      --space-4:  0.1875rem;       /* 3px */
+      --space-6:  0.25rem;         /* 4px */
+      --space-8:  0.375rem;        /* 6px */
+      --space-10: 0.5rem;          /* 8px */
+      --space-12: 0.625rem;        /* 10px */
+      --space-16: 0.75rem;         /* 12px */
+      --space-20: 1rem;            /* 16px */
+      --space-24: 1.25rem;         /* 20px */
+
+      /* ── Dense layout ── */
+      --shell-rail-width:     48px;
+      --shell-header-height:  56px;
+      --shell-sidebar-width:  260px;
+      --shell-detail-width:   280px;
+
+      /* ── Dense rail ── */
+      --rail-logo-size:       24px;
+      --rail-icon-size:       28px;
+      --rail-icon-svg-size:   16px;
+
+      /* ── Dense header ── */
+      --header-btn-size:      28px;
+      --header-avatar-size:   24px;
+
+      /* ── Dense density tokens ── */
+      --density-panel-padding:  var(--space-8);    /* 6px */
+      --density-section-gap:    var(--space-8);
+      --density-gutter:         var(--space-12);   /* 10px */
+      --density-strip-height:   1.75rem;           /* 28px */
+      --density-row-height:     2.125rem;          /* 34px */
+      --density-cell-padding-x: var(--space-8);
+      --density-cell-padding-y: var(--space-4);
+      --density-header-height:  1.75rem;           /* 28px */
+      --density-input-height:   1.75rem;
+      --density-action-height:  1.75rem;
+      --density-toolbar-height: 1.75rem;
+      --density-chart-header:   1.75rem;
+      --density-chart-padding:  var(--space-8);
+      --density-font-delta:     -1;
+    }
+  </style>
+</head>
+<body>
+  <div class="style-label">Dense 密集 — 10/11px · 34px rows · 48px rail · A股为主</div>
+
+  <div class="shell">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon active" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <span class="header-title">Home</span>
+      <div class="header-spacer"></div>
+      <div class="header-search">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        搜索...
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="header-actions">
+        <div class="header-action-btn" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </div>
+        <div class="header-action-btn" title="Help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Pulse Strip (operational status line) ═══ -->
+    <div class="shell-pulse">
+      <div class="pulse-item">
+        <span class="pulse-value">2026-03-28</span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-value">盘中交易</span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-label">预警</span>
+        <span class="pulse-value negative">2</span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-label">任务</span>
+        <span class="pulse-value">3 运行中</span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-label">连接</span>
+        <span class="pulse-value">正常</span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-label">数据</span>
+        <span class="pulse-value">实时</span>
+      </div>
+    </div>
+
+    <!-- ═══ Main Content (Status Banner + Priority Items + Research/Insights) ═══ -->
+    <div class="shell-main">
+      <!-- Primary: Status Banner + Priority Items -->
+      <div class="main-primary">
+        <!-- Decision Banner: Account status + Market judgment + Routing CTAs -->
+        <div class="panel">
+          <div class="decision-banner">
+            <!-- Left: Account primary status (~42%) -->
+            <div class="decision-primary">
+              <span class="metric-label">今日盈亏</span>
+              <span class="metric-value positive">+¥86,472.50</span>
+              <span class="metric-sub">+0.34% · 总权益 ¥25,432,180 · ▲ 较昨日 +¥21,400</span>
+            </div>
+            <!-- Middle: Market context + judgment (~33%) -->
+            <div class="decision-judgment">
+              <div class="decision-judgment-text">偏 Risk-On，波动回落，北向转暖，但局部拥挤。</div>
+              <div class="decision-judgment-metrics">
+                <div class="decision-judgment-metric">
+                  <span class="status-label">IVIX</span>
+                  <span class="status-value">18.52</span>
+                </div>
+                <div class="decision-judgment-metric">
+                  <span class="status-label">北向资金</span>
+                  <span class="status-value up">+12.4 亿</span>
+                </div>
+              </div>
+            </div>
+            <!-- Right: Routing CTAs (~25%) -->
+            <div class="decision-execution">
+              <span class="decision-routing-label">推荐入口</span>
+              <div class="decision-cta-row">
+                <span class="decision-cta primary">查看信号总览</span>
+                <span class="decision-cta secondary">进入研究</span>
+                <span class="decision-cta ghost">风控中心</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Today's Priority Items — Main Work Surface -->
+        <div class="panel" style="flex: 1;">
+          <div class="panel-header">
+            <span class="panel-title">今日优先事项 <span class="panel-subtitle">系统为你整理的跨域关注项</span></span>
+            <span class="panel-count">5</span>
+            <div class="panel-actions">
+              <span class="panel-action">查看全部 →</span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="queue-item">
+              <div class="queue-item-bar p2"></div>
+              <div class="queue-item-body">
+                <div class="queue-item-header">
+                  <span class="queue-item-title">价值因子 2026 Q1 回测完成</span>
+                  <span class="queue-item-tag domain">研究</span>
+                </div>
+                <div class="queue-item-detail">
+                  <span class="queue-item-reason">Sharpe 1.42，最大回撤 -8.3%，建议审阅后决定是否部署。</span>
+                </div>
+                <div class="queue-item-footer">
+                  <span class="queue-item-source">回测引擎 · 1小时前</span>
+                  <span class="panel-action">查看报告</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="queue-item">
+              <div class="queue-item-bar p1"></div>
+              <div class="queue-item-body">
+                <div class="queue-item-header">
+                  <span class="queue-item-title">行业集中度超限 — 科技板块 > 35%</span>
+                  <span class="queue-item-tag risk">风控</span><span class="queue-item-tag priority">P1</span>
+                </div>
+                <div class="queue-item-detail">
+                  <span class="queue-item-reason">当前占比 37.2%，超过规则上限，需评估是否降集中度。</span>
+                </div>
+                <div class="queue-item-footer">
+                  <span class="queue-item-source">风控引擎 · 12分钟前</span>
+                  <span class="panel-action">查看详情</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="queue-item">
+              <div class="queue-item-bar p1"></div>
+              <div class="queue-item-body">
+                <div class="queue-item-header">
+                  <span class="queue-item-title">贵州茅台（600519）出现卖出信号</span>
+                  <span class="queue-item-tag trade">交易</span><span class="queue-item-tag priority">P1</span>
+                </div>
+                <div class="queue-item-detail">
+                  <span class="queue-item-reason">RSI 背离叠加放量，Alpha v3 置信度 87%，建议查看卖出上下文。</span>
+                </div>
+                <div class="queue-item-footer">
+                  <span class="queue-item-source">策略引擎 · 3分钟前</span>
+                  <span class="panel-action">查看详情</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="queue-item">
+              <div class="queue-item-bar p3"></div>
+              <div class="queue-item-body">
+                <div class="queue-item-header">
+                  <span class="queue-item-title">沪深300 1 分钟 K 线缺失</span>
+                  <span class="queue-item-tag data">数据</span>
+                </div>
+                <div class="queue-item-detail">
+                  <span class="queue-item-reason">14:32–14:33 数据缺失，当前自动补中，建议关注修复结果。</span>
+                </div>
+                <div class="queue-item-footer">
+                  <span class="queue-item-source">数据管道 · 42分钟前</span>
+                  <span class="panel-action">查看详情</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="queue-item">
+              <div class="queue-item-bar p3"></div>
+              <div class="queue-item-body">
+                <div class="queue-item-header">
+                  <span class="queue-item-title">Tushare API 频率接近上限</span>
+                  <span class="queue-item-tag platform">平台</span>
+                </div>
+                <div class="queue-item-detail">
+                  <span class="queue-item-reason">4,820 / 5,000 次今日请求，3 小时后自动重置。</span>
+                </div>
+                <div class="queue-item-footer">
+                  <span class="queue-item-source">系统监控 · 2小时前</span>
+                  <span class="panel-action">查看用量</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secondary: Research Progress + Agent Insights -->
+      <div class="shell-secondary">
+        <!-- Research Progress (cross-domain, not trading-specific) -->
+        <div class="secondary-panel">
+          <div class="panel-header">
+            <span class="panel-title">研究进展 <span class="panel-subtitle">最近的研究与验证动态</span></span>
+            <span class="panel-action">查看全部</span>
+          </div>
+          <div class="panel-body">
+            <div class="research-item highlighted">
+              <span class="research-item-icon" style="color:var(--system-healthy-fg);">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10l3 3 9-9"/></svg>
+              </span>
+              <div>
+                <div class="research-item-text">价值因子 Q1 回测完成</div>
+                <div class="research-item-summary">Sharpe 1.42，最大回撤 -8.3%，建议部署到实盘观察。</div>
+                <div class="research-item-source">回测引擎 · 1小时前</div>
+              </div>
+            </div>
+            <div class="research-item">
+              <span class="research-item-icon" style="color:var(--brand-accent);">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+              </span>
+              <div>
+                <div class="research-item-text">情绪 Alpha v2 模型漂移检测 — 近 5 日 IC 从 0.041 降至 0.028，需关注。</div>
+                <div class="research-item-source">模型监控 · 2小时前</div>
+              </div>
+            </div>
+            <div class="research-item">
+              <span class="research-item-icon" style="color:var(--amber-500);">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+              </span>
+              <div>
+                <div class="research-item-text">新因子「北向持仓变化率」验证中 — 初步 IC 0.055，待 3 个月滚动验证。</div>
+                <div class="research-item-source">因子研究 · 4小时前</div>
+              </div>
+            </div>
+            <div class="research-item">
+              <span class="research-item-icon" style="color:var(--text-tertiary);">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12M9 4v12"/></svg>
+              </span>
+              <div>
+                <div class="research-item-text">行业轮动策略参数优化完成 — 新参数组夏普比提升 0.15，待人工复核。</div>
+                <div class="research-item-source">优化引擎 · 6小时前</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agent Insights (cross-domain intelligence summary) -->
+        <div class="findings-feed">
+          <div class="findings-feed-label">Agent 洞察 <span class="findings-feed-subtitle">跨域智能洞察摘要</span></div>
+          <div class="finding-item">
+            <span class="finding-icon" style="color:var(--agent-running-fg);">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+            </span>
+            <div>
+              <div class="finding-text">贵州茅台↔沪深300 相关性从 0.82 降至 0.65 — 市场风格切换信号，当前组合偏向单一因子。</div>
+              <div class="finding-source">风控监控 · 1小时前</div>
+            </div>
+          </div>
+          <div class="finding-item">
+            <span class="finding-icon" style="color:var(--risk-high-fg);">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2v1"/></svg>
+            </span>
+            <div>
+              <div class="finding-text">财报数据延迟已持续 2 小时 — 上交所接口响应超时，建议切换备用源。</div>
+              <div class="finding-source">数据监控 · 2小时前</div>
+            </div>
+          </div>
+          <div class="finding-item">
+            <span class="finding-icon" style="color:var(--brand-accent);">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </span>
+            <div>
+              <div class="finding-text">公募 Q4 持仓数据更新完毕 — 电子板块获增配 2.3%，消费板块减配 1.8%。</div>
+              <div class="finding-source">研究扫描 · 3小时前</div>
+            </div>
+          </div>
+          <div class="findings-feed-expand">
+            <a href="#">展开全部 Agent 分析 →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Sidebar (full-height context rail: Market Pulse → Alerts → Health) ═══ -->
+    <div class="shell-sidebar">
+      <div class="context-rail">
+        <!-- Market Pulse (context-first — lightest ambient data) -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">市场脉搏</span>
+          </div>
+          <div class="context-section-body">
+            <div class="pulse-metric">
+              <span class="pulse-metric-label">大盘</span>
+              <span class="pulse-metric-value up">3,432 · +0.82%</span>
+            </div>
+            <div class="pulse-metric">
+              <span class="pulse-metric-label">波动率</span>
+              <span class="pulse-metric-value down">IVIX 18.52 -3.1%</span>
+            </div>
+            <div class="pulse-metric">
+              <span class="pulse-metric-label">市场宽度</span>
+              <span class="pulse-metric-value up">偏强</span>
+            </div>
+            <div class="pulse-metric">
+              <span class="pulse-metric-label">北向资金</span>
+              <span class="pulse-metric-value up">+12.4 亿</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Global Alerts -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">全局预警</span>
+            <span class="panel-count">4</span>
+          </div>
+          <div class="context-section-body">
+            <div class="alert-row">
+              <span class="alert-dot critical"></span>
+              <span class="alert-title">组合 VaR 突破 95% 分位</span>
+              <span class="alert-time">8分钟</span>
+            </div>
+            <div class="alert-row">
+              <span class="alert-dot critical"></span>
+              <span class="alert-title">券商连接中断 — 中信证券</span>
+              <span class="alert-time">15分钟</span>
+            </div>
+            <div class="alert-row">
+              <span class="alert-dot warning"></span>
+              <span class="alert-title">模型漂移 — 情绪 Alpha v2</span>
+              <span class="alert-time">1小时</span>
+            </div>
+            <div class="alert-row">
+              <span class="alert-dot info"></span>
+              <span class="alert-title">财报数据延迟</span>
+              <span class="alert-time">2小时</span>
+            </div>
+          </div>
+          <div class="context-section-footer">
+            <a href="#">查看全部预警 →</a>
+          </div>
+        </div>
+
+        <!-- Data Health (system trust check) -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">数据健康</span>
+          </div>
+          <div class="context-section-body health-preview-body">
+            <div class="health-item">
+              <span class="health-dot healthy"></span>
+              <span class="health-label">行情数据</span>
+              <span class="health-status ok">正常</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot healthy"></span>
+              <span class="health-label">期权链</span>
+              <span class="health-status ok">正常</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot degraded"></span>
+              <span class="health-label">财报数据</span>
+              <span class="health-status warning">延迟</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot healthy"></span>
+              <span class="health-label">新闻资讯</span>
+              <span class="health-status ok">正常</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot degraded"></span>
+              <span class="health-label">另类数据</span>
+              <span class="health-status warning">陈旧 (3天)</span>
+            </div>
+          </div>
+          <div class="health-preview-footer">
+            <a href="#">查看详情 →</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

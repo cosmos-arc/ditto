@@ -1,0 +1,69 @@
+/* ─────────────────────────────────────────────
+ * Ditto Design Tokens — Semantic Surface Layer
+ * Layer 2: Surface elevation, text hierarchy, borders
+ * These defaults get overridden per-style.
+ * ───────────────────────────────────────────── */
+
+:root {
+  /* ── Surface Elevation (6 levels) ── */
+  /* Level 0: App background — deepest, most recessed */
+  --surface-app:               oklch(0.155 0.0124 254.17);
+  /* Level 1: Panel base — primary content containers */
+  --surface-panel-base:        oklch(0.185 0.0146 253.21);
+  /* Level 2: Panel elevated — nested cards, secondary panels */
+  --surface-panel-elevated:    oklch(0.215 0.0190 252.07);
+  /* Level 3: Strip / toolbar — horizontal bars */
+  --surface-strip:             oklch(0.185 0.0146 253.21);
+  /* Level 4: Overlay / popover — floating elements */
+  --surface-overlay:           oklch(0.260 0.0252 251.20);
+  /* Level 5: Modal — highest elevation */
+  --surface-modal:             oklch(0.302 0.0303 246.97);
+
+  /* ── Text Hierarchy (5 levels) ── */
+  --text-primary:              oklch(0.9205 0.0146 244.73);
+  --text-secondary:            oklch(0.5937 0.0393 247.20);
+  --text-tertiary:             oklch(0.4193 0.0421 241.39);
+  --text-disabled:             oklch(0.3418 0.0330 248.82);
+  --text-inverse:              oklch(0.1665 0.0124 254.17);
+
+  /* ── Text Semantic ── */
+  --text-link:                 var(--brand-500);
+  --text-link-hover:           var(--brand-400);
+  --text-error:                var(--red-500);
+  --text-warning:              var(--amber-500);
+  --text-success:              var(--green-500);
+
+  /* ── Border Hierarchy (3 levels) ── */
+  --border-subtle:             oklch(0.2396 0.0233 251.45);
+  --border-default:            oklch(0.3025 0.0303 246.97);
+  --border-strong:             oklch(0.4193 0.0421 241.39);
+
+  /* ── Border Semantic ── */
+  --border-focus:              var(--interaction-focus-ring);
+  --border-error:              var(--red-500);
+  --border-warning:            var(--amber-500);
+
+  /* ── Brand Accent (semantic) ── */
+  --brand-accent:              var(--brand-500);
+  --brand-accent-hover:        var(--brand-400);
+  --brand-accent-subtle:       oklch(0.6642 0.1605 263.63 / 0.12);
+
+  /* ── Icon ── */
+  --icon-primary:              var(--text-secondary);
+  --icon-secondary:            var(--text-tertiary);
+  --icon-brand:                var(--brand-accent);
+
+  /* ── Scrollbar ── */
+  --scrollbar-track:           oklch(0.1665 0.0124 254.17);
+  --scrollbar-thumb:           oklch(0.3025 0.0303 246.97);
+  --scrollbar-thumb-hover:     oklch(0.3418 0.0330 248.82);
+
+  /* ── Code / Mono ── */
+  --code-bg:                   oklch(0.1665 0.0124 254.17);
+  --code-text:                 oklch(0.8143 0.0232 248.11);
+  --code-border:               oklch(0.2396 0.0233 251.45);
+
+  /* ── Divider ── */
+  --divider-default:           var(--border-subtle);
+  --divider-strong:            var(--border-default);
+}

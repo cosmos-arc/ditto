@@ -124,7 +124,7 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 
 **对应页面**
 
-- `/markets`
+- `/markets/a-shares`
 - `/markets/screener`
 - `/markets/watchlist`
 - `/markets/map`
@@ -152,6 +152,85 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 - 纯目录页
 - 复杂编辑器
 - 运维表单页
+
+---
+
+### 4.2.1 Analytical / Radar 子变体
+
+> **详细设计**：[全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)
+
+**适用场景**
+
+用于跨市场扫描和单市场结构扫描——以"扫 → 比 → 选"为核心动词的页面。
+
+**对应页面**
+
+- `/markets` — 全市场总览
+- `/markets/a-shares` — 中国 A 股总览
+- `/markets/hk` — 港股总览
+- `/markets/us` — 美股总览
+- 后续 `/markets/fx`、`/markets/rates`、`/markets/commodities`
+
+**任务特征**
+
+- 双层 Context：Context Bar（客观变量） + Scope Strip（解读摘要）
+- 主工作面 70%，Right Rail 30%
+- 主工作面不是单一主表/主图，而是 Market Cards / Matrix / Drivers 组合
+- Right Rail 聚焦风险、事件和下钻推荐，不是信息堆叠
+- 底部 Tab Band（资金轮动 / 事件日历 / AI 解读）
+- 页面核心动词是 scan / compare / drill down，不是深度分析
+
+**与 Analytical 原版的差异**
+
+| 维度 | Analytical 原版 | Radar 子变体 |
+|------|----------------|-------------|
+| Context 层 | 单层 Pulse Strip | 双层（Context Bar + Scope Strip） |
+| 主工作面比例 | 65-70% | 固定 70% |
+| 右侧 | Activity Stack | Right Rail（风险 + 事件 + 下钻） |
+| 底部 | Analysis Band | Tab Band（资金轮动 / 事件日历 / AI 解读） |
+| 页面动词 | 分析 / 监控 / 判断 | 扫描 / 比较 / 下钻 |
+
+**推荐骨架**
+
+```
+┌ Rail ┬───────────────────────────────────────────────────────────────┐
+│      │ Workspace Header                                              │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ Context Bar（全局环境条 — 客观变量）                             │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ Scope Strip（今日解读条 — 人话摘要）                             │
+│      ├───────────────────────────────────┬───────────────────────────┤
+│      │ Main Stage (70%)                  │ Right Rail (30%)          │
+│      │                                   │                           │
+│      │ Market Cards / Matrix / Drivers   │ 脉搏 / 风险 / 事件 / 下钻   │
+│      │                                   │                           │
+│      ├───────────────────────────────────┴───────────────────────────┤
+│      │ Bottom Tab Band                                               │
+└──────┴───────────────────────────────────────────────────────────────┘
+```
+
+**CSS Grid 定义**
+
+```css
+.shell-radar {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr var(--shell-rail-radar-width);
+  grid-template-rows: var(--shell-header-height) var(--context-bar-height) var(--scope-strip-height) 1fr var(--tab-band-height);
+  grid-template-areas:
+    "rail    header   header"
+    "rail    context  context"
+    "rail    scope    scope"
+    "rail    main     right-rail"
+    "rail    tabs     tabs";
+}
+```
+
+**不适合的场景**
+
+- 深度单对象分析（应使用 Analytical 原版或 Object Hub）
+- 纯配置台
+- 纯目录页
+- 复杂编辑器
 
 ---
 

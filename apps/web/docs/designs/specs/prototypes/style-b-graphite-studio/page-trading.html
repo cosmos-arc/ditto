@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Trading</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base → semantic → domain → interaction → density → style) -->
+  <link rel="stylesheet" href="../shared/tokens-base.css">
+  <link rel="stylesheet" href="../shared/tokens-semantic.css">
+  <link rel="stylesheet" href="../shared/tokens-domain.css">
+  <link rel="stylesheet" href="../shared/tokens-interaction.css">
+  <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="../shared/layout-base.css">
+
+  <style>
+    /* Style label for comparison */
+    .style-label {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    /* ── Trading Variant: 3-row override (no analysis band) ── */
+    .shell-analytical.trading-variant {
+      grid-template-rows: 64px auto 1fr;
+      grid-template-areas:
+        "rail header   header"
+        "rail strip    strip"
+        "rail main     activity";
+    }
+
+    /* ── Scope Strip — Trading Session Metrics ── */
+    .scope-metric {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      white-space: nowrap;
+    }
+
+    .scope-metric-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .scope-metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .scope-metric-value.up {
+      color: var(--market-up-fg);
+    }
+
+    .scope-metric-value.down {
+      color: var(--market-down-fg);
+    }
+
+    .scope-metric-value.warning {
+      color: var(--risk-high-fg);
+    }
+
+    .scope-metric-value.ok {
+      color: var(--system-healthy-fg);
+    }
+
+    .scope-separator {
+      width: 1px;
+      height: 14px;
+      background: var(--border-subtle);
+    }
+
+    .scope-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .scope-status-dot.green {
+      background: var(--system-healthy-fg);
+      box-shadow: 0 0 4px var(--system-healthy-fg);
+    }
+
+    /* ── Header: Account Selector ── */
+    .header-account {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      padding: var(--space-4) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .header-account:hover {
+      border-color: var(--border-default);
+    }
+
+    .header-account-name {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .header-account-broker {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+    }
+
+    .header-account-chevron {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+    }
+
+    /* ── Header: Danger Button ── */
+    .btn-danger-sm {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-4) var(--space-10);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--red-500);
+      background: transparent;
+      color: var(--red-500);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .btn-danger-sm:hover {
+      background: oklch(0.6317 0.1567 22.64 / 0.1);
+    }
+
+    /* ── Main Content: Trading Panels ── */
+    .trading-panels {
+      display: flex;
+      flex-direction: column;
+      gap: var(--density-gutter);
+      height: 100%;
+      min-height: 0;
+    }
+
+    /* Panel 1: Equity / PnL (~40%) */
+    .panel-equity {
+      flex: 4;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .equity-metrics {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-12);
+      padding: var(--space-12) var(--space-16);
+    }
+
+    .equity-primary {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-12);
+    }
+
+    .equity-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .equity-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-28);
+      font-weight: var(--font-weight-semibold);
+      color: var(--market-up-fg);
+      letter-spacing: -0.02em;
+    }
+
+    .equity-pct {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-medium);
+      color: var(--market-up-fg);
+    }
+
+    .equity-sub-row {
+      display: flex;
+      gap: var(--space-16);
+    }
+
+    .equity-sub-item {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-4);
+    }
+
+    .equity-sub-label {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+
+    .equity-sub-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .equity-sub-value.up {
+      color: var(--market-up-fg);
+    }
+
+    /* Chart placeholder */
+    .equity-chart {
+      flex: 1;
+      min-height: 80px;
+      margin: 0 var(--space-16) var(--space-12);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .equity-chart-label {
+      position: absolute;
+      top: var(--space-8);
+      left: var(--space-12);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      z-index: 1;
+    }
+
+    .equity-chart-trend {
+      position: absolute;
+      bottom: 16px;
+      left: 10%;
+      right: 15%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--market-up-fg) 20%, var(--market-up-fg) 100%);
+      transform: rotate(-3deg);
+      transform-origin: left center;
+      opacity: 0.6;
+    }
+
+    .equity-chart-area {
+      position: absolute;
+      bottom: 16px;
+      left: 10%;
+      right: 15%;
+      height: 40%;
+      background: linear-gradient(180deg, var(--market-up-subtle) 0%, transparent 100%);
+      clip-path: polygon(0% 100%, 5% 85%, 15% 70%, 25% 75%, 35% 60%, 45% 55%, 55% 50%, 65% 45%, 75% 35%, 85% 30%, 95% 20%, 100% 15%, 100% 100%);
+    }
+
+    /* Panel 2: Positions (~35%) */
+    .panel-positions {
+      flex: 3.5;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-positions .panel-body {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Panel 3: Orders (~25%) */
+    .panel-orders {
+      flex: 2.5;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-orders .panel-body {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Order list */
+    .order-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-10);
+      padding: var(--density-cell-padding-y) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .order-row:last-child {
+      border-bottom: none;
+    }
+
+    .order-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .order-side-pill {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-4);
+      white-space: nowrap;
+    }
+
+    .order-side-pill.buy {
+      background: var(--market-up-bg);
+      color: var(--market-up-fg);
+    }
+
+    .order-side-pill.sell {
+      background: var(--market-down-bg);
+      color: var(--market-down-fg);
+    }
+
+    .order-ticker {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .order-type {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    .order-detail {
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .order-status {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+    }
+
+    .order-status.pending {
+      color: var(--brand-accent);
+    }
+
+    .order-status.filled {
+      color: var(--system-healthy-fg);
+    }
+
+    .order-status.cancelled {
+      color: var(--text-disabled);
+    }
+
+    .order-status.partial {
+      color: var(--risk-high-fg);
+    }
+
+    .order-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    /* ── Order Tabs ── */
+    .order-tabs {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .order-tab {
+      font-size: var(--font-size-11);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      color: var(--text-tertiary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .order-tab:hover {
+      color: var(--text-secondary);
+    }
+
+    .order-tab.active {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .order-tab .tab-count {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+    }
+
+    /* ── Activity Stack: Risk Items ── */
+    .risk-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .risk-item:last-child {
+      border-bottom: none;
+    }
+
+    .risk-item-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .risk-item-dot.warning {
+      background: var(--risk-high-fg);
+    }
+
+    .risk-item-dot.critical {
+      background: var(--risk-critical-fg);
+    }
+
+    .risk-item-dot.ok {
+      background: var(--system-healthy-fg);
+    }
+
+    .risk-item-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .risk-item-label {
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+    }
+
+    .risk-item-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .risk-item-value.warning {
+      color: var(--risk-high-fg);
+    }
+
+    .risk-item-value.ok {
+      color: var(--system-healthy-fg);
+    }
+
+    .risk-progress {
+      width: 100%;
+      height: 3px;
+      background: var(--border-subtle);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: var(--space-4);
+    }
+
+    .risk-progress-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+
+    .risk-progress-fill.warning {
+      background: var(--risk-high-fg);
+    }
+
+    .risk-progress-fill.critical {
+      background: var(--risk-critical-fg);
+    }
+
+    .risk-progress-fill.ok {
+      background: var(--system-healthy-fg);
+    }
+
+    /* ── Activity Stack: Signal Queue ── */
+    .signal-queue-item {
+      display: flex;
+      gap: 0;
+      padding: var(--space-6) 0;
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .signal-queue-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+      margin: 0 calc(var(--space-12) * -1);
+      padding-left: var(--space-12);
+      padding-right: var(--space-12);
+    }
+
+    .signal-queue-bar {
+      width: 2px;
+      flex-shrink: 0;
+      align-self: stretch;
+      border-radius: 1px;
+    }
+
+    .signal-queue-bar.p1 { background: var(--risk-critical-fg); }
+    .signal-queue-bar.p2 { background: var(--risk-high-fg); }
+    .signal-queue-bar.p3 { background: var(--text-disabled); }
+
+    .signal-queue-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-left: var(--space-8);
+    }
+
+    .signal-queue-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .signal-queue-title {
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .signal-queue-direction {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+    }
+
+    .signal-queue-direction.sell {
+      color: var(--market-down-fg);
+    }
+
+    .signal-queue-direction.buy {
+      color: var(--market-up-fg);
+    }
+
+    .signal-queue-direction.hold {
+      color: var(--text-tertiary);
+    }
+
+    .signal-queue-reason {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .signal-queue-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1px;
+    }
+
+    .signal-queue-meta {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .signal-queue-confidence {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .signal-queue-confidence.high { color: var(--market-up-fg); }
+    .signal-queue-confidence.medium { color: var(--risk-high-fg); }
+    .signal-queue-confidence.low { color: var(--text-tertiary); }
+
+    /* ── Activity Stack: Recent Fills ── */
+    .fill-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .fill-row:last-child {
+      border-bottom: none;
+    }
+
+    .fill-ticker {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .fill-side {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+    }
+
+    .fill-side.buy { color: var(--market-up-fg); }
+    .fill-side.sell { color: var(--market-down-fg); }
+
+    .fill-detail {
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .fill-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="style-label">Graphite Studio — Trading Overview · Compact · A股</div>
+
+  <div class="shell-analytical trading-variant">
+
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon active" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header (64px) ═══ -->
+    <header class="shell-header">
+      <span class="header-title">Trading</span>
+      <span style="font-size: var(--font-size-11); color: var(--text-tertiary); margin-left: var(--space-4);">交易控制中心</span>
+
+      <div class="header-spacer"></div>
+
+      <!-- Account Selector -->
+      <div class="header-account">
+        <span class="header-account-name">主账户</span>
+        <span style="color: var(--text-tertiary);">·</span>
+        <span class="header-account-broker">华泰证券</span>
+        <span class="header-account-chevron">▾</span>
+      </div>
+
+      <!-- Search -->
+      <div class="header-search">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        搜索...
+        <kbd>⌘K</kbd>
+      </div>
+
+      <!-- Actions -->
+      <div class="header-actions">
+        <span class="btn-danger-sm">暂停交易</span>
+        <div class="header-action-btn" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Session Strip ═══ -->
+    <div class="scope-strip">
+      <div class="scope-metric">
+        <span class="scope-metric-label">可用资金</span>
+        <span class="scope-metric-value">¥8,432,180.50</span>
+      </div>
+      <div class="scope-separator"></div>
+      <div class="scope-metric">
+        <span class="scope-metric-label">融资余额</span>
+        <span class="scope-metric-value">¥12,000,000</span>
+      </div>
+      <div class="scope-separator"></div>
+      <div class="scope-metric">
+        <span class="scope-metric-label">风控占用</span>
+        <span class="scope-metric-value warning">68.2%</span>
+      </div>
+      <div class="scope-separator"></div>
+      <div class="scope-metric">
+        <span class="scope-status-dot green"></span>
+        <span class="scope-metric-label">券商连接</span>
+        <span class="scope-metric-value ok">正常</span>
+      </div>
+      <div class="scope-separator"></div>
+      <div class="scope-metric">
+        <span class="scope-metric-label">通道延迟</span>
+        <span class="scope-metric-value">12ms</span>
+      </div>
+      <div class="scope-separator"></div>
+      <div class="scope-metric">
+        <span class="scope-metric-label">今日成交</span>
+        <span class="scope-metric-value">47 笔</span>
+      </div>
+    </div>
+
+    <!-- ═══ Main Content — Three stacked panels ═══ -->
+    <div class="main-content">
+      <div class="trading-panels">
+
+        <!-- Panel 1: 权益/盈亏 (~40%) -->
+        <div class="panel panel-equity">
+          <div class="equity-metrics">
+            <div class="equity-primary">
+              <span class="equity-label">今日盈亏</span>
+              <span class="equity-value">+¥86,472.50</span>
+              <span class="equity-pct">(+0.34%)</span>
+            </div>
+            <div class="equity-sub-row">
+              <div class="equity-sub-item">
+                <span class="equity-sub-label">总权益</span>
+                <span class="equity-sub-value">¥25,432,180.00</span>
+              </div>
+              <div class="equity-sub-item">
+                <span class="equity-sub-label">昨日权益</span>
+                <span class="equity-sub-value">¥25,345,707.50</span>
+              </div>
+              <div class="equity-sub-item">
+                <span class="equity-sub-label">本月</span>
+                <span class="equity-sub-value up">+2.8%</span>
+              </div>
+            </div>
+          </div>
+          <div class="equity-chart">
+            <span class="equity-chart-label">权益曲线 · 日线</span>
+            <div class="equity-chart-area"></div>
+            <div class="equity-chart-trend"></div>
+          </div>
+        </div>
+
+        <!-- Panel 2: 持仓汇总 (~35%) -->
+        <div class="panel panel-positions">
+          <div class="panel-header">
+            <span class="panel-title">持仓</span>
+            <span class="panel-count">8</span>
+            <div class="panel-actions">
+              <span class="panel-action">查看全部 →</span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>代码</th>
+                  <th>名称</th>
+                  <th class="right">数量</th>
+                  <th class="right">成本</th>
+                  <th class="right">现价</th>
+                  <th class="right">盈亏</th>
+                  <th class="right">盈亏%</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="row">
+                  <td class="cell-ticker">600519</td>
+                  <td class="cell-name">贵州茅台</td>
+                  <td class="numeric right">200</td>
+                  <td class="numeric right">1,785.00</td>
+                  <td class="numeric right">1,856.00</td>
+                  <td class="numeric right cell-change-up">+14,200</td>
+                  <td class="numeric right cell-change-up">+3.98%</td>
+                </tr>
+                <tr class="row">
+                  <td class="cell-ticker">300750</td>
+                  <td class="cell-name">宁德时代</td>
+                  <td class="numeric right">500</td>
+                  <td class="numeric right">215.00</td>
+                  <td class="numeric right">218.00</td>
+                  <td class="numeric right cell-change-up">+1,500</td>
+                  <td class="numeric right cell-change-up">+1.40%</td>
+                </tr>
+                <tr class="row">
+                  <td class="cell-ticker">002594</td>
+                  <td class="cell-name">比亚迪</td>
+                  <td class="numeric right">300</td>
+                  <td class="numeric right">285.00</td>
+                  <td class="numeric right">291.00</td>
+                  <td class="numeric right cell-change-up">+1,800</td>
+                  <td class="numeric right cell-change-up">+2.11%</td>
+                </tr>
+                <tr class="row">
+                  <td class="cell-ticker">601318</td>
+                  <td class="cell-name">中国平安</td>
+                  <td class="numeric right">1000</td>
+                  <td class="numeric right">52.00</td>
+                  <td class="numeric right">53.80</td>
+                  <td class="numeric right cell-change-up">+1,800</td>
+                  <td class="numeric right cell-change-up">+3.46%</td>
+                </tr>
+                <tr class="row">
+                  <td class="cell-ticker">000333</td>
+                  <td class="cell-name">美的集团</td>
+                  <td class="numeric right">600</td>
+                  <td class="numeric right">68.00</td>
+                  <td class="numeric right">66.50</td>
+                  <td class="numeric right cell-change-down">-900</td>
+                  <td class="numeric right cell-change-down">-2.21%</td>
+                </tr>
+                <tr class="row">
+                  <td class="cell-ticker">600900</td>
+                  <td class="cell-name">长江电力</td>
+                  <td class="numeric right">800</td>
+                  <td class="numeric right">28.00</td>
+                  <td class="numeric right">28.90</td>
+                  <td class="numeric right cell-change-up">+720</td>
+                  <td class="numeric right cell-change-up">+3.21%</td>
+                </tr>
+                <tr class="row">
+                  <td class="cell-ticker">002475</td>
+                  <td class="cell-name">立讯精密</td>
+                  <td class="numeric right">400</td>
+                  <td class="numeric right">38.00</td>
+                  <td class="numeric right">35.60</td>
+                  <td class="numeric right cell-change-down">-960</td>
+                  <td class="numeric right cell-change-down">-6.32%</td>
+                </tr>
+                <tr class="row">
+                  <td class="cell-ticker">688981</td>
+                  <td class="cell-name">中芯国际</td>
+                  <td class="numeric right">300</td>
+                  <td class="numeric right">48.00</td>
+                  <td class="numeric right">51.00</td>
+                  <td class="numeric right cell-change-up">+900</td>
+                  <td class="numeric right cell-change-up">+6.25%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel 3: 订单状态 (~25%) -->
+        <div class="panel panel-orders">
+          <div class="panel-header">
+            <span class="panel-title">订单</span>
+            <div class="order-tabs">
+              <span class="order-tab active">待成交 <span class="tab-count">2</span></span>
+              <span class="order-tab">已成交 <span class="tab-count">5</span></span>
+              <span class="order-tab">已撤 <span class="tab-count">1</span></span>
+            </div>
+            <div class="panel-actions">
+              <span class="panel-action">查看全部 →</span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="order-row">
+              <span class="order-side-pill buy">买入</span>
+              <span class="order-ticker">600519</span>
+              <span class="order-type">限价</span>
+              <span class="order-detail">100股 ¥1,850.00</span>
+              <span class="order-status pending">待成交</span>
+              <span class="order-time">2分钟前</span>
+            </div>
+            <div class="order-row">
+              <span class="order-side-pill sell">卖出</span>
+              <span class="order-ticker">300750</span>
+              <span class="order-type">市价</span>
+              <span class="order-detail">50股</span>
+              <span class="order-status partial">部分成交 30/50</span>
+              <span class="order-time">8分钟前</span>
+            </div>
+            <div class="order-row">
+              <span class="order-side-pill buy">买入</span>
+              <span class="order-ticker">002594</span>
+              <span class="order-type">限价</span>
+              <span class="order-detail">200股 ¥288.00</span>
+              <span class="order-status filled">已成交</span>
+              <span class="order-time">15分钟前</span>
+            </div>
+            <div class="order-row">
+              <span class="order-side-pill sell">卖出</span>
+              <span class="order-ticker">601318</span>
+              <span class="order-type">限价</span>
+              <span class="order-detail">500股 ¥54.00</span>
+              <span class="order-status cancelled">已撤单</span>
+              <span class="order-time">28分钟前</span>
+            </div>
+            <div class="order-row">
+              <span class="order-side-pill buy">买入</span>
+              <span class="order-ticker">000333</span>
+              <span class="order-type">市价</span>
+              <span class="order-detail">200股</span>
+              <span class="order-status filled">已成交</span>
+              <span class="order-time">45分钟前</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ Activity Stack (300px right side) ═══ -->
+    <div class="activity-stack">
+      <div class="context-rail">
+
+        <!-- Section 1: 风控/预警 -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">风控 / 预警</span>
+          </div>
+          <div class="context-section-body">
+            <div class="risk-item">
+              <div class="risk-item-dot warning"></div>
+              <div class="risk-item-body">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="risk-item-label">组合 VaR</span>
+                  <span class="risk-item-value warning">68.2%</span>
+                </div>
+                <div class="risk-progress">
+                  <div class="risk-progress-fill warning" style="width: 68.2%;"></div>
+                </div>
+              </div>
+            </div>
+            <div class="risk-item">
+              <div class="risk-item-dot critical"></div>
+              <div class="risk-item-body">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="risk-item-label">行业集中度</span>
+                  <span class="risk-item-value" style="color: var(--risk-critical-fg);">科技 37.2% / 限制 35%</span>
+                </div>
+              </div>
+            </div>
+            <div class="risk-item">
+              <div class="risk-item-dot ok"></div>
+              <div class="risk-item-body">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="risk-item-label">最大持仓</span>
+                  <span class="risk-item-value ok">贵州茅台 14.2%</span>
+                </div>
+              </div>
+            </div>
+            <div class="risk-item">
+              <div class="risk-item-dot ok"></div>
+              <div class="risk-item-body">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="risk-item-label">日内回撤</span>
+                  <span class="risk-item-value ok">-0.12%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: 信号队列 -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">信号队列</span>
+          </div>
+          <div class="context-section-body">
+            <div class="signal-queue-item">
+              <div class="signal-queue-bar p1"></div>
+              <div class="signal-queue-body">
+                <div class="signal-queue-header">
+                  <span class="signal-queue-title">贵州茅台</span>
+                  <span class="signal-queue-direction sell">卖出信号</span>
+                </div>
+                <span class="signal-queue-reason">RSI背离+放量, Alpha v3</span>
+                <div class="signal-queue-footer">
+                  <span class="signal-queue-meta">3分钟前</span>
+                  <span class="signal-queue-confidence high">置信度 87%</span>
+                </div>
+              </div>
+            </div>
+            <div class="signal-queue-item">
+              <div class="signal-queue-bar p2"></div>
+              <div class="signal-queue-body">
+                <div class="signal-queue-header">
+                  <span class="signal-queue-title">宁德时代</span>
+                  <span class="signal-queue-direction buy">买入信号</span>
+                </div>
+                <span class="signal-queue-reason">均值回归 v2</span>
+                <div class="signal-queue-footer">
+                  <span class="signal-queue-meta">12分钟前</span>
+                  <span class="signal-queue-confidence medium">置信度 72%</span>
+                </div>
+              </div>
+            </div>
+            <div class="signal-queue-item">
+              <div class="signal-queue-bar p3"></div>
+              <div class="signal-queue-body">
+                <div class="signal-queue-header">
+                  <span class="signal-queue-title">中国平安</span>
+                  <span class="signal-queue-direction hold">持有信号</span>
+                </div>
+                <span class="signal-queue-reason">Regime Filter</span>
+                <div class="signal-queue-footer">
+                  <span class="signal-queue-meta">28分钟前</span>
+                  <span class="signal-queue-confidence high">置信度 91%</span>
+                </div>
+              </div>
+            </div>
+            <div class="signal-queue-item">
+              <div class="signal-queue-bar p3"></div>
+              <div class="signal-queue-body">
+                <div class="signal-queue-header">
+                  <span class="signal-queue-title">美的集团</span>
+                  <span class="signal-queue-direction sell">卖出信号</span>
+                </div>
+                <span class="signal-queue-reason">动量反转, Alpha v3</span>
+                <div class="signal-queue-footer">
+                  <span class="signal-queue-meta">45分钟前</span>
+                  <span class="signal-queue-confidence low">置信度 68%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: 最近成交 -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">最近成交</span>
+          </div>
+          <div class="context-section-body">
+            <div class="fill-row">
+              <span class="fill-ticker">600519</span>
+              <span class="fill-side buy">买入</span>
+              <span class="fill-detail">100股 @ ¥1,850.00</span>
+              <span class="fill-time">2分钟前</span>
+            </div>
+            <div class="fill-row">
+              <span class="fill-ticker">300750</span>
+              <span class="fill-side sell">卖出</span>
+              <span class="fill-detail">30股 @ ¥217.80</span>
+              <span class="fill-time">8分钟前</span>
+            </div>
+            <div class="fill-row">
+              <span class="fill-ticker">002594</span>
+              <span class="fill-side buy">买入</span>
+              <span class="fill-detail">200股 @ ¥288.00</span>
+              <span class="fill-time">15分钟前</span>
+            </div>
+            <div class="fill-row">
+              <span class="fill-ticker">000333</span>
+              <span class="fill-side buy">买入</span>
+              <span class="fill-detail">200股 @ ¥66.50</span>
+              <span class="fill-time">45分钟前</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

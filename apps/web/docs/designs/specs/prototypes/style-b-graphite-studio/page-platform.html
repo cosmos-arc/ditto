@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Platform</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="../shared/tokens-base.css">
+  <link rel="stylesheet" href="../shared/tokens-semantic.css">
+  <link rel="stylesheet" href="../shared/tokens-domain.css">
+  <link rel="stylesheet" href="../shared/tokens-interaction.css">
+  <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="../shared/layout-base.css">
+
+  <style>
+    /* Style label for comparison */
+    .style-label {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    :root {
+      /* Inherits layout-base.css defaults for ops console */
+      /* Inherits tokens-style.css compact density tokens */
+    }
+
+    /* ── Header subtitle ── */
+    .header-subtitle {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-normal);
+      margin-left: var(--space-8);
+    }
+
+    /* ── Environment Badge ── */
+    .env-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-2) var(--space-10);
+      border-radius: var(--radius-4);
+      background: var(--system-healthy-bg);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      color: var(--system-healthy-fg);
+    }
+
+    .env-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+    }
+
+    /* ── Header button with badge ── */
+    .header-btn-badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--header-btn-size);
+      height: var(--header-btn-size);
+      border-radius: var(--radius-6);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .header-btn-badge:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+
+    .header-btn-badge .badge-count {
+      position: absolute;
+      top: 2px;
+      right: 0;
+      font-family: var(--font-family-numeric);
+      font-size: 9px;
+      font-weight: var(--font-weight-medium);
+      color: var(--text-inverse);
+      background: var(--system-down-fg);
+      min-width: 14px;
+      height: 14px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3px;
+    }
+
+    /* ── Health Strip Item ── */
+    .health-metric {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      white-space: nowrap;
+      font-size: var(--font-size-11);
+    }
+
+    .health-metric-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .health-metric-dot.healthy  { background: var(--system-healthy-fg); }
+    .health-metric-dot.degraded { background: var(--system-degraded-fg); }
+    .health-metric-dot.down     { background: var(--system-down-fg); }
+    .health-metric-dot.brand    { background: var(--brand-accent); }
+
+    .health-metric-label {
+      color: var(--text-tertiary);
+    }
+
+    .health-metric-value {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .health-metric-value.ok     { color: var(--system-healthy-fg); }
+    .health-metric-value.warn   { color: var(--system-degraded-fg); }
+    .health-metric-value.alert  { color: var(--system-down-fg); }
+    .health-metric-value.brand  { color: var(--brand-accent); }
+
+    .health-metric-separator {
+      width: 1px;
+      height: 10px;
+      background: var(--border-subtle);
+    }
+
+    /* ── Ops Main: stacked panels ── */
+    .ops-main .panel + .panel {
+      border-top: none;
+      margin-top: -1px;
+    }
+
+    /* ── Alert Row with description ── */
+    .alert-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .alert-desc {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Status Dot (inline) ── */
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+    }
+
+    .status-dot-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot-dot.ok       { background: var(--system-healthy-fg); }
+    .status-dot-dot.warn     { background: var(--system-degraded-fg); }
+    .status-dot-dot.down     { background: var(--system-down-fg); }
+
+    .status-dot.ok   { color: var(--system-healthy-fg); }
+    .status-dot.warn { color: var(--system-degraded-fg); }
+    .status-dot.down { color: var(--system-down-fg); }
+
+    /* ── Inline Quota Bar ── */
+    .quota-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .quota-text {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+      white-space: nowrap;
+    }
+
+    .quota-text.ok       { color: var(--system-healthy-fg); }
+    .quota-text.warn     { color: var(--system-degraded-fg); }
+    .quota-text.critical { color: var(--system-down-fg); }
+
+    .quota-bar {
+      width: 60px;
+      height: 3px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .quota-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+
+    .quota-bar-fill.ok       { background: var(--system-healthy-fg); }
+    .quota-bar-fill.warn     { background: var(--system-degraded-fg); }
+    .quota-bar-fill.critical { background: var(--system-down-fg); }
+
+    /* ── Task Row ── */
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .task-item:last-child {
+      border-bottom: none;
+    }
+
+    .task-status-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .task-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-name {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .task-meta {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+
+    .task-status {
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .task-status.running  { color: var(--system-healthy-fg); }
+    .task-status.waiting  { color: var(--text-tertiary); }
+    .task-status.progress { color: var(--system-degraded-fg); }
+    .task-status.failed   { color: var(--system-down-fg); }
+
+    /* ── Resource Row ── */
+    .resource-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .resource-item:last-child {
+      border-bottom: none;
+    }
+
+    .resource-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .resource-label {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+
+    .resource-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .resource-value.ok       { color: var(--system-healthy-fg); }
+    .resource-value.warn     { color: var(--system-degraded-fg); }
+    .resource-value.critical { color: var(--system-down-fg); }
+
+    .resource-bar {
+      height: 4px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .resource-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .resource-bar-fill.ok       { background: var(--system-healthy-fg); }
+    .resource-bar-fill.warn     { background: var(--system-degraded-fg); }
+    .resource-bar-fill.critical { background: var(--system-down-fg); }
+
+    /* ── Event Row ── */
+    .event-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .event-item:last-child {
+      border-bottom: none;
+    }
+
+    .event-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+      min-width: 36px;
+    }
+
+    .event-text {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .event-item.muted .event-time {
+      color: var(--text-disabled);
+    }
+
+    .event-item.muted .event-text {
+      color: var(--text-tertiary);
+    }
+  </style>
+</head>
+<body>
+  <div class="style-label">Graphite Studio — Platform Ops · Compact · A股</div>
+
+  <div class="shell-ops">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon active" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <span class="header-title">Platform<span class="header-subtitle">平台运维</span></span>
+      <div class="env-badge">
+        <span class="env-badge-dot"></span>
+        生产环境
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-actions">
+        <div class="btn btn-sm" title="刷新">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
+          刷新
+        </div>
+        <div class="header-btn-badge" title="事件">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h14v12H3z"/><path d="M3 9h14M7 4v12M10 9v7"/></svg>
+          <span class="badge-count">4</span>
+        </div>
+        <div class="header-action-btn" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Health Strip (36px) ═══ -->
+    <div class="ops-health">
+      <div class="health-metric">
+        <span class="health-metric-dot healthy"></span>
+        <span class="health-metric-label">数据新鲜度</span>
+        <span class="health-metric-value ok">98.2%</span>
+      </div>
+      <div class="health-metric-separator"></div>
+      <div class="health-metric">
+        <span class="health-metric-dot healthy"></span>
+        <span class="health-metric-label">数据完整度</span>
+        <span class="health-metric-value ok">99.4%</span>
+      </div>
+      <div class="health-metric-separator"></div>
+      <div class="health-metric">
+        <span class="health-metric-dot healthy"></span>
+        <span class="health-metric-label">数据准确度</span>
+        <span class="health-metric-value ok">99.8%</span>
+      </div>
+      <div class="health-metric-separator"></div>
+      <div class="health-metric">
+        <span class="health-metric-dot brand"></span>
+        <span class="health-metric-label">任务运行</span>
+        <span class="health-metric-value brand">3/4</span>
+      </div>
+      <div class="health-metric-separator"></div>
+      <div class="health-metric">
+        <span class="health-metric-dot healthy"></span>
+        <span class="health-metric-label">系统负载</span>
+        <span class="health-metric-value ok">23%</span>
+      </div>
+    </div>
+
+    <!-- ═══ Main Content (Data Sources + Alerts) ═══ -->
+    <div class="ops-main">
+      <!-- Panel 1: 数据源 / 数据质量 -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">数据源 <span class="panel-subtitle">5 个源</span></span>
+        </div>
+        <div class="panel-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>数据源</th>
+                <th>状态</th>
+                <th>延迟</th>
+                <th>API配额</th>
+                <th>上次同步</th>
+                <th class="right">今日请求</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Tushare -->
+              <tr>
+                <td style="font-weight: var(--font-weight-medium);">Tushare</td>
+                <td>
+                  <span class="status-dot ok">
+                    <span class="status-dot-dot ok"></span>
+                    正常
+                  </span>
+                </td>
+                <td style="font-family: var(--font-family-numeric);">2s</td>
+                <td>
+                  <div class="quota-cell">
+                    <span class="quota-text warn">4,820/5,000</span>
+                    <div class="quota-bar"><div class="quota-bar-fill warn" style="width: 96.4%;"></div></div>
+                  </div>
+                </td>
+                <td style="font-family: var(--font-family-numeric); color: var(--text-secondary);">14:32:15</td>
+                <td class="right" style="font-family: var(--font-family-numeric);">4,820</td>
+              </tr>
+              <!-- Wind -->
+              <tr>
+                <td style="font-weight: var(--font-weight-medium);">Wind</td>
+                <td>
+                  <span class="status-dot ok">
+                    <span class="status-dot-dot ok"></span>
+                    正常
+                  </span>
+                </td>
+                <td style="font-family: var(--font-family-numeric);">1s</td>
+                <td>
+                  <span class="quota-text ok">无限制</span>
+                </td>
+                <td style="font-family: var(--font-family-numeric); color: var(--text-secondary);">14:32:10</td>
+                <td class="right" style="font-family: var(--font-family-numeric);">1,247</td>
+              </tr>
+              <!-- 东方财富Choice -->
+              <tr>
+                <td style="font-weight: var(--font-weight-medium);">东方财富Choice</td>
+                <td>
+                  <span class="status-dot warn">
+                    <span class="status-dot-dot warn"></span>
+                    延迟
+                  </span>
+                </td>
+                <td style="font-family: var(--font-family-numeric); color: var(--system-degraded-fg);">45s</td>
+                <td>
+                  <div class="quota-cell">
+                    <span class="quota-text warn">8,200/10,000</span>
+                    <div class="quota-bar"><div class="quota-bar-fill warn" style="width: 82%;"></div></div>
+                  </div>
+                </td>
+                <td style="font-family: var(--font-family-numeric); color: var(--text-secondary);">14:31:28</td>
+                <td class="right" style="font-family: var(--font-family-numeric);">8,200</td>
+              </tr>
+              <!-- 同花顺iFind -->
+              <tr>
+                <td style="font-weight: var(--font-weight-medium);">同花顺iFind</td>
+                <td>
+                  <span class="status-dot ok">
+                    <span class="status-dot-dot ok"></span>
+                    正常
+                  </span>
+                </td>
+                <td style="font-family: var(--font-family-numeric);">3s</td>
+                <td>
+                  <div class="quota-cell">
+                    <span class="quota-text ok">2,100/3,000</span>
+                    <div class="quota-bar"><div class="quota-bar-fill ok" style="width: 70%;"></div></div>
+                  </div>
+                </td>
+                <td style="font-family: var(--font-family-numeric); color: var(--text-secondary);">14:32:08</td>
+                <td class="right" style="font-family: var(--font-family-numeric);">2,100</td>
+              </tr>
+              <!-- 聚宽 -->
+              <tr>
+                <td style="font-weight: var(--font-weight-medium);">聚宽</td>
+                <td>
+                  <span class="status-dot down">
+                    <span class="status-dot-dot down"></span>
+                    断开
+                  </span>
+                </td>
+                <td style="font-family: var(--font-family-numeric); color: var(--text-disabled);">—</td>
+                <td>
+                  <span class="quota-text muted">—</span>
+                </td>
+                <td style="font-family: var(--font-family-numeric); color: var(--text-disabled);">14:15:00</td>
+                <td class="right" style="font-family: var(--font-family-numeric); color: var(--text-disabled);">0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Panel 2: 系统预警 -->
+      <div class="panel" style="flex: 1;">
+        <div class="panel-header">
+          <span class="panel-title">系统预警</span>
+          <span class="panel-count" style="background: var(--system-down-bg); color: var(--system-down-fg);">4</span>
+          <div class="panel-actions">
+            <span class="panel-action">查看全部 →</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <!-- Alert 1 — amber -->
+          <div class="alert-row">
+            <span class="alert-dot warning"></span>
+            <div class="alert-content">
+              <span class="alert-title">Tushare API 频率接近上限</span>
+              <span class="alert-desc">4,820/5,000 今日请求，预计 3 小时后重置</span>
+            </div>
+            <span class="alert-time">12分钟前</span>
+          </div>
+          <!-- Alert 2 — red -->
+          <div class="alert-row">
+            <span class="alert-dot critical"></span>
+            <div class="alert-content">
+              <span class="alert-title">上交所行情接口响应超时</span>
+              <span class="alert-desc">超时 45s，已自动切换备用源</span>
+            </div>
+            <span class="alert-time">28分钟前</span>
+          </div>
+          <!-- Alert 3 — amber -->
+          <div class="alert-row">
+            <span class="alert-dot warning"></span>
+            <div class="alert-content">
+              <span class="alert-title">因子计算任务延迟</span>
+              <span class="alert-desc">北向持仓变化率因子计算积压 15 分钟</span>
+            </div>
+            <span class="alert-time">1小时前</span>
+          </div>
+          <!-- Alert 4 — red -->
+          <div class="alert-row">
+            <span class="alert-dot critical"></span>
+            <div class="alert-content">
+              <span class="alert-title">模型评分服务异常</span>
+              <span class="alert-desc">情绪 Alpha v2 评分返回 503，已自动重试 2 次</span>
+            </div>
+            <span class="alert-time">2小时前</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Detail Panel (340px right side) ═══ -->
+    <div class="ops-detail">
+      <div class="context-rail">
+        <!-- Section 1: 管道/任务 -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">管道 & 任务</span>
+            <span class="panel-count" style="background: var(--system-healthy-bg); color: var(--system-healthy-fg);">运行中 2</span>
+          </div>
+          <div class="context-section-body">
+            <!-- Task 1: 日线行情同步 — running -->
+            <div class="task-item">
+              <span class="task-status-icon" style="color: var(--system-healthy-fg);">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+              </span>
+              <div class="task-body">
+                <span class="task-name">日线行情同步</span>
+                <span class="task-meta">Tushare + Wind</span>
+              </div>
+              <span class="task-status running">ETA 2分钟</span>
+            </div>
+            <!-- Task 2: 财务数据更新 — waiting -->
+            <div class="task-item">
+              <span class="task-status-icon" style="color: var(--text-tertiary);">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+              </span>
+              <div class="task-body">
+                <span class="task-name">财务数据更新</span>
+                <span class="task-meta">东方财富</span>
+              </div>
+              <span class="task-status waiting">排队 #2</span>
+            </div>
+            <!-- Task 3: 因子计算 — progress -->
+            <div class="task-item">
+              <span class="task-status-icon" style="color: var(--system-degraded-fg);">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+              </span>
+              <div class="task-body">
+                <span class="task-name">因子计算 · 北向持仓变化率</span>
+                <span class="task-meta">计算中 67%</span>
+              </div>
+              <span class="task-status progress">15分钟积压</span>
+            </div>
+            <!-- Task 4: 模型评分 — failed -->
+            <div class="task-item">
+              <span class="task-status-icon" style="color: var(--system-down-fg);">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 5l10 10M15 5L5 15"/></svg>
+              </span>
+              <div class="task-body">
+                <span class="task-name">模型评分 · 情绪 Alpha v2</span>
+                <span class="task-meta" style="color: var(--system-down-fg);">服务返回 503</span>
+              </div>
+              <span class="task-status failed">需重试</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: 资源/配额 -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">资源 & 配额</span>
+          </div>
+          <div class="context-section-body">
+            <!-- API 配额 (Tushare) — critical -->
+            <div class="resource-item">
+              <div class="resource-header">
+                <span class="resource-label">API 配额 (Tushare)</span>
+                <span class="resource-value critical">96.4% — 4,820/5,000</span>
+              </div>
+              <div class="resource-bar">
+                <div class="resource-bar-fill critical" style="width: 96.4%;"></div>
+              </div>
+            </div>
+            <!-- CPU 使用率 — ok -->
+            <div class="resource-item">
+              <div class="resource-header">
+                <span class="resource-label">CPU 使用率</span>
+                <span class="resource-value ok">23%</span>
+              </div>
+              <div class="resource-bar">
+                <div class="resource-bar-fill ok" style="width: 23%;"></div>
+              </div>
+            </div>
+            <!-- 内存使用 — ok -->
+            <div class="resource-item">
+              <div class="resource-header">
+                <span class="resource-label">内存使用</span>
+                <span class="resource-value ok">4.2/16 GB</span>
+              </div>
+              <div class="resource-bar">
+                <div class="resource-bar-fill ok" style="width: 26%;"></div>
+              </div>
+            </div>
+            <!-- 磁盘空间 — ok -->
+            <div class="resource-item">
+              <div class="resource-header">
+                <span class="resource-label">磁盘空间</span>
+                <span class="resource-value ok">128/512 GB</span>
+              </div>
+              <div class="resource-bar">
+                <div class="resource-bar-fill ok" style="width: 25%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: 最近事件 -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">最近事件</span>
+          </div>
+          <div class="context-section-body">
+            <div class="event-item">
+              <span class="event-time">14:32</span>
+              <span class="event-text">Tushare 日线数据同步完成</span>
+            </div>
+            <div class="event-item">
+              <span class="event-time">14:31</span>
+              <span class="event-text">因子计算任务启动 (北向持仓变化率)</span>
+            </div>
+            <div class="event-item">
+              <span class="event-time">14:28</span>
+              <span class="event-text">Wind 分钟线数据同步完成</span>
+            </div>
+            <div class="event-item">
+              <span class="event-time">14:25</span>
+              <span class="event-text">模型评分服务返回 503 (第2次)</span>
+            </div>
+            <div class="event-item muted">
+              <span class="event-time">14:15</span>
+              <span class="event-text">聚宽连接断开，已发送告警</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

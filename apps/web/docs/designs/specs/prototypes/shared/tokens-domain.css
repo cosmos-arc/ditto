@@ -1,0 +1,85 @@
+/* ─────────────────────────────────────────────
+ * Ditto Design Tokens — Domain Semantic Layer
+ * Layer 7: Business domain colors
+ * Maps domain states to foundation primitives.
+ * These get overridden per-style for visual differentiation.
+ * ───────────────────────────────────────────── */
+
+:root {
+  /* ── Market Domain ── */
+  --market-up-fg:      var(--green-500);
+  --market-up-bg:      oklch(0.2280 0.0238 162.00);
+  --market-up-subtle:  oklch(0.2280 0.0238 162.00 / 0.3);
+  --market-down-fg:    var(--red-500);
+  --market-down-bg:    oklch(0.2242 0.0365 8.74);
+  --market-down-subtle:oklch(0.2242 0.0365 8.74 / 0.3);
+  --market-flat-fg:    var(--neutral-500);
+  --market-flat-bg:    transparent;
+  --market-strong-fg:  var(--green-600);
+  --market-weak-fg:    var(--red-600);
+
+  /* ── Risk Domain ── */
+  --risk-low-fg:       var(--green-500);
+  --risk-low-bg:       oklch(0.2280 0.0238 162.00 / 0.2);
+  --risk-medium-fg:    var(--amber-500);
+  --risk-medium-bg:    oklch(0.2229 0.0212 76.17 / 0.2);
+  --risk-high-fg:      var(--orange-500);
+  --risk-high-bg:      oklch(0.2165 0.0265 47.45 / 0.2);
+  --risk-critical-fg:  var(--red-600);
+  --risk-critical-bg:  oklch(0.2242 0.0365 8.74 / 0.25);
+  --risk-near-limit-fg:var(--amber-600);
+  --risk-breach-fg:    var(--red-600);
+
+  /* ── Execution Domain ── */
+  --execution-pending-fg:    var(--amber-500);
+  --execution-pending-bg:    oklch(0.2229 0.0212 76.17 / 0.2);
+  --execution-partial-fg:    var(--cyan-500);
+  --execution-partial-bg:    oklch(0.2160 0.0237 225.57 / 0.2);
+  --execution-filled-fg:     var(--green-500);
+  --execution-filled-bg:     oklch(0.2280 0.0238 162.00 / 0.2);
+  --execution-cancelled-fg:  var(--neutral-500);
+  --execution-rejected-fg:   var(--red-600);
+  --execution-rejected-bg:   oklch(0.2242 0.0365 8.74 / 0.25);
+
+  /* ── System Domain ── */
+  --system-healthy-fg:   var(--green-500);
+  --system-healthy-bg:   oklch(0.2280 0.0238 162.00 / 0.2);
+  --system-degraded-fg:  var(--amber-500);
+  --system-degraded-bg:  oklch(0.2229 0.0212 76.17 / 0.2);
+  --system-stale-fg:     var(--orange-500);
+  --system-stale-bg:     oklch(0.2165 0.0265 47.45 / 0.2);
+  --system-down-fg:      var(--red-600);
+  --system-down-bg:      oklch(0.2242 0.0365 8.74 / 0.3);
+  --system-recovering-fg:var(--cyan-500);
+
+  /* ── Data Quality Domain ── */
+  --data-quality-fresh-fg:    var(--green-500);
+  --data-quality-delayed-fg:  var(--amber-500);
+  --data-quality-delayed-bg:  oklch(0.2229 0.0212 76.17 / 0.2);
+  --data-quality-missing-fg:  var(--red-500);
+  --data-quality-missing-bg:  oklch(0.2242 0.0365 8.74 / 0.25);
+  --data-quality-partial-fg:  var(--orange-500);
+  --data-quality-revised-fg:  var(--purple-500);
+
+  /* ── Model Domain ── */
+  --model-stable-fg:    var(--green-500);
+  --model-stable-bg:    oklch(0.2280 0.0238 162.00 / 0.2);
+  --model-degrading-fg: var(--amber-500);
+  --model-degrading-bg: oklch(0.2229 0.0212 76.17 / 0.2);
+  --model-drifting-fg:  var(--orange-500);
+  --model-drifting-bg:  oklch(0.2165 0.0265 47.45 / 0.2);
+  --model-invalid-fg:   var(--red-600);
+  --model-invalid-bg:   oklch(0.2242 0.0365 8.74 / 0.25);
+  --model-candidate-fg: var(--cyan-500);
+
+  /* ── Agent Domain ── */
+  --agent-idle-fg:              var(--neutral-500);
+  --agent-running-fg:           var(--brand-500);
+  --agent-running-bg:           oklch(0.2387 0.0577 261.76 / 0.25);
+  --agent-waiting-approval-fg:  var(--amber-500);
+  --agent-waiting-approval-bg:  oklch(0.2229 0.0212 76.17 / 0.2);
+  --agent-blocked-fg:           var(--red-500);
+  --agent-blocked-bg:           oklch(0.2242 0.0365 8.74 / 0.25);
+  --agent-failed-fg:            var(--red-600);
+  --agent-failed-bg:            oklch(0.2242 0.0365 8.74 / 0.3);
+}

@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Research 研究工作台</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base → semantic → domain → interaction → density → style) -->
+  <link rel="stylesheet" href="../shared/tokens-base.css">
+  <link rel="stylesheet" href="../shared/tokens-semantic.css">
+  <link rel="stylesheet" href="../shared/tokens-domain.css">
+  <link rel="stylesheet" href="../shared/tokens-interaction.css">
+  <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="../shared/layout-base.css">
+
+  <style>
+    /* Style label for comparison */
+    .style-label {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    :root {
+      /* Inherits all tokens from tokens-style.css (Graphite Studio Compact) */
+      /* Inherits shell-analytical grid from layout-base.css */
+    }
+
+    /* ── Header subtitle ── */
+    .header-subtitle {
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-normal);
+      color: var(--text-tertiary);
+      margin-left: var(--space-8);
+    }
+
+    /* ── Header buttons ── */
+    .header-btn {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-4) var(--space-10);
+      border-radius: var(--radius-6);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .header-btn-primary {
+      border: 1px solid var(--brand-accent);
+      background: var(--brand-accent);
+      color: var(--text-inverse);
+    }
+
+    .header-btn-primary:hover {
+      background: var(--brand-accent-hover);
+      border-color: var(--brand-accent-hover);
+    }
+
+    .header-btn-secondary {
+      border: 1px solid var(--border-subtle);
+      background: transparent;
+      color: var(--text-secondary);
+    }
+
+    .header-btn-secondary:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Scope Strip pulse items (Research-specific) ── */
+    .scope-strip .pulse-item .pulse-value.ok {
+      color: var(--system-healthy-fg);
+    }
+
+    .scope-strip .pulse-item .pulse-value.warning {
+      color: var(--system-degraded-fg);
+    }
+
+    .scope-strip .pulse-item .pulse-value.critical {
+      color: var(--system-down-fg);
+    }
+
+    .scope-strip .pulse-item .pulse-value.brand {
+      color: var(--brand-accent);
+    }
+
+    /* ── Factor Monitor Panel ── */
+    .monitor-panel {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-8);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    .monitor-panel .panel-header {
+      display: flex;
+      align-items: center;
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .monitor-panel .panel-header .panel-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      flex: 1;
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-8);
+    }
+
+    .monitor-panel .panel-header .panel-subtitle {
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-normal);
+      color: var(--text-tertiary);
+    }
+
+    .monitor-panel .panel-body {
+      flex: 1;
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .column-icon {
+      color: var(--text-tertiary);
+      cursor: pointer;
+      padding: var(--space-4);
+      border-radius: var(--radius-4);
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .column-icon:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+    }
+
+    /* ── Table cell semantic colors ── */
+    .cell-numeric {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+    }
+
+    .cell-numeric.accent {
+      color: var(--brand-accent);
+    }
+
+    .cell-numeric.muted {
+      color: var(--text-tertiary);
+    }
+
+    .cell-status {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-11);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot.ok {
+      background: var(--system-healthy-fg);
+    }
+
+    .status-dot.warning {
+      background: var(--system-degraded-fg);
+    }
+
+    .status-dot.brand {
+      background: var(--brand-accent);
+    }
+
+    .cell-universe {
+      display: inline-flex;
+      align-items: center;
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Activity Stack run item ── */
+    .run-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .run-item:last-child {
+      border-bottom: none;
+    }
+
+    .run-item-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .run-item-icon.ok {
+      color: var(--system-healthy-fg);
+    }
+
+    .run-item-icon.warning {
+      color: var(--system-degraded-fg);
+    }
+
+    .run-item-icon.brand {
+      color: var(--brand-accent);
+    }
+
+    .run-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .run-item-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .run-item-detail {
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin-top: 2px;
+    }
+
+    .run-item-footer {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      margin-top: var(--space-4);
+    }
+
+    .run-item-status {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+    }
+
+    .run-item-status.complete {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+    }
+
+    .run-item-status.warn {
+      color: var(--system-degraded-fg);
+      background: var(--execution-pending-bg);
+    }
+
+    .run-item-status.running {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+
+    .run-item-time {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Queue review item ── */
+    .queue-review-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .queue-review-item:last-child {
+      border-bottom: none;
+    }
+
+    .queue-review-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .queue-review-title {
+      font-size: var(--font-size-11);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .queue-review-sub {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-top: 1px;
+    }
+
+    .queue-review-badge {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 2px var(--space-6);
+      border-radius: var(--radius-4);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .queue-review-badge.pending {
+      background: var(--execution-pending-bg);
+      color: var(--execution-pending-fg);
+    }
+
+    .queue-review-badge.validating {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    .queue-review-badge.improve {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Analysis Band metrics ── */
+    .analysis-metrics {
+      display: flex;
+      gap: var(--space-16);
+      margin-bottom: var(--space-12);
+    }
+
+    .analysis-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .analysis-metric-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    .analysis-metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .analysis-metric-value.ok {
+      color: var(--system-healthy-fg);
+    }
+
+    .analysis-metric-value.warning {
+      color: var(--system-degraded-fg);
+    }
+
+    /* ── Chart placeholder ── */
+    .chart-placeholder {
+      flex: 1;
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .chart-placeholder-label {
+      position: absolute;
+      top: var(--space-8);
+      left: var(--space-12);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      z-index: 1;
+    }
+
+    .chart-placeholder-area {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        oklch(0.700 0.165 255 / 0.06) 0%,
+        oklch(0.700 0.165 255 / 0.02) 40%,
+        transparent 100%
+      );
+    }
+
+    .chart-placeholder-line {
+      position: absolute;
+      bottom: 20%;
+      left: 0;
+      right: 0;
+      height: 2px;
+    }
+
+    .chart-placeholder-line svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Spinner animation ── */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .spinner {
+      animation: spin 1.5s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="style-label">Graphite Studio — Research Workspace · Compact · A股</div>
+
+  <div class="shell-analytical">
+
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon active" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <span class="header-title">Research <span class="header-subtitle">研究工作台</span></span>
+      <div class="header-spacer"></div>
+      <div class="header-search">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        搜索因子、回测、实验...
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="header-actions">
+        <span class="header-btn header-btn-primary">新建回测</span>
+        <span class="header-btn header-btn-secondary">新建实验</span>
+        <div class="header-action-btn" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Scope Strip (Research context) ═══ -->
+    <div class="scope-strip">
+      <div class="pulse-item">
+        <span class="pulse-label">活跃因子</span>
+        <span class="pulse-value ok">12</span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-label">退化</span>
+        <span class="pulse-value warning">3</span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-label">失败</span>
+        <span class="pulse-value critical">1</span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-label">运行队列</span>
+        <span class="pulse-value brand">5</span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-label">Universe</span>
+        <span class="pulse-value">沪深300</span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-label">最近更新</span>
+        <span class="pulse-value">14:32</span>
+      </div>
+    </div>
+
+    <!-- ═══ Main Content — Factor Monitor Table ═══ -->
+    <div class="main-content">
+      <div class="monitor-panel">
+        <div class="panel-header">
+          <span class="panel-title">因子监控 <span class="panel-subtitle">12 因子</span></span>
+          <span class="panel-count">12</span>
+          <div class="panel-actions">
+            <span class="column-icon" title="列管理">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h14M3 10h14M3 15h14"/><circle cx="7" cy="5" r="1.5" fill="currentColor"/><circle cx="13" cy="10" r="1.5" fill="currentColor"/><circle cx="7" cy="15" r="1.5" fill="currentColor"/></svg>
+            </span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 20%;">因子名</th>
+                <th class="right" style="width: 8%;">IC</th>
+                <th class="right" style="width: 8%;">IR</th>
+                <th class="right" style="width: 10%;">Sharpe</th>
+                <th class="right" style="width: 10%;">换手率</th>
+                <th class="right" style="width: 8%;">衰减</th>
+                <th class="right" style="width: 10%;">覆盖率</th>
+                <th style="width: 12%;">Universe</th>
+                <th style="width: 14%;">状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 动量12M -->
+              <tr class="row">
+                <td><span class="cell-ticker">动量12M</span></td>
+                <td class="right"><span class="cell-numeric accent">0.041</span></td>
+                <td class="right"><span class="cell-numeric accent">0.82</span></td>
+                <td class="right"><span class="cell-numeric">1.42</span></td>
+                <td class="right"><span class="cell-numeric">15.2%</span></td>
+                <td class="right"><span class="cell-numeric">3.2%</span></td>
+                <td class="right"><span class="cell-numeric">98%</span></td>
+                <td><span class="cell-universe">沪深300</span></td>
+                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span></td>
+              </tr>
+              <!-- 价值PE -->
+              <tr class="row">
+                <td><span class="cell-ticker">价值PE</span></td>
+                <td class="right"><span class="cell-numeric accent">0.038</span></td>
+                <td class="right"><span class="cell-numeric accent">0.75</span></td>
+                <td class="right"><span class="cell-numeric">1.28</span></td>
+                <td class="right"><span class="cell-numeric">8.4%</span></td>
+                <td class="right"><span class="cell-numeric">1.8%</span></td>
+                <td class="right"><span class="cell-numeric">95%</span></td>
+                <td><span class="cell-universe">沪深300</span></td>
+                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span></td>
+              </tr>
+              <!-- 低波动 -->
+              <tr class="row">
+                <td><span class="cell-ticker">低波动</span></td>
+                <td class="right"><span class="cell-numeric accent">0.032</span></td>
+                <td class="right"><span class="cell-numeric">0.68</span></td>
+                <td class="right"><span class="cell-numeric">1.15</span></td>
+                <td class="right"><span class="cell-numeric">12.1%</span></td>
+                <td class="right"><span class="cell-numeric">2.5%</span></td>
+                <td class="right"><span class="cell-numeric">99%</span></td>
+                <td><span class="cell-universe">沪深300</span></td>
+                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span></td>
+              </tr>
+              <!-- 质量ROE -->
+              <tr class="row">
+                <td><span class="cell-ticker">质量ROE</span></td>
+                <td class="right"><span class="cell-numeric muted">0.029</span></td>
+                <td class="right"><span class="cell-numeric">0.61</span></td>
+                <td class="right"><span class="cell-numeric">1.02</span></td>
+                <td class="right"><span class="cell-numeric">6.8%</span></td>
+                <td class="right"><span class="cell-numeric">1.2%</span></td>
+                <td class="right"><span class="cell-numeric">92%</span></td>
+                <td><span class="cell-universe">中证500</span></td>
+                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span></td>
+              </tr>
+              <!-- 规模 -->
+              <tr class="row">
+                <td><span class="cell-ticker">规模</span></td>
+                <td class="right"><span class="cell-numeric muted">0.025</span></td>
+                <td class="right"><span class="cell-numeric muted">0.55</span></td>
+                <td class="right"><span class="cell-numeric">0.92</span></td>
+                <td class="right"><span class="cell-numeric">5.2%</span></td>
+                <td class="right"><span class="cell-numeric">0.8%</span></td>
+                <td class="right"><span class="cell-numeric">100%</span></td>
+                <td><span class="cell-universe">全A</span></td>
+                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span></td>
+              </tr>
+              <!-- 成长(营收) -->
+              <tr class="row">
+                <td><span class="cell-ticker">成长(营收)</span></td>
+                <td class="right"><span class="cell-numeric muted">0.022</span></td>
+                <td class="right"><span class="cell-numeric muted">0.48</span></td>
+                <td class="right"><span class="cell-numeric">0.85</span></td>
+                <td class="right"><span class="cell-numeric">18.6%</span></td>
+                <td class="right"><span class="cell-numeric">4.1%</span></td>
+                <td class="right"><span class="cell-numeric">88%</span></td>
+                <td><span class="cell-universe">沪深300</span></td>
+                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span></td>
+              </tr>
+              <!-- 北向持仓变化率 -->
+              <tr class="row">
+                <td><span class="cell-ticker">北向持仓变化率</span></td>
+                <td class="right"><span class="cell-numeric accent">0.055</span></td>
+                <td class="right"><span class="cell-numeric accent">0.92</span></td>
+                <td class="right"><span class="cell-numeric">1.58</span></td>
+                <td class="right"><span class="cell-numeric">22.3%</span></td>
+                <td class="right"><span class="cell-numeric">5.8%</span></td>
+                <td class="right"><span class="cell-numeric">76%</span></td>
+                <td><span class="cell-universe">沪深300</span></td>
+                <td><span class="cell-status"><span class="status-dot brand"></span> 验证中</span></td>
+              </tr>
+              <!-- 情绪Alpha -->
+              <tr class="row">
+                <td><span class="cell-ticker">情绪Alpha</span></td>
+                <td class="right"><span class="cell-numeric muted">0.028</span></td>
+                <td class="right"><span class="cell-numeric muted">0.45</span></td>
+                <td class="right"><span class="cell-numeric">0.78</span></td>
+                <td class="right"><span class="cell-numeric">25.1%</span></td>
+                <td class="right"><span class="cell-numeric">7.2%</span></td>
+                <td class="right"><span class="cell-numeric">85%</span></td>
+                <td><span class="cell-universe">中证500</span></td>
+                <td><span class="cell-status"><span class="status-dot warning"></span> 退化</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Activity Stack (300px right) ═══ -->
+    <div class="activity-stack">
+      <!-- Section 1: 最近运行 -->
+      <div class="context-section">
+        <div class="context-section-header">
+          <span class="context-section-title">最近运行</span>
+        </div>
+        <div class="context-section-body">
+          <!-- Run 1: Completed -->
+          <div class="run-item">
+            <span class="run-item-icon ok">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10l3 3 9-9"/></svg>
+            </span>
+            <div class="run-item-content">
+              <div class="run-item-title">价值因子 Q1 回测</div>
+              <div class="run-item-detail">Sharpe 1.42, 最大回撤 -8.3%, 1,247 笔交易</div>
+              <div class="run-item-footer">
+                <span class="run-item-status complete">完成</span>
+                <span class="run-item-time">1小时前</span>
+              </div>
+            </div>
+          </div>
+          <!-- Run 2: Warning -->
+          <div class="run-item">
+            <span class="run-item-icon warning">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </span>
+            <div class="run-item-content">
+              <div class="run-item-title">情绪Alpha v2 漂移检测</div>
+              <div class="run-item-detail">近 5 日 IC 从 0.041 降至 0.028</div>
+              <div class="run-item-footer">
+                <span class="run-item-status warn">警告</span>
+                <span class="run-item-time">2小时前</span>
+              </div>
+            </div>
+          </div>
+          <!-- Run 3: Completed -->
+          <div class="run-item">
+            <span class="run-item-icon ok">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10l3 3 9-9"/></svg>
+            </span>
+            <div class="run-item-content">
+              <div class="run-item-title">行业轮动策略参数优化</div>
+              <div class="run-item-detail">新参数组夏普比提升 0.15</div>
+              <div class="run-item-footer">
+                <span class="run-item-status complete">完成</span>
+                <span class="run-item-time">3小时前</span>
+              </div>
+            </div>
+          </div>
+          <!-- Run 4: Running -->
+          <div class="run-item">
+            <span class="run-item-icon brand">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="spinner"><path d="M10 2a8 8 0 018 8" stroke-linecap="round"/></svg>
+            </span>
+            <div class="run-item-content">
+              <div class="run-item-title">北向持仓变化率 3月滚动验证</div>
+              <div class="run-item-detail">IC 0.055, 覆盖率 76%</div>
+              <div class="run-item-footer">
+                <span class="run-item-status running">运行中</span>
+                <span class="run-item-time">4小时前</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: 审核/实验队列 -->
+      <div class="context-section">
+        <div class="context-section-header">
+          <span class="context-section-title">审核/实验队列</span>
+          <span class="context-section-count">3</span>
+        </div>
+        <div class="context-section-body">
+          <!-- Review 1 -->
+          <div class="queue-review-item">
+            <div class="queue-review-content">
+              <div class="queue-review-title">行业轮动参数优化</div>
+              <div class="queue-review-sub">新参数组 · 待人工复核</div>
+            </div>
+            <span class="queue-review-badge pending">待复核</span>
+          </div>
+          <!-- Review 2 -->
+          <div class="queue-review-item">
+            <div class="queue-review-content">
+              <div class="queue-review-title">北向持仓变化率</div>
+              <div class="queue-review-sub">初步验证通过 · 待3个月滚动</div>
+            </div>
+            <span class="queue-review-badge validating">验证中</span>
+          </div>
+          <!-- Review 3 -->
+          <div class="queue-review-item">
+            <div class="queue-review-content">
+              <div class="queue-review-title">新因子「分析师预期变化」</div>
+              <div class="queue-review-sub">IC 0.018 · 待改进</div>
+            </div>
+            <span class="queue-review-badge improve">待改进</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Analysis Band (220px bottom) ═══ -->
+    <div class="analysis-band">
+      <div class="analysis-band-header">
+        <span class="analysis-band-tab active">IC 趋势</span>
+        <span class="analysis-band-tab">因子宽度</span>
+        <span class="analysis-band-tab">相关性</span>
+        <span class="analysis-band-tab">备注</span>
+      </div>
+      <div class="analysis-band-body">
+        <!-- Metrics row -->
+        <div class="analysis-metrics">
+          <div class="analysis-metric">
+            <span class="analysis-metric-label">平均 IC (20日)</span>
+            <span class="analysis-metric-value ok">0.032</span>
+          </div>
+          <div class="analysis-metric">
+            <span class="analysis-metric-label">IC_IR</span>
+            <span class="analysis-metric-value ok">0.61</span>
+          </div>
+          <div class="analysis-metric">
+            <span class="analysis-metric-label">IC &gt; 0.02 占比</span>
+            <span class="analysis-metric-value ok">72%</span>
+          </div>
+          <div class="analysis-metric">
+            <span class="analysis-metric-label">IC 衰减率</span>
+            <span class="analysis-metric-value warning">2.8%</span>
+          </div>
+        </div>
+        <!-- Chart placeholder -->
+        <div class="chart-placeholder">
+          <span class="chart-placeholder-label">因子 IC 趋势 · 近 60 日</span>
+          <div class="chart-placeholder-area"></div>
+          <div class="chart-placeholder-line">
+            <svg viewBox="0 0 800 40" preserveAspectRatio="none" fill="none" stroke="var(--brand-accent)" stroke-width="1.5" opacity="0.6">
+              <polyline points="0,8 40,6 80,10 120,5 160,8 200,12 240,10 280,14 320,16 360,13 400,18 440,15 480,20 520,22 560,19 600,24 640,26 680,23 720,28 760,30 800,32"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

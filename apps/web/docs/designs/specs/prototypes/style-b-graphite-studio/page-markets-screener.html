@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Markets / Screener</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="../shared/tokens-base.css">
+  <link rel="stylesheet" href="../shared/tokens-semantic.css">
+  <link rel="stylesheet" href="../shared/tokens-domain.css">
+  <link rel="stylesheet" href="../shared/tokens-interaction.css">
+  <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="../shared/layout-base.css">
+
+  <style>
+    /* ── Style label for visual comparison ── */
+    .style-label {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    /* ── Header subtitle (breadcrumb sub-text) ── */
+    .header-subtitle {
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-normal);
+      color: var(--text-tertiary);
+      margin-left: var(--space-8);
+    }
+
+    /* ── Header button group ── */
+    .header-btn-group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-btn-group-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-btn-group-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-title-group {
+      display: flex;
+      align-items: baseline;
+    }
+
+    /* ── Density toggle icon ── */
+    .density-toggle {
+      width: var(--header-btn-size);
+      height: var(--header-btn-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-6);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .density-toggle:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+
+    /* ── Catalog table wrapper ── */
+    .catalog-table-inner {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .catalog-table-inner .table-container {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--surface-app);
+    }
+
+    .catalog-table-inner .table-footer {
+      flex-shrink: 0;
+    }
+
+    /* ── Signal pill badges ── */
+    .signal-pill {
+      display: inline-flex;
+      align-items: center;
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-8);
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+
+    .signal-pill.buy {
+      background: var(--market-up-bg);
+      color: var(--market-up-fg);
+    }
+
+    .signal-pill.sell {
+      background: var(--market-down-bg);
+      color: var(--market-down-fg);
+    }
+
+    .signal-pill.hold {
+      background: transparent;
+      color: var(--text-tertiary);
+    }
+
+    /* ── Risk dot indicator ── */
+    .risk-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .risk-dot::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .risk-dot.low::before    { background: var(--risk-low-fg); }
+    .risk-dot.medium::before { background: var(--risk-medium-fg); }
+    .risk-dot.high::before   { background: var(--risk-high-fg); }
+
+    /* ── Sparkline variants (48x20px, tinted by direction) ── */
+    .sparkline-up {
+      width: 48px;
+      height: 20px;
+      background: linear-gradient(135deg, transparent 35%, var(--market-up-subtle) 35%);
+      border-radius: 2px;
+    }
+
+    .sparkline-down {
+      width: 48px;
+      height: 20px;
+      background: linear-gradient(135deg, var(--market-down-subtle) 35%, transparent 35%);
+      border-radius: 2px;
+    }
+
+    .sparkline-flat {
+      width: 48px;
+      height: 20px;
+      background: linear-gradient(0deg, transparent 45%, var(--neutral-200) 45%, var(--neutral-200) 55%, transparent 55%);
+      border-radius: 2px;
+      opacity: 0.5;
+    }
+
+    /* ── Detail Panel Sections ── */
+    .detail-actions {
+      padding: var(--space-12);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .detail-actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* ── Preset card ── */
+    .preset-card {
+      padding: var(--space-10) var(--space-12);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      margin-bottom: var(--space-8);
+    }
+
+    .preset-card:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .preset-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .preset-card-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .preset-card-desc {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      line-height: 1.4;
+      margin-bottom: var(--space-6);
+    }
+
+    .preset-card-match {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--brand-accent);
+    }
+
+    /* ── Score row ── */
+    .score-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+    }
+
+    .score-label {
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+      width: 36px;
+      flex-shrink: 0;
+    }
+
+    .score-bar-wrap {
+      flex: 1;
+      height: 4px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .score-bar-fill.brand { background: var(--brand-accent); }
+    .score-bar-fill.ok    { background: var(--system-healthy-fg); }
+    .score-bar-fill.warn  { background: var(--system-degraded-fg); }
+
+    .score-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      width: 32px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .score-row.composite .score-label {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .score-row.composite .score-value {
+      font-weight: var(--font-weight-medium);
+      color: var(--brand-accent);
+    }
+
+    /* ── Compare basket items ── */
+    .compare-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .compare-item:last-of-type {
+      border-bottom: none;
+    }
+
+    .compare-item-name {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+
+    .compare-item-code {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .compare-item-remove {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      padding: 2px;
+      border-radius: var(--radius-2);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .compare-item-remove:hover {
+      color: var(--text-secondary);
+    }
+
+    .compare-cta {
+      width: 100%;
+      margin-top: var(--space-8);
+      padding: var(--space-8);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="style-label">Graphite Studio — Markets Screener · Compact · A股</div>
+
+  <div class="shell-catalog">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon active" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header (60px) ═══ -->
+    <header class="shell-header">
+      <div class="header-title-group">
+        <span class="header-title">Markets / Screener</span>
+        <span class="header-subtitle">筛选器</span>
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-btn-group-left">
+        <button class="btn">保存视图</button>
+        <button class="btn btn-primary">运行筛选</button>
+      </div>
+      <div class="header-btn-group-right">
+        <button class="btn btn-ghost">重置</button>
+        <button class="btn btn-ghost">导出</button>
+        <div class="header-action-btn" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Filter Toolbar ═══ -->
+    <div class="filter-toolbar">
+      <div class="filter-group">
+        <span class="filter-label">股票池:</span>
+        <button class="filter-chip active">沪深300</button>
+        <button class="filter-chip">中证500</button>
+        <button class="filter-chip">全A</button>
+        <button class="filter-chip">自定义</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">行业:</span>
+        <select class="filter-select">
+          <option>All Sectors</option>
+          <option>科技</option>
+          <option>医药</option>
+          <option>消费</option>
+          <option>金融</option>
+          <option>新能源</option>
+          <option>制造</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">市值:</span>
+        <button class="filter-chip active">全部</button>
+        <button class="filter-chip">大盘</button>
+        <button class="filter-chip">中盘</button>
+        <button class="filter-chip">小盘</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">信号:</span>
+        <button class="filter-chip active">全部</button>
+        <button class="filter-chip">有买入</button>
+        <button class="filter-chip">有卖出</button>
+      </div>
+      <div class="filter-spacer"></div>
+      <span class="filter-count">238 只</span>
+      <div class="density-toggle" title="密度切换">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h12M4 10h12M4 14h12"/></svg>
+      </div>
+    </div>
+
+    <!-- ═══ Main Table Area ═══ -->
+    <div class="catalog-table">
+      <div class="catalog-table-inner">
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:80px" class="sorted">代码 <span class="sort-icon">▲</span></th>
+                <th style="width:100px">名称</th>
+                <th style="width:90px" class="right">最新价 <span class="sort-icon">│</span></th>
+                <th style="width:80px" class="right">涨跌幅 <span class="sort-icon">│</span></th>
+                <th style="width:80px" class="right">涨跌额 <span class="sort-icon">│</span></th>
+                <th style="width:80px" class="right">成交额 <span class="sort-icon">│</span></th>
+                <th style="width:90px" class="right">流通市值 <span class="sort-icon">│</span></th>
+                <th style="width:60px">行业</th>
+                <th style="width:60px">信号</th>
+                <th style="width:50px">风险</th>
+                <th style="width:56px">趋势</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 600519 贵州茅台 -->
+              <tr class="row selected">
+                <td class="cell-ticker numeric">600519</td>
+                <td>贵州茅台</td>
+                <td class="right numeric">1,856.00</td>
+                <td class="right numeric cell-change-up">+3.10%</td>
+                <td class="right numeric cell-change-up">+55.86</td>
+                <td class="right numeric cell-volume">82.3亿</td>
+                <td class="right numeric cell-volume">2.3万亿</td>
+                <td><span class="cell-badge sector">消费</span></td>
+                <td><span class="signal-pill buy">买入</span></td>
+                <td><span class="risk-dot low">低</span></td>
+                <td><div class="sparkline-up"></div></td>
+              </tr>
+              <!-- 300750 宁德时代 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">300750</td>
+                <td>宁德时代</td>
+                <td class="right numeric">218.00</td>
+                <td class="right numeric cell-change-up">+5.20%</td>
+                <td class="right numeric cell-change-up">+10.76</td>
+                <td class="right numeric cell-volume">156.7亿</td>
+                <td class="right numeric cell-volume">5,320亿</td>
+                <td><span class="cell-badge sector">新能源</span></td>
+                <td><span class="signal-pill buy">买入</span></td>
+                <td><span class="risk-dot medium">中</span></td>
+                <td><div class="sparkline-up"></div></td>
+              </tr>
+              <!-- 002594 比亚迪 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">002594</td>
+                <td>比亚迪</td>
+                <td class="right numeric">291.00</td>
+                <td class="right numeric cell-change-up">+2.80%</td>
+                <td class="right numeric cell-change-up">+7.90</td>
+                <td class="right numeric cell-volume">98.4亿</td>
+                <td class="right numeric cell-volume">8,450亿</td>
+                <td><span class="cell-badge sector">新能源</span></td>
+                <td><span class="signal-pill hold">持有</span></td>
+                <td><span class="risk-dot low">低</span></td>
+                <td><div class="sparkline-up"></div></td>
+              </tr>
+              <!-- 601318 中国平安 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">601318</td>
+                <td>中国平安</td>
+                <td class="right numeric">53.80</td>
+                <td class="right numeric cell-change-up">+3.46%</td>
+                <td class="right numeric cell-change-up">+1.80</td>
+                <td class="right numeric cell-volume">45.2亿</td>
+                <td class="right numeric cell-volume">9,820亿</td>
+                <td><span class="cell-badge sector">金融</span></td>
+                <td><span class="signal-pill buy">买入</span></td>
+                <td><span class="risk-dot low">低</span></td>
+                <td><div class="sparkline-up"></div></td>
+              </tr>
+              <!-- 000333 美的集团 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">000333</td>
+                <td>美的集团</td>
+                <td class="right numeric">66.50</td>
+                <td class="right numeric cell-change-down">-2.21%</td>
+                <td class="right numeric cell-change-down">-1.50</td>
+                <td class="right numeric cell-volume">32.1亿</td>
+                <td class="right numeric cell-volume">4,560亿</td>
+                <td><span class="cell-badge sector">制造</span></td>
+                <td><span class="signal-pill sell">卖出</span></td>
+                <td><span class="risk-dot low">低</span></td>
+                <td><div class="sparkline-down"></div></td>
+              </tr>
+              <!-- 600900 长江电力 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">600900</td>
+                <td>长江电力</td>
+                <td class="right numeric">28.90</td>
+                <td class="right numeric cell-change-up">+3.21%</td>
+                <td class="right numeric cell-change-up">+0.90</td>
+                <td class="right numeric cell-volume">18.6亿</td>
+                <td class="right numeric cell-volume">7,120亿</td>
+                <td><span class="cell-badge sector">公用</span></td>
+                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="risk-dot low">低</span></td>
+                <td><div class="sparkline-up"></div></td>
+              </tr>
+              <!-- 002475 立讯精密 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">002475</td>
+                <td>立讯精密</td>
+                <td class="right numeric">35.60</td>
+                <td class="right numeric cell-change-down">-6.32%</td>
+                <td class="right numeric cell-change-down">-2.40</td>
+                <td class="right numeric cell-volume">28.9亿</td>
+                <td class="right numeric cell-volume">2,530亿</td>
+                <td><span class="cell-badge sector">科技</span></td>
+                <td><span class="signal-pill sell">卖出</span></td>
+                <td><span class="risk-dot medium">中</span></td>
+                <td><div class="sparkline-down"></div></td>
+              </tr>
+              <!-- 688981 中芯国际 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">688981</td>
+                <td>中芯国际</td>
+                <td class="right numeric">51.00</td>
+                <td class="right numeric cell-change-up">+6.25%</td>
+                <td class="right numeric cell-change-up">+3.00</td>
+                <td class="right numeric cell-volume">67.8亿</td>
+                <td class="right numeric cell-volume">4,060亿</td>
+                <td><span class="cell-badge sector">科技</span></td>
+                <td><span class="signal-pill buy">买入</span></td>
+                <td><span class="risk-dot high">高</span></td>
+                <td><div class="sparkline-up"></div></td>
+              </tr>
+              <!-- 300760 迈瑞医疗 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">300760</td>
+                <td>迈瑞医疗</td>
+                <td class="right numeric">268.00</td>
+                <td class="right numeric cell-change-up">+1.52%</td>
+                <td class="right numeric cell-change-up">+4.02</td>
+                <td class="right numeric cell-volume">12.3亿</td>
+                <td class="right numeric cell-volume">3,240亿</td>
+                <td><span class="cell-badge sector">医药</span></td>
+                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="risk-dot low">低</span></td>
+                <td><div class="sparkline-flat"></div></td>
+              </tr>
+              <!-- 002371 北方华创 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">002371</td>
+                <td>北方华创</td>
+                <td class="right numeric">342.00</td>
+                <td class="right numeric cell-change-up">+4.25%</td>
+                <td class="right numeric cell-change-up">+13.94</td>
+                <td class="right numeric cell-volume">56.2亿</td>
+                <td class="right numeric cell-volume">1,780亿</td>
+                <td><span class="cell-badge sector">科技</span></td>
+                <td><span class="signal-pill buy">买入</span></td>
+                <td><span class="risk-dot medium">中</span></td>
+                <td><div class="sparkline-up"></div></td>
+              </tr>
+              <!-- 688012 中微公司 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">688012</td>
+                <td>中微公司</td>
+                <td class="right numeric">185.00</td>
+                <td class="right numeric cell-change-down">-1.60%</td>
+                <td class="right numeric cell-change-down">-3.00</td>
+                <td class="right numeric cell-volume">15.4亿</td>
+                <td class="right numeric cell-volume">1,120亿</td>
+                <td><span class="cell-badge sector">科技</span></td>
+                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="risk-dot low">低</span></td>
+                <td><div class="sparkline-down"></div></td>
+              </tr>
+              <!-- 603259 药明康德 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">603259</td>
+                <td>药明康德</td>
+                <td class="right numeric">42.50</td>
+                <td class="right numeric cell-change-down">-3.41%</td>
+                <td class="right numeric cell-change-down">-1.50</td>
+                <td class="right numeric cell-volume">22.1亿</td>
+                <td class="right numeric cell-volume">1,260亿</td>
+                <td><span class="cell-badge sector">医药</span></td>
+                <td><span class="signal-pill sell">卖出</span></td>
+                <td><span class="risk-dot high">高</span></td>
+                <td><div class="sparkline-down"></div></td>
+              </tr>
+              <!-- 601888 中国中免 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">601888</td>
+                <td>中国中免</td>
+                <td class="right numeric">78.30</td>
+                <td class="right numeric cell-change-down">-2.12%</td>
+                <td class="right numeric cell-change-down">-1.70</td>
+                <td class="right numeric cell-volume">18.7亿</td>
+                <td class="right numeric cell-volume">1,620亿</td>
+                <td><span class="cell-badge sector">消费</span></td>
+                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="risk-dot low">低</span></td>
+                <td><div class="sparkline-down"></div></td>
+              </tr>
+              <!-- 601012 隆基绿能 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">601012</td>
+                <td>隆基绿能</td>
+                <td class="right numeric">22.80</td>
+                <td class="right numeric cell-change-down">-1.72%</td>
+                <td class="right numeric cell-change-down">-0.40</td>
+                <td class="right numeric cell-volume">25.3亿</td>
+                <td class="right numeric cell-volume">1,730亿</td>
+                <td><span class="cell-badge sector">新能源</span></td>
+                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="risk-dot medium">中</span></td>
+                <td><div class="sparkline-down"></div></td>
+              </tr>
+              <!-- 002049 紫光国微 -->
+              <tr class="row">
+                <td class="cell-ticker numeric">002049</td>
+                <td>紫光国微</td>
+                <td class="right numeric">98.50</td>
+                <td class="right numeric cell-change-up">+2.07%</td>
+                <td class="right numeric cell-change-up">+2.00</td>
+                <td class="right numeric cell-volume">8.9亿</td>
+                <td class="right numeric cell-volume">580亿</td>
+                <td><span class="cell-badge sector">科技</span></td>
+                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="risk-dot low">低</span></td>
+                <td><div class="sparkline-up"></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Table Footer -->
+        <div class="table-footer">
+          <div class="table-footer-info">
+            <span>显示 1-15 / 共 238 只 · 第 1/16 页</span>
+          </div>
+          <div class="table-footer-actions">
+            <button class="pagination-btn active">1</button>
+            <button class="pagination-btn">2</button>
+            <button class="pagination-btn">3</button>
+            <span style="color:var(--text-tertiary)">...</span>
+            <button class="pagination-btn">16</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Detail Panel (320px right side) ═══ -->
+    <div class="catalog-detail">
+      <!-- Section 1: 快捷操作 -->
+      <div class="detail-actions">
+        <button class="btn">加入观察</button>
+        <button class="btn">加入标的池</button>
+        <button class="btn btn-ghost">发送到研究</button>
+      </div>
+
+      <!-- Section 2: 筛选预设 -->
+      <div class="context-section">
+        <div class="context-section-header">
+          <span class="context-section-title">筛选预设</span>
+        </div>
+        <div class="context-section-body">
+          <!-- Preset 1 -->
+          <div class="preset-card">
+            <div class="preset-card-title">高ROE低估值</div>
+            <div class="preset-card-desc">ROE&gt;15%, PE&lt;20</div>
+            <div class="preset-card-match">匹配 23 只</div>
+          </div>
+          <!-- Preset 2 -->
+          <div class="preset-card">
+            <div class="preset-card-title">动量强势</div>
+            <div class="preset-card-desc">20日涨幅&gt;10%, 成交额放大</div>
+            <div class="preset-card-match">匹配 45 只</div>
+          </div>
+          <!-- Preset 3 -->
+          <div class="preset-card">
+            <div class="preset-card-title">低波动红利</div>
+            <div class="preset-card-desc">波动率&lt;15%, 股息率&gt;3%</div>
+            <div class="preset-card-match">匹配 18 只</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: 多维评分 -->
+      <div class="context-section">
+        <div class="context-section-header">
+          <span class="context-section-title">多维评分</span>
+          <span class="context-section-count">贵州茅台</span>
+        </div>
+        <div class="context-section-body">
+          <!-- 价值 -->
+          <div class="score-row">
+            <span class="score-label">价值</span>
+            <div class="score-bar-wrap">
+              <div class="score-bar-fill ok" style="width: 78%"></div>
+            </div>
+            <span class="score-value">78</span>
+          </div>
+          <!-- 成长 -->
+          <div class="score-row">
+            <span class="score-label">成长</span>
+            <div class="score-bar-wrap">
+              <div class="score-bar-fill warn" style="width: 65%"></div>
+            </div>
+            <span class="score-value">65</span>
+          </div>
+          <!-- 质量 -->
+          <div class="score-row">
+            <span class="score-label">质量</span>
+            <div class="score-bar-wrap">
+              <div class="score-bar-fill ok" style="width: 82%"></div>
+            </div>
+            <span class="score-value">82</span>
+          </div>
+          <!-- 动量 -->
+          <div class="score-row">
+            <span class="score-label">动量</span>
+            <div class="score-bar-wrap">
+              <div class="score-bar-fill ok" style="width: 91%"></div>
+            </div>
+            <span class="score-value">91</span>
+          </div>
+          <!-- 综合 -->
+          <div class="score-row composite" style="margin-top: var(--space-4); padding-top: var(--space-8); border-top: 1px solid var(--border-subtle);">
+            <span class="score-label">综合</span>
+            <div class="score-bar-wrap">
+              <div class="score-bar-fill brand" style="width: 79%"></div>
+            </div>
+            <span class="score-value">79</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: 对比篮 -->
+      <div class="context-section" style="flex: 1 0 auto;">
+        <div class="context-section-header">
+          <span class="context-section-title">对比篮</span>
+          <span class="context-section-action">已选 3 只</span>
+        </div>
+        <div class="context-section-body">
+          <div class="compare-item">
+            <div>
+              <div class="compare-item-name">贵州茅台</div>
+              <div class="compare-item-code">600519</div>
+            </div>
+            <span class="compare-item-remove">&times;</span>
+          </div>
+          <div class="compare-item">
+            <div>
+              <div class="compare-item-name">宁德时代</div>
+              <div class="compare-item-code">300750</div>
+            </div>
+            <span class="compare-item-remove">&times;</span>
+          </div>
+          <div class="compare-item">
+            <div>
+              <div class="compare-item-name">中芯国际</div>
+              <div class="compare-item-code">688981</div>
+            </div>
+            <span class="compare-item-remove">&times;</span>
+          </div>
+          <button class="btn btn-primary compare-cta">开始对比 &rarr;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

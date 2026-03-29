@@ -183,7 +183,10 @@ Ditto
 │   └── /
 │
 ├── Markets
-│   ├── /markets
+│   ├── /markets                  ← 全市场总览（Cross-Market Overview）
+│   ├── /markets/a-shares         ← 中国 A 股总览
+│   ├── /markets/hk               ← 港股总览（v1.5）
+│   ├── /markets/us               ← 美股总览（v2）
 │   ├── /markets/screener
 │   ├── /markets/universes
 │   ├── /markets/watchlist
@@ -241,7 +244,17 @@ Ditto
 
 它们应整合为 `/` 首页中的核心区块、查看全部视图或全局命令入口，而不是继续发展为独立页面体系。
 
-### 6.2 /markets/map 降级为视图模式
+### 6.2 Markets 域重构为完整域
+
+Markets 不再等于中国 A 股页，而是覆盖跨市场扫描与单市场下钻的完整域。
+
+- `/markets` → 全市场总览（Cross-Market Overview），核心动词 scan / compare
+- `/markets/a-shares` → 中国 A 股总览，核心动词 structure scan
+- 后续扩展 `/markets/hk`、`/markets/us`、`/markets/fx`、`/markets/rates`、`/markets/commodities`
+
+详见 [全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)。
+
+### 6.3 /markets/map 降级为视图模式
 
 `/markets/map` 不再作为高优独立页面。
 
@@ -250,7 +263,7 @@ Ditto
 - `/markets` 的视图模式
 - `/markets/intelligence` 的结构可视化视图
 
-### 6.3 /markets/intelligence/* 收敛成一个主工作区
+### 6.4 /markets/intelligence/* 收敛成一个主工作区
 
 以下内容不再作为 5 个平权产品心智：
 
@@ -262,7 +275,7 @@ Ditto
 
 它们统一收敛到 `/markets/intelligence` 内部，通过 tab 视图承接。
 
-### 6.4 Strategy Builder 与 Strategy Editor 合并为 Strategy Studio
+### 6.5 Strategy Builder 与 Strategy Editor 合并为 Strategy Studio
 
 策略构建和策略编辑不再作为两个割裂产品心智，而是同一个策略对象下的两种模式：
 
@@ -273,7 +286,7 @@ Ditto
 
 `/research/strategies/[id]/studio`
 
-### 6.5 AI 市场分析 / AI 选股 / AI 策略助手合并为 Copilot Studio
+### 6.6 AI 市场分析 / AI 选股 / AI 策略助手合并为 Copilot Studio
 
 AI 域不再拆成多个看似平行但边界模糊的 AI 页面。
 
@@ -287,13 +300,13 @@ Copilot 内部再区分工作模式：
 - Stock Discovery Mode
 - Strategy Draft Mode
 
-### 6.6 ML 能力降为 Research 子域能力
+### 6.7 ML 能力降为 Research 子域能力
 
 ML 能力保留，但不在 v1 中作为一级重页面与重型平台推进。
 
 只有在真实训练、注册、部署、监控闭环足够成熟后，再升级为更重的产品结构。
 
-### 6.7 Platform 明确定位为 Ops Console
+### 6.8 Platform 明确定位为 Ops Console
 
 Platform 不做"后台大全"，只聚焦：
 
@@ -347,14 +360,15 @@ Platform 不做"后台大全"，只聚焦：
 
 **优先级排序**：
 
-1. Markets Overview
-2. Markets Screener
-3. Instrument Hub
-4. Watchlist
-5. Universes
-6. Intelligence
-7. Chart Lab
-8. Calendar
+1. 全市场总览（Cross-Market Overview）
+2. 中国 A 股总览
+3. Markets Screener
+4. Instrument Hub
+5. Watchlist
+6. Universes
+7. Intelligence
+8. Chart Lab
+9. Calendar
 
 ### 7.3 Research
 

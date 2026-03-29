@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Style B 密度对比导航</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body {
+      background: oklch(0.155 0.005 260);
+      color: oklch(0.935 0.005 260);
+      font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      gap: 40px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: oklch(0.977 0.005 260);
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: oklch(0.610 0.010 260);
+      text-align: center;
+      margin-top: -28px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    .card {
+      background: oklch(0.185 0.005 260);
+      border: 1px solid oklch(0.245 0.008 260);
+      border-radius: 12px;
+      padding: 32px 24px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card:hover {
+      border-color: oklch(0.700 0.165 255);
+      background: oklch(0.195 0.006 260);
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: oklch(0.977 0.005 260);
+    }
+    .card-tag {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: oklch(0.700 0.165 255 / 0.12);
+      color: oklch(0.700 0.165 255);
+    }
+
+    .card-params {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .param {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .param-label {
+      font-size: 11px;
+      color: oklch(0.430 0.010 260);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .param-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+      color: oklch(0.935 0.005 260);
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: oklch(0.610 0.010 260);
+      line-height: 1.6;
+    }
+
+    .card-preview {
+      background: oklch(0.142 0.005 260);
+      border: 1px solid oklch(0.245 0.008 260);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .card-preview .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid oklch(0.245 0.008 260 / 0.5);
+      padding: 4px 0;
+    }
+    .card-preview .row:last-child { border-bottom: none; }
+    .card-preview .label { color: oklch(0.610 0.010 260); flex: 1; }
+    .card-preview .value { font-family: 'JetBrains Mono', monospace; color: oklch(0.935 0.005 260); }
+    .card-preview .value.green { color: oklch(0.680 0.120 175); }
+
+    .arrow {
+      font-size: 14px;
+      color: oklch(0.700 0.165 255);
+      margin-top: auto;
+      text-align: center;
+    }
+
+    /* Preview size variants */
+    .preview-dense .row { height: 24px; font-size: 10px; }
+    .preview-dense .row .label { font-size: 10px; }
+    .preview-dense .row .value { font-size: 10px; }
+    .preview-compact .row { height: 28px; font-size: 11px; }
+    .preview-compact .row .label { font-size: 11px; }
+    .preview-compact .row .value { font-size: 11px; }
+    .preview-comfortable .row { height: 34px; font-size: 12px; }
+    .preview-comfortable .row .label { font-size: 12px; }
+    .preview-comfortable .row .value { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Style B — Graphite Studio</h1>
+  <p class="subtitle">字号 / 间距 / 布局密度探索 — 点击卡片打开完整原型</p>
+
+  <div class="grid">
+    <!-- Dense -->
+    <a class="card" href="prototype-dense.html">
+      <div class="card-header">
+        <span class="card-name">Dense 密集</span>
+        <span class="card-tag">A</span>
+      </div>
+      <div class="card-params">
+        <div class="param"><span class="param-label">正文</span><span class="param-value">11px</span></div>
+        <div class="param"><span class="param-label">数字</span><span class="param-value">10.5px</span></div>
+        <div class="param"><span class="param-label">行高</span><span class="param-value">34px</span></div>
+        <div class="param"><span class="param-label">Rail</span><span class="param-value">48px</span></div>
+      </div>
+      <div class="card-desc">Bloomberg Terminal 风格，最大化屏幕信息量，适合多屏工作台</div>
+      <div class="card-preview preview-dense">
+        <div class="row"><span class="label">AAPL 卖出信号</span><span class="value">87%</span><span class="value green">3m</span></div>
+        <div class="row"><span class="label">NVDA 仓位超限</span><span class="value">12.3%</span><span class="value">1h</span></div>
+        <div class="row"><span class="label">TSLA 限价买入</span><span class="value">$242.50</span><span class="value">25m</span></div>
+      </div>
+      <div class="arrow">打开 Dense 原型 →</div>
+    </a>
+
+    <!-- Compact (current) -->
+    <a class="card" href="prototype-compact.html">
+      <div class="card-header">
+        <span class="card-name">Compact 适中</span>
+        <span class="card-tag">B · 当前</span>
+      </div>
+      <div class="card-params">
+        <div class="param"><span class="param-label">正文</span><span class="param-value">12px</span></div>
+        <div class="param"><span class="param-label">数字</span><span class="param-value">11px</span></div>
+        <div class="param"><span class="param-label">行高</span><span class="param-value">36px</span></div>
+        <div class="param"><span class="param-label">Rail</span><span class="param-value">56px</span></div>
+      </div>
+      <div class="card-desc">Linear / Vercel 风格，信息密度与可读性平衡，适合日常使用</div>
+      <div class="card-preview preview-compact">
+        <div class="row"><span class="label">AAPL 卖出信号</span><span class="value">87%</span><span class="value green">3m</span></div>
+        <div class="row"><span class="label">NVDA 仓位超限</span><span class="value">12.3%</span><span class="value">1h</span></div>
+        <div class="row"><span class="label">TSLA 限价买入</span><span class="value">$242.50</span><span class="value">25m</span></div>
+      </div>
+      <div class="arrow">打开 Compact 原型 →</div>
+    </a>
+
+    <!-- Comfortable -->
+    <a class="card" href="prototype-comfortable.html">
+      <div class="card-header">
+        <span class="card-name">Comfortable 舒展</span>
+        <span class="card-tag">C</span>
+      </div>
+      <div class="card-params">
+        <div class="param"><span class="param-label">正文</span><span class="param-value">13px</span></div>
+        <div class="param"><span class="param-label">数字</span><span class="param-value">12px</span></div>
+        <div class="param"><span class="param-label">行高</span><span class="param-value">42px</span></div>
+        <div class="param"><span class="param-label">Rail</span><span class="param-value">60px</span></div>
+      </div>
+      <div class="card-desc">Stripe / Raycast 风格，更多呼吸空间，适合长时间使用降低疲劳</div>
+      <div class="card-preview preview-comfortable">
+        <div class="row"><span class="label">AAPL 卖出信号</span><span class="value">87%</span><span class="value green">3m</span></div>
+        <div class="row"><span class="label">NVDA 仓位超限</span><span class="value">12.3%</span><span class="value">1h</span></div>
+        <div class="row"><span class="label">TSLA 限价买入</span><span class="value">$242.50</span><span class="value">25m</span></div>
+      </div>
+      <div class="arrow">打开 Comfortable 原型 →</div>
+    </a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,40 @@
+/* ─────────────────────────────────────────────
+ * Ditto Design Tokens — Interaction & Feedback Layer
+ * Layer 6: hover, focus, selected, active, drag states
+ * ───────────────────────────────────────────── */
+
+:root {
+  /* ── Focus ── */
+  --interaction-focus-ring:    oklch(0.6642 0.1605 263.63 / 0.5);
+  --interaction-focus-border:  oklch(0.6642 0.1605 263.63);
+
+  /* ── Hover ── */
+  --interaction-hover-subtle-bg:   oklch(1 0 0 / 0.04);
+  --interaction-hover-strong-bg:   oklch(1 0 0 / 0.08);
+
+  /* ── Selected ── */
+  --interaction-selected-bg:       oklch(0.6642 0.1605 263.63 / 0.12);
+  --interaction-selected-border:   oklch(0.6642 0.1605 263.63 / 0.3);
+  --interaction-selected-text:     var(--text-primary);
+
+  /* ── Active / Press ── */
+  --interaction-active-bg:         oklch(0 0 0 / 0.12);
+
+  /* ── Dragging ── */
+  --interaction-dragging-shadow:   0 8px 24px oklch(0 0 0 / 0.4);
+  --interaction-dragging-opacity:  0.85;
+
+  /* ── Feedback: Toast ── */
+  --feedback-toast-bg:         var(--surface-panel-elevated);
+  --feedback-toast-border:     var(--border-default);
+
+  /* ── Feedback: Banner ── */
+  --feedback-banner-warning-bg:    oklch(0.7341 0.1177 79.66 / 0.1);
+  --feedback-banner-warning-border:var(--amber-500);
+  --feedback-banner-critical-bg:   oklch(0.6317 0.1567 22.64 / 0.12);
+  --feedback-banner-critical-border:var(--red-600);
+
+  /* ── Feedback: Progress ── */
+  --feedback-progress-track:   var(--neutral-200);
+  --feedback-progress-fill:    var(--brand-500);
+}

@@ -97,19 +97,112 @@ Today Pulse → Decision Banner → Pending → Alerts → Recent Signals / Runs
 
 ---
 
-## 2. Markets Overview
+## 2. 全市场总览（Cross-Market Overview）
+
+> **路由**：`/markets`
+> **详细设计**：[全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)
 
 ### 页面目标
 
-作为 Markets 域的 landing page，先看市场结构，再决定钻取方向。
+让用户进入 Markets 域后 5 秒内回答：
+
+1. 今天全球总体是 Risk-On 还是 Risk-Off
+2. 哪些市场 / 资产类别最强，哪些最弱
+3. 驱动当前市场分化的核心变量是什么
+4. 哪些市场值得我点进去继续看
+5. 接下来 24 小时有什么重要事件会改变格局
 
 ### 页面角色
 
-Analytical Overview Workspace
+Analytical Shell / Radar Variant（扫描 / 比较 / 下钻）
+
+### 核心动词
+
+scan → compare → choose where to drill down
 
 ### 主工作面
 
-Market Structure Map
+Cross-Market Cards（6 宫格平权比较） + Cross-Market Matrix（热力矩阵）
+
+### 辅工作面
+
+Right Rail（市场脉搏 / 风险预警 / 关键事件 / 推荐下钻）
+
+### 默认信息顺序
+
+Context Bar → Scope Strip → Market Cards → Matrix → Macro Drivers → Bottom Tabs
+
+### 核心区块
+
+- Workspace Header（标题 / 时间框架 / 刷新时间 / 视图密度）
+- Context Bar（全局环境：Universe / Session / Regime / Volatility / Dollar / Alerts）
+- Scope Strip（今日解读：强势 / 承压 / 风格 / 风险事件）
+- Cross-Market Card Grid（6 卡片：A股 / 港股 / 美股 / 利率 / 外汇 / 商品）
+- Cross-Market Matrix（行：市场，列：1D / 1W / 1M / Vol / Breadth / Flow）
+- Macro Drivers Bar（DXY / US10Y / CN10Y / VIX / Gold / Oil / CNY）
+- Right Rail（市场脉搏 / 风险预警 / 关键事件 / 推荐下钻）
+- Bottom Tab Band（资金轮动 / 事件日历 / AI 解读）
+
+### 主 CTA
+
+- 进入 A 股总览
+- 进入港股总览
+- 进入美股总览
+- 查看事件详情
+- 固定视角
+- 加入观察
+
+### 主要跳转
+
+- Market Card → 单市场总览页（`/markets/a-shares`、`/markets/hk` 等）
+- Matrix 行 → 对应单市场总览页
+- Right Rail 推荐下钻 → 动态推荐的单市场页
+- 事件日历条目 → 事件详情
+- AI 解读 → 对应单市场页
+
+### Wireframe
+
+```
+┌ Rail ┬───────────────────────────────────────────────────────────────┐
+│      │ Markets / 全市场总览                       [1D] [09:46 CST]   │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ GLOBAL | SESSION Mixed | REGIME Mild Risk-On | VOL 回落 | A2  │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ 强势：港股科技/黄金 | 承压：美元/长债 | 风险事件：FOMC-1D     │
+│      ├─────────────────────────────────┬─────────────────────────────┤
+│      │ 中国A股   港股     美股          │ 市场脉搏摘要               │
+│      │ 利率     外汇     商品/黄金      │ 风险与预警                  │
+│      ├─────────────────────────────────┤ 关键事件                    │
+│      │ Cross-Market Matrix             │ 推荐下钻                    │
+│      ├─────────────────────────────────┤                             │
+│      │ Macro Drivers Bar               │                             │
+│      ├─────────────────────────────────┴─────────────────────────────┤
+│      │ [资金轮动] [事件日历] [AI 解读]                                 │
+└──────┴───────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2.1 中国 A 股总览
+
+> **路由**：`/markets/a-shares`
+> **说明**：从原 `/markets`（Markets Overview）迁入，聚焦 A 股内部结构扫描。
+
+### 页面目标
+
+作为 A 股单市场入口，先看 A 股整体结构，再决定看哪个行业、哪个标的。
+
+### 页面角色
+
+Analytical Shell / Radar Variant（结构扫描 / 下钻）
+
+### 核心动词
+
+structure scan → drill down to instrument
+
+### 主工作面
+
+Market Structure Map（treemap / heatmap）
 
 ### 辅工作面
 
@@ -117,17 +210,17 @@ Index Summary / ETF Matrix / Movers
 
 ### 默认信息顺序
 
-Scope → Market Structure → Breadth → ETF → Movers → Intelligence Links
+Context → Scope → Market Structure → Breadth → ETF → Movers → Intelligence Links
 
 ### 核心区块
 
-- Markets Header
-- Scope Strip
-- Market Structure Map
-- Index Summary
-- ETF Matrix
+- A-Share Header（标题 / 板块选择 / 时间框架）
+- Context Bar（A 股本地变量：Regime / Breadth / 北向 / 涨跌比）
+- Scope Strip（A 股今日解读：强势板块 / 承压板块 / 主线 / 预警）
+- Market Structure Map（treemap / heatmap，按行业 / 概念分组）
+- Index Summary（沪深300 / 中证500 / 中证1000 / 创业板指）
+- ETF Matrix（核心 ETF 表现）
 - Movers / Main Theme Activity
-- Bottom band shortcuts
 
 ### 主 CTA
 
@@ -145,9 +238,11 @@ Scope → Market Structure → Breadth → ETF → Movers → Intelligence Links
 
 ```
 ┌ Rail ┬───────────────────────────────────────────────────────────────┐
-│      │ Markets Header: region / asset / view / date                 │
+│      │ 中国 A 股总览                             [1D] [09:46 CST]   │
 │      ├───────────────────────────────────────────────────────────────┤
-│      │ Scope Strip: breadth / regime / top themes / alerts          │
+│      │ REGIME Risk-On | BREADTH 偏强 | 北向 +12亿 | ALERTS 1       │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ 强势：AI/半导体 | 承压：地产/银行 | 主线：科技扩散 | FOMC-1D  │
 │      ├───────────────────────────────┬───────────────────────────────┤
 │      │ Market Structure Map          │ Index Summary                 │
 │      │ treemap / heatmap             ├───────────────────────────────┤

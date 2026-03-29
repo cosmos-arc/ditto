@@ -142,6 +142,10 @@ Shell Components 是构成页面壳层和全站工作区结构的组件。
 - Workspace Header
 - Global Header
 - Context Strip / Pulse Strip
+- Context Bar（Radar Shell 专用，双层 Context 的上层）
+- Scope Strip（Radar Shell 专用，双层 Context 的下层）
+- Right Rail Container（Radar Shell 专用，30% 辅工作面）
+- Bottom Tab Band Container（Radar Shell 专用，底部 Tab 区）
 - Analysis Band Container
 - Activity / Context Side Container
 - Global Banner
@@ -453,6 +457,11 @@ Toolbar 在 Ditto 中非常关键，不应退化为按钮堆积条。
 - Filter Chip
 - Sparkline
 - Distribution Strip
+- Market Card（Radar Shell 专用）
+- Cross-Market Matrix（Radar Shell 专用）
+- Macro Driver Block（Radar Shell 专用）
+- Context Pill（Radar Shell 专用）
+- Scope Chip（Radar Shell 专用）
 
 ### 16. Table 作为一等组件
 
@@ -564,6 +573,120 @@ Timeline 应作为独立组件族，而不是"某种图表的附属样式"。
 用于当前筛选条件。例如：Universe: Core3000、Owner: Me、Severity: High
 
 **四者绝不能外观完全一致。**
+
+---
+
+## Part C-1 — Cross-Market Components（Radar Shell 专用）
+
+> **上游**：[全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)
+
+以下组件服务于 Analytical / Radar Shell 子变体，用于跨市场总览和单市场总览页面。
+
+### C1.1 Context Pill
+
+**角色**：Context Bar 内的单个客观变量展示单元。
+
+**结构**：`LABEL VALUE`（如 `REGIME Mild Risk-On`）
+
+**规则**：
+- 标签大写、颜色中性（text-tertiary）
+- 值用语义色表达方向（Risk-On 绿 / Risk-Off 红 / Mixed 黄）
+- 单行水平排列，分隔符用 `|` 或微间距
+- AlertBadge 放末尾，用数字 + 微动效
+
+**不允许**：
+- 放入 A 股本地特定项（如北向流入）
+- 做成可编辑或可点击
+- 超过 6 项
+
+### C1.2 Scope Chip
+
+**角色**：Scope Strip 内的单个解读摘要单元。
+
+**结构**：`分类标签：内容`（如 `强势：港股科技/黄金`）
+
+**规则**：
+- 分类标签用固定色彩区分（强势 = 正向色 / 承压 = 负向色 / 风格 = 中性色 / 风险事件 = 警示色）
+- 内容为纯文本摘要，不做数值
+- 4-6 个 ScopeChip 横向排列
+
+**不允许**：
+- 做成长段落
+- 放入精确数值
+- 超过 6 项
+
+### C1.3 Market Card
+
+**角色**：跨市场平权比较的核心单元。每张卡片代表一个一级市场或资产类别。
+
+**统一结构**（所有卡片必须遵循）：
+1. **头部**：市场名 + Regime Tag（颜色编码）
+2. **表现行**：核心指数 + 当日变化 + 相对强弱标签
+3. **驱动行**：一句话驱动摘要
+4. **CTA 行**：下钻入口按钮
+
+**规则**：
+- 6 宫格排列（3×2），所有卡片等宽等高
+- hover 时 border 高亮 + 轻微提升
+- 整卡可点击 + 底部 CTA 按钮显式
+- Regime Tag 使用语义色：Risk-On / High Beta = 正向 / Risk-Off / Bonds Weak = 负向 / Mixed = 中性
+
+**示例**：
+
+```
+┌─────────────────────┐
+│ 中国A股    Risk-On   │
+│ 沪深300   +0.67%    │
+│ 广度偏强｜AI+半导体  │
+│ → 进入 A 股总览      │
+└─────────────────────┘
+```
+
+**不允许**：
+- 不同卡片使用不同字段结构
+- 放入过多子指数或明细数据
+- 使用 treemap 替代卡片（跨市场页用卡片，单市场页用 treemap）
+
+### C1.4 Cross-Market Matrix
+
+**角色**：跨市场比较器——把"谁强谁弱"从感性判断变成可比较结构。
+
+**结构**：
+- 行：市场/资产类别（6-8 行）
+- 列：1D / 1W / 1M / Vol / Breadth / Flow（6 列）
+
+**规则**：
+- 热力矩阵风格：数值用颜色梯度表达强弱
+- 文字保留精确值（如 `+1.4%`）
+- 行 hover 时联动对应 MarketCard 轻微高亮
+- "-" 表示该市场不适用该维度（如黄金没有 Breadth）
+- Vol / Breadth / Flow 列用文字标签而非数值
+
+**不允许**：
+- 做成传统全功能表格（列管理、排序、导出）
+- 超过 8 行或 7 列
+- 放入非核心维度
+
+### C1.5 Macro Driver Block
+
+**角色**：单个跨市场驱动变量的微型状态块。
+
+**结构**：
+1. 名称（如 `DXY`）
+2. 当前值（如 `102.4`）
+3. 变化量（如 `-0.4%`）
+4. 一句解释性标签（如 `美元走弱`）
+
+**规则**：
+- 水平排列，7 个 Driver Block 均分宽度
+- 变化量用颜色：正 = 红色（涨）/ 负 = 绿色（跌），遵循市场色规则
+- 解释性标签用 text-tertiary，不超过一行
+- 整体高度固定，不因内容长度变化
+
+**不允许**：
+- 放入迷你图表或 sparkline
+- 超过 7 个驱动器
+- 做成可展开面板
 
 ---
 
