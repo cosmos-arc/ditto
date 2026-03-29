@@ -1,3 +1,380 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
+
+/* ─────────────────────────────────────────────
+ * Ditto — @theme inline bridge
+ * Maps CSS custom properties to Tailwind utilities.
+ * ───────────────────────────────────────────── */
+
+@theme inline {
+  /* ── Surface ── */
+  --color-surface-app: var(--surface-app);
+  --color-surface-panel-base: var(--surface-panel-base);
+  --color-surface-panel-elevated: var(--surface-panel-elevated);
+  --color-surface-strip: var(--surface-strip);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-modal: var(--surface-modal);
+
+  /* ── Text ── */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-disabled: var(--text-disabled);
+  --color-text-inverse: var(--text-inverse);
+  --color-text-link: var(--brand-accent);
+  --color-text-error: var(--red-500);
+  --color-text-warning: var(--amber-500);
+  --color-text-success: var(--green-500);
+
+  /* ── Border ── */
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  /* ── Brand ── */
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-hover: var(--brand-accent-hover);
+  --color-brand-accent-subtle: var(--brand-accent-subtle);
+
+  /* ── Market Domain ── */
+  --color-market-up: var(--market-up-fg);
+  --color-market-up-bg: var(--market-up-bg);
+  --color-market-up-subtle: var(--market-up-subtle);
+  --color-market-down: var(--market-down-fg);
+  --color-market-down-bg: var(--market-down-bg);
+  --color-market-down-subtle: var(--market-down-subtle);
+  --color-market-flat: var(--market-flat-fg);
+  --color-market-strong: var(--market-strong-fg);
+  --color-market-weak: var(--market-weak-fg);
+
+  /* ── Risk Domain ── */
+  --color-risk-critical: var(--risk-critical-fg);
+  --color-risk-critical-bg: var(--risk-critical-bg);
+  --color-risk-high: var(--risk-high-fg);
+  --color-risk-high-bg: var(--risk-high-bg);
+
+  /* ── System Domain ── */
+  --color-system-healthy: var(--system-healthy-fg);
+  --color-system-healthy-bg: var(--system-healthy-bg);
+  --color-system-degraded: var(--system-degraded-fg);
+  --color-system-down: var(--system-down-fg);
+  --color-system-down-bg: var(--system-down-bg);
+
+  /* ── Execution Domain ── */
+  --color-execution-pending: var(--execution-pending-fg);
+  --color-execution-pending-bg: var(--execution-pending-bg);
+  --color-execution-filled: var(--execution-filled-fg);
+
+  /* ── Interaction ── */
+  --color-interaction-focus-ring: var(--interaction-focus-ring);
+  --color-interaction-hover-subtle: var(--interaction-hover-subtle-bg);
+  --color-interaction-hover-strong: var(--interaction-hover-strong-bg);
+  --color-interaction-selected: var(--interaction-selected-bg);
+
+  /* ── Functional Colors ── */
+  --color-functional-green: var(--green-500);
+  --color-functional-red: var(--red-500);
+  --color-functional-amber: var(--amber-500);
+  --color-functional-orange: var(--orange-500);
+  --color-functional-cyan: var(--cyan-500);
+  --color-functional-purple: var(--purple-500);
+
+  /* ── Fonts ── */
+  --font-ui: var(--font-family-ui);
+  --font-numeric: var(--font-family-numeric);
+  --font-code: var(--font-family-code);
+}
+
+/* ─────────────────────────────────────────────
+ * Ditto Design Tokens — All Layers
+ * Style B: Graphite Studio (final)
+ * ───────────────────────────────────────────── */
+
+:root {
+  /* ══════════════════════════════════════════════
+   * Layer 1: Foundation — Physical primitives
+   * ══════════════════════════════════════════════ */
+
+  /* ── Neutral Primitives (15 levels) ── */
+  --neutral-0:   oklch(0.1665 0.0124 254.17);
+  --neutral-25:  oklch(0.1844 0.0146 253.21);
+  --neutral-50:  oklch(0.1974 0.0169 252.56);
+  --neutral-75:  oklch(0.2146 0.0190 252.07);
+  --neutral-100: oklch(0.2396 0.0233 251.45);
+  --neutral-150: oklch(0.2601 0.0252 251.20);
+  --neutral-200: oklch(0.3025 0.0303 246.97);
+  --neutral-300: oklch(0.3418 0.0330 248.82);
+  --neutral-400: oklch(0.4193 0.0421 241.39);
+  --neutral-500: oklch(0.4942 0.0477 243.51);
+  --neutral-600: oklch(0.5937 0.0393 247.20);
+  --neutral-700: oklch(0.7074 0.0333 248.30);
+  --neutral-800: oklch(0.8143 0.0232 248.11);
+  --neutral-900: oklch(0.9205 0.0146 244.73);
+  --neutral-950: oklch(0.9777 0.0051 247.88);
+
+  /* ── Brand Primitives ── */
+  --brand-300: oklch(0.8194 0.0897 266.29);
+  --brand-400: oklch(0.7420 0.1322 264.83);
+  --brand-500: oklch(0.6642 0.1605 263.63);
+  --brand-600: oklch(0.5842 0.1443 262.74);
+  --brand-700: oklch(0.4767 0.1321 262.01);
+
+  /* ── Functional Primitives ── */
+  --green-400: oklch(0.4479 0.0741 157.11);
+  --green-500: oklch(0.6442 0.1203 156.74);
+  --green-600: oklch(0.7055 0.1278 153.45);
+  --red-400:  oklch(0.4779 0.1020 14.27);
+  --red-500:  oklch(0.6317 0.1567 22.64);
+  --red-600:  oklch(0.6656 0.1479 21.89);
+  --amber-400: oklch(0.4699 0.0626 80.62);
+  --amber-500: oklch(0.7341 0.1177 79.66);
+  --amber-600: oklch(0.7613 0.1110 77.09);
+  --orange-400: oklch(0.4646 0.0742 48.27);
+  --orange-500: oklch(0.7187 0.1270 50.23);
+  --orange-600: oklch(0.7218 0.1216 49.42);
+  --cyan-400: oklch(0.6394 0.1037 220.78);
+  --cyan-500: oklch(0.7312 0.1106 220.00);
+  --cyan-600: oklch(0.7935 0.0910 218.53);
+  --purple-400: oklch(0.4494 0.0772 298.93);
+  --purple-500: oklch(0.7324 0.1170 300.20);
+  --purple-600: oklch(0.7948 0.0862 299.72);
+
+  /* ── Typography Scale ── */
+  --font-size-10: 0.625rem;
+  --font-size-11: 0.6875rem;
+  --font-size-12: 0.75rem;
+  --font-size-13: 0.8125rem;
+  --font-size-14: 0.875rem;
+  --font-size-16: 1rem;
+  --font-size-18: 1.125rem;
+  --font-size-20: 1.25rem;
+  --font-size-24: 1.5rem;
+  --font-size-28: 1.75rem;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* ── Font Families ── */
+  --font-family-ui: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --font-family-numeric: 'JetBrains Mono', monospace;
+  --font-family-code: 'JetBrains Mono', monospace;
+
+  /* ── Spacing Scale (4pt base) ── */
+  --space-2:  0.125rem;
+  --space-4:  0.25rem;
+  --space-6:  0.375rem;
+  --space-8:  0.5rem;
+  --space-10: 0.625rem;
+  --space-12: 0.75rem;
+  --space-16: 1rem;
+  --space-20: 1.25rem;
+  --space-24: 1.5rem;
+  --space-32: 2rem;
+
+  /* ── Radius Scale ── */
+  --radius-2:  0.125rem;
+  --radius-4:  0.25rem;
+  --radius-6:  0.375rem;
+  --radius-8:  0.5rem;
+  --radius-12: 0.75rem;
+
+  /* ── Motion ── */
+  --motion-duration-fast: 100ms;
+  --motion-duration-normal: 200ms;
+  --motion-duration-slow: 350ms;
+  --motion-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-easing-emphasis: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ══════════════════════════════════════════════
+   * Layer 2: Semantic Surface
+   * Style B Graphite Studio overrides applied
+   * ══════════════════════════════════════════════ */
+
+  --surface-app:               oklch(0.155 0.005 260);
+  --surface-panel-base:        oklch(0.185 0.005 260);
+  --surface-panel-elevated:    oklch(0.215 0.006 260);
+  --surface-strip:             oklch(0.180 0.005 260);
+  --surface-overlay:           oklch(0.260 0.008 260);
+  --surface-modal:             oklch(0.300 0.010 260);
+
+  --text-primary:              oklch(0.935 0.005 260);
+  --text-secondary:            oklch(0.610 0.010 260);
+  --text-tertiary:             oklch(0.430 0.010 260);
+  --text-disabled:             oklch(0.340 0.008 260);
+  --text-inverse:              oklch(0.155 0.005 260);
+
+  --border-subtle:             oklch(0.245 0.008 260);
+  --border-default:            oklch(0.310 0.010 260);
+  --border-strong:             oklch(0.420 0.012 260);
+
+  --brand-accent:              oklch(0.700 0.165 255);
+  --brand-accent-hover:        oklch(0.760 0.160 254);
+  --brand-accent-subtle:       oklch(0.700 0.165 255 / 0.10);
+
+  /* ══════════════════════════════════════════════
+   * Layer 6: Interaction & Feedback
+   * ══════════════════════════════════════════════ */
+
+  --interaction-focus-ring:    oklch(0.700 0.165 255 / 0.4);
+  --interaction-focus-border:  oklch(0.700 0.165 255);
+  --interaction-hover-subtle-bg:   oklch(1 0 0 / 0.05);
+  --interaction-hover-strong-bg:   oklch(1 0 0 / 0.08);
+  --interaction-selected-bg:       oklch(0.700 0.165 255 / 0.10);
+  --interaction-selected-border:   oklch(0.700 0.165 255 / 0.25);
+  --interaction-active-bg:         oklch(0 0 0 / 0.12);
+  --interaction-dragging-shadow:   0 8px 24px oklch(0 0 0 / 0.4);
+
+  --feedback-toast-bg:         var(--surface-panel-elevated);
+  --feedback-toast-border:     var(--border-default);
+
+  /* ══════════════════════════════════════════════
+   * Layer 7: Domain Semantic
+   * Default: CN red-up / green-down
+   * ══════════════════════════════════════════════ */
+
+  /* ── Market ── */
+  --market-up-fg:      oklch(0.670 0.170 20);
+  --market-up-bg:      oklch(0.670 0.170 20 / 0.10);
+  --market-up-subtle:  oklch(0.670 0.170 20 / 0.08);
+  --market-down-fg:    oklch(0.680 0.120 175);
+  --market-down-bg:    oklch(0.680 0.120 175 / 0.10);
+  --market-down-subtle:oklch(0.680 0.120 175 / 0.08);
+  --market-flat-fg:    oklch(0.530 0.010 260);
+  --market-strong-fg:  oklch(0.720 0.140 172);
+  --market-weak-fg:    oklch(0.680 0.180 18);
+
+  /* ── Risk ── */
+  --risk-critical-fg:  oklch(0.680 0.180 18);
+  --risk-critical-bg:  oklch(0.680 0.180 18 / 0.12);
+  --risk-high-fg:      oklch(0.740 0.160 55);
+  --risk-high-bg:      oklch(0.740 0.160 55 / 0.10);
+
+  /* ── System ── */
+  --system-healthy-fg: oklch(0.680 0.120 175);
+  --system-healthy-bg: oklch(0.680 0.120 175 / 0.10);
+  --system-degraded-fg:oklch(0.770 0.140 80);
+  --system-down-fg:    oklch(0.680 0.180 18);
+  --system-down-bg:    oklch(0.680 0.180 18 / 0.15);
+
+  /* ── Execution ── */
+  --execution-pending-fg: oklch(0.770 0.140 80);
+  --execution-pending-bg: oklch(0.770 0.140 80 / 0.10);
+  --execution-filled-fg:  oklch(0.680 0.120 175);
+
+  /* ══════════════════════════════════════════════
+   * Layer 8: Density — Compact (default)
+   * ══════════════════════════════════════════════ */
+
+  --density-panel-padding:     var(--space-12);
+  --density-section-gap:       var(--space-12);
+  --density-gutter:            var(--space-16);
+  --density-strip-height:      2.25rem;
+  --density-toolbar-height:    2.25rem;
+  --density-row-height:        2.25rem;
+  --density-cell-padding-x:    var(--space-12);
+  --density-cell-padding-y:    var(--space-6);
+  --density-header-height:     2rem;
+  --density-input-height:      2rem;
+  --density-action-height:     2rem;
+  --density-chart-header:      2rem;
+  --density-chart-padding:     var(--space-12);
+  --density-font-delta:        0;
+
+  /* ══════════════════════════════════════════════
+   * Layout Variables
+   * ══════════════════════════════════════════════ */
+
+  --shell-rail-width:           56px;
+  --shell-header-height:        68px;
+  --shell-sidebar-width:        320px;
+  --shell-rail-radar-width:     340px;
+  --shell-activity-width:      300px;
+  --shell-analysis-band-height: 220px;
+
+  /* Code / Mono */
+  --code-bg:        oklch(0.155 0.005 260);
+  --code-text:      oklch(0.830 0.010 260);
+  --code-border:    oklch(0.245 0.008 260);
+
+  /* Scrollbar */
+  --scrollbar-track:        oklch(0.155 0.005 260);
+  --scrollbar-thumb:        oklch(0.310 0.010 260);
+  --scrollbar-thumb-hover:  oklch(0.370 0.012 260);
+}
+
+/* ── Density: Comfortable ── */
+[data-density="comfortable"] {
+  --density-panel-padding:     var(--space-16);
+  --density-section-gap:       var(--space-16);
+  --density-strip-height:      2.5rem;
+  --density-row-height:        2.5rem;
+  --density-cell-padding-x:    var(--space-16);
+  --density-cell-padding-y:    var(--space-8);
+  --density-header-height:     2.25rem;
+  --density-input-height:      2.25rem;
+  --density-action-height:     2.25rem;
+  --density-chart-header:      2.25rem;
+  --density-chart-padding:     var(--space-16);
+}
+
+/* ── Density: Ultra-compact ── */
+[data-density="ultra"] {
+  --density-panel-padding:     var(--space-8);
+  --density-section-gap:       var(--space-8);
+  --density-strip-height:      2rem;
+  --density-row-height:        1.75rem;
+  --density-cell-padding-x:    var(--space-8);
+  --density-cell-padding-y:    var(--space-4);
+  --density-header-height:     1.75rem;
+  --density-input-height:      1.75rem;
+  --density-action-height:     1.75rem;
+  --density-chart-header:      1.75rem;
+  --density-chart-padding:     var(--space-8);
+  --density-font-delta:        -1;
+}
+
+/* ══════════════════════════════════════════════
+ * Base Styles
+ * ══════════════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface-app);
+  color: var(--text-primary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-13);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-4);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
