@@ -527,7 +527,8 @@
     @media (prefers-reduced-motion: reduce) {
       .btn, .rail-icon, .header-btn-badge, .header-action-btn,
       .panel-action, .quota-bar-fill, .resource-bar-fill,
-      .status-indicator, .alert-row, .data-table tr {
+      .status-indicator, .alert-row, .data-table tr,
+      .skeleton, .task-item.running .task-status::after {
         transition: none !important;
         animation: none !important;
       }
@@ -701,9 +702,114 @@
       background: var(--brand-accent-subtle);
       text-decoration: underline;
     }
+
+    /* ══════════════════════════════════════════════
+     * R6: Noise material texture
+     * ══════════════════════════════════════════════ */
+    .shell-ops {
+      position: relative;
+    }
+    .shell-ops::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .shell-ops > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+     * R6: Skeleton shimmer — loading state placeholder
+     * ══════════════════════════════════════════════ */
+    .skeleton {
+      background: linear-gradient(
+        90deg,
+        var(--neutral-100) 25%,
+        var(--neutral-150) 50%,
+        var(--neutral-100) 75%
+      );
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s ease-in-out infinite;
+      border-radius: var(--radius-2);
+    }
+    .skeleton-bar {
+      height: 12px;
+      width: 60px;
+    }
+    .skeleton-text {
+      height: 11px;
+      width: 80px;
+    }
+    .skeleton-text-sm {
+      height: 10px;
+      width: 48px;
+    }
+    @keyframes skeleton-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ══════════════════════════════════════════════
+     * R6: Mini sparkline — latency trend indicator
+     * ══════════════════════════════════════════════ */
+    .sparkline {
+      display: inline-block;
+      vertical-align: middle;
+      width: 40px;
+      height: 14px;
+      margin-left: var(--space-4);
+    }
+    .sparkline path {
+      fill: none;
+      stroke-width: 1.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .sparkline.ok path   { stroke: var(--system-healthy-fg); }
+    .sparkline.warn path { stroke: var(--system-degraded-fg); }
+
+    /* ══════════════════════════════════════════════
+     * R6: Brand moment — running task accent pulse
+     * ══════════════════════════════════════════════ */
+    .task-item.running .task-status {
+      position: relative;
+    }
+    .task-item.running .task-status::after {
+      content: '';
+      position: absolute;
+      right: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+      animation: task-pulse 2s ease-in-out infinite;
+    }
+    @keyframes task-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 oklch(0.700 0.165 255 / 0.4); }
+      50%      { opacity: 0.7; box-shadow: 0 0 0 4px oklch(0.700 0.165 255 / 0); }
+    }
+
+    /* ══════════════════════════════════════════════
+     * R6: Alert panel flex fix
+     * ══════════════════════════════════════════════ */
+    .ops-main .panel.panel-alerts {
+      flex: 1;
+    }
   </style>
 </head>
 <body>
+  <!-- R6: SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+  </svg>
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Platform Ops · Compact · A股</div>
 
@@ -830,7 +936,7 @@
                     正常
                   </span>
                 </td>
-                <td class="cell-numeric">2s</td>
+                <td class="cell-numeric">2s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 7 L8 5 L16 8 L24 4 L32 6 L40 7"/></svg></td>
                 <td>
                   <div class="quota-cell">
                     <span class="quota-text critical">4,820/5,000</span>
@@ -849,7 +955,7 @@
                     正常
                   </span>
                 </td>
-                <td class="cell-numeric">1s</td>
+                <td class="cell-numeric">1s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 7 L8 6 L16 7 L24 5 L32 7 L40 6"/></svg></td>
                 <td>
                   <span class="quota-text ok">无限制</span>
                 </td>
@@ -865,7 +971,7 @@
                     延迟
                   </span>
                 </td>
-                <td class="cell-numeric cell-warn">45s</td>
+                <td class="cell-numeric cell-warn">45s<svg class="sparkline warn" viewBox="0 0 40 14"><path d="M0 6 L8 7 L16 10 L24 12 L32 13 L40 13"/></svg></td>
                 <td>
                   <div class="quota-cell">
                     <span class="quota-text warn">8,200/10,000</span>
@@ -884,7 +990,7 @@
                     正常
                   </span>
                 </td>
-                <td class="cell-numeric">3s</td>
+                <td class="cell-numeric">3s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 8 L8 7 L16 6 L24 8 L32 5 L40 7"/></svg></td>
                 <td>
                   <div class="quota-cell">
                     <span class="quota-text ok">2,100/3,000</span>
@@ -917,7 +1023,7 @@
       </div>
 
       <!-- Panel 2: 系统预警 -->
-      <div class="panel" style="flex: 1;">
+      <div class="panel panel-alerts">
         <div class="panel-header">
           <span class="panel-title">系统预警</span>
           <span class="panel-count panel-count-critical">4</span>
