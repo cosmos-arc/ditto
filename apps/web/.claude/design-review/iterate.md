@@ -1,6 +1,7 @@
 # 自主迭代模式
 
-> **无需人工介入**，自动循环审查-修复-评分，直到达标或达到上限。
+> **无需人工介入**，自动循环创意方向→审查→修复→评分→反思，直到达标或达到上限。
+> **创意流程借鉴**：CREATIVE DIRECTION 从 [CREA 框架](https://crea-diffusion.github.io/)借鉴、REFLECT 从 [Reflexion 模式](https://arxiv.org/abs/2303.11366)借鉴、常态化标杆调研从 Design Harness 的 [Inspiration 层](https://agenticux.substack.com/p/between-uicrit-and-autoresearch-what)借鉴。
 
 ---
 
@@ -21,18 +22,20 @@ VERSION [sonnet] → BASELINE [sonnet]
   │
   ├─ Loop (round 1..max-rounds)
   │   │
-  │   ├─ Phase 2: PARALLEL REVIEW    [按角色分配]
-  │   ├─ Phase 3: CONFLICT RESOLUTION [opus]
-  │   ├─ Phase 4: AUTO-DECISION       [sonnet]（自动裁决，不阻塞用户）
-  │   ├─ Phase 5: FIX                 [sonnet]
-  │   ├─ Phase 6: POLISH              [混合: AD=opus, skills=sonnet]
-  │   ├─ SCORE: 评分快照              [opus]
+  │   ├─ Phase 2: CREATIVE DIRECTION  [opus]（创意蓝图：策略选择 + 轻量标杆调研）
+  │   ├─ Phase 3: PARALLEL REVIEW     [按角色分配]
+  │   ├─ Phase 4: CONFLICT RESOLUTION  [opus]
+  │   ├─ Phase 5: AUTO-DECISION        [sonnet]（自动裁决，不阻塞用户）
+  │   ├─ Phase 6: FIX                  [sonnet]
+  │   ├─ Phase 7: POLISH               [混合: AD=opus, skills=sonnet]
+  │   ├─ SCORE: 评分快照               [opus]
+  │   ├─ REFLECT: 反思记录             [opus]
   │   │
   │   ├─ 达标？ ──是──→ 退出循环
   │   │
   │   └─ 无进展？ ──是──→ 瓶颈诊断 → 策略转向（详见「突破机制」）
   │
-  └─ Phase 7: FINAL [混合] → Phase 8: SYNC [sonnet]
+  └─ Phase 8: FINAL [混合] → Phase 9: SYNC [sonnet]
 ```
 
 ---
@@ -49,6 +52,55 @@ VERSION [sonnet] → BASELINE [sonnet]
 **提前退出（任一满足）：**
 - 连续 2 轮综合分变化 < 0.2 且**突破机制也未能产生有效方案**
 - 已达到 max-rounds
+- 反思记录连续 2 轮标记"无新方向可探索"
+
+---
+
+## Phase 2: CREATIVE DIRECTION（创意蓝图）
+
+> **从 [CREA 框架](https://crea-diffusion.github.io/) 借鉴**：每轮迭代前，Art Director 定义本轮创意方向。
+> 不是被动等审查发现问题，而是主动决定"这轮要往哪个方向优化"。
+
+### 步骤
+
+1. **回顾历史**：读取前轮评分快照和反思记录（首轮无历史则跳过）
+2. **瓶颈识别**：识别当前最低分维度和已达天花板的维度
+3. **创意策略选择**：从策略矩阵中选择本轮方向
+
+| 优先级 | 策略 | 触发条件 | 业界参考 |
+|--------|------|---------|---------|
+| 1 | 基础修补 | P0 > 0 或有基础缺陷（≤ 7.0） | — |
+| 2 | 定向精修 | 特定维度 < 8.0，需定向提升 | 标杆产品对应维度 |
+| 3 | 一致性打磨 | 各维度 ≥ 8.0 但一致性 < 8.5 | Linear, Vercel |
+| 4 | 创意突破 | 连续 2 轮无进展，或某维度达天花板 | Bloomberg, TradingView |
+| 5 | 整体气质提升 | 各维度 ≥ 9.0 但综合未达标 | 综合标杆 |
+
+4. **轻量标杆调研**（每轮标配，非突破专属）：
+- WebSearch 1-2 个标杆产品的具体实现
+- 提取可落地的视觉手法（不需要深度调研，只需要 1-2 个具体参考点）
+- 例："Bloomberg Terminal 信息密度布局"、"Linear 留白节奏设计"
+- **不从 AutoResearch 借鉴的边界**：不做单变量实验，标杆参考用于**启发创意方向**而非逐项测试
+
+5. **输出本轮创意蓝图**：
+
+```
+Round {N} 创意蓝图
+├─ 策略: {从策略矩阵选择}
+├─ 重点区域: {本轮聚焦优化的页面区域}
+├─ 标杆参考: {1-2 个参考产品 + 具体参考点}
+├─ 预期改进维度: {克制度/一致性/高级感/品牌方向/信息效率}
+└─ 约束: {本轮不可触碰的方向（避免震荡）}
+```
+
+### 与突破机制的关系
+
+CREATIVE DIRECTION 是**每轮标配**的前置规划，突破机制是**特殊触发**的深度转向。两者共享策略矩阵但执行深度不同：
+
+| 维度 | CREATIVE DIRECTION（每轮） | 突破机制（触发时） |
+|------|---------------------------|-------------------|
+| 标杆调研 | 1-2 个轻量参考 | 深度调研 + 多参考对比 |
+| 策略选择 | 从 5 级优先级选择 | 从转向矩阵选择（更激进） |
+| 产出 | 一段创意蓝图 | 完整突破方案 + 变更清单 |
 
 ---
 
@@ -165,9 +217,9 @@ VERSION [sonnet] → BASELINE [sonnet]
 
 ---
 
-## AUTO-DECISION 规则（替代人工 Phase 4）
+## AUTO-DECISION 规则（替代人工 Phase 5）
 
-自主模式下，Phase 4 不阻塞用户，按以下优先级自动决策：
+自主模式下，Phase 5 不阻塞用户，按以下优先级自动决策：
 
 ```
 优先级 1: P0 全部采纳 → 无条件修复
@@ -183,6 +235,9 @@ VERSION [sonnet] → BASELINE [sonnet]
     └─ 选取直到预计总分能达标（留 0.3 安全余量）
 优先级 5: P2 → 仅在后续轮次且仍有缺口时才考虑
 优先级 6: 突破变更 → 触发突破机制时，按「突破执行」原则实施
+优先级 7: 创意蓝图对齐 → AUTO-DECISION 采纳的变更需与 CREATIVE DIRECTION 蓝图方向一致：
+    ├─ 与蓝图方向一致的变更 → 优先采纳
+    └─ 与蓝图方向无关但确实解决 P0/P1 的变更 → 正常采纳，但在反思中标记为"非蓝图变更"
 ```
 
 ---
@@ -193,6 +248,9 @@ VERSION [sonnet] → BASELINE [sonnet]
 - 后续轮次**不推翻**已采纳的决策（除非新问题导致必须回退）
 - 连续 2 轮总分变化 < 0.2 → **不立即退出**，触发突破机制
 - 突破机制执行后仍无进展 → 退出并报告天花板
+- 每轮 CREATIVE DIRECTION 必须读取前轮的创意蓝图和反思记录
+- 创意策略不得与前 2 轮重复（除非基础修补策略仍有 P0）
+- 标杆参考不得与前一轮完全相同
 
 ## 基线修正规则（Baseline Correction）
 
@@ -245,3 +303,32 @@ VERSION [sonnet] → BASELINE [sonnet]
 
 > **注意**: 综合气质现在是 5 维平均值（含信息效率）。信息效率维度参考
 > [product-criteria.md](product-criteria.md) 中的模块分层密度准则和元素角色→字号映射。
+
+---
+
+## 每轮反思记录（REFLECT）
+
+> **从 [Reflexion 模式](https://arxiv.org/abs/2303.11366) 借鉴**：维护跨轮次的定性记忆，
+> 记录"为什么有效/无效"，避免重复无效方向。设计效果是整体性的，
+> 反思记录关注的是**创意方向的成败**，而非逐个变更的成败。
+
+每轮 SCORE 之后，Art Director 输出结构化反思：
+
+```
+Round {N} 反思：
+├─ 本轮创意策略: [策略名 + 方向]
+├─ 实际执行: [变更摘要，2-3 句]
+├─ 效果:
+│   ├─ 分数变化: {各维度变化}
+│   └─ 整体感受: [有效/无效/中性] + [一句话原因]
+├─ 关键洞察:
+│   ├─ 什么起了作用: [具体手法 + 为什么]
+│   └─ 什么没起作用: [具体手法 + 为什么]
+├─ 死胡同标记: [明确无效的方向，下轮应避免]
+└─ 可探索方向: [有潜力但本轮未充分尝试的方向]
+```
+
+**反思记录的用途**：
+- 下轮 CREATIVE DIRECTION 阶段的**必读输入**
+- 突破机制瓶颈诊断的**定性数据**（不只是看分数趋势）
+- 最终报告迭代历程的**定性补充**

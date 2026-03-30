@@ -140,19 +140,21 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 |------|------|------|
 | Phase 0: VERSION | sonnet | git 操作，纯机械 |
 | Phase 1: BASELINE | sonnet | 数据采集 + 脚本执行 |
-| Phase 2: Art Director | **opus** | 审美判断核心，气质评分 |
-| Phase 2: UI Designer | **opus** | 视觉品质需要审美理解 |
-| Phase 2: UX Reviewer | sonnet | 交互分析偏结构化 |
-| Phase 2: Product Mgr | sonnet | 功能可用性偏结构化 |
-| Phase 2: Copy Editor | sonnet | 文案审查最结构化 |
-| Phase 3: CONFLICT RES. | **opus** | 多角色冲突权衡取舍 |
-| Phase 4: DECISION | sonnet | 呈现选项，不涉及判断 |
-| Phase 5: FIX | sonnet | 按已定方案执行 |
-| Phase 6: AD 预审/复审 | **opus** | 审美把关 |
-| Phase 6: impeccable skills | sonnet | 按规范执行 |
-| Phase 7: 自动化检测 | sonnet | Lighthouse/Token/视口 |
-| Phase 7: 最终气质评分 | **opus** | 最终审美裁决 |
-| Phase 8: SYNC | sonnet | 文档同步 |
+| Phase 2: CREATIVE DIRECTION | **opus** | 创意方向判断，策略选择和蓝图定义 |
+| Phase 3: Art Director | **opus** | 审美判断核心，气质评分 |
+| Phase 3: UI Designer | **opus** | 视觉品质需要审美理解 |
+| Phase 3: UX Reviewer | sonnet | 交互分析偏结构化 |
+| Phase 3: Product Mgr | sonnet | 功能可用性偏结构化 |
+| Phase 3: Copy Editor | sonnet | 文案审查最结构化 |
+| Phase 4: CONFLICT RES. | **opus** | 多角色冲突权衡取舍 |
+| Phase 5: DECISION | sonnet | 呈现选项，不涉及判断 |
+| Phase 6: FIX | sonnet | 按已定方案执行 |
+| Phase 7: AD 预审/复审 | **opus** | 审美把关 |
+| Phase 7: impeccable skills | sonnet | 按规范执行 |
+| Phase 7: REFLECT [--iterate] | **opus** | 定性反思，洞察提取 |
+| Phase 8: 自动化检测 | sonnet | Lighthouse/Token/视口 |
+| Phase 8: 最终气质评分 | **opus** | 最终审美裁决 |
+| Phase 9: SYNC | sonnet | 文档同步 |
 
 **实现方式**：Agent 工具调用时传入 `model` 参数，如 `Agent(prompt="...", model="opus")`。
 
@@ -173,8 +175,10 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 
 ## 自主迭代模式（`--iterate`）
 
-> 自动循环审查-修复-评分，直到达标或达到上限。参数：`--goal`（默认 8.0）、`--max-rounds`（默认 3）。
+> 自动循环**创意方向→审查→修复→评分→反思**，直到达标或达到上限。参数：`--goal`（默认 8.0）、`--max-rounds`（默认 3）。
+> 每轮开始前 Art Director 定义创意蓝图（CREATIVE DIRECTION），每轮结束后输出结构化反思（REFLECT）。
 > 循环架构、退出条件、AUTO-DECISION 规则、防震荡机制、**突破机制**详见 [iterate.md](../design-review/iterate.md)。
+> **创意流程借鉴**：CREATIVE DIRECTION 从 [CREA 框架](https://crea-diffusion.github.io/)借鉴、REFLECT 从 [Reflexion 模式](https://arxiv.org/abs/2303.11366)借鉴、常态化标杆调研从 Design Harness 的 [Inspiration 层](https://agenticux.substack.com/p/between-uicrit-and-autoresearch-what)借鉴。
 
 > **突破机制**: 当连续多轮收益递减（diminishing returns）时，不直接退出，而是触发「瓶颈诊断 → 策略转向 → 标杆调研 → 突破执行」流程。核心原则：**分数卡住的根源往往是优化维度本身已耗尽，需要换一个维度思考**。详见 [iterate.md §突破机制](../design-review/iterate.md#突破机制breakthrough-protocol)。
 
@@ -210,7 +214,15 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 │      │   留白节奏比 / 色彩种类数                          │
 │      └─ 生成「跨页一致性基线」                            │
 ├─────────────────────────────────────────────────────────┤
-│ Phase 2: PARALLEL REVIEW（并行审查）                      │
+│ Phase 2: CREATIVE DIRECTION（创意蓝图）              [opus]  │
+│                                                         │
+│   1. 读取前轮评分快照和反思记录（首轮跳过）              │
+│   2. 识别当前最低分维度和天花板维度                     │
+│   3. 从策略矩阵选择本轮创意策略                        │
+│   4. 轻量标杆调研（WebSearch 1-2 个参考）              │
+│   5. 输出本轮创意蓝图（策略/区域/参考/预期/约束）      │
+├─────────────────────────────────────────────────────────┤
+│ Phase 3: PARALLEL REVIEW（并行审查）                      │
 │                                                         │
 │   启动 5 个并行 Agent，每个扮演一个角色：                   │
 │   ├─ Art Director Agent  → opus  → 气质问题清单 + 评分卡 │
@@ -225,7 +237,7 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 │   - 🟢 P2: 可选优化（锦上添花）                           │
 │   - 💡 建议：对设计/信息架构的调整建议                     │
 ├─────────────────────────────────────────────────────────┤
-│ Phase 3: CONFLICT RESOLUTION（冲突协调）            [opus]  │
+│ Phase 4: CONFLICT RESOLUTION（冲突协调）            [opus]  │
 │                                                         │
 │   1. 汇总 5 个角色的问题清单                              │
 │   2. 去重合并相似问题                                     │
@@ -234,6 +246,7 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 │   5. 识别所有角色的共识点                                 │
 │   6. [--iterate] Art Director 为每个 P1 标注「预期提分」  │
 │      用于后续 AUTO-DECISION 阶段的优先级排序              │
+│   7. [--iterate] 标注每个变更与创意蓝图的方向对齐度      │
 │                                                         │
 │   Art Director 冲突优先级规则：                            │
 │   ├─ AD vs UI（装饰 vs Token）→ AD 优先                  │
@@ -244,7 +257,7 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 │   └─ AD vs 所有（整体气质 vs 局部优化）→ AD 整体视角     │
 │     优先
 ├─────────────────────────────────────────────────────────┤
-│ Phase 4: USER DECISION（用户决策）                  [sonnet] │
+│ Phase 5: DECISION（用户决策 / AUTO-DECISION）      [sonnet] │
 │                                                         │
 │   使用 AskUserQuestion 呈现：                             │
 │   - 共识点（所有角色一致认同，建议直接采纳）               │
@@ -252,9 +265,10 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 │   - 各角色独立建议（可选择性采纳）                         │
 │   - 信息架构/交互流程的重大调整建议                        │
 │                                                         │
-│   用户选择：采纳 / 否决 / 替代方案                         │
+│   [--iterate] AUTO-DECISION 自动裁决，不阻塞用户          │
+│   [--人工] 用户选择：采纳 / 否决 / 替代方案               │
 ├─────────────────────────────────────────────────────────┤
-│ Phase 5: FIX（执行修改）                            [sonnet] │
+│ Phase 6: FIX（执行修改）                            [sonnet] │
 │                                                         │
 │   1. 按优先级执行采纳的修改                               │
 │   2. 需要验证时用 evaluate_script 提取关键 computed styles│
@@ -262,7 +276,7 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 │   3. 如有信息架构调整，更新 spec 文档                     │
 │   4. 如有新的设计决策，记录到 decisions/                   │
 ├─────────────────────────────────────────────────────────┤
-│ Phase 6: POLISH（质量提升 + Art Director 审批）     [混合]   │
+│ Phase 7: POLISH（质量提升 + Art Director 审批）     [混合]   │
 │                                                         │
 │   Step 1: Art Director 预审 FIX 结果              [opus]  │
 │   ├─ 气质评分 ≥ 7.5 → 允许进入 POLISH                   │
@@ -277,9 +291,14 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 │   ├─ 可降级过度的 bolder/delight/overdrive 效果          │
 │   ├─ 可移除违反克制度的装饰元素                           │
 │   ├─ 使用 impeccable: quieter 处理过度装饰                │
-│   └─ 输出最终气质评分卡                                  │
+│   └─ 输出气质评分卡                                     │
+│                                                         │
+│   [--iterate] Step 4: REFLECT 反思记录            [opus]  │
+│   ├─ 记录本轮创意策略与实际执行的偏差                    │
+│   ├─ 记录关键洞察（什么起作用/什么没起作用）             │
+│   └─ 标记死胡同 + 可探索方向                            │
 ├─────────────────────────────────────────────────────────┤
-│ Phase 7: FINAL（最终验证 + 气质评分）               [混合]   │
+│ Phase 8: FINAL（最终验证 + 气质评分）               [混合]   │
 │                                                         │
 │   1. Chrome MCP: lighthouse_audit（质量评分）    [sonnet] │
 │   2. Chrome MCP: evaluate_script（最终 Token 审计）[sonnet]│
@@ -292,14 +311,15 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 │   5. [多视口] 输出视口验证报告                   [sonnet] │
 │   6. Art Director 最终气质评估：                   [opus]  │
 │      ├─ 重新提取视觉指纹，对比 Phase 1 基线               │
-│      ├─ 输出气质评分卡（克制度/一致性/高级感/品牌方向）   │
+│      ├─ 输出气质评分卡（克制度/一致性/高级感/品牌方向/信息效率）│
 │      └─ 跨页一致性验证（对比其他页面视觉指纹）            │
+│  11. [--iterate] 汇总所有轮次反思记录到最终报告          │
 │   7. git commit 最终状态                                 │
 │   8. 生成审查报告 → docs/reviews/（含 tag 引用）          │
 │   9. 更新 design decisions（如有架构调整）                 │
 │  10. 生成待同步清单（嵌入报告末尾）                       │
 ├─────────────────────────────────────────────────────────┤
-│ Phase 8: SYNC（反向同步，独立触发）                 [sonnet] │
+│ Phase 9: SYNC（反向同步，独立触发）                 [sonnet] │
 │                                                         │
 │   触发: /ditto-design-review <file> --sync              │
 │   详情见 [sync.md](../design-review/sync.md)             │
@@ -311,7 +331,7 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 使用 `--ui` / `--ux` / `--product` / `--copy` / `--ad` 参数时，只运行对应角色的审查，跳过冲突协调和全流程。
 
 ```
-BASELINE [sonnet] → 单角色审查 [按角色分配] → 用户决策 [sonnet] → FIX [sonnet] → VERIFY [sonnet]
+BASELINE [sonnet] → 单角色审查 [按角色分配] → DECISION [sonnet] → FIX [sonnet] → VERIFY [sonnet]
 ```
 
 **单角色模型分配：**
