@@ -125,6 +125,7 @@
     .context-bar {
       background: var(--surface-app);
       border-bottom: 1px solid var(--border-subtle);
+      box-shadow: 0 1px 6px oklch(0.700 0.165 255 / 0.04);
       display: flex;
       align-items: center;
       padding: 0 var(--density-gutter);
@@ -228,6 +229,7 @@
     .market-card:hover {
       border-color: var(--border-default);
       background: var(--surface-panel-elevated);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.2);
     }
 
     .market-card.card-lead:hover {
@@ -471,18 +473,32 @@
 
     .matrix-table tr:hover td { background: var(--interaction-hover-subtle-bg); }
 
+    /* Ambient tint for lead/lag rows — data floats in space */
+    .matrix-table tr.row-lead td { background: oklch(0.670 0.170 20 / 0.03); }
+    .matrix-table tr.row-lag td { background: oklch(0.680 0.120 175 / 0.03); }
+    .matrix-table tr.row-lead:hover td { background: oklch(0.670 0.170 20 / 0.06); }
+    .matrix-table tr.row-lag:hover td { background: oklch(0.680 0.120 175 / 0.06); }
+
     .matrix-table .up { color: var(--market-up-fg); }
     .matrix-table .down { color: var(--market-down-fg); }
     .matrix-table .neutral { color: var(--text-tertiary); }
 
-    /* Highlight top 2 / bottom 2 rows */
+    /* Highlight top 2 / bottom 2 rows — ambient surface tint */
+    .matrix-table tr.row-lead td {
+      color: var(--market-up-fg);
+      font-weight: var(--font-weight-medium);
+    }
     .matrix-table tr.row-lead td:first-child {
       color: var(--market-up-fg);
+      font-weight: var(--font-weight-semibold);
+    }
+    .matrix-table tr.row-lag td {
+      color: var(--market-down-fg);
       font-weight: var(--font-weight-medium);
     }
     .matrix-table tr.row-lag td:first-child {
       color: var(--market-down-fg);
-      font-weight: var(--font-weight-medium);
+      font-weight: var(--font-weight-semibold);
     }
 
     /* ── L3: Macro Drivers Strip (ultra-light, no pill background) ── */
@@ -862,7 +878,7 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳至主要内容</a>
-  <div class="style-label">Graphite Studio — Cross-Market Overview · v8 · Design Review R2</div>
+  <div class="style-label">Graphite Studio — Cross-Market Overview · v9 · Design Review R3</div>
 
   <div class="shell-radar">
 
