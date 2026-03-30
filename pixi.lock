@@ -2809,8 +2809,8 @@ packages:
   requires_python: '>=3.13'
 - pypi: ./packages/kernel
   name: ditto-kernel
-  version: 0.1.0
-  sha256: f47a4780024268dacab63379782bc6f5b4cf3c1fab137d185d8ae090d3f350ae
+  version: 0.2.0
+  sha256: 57697b29483fe8c1efda956b1ba91585e024ffc35df7773f9565d8f2718c03a1
   requires_python: '>=3.13'
 - pypi: ./apps/port
   name: ditto-port
