@@ -551,14 +551,13 @@
       transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Data table row hover — subtle lift + interactive hint */
+    /* Data table row hover — subtle interactive hint */
     .data-table tbody tr {
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
-                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: pointer;
     }
     .data-table tbody tr:hover {
-      background: oklch(0.35 0.005 260 / 0.3);
+      background: var(--interaction-hover-strong-bg);
     }
 
     /* Disconnected row persistent highlight */
@@ -689,7 +688,7 @@
      * ══════════════════════════════════════════════ */
     .row-action {
       font-size: var(--font-size-11);
-      color: oklch(0.700 0.165 255 / 0.6);
+      color: color-mix(in oklch, var(--brand-accent) 60%, transparent);
       cursor: pointer;
       padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-4);
