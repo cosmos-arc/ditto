@@ -221,9 +221,9 @@
     /* ── Cell state classes ── */
     .cell-warn { font-family: var(--font-family-numeric); color: var(--system-degraded-fg); }
 
-    /* ── Status bar live indicator — brand-tinted green ── */
+    /* ── Status bar live indicator ── */
     .status-live {
-      color: oklch(0.72 0.15 195);
+      color: var(--system-healthy-fg);
       font-weight: var(--font-weight-medium);
     }
 
@@ -465,6 +465,13 @@
     .cell-numeric  { font-family: var(--font-family-numeric); }
     .cell-time     { font-family: var(--font-family-numeric); color: var(--text-secondary); }
     .cell-disabled { font-family: var(--font-family-numeric); color: var(--text-disabled); }
+
+    /* ── Sort indicator ── */
+    .sort-indicator {
+      font-size: var(--font-size-10);
+      color: var(--text-disabled);
+      margin-left: var(--space-2);
+    }
 
     /* ── Task status icon color via parent ── */
     .task-item.running  .task-status-icon { color: var(--system-healthy-fg); }
@@ -957,7 +964,7 @@
             <thead>
               <tr>
                 <th scope="col">数据源</th>
-                <th scope="col">状态</th>
+                <th scope="col">状态 <span class="sort-indicator" aria-label="按严重程度排序">▼</span></th>
                 <th scope="col">延迟</th>
                 <th scope="col">API 配额</th>
                 <th scope="col">上次同步</th>
@@ -1259,7 +1266,7 @@
     <span class="status-sep">│</span>
     <span>CPU 23% · MEM 26%</span>
     <span class="status-spacer"></span>
-    <span class="status-kbd">⌘K</span> 搜索
+    <span class="status-kbd">Ctrl+K</span> 搜索
   </div>
 
 </body>
