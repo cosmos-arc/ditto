@@ -250,11 +250,11 @@ docs/designs/specs/prototypes/
 
 ---
 
-## 核心编排 Skill: /ditto-product-review
+## 核心编排 Skill: /ditto-design-review
 
 **新增机制：** 多角色产品级审查编排 Skill，覆盖设计 → 原型 → 审计 → 精修 → 完成。
 
-详细设计见 [ditto-product-review.md](../../.claude/commands/ditto-product-review.md)
+详细设计见 [ditto-design-review.md](../../.claude/commands/ditto-design-review.md)
 
 ### 四个审查角色
 
@@ -282,10 +282,10 @@ docs/designs/specs/prototypes/
 ### 用法
 
 ```bash
-/ditto-product-review <target>                    # 全流程审查
-/ditto-product-review <target> --ui --ux          # 指定角色
-/ditto-product-review <target> --polish           # 仅精修
-/ditto-product-review <target> --level best       # 指定质量等级
+/ditto-design-review <target>                    # 全流程审查
+/ditto-design-review <target> --ui --ux          # 指定角色
+/ditto-design-review <target> --polish           # 仅精修
+/ditto-design-review <target> --level best       # 指定质量等级
 ```
 
 ---
