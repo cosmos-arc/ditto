@@ -460,6 +460,8 @@ Visual View 是 Ditto 里承载趋势、分布、阈值、关系、状态变化�
 
 用于表格、summary strip、preview panel 中的轻量可视化。
 
+> **Sparkline 规范** (R10): opacity 0.6, stroke-width 1.5px, stroke-linecap/linejoin round。用于 Market Card 趋势线、table cell inline trend。
+
 ### 15. Visual Views 的共同规则
 
 #### 15.1 先定义分析角色，再定义图种
@@ -646,3 +648,10 @@ Shared state
 - [ ] 页面级联动规则明确
 - [ ] 研究、交易、风控、AI、平台运维都能被覆盖
 - [ ] 历史专题 spec 可以被吸收，而不是继续散乱发展
+
+## Changelog
+
+### 2026-03-30 — Cross-Market Review R10-R12 Sync
+
+- **[新增]** Heat map 5 级 alpha 梯度: 0.05/0.10/0.17（oklch 红/绿双色系），用于 Matrix 热区背景（来源: FIX-04）
+- **[新增]** Sparkline opacity 0.6, stroke-width 1.5px（来源: FIX-07）

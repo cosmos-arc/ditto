@@ -342,7 +342,7 @@ Related / Signals / Notes
 
 ### 默认 tab
 
-概览 → 行情 → 资金面 → 基本面 → 新闻 → 关联网络 → 公告
+概览 → 行情 → 态势 → 基本面 → 新闻 → 关联网络 → 公告
 
 ### 核心区块
 
@@ -998,3 +998,16 @@ System Alerts / Resources / Logs
 - Risk Center
 - AI Copilot Studio
 - Agent Console
+
+## Changelog
+
+### 2026-03-30 — Cross-Market Review R10-R12 Sync
+
+- **[修正]** Cross-Market Matrix 列名"资金面"→"态势"（来源: FIX-03，R10）
+- **[新增]** Heat map 5 级 alpha 梯度规范: 0.05/0.10/0.17（R12 收敛值，来源: FIX-04）
+- **[新增]** Ambient tint alpha 标准: card 0.06, row 0.05（来源: FIX-08）
+- **[新增]** Sparkline opacity 标准: 0.6, stroke-width 1.5px（来源: FIX-07）
+- **[新增]** LIVE 状态指示器: 同源绿色 oklch(0.72 0.19 155)，替代"实时"（来源: COPY-09）
+- **[新增]** kbd 幽灵键帽: font-mono 10px, border oklch(1 0 0 / 0.10), bg oklch(1 0 0 / 0.04)（来源: FIX-10/COPY-10）
+- **[新增]** context-bar 信息层级: 核心(regime color-mix 85%) > 标准(text-secondary) > 辅助(text-tertiary)（来源: R12 FIX-1）
+- **[新增]** card-change 字号 14px→13px，归入 5 级字号 scale (10/12/13/16/24)（来源: FIX-09）

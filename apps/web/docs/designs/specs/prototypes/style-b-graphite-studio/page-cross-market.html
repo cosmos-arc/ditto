@@ -242,9 +242,12 @@
       color: var(--text-secondary);
     }
 
-    .context-bar-value.regime-on { color: var(--market-up-fg); }
-    .context-bar-value.regime-off { color: var(--market-down-fg); }
-    .context-bar-value.regime-mixed { color: var(--amber-500); }
+    .context-bar-value.regime-on { color: color-mix(in oklch, var(--market-up-fg) 85%, var(--text-secondary)); }
+    .context-bar-value.regime-off { color: color-mix(in oklch, var(--market-down-fg) 85%, var(--text-secondary)); }
+    .context-bar-value.regime-mixed { color: color-mix(in oklch, var(--amber-500) 85%, var(--text-secondary)); }
+
+    /* R12: Secondary context items — quieter visual weight */
+    .context-bar-item--secondary .context-bar-value { color: var(--text-tertiary); }
 
     /* Context bar badge — subtle breathing pulse (delight) */
     .context-bar-badge {
@@ -564,24 +567,24 @@
     .matrix-table tr.row-lead td.neutral,
     .matrix-table tr.row-lag td.neutral { color: var(--text-tertiary); }
 
-    /* R10: 5-level heat map — 5 distinct alpha levels for perceptible gradation */
-    .matrix-table td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.22); }
-    .matrix-table td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.14); }
-    .matrix-table td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.06); }
-    .matrix-table td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.06); }
-    .matrix-table td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.14); }
+    /* R10→R11: 5-level heat map — toned ~20% so numbers stay primary */
+    .matrix-table td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.17); }
+    .matrix-table td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.10); }
+    .matrix-table td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.05); }
+    .matrix-table td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.05); }
+    .matrix-table td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.10); }
     /* R10: Heat map takes precedence over row tint (specificity 0-4-0 > 0-3-0) */
     /* Full cross-domain coverage: all heat levels in both row types */
-    .matrix-table tr.row-lead td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.22); }
-    .matrix-table tr.row-lead td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.14); }
-    .matrix-table tr.row-lead td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.06); }
-    .matrix-table tr.row-lead td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.06); }
-    .matrix-table tr.row-lead td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.14); }
-    .matrix-table tr.row-lag td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.22); }
-    .matrix-table tr.row-lag td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.14); }
-    .matrix-table tr.row-lag td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.06); }
-    .matrix-table tr.row-lag td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.06); }
-    .matrix-table tr.row-lag td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.14); }
+    .matrix-table tr.row-lead td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.17); }
+    .matrix-table tr.row-lead td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.10); }
+    .matrix-table tr.row-lead td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.05); }
+    .matrix-table tr.row-lead td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.05); }
+    .matrix-table tr.row-lead td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.10); }
+    .matrix-table tr.row-lag td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.17); }
+    .matrix-table tr.row-lag td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.10); }
+    .matrix-table tr.row-lag td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.05); }
+    .matrix-table tr.row-lag td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.05); }
+    .matrix-table tr.row-lag td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.10); }
     .matrix-table tr:hover td[data-heat] { background-color: color-mix(in oklch, currentColor 15%, transparent); }
 
     /* Highlight top 2 / bottom 2 rows — ambient surface tint */
@@ -657,8 +660,8 @@
       font-size: var(--font-size-12);
     }
 
-    .driver-item-change.up { color: var(--market-up-fg); }
-    .driver-item-change.down { color: var(--market-down-fg); }
+    .driver-item-change.up { color: color-mix(in oklch, var(--market-up-fg) 85%, var(--text-secondary)); }
+    .driver-item-change.down { color: color-mix(in oklch, var(--market-down-fg) 85%, var(--text-secondary)); }
 
     .driver-item-read {
       color: var(--text-tertiary);
@@ -773,7 +776,7 @@
     .event-time {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
-      color: var(--text-secondary);
+      color: var(--text-tertiary);
     }
 
     .event-name {
@@ -798,11 +801,12 @@
     }
 
     .drilldown-item:hover { opacity: 0.8; }
+    .drilldown-item:hover .drilldown-market { color: var(--text-primary); }
 
     .drilldown-market {
       font-size: var(--font-size-13);
       font-weight: var(--font-weight-medium);
-      color: var(--text-primary);
+      color: var(--text-secondary);
       flex-shrink: 0;
     }
 
@@ -825,7 +829,7 @@
      * ══════════════════════════════════════════════ */
     .tab-band {
       background: transparent;
-      border-top: 1px solid var(--overlay-4);
+      border-top: 1px solid var(--overlay-6);
       display: flex;
       flex-direction: column;
     }
@@ -861,7 +865,7 @@
     }
 
     .tab-band-body {
-      padding: var(--space-12);
+      padding: var(--space-10);
       display: none;
       opacity: 0;
       transform: translateY(4px);
@@ -1123,11 +1127,11 @@
           <span class="context-bar-value regime-on">温和风险偏好</span>
         </div>
         <div class="context-bar-sep"></div>
-        <div class="context-bar-item">
+        <div class="context-bar-item context-bar-item--secondary">
           <span class="context-bar-label">波动</span>
           <span class="context-bar-value">VIX 16.8</span>
         </div>
-        <div class="context-bar-item">
+        <div class="context-bar-item context-bar-item--secondary">
           <span class="context-bar-label">美元</span>
           <span class="context-bar-value">102.4</span>
         </div>
@@ -1139,7 +1143,7 @@
           <span class="context-bar-label">领跌</span>
           <span class="context-bar-value regime-off">美元 / 长债</span>
         </div>
-        <div class="context-bar-item">
+        <div class="context-bar-item context-bar-item--secondary">
           <span class="context-bar-label">风格因子</span>
           <span class="context-bar-value">成长占优</span>
         </div>
@@ -1195,7 +1199,7 @@
                 纳指 <span class="market-card-change up">+0.4%</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,8 10,6 20,10 30,12 40,8 50,7 60,9" stroke="var(--text-tertiary)"/></svg>
-              <div class="market-card-judgment">科技权重主导，广度偏弱</div>
+              <div class="market-card-judgment">广度偏弱，科技权重主导</div>
             </div>
 
             <div class="market-card card-lag" tabindex="0" role="button" aria-label="利率 US10Y +7bp 长端承压 降息预期降温">

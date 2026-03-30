@@ -1148,3 +1148,11 @@ AI / Agent
 6. feedback 分级完整
 7. AI / Agent 组件不与主产品风格断裂
 8. 能直接为 token 规范提供结构基础
+
+## Changelog
+
+### 2026-03-30 — Cross-Market Review R10 Sync
+
+- **[新增]** Sparkline opacity 标准: 0.6, stroke-width 1.5px（来源: FIX-07）
+- **[新增]** LIVE 状态指示器规范: 同源绿色 oklch(0.72 0.19 155)（来源: COPY-09）
+- **[新增]** kbd 幽灵键帽组件规范: font-mono 10px, border oklch(1 0 0 / 0.10)（来源: FIX-10/COPY-10）
