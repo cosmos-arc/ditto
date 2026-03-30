@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ditto — Cross-Market Overview</title>
+  <title>Ditto — 跨市场概览</title>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,33 +25,38 @@
 
     .style-label {
       position: fixed;
-      top: 8px;
-      right: 8px;
+      top: var(--space-8);
+      right: var(--space-8);
       z-index: 999;
       font-family: var(--font-family-ui);
-      font-size: 11px;
+      font-size: var(--font-size-11);
       color: var(--text-tertiary);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
-      padding: 3px 8px;
-      border-radius: 4px;
+      padding: var(--space-3) var(--space-8);
+      border-radius: var(--radius-4);
       pointer-events: none;
     }
 
     :root {
-      --shell-context-bar-height: 32px;
-      --shell-scope-strip-height: 32px;
-      --shell-rail-radar-width: 300px;
-      --flow-in-fg: oklch(0.72 0.12 195);
-      --flow-out-fg: oklch(0.78 0.14 65);
+      --shell-context-bar-height: 2rem;
+      --shell-scope-strip-height: 2rem;
+      --shell-rail-radar-width: 18.75rem;
       --text-quaternary: oklch(0.50 0.02 244);
-      --text-tertiary: oklch(0.55 0.015 260);
       /* Overlay tokens — white at controlled opacity for subtle separators */
       --overlay-2: oklch(1 0 0 / 0.02);
       --overlay-3: oklch(1 0 0 / 0.03);
       --overlay-4: oklch(1 0 0 / 0.04);
       --overlay-6: oklch(1 0 0 / 0.06);
       --overlay-8: oklch(1 0 0 / 0.08);
+      /* Accent bar (conclusion / lead card) */
+      --accent-bar-width: var(--space-3);
+      --separator-size: var(--space-4);
+      --badge-size: var(--space-8);
+      /* Page-level tokens missing from shared base */
+      --space-3: 0.1875rem;
+      --radius-3: 0.1875rem;
+      --font-size-9: 0.5625rem;
     }
 
     /* ══════════════════════════════════════════════
@@ -102,14 +107,6 @@
       height: var(--shell-context-bar-height);
     }
 
-    /* Scope Strip: sticky below context */
-    .shell-radar .scope-strip {
-      position: sticky;
-      top: calc(var(--shell-header-height) + var(--shell-context-bar-height));
-      z-index: 14;
-      height: var(--shell-scope-strip-height);
-    }
-
     /* Workspace: grid for main + right-rail side-by-side */
     .shell-workspace {
       display: grid;
@@ -118,10 +115,10 @@
 
     /* Main content: no overflow, natural flow */
     .main-content {
-      padding: var(--density-gutter);
+      padding: var(--space-24) var(--density-gutter);
       display: flex;
       flex-direction: column;
-      gap: var(--space-12);
+      gap: var(--space-32);
     }
 
     /* ── Context Bar (L1: global environment) ── */
@@ -134,8 +131,20 @@
       gap: var(--space-16);
       font-size: var(--font-size-11);
       scrollbar-width: none;
+      position: relative;
+      overflow: hidden;
     }
     .context-bar::-webkit-scrollbar { display: none; }
+    .context-bar::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 2.5rem;
+      height: 100%;
+      background: linear-gradient(to right, transparent, var(--surface-app));
+      pointer-events: none;
+    }
 
     .context-bar-item {
       display: flex;
@@ -147,8 +156,9 @@
     .context-bar-label {
       color: var(--text-tertiary);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
     }
 
     .context-bar-value {
@@ -163,11 +173,11 @@
 
     /* Context bar badge pulse animation */
     .context-bar-badge {
-      animation: badge-pulse 2s ease-in-out infinite;
+      animation: badge-appear 0.3s ease-out forwards;
     }
-    @keyframes badge-pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
+    @keyframes badge-appear {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     @media (prefers-reduced-motion: reduce) {
       .context-bar-badge { animation: none; }
@@ -175,7 +185,7 @@
 
     .context-bar-sep {
       width: 1px;
-      height: 10px;
+      height: var(--separator-size);
       background: var(--border-subtle);
     }
 
@@ -183,52 +193,14 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 14px;
-      height: 14px;
-      padding: 0 3px;
-      font-size: 9px;
+      min-width: var(--badge-size);
+      height: var(--badge-size);
+      padding: 0 var(--space-3);
+      font-size: var(--font-size-9);
       font-weight: var(--font-weight-medium);
-      border-radius: 7px;
+      border-radius: var(--radius-8);
       background: var(--amber-500);
       color: var(--surface-app);
-    }
-
-    /* ── Scope Strip (L1: today's interpretation) ── */
-    .scope-strip {
-      background: var(--surface-strip);
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      padding: 0 var(--density-gutter);
-      gap: var(--space-12);
-      font-size: var(--font-size-12);
-      scrollbar-width: none;
-    }
-    .scope-strip::-webkit-scrollbar { display: none; }
-
-    .scope-item {
-      display: flex;
-      align-items: center;
-      gap: var(--space-4);
-      white-space: nowrap;
-      color: var(--text-tertiary);
-    }
-
-    .scope-value {
-      font-weight: var(--font-weight-medium);
-      color: var(--text-secondary);
-      padding: 1px var(--space-4);
-      border-radius: var(--radius-2);
-    }
-
-    .scope-value.up { color: var(--market-up-fg); background: var(--market-up-subtle); }
-    .scope-value.down { color: var(--market-down-fg); background: var(--market-down-subtle); }
-    .scope-value.warning { color: var(--amber-500); background: var(--overlay-8); }
-
-    .scope-separator {
-      width: 1px;
-      height: 10px;
-      background: var(--border-subtle);
     }
 
     /* ══════════════════════════════════════════════
@@ -237,17 +209,17 @@
     .market-card-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: var(--space-6);
+      gap: var(--space-12);
     }
 
     .market-card {
       background: var(--surface-panel-base);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
-      padding: var(--space-8) var(--space-10);
+      padding: var(--space-12) var(--space-16);
       display: flex;
       flex-direction: column;
-      gap: var(--space-4);
+      gap: var(--space-8);
       cursor: pointer;
       transition: all var(--motion-duration-fast) var(--motion-easing-standard);
       position: relative;
@@ -256,7 +228,13 @@
     .market-card:hover {
       border-color: var(--border-default);
       background: var(--surface-panel-elevated);
-      transform: translateY(-1px);
+    }
+
+    .market-card.card-lead:hover {
+      border-left-color: var(--market-up-fg);
+    }
+    .market-card.card-lag:hover {
+      border-left-color: var(--market-down-fg);
     }
 
     .market-card-top {
@@ -272,9 +250,9 @@
     }
 
     .market-card-regime {
-      font-size: 9px;
+      font-size: var(--font-size-9);
       font-weight: var(--font-weight-medium);
-      padding: 1px 5px;
+      padding: var(--space-1) var(--space-4);
       border-radius: var(--radius-4);
       white-space: nowrap;
     }
@@ -294,27 +272,32 @@
 
     .market-card-index {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-20);
+      font-size: var(--font-size-24);
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
       display: flex;
       align-items: baseline;
       gap: var(--space-6);
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
     }
 
     .market-card-change {
+      font-family: var(--font-family-numeric);
       font-size: var(--font-size-14);
-      font-weight: var(--font-weight-medium);
+      font-weight: var(--font-weight-semibold);
     }
 
     .market-card-change.up { color: var(--market-up-fg); }
     .market-card-change.down { color: var(--market-down-fg); }
 
+    /* Lead / Lag card accent borders (visual hierarchy) */
+    .market-card.card-lead { border-left: var(--accent-bar-width) solid var(--market-up-fg); }
+    .market-card.card-lag { border-left: var(--accent-bar-width) solid var(--market-down-fg); }
+
     /* Third layer: one judgment sentence */
     .market-card-judgment {
-      font-size: var(--font-size-12);
-      color: var(--text-secondary);
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
       line-height: 1.5;
     }
 
@@ -342,6 +325,11 @@
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
     }
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+    }
     .scope-sep-inline {
       color: var(--border-subtle);
     }
@@ -349,12 +337,25 @@
       text-align: left;
     }
 
+    /* Terminal-grade numeric typography */
+    .market-card-index,
+    .market-card-change,
+    .matrix-table td,
+    .driver-item-val,
+    .driver-item-change,
+    .pulse-status,
+    .rotation-summary-value,
+    .event-time {
+      letter-spacing: -0.01em;
+    }
+
     /* Focus-visible for keyboard navigation */
     .market-card:focus-visible,
     .tab-band-tab:focus-visible,
     .drilldown-item:focus-visible,
     .view-detail-link:focus-visible,
-    .header-action-btn:focus-visible {
+    .header-action-btn:focus-visible,
+    .matrix-table tr:focus-visible {
       outline: 1.5px solid var(--brand-accent);
       outline-offset: 1px;
       border-radius: var(--radius-2);
@@ -403,10 +404,10 @@
 
     .matrix-title {
       font-size: var(--font-size-10);
-      font-weight: var(--font-weight-medium);
+      font-weight: var(--font-weight-semibold);
       color: var(--text-tertiary);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
     }
 
     .matrix-summary {
@@ -422,11 +423,12 @@
       font-size: var(--font-size-13);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
-      margin-bottom: var(--space-8);
-      padding: var(--space-8) var(--space-10);
-      background: var(--overlay-2);
+      margin-bottom: var(--space-12);
+      padding: var(--space-10) var(--space-16);
+      background: var(--surface-panel-elevated);
       border-radius: var(--radius-4);
-      border-left: 2px solid var(--brand-accent);
+      border-left: var(--accent-bar-width) solid var(--brand-accent);
+      box-shadow: -3px 0 8px -2px oklch(0.700 0.165 255 / 0.08);
       line-height: 1.6;
     }
 
@@ -444,7 +446,7 @@
       font-size: var(--font-size-11);
       font-weight: var(--font-weight-medium);
       color: var(--text-tertiary);
-      padding: var(--space-6) var(--space-8);
+      padding: var(--space-6) var(--space-10);
       border-bottom: 1px solid var(--border-subtle);
     }
 
@@ -453,7 +455,7 @@
     .matrix-table td {
       text-align: right;
       font-family: var(--font-family-numeric);
-      padding: var(--space-4) var(--space-8);
+      padding: var(--space-6) var(--space-10);
       border-bottom: 1px solid var(--overlay-2);
       color: var(--text-secondary);
       cursor: pointer;
@@ -476,19 +478,20 @@
     /* Highlight top 2 / bottom 2 rows */
     .matrix-table tr.row-lead td:first-child {
       color: var(--market-up-fg);
+      font-weight: var(--font-weight-medium);
     }
     .matrix-table tr.row-lag td:first-child {
       color: var(--market-down-fg);
+      font-weight: var(--font-weight-medium);
     }
 
     /* ── L3: Macro Drivers Strip (ultra-light, no pill background) ── */
     .drivers-strip {
       display: flex;
       align-items: center;
-      gap: var(--space-2);
+      gap: var(--space-4);
       flex-shrink: 0;
-      padding: var(--space-6) 0;
-      border-top: 1px solid var(--overlay-3);
+      padding: var(--space-8) 0;
     }
 
     .drivers-strip-label {
@@ -500,51 +503,52 @@
       margin-right: var(--space-4);
     }
 
-    .driver-pill {
+    .driver-item {
       display: inline-flex;
       align-items: center;
-      gap: var(--space-2);
-      padding: 0;
-      border-radius: 0;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-3);
       background: none;
       white-space: nowrap;
       font-size: var(--font-size-11);
       flex-shrink: 0;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
-    .driver-pill:hover {
-      background: none;
+    .driver-item:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
 
-    .driver-pill-name {
+    .driver-item-name {
       color: var(--text-tertiary);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-11);
       font-weight: var(--font-weight-medium);
     }
 
-    .driver-pill-val {
+    .driver-item-val {
       font-family: var(--font-family-numeric);
       font-weight: var(--font-weight-medium);
       font-size: var(--font-size-12);
       color: var(--text-secondary);
     }
 
-    .driver-pill-change {
+    .driver-item-change {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-11);
     }
 
-    .driver-pill-change.up { color: var(--market-up-fg); }
-    .driver-pill-change.down { color: var(--market-down-fg); }
+    .driver-item-change.up { color: var(--market-up-fg); }
+    .driver-item-change.down { color: var(--market-down-fg); }
 
-    .driver-pill-read {
+    .driver-item-read {
       color: var(--text-tertiary);
       font-size: var(--font-size-11);
     }
 
     .driver-sep {
       width: 1px;
-      height: 10px;
+      height: var(--separator-size);
       background: var(--overlay-8);
       flex-shrink: 0;
       margin: 0 var(--space-4);
@@ -559,8 +563,9 @@
       display: flex;
       flex-direction: column;
       position: sticky;
-      top: calc(var(--shell-header-height) + var(--shell-context-bar-height) + var(--shell-scope-strip-height));
+      top: calc(var(--shell-header-height) + var(--shell-context-bar-height));
       align-self: start;
+      flex: 1;
     }
 
     .rail-section {
@@ -573,22 +578,20 @@
     .rail-section-header {
       display: flex;
       align-items: center;
-      padding: var(--space-6) var(--space-10);
+      padding: var(--space-8) var(--space-12);
       gap: var(--space-4);
     }
 
     .rail-section-title {
       font-size: var(--font-size-10);
-      font-weight: var(--font-weight-medium);
+      font-weight: var(--font-weight-semibold);
       color: var(--text-tertiary);
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
     }
 
     .rail-section-body {
-      padding: 0 var(--space-10) var(--space-6);
+      padding: 0 var(--space-12) var(--space-10);
     }
 
     /* Pulse: compact */
@@ -596,7 +599,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 2px 0;
+      padding: var(--space-4) 0;
       font-size: var(--font-size-13);
     }
 
@@ -616,17 +619,17 @@
       display: flex;
       align-items: flex-start;
       gap: var(--space-4);
-      padding: var(--space-3) 0;
+      padding: var(--space-4) 0;
       font-size: var(--font-size-13);
       line-height: 1.4;
     }
 
     .risk-dot {
-      width: 4px;
-      height: 4px;
+      width: var(--space-2);
+      height: var(--space-2);
       border-radius: 50%;
       flex-shrink: 0;
-      margin-top: 5px;
+      margin-top: var(--space-4);
     }
 
     .risk-dot.high { background: var(--market-down-fg); }
@@ -657,7 +660,7 @@
     .event-impact {
       color: var(--text-secondary);
       font-size: var(--font-size-12);
-      margin-top: 1px;
+      margin-top: var(--space-1);
     }
 
     /* Drilldown: conclusion style, not menu */
@@ -665,7 +668,7 @@
       display: flex;
       align-items: center;
       gap: var(--space-4);
-      padding: var(--space-3) 0;
+      padding: var(--space-4) 0;
       cursor: pointer;
       transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
@@ -704,8 +707,8 @@
      * Detail → drawer or sub-page.
      * ══════════════════════════════════════════════ */
     .tab-band {
-      background: var(--overlay-2);
-      border-top: 1px solid var(--overlay-6);
+      background: transparent;
+      border-top: 1px solid var(--overlay-4);
       display: flex;
       flex-direction: column;
     }
@@ -737,7 +740,7 @@
     }
 
     .tab-band-body {
-      padding: var(--space-10) var(--space-12) var(--space-12);
+      padding: var(--space-12);
       display: none;
     }
 
@@ -766,6 +769,7 @@
       font-family: var(--font-family-numeric);
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
+      letter-spacing: -0.01em;
     }
 
     .rotation-summary-value.up { color: var(--market-up-fg); }
@@ -812,7 +816,7 @@
       color: var(--text-secondary);
       font-size: var(--font-size-12);
       flex-shrink: 0;
-      width: 70px;
+      width: 4.375rem;
     }
 
     .calendar-summary-name {
@@ -839,6 +843,10 @@
       font-weight: var(--font-weight-medium);
     }
 
+    .insight-headline + .insight-headline {
+      margin-top: var(--space-6);
+    }
+
     /* Respect reduced motion preference */
     @media (prefers-reduced-motion: reduce) {
       .market-card,
@@ -849,15 +857,12 @@
       .matrix-table tr td {
         transition: none !important;
       }
-      .market-card:hover {
-        transform: none;
-      }
     }
   </style>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳至主要内容</a>
-  <div class="style-label">Graphite Studio — Cross-Market Overview · v6 · Production Polish</div>
+  <div class="style-label">Graphite Studio — Cross-Market Overview · v8 · Design Review R2</div>
 
   <div class="shell-radar">
 
@@ -919,63 +924,46 @@
         </div>
       </header>
 
-      <!-- Context Bar (sticky below header) -->
+      <!-- Context Strip (unified: environment + today's interpretation) -->
       <div class="context-bar" role="status" aria-label="市场环境摘要">
         <div class="context-bar-item">
-          <span class="context-bar-label">Universe</span>
-          <span class="context-bar-value">Global</span>
+          <span class="context-bar-label">市态</span>
+          <span class="context-bar-value regime-on">温和风险偏好</span>
         </div>
         <div class="context-bar-sep"></div>
         <div class="context-bar-item">
-          <span class="context-bar-label">Session</span>
-          <span class="context-bar-value">Mixed</span>
+          <span class="context-bar-label">波动</span>
+          <span class="context-bar-value">VIX 16.8</span>
         </div>
         <div class="context-bar-sep"></div>
         <div class="context-bar-item">
-          <span class="context-bar-label">Regime</span>
-          <span class="context-bar-value regime-on">Mild Risk-On</span>
+          <span class="context-bar-label">美元</span>
+          <span class="context-bar-value">102.4</span>
         </div>
         <div class="context-bar-sep"></div>
         <div class="context-bar-item">
-          <span class="context-bar-label">Vol</span>
-          <span class="context-bar-value">VIX 16.8 ↓</span>
+          <span class="context-bar-label">强势</span>
+          <span class="context-bar-value regime-on">港股科技 / 黄金</span>
         </div>
         <div class="context-bar-sep"></div>
         <div class="context-bar-item">
-          <span class="context-bar-label">DXY</span>
-          <span class="context-bar-value">102.4 ↓</span>
+          <span class="context-bar-label">承压</span>
+          <span class="context-bar-value regime-off">美元 / 长债</span>
         </div>
         <div class="context-bar-sep"></div>
         <div class="context-bar-item">
-          <span class="context-bar-label">Alerts</span>
+          <span class="context-bar-label">风格</span>
+          <span class="context-bar-value">成长占优</span>
+        </div>
+        <div class="context-bar-sep"></div>
+        <div class="context-bar-item">
+          <span class="context-bar-label">事件</span>
+          <span class="context-bar-value regime-mixed">FOMC 明日</span>
+        </div>
+        <div class="context-bar-sep"></div>
+        <div class="context-bar-item">
+          <span class="context-bar-label">预警</span>
           <span class="context-bar-badge">2</span>
-        </div>
-      </div>
-
-      <!-- Scope Strip (sticky below context) -->
-      <div class="scope-strip" role="status" aria-label="今日市场解读">
-        <div class="scope-item">
-          <span>强势:</span>
-          <span class="scope-value up">港股科技</span>
-          <span class="scope-sep-inline">/</span>
-          <span class="scope-value up">黄金</span>
-        </div>
-        <div class="scope-separator"></div>
-        <div class="scope-item">
-          <span>承压:</span>
-          <span class="scope-value down">美元</span>
-          <span class="scope-sep-inline">/</span>
-          <span class="scope-value down">长债</span>
-        </div>
-        <div class="scope-separator"></div>
-        <div class="scope-item">
-          <span>风格:</span>
-          <span class="scope-value">成长占优</span>
-        </div>
-        <div class="scope-separator"></div>
-        <div class="scope-item">
-          <span>风险事件:</span>
-          <span class="scope-value warning">FOMC-1D</span>
         </div>
       </div>
 
@@ -988,10 +976,10 @@
           <!-- L1: Market Card Grid (unified 3-line template) -->
           <div class="market-card-grid">
 
-            <div class="market-card" tabindex="0" role="button" aria-label="中国A股 — 沪深300 +0.67%，广度偏强，AI+半导体主线扩散">
+            <div class="market-card card-lead" tabindex="0" role="button" aria-label="A股 · 沪深300">
               <div class="market-card-top">
-                <span class="market-card-name">中国 A 股</span>
-                <span class="market-card-regime on">Risk-On</span>
+                <span class="market-card-name">A股 · 沪深300</span>
+                <span class="market-card-regime on">风险偏好</span>
               </div>
               <div class="market-card-index">
                 沪深300 <span class="market-card-change up">+0.67%</span>
@@ -1000,10 +988,10 @@
               <span class="market-card-drilldown">查看详情 →</span>
             </div>
 
-            <div class="market-card" tabindex="0" role="button" aria-label="港股 — 恒生科技 +1.9%，弹性领先，南向资金偏强">
+            <div class="market-card card-lead" tabindex="0" role="button" aria-label="港股 · 恒科">
               <div class="market-card-top">
-                <span class="market-card-name">港股</span>
-                <span class="market-card-regime on">High Beta</span>
+                <span class="market-card-name">港股 · 恒科</span>
+                <span class="market-card-regime on">高弹性</span>
               </div>
               <div class="market-card-index">
                 恒生科技 <span class="market-card-change up">+1.9%</span>
@@ -1012,34 +1000,34 @@
               <span class="market-card-drilldown">查看详情 →</span>
             </div>
 
-            <div class="market-card" tabindex="0" role="button" aria-label="美股 — 纳指 +0.4%，纳指领涨，大盘分化">
+            <div class="market-card" tabindex="0" role="button" aria-label="美股 · 纳指">
               <div class="market-card-top">
-                <span class="market-card-name">美股</span>
-                <span class="market-card-regime mixed">Mixed</span>
+                <span class="market-card-name">美股 · 纳指</span>
+                <span class="market-card-regime mixed">分化</span>
               </div>
               <div class="market-card-index">
                 纳指 <span class="market-card-change up">+0.4%</span>
               </div>
-              <div class="market-card-judgment">纳指领涨，大盘分化</div>
+              <div class="market-card-judgment">科技权重主导，广度偏弱</div>
               <span class="market-card-drilldown">查看详情 →</span>
             </div>
 
-            <div class="market-card" tabindex="0" role="button" aria-label="利率 — US10Y +7bp，长端承压，降息预期降温">
+            <div class="market-card card-lag" tabindex="0" role="button" aria-label="利率">
               <div class="market-card-top">
                 <span class="market-card-name">利率</span>
-                <span class="market-card-regime off">Bonds Weak</span>
+                <span class="market-card-regime off">利率承压</span>
               </div>
               <div class="market-card-index">
-                US10Y <span class="market-card-change up">+7bp</span>
+                US10Y <span class="market-card-change down">+7bp</span>
               </div>
               <div class="market-card-judgment">长端承压，降息预期降温</div>
               <span class="market-card-drilldown">查看详情 →</span>
             </div>
 
-            <div class="market-card" tabindex="0" role="button" aria-label="外汇 — DXY -0.4%，美元走弱，非美货币普涨">
+            <div class="market-card card-lag" tabindex="0" role="button" aria-label="外汇">
               <div class="market-card-top">
                 <span class="market-card-name">外汇</span>
-                <span class="market-card-regime on">Dollar Soft</span>
+                <span class="market-card-regime on">美元偏弱</span>
               </div>
               <div class="market-card-index">
                 DXY <span class="market-card-change down">-0.4%</span>
@@ -1048,13 +1036,13 @@
               <span class="market-card-drilldown">查看详情 →</span>
             </div>
 
-            <div class="market-card" tabindex="0" role="button" aria-label="黄金 — 黄金 +1.2%，避险需求持续推升金价">
+            <div class="market-card card-lead" tabindex="0" role="button" aria-label="黄金">
               <div class="market-card-top">
                 <span class="market-card-name">黄金</span>
-                <span class="market-card-regime on">Gold Lead</span>
+                <span class="market-card-regime on">避险</span>
               </div>
               <div class="market-card-index">
-                黄金 <span class="market-card-change up">+1.2%</span>
+                XAUUSD <span class="market-card-change up">+1.2%</span>
               </div>
               <div class="market-card-judgment">避险需求持续推升金价</div>
               <span class="market-card-drilldown">查看详情 →</span>
@@ -1069,7 +1057,7 @@
             </div>
             <div class="matrix-conclusion">
               <span class="lead">港股</span>弹性领跑全市场，<span class="lead">黄金</span>避险持续偏强；
-              <span class="lag">美元</span>与<span class="lag">原油</span>同步承压，利率端抛售延续。
+              <span class="lag">美元</span>与<span class="lag">利率</span>同步承压，成长板块承压。
             </div>
             <table class="matrix-table">
               <caption class="sr-only">相对强弱矩阵 — 跨市场多周期表现对比</caption>
@@ -1104,7 +1092,7 @@
                   <td>防御偏强</td>
                 </tr>
                 <tr>
-                  <td>中国A股</td>
+                  <td>A股</td>
                   <td class="up">+0.6%</td>
                   <td class="up">+1.8%</td>
                   <td class="up">+4.3%</td>
@@ -1155,40 +1143,46 @@
           <!-- L3: Macro Drivers Strip (ultra-lightweight, no border) -->
           <div class="drivers-strip">
             <span class="drivers-strip-label">核心驱动</span>
-            <div class="driver-pill">
-              <span class="driver-pill-name">DXY</span>
-              <span class="driver-pill-val">102.4</span>
-              <span class="driver-pill-change down">-0.4%</span>
+            <div class="driver-item">
+              <span class="driver-item-name">DXY</span>
+              <span class="driver-item-val">102.4</span>
+              <span class="driver-item-change down">-0.4%</span>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-pill">
-              <span class="driver-pill-name">US10Y</span>
-              <span class="driver-pill-val">4.41%</span>
-              <span class="driver-pill-change up">+7bp</span>
+            <div class="driver-item">
+              <span class="driver-item-name">US10Y</span>
+              <span class="driver-item-val">4.41%</span>
+              <span class="driver-item-change up">+7bp</span>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-pill">
-              <span class="driver-pill-name">VIX</span>
-              <span class="driver-pill-val">16.8</span>
-              <span class="driver-pill-change up">-5.2%</span>
+            <div class="driver-item">
+              <span class="driver-item-name">CN10Y</span>
+              <span class="driver-item-val">2.32%</span>
+              <span class="driver-item-change up">+2bp</span>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-pill">
-              <span class="driver-pill-name">Gold</span>
-              <span class="driver-pill-val">2,648</span>
-              <span class="driver-pill-change up">+1.2%</span>
+            <div class="driver-item">
+              <span class="driver-item-name">VIX</span>
+              <span class="driver-item-val">16.8</span>
+              <span class="driver-item-change up">-5.2%</span>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-pill">
-              <span class="driver-pill-name">Oil</span>
-              <span class="driver-pill-val">71.3</span>
-              <span class="driver-pill-change down">-0.8%</span>
+            <div class="driver-item">
+              <span class="driver-item-name">XAU</span>
+              <span class="driver-item-val">2,648</span>
+              <span class="driver-item-change up">+1.2%</span>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-pill">
-              <span class="driver-pill-name">USD/CNH</span>
-              <span class="driver-pill-val">7.24</span>
-              <span class="driver-pill-change up">-0.3%</span>
+            <div class="driver-item">
+              <span class="driver-item-name">WTI</span>
+              <span class="driver-item-val">71.3</span>
+              <span class="driver-item-change down">-0.8%</span>
+            </div>
+            <div class="driver-sep"></div>
+            <div class="driver-item">
+              <span class="driver-item-name">USD/CNH</span>
+              <span class="driver-item-val">7.24</span>
+              <span class="driver-item-change up">-0.3%</span>
             </div>
           </div>
 
@@ -1205,15 +1199,15 @@
             <div class="rail-section-body">
               <div class="pulse-item">
                 <span class="pulse-market">A股</span>
-                <span class="pulse-status on">Risk-On</span>
+                <span class="pulse-status on">风险偏好偏强</span>
               </div>
               <div class="pulse-item">
                 <span class="pulse-market">港股</span>
-                <span class="pulse-status on">弹性最强</span>
+                <span class="pulse-status on">弹性领先</span>
               </div>
               <div class="pulse-item">
                 <span class="pulse-market">美股</span>
-                <span class="pulse-status neutral">震荡偏多</span>
+                <span class="pulse-status neutral">震荡分化</span>
               </div>
               <div class="pulse-item">
                 <span class="pulse-market">黄金</span>
@@ -1221,7 +1215,7 @@
               </div>
               <div class="pulse-item">
                 <span class="pulse-market">美元</span>
-                <span class="pulse-status down">走弱</span>
+                <span class="pulse-status down">持续走弱</span>
               </div>
             </div>
           </div>
@@ -1270,20 +1264,20 @@
             </div>
           </div>
 
-          <!-- 4. Drilldown: conclusion style, 2 items only -->
+          <!-- 4. Anomaly Monitor: specific actionable signals -->
           <div class="rail-section">
             <div class="rail-section-header">
-              <span class="rail-section-title">建议关注</span>
+              <span class="rail-section-title">异动监控</span>
             </div>
             <div class="rail-section-body">
               <div class="drilldown-item">
-                <span class="drilldown-market">A 股</span>
-                <span class="drilldown-reason">科技主线扩散</span>
+                <span class="drilldown-market">沪深300</span>
+                <span class="drilldown-reason">突破 3,800 关口，成交放大 1.3x</span>
                 <span class="drilldown-arrow">→</span>
               </div>
               <div class="drilldown-item">
-                <span class="drilldown-market">港股</span>
-                <span class="drilldown-reason">恒科弹性领先</span>
+                <span class="drilldown-market">US10Y</span>
+                <span class="drilldown-reason">突破 4.40%，两周新高</span>
                 <span class="drilldown-arrow">→</span>
               </div>
             </div>
@@ -1297,13 +1291,12 @@
       <!-- Tab Band (summary-only, detail → drawer/sub-page) -->
       <div class="tab-band">
         <div class="tab-band-header" role="tablist" aria-label="辅助视角切换">
-          <span class="tab-band-tab active" role="tab" aria-selected="true" aria-controls="tab-rotation" data-tab="rotation" tabindex="0">资金轮动</span>
-          <span class="tab-band-tab" role="tab" aria-selected="false" aria-controls="tab-calendar" data-tab="calendar" tabindex="-1">事件日历</span>
-          <span class="tab-band-tab" role="tab" aria-selected="false" aria-controls="tab-ai" data-tab="ai" tabindex="-1">AI 解读</span>
+          <span class="tab-band-tab active" role="tab" aria-selected="true" aria-controls="tab-rotation" id="tab-tab-rotation" data-tab="rotation" tabindex="0">资金轮动</span>
+          <span class="tab-band-tab" role="tab" aria-selected="false" aria-controls="tab-ai" id="tab-tab-ai" data-tab="ai" tabindex="-1">AI 解读</span>
         </div>
 
         <!-- Tab 1: Capital Rotation — summary only -->
-        <div class="tab-band-body active" id="tab-rotation" role="tabpanel" aria-labelledby="tab-rotation">
+        <div class="tab-band-body active" id="tab-rotation" role="tabpanel" aria-labelledby="tab-tab-rotation">
           <div class="rotation-summary-row">
             <div class="rotation-summary-item">
               <span class="rotation-summary-label">风险偏好</span>
@@ -1324,28 +1317,13 @@
           <div class="view-detail-link">查看完整资金轮动 →</div>
         </div>
 
-        <!-- Tab 2: Event Calendar — top 2 events only -->
-        <div class="tab-band-body" id="tab-calendar" role="tabpanel" aria-labelledby="tab-calendar">
-          <div class="calendar-summary-list">
-            <div class="calendar-summary-event">
-              <span class="calendar-summary-time">今晚 20:30</span>
-              <span class="calendar-summary-name high">美国 CPI</span>
-              <span class="calendar-summary-markets">美股 / 美债 / 美元</span>
-            </div>
-            <div class="calendar-summary-event">
-              <span class="calendar-summary-time">明日 02:00</span>
-              <span class="calendar-summary-name high">FOMC 利率决议</span>
-              <span class="calendar-summary-markets">全球权益 / 黄金 / 汇率</span>
-            </div>
-          </div>
-          <div class="view-detail-link">查看完整事件日历 →</div>
-        </div>
-
-        <!-- Tab 3: AI Insight — headline only -->
-        <div class="tab-band-body" id="tab-ai" role="tabpanel" aria-labelledby="tab-ai">
+        <!-- Tab 2: AI Insight — enhanced analysis -->
+        <div class="tab-band-body" id="tab-ai" role="tabpanel" aria-labelledby="tab-tab-ai">
           <div class="insight-headline">
-            <strong>美元走弱</strong>是本轮跨市场反弹的核心驱动，港股高 Beta 弹性领先；
-            黄金与成长同步偏强，指向<strong>美元信用走弱</strong>与实际利率预期下行。
+            <strong>美元走弱</strong>是本轮跨市场反弹的核心驱动，港股高弹性领先；黄金与成长同步偏强，指向<strong>美元信用走弱</strong>与实际利率预期下行。
+          </div>
+          <div class="insight-headline">
+            <strong>情景推演</strong>：若 FOMC 释放偏鸽信号，利率下行预期进一步强化，港股科技与黄金有望延续强势；若超预期鹰派，则长债抛售加速，成长板块面临回调压力。
           </div>
           <div class="view-detail-link">查看完整 AI 解读 →</div>
         </div>
@@ -1388,9 +1366,22 @@
         let newIdx;
         if (e.key === 'ArrowRight') { newIdx = (idx + 1) % tabList.length; }
         else if (e.key === 'ArrowLeft') { newIdx = (idx - 1 + tabList.length) % tabList.length; }
+        else if (e.key === 'Home') { newIdx = 0; }
+        else if (e.key === 'End') { newIdx = tabList.length - 1; }
         else { return; }
         e.preventDefault();
         activateTab(tabList[newIdx]);
+      });
+    });
+
+    // Matrix table row keyboard interaction
+    document.querySelectorAll('.matrix-table tbody tr').forEach(row => {
+      row.setAttribute('tabindex', '0');
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          // Placeholder: navigate to market detail
+        }
       });
     });
   </script>

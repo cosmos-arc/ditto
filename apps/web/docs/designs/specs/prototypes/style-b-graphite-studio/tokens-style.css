@@ -21,7 +21,7 @@
   /* ── Text Hierarchy — Clean, bright primaries ── */
   --text-primary:              oklch(0.935 0.005 260);
   --text-secondary:            oklch(0.610 0.010 260);
-  --text-tertiary:             oklch(0.430 0.010 260);
+  --text-tertiary:             oklch(0.550 0.010 260);
   --text-disabled:             oklch(0.340 0.008 260);
   --text-inverse:              oklch(0.155 0.005 260);
 
