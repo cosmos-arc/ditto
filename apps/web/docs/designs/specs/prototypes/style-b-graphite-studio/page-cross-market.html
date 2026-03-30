@@ -42,8 +42,8 @@
       --shell-context-bar-height: 2rem;
       --shell-scope-strip-height: 2rem;
       --shell-rail-radar-width: 18.75rem;
-      --text-quaternary: oklch(0.55 0.01 260);
-      --text-tertiary: oklch(0.60 0.01 260);
+      --text-quaternary: oklch(0.60 0.01 260);
+      --text-tertiary: oklch(0.65 0.01 260);
       /* Overlay tokens — white at controlled opacity for subtle separators */
       --overlay-2: oklch(1 0 0 / 0.02);
       --overlay-3: oklch(1 0 0 / 0.03);
@@ -53,7 +53,7 @@
       /* Accent bar (conclusion only) */
       --accent-bar-width: var(--space-3);
       --separator-size: var(--space-4);
-      --badge-size: var(--space-8);
+      --badge-size: 0.875rem; /* 14px — product-criteria: badge ≥ text(10px) + 4px padding */
       /* Page-level tokens missing from shared base */
       --space-3: 0.1875rem;
       --radius-3: 0.1875rem;
@@ -165,7 +165,7 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
-      /* No height/min-height: let content stretch naturally */
+      padding-bottom: 1.5rem; /* compensate fixed status bar height */
     }
 
     /* Header: sticky top with frosted glass (R9) */
@@ -201,7 +201,7 @@
       padding: 2rem var(--density-gutter);
       display: flex;
       flex-direction: column;
-      gap: 3rem;
+      gap: 1.5rem; /* 24px — product-criteria: L1→L1 section gap */
     }
 
     /* ── Context Bar (L1: global environment) ── */
@@ -594,6 +594,7 @@
       gap: var(--space-4);
       flex-shrink: 0;
       padding: var(--space-12) 0;
+      margin-top: -0.5rem; /* L1→L2 gradient: 24px - 8px = 16px */
       background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.01) 10%, oklch(1 0 0 / 0.01) 90%, transparent);
     }
 
@@ -823,14 +824,17 @@
     }
 
     .tab-band-tab {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-quaternary);
-      padding: var(--space-1) var(--space-4);
+      padding: var(--space-2) var(--space-4);
       cursor: pointer;
       border-radius: var(--radius-3);
       transition: all var(--motion-duration-fast) var(--motion-easing-standard);
       letter-spacing: 0.02em;
+      min-height: 1.5rem; /* 24px — product-criteria: interactive element ≥ 24px */
+      display: inline-flex;
+      align-items: center;
     }
 
     .tab-band-tab:hover { color: var(--text-tertiary); }
@@ -1024,7 +1028,7 @@
     <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
   </svg>
   <a class="skip-link" href="#main-content">跳至主要内容</a>
-  <div class="style-label">Graphite Studio — Cross-Market Overview · v15 · Design Review R9</div>
+  <div class="style-label">Graphite Studio — Cross-Market Overview · v16 · Design Review R10</div>
 
   <div class="shell-radar">
 
