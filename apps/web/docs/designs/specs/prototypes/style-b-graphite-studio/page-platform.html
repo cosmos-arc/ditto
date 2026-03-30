@@ -221,8 +221,11 @@
     /* ── Cell state classes ── */
     .cell-warn { font-family: var(--font-family-numeric); color: var(--system-degraded-fg); }
 
-    /* ── Status bar live indicator ── */
-    .status-live { color: oklch(0.72 0.19 155); }
+    /* ── Status bar live indicator — brand-tinted green ── */
+    .status-live {
+      color: oklch(0.72 0.15 195);
+      font-weight: var(--font-weight-medium);
+    }
 
     .health-metric-separator {
       width: 1px;
@@ -688,11 +691,12 @@
      * R3: Row-down action hint
      * ══════════════════════════════════════════════ */
     .row-action {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-10);
       color: color-mix(in oklch, var(--brand-accent) 60%, transparent);
       cursor: pointer;
-      padding: var(--space-2) var(--space-6);
-      border-radius: var(--radius-4);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      margin-left: var(--space-4);
       transition: color var(--motion-duration-fast) var(--motion-easing-standard),
                   background var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
@@ -718,6 +722,25 @@
       opacity: 0.018;
       pointer-events: none;
       z-index: 0;
+    }
+    /* Subtle top-edge ambient light */
+    .shell-ops::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        oklch(0.700 0.165 255 / 0.08) 20%,
+        oklch(0.700 0.165 255 / 0.12) 50%,
+        oklch(0.700 0.165 255 / 0.08) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
     }
     .shell-ops > * {
       position: relative;
@@ -808,7 +831,17 @@
 <body>
   <!-- R6: SVG noise filter for material texture -->
   <svg style="position:absolute;width:0;height:0" aria-hidden="true">
-    <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+      <linearGradient id="spark-fill-ok" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="oklch(0.68 0.12 175)" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="oklch(0.68 0.12 175)" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="spark-fill-warn" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="oklch(0.77 0.14 80)" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="oklch(0.77 0.14 80)" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
   </svg>
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Platform Ops · Compact · A股</div>
@@ -936,7 +969,7 @@
                     正常
                   </span>
                 </td>
-                <td class="cell-numeric">2s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 7 L8 5 L16 8 L24 4 L32 6 L40 7"/></svg></td>
+                <td class="cell-numeric">2s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 5 L16 8 L24 4 L32 6 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 5 L16 8 L24 4 L32 6 L40 7"/></svg></td>
                 <td>
                   <div class="quota-cell">
                     <span class="quota-text critical">4,820/5,000</span>
@@ -955,7 +988,7 @@
                     正常
                   </span>
                 </td>
-                <td class="cell-numeric">1s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 7 L8 6 L16 7 L24 5 L32 7 L40 6"/></svg></td>
+                <td class="cell-numeric">1s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 6 L16 7 L24 5 L32 7 L40 6 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 6 L16 7 L24 5 L32 7 L40 6"/></svg></td>
                 <td>
                   <span class="quota-text ok">无限制</span>
                 </td>
@@ -971,7 +1004,7 @@
                     延迟
                   </span>
                 </td>
-                <td class="cell-numeric cell-warn">45s<svg class="sparkline warn" viewBox="0 0 40 14"><path d="M0 6 L8 7 L16 10 L24 12 L32 13 L40 13"/></svg></td>
+                <td class="cell-numeric cell-warn">45s<svg class="sparkline warn" viewBox="0 0 40 14"><path d="M0 14 L0 6 L8 7 L16 10 L24 12 L32 13 L40 13 L40 14Z" fill="url(#spark-fill-warn)"/><path d="M0 6 L8 7 L16 10 L24 12 L32 13 L40 13"/></svg></td>
                 <td>
                   <div class="quota-cell">
                     <span class="quota-text warn">8,200/10,000</span>
@@ -990,7 +1023,7 @@
                     正常
                   </span>
                 </td>
-                <td class="cell-numeric">3s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 8 L8 7 L16 6 L24 8 L32 5 L40 7"/></svg></td>
+                <td class="cell-numeric">3s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 8 L8 7 L16 6 L24 8 L32 5 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 8 L8 7 L16 6 L24 8 L32 5 L40 7"/></svg></td>
                 <td>
                   <div class="quota-cell">
                     <span class="quota-text ok">2,100/3,000</span>
@@ -1008,6 +1041,7 @@
                     <span class="status-dot-dot down"></span>
                     断开
                   </span>
+                  <span class="row-action" tabindex="0" role="button" aria-label="重试连接聚宽">重试</span>
                 </td>
                 <td class="cell-disabled">—</td>
                 <td>
@@ -1015,7 +1049,6 @@
                 </td>
                 <td class="cell-disabled">14:15:00</td>
                 <td class="right cell-disabled">0</td>
-                <td><span class="row-action" tabindex="0" role="button" aria-label="重试连接聚宽">重试 →</span></td>
               </tr>
             </tbody>
           </table>
