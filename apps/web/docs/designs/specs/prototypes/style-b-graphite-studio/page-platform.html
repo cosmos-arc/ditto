@@ -221,11 +221,6 @@
     /* ── Cell state classes ── */
     .cell-warn { font-family: var(--font-family-numeric); color: var(--system-degraded-fg); }
 
-    /* ── Brand anchor: health strip bottom accent line ── */
-    .shell-ops .ops-health {
-      border-bottom: 1px solid oklch(0.700 0.165 255 / 0.30);
-    }
-
     /* ── Status bar live indicator ── */
     .status-live { color: oklch(0.72 0.19 155); }
 
@@ -486,11 +481,6 @@
     .alert-severity.critical { color: var(--system-down-fg); }
     .alert-severity.warning  { color: var(--system-degraded-fg); }
 
-    /* ── Row highlight for abnormal state ── */
-    .data-table tr.row-down td {
-      background: var(--system-down-bg);
-    }
-
     /* ── Status bar (terminal DNA) ── */
     .status-bar {
       position: fixed;
@@ -536,9 +526,120 @@
     /* ── Respect reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
       .btn, .rail-icon, .header-btn-badge, .header-action-btn,
-      .panel-action, .quota-bar-fill, .resource-bar-fill {
+      .panel-action, .quota-bar-fill, .resource-bar-fill,
+      .status-indicator, .alert-row, .data-table tr {
         transition: none !important;
+        animation: none !important;
       }
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Micro-animations — subtle, purposeful motion
+     * ══════════════════════════════════════════════ */
+
+    /* Status dot pulse — gentle breathing for LIVE indicator */
+    .status-indicator {
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Resource bar fill entrance — eased width transition */
+    .resource-bar-fill {
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Data table row hover — subtle lift */
+    .data-table tbody tr {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .data-table tbody tr:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Disconnected row persistent highlight */
+    .data-table tr.row-down td {
+      background: var(--system-down-bg);
+    }
+    .data-table tr.row-down:hover td {
+      background: color-mix(in oklch, var(--system-down-bg) 80%, var(--interaction-hover-subtle-bg));
+    }
+
+    /* Alert row entrance */
+    .alert-row {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .alert-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Brand anchor — header title underline
+     * ══════════════════════════════════════════════ */
+    .header-title {
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 2px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: 2px;
+    }
+
+    /* Rail logo subtle brand glow */
+    .rail-logo {
+      text-shadow: 0 0 12px oklch(0.700 0.165 255 / 0.15);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Trend indicators — health metric arrows
+     * ══════════════════════════════════════════════ */
+    .health-trend {
+      font-size: var(--font-size-10);
+      margin-left: var(--space-2);
+      font-family: var(--font-family-numeric);
+    }
+    .health-trend.up   { color: var(--market-up-fg); }
+    .health-trend.down { color: var(--market-down-fg); }
+    .health-trend.flat { color: var(--text-tertiary); }
+
+    /* ══════════════════════════════════════════════
+     * R2: Timeline connector — event section
+     * ══════════════════════════════════════════════ */
+    .event-item {
+      position: relative;
+    }
+    .event-item::before {
+      content: '';
+      position: absolute;
+      left: 22px;
+      top: 18px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+    .event-item:last-child::before {
+      display: none;
+    }
+
+    /* Event time marker dot */
+    .event-time::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      margin-right: var(--space-4);
+      vertical-align: middle;
+    }
+    .event-item.muted .event-time::before {
+      background: var(--text-disabled);
     }
   </style>
 </head>
@@ -606,25 +707,25 @@
       <div class="health-metric">
         <span class="health-metric-dot healthy"></span>
         <span class="health-metric-label">数据新鲜度</span>
-        <span class="health-metric-value ok">98.2%</span>
+        <span class="health-metric-value ok">98.2%</span><span class="health-trend up">↑</span>
       </div>
       <div class="health-metric-separator"></div>
       <div class="health-metric">
         <span class="health-metric-dot healthy"></span>
         <span class="health-metric-label">数据完整度</span>
-        <span class="health-metric-value ok">99.4%</span>
+        <span class="health-metric-value ok">99.4%</span><span class="health-trend flat">→</span>
       </div>
       <div class="health-metric-separator"></div>
       <div class="health-metric">
         <span class="health-metric-dot healthy"></span>
         <span class="health-metric-label">数据准确度</span>
-        <span class="health-metric-value ok">99.8%</span>
+        <span class="health-metric-value ok">99.8%</span><span class="health-trend flat">→</span>
       </div>
       <div class="health-metric-separator"></div>
       <div class="health-metric">
         <span class="health-metric-dot degraded"></span>
         <span class="health-metric-label">数据源在线</span>
-        <span class="health-metric-value warn">4/5</span>
+        <span class="health-metric-value warn">4/5</span><span class="health-trend down">↓</span>
       </div>
       <div class="health-metric-separator"></div>
       <div class="health-metric">
@@ -636,7 +737,7 @@
       <div class="health-metric">
         <span class="health-metric-dot healthy"></span>
         <span class="health-metric-label">系统负载</span>
-        <span class="health-metric-value ok">23%</span>
+        <span class="health-metric-value ok">23%</span><span class="health-trend up">↑</span>
       </div>
     </div>
 
@@ -734,7 +835,7 @@
                 <td class="right cell-numeric">2,100</td>
               </tr>
               <!-- 聚宽 -->
-              <tr>
+              <tr class="row-down">
                 <td class="cell-name">聚宽</td>
                 <td>
                   <span class="status-dot down">
