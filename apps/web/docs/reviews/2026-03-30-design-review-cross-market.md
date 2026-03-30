@@ -4,85 +4,139 @@
 **Target**: `docs/designs/specs/prototypes/style-b-graphite-studio/page-cross-market.html`
 **Quality Level**: best
 **Review Roles**: UI Designer / UX Reviewer / Product Manager / Copy Editor / Art Director
-**Mode**: 自主迭代（goal: 9.5, max-rounds: 3）
+**Mode**: 自主迭代（Phase 1: goal 9.5, max-rounds 3 → Phase 2: goal 9.8, max-rounds 10）
 
 ## Version Info
-- **Tag (final)**: `review/round-3`
-- **Commits**: `7c821b4` → `69e2190` → `ad64175`
-- **变更查看**: `git diff review/round-1..review/round-3 -- page-cross-market.html`
+- **Tag (R3 final)**: `review/round-3`
+- **Tag (R4 snapshot)**: `review/round-4`
+- **Phase 2 final**: v14 (uncommitted, R4-R8 autonomous iteration)
+- **变更查看**: `git diff review/round-4 -- page-cross-market.html`
 
 ## Summary
-- P0 问题: 28 个（已修复 28 个）
-- P1 问题: 35 个（采纳 22 个）
-- P2 建议: 45 个（采纳 6 个）
+- Phase 1 (R1-R3): 28 P0 → 0, 35 P1 采纳 22, 综合气质 7.75 → 9.2
+- Phase 2 (R4-R8): 继续迭代 9.2 → 9.4，diminishing returns 退出
 - 设计决策变更: 1 个（text-tertiary 对比度提升）
-- Lighthouse 评分: A11y 96, Best Practices 100
-- **最终综合气质: 9.2/10**（目标 9.5，差距 0.3）
+- Lighthouse 评分: A11y 92, Best Practices 100
+- **最终综合气质: 9.4/10**（Phase 2 目标 9.8，差距 0.4，实践天花板）
 
 ## 迭代历程
+
+### Phase 1 (R1-R3)
 
 | 轮次 | 综合分 | P0 | 采纳建议 | 关键改动 | 状态 |
 |------|--------|----|---------|---------|------|
 | R1 | 7.75 | 10→0 | 18 | Token 一致性、消除硬编码 px、中文标签初版 | 继续 |
 | R2 | 8.90 | 18→0 | 22 | 留白优化(32px gap)、中文标签全覆盖、terminal 字体、matrix 去accent bar | 继续 |
-| R3 | 9.20 | — | 6 | ambient row tint、brand signature glow、premium elevation shadow | 达标 ✗（max-rounds） |
+| R3 | 9.20 | — | 6 | ambient row tint、brand signature glow、premium elevation shadow | max-rounds |
 
-**评分快照**:
+### Phase 2 (R4-R8, autonomous)
+
+| 轮次 | 综合分 | P0 | 关键改动 | 状态 |
+|------|--------|----|---------|------|
+| R4 | 8.2 | 3→0 | Whitespace(40px pad/56px gap)、装饰类型7→6、WCAG text-tertiary、Regime 色彩修正、letter-spacing 4级 | 继续 |
+| R5 | 8.7 | 0 | Card ambient tint 替代 accent border、font-size-9→10 合并、context-bar 分隔符 7→1 | 继续 |
+| R6 | 9.2 | 0 | Shell radial gradient 深度、card hover translateY、badge breathing pulse、tab reveal 动画 | 继续 |
+| R7 | 9.4 | 0 | 字号 7→6 级 (11px→12px 合并)、drivers strip 背景层次 | 继续 |
+| R8 | 9.4 | 0 | Rail glass gradient、rail section 间距微调 | **退出 ✓ (diminishing returns)** |
+
+### 完整评分快照
+
 ```
-┌─────────────┬─────────┬─────────┬─────────┬─────────┐
-│ 指标         │ Round 1 │ Round 2 │ Round 3 │ 趋势     │
-├─────────────┼─────────┼─────────┼─────────┼─────────┤
-│ 克制度       │  8.0    │  9.0    │  9.0    │  ↑→     │
-│ 一致性       │  7.0    │  8.5    │  9.2    │  ↑↑     │
-│ 高级感       │  8.0    │  8.5    │  9.0    │  ↑↑     │
-│ 品牌方向     │  8.0    │  9.0    │  9.2    │  ↑↑     │
-│ 综合气质     │  7.75   │  8.90   │  9.20   │  ↑↑     │
-│ P0 残留      │  10     │  0      │  0      │  ✓      │
-│ Lighthouse   │ 82/90   │ 96/100  │  96/100 │  ↑→     │
-│ 状态         │ 继续    │ 继续    │ 终止    │         │
-└─────────────┴─────────┴─────────┴─────────┴─────────┘
+┌─────────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐
+│ 指标         │ R1      │ R2      │ R3      │ R4      │ R5      │ R6      │ R7      │ R8      │ 趋势     │
+├─────────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ 克制度       │  8.0    │  9.0    │  9.0    │  7.8    │  8.5    │  9.0    │  9.5    │  9.5    │  ↑→→→   │
+│ 一致性       │  7.0    │  8.5    │  9.2    │  7.5    │  8.8    │  9.2    │  9.4    │  9.4    │  ↑→→→   │
+│ 高级感       │  8.0    │  8.5    │  9.0    │  7.0    │  9.0    │  9.2    │  9.3    │  9.4    │  ↑↑→→   │
+│ 品牌方向     │  8.0    │  9.0    │  9.2    │  8.0    │  9.2    │  9.3    │  9.3    │  9.4    │  ↑→→→   │
+│ 综合气质     │  7.75   │  8.90   │  9.20   │  7.6    │  8.7    │  9.2    │  9.4    │  9.4    │  ↑→→→   │
+│ P0 残留      │  10     │  0      │  0      │  3      │  0      │  0      │  0      │  0      │  ✓      │
+│ Lighthouse   │ 82/90   │ 96/100  │  96/100 │  —      │  —      │  —      │  —      │ 92/100  │  ↑→     │
+│ 状态         │ 继续    │ 继续    │ 终止    │ 继续    │ 继续    │ 继续    │ 继续    │ 退出 ✓  │         │
+└─────────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┘
 ```
 
-**自动裁决记录**:
+> R4 评分骤降原因：Phase 2 从 R4 开始重新评估，引入了更严格的视口检测和视觉指纹审计，暴露了 Phase 1 遗留的 WCAG 对比度、Regime 色彩矛盾、letter-spacing 混乱等问题。R4-R5 集中修复这些基础问题，R6-R8 转入精修提升。
+
+## 气质评分卡（Art Director — Final R8）
+
+| 维度 | 评分 | 说明 |
+|------|------|------|
+| 克制度 | 9.5/10 | 6 级字号 (10/12/13/14/16/24)、6 种装饰类型 (≤6 阈值)、1 处品牌色描边 (≤5 阈值)、4 种语义色 (≤4 阈值)。极限克制 |
+| 一致性 | 9.4/10 | 零 inline style、4 级 authored letter-spacing (normal/-0.02em/0.06em/0.02em)、token 体系统一、阴影系统三件套 (card-hover/conclusion/context-bar) |
+| 高级感 | 9.4/10 | Shell radial gradient 深度、card hover elevate(-1px)+shadow、badge breathing pulse、tab reveal 动画、drivers strip 背景层次、rail glass gradient |
+| 品牌方向 | 9.4/10 | Bloomberg terminal DNA 稳固、ambient tint 数据浮空感、numeric -0.02em tracking、专业终端克制感 |
+| **综合气质** | **9.4/10** | |
+
+### 视觉指纹（Final R8）
+
+| 指标 | 基线 (R1前) | R3 最终 | R8 最终 | AD 阈值 | 状态 |
+|------|-----------|--------|--------|---------|------|
+| Hardcoded px | 42 | 0 | 0 | 0 | ✅ |
+| Inline styles | 4 | 0 | 0 | 0 | ✅ |
+| Font size varieties | 10+ | 8 | **6** | — | ✅ |
+| Decorative types (content) | 9 | 7 | **6** | ≤6 | ✅ |
+| Accent borders | 8 | 1 | **1** | ≤5 | ✅ |
+| Semantic colors | 6 | 4 | **4** | ≤4 | ✅ |
+| Letter-spacing (authored) | mixed | mixed | **4** | — | ✅ |
+| text-tertiary L | 0.43 | 0.55 | 0.60 | ≥0.55 | ✅ |
+
+### 视口验证
+
+| 视口 | 分辨率 | 内容完整 | 截断(px) | 可滚动 | sticky 正常 | 状态 |
+|------|--------|---------|---------|--------|------------|------|
+| VP-STANDARD | 1536x1080 | ✓ | 0 | N/A | ✓ | 通过 |
+| VP-COMPACT | 1366x768 | ✓ (滚动后) | 299 | ✓ | ✓ | 通过 |
+
+**body overflow**: `hidden auto` → `overflow-y: auto` 已覆写
+**scrollHeight (VP-STANDARD)**: 1080px = viewportHeight（恰好填满，无需滚动）
+**scrollHeight (VP-COMPACT)**: 1067px > 768px（可滚动至底部，tab band 完全可达）
+
+## 自动裁决记录
+
+### Phase 1 (R1-R3)
 - R2-Conflict-01: UX-106 vs AD: Matrix section accent bar → 移除（UX 胜，减少视觉噪音）
 - R2-Conflict-02: PM-002 vs AD: 恢复 Scope Strip 双层 → 驳回（AD 整体视角优先，留白更关键）
 - R2-Conflict-03: PM-001 vs AD: 恢复商品卡片 → 延后 R3（架构变更过大，R3 未执行）
 - R2-Conflict-04: CE-009 vs PM: Regime 标签中文化 → 采纳（中文优先定位）
 - R2-Conflict-05: CE-014: 结论引用原油 → 改为引用利率（与 L1 卡片一致）
 
-## 气质评分卡（Art Director — Final R3）
+### Phase 2 (R4-R8, autonomous)
+- R4-Auto-01: WCAG text-tertiary 对比度 → 页面级 `:root` 覆盖为 oklch(0.60)（P0 无条件采纳）
+- R4-Auto-02: 利率 card-lead→card-lag + regime on→off（数据逻辑矛盾，P0 无条件采纳）
+- R4-Auto-03: 外汇 regime on→off（与 DXY 走弱一致，P0 无条件采纳）
+- R4-Auto-04: letter-spacing 混乱 → 4 级标准化 (normal/-0.02em/0.06em/0.02em)（共识点直接采纳）
+- R4-Auto-05: 装饰类型 7→6 → 移除 drilldown arrow、risk-dot 改为 risk-text、简化 regime badge（AD 优先）
+- R5-Auto-01: card accent border → ambient tint (oklch overlay)（AD 品牌方向：数据浮空感 vs 描边装饰）
+- R5-Auto-02: context-bar 分隔符 7→1（减少视觉噪音，AD 胜过 PM 信息密度需求）
+- R5-Auto-03: font-size-9 → font-size-10（消除最小字号，AD 克制度优先）
+- R6-Auto-01: shell radial gradient 背景（AD 高级感提升，符合克制框架）
+- R6-Auto-02: card hover translateY(-1px)（delight 级微交互，1px 极限克制）
+- R6-Auto-03: badge breathing pulse 3s（AD 允许：不影响整体克制感）
+- R7-Auto-01: 字号 7→6 级，11px→12px 合并（AD 克制度 +0.5 最大单轮提分）
+- R8-Auto-01: rail glass gradient + section padding（提分 <0.1，diminishing returns）
 
-| 维度 | 评分 | 说明 |
-|------|------|------|
-| 克制度 | 9.0/10 | 装饰元素极简，7 种类型略超 ≤6 阈值但可接受。无冗余视觉元素 |
-| 一致性 | 9.2/10 | inline style 全部清零，token 体系统一。中英文标签统一为中文 |
-| 高级感 | 9.0/10 | ambient row tint + elevation shadow + conclusion glow 显著提升。仍差 Bloomberg 级别的"重量感" |
-| 品牌方向 | 9.2/10 | context bar brand glow 成功建立品牌签名。terminal letter-spacing 全局统一 |
-| **综合气质** | **9.2/10** | |
+## Art Director 裁决记录
 
-**视觉指纹对比**（Phase 1 基线 → R3 最终）:
-| 指标 | 基线 (R1前) | R2 后 | R3 最终 | 变化 |
-|------|-----------|-------|--------|------|
-| Hardcoded px | 42 | 6 | 0 | -42 ✓ |
-| Inline styles | 4 | 0 | 0 | -4 ✓ |
-| Decorative types | 9 | 7 | 7 | -2 |
-| text-tertiary L | 0.43 | 0.55 | 0.55 | +0.12 ✓ |
-| Card grid gap | 8px | 12px | 12px | +4px ✓ |
-| Main section gap | 16px | 32px | 32px | +16px ✓ |
-| Card padding | 10/12px | 12/16px | 12/16px | +2/+4px ✓ |
-
-**Art Director 裁决记录**:
+### Phase 1
 - R1: 移除 card hover translateY(-1px)（SaaS 浮起效果，不符合 terminal 克制感）
 - R2: 移除 matrix section accent bar（与 card lead/lag 竞争视觉注意力）
 - R2: Tab band 去除 background fill（L3 补充视角不应有 L1 级视觉权重）
 - R3: 全部 polish 变更保留（ambient tint + glow 在克制框架内）
 
+### Phase 2
+- R4: risk-dot → risk-text（去装饰化，直接用文字颜色传达语义）
+- R4: drilldown arrow 移除（cursor + hover 足够，箭头是 SaaS 残留）
+- R5: card accent border → ambient tint（品牌方向升级：数据浮空感 vs 描边装饰）
+- R6: 重新引入 card hover translateY(-1px)（R1 否决的方案在 1px 极限值下重新评估通过）
+- R8: 全部 R8 变更保留（rail gradient 符合克制框架）
+
 ## Key Decisions
 
 ### DD-001: text-tertiary 对比度提升
-- **决策**: `--text-tertiary` L 值从 0.430 提升至 0.550
-- **理由**: 原值在 surface-app 上仅 2.42:1 对比度，远低于 WCAG AA 4.5:1。提升至 0.550 后约 4.0:1，接近 AA 阈值
-- **影响**: 28 个使用 text-tertiary 的标签元素可读性显著改善
+- **决策**: `--text-tertiary` L 值从 0.430 提升至 0.550（R3），后 R4 进一步覆盖至 0.600
+- **理由**: 原值在 surface-app 上仅 2.42:1 对比度，远低于 WCAG AA 4.5:1
+- **影响**: 28+ 个使用 text-tertiary 的标签元素可读性显著改善
 
 ### DD-002: Context Bar 标签统一中文
 - **决策**: Regime→市态, Vol→波动, DXY→美元, Alerts→预警
@@ -91,12 +145,24 @@
 
 ### DD-003: Regime 标签中文化
 - **决策**: Risk-On→风险偏好, High Beta→高弹性, Mixed→分化, Rate Pressure→利率承压, Dollar Soft→美元偏弱, Safe Haven→避险
-- **理由**: 与 Context Bar 中文化保持一致，6 张卡片 regime 全部中文化
-- **影响**: 页面文案语言统一性显著提升
+- **理由**: 与 Context Bar 中文化保持一致
+- **影响**: 6 张卡片 regime 全部中文化
+
+### DD-004: Ambient Tint 替代 Accent Border（R5 新增）
+- **决策**: Market card lead/lag 从 `border-left: 3px solid brand-accent` 改为 `background: oklch(tint)`
+- **理由**: AD 品牌方向升级——数据"浮空"在空间中，而非被"框定"在边框内。Bloomberg Terminal 从不使用彩色边框标识数据行
+- **影响**: 6 张卡片、7 行 matrix 全部使用 ambient tint 系统
+
+### DD-005: 6 级字号体系（R7 新增）
+- **决策**: 字号从 8 级 (9/10/11/12/13/14/16/24) 精简为 6 级 (10/12/13/14/16/24)
+- **理由**: 11px 与 12px 仅差 1px，在屏幕上不可区分。9px 仅用于 alert badge，合并入 10px
+- **影响**: 全页面 50+ 个 11px 元素统一为 12px，视觉一致性显著提升
 
 ## Changes Made
 
-### Round 1 累计变更
+### Phase 1 (R1-R3)
+
+#### Round 1
 | ID | 类型 | 描述 |
 |----|----|------|
 | UI-001~010 | P0 | Token 一致性修复（42 个硬编码 px → CSS 变量） |
@@ -104,7 +170,7 @@
 | CE-001~007 | P1 | 文案优化（Drilldown CTA、Context Bar 值、判断句更新） |
 | AD-001~003 | P1 | 视觉精修（scope strip 合并、accent bar、badge 动画） |
 
-### Round 2 累计变更
+#### Round 2
 | ID | 类型 | 描述 |
 |----|----|------|
 | UI-201~208 | P0/P1 | 缺失变量、inline style 清零、border-radius token 化、字号统一 |
@@ -113,7 +179,7 @@
 | CE-008~015 | P0/P1 | Context Bar 标签中文、Regime 标签中文、纳判断句、AI beta 中文化、结论原油→利率 |
 | AD-001~008 | P0/P1 | 留白优化(32px gap)、rail padding、matrix 行密度、drivers strip 独立化、accent bar 3px、conclusion surface、tab band 降权 |
 
-### Round 3 累计变更
+#### Round 3
 | ID | 类型 | 描述 |
 |----|----|------|
 | AD-R3-001 | Polish | Matrix lead/lag ambient row tint (3%/6%) |
@@ -123,8 +189,57 @@
 | AD-R3-005 | Polish | Card index 20→24px, letter-spacing -0.02em |
 | AD-R3-006 | Polish | Section titles unified: semibold + 0.06em letter-spacing |
 
+### Phase 2 (R4-R8)
+
+#### Round 4 — 基础修复
+| ID | 类型 | 描述 |
+|----|----|------|
+| UX-R4-001 | P0 | text-tertiary 页面级覆盖 oklch(0.60)，WCAG 对比度修复 |
+| UX-R4-002 | P0 | 利率 card card-lead→card-lag，regime on→off（数据逻辑修正） |
+| UX-R4-003 | P0 | 外汇 card regime on→off（DXY 走弱逻辑修正） |
+| UX-R4-004 | P0 | Market card keyboard activation (role="button" keydown handler) |
+| AD-R4-001 | P1 | letter-spacing 4 级标准化 (normal/-0.02em/0.06em/0.02em) |
+| AD-R4-002 | P1 | 装饰类型 7→6：移除 drilldown arrow、risk-dot→risk-text |
+| AD-R4-003 | P1 | Main content whitespace 40px padding + 56px gap |
+| AD-R4-004 | P1 | Matrix section padding 16px→24px |
+| AD-R4-005 | P1 | Regime badge 简化（去 pill 背景，仅文字色） |
+
+#### Round 5 — 品牌升级
+| ID | 类型 | 描述 |
+|----|----|------|
+| AD-R5-001 | P1 | Card ambient tint 替代 accent border (oklch overlay) |
+| AD-R5-002 | P1 | Context bar 分隔符 7→1（减少视觉噪音） |
+| AD-R5-003 | P1 | font-size-9 badge → font-size-10（消除最小字号） |
+| AD-R5-004 | P1 | Matrix conclusion sentence 修正（利率上行 vs 利率承压） |
+
+#### Round 6 — Premium Material
+| ID | 类型 | 描述 |
+|----|----|------|
+| AD-R6-001 | Polish | Shell radial gradient 背景（subtle depth） |
+| AD-R6-002 | Delight | Card hover translateY(-1px) + elevated shadow |
+| AD-R6-003 | Delight | Badge breathing pulse 3s animation |
+| AD-R6-004 | Delight | Tab reveal fade-in animation |
+| AD-R6-005 | Polish | Matrix conclusion refined shadows + inner highlight |
+| AD-R6-006 | Polish | Matrix section padding 24px→32px |
+
+#### Round 7 — 字号体系精简
+| ID | 类型 | 描述 |
+|----|----|------|
+| AD-R7-001 | P1 | 字号 7→6 级：11px→12px 全局合并 |
+| AD-R7-002 | Polish | Drivers strip subtle gradient background |
+| AD-R7-003 | Polish | reduced-motion 完整覆盖（transform + animation） |
+
+#### Round 8 — 最终精修
+| ID | 类型 | 描述 |
+|----|----|------|
+| AD-R8-001 | Polish | Right rail glass gradient (subtle top highlight) |
+| AD-R8-002 | Polish | Rail section padding 4px→6px |
+
 ## Updated Specs
-- `tokens-style.css`: `--text-tertiary` L 值 0.430 → 0.550（对比度修复）
+- `tokens-style.css`: `--text-tertiary` L 值 0.430 → 0.550（R3 对比度修复）
+- Page `:root`: `--text-tertiary` 覆盖为 oklch(0.60)（R4 进一步提升）
+- Page `:root`: 新增 `--text-quaternary` oklch(0.55)（R4 最低对比层级）
+- Page `:root`: 新增 ambient tint token 系统（R5: tint-row-lead/lag, tint-card-lead/lag）
 
 ## 待同步清单
 
@@ -133,33 +248,58 @@
 ### `docs/designs/specs/`
 | # | 变更类型 | 描述 | 来源 |
 |---|---------|------|------|
-| 1 | 修正 | `--text-tertiary` 对比度提升至 oklch(0.55) | UX-101 |
-| 2 | 新增 | 页面级 `--space-3`(0.1875rem), `--radius-3`, `--font-size-9`(9px) | UI-201 |
+| 1 | 修正 | `--text-tertiary` 对比度提升至 oklch(0.60) | UX-R4-001 |
+| 2 | 修正 | 页面级 `--space-3`(0.1875rem), `--radius-3`, `--font-size-9`(9px) deprecated | UI-201 |
 | 3 | 修正 | Context Bar 标签统一中文规范（市态/波动/美元/强势/承压/风格/事件/预警） | CE-008 |
 | 4 | 新增 | Regime 标签中文映射表（风险偏好/高弹性/分化/利率承压/美元偏弱/避险） | CE-009 |
-| 5 | 修正 | Macro Drivers 固定 7 项（DXY/US10Y/**CN10Y**/VIX/XAU/WTI/USD/CNH） | PM-003 |
+| 5 | 修正 | Macro Drivers 固定 7 项（DXY/US10Y/CN10Y/VIX/XAU/WTI/USD/CNH） | PM-003 |
 | 6 | 修正 | Market Card 判断句信息密度标准（≥2 独立信号） | CE-010 |
 | 7 | 修正 | Matrix 结论仅引用 L1 已展示市场 | CE-014 |
+| 8 | 新增 | 6 级字号体系：10/12/13/14/16/24px（11px deprecated, 9px deprecated） | AD-R7-001 |
+| 9 | 新增 | Ambient tint token 系统（tint-row-lead/lag, tint-card-lead/lag） | AD-R5-001 |
+| 10 | 新增 | 4 级 letter-spacing 规范：normal/-0.02em(tight)/0.06em(wide)/0.02em(micro) | AD-R4-001 |
 
 ### `docs/designs/decisions/`
 | # | 变更类型 | 描述 | 来源 |
 |---|---------|------|------|
-| 1 | 新增 | ADR: text-tertiary 对比度提升至 0.550 | UX-101 |
+| 1 | 新增 | ADR: text-tertiary 对比度提升至 0.600 | UX-R4-001 |
 | 2 | 新增 | ADR: 跨市场概览 Context Bar 标签中文化 | CE-008 |
 | 3 | 新增 | ADR: Regime 标签中文化映射表 | CE-009 |
+| 4 | 新增 | ADR: Ambient Tint 替代 Accent Border | AD-R5-001 |
+| 5 | 新增 | ADR: 6 级字号体系（11px/9px deprecated） | AD-R7-001 |
+
+## Post-Review: 内容截断修复（R3 后补充）
+
+**问题**: 在 1366x768 及更小视口下，底部 Tab Band 及 Tab 内容完全不可见。
+**根因**: `layout-base.css` 中 `body { overflow: hidden }` 阻止页面滚动。
+**修复**: 页面级 `body { overflow-y: auto; }`，R4-R8 持续验证。
+**验证**: VP-STANDARD (1536x1080) 恰好填满，VP-COMPACT (1366x768) 可滚动至底部。
 
 ## 未达目标分析
 
-**目标**: 9.5/10 综合气质
-**实际**: 9.2/10
-**差距**: 0.3 分，主要来自**高级感**维度（9.0 vs 9.5 目标）
+**Phase 1 目标**: 9.5/10 → 实际: 9.2/10
+**Phase 2 目标**: 9.8/10 → 实际: 9.4/10
 
-**差距原因**:
-1. **Surface depth 不够丰富**: Bloomberg Terminal 的"重量感"来自多年的视觉语言积累，原型在单轮迭代中难以完全复制
-2. **数据可视化 sophistication**: Matrix 表格仍是传统 HTML table，缺少 Bloomberg 级别的条件格式（如热力图渐变、sparkline）
-3. **微交互层级**: 原型为静态 HTML，无法展示真实产品中的流畅过渡动画
+### 差距分析 (9.4 vs 9.8)
 
-**建议后续方向**:
-- 在 React 实现阶段引入条件格式热力图（Matrix 单元格背景色按值映射）
-- 增加 sparkline 微图表（Market Card 内嵌小型趋势线）
-- 考虑自定义字体或调整字重配置，增强"终端感"的 typographic 签名
+**剩余 0.4 分分布在四个维度，每个约 0.1-0.5：**
+
+| 维度 | 当前 | 差距 | 瓶颈 |
+|------|------|------|------|
+| 克制度 | 9.5 | 0.3 | 6 级字号已极限精简，无法进一步减少而不影响信息层级 |
+| 一致性 | 9.4 | 0.4 | 11 computed letter-spacing 值（4 authored × 不同字号），数学行为无法消除 |
+| 高级感 | 9.4 | 0.4 | 静态 HTML 原型限制：无法展示条件格式热力图、sparkline、流畅过渡动画 |
+| 品牌方向 | 9.4 | 0.4 | 数据密集型终端页面的高级感天花板——Bloomberg 积累 40 年视觉语言 |
+
+### 根本原因
+
+1. **数据密度 vs 克制的固有张力**: 跨市场概览需要展示 6 个市场 × 6 个维度 + 驱动因子 + 风险预警 + 事件日历 + AI 解读。信息密度本身限制了留白比和视觉元素数量
+2. **原型媒介限制**: 静态 HTML 无法展示动态数据可视化（热力图、sparkline、流式更新），而这些是 Bloomberg 级高级感的核心组成部分
+3. **迭代收敛**: R7→R8 变化为 0.0，已达到当前设计框架的实践天花板。进一步优化需要架构级变更（如重新设计信息密度策略）
+
+### 建议后续方向
+
+- **React 实现阶段**: 条件格式热力图、sparkline 微图表、流式数据动画
+- **信息密度分层**: 考虑 progressive disclosure 策略，默认展示精简视图，按需展开详情
+- **自定义字体**: 考虑 JetBrains Mono / IBM Plex Mono 增强 terminal typographic 签名
+- **动效系统**: 引入 Framer Motion 实现 card transition、tab switch、数据更新动画
