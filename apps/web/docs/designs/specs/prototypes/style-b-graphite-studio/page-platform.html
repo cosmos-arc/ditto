@@ -551,12 +551,14 @@
       transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Data table row hover — subtle lift */
+    /* Data table row hover — subtle lift + interactive hint */
     .data-table tbody tr {
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
     }
     .data-table tbody tr:hover {
-      background: var(--interaction-hover-subtle-bg);
+      background: oklch(0.35 0.005 260 / 0.3);
     }
 
     /* Disconnected row persistent highlight */
@@ -664,8 +666,8 @@
     }
 
     @keyframes value-flash {
-      0%   { opacity: 0.85; }
-      100% { opacity: 1; }
+      0%   { opacity: 0.85; transform: translateY(0.5px); }
+      100% { opacity: 1; transform: translateY(0); }
     }
     .health-metric-value.ok,
     .health-metric-value.warn,
@@ -687,7 +689,7 @@
      * ══════════════════════════════════════════════ */
     .row-action {
       font-size: var(--font-size-11);
-      color: var(--text-tertiary);
+      color: oklch(0.700 0.165 255 / 0.6);
       cursor: pointer;
       padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-4);
@@ -698,6 +700,7 @@
     .row-action:hover {
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
+      text-decoration: underline;
     }
   </style>
 </head>
