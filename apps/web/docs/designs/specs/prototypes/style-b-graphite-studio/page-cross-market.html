@@ -62,13 +62,13 @@
       --shadow-card-hover: 0 2px 8px oklch(0 0 0 / 0.2);
       --shadow-conclusion: -3px 0 8px -2px oklch(0.700 0.165 255 / 0.08);
       --shadow-context-bar: 0 1px 6px oklch(0.700 0.165 255 / 0.04);
-      /* Ambient tint tokens */
-      --tint-row-lead: oklch(0.670 0.170 20 / 0.03);
-      --tint-row-lead-hover: oklch(0.670 0.170 20 / 0.06);
-      --tint-row-lag: oklch(0.680 0.120 175 / 0.03);
-      --tint-row-lag-hover: oklch(0.680 0.120 175 / 0.06);
-      --tint-card-lead: oklch(0.670 0.170 20 / 0.04);
-      --tint-card-lag: oklch(0.680 0.120 175 / 0.04);
+      /* Ambient tint tokens — R10: bumped for perceptible lead/lag distinction */
+      --tint-row-lead: oklch(0.670 0.170 20 / 0.05);
+      --tint-row-lead-hover: oklch(0.670 0.170 20 / 0.08);
+      --tint-row-lag: oklch(0.680 0.120 175 / 0.05);
+      --tint-row-lag-hover: oklch(0.680 0.120 175 / 0.08);
+      --tint-card-lead: oklch(0.670 0.170 20 / 0.06);
+      --tint-card-lag: oklch(0.680 0.120 175 / 0.06);
     }
 
     /* ══════════════════════════════════════════════
@@ -226,6 +226,7 @@
       align-items: center;
       gap: var(--space-4);
       white-space: nowrap;
+      min-height: 1.5rem; /* R10: 24px minimum interactive dimension */
     }
 
     .context-bar-label {
@@ -348,7 +349,7 @@
 
     .market-card-change {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-14);
+      font-size: var(--font-size-13); /* R10: 14→13, consolidate to 5-level scale */
       font-weight: var(--font-weight-semibold);
     }
 
@@ -375,10 +376,10 @@
     }
     .card-sparkline polyline {
       fill: none;
-      stroke-width: 1.5;
+      stroke-width: 1.5 !important; /* R10: !important to override SVG presentation attr */
       stroke-linecap: round;
       stroke-linejoin: round;
-      opacity: 0.5;
+      opacity: 0.6; /* R10: bumped from 0.5 for perceptibility */
     }
 
     /* Extracted inline styles */
@@ -559,14 +560,28 @@
     .matrix-table .up { color: var(--market-up-fg); }
     .matrix-table .down { color: var(--market-down-fg); }
     .matrix-table .neutral { color: var(--text-tertiary); }
+    /* R10: neutral must override row-lead/lag color (specificity 0-3-0 > 0-3-0, declared after) */
+    .matrix-table tr.row-lead td.neutral,
+    .matrix-table tr.row-lag td.neutral { color: var(--text-tertiary); }
 
-    /* R9: 5-level heat map for matrix numeric cells */
-    .matrix-table td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.10); }
-    .matrix-table td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.05); }
-    .matrix-table td[data-heat="1"] { background: oklch(0.700 0.010 260 / 0.02); }
-    .matrix-table td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.05); }
-    .matrix-table td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.10); }
-    /* Heat map takes precedence over row tint on hover */
+    /* R10: 5-level heat map — 5 distinct alpha levels for perceptible gradation */
+    .matrix-table td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.22); }
+    .matrix-table td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.14); }
+    .matrix-table td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.06); }
+    .matrix-table td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.06); }
+    .matrix-table td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.14); }
+    /* R10: Heat map takes precedence over row tint (specificity 0-4-0 > 0-3-0) */
+    /* Full cross-domain coverage: all heat levels in both row types */
+    .matrix-table tr.row-lead td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.22); }
+    .matrix-table tr.row-lead td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.14); }
+    .matrix-table tr.row-lead td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.06); }
+    .matrix-table tr.row-lead td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.06); }
+    .matrix-table tr.row-lead td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.14); }
+    .matrix-table tr.row-lag td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.22); }
+    .matrix-table tr.row-lag td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.14); }
+    .matrix-table tr.row-lag td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.06); }
+    .matrix-table tr.row-lag td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.06); }
+    .matrix-table tr.row-lag td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.14); }
     .matrix-table tr:hover td[data-heat] { background-color: color-mix(in oklch, currentColor 15%, transparent); }
 
     /* Highlight top 2 / bottom 2 rows — ambient surface tint */
@@ -593,7 +608,7 @@
       align-items: center;
       gap: var(--space-4);
       flex-shrink: 0;
-      padding: var(--space-12) 0;
+      padding: var(--space-8) 0; /* R10: 12→8, tighten L2 density */
       margin-top: -0.5rem; /* L1→L2 gradient: 24px - 8px = 16px */
       background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.01) 10%, oklch(1 0 0 / 0.01) 90%, transparent);
     }
@@ -842,6 +857,7 @@
     .tab-band-tab.active {
       color: var(--text-secondary);
       background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent); /* R10: brand-accent 3rd touchpoint */
     }
 
     .tab-band-body {
@@ -906,6 +922,7 @@
       color: var(--text-secondary);
       cursor: pointer;
       margin-top: var(--space-6);
+      padding: var(--space-3) 0; /* R10: min-height 24px for interactive element */
       transition: color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
@@ -1008,6 +1025,15 @@
       color: oklch(1 0 0 / 0.08);
     }
     .status-spacer { flex: 1; }
+    /* R10: kbd style for terminal DNA */
+    .status-kbd {
+      font-family: var(--font-family-mono);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid oklch(1 0 0 / 0.10);
+      border-radius: var(--radius-3);
+      background: oklch(1 0 0 / 0.04);
+    }
 
     /* Respect reduced motion preference */
     @media (prefers-reduced-motion: reduce) {
@@ -1028,7 +1054,7 @@
     <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
   </svg>
   <a class="skip-link" href="#main-content">跳至主要内容</a>
-  <div class="style-label">Graphite Studio — Cross-Market Overview · v16 · Design Review R10</div>
+  <div class="style-label">Graphite Studio — Cross-Market Overview · v17 · Design Review R10</div>
 
   <div class="shell-radar">
 
@@ -1119,7 +1145,7 @@
         </div>
         <div class="context-bar-item">
           <span class="context-bar-label">事件</span>
-          <span class="context-bar-value regime-mixed">FOMC 明日</span>
+          <span class="context-bar-value regime-mixed">FOMC 03:00</span>
         </div>
         <div class="context-bar-item">
           <span class="context-bar-label">预警</span>
@@ -1145,7 +1171,7 @@
                 沪深300 <span class="market-card-change up">+0.67%</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,10 10,12 20,8 30,6 40,9 50,4 60,2" stroke="var(--market-up-fg)"/></svg>
-              <div class="market-card-judgment">广度偏强，AI+半导体主线扩散</div>
+              <div class="market-card-judgment">广度偏强，AI 半导体扩散</div>
             </div>
 
             <div class="market-card card-lead" tabindex="0" role="button" aria-label="港股 恒生科技 +1.9% 弹性领先 南向资金偏强">
@@ -1217,7 +1243,7 @@
             </div>
             <div class="matrix-conclusion">
               <span class="lead">港股</span>弹性领跑全市场，<span class="lead">黄金</span>避险持续偏强；
-              <span class="lag">美元</span>与<span class="lag">利率</span>同步承压，利率上行对成长估值形成压制。
+              <span class="lag">美元</span>走弱，<span class="lag">利率</span>上行对成长估值形成压制。
             </div>
             <table class="matrix-table">
               <caption class="sr-only">相对强弱矩阵 — 跨市场多周期表现对比</caption>
@@ -1229,7 +1255,7 @@
                   <th scope="col">1M</th>
                   <th scope="col">波动</th>
                   <th scope="col">广度</th>
-                  <th scope="col">资金面</th>
+                  <th scope="col">态势</th>
                 </tr>
               </thead>
               <tbody>
@@ -1265,7 +1291,7 @@
                   <td class="up" data-heat="1">+0.2%</td>
                   <td class="down" data-heat="-1">-0.4%</td>
                   <td class="up" data-heat="2">+1.1%</td>
-                  <td data-heat="1">中低</td>
+                  <td data-heat="1">低</td>
                   <td class="neutral">中性</td>
                   <td>科技偏强</td>
                 </tr>
@@ -1328,7 +1354,7 @@
             </div>
             <div class="driver-sep"></div>
             <div class="driver-item">
-              <span class="driver-item-name">XAU</span>
+              <span class="driver-item-name">XAUUSD</span>
               <span class="driver-item-val">2,648</span>
               <span class="driver-item-change up">+1.2%</span>
             </div>
@@ -1359,23 +1385,23 @@
             <div class="rail-section-body">
               <div class="pulse-item">
                 <span class="pulse-market">A股</span>
-                <span class="pulse-status on">风险偏好偏强</span>
+                <span class="pulse-status on">偏强</span>
               </div>
               <div class="pulse-item">
                 <span class="pulse-market">港股</span>
-                <span class="pulse-status on">弹性领先</span>
+                <span class="pulse-status on">领先</span>
               </div>
               <div class="pulse-item">
                 <span class="pulse-market">美股</span>
-                <span class="pulse-status neutral">震荡分化</span>
+                <span class="pulse-status neutral">分化</span>
               </div>
               <div class="pulse-item">
                 <span class="pulse-market">黄金</span>
-                <span class="pulse-status on">避险偏强</span>
+                <span class="pulse-status on">偏强</span>
               </div>
               <div class="pulse-item">
                 <span class="pulse-market">美元</span>
-                <span class="pulse-status down">持续走弱</span>
+                <span class="pulse-status down">走弱</span>
               </div>
             </div>
           </div>
@@ -1387,12 +1413,15 @@
             </div>
             <div class="rail-section-body">
               <div class="risk-item">
+                <span class="risk-dot high"></span>
                 <span class="risk-text high">FOMC 前夜，波动可能抬升</span>
               </div>
               <div class="risk-item">
+                <span class="risk-dot high"></span>
                 <span class="risk-text high">美债长端上行压制成长</span>
               </div>
               <div class="risk-item">
+                <span class="risk-dot medium"></span>
                 <span class="risk-text medium">A股科技拥挤度升高</span>
               </div>
             </div>
@@ -1424,7 +1453,7 @@
           <!-- 4. Drilldown Recommendations -->
           <div class="rail-section">
             <div class="rail-section-header">
-              <span class="rail-section-title">推荐下钻</span>
+              <span class="rail-section-title">关注方向</span>
             </div>
             <div class="rail-section-body">
               <div class="drilldown-item" tabindex="0" role="button" aria-label="下钻至 港股科技板块">
@@ -1470,7 +1499,7 @@
           <div class="rotation-sentence">
             资金偏好从<strong>美元与长债</strong>转向<strong>港股科技、A股成长与黄金</strong>。
           </div>
-          <div class="view-detail-link" tabindex="0" role="link">查看完整资金轮动</div>
+          <div class="view-detail-link" tabindex="0" role="link">资金轮动详情 →</div>
         </div>
 
         <!-- Tab 2: Event Calendar — summary-only, upcoming events -->
@@ -1497,7 +1526,7 @@
               <span class="calendar-summary-markets">A股 / 人民币</span>
             </div>
           </div>
-          <div class="view-detail-link" tabindex="0" role="link">查看完整事件日历</div>
+          <div class="view-detail-link" tabindex="0" role="link">事件日历详情 →</div>
         </div>
 
         <!-- Tab 3: AI Insight — enhanced analysis -->
@@ -1508,7 +1537,7 @@
           <div class="insight-headline">
             <strong>情景推演</strong>：若 FOMC 释放偏鸽信号，利率下行预期进一步强化，港股科技与黄金有望延续强势；若超预期鹰派，则长债抛售加速，成长板块面临回调压力。
           </div>
-          <div class="view-detail-link" tabindex="0" role="link">查看完整 AI 解读</div>
+          <div class="view-detail-link" tabindex="0" role="link">AI 解读详情 →</div>
         </div>
 
       </div>
@@ -1517,12 +1546,12 @@
       <!-- R9: Status Bar -->
       <div class="status-bar" role="status" aria-label="系统状态">
         <span class="status-indicator" aria-hidden="true"></span>
-        <span>实时</span>
+        <span style="color: oklch(0.72 0.19 155)">LIVE</span>
         <span class="status-sep">│</span>
         <span>09:46:32 CST</span>
         <span class="status-sep">│</span>
         <span class="status-spacer"></span>
-        <span>⌘K 搜索</span>
+        <span class="status-kbd">⌘K</span> 搜索
       </div>
 
     </div>
