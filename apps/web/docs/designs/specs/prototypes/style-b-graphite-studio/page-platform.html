@@ -641,6 +641,64 @@
     .event-item.muted .event-time::before {
       background: var(--text-disabled);
     }
+
+    /* ══════════════════════════════════════════════
+     * R3: Detail Panel — first section priority weight
+     * ══════════════════════════════════════════════ */
+    .context-section:first-child {
+      border-top: 2px solid oklch(0.700 0.165 255 / 0.20);
+    }
+
+    .task-item.running {
+      background: oklch(0.700 0.165 255 / 0.03);
+      border-radius: var(--radius-4);
+      padding-left: var(--space-4);
+      padding-right: var(--space-4);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R3: Health metric — tabular-nums + update flash
+     * ══════════════════════════════════════════════ */
+    .health-metric-value {
+      font-variant-numeric: tabular-nums;
+    }
+
+    @keyframes value-flash {
+      0%   { opacity: 0.85; }
+      100% { opacity: 1; }
+    }
+    .health-metric-value.ok,
+    .health-metric-value.warn,
+    .health-metric-value.brand {
+      animation: value-flash 200ms ease-out;
+    }
+
+    /* ══════════════════════════════════════════════
+     * R3: Quota bar 95%+ critical escalation
+     * ══════════════════════════════════════════════ */
+    .quota-text.critical,
+    .quota-bar-fill.critical {
+      color: var(--system-down-fg);
+      background: var(--system-down-fg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R3: Row-down action hint
+     * ══════════════════════════════════════════════ */
+    .row-action {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+    .row-action:hover {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
   </style>
 </head>
 <body>
@@ -773,8 +831,8 @@
                 <td class="cell-numeric">2s</td>
                 <td>
                   <div class="quota-cell">
-                    <span class="quota-text warn">4,820/5,000</span>
-                    <div class="quota-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="Tushare API 配额 96.4%"><div class="quota-bar-fill warn" style="width: 96.4%;"></div></div>
+                    <span class="quota-text critical">4,820/5,000</span>
+                    <div class="quota-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="Tushare API 配额 96.4%"><div class="quota-bar-fill critical" style="width: 96.4%;"></div></div>
                   </div>
                 </td>
                 <td class="cell-time">14:32:15</td>
@@ -849,6 +907,7 @@
                 </td>
                 <td class="cell-disabled">14:15:00</td>
                 <td class="right cell-disabled">0</td>
+                <td><span class="row-action" tabindex="0" role="button" aria-label="重试连接聚宽">重试 →</span></td>
               </tr>
             </tbody>
           </table>
@@ -1051,6 +1110,8 @@
     <span>4/5 数据源在线</span>
     <span class="status-sep">│</span>
     <span>14:32:15 CST</span>
+    <span class="status-sep">│</span>
+    <span>CPU 23% · MEM 26%</span>
     <span class="status-spacer"></span>
     <span class="status-kbd">⌘K</span> 搜索
   </div>
