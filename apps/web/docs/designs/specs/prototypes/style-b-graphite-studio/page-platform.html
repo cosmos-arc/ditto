@@ -494,13 +494,13 @@
       align-items: center;
       height: 1.5rem;
       padding: 0 var(--space-8);
-      background: oklch(0.14 0.005 260 / 0.9);
+      background: var(--surface-app);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      border-top: 1px solid oklch(1 0 0 / 0.04);
+      border-top: 1px solid var(--border-subtle);
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
-      color: oklch(0.55 0.01 260);
+      color: var(--text-tertiary);
       letter-spacing: 0.02em;
       user-select: none;
       z-index: 25;
@@ -508,22 +508,22 @@
     .status-indicator {
       width: 6px; height: 6px;
       border-radius: 50%;
-      background: oklch(0.72 0.19 155);
+      background: var(--system-healthy-fg);
       margin-right: var(--space-4);
       flex-shrink: 0;
     }
     .status-sep {
       margin: 0 var(--space-6);
-      color: oklch(1 0 0 / 0.08);
+      color: var(--border-subtle);
     }
     .status-spacer { flex: 1; }
     .status-kbd {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
       padding: 0 var(--space-2);
-      border: 1px solid oklch(1 0 0 / 0.10);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-2);
-      background: oklch(1 0 0 / 0.04);
+      background: var(--interaction-hover-subtle-bg);
     }
 
     /* ── Respect reduced motion ── */
@@ -578,6 +578,11 @@
     }
     .alert-row:hover {
       background: var(--interaction-hover-subtle-bg);
+    }
+    /* Critical alert left accent — scan priority */
+    .alert-row:has(.alert-dot.critical) {
+      border-left: 2px solid var(--system-down-fg);
+      padding-left: calc(var(--space-8) - 2px);
     }
 
     /* ══════════════════════════════════════════════
@@ -730,13 +735,13 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 1px;
+      height: 1.5px;
       background: linear-gradient(
         90deg,
         transparent 0%,
-        oklch(0.700 0.165 255 / 0.08) 20%,
-        oklch(0.700 0.165 255 / 0.12) 50%,
-        oklch(0.700 0.165 255 / 0.08) 80%,
+        oklch(0.700 0.165 255 / 0.10) 20%,
+        oklch(0.700 0.165 255 / 0.18) 50%,
+        oklch(0.700 0.165 255 / 0.10) 80%,
         transparent 100%
       );
       pointer-events: none;
@@ -1218,23 +1223,23 @@
           </div>
           <div class="context-section-body">
             <div class="event-item">
-              <span class="event-time">14:32</span>
+              <span class="event-time">14:32:15</span>
               <span class="event-text">Tushare 日线数据同步完成</span>
             </div>
             <div class="event-item">
-              <span class="event-time">14:31</span>
+              <span class="event-time">14:31:00</span>
               <span class="event-text">因子计算任务启动 · 北向持仓变化率</span>
             </div>
             <div class="event-item">
-              <span class="event-time">14:28</span>
+              <span class="event-time">14:28:42</span>
               <span class="event-text">Wind 分钟线数据同步完成</span>
             </div>
             <div class="event-item">
-              <span class="event-time">14:25</span>
+              <span class="event-time">14:25:08</span>
               <span class="event-text">模型评分服务返回 503（连续第 2 次）</span>
             </div>
             <div class="event-item muted">
-              <span class="event-time">14:15</span>
+              <span class="event-time">14:15:00</span>
               <span class="event-text">聚宽连接断开，已发送告警</span>
             </div>
           </div>
