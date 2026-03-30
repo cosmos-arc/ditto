@@ -12,7 +12,42 @@
 
 **方案**：基于 hybrid-plane-design，先扩展 Kernel 抽象层（Phase 0），再收拢 Data 平面数据访问（Phase 1），为后续 Engine/Analytics 平面重构奠基。
 
-**产出**：8 个 PR，Kernel 从 6 类型扩展到 17 类型，DataHub 新增 `query/` 子模块 + `BacktestProvider`/`LiveProvider`。
+**产出**：10 个 PR（含 2 个前置约束调优 PR），Kernel 从 6 类型扩展到 17 类型，DataHub 新增 `query/` 子模块 + `BacktestProvider`/`LiveProvider`。
+
+---
+
+## Phase -1：前置约束调优（规则预对齐）
+
+**目的**：解决当前项目约束与 Phase 0 目标的 3 处冲突，避免开发过程中 CI/CLAUDE.md 规则报错。
+
+**详细设计**：[pre-phase0-constraint-tuning](2026-03-30-pre-phase0-constraint-tuning.md)
+
+### Task -1a: 更新 Kernel CLAUDE.md 准入标准 `[XS]`
+
+- **验收**：CLAUDE.md 准入标准允许 Protocol + 薄实现，去掉类型数量硬上限
+- **文件**：
+  - 修改 `packages/kernel/CLAUDE.md`
+- **变更内容**：
+  - 新增「Protocol / 薄实现」准入标准（5 条：预期跨层使用、零业务逻辑、无外部依赖、实现体 < 30 行、无 I/O）
+  - 去掉"kernel 类型数量超过 20 个"红线，改为 PR 描述理由说明机制
+  - 更新 Kernel 定位为"类型 + Protocol 抽象 + 薄实现"
+  - 准入标准第 1 条从"已被 2 个包导入"改为"预期被 2 个包消费"
+
+### Task -1b: 修正 architecture.md 术语 `[XS]`
+
+- **验收**：所有 "Server" 术语替换为 "Port"
+- **文件**：
+  - 修改 `.claude/rules/architecture.md`
+- **变更内容**：
+  - `Server` → `Port`、`Server Service` → `Port Service`、`Server Flow` → `Port Flow`
+  - 与实际包名 `ditto_port` 对齐
+
+### Phase -1 完成标准
+
+- [ ] `packages/kernel/CLAUDE.md` 允许 Protocol + 薄实现准入
+- [ ] 类型数量硬上限已移除
+- [ ] `.claude/rules/architecture.md` 术语与实际包名一致
+- [ ] `pixi run -e dev check` 全通过
 
 ---
 
@@ -25,11 +60,11 @@
 ### Task 0a: Clock Protocol + SimulatedClock + RealtimeClock `[S]`
 
 - **验收**：Clock Protocol 定义完整，两个实现通过单元测试，`pixi run -e dev check` 通过
+- **前置**：Task -1a 已完成（Kernel CLAUDE.md 已允许 Protocol + 薄实现）
 - **文件**：
   - 新建 `packages/kernel/src/ditto_kernel/clock.py`
   - 新建 `packages/kernel/tests/unit/test_clock.py`
   - 修改 `packages/kernel/src/ditto_kernel/__init__.py` — 添加 Clock/SimulatedClock/RealtimeClock 导出
-  - 修改 `packages/kernel/CLAUDE.md` — 更新定位为"类型 + Protocol 抽象 + 薄实现"
 - **关键设计**：
   - `Clock(Protocol)`: `now`, `today`, `advance_to` 三个成员
   - `SimulatedClock`: 可推进时间，`advance_to` 断言不回退
@@ -85,7 +120,6 @@
 - [ ] Kernel 17 个公共符号全部在 `__init__.py` 导出
 - [ ] `pixi run -e dev check` 全通过
 - [ ] 分支覆盖率 ≥ 80%
-- [ ] CLAUDE.md 反映新角色：类型 + Protocol 抽象 + 薄实现
 
 ---
 
@@ -166,8 +200,9 @@
 
 | 文件 | 角色 |
 |------|------|
+| `packages/kernel/CLAUDE.md` | 架构契约，-1a 首次更新（Phase -1 前置） |
+| `.claude/rules/architecture.md` | 架构规则，-1b 术语修正（Phase -1 前置） |
 | `packages/kernel/src/ditto_kernel/__init__.py` | 统一导出，每个 PR 都改 |
-| `packages/kernel/CLAUDE.md` | 架构契约，0a 首次更新 |
 | `packages/kernel/pyproject.toml` | 保持零依赖，0c 升版本 |
 | `packages/core/src/ditto_core/backtest/data_feed.py` | Phase 1 核心改造点 |
 | `packages/core/src/ditto_core/backtest/engine.py` | 回测主循环，可能需调整注入 |
@@ -179,7 +214,7 @@
 
 | 风险 | 等级 | 缓解 |
 |------|------|------|
-| Kernel "纯类型"原则被打破 | 中 | CLAUDE.md 明确"薄实现"准入条件（<30 行、无外部依赖、无业务逻辑、无 I/O） |
+| Kernel "纯类型"原则被打破 | ~~中~~ 已缓解 | Phase -1 已更新 CLAUDE.md 准入标准，明确"薄实现"准入条件（<30 行、无外部依赖、无业务逻辑、无 I/O） |
 | AnyFrame 丢失 DataFrame 类型安全 | 低 | 仅 Protocol 层用 Any，实现和消费者侧用 pl.DataFrame |
 | Pipeline.execute 的 type: ignore | 低 | 单行、不可避免、文档说明 |
 | 1c DataFeed 改造影响回测 | 中 | golden test 对比改造前后回测输出 |
