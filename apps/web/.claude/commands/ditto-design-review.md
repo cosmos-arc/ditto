@@ -66,6 +66,12 @@ disable-model-invocation: true
 
 # 自主迭代优化（使用默认值：目标 8.0，最多 3 轮）
 /ditto-design-review page-cross-market.html --iterate
+
+# 指定任务名（覆盖文件名自动映射）
+/ditto-design-review page-cross-market.html --task cross-market-v2 --iterate
+
+# 清理已完成任务的历史 tag
+/ditto-design-review --cleanup cross-market
 ```
 
 ---
@@ -73,41 +79,87 @@ disable-model-invocation: true
 ## 原型版本管理（git tag）
 
 > **每次 review 前，通过 git tag 快照当前状态。回退和对比均依赖 git 原生能力。**
+> **Tag 按任务名分组，已完成任务可安全清理，不同任务互不干扰。**
+
+### 任务名与 Tag 命名
+
+- **Tag 格式**：`review/<task>/round-{N}`（按任务名分组，各任务独立递增）
+- **完成标记**：`review/<task>/done`（达标后创建，含最终分数的 annotated tag）
+- **任务名来源**：优先 `--task` 参数，否则从文件名自动映射
+  - `page-cross-market.html` → `cross-market`
+  - `page-home.html` → `home`
+  - `page-market-pulse.html` → `market-pulse`
+
+```
+示例：
+review/cross-market/round-1
+review/cross-market/round-2
+review/cross-market/done          ← 已达标
+review/home/round-1               ← 不同任务，独立轮次
+review/home/round-2
+```
 
 ### 工作流
 
 ```
 Phase 0: VERSION（在所有审查之前）
 
-  1. 确定目标文件（如 page-cross-market.html）
-  2. 检查已有 tag（git tag -l 'review/round-*'）确定下一个轮次号
-  3. git add 目标文件 → git commit -m "docs(review): round-{N} pre-review snapshot"
-  4. git tag review/round-{N}
-  5. 后续所有修改直接在原文件上进行
+  1. 确定任务名
+     ├─ 有 --task 参数 → 用参数值
+     └─ 无 --task → 从文件名映射（去 page- 前缀和 .html 后缀）
+
+  2. 检查任务状态
+     ├─ git tag -l 'review/<task>/done' 存在 → 已完成任务
+     │   ├─ [人工模式] 提示用户：任务已达标，是否重新迭代？
+     │   └─ [--iterate] 自动提示选择：续接 / 新任务名 / 退出
+     └─ 不存在 → 进行中或新任务
+
+  3. 确定轮次号
+     ├─ git tag -l 'review/<task>/round-*' 有结果
+     │   └─ N = max(round-N) + 1
+     └─ 无结果 → N = 1（新任务）
+
+  4. git add 目标文件 → git commit -m "docs(review): <task> round-{N} pre-review snapshot"
+  5. git tag review/<task>/round-{N}
+  6. 后续所有修改直接在原文件上进行
 ```
 
 ### 回退操作
 
 ```bash
-# 回退到 round-2 的状态
-git checkout review/round-2 -- page-cross-market.html
+# 回退 cross-market 任务 round-2 的状态
+git checkout review/cross-market/round-2 -- page-cross-market.html
 ```
 
 ### 版本对比
 
 ```bash
-# 查看 HTML 变更
-git diff review/round-1..review/round-2 -- page-cross-market.html
+# 查看 cross-market 任务 round-1 → round-2 的变更
+git diff review/cross-market/round-1..review/cross-market/round-2 -- page-cross-market.html
 
 # 查看变更摘要
-git log review/round-1..review/round-2 --oneline -- page-cross-market.html
+git log review/cross-market/round-1..review/cross-market/round-2 --oneline -- page-cross-market.html
+```
+
+### 任务完成与清理
+
+```bash
+# 达标后自动创建 done 标记（Phase 8 中执行）
+git tag -a review/cross-market/done -m "task completed: score 8.8/10, 4 rounds"
+
+# 手动清理已完成任务的所有 tag
+git tag -l 'review/cross-market/*' | xargs git tag -d
+
+# 或使用 --cleanup 参数
+/ditto-design-review --cleanup cross-market
 ```
 
 ### 约束
 
-- Tag 命名：`review/round-{N}`（全局递增，不按页面分段）
+- Tag 命名：`review/<task>/round-{N}`（按任务分组，各任务独立递增）
+- 旧格式 `review/round-{N}` 视为 legacy，Phase 0 忽略，保留不动
 - 活跃文件是唯一被 review 修改的文件
-- 审查报告标注对应 tag，如 `Tag: review/round-2`
+- 审查报告标注对应 tag，如 `Tag: review/cross-market/round-2`
 - 不保存 HTML 副本、不自动截图到磁盘
 
 ---
@@ -192,10 +244,12 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 ┌─────────────────────────────────────────────────────────┐
 │ Phase 0: VERSION（git tag 快照）                    [sonnet] │
 │                                                         │
-│   1. 检查已有 tag（review/round-*）确定轮次号              │
-│   2. git add 目标文件 → git commit                      │
-│   3. git tag review/round-{N}                           │
-│   4. 后续修改直接在原文件上进行                           │
+│   1. 确定任务名（--task 参数 or 文件名映射）                │
+│   2. 检查 review/<task>/done 是否存在 → 已完成则提示      │
+│   3. git tag -l 'review/<task>/round-*' → 确定轮次号      │
+│   4. git add 目标文件 → git commit                      │
+│   5. git tag review/<task>/round-{N}                    │
+│   6. 后续修改直接在原文件上进行                           │
 ├─────────────────────────────────────────────────────────┤
 │ Phase 1: BASELINE（基线采集 + 跨页视觉指纹）        [sonnet] │
 │                                                         │
@@ -315,9 +369,12 @@ git log review/round-1..review/round-2 --oneline -- page-cross-market.html
 │      └─ 跨页一致性验证（对比其他页面视觉指纹）            │
 │  11. [--iterate] 汇总所有轮次反思记录到最终报告          │
 │   7. git commit 最终状态                                 │
-│   8. 生成审查报告 → docs/reviews/（含 tag 引用）          │
-│   9. 更新 design decisions（如有架构调整）                 │
-│  10. 生成待同步清单（嵌入报告末尾）                       │
+│   8. [--iterate 达标] 创建 done 标记：                      │
+│      git tag -a review/<task>/done -m                      │
+│        "task completed: score {X}/10, {N} rounds"          │
+│   9. 生成审查报告 → docs/reviews/（含 tag 引用）          │
+│  10. 更新 design decisions（如有架构调整）                 │
+│  11. 生成待同步清单（嵌入报告末尾）                       │
 ├─────────────────────────────────────────────────────────┤
 │ Phase 9: SYNC（反向同步，独立触发）                 [sonnet] │
 │                                                         │
