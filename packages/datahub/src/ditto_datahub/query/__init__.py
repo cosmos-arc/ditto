@@ -7,11 +7,10 @@ DataHub 查询门面.
 
 from ditto_datahub.query.market import MarketQuerist
 from ditto_datahub.query.metadata import MetadataQuerist
-from ditto_datahub.query.provider import BacktestProvider, LiveProvider
+from ditto_datahub.query.provider import ServiceBackedDataProvider
 
 __all__ = [
-    "BacktestProvider",
-    "LiveProvider",
     "MarketQuerist",
     "MetadataQuerist",
+    "ServiceBackedDataProvider",
 ]

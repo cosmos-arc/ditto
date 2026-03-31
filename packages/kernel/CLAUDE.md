@@ -23,7 +23,7 @@ Kernel 层是 **Shared Kernel — 类型 + Protocol 抽象 + 薄实现**，提�
 
 ### Protocol / 薄实现准入标准
 
-适用于 Clock、DataProvider、EventBus、Stage/Pipeline 等 Protocol 及其薄实现类
+适用于 Clock、DataProvider、EventBus 等 Protocol 及其薄实现类
 （SimulatedClock、RealtimeClock、SimpleEventBus）。
 
 1. **预期跨层使用**：至少被 2 个业务包消费
@@ -52,7 +52,6 @@ ditto_kernel/
 ├── enums.py           # 共享枚举类型（StrEnum）
 ├── clock.py           # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
 ├── provider.py        # DataProvider Protocol + 查询契约（BarQuery / InstrumentQuery）
-├── pipeline.py        # Stage/Pipeline Protocol + Context
 └── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
 ```
 

@@ -1,9 +1,9 @@
-"""BacktestProvider 单元测试."""
+"""ServiceBackedDataProvider 单元测试."""
 
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_datahub.query.provider import BacktestProvider
+from ditto_datahub.query.provider import ServiceBackedDataProvider
 from ditto_kernel.provider import BarQuery, InstrumentQuery
 
 
@@ -12,16 +12,16 @@ def _make_mock_service(name: str) -> MagicMock:
     return MagicMock(name=name)
 
 
-class TestBacktestProvider:
-    """BacktestProvider 测试."""
+class TestServiceBackedDataProvider:
+    """ServiceBackedDataProvider 测试."""
 
-    def _make_provider(self) -> tuple[BacktestProvider, dict[str, MagicMock]]:
+    def _make_provider(self) -> tuple[ServiceBackedDataProvider, dict[str, MagicMock]]:
         """创建 provider + mock services."""
         market = _make_mock_service("market")
         metadata = _make_mock_service("metadata")
         derived = _make_mock_service("derived")
 
-        provider = BacktestProvider(
+        provider = ServiceBackedDataProvider(
             market_service=market,
             metadata_service=metadata,
             derived_service=derived,
@@ -235,7 +235,7 @@ class TestBacktestProvider:
     # --- Protocol 一致性 ---
 
     def test_satisfies_data_provider_protocol(self) -> None:
-        """BacktestProvider 应满足 DataProvider Protocol."""
+        """ServiceBackedDataProvider 应满足 DataProvider Protocol."""
         provider, _ = self._make_provider()
         # Protocol 一致性：结构检查
         assert hasattr(provider, "get_bars")

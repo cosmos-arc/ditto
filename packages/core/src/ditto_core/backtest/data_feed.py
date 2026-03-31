@@ -197,7 +197,7 @@ class ProviderBackedDataFeed:
 
     通过 DataProvider.get_bars() 加载全量行情数据，
     通过 DataProvider.get_schedule() 获取交易日历。
-    适用于 BacktestProvider / LiveProvider 等实现。
+    适用于 ServiceBackedDataProvider 等实现。
 
     构造参数由 app 层（port/registry）注入。
     """
