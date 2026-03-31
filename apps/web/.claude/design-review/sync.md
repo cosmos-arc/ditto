@@ -7,7 +7,7 @@
 ## 触发
 
 ```bash
-/ditto-design-review <file> --sync
+/ditto-design-cycle <file> --sync
 ```
 
 ---

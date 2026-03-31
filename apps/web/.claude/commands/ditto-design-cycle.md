@@ -1,14 +1,14 @@
 ---
-name: ditto-design-review
-description: Use when reviewing HTML prototypes or UI pages for visual quality, UX interaction, feature completeness, copy clarity, or brand temperament. Supports 5-role parallel review, autonomous iteration, and doc sync.
+name: ditto-design-cycle
+description: Use when creating UI prototypes from blueprints, reviewing HTML prototypes or UI pages for visual quality, UX interaction, feature completeness, copy clarity, brand temperament, or information architecture. Supports --create mode (from blueprint to prototype), 6-role parallel review, autonomous iteration, and doc sync.
 disable-model-invocation: true
 ---
 
-# /ditto-design-review
+# /ditto-design-cycle
 
-多角色设计审查编排。聚焦设计交付物质量——UI 视觉、交互体验、功能可用性、界面语言、品牌气质、**信息效率**，通过五角色并行审查识别冲突与共识，协商优化达成一致。支持 `--iterate` 自主迭代模式，设定评分目标后自动循环优化直到达标。
+UI 创建与设计审查编排。支持两种模式：**创建模式**（`--create`，基于产品架构产出物生成 UI 原型）和**审查模式**（对已有原型进行六角色并行审查）。聚焦设计交付物质量——UI 视觉、交互体验、功能可用性、界面语言、品牌气质、**信息效率**、**信息架构**，通过六角色并行审查识别冲突与共识，协商优化达成一致。支持 `--iterate` 自主迭代模式，设定评分目标后自动循环优化直到达标。
 
-> **审查标准必须与产品定位匹配**，不使用通用 UI 准则。详见 [product-criteria.md](../design-review/product-criteria.md)。
+> **审查标准必须与产品定位匹配**，不使用通用 UI 准则。详见 [00_ditto_product_criteria.md](../../docs/designs/specs/00_ditto_product_criteria.md) 和 [review-scoring.md](../design-review/review-scoring.md)。
 > 评分从 4 维度扩展为 5 维度（克制度/一致性/高级感/品牌方向/**信息效率**）。
 
 ## 核心理念
@@ -36,42 +36,53 @@ disable-model-invocation: true
 
 ## 输入
 
-`$ARGUMENTS` — 审查目标 + 可选参数
+`$ARGUMENTS` — 目标 + 可选参数
 
 ```bash
+# === 创建模式（基于蓝图生成 UI 原型）===
+
+# 从页面蓝图创建页面并审查迭代
+/ditto-design-cycle page-markets.html --create --page markets
+
+# 创建 + 自主迭代直到达标
+/ditto-design-cycle page-markets.html --create --page markets --iterate --goal 8.0
+
+# === 审查模式（已有原型）===
+
 # 全流程审查
-/ditto-design-review docs/designs/specs/prototypes/style-b-graphite-studio/page-cross-market.html
+/ditto-design-cycle docs/designs/specs/prototypes/style-b-graphite-studio/page-cross-market.html
 
 # 指定质量等级（默认 polished）
-/ditto-design-review page-cross-market.html --level best
+/ditto-design-cycle page-cross-market.html --level best
 
 # 仅运行特定角色
-/ditto-design-review page-cross-market.html --ui
-/ditto-design-review page-cross-market.html --ux
-/ditto-design-review page-cross-market.html --product
-/ditto-design-review page-cross-market.html --copy
-/ditto-design-review page-cross-market.html --ad
+/ditto-design-cycle page-cross-market.html --ui
+/ditto-design-cycle page-cross-market.html --ux
+/ditto-design-cycle page-cross-market.html --product
+/ditto-design-cycle page-cross-market.html --ia
+/ditto-design-cycle page-cross-market.html --copy
+/ditto-design-cycle page-cross-market.html --ad
 
 # 仅精修（跳过审查，直接应用 impeccable skills）
-/ditto-design-review page-cross-market.html --polish
+/ditto-design-cycle page-cross-market.html --polish
 
 # 指定审查基准（对照某个原型版本）
-/ditto-design-review page-cross-market.html --baseline prototype-v2.html
+/ditto-design-cycle page-cross-market.html --baseline prototype-v2.html
 
 # 反向同步（验收后，将 review 变更写回设计文档）
-/ditto-design-review page-cross-market.html --sync
+/ditto-design-cycle page-cross-market.html --sync
 
 # 自主迭代优化（目标气质 8.5，最多 3 轮，无需人工介入）
-/ditto-design-review page-cross-market.html --iterate --goal 8.5 --max-rounds 3
+/ditto-design-cycle page-cross-market.html --iterate --goal 8.5 --max-rounds 3
 
 # 自主迭代优化（使用默认值：目标 8.0，最多 3 轮）
-/ditto-design-review page-cross-market.html --iterate
+/ditto-design-cycle page-cross-market.html --iterate
 
 # 指定任务名（覆盖文件名自动映射）
-/ditto-design-review page-cross-market.html --task cross-market-v2 --iterate
+/ditto-design-cycle page-cross-market.html --task cross-market-v2 --iterate
 
 # 清理已完成任务的历史 tag
-/ditto-design-review --cleanup cross-market
+/ditto-design-cycle --cleanup cross-market
 ```
 
 ---
@@ -151,7 +162,7 @@ git tag -a review/cross-market/done -m "task completed: score 8.8/10, 4 rounds"
 git tag -l 'review/cross-market/*' | xargs git tag -d
 
 # 或使用 --cleanup 参数
-/ditto-design-review --cleanup cross-market
+/ditto-design-cycle --cleanup cross-market
 ```
 
 ### 约束
@@ -172,13 +183,14 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 
 ---
 
-## 五个审查角色
+## 六个审查角色
 
 | 角色 | model | 核心关注 | 详情 |
 |------|-------|---------|------|
 | UI Designer | opus | Token 一致性、视觉层次、色彩排版 | [roles.md](../design-review/roles.md#ui-designer) |
 | UX Reviewer | sonnet | 可用性、可访问性、交互流程 | [roles.md](../design-review/roles.md#ux-reviewer) |
-| Product Mgr | sonnet | 功能完整性、用户场景、信息密度 | [roles.md](../design-review/roles.md#product-manager) |
+| Product Mgr | sonnet | 功能完整性、用户场景、业务规则 | [roles.md](../design-review/roles.md#product-manager) |
+| IA Specialist | sonnet | 信息架构、用户流程、页面蓝图、标签体系 | [roles.md](../design-review/roles.md#ia-specialist) |
 | Copy Editor | sonnet | 文案清晰度、语气一致、中文表达 | [roles.md](../design-review/roles.md#copy-editor) |
 | Art Director | opus | 克制度、高级感、品牌方向锚定 | [roles.md](../design-review/roles.md#art-director) |
 
@@ -191,12 +203,14 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 | 阶段 | 模型 | 理由 |
 |------|------|------|
 | Phase 0: VERSION | sonnet | git 操作，纯机械 |
+| Phase 0.5: CREATE [--create] | sonnet | 基于蓝图生成 UI 原型 |
 | Phase 1: BASELINE | sonnet | 数据采集 + 脚本执行 |
 | Phase 2: CREATIVE DIRECTION | **opus** | 创意方向判断，策略选择和蓝图定义 |
 | Phase 3: Art Director | **opus** | 审美判断核心，气质评分 |
 | Phase 3: UI Designer | **opus** | 视觉品质需要审美理解 |
 | Phase 3: UX Reviewer | sonnet | 交互分析偏结构化 |
 | Phase 3: Product Mgr | sonnet | 功能可用性偏结构化 |
+| Phase 3: IA Specialist | sonnet | 信息架构偏结构化 |
 | Phase 3: Copy Editor | sonnet | 文案审查最结构化 |
 | Phase 4: CONFLICT RES. | **opus** | 多角色冲突权衡取舍 |
 | Phase 5: DECISION | sonnet | 呈现选项，不涉及判断 |
@@ -251,12 +265,37 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │   5. git tag review/<task>/round-{N}                    │
 │   6. 后续修改直接在原文件上进行                           │
 ├─────────────────────────────────────────────────────────┤
+│ Phase 0.5: CREATE（基于蓝图生成 UI 原型）   [--create] [sonnet] │
+│                                                         │
+│   仅在 --create 模式下执行。基于 product-arch 产出物     │
+│   生成初始 HTML 原型，然后进入正常审查流程。             │
+│                                                         │
+│   1. 读取 product-arch 产出物                           │
+│      ├─ 01_product_information_architecture.md           │
+│      │   （页面角色、导航上下文、术语表）                  │
+│      ├─ 02_core_page_blueprints.md                      │
+│      │   （--page 指定页面：模块清单、优先级、交互设计）   │
+│      └─ 00_ditto_product_criteria.md                     │
+│          （密度准则、字号映射、间距梯度）                  │
+│   2. 读取 Design Token（tokens-style.css）               │
+│   3. 读取设计决策（docs/designs/decisions/）             │
+│   4. 读取同风格参考页面（如有已完成的原型）               │
+│   5. 调用 impeccable:frontend-design 生成 HTML 原型      │
+│      ├─ 传入蓝图中的模块清单和信息优先级                  │
+│      ├─ 传入产品规格中的密度/字号/间距标准                 │
+│      └─ 传入品牌 DNA（Graphite Studio 风格）             │
+│   6. 写入目标文件                                        │
+│   7. git add → commit → tag review/<task>/round-0        │
+├─────────────────────────────────────────────────────────┤
 │ Phase 1: BASELINE（基线采集 + 跨页视觉指纹）        [sonnet] │
 │                                                         │
 │   1. 读取目标文件（HTML 原型或 React 组件）               │
 │   2. 读取相关 spec 文档（作为参考）                        │
 │   3. 读取 Design Token 定义                              │
 │   4. 读取设计决策文档（Art Director 刚性锚点）            │
+│   4a. 读取信息架构文档（IA Specialist 参考锚点）          │
+│      ├─ 01_product_information_architecture.md           │
+│      └─ 02_core_page_blueprints.md                        │
 │   5. Chrome MCP: emulate(VP-STANDARD 1536x1080)          │
 │   6. Chrome MCP: evaluate_script（提取关键元素 styles）    │
 │   7. [多视口] VP-STANDARD 内容溢出检测（详见 viewport.md） │
@@ -278,11 +317,12 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 ├─────────────────────────────────────────────────────────┤
 │ Phase 3: PARALLEL REVIEW（并行审查）                      │
 │                                                         │
-│   启动 5 个并行 Agent，每个扮演一个角色：                   │
+│   启动 6 个并行 Agent，每个扮演一个角色：                   │
 │   ├─ Art Director Agent  → opus  → 气质问题清单 + 评分卡 │
 │   ├─ UI Designer Agent   → opus  → UI 问题清单           │
 │   ├─ UX Reviewer Agent   → sonnet → UX 问题清单          │
 │   ├─ Product Mgr Agent   → sonnet → 产品问题清单         │
+│   ├─ IA Specialist Agent → sonnet → 信息架构 + 流程问题  │
 │   └─ Copy Editor Agent   → sonnet → 文案问题清单         │
 │                                                         │
 │   每个角色的输出格式：                                    │
@@ -293,7 +333,7 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 ├─────────────────────────────────────────────────────────┤
 │ Phase 4: CONFLICT RESOLUTION（冲突协调）            [opus]  │
 │                                                         │
-│   1. 汇总 5 个角色的问题清单                              │
+│   1. 汇总 6 个角色的问题清单                              │
 │   2. 去重合并相似问题                                     │
 │   3. 识别角色间的冲突点                                   │
 │   4. 为每个冲突提供分析 + 折中方案                        │
@@ -308,6 +348,12 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │   │  安静的实现方式                                      │
 │   ├─ AD vs UX（affordance vs 高级感）→ UX 优先           │
 │   │  （可访问性不妥协）                                  │
+│   ├─ AD vs IA（信息密度 vs 克制留白）→ 协商，参考       │
+│   │  00_ditto_product_criteria.md 的 L1/L2/L3 分层     │
+│   ├─ IA vs UX（信息分组 vs 交互路径）→ 先 IA 定结构，   │
+│   │  再 UX 审交互                                      │
+│   ├─ IA vs PM（内容边界 vs 功能完整性）→ 协商，IA 可    │
+│   │  建议"移到其他页面"                                │
 │   └─ AD vs 所有（整体气质 vs 局部优化）→ AD 整体视角     │
 │     优先
 ├─────────────────────────────────────────────────────────┤
@@ -378,14 +424,14 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 ├─────────────────────────────────────────────────────────┤
 │ Phase 9: SYNC（反向同步，独立触发）                 [sonnet] │
 │                                                         │
-│   触发: /ditto-design-review <file> --sync              │
+│   触发: /ditto-design-cycle <file> --sync              │
 │   详情见 [sync.md](../design-review/sync.md)             │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ### 单角色审查
 
-使用 `--ui` / `--ux` / `--product` / `--copy` / `--ad` 参数时，只运行对应角色的审查，跳过冲突协调和全流程。
+使用 `--ui` / `--ux` / `--product` / `--ia` / `--copy` / `--ad` 参数时，只运行对应角色的审查，跳过冲突协调和全流程。
 
 ```
 BASELINE [sonnet] → 单角色审查 [按角色分配] → DECISION [sonnet] → FIX [sonnet] → VERIFY [sonnet]
@@ -397,6 +443,7 @@ BASELINE [sonnet] → 单角色审查 [按角色分配] → DECISION [sonnet] �
 | `--ui` | UI Designer | opus | 视觉品质需要审美判断 |
 | `--ux` | UX Reviewer | sonnet | 交互分析偏结构化 |
 | `--product` | Product Mgr | sonnet | 功能可用性偏结构化 |
+| `--ia` | IA Specialist | sonnet | 信息架构偏结构化 |
 | `--copy` | Copy Editor | sonnet | 文案审查最结构化 |
 | `--ad` | Art Director | opus | 审美判断核心 |
 

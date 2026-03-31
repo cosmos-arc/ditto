@@ -302,7 +302,7 @@ CREATIVE DIRECTION 是**每轮标配**的前置规划，突破机制是**特殊�
 ```
 
 > **注意**: 综合气质现在是 5 维平均值（含信息效率）。信息效率维度参考
-> [product-criteria.md](product-criteria.md) 中的模块分层密度准则和元素角色→字号映射。
+> [00_ditto_product_criteria.md](../../docs/designs/specs/00_ditto_product_criteria.md) 中的模块分层密度准则和元素角色→字号映射。
 
 ---
 

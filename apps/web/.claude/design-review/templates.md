@@ -204,7 +204,7 @@
 
 ## 待同步清单
 
-> 以下变更已通过验收，可使用 `/ditto-design-review {file} --sync` 同步到设计文档。
+> 以下变更已通过验收，可使用 `/ditto-design-cycle {file} --sync` 同步到设计文档。
 
 ### {spec 文档路径}
 | # | 变更类型 | 描述 | 来源 |
