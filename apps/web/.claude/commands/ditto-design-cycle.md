@@ -73,7 +73,7 @@ UI 创建与设计审查编排。支持两种模式：**创建模式**（`--crea
 /ditto-design-cycle page-cross-market.html --sync
 
 # 自主迭代优化（目标气质 8.5，最多 3 轮，无需人工介入）
-/ditto-design-cycle page-cross-market.html --iterate --goal 8.5 --max-rounds 3
+/ditto-design-cycle page-cross-market.html --iterate --goal 8.5 --max-rounds 3 --level best
 
 # 自主迭代优化（使用默认值：目标 8.0，最多 3 轮）
 /ditto-design-cycle page-cross-market.html --iterate
