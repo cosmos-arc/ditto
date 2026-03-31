@@ -1208,7 +1208,6 @@ class TestSuspendedE2E:
         """is_suspended=True 的标的不产生成交。"""
 
         import polars as pl
-        from ditto_core.backtest.data_feed import ParquetDataFeed
         from ditto_core.backtest.engine import (
             EngineConfig,
             EngineLoop,
@@ -1223,11 +1222,11 @@ class TestSuspendedE2E:
         from .conftest import (
             INSTRUMENT_IDS,
             TRADE_DATES_3,
+            TestParquetDataFeed,
             generate_3day_data,
             write_parquet_data,
         )
 
-        # 构建数据: 标的 1 全程停牌, 标的 2/3 正常
         suspended_data: dict[int, pl.DataFrame] = {}
         for iid in INSTRUMENT_IDS:
             if iid == 1:
@@ -1253,7 +1252,7 @@ class TestSuspendedE2E:
 
         # 写 parquet + 创建 DataFeed
         data_dir = write_parquet_data(tmp_path, suspended_data)
-        data_feed = ParquetDataFeed(
+        data_feed = TestParquetDataFeed(
             data_dir=data_dir,
             instrument_ids=INSTRUMENT_IDS,
             start_date="2026-01-05",
@@ -1326,7 +1325,6 @@ class TestExitOrderRules:
 
         import polars as pl
         from ditto_core.accounting.position import Position
-        from ditto_core.backtest.data_feed import ParquetDataFeed
         from ditto_core.backtest.engine import (
             EngineConfig,
             EngineLoop,
@@ -1342,11 +1340,11 @@ class TestExitOrderRules:
         from .conftest import (
             INSTRUMENT_IDS,
             TRADE_DATES_3,
+            TestParquetDataFeed,
             generate_3day_data,
             write_parquet_data,
         )
 
-        # 构建数据 — ETF-003 价格表现最差（持续下跌），top_k=2 会排除它
         data = generate_3day_data()
         # 确保 ETF-003 跌幅最大 → 会被 top_k=2 排除
         data[3] = pl.DataFrame(
@@ -1364,7 +1362,7 @@ class TestExitOrderRules:
         )
 
         data_dir = write_parquet_data(tmp_path, data)
-        data_feed = ParquetDataFeed(
+        data_feed = TestParquetDataFeed(
             data_dir=data_dir,
             instrument_ids=INSTRUMENT_IDS,
             start_date="2026-01-05",
@@ -1473,7 +1471,6 @@ class TestRuleRefsPreserved:
     def test_rule_refs_all_versions_preserved(self, tmp_path) -> None:
         """跨 3 日运行 — 不同 as_of_date 的规则版本都被保留。"""
 
-        from ditto_core.backtest.data_feed import ParquetDataFeed
         from ditto_core.backtest.engine import (
             EngineConfig,
             EngineLoop,
@@ -1488,13 +1485,14 @@ class TestRuleRefsPreserved:
 
         from .conftest import (
             INSTRUMENT_IDS,
+            TestParquetDataFeed,
             generate_3day_data,
             write_parquet_data,
         )
 
         data = generate_3day_data()
         data_dir = write_parquet_data(tmp_path, data)
-        data_feed = ParquetDataFeed(
+        data_feed = TestParquetDataFeed(
             data_dir=data_dir,
             instrument_ids=INSTRUMENT_IDS,
             start_date="2026-01-05",

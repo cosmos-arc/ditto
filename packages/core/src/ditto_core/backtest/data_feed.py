@@ -3,7 +3,6 @@ DataFeed — 市场数据切片协议 + 数据容器.
 
 MarketSnapshot 从 execution/reality/market.py 导入.
 Slice 是某日所有标的的聚合视图, 由 DataFeed 提供.
-ParquetDataFeed 是基于 parquet 文件的 DataFeed 实现.
 ProviderBackedDataFeed 通过 kernel.DataProvider Protocol 获取数据.
 """
 
@@ -11,7 +10,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
 import polars as pl
@@ -26,7 +24,6 @@ if TYPE_CHECKING:
 __all__ = [
     "DataFeed",
     "MarketSnapshot",
-    "ParquetDataFeed",
     "ProviderBackedDataFeed",
     "Slice",
 ]
@@ -105,85 +102,6 @@ def _row_to_snapshot(
             else None
         ),
     )
-
-
-# ---------------------------------------------------------------------------
-# ParquetDataFeed
-# ---------------------------------------------------------------------------
-
-
-class ParquetDataFeed:
-    """
-    Parquet-backed DataFeed — reads market data from parquet files.
-
-    每个标的对应一个 parquet 文件，命名约定: ``{instrument_id}.parquet``.
-    文件须包含以下列: trade_date, open, high, low, close, prev_close,
-    volume, amount, is_suspended. 可选列: limit_up, limit_down, avg_volume_20d.
-    """
-
-    def __init__(
-        self,
-        data_dir: str | Path,
-        instrument_ids: list[InstrumentId],
-        start_date: str,
-        end_date: str,
-    ) -> None:
-        self._data_dir = Path(data_dir)
-        self._instrument_ids = list(instrument_ids)
-        self._start_date = start_date
-        self._end_date = end_date
-        # Lazy-loaded: instrument_id → pl.DataFrame
-        self._data: dict[InstrumentId, pl.DataFrame] | None = None
-
-    # -- private helpers ---------------------------------------------------
-
-    def _load(self) -> dict[InstrumentId, pl.DataFrame]:
-        """Lazy-load all parquet files into memory."""
-        if self._data is not None:
-            return self._data
-
-        data: dict[InstrumentId, pl.DataFrame] = {}
-        for iid in self._instrument_ids:
-            path = self._data_dir / f"{iid}.parquet"
-            if not path.exists():
-                continue
-            df = pl.read_parquet(path)
-            data[iid] = df
-        self._data = data
-        return data
-
-    # -- public interface --------------------------------------------------
-
-    def trading_days(self) -> list[str]:
-        """Return sorted list of unique trade dates in [start_date, end_date]."""
-        data = self._load()
-        all_dates: set[str] = set()
-        for df in data.values():
-            dates = df["trade_date"].cast(pl.String)
-            all_dates.update(dates.to_list())
-
-        filtered = {d for d in all_dates if self._start_date <= d <= self._end_date}
-        return sorted(filtered)
-
-    def get_slice(self, date: str) -> Slice:
-        """
-        Build Slice with all instruments' data for the given date.
-
-        step_time is set to 15:00:00 (A-share close).
-        Instruments with no data for the date are excluded from bars.
-        """
-        data = self._load()
-        date_obj = datetime.strptime(date, "%Y-%m-%d")
-        step_time = date_obj.replace(hour=15, minute=0, second=0)
-
-        bars: dict[InstrumentId, MarketSnapshot] = {}
-        for iid, df in data.items():
-            row = df.filter(pl.col("trade_date") == date)
-            if row.height == 0:
-                continue
-            bars[iid] = _row_to_snapshot(date, iid, row.to_dicts()[0])
-
-        return Slice(trade_date=date, step_time=step_time, bars=bars)
 
 
 # ---------------------------------------------------------------------------

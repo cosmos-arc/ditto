@@ -11,6 +11,7 @@ Phase 3 新增:
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +19,7 @@ import polars as pl
 import pytest
 from ditto_core.accounting.account import Account
 from ditto_core.accounting.cash import CashBook
-from ditto_core.backtest.data_feed import ParquetDataFeed
+from ditto_core.backtest.data_feed import DataFeed, Slice
 from ditto_core.backtest.engine import (
     EngineConfig,
     EngineLoop,
@@ -40,10 +41,108 @@ from ditto_core.execution.reality import (
     FixedBpsSlippage,
     SimpleFeeModel,
 )
+from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.strategy.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
 )
+from ditto_kernel.identity import InstrumentId
+
+# ---------------------------------------------------------------------------
+# TestParquetDataFeed — 测试专用的 parquet 数据源
+# ---------------------------------------------------------------------------
+
+
+class TestParquetDataFeed:
+    """测试专用的 Parquet-backed DataFeed — 从 parquet 文件读取市场数据。
+
+    接受 ``list[int]`` 并内部转换为 ``InstrumentId``，方便测试使用。
+    """
+
+    def __init__(
+        self,
+        data_dir: str | Path,
+        instrument_ids: list[Any],
+        start_date: str,
+        end_date: str,
+    ) -> None:
+        self._data_dir = Path(data_dir)
+        self._instrument_ids = [InstrumentId(i) for i in instrument_ids]
+        self._start_date = start_date
+        self._end_date = end_date
+        self._data: dict[InstrumentId, pl.DataFrame] | None = None
+
+    def _load(self) -> dict[InstrumentId, pl.DataFrame]:
+        """Lazy-load all parquet files into memory."""
+        if self._data is not None:
+            return self._data
+
+        data: dict[InstrumentId, pl.DataFrame] = {}
+        for iid in self._instrument_ids:
+            path = self._data_dir / f"{iid}.parquet"
+            if not path.exists():
+                continue
+            data[iid] = pl.read_parquet(path)
+        self._data = data
+        return data
+
+    @staticmethod
+    def _row_to_snapshot(
+        date: str,
+        iid: InstrumentId,
+        row: dict[str, Any],
+    ) -> MarketSnapshot:
+        """Convert a polars row dict to a MarketSnapshot."""
+        return MarketSnapshot(
+            trade_date=date,
+            instrument_id=iid,
+            open=float(row["open"]),
+            high=float(row["high"]),
+            low=float(row["low"]),
+            close=float(row["close"]),
+            prev_close=float(row["prev_close"]),
+            volume=float(row["volume"]),
+            amount=float(row["amount"]),
+            is_suspended=bool(row["is_suspended"]),
+            limit_up=(
+                float(row["limit_up"]) if row.get("limit_up") is not None else None
+            ),
+            limit_down=(
+                float(row["limit_down"]) if row.get("limit_down") is not None else None
+            ),
+            avg_volume_20d=(
+                float(row["avg_volume_20d"])
+                if row.get("avg_volume_20d") is not None
+                else None
+            ),
+        )
+
+    def trading_days(self) -> list[str]:
+        """Return sorted list of unique trade dates in [start_date, end_date]."""
+        data = self._load()
+        all_dates: set[str] = set()
+        for df in data.values():
+            dates = df["trade_date"].cast(pl.String)
+            all_dates.update(dates.to_list())
+
+        filtered = {d for d in all_dates if self._start_date <= d <= self._end_date}
+        return sorted(filtered)
+
+    def get_slice(self, date: str) -> Slice:
+        """Build Slice with all instruments' data for the given date."""
+        data = self._load()
+        date_obj = datetime.strptime(date, "%Y-%m-%d")
+        step_time = date_obj.replace(hour=15, minute=0, second=0)
+
+        bars: dict[InstrumentId, MarketSnapshot] = {}
+        for iid, df in data.items():
+            row = df.filter(pl.col("trade_date") == date)
+            if row.height == 0:
+                continue
+            bars[iid] = self._row_to_snapshot(date, iid, row.to_dicts()[0])
+
+        return Slice(trade_date=date, step_time=step_time, bars=bars)
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -267,9 +366,9 @@ def three_day_parquet_dir(
 
 
 @pytest.fixture
-def three_day_data_feed(three_day_parquet_dir: Path) -> ParquetDataFeed:
-    """3 日 ParquetDataFeed。"""
-    return ParquetDataFeed(
+def three_day_data_feed(three_day_parquet_dir: Path) -> DataFeed:
+    """3 日 TestParquetDataFeed。"""
+    return TestParquetDataFeed(
         data_dir=three_day_parquet_dir,
         instrument_ids=INSTRUMENT_IDS,
         start_date="2026-01-05",
@@ -329,7 +428,7 @@ def assembled_engine_loop(
     etf_rotation_pipeline: Any,
     backtest_account: Account,
     pre_trade_check: CompositePreTradeCheck,
-    three_day_data_feed: ParquetDataFeed,
+    three_day_data_feed: DataFeed,
     fee_model: SimpleFeeModel,
 ) -> EngineLoop:
     """完整组装的 3 日回测引擎 — 所有组件均为真实实现。"""
@@ -371,9 +470,9 @@ def five_day_parquet_dir(
 
 
 @pytest.fixture
-def five_day_data_feed(five_day_parquet_dir: Path) -> ParquetDataFeed:
-    """5 日 ParquetDataFeed。"""
-    return ParquetDataFeed(
+def five_day_data_feed(five_day_parquet_dir: Path) -> DataFeed:
+    """5 日 TestParquetDataFeed。"""
+    return TestParquetDataFeed(
         data_dir=five_day_parquet_dir,
         instrument_ids=INSTRUMENT_IDS,
         start_date="2026-01-05",
@@ -398,7 +497,7 @@ def five_day_engine_config() -> EngineConfig:
 def five_day_engine_loop(
     five_day_engine_config: EngineConfig,
     etf_rotation_pipeline: Any,
-    five_day_data_feed: ParquetDataFeed,
+    five_day_data_feed: DataFeed,
     pre_trade_check: CompositePreTradeCheck,
     fee_model: SimpleFeeModel,
 ) -> EngineLoop:
@@ -465,9 +564,9 @@ def limit_up_parquet_dir(
 
 
 @pytest.fixture
-def limit_up_data_feed(limit_up_parquet_dir: Path) -> ParquetDataFeed:
-    """涨停场景 ParquetDataFeed。"""
-    return ParquetDataFeed(
+def limit_up_data_feed(limit_up_parquet_dir: Path) -> DataFeed:
+    """涨停场景 TestParquetDataFeed。"""
+    return TestParquetDataFeed(
         data_dir=limit_up_parquet_dir,
         instrument_ids=INSTRUMENT_IDS,
         start_date="2026-01-05",
@@ -479,7 +578,7 @@ def limit_up_data_feed(limit_up_parquet_dir: Path) -> ParquetDataFeed:
 def limit_up_engine_loop(
     three_day_engine_config: EngineConfig,
     etf_rotation_pipeline: Any,
-    limit_up_data_feed: ParquetDataFeed,
+    limit_up_data_feed: DataFeed,
     pre_trade_check: CompositePreTradeCheck,
     ashare_brokerage_model: BrokerageModel,
     ashare_fee_model: AShareFeeModel,
@@ -525,9 +624,9 @@ def limit_down_parquet_dir(
 
 
 @pytest.fixture
-def limit_down_data_feed(limit_down_parquet_dir: Path) -> ParquetDataFeed:
-    """跌停场景 ParquetDataFeed。"""
-    return ParquetDataFeed(
+def limit_down_data_feed(limit_down_parquet_dir: Path) -> DataFeed:
+    """跌停场景 TestParquetDataFeed。"""
+    return TestParquetDataFeed(
         data_dir=limit_down_parquet_dir,
         instrument_ids=INSTRUMENT_IDS,
         start_date="2026-01-05",
@@ -539,7 +638,7 @@ def limit_down_data_feed(limit_down_parquet_dir: Path) -> ParquetDataFeed:
 def limit_down_engine_loop(
     three_day_engine_config: EngineConfig,
     etf_rotation_pipeline: Any,
-    limit_down_data_feed: ParquetDataFeed,
+    limit_down_data_feed: DataFeed,
     pre_trade_check: CompositePreTradeCheck,
     ashare_brokerage_model: BrokerageModel,
     ashare_fee_model: AShareFeeModel,
@@ -585,9 +684,9 @@ def st_parquet_dir(
 
 
 @pytest.fixture
-def st_data_feed(st_parquet_dir: Path) -> ParquetDataFeed:
-    """ST 场景 ParquetDataFeed。"""
-    return ParquetDataFeed(
+def st_data_feed(st_parquet_dir: Path) -> DataFeed:
+    """ST 场景 TestParquetDataFeed。"""
+    return TestParquetDataFeed(
         data_dir=st_parquet_dir,
         instrument_ids=INSTRUMENT_IDS,
         start_date="2026-01-05",
@@ -599,7 +698,7 @@ def st_data_feed(st_parquet_dir: Path) -> ParquetDataFeed:
 def st_engine_loop(
     three_day_engine_config: EngineConfig,
     etf_rotation_pipeline: Any,
-    st_data_feed: ParquetDataFeed,
+    st_data_feed: DataFeed,
     pre_trade_check: CompositePreTradeCheck,
     ashare_brokerage_model: BrokerageModel,
     ashare_fee_model: AShareFeeModel,
