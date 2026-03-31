@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ditto — 跨市场概览</title>
+  <title>Ditto — 全市场总览</title>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,13 +49,22 @@
       --shadow-card-hover: 0 2px 8px oklch(0 0 0 / 0.2);
       --shadow-conclusion: -3px 0 8px -2px oklch(0.700 0.165 255 / 0.08);
       --shadow-context-bar: 0 1px 6px oklch(0.700 0.165 255 / 0.04);
-      /* Ambient tint tokens — R10: bumped for perceptible lead/lag distinction */
-      --tint-row-lead: oklch(0.670 0.170 20 / 0.05);
-      --tint-row-lead-hover: oklch(0.670 0.170 20 / 0.08);
-      --tint-row-lag: oklch(0.680 0.120 175 / 0.05);
-      --tint-row-lag-hover: oklch(0.680 0.120 175 / 0.08);
-      --tint-card-lead: oklch(0.670 0.170 20 / 0.06);
-      --tint-card-lag: oklch(0.680 0.120 175 / 0.06);
+      /* Ambient tint tokens — derived from market-up/down-fg for region switching */
+      --tint-row-lead: color-mix(in oklch, var(--market-up-fg) 5%, transparent);
+      --tint-row-lead-hover: color-mix(in oklch, var(--market-up-fg) 8%, transparent);
+      --tint-row-lag: color-mix(in oklch, var(--market-down-fg) 5%, transparent);
+      --tint-row-lag-hover: color-mix(in oklch, var(--market-down-fg) 8%, transparent);
+      --tint-card-lead: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
+      --tint-card-lag: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
+      /* Heat map tokens — 5-level, derived from market-up/down-fg */
+      --heat-up-3: color-mix(in oklch, var(--market-up-fg) 17%, transparent);
+      --heat-up-2: color-mix(in oklch, var(--market-up-fg) 10%, transparent);
+      --heat-up-1: color-mix(in oklch, var(--market-up-fg) 5%, transparent);
+      --heat-down-1: color-mix(in oklch, var(--market-down-fg) 5%, transparent);
+      --heat-down-2: color-mix(in oklch, var(--market-down-fg) 10%, transparent);
+      /* Status bar tokens */
+      --status-bar-bg: color-mix(in oklch, var(--surface-app) 90%, transparent);
+      --status-live-fg: var(--system-healthy-fg);
     }
 
     /* ══════════════════════════════════════════════
@@ -99,11 +108,14 @@
 
     /* R6: Card hover — elevate + ambient glow (R9 enhanced) */
     .market-card:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px oklch(0 0 0 / 0.3);
+      transform: none;
+      box-shadow: inset 0 0 0 1px var(--border-default);
+      border-color: var(--border-default);
     }
+    .market-card:hover .market-card-judgment { color: var(--text-secondary); }
+    .market-card:hover .card-sparkline polyline { opacity: 0.9; }
     .market-card.card-lead:hover {
-      box-shadow: 0 4px 12px oklch(0 0 0 / 0.3), 0 0 20px oklch(0.670 0.170 20 / 0.06);
+      box-shadow: inset 0 0 0 1px var(--border-default), 0 0 20px oklch(0.670 0.170 20 / 0.06);
     }
     .market-card.card-lag:hover {
       box-shadow: 0 4px 12px oklch(0 0 0 / 0.3), 0 0 20px oklch(0.680 0.120 175 / 0.06);
@@ -186,6 +198,7 @@
     /* Main content: no overflow, natural flow */
     .main-content {
       padding: 2rem var(--density-gutter);
+      padding-bottom: calc(2rem + 1.5rem); /* +status-bar height to prevent overlap */
       display: flex;
       flex-direction: column;
       gap: 1.5rem; /* 24px — product-criteria: L1→L1 section gap */
@@ -245,12 +258,14 @@
       to { opacity: 1; }
     }
     @keyframes badge-breathe {
-      0%, 100% { box-shadow: 0 0 0 0 oklch(0.75 0.16 55 / 0); }
-      50% { box-shadow: 0 0 0 3px oklch(0.75 0.16 55 / 0.15); }
+      0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--amber-500) 0%, transparent); }
+      50% { box-shadow: 0 0 0 2px color-mix(in oklch, var(--amber-500) 15%, transparent); }
     }
     @media (prefers-reduced-motion: reduce) {
       .context-bar-badge { animation: none !important; }
       .tab-band-body.active { animation: none !important; opacity: 1; transform: none; }
+      .matrix-conclusion { animation: none !important; opacity: 1; transform: none; }
+      .status-indicator { animation: none !important; opacity: 1; }
     }
 
     .context-bar-sep {
@@ -258,6 +273,32 @@
       height: var(--separator-size);
       background: var(--border-subtle);
     }
+
+    .context-bar-spacer {
+      flex: 1;
+    }
+
+    /* ── Scope Strip (L1: today's interpretation — secondary context layer) ── */
+    .scope-strip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-16);
+      padding: var(--space-6) var(--density-gutter);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-strip);
+      font-size: var(--font-size-12);
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .shell-radar .scope-strip {
+      position: sticky;
+      top: calc(var(--shell-header-height) + var(--shell-context-bar-height));
+      z-index: 14;
+      background: var(--surface-frosted-subtle);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .scope-strip::-webkit-scrollbar { display: none; }
 
     .context-bar-badge {
       display: inline-flex;
@@ -345,6 +386,14 @@
 
     .market-card-change.up { color: var(--market-up-fg); }
     .market-card-change.down { color: var(--market-down-fg); }
+
+    /* Aggregate card secondary index line — quieter visual weight */
+    .market-card-index-sub {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-regular);
+      color: var(--text-secondary);
+      margin-top: calc(var(--space-3) * -1);
+    }
 
     /* Lead / Lag card — ambient tint replaces accent border (R4: AD direction) */
 
@@ -500,6 +549,12 @@
       border-radius: var(--radius-4);
       border-left: var(--accent-bar-width) solid var(--brand-accent);
       line-height: 1.6;
+      animation: conclusion-appear 0.6s ease-out 0.3s both;
+    }
+    @keyframes conclusion-appear {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
     }
 
     .matrix-conclusion .lead { color: var(--market-up-fg); font-weight: var(--font-weight-semibold); }
@@ -555,23 +610,13 @@
     .matrix-table tr.row-lag td.neutral { color: var(--text-tertiary); }
 
     /* R10→R11: 5-level heat map — toned ~20% so numbers stay primary */
-    .matrix-table td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.17); }
-    .matrix-table td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.10); }
-    .matrix-table td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.05); }
-    .matrix-table td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.05); }
-    .matrix-table td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.10); }
-    /* R10: Heat map takes precedence over row tint (specificity 0-4-0 > 0-3-0) */
-    /* Full cross-domain coverage: all heat levels in both row types */
-    .matrix-table tr.row-lead td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.17); }
-    .matrix-table tr.row-lead td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.10); }
-    .matrix-table tr.row-lead td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.05); }
-    .matrix-table tr.row-lead td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.05); }
-    .matrix-table tr.row-lead td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.10); }
-    .matrix-table tr.row-lag td[data-heat="3"] { background: oklch(0.670 0.170 20 / 0.17); }
-    .matrix-table tr.row-lag td[data-heat="2"] { background: oklch(0.670 0.170 20 / 0.10); }
-    .matrix-table tr.row-lag td[data-heat="1"] { background: oklch(0.670 0.170 20 / 0.05); }
-    .matrix-table tr.row-lag td[data-heat="-1"] { background: oklch(0.680 0.120 175 / 0.05); }
-    .matrix-table tr.row-lag td[data-heat="-2"] { background: oklch(0.680 0.120 175 / 0.10); }
+        /* R1: 5-level heat map — tokenized for region switching */
+    .matrix-table td[data-heat="3"] { background: var(--heat-up-3); }
+    .matrix-table td[data-heat="2"] { background: var(--heat-up-2); }
+    .matrix-table td[data-heat="1"] { background: var(--heat-up-1); }
+    .matrix-table td[data-heat="-1"] { background: var(--heat-down-1); }
+    .matrix-table td[data-heat="-2"] { background: var(--heat-down-2); }
+    /* Heat map takes precedence over row tint — row-lead/lag inherit same tokens */
     .matrix-table tr:hover td[data-heat] { background-color: color-mix(in oklch, currentColor 15%, transparent); }
 
     /* Highlight top 2 / bottom 2 rows — ambient surface tint */
@@ -599,7 +644,7 @@
       gap: var(--space-4);
       flex-shrink: 0;
       padding: var(--space-8) 0; /* R10: 12→8, tighten L2 density */
-      margin-top: -0.5rem; /* L1→L2 gradient: 24px - 8px = 16px */
+      margin-top: calc(var(--space-8) * -1); /* L1→L2: tighten transition */
       background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.01) 10%, oklch(1 0 0 / 0.01) 90%, transparent);
     }
 
@@ -700,6 +745,9 @@
       color: var(--text-tertiary);
       text-transform: uppercase;
       letter-spacing: 0.06em;
+    }
+    .rail-section-title--alert { color: var(--text-secondary); }
+    .rail-section--risk { background: color-mix(in oklch, var(--amber-500) 4%, transparent); }
     }
 
     .rail-section-body {
@@ -809,6 +857,26 @@
 
     /* drilldown-arrow removed (R4: AD direction — cursor + hover sufficient) */
 
+    /* ── Quick Access — hidden utility links (R11: discovery) ── */
+    .rail-quick-access {
+      margin-top: auto;
+      padding-top: var(--space-8);
+      border-top: 1px solid var(--overlay-4);
+    }
+    .quick-access-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) 0;
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .quick-access-item:hover { color: var(--text-secondary); }
+    .quick-access-item:hover svg { opacity: 1; transform: translateX(2px); }
+    .quick-access-item svg { opacity: 0.6; transition: all 150ms var(--motion-easing-standard); }
+
     /* ══════════════════════════════════════════════
      * Tab Band (bottom, L3: supplementary perspective switch)
      * Ultra-lightweight: summary-only, no in-page expansion.
@@ -819,6 +887,7 @@
       border-top: 1px solid var(--overlay-6);
       display: flex;
       flex-direction: column;
+      padding-bottom: 1.5rem; /* +status-bar height to prevent overlap */
     }
 
     .tab-band-header {
@@ -993,7 +1062,7 @@
       align-items: center;
       height: 1.5rem;
       padding: 0 var(--space-8);
-      background: oklch(0.14 0.005 260 / 0.9);
+      background: var(--status-bar-bg);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       border-top: 1px solid var(--overlay-4);
@@ -1007,7 +1076,15 @@
     .status-indicator {
       width: 6px; height: 6px;
       border-radius: 50%;
-      background: oklch(0.72 0.19 155);
+      background: var(--status-live-fg);
+      animation: status-breathe 2s ease-in-out infinite;
+    }
+    @keyframes status-breathe {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+    .status-live {
+      color: var(--status-live-fg);
       margin-right: var(--space-4);
       flex-shrink: 0;
     }
@@ -1050,30 +1127,30 @@
   <div class="shell-radar">
 
     <!-- ===== Rail (sticky left) ===== -->
-    <nav class="shell-rail">
+    <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo">D</div>
-      <div class="rail-nav">
-        <div class="rail-icon" title="首页">
+      <div class="rail-nav" role="list">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon active" title="市场">
+        <div class="rail-icon active" role="listitem" tabindex="0" aria-label="市场" aria-current="page">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" title="研究">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="研究">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" title="交易">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" title="AI">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
-        <div class="rail-icon" title="平台">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="平台">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" title="设置">
+      <div class="rail-bottom" role="list">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="设置">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
         </div>
       </div>
@@ -1107,8 +1184,8 @@
         </div>
       </header>
 
-      <!-- Context Strip (unified: environment + today's interpretation) -->
-      <div class="context-bar" role="status" aria-label="市场环境摘要">
+      <!-- Context Bar (L1: objective environment variables) -->
+      <div class="context-bar" role="status" aria-label="市场环境">
         <div class="context-bar-item">
           <span class="context-bar-label">市态</span>
           <span class="context-bar-value regime-on">温和风险偏好</span>
@@ -1116,31 +1193,39 @@
         <div class="context-bar-sep"></div>
         <div class="context-bar-item context-bar-item--secondary">
           <span class="context-bar-label">波动</span>
-          <span class="context-bar-value">VIX 16.8</span>
+          <span class="context-bar-value">回落</span>
         </div>
         <div class="context-bar-item context-bar-item--secondary">
           <span class="context-bar-label">美元</span>
-          <span class="context-bar-value">102.4</span>
+          <span class="context-bar-value">走弱</span>
         </div>
+        <div class="context-bar-spacer"></div>
+        <div class="context-bar-item">
+          <span class="context-bar-label">预警</span>
+          <span class="context-bar-badge">2</span>
+        </div>
+      </div>
+
+      <!-- Scope Strip (L1: today's interpretation) -->
+      <div class="scope-strip" role="status" aria-label="今日解读">
         <div class="context-bar-item">
           <span class="context-bar-label">领涨</span>
           <span class="context-bar-value regime-on">港股科技 / 黄金</span>
         </div>
+        <div class="context-bar-sep"></div>
         <div class="context-bar-item">
           <span class="context-bar-label">领跌</span>
           <span class="context-bar-value regime-off">美元 / 长债</span>
         </div>
+        <div class="context-bar-sep"></div>
         <div class="context-bar-item context-bar-item--secondary">
-          <span class="context-bar-label">风格因子</span>
+          <span class="context-bar-label">风格</span>
           <span class="context-bar-value">成长占优</span>
         </div>
+        <div class="context-bar-sep"></div>
         <div class="context-bar-item">
           <span class="context-bar-label">事件</span>
           <span class="context-bar-value regime-mixed">FOMC 03:00</span>
-        </div>
-        <div class="context-bar-item">
-          <span class="context-bar-label">预警</span>
-          <span class="context-bar-badge">2</span>
         </div>
       </div>
 
@@ -1162,7 +1247,7 @@
                 沪深300 <span class="market-card-change up">+0.67%</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,10 10,12 20,8 30,6 40,9 50,4 60,2" stroke="var(--market-up-fg)"/></svg>
-              <div class="market-card-judgment">广度偏强，AI 半导体扩散</div>
+              <div class="market-card-judgment">涨跌比偏强，AI 半导体扩散</div>
             </div>
 
             <div class="market-card card-lead" tabindex="0" role="button" aria-label="港股 恒生科技 +1.9% 弹性领先 南向资金偏强">
@@ -1186,7 +1271,7 @@
                 纳指 <span class="market-card-change up">+0.4%</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,8 10,6 20,10 30,12 40,8 50,7 60,9" stroke="var(--text-tertiary)"/></svg>
-              <div class="market-card-judgment">广度偏弱，科技权重主导</div>
+              <div class="market-card-judgment">涨跌比偏弱，科技权重主导</div>
             </div>
 
             <div class="market-card card-lag" tabindex="0" role="button" aria-label="利率 US10Y +7bp 长端承压 降息预期降温">
@@ -1213,16 +1298,19 @@
               <div class="market-card-judgment">美元走弱，非美货币普涨</div>
             </div>
 
-            <div class="market-card card-lead" tabindex="0" role="button" aria-label="黄金 XAUUSD +1.2% 避险需求持续推升金价">
+            <div class="market-card card-lead" tabindex="0" role="button" aria-label="商品 黄金+1.2% 原油-0.3% 避险需求推升黄金，原油受OPEC观望压制">
               <div class="market-card-top">
-                <span class="market-card-name">黄金</span>
+                <span class="market-card-name">商品</span>
                 <span class="market-card-regime on">避险</span>
               </div>
               <div class="market-card-index">
-                XAUUSD <span class="market-card-change up">+1.2%</span>
+                黄金 <span class="market-card-change up">+1.2%</span>
+              </div>
+              <div class="market-card-index market-card-index-sub">
+                原油 <span class="market-card-change down">-0.3%</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,12 10,10 20,8 30,6 40,4 50,3 60,1" stroke="var(--market-up-fg)"/></svg>
-              <div class="market-card-judgment">避险需求持续推升金价</div>
+              <div class="market-card-judgment">避险推升黄金，原油 OPEC 观望</div>
             </div>
 
           </div>
@@ -1245,7 +1333,7 @@
                   <th scope="col">1W</th>
                   <th scope="col">1M</th>
                   <th scope="col">波动</th>
-                  <th scope="col">广度</th>
+                  <th scope="col">涨跌比</th>
                   <th scope="col">态势</th>
                 </tr>
               </thead>
@@ -1319,7 +1407,7 @@
 
           <!-- L3: Macro Drivers Strip (ultra-lightweight, no border) -->
           <div class="drivers-strip">
-            <span class="drivers-strip-label">核心驱动</span>
+            <span class="drivers-strip-label">宏观驱动</span>
             <div class="driver-item">
               <span class="driver-item-name">DXY</span>
               <span class="driver-item-val">102.4</span>
@@ -1373,24 +1461,24 @@
             <div class="rail-section-header">
               <span class="rail-section-title">市场脉搏</span>
             </div>
-            <div class="rail-section-body">
-              <div class="pulse-item">
+            <div class="rail-section-body" role="list">
+              <div class="pulse-item" role="listitem">
                 <span class="pulse-market">A股</span>
                 <span class="pulse-status on">偏强</span>
               </div>
-              <div class="pulse-item">
+              <div class="pulse-item" role="listitem">
                 <span class="pulse-market">港股</span>
                 <span class="pulse-status on">领先</span>
               </div>
-              <div class="pulse-item">
+              <div class="pulse-item" role="listitem">
                 <span class="pulse-market">美股</span>
                 <span class="pulse-status neutral">分化</span>
               </div>
-              <div class="pulse-item">
+              <div class="pulse-item" role="listitem">
                 <span class="pulse-market">黄金</span>
                 <span class="pulse-status on">偏强</span>
               </div>
-              <div class="pulse-item">
+              <div class="pulse-item" role="listitem">
                 <span class="pulse-market">美元</span>
                 <span class="pulse-status down">走弱</span>
               </div>
@@ -1398,20 +1486,20 @@
           </div>
 
           <!-- 2. Risk: 3 items, high+medium only -->
-          <div class="rail-section">
+          <div class="rail-section rail-section--risk">
             <div class="rail-section-header">
-              <span class="rail-section-title">风险与预警</span>
+              <span class="rail-section-title rail-section-title--alert">风险与预警</span>
             </div>
-            <div class="rail-section-body">
-              <div class="risk-item">
+            <div class="rail-section-body" role="list">
+              <div class="risk-item" role="listitem">
                 <span class="risk-dot high"></span>
                 <span class="risk-text high">FOMC 前夜，波动可能抬升</span>
               </div>
-              <div class="risk-item">
+              <div class="risk-item" role="listitem">
                 <span class="risk-dot high"></span>
                 <span class="risk-text high">美债长端上行压制成长</span>
               </div>
-              <div class="risk-item">
+              <div class="risk-item" role="listitem">
                 <span class="risk-dot medium"></span>
                 <span class="risk-text medium">A股科技拥挤度升高</span>
               </div>
@@ -1423,15 +1511,15 @@
             <div class="rail-section-header">
               <span class="rail-section-title">关键事件</span>
             </div>
-            <div class="rail-section-body">
-              <div class="event-item">
+            <div class="rail-section-body" role="list">
+              <div class="event-item" role="listitem">
                 <span class="event-time">今晚 20:30</span>
                 <div>
                   <div class="event-name">美国 CPI</div>
                   <div class="event-impact">美股 / 美债 / 美元</div>
                 </div>
               </div>
-              <div class="event-item">
+              <div class="event-item" role="listitem">
                 <span class="event-time">明日 02:00</span>
                 <div>
                   <div class="event-name">FOMC 利率决议</div>
@@ -1444,9 +1532,9 @@
           <!-- 4. Drilldown Recommendations -->
           <div class="rail-section">
             <div class="rail-section-header">
-              <span class="rail-section-title">关注方向</span>
+              <span class="rail-section-title">推荐下钻</span>
             </div>
-            <div class="rail-section-body">
+            <div class="rail-section-body" role="list">
               <div class="drilldown-item" tabindex="0" role="button" aria-label="下钻至 港股科技板块">
                 <span class="drilldown-market">港股科技</span>
                 <span class="drilldown-reason">弹性领先，南向资金持续流入</span>
@@ -1454,6 +1542,20 @@
               <div class="drilldown-item" tabindex="0" role="button" aria-label="下钻至 黄金避险主线">
                 <span class="drilldown-market">黄金避险</span>
                 <span class="drilldown-reason">避险需求推升，关注央行购金动态</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Access: hidden utility links (R11: discovery) -->
+          <div class="rail-section rail-quick-access" role="navigation" aria-label="快捷工具">
+            <div class="rail-section-body" role="list">
+              <div class="quick-access-item" tabindex="0" role="link" aria-label="打开图表实验室">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 14V2m0 0h12M2 2l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>图表实验室</span>
+              </div>
+              <div class="quick-access-item" tabindex="0" role="link" aria-label="打开事件日历">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M2 7h12M5 1v3M11 1v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <span>事件日历</span>
               </div>
             </div>
           </div>
@@ -1537,7 +1639,7 @@
       <!-- R9: Status Bar -->
       <div class="status-bar" role="status" aria-label="系统状态">
         <span class="status-indicator" aria-hidden="true"></span>
-        <span style="color: oklch(0.72 0.19 155)">LIVE</span>
+        <span class="status-live">LIVE</span>
         <span class="status-sep">│</span>
         <span>09:46:32 CST</span>
         <span class="status-sep">│</span>
@@ -1605,6 +1707,16 @@
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           // Placeholder: navigate to market detail
+        }
+      });
+    });
+
+    // Generic keyboard activation for interactive elements with role="button" or role="link"
+    document.querySelectorAll('.drilldown-item[role="button"], .view-detail-link[role="link"], .quick-access-item[role="link"], .rail-icon[role="listitem"]').forEach(el => {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          el.click();
         }
       });
     });
