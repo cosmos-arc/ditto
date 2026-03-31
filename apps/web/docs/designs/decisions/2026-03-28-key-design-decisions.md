@@ -1,7 +1,7 @@
 # Ditto App — Key Design Decisions
 
 > 决策时间：2026-03-28
-> 状态：Style B 已定稿，密度档位待最终选定
+> 状态：Style B 已定稿，Token Stabilization R1 完成
 
 ## 1. 视觉风格 → Style B: Graphite Studio
 

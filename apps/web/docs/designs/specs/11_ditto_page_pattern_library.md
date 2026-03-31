@@ -1,7 +1,7 @@
 # Ditto Page Pattern Library
 
-> **版本**：v1.0
-> **日期**：2026-03-28
+> **版本**：v1.2
+> **日期**：2026-03-31
 > **状态**：Final
 > **上游**：[10 Shell Family 规范](./10_ditto_shell_family_spec.md)、[01 产品信息架构](./01_product_information_architecture.md)
 > **下游**：[02 核心页面蓝图](./02_core_page_blueprints.md)
@@ -92,9 +92,7 @@ Global Command Center 是 Ditto 的全局起点。
 ### 4.2 适用页面
 
 - `/`
-- `/home/pending`
-- `/home/quick-actions`
-- `/home/alerts-summary`
+- `/ai`（轻量变体——聚焦 AI 产出总览与分流，参见 01 IA §7.5）
 
 未来也可以承接：
 
@@ -102,6 +100,10 @@ Global Command Center 是 Ditto 的全局起点。
 - Daily Prep
 - Close Review
 - Global Operations Snapshot
+
+<!-- 已降级/合并: `/home/pending` — 并入 `/` 首页内部区块 -->
+<!-- 已降级/合并: `/home/quick-actions` — 并入 `/` 首页内部区块 -->
+<!-- 已降级/合并: `/home/alerts-summary` — 并入 `/` 首页内部区块 -->
 
 ### 4.3 页面目标
 
@@ -209,19 +211,17 @@ Global Command Center 是 Ditto 的全局起点。
 - `/markets/a-shares`（Radar 变体）
 - `/markets/hk`（Radar 变体）
 - `/markets/us`（Radar 变体）
-- `/markets/screener`
 - `/markets/watchlist`
-- `/markets/map`
-- `/markets/intelligence/*`
+- `/markets/intelligence`
 - `/research`
 - `/research/regime`
-- `/research/backtest/compare`
-- `/research/ml`（若偏模型监控）
 - `/trading`
 - `/trading/positions`
-- `/trading/signals`
-- `/trading/risk/dashboard`
-- `/trading/risk/stress-test`
+- `/trading/risk`
+
+<!-- 已移除: `/trading/signals` — IA 归为 Queue/Ops Console（核心动词是 review/confirm/reject） -->
+<!-- 已修正: `/trading/risk/dashboard` → `/trading/risk` -->
+<!-- 已移除: `/trading/risk/stress-test` — IA 无此路由 -->
 
 ### 5.3 页面目标
 
@@ -299,7 +299,7 @@ Global Command Center 是 Ditto 的全局起点。
 
 表图并存，但主次仍需明确。
 
-适用：Trading overview、Portfolio overview、ML monitoring
+适用：Trading overview、Portfolio overview
 
 ### 5.6 典型区块
 
@@ -361,18 +361,17 @@ Catalog / Screener Workspace 用于对象集合的检索、筛选、浏览、批
 
 ### 6.2 适用页面
 
-- `/markets/catalog`
+- `/markets/screener`
 - `/markets/universes`
 - `/markets/calendar`
 - `/research/factors`
 - `/research/strategies`
 - `/research/backtest`
 - `/research/experiments`
-- `/research/output`
-- `/trading/accounts`
-- `/trading/portfolios`
 - `/trading/orders`
 - `/trading/trades`
+
+<!-- 已移除: `/markets/catalog` — IA 无此独立路由，由 `/markets` + `/markets/screener` 覆盖 -->
 
 ### 6.3 页面目标
 
@@ -470,10 +469,12 @@ Object Hub 是围绕**单一对象**展开的综合工作台。
 ### 7.2 适用页面
 
 - `/instruments/[id]`
-- `/research/factors/[id]/analysis`
-- `/research/strategies/[id]`
+- `/research/factors/[id]`
 - `/research/backtest/[id]`
-- `/research/experiments/[id]`
+
+<!-- 已修正: `/research/factors/[id]/analysis` → `/research/factors/[id]` -->
+<!-- 已移除: `/research/strategies/[id]` — Studio 统一后路由不再独立 -->
+<!-- 已移除: `/research/experiments/[id]` — IA 无此路由 -->
 
 未来也可扩展到：
 
@@ -591,14 +592,16 @@ Studio / Builder 用于构建、编辑、配置、对话、编排和调试。
 ### 8.2 适用页面
 
 - `/markets/chart-lab`
-- `/research/strategies/new`
-- `/research/strategies/[id]/editor`
-- `/research/backtest/new`
-- `/ai/market-analysis`
-- `/ai/stock-screener`
-- `/ai/strategy-assistant`
+- `/research/strategies/[id]/studio`
 - `/ai/copilot`
 - `/ai/agent`
+
+<!-- 已合并: `/research/strategies/new` → `/research/strategies/[id]/studio` -->
+<!-- 已合并: `/research/strategies/[id]/editor` → `/research/strategies/[id]/studio` -->
+<!-- 已合并: `/research/backtest/new` — IA 无此独立路由 -->
+<!-- 已合并: `/ai/market-analysis` → `/ai/copilot` 内部模式 -->
+<!-- 已合并: `/ai/stock-screener` → `/ai/copilot` 内部模式 -->
+<!-- 已合并: `/ai/strategy-assistant` → `/ai/copilot` 内部模式 -->
 
 ### 8.3 页面目标
 
@@ -724,12 +727,15 @@ Queue / Ops Console 用于处置、排查、监控、追踪系统级或流程级
 
 ### 9.2 适用页面
 
-- `/home/pending`
-- `/home/alerts-summary`
-- `/trading/alerts`
-- `/platform/data-quality`
-- `/platform/pipelines`
+- `/trading/signals`（核心动词是 review / confirm / reject，本质是队列操作）
+- `/platform`
 - 未来 incident/review pages
+
+<!-- 已降级/合并: `/home/pending` — 并入 `/` 首页内部区块 -->
+<!-- 已降级/合并: `/home/alerts-summary` — 并入 `/` 首页内部区块 -->
+<!-- 已移除: `/trading/alerts` — IA 无此路由 -->
+<!-- 已降级: `/platform/data-quality` — 收敛为 `/platform` 的 tab -->
+<!-- 已降级: `/platform/pipelines` — 收敛为 `/platform` 的 tab -->
 
 这类页面有时属于 Home，有时属于 Platform，但模式相同。
 
@@ -836,8 +842,8 @@ Ledger / Execution Console 用于订单、成交、执行状态、持仓流水�
 
 - `/trading/orders`
 - `/trading/trades`
-- `/trading/accounts`
-- `/trading/positions`（若更偏执行和账本）
+
+<!-- 已修正: `/trading/positions` → Analytical Overview Workspace（01 IA §8.6 / 10 Shell §10.4 / 11 Pattern §5.2 三处一致） -->
 
 未来可能的 fills / execution logs / broker routes
 
@@ -933,11 +939,12 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 
 ### 11.2 适用页面
 
-- `/platform/accounts`
-- `/platform/brokers`
-- `/platform/data-providers`
-- `/platform/notifications`
-- `/platform/settings`
+- `/platform/settings`（Data Providers / Brokers / 通用 Settings 作为 tab 承载）
+
+<!-- 已降级: `/platform/accounts` → `/platform/settings` 的 tab -->
+<!-- 已降级: `/platform/brokers` → `/platform/settings` 的 tab -->
+<!-- 已降级: `/platform/data-providers` → `/platform/settings` 的 tab -->
+<!-- 已移除: `/platform/notifications` — IA 无此路由 -->
 
 ### 11.3 页面目标
 
@@ -1031,23 +1038,24 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 
 | 路由 | Pattern |
 |------|---------|
-| `/` | Global Command Center |
-| `/home/pending` | Queue / Ops Console |
-| `/home/quick-actions` | Global Command Center |
-| `/home/alerts-summary` | Queue / Ops Console |
+| `/` | Global Command Center (orient 型) |
+| ~~`/home/pending`~~ | _降级：并入 `/` 首页内部区块_ |
+| ~~`/home/quick-actions`~~ | _降级：并入 `/` 首页内部区块_ |
+| ~~`/home/alerts-summary`~~ | _降级：并入 `/` 首页内部区块_ |
 
 ### 12.2 Markets & Intelligence
 
 | 路由 | Pattern |
 |------|---------|
 | `/markets` | Analytical Overview Workspace |
-| `/markets/catalog` | Catalog / Screener Workspace |
+| `/markets/a-shares` | Analytical Overview Workspace (Radar 变体) |
 | `/markets/screener` | Catalog / Screener Workspace |
 | `/markets/universes` | Catalog / Screener Workspace |
 | `/markets/watchlist` | Analytical Overview Workspace |
-| `/markets/map` | Analytical Overview Workspace |
+| ~~`/markets/catalog`~~ | _移除：IA Sitemap 无此独立路由，由 `/markets` + `/markets/screener` 覆盖_ |
+| ~~`/markets/map`~~ | _降级：并入 `/markets` 视图模式_ |
+| `/markets/intelligence` | Analytical Overview Workspace (tab 视图，收敛原 `/*` 子路由) |
 | `/markets/chart-lab` | Studio / Builder |
-| `/markets/intelligence/*` | Analytical Overview Workspace |
 | `/markets/calendar` | Catalog / Screener Workspace |
 | `/instruments/[id]` | Object Hub |
 
@@ -1057,59 +1065,67 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 |------|---------|
 | `/research` | Analytical Overview Workspace |
 | `/research/factors` | Catalog / Screener Workspace |
-| `/research/factors/[id]/analysis` | Object Hub |
+| `/research/factors/[id]` | Object Hub |
+| ~~`/research/factors/[id]/analysis`~~ | _修正：简化为 `/research/factors/[id]`_ |
 | `/research/strategies` | Catalog / Screener Workspace |
-| `/research/strategies/new` | Studio / Builder |
-| `/research/strategies/[id]/editor` | Studio / Builder |
-| `/research/strategies/[id]` | Object Hub |
+| `/research/strategies/[id]/studio` | Studio / Builder |
+| ~~`/research/strategies/new`~~ | _合并：统一为 `/strategies/[id]/studio`_ |
+| ~~`/research/strategies/[id]/editor`~~ | _合并：统一为 `/strategies/[id]/studio`_ |
+| ~~`/research/strategies/[id]`~~ | _移除：Studio 统一后原 Object Hub 路由不再独立存在_ |
 | `/research/backtest` | Catalog / Screener Workspace |
-| `/research/backtest/new` | Studio / Builder |
 | `/research/backtest/[id]` | Object Hub |
-| `/research/backtest/compare` | Analytical Overview Workspace |
+| ~~`/research/backtest/new`~~ | _移除：IA Sitemap 无此独立路由_ |
+| ~~`/research/backtest/compare`~~ | _移除：IA Sitemap 无此独立路由_ |
 | `/research/experiments` | Catalog / Screener Workspace |
-| `/research/experiments/[id]` | Object Hub |
+| ~~`/research/experiments/[id]`~~ | _移除：IA Sitemap 无此独立路由_ |
 | `/research/regime` | Analytical Overview Workspace |
-| `/research/ml` | Catalog / Screener Workspace |
-| `/research/output` | Catalog / Screener Workspace |
+| ~~`/research/ml`~~ | _降级：并入 Research 子域，非独立路由_ |
+| ~~`/research/output`~~ | _移除：IA Sitemap 无此路由_ |
 
-### 12.4 Portfolio & Trading
+### 12.4 Trading
 
 | 路由 | Pattern |
 |------|---------|
 | `/trading` | Analytical Overview Workspace |
-| `/trading/accounts` | Ledger / Execution Console |
-| `/trading/portfolios` | Catalog / Screener Workspace |
+| ~~`/trading/accounts`~~ | _移除：IA Sitemap 无此路由（v1.1 审计清理）_ |
+| ~~`/trading/portfolios`~~ | _移除：IA Sitemap 无此路由_ |
 | `/trading/positions` | Analytical Overview Workspace |
-| `/trading/signals` | Analytical Overview Workspace |
+| `/trading/signals` | Queue / Ops Console **[v1.1 审计修正]** |
 | `/trading/orders` | Ledger / Execution Console |
 | `/trading/trades` | Ledger / Execution Console |
-| `/trading/risk/dashboard` | Analytical Overview Workspace |
-| `/trading/risk/stress-test` | Analytical Overview Workspace |
-| `/trading/alerts` | Queue / Ops Console |
+| `/trading/risk` | Analytical Overview Workspace |
+| ~~`/trading/risk/dashboard`~~ | _修正：简化为 `/trading/risk`_ |
+| ~~`/trading/risk/stress-test`~~ | _移除：IA Sitemap 无此路由_ |
+| ~~`/trading/alerts`~~ | _移除：IA Sitemap 无此路由_ |
 
 ### 12.5 AI & Agent
 
 | 路由 | Pattern |
 |------|---------|
-| `/ai` | Object Hub |
-| `/ai/market-analysis` | Studio / Builder |
-| `/ai/stock-screener` | Studio / Builder |
-| `/ai/strategy-assistant` | Studio / Builder |
+| `/ai` | Global Command Center（轻量变体）——**已修正：从 Object Hub 重新归类（v1.1 审计对齐 01 IA + 10 Shell 决策）** |
 | `/ai/copilot` | Studio / Builder |
 | `/ai/agent` | Studio / Builder |
+| ~~`/ai/market-analysis`~~ | _合并：作为 `/ai/copilot` 内部模式_ |
+| ~~`/ai/stock-screener`~~ | _合并：作为 `/ai/copilot` 内部模式_ |
+| ~~`/ai/strategy-assistant`~~ | _合并：作为 `/ai/copilot` 内部模式_ |
 
 ### 12.6 Platform
 
 | 路由 | Pattern |
 |------|---------|
 | `/platform` | Queue / Ops Console |
-| `/platform/accounts` | Config / Integration Console |
-| `/platform/brokers` | Config / Integration Console |
-| `/platform/data-providers` | Config / Integration Console |
-| `/platform/data-quality` | Queue / Ops Console |
-| `/platform/pipelines` | Queue / Ops Console |
-| `/platform/notifications` | Config / Integration Console |
 | `/platform/settings` | Config / Integration Console |
+
+> **v1 收敛说明**：Platform 域在 v1 仅保留 2 条路由（`/platform` + `/platform/settings`）。
+> data-quality / pipelines 收敛为 `/platform` 的 tab；
+> accounts / data-providers / brokers 收敛为 `/platform/settings` 的 tab。
+> 详见 01 IA §7.6 及 [Platform 域收敛决策](../../docs/designs/decisions/2026-03-31-product-arch-audit-fixes.md)。
+
+<!-- 已降级: `/platform/accounts` → `/platform/settings` 的 tab -->
+<!-- 已降级: `/platform/brokers` → `/platform/settings` 的 tab -->
+<!-- 已降级: `/platform/data-providers` → `/platform/settings` 的 tab -->
+<!-- 已降级: `/platform/data-quality` → `/platform` 的 tab -->
+<!-- 已降级: `/platform/pipelines` → `/platform` 的 tab -->
 
 ---
 

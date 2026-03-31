@@ -1,7 +1,7 @@
 # Ditto Shell Family 规范
 
-> **版本**：v1.0
-> **日期**：2026-03-28
+> **版本**：v1.2
+> **日期**：2026-03-31
 > **状态**：Final
 > **上游**：[00 视觉宪章](./00_ditto_visual_constitution.md)、[01 产品信息架构](./01_product_information_architecture.md)
 > **下游**：[11 Page Pattern Library](./11_ditto_page_pattern_library.md)、[13 Component Spec](./13_ditto_component_spec.md)
@@ -95,9 +95,6 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 **对应页面**
 
 - `/`
-- `/home/pending`
-- `/home/quick-actions`
-- `/home/alerts-summary`
 - 未来若有全局 "morning brief / daily prep / global command" 页面，也走这一类
 
 **任务特征**
@@ -124,20 +121,17 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 
 **对应页面**
 
+- `/markets`
 - `/markets/a-shares`
-- `/markets/screener`
 - `/markets/watchlist`
-- `/markets/map`
-- `/markets/intelligence/*`
+- `/markets/intelligence`
 - `/research`
 - `/research/regime`
-- `/research/backtest/compare`
-- `/research/ml`（若偏模型监控）
 - `/trading`
 - `/trading/positions`
-- `/trading/signals`
-- `/trading/risk/dashboard`
-- `/trading/risk/stress-test`
+- `/trading/risk`
+
+<!-- 已修正: `/trading/signals` → Operations Console（核心动词是 review/confirm/reject） -->
 
 **任务特征**
 
@@ -242,21 +236,19 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 
 **对应页面**
 
-- `/markets/catalog`
+- `/markets/screener`
 - `/markets/universes`
 - `/markets/calendar`
 - `/research/factors`
 - `/research/strategies`
 - `/research/backtest`
 - `/research/experiments`
-- `/research/output`
-- `/trading/accounts`
-- `/trading/portfolios`
 - `/trading/orders`
 - `/trading/trades`
-- `/platform/brokers`
-- `/platform/data-providers`
-- `/platform/pipelines`
+
+<!-- 已降级: `/platform/brokers` → `/platform/settings` 的 tab -->
+<!-- 已降级: `/platform/data-providers` → `/platform/settings` 的 tab -->
+<!-- 已降级: `/platform/pipelines` → `/platform` 的 tab -->
 
 **任务特征**
 
@@ -283,10 +275,8 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 **对应页面**
 
 - `/instruments/[id]`
-- `/research/factors/[id]/analysis`
-- `/research/strategies/[id]`
+- `/research/factors/[id]`
 - `/research/backtest/[id]`
-- `/research/experiments/[id]`
 
 **任务特征**
 
@@ -314,12 +304,7 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 **对应页面**
 
 - `/markets/chart-lab`
-- `/research/strategies/new`
-- `/research/strategies/[id]/editor`
-- `/research/backtest/new`
-- `/ai/market-analysis`
-- `/ai/stock-screener`
-- `/ai/strategy-assistant`
+- `/research/strategies/[id]/studio`
 - `/ai/copilot`
 - `/ai/agent`
 
@@ -347,13 +332,12 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 **对应页面**
 
 - `/platform`
-- `/platform/accounts`
-- `/platform/data-quality`
-- `/platform/pipelines`
-- `/platform/notifications`
 - `/platform/settings`
-- `/trading/alerts`
 - 未来可能的 `/platform/logs`、`/platform/jobs`、`/platform/audit`
+
+<!-- 已降级: `/platform/accounts` → `/platform/settings` 的 tab -->
+<!-- 已降级: `/platform/data-quality` → `/platform` 的 tab -->
+<!-- 已降级: `/platform/pipelines` → `/platform` 的 tab -->
 
 **任务特征**
 
@@ -544,7 +528,6 @@ Command Center 是 Ditto 的全局指挥台。它不是某一模块的首页，�
 #### 6.2.4 适用主仪表
 
 - Factor monitor
-- Screener
 - Holdings / positions
 - Risk utilization
 - Signal monitor
@@ -552,11 +535,11 @@ Command Center 是 Ditto 的全局指挥台。它不是某一模块的首页，�
 
 #### 6.2.5 可变体
 
-**Table-first** — 主区以主表为核心。适合：Research overview、Screener、Positions、Signals
+**Table-first** — 主区以主表为核心。适合：Research overview、Positions、Signals
 
-**Chart-first** — 主区以主图为核心。适合：Markets overview、Risk dashboard、Backtest compare、Regime lab
+**Chart-first** — 主区以主图为核心。适合：Markets overview、Risk dashboard、Regime lab
 
-**Mixed** — 主区表图并存，但主次必须明确。适合：Trading overview、Portfolio overview
+**Mixed** — 主区表图并存，但主次必须明确。适合：Trading overview
 
 ---
 
@@ -698,7 +681,7 @@ Studio Shell 是 Ditto 的构建型工作区。适用于策略构建、图表实
 
 #### 6.5.4 适用页面
 
-Strategy Builder、Strategy Editor、Backtest New、Chart Lab、AI Copilot、AI Market Analysis、AI Agent Workspace
+Strategy Builder、Chart Lab、AI Copilot、AI Agent Workspace
 
 #### 6.5.5 Studio 内部常见面板
 
@@ -738,7 +721,7 @@ Operations Console 用于平台管理、系统配置、任务流水、质量监�
 
 #### 6.6.4 适用页面
 
-Platform overview、Accounts、Brokers、Data providers、Data quality、Pipelines、Notifications、Settings、Trading alerts
+Platform overview、Accounts [Shell 扩展]、Brokers、Data providers、Data quality、Pipelines、Settings
 
 #### 6.6.5 Ops Detail Panel 适合放
 
@@ -812,84 +795,103 @@ Platform overview、Accounts、Brokers、Data providers、Data quality、Pipelin
 | 路径 | Shell |
 |------|-------|
 | `/` | Command Center |
-| `/home/pending` | Command Center |
-| `/home/quick-actions` | Command Center |
-| `/home/alerts-summary` | Command Center |
+
+<!-- 已降级/合并: `/home/pending` — Home 角色 orient 型，非 execute，降级移除 -->
+<!-- 已降级/合并: `/home/quick-actions` — Home 角色 orient 型，非 execute，降级移除 -->
+<!-- 已降级/合并: `/home/alerts-summary` — Home 角色 orient 型，非 execute，降级移除 -->
 
 ### 10.2 Markets & Intelligence
 
 | 路径 | Shell |
 |------|-------|
 | `/markets` | Analytical Workspace |
-| `/markets/catalog` | Catalog Workspace |
-| `/markets/screener` | Analytical Workspace |
+| `/markets/a-shares` | Analytical Workspace |
+| `/markets/screener` | Catalog Workspace |
 | `/markets/universes` | Catalog Workspace |
 | `/markets/watchlist` | Analytical Workspace |
-| `/markets/map` | Analytical Workspace |
 | `/markets/chart-lab` | Studio |
-| `/markets/intelligence/*` | Analytical Workspace |
+| `/markets/intelligence` | Analytical Workspace |
 | `/markets/calendar` | Catalog Workspace |
 | `/instruments/[id]` | Object Hub |
 
-### 10.3 Research & ML
+<!-- 已降级/合并: `/markets/catalog` — IA 无此路由，screener 已承担目录职能 -->
+<!-- 已降级/合并: `/markets/map` — 并入 `/markets` 视图模式 -->
+<!-- 已降级/合并: `/markets/intelligence/*` → `/markets/intelligence` — 收敛为 tab 视图 -->
+
+### 10.3 Research
 
 | 路径 | Shell |
 |------|-------|
 | `/research` | Analytical Workspace |
 | `/research/factors` | Catalog Workspace |
-| `/research/factors/[id]/analysis` | Object Hub |
+| `/research/factors/[id]` | Object Hub |
 | `/research/strategies` | Catalog Workspace |
-| `/research/strategies/new` | Studio |
-| `/research/strategies/[id]/editor` | Studio |
-| `/research/strategies/[id]` | Object Hub |
+| `/research/strategies/[id]/studio` | Studio |
 | `/research/backtest` | Catalog Workspace |
-| `/research/backtest/new` | Studio |
 | `/research/backtest/[id]` | Object Hub |
-| `/research/backtest/compare` | Analytical Workspace |
 | `/research/experiments` | Catalog Workspace |
-| `/research/experiments/[id]` | Object Hub |
 | `/research/regime` | Analytical Workspace |
-| `/research/ml` | Catalog 或 Analytical（取决于偏"模型库"还是"模型监控"） |
-| `/research/output` | Catalog Workspace |
 
-### 10.4 Portfolio & Trading
+<!-- 已降级/合并: `/research/factors/[id]/analysis` → `/research/factors/[id]` — 路由简化 -->
+<!-- 已降级/合并: `/research/strategies/new` — 统一为 `/research/strategies/[id]/studio` -->
+<!-- 已降级/合并: `/research/strategies/[id]/editor` — 统一为 `/research/strategies/[id]/studio` -->
+<!-- 已降级/合并: `/research/strategies/[id]` — 统一为 `/research/strategies/[id]/studio` -->
+<!-- 已降级/合并: `/research/backtest/new` — IA 无此路由 -->
+<!-- 已降级/合并: `/research/backtest/compare` — IA 无此路由 -->
+<!-- 已降级/合并: `/research/experiments/[id]` — IA 无此路由 -->
+<!-- 已降级/合并: `/research/ml` — 降级为 Research 子域 -->
+<!-- 已降级/合并: `/research/output` — IA 无此路由 -->
+
+### 10.4 Trading
 
 | 路径 | Shell |
 |------|-------|
 | `/trading` | Analytical Workspace |
-| `/trading/accounts` | Catalog Workspace |
-| `/trading/portfolios` | Catalog Workspace |
 | `/trading/positions` | Analytical Workspace |
-| `/trading/signals` | Analytical Workspace |
+| `/trading/signals` | Operations Console **[v1.1 审计修正：核心动词是 review/confirm/reject，归属 Ops Console]** |
 | `/trading/orders` | Catalog Workspace |
 | `/trading/trades` | Catalog Workspace |
-| `/trading/risk/dashboard` | Analytical Workspace |
-| `/trading/risk/stress-test` | Analytical Workspace |
-| `/trading/alerts` | Operations Console |
+| `/trading/risk` | Analytical Workspace |
 
-### 10.5 AI & Agent
+<!-- 已降级/合并: `/trading/risk/dashboard` → `/trading/risk` — 路由简化 -->
+<!-- 已降级/合并: `/trading/risk/stress-test` — IA 无此路由 -->
+<!-- 已降级/合并: `/trading/accounts` — IA 无此路由 -->
+<!-- 已降级/合并: `/trading/portfolios` — IA 无此路由 -->
+<!-- 已降级/合并: `/trading/alerts` — IA 无此路由 -->
+
+### 10.5 AI
 
 | 路径 | Shell |
 |------|-------|
-| `/ai` | Object Hub 或轻量 Command Center 变体（建议偏 AI Hub） |
-| `/ai/market-analysis` | Studio |
-| `/ai/stock-screener` | Studio |
-| `/ai/strategy-assistant` | Studio |
+| `/ai` | Command Center（轻量变体——聚焦 AI 产出总览与分流） |
 | `/ai/copilot` | Studio |
 | `/ai/agent` | Studio |
+
+> **v1.1 审计修正**：`/ai` 从原先的"Object Hub 或 Command Center 变体"明确为 **Command Center 轻量变体**。
+> 与 Home 同属 orient 模式（定优先级+分流），但聚焦 AI 产出。
+> 详见 01 IA §7.5 及 [AI 域 Pattern 决策](../../docs/designs/decisions/2026-03-31-product-arch-audit-fixes.md)。
+
+<!-- 已降级/合并: `/ai/market-analysis` — 合并为 `/ai/copilot` 内部模式 -->
+<!-- 已降级/合并: `/ai/stock-screener` — 合并为 `/ai/copilot` 内部模式 -->
+<!-- 已降级/合并: `/ai/strategy-assistant` — 合并为 `/ai/copilot` 内部模式 -->
 
 ### 10.6 Platform
 
 | 路径 | Shell |
 |------|-------|
 | `/platform` | Operations Console |
-| `/platform/accounts` | Operations Console |
-| `/platform/brokers` | Operations Console |
-| `/platform/data-providers` | Operations Console |
-| `/platform/data-quality` | Operations Console |
-| `/platform/pipelines` | Operations Console |
-| `/platform/notifications` | Operations Console |
-| `/platform/settings` | Operations Console |
+| `/platform/settings` | Operations Console **[Config 变体]** |
+
+> **v1 收敛说明**：Platform 域在 v1 仅保留 2 条路由（`/platform` + `/platform/settings`）。
+> data-quality / pipelines 收敛为 `/platform` 的 tab；
+> accounts / data-providers / brokers 收敛为 `/platform/settings` 的 tab。
+> 详见 01 IA §7.6 及 [Platform 域收敛决策](../../docs/designs/decisions/2026-03-31-product-arch-audit-fixes.md)。
+
+<!-- 已降级: `/platform/accounts` → `/platform/settings` 的 tab -->
+<!-- 已降级: `/platform/data-quality` → `/platform` 的 tab -->
+<!-- 已降级: `/platform/pipelines` → `/platform` 的 tab -->
+<!-- 已降级: `/platform/data-providers` → `/platform/settings` 的 tab -->
+<!-- 已降级: `/platform/brokers` → `/platform/settings` 的 tab -->
 
 ---
 
