@@ -15,7 +15,6 @@ from pathlib import Path
 import polars as pl
 from ditto_core.accounting.account import Account
 from ditto_core.accounting.cash import CashBook
-from ditto_core.backtest.data_feed import ParquetDataFeed
 from ditto_core.backtest.engine import (
     EngineConfig,
     EngineLoop,
@@ -49,6 +48,7 @@ from .conftest import (
     INSTRUMENT_IDS,
     TRADE_DATES_3,
     TRADE_DATES_5,
+    TestParquetDataFeed,
     _make_market_df,
     write_parquet_data,
 )
@@ -154,7 +154,7 @@ def _build_engine_with_risk_and_audit(
     """
     data_dir = write_parquet_data(tmp_path, data)
 
-    data_feed = ParquetDataFeed(
+    data_feed = TestParquetDataFeed(
         data_dir=data_dir,
         instrument_ids=INSTRUMENT_IDS,
         start_date=start_date,

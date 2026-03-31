@@ -17,7 +17,6 @@ import pytest
 from ditto_core.accounting.account import Account
 from ditto_core.accounting.cash import CashBook
 from ditto_core.accounting.fills import FillEvent
-from ditto_core.backtest.data_feed import ParquetDataFeed
 from ditto_core.backtest.engine import (
     EngineConfig,
     EngineLoop,
@@ -63,6 +62,7 @@ from ditto_core.strategy.templates.etf_rotation import (
 from .conftest import (
     INITIAL_CASH,
     INSTRUMENT_IDS,
+    TestParquetDataFeed,
     generate_3day_data,
     write_parquet_data,
 )
@@ -160,7 +160,7 @@ def _build_engine_loop(
     instance_dir = tmp_path / f"engine_{instance_id}"
     instance_dir.mkdir(parents=True)
     data_dir = write_parquet_data(instance_dir, data)
-    data_feed = ParquetDataFeed(
+    data_feed = TestParquetDataFeed(
         data_dir=data_dir,
         instrument_ids=INSTRUMENT_IDS,
         start_date=config.start_date,
@@ -206,7 +206,7 @@ def _build_audited_engine_loop(
     instance_dir = tmp_path / f"audited_{instance_id}"
     instance_dir.mkdir(parents=True)
     data_dir = write_parquet_data(instance_dir, data)
-    data_feed = ParquetDataFeed(
+    data_feed = TestParquetDataFeed(
         data_dir=data_dir,
         instrument_ids=INSTRUMENT_IDS,
         start_date=config.start_date,

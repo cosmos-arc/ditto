@@ -2,7 +2,6 @@
 
 from ditto_core.backtest.data_feed import (
     DataFeed,
-    ParquetDataFeed,
     Slice,
 )
 from ditto_core.backtest.engine import (
@@ -56,7 +55,6 @@ __all__ = [
     "ExecutionAuditCollector",
     "MarketSnapshot",
     "OrderCheckResult",
-    "ParquetDataFeed",
     "PortfolioStatistics",
     "PostTradeRiskGuard",
     "PreTradeContext",

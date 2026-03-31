@@ -14,7 +14,6 @@ from typing import Any
 import polars as pl
 from ditto_core.accounting.account import Account
 from ditto_core.accounting.cash import CashBook
-from ditto_core.backtest.data_feed import ParquetDataFeed
 from ditto_core.backtest.engine import (
     EngineConfig,
     EngineLoop,
@@ -34,6 +33,110 @@ from ditto_core.execution.reality import (
     SimpleFeeModel,
 )
 from ditto_core.strategy.pipeline import StrategyPipeline
+
+# ---------------------------------------------------------------------------
+# TestParquetDataFeed — 测试专用的 parquet 数据源（与 backtest/conftest.py 一致）
+# ---------------------------------------------------------------------------
+
+
+class TestParquetDataFeed:
+    """测试专用的 Parquet-backed DataFeed — 从 parquet 文件读取市场数据。
+
+    接受 ``list[int]`` 并内部转换为 ``InstrumentId``，方便测试使用。
+    """
+
+    def __init__(
+        self,
+        data_dir: str | Path,
+        instrument_ids: list[Any],
+        start_date: str,
+        end_date: str,
+    ) -> None:
+        from ditto_kernel.identity import InstrumentId
+
+        self._data_dir = Path(data_dir)
+        self._instrument_ids = [InstrumentId(i) for i in instrument_ids]
+        self._start_date = start_date
+        self._end_date = end_date
+        self._data: dict[Any, pl.DataFrame] | None = None
+
+    def _load(self) -> dict[Any, pl.DataFrame]:
+        """Lazy-load all parquet files into memory."""
+        if self._data is not None:
+            return self._data
+
+        data: dict[Any, pl.DataFrame] = {}
+        for iid in self._instrument_ids:
+            path = self._data_dir / f"{iid}.parquet"
+            if not path.exists():
+                continue
+            data[iid] = pl.read_parquet(path)
+        self._data = data
+        return data
+
+    @staticmethod
+    def _row_to_snapshot(
+        date: str,
+        iid: Any,
+        row: dict[str, Any],
+    ) -> Any:
+        """Convert a polars row dict to a MarketSnapshot."""
+        from ditto_core.execution.reality.market import MarketSnapshot
+
+        return MarketSnapshot(
+            trade_date=date,
+            instrument_id=iid,
+            open=float(row["open"]),
+            high=float(row["high"]),
+            low=float(row["low"]),
+            close=float(row["close"]),
+            prev_close=float(row["prev_close"]),
+            volume=float(row["volume"]),
+            amount=float(row["amount"]),
+            is_suspended=bool(row["is_suspended"]),
+            limit_up=(
+                float(row["limit_up"]) if row.get("limit_up") is not None else None
+            ),
+            limit_down=(
+                float(row["limit_down"]) if row.get("limit_down") is not None else None
+            ),
+            avg_volume_20d=(
+                float(row["avg_volume_20d"])
+                if row.get("avg_volume_20d") is not None
+                else None
+            ),
+        )
+
+    def trading_days(self) -> list[str]:
+        """Return sorted list of unique trade dates in [start_date, end_date]."""
+        data = self._load()
+        all_dates: set[str] = set()
+        for df in data.values():
+            dates = df["trade_date"].cast(pl.String)
+            all_dates.update(dates.to_list())
+
+        filtered = {d for d in all_dates if self._start_date <= d <= self._end_date}
+        return sorted(filtered)
+
+    def get_slice(self, date: str) -> Any:
+        """Build Slice with all instruments' data for the given date."""
+        from datetime import datetime as _dt
+
+        from ditto_core.backtest.data_feed import Slice
+
+        data = self._load()
+        date_obj = _dt.strptime(date, "%Y-%m-%d")
+        step_time = date_obj.replace(hour=15, minute=0, second=0)
+
+        bars: dict[Any, Any] = {}
+        for iid, df in data.items():
+            row = df.filter(pl.col("trade_date") == date)
+            if row.height == 0:
+                continue
+            bars[iid] = self._row_to_snapshot(date, iid, row.to_dicts()[0])
+
+        return Slice(trade_date=date, step_time=step_time, bars=bars)
+
 
 # ---------------------------------------------------------------------------
 # 常量（与 backtest/conftest.py 保持一致）
@@ -303,7 +406,7 @@ def build_snapshot_engine(
 
     """
     data_dir = write_parquet_data(tmp_path, data)
-    data_feed = ParquetDataFeed(
+    data_feed = TestParquetDataFeed(
         data_dir=data_dir,
         instrument_ids=instrument_ids,
         start_date=start_date,
