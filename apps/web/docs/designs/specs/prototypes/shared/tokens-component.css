@@ -1,0 +1,71 @@
+/* ─────────────────────────────────────────────
+ * Ditto Design Tokens — Component Layer
+ * Layer 5: Structural tokens for UI components
+ * Sizing, padding, radius patterns for buttons,
+ * badges, cards, panels, inputs, tabs, etc.
+ * ───────────────────────────────────────────── */
+
+:root {
+  /* ── Button ── */
+  --btn-sm-padding-y:  2px;
+  --btn-sm-padding-x:  var(--space-6);
+  --btn-padding-y:     var(--space-4);
+  --btn-padding-x:     var(--space-8);
+  --btn-cta-padding-x: var(--space-10);
+  --btn-radius:        var(--radius-4);
+  --btn-font-size:     var(--font-size-12);
+  --btn-sm-font-size:  var(--font-size-10);
+  --btn-height:        var(--density-action-height);
+
+  /* ── Badge / Tag / Chip ── */
+  --badge-sm-padding-y:  1px;
+  --badge-sm-padding-x:  var(--space-4);
+  --badge-sm-radius:     var(--radius-2);
+  --badge-md-padding-y:  2px;
+  --badge-md-padding-x:  var(--space-6);
+  --badge-md-radius:     var(--radius-4);
+  --badge-pill-radius:   var(--radius-12);
+  --badge-font-size:     var(--font-size-10);
+  --badge-font-weight:   var(--font-weight-medium);
+  --badge-dot-size:      7px;
+  --badge-dot-offset:    6px;
+  --badge-dot-border:    1.5px;
+  --badge-count-height:  16px;
+  --badge-count-min-w:   16px;
+
+  /* ── Card / Panel ── */
+  --card-radius:          var(--radius-6);
+  --card-padding:         var(--space-10) var(--space-12);
+  --card-border:          1px solid var(--border-subtle);
+  --panel-radius:         var(--radius-8);
+  --panel-header-padding: var(--space-8) var(--space-12);
+  --panel-border:         1px solid var(--border-subtle);
+  --section-divider:      1px solid var(--border-subtle);
+
+  /* ── Input / Select ── */
+  --input-sm-padding-y:  var(--space-2);
+  --input-sm-padding-x:  var(--space-8);
+  --input-sm-radius:     var(--radius-4);
+  --input-padding-y:     var(--space-6);
+  --input-padding-x:     var(--space-12);
+  --input-radius:        var(--radius-6);
+  --input-font-size:     var(--font-size-12);
+
+  /* ── Tab ── */
+  --tab-pill-padding-y:    var(--space-4);
+  --tab-pill-padding-x:    var(--space-8);
+  --tab-pill-radius:       var(--radius-4);
+  --tab-underline-padding-x: var(--space-12);
+  --tab-indicator-width:   2px;
+  --tab-count-height:      16px;
+  --tab-font-size:         var(--font-size-12);
+
+  /* ── Status Indicator ── */
+  --status-dot-size:     6px;
+  --status-dot-size-lg:  8px;
+
+  /* ── Checkbox ── */
+  --checkbox-size:       14px;
+  --checkbox-radius:     var(--radius-2);
+  --checkbox-border:     1px solid var(--border-default);
+}
