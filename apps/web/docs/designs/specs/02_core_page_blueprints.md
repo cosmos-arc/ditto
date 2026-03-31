@@ -135,13 +135,13 @@ Context Bar → Scope Strip → Market Cards → Matrix → Macro Drivers → Bo
 ### 核心区块
 
 - Workspace Header（标题 / 时间框架 / 刷新时间 / 视图密度）
-- Context Bar（全局环境：Universe / Session / Regime / Volatility / Dollar / Alerts）
-- Scope Strip（今日解读：强势 / 承压 / 风格 / 风险事件）
+- Context Bar（全局环境客观指标：市态 / 波动 / 美元 / 预警）
+- Scope Strip（AI 今日解读：领涨 / 领跌 / 风格 / 事件）
 - Cross-Market Card Grid（6 卡片：A股 / 港股 / 美股 / 利率 / 外汇 / 商品）
 - Cross-Market Matrix（行：市场，列：1D / 1W / 1M / Vol / Breadth / Flow）
-- Macro Drivers Bar（DXY / US10Y / CN10Y / VIX / Gold / Oil / CNY）
-- Right Rail（市场脉搏 / 风险预警 / 关键事件 / 推荐下钻 / 北向资金深度面板 / 快捷入口: Chart Lab / Calendar）
-- Bottom Tab Band: 资金轮动 / 龙虎榜 / 两融数据 / 事件日历
+- Macro Drivers Bar / 宏观驱动（DXY / US10Y / CN10Y / VIX / Gold / Oil / CNY）
+- Right Rail（市场脉搏 / 风险预警 / 关键事件 / 推荐下钻 / 快捷入口: Chart Lab / Calendar）
+- Bottom Tab Band: 资金轮动 / 事件日历 / AI 解读
 
 ### 主 CTA
 
@@ -166,16 +166,17 @@ Context Bar → Scope Strip → Market Cards → Matrix → Macro Drivers → Bo
 ┌ Rail ┬───────────────────────────────────────────────────────────────┐
 │      │ Markets / 全市场总览                       [1D] [09:46 CST]   │
 │      ├───────────────────────────────────────────────────────────────┤
-│      │ GLOBAL | SESSION Mixed | REGIME Mild Risk-On | VOL 回落 | A2  │
+│      │ 市态=温和风险偏好 | 波动=回落 | 美元=走弱 | 预警=2           │
 │      ├───────────────────────────────────────────────────────────────┤
-│      │ 强势：港股科技/黄金 | 承压：美元/长债 | 风险事件：FOMC-1D     │
+│      │ 领涨：港股科技/黄金 | 领跌：美元/长债 | 风格=成长占优 | 事件=FOMC 03:00 │
 │      ├─────────────────────────────────┬─────────────────────────────┤
 │      │ 中国A股   港股     美股          │ 市场脉搏摘要               │
-│      │ 利率     外汇     商品/黄金      │ 风险与预警                  │
+│      │ 利率     外汇     商品          │ 风险与预警                  │
 │      ├─────────────────────────────────┤ 关键事件                    │
 │      │ Cross-Market Matrix             │ 推荐下钻                    │
+│      ├─────────────────────────────────┤ 快捷入口                    │
 │      ├─────────────────────────────────┤                             │
-│      │ Macro Drivers Bar               │                             │
+│      │ 宏观驱动 Bar                    │                             │
 │      ├─────────────────────────────────┴─────────────────────────────┤
 │      │ [资金轮动] [事件日历] [AI 解读]                                 │
 └──────┴───────────────────────────────────────────────────────────────┘
@@ -1516,3 +1517,13 @@ Global Command Center（轻量变体）
 - **[新增]** kbd 幽灵键帽: font-mono 10px, border oklch(1 0 0 / 0.10), bg oklch(1 0 0 / 0.04)（来源: FIX-10/COPY-10）
 - **[新增]** context-bar 信息层级: 核心(regime color-mix 85%) > 标准(text-secondary) > 辅助(text-tertiary)（来源: R12 FIX-1）
 - **[新增]** card-change 字号 14px→13px，归入 5 级字号 scale (10/12/13/16/24)（来源: FIX-09）
+
+### 2026-04-01 — Cross-Market Review R11 Sync (IA Alignment Round)
+
+- **[修正]** §2 Bottom Tab Band: 龙虎榜/两融数据移至 A股总览，Cross-Market 保留 3 tabs（资金轮动/事件日历/AI解读）（来源: IA-01，R11 六角色共识）
+- **[修正]** §2 Right Rail: 移除「北向资金深度面板」，北向资金深度仅归属 §2.1 A股总览 Right Rail（来源: IA-02，§7.2 明确）
+- **[修正]** §2 Context Bar: 6 变量(UNIVERSE/SESSION/REGIME/VOL/DOLLAR/ALERTS)→4 客观变量(市态/波动/美元/预警)，与原型实现对齐（来源: IA-03）
+- **[补充]** §2 Scope Strip: 新增 4 解读变量描述（领涨/领跌/风格/事件），承载 AI 今日解读层（来源: IA-03）
+- **[修正]** §2 商品 Market Card: 「商品/黄金」→「商品」（聚合品类，黄金为主指数，原油内联至 judgment 文本）（来源: IA-04）
+- **[修正]** §2 Wireframe: Context Bar/Scope Strip/卡片/Rail 标签全面同步原型实现
+- **[修正]** §2 Sparkline opacity 标准: 0.6→0.7（R2 精修，暗色背景可感知性提升）（来源: R2-POLISH-04）
