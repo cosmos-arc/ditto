@@ -47,7 +47,7 @@
       --badge-size: 0.875rem; /* 14px — product-criteria: badge ≥ text(10px) + 4px padding */
       /* Shadow tokens (extracted from inline) */
       --shadow-card-hover: 0 2px 8px oklch(0 0 0 / 0.2);
-      --shadow-conclusion: -3px 0 8px -2px oklch(0.700 0.165 255 / 0.08);
+      --shadow-conclusion: -3px 0 8px -2px oklch(0.700 0.165 255 / 0.04);
       --shadow-context-bar: 0 1px 6px oklch(0.700 0.165 255 / 0.04);
       /* Ambient tint tokens — derived from market-up/down-fg for region switching */
       --tint-row-lead: color-mix(in oklch, var(--market-up-fg) 5%, transparent);
@@ -125,8 +125,7 @@
     .matrix-conclusion {
       box-shadow:
         var(--shadow-conclusion),
-        inset 0 1px 0 oklch(1 0 0 / 0.03),
-        0 0 24px oklch(0.700 0.165 255 / 0.03);
+        inset 0 1px 0 oklch(1 0 0 / 0.03);
     }
 
     /* R5: Letter-spacing normalization — 4 levels only */
@@ -249,20 +248,7 @@
     /* R12: Secondary context items — quieter visual weight */
     .context-bar-item--secondary .context-bar-value { color: var(--text-tertiary); }
 
-    /* Context bar badge — subtle breathing pulse (delight) */
-    .context-bar-badge {
-      animation: badge-appear 0.3s ease-out forwards, badge-breathe 3s ease-in-out 0.5s infinite;
-    }
-    @keyframes badge-appear {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    @keyframes badge-breathe {
-      0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--amber-500) 0%, transparent); }
-      50% { box-shadow: 0 0 0 2px color-mix(in oklch, var(--amber-500) 15%, transparent); }
-    }
     @media (prefers-reduced-motion: reduce) {
-      .context-bar-badge { animation: none !important; }
       .tab-band-body.active { animation: none !important; opacity: 1; transform: none; }
       .matrix-conclusion { animation: none !important; opacity: 1; transform: none; }
       .status-indicator { animation: none !important; opacity: 1; }
@@ -300,18 +286,13 @@
     }
     .scope-strip::-webkit-scrollbar { display: none; }
 
-    .context-bar-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: var(--badge-size);
-      height: var(--badge-size);
-      padding: 0 var(--space-3);
-      font-size: var(--font-size-10);
-      font-weight: var(--font-weight-medium);
-      border-radius: var(--radius-8);
+    /* Silent indicator dot — replaces badge for non-counted warnings */
+    .context-bar-indicator {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
       background: var(--amber-500);
-      color: var(--surface-app);
     }
 
     /* ══════════════════════════════════════════════
@@ -387,12 +368,11 @@
     .market-card-change.up { color: var(--market-up-fg); }
     .market-card-change.down { color: var(--market-down-fg); }
 
-    /* Aggregate card secondary index line — quieter visual weight */
-    .market-card-index-sub {
-      font-size: var(--font-size-13);
-      font-weight: var(--font-weight-regular);
-      color: var(--text-secondary);
-      margin-top: calc(var(--space-3) * -1);
+    /* Inline index value within judgment — secondary data embedded in text */
+    .market-card-index-inline {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--market-down-fg);
     }
 
     /* Lead / Lag card — ambient tint replaces accent border (R4: AD direction) */
@@ -418,7 +398,7 @@
       stroke-width: 1.5 !important; /* R10: !important to override SVG presentation attr */
       stroke-linecap: round;
       stroke-linejoin: round;
-      opacity: 0.6; /* R10: bumped from 0.5 for perceptibility */
+      opacity: 0.7; /* R2: final value — perceptible without competing */
     }
 
     /* Extracted inline styles */
@@ -555,7 +535,6 @@
       from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    }
 
     .matrix-conclusion .lead { color: var(--market-up-fg); font-weight: var(--font-weight-semibold); }
     .matrix-conclusion .lag  { color: var(--market-down-fg); font-weight: var(--font-weight-semibold); }
@@ -643,9 +622,8 @@
       align-items: center;
       gap: var(--space-4);
       flex-shrink: 0;
-      padding: var(--space-8) 0; /* R10: 12→8, tighten L2 density */
+      padding: var(--space-8) 0;
       margin-top: calc(var(--space-8) * -1); /* L1→L2: tighten transition */
-      background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.01) 10%, oklch(1 0 0 / 0.01) 90%, transparent);
     }
 
     .drivers-strip-label {
@@ -712,9 +690,7 @@
      * Right Rail (sticky, no internal scroll)
      * ══════════════════════════════════════════════ */
     .right-rail {
-      background:
-        linear-gradient(180deg, oklch(1 0 0 / 0.015) 0%, transparent 30%),
-        var(--surface-panel-base);
+      background: var(--surface-panel-base);
       border-left: 1px solid var(--border-subtle);
       display: flex;
       flex-direction: column;
@@ -748,7 +724,6 @@
     }
     .rail-section-title--alert { color: var(--text-secondary); }
     .rail-section--risk { background: color-mix(in oklch, var(--amber-500) 4%, transparent); }
-    }
 
     .rail-section-body {
       padding: 0 var(--space-12) var(--space-10);
@@ -1202,7 +1177,7 @@
         <div class="context-bar-spacer"></div>
         <div class="context-bar-item">
           <span class="context-bar-label">预警</span>
-          <span class="context-bar-badge">2</span>
+          <span class="context-bar-indicator" aria-label="2 条预警"></span>
         </div>
       </div>
 
@@ -1298,7 +1273,7 @@
               <div class="market-card-judgment">美元走弱，非美货币普涨</div>
             </div>
 
-            <div class="market-card card-lead" tabindex="0" role="button" aria-label="商品 黄金+1.2% 原油-0.3% 避险需求推升黄金，原油受OPEC观望压制">
+            <div class="market-card card-lead" tabindex="0" role="button" aria-label="商品 黄金+1.2% 避险推升金价，原油OPEC观望-0.3%">
               <div class="market-card-top">
                 <span class="market-card-name">商品</span>
                 <span class="market-card-regime on">避险</span>
@@ -1306,11 +1281,8 @@
               <div class="market-card-index">
                 黄金 <span class="market-card-change up">+1.2%</span>
               </div>
-              <div class="market-card-index market-card-index-sub">
-                原油 <span class="market-card-change down">-0.3%</span>
-              </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,12 10,10 20,8 30,6 40,4 50,3 60,1" stroke="var(--market-up-fg)"/></svg>
-              <div class="market-card-judgment">避险推升黄金，原油 OPEC 观望</div>
+              <div class="market-card-judgment">避险推升金价，原油 OPEC 观望 <span class="market-card-index-inline">-0.3%</span></div>
             </div>
 
           </div>
