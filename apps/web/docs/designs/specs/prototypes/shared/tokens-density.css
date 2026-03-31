@@ -35,7 +35,7 @@
   --density-panel-padding:     var(--space-16);
   --density-section-gap:       var(--space-16);
   --density-strip-height:      2.5rem;
-  --density-row-height:        2.5rem;
+  --density-row-height:        2.625rem;     /* 42px per design decision */
   --density-cell-padding-x:    var(--space-16);
   --density-cell-padding-y:    var(--space-8);
   --density-header-height:     2.25rem;
@@ -62,12 +62,12 @@
   --density-font-delta:        0;
 }
 
-/* ── Ultra-compact preset ── */
-[data-density="ultra"] {
+/* ── Dense preset ── */
+[data-density="dense"] {
   --density-panel-padding:     var(--space-8);
   --density-section-gap:       var(--space-8);
   --density-strip-height:      2rem;
-  --density-row-height:        1.75rem;
+  --density-row-height:        2.125rem;     /* 34px per design decision */
   --density-cell-padding-x:    var(--space-8);
   --density-cell-padding-y:    var(--space-4);
   --density-header-height:     1.75rem;

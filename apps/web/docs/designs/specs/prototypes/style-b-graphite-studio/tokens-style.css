@@ -35,13 +35,7 @@
   --brand-accent-hover:        oklch(0.760 0.160 254);
   --brand-accent-subtle:       oklch(0.700 0.165 255 / 0.10);
 
-  /* ── Market Colors — Red Up / Green Down (CN default, switchable) ── */
-  --market-up-fg:      oklch(0.670 0.170 20);   /* red (CN: 涨) */
-  --market-up-bg:      oklch(0.670 0.170 20 / 0.10);
-  --market-up-subtle:  oklch(0.670 0.170 20 / 0.08);
-  --market-down-fg:    oklch(0.680 0.120 175);  /* green (CN: 跌) */
-  --market-down-bg:    oklch(0.680 0.120 175 / 0.10);
-  --market-down-subtle:oklch(0.680 0.120 175 / 0.08);
+  /* ── Market Colors — style-specific overrides (region logic in tokens-domain.css) ── */
   --market-flat-fg:    oklch(0.530 0.010 260);
   --market-strong-fg:  oklch(0.720 0.140 172);
   --market-weak-fg:    oklch(0.680 0.180 18);
@@ -86,18 +80,50 @@
   --scrollbar-track:        oklch(0.155 0.005 260);
   --scrollbar-thumb:        oklch(0.310 0.010 260);
   --scrollbar-thumb-hover:  oklch(0.370 0.012 260);
+}
 
-  /* ── Density: Compact (default for this style) ── */
-  --density-panel-padding:  var(--space-12);
-  --density-section-gap:    var(--space-12);
-  --density-strip-height:   2.25rem;
-  --density-row-height:     2.25rem;
-  --density-cell-padding-x: var(--space-12);
-  --density-cell-padding-y: var(--space-6);
-  --density-header-height:  2rem;
-  --density-input-height:   2rem;
-  --density-action-height:  2rem;
-  --density-chart-header:   2rem;
-  --density-chart-padding:  var(--space-12);
-  --density-font-delta:     0;
+/* ── Light Mode Override — Graphite Studio ── */
+[data-theme="light"] {
+  /* Surface — pure white graphite steps */
+  --surface-app:               oklch(0.988 0.001 260);
+  --surface-panel-base:        oklch(0.958 0.003 260);
+  --surface-panel-elevated:    oklch(0.932 0.005 260);
+  --surface-strip:             oklch(0.958 0.003 260);
+  --surface-overlay:           oklch(0.995 0.000 0);
+  --surface-modal:             oklch(0.998 0.000 0);
+
+  /* Text — dark graphite */
+  --text-primary:              oklch(0.148 0.010 260);
+  --text-secondary:            oklch(0.395 0.012 260);
+  --text-tertiary:             oklch(0.545 0.008 260);
+  --text-disabled:             oklch(0.740 0.006 260);
+  --text-inverse:              oklch(0.958 0.003 260);
+
+  /* Border */
+  --border-subtle:             oklch(0.878 0.006 260);
+  --border-default:            oklch(0.775 0.010 260);
+  --border-strong:             oklch(0.645 0.008 260);
+
+  /* Brand accent */
+  --brand-accent:              oklch(0.550 0.200 260);
+  --brand-accent-hover:        oklch(0.500 0.210 260);
+  --brand-accent-subtle:       oklch(0.550 0.200 260 / 0.07);
+
+  /* Interaction */
+  --interaction-focus-ring:    oklch(0.550 0.200 260 / 0.35);
+  --interaction-focus-border:  oklch(0.550 0.200 260);
+  --interaction-hover-subtle-bg: oklch(0 0 0 / 0.04);
+  --interaction-hover-strong-bg: oklch(0 0 0 / 0.07);
+  --interaction-selected-bg:   oklch(0.550 0.200 260 / 0.08);
+  --interaction-selected-border: oklch(0.550 0.200 260 / 0.20);
+
+  /* Code */
+  --code-bg:        oklch(0.938 0.003 260);
+  --code-text:      oklch(0.195 0.010 260);
+  --code-border:    oklch(0.878 0.006 260);
+
+  /* Scrollbar */
+  --scrollbar-track:        oklch(0.938 0.003 260);
+  --scrollbar-thumb:        oklch(0.775 0.010 260);
+  --scrollbar-thumb-hover:  oklch(0.645 0.008 260);
 }

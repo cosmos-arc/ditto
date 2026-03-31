@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,13 +7,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/tokens-base.css">
+  <link rel="stylesheet" href="../shared/tokens-semantic.css">
+  <link rel="stylesheet" href="../shared/tokens-domain.css">
+  <link rel="stylesheet" href="../shared/tokens-interaction.css">
+  <link rel="stylesheet" href="../shared/tokens-component.css">
+  <link rel="stylesheet" href="tokens-style.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 16px; -webkit-font-smoothing: antialiased; }
     body {
-      background: oklch(0.155 0.005 260);
-      color: oklch(0.935 0.005 260);
-      font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+      background: var(--surface-app);
+      color: var(--text-primary);
+      font-family: var(--font-family-ui);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -26,12 +32,11 @@
     h1 {
       font-size: 28px;
       font-weight: 700;
-      color: oklch(0.977 0.005 260);
       text-align: center;
     }
     .subtitle {
       font-size: 14px;
-      color: oklch(0.610 0.010 260);
+      color: var(--text-secondary);
       text-align: center;
       margin-top: -28px;
     }
@@ -45,20 +50,20 @@
     }
 
     .card {
-      background: oklch(0.185 0.005 260);
-      border: 1px solid oklch(0.245 0.008 260);
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
       border-radius: 12px;
       padding: 32px 24px;
       text-decoration: none;
       color: inherit;
-      transition: all 0.2s;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
       display: flex;
       flex-direction: column;
       gap: 16px;
     }
     .card:hover {
-      border-color: oklch(0.700 0.165 255);
-      background: oklch(0.195 0.006 260);
+      border-color: var(--brand-accent);
+      background: var(--surface-panel-elevated);
       transform: translateY(-2px);
     }
 
@@ -70,15 +75,14 @@
     .card-name {
       font-size: 18px;
       font-weight: 600;
-      color: oklch(0.977 0.005 260);
     }
     .card-tag {
       font-size: 11px;
       font-weight: 500;
       padding: 3px 10px;
       border-radius: 20px;
-      background: oklch(0.700 0.165 255 / 0.12);
-      color: oklch(0.700 0.165 255);
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
     }
 
     .card-params {
@@ -93,26 +97,25 @@
     }
     .param-label {
       font-size: 11px;
-      color: oklch(0.430 0.010 260);
+      color: var(--text-tertiary);
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
     .param-value {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-family-numeric);
       font-size: 14px;
       font-weight: 500;
-      color: oklch(0.935 0.005 260);
     }
 
     .card-desc {
       font-size: 13px;
-      color: oklch(0.610 0.010 260);
+      color: var(--text-secondary);
       line-height: 1.6;
     }
 
     .card-preview {
-      background: oklch(0.142 0.005 260);
-      border: 1px solid oklch(0.245 0.008 260);
+      background: oklch(from var(--surface-app) l c h - 0.01);
+      border: 1px solid var(--border-subtle);
       border-radius: 6px;
       padding: 12px;
       font-size: 12px;
@@ -122,17 +125,17 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      border-bottom: 1px solid oklch(0.245 0.008 260 / 0.5);
+      border-bottom: 1px solid oklch(from var(--border-subtle) l c h / 0.5);
       padding: 4px 0;
     }
     .card-preview .row:last-child { border-bottom: none; }
-    .card-preview .label { color: oklch(0.610 0.010 260); flex: 1; }
-    .card-preview .value { font-family: 'JetBrains Mono', monospace; color: oklch(0.935 0.005 260); }
-    .card-preview .value.green { color: oklch(0.680 0.120 175); }
+    .card-preview .label { color: var(--text-secondary); flex: 1; }
+    .card-preview .value { font-family: var(--font-family-numeric); }
+    .card-preview .value.green { color: var(--market-down-fg); }
 
     .arrow {
       font-size: 14px;
-      color: oklch(0.700 0.165 255);
+      color: var(--brand-accent);
       margin-top: auto;
       text-align: center;
     }

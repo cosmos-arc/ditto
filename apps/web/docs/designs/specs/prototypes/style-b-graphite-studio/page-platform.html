@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="../shared/tokens-domain.css">
   <link rel="stylesheet" href="../shared/tokens-interaction.css">
   <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="../shared/tokens-component.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
@@ -29,7 +30,7 @@
       right: var(--space-6);
       z-index: 50;
       font-family: var(--font-family-ui);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
@@ -73,7 +74,7 @@
     .panel-action:focus-visible,
     .header-avatar:focus-visible {
       outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px oklch(0.700 0.165 255 / 0.25);
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
       border-radius: var(--radius-4);
       transition: box-shadow 150ms ease-out;
     }
@@ -85,14 +86,14 @@
 
     /* ── Frosted glass header ── */
     .shell-ops .shell-header {
-      background: oklch(0.155 0.005 260 / 0.85);
+      background: var(--surface-frosted);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
     }
 
     /* ── Brand anchor: health strip accent underline ── */
     .shell-ops .ops-health {
-      border-bottom: 1px solid oklch(0.700 0.165 255 / 0.15);
+      border-bottom: 1px solid var(--brand-accent-subtle);
     }
 
     /* ── Panel body breathing room ── */
@@ -102,7 +103,7 @@
 
     /* ── Header subtitle ── */
     .header-subtitle {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       font-weight: var(--font-weight-regular);
       margin-left: var(--space-8);
@@ -116,7 +117,7 @@
       padding: var(--space-2) var(--space-10);
       border-radius: var(--radius-4);
       background: var(--system-healthy-bg);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--system-healthy-fg);
       border-left: 2px solid var(--brand-accent);
@@ -173,7 +174,7 @@
       align-items: center;
       gap: var(--space-6);
       white-space: nowrap;
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
     }
 
     .health-metric-dot {
@@ -249,7 +250,7 @@
     }
 
     .alert-desc {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       white-space: nowrap;
       overflow: hidden;
@@ -288,7 +289,7 @@
 
     .quota-text {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       white-space: nowrap;
     }
 
@@ -351,12 +352,12 @@
     }
 
     .task-meta {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
 
     .task-status {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       flex-shrink: 0;
       white-space: nowrap;
@@ -400,7 +401,7 @@
 
     .resource-value {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
     }
 
@@ -440,7 +441,7 @@
 
     .event-time {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       flex-shrink: 0;
       min-width: 36px;

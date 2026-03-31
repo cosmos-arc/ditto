@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="../shared/tokens-domain.css">
   <link rel="stylesheet" href="../shared/tokens-interaction.css">
   <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="../shared/tokens-component.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
@@ -62,7 +63,7 @@
 
     .scope-metric-value {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
     }
@@ -138,7 +139,7 @@
     /* ── Header: Danger Button ── */
     .btn-danger-sm {
       font-family: var(--font-family-ui);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       padding: var(--space-4) var(--space-10);
       border-radius: var(--radius-4);
@@ -151,7 +152,7 @@
     }
 
     .btn-danger-sm:hover {
-      background: oklch(0.6317 0.1567 22.64 / 0.1);
+      background: oklch(from var(--red-500) l c h / 0.1);
     }
 
     /* ── Main Content: Trading Panels ── */
@@ -216,7 +217,7 @@
     }
 
     .equity-sub-label {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
 
@@ -351,7 +352,7 @@
     }
 
     .order-detail {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-secondary);
       flex: 1;
       min-width: 0;
@@ -396,7 +397,7 @@
     }
 
     .order-tab {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       padding: var(--space-2) var(--space-8);
       border-radius: var(--radius-4);
       cursor: pointer;
@@ -457,13 +458,13 @@
     }
 
     .risk-item-label {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-secondary);
     }
 
     .risk-item-value {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
     }
@@ -545,7 +546,7 @@
     }
 
     .signal-queue-title {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
       white-space: nowrap;
@@ -617,7 +618,7 @@
 
     .fill-ticker {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
     }
@@ -632,7 +633,7 @@
     .fill-side.sell { color: var(--market-down-fg); }
 
     .fill-detail {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-secondary);
       flex: 1;
       min-width: 0;
@@ -687,7 +688,7 @@
     <!-- ═══ Header (64px) ═══ -->
     <header class="shell-header">
       <span class="header-title">Trading</span>
-      <span style="font-size: var(--font-size-11); color: var(--text-tertiary); margin-left: var(--space-4);">交易控制中心</span>
+      <span style="font-size: var(--font-size-12); color: var(--text-tertiary); margin-left: var(--space-4);">交易控制中心</span>
 
       <div class="header-spacer"></div>
 

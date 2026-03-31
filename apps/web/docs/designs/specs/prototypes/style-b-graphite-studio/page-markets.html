@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="../shared/tokens-domain.css">
   <link rel="stylesheet" href="../shared/tokens-interaction.css">
   <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="../shared/tokens-component.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
@@ -43,8 +44,6 @@
       --shell-analysis-band-height: 280px;
       --flow-in-fg: oklch(0.72 0.12 195);
       --flow-out-fg: oklch(0.78 0.14 65);
-      --text-secondary: oklch(0.650 0.010 260);
-      --text-tertiary: oklch(0.480 0.010 260);
     }
 
     /* ── Override shell-analytical grid for two-layer context ── */
@@ -60,7 +59,7 @@
 
     /* ── Header subtitle ── */
     .header-subtitle {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       margin-left: var(--space-8);
     }
@@ -86,7 +85,7 @@
     }
 
     .universe-selector-label {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-secondary);
     }
@@ -102,7 +101,7 @@
       align-items: center;
       gap: var(--space-4);
       white-space: nowrap;
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
 
@@ -165,7 +164,7 @@
     }
 
     .context-bar-value {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-secondary);
     }
@@ -225,7 +224,7 @@
     }
 
     .treemap-cta {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-regular);
       color: var(--text-tertiary);
       cursor: pointer;
@@ -300,7 +299,7 @@
 
     .treemap-block-pct {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: 400;
       color: oklch(0.70 0 0);
     }
@@ -386,7 +385,7 @@
     /* ── Treemap interaction states ── */
     .treemap-block.selected {
       filter: brightness(1.06);
-      box-shadow: 0 0 0 1px oklch(1 0 0 / 0.12), 0 0 0 1px oklch(0.55 0.15 255 / 0.22) !important;
+      box-shadow: 0 0 0 1px var(--overlay-12), 0 0 0 1px oklch(from var(--brand-accent) l c h / 0.22) !important;
     }
 
     /* Heatmap legend — shown only when heatmap tab is active */
@@ -432,8 +431,8 @@
       align-items: center;
       gap: var(--space-8);
       padding: var(--space-6) var(--space-12);
-      border-bottom: 1px solid oklch(1 0 0 / 0.04);
-      font-size: var(--font-size-11);
+      border-bottom: 1px solid var(--overlay-4);
+      font-size: var(--font-size-12);
       cursor: pointer;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
@@ -486,8 +485,8 @@
       align-items: center;
       justify-content: space-between;
       padding: var(--space-4) var(--space-12);
-      border-bottom: 1px solid oklch(1 0 0 / 0.04);
-      font-size: var(--font-size-11);
+      border-bottom: 1px solid var(--overlay-4);
+      font-size: var(--font-size-12);
       cursor: pointer;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
@@ -545,7 +544,7 @@
       align-items: center;
       gap: var(--space-6);
       padding: var(--space-4) var(--space-12);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       cursor: pointer;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
@@ -683,7 +682,7 @@
     }
 
     .flow-top-item-name {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-primary);
       width: 48px;
       flex-shrink: 0;
@@ -693,7 +692,7 @@
       flex: 1;
       height: 4px;
       border-radius: 2px;
-      background: oklch(1 0 0 / 0.04);
+      background: var(--overlay-4);
       overflow: hidden;
     }
 
@@ -715,7 +714,7 @@
 
     .flow-top-item-value {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       width: 56px;
       text-align: right;
@@ -780,7 +779,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-4);
       cursor: pointer;
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-secondary);
       transition: all var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
@@ -805,7 +804,7 @@
     }
 
     .compare-chip {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       padding: var(--space-4) var(--space-10);
       border-radius: var(--radius-4);
@@ -856,10 +855,10 @@
     .compare-th-center { text-align: center; }
 
     .compare-td {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-secondary);
       padding: var(--space-10) var(--space-10);
-      border-bottom: 1px solid oklch(1 0 0 / 0.04);
+      border-bottom: 1px solid var(--overlay-4);
       white-space: nowrap;
     }
 
@@ -928,7 +927,7 @@
       width: 48px;
       height: 4px;
       border-radius: 2px;
-      background: oklch(1 0 0 / 0.04);
+      background: var(--overlay-4);
       overflow: hidden;
     }
 
@@ -955,7 +954,7 @@
       padding: var(--space-8) var(--space-12);
       z-index: 100;
       min-width: 170px;
-      box-shadow: 0 8px 24px oklch(0 0 0 / 0.4);
+      box-shadow: var(--interaction-dragging-shadow);
     }
 
     .compare-score-cell:hover .compare-score-tooltip {
@@ -967,7 +966,7 @@
       color: var(--text-tertiary);
       margin-bottom: var(--space-6);
       padding-bottom: var(--space-4);
-      border-bottom: 1px solid oklch(1 0 0 / 0.06);
+      border-bottom: 1px solid var(--overlay-6);
     }
 
     .compare-score-tooltip-row {
@@ -1004,7 +1003,7 @@
     }
 
     .compare-detail-rank {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
 
@@ -1031,7 +1030,7 @@
       width: 100%;
       height: 3px;
       border-radius: 2px;
-      background: oklch(1 0 0 / 0.06);
+      background: var(--overlay-6);
       overflow: hidden;
       margin-bottom: var(--space-16);
     }
@@ -1077,7 +1076,7 @@
 
     .compare-detail-section {
       padding-top: var(--space-10);
-      border-top: 1px solid oklch(1 0 0 / 0.04);
+      border-top: 1px solid var(--overlay-4);
     }
 
     .compare-detail-section + .compare-detail-section {
@@ -1096,7 +1095,7 @@
     }
 
     .compare-detail-section-content {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-secondary);
       display: block;
     }
@@ -1107,9 +1106,9 @@
       line-height: 1.6;
       padding: var(--space-10) var(--space-12);
       margin-top: var(--space-10);
-      background: oklch(1 0 0 / 0.02);
+      background: var(--overlay-2);
       border-radius: var(--radius-6);
-      border: 1px solid oklch(1 0 0 / 0.03);
+      border: 1px solid var(--overlay-3);
     }
   </style>
 </head>

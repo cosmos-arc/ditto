@@ -55,17 +55,14 @@
   --purple-500: oklch(0.7324 0.1170 300.20);
   --purple-600: oklch(0.7948 0.0862 299.72);
 
-  /* ── Typography Scale ── */
+  /* ── Typography Scale (6 levels) ── */
+  /* DEPRECATED: 11px (too close to 12px), 18/20/28px (no usage) — use adjacent size */
   --font-size-10: 0.625rem;
-  --font-size-11: 0.6875rem;
   --font-size-12: 0.75rem;
   --font-size-13: 0.8125rem;
   --font-size-14: 0.875rem;
   --font-size-16: 1rem;
-  --font-size-18: 1.125rem;
-  --font-size-20: 1.25rem;
   --font-size-24: 1.5rem;
-  --font-size-28: 1.75rem;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
@@ -78,6 +75,7 @@
 
   /* ── Spacing Scale (4pt base) ── */
   --space-2:  0.125rem;
+  --space-3:  0.1875rem;
   --space-4:  0.25rem;
   --space-6:  0.375rem;
   --space-8:  0.5rem;
@@ -90,6 +88,7 @@
 
   /* ── Radius Scale ── */
   --radius-2:  0.125rem;
+  --radius-3:  0.1875rem;
   --radius-4:  0.25rem;
   --radius-6:  0.375rem;
   --radius-8:  0.5rem;
@@ -101,4 +100,12 @@
   --motion-duration-slow: 350ms;
   --motion-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --motion-easing-emphasis: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ── Accessibility: Non-color indicators ── */
+  /* For color-blind users, supplement color with shape/position */
+  --indicator-up-sym:        '\25B2';
+  --indicator-down-sym:      '\25BC';
+  --indicator-flat-sym:      '\2500';
+  --indicator-critical-sym:  '\2715';
+  --indicator-warn-sym:      '\26A0';
 }
