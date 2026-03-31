@@ -460,6 +460,11 @@
       color: var(--text-tertiary);
     }
 
+    /* Older events — second-level fade */
+    .event-item.older .event-text {
+      color: var(--text-disabled);
+    }
+
     /* ── Cell utility classes (replace inline styles) ── */
     .cell-name     { font-weight: var(--font-weight-medium); }
     .cell-numeric  { font-family: var(--font-family-numeric); }
@@ -1245,7 +1250,7 @@
               <span class="event-time">14:25:08</span>
               <span class="event-text">模型评分服务返回 503（连续第 2 次）</span>
             </div>
-            <div class="event-item muted">
+            <div class="event-item muted older">
               <span class="event-time">14:15:00</span>
               <span class="event-text">聚宽连接断开，已发送告警</span>
             </div>
