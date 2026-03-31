@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Markets Screener (Style B: Graphite Studio)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/tokens-base.css">
+  <link rel="stylesheet" href="../shared/tokens-semantic.css">
+  <link rel="stylesheet" href="../shared/tokens-domain.css">
+  <link rel="stylesheet" href="../shared/tokens-interaction.css">
+  <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="../shared/layout-base.css">
+  <style>
+    .style-label {
+      position: fixed; top: 8px; right: 8px; z-index: 999;
+      font-family: var(--font-family-ui); font-size: 11px;
+      color: var(--text-tertiary); background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="style-label">Style B — Markets Screener</div>
+
+  <div class="shell-screener">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon active" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <span class="header-title">Markets / Screener</span>
+      <div class="header-spacer"></div>
+      <div class="header-search">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        Search instruments, sectors...
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="header-actions">
+        <div class="header-action-btn" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Filter Toolbar ═══ -->
+    <div class="filter-toolbar">
+      <div class="filter-group">
+        <span class="filter-label">Universe:</span>
+        <button class="filter-chip active">S&P 500</button>
+        <button class="filter-chip">NASDAQ 100</button>
+        <button class="filter-chip">Russell 2000</button>
+        <button class="filter-chip">Watchlist</button>
+        <button class="filter-chip">Custom</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">Sector:</span>
+        <select class="filter-select">
+          <option>All Sectors</option>
+          <option>Technology</option>
+          <option>Healthcare</option>
+          <option>Financials</option>
+          <option>Consumer</option>
+          <option>Energy</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">Signal:</span>
+        <button class="filter-chip">Any</button>
+        <button class="filter-chip">BUY</button>
+        <button class="filter-chip">SELL</button>
+        <button class="filter-chip">HOLD</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">Risk:</span>
+        <select class="filter-select">
+          <option>All</option>
+          <option>Low</option>
+          <option>Medium</option>
+          <option>High</option>
+        </select>
+      </div>
+      <div class="filter-spacer"></div>
+      <input class="filter-search" type="text" placeholder="Filter ticker...">
+      <span class="filter-count">247 results</span>
+    </div>
+
+    <!-- ═══ Data Table ═══ -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:40px"><div class="checkbox"></div></th>
+            <th style="width:70px" class="sorted">Ticker <span class="sort-icon">▲</span></th>
+            <th style="width:140px">Name</th>
+            <th style="width:80px" class="right">Price <span class="sort-icon">│</span></th>
+            <th style="width:70px" class="right">Chg% <span class="sort-icon">│</span></th>
+            <th style="width:60px"></th>
+            <th style="width:80px" class="right">Volume <span class="sort-icon">│</span></th>
+            <th style="width:90px" class="right">Mkt Cap <span class="sort-icon">│</span></th>
+            <th style="width:80px">Sector</th>
+            <th style="width:70px">Signal</th>
+            <th style="width:60px" class="right">Risk <span class="sort-icon">│</span></th>
+            <th style="width:60px" class="right">RSI <span class="sort-icon">│</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="row selected">
+            <td><div class="checkbox checked"></div></td>
+            <td class="cell-ticker">AAPL</td>
+            <td class="cell-name">Apple Inc</td>
+            <td class="right numeric">189.42</td>
+            <td class="right numeric cell-change-down">-0.18%</td>
+            <td><div class="sparkline-down"></div></td>
+            <td class="right numeric cell-volume">48.2M</td>
+            <td class="right numeric">$2.95T</td>
+            <td><span class="cell-badge sector">Tech</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot sell"></span>SELL</span></td>
+            <td class="right"><span class="cell-badge risk-high">High</span></td>
+            <td class="right numeric">72.4</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">MSFT</td>
+            <td class="cell-name">Microsoft Corp</td>
+            <td class="right numeric">428.15</td>
+            <td class="right numeric cell-change-up">+0.42%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">22.1M</td>
+            <td class="right numeric">$3.18T</td>
+            <td><span class="cell-badge sector">Tech</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot buy"></span>BUY</span></td>
+            <td class="right"><span class="cell-badge risk-low">Low</span></td>
+            <td class="right numeric">58.2</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">NVDA</td>
+            <td class="cell-name">NVIDIA Corp</td>
+            <td class="right numeric">924.78</td>
+            <td class="right numeric cell-change-up">+1.23%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">41.7M</td>
+            <td class="right numeric">$2.28T</td>
+            <td><span class="cell-badge sector">Tech</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot buy"></span>BUY</span></td>
+            <td class="right"><span class="cell-badge risk-med">Med</span></td>
+            <td class="right numeric">65.8</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">GOOGL</td>
+            <td class="cell-name">Alphabet Inc</td>
+            <td class="right numeric">174.56</td>
+            <td class="right numeric cell-change-flat">+0.00%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">18.3M</td>
+            <td class="right numeric">$2.16T</td>
+            <td><span class="cell-badge sector">Comm</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot hold"></span>HOLD</span></td>
+            <td class="right"><span class="cell-badge risk-low">Low</span></td>
+            <td class="right numeric">51.6</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">AMZN</td>
+            <td class="cell-name">Amazon.com Inc</td>
+            <td class="right numeric">186.23</td>
+            <td class="right numeric cell-change-down">-0.65%</td>
+            <td><div class="sparkline-down"></div></td>
+            <td class="right numeric cell-volume">35.6M</td>
+            <td class="right numeric">$1.94T</td>
+            <td><span class="cell-badge sector">Cons</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot sell"></span>SELL</span></td>
+            <td class="right"><span class="cell-badge risk-med">Med</span></td>
+            <td class="right numeric">68.9</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">TSLA</td>
+            <td class="cell-name">Tesla Inc</td>
+            <td class="right numeric">242.50</td>
+            <td class="right numeric cell-change-up">+2.14%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">82.4M</td>
+            <td class="right numeric">$772B</td>
+            <td><span class="cell-badge sector">Cons</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot buy"></span>BUY</span></td>
+            <td class="right"><span class="cell-badge risk-high">High</span></td>
+            <td class="right numeric">74.2</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">META</td>
+            <td class="cell-name">Meta Platforms</td>
+            <td class="right numeric">502.18</td>
+            <td class="right numeric cell-change-up">+0.87%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">15.8M</td>
+            <td class="right numeric">$1.28T</td>
+            <td><span class="cell-badge sector">Comm</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot buy"></span>BUY</span></td>
+            <td class="right"><span class="cell-badge risk-low">Low</span></td>
+            <td class="right numeric">62.1</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">JPM</td>
+            <td class="cell-name">JPMorgan Chase</td>
+            <td class="right numeric">202.84</td>
+            <td class="right numeric cell-change-up">+0.31%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">8.2M</td>
+            <td class="right numeric">$585B</td>
+            <td><span class="cell-badge sector">Fin</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot watch"></span>WATCH</span></td>
+            <td class="right"><span class="cell-badge risk-low">Low</span></td>
+            <td class="right numeric">55.4</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">V</td>
+            <td class="cell-name">Visa Inc</td>
+            <td class="right numeric">284.12</td>
+            <td class="right numeric cell-change-up">+0.15%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">5.6M</td>
+            <td class="right numeric">$578B</td>
+            <td><span class="cell-badge sector">Fin</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot hold"></span>HOLD</span></td>
+            <td class="right"><span class="cell-badge risk-low">Low</span></td>
+            <td class="right numeric">48.7</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">UNH</td>
+            <td class="cell-name">UnitedHealth Group</td>
+            <td class="right numeric">527.63</td>
+            <td class="right numeric cell-change-down">-0.42%</td>
+            <td><div class="sparkline-down"></div></td>
+            <td class="right numeric cell-volume">3.1M</td>
+            <td class="right numeric">$487B</td>
+            <td><span class="cell-badge sector">Health</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot sell"></span>SELL</span></td>
+            <td class="right"><span class="cell-badge risk-med">Med</span></td>
+            <td class="right numeric">44.3</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">JNJ</td>
+            <td class="cell-name">Johnson & Johnson</td>
+            <td class="right numeric">156.78</td>
+            <td class="right numeric cell-change-up">+0.08%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">6.4M</td>
+            <td class="right numeric">$378B</td>
+            <td><span class="cell-badge sector">Health</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot hold"></span>HOLD</span></td>
+            <td class="right"><span class="cell-badge risk-low">Low</span></td>
+            <td class="right numeric">52.1</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">XOM</td>
+            <td class="cell-name">Exxon Mobil Corp</td>
+            <td class="right numeric">108.34</td>
+            <td class="right numeric cell-change-down">-1.12%</td>
+            <td><div class="sparkline-down"></div></td>
+            <td class="right numeric cell-volume">14.8M</td>
+            <td class="right numeric">$452B</td>
+            <td><span class="cell-badge sector">Energy</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot sell"></span>SELL</span></td>
+            <td class="right"><span class="cell-badge risk-high">High</span></td>
+            <td class="right numeric">38.6</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">LLY</td>
+            <td class="cell-name">Eli Lilly & Co</td>
+            <td class="right numeric">812.45</td>
+            <td class="right numeric cell-change-up">+1.56%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">4.2M</td>
+            <td class="right numeric">$768B</td>
+            <td><span class="cell-badge sector">Health</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot buy"></span>BUY</span></td>
+            <td class="right"><span class="cell-badge risk-med">Med</span></td>
+            <td class="right numeric">71.3</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">AMD</td>
+            <td class="cell-name">Advanced Micro Devices</td>
+            <td class="right numeric">178.92</td>
+            <td class="right numeric cell-change-up">+0.94%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">52.6M</td>
+            <td class="right numeric">$289B</td>
+            <td><span class="cell-badge sector">Tech</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot buy"></span>BUY</span></td>
+            <td class="right"><span class="cell-badge risk-high">High</span></td>
+            <td class="right numeric">69.7</td>
+          </tr>
+          <tr class="row">
+            <td><div class="checkbox"></div></td>
+            <td class="cell-ticker">CRM</td>
+            <td class="cell-name">Salesforce Inc</td>
+            <td class="right numeric">272.18</td>
+            <td class="right numeric cell-change-up">+0.36%</td>
+            <td><div class="sparkline-up"></div></td>
+            <td class="right numeric cell-volume">4.8M</td>
+            <td class="right numeric">$264B</td>
+            <td><span class="cell-badge sector">Tech</span></td>
+            <td><span class="cell-signal"><span class="cell-signal-dot hold"></span>HOLD</span></td>
+            <td class="right"><span class="cell-badge risk-low">Low</span></td>
+            <td class="right numeric">56.8</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ═══ Table Footer ═══ -->
+    <div class="table-footer">
+      <div class="table-footer-info">
+        <span>Showing 1-15 of 247 instruments</span>
+        <span>Selected: 1</span>
+      </div>
+      <div class="table-footer-actions">
+        <button class="pagination-btn active">1</button>
+        <button class="pagination-btn">2</button>
+        <button class="pagination-btn">3</button>
+        <span style="color:var(--text-tertiary)">...</span>
+        <button class="pagination-btn">17</button>
+        <button class="btn btn-sm">Export CSV</button>
+        <button class="btn btn-sm">Add to Watchlist</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

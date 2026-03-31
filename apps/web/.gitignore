@@ -3,20 +3,25 @@ node_modules/
 
 # Build output
 dist/
+*.tsbuildinfo
 
 # Vite
 *.local
 
-# TypeScript
-*.tsbuildinfo
-
 # Environment variables
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+
+# TanStack Router (auto-generated)
+src/routeTree.gen.ts
+.tanstack/
 
 # Test
 coverage/
+
+# MSW
+public/mockServiceWorker.js
 
 # Playwright
 test-results/

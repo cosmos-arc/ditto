@@ -1,0 +1,129 @@
+/* ─────────────────────────────────────────────
+ * Style B — Graphite Studio
+ * Modern developer tool (Linear / Vercel / Raycast)
+ * Sans-dominant, compact, clean hue-260 elevation steps
+ * ───────────────────────────────────────────── */
+
+:root {
+  /* ── Typography — Inter + Noto Sans SC (CN) / JetBrains Mono (code & data) ── */
+  --font-family-ui:      'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --font-family-numeric: 'JetBrains Mono', monospace;
+  --font-family-code:    'JetBrains Mono', monospace;
+
+  /* ── Surface Elevation — Neutral graphite, pure gray steps ── */
+  --surface-app:               oklch(0.155 0.005 260);
+  --surface-panel-base:        oklch(0.185 0.005 260);
+  --surface-panel-elevated:    oklch(0.215 0.006 260);
+  --surface-strip:             oklch(0.180 0.005 260);
+  --surface-overlay:           oklch(0.260 0.008 260);
+  --surface-modal:             oklch(0.300 0.010 260);
+
+  /* ── Text Hierarchy — Clean, bright primaries ── */
+  --text-primary:              oklch(0.935 0.005 260);
+  --text-secondary:            oklch(0.610 0.010 260);
+  --text-tertiary:             oklch(0.550 0.010 260);
+  --text-disabled:             oklch(0.340 0.008 260);
+  --text-inverse:              oklch(0.155 0.005 260);
+
+  /* ── Border — Minimal, consistent ── */
+  --border-subtle:             oklch(0.245 0.008 260);
+  --border-default:            oklch(0.310 0.010 260);
+  --border-strong:             oklch(0.420 0.012 260);
+
+  /* ── Brand Accent — Bright blue, interactive feel ── */
+  --brand-accent:              oklch(0.700 0.165 255);
+  --brand-accent-hover:        oklch(0.760 0.160 254);
+  --brand-accent-subtle:       oklch(0.700 0.165 255 / 0.10);
+
+  /* ── Market Colors — style-specific overrides (region logic in tokens-domain.css) ── */
+  --market-flat-fg:    oklch(0.530 0.010 260);
+  --market-strong-fg:  oklch(0.720 0.140 172);
+  --market-weak-fg:    oklch(0.680 0.180 18);
+
+  /* ── Domain Overrides — Teal/Coral harmonized ── */
+  --risk-critical-fg:  oklch(0.680 0.180 18);
+  --risk-critical-bg:  oklch(0.680 0.180 18 / 0.12);
+  --risk-high-fg:      oklch(0.740 0.160 55);
+  --risk-high-bg:      oklch(0.740 0.160 55 / 0.10);
+
+  --system-healthy-fg: oklch(0.680 0.120 175);
+  --system-healthy-bg: oklch(0.680 0.120 175 / 0.10);
+  --system-degraded-fg:oklch(0.770 0.140 80);
+  --system-down-fg:    oklch(0.680 0.180 18);
+  --system-down-bg:    oklch(0.680 0.180 18 / 0.15);
+
+  --execution-pending-fg: oklch(0.770 0.140 80);
+  --execution-pending-bg: oklch(0.770 0.140 80 / 0.10);
+  --execution-filled-fg:  oklch(0.680 0.120 175);
+
+  --agent-running-fg:    oklch(0.700 0.165 255);
+  --agent-running-bg:    oklch(0.700 0.165 255 / 0.12);
+
+  --data-quality-delayed-fg: oklch(0.770 0.140 80);
+  --data-quality-delayed-bg: oklch(0.770 0.140 80 / 0.10);
+  --data-quality-missing-fg: oklch(0.670 0.170 20);
+
+  /* ── Interaction ── */
+  --interaction-focus-ring:   oklch(0.700 0.165 255 / 0.4);
+  --interaction-focus-border: oklch(0.700 0.165 255);
+  --interaction-hover-subtle-bg: oklch(1 0 0 / 0.05);
+  --interaction-hover-strong-bg: oklch(1 0 0 / 0.08);
+  --interaction-selected-bg:  oklch(0.700 0.165 255 / 0.10);
+  --interaction-selected-border: oklch(0.700 0.165 255 / 0.25);
+
+  /* ── Code / Mono ── */
+  --code-bg:        oklch(0.155 0.005 260);
+  --code-text:      oklch(0.830 0.010 260);
+  --code-border:    oklch(0.245 0.008 260);
+
+  /* ── Scrollbar ── */
+  --scrollbar-track:        oklch(0.155 0.005 260);
+  --scrollbar-thumb:        oklch(0.310 0.010 260);
+  --scrollbar-thumb-hover:  oklch(0.370 0.012 260);
+}
+
+/* ── Light Mode Override — Graphite Studio ── */
+[data-theme="light"] {
+  /* Surface — pure white graphite steps */
+  --surface-app:               oklch(0.988 0.001 260);
+  --surface-panel-base:        oklch(0.958 0.003 260);
+  --surface-panel-elevated:    oklch(0.932 0.005 260);
+  --surface-strip:             oklch(0.958 0.003 260);
+  --surface-overlay:           oklch(0.995 0.000 0);
+  --surface-modal:             oklch(0.998 0.000 0);
+
+  /* Text — dark graphite */
+  --text-primary:              oklch(0.148 0.010 260);
+  --text-secondary:            oklch(0.395 0.012 260);
+  --text-tertiary:             oklch(0.545 0.008 260);
+  --text-disabled:             oklch(0.740 0.006 260);
+  --text-inverse:              oklch(0.958 0.003 260);
+
+  /* Border */
+  --border-subtle:             oklch(0.878 0.006 260);
+  --border-default:            oklch(0.775 0.010 260);
+  --border-strong:             oklch(0.645 0.008 260);
+
+  /* Brand accent */
+  --brand-accent:              oklch(0.550 0.200 260);
+  --brand-accent-hover:        oklch(0.500 0.210 260);
+  --brand-accent-subtle:       oklch(0.550 0.200 260 / 0.07);
+
+  /* Interaction */
+  --interaction-focus-ring:    oklch(0.550 0.200 260 / 0.35);
+  --interaction-focus-border:  oklch(0.550 0.200 260);
+  --interaction-hover-subtle-bg: oklch(0 0 0 / 0.04);
+  --interaction-hover-strong-bg: oklch(0 0 0 / 0.07);
+  --interaction-selected-bg:   oklch(0.550 0.200 260 / 0.08);
+  --interaction-selected-border: oklch(0.550 0.200 260 / 0.20);
+
+  /* Code */
+  --code-bg:        oklch(0.938 0.003 260);
+  --code-text:      oklch(0.195 0.010 260);
+  --code-border:    oklch(0.878 0.006 260);
+
+  /* Scrollbar */
+  --scrollbar-track:        oklch(0.938 0.003 260);
+  --scrollbar-thumb:        oklch(0.775 0.010 260);
+  --scrollbar-thumb-hover:  oklch(0.645 0.008 260);
+}

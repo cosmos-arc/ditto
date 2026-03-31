@@ -53,6 +53,11 @@
 	},
 	"overrides": [
 		{
+			"includes": ["src/routeTree.gen.ts", "src/types/api.d.ts"],
+			"linter": { "enabled": false },
+			"formatter": { "enabled": false }
+		},
+		{
 			"includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/__tests__/**"],
 			"linter": {
 				"rules": {

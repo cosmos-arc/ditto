@@ -1,0 +1,125 @@
+/* ─────────────────────────────────────────────
+ * Ditto Design Tokens — Semantic Surface Layer
+ * Layer 2: Surface elevation, text hierarchy, borders
+ * These defaults get overridden per-style.
+ * ───────────────────────────────────────────── */
+
+:root {
+  /* ── Surface Elevation (6 levels) ── */
+  /* Level 0: App background — deepest, most recessed */
+  --surface-app:               oklch(0.155 0.0124 254.17);
+  /* Level 1: Panel base — primary content containers */
+  --surface-panel-base:        oklch(0.185 0.0146 253.21);
+  /* Level 2: Panel elevated — nested cards, secondary panels */
+  --surface-panel-elevated:    oklch(0.215 0.0190 252.07);
+  /* Level 3: Strip / toolbar — horizontal bars */
+  --surface-strip:             oklch(0.185 0.0146 253.21);
+  /* Level 4: Overlay / popover — floating elements */
+  --surface-overlay:           oklch(0.260 0.0252 251.20);
+  /* Level 5: Modal — highest elevation */
+  --surface-modal:             oklch(0.302 0.0303 246.97);
+
+  /* ── Text Hierarchy (5 levels) ── */
+  --text-primary:              oklch(0.9205 0.0146 244.73);
+  --text-secondary:            oklch(0.5937 0.0393 247.20);
+  --text-tertiary:             oklch(0.4193 0.0421 241.39);
+  --text-quaternary:           oklch(0.3418 0.0330 248.82);
+  --text-disabled:             oklch(0.3418 0.0330 248.82);
+  --text-inverse:              oklch(0.1665 0.0124 254.17);
+  --text-data-stale:           oklch(0.3418 0.0330 248.82);
+
+  /* ── Text Semantic ── */
+  --text-link:                 var(--brand-500);
+  --text-link-hover:           var(--brand-400);
+  --text-error:                var(--red-500);
+  --text-warning:              var(--amber-500);
+  --text-success:              var(--green-500);
+
+  /* ── Border Hierarchy (3 levels) ── */
+  --border-subtle:             oklch(0.2396 0.0233 251.45);
+  --border-default:            oklch(0.3025 0.0303 246.97);
+  --border-strong:             oklch(0.4193 0.0421 241.39);
+
+  /* ── Border Semantic ── */
+  --border-focus:              var(--interaction-focus-ring);
+  --border-error:              var(--red-500);
+  --border-warning:            var(--amber-500);
+
+  /* ── Brand Accent (semantic) ── */
+  --brand-accent:              var(--brand-500);
+  --brand-accent-hover:        var(--brand-400);
+  --brand-accent-subtle:       oklch(0.6642 0.1605 263.63 / 0.12);
+
+  /* ── Icon ── */
+  --icon-primary:              var(--text-secondary);
+  --icon-secondary:            var(--text-tertiary);
+  --icon-brand:                var(--brand-accent);
+
+  /* ── Scrollbar ── */
+  --scrollbar-track:           oklch(0.1665 0.0124 254.17);
+  --scrollbar-thumb:           oklch(0.3025 0.0303 246.97);
+  --scrollbar-thumb-hover:     oklch(0.3418 0.0330 248.82);
+
+  /* ── Code / Mono ── */
+  --code-bg:                   oklch(0.1665 0.0124 254.17);
+  --code-text:                 oklch(0.8143 0.0232 248.11);
+  --code-border:               oklch(0.2396 0.0233 251.45);
+
+  /* ── Divider ── */
+  --divider-default:           var(--border-subtle);
+  --divider-strong:            var(--border-default);
+
+  /* ── Overlay (white-at-controlled-opacity for subtle separators) ── */
+  --overlay-2:   oklch(1 0 0 / 0.02);
+  --overlay-3:   oklch(1 0 0 / 0.03);
+  --overlay-4:   oklch(1 0 0 / 0.04);
+  --overlay-6:   oklch(1 0 0 / 0.06);
+  --overlay-8:   oklch(1 0 0 / 0.08);
+  --overlay-10:  oklch(1 0 0 / 0.10);
+  --overlay-12:  oklch(1 0 0 / 0.12);
+
+  /* ── Frosted Glass (surface at reduced opacity for header/bar effects) ── */
+  --surface-frosted:           oklch(from var(--surface-app) l c h / 0.85);
+  --surface-frosted-subtle:    oklch(from var(--surface-app) l c h / 0.80);
+}
+
+/* ── Light Mode ──
+ * Radix step-scale pattern: higher elevation → lower lightness (darker surface).
+ * Mirrors dark mode where higher elevation → higher lightness.
+ */
+[data-theme="light"] {
+  /* Surface Elevation — white → gray steps */
+  --surface-app:               oklch(0.985 0.002 260);
+  --surface-panel-base:        oklch(0.960 0.004 260);
+  --surface-panel-elevated:    oklch(0.935 0.006 260);
+  --surface-strip:             oklch(0.960 0.004 260);
+  --surface-overlay:           oklch(0.995 0.000 0);
+  --surface-modal:             oklch(0.998 0.000 0);
+
+  /* Text Hierarchy — dark on light */
+  --text-primary:              oklch(0.155 0.015 260);
+  --text-secondary:            oklch(0.400 0.015 260);
+  --text-tertiary:             oklch(0.550 0.010 260);
+  --text-quaternary:           oklch(0.650 0.008 260);
+  --text-disabled:             oklch(0.750 0.006 260);
+  --text-inverse:              oklch(0.960 0.004 260);
+  --text-data-stale:           oklch(0.650 0.008 260);
+
+  /* Border — subtle gray steps */
+  --border-subtle:             oklch(0.880 0.006 260);
+  --border-default:            oklch(0.780 0.010 260);
+  --border-strong:             oklch(0.650 0.008 260);
+
+  /* Brand accent subtle — low opacity on white */
+  --brand-accent-subtle:       oklch(0.6642 0.1605 263.63 / 0.08);
+
+  /* Scrollbar */
+  --scrollbar-track:           oklch(0.940 0.004 260);
+  --scrollbar-thumb:           oklch(0.780 0.010 260);
+  --scrollbar-thumb-hover:     oklch(0.650 0.008 260);
+
+  /* Code / Mono */
+  --code-bg:                   oklch(0.940 0.004 260);
+  --code-text:                 oklch(0.200 0.015 260);
+  --code-border:               oklch(0.880 0.006 260);
+}

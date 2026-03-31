@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Platform</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="../shared/tokens-base.css">
+  <link rel="stylesheet" href="../shared/tokens-semantic.css">
+  <link rel="stylesheet" href="../shared/tokens-domain.css">
+  <link rel="stylesheet" href="../shared/tokens-interaction.css">
+  <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="../shared/tokens-component.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="../shared/layout-base.css">
+
+  <style>
+    /* Style label for comparison */
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .header-btn-badge:focus-visible,
+    .header-action-btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
+
+    :root {
+      /* Inherits layout-base.css defaults for ops console */
+      /* Inherits tokens-style.css compact density tokens */
+    }
+
+    /* ── Frosted glass header ── */
+    .shell-ops .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* ── Brand anchor: health strip accent underline ── */
+    .shell-ops .ops-health {
+      border-bottom: 1px solid var(--brand-accent-subtle);
+    }
+
+    /* ── Panel body breathing room ── */
+    .shell-ops .panel-body {
+      padding: var(--space-4) 0;
+    }
+
+    /* ── Header subtitle ── */
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+      margin-left: var(--space-8);
+    }
+
+    /* ── Environment Badge ── */
+    .env-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-2) var(--space-10);
+      border-radius: var(--radius-4);
+      background: var(--system-healthy-bg);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--system-healthy-fg);
+      border-left: 2px solid var(--brand-accent);
+    }
+
+    .env-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+    }
+
+    /* ── Header button with badge ── */
+    .header-btn-badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--header-btn-size);
+      height: var(--header-btn-size);
+      border-radius: var(--radius-6);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .header-btn-badge:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+
+    .header-btn-badge .badge-count {
+      position: absolute;
+      top: 2px;
+      right: 0;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-inverse);
+      background: var(--system-down-fg);
+      min-width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3px;
+    }
+
+    /* ── Health Strip Item ── */
+    .health-metric {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      white-space: nowrap;
+      font-size: var(--font-size-12);
+    }
+
+    .health-metric-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .health-metric-dot.healthy  { background: var(--system-healthy-fg); }
+    .health-metric-dot.degraded { background: var(--system-degraded-fg); }
+    .health-metric-dot.down     { background: var(--system-down-fg); }
+    .health-metric-dot.brand    { background: var(--brand-accent); }
+
+    .health-metric-label {
+      color: var(--text-tertiary);
+    }
+
+    .health-metric-value {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* Brand accent touchpoint: task-running value */
+    .health-metric-value.brand {
+      color: var(--brand-accent);
+    }
+
+    /* Brand accent touchpoint: panel-count severity */
+    .panel-count-critical {
+      background: var(--system-down-bg);
+      color: var(--system-down-fg);
+    }
+    .panel-count-healthy {
+      background: var(--system-healthy-bg);
+      color: var(--system-healthy-fg);
+    }
+
+    .health-metric-value.ok     { color: var(--system-healthy-fg); }
+    .health-metric-value.warn   { color: var(--system-degraded-fg); }
+    .health-metric-value.alert  { color: var(--system-down-fg); }
+    .health-metric-value.brand  { color: var(--brand-accent); }
+    .health-metric-value        { font-family: var(--font-family-numeric); }
+
+    /* ── Cell state classes ── */
+    .cell-warn { font-family: var(--font-family-numeric); color: var(--system-degraded-fg); }
+
+    /* ── Status bar live indicator ── */
+    .status-live {
+      color: var(--system-healthy-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .health-metric-separator {
+      width: 1px;
+      height: 10px;
+      background: var(--border-subtle);
+    }
+
+    /* ── Ops Main: stacked panels ── */
+    .ops-main .panel + .panel {
+      border-top: none;
+      margin-top: -1px;
+    }
+
+    /* ── Alert Row with description ── */
+    .alert-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .alert-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Status Dot (inline) ── */
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+    }
+
+    .status-dot-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot-dot.ok       { background: var(--system-healthy-fg); }
+    .status-dot-dot.warn     { background: var(--system-degraded-fg); }
+    .status-dot-dot.down     { background: var(--system-down-fg); }
+
+    .status-dot.ok   { color: var(--system-healthy-fg); }
+    .status-dot.warn { color: var(--system-degraded-fg); }
+    .status-dot.down { color: var(--system-down-fg); }
+
+    /* ── Inline Quota Bar ── */
+    .quota-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .quota-text {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      white-space: nowrap;
+    }
+
+    .quota-text.ok       { color: var(--system-healthy-fg); }
+    .quota-text.warn     { color: var(--system-degraded-fg); }
+    .quota-text.critical { color: var(--system-down-fg); }
+
+    .quota-bar {
+      width: 60px;
+      height: 3px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .quota-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+
+    .quota-bar-fill.ok       { background: var(--system-healthy-fg); }
+    .quota-bar-fill.warn     { background: var(--system-degraded-fg); }
+    .quota-bar-fill.critical { background: var(--system-down-fg); }
+
+    /* ── Task Row ── */
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .task-item:last-child {
+      border-bottom: none;
+    }
+
+    .task-status-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .task-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-name {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .task-meta {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .task-status {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .task-status.running  { color: var(--system-healthy-fg); }
+    .task-status.waiting  { color: var(--text-tertiary); }
+    .task-status.progress { color: var(--system-degraded-fg); }
+    .task-status.failed   { color: var(--system-down-fg); }
+
+    /* Task status icon color via parent class */
+    .task-item.running  .task-status-icon { color: var(--system-healthy-fg); }
+    .task-item.waiting  .task-status-icon { color: var(--text-tertiary); }
+    .task-item.progress .task-status-icon { color: var(--system-degraded-fg); }
+    .task-item.failed   .task-status-icon { color: var(--system-down-fg); }
+    .task-item.failed   .task-meta        { color: var(--system-down-fg); }
+
+    /* ── Resource Row ── */
+    .resource-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .resource-item:last-child {
+      border-bottom: none;
+    }
+
+    .resource-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .resource-label {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+
+    .resource-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .resource-value.ok       { color: var(--system-healthy-fg); }
+    .resource-value.warn     { color: var(--system-degraded-fg); }
+    .resource-value.critical { color: var(--system-down-fg); }
+
+    .resource-bar {
+      height: 4px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .resource-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .resource-bar-fill.ok       { background: var(--system-healthy-fg); }
+    .resource-bar-fill.warn     { background: var(--system-degraded-fg); }
+    .resource-bar-fill.critical { background: var(--system-down-fg); }
+
+    /* ── Event Row ── */
+    .event-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .event-item:last-child {
+      border-bottom: none;
+    }
+
+    .event-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+      min-width: 36px;
+    }
+
+    .event-text {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .event-item.muted .event-time {
+      color: var(--text-disabled);
+    }
+
+    .event-item.muted .event-text {
+      color: var(--text-tertiary);
+    }
+
+    /* Older events — second-level fade */
+    .event-item.older .event-text {
+      color: var(--text-disabled);
+    }
+
+    /* ── Cell utility classes (replace inline styles) ── */
+    .cell-name     { font-weight: var(--font-weight-medium); }
+    .cell-numeric  { font-family: var(--font-family-numeric); }
+    .cell-time     { font-family: var(--font-family-numeric); color: var(--text-secondary); }
+    .cell-disabled { font-family: var(--font-family-numeric); color: var(--text-disabled); }
+
+    /* ── Sort indicator ── */
+    .sort-indicator {
+      font-size: var(--font-size-10);
+      color: var(--text-disabled);
+      margin-left: var(--space-2);
+    }
+
+    /* ── Task status icon color via parent ── */
+    .task-item.running  .task-status-icon { color: var(--system-healthy-fg); }
+    .task-item.waiting  .task-status-icon { color: var(--text-tertiary); }
+    .task-item.progress .task-status-icon { color: var(--system-degraded-fg); }
+    .task-item.failed   .task-status-icon { color: var(--system-down-fg); }
+    .task-item.failed   .task-meta-error  { color: var(--system-down-fg); }
+
+    /* ── Alert severity text label ── */
+    .alert-severity {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+    .alert-severity.critical { color: var(--system-down-fg); }
+    .alert-severity.warning  { color: var(--system-degraded-fg); }
+
+    /* ── Status bar (terminal DNA) ── */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: 1.5rem;
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+    .status-indicator {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      margin-right: var(--space-4);
+      flex-shrink: 0;
+    }
+    .status-sep {
+      margin: 0 var(--space-6);
+      color: var(--border-subtle);
+    }
+    .status-spacer { flex: 1; }
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Respect reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .btn, .rail-icon, .header-btn-badge, .header-action-btn,
+      .panel-action, .quota-bar-fill, .resource-bar-fill,
+      .status-indicator, .alert-row, .data-table tr,
+      .skeleton, .task-item.running .task-status::after {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Micro-animations — subtle, purposeful motion
+     * ══════════════════════════════════════════════ */
+
+    /* Status dot pulse — gentle breathing for LIVE indicator */
+    .status-indicator {
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Resource bar fill entrance — eased width transition */
+    .resource-bar-fill {
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Data table row hover — subtle interactive hint */
+    .data-table tbody tr {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .data-table tbody tr:hover {
+      background: var(--interaction-hover-strong-bg);
+    }
+
+    /* Disconnected row persistent highlight */
+    .data-table tr.row-down td {
+      background: var(--system-down-bg);
+    }
+    .data-table tr.row-down:hover td {
+      background: color-mix(in oklch, var(--system-down-bg) 80%, var(--interaction-hover-subtle-bg));
+    }
+
+    /* Alert row entrance */
+    .alert-row {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .alert-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    /* Critical alert left accent — scan priority */
+    .alert-row:has(.alert-dot.critical) {
+      border-left: 2px solid var(--system-down-fg);
+      padding-left: calc(var(--space-8) - 2px);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Brand anchor — header title underline
+     * ══════════════════════════════════════════════ */
+    .header-title {
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 2px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: 2px;
+    }
+
+    /* Rail logo subtle brand glow */
+    .rail-logo {
+      text-shadow: 0 0 12px oklch(0.700 0.165 255 / 0.15);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Trend indicators — health metric arrows
+     * ══════════════════════════════════════════════ */
+    .health-trend {
+      font-size: var(--font-size-10);
+      margin-left: var(--space-2);
+      font-family: var(--font-family-numeric);
+    }
+    .health-trend.up   { color: var(--market-up-fg); }
+    .health-trend.down { color: var(--market-down-fg); }
+    .health-trend.flat { color: var(--text-tertiary); }
+
+    /* ══════════════════════════════════════════════
+     * R2: Timeline connector — event section
+     * ══════════════════════════════════════════════ */
+    .event-item {
+      position: relative;
+    }
+    .event-item::before {
+      content: '';
+      position: absolute;
+      left: 22px;
+      top: 18px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+    .event-item:last-child::before {
+      display: none;
+    }
+
+    /* Event time marker dot */
+    .event-time::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      margin-right: var(--space-4);
+      vertical-align: middle;
+    }
+    .event-item.muted .event-time::before {
+      background: var(--text-disabled);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R3: Detail Panel — first section priority weight
+     * ══════════════════════════════════════════════ */
+    .context-section:first-child {
+      border-top: 2px solid oklch(0.700 0.165 255 / 0.20);
+    }
+
+    .task-item.running {
+      background: oklch(0.700 0.165 255 / 0.03);
+      border-radius: var(--radius-4);
+      padding-left: var(--space-4);
+      padding-right: var(--space-4);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R3: Health metric — tabular-nums + update flash
+     * ══════════════════════════════════════════════ */
+    .health-metric-value {
+      font-variant-numeric: tabular-nums;
+    }
+
+    @keyframes value-flash {
+      0%   { opacity: 0.85; transform: translateY(0.5px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .health-metric-value.ok,
+    .health-metric-value.warn,
+    .health-metric-value.brand {
+      animation: value-flash 200ms ease-out;
+    }
+
+    /* ══════════════════════════════════════════════
+     * R3: Quota bar 95%+ critical escalation
+     * ══════════════════════════════════════════════ */
+    .quota-text.critical,
+    .quota-bar-fill.critical {
+      color: var(--system-down-fg);
+      background: var(--system-down-fg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R3: Row-down action hint
+     * ══════════════════════════════════════════════ */
+    .row-action {
+      font-size: var(--font-size-10);
+      color: color-mix(in oklch, var(--brand-accent) 60%, transparent);
+      cursor: pointer;
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      margin-left: var(--space-4);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+    .row-action:hover {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      text-decoration: underline;
+    }
+
+    /* ══════════════════════════════════════════════
+     * R6: Noise material texture
+     * ══════════════════════════════════════════════ */
+    .shell-ops {
+      position: relative;
+    }
+    .shell-ops::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+    /* Subtle top-edge ambient light */
+    .shell-ops::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        oklch(0.700 0.165 255 / 0.10) 20%,
+        oklch(0.700 0.165 255 / 0.18) 50%,
+        oklch(0.700 0.165 255 / 0.10) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+    .shell-ops > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+     * R6: Skeleton shimmer — loading state placeholder
+     * ══════════════════════════════════════════════ */
+    .skeleton {
+      background: linear-gradient(
+        90deg,
+        var(--neutral-100) 25%,
+        var(--neutral-150) 50%,
+        var(--neutral-100) 75%
+      );
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s ease-in-out infinite;
+      border-radius: var(--radius-2);
+    }
+    .skeleton-bar {
+      height: 12px;
+      width: 60px;
+    }
+    .skeleton-text {
+      height: 11px;
+      width: 80px;
+    }
+    .skeleton-text-sm {
+      height: 10px;
+      width: 48px;
+    }
+    @keyframes skeleton-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ══════════════════════════════════════════════
+     * R6: Mini sparkline — latency trend indicator
+     * ══════════════════════════════════════════════ */
+    .sparkline {
+      display: inline-block;
+      vertical-align: middle;
+      width: 40px;
+      height: 14px;
+      margin-left: var(--space-4);
+    }
+    .sparkline path {
+      fill: none;
+      stroke-width: 1.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .sparkline.ok path   { stroke: var(--system-healthy-fg); }
+    .sparkline.warn path { stroke: var(--system-degraded-fg); }
+
+    /* ══════════════════════════════════════════════
+     * R6: Brand moment — running task accent pulse
+     * ══════════════════════════════════════════════ */
+    .task-item.running .task-status {
+      position: relative;
+    }
+    .task-item.running .task-status::after {
+      content: '';
+      position: absolute;
+      right: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+      animation: task-pulse 2s ease-in-out infinite;
+    }
+    @keyframes task-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 oklch(0.700 0.165 255 / 0.4); }
+      50%      { opacity: 0.7; box-shadow: 0 0 0 4px oklch(0.700 0.165 255 / 0); }
+    }
+
+    /* ══════════════════════════════════════════════
+     * R6: Alert panel flex fix
+     * ══════════════════════════════════════════════ */
+    .ops-main .panel.panel-alerts {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <!-- R6: SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+      <linearGradient id="spark-fill-ok" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="oklch(0.68 0.12 175)" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="oklch(0.68 0.12 175)" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="spark-fill-warn" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="oklch(0.77 0.14 80)" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="oklch(0.77 0.14 80)" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+  </svg>
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label">Graphite Studio — Platform Ops · Compact · A股</div>
+
+  <div class="shell-ops">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="Home" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="Markets" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="Research" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="Trading" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="AI" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="Platform" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="Settings" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <span class="header-title">Platform<span class="header-subtitle">平台运维</span></span>
+      <div class="env-badge">
+        <span class="env-badge-dot"></span>
+        生产环境
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-actions" role="toolbar" aria-label="页面操作">
+        <div class="btn btn-sm" tabindex="0" role="button" title="刷新">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
+          刷新
+        </div>
+        <div class="header-btn-badge" tabindex="0" role="button" aria-label="事件（4 条未处理）" title="事件">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h14v12H3z"/><path d="M3 9h14M7 4v12M10 9v7"/></svg>
+          <span class="badge-count">4</span>
+        </div>
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+        </div>
+        <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Health Strip (36px) ═══ -->
+    <div class="ops-health" role="status" aria-label="系统健康指标">
+      <div class="health-metric">
+        <span class="health-metric-dot healthy"></span>
+        <span class="health-metric-label">数据新鲜度</span>
+        <span class="health-metric-value ok">98.2%</span><span class="health-trend up">↑</span>
+      </div>
+      <div class="health-metric-separator"></div>
+      <div class="health-metric">
+        <span class="health-metric-dot healthy"></span>
+        <span class="health-metric-label">数据完整度</span>
+        <span class="health-metric-value ok">99.4%</span><span class="health-trend flat">→</span>
+      </div>
+      <div class="health-metric-separator"></div>
+      <div class="health-metric">
+        <span class="health-metric-dot healthy"></span>
+        <span class="health-metric-label">数据准确度</span>
+        <span class="health-metric-value ok">99.8%</span><span class="health-trend flat">→</span>
+      </div>
+      <div class="health-metric-separator"></div>
+      <div class="health-metric">
+        <span class="health-metric-dot degraded"></span>
+        <span class="health-metric-label">数据源在线</span>
+        <span class="health-metric-value warn">4/5</span><span class="health-trend down">↓</span>
+      </div>
+      <div class="health-metric-separator"></div>
+      <div class="health-metric">
+        <span class="health-metric-dot brand"></span>
+        <span class="health-metric-label">任务运行</span>
+        <span class="health-metric-value brand">3/4</span>
+      </div>
+      <div class="health-metric-separator"></div>
+      <div class="health-metric">
+        <span class="health-metric-dot healthy"></span>
+        <span class="health-metric-label">系统负载</span>
+        <span class="health-metric-value ok">23%</span><span class="health-trend up">↑</span>
+      </div>
+    </div>
+
+    <!-- ═══ Main Content (Data Sources + Alerts) ═══ -->
+    <div class="ops-main" id="main-content">
+      <!-- Panel 1: 数据源 / 数据质量 -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">数据源 <span class="panel-subtitle">5 个源</span></span>
+        </div>
+        <div class="panel-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">数据源</th>
+                <th scope="col">状态 <span class="sort-indicator" aria-label="按严重程度排序">▼</span></th>
+                <th scope="col">延迟</th>
+                <th scope="col">API 配额</th>
+                <th scope="col">上次同步</th>
+                <th scope="col" class="right">今日请求</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Tushare -->
+              <tr>
+                <td class="cell-name">Tushare</td>
+                <td>
+                  <span class="status-dot ok">
+                    <span class="status-dot-dot ok"></span>
+                    正常
+                  </span>
+                </td>
+                <td class="cell-numeric">2s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 5 L16 8 L24 4 L32 6 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 5 L16 8 L24 4 L32 6 L40 7"/></svg></td>
+                <td>
+                  <div class="quota-cell">
+                    <span class="quota-text critical">4,820/5,000</span>
+                    <div class="quota-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="Tushare API 配额 96.4%"><div class="quota-bar-fill critical" style="width: 96.4%;"></div></div>
+                  </div>
+                </td>
+                <td class="cell-time">14:32:15</td>
+                <td class="right cell-numeric">4,820</td>
+              </tr>
+              <!-- Wind -->
+              <tr>
+                <td class="cell-name">Wind</td>
+                <td>
+                  <span class="status-dot ok">
+                    <span class="status-dot-dot ok"></span>
+                    正常
+                  </span>
+                </td>
+                <td class="cell-numeric">1s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 6 L16 7 L24 5 L32 7 L40 6 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 6 L16 7 L24 5 L32 7 L40 6"/></svg></td>
+                <td>
+                  <span class="quota-text ok">无限制</span>
+                </td>
+                <td class="cell-time">14:32:10</td>
+                <td class="right cell-numeric">1,247</td>
+              </tr>
+              <!-- 东方财富 Choice -->
+              <tr>
+                <td class="cell-name">东方财富 Choice</td>
+                <td>
+                  <span class="status-dot warn">
+                    <span class="status-dot-dot warn"></span>
+                    延迟
+                  </span>
+                </td>
+                <td class="cell-numeric cell-warn">45s<svg class="sparkline warn" viewBox="0 0 40 14"><path d="M0 14 L0 6 L8 7 L16 10 L24 12 L32 13 L40 13 L40 14Z" fill="url(#spark-fill-warn)"/><path d="M0 6 L8 7 L16 10 L24 12 L32 13 L40 13"/></svg></td>
+                <td>
+                  <div class="quota-cell">
+                    <span class="quota-text warn">8,200/10,000</span>
+                    <div class="quota-bar" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="东方财富 Choice API 配额 82%"><div class="quota-bar-fill warn" style="width: 82%;"></div></div>
+                  </div>
+                </td>
+                <td class="cell-time">14:31:28</td>
+                <td class="right cell-numeric">8,200</td>
+              </tr>
+              <!-- 同花顺 iFind -->
+              <tr>
+                <td class="cell-name">同花顺 iFind</td>
+                <td>
+                  <span class="status-dot ok">
+                    <span class="status-dot-dot ok"></span>
+                    正常
+                  </span>
+                </td>
+                <td class="cell-numeric">3s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 8 L8 7 L16 6 L24 8 L32 5 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 8 L8 7 L16 6 L24 8 L32 5 L40 7"/></svg></td>
+                <td>
+                  <div class="quota-cell">
+                    <span class="quota-text ok">2,100/3,000</span>
+                    <div class="quota-bar" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" aria-label="同花顺 iFind API 配额 70%"><div class="quota-bar-fill ok" style="width: 70%;"></div></div>
+                  </div>
+                </td>
+                <td class="cell-time">14:32:08</td>
+                <td class="right cell-numeric">2,100</td>
+              </tr>
+              <!-- 聚宽 -->
+              <tr class="row-down">
+                <td class="cell-name">聚宽</td>
+                <td>
+                  <span class="status-dot down">
+                    <span class="status-dot-dot down"></span>
+                    断开
+                  </span>
+                  <span class="row-action" tabindex="0" role="button" aria-label="重试连接聚宽">重试</span>
+                </td>
+                <td class="cell-disabled">—</td>
+                <td>
+                  <span class="quota-text muted">—</span>
+                </td>
+                <td class="cell-disabled">14:15:00</td>
+                <td class="right cell-disabled">0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Panel 2: 系统预警 -->
+      <div class="panel panel-alerts">
+        <div class="panel-header">
+          <span class="panel-title">系统预警</span>
+          <span class="panel-count panel-count-critical">4</span>
+          <div class="panel-actions">
+            <span class="panel-action" tabindex="0" role="button">查看全部 →</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <!-- Alert 1 — critical (sorted: severity first, then time) -->
+          <div class="alert-row">
+            <span class="alert-dot critical"></span>
+            <div class="alert-content">
+              <span class="alert-title">上交所行情接口响应超时 <span class="alert-severity critical">严重</span></span>
+              <span class="alert-desc">超时 45s，已自动切换备用源</span>
+            </div>
+            <span class="alert-time">28 分钟前</span>
+          </div>
+          <!-- Alert 2 — critical -->
+          <div class="alert-row">
+            <span class="alert-dot critical"></span>
+            <div class="alert-content">
+              <span class="alert-title">模型评分服务异常 <span class="alert-severity critical">严重</span></span>
+              <span class="alert-desc">情绪 Alpha v2 评分返回 503，已自动重试 2 次</span>
+            </div>
+            <span class="alert-time">2 小时前</span>
+          </div>
+          <!-- Alert 3 — warning -->
+          <div class="alert-row">
+            <span class="alert-dot warning"></span>
+            <div class="alert-content">
+              <span class="alert-title">Tushare API 日配额即将耗尽 <span class="alert-severity warning">警告</span></span>
+              <span class="alert-desc">4,820/5,000 今日请求，预计 3 小时后重置</span>
+            </div>
+            <span class="alert-time">12 分钟前</span>
+          </div>
+          <!-- Alert 4 — warning -->
+          <div class="alert-row">
+            <span class="alert-dot warning"></span>
+            <div class="alert-content">
+              <span class="alert-title">因子计算任务延迟 <span class="alert-severity warning">警告</span></span>
+              <span class="alert-desc">北向持仓变化率因子计算积压 15 分钟</span>
+            </div>
+            <span class="alert-time">1 小时前</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Detail Panel (340px right side) ═══ -->
+    <div class="ops-detail">
+      <div class="context-rail">
+        <!-- Section 1: 管道/任务 -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">Pipeline & 任务</span>
+            <span class="panel-count panel-count-healthy">运行中 2</span>
+          </div>
+          <div class="context-section-body">
+            <!-- Task 1: 日线行情同步 — running -->
+            <div class="task-item running">
+              <span class="task-status-icon">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+              </span>
+              <div class="task-body">
+                <span class="task-name">日线行情同步</span>
+                <span class="task-meta">Tushare + Wind</span>
+              </div>
+              <span class="task-status running">运行中 · 剩余 2 分钟</span>
+            </div>
+            <!-- Task 2: 财务数据更新 — waiting -->
+            <div class="task-item waiting">
+              <span class="task-status-icon">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+              </span>
+              <div class="task-body">
+                <span class="task-name">财务数据更新</span>
+                <span class="task-meta">东方财富 Choice</span>
+              </div>
+              <span class="task-status waiting">排队中 · 第 2 位</span>
+            </div>
+            <!-- Task 3: 因子计算 — progress -->
+            <div class="task-item progress">
+              <span class="task-status-icon">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+              </span>
+              <div class="task-body">
+                <span class="task-name">因子计算 · 北向持仓变化率</span>
+                <span class="task-meta">计算中 67%</span>
+              </div>
+              <span class="task-status progress">计算中 · 积压 15 分钟</span>
+            </div>
+            <!-- Task 4: 模型评分 — failed -->
+            <div class="task-item failed">
+              <span class="task-status-icon">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 5l10 10M15 5L5 15"/></svg>
+              </span>
+              <div class="task-body">
+                <span class="task-name">模型评分 · 情绪 Alpha v2</span>
+                <span class="task-meta">服务返回 503</span>
+              </div>
+              <span class="task-status failed">已失败 · 需重试</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: 资源/配额 -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">资源 & 配额</span>
+          </div>
+          <div class="context-section-body">
+            <!-- API 配额 (Tushare) — critical -->
+            <div class="resource-item">
+              <div class="resource-header">
+                <span class="resource-label">API 配额 (Tushare)</span>
+                <span class="resource-value critical">96.4% — 4,820/5,000</span>
+              </div>
+              <div class="resource-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="API 配额 (Tushare) 96.4%">
+                <div class="resource-bar-fill critical" style="width: 96.4%;"></div>
+              </div>
+            </div>
+            <!-- CPU 使用率 — ok -->
+            <div class="resource-item">
+              <div class="resource-header">
+                <span class="resource-label">CPU 使用率</span>
+                <span class="resource-value ok">23%</span>
+              </div>
+              <div class="resource-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100" aria-label="CPU 使用率 23%">
+                <div class="resource-bar-fill ok" style="width: 23%;"></div>
+              </div>
+            </div>
+            <!-- 内存使用 — ok -->
+            <div class="resource-item">
+              <div class="resource-header">
+                <span class="resource-label">内存使用</span>
+                <span class="resource-value ok">4.2 / 16 GB</span>
+              </div>
+              <div class="resource-bar" role="progressbar" aria-valuenow="26" aria-valuemin="0" aria-valuemax="100" aria-label="内存使用 26%">
+                <div class="resource-bar-fill ok" style="width: 26%;"></div>
+              </div>
+            </div>
+            <!-- 磁盘空间 — ok -->
+            <div class="resource-item">
+              <div class="resource-header">
+                <span class="resource-label">磁盘空间</span>
+                <span class="resource-value ok">128 / 512 GB</span>
+              </div>
+              <div class="resource-bar" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100" aria-label="磁盘空间 25%">
+                <div class="resource-bar-fill ok" style="width: 25%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: 最近事件 -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">最近事件</span>
+          </div>
+          <div class="context-section-body">
+            <div class="event-item">
+              <span class="event-time">14:32:15</span>
+              <span class="event-text">Tushare 日线数据同步完成</span>
+            </div>
+            <div class="event-item">
+              <span class="event-time">14:31:00</span>
+              <span class="event-text">因子计算任务启动 · 北向持仓变化率</span>
+            </div>
+            <div class="event-item">
+              <span class="event-time">14:28:42</span>
+              <span class="event-text">Wind 分钟线数据同步完成</span>
+            </div>
+            <div class="event-item">
+              <span class="event-time">14:25:08</span>
+              <span class="event-text">模型评分服务返回 503（连续第 2 次）</span>
+            </div>
+            <div class="event-item muted older">
+              <span class="event-time">14:15:00</span>
+              <span class="event-text">聚宽连接断开，已发送告警</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- R1: Status Bar — terminal DNA -->
+  <div class="status-bar" role="status" aria-label="系统状态">
+    <span class="status-indicator" aria-hidden="true"></span>
+    <span class="status-live">LIVE</span>
+    <span class="status-sep">│</span>
+    <span>4/5 数据源在线</span>
+    <span class="status-sep">│</span>
+    <span>14:32:15 CST</span>
+    <span class="status-sep">│</span>
+    <span>CPU 23% · MEM 26%</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl+K</span> 搜索
+  </div>
+
+</body>
+</html>

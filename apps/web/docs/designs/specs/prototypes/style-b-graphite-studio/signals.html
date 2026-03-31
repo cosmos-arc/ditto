@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Trading Signals (Style B: Graphite Studio)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/tokens-base.css">
+  <link rel="stylesheet" href="../shared/tokens-semantic.css">
+  <link rel="stylesheet" href="../shared/tokens-domain.css">
+  <link rel="stylesheet" href="../shared/tokens-interaction.css">
+  <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="../shared/layout-base.css">
+  <style>
+    .style-label {
+      position: fixed; top: 8px; right: 8px; z-index: 999;
+      font-family: var(--font-family-ui); font-size: 11px;
+      color: var(--text-tertiary); background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="style-label">Style B — Trading Signals Inbox</div>
+
+  <div class="shell-signals">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon active" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <span class="header-title">Trading / Signals</span>
+      <div class="header-spacer"></div>
+      <div class="header-search">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        Search signals...
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="header-actions">
+        <div class="header-action-btn" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Filter Toolbar ═══ -->
+    <div class="filter-toolbar">
+      <div class="filter-group">
+        <span class="filter-label">Status:</span>
+        <button class="filter-chip active">All (23)</button>
+        <button class="filter-chip">Pending (12)</button>
+        <button class="filter-chip">Approved (7)</button>
+        <button class="filter-chip">Rejected (3)</button>
+        <button class="filter-chip">Executed (1)</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">Direction:</span>
+        <button class="filter-chip">All</button>
+        <button class="filter-chip">BUY</button>
+        <button class="filter-chip">SELL</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">Strategy:</span>
+        <select class="filter-select">
+          <option>All Strategies</option>
+          <option>Momentum Alpha v3</option>
+          <option>Mean Revert v2</option>
+          <option>Breakout v1</option>
+          <option>Regime Filter</option>
+        </select>
+      </div>
+      <div class="filter-spacer"></div>
+      <span class="filter-count">12 pending review</span>
+      <button class="btn btn-sm">Approve All (12)</button>
+    </div>
+
+    <!-- ═══ Signal Queue (left) ═══ -->
+    <div class="signal-queue">
+      <!-- Pending signals -->
+      <div class="signal-row selected">
+        <span class="action-priority critical"></span>
+        <span class="signal-ticker">AAPL</span>
+        <span class="signal-direction sell">SELL</span>
+        <span class="signal-strategy">Momentum Alpha v3 — RSI Divergence + Volume Spike</span>
+        <div style="text-align:center">
+          <span class="signal-confidence high">87%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill high" style="width:87%"></div></div>
+        </div>
+        <span class="signal-time">3m</span>
+        <span class="signal-actions">
+          <button class="btn btn-sm btn-primary">Approve</button>
+          <button class="btn btn-sm btn-danger">Reject</button>
+        </span>
+      </div>
+
+      <div class="signal-row">
+        <span class="action-priority critical"></span>
+        <span class="signal-ticker">TSLA</span>
+        <span class="signal-direction buy">BUY</span>
+        <span class="signal-strategy">Mean Revert v2 — Oversold bounce, support at $238</span>
+        <div style="text-align:center">
+          <span class="signal-confidence high">82%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill high" style="width:82%"></div></div>
+        </div>
+        <span class="signal-time">25m</span>
+        <span class="signal-actions">
+          <button class="btn btn-sm btn-primary">Approve</button>
+          <button class="btn btn-sm btn-danger">Reject</button>
+        </span>
+      </div>
+
+      <div class="signal-row">
+        <span class="action-priority high"></span>
+        <span class="signal-ticker">NVDA</span>
+        <span class="signal-direction buy">BUY</span>
+        <span class="signal-strategy">Breakout v1 — Resistance breakout + volume confirmation</span>
+        <div style="text-align:center">
+          <span class="signal-confidence high">79%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill high" style="width:79%"></div></div>
+        </div>
+        <span class="signal-time">38m</span>
+        <span class="signal-actions">
+          <button class="btn btn-sm btn-primary">Approve</button>
+          <button class="btn btn-sm btn-danger">Reject</button>
+        </span>
+      </div>
+
+      <div class="signal-row">
+        <span class="action-priority high"></span>
+        <span class="signal-ticker">MSFT</span>
+        <span class="signal-direction buy">BUY</span>
+        <span class="signal-strategy">Mean Revert v2 — 2σ deviation from 20d MA</span>
+        <div style="text-align:center">
+          <span class="signal-confidence medium">72%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill medium" style="width:72%"></div></div>
+        </div>
+        <span class="signal-time">52m</span>
+        <span class="signal-actions">
+          <button class="btn btn-sm btn-primary">Approve</button>
+          <button class="btn btn-sm btn-danger">Reject</button>
+        </span>
+      </div>
+
+      <div class="signal-row">
+        <span class="action-priority medium"></span>
+        <span class="signal-ticker">AMZN</span>
+        <span class="signal-direction sell">SELL</span>
+        <span class="signal-strategy">Momentum Alpha v3 — Trend reversal pattern</span>
+        <div style="text-align:center">
+          <span class="signal-confidence medium">68%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill medium" style="width:68%"></div></div>
+        </div>
+        <span class="signal-time">1h</span>
+        <span class="signal-actions">
+          <button class="btn btn-sm btn-primary">Approve</button>
+          <button class="btn btn-sm btn-danger">Reject</button>
+        </span>
+      </div>
+
+      <div class="signal-row">
+        <span class="action-priority medium"></span>
+        <span class="signal-ticker">META</span>
+        <span class="signal-direction buy">BUY</span>
+        <span class="signal-strategy">Breakout v1 — Channel breakout on 4H</span>
+        <div style="text-align:center">
+          <span class="signal-confidence medium">65%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill medium" style="width:65%"></div></div>
+        </div>
+        <span class="signal-time">1.5h</span>
+        <span class="signal-actions">
+          <button class="btn btn-sm btn-primary">Approve</button>
+          <button class="btn btn-sm btn-danger">Reject</button>
+        </span>
+      </div>
+
+      <div class="signal-row">
+        <span class="action-priority medium"></span>
+        <span class="signal-ticker">AMD</span>
+        <span class="signal-direction buy">BUY</span>
+        <span class="signal-strategy">Mean Revert v2 — Bollinger lower band touch</span>
+        <div style="text-align:center">
+          <span class="signal-confidence medium">61%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill medium" style="width:61%"></div></div>
+        </div>
+        <span class="signal-time">2h</span>
+        <span class="signal-actions">
+          <button class="btn btn-sm btn-primary">Approve</button>
+          <button class="btn btn-sm btn-danger">Reject</button>
+        </span>
+      </div>
+
+      <div class="signal-row">
+        <span class="action-priority low"></span>
+        <span class="signal-ticker">JPM</span>
+        <span class="signal-direction buy">BUY</span>
+        <span class="signal-strategy">Regime Filter — Sector rotation into Financials</span>
+        <div style="text-align:center">
+          <span class="signal-confidence low">54%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill low" style="width:54%"></div></div>
+        </div>
+        <span class="signal-time">3h</span>
+        <span class="signal-actions">
+          <button class="btn btn-sm btn-primary">Approve</button>
+          <button class="btn btn-sm btn-danger">Reject</button>
+        </span>
+      </div>
+
+      <div class="signal-row">
+        <span class="action-priority low"></span>
+        <span class="signal-ticker">LLY</span>
+        <span class="signal-direction buy">BUY</span>
+        <span class="signal-strategy">Momentum Alpha v3 — Healthcare momentum breakout</span>
+        <div style="text-align:center">
+          <span class="signal-confidence low">52%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill low" style="width:52%"></div></div>
+        </div>
+        <span class="signal-time">4h</span>
+        <span class="signal-actions">
+          <button class="btn btn-sm btn-primary">Approve</button>
+          <button class="btn btn-sm btn-danger">Reject</button>
+        </span>
+      </div>
+
+      <!-- Approved signals (dimmed) -->
+      <div style="padding:var(--space-4) var(--space-12);font-size:var(--font-size-10);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;border-top:1px solid var(--border-default);margin-top:var(--space-4);">Approved</div>
+
+      <div class="signal-row" style="opacity:0.5">
+        <span class="action-priority" style="background:var(--market-up-fg)"></span>
+        <span class="signal-ticker">GOOGL</span>
+        <span class="signal-direction buy">BUY</span>
+        <span class="signal-strategy">Mean Revert v2 — Gap fill play</span>
+        <div style="text-align:center">
+          <span class="signal-confidence high">78%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill high" style="width:78%"></div></div>
+        </div>
+        <span class="signal-time" style="color:var(--market-up-fg)">Approved 5m</span>
+        <span class="signal-actions">
+          <span class="action-badge" style="background:var(--market-up-bg);color:var(--market-up-fg)">Executed</span>
+        </span>
+      </div>
+
+      <div class="signal-row" style="opacity:0.5">
+        <span class="action-priority" style="background:var(--market-up-fg)"></span>
+        <span class="signal-ticker">CRM</span>
+        <span class="signal-direction buy">BUY</span>
+        <span class="signal-strategy">Breakout v1 — Base breakout</span>
+        <div style="text-align:center">
+          <span class="signal-confidence medium">71%</span>
+          <div class="confidence-bar"><div class="confidence-bar-fill medium" style="width:71%"></div></div>
+        </div>
+        <span class="signal-time" style="color:var(--market-up-fg)">Approved 18m</span>
+        <span class="signal-actions">
+          <span class="action-badge" style="background:var(--market-up-bg);color:var(--market-up-fg)">Queued</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- ═══ Signal Detail Panel (right) ═══ -->
+    <div class="signal-detail">
+      <div class="detail-header">
+        <div style="display:flex;align-items:center;">
+          <span class="detail-ticker">AAPL</span>
+          <span class="detail-direction sell">SELL</span>
+        </div>
+        <div class="detail-meta">
+          <span><span class="meta-label">Strategy</span> <span class="meta-value">Momentum Alpha v3</span></span>
+          <span><span class="meta-label">Confidence</span> <span class="meta-value" style="color:var(--market-up-fg)">87%</span></span>
+          <span><span class="meta-label">Generated</span> <span class="meta-value">3m ago</span></span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Signal Parameters</div>
+        <div class="detail-rules">
+          <div class="detail-rule">
+            <span class="rule-key">Entry Price</span>
+            <span class="rule-val">$189.42</span>
+          </div>
+          <div class="detail-rule">
+            <span class="rule-key">Target Price</span>
+            <span class="rule-val" style="color:var(--market-up-fg)">$182.00</span>
+          </div>
+          <div class="detail-rule">
+            <span class="rule-key">Stop Loss</span>
+            <span class="rule-val" style="color:var(--market-down-fg)">$193.50</span>
+          </div>
+          <div class="detail-rule">
+            <span class="rule-key">Position Size</span>
+            <span class="rule-val">450 shares</span>
+          </div>
+          <div class="detail-rule">
+            <span class="rule-key">Risk/Reward</span>
+            <span class="rule-val">1 : 1.32</span>
+          </div>
+          <div class="detail-rule">
+            <span class="rule-key">Expected PnL</span>
+            <span class="rule-val" style="color:var(--market-up-fg)">+$3,321</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Trigger Analysis</div>
+        <div class="detail-rules">
+          <div class="detail-rule">
+            <span class="rule-key">RSI (14)</span>
+            <span class="rule-val" style="color:var(--risk-high-fg)">72.4 <span style="color:var(--text-tertiary);font-size:10px">overbought</span></span>
+          </div>
+          <div class="detail-rule">
+            <span class="rule-key">Volume vs 20d Avg</span>
+            <span class="rule-val" style="color:var(--risk-high-fg)">1.8x <span style="color:var(--text-tertiary);font-size:10px">elevated</span></span>
+          </div>
+          <div class="detail-rule">
+            <span class="rule-key">MACD Signal</span>
+            <span class="rule-val" style="color:var(--market-down-fg)">Bearish cross</span>
+          </div>
+          <div class="detail-rule">
+            <span class="rule-key">Bollinger Position</span>
+            <span class="rule-val">Upper band touch</span>
+          </div>
+          <div class="detail-rule">
+            <span class="rule-key">Price vs 50d MA</span>
+            <span class="rule-val">+4.2% above</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Risk Assessment</div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-8);">
+          <div style="display:flex;align-items:center;gap:var(--space-8);">
+            <span style="font-size:var(--font-size-12);color:var(--text-secondary);width:80px;">Sector Risk</span>
+            <span class="cell-badge risk-high">High</span>
+            <span style="font-size:var(--font-size-12);color:var(--text-tertiary);">Tech concentration 37.2%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--space-8);">
+            <span style="font-size:var(--font-size-12);color:var(--text-secondary);width:80px;">Correlation</span>
+            <span class="cell-badge risk-med">Medium</span>
+            <span style="font-size:var(--font-size-12);color:var(--text-tertiary);">ρ=0.72 with QQQ</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--space-8);">
+            <span style="font-size:var(--font-size-12);color:var(--text-secondary);width:80px;">VaR Impact</span>
+            <span class="cell-badge risk-high">High</span>
+            <span style="font-size:var(--font-size-12);color:var(--text-tertiary);">+$8.4K (6% of daily VaR)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--space-8);">
+            <span style="font-size:var(--font-size-12);color:var(--text-secondary);width:80px;">Liquidity</span>
+            <span class="cell-badge risk-low">Low Risk</span>
+            <span style="font-size:var(--font-size-12);color:var(--text-tertiary);">Avg daily vol: 48.2M</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Strategy Context</div>
+        <div style="font-size:var(--font-size-12);color:var(--text-secondary);line-height:1.5;">
+          Momentum Alpha v3 generated a SELL signal based on RSI divergence from price action combined with a volume spike (1.8x 20d average). The MACD histogram shows a bearish cross forming. Historical backtest shows 87% win rate for this pattern over 1,247 trades with avg holding period of 3.2 days.
+        </div>
+      </div>
+
+      <div class="detail-actions">
+        <button class="btn btn-primary" style="flex:1">Approve & Execute</button>
+        <button class="btn" style="flex:1">Approve (Manual)</button>
+        <button class="btn btn-danger">Reject</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

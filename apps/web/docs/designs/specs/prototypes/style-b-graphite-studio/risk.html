@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Risk Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/tokens-base.css">
+  <link rel="stylesheet" href="../shared/tokens-semantic.css">
+  <link rel="stylesheet" href="../shared/tokens-domain.css">
+  <link rel="stylesheet" href="../shared/tokens-interaction.css">
+  <link rel="stylesheet" href="../shared/tokens-density.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="../shared/layout-base.css">
+  <style>
+    .style-label {
+      position: fixed; top: 8px; right: 8px; z-index: 999;
+      font-family: var(--font-family-ui); font-size: 11px;
+      color: var(--text-tertiary); background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle); padding: 3px 8px; border-radius: 4px;
+      pointer-events: none;
+    }
+
+    /* ── Exposure Table Header ── */
+    .exposure-row.header-row {
+      border-bottom: 1px solid var(--border-default);
+      cursor: default;
+      font-size: var(--font-size-10);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-medium);
+    }
+    .exposure-row.header-row:hover {
+      background: none;
+    }
+
+    /* ── Correlation Matrix ── */
+    .corr-matrix {
+      display: grid;
+      grid-template-columns: 56px repeat(5, 1fr);
+      gap: 2px;
+      padding: var(--space-12);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+    }
+    .corr-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-6) 0;
+      border-radius: var(--radius-2);
+      font-size: var(--font-size-12);
+    }
+    .corr-label {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: var(--space-8);
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+    .corr-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+      padding-bottom: var(--space-4);
+    }
+    .corr-value.low    { color: var(--system-healthy-fg); }
+    .corr-value.medium { color: var(--text-secondary); }
+    .corr-value.high   { color: var(--system-down-fg); }
+    .corr-value.diag   { color: var(--text-tertiary); font-weight: var(--font-weight-medium); }
+  </style>
+</head>
+<body>
+  <div class="style-label">Style B: Graphite Studio — Risk Center</div>
+
+  <div class="shell-risk">
+    <!-- ======== Rail ======== -->
+    <nav class="shell-rail">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon active" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ======== Header ======== -->
+    <header class="shell-header">
+      <span class="header-title">Trading / Risk</span>
+      <div class="header-spacer"></div>
+      <div class="header-search">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        Search positions, limits...
+        <kbd>&#8984;K</kbd>
+      </div>
+      <div class="header-actions">
+        <div class="header-action-btn" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ======== Risk Metrics Strip ======== -->
+    <div class="risk-metrics">
+      <!-- Portfolio VaR -->
+      <div class="risk-metric-card">
+        <span class="rm-label">Portfolio VaR</span>
+        <span class="rm-value warning">$142K</span>
+        <div class="rm-bar"><div class="rm-bar-fill warning" style="width: 72%;"></div></div>
+        <span class="rm-sub">95% confidence &middot; 1d horizon</span>
+      </div>
+      <!-- Max Drawdown -->
+      <div class="risk-metric-card">
+        <span class="rm-label">Max Drawdown</span>
+        <span class="rm-value ok">-8.3%</span>
+        <div class="rm-bar"><div class="rm-bar-fill ok" style="width: 69%;"></div></div>
+        <span class="rm-sub">Limit: -12.0% &middot; from peak</span>
+      </div>
+      <!-- Risk Utilization -->
+      <div class="risk-metric-card">
+        <span class="rm-label">Risk Utilization</span>
+        <span class="rm-value ok">68.2%</span>
+        <div class="rm-bar"><div class="rm-bar-fill ok" style="width: 68%;"></div></div>
+        <span class="rm-sub">Target: 70-80%</span>
+      </div>
+      <!-- Sector Concentration -->
+      <div class="risk-metric-card">
+        <span class="rm-label">Sector Concentration</span>
+        <span class="rm-value critical">37.2%</span>
+        <div class="rm-bar"><div class="rm-bar-fill critical" style="width: 94%;"></div></div>
+        <span class="rm-sub">Top: Technology &middot; Limit: 35%</span>
+      </div>
+      <!-- Beta -->
+      <div class="risk-metric-card">
+        <span class="rm-label">Beta</span>
+        <span class="rm-value" style="color: var(--text-primary);">1.12</span>
+        <div class="rm-bar"><div class="rm-bar-fill ok" style="width: 75%;"></div></div>
+        <span class="rm-sub">Range: 0.8 - 1.5</span>
+      </div>
+      <!-- Sharpe Ratio -->
+      <div class="risk-metric-card">
+        <span class="rm-label">Sharpe Ratio</span>
+        <span class="rm-value ok">1.42</span>
+        <div class="rm-bar"><div class="rm-bar-fill ok" style="width: 71%;"></div></div>
+        <span class="rm-sub">Annualized &middot; 30d rolling</span>
+      </div>
+    </div>
+
+    <!-- ======== Main Area ======== -->
+    <div class="risk-main">
+      <!-- Left: Position Exposure -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Position Exposure</span>
+          <span class="panel-count">8 positions</span>
+          <div class="panel-actions">
+            <span class="panel-action">Sort</span>
+            <span class="panel-action">Filter</span>
+            <span class="panel-action">Export</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <!-- Header Row -->
+          <div class="exposure-row header-row">
+            <span>Ticker</span>
+            <span>Name</span>
+            <span style="text-align:right;">Weight</span>
+            <span style="text-align:right;">PnL</span>
+            <span style="text-align:right;">PnL%</span>
+            <span style="text-align:right;">VaR Contrib</span>
+          </div>
+          <!-- AAPL -->
+          <div class="exposure-row">
+            <span class="exposure-ticker">AAPL</span>
+            <span class="exposure-name">Apple Inc.</span>
+            <span class="exposure-value">12.4%</span>
+            <span class="exposure-value positive">+$24,800</span>
+            <span class="exposure-value positive">+4.2%</span>
+            <span class="exposure-value">$18,200</span>
+          </div>
+          <!-- MSFT -->
+          <div class="exposure-row">
+            <span class="exposure-ticker">MSFT</span>
+            <span class="exposure-name">Microsoft Corp.</span>
+            <span class="exposure-value">11.8%</span>
+            <span class="exposure-value positive">+$31,400</span>
+            <span class="exposure-value positive">+5.6%</span>
+            <span class="exposure-value">$16,900</span>
+          </div>
+          <!-- NVDA -->
+          <div class="exposure-row">
+            <span class="exposure-ticker">NVDA</span>
+            <span class="exposure-name">NVIDIA Corp.</span>
+            <span class="exposure-value">10.2%</span>
+            <span class="exposure-value positive">+$52,100</span>
+            <span class="exposure-value positive">+12.8%</span>
+            <span class="exposure-value">$22,700</span>
+          </div>
+          <!-- GOOGL -->
+          <div class="exposure-row">
+            <span class="exposure-ticker">GOOGL</span>
+            <span class="exposure-name">Alphabet Inc.</span>
+            <span class="exposure-value">8.6%</span>
+            <span class="exposure-value positive">+$12,300</span>
+            <span class="exposure-value positive">+2.9%</span>
+            <span class="exposure-value">$11,400</span>
+          </div>
+          <!-- AMZN -->
+          <div class="exposure-row">
+            <span class="exposure-ticker">AMZN</span>
+            <span class="exposure-name">Amazon.com Inc.</span>
+            <span class="exposure-value">7.9%</span>
+            <span class="exposure-value positive">+$18,600</span>
+            <span class="exposure-value positive">+4.7%</span>
+            <span class="exposure-value">$14,100</span>
+          </div>
+          <!-- TSLA -->
+          <div class="exposure-row">
+            <span class="exposure-ticker">TSLA</span>
+            <span class="exposure-name">Tesla Inc.</span>
+            <span class="exposure-value">6.3%</span>
+            <span class="exposure-value negative">-$8,400</span>
+            <span class="exposure-value negative">-2.8%</span>
+            <span class="exposure-value">$19,800</span>
+          </div>
+          <!-- META -->
+          <div class="exposure-row">
+            <span class="exposure-ticker">META</span>
+            <span class="exposure-name">Meta Platforms</span>
+            <span class="exposure-value">5.7%</span>
+            <span class="exposure-value positive">+$14,200</span>
+            <span class="exposure-value positive">+5.1%</span>
+            <span class="exposure-value">$9,600</span>
+          </div>
+          <!-- JPM -->
+          <div class="exposure-row">
+            <span class="exposure-ticker">JPM</span>
+            <span class="exposure-name">JPMorgan Chase</span>
+            <span class="exposure-value">4.8%</span>
+            <span class="exposure-value positive">+$6,900</span>
+            <span class="exposure-value positive">+2.3%</span>
+            <span class="exposure-value">$7,200</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Risk Limits -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Risk Limits</span>
+          <span class="panel-count">2 breached</span>
+          <div class="panel-actions">
+            <span class="panel-action">History</span>
+            <span class="panel-action">Configure</span>
+          </div>
+        </div>
+        <div class="panel-body" style="padding: var(--space-8) var(--space-12);">
+          <!-- VaR 95% — critical -->
+          <div class="limit-row">
+            <span class="limit-name">VaR 95%</span>
+            <div class="limit-bar-track">
+              <div class="limit-bar-fill critical" style="width: 100%;"></div>
+            </div>
+            <div class="limit-values">
+              <span class="limit-current" style="color: var(--system-down-fg);">$142K</span>
+              <span class="limit-max">/ $125K</span>
+            </div>
+          </div>
+          <!-- Sector Concentration — critical -->
+          <div class="limit-row">
+            <span class="limit-name">Sector Conc.</span>
+            <div class="limit-bar-track">
+              <div class="limit-bar-fill critical" style="width: 100%;"></div>
+            </div>
+            <div class="limit-values">
+              <span class="limit-current" style="color: var(--system-down-fg);">37.2%</span>
+              <span class="limit-max">/ 35%</span>
+            </div>
+          </div>
+          <!-- Single Position — ok -->
+          <div class="limit-row">
+            <span class="limit-name">Single Position</span>
+            <div class="limit-bar-track">
+              <div class="limit-bar-fill ok" style="width: 83%;"></div>
+            </div>
+            <div class="limit-values">
+              <span class="limit-current">12.4%</span>
+              <span class="limit-max">/ 15%</span>
+            </div>
+          </div>
+          <!-- Daily Turnover — ok -->
+          <div class="limit-row">
+            <span class="limit-name">Daily Turnover</span>
+            <div class="limit-bar-track">
+              <div class="limit-bar-fill ok" style="width: 68%;"></div>
+            </div>
+            <div class="limit-values">
+              <span class="limit-current">34%</span>
+              <span class="limit-max">/ 50%</span>
+            </div>
+          </div>
+          <!-- Leverage — ok -->
+          <div class="limit-row">
+            <span class="limit-name">Leverage</span>
+            <div class="limit-bar-track">
+              <div class="limit-bar-fill ok" style="width: 60%;"></div>
+            </div>
+            <div class="limit-values">
+              <span class="limit-current">1.2x</span>
+              <span class="limit-max">/ 2.0x</span>
+            </div>
+          </div>
+          <!-- Drawdown Limit — ok -->
+          <div class="limit-row">
+            <span class="limit-name">Drawdown Limit</span>
+            <div class="limit-bar-track">
+              <div class="limit-bar-fill ok" style="width: 69%;"></div>
+            </div>
+            <div class="limit-values">
+              <span class="limit-current">-8.3%</span>
+              <span class="limit-max">/ -12%</span>
+            </div>
+          </div>
+          <!-- Beta Range — ok -->
+          <div class="limit-row">
+            <span class="limit-name">Beta Range</span>
+            <div class="limit-bar-track">
+              <div class="limit-bar-fill ok" style="width: 75%;"></div>
+            </div>
+            <div class="limit-values">
+              <span class="limit-current">1.12</span>
+              <span class="limit-max">/ 1.5</span>
+            </div>
+          </div>
+          <!-- Margin Utilization — ok -->
+          <div class="limit-row">
+            <span class="limit-name">Margin Util.</span>
+            <div class="limit-bar-track">
+              <div class="limit-bar-fill ok" style="width: 53%;"></div>
+            </div>
+            <div class="limit-values">
+              <span class="limit-current">42%</span>
+              <span class="limit-max">/ 80%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== Secondary Area ======== -->
+    <div class="risk-secondary">
+      <!-- Left: Active Risk Alerts -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Active Risk Alerts</span>
+          <span class="panel-count">5 alerts</span>
+          <div class="panel-actions">
+            <span class="panel-action">Dismiss All</span>
+            <span class="panel-action">History</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <!-- Alert 1 — critical -->
+          <div class="alert-row">
+            <div class="alert-dot critical"></div>
+            <div class="alert-content">
+              <span class="alert-title">Sector concentration limit breached</span>
+              <span class="alert-desc">Technology sector at 37.2% exceeds 35% limit. Consider rebalancing.</span>
+            </div>
+            <span class="alert-time">2m ago</span>
+          </div>
+          <!-- Alert 2 — critical -->
+          <div class="alert-row">
+            <div class="alert-dot critical"></div>
+            <div class="alert-content">
+              <span class="alert-title">VaR limit exceeded</span>
+              <span class="alert-desc">Portfolio VaR ($142K) has exceeded the $125K threshold at 95% confidence.</span>
+            </div>
+            <span class="alert-time">8m ago</span>
+          </div>
+          <!-- Alert 3 — warning -->
+          <div class="alert-row">
+            <div class="alert-dot warning"></div>
+            <div class="alert-content">
+              <span class="alert-title">TSLA VaR contribution elevated</span>
+              <span class="alert-desc">Tesla accounts for 13.9% of portfolio VaR despite only 6.3% weight.</span>
+            </div>
+            <span class="alert-time">23m ago</span>
+          </div>
+          <!-- Alert 4 — warning -->
+          <div class="alert-row">
+            <div class="alert-dot warning"></div>
+            <div class="alert-content">
+              <span class="alert-title">Risk utilization approaching target band</span>
+              <span class="alert-desc">Current utilization at 68.2%, approaching the 70-80% target range.</span>
+            </div>
+            <span class="alert-time">1h ago</span>
+          </div>
+          <!-- Alert 5 — info -->
+          <div class="alert-row">
+            <div class="alert-dot info"></div>
+            <div class="alert-content">
+              <span class="alert-title">NVDA correlation with QQQ rising</span>
+              <span class="alert-desc">30d rolling correlation increased to 0.84 from 0.72 last week.</span>
+            </div>
+            <span class="alert-time">2h ago</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Correlation Matrix -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Correlation Matrix</span>
+          <span class="panel-count">30d rolling</span>
+          <div class="panel-actions">
+            <span class="panel-action">Period</span>
+            <span class="panel-action">Heatmap</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="corr-matrix">
+            <!-- Header row -->
+            <div class="corr-cell"></div>
+            <div class="corr-header">AAPL</div>
+            <div class="corr-header">MSFT</div>
+            <div class="corr-header">NVDA</div>
+            <div class="corr-header">GOOGL</div>
+            <div class="corr-header">AMZN</div>
+            <!-- AAPL row -->
+            <div class="corr-label">AAPL</div>
+            <div class="corr-cell corr-value diag">1.00</div>
+            <div class="corr-cell corr-value high">0.78</div>
+            <div class="corr-cell corr-value medium">0.62</div>
+            <div class="corr-cell corr-value medium">0.58</div>
+            <div class="corr-cell corr-value medium">0.51</div>
+            <!-- MSFT row -->
+            <div class="corr-label">MSFT</div>
+            <div class="corr-cell corr-value high">0.78</div>
+            <div class="corr-cell corr-value diag">1.00</div>
+            <div class="corr-cell corr-value high">0.72</div>
+            <div class="corr-cell corr-value medium">0.64</div>
+            <div class="corr-cell corr-value medium">0.59</div>
+            <!-- NVDA row -->
+            <div class="corr-label">NVDA</div>
+            <div class="corr-cell corr-value medium">0.62</div>
+            <div class="corr-cell corr-value high">0.72</div>
+            <div class="corr-cell corr-value diag">1.00</div>
+            <div class="corr-cell corr-value medium">0.67</div>
+            <div class="corr-cell corr-value medium">0.55</div>
+            <!-- GOOGL row -->
+            <div class="corr-label">GOOGL</div>
+            <div class="corr-cell corr-value medium">0.58</div>
+            <div class="corr-cell corr-value medium">0.64</div>
+            <div class="corr-cell corr-value medium">0.67</div>
+            <div class="corr-cell corr-value diag">1.00</div>
+            <div class="corr-cell corr-value high">0.74</div>
+            <!-- AMZN row -->
+            <div class="corr-label">AMZN</div>
+            <div class="corr-cell corr-value medium">0.51</div>
+            <div class="corr-cell corr-value medium">0.59</div>
+            <div class="corr-cell corr-value medium">0.55</div>
+            <div class="corr-cell corr-value high">0.74</div>
+            <div class="corr-cell corr-value diag">1.00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
