@@ -1,0 +1,66 @@
+/* ─────────────────────────────────────────────
+ * Ditto Theme Switcher — Shared Controls
+ * Density (Dense / Compact / Comfortable) + Theme (Dark / Light)
+ * Used by all prototype pages for consistency.
+ * ───────────────────────────────────────────── */
+
+.theme-switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+/* ── Switcher Group (density / theme) ── */
+.switcher-group {
+  display: flex;
+  align-items: center;
+  background: var(--surface-panel-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-4);
+  padding: 2px;
+  gap: 1px;
+}
+
+.switcher-group-label {
+  font-size: var(--font-size-10);
+  color: var(--text-quaternary);
+  padding: 0 var(--space-6);
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+
+.switcher-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--density-action-height);
+  padding: 0 var(--space-8);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-3);
+  cursor: pointer;
+  transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+              background var(--motion-duration-fast) var(--motion-easing-standard);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.switcher-btn:hover {
+  color: var(--text-secondary);
+  background: var(--interaction-hover-subtle-bg);
+}
+
+.switcher-btn[aria-pressed="true"] {
+  color: var(--text-primary);
+  background: var(--interaction-selected-bg);
+}
+
+/* ── Separator ── */
+.switcher-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border-subtle);
+}

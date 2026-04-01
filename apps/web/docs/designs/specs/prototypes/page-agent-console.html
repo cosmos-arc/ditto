@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Agent Console</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="shared/tokens-base.css">
+  <link rel="stylesheet" href="shared/tokens-semantic.css">
+  <link rel="stylesheet" href="shared/tokens-domain.css">
+  <link rel="stylesheet" href="shared/tokens-interaction.css">
+  <link rel="stylesheet" href="shared/tokens-density.css">
+  <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <style>
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible,
+    .agent-tab:focus-visible,
+    .plan-card:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Studio Shell — Agent Console
+     * Grid: Rail (56px) | Main (1fr) | Detail Panel (340px)
+     * Rows: Header (60px) | Tabs (auto) | Content (1fr)
+     * ══════════════════════════════════════════════ */
+    .shell-agent {
+      display: grid;
+      grid-template-columns: var(--shell-rail-width) 1fr 340px;
+      grid-template-rows: 60px auto 1fr;
+      grid-template-areas:
+        "rail header header"
+        "rail tabs   tabs"
+        "rail main   detail";
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Noise material texture */
+    .shell-agent::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Subtle top-edge ambient light */
+    .shell-agent::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .shell-agent > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .shell-agent .shell-rail {
+      grid-area: rail;
+    }
+
+    .shell-agent .shell-header {
+      grid-area: header;
+      height: 60px;
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Header floating layer — light from behind */
+    .shell-agent .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    .shell-agent .agent-tabs {
+      grid-area: tabs;
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: 0;
+      height: var(--density-toolbar-height);
+    }
+
+    .shell-agent .agent-main {
+      grid-area: main;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      padding: var(--density-gutter);
+      gap: var(--density-gutter);
+      min-height: 0;
+    }
+
+    .shell-agent .agent-detail {
+      grid-area: detail;
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Detail panel top glow bar */
+    .agent-detail::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 50%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 70%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 50%, transparent) 70%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Rail right edge ambient light */
+    .shell-agent .shell-rail {
+      position: relative;
+    }
+    .shell-agent .shell-rail::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -1px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* Rail active indicator */
+    .rail-icon.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
+    }
+
+    /* ── Style label for comparison ── */
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    /* ── Header title underline ── */
+    .header-title {
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 2px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: 2px;
+    }
+
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+      margin-left: var(--space-8);
+    }
+
+    /* ── CTA Button ── */
+    .btn-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      height: var(--density-action-height);
+      padding: var(--btn-sm-padding-y) var(--btn-cta-padding-x);
+      font-family: var(--font-family-ui);
+      font-size: var(--btn-font-size);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      background: var(--brand-accent);
+      border: none;
+      border-radius: var(--btn-radius);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+    .btn-cta:hover {
+      background: var(--brand-accent-hover);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      height: var(--density-action-height);
+      padding: var(--btn-sm-padding-y) var(--btn-padding-x);
+      font-family: var(--font-family-ui);
+      font-size: var(--btn-font-size);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--btn-radius);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+    .btn-ghost:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-default);
+      color: var(--text-primary);
+    }
+
+    /* ── Agent Tabs ── */
+    .agent-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-4) var(--space-12);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      border-radius: var(--radius-4) var(--radius-4) 0 0;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-4);
+      user-select: none;
+    }
+
+    .agent-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .agent-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    /* Tab count badge */
+    .agent-tab-count {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      background: var(--surface-panel-elevated);
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-2);
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
+    }
+
+    .agent-tab.active .agent-tab-count {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    /* Tab entrance — stagger */
+    .agent-tab {
+      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .agent-tabs .agent-tab:nth-child(1) { animation-delay: 50ms; }
+    .agent-tabs .agent-tab:nth-child(2) { animation-delay: 100ms; }
+    .agent-tabs .agent-tab:nth-child(3) { animation-delay: 150ms; }
+    .agent-tabs .agent-tab:nth-child(4) { animation-delay: 200ms; }
+
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .agent-tabs-spacer {
+      flex: 1;
+    }
+
+    /* ── Plan Card ── */
+    .plan-card {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: var(--card-padding);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .plan-card:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-strong-bg);
+    }
+
+    .plan-card.selected {
+      border-color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+
+    .plan-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-8);
+      margin-bottom: var(--space-6);
+    }
+
+    .plan-card-name {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .plan-card-status {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: 2px var(--space-6);
+      border-radius: var(--radius-4);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .plan-card-status.running {
+      color: var(--agent-running-fg);
+      background: var(--agent-running-bg);
+    }
+
+    .plan-card-status.completed {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+    }
+
+    .plan-card-status.failed {
+      color: var(--agent-failed-fg);
+      background: var(--agent-failed-bg);
+    }
+
+    /* Status dot inside badge */
+    .plan-card-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .plan-card-status.running .plan-card-status-dot {
+      background: var(--agent-running-fg);
+      animation: dot-pulse 2s ease-in-out infinite;
+    }
+    .plan-card-status.completed .plan-card-status-dot {
+      background: var(--system-healthy-fg);
+    }
+    .plan-card-status.failed .plan-card-status-dot {
+      background: var(--agent-failed-fg);
+    }
+
+    .plan-card-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      margin-bottom: var(--space-8);
+    }
+
+    .plan-card-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .plan-card-meta-sep {
+      width: 1px;
+      height: 12px;
+      background: var(--border-subtle);
+    }
+
+    /* ── Progress Bar ── */
+    .progress-bar {
+      height: 4px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: var(--space-8);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .progress-bar-fill.brand {
+      background: var(--brand-accent);
+    }
+
+    .progress-bar-fill.ok {
+      background: var(--system-healthy-fg);
+    }
+
+    .progress-bar-fill.warn {
+      background: var(--system-degraded-fg);
+    }
+
+    .progress-bar-fill.critical {
+      background: var(--system-down-fg);
+    }
+
+    .plan-card-progress-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-4);
+    }
+
+    .plan-card-progress-text {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .plan-card-progress-pct {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Agent Chain ── */
+    .agent-chain {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-top: var(--space-6);
+      flex-wrap: wrap;
+    }
+
+    .agent-chain-step {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      padding: 2px var(--space-6);
+      border-radius: var(--radius-2);
+      background: var(--surface-strip);
+      border: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+
+    .agent-chain-step.active {
+      color: var(--agent-running-fg);
+      background: var(--agent-running-bg);
+      border-color: color-mix(in oklch, var(--agent-running-fg) 30%, transparent);
+    }
+
+    .agent-chain-step.done {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+      border-color: color-mix(in oklch, var(--system-healthy-fg) 20%, transparent);
+    }
+
+    .agent-chain-step.failed {
+      color: var(--agent-failed-fg);
+      background: var(--agent-failed-bg);
+      border-color: color-mix(in oklch, var(--agent-failed-fg) 20%, transparent);
+    }
+
+    .agent-chain-arrow {
+      color: var(--text-disabled);
+      font-size: var(--font-size-10);
+      margin: 0 var(--space-4);
+      flex-shrink: 0;
+    }
+
+    /* ── Plan Output Summary ── */
+    .plan-card-output {
+      margin-top: var(--space-8);
+      padding-top: var(--space-6);
+      border-top: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .plan-card-output-count {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    /* ── Detail Panel Sections ── */
+    .detail-header {
+      padding: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .detail-header-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin-bottom: var(--space-4);
+    }
+
+    .detail-header-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .detail-section {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid var(--border-subtle);
+      position: relative;
+    }
+
+    /* Dual-line separator */
+    .detail-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, white 3%, transparent);
+      pointer-events: none;
+    }
+
+    .detail-section:first-of-type {
+      border-top: none;
+    }
+    .detail-section:first-of-type::before {
+      display: none;
+    }
+
+    .detail-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-8) var(--space-12);
+      flex-shrink: 0;
+    }
+
+    .detail-section-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .detail-section-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0 var(--space-12) var(--space-8);
+    }
+
+    /* ── Current Agent Status ── */
+    .agent-status-block {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-8);
+      border-radius: var(--radius-4);
+      margin-bottom: var(--space-8);
+    }
+
+    .agent-status-block.running {
+      background: var(--agent-running-bg);
+    }
+
+    .agent-status-block.idle {
+      background: var(--surface-panel-elevated);
+    }
+
+    .agent-status-block.waiting {
+      background: var(--agent-waiting-approval-bg);
+    }
+
+    .agent-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .agent-status-block.running .agent-status-dot {
+      background: var(--agent-running-fg);
+      animation: dot-pulse 2s ease-in-out infinite;
+    }
+    .agent-status-block.idle .agent-status-dot {
+      background: var(--agent-idle-fg);
+    }
+    .agent-status-block.waiting .agent-status-dot {
+      background: var(--agent-waiting-approval-fg);
+    }
+
+    .agent-status-label {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      flex: 1;
+    }
+
+    .agent-status-label strong {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .agent-status-state {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+    .agent-status-block.running .agent-status-state {
+      color: var(--agent-running-fg);
+    }
+    .agent-status-block.idle .agent-status-state {
+      color: var(--agent-idle-fg);
+    }
+    .agent-status-block.waiting .agent-status-state {
+      color: var(--agent-waiting-approval-fg);
+    }
+
+    /* ── Tool Trace ── */
+    .tool-trace-item {
+      display: flex;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+    }
+
+    .tool-trace-item:last-child {
+      border-bottom: none;
+    }
+
+    /* Timeline connector */
+    .tool-trace-item::before {
+      content: '';
+      position: absolute;
+      left: 14px;
+      top: 22px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+    .tool-trace-item:last-child::before {
+      display: none;
+    }
+
+    .tool-trace-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-disabled);
+      flex-shrink: 0;
+      min-width: 42px;
+      padding-top: 2px;
+    }
+
+    /* Time marker dot */
+    .tool-trace-time::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      margin-right: var(--space-4);
+      vertical-align: middle;
+    }
+
+    .tool-trace-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .tool-trace-name {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .tool-trace-tool {
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-12);
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-2);
+    }
+
+    .tool-trace-params {
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tool-trace-result {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .tool-trace-result.success {
+      color: var(--system-healthy-fg);
+    }
+
+    .tool-trace-result.error {
+      color: var(--agent-failed-fg);
+    }
+
+    .tool-trace-result.pending {
+      color: var(--system-degraded-fg);
+    }
+
+    /* ── Artifacts List ── */
+    .artifact-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .artifact-item:last-child {
+      border-bottom: none;
+    }
+
+    .artifact-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--text-tertiary);
+    }
+
+    .artifact-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .artifact-name {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .artifact-meta {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Confidence Score ── */
+    .confidence-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-4);
+      white-space: nowrap;
+    }
+
+    .confidence-badge.high {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+    }
+
+    .confidence-badge.medium {
+      color: var(--system-degraded-fg);
+      background: var(--system-degraded-bg);
+    }
+
+    .confidence-badge.low {
+      color: var(--system-down-fg);
+      background: var(--system-down-bg);
+    }
+
+    .confidence-label {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Detail Actions ── */
+    .detail-actions {
+      padding: var(--space-8) var(--space-12);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      gap: var(--space-8);
+      flex-shrink: 0;
+    }
+
+    /* ── Status Bar ── */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: 1.5rem;
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      margin-right: var(--space-6);
+      flex-shrink: 0;
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    .status-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+
+    .status-live {
+      color: var(--system-healthy-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .status-spacer { flex: 1; }
+
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Animations ── */
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.6; }
+    }
+
+    /* ── Respect reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .btn-cta, .btn-ghost, .rail-icon, .agent-tab,
+      .plan-card, .tool-trace-item, .artifact-item,
+      .status-indicator, .plan-card-status-dot,
+      .agent-status-dot {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    /* ── Plan Card breathing for running state ── */
+    .plan-card.selected {
+      animation: card-breathe 3s ease-in-out infinite;
+    }
+
+    @keyframes card-breathe {
+      0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--brand-accent) 0%, transparent); }
+      50%      { box-shadow: 0 0 0 2px color-mix(in oklch, var(--brand-accent) 8%, transparent); }
+    }
+
+    /* ── Section flex proportions ── */
+    .detail-section:nth-child(2) {
+      flex: 2.5;
+    }
+    .detail-section:nth-child(3) {
+      flex: 2;
+    }
+    .detail-section:nth-child(4) {
+      flex: 1.5;
+    }
+    .detail-section:last-child {
+      flex: 0 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label">Graphite Studio — Agent Console · Compact</div>
+
+  <div class="shell-agent">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="AI" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <span class="header-title">Agent Console<span class="header-subtitle">智能体工作台</span></span>
+      <div class="header-spacer"></div>
+      <div class="header-actions" role="toolbar" aria-label="页面操作">
+        <button class="btn-cta" tabindex="0" aria-label="新建 Plan">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+          新建 Plan
+        </button>
+        <div class="theme-switcher">
+          <div class="switcher-group" role="group" aria-label="密度">
+            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          </div>
+          <div class="switcher-sep"></div>
+          <div class="switcher-group" role="group" aria-label="主题">
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+          </div>
+        </div>
+        <div class="header-search" tabindex="0" role="search" aria-label="搜索">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+          <span style="color:var(--text-tertiary);font-size:var(--font-size-12)">搜索 Plans...</span>
+          <kbd>Ctrl+K</kbd>
+        </div>
+        <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Tabs ═══ -->
+    <div class="agent-tabs" role="tablist" aria-label="Agent 工作流">
+      <span class="agent-tab active" role="tab" aria-selected="true">Plans</span>
+      <span class="agent-tab" role="tab" aria-selected="false">Runs</span>
+      <span class="agent-tab" role="tab" aria-selected="false">Findings <span class="agent-tab-count">3</span></span>
+      <span class="agent-tab" role="tab" aria-selected="false">Approvals <span class="agent-tab-count">2</span></span>
+      <div class="agent-tabs-spacer"></div>
+    </div>
+
+    <!-- ═══ Main Content — Plan Queue ═══ -->
+    <main class="agent-main" id="main-content">
+
+      <!-- Plan 1: Running (selected) -->
+      <div class="plan-card selected" tabindex="0" role="button" aria-label="Alpha 因子挖掘计划 — 运行中">
+        <div class="plan-card-header">
+          <span class="plan-card-name">Alpha 因子挖掘计划</span>
+          <span class="plan-card-status running">
+            <span class="plan-card-status-dot"></span>
+            运行中
+          </span>
+        </div>
+        <div class="plan-card-meta">
+          <span class="plan-card-time">2026-04-01 14:28</span>
+          <span class="plan-card-meta-sep"></span>
+          <span style="font-size:var(--font-size-12);color:var(--text-tertiary)">预计 15 分钟</span>
+        </div>
+        <div class="plan-card-progress-label">
+          <span class="plan-card-progress-text">整体进度</span>
+          <span class="plan-card-progress-pct">62%</span>
+        </div>
+        <div class="progress-bar" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 62%">
+          <div class="progress-bar-fill brand" style="width: 62%;"></div>
+        </div>
+        <div class="agent-chain">
+          <span class="agent-chain-step done">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+            数据探索
+          </span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step active">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+            Factor 挖掘
+          </span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step">策略验证</span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step">风控校验</span>
+        </div>
+        <div class="plan-card-output">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/></svg>
+          <span>产出物</span>
+          <span class="plan-card-output-count">8 个因子 · 3 个策略</span>
+        </div>
+      </div>
+
+      <!-- Plan 2: Completed -->
+      <div class="plan-card" tabindex="0" role="button" aria-label="北向资金异常流入检测 — 已完成">
+        <div class="plan-card-header">
+          <span class="plan-card-name">北向资金异常流入检测</span>
+          <span class="plan-card-status completed">
+            <span class="plan-card-status-dot"></span>
+            已完成
+          </span>
+        </div>
+        <div class="plan-card-meta">
+          <span class="plan-card-time">2026-04-01 10:15</span>
+          <span class="plan-card-meta-sep"></span>
+          <span style="font-size:var(--font-size-12);color:var(--text-tertiary)">耗时 12 分钟</span>
+        </div>
+        <div class="plan-card-progress-label">
+          <span class="plan-card-progress-text">整体进度</span>
+          <span class="plan-card-progress-pct">100%</span>
+        </div>
+        <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 100%">
+          <div class="progress-bar-fill ok" style="width: 100%;"></div>
+        </div>
+        <div class="agent-chain">
+          <span class="agent-chain-step done">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+            数据采集
+          </span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step done">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+            异常识别
+          </span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step done">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+            信号生成
+          </span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step done">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+            风控校验
+          </span>
+        </div>
+        <div class="plan-card-output">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/></svg>
+          <span>产出物</span>
+          <span class="plan-card-output-count">2 个 Finding · 1 个 Signal</span>
+        </div>
+      </div>
+
+      <!-- Plan 3: Failed -->
+      <div class="plan-card" tabindex="0" role="button" aria-label="行业轮动策略回测 — 失败">
+        <div class="plan-card-header">
+          <span class="plan-card-name">行业轮动策略回测</span>
+          <span class="plan-card-status failed">
+            <span class="plan-card-status-dot"></span>
+            失败
+          </span>
+        </div>
+        <div class="plan-card-meta">
+          <span class="plan-card-time">2026-04-01 09:40</span>
+          <span class="plan-card-meta-sep"></span>
+          <span style="font-size:var(--font-size-12);color:var(--agent-failed-fg)">Factor 挖掘阶段异常终止</span>
+        </div>
+        <div class="plan-card-progress-label">
+          <span class="plan-card-progress-text">整体进度</span>
+          <span class="plan-card-progress-pct">23%</span>
+        </div>
+        <div class="progress-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 23%">
+          <div class="progress-bar-fill critical" style="width: 23%;"></div>
+        </div>
+        <div class="agent-chain">
+          <span class="agent-chain-step done">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+            数据准备
+          </span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step failed">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15"/></svg>
+            Factor 挖掘
+          </span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step">策略回测</span>
+        </div>
+        <div class="plan-card-output">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/></svg>
+          <span>产出物</span>
+          <span class="plan-card-output-count">0 个因子</span>
+        </div>
+      </div>
+
+      <!-- Plan 4: Running -->
+      <div class="plan-card" tabindex="0" role="button" aria-label="多因子合成模型优化 — 运行中">
+        <div class="plan-card-header">
+          <span class="plan-card-name">多因子合成模型优化</span>
+          <span class="plan-card-status running">
+            <span class="plan-card-status-dot"></span>
+            运行中
+          </span>
+        </div>
+        <div class="plan-card-meta">
+          <span class="plan-card-time">2026-04-01 13:50</span>
+          <span class="plan-card-meta-sep"></span>
+          <span style="font-size:var(--font-size-12);color:var(--text-tertiary)">预计 25 分钟</span>
+        </div>
+        <div class="plan-card-progress-label">
+          <span class="plan-card-progress-text">整体进度</span>
+          <span class="plan-card-progress-pct">38%</span>
+        </div>
+        <div class="progress-bar" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 38%">
+          <div class="progress-bar-fill brand" style="width: 38%;"></div>
+        </div>
+        <div class="agent-chain">
+          <span class="agent-chain-step done">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+            历史数据回填
+          </span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step done">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+            因子筛选
+          </span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step active">
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+            模型训练
+          </span>
+          <span class="agent-chain-arrow">&#8594;</span>
+          <span class="agent-chain-step">回测验证</span>
+        </div>
+        <div class="plan-card-output">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/></svg>
+          <span>产出物</span>
+          <span class="plan-card-output-count">5 个候选因子</span>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ═══ Detail / Tool Trace Panel (340px) ═══ -->
+    <div class="agent-detail">
+      <!-- Detail Header -->
+      <div class="detail-header">
+        <div class="detail-header-title">Alpha 因子挖掘计划</div>
+        <div class="detail-header-meta">
+          <span style="color:var(--agent-running-fg);display:flex;align-items:center;gap:var(--space-4);">
+            <svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="3" fill="currentColor"/></svg>
+            运行中
+          </span>
+          <span style="color:var(--border-subtle);">|</span>
+          <span>2026-04-01 14:28</span>
+          <span style="color:var(--border-subtle);">|</span>
+          <span>已运行 8 分钟</span>
+        </div>
+      </div>
+
+      <!-- Section 1: Current Agent Status -->
+      <div class="detail-section">
+        <div class="detail-section-header">
+          <span class="detail-section-title">当前 Agent</span>
+        </div>
+        <div class="detail-section-body">
+          <div class="agent-status-block running">
+            <span class="agent-status-dot"></span>
+            <span class="agent-status-label"><strong>Factor 挖掘 Agent</strong> · 正在分析动量因子</span>
+            <span class="agent-status-state">运行中</span>
+          </div>
+          <!-- Other agents in queue -->
+          <div class="agent-status-block idle" style="margin-bottom:var(--space-4);">
+            <span class="agent-status-dot"></span>
+            <span class="agent-status-label"><strong>策略验证 Agent</strong> · 等待 Factor 挖掘完成</span>
+            <span class="agent-status-state" style="color:var(--text-tertiary)">排队中</span>
+          </div>
+          <div class="agent-status-block idle">
+            <span class="agent-status-dot"></span>
+            <span class="agent-status-label"><strong>风控校验 Agent</strong> · 等待策略验证完成</span>
+            <span class="agent-status-state" style="color:var(--text-tertiary)">排队中</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Tool Trace -->
+      <div class="detail-section">
+        <div class="detail-section-header">
+          <span class="detail-section-title">Tool 调用记录</span>
+          <span class="panel-count" style="font-size:var(--font-size-12)">6 次</span>
+        </div>
+        <div class="detail-section-body">
+          <!-- Trace 1 -->
+          <div class="tool-trace-item">
+            <span class="tool-trace-time">14:28</span>
+            <div class="tool-trace-content">
+              <span class="tool-trace-name">
+                <span class="tool-trace-tool">data_query</span>
+                获取行情数据
+              </span>
+              <span class="tool-trace-params">table=daily, start=2025-01-01, fields=close,volume</span>
+              <span class="tool-trace-result success">返回 4,832 行 · 耗时 1.2s</span>
+            </div>
+          </div>
+          <!-- Trace 2 -->
+          <div class="tool-trace-item">
+            <span class="tool-trace-time">14:29</span>
+            <div class="tool-trace-content">
+              <span class="tool-trace-name">
+                <span class="tool-trace-tool">factor_compute</span>
+                计算动量因子
+              </span>
+              <span class="tool-trace-params">type=momentum, windows=[5,10,20,60]</span>
+              <span class="tool-trace-result success">生成 4 个因子列 · 耗时 3.8s</span>
+            </div>
+          </div>
+          <!-- Trace 3 -->
+          <div class="tool-trace-item">
+            <span class="tool-trace-time">14:30</span>
+            <div class="tool-trace-content">
+              <span class="tool-trace-name">
+                <span class="tool-trace-tool">correlation</span>
+                因子相关性分析
+              </span>
+              <span class="tool-trace-params">method=spearman, threshold=0.7</span>
+              <span class="tool-trace-result success">发现 2 组高相关因子 · 耗时 2.1s</span>
+            </div>
+          </div>
+          <!-- Trace 4 -->
+          <div class="tool-trace-item">
+            <span class="tool-trace-time">14:32</span>
+            <div class="tool-trace-content">
+              <span class="tool-trace-name">
+                <span class="tool-trace-tool">factor_compute</span>
+                计算 Alpha 因子 v2
+              </span>
+              <span class="tool-trace-params">type=alpha_v2, features=12, method=xgboost</span>
+              <span class="tool-trace-result success">IC=0.042 · Rank IC=0.038 · 耗时 45s</span>
+            </div>
+          </div>
+          <!-- Trace 5 -->
+          <div class="tool-trace-item">
+            <span class="tool-trace-time">14:34</span>
+            <div class="tool-trace-content">
+              <span class="tool-trace-name">
+                <span class="tool-trace-tool">backtest</span>
+                因子回测
+              </span>
+              <span class="tool-trace-params">factor=alpha_v2, period=2024-2025, top_n=50</span>
+              <span class="tool-trace-result success">年化 18.2% · 最大回撤 -8.7% · Sharpe 1.43</span>
+            </div>
+          </div>
+          <!-- Trace 6: Running -->
+          <div class="tool-trace-item">
+            <span class="tool-trace-time">14:36</span>
+            <div class="tool-trace-content">
+              <span class="tool-trace-name">
+                <span class="tool-trace-tool">factor_compute</span>
+                计算反转因子
+              </span>
+              <span class="tool-trace-params">type=reversal, windows=[3,5,10]</span>
+              <span class="tool-trace-result pending">计算中...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Artifacts -->
+      <div class="detail-section">
+        <div class="detail-section-header">
+          <span class="detail-section-title">产出物</span>
+        </div>
+        <div class="detail-section-body">
+          <div class="artifact-item">
+            <span class="artifact-icon">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h14v14H3z"/><path d="M7 7h6M7 10h6"/></svg>
+            </span>
+            <div class="artifact-info">
+              <span class="artifact-name">动量因子 MOM_20d</span>
+              <span class="artifact-meta">IC: 0.035 · Rank IC: 0.031</span>
+            </div>
+            <span class="confidence-badge high">
+              <span class="confidence-label">置信度</span> 82
+            </span>
+          </div>
+          <div class="artifact-item">
+            <span class="artifact-icon">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h14v14H3z"/><path d="M7 7h6M7 10h6"/></svg>
+            </span>
+            <div class="artifact-info">
+              <span class="artifact-name">Alpha v2 合成因子</span>
+              <span class="artifact-meta">IC: 0.042 · Rank IC: 0.038</span>
+            </div>
+            <span class="confidence-badge high">
+              <span class="confidence-label">置信度</span> 87
+            </span>
+          </div>
+          <div class="artifact-item">
+            <span class="artifact-icon">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h14v14H3z"/><path d="M7 7h6M7 10h6"/></svg>
+            </span>
+            <div class="artifact-info">
+              <span class="artifact-name">波动率因子 VOL_60d</span>
+              <span class="artifact-meta">IC: 0.018 · Rank IC: 0.022</span>
+            </div>
+            <span class="confidence-badge medium">
+              <span class="confidence-label">置信度</span> 54
+            </span>
+          </div>
+          <div class="artifact-item">
+            <span class="artifact-icon">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="14" height="12" rx="1"/><path d="M3 8h14M8 4v12"/></svg>
+            </span>
+            <div class="artifact-info">
+              <span class="artifact-name">多因子策略草案</span>
+              <span class="artifact-meta">年化 18.2% · Sharpe 1.43</span>
+            </div>
+            <span class="confidence-badge high">
+              <span class="confidence-label">置信度</span> 79
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="detail-actions">
+        <button class="btn-ghost" tabindex="0" aria-label="暂停">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="4" width="3" height="12" rx="0.5"/><rect x="12" y="4" width="3" height="12" rx="0.5"/></svg>
+          暂停
+        </button>
+        <button class="btn-ghost" tabindex="0" aria-label="重跑">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
+          重跑
+        </button>
+        <button class="btn-ghost" tabindex="0" aria-label="查看产出">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/><path d="M9 4v12"/></svg>
+          查看产出
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar" role="status" aria-label="Agent 状态">
+    <span class="status-indicator" aria-hidden="true"></span>
+    <span class="status-live">LIVE</span>
+    <span class="status-sep">|</span>
+    <span>2 Plans 运行中</span>
+    <span class="status-sep">|</span>
+    <span>3 Findings 待审</span>
+    <span class="status-sep">|</span>
+    <span>2 Approvals 待批</span>
+    <span class="status-sep">|</span>
+    <span>14:36:42 CST</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl+K</span> 搜索
+  </div>
+
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

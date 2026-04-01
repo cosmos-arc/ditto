@@ -21,6 +21,7 @@
 
   <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
 
   <style>
     /* ── Style label for visual comparison ── */
@@ -375,6 +376,18 @@
         <button class="btn btn-primary">运行筛选</button>
       </div>
       <div class="header-btn-group-right">
+        <div class="theme-switcher">
+          <div class="switcher-group" role="group" aria-label="密度">
+            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          </div>
+          <div class="switcher-sep"></div>
+          <div class="switcher-group" role="group" aria-label="主题">
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+          </div>
+        </div>
         <button class="btn btn-ghost">重置</button>
         <button class="btn btn-ghost">导出</button>
         <div class="header-action-btn" title="通知">
@@ -799,5 +812,6 @@
       </div>
     </div>
   </div>
+  <script src="shared/theme-switcher.js"></script>
 </body>
 </html>

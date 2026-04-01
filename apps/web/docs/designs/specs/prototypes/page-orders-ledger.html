@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — 执行账本</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="shared/tokens-base.css">
+  <link rel="stylesheet" href="shared/tokens-semantic.css">
+  <link rel="stylesheet" href="shared/tokens-domain.css">
+  <link rel="stylesheet" href="shared/tokens-interaction.css">
+  <link rel="stylesheet" href="shared/tokens-density.css">
+  <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <style>
+    /* ── Style label ── */
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .header-action-btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible,
+    .status-tab:focus-visible,
+    .ledger-table tr:focus-visible,
+    .filter-btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Shell — Ledger variant (Catalog Workspace)
+     * Grid: Rail (56px) | Main (1fr) | Trace (340px)
+     * Rows: Header (60px) | Strip (auto) | Table (1fr)
+     * ══════════════════════════════════════════════ */
+    .shell-ledger {
+      display: grid;
+      grid-template-columns: var(--shell-rail-width) 1fr 340px;
+      grid-template-rows: 60px auto 1fr;
+      grid-template-areas:
+        "rail header  header"
+        "rail strip  strip"
+        "rail table   trace";
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* ── Frosted glass header ── */
+    .shell-ledger .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    .shell-ledger .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── Noise material texture ── */
+    .shell-ledger {
+      position: relative;
+    }
+    .shell-ledger::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+    /* Subtle top-edge ambient light */
+    .shell-ledger::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+    .shell-ledger > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Rail right edge ambient light — brand continuity */
+    .shell-ledger .shell-rail {
+      position: relative;
+    }
+    .shell-ledger .shell-rail::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -1px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* ── Header title underline ── */
+    .header-title {
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 2px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: 2px;
+    }
+
+    /* Rail logo subtle brand glow */
+    .rail-logo {
+      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+    }
+
+    /* Rail active indicator — 80% saturation for even distribution */
+    .rail-icon.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
+    }
+
+    /* ── Header subtitle ── */
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+      margin-left: var(--space-8);
+    }
+
+    /* ── Header Filters (orders header area) ── */
+    .header-filters {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .filter-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-8);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .filter-btn:hover {
+      color: var(--text-secondary);
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .filter-btn .filter-value {
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .filter-sep {
+      width: 1px;
+      height: 16px;
+      background: var(--border-subtle);
+    }
+
+    /* ── Status Strip (tab bar) ── */
+    .status-strip {
+      grid-area: strip;
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      height: var(--density-strip-height);
+      overflow-x: auto;
+      position: relative;
+    }
+    /* Brand accent bottom line */
+    .status-strip::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 35%, transparent) 50%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    .status-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: 100%;
+    }
+
+    .status-tab {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-4) var(--space-12);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      border-radius: var(--radius-4) var(--radius-4) 0 0;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      height: 100%;
+      user-select: none;
+    }
+
+    .status-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .status-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    .status-tab .tab-count {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      min-width: 18px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+    }
+
+    .status-tab.active .tab-count {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    /* Tab accent dot for active states with pending items */
+    .status-tab .tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .tab-dot.pending   { background: var(--execution-pending-fg); }
+    .tab-dot.submitted { background: var(--cyan-500); }
+    .tab-dot.partial   { background: var(--execution-partial-fg); }
+    .tab-dot.done      { background: var(--execution-filled-fg); }
+    .tab-dot.failed    { background: var(--execution-rejected-fg); }
+
+    .status-strip-spacer { flex: 1; }
+
+    .status-strip-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .strip-action {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      border: none;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .strip-action.primary {
+      color: var(--brand-accent);
+      background: transparent;
+    }
+    .strip-action.primary:hover {
+      background: var(--brand-accent-subtle);
+    }
+
+    .strip-action.danger {
+      color: var(--execution-rejected-fg);
+      background: transparent;
+    }
+    .strip-action.danger:hover {
+      background: var(--execution-rejected-bg);
+    }
+
+    .strip-action.secondary {
+      color: var(--text-tertiary);
+      background: transparent;
+    }
+    .strip-action.secondary:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Ledger Table Area ── */
+    .ledger-table-area {
+      grid-area: table;
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+    }
+
+    /* ── Brand anchor: table header bottom accent ── */
+    .ledger-table thead {
+      border-bottom: 2px solid color-mix(in oklch, var(--brand-accent) 35%, transparent);
+    }
+
+    .ledger-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .ledger-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .ledger-table th {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-align: left;
+      padding: var(--space-4) var(--density-cell-padding-x);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-strip);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .ledger-table th:hover {
+      color: var(--text-secondary);
+    }
+
+    .ledger-table th .sort-indicator {
+      font-size: var(--font-size-10);
+      color: var(--text-disabled);
+      margin-left: var(--space-2);
+    }
+
+    .ledger-table th.right { text-align: right; }
+
+    .ledger-table td {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      padding: var(--density-cell-padding-y) var(--density-cell-padding-x);
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ledger-table td.right { text-align: right; }
+    .ledger-table td.numeric { font-family: var(--font-family-numeric); }
+
+    .ledger-table tbody tr {
+      height: var(--density-row-height);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .ledger-table tbody tr:hover {
+      background: var(--interaction-hover-strong-bg);
+    }
+    .ledger-table tbody tr.selected {
+      background: var(--interaction-selected-bg);
+    }
+    .ledger-table tbody tr.selected:hover {
+      background: color-mix(in oklch, var(--interaction-selected-bg) 80%, var(--interaction-hover-strong-bg));
+    }
+
+    /* Token consistency: force oklch borders on all table cells */
+    .ledger-table td,
+    .ledger-table th {
+      border-color: var(--border-subtle);
+    }
+
+    /* ── Order Status Badge ── */
+    .order-status {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .order-status .status-dot-inline {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .order-status.pending {
+      color: var(--execution-pending-fg);
+    }
+    .order-status.pending .status-dot-inline {
+      background: var(--execution-pending-fg);
+      animation: dot-breathe 2.5s ease-in-out infinite;
+    }
+
+    .order-status.submitted {
+      color: var(--cyan-500);
+    }
+    .order-status.submitted .status-dot-inline {
+      background: var(--cyan-500);
+      animation: dot-breathe 2s ease-in-out infinite;
+    }
+
+    .order-status.partial {
+      color: var(--execution-partial-fg);
+    }
+    .order-status.partial .status-dot-inline {
+      background: var(--execution-partial-fg);
+    }
+
+    .order-status.filled {
+      color: var(--execution-filled-fg);
+    }
+    .order-status.filled .status-dot-inline {
+      background: var(--execution-filled-fg);
+    }
+
+    .order-status.failed {
+      color: var(--execution-rejected-fg);
+    }
+    .order-status.failed .status-dot-inline {
+      background: var(--execution-rejected-fg);
+    }
+
+    .order-status.cancelled {
+      color: var(--execution-cancelled-fg);
+    }
+    .order-status.cancelled .status-dot-inline {
+      background: var(--execution-cancelled-fg);
+    }
+
+    @keyframes dot-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ── Order Side (Buy/Sell) ── */
+    .order-side {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .order-side .side-arrow {
+      font-size: var(--font-size-10);
+    }
+
+    .order-side.buy {
+      color: var(--market-up-fg);
+    }
+    .order-side.buy .side-arrow::before {
+      content: var(--indicator-up-sym);
+    }
+
+    .order-side.sell {
+      color: var(--market-down-fg);
+    }
+    .order-side.sell .side-arrow::before {
+      content: var(--indicator-down-sym);
+    }
+
+    /* ── Order Type Tag ── */
+    .order-type-tag {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Order Trace Panel (right 340px) ── */
+    .order-trace {
+      grid-area: trace;
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Brand anchor: trace panel top glow bar */
+    .order-trace::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 50%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 70%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 50%, transparent) 70%,
+        transparent 100%
+      );
+      z-index: 1;
+    }
+
+    .trace-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .trace-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .trace-title .trace-order-id {
+      font-family: var(--font-family-numeric);
+      color: var(--text-tertiary);
+    }
+
+    .trace-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .trace-action-btn {
+      font-size: var(--font-size-12);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      border: none;
+      font-weight: var(--font-weight-medium);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .trace-action-btn.primary {
+      color: var(--brand-accent);
+      background: transparent;
+    }
+    .trace-action-btn.primary:hover {
+      background: var(--brand-accent-subtle);
+    }
+
+    .trace-action-btn.danger {
+      color: var(--execution-rejected-fg);
+      background: transparent;
+    }
+    .trace-action-btn.danger:hover {
+      background: var(--execution-rejected-bg);
+    }
+
+    /* ── Trace Sections ── */
+    .trace-sections {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .trace-section {
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    .trace-section + .trace-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, white 3%, transparent);
+      pointer-events: none;
+    }
+
+    .trace-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-8) var(--space-12);
+      flex-shrink: 0;
+    }
+
+    .trace-section-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .trace-section-body {
+      padding: 0 var(--space-12) var(--space-8);
+    }
+
+    /* ── Order Info Grid ── */
+    .order-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-8);
+    }
+
+    .order-info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .order-info-label {
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .order-info-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .order-info-value.up    { color: var(--market-up-fg); }
+    .order-info-value.down  { color: var(--market-down-fg); }
+
+    /* ── Status Timeline ── */
+    .status-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .timeline-step {
+      display: flex;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      position: relative;
+    }
+
+    .timeline-step::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 26px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+    .timeline-step:last-child::before {
+      display: none;
+    }
+
+    .timeline-indicator {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .timeline-indicator.completed {
+      background: var(--execution-filled-bg);
+      color: var(--execution-filled-fg);
+    }
+
+    .timeline-indicator.active {
+      background: var(--execution-partial-bg);
+      color: var(--execution-partial-fg);
+      animation: timeline-pulse 2s ease-in-out infinite;
+    }
+
+    .timeline-indicator.pending-step {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-disabled);
+    }
+
+    .timeline-indicator.failed-step {
+      background: var(--execution-rejected-bg);
+      color: var(--execution-rejected-fg);
+    }
+
+    @keyframes timeline-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--execution-partial-fg) 30%, transparent); }
+      50%      { box-shadow: 0 0 0 4px color-mix(in oklch, var(--execution-partial-fg) 0%, transparent); }
+    }
+
+    .timeline-indicator svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .timeline-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding-top: 2px;
+    }
+
+    .timeline-step-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .timeline-step.active .timeline-step-title {
+      color: var(--execution-partial-fg);
+    }
+
+    .timeline-step.pending-step .timeline-step-title {
+      color: var(--text-disabled);
+    }
+
+    .timeline-step.failed-step .timeline-step-title {
+      color: var(--execution-rejected-fg);
+    }
+
+    .timeline-step-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .timeline-step-detail {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Fee Detail Rows ── */
+    .fee-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .fee-row:last-child {
+      border-bottom: none;
+    }
+
+    .fee-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .fee-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .fee-total {
+      border-top: 1px solid var(--border-default);
+      border-bottom: none;
+      padding-top: var(--space-6);
+      margin-top: var(--space-2);
+    }
+
+    .fee-total .fee-label {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .fee-total .fee-value {
+      color: var(--text-primary);
+    }
+
+    /* ── Slippage Analysis ── */
+    .slippage-display {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-4) 0;
+    }
+
+    .slippage-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .slippage-value.negative {
+      color: var(--market-down-fg);
+    }
+    .slippage-value.positive {
+      color: var(--market-up-fg);
+    }
+    .slippage-value.zero {
+      color: var(--text-tertiary);
+    }
+
+    .slippage-detail {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .slippage-bar-container {
+      margin-top: var(--space-4);
+    }
+
+    .slippage-bar {
+      height: 4px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px color-mix(in oklch, var(--neutral-0) 40%, transparent);
+    }
+
+    .slippage-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .slippage-bar-fill.negative {
+      background: linear-gradient(90deg, var(--market-down-fg), color-mix(in oklch, var(--market-down-fg) 80%, white));
+    }
+
+    .slippage-bar-fill.positive {
+      background: linear-gradient(90deg, var(--market-up-fg), color-mix(in oklch, var(--market-up-fg) 80%, white));
+    }
+
+    /* ── Route Log ── */
+    .route-log {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .route-entry {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      position: relative;
+      font-size: var(--font-size-12);
+    }
+
+    .route-entry::before {
+      content: '';
+      position: absolute;
+      left: 22px;
+      top: 20px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+    .route-entry:last-child::before {
+      display: none;
+    }
+
+    .route-entry-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+      min-width: 48px;
+    }
+
+    .route-entry-time::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      margin-right: var(--space-4);
+      vertical-align: middle;
+    }
+
+    .route-entry-text {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .route-entry.older .route-entry-text {
+      color: var(--text-tertiary);
+    }
+
+    /* ── Empty Trace State ── */
+    .trace-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: var(--space-8);
+      color: var(--text-tertiary);
+    }
+
+    .trace-empty svg {
+      width: 32px;
+      height: 32px;
+      opacity: 0.4;
+    }
+
+    .trace-empty-text {
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Cell utility classes ── */
+    .cell-name     { font-weight: var(--font-weight-medium); }
+    .cell-numeric  { font-family: var(--font-family-numeric); }
+    .cell-time     { font-family: var(--font-family-numeric); color: var(--text-secondary); }
+    .cell-disabled { font-family: var(--font-family-numeric); color: var(--text-disabled); }
+
+    /* ── Status Bar ── */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: 1.5rem;
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+    .status-indicator {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      margin-right: var(--space-6);
+      flex-shrink: 0;
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .status-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+    .status-spacer { flex: 1; }
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .status-live {
+      color: var(--system-healthy-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Respect reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .btn, .rail-icon, .header-action-btn, .panel-action,
+      .status-tab, .order-status .status-dot-inline,
+      .timeline-indicator, .status-indicator, .trace-action-btn {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label">Graphite Studio — Execution Ledger · Compact · A股</div>
+
+  <div class="shell-ledger">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="交易" title="交易">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="AI" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <span class="header-title">Execution<span class="header-subtitle">执行账本</span></span>
+      <div class="header-filters" role="toolbar" aria-label="订单筛选">
+        <button class="filter-btn" tabindex="0" aria-label="会话: 主策略会话">
+          <span>会话</span>
+          <span class="filter-value">主策略会话</span>
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l5 5 5-5"/></svg>
+        </button>
+        <button class="filter-btn" tabindex="0" aria-label="账户: 中信建投">
+          <span>账户</span>
+          <span class="filter-value">中信建投</span>
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l5 5 5-5"/></svg>
+        </button>
+        <button class="filter-btn" tabindex="0" aria-label="券商: 全部">
+          <span>券商</span>
+          <span class="filter-value">全部</span>
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l5 5 5-5"/></svg>
+        </button>
+        <span class="filter-sep" aria-hidden="true"></span>
+        <button class="filter-btn" tabindex="0" aria-label="日期范围: 今日">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="14" height="13" rx="1"/><path d="M3 9h14M7 2v4M13 2v4"/></svg>
+          <span class="filter-value">今日</span>
+        </button>
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-actions" role="toolbar" aria-label="页面操作">
+        <div class="theme-switcher">
+          <div class="switcher-group" role="group" aria-label="密度">
+            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          </div>
+          <div class="switcher-sep"></div>
+          <div class="switcher-group" role="group" aria-label="主题">
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+          </div>
+        </div>
+        <button class="filter-btn" tabindex="0" aria-label="刷新订单" title="刷新">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
+          刷新
+        </button>
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="导出订单" title="导出">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v10m0 0l-3-3m3 3l3-3M3 17h14"/></svg>
+        </div>
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+        </div>
+        <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Status Strip ═══ -->
+    <div class="status-strip" role="tablist" aria-label="订单状态筛选" id="status-tabs">
+      <div class="status-tabs">
+        <div class="status-tab" role="tab" aria-selected="false" tabindex="0" id="tab-pending">
+          <span class="tab-dot pending" aria-hidden="true"></span>
+          待提交
+          <span class="tab-count">2</span>
+        </div>
+        <div class="status-tab" role="tab" aria-selected="false" tabindex="0" id="tab-submitted">
+          <span class="tab-dot submitted" aria-hidden="true"></span>
+          已提交
+          <span class="tab-count">5</span>
+        </div>
+        <div class="status-tab" role="tab" aria-selected="false" tabindex="0" id="tab-partial">
+          <span class="tab-dot partial" aria-hidden="true"></span>
+          部分成交
+          <span class="tab-count">1</span>
+        </div>
+        <div class="status-tab active" role="tab" aria-selected="true" tabindex="0" id="tab-done" aria-controls="orders-table">
+          <span class="tab-dot done" aria-hidden="true"></span>
+          已完成
+          <span class="tab-count">148</span>
+        </div>
+        <div class="status-tab" role="tab" aria-selected="false" tabindex="0" id="tab-failed">
+          <span class="tab-dot failed" aria-hidden="true"></span>
+          失败/撤单
+          <span class="tab-count">12</span>
+        </div>
+      </div>
+      <div class="status-strip-spacer"></div>
+      <div class="status-strip-actions">
+        <button class="strip-action primary" tabindex="0" role="button" aria-label="批量提交">提交</button>
+        <button class="strip-action danger" tabindex="0" role="button" aria-label="批量撤单">撤单</button>
+        <button class="strip-action secondary" tabindex="0" role="button" aria-label="批量重试">重试</button>
+      </div>
+    </div>
+
+    <!-- ═══ Orders Ledger Table ═══ -->
+    <div class="ledger-table-area" id="main-content" role="region" aria-label="订单列表">
+      <table class="ledger-table" aria-label="订单账本">
+        <thead>
+          <tr>
+            <th scope="col" style="width:100px">订单ID</th>
+            <th scope="col" style="width:100px">标的</th>
+            <th scope="col" style="width:80px">方向</th>
+            <th scope="col" style="width:80px">数量</th>
+            <th scope="col" style="width:90px">委托价</th>
+            <th scope="col" style="width:90px">成交价</th>
+            <th scope="col" style="width:72px">类型</th>
+            <th scope="col" style="width:100px">状态</th>
+            <th scope="col" style="width:72px">时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row 1: Filled — selected -->
+          <tr class="selected" aria-selected="true" tabindex="0" role="row" data-order-id="ORD-20240401-001">
+            <td class="cell-numeric">ORD-001</td>
+            <td class="cell-name">贵州茅台</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">200</td>
+            <td class="numeric">1,725.00</td>
+            <td class="numeric">1,723.50</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:42:15</td>
+          </tr>
+          <!-- Row 2: Filled -->
+          <tr tabindex="0" role="row" data-order-id="ORD-20240401-002">
+            <td class="cell-numeric">ORD-002</td>
+            <td class="cell-name">宁德时代</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">500</td>
+            <td class="numeric">198.80</td>
+            <td class="numeric">199.20</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:35:08</td>
+          </tr>
+          <!-- Row 3: Partial fill -->
+          <tr tabindex="0" role="row" data-order-id="ORD-20240401-003">
+            <td class="cell-numeric">ORD-003</td>
+            <td class="cell-name">比亚迪</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">1,000</td>
+            <td class="numeric">265.00</td>
+            <td class="numeric">264.80</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status partial"><span class="status-dot-inline" aria-hidden="true"></span> 部分成交</span>
+            </td>
+            <td class="cell-time">09:48:33</td>
+          </tr>
+          <!-- Row 4: Submitted -->
+          <tr tabindex="0" role="row" data-order-id="ORD-20240401-004">
+            <td class="cell-numeric">ORD-004</td>
+            <td class="cell-name">招商银行</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">2,000</td>
+            <td class="numeric">33.45</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+            </td>
+            <td class="cell-time">09:50:01</td>
+          </tr>
+          <!-- Row 5: Filled -->
+          <tr tabindex="0" role="row" data-order-id="ORD-20240401-005">
+            <td class="cell-numeric">ORD-005</td>
+            <td class="cell-name">中国平安</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">800</td>
+            <td class="numeric">45.20</td>
+            <td class="numeric">45.15</td>
+            <td><span class="order-type-tag">市价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:31:20</td>
+          </tr>
+          <!-- Row 6: Pending -->
+          <tr tabindex="0" role="row" data-order-id="ORD-20240401-006">
+            <td class="cell-numeric">ORD-006</td>
+            <td class="cell-name">药明康德</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">300</td>
+            <td class="numeric">62.80</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status pending"><span class="status-dot-inline" aria-hidden="true"></span> 待提交</span>
+            </td>
+            <td class="cell-time">—</td>
+          </tr>
+          <!-- Row 7: Filled -->
+          <tr tabindex="0" role="row" data-order-id="ORD-20240401-007">
+            <td class="cell-numeric">ORD-007</td>
+            <td class="cell-name">隆基绿能</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">1,500</td>
+            <td class="numeric">27.90</td>
+            <td class="numeric">27.85</td>
+            <td><span class="order-type-tag">市价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:05:44</td>
+          </tr>
+          <!-- Row 8: Failed -->
+          <tr tabindex="0" role="row" data-order-id="ORD-20240401-008">
+            <td class="cell-numeric">ORD-008</td>
+            <td class="cell-name">紫金矿业</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">3,000</td>
+            <td class="numeric">15.60</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status failed"><span class="status-dot-inline" aria-hidden="true"></span> 已撤单</span>
+            </td>
+            <td class="cell-time">10:12:30</td>
+          </tr>
+          <!-- Row 9: Submitted -->
+          <tr tabindex="0" role="row" data-order-id="ORD-20240401-009">
+            <td class="cell-numeric">ORD-009</td>
+            <td class="cell-name">迈瑞医疗</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">100</td>
+            <td class="numeric">285.00</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+            </td>
+            <td class="cell-time">10:15:02</td>
+          </tr>
+          <!-- Row 10: Filled -->
+          <tr tabindex="0" role="row" data-order-id="ORD-20240401-010">
+            <td class="cell-numeric">ORD-010</td>
+            <td class="cell-name">长江电力</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">1,200</td>
+            <td class="numeric">28.10</td>
+            <td class="numeric">28.05</td>
+            <td><span class="order-type-tag">市价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:22:18</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ═══ Order Trace Panel (340px) ═══ -->
+    <aside class="order-trace" id="order-trace" role="complementary" aria-label="订单追踪">
+      <!-- Trace Header -->
+      <div class="trace-header">
+        <div class="trace-title">
+          订单详情
+          <span class="trace-order-id">ORD-001</span>
+        </div>
+        <div class="trace-actions">
+          <button class="trace-action-btn danger" tabindex="0" role="button" aria-label="撤单">撤单</button>
+          <button class="trace-action-btn primary" tabindex="0" role="button" aria-label="复制订单">复制</button>
+        </div>
+      </div>
+
+      <div class="trace-sections">
+        <!-- Section 1: Order Information -->
+        <div class="trace-section">
+          <div class="trace-section-header">
+            <span class="trace-section-title">订单信息</span>
+          </div>
+          <div class="trace-section-body">
+            <div class="order-info-grid">
+              <div class="order-info-item">
+                <span class="order-info-label">标的</span>
+                <span class="order-info-value">贵州茅台 600519</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">方向</span>
+                <span class="order-info-value up">买入</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">委托数量</span>
+                <span class="order-info-value">200 股</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">成交数量</span>
+                <span class="order-info-value">200 股</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">委托价格</span>
+                <span class="order-info-value">1,725.00</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">成交均价</span>
+                <span class="order-info-value">1,723.50</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">委托金额</span>
+                <span class="order-info-value">345,000.00</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">成交金额</span>
+                <span class="order-info-value">344,700.00</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">账户</span>
+                <span class="order-info-value">中信建投 · 主账户</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">策略来源</span>
+                <span class="order-info-value">Alpha v2 — 消费</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Status Timeline -->
+        <div class="trace-section">
+          <div class="trace-section-header">
+            <span class="trace-section-title">状态时间线</span>
+          </div>
+          <div class="trace-section-body">
+            <div class="status-timeline">
+              <!-- Step 1: Created -->
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">订单创建</span>
+                  <span class="timeline-step-time">09:42:15</span>
+                </div>
+              </div>
+              <!-- Step 2: Submitted -->
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">已报备</span>
+                  <span class="timeline-step-time">09:42:16</span>
+                  <span class="timeline-step-detail">券商确认接收</span>
+                </div>
+              </div>
+              <!-- Step 3: Partial Fill -->
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">部分成交</span>
+                  <span class="timeline-step-time">09:42:18</span>
+                  <span class="timeline-step-detail">成交 100/200 股 @ 1,724.00</span>
+                </div>
+              </div>
+              <!-- Step 4: Full Fill -->
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">全部成交</span>
+                  <span class="timeline-step-time">09:42:20</span>
+                  <span class="timeline-step-detail">成交 100/200 股 @ 1,723.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Fee Breakdown -->
+        <div class="trace-section">
+          <div class="trace-section-header">
+            <span class="trace-section-title">费用明细</span>
+          </div>
+          <div class="trace-section-body">
+            <div class="fee-row">
+              <span class="fee-label">佣金</span>
+              <span class="fee-value">172.35</span>
+            </div>
+            <div class="fee-row">
+              <span class="fee-label">过户费</span>
+              <span class="fee-value">17.24</span>
+            </div>
+            <div class="fee-row">
+              <span class="fee-label">印花税</span>
+              <span class="fee-value">344.70</span>
+            </div>
+            <div class="fee-row fee-total">
+              <span class="fee-label">费用合计</span>
+              <span class="fee-value">534.29</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Slippage Analysis -->
+        <div class="trace-section">
+          <div class="trace-section-header">
+            <span class="trace-section-title">滑点分析</span>
+          </div>
+          <div class="trace-section-body">
+            <div class="slippage-display">
+              <span class="slippage-value negative">-0.09%</span>
+              <span class="slippage-detail">委托 1,725.00 / 成交 1,723.50</span>
+            </div>
+            <div class="slippage-bar-container">
+              <div class="slippage-bar" role="progressbar" aria-valuenow="3" aria-valuemin="0" aria-valuemax="100" aria-label="滑点幅度">
+                <div class="slippage-bar-fill negative" style="width: 3%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 5: Route Log -->
+        <div class="trace-section">
+          <div class="trace-section-header">
+            <span class="trace-section-title">路由日志</span>
+          </div>
+          <div class="trace-section-body">
+            <div class="route-log">
+              <div class="route-entry">
+                <span class="route-entry-time">09:42:15</span>
+                <span class="route-entry-text">订单创建 — 策略 Alpha v2 生成</span>
+              </div>
+              <div class="route-entry">
+                <span class="route-entry-time">09:42:16</span>
+                <span class="route-entry-text">路由选择 — 中信建投 (延迟 2ms)</span>
+              </div>
+              <div class="route-entry">
+                <span class="route-entry-time">09:42:16</span>
+                <span class="route-entry-text">报单发送 — 上交所 限价买入 200 股 @ 1,725.00</span>
+              </div>
+              <div class="route-entry">
+                <span class="route-entry-time">09:42:18</span>
+                <span class="route-entry-text">部分成交 — 100 股 @ 1,724.00</span>
+              </div>
+              <div class="route-entry">
+                <span class="route-entry-time">09:42:20</span>
+                <span class="route-entry-text">全部成交 — 100 股 @ 1,723.00 · 均价 1,723.50</span>
+              </div>
+              <div class="route-entry older">
+                <span class="route-entry-time">09:42:20</span>
+                <span class="route-entry-text">回报确认 · 滑点 -0.09% · 费用 534.29</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Status Bar — terminal DNA -->
+  <div class="status-bar" role="status" aria-label="系统状态">
+    <span class="status-indicator" aria-hidden="true"></span>
+    <span class="status-live">LIVE</span>
+    <span class="status-sep">|</span>
+    <span>今日 168 笔 · 成交 148 · 待处理 8</span>
+    <span class="status-sep">|</span>
+    <span>成交额 <span class="status-live" style="color:var(--market-up-fg)">12.8M</span></span>
+    <span class="status-sep">|</span>
+    <span>10:22:18 CST</span>
+    <span class="status-sep">|</span>
+    <span>中信建报 · 延迟 2ms</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl+K</span> 搜索
+  </div>
+
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

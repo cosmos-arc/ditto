@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="dense">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,6 +21,7 @@
 
   <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
 
   <!-- Mock Data -->
   <script src="shared/mock-data.js"></script>
@@ -43,62 +44,36 @@
     }
 
     :root {
-      /* ── Dense typography (shift -1 step) ── */
-      --font-size-10: 0.5625rem;   /* 9px */
-      --font-size-12: 0.625rem;    /* 10px */
-      --font-size-12: 0.6875rem;   /* 11px */
-      --font-size-13: 0.75rem;     /* 12px */
-      --font-size-14: 0.8125rem;   /* 13px */
-      --font-size-16: 0.875rem;    /* 14px */
-      --font-size-18: 1rem;        /* 16px */
-      --font-size-20: 1.125rem;    /* 18px */
+      /* ── Compact typography (base scale — no shift) ── */
+      /* Inherits from tokens-base.css: 10-28px standard scale */
 
-      /* ── Dense spacing (4pt grid, tighter) ── */
-      --space-2:  0.125rem;
-      --space-4:  0.1875rem;       /* 3px */
-      --space-6:  0.25rem;         /* 4px */
-      --space-8:  0.375rem;        /* 6px */
-      --space-10: 0.5rem;          /* 8px */
-      --space-12: 0.625rem;        /* 10px */
-      --space-16: 0.75rem;         /* 12px */
-      --space-20: 1rem;            /* 16px */
-      --space-24: 1.25rem;         /* 20px */
+      /* ── Compact spacing (standard 4pt grid) ── */
+      /* Inherits from tokens-base.css: space-2 to space-32 */
 
-      /* ── Dense layout ── */
-      --shell-rail-width:     48px;
-      --shell-header-height:  56px;
-      --shell-sidebar-width:  260px;
-      --shell-detail-width:   280px;
+      /* ── Compact layout ── */
+      /* Inherits layout-base.css defaults:
+         --shell-rail-width: 56px
+         --shell-header-height: 68px
+         --shell-sidebar-width: 320px
+         --shell-detail-width: 340px
+         --rail-logo-size: 32px
+         --rail-icon-size: 36px
+         --rail-icon-svg-size: 18px
+         --header-btn-size: 32px
+         --header-avatar-size: 28px */
 
-      /* ── Dense rail ── */
-      --rail-logo-size:       24px;
-      --rail-icon-size:       28px;
-      --rail-icon-svg-size:   16px;
-
-      /* ── Dense header ── */
-      --header-btn-size:      28px;
-      --header-avatar-size:   24px;
-
-      /* ── Dense density tokens ── */
-      --density-panel-padding:  var(--space-8);    /* 6px */
-      --density-section-gap:    var(--space-8);
-      --density-gutter:         var(--space-12);   /* 10px */
-      --density-strip-height:   1.75rem;           /* 28px */
-      --density-row-height:     2.125rem;          /* 34px */
-      --density-cell-padding-x: var(--space-8);
-      --density-cell-padding-y: var(--space-4);
-      --density-header-height:  1.75rem;           /* 28px */
-      --density-input-height:   1.75rem;
-      --density-action-height:  1.75rem;
-      --density-toolbar-height: 1.75rem;
-      --density-chart-header:   1.75rem;
-      --density-chart-padding:  var(--space-8);
-      --density-font-delta:     -1;
+      /* ── Compact density tokens ── */
+      /* Inherits from tokens-style.css:
+         --density-row-height: 2.25rem (36px)
+         --density-strip-height: 2.25rem (36px)
+         --density-cell-padding-x: var(--space-12) (12px)
+         --density-cell-padding-y: var(--space-6) (6px)
+         --density-header-height: 2rem (32px) */
     }
   </style>
 </head>
 <body>
-  <div class="style-label">Dense 密集 — 10/11px · 34px rows · 48px rail · A股为主</div>
+  <div class="style-label">Compact 适中 — 12/13px · 36px rows · 56px rail · A股为主</div>
 
   <div class="shell">
     <!-- ═══ Rail ═══ -->
@@ -141,6 +116,18 @@
         <kbd>⌘K</kbd>
       </div>
       <div class="header-actions">
+        <div class="theme-switcher">
+          <div class="switcher-group" role="group" aria-label="密度">
+            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          </div>
+          <div class="switcher-sep"></div>
+          <div class="switcher-group" role="group" aria-label="主题">
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+          </div>
+        </div>
         <div class="header-action-btn" title="Notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
@@ -183,11 +170,11 @@
       </div>
     </div>
 
-    <!-- ═══ Main Content (Status Banner + Priority Items + Research/Insights) ═══ -->
+    <!-- ═══ Main Content (Decision Banner + Execution Queue + Signals/Findings) ═══ -->
     <div class="shell-main">
-      <!-- Primary: Status Banner + Priority Items -->
+      <!-- Primary: Decision Banner + Execution Queue -->
       <div class="main-primary">
-        <!-- Decision Banner: Account status + Market judgment + Routing CTAs -->
+        <!-- Decision Banner: Account status + Regime judgment + Execution summary -->
         <div class="panel">
           <div class="decision-banner">
             <!-- Left: Account primary status (~42%) -->
@@ -506,7 +493,7 @@
 
       </div>
     </div>
-
   </div>
+  <script src="shared/theme-switcher.js"></script>
 </body>
 </html>

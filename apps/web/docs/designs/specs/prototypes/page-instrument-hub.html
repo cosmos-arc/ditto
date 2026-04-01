@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — 标的详情</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> component -> data-viz -> style) -->
+  <link rel="stylesheet" href="shared/tokens-base.css">
+  <link rel="stylesheet" href="shared/tokens-semantic.css">
+  <link rel="stylesheet" href="shared/tokens-domain.css">
+  <link rel="stylesheet" href="shared/tokens-interaction.css">
+  <link rel="stylesheet" href="shared/tokens-density.css">
+  <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <style>
+    /* ══════════════════════════════════════════════
+     * Object Hub Shell — Instrument Detail Page
+     * ══════════════════════════════════════════════ */
+
+    /* ── Style label ── */
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .hub-tab:focus-visible,
+    .header-action-btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible,
+    .meta-chip:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Object Hub Shell — Layout
+     * Rail | Content (Header + Meta + Tabs + Main + Bottom)
+     * ══════════════════════════════════════════════ */
+    .shell-hub {
+      display: grid;
+      grid-template-columns: var(--shell-rail-width) 1fr;
+      grid-template-rows: var(--shell-header-height) auto auto 1fr auto;
+      grid-template-areas:
+        "rail  header"
+        "rail  meta"
+        "rail  tabs"
+        "rail  main"
+        "rail  bottom";
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Noise texture ── */
+    .shell-hub::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+    /* Top-edge ambient light */
+    .shell-hub::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+    .shell-hub > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Header — Frosted glass
+     * ══════════════════════════════════════════════ */
+    .shell-hub .shell-header {
+      grid-area: header;
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: none;
+      position: relative;
+    }
+    .shell-hub .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── Object Header (inside shell-header) ── */
+    .object-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .object-identity {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .object-name-row {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-8);
+    }
+
+    .object-name {
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .object-code {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+    }
+
+    .object-price-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+    }
+
+    .object-price {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-24);
+      font-weight: var(--font-weight-semibold);
+      color: var(--market-up-fg);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .object-change {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--market-up-fg);
+    }
+
+    .object-change-value {
+      font-weight: var(--font-weight-medium);
+    }
+
+    .object-change-arrow {
+      font-size: var(--font-size-10);
+    }
+
+    .object-change-amount {
+      color: var(--text-tertiary);
+    }
+
+    .object-status {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      white-space: nowrap;
+    }
+
+    .object-status.trading {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+    }
+
+    .object-status.suspended {
+      color: var(--system-degraded-fg);
+      background: var(--system-degraded-bg);
+    }
+
+    .object-status-dot {
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .object-status.trading .object-status-dot {
+      background: var(--system-healthy-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    .object-status.suspended .object-status-dot {
+      background: var(--system-degraded-fg);
+    }
+
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* ── Header CTA buttons ── */
+    .header-ctas {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      flex-shrink: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      height: var(--btn-height);
+      padding: 0 var(--btn-padding-x);
+      font-family: var(--font-family-ui);
+      font-size: var(--btn-font-size);
+      font-weight: var(--font-weight-medium);
+      border: 1px solid var(--border-default);
+      border-radius: var(--btn-radius);
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .btn.btn-primary {
+      background: var(--brand-accent);
+      border-color: var(--brand-accent);
+      color: var(--text-inverse);
+    }
+
+    .btn.btn-primary:hover {
+      background: var(--brand-accent-hover);
+      border-color: var(--brand-accent-hover);
+    }
+
+    .btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Meta Strip
+     * ══════════════════════════════════════════════ */
+    .hub-meta {
+      grid-area: meta;
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: var(--space-8);
+      height: var(--density-strip-height);
+      overflow: hidden;
+    }
+
+    .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      padding: 0 var(--space-8);
+      white-space: nowrap;
+      cursor: default;
+      border-radius: var(--radius-3);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .meta-chip:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .meta-chip-label {
+      color: var(--text-tertiary);
+    }
+
+    .meta-chip-value {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .meta-chip-value.numeric {
+      font-family: var(--font-family-numeric);
+    }
+
+    .meta-separator {
+      width: 1px;
+      height: 12px;
+      background: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .meta-tag {
+      display: inline-flex;
+      align-items: center;
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    .meta-tag.brand {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Tab Band
+     * ══════════════════════════════════════════════ */
+    .hub-tabs {
+      grid-area: tabs;
+      background: var(--surface-app);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: 0;
+      position: relative;
+    }
+
+    /* Brand accent underline — tab band */
+    .hub-tabs::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, white 2%, transparent);
+      pointer-events: none;
+    }
+
+    .hub-tab {
+      font-size: var(--tab-font-size);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--tab-underline-padding-x) var(--tab-pill-padding-x);
+      cursor: pointer;
+      border-bottom: var(--tab-indicator-width) solid transparent;
+      border-radius: var(--tab-pill-radius) var(--tab-pill-radius) 0 0;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-4);
+      position: relative;
+      user-select: none;
+    }
+
+    .hub-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .hub-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    /* Tab entrance stagger */
+    .hub-tab {
+      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .hub-tab:nth-child(1) { animation-delay: 30ms; }
+    .hub-tab:nth-child(2) { animation-delay: 60ms; }
+    .hub-tab:nth-child(3) { animation-delay: 90ms; }
+    .hub-tab:nth-child(4) { animation-delay: 120ms; }
+    .hub-tab:nth-child(5) { animation-delay: 150ms; }
+    .hub-tab:nth-child(6) { animation-delay: 180ms; }
+    .hub-tab:nth-child(7) { animation-delay: 210ms; }
+
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Main Content Area
+     * Split: Main Object View (left) | Related / Signals / Notes (right)
+     * ══════════════════════════════════════════════ */
+    .hub-main {
+      grid-area: main;
+      display: grid;
+      grid-template-columns: 1fr var(--shell-detail-width);
+      gap: var(--density-gutter);
+      padding: var(--density-gutter);
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── Main Object View ── */
+    .hub-object-view {
+      display: flex;
+      flex-direction: column;
+      gap: var(--density-section-gap);
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── Key Metrics Cards ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-8);
+      flex-shrink: 0;
+    }
+
+    .metric-card {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: var(--space-10) var(--space-12);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .metric-card:hover {
+      border-color: var(--border-default);
+    }
+
+    .metric-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-change {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+    }
+
+    .metric-change.up { color: var(--market-up-fg); }
+    .metric-change.down { color: var(--market-down-fg); }
+
+    /* ── Price Chart Panel ── */
+    .chart-panel {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .chart-panel .panel-header {
+      display: flex;
+      align-items: center;
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .chart-panel .panel-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .chart-toolbar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .chart-period-btn {
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      color: var(--text-tertiary);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-3);
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .chart-period-btn:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .chart-period-btn.active {
+      color: var(--text-primary);
+      background: var(--interaction-selected-bg);
+    }
+
+    .chart-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-8);
+      color: var(--text-tertiary);
+    }
+
+    .chart-placeholder svg {
+      width: 48px;
+      height: 48px;
+      opacity: 0.3;
+    }
+
+    .chart-placeholder-text {
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Flow Summary Panel ── */
+    .flow-panel {
+      flex-shrink: 0;
+    }
+
+    .flow-summary {
+      padding: var(--density-panel-padding);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-12);
+    }
+
+    .flow-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .flow-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .flow-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .flow-value.inflow { color: var(--market-up-fg); }
+    .flow-value.outflow { color: var(--market-down-fg); }
+
+    .flow-bar {
+      width: 100%;
+      height: 4px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .flow-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .flow-bar-fill.inflow { background: var(--market-up-fg); }
+    .flow-bar-fill.outflow { background: var(--market-down-fg); }
+
+    /* ══════════════════════════════════════════════
+     * Right Sidebar — Related / Signals / Notes
+     * ══════════════════════════════════════════════ */
+    .hub-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+    }
+
+    /* Brand anchor: sidebar top glow bar */
+    .hub-sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 50%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 70%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 50%, transparent) 70%,
+        transparent 100%
+      );
+    }
+
+    /* ── Context Section ── */
+    .context-section {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-8);
+      overflow: hidden;
+    }
+
+    .context-section + .context-section {
+      border-top: 1px solid var(--border-subtle);
+      position: relative;
+    }
+
+    .context-header {
+      display: flex;
+      align-items: center;
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .context-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      flex: 1;
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-6);
+    }
+
+    .context-count {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: var(--surface-strip);
+      padding: 0 var(--space-6);
+      border-radius: var(--radius-4);
+      height: 18px;
+      display: flex;
+      align-items: center;
+    }
+
+    .context-body {
+      padding: var(--space-8) var(--space-12);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    /* ── Signal Item ── */
+    .signal-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .signal-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .signal-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .signal-type {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
+    }
+
+    .signal-type.alert {
+      background: var(--risk-medium-bg);
+      color: var(--risk-medium-fg);
+    }
+
+    .signal-type.opportunity {
+      background: var(--system-healthy-bg);
+      color: var(--system-healthy-fg);
+    }
+
+    .signal-type.warning {
+      background: var(--risk-high-bg);
+      color: var(--risk-high-fg);
+    }
+
+    .signal-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-left: auto;
+    }
+
+    .signal-title {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.4;
+    }
+
+    .signal-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.4;
+    }
+
+    /* ── Research Item ── */
+    .research-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .research-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .research-title {
+      font-size: var(--font-size-12);
+      color: var(--text-link);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.4;
+    }
+
+    .research-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .research-author {
+      color: var(--text-secondary);
+    }
+
+    /* ── Note Area ── */
+    .note-input {
+      width: 100%;
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      padding: var(--space-8);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      resize: vertical;
+      min-height: 60px;
+      line-height: 1.5;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .note-input::placeholder {
+      color: var(--text-disabled);
+    }
+
+    .note-input:focus {
+      outline: none;
+      border-color: var(--interaction-focus-border);
+      box-shadow: 0 0 0 1px var(--interaction-focus-ring);
+    }
+
+    .note-item {
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-4);
+      border-left: 2px solid var(--brand-accent);
+      background: color-mix(in oklch, var(--brand-accent) 4%, transparent);
+    }
+
+    .note-text {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .note-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-top: var(--space-4);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Bottom Area — Timeline / Filings / Linked Research
+     * ══════════════════════════════════════════════ */
+    .hub-bottom {
+      grid-area: bottom;
+      border-top: 1px solid var(--border-subtle);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hub-bottom::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, white 3%, transparent);
+      pointer-events: none;
+    }
+
+    .bottom-tabs {
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: 0;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .bottom-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-6) var(--space-12);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      user-select: none;
+    }
+
+    .bottom-tab:hover {
+      color: var(--text-secondary);
+    }
+
+    .bottom-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    .bottom-content {
+      display: flex;
+      align-items: flex-start;
+      padding: var(--space-8) var(--space-16);
+      gap: var(--space-16);
+      overflow-y: auto;
+      max-height: 180px;
+    }
+
+    /* ── Timeline ── */
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      flex: 1;
+    }
+
+    .timeline-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-12);
+      padding: var(--space-6) 0;
+      position: relative;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 18px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+
+    .timeline-item:last-child::before {
+      display: none;
+    }
+
+    .timeline-marker {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 3px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .timeline-marker.event {
+      background: var(--brand-accent);
+      box-shadow: 0 0 0 3px var(--surface-app);
+    }
+
+    .timeline-marker.filing {
+      background: var(--border-default);
+      box-shadow: 0 0 0 3px var(--surface-app);
+    }
+
+    .timeline-marker.earnings {
+      background: var(--system-healthy-fg);
+      box-shadow: 0 0 0 3px var(--surface-app);
+    }
+
+    .timeline-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .timeline-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .timeline-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.4;
+    }
+
+    .timeline-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Status bar (terminal DNA)
+     * ══════════════════════════════════════════════ */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: 1.5rem;
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      margin-right: var(--space-6);
+      flex-shrink: 0;
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    .status-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+
+    .status-spacer { flex: 1; }
+
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Responsive — Dense height adjustments
+     * ══════════════════════════════════════════════ */
+    [data-density="dense"] .metrics-grid {
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-4);
+    }
+
+    [data-density="comfortable"] .metrics-grid {
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-12);
+    }
+
+    /* ── Respect reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .btn, .rail-icon, .hub-tab, .header-action-btn,
+      .metric-card, .signal-item, .research-item,
+      .timeline-marker, .object-status-dot {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label">Graphite Studio — Instrument Hub · Compact · A股</div>
+
+  <div class="shell-hub">
+    <!-- ══════════════════════════════════════════════
+         Rail
+         ══════════════════════════════════════════════ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="市场" title="市场">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="AI" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ══════════════════════════════════════════════
+         Object Header
+         ══════════════════════════════════════════════ -->
+    <header class="shell-header">
+      <div class="object-header" role="banner">
+        <!-- Identity -->
+        <div class="object-identity">
+          <div class="object-name-row">
+            <span class="object-name">贵州茅台</span>
+            <span class="object-code">600519.SH</span>
+            <span class="object-status trading" role="status" aria-label="正常交易">
+              <span class="object-status-dot"></span>
+              交易中
+            </span>
+          </div>
+          <div class="object-price-row">
+            <span class="object-price" aria-label="当前价格 ¥1,856.00">¥1,856.00</span>
+            <span class="object-change" aria-label="涨跌幅 +2.35%">
+              <span class="object-change-arrow">&#9650;</span>
+              <span class="object-change-value">+2.35%</span>
+              <span class="object-change-amount">+42.60</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Spacer -->
+        <div style="flex:1"></div>
+
+        <!-- Header actions -->
+        <div class="header-actions" role="toolbar" aria-label="页面操作">
+          <div class="theme-switcher">
+            <div class="switcher-group" role="group" aria-label="密度">
+              <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+            </div>
+            <div class="switcher-sep"></div>
+            <div class="switcher-group" role="group" aria-label="主题">
+              <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.5 10.5a7.5 7.5 0 11-5-7.1A7.5 7.5 0 0017.5 10.5z"/></svg>
+              </button>
+              <button class="switcher-btn" data-set-theme="light" aria-pressed="false">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3.5"/><path d="M10 2v2m0 12v2m-8-8h2m12 0h2m-2.5-5.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+              </button>
+            </div>
+          </div>
+          <div style="width:1px;height:20px;background:var(--border-subtle)"></div>
+          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg>
+            <span class="badge-dot"></span>
+          </div>
+          <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">陈</div>
+        </div>
+
+        <!-- CTAs -->
+        <div class="header-ctas">
+          <button class="btn" aria-label="加入观察">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12m-6-6h12"/></svg>
+            加入观察
+          </button>
+          <button class="btn" aria-label="加入标的池">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M4 10h8M4 15h12"/><circle cx="17" cy="15" r="2"/></svg>
+            加入标的池
+          </button>
+          <button class="btn btn-primary" aria-label="Chart Lab">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1"/><path d="M3 14l4-4 3 2 7-7"/></svg>
+            Chart Lab
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ══════════════════════════════════════════════
+         Meta Strip
+         ══════════════════════════════════════════════ -->
+    <div class="hub-meta" role="complementary" aria-label="标的元信息">
+      <div class="meta-chip">
+        <span class="meta-chip-label">行业</span>
+        <span class="meta-chip-value">白酒</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">市场</span>
+        <span class="meta-chip-value">A股 / 主板</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">市值</span>
+        <span class="meta-chip-value numeric">¥2.33万亿</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">观察池</span>
+        <span class="meta-chip-value brand">核心池</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-tag">消费</span>
+        <span class="meta-tag">龙头</span>
+        <span class="meta-tag brand">沪股通</span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         Tab Band
+         ══════════════════════════════════════════════ -->
+    <div class="hub-tabs" role="tablist" aria-label="标的详情导航">
+      <div class="hub-tab active" role="tab" aria-selected="true" tabindex="0">概览</div>
+      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">行情</div>
+      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">态势</div>
+      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">基本面</div>
+      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">公司行动</div>
+      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">新闻</div>
+      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">关联网络</div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         Main Content
+         ══════════════════════════════════════════════ -->
+    <main class="hub-main" id="main-content" role="main">
+      <!-- ── Left: Main Object View ── -->
+      <div class="hub-object-view">
+        <!-- Key Metrics -->
+        <div class="metrics-grid" role="region" aria-label="关键指标">
+          <div class="metric-card">
+            <span class="metric-label">PE (TTM)</span>
+            <span class="metric-value">28.6x</span>
+            <span class="metric-change down">-1.2</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">PB</span>
+            <span class="metric-value">10.3x</span>
+            <span class="metric-change down">-0.4</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">ROE</span>
+            <span class="metric-value">36.1%</span>
+            <span class="metric-change up">+0.8%</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">营收增速</span>
+            <span class="metric-value">16.2%</span>
+            <span class="metric-change up">+2.1%</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">净利润增速</span>
+            <span class="metric-value">19.8%</span>
+            <span class="metric-change up">+3.4%</span>
+          </div>
+        </div>
+
+        <!-- Price Chart -->
+        <div class="chart-panel panel">
+          <div class="panel-header">
+            <span class="panel-title">价格走势</span>
+            <div class="chart-toolbar">
+              <button class="chart-period-btn" aria-pressed="false">1D</button>
+              <button class="chart-period-btn" aria-pressed="false">1W</button>
+              <button class="chart-period-btn" aria-pressed="false">1M</button>
+              <button class="chart-period-btn active" aria-pressed="true">3M</button>
+              <button class="chart-period-btn" aria-pressed="false">1Y</button>
+              <button class="chart-period-btn" aria-pressed="false">ALL</button>
+            </div>
+          </div>
+          <div class="chart-body">
+            <div class="chart-placeholder">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <rect x="4" y="4" width="40" height="40" rx="4"/>
+                <path d="M10 34l8-10 6 6 12-16"/>
+                <circle cx="36" cy="14" r="2" fill="currentColor"/>
+              </svg>
+              <span class="chart-placeholder-text">Chart Lab 集成区域 — 价格走势图</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flow Summary -->
+        <div class="flow-panel panel">
+          <div class="panel-header">
+            <span class="panel-title">资金流向</span>
+            <span class="panel-subtitle">2026-03-31</span>
+          </div>
+          <div class="flow-summary">
+            <div class="flow-item">
+              <span class="flow-label">主力净流入</span>
+              <span class="flow-value inflow">+8.73亿</span>
+              <div class="flow-bar">
+                <div class="flow-bar-fill inflow" style="width:72%"></div>
+              </div>
+            </div>
+            <div class="flow-item">
+              <span class="flow-label">超大单净流入</span>
+              <span class="flow-value inflow">+5.21亿</span>
+              <div class="flow-bar">
+                <div class="flow-bar-fill inflow" style="width:58%"></div>
+              </div>
+            </div>
+            <div class="flow-item">
+              <span class="flow-label">中单净流入</span>
+              <span class="flow-value inflow">+3.52亿</span>
+              <div class="flow-bar">
+                <div class="flow-bar-fill inflow" style="width:40%"></div>
+              </div>
+            </div>
+            <div class="flow-item">
+              <span class="flow-label">小单净流出</span>
+              <span class="flow-value outflow">-1.86亿</span>
+              <div class="flow-bar">
+                <div class="flow-bar-fill outflow" style="width:22%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Right: Related / Signals / Notes ── -->
+      <aside class="hub-sidebar" aria-label="标的辅助信息">
+        <!-- Signals -->
+        <section class="context-section" style="position:relative" aria-label="相关信号">
+          <div class="context-header">
+            <span class="context-title">相关信号</span>
+            <span class="context-count">3</span>
+          </div>
+          <div class="context-body">
+            <div class="signal-item" tabindex="0" role="button">
+              <div class="signal-header">
+                <span class="signal-type opportunity">机会</span>
+                <span class="signal-time">10:32</span>
+              </div>
+              <span class="signal-title">北向资金连续3日净买入</span>
+              <span class="signal-desc">沪股通今日净买入2.1亿，累计3日净买入6.8亿</span>
+            </div>
+            <div class="signal-item" tabindex="0" role="button">
+              <div class="signal-header">
+                <span class="signal-type alert">预警</span>
+                <span class="signal-time">09:15</span>
+              </div>
+              <span class="signal-title">PE 接近历史中位数</span>
+              <span class="signal-desc">当前 PE 28.6x 接近5年历史中位数 27.8x</span>
+            </div>
+            <div class="signal-item" tabindex="0" role="button">
+              <div class="signal-header">
+                <span class="signal-type warning">关注</span>
+                <span class="signal-time">昨日</span>
+              </div>
+              <span class="signal-title">白酒板块资金面异动</span>
+              <span class="signal-desc">板块整体净流入15.3亿，龙头股领涨</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Related Research -->
+        <section class="context-section" aria-label="关联研究">
+          <div class="context-header">
+            <span class="context-title">关联研究</span>
+            <span class="context-count">2</span>
+          </div>
+          <div class="context-body">
+            <div class="research-item" tabindex="0" role="button">
+              <span class="research-title">贵州茅台2025年年报点评：Q4业绩稳健，直销占比持续提升</span>
+              <div class="research-meta">
+                <span class="research-author">中信证券</span>
+                <span>2026-03-28</span>
+                <span>维持买入</span>
+              </div>
+            </div>
+            <div class="research-item" tabindex="0" role="button">
+              <span class="research-title">白酒行业深度报告：高端白酒景气度回升，龙头集中度加速</span>
+              <div class="research-meta">
+                <span class="research-author">国泰君安</span>
+                <span>2026-03-25</span>
+                <span>增持</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Notes -->
+        <section class="context-section" aria-label="备注">
+          <div class="context-header">
+            <span class="context-title">备注</span>
+          </div>
+          <div class="context-body">
+            <textarea class="note-input" placeholder="添加备注..." aria-label="添加备注"></textarea>
+            <div class="note-item">
+              <div class="note-text">关注Q2批价走势，当前飞天批价2,680元，环比+30元。若批价站稳2,700可加仓。</div>
+              <div class="note-time">2026-03-30 16:42 — 陈</div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <!-- ══════════════════════════════════════════════
+         Bottom Area — Timeline
+         ══════════════════════════════════════════════ -->
+    <footer class="hub-bottom" aria-label="时间线">
+      <div class="bottom-tabs" role="tablist">
+        <div class="bottom-tab active" role="tab" aria-selected="true">最近事件</div>
+        <div class="bottom-tab" role="tab" aria-selected="false">公告</div>
+        <div class="bottom-tab" role="tab" aria-selected="false">关联研究</div>
+      </div>
+      <div class="bottom-content" role="tabpanel">
+        <div class="timeline-list">
+          <div class="timeline-item">
+            <div class="timeline-marker event" aria-hidden="true"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">年度股东大会召开</div>
+              <div class="timeline-desc">审议2025年度利润分配方案，每10股派发现金红利275.28元</div>
+              <span class="timeline-time">2026-03-28</span>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker earnings" aria-hidden="true"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">2025年年报发布</div>
+              <div class="timeline-desc">营收1,562亿（+16.2%），归母净利润862亿（+19.8%），每股收益68.58元</div>
+              <span class="timeline-time">2026-03-25</span>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker filing" aria-hidden="true"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">投资者关系活动记录</div>
+              <div class="timeline-desc">Q&A 涉及系列酒发展战略、国际化布局及产能规划</div>
+              <span class="timeline-time">2026-03-20</span>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker event" aria-hidden="true"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">机构调研汇总</div>
+              <div class="timeline-desc">近30日内接待87家机构调研，海外机构占比32%</div>
+              <span class="timeline-time">2026-03-15</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar" role="status" aria-label="系统状态">
+    <span class="status-indicator"></span>
+    <span>行情延迟</span>
+    <span style="color:var(--system-healthy-fg)">&lt;3s</span>
+    <span class="status-sep">|</span>
+    <span>数据源</span>
+    <span style="color:var(--text-secondary)">Wind · 东方财富</span>
+    <span class="status-sep">|</span>
+    <span>上次刷新</span>
+    <span style="color:var(--text-secondary)">15:00:02</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">?</span>
+    <span>快捷键</span>
+    <span class="status-sep">|</span>
+    <span>Instrument Hub</span>
+  </div>
+
+  <!-- Theme Switcher Script -->
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

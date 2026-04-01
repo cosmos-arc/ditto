@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — 信号收件箱</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="shared/tokens-base.css">
+  <link rel="stylesheet" href="shared/tokens-semantic.css">
+  <link rel="stylesheet" href="shared/tokens-domain.css">
+  <link rel="stylesheet" href="shared/tokens-interaction.css">
+  <link rel="stylesheet" href="shared/tokens-density.css">
+  <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <style>
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .header-btn-badge:focus-visible,
+    .header-action-btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible,
+    .scope-tab:focus-visible,
+    .detail-action:focus-visible,
+    .risk-check:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
+
+    /* ══════════════════════════════════
+     * Shell: Operations Console — Signals
+     * Grid: Rail | Header + Scope | Main(detail)
+     * ══════════════════════════════════ */
+    .shell-signals {
+      display: grid;
+      grid-template-columns: var(--shell-rail-width) 1fr var(--shell-signals-detail-width);
+      grid-template-rows: var(--shell-header-height) var(--density-strip-height) 1fr;
+      grid-template-areas:
+        "rail header  header"
+        "rail scope   scope"
+        "rail main    detail";
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* ── Rail ── */
+    .shell-signals .shell-rail {
+      grid-area: rail;
+      background: var(--surface-app);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--space-8) 0;
+      gap: var(--space-4);
+      z-index: 10;
+    }
+
+    /* ── Header ── */
+    .shell-signals .shell-header {
+      grid-area: header;
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: var(--space-16);
+      z-index: 5;
+      position: relative;
+    }
+
+    /* Header floating accent line */
+    .shell-signals .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── Scope Strip (tabs: pending / confirmed / ignored / ordered) ── */
+    .shell-signals .scope-strip {
+      grid-area: scope;
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--density-gutter);
+      gap: var(--space-4);
+      height: var(--density-strip-height);
+      overflow-x: auto;
+    }
+
+    .scope-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-4) var(--space-8);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-6);
+      white-space: nowrap;
+      border-radius: var(--radius-4) var(--radius-4) 0 0;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+
+    .scope-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .scope-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    .scope-tab .tab-count {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      background: var(--surface-panel-elevated);
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-4);
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      min-width: 18px;
+      justify-content: center;
+    }
+
+    .scope-tab.active .tab-count {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+
+    /* Scope strip: risk status summary (right side) */
+    .scope-status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .scope-status-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .scope-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .scope-status-dot.pass   { background: var(--system-healthy-fg); }
+    .scope-status-dot.warn   { background: var(--system-degraded-fg); }
+    .scope-status-dot.block  { background: var(--system-down-fg); }
+
+    /* ── Main Content (Signal Table) ── */
+    .shell-signals .signals-main {
+      grid-area: main;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* Signals header: filters + account selector */
+    .signals-header {
+      display: flex;
+      align-items: center;
+      padding: var(--space-8) var(--density-gutter);
+      gap: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .signals-header-title {
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
+    .signals-header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+      margin-left: var(--space-4);
+    }
+
+    .signals-filters {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      margin-left: auto;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      padding: 2px;
+    }
+
+    .filter-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      height: var(--density-action-height);
+      padding: 0 var(--space-8);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-3);
+      cursor: pointer;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+      line-height: 1;
+    }
+
+    .filter-btn:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .filter-btn.active {
+      color: var(--text-primary);
+      background: var(--interaction-selected-bg);
+    }
+
+    .account-selector {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) var(--space-10);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .account-selector:hover {
+      border-color: var(--border-default);
+    }
+
+    .account-selector-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+    }
+
+    /* Table container */
+    .signals-table-wrap {
+      flex: 1;
+      overflow: auto;
+      min-height: 0;
+    }
+
+    /* ── Signal source badges ── */
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+      white-space: nowrap;
+    }
+
+    .source-badge.strategy {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+
+    .source-badge.ai {
+      color: var(--cyan-500);
+      background: oklch(0.6394 0.1037 220.78 / 0.12);
+    }
+
+    .source-badge.manual {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .source-badge-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+
+    .source-badge.strategy .source-badge-dot { background: var(--brand-accent); }
+    .source-badge.ai .source-badge-dot       { background: var(--cyan-500); }
+    .source-badge.manual .source-badge-dot  { background: var(--text-tertiary); }
+
+    /* ── Confidence bar ── */
+    .confidence-cell {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .confidence-bar {
+      width: 48px;
+      height: 4px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .confidence-fill.high   { background: var(--system-healthy-fg); }
+    .confidence-fill.medium { background: var(--system-degraded-fg); }
+    .confidence-fill.low    { background: var(--system-down-fg); }
+
+    .confidence-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      white-space: nowrap;
+    }
+
+    /* ── Risk check badge ── */
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+      white-space: nowrap;
+    }
+
+    .risk-badge.pass {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+    }
+
+    .risk-badge.warn {
+      color: var(--system-degraded-fg);
+      background: var(--system-degraded-bg);
+    }
+
+    .risk-badge.block {
+      color: var(--system-down-fg);
+      background: var(--system-down-bg);
+    }
+
+    .risk-badge-icon {
+      width: 8px;
+      height: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ── Side direction badge ── */
+    .side-badge {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .side-badge.buy {
+      color: var(--market-up-fg);
+    }
+
+    .side-badge.sell {
+      color: var(--market-down-fg);
+    }
+
+    .side-badge-sym {
+      font-size: var(--font-size-10);
+    }
+
+    /* ── Status pill ── */
+    .status-pill {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+      white-space: nowrap;
+    }
+
+    .status-pill.pending   { color: var(--execution-pending-fg); background: var(--execution-pending-bg); }
+    .status-pill.confirmed { color: var(--system-healthy-fg); background: var(--system-healthy-bg); }
+    .status-pill.ignored   { color: var(--text-tertiary); background: var(--interaction-hover-subtle-bg); }
+    .status-pill.ordered   { color: var(--execution-filled-fg); background: var(--execution-filled-bg); }
+
+    /* ══════════════════════════════════
+     * Detail Panel (right, 380px)
+     * ══════════════════════════════════ */
+    .shell-signals .detail-panel {
+      grid-area: detail;
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      padding: var(--space-12) var(--space-16);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      gap: var(--space-8);
+    }
+
+    .detail-header-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .detail-header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+    }
+
+    .detail-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-12) var(--space-16);
+      display: flex;
+      flex-direction: column;
+      gap: var(--density-section-gap);
+    }
+
+    /* Detail section */
+    .detail-section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+
+    .detail-section-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .detail-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-12);
+    }
+
+    .detail-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    .detail-value {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      text-align: right;
+    }
+
+    .detail-value.numeric {
+      font-family: var(--font-family-numeric);
+    }
+
+    .detail-value.brand {
+      color: var(--brand-accent);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .detail-value.brand:hover {
+      color: var(--brand-accent-hover);
+      text-decoration: underline;
+    }
+
+    /* Confidence display in detail */
+    .detail-confidence {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .detail-confidence-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--neutral-200);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .detail-confidence-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, white));
+    }
+
+    .detail-confidence-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      color: var(--system-healthy-fg);
+      white-space: nowrap;
+    }
+
+    .detail-confidence-label {
+      font-size: var(--font-size-10);
+      color: var(--system-healthy-fg);
+      white-space: nowrap;
+    }
+
+    /* ── Risk check list ── */
+    .risk-check-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .risk-check {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .risk-check-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .risk-check-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .risk-check-label {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+
+    .risk-check-status {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+    }
+
+    .risk-check-status.pass  { color: var(--system-healthy-fg); background: var(--system-healthy-bg); }
+    .risk-check-status.warn  { color: var(--system-degraded-fg); background: var(--system-degraded-bg); }
+    .risk-check-status.block { color: var(--system-down-fg); background: var(--system-down-bg); }
+
+    /* ── Portfolio impact ── */
+    .impact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-8);
+    }
+
+    .impact-card {
+      padding: var(--space-8);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .impact-card-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .impact-card-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .impact-card-value.up   { color: var(--market-up-fg); }
+    .impact-card-value.down { color: var(--market-down-fg); }
+    .impact-card-value.neutral { color: var(--text-secondary); }
+
+    /* ── Detail CTA actions ── */
+    .detail-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      padding-top: var(--space-8);
+      border-top: 1px solid var(--border-subtle);
+      margin-top: auto;
+    }
+
+    .detail-action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-6);
+      height: var(--density-input-height);
+      padding: 0 var(--space-12);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      border-radius: var(--radius-6);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+      text-decoration: none;
+      border: none;
+    }
+
+    .detail-action.primary {
+      color: var(--text-inverse);
+      background: var(--brand-accent);
+    }
+
+    .detail-action.primary:hover {
+      background: var(--brand-accent-hover);
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+    }
+
+    .detail-action.secondary {
+      color: var(--text-primary);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .detail-action.secondary:hover {
+      background: var(--interaction-hover-strong-bg);
+      border-color: var(--border-default);
+    }
+
+    .detail-action.ghost {
+      color: var(--text-secondary);
+      background: transparent;
+    }
+
+    .detail-action.ghost:hover {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Style label for comparison ── */
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    /* ── Status bar (terminal DNA) ── */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: 1.5rem;
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      margin-right: var(--space-6);
+      flex-shrink: 0;
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+
+    .status-live {
+      color: var(--system-healthy-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .status-spacer { flex: 1; }
+
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Header button patterns ── */
+    .header-spacer { flex: 1; }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-btn-badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-6);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .header-btn-badge:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+
+    .header-btn-badge .badge-count {
+      position: absolute;
+      top: 2px;
+      right: 0;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-inverse);
+      background: var(--system-down-fg);
+      min-width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3px;
+    }
+
+    .header-action-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-6);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      position: relative;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .header-action-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+
+    .header-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+    }
+
+    /* ── Respect reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .scope-tab, .detail-action, .filter-btn,
+      .status-indicator, .confidence-fill,
+      .data-table tr, .rail-icon, .header-btn-badge {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    /* ── Scrollbar (inherited from layout-base.css, ensure availability) ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: var(--radius-4); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Signals Inbox · Compact · A股</div>
+
+  <div class="shell-signals">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="交易" title="交易">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="AI" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <span class="header-title">信号收件箱<span class="header-subtitle">交易控制中心</span></span>
+      <div class="header-spacer"></div>
+      <div class="header-actions" role="toolbar" aria-label="页面操作">
+        <div class="theme-switcher">
+          <div class="switcher-group" role="group" aria-label="密度">
+            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          </div>
+          <div class="switcher-sep"></div>
+          <div class="switcher-group" role="group" aria-label="主题">
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+          </div>
+        </div>
+        <div class="header-btn-badge" tabindex="0" role="button" aria-label="信号队列（12 条待复核）" title="信号队列">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12M8 4v12M12 4v12"/></svg>
+          <span class="badge-count">12</span>
+        </div>
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+        </div>
+        <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Scope Strip ═══ -->
+    <div class="scope-strip" role="tablist" aria-label="信号状态">
+      <button class="scope-tab active" role="tab" aria-selected="true" aria-controls="tab-pending" id="tab-btn-pending">
+        待复核 <span class="tab-count">12</span>
+      </button>
+      <button class="scope-tab" role="tab" aria-selected="false" aria-controls="tab-confirmed" id="tab-btn-confirmed">
+        已确认 <span class="tab-count">34</span>
+      </button>
+      <button class="scope-tab" role="tab" aria-selected="false" aria-controls="tab-ignored" id="tab-btn-ignored">
+        已忽略 <span class="tab-count">8</span>
+      </button>
+      <button class="scope-tab" role="tab" aria-selected="false" aria-controls="tab-ordered" id="tab-btn-ordered">
+        已转订单 <span class="tab-count">156</span>
+      </button>
+
+      <div class="scope-status" role="status" aria-label="涨跌停校验">
+        <div class="scope-status-item">
+          <span class="scope-status-dot pass"></span>
+          涨跌停: 正常
+        </div>
+        <div class="scope-status-item">
+          <span class="scope-status-dot warn"></span>
+          T+1: 2 项
+        </div>
+        <div class="scope-status-item">
+          <span class="scope-status-dot pass"></span>
+          两融: 合规
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Main Content — Signals Table ═══ -->
+    <main class="signals-main" id="main-content" role="main">
+      <!-- Signals Header (filters) -->
+      <div class="signals-header">
+        <div class="signals-filters">
+          <div class="filter-group" role="group" aria-label="信号来源">
+            <button class="filter-btn active" aria-pressed="true">全部</button>
+            <button class="filter-btn" aria-pressed="false">策略</button>
+            <button class="filter-btn" aria-pressed="false">AI</button>
+            <button class="filter-btn" aria-pressed="false">手动</button>
+          </div>
+          <div class="filter-group" role="group" aria-label="优先级">
+            <button class="filter-btn active" aria-pressed="true">全部</button>
+            <button class="filter-btn" aria-pressed="false">高</button>
+            <button class="filter-btn" aria-pressed="false">中</button>
+            <button class="filter-btn" aria-pressed="false">低</button>
+          </div>
+        </div>
+        <div class="account-selector" tabindex="0" role="button" aria-label="切换账户">
+          <span class="account-selector-dot"></span>
+          主策略账户
+        </div>
+      </div>
+
+      <!-- Signal Table -->
+      <div class="signals-table-wrap">
+        <table class="data-table" role="grid" aria-label="信号列表">
+          <thead>
+            <tr>
+              <th scope="col" style="width:100px">时间</th>
+              <th scope="col" style="width:160px">标的</th>
+              <th scope="col" style="width:90px">来源</th>
+              <th scope="col" style="width:70px">方向</th>
+              <th scope="col" style="width:90px">建议权重</th>
+              <th scope="col" style="width:130px">置信度</th>
+              <th scope="col" style="width:80px">风控检查</th>
+              <th scope="col" style="width:80px">状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Row 1: selected -->
+            <tr class="row selected" role="row" aria-selected="true" tabindex="0">
+              <td class="cell-time">14:32:08</td>
+              <td>
+                <span class="cell-ticker">600519</span>
+                <span class="cell-name" style="margin-left:var(--space-6)">贵州茅台</span>
+              </td>
+              <td><span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span></td>
+              <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
+              <td class="cell-numeric">5.0%</td>
+              <td>
+                <div class="confidence-cell">
+                  <div class="confidence-bar"><div class="confidence-fill high" style="width:82%"></div></div>
+                  <span class="confidence-value">82%</span>
+                </div>
+              </td>
+              <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
+              <td><span class="status-pill pending">待复核</span></td>
+            </tr>
+
+            <!-- Row 2 -->
+            <tr class="row" role="row" tabindex="0">
+              <td class="cell-time">14:30:45</td>
+              <td>
+                <span class="cell-ticker">300750</span>
+                <span class="cell-name" style="margin-left:var(--space-6)">宁德时代</span>
+              </td>
+              <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
+              <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
+              <td class="cell-numeric">-3.2%</td>
+              <td>
+                <div class="confidence-cell">
+                  <div class="confidence-bar"><div class="confidence-fill medium" style="width:65%"></div></div>
+                  <span class="confidence-value">65%</span>
+                </div>
+              </td>
+              <td><span class="risk-badge warn"><span class="risk-badge-icon">!</span> 警告</span></td>
+              <td><span class="status-pill pending">待复核</span></td>
+            </tr>
+
+            <!-- Row 3 -->
+            <tr class="row" role="row" tabindex="0">
+              <td class="cell-time">14:28:33</td>
+              <td>
+                <span class="cell-ticker">000858</span>
+                <span class="cell-name" style="margin-left:var(--space-6)">五粮液</span>
+              </td>
+              <td><span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span></td>
+              <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
+              <td class="cell-numeric">3.8%</td>
+              <td>
+                <div class="confidence-cell">
+                  <div class="confidence-bar"><div class="confidence-fill high" style="width:91%"></div></div>
+                  <span class="confidence-value">91%</span>
+                </div>
+              </td>
+              <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
+              <td><span class="status-pill pending">待复核</span></td>
+            </tr>
+
+            <!-- Row 4 -->
+            <tr class="row" role="row" tabindex="0">
+              <td class="cell-time">14:25:12</td>
+              <td>
+                <span class="cell-ticker">601318</span>
+                <span class="cell-name" style="margin-left:var(--space-6)">中国平安</span>
+              </td>
+              <td><span class="source-badge manual"><span class="source-badge-dot"></span>手动信号</span></td>
+              <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
+              <td class="cell-numeric">-4.5%</td>
+              <td>
+                <div class="confidence-cell">
+                  <div class="confidence-bar"><div class="confidence-fill low" style="width:40%"></div></div>
+                  <span class="confidence-value">40%</span>
+                </div>
+              </td>
+              <td><span class="risk-badge warn"><span class="risk-badge-icon">!</span> 警告</span></td>
+              <td><span class="status-pill pending">待复核</span></td>
+            </tr>
+
+            <!-- Row 5 -->
+            <tr class="row" role="row" tabindex="0">
+              <td class="cell-time">14:22:50</td>
+              <td>
+                <span class="cell-ticker">002594</span>
+                <span class="cell-name" style="margin-left:var(--space-6)">比亚迪</span>
+              </td>
+              <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
+              <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
+              <td class="cell-numeric">2.8%</td>
+              <td>
+                <div class="confidence-cell">
+                  <div class="confidence-bar"><div class="confidence-fill high" style="width:78%"></div></div>
+                  <span class="confidence-value">78%</span>
+                </div>
+              </td>
+              <td><span class="risk-badge block"><span class="risk-badge-icon">✕</span> 阻断</span></td>
+              <td><span class="status-pill pending">待复核</span></td>
+            </tr>
+
+            <!-- Row 6 -->
+            <tr class="row" role="row" tabindex="0">
+              <td class="cell-time">14:18:07</td>
+              <td>
+                <span class="cell-ticker">603259</span>
+                <span class="cell-name" style="margin-left:var(--space-6)">药明康德</span>
+              </td>
+              <td><span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span></td>
+              <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
+              <td class="cell-numeric">4.2%</td>
+              <td>
+                <div class="confidence-cell">
+                  <div class="confidence-bar"><div class="confidence-fill high" style="width:88%"></div></div>
+                  <span class="confidence-value">88%</span>
+                </div>
+              </td>
+              <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
+              <td><span class="status-pill pending">待复核</span></td>
+            </tr>
+
+            <!-- Row 7 -->
+            <tr class="row" role="row" tabindex="0">
+              <td class="cell-time">14:15:22</td>
+              <td>
+                <span class="cell-ticker">600036</span>
+                <span class="cell-name" style="margin-left:var(--space-6)">招商银行</span>
+              </td>
+              <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
+              <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
+              <td class="cell-numeric">-2.1%</td>
+              <td>
+                <div class="confidence-cell">
+                  <div class="confidence-bar"><div class="confidence-fill medium" style="width:58%"></div></div>
+                  <span class="confidence-value">58%</span>
+                </div>
+              </td>
+              <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
+              <td><span class="status-pill pending">待复核</span></td>
+            </tr>
+
+            <!-- Row 8 -->
+            <tr class="row" role="row" tabindex="0">
+              <td class="cell-time">14:10:55</td>
+              <td>
+                <span class="cell-ticker">000001</span>
+                <span class="cell-name" style="margin-left:var(--space-6)">平安银行</span>
+              </td>
+              <td><span class="source-badge manual"><span class="source-badge-dot"></span>手动信号</span></td>
+              <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
+              <td class="cell-numeric">1.5%</td>
+              <td>
+                <div class="confidence-cell">
+                  <div class="confidence-bar"><div class="confidence-fill medium" style="width:52%"></div></div>
+                  <span class="confidence-value">52%</span>
+                </div>
+              </td>
+              <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
+              <td><span class="status-pill pending">待复核</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- ═══ Detail Panel (380px) ═══ -->
+    <aside class="detail-panel" role="complementary" aria-label="信号详情">
+      <div class="detail-header">
+        <div>
+          <div class="detail-header-title">贵州茅台</div>
+          <div class="detail-header-subtitle">600519.SH</div>
+        </div>
+        <span class="side-badge buy" style="font-size:var(--font-size-14)">
+          <span class="side-badge-sym">▲</span> 买入
+        </span>
+      </div>
+
+      <div class="detail-body">
+        <!-- Signal info -->
+        <div class="detail-section">
+          <span class="detail-section-title">信号信息</span>
+          <div class="detail-row">
+            <span class="detail-label">信号时间</span>
+            <span class="detail-value numeric">2026-04-01 14:32:08</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">信号来源</span>
+            <span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">策略名称</span>
+            <a class="detail-value brand" href="#strategy" title="查看策略 Momentum Alpha v3">Momentum Alpha v3</a>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">建议权重</span>
+            <span class="detail-value numeric">5.0%</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">建议价格</span>
+            <span class="detail-value numeric">1,586.00</span>
+          </div>
+        </div>
+
+        <!-- Confidence -->
+        <div class="detail-section">
+          <span class="detail-section-title">置信度</span>
+          <div class="detail-confidence">
+            <div class="detail-confidence-bar">
+              <div class="detail-confidence-fill" style="width:82%"></div>
+            </div>
+            <span class="detail-confidence-value">82%</span>
+            <span class="detail-confidence-label">高置信</span>
+          </div>
+        </div>
+
+        <!-- Explanation -->
+        <div class="detail-section">
+          <span class="detail-section-title">策略解读</span>
+          <p style="font-size:var(--font-size-12);color:var(--text-secondary);line-height:1.6">
+            动量因子持续走强，近 20 日收益率排名第 87 百分位。资金面北向连续 5 日净流入，筹码集中度提升。MACD 周线金叉确认，成交量放大 1.4 倍。
+          </p>
+        </div>
+
+        <!-- Risk checks -->
+        <div class="detail-section">
+          <span class="detail-section-title">风控检查</span>
+          <div class="risk-check-list">
+            <div class="risk-check" tabindex="0" role="listitem">
+              <div class="risk-check-left">
+                <span class="risk-check-icon" style="color:var(--system-healthy-fg)">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8l3 3 5-5"/></svg>
+                </span>
+                <span class="risk-check-label">标的状态</span>
+              </div>
+              <span class="risk-check-status pass">正常交易</span>
+            </div>
+            <div class="risk-check" tabindex="0" role="listitem">
+              <div class="risk-check-left">
+                <span class="risk-check-icon" style="color:var(--system-healthy-fg)">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8l3 3 5-5"/></svg>
+                </span>
+                <span class="risk-check-label">涨跌停校验</span>
+              </div>
+              <span class="risk-check-status pass">未触及</span>
+            </div>
+            <div class="risk-check" tabindex="0" role="listitem">
+              <div class="risk-check-left">
+                <span class="risk-check-icon" style="color:var(--system-degraded-fg)">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v5m0 3v0.5"/></svg>
+                </span>
+                <span class="risk-check-label">T+1 约束</span>
+              </div>
+              <span class="risk-check-status warn">今日已买入</span>
+            </div>
+            <div class="risk-check" tabindex="0" role="listitem">
+              <div class="risk-check-left">
+                <span class="risk-check-icon" style="color:var(--system-healthy-fg)">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8l3 3 5-5"/></svg>
+                </span>
+                <span class="risk-check-label">两融约束</span>
+              </div>
+              <span class="risk-check-status pass">合规</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio impact -->
+        <div class="detail-section">
+          <span class="detail-section-title">组合影响预估</span>
+          <div class="impact-grid">
+            <div class="impact-card">
+              <span class="impact-card-label">当前持仓</span>
+              <span class="impact-card-value">3.2%</span>
+            </div>
+            <div class="impact-card">
+              <span class="impact-card-label">调整后持仓</span>
+              <span class="impact-card-value up">8.2%</span>
+            </div>
+            <div class="impact-card">
+              <span class="impact-card-label">行业集中度</span>
+              <span class="impact-card-value neutral">18.6%</span>
+            </div>
+            <div class="impact-card">
+              <span class="impact-card-label">组合 Beta</span>
+              <span class="impact-card-value neutral">0.94</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="detail-actions">
+          <button class="detail-action primary" tabindex="0" aria-label="确认信号">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
+            确认信号
+          </button>
+          <button class="detail-action secondary" tabindex="0" aria-label="生成订单复核">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
+            生成订单复核
+          </button>
+          <button class="detail-action secondary" tabindex="0" aria-label="交给 AI 解读">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l2 4.5L15 7.5l-3.5 3.5.8 5L8 13.5 3.7 16l.8-5L1 7.5l5-1L8 2z"/></svg>
+            交给 AI 解读
+          </button>
+          <button class="detail-action ghost" tabindex="0" aria-label="查看来源回测">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 2 5-6"/><circle cx="14" cy="4" r="1.5" fill="currentColor"/></svg>
+            查看来源回测
+          </button>
+          <button class="detail-action ghost" tabindex="0" aria-label="查看来源策略">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M6 3v10"/></svg>
+            查看来源策略
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Status Bar — terminal DNA -->
+  <div class="status-bar" role="status" aria-label="系统状态">
+    <span class="status-indicator" aria-hidden="true"></span>
+    <span class="status-live">LIVE</span>
+    <span class="status-sep">|</span>
+    <span>12 信号待复核</span>
+    <span class="status-sep">|</span>
+    <span>策略 5 · AI 4 · 手动 3</span>
+    <span class="status-sep">|</span>
+    <span>14:32:15 CST</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl+K</span> 搜索
+  </div>
+
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

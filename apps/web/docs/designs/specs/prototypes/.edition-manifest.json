@@ -23,6 +23,24 @@
       "createdAt": "2026-03-29"
     },
     {
+      "id": "home",
+      "file": "page-home.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": "platform",
+      "rounds": 0,
+      "createdAt": "2026-04-01"
+    },
+    {
+      "id": "markets-screener",
+      "file": "page-markets-screener.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": "platform",
+      "rounds": 0,
+      "createdAt": "2026-04-01"
+    },
+    {
       "id": "research",
       "file": "page-research.html",
       "status": "needs-refinement",
@@ -32,52 +50,89 @@
       "createdAt": "2026-03-30"
     },
     {
-      "id": "markets",
-      "file": "page-markets.html",
+      "id": "trading-overview",
+      "file": "page-trading-overview.html",
       "status": "created",
       "score": null,
-      "styleAnchor": null,
+      "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-03-31"
+      "createdAt": "2026-04-01"
     },
     {
-      "id": "markets-screener",
-      "file": "page-markets-screener.html",
+      "id": "instrument-hub",
+      "file": "page-instrument-hub.html",
       "status": "created",
       "score": null,
-      "styleAnchor": null,
+      "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-03-31"
+      "createdAt": "2026-04-01"
     },
     {
-      "id": "trading",
-      "file": "page-trading.html",
+      "id": "strategy-studio",
+      "file": "page-strategy-studio.html",
       "status": "created",
       "score": null,
-      "styleAnchor": null,
+      "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-03-31"
+      "createdAt": "2026-04-01"
     },
     {
-      "id": "home-compact",
-      "file": "prototype-compact.html",
+      "id": "signals-inbox",
+      "file": "page-signals-inbox.html",
       "status": "created",
       "score": null,
-      "styleAnchor": null,
+      "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-03-31"
+      "createdAt": "2026-04-01"
+    },
+    {
+      "id": "orders-ledger",
+      "file": "page-orders-ledger.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": "platform",
+      "rounds": 0,
+      "createdAt": "2026-04-01"
+    },
+    {
+      "id": "risk-center",
+      "file": "page-risk-center.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": "platform",
+      "rounds": 0,
+      "createdAt": "2026-04-01"
+    },
+    {
+      "id": "ai-overview",
+      "file": "page-ai-overview.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": "platform",
+      "rounds": 0,
+      "createdAt": "2026-04-01"
+    },
+    {
+      "id": "ai-copilot",
+      "file": "page-ai-copilot.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": "platform",
+      "rounds": 0,
+      "createdAt": "2026-04-01"
+    },
+    {
+      "id": "agent-console",
+      "file": "page-agent-console.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": "platform",
+      "rounds": 0,
+      "createdAt": "2026-04-01"
     }
   ],
-  "auxiliary": [
-    { "id": "home-dense", "file": "prototype-dense.html", "role": "density-variant", "base": "home-compact" },
-    { "id": "home-comfortable", "file": "prototype-comfortable.html", "role": "density-variant", "base": "home-compact" }
-  ],
-  "legacy": [
-    { "id": "research-legacy", "file": "research_legacy.html", "supersededBy": "research" },
-    { "id": "screener-legacy", "file": "screener_legacy.html", "supersededBy": "markets-screener" },
-    { "id": "signals-legacy", "file": "signals_legacy.html", "supersededBy": null },
-    { "id": "risk-legacy", "file": "risk_legacy.html", "supersededBy": null }
-  ],
+  "auxiliary": [],
+  "legacy": [],
   "crossPageAudit": {
     "lastRun": null,
     "issues": 0,

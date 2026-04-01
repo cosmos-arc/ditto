@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — AI Copilot</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="shared/tokens-base.css">
+  <link rel="stylesheet" href="shared/tokens-semantic.css">
+  <link rel="stylesheet" href="shared/tokens-domain.css">
+  <link rel="stylesheet" href="shared/tokens-interaction.css">
+  <link rel="stylesheet" href="shared/tokens-density.css">
+  <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <style>
+    /* Style label for comparison */
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .header-btn-badge:focus-visible,
+    .header-action-btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible,
+    .mode-tab:focus-visible,
+    .session-item:focus-visible,
+    .action-card:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
+
+    /* ══════════════════════════════════════════════
+     * AI Copilot Shell — three-column Studio layout
+     * Rail | [Sessions | Conversation+Output | Context]
+     * ══════════════════════════════════════════════ */
+    .shell-copilot {
+      display: grid;
+      grid-template-columns: var(--shell-rail-width) var(--copilot-sessions-width) 1fr var(--copilot-context-width);
+      grid-template-rows: 60px auto 1fr;
+      grid-template-areas:
+        "rail header header header"
+        "rail modes  modes  modes"
+        "rail sessions conversation context";
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    :root {
+      --copilot-sessions-width: 220px;
+      --copilot-context-width: 280px;
+    }
+
+    .shell-copilot .shell-rail {
+      grid-area: rail;
+    }
+    .shell-copilot .shell-header {
+      grid-area: header;
+      height: 60px;
+    }
+    .shell-copilot .copilot-modes {
+      grid-area: modes;
+    }
+    .shell-copilot .copilot-sessions {
+      grid-area: sessions;
+    }
+    .shell-copilot .copilot-conversation {
+      grid-area: conversation;
+    }
+    .shell-copilot .copilot-context {
+      grid-area: context;
+    }
+
+    /* ── Frosted glass header ── */
+    .shell-copilot .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    .shell-copilot .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Brand anchor: header title underline */
+    .header-title {
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 2px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: 2px;
+    }
+
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+      margin-left: var(--space-8);
+    }
+
+    /* Rail logo subtle brand glow */
+    .rail-logo {
+      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+    }
+
+    /* Brand anchor: rail active indicator */
+    .rail-icon.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Mode Switch Strip
+     * ══════════════════════════════════════════════ */
+    .copilot-modes {
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: var(--space-4);
+      height: calc(var(--density-strip-height) - 4px);
+    }
+
+    .mode-tabs {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .mode-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-4) var(--space-10);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .mode-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .mode-tab.active {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+    }
+
+    .mode-tab svg {
+      width: 14px;
+      height: 14px;
+      margin-right: var(--space-4);
+      flex-shrink: 0;
+    }
+
+    .mode-spacer { flex: 1; }
+
+    .mode-status {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .mode-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--agent-running-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Sessions Sidebar (left, 220px)
+     * ══════════════════════════════════════════════ */
+    .copilot-sessions {
+      background: var(--surface-panel-base);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .sessions-search {
+      padding: var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .sessions-search-input {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .sessions-search-input:hover {
+      border-color: var(--border-default);
+    }
+    .sessions-search-input svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .sessions-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: var(--space-4) 0;
+    }
+
+    .sessions-group-label {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: var(--space-6) var(--space-10);
+    }
+
+    .session-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: var(--space-6) var(--space-10);
+      margin: 1px var(--space-4);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .session-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .session-item.active {
+      background: var(--brand-accent-subtle);
+    }
+
+    .session-item-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .session-item.active .session-item-title {
+      color: var(--brand-accent);
+    }
+
+    .session-item-meta {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .session-item-template {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-6) var(--space-10);
+      margin: 1px var(--space-4);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      border: 1px dashed var(--border-default);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .session-item-template:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--brand-accent);
+    }
+    .session-item-template svg {
+      width: 14px;
+      height: 14px;
+      color: var(--brand-accent);
+      flex-shrink: 0;
+    }
+    .session-item-template span {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .session-item-note {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .session-item-note svg {
+      width: 12px;
+      height: 12px;
+      color: var(--amber-500);
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Conversation + Structured Output (center)
+     * ══════════════════════════════════════════════ */
+    .copilot-conversation {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .conversation-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: var(--density-gutter);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-16);
+    }
+
+    /* ── Message ── */
+    .message {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .message-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .message-avatar.ai {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    .message-avatar.user {
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary);
+    }
+
+    .message-sender {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .message-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+    }
+
+    .message-content {
+      padding-left: 36px;
+    }
+
+    .message-content p {
+      font-size: var(--font-size-13);
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin-bottom: var(--space-8);
+    }
+
+    .message-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message-content strong {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .message-content code {
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-12);
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      color: var(--code-text);
+    }
+
+    .message-content ul {
+      padding-left: var(--space-16);
+      margin: var(--space-4) 0 var(--space-8);
+    }
+
+    .message-content li {
+      font-size: var(--font-size-13);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: var(--space-4);
+    }
+
+    .message-content li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ── Structured Output Card ── */
+    .structured-card {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: var(--card-padding);
+      margin-top: var(--space-8);
+      position: relative;
+    }
+
+    .structured-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 60%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent) 70%,
+        transparent 100%
+      );
+      border-radius: var(--card-radius) var(--card-radius) 0 0;
+    }
+
+    .structured-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+
+    .structured-card-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .structured-card-title svg {
+      width: 14px;
+      height: 14px;
+      color: var(--brand-accent);
+    }
+
+    /* ── Confidence Tags ── */
+    .confidence-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: 1px var(--space-6);
+      border-radius: var(--badge-md-radius);
+      font-size: var(--font-size-10);
+      font-weight: var(--badge-font-weight);
+    }
+
+    .confidence-tag.high {
+      background: var(--risk-low-bg);
+      color: var(--risk-low-fg);
+    }
+
+    .confidence-tag.medium {
+      background: var(--risk-medium-bg);
+      color: var(--risk-medium-fg);
+    }
+
+    .confidence-tag.low {
+      background: var(--risk-high-bg);
+      color: var(--risk-high-fg);
+    }
+
+    .confidence-tag-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .confidence-tag.high .confidence-tag-dot { background: var(--risk-low-fg); }
+    .confidence-tag.medium .confidence-tag-dot { background: var(--risk-medium-fg); }
+    .confidence-tag.low .confidence-tag-dot { background: var(--risk-high-fg); }
+
+    /* ── Factor Hypothesis Table ── */
+    .factor-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--space-8);
+    }
+
+    .factor-table th {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: left;
+      padding: var(--space-4) var(--space-8);
+      border-bottom: 1px solid var(--border-default);
+    }
+
+    .factor-table td {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      padding: var(--space-6) var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: top;
+    }
+
+    .factor-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .factor-table .factor-name {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .factor-table .factor-code {
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-10);
+      color: var(--brand-accent);
+    }
+
+    /* ── Conversation Input Bar (bottom fixed) ── */
+    .conversation-input {
+      flex-shrink: 0;
+      padding: var(--space-8) var(--density-gutter);
+      padding-bottom: calc(var(--space-8) + 1.5rem);
+      background: var(--surface-app);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .input-wrapper {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-12);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--input-radius);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--brand-accent);
+      box-shadow: 0 0 0 3px var(--brand-accent-subtle);
+    }
+
+    .input-wrapper input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-13);
+      color: var(--text-primary);
+    }
+
+    .input-wrapper input::placeholder {
+      color: var(--text-quaternary);
+    }
+
+    .input-wrapper kbd {
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-10);
+      padding: 1px var(--space-4);
+      background: var(--surface-strip);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      color: var(--text-quaternary);
+    }
+
+    .input-send-btn {
+      width: var(--density-action-height);
+      height: var(--density-action-height);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-4);
+      background: var(--brand-accent);
+      color: var(--text-inverse);
+      border: none;
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      flex-shrink: 0;
+    }
+    .input-send-btn:hover {
+      background: var(--brand-accent-hover);
+    }
+    .input-send-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Context Sidebar (right, 280px)
+     * ══════════════════════════════════════════════ */
+    .copilot-context {
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .copilot-context .context-rail {
+      position: relative;
+    }
+
+    /* Brand anchor: context panel top glow bar */
+    .copilot-context .context-rail::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 60%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent) 70%,
+        transparent 100%
+      );
+      z-index: 1;
+    }
+
+    .copilot-context .context-section:nth-child(1) {
+      flex: 3;
+      min-height: 0;
+    }
+    .copilot-context .context-section:nth-child(2) {
+      flex: 3;
+      min-height: 0;
+    }
+    .copilot-context .context-section:nth-child(3) {
+      flex: 2.5;
+      min-height: 0;
+    }
+    .copilot-context .context-section:last-child {
+      flex: 2.5;
+      min-height: 0;
+    }
+
+    /* Section highlight line */
+    .copilot-context .context-section + .context-section {
+      border-top: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    .copilot-context .context-section + .context-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, white 3%, transparent);
+      pointer-events: none;
+    }
+
+    /* ── Context Object Chips ── */
+    .object-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }
+
+    .object-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-8);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--badge-md-radius);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .object-chip:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .object-chip-type {
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+    }
+
+    .object-chip-name {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .object-chip-market {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+    }
+
+    .object-chip-market.up { color: var(--market-up-fg); }
+    .object-chip-market.down { color: var(--market-down-fg); }
+
+    /* ── Evidence Chain ── */
+    .evidence-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+    }
+
+    .evidence-item:last-child {
+      border-bottom: none;
+    }
+
+    /* Evidence timeline connector */
+    .evidence-item::before {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 16px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+    .evidence-item:last-child::before {
+      display: none;
+    }
+
+    .evidence-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .evidence-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      border: 2px solid var(--border-default);
+      background: var(--surface-panel-base);
+      flex-shrink: 0;
+    }
+
+    .evidence-dot.recent {
+      border-color: var(--brand-accent);
+      background: var(--brand-accent);
+    }
+
+    .evidence-source {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .evidence-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      margin-left: auto;
+    }
+
+    .evidence-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.4;
+      padding-left: 15px;
+    }
+
+    /* ── Action Cards ── */
+    .action-card {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      margin-bottom: var(--space-4);
+    }
+
+    .action-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .action-card:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-default);
+    }
+
+    .action-card-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .action-card-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .action-card-icon.brand {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    .action-card-icon.green {
+      background: var(--risk-low-bg);
+      color: var(--risk-low-fg);
+    }
+
+    .action-card-icon.amber {
+      background: var(--risk-medium-bg);
+      color: var(--risk-medium-fg);
+    }
+
+    .action-card-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .action-card-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .action-card-desc {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .action-card-arrow {
+      color: var(--text-quaternary);
+      flex-shrink: 0;
+    }
+
+    .action-card-arrow svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Status bar (terminal DNA)
+     * ══════════════════════════════════════════════ */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: 1.5rem;
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      margin-right: var(--space-6);
+      flex-shrink: 0;
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    .status-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+
+    .status-spacer { flex: 1; }
+
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .status-live {
+      color: var(--system-healthy-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Header button with badge ── */
+    .header-btn-badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--header-btn-size);
+      height: var(--header-btn-size);
+      border-radius: var(--radius-6);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .header-btn-badge:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+
+    /* ── Header action buttons ── */
+    .header-action-btn {
+      width: var(--header-btn-size);
+      height: var(--header-btn-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-6);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      position: relative;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .header-action-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+
+    .header-avatar {
+      width: var(--header-avatar-size);
+      height: var(--header-avatar-size);
+      border-radius: 50%;
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+    }
+
+    .header-spacer { flex: 1; }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    /* ── Button styles ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-10);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      background: transparent;
+      border: 1px solid var(--border-default);
+      border-radius: var(--btn-radius);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .btn svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* ── Copilot header CTA buttons ── */
+    .header-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-10);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      border-radius: var(--btn-radius);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .header-cta.primary {
+      color: var(--text-inverse);
+      background: var(--brand-accent);
+      border: 1px solid var(--brand-accent);
+    }
+
+    .header-cta.primary:hover {
+      background: var(--brand-accent-hover);
+    }
+
+    .header-cta.primary svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .header-cta.ghost {
+      color: var(--text-tertiary);
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .header-cta.ghost:hover {
+      border-color: var(--border-default);
+      color: var(--text-secondary);
+    }
+
+    .header-cta.ghost svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Noise material texture
+     * ══════════════════════════════════════════════ */
+    .shell-copilot {
+      position: relative;
+    }
+    .shell-copilot::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .shell-copilot::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+    .shell-copilot > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Animations
+     * ══════════════════════════════════════════════ */
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Message entrance animation */
+    .message {
+      animation: msg-fade-in var(--motion-duration-slow) var(--motion-easing-emphasis) both;
+    }
+    .message:nth-child(1) { animation-delay: 100ms; }
+    .message:nth-child(2) { animation-delay: 200ms; }
+    .message:nth-child(3) { animation-delay: 300ms; }
+    .message:nth-child(4) { animation-delay: 400ms; }
+    .message:nth-child(5) { animation-delay: 500ms; }
+    .message:nth-child(6) { animation-delay: 600ms; }
+
+    @keyframes msg-fade-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Structured card subtle breathing */
+    .structured-card {
+      animation: card-subtle-in var(--motion-duration-slow) var(--motion-easing-emphasis) both;
+    }
+
+    @keyframes card-subtle-in {
+      from { opacity: 0; transform: scale(0.98); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* Mode tab entrance — stagger */
+    .mode-tab {
+      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .mode-tabs .mode-tab:nth-child(1) { animation-delay: 50ms; }
+    .mode-tabs .mode-tab:nth-child(2) { animation-delay: 100ms; }
+    .mode-tabs .mode-tab:nth-child(3) { animation-delay: 150ms; }
+    .mode-tabs .mode-tab:nth-child(4) { animation-delay: 200ms; }
+
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .message, .structured-card, .mode-tab, .status-indicator {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label">Graphite Studio — AI Copilot · Compact · A股</div>
+
+  <div class="shell-copilot">
+    <!-- ======== Rail ======== -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="AI" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ======== Header ======== -->
+    <header class="shell-header">
+      <span class="header-title">AI Copilot<span class="header-subtitle">智能工作台</span></span>
+      <div class="header-spacer"></div>
+      <div class="header-actions" role="toolbar" aria-label="页面操作">
+        <button class="header-cta primary" tabindex="0" role="button" title="新建对话">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+          新建对话
+        </button>
+        <button class="header-cta ghost" tabindex="0" role="button" title="保存笔记">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h8l4 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M12 3v5h5"/></svg>
+          保存笔记
+        </button>
+        <button class="header-cta ghost" tabindex="0" role="button" title="导出">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v9m0 0l-3-3m3 3l3-3M4 16v1a1 1 0 001 1h10a1 1 0 001-1v-1"/></svg>
+          导出
+        </button>
+        <div class="switcher-sep"></div>
+        <div class="theme-switcher">
+          <div class="switcher-group" role="group" aria-label="密度">
+            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          </div>
+          <div class="switcher-sep"></div>
+          <div class="switcher-group" role="group" aria-label="主题">
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+          </div>
+        </div>
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+        </div>
+        <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
+      </div>
+    </header>
+
+    <!-- ======== Mode Switch ======== -->
+    <div class="copilot-modes" role="tablist" aria-label="AI 模式">
+      <div class="mode-tabs">
+        <span class="mode-tab active" role="tab" aria-selected="true" tabindex="0">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+          Market Analysis
+        </span>
+        <span class="mode-tab" role="tab" aria-selected="false" tabindex="0">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+          Stock Discovery
+        </span>
+        <span class="mode-tab" role="tab" aria-selected="false" tabindex="0">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+          Strategy Draft
+        </span>
+        <span class="mode-tab" role="tab" aria-selected="false" tabindex="0">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
+          Factor Discovery
+        </span>
+      </div>
+      <div class="mode-spacer"></div>
+      <div class="mode-status">
+        <span class="mode-status-dot"></span>
+        AI 就绪
+      </div>
+    </div>
+
+    <!-- ======== Sessions Sidebar (220px) ======== -->
+    <aside class="copilot-sessions" aria-label="会话列表">
+      <div class="sessions-search">
+        <div class="sessions-search-input">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+          搜索会话...
+        </div>
+      </div>
+      <div class="sessions-body">
+        <!-- Templates -->
+        <div class="sessions-group-label">快速开始</div>
+        <div class="session-item-template" tabindex="0" role="button">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+          <span>市场全景分析</span>
+        </div>
+        <div class="session-item-template" tabindex="0" role="button">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+          <span>因子假设验证</span>
+        </div>
+        <div class="session-item-template" tabindex="0" role="button">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+          <span>策略草案生成</span>
+        </div>
+
+        <!-- History -->
+        <div class="sessions-group-label">历史会话</div>
+        <div class="session-item active" tabindex="0" role="button">
+          <span class="session-item-title">沪深300风格因子分析</span>
+          <span class="session-item-meta">今天 14:20 · Market Analysis</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">北向资金流入预测模型</span>
+          <span class="session-item-meta">今天 11:05 · Factor Discovery</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">新能源板块拥挤度评估</span>
+          <span class="session-item-meta">昨天 16:30 · Market Analysis</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">动量反转策略初稿</span>
+          <span class="session-item-meta">昨天 10:15 · Strategy Draft</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">高股息选股筛选</span>
+          <span class="session-item-meta">3月29日 · Stock Discovery</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">量价背离信号复盘</span>
+          <span class="session-item-meta">3月28日 · Market Analysis</span>
+        </div>
+
+        <!-- Saved Notes -->
+        <div class="sessions-group-label">保存的笔记</div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">
+            <span class="session-item-note">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l5 5-9 9H3v-5l9-9z"/></svg>
+            </span>
+            小盘价值风格 Alpha 源
+          </span>
+          <span class="session-item-meta">3月30日 · 2 条引用</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">
+            <span class="session-item-note">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l5 5-9 9H3v-5l9-9z"/></svg>
+            </span>
+            北向资金领先指标验证
+          </span>
+          <span class="session-item-meta">3月28日 · 4 条引用</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">
+            <span class="session-item-note">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l5 5-9 9H3v-5l9-9z"/></svg>
+            </span>
+            板块轮动时序特征
+          </span>
+          <span class="session-item-meta">3月25日 · 1 条引用</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ======== Conversation + Structured Output ======== -->
+    <main class="copilot-conversation" id="main-content">
+      <div class="conversation-body">
+        <!-- Message 1: User -->
+        <div class="message">
+          <div class="message-header">
+            <span class="message-avatar user">C</span>
+            <span class="message-sender">我</span>
+            <span class="message-time">14:20</span>
+          </div>
+          <div class="message-content">
+            <p>帮我分析一下当前沪深300的风格因子表现，重点关注价值、动量和质量因子。最近一周的 IC 和 IR 表现如何？有没有值得关注的因子假设？</p>
+          </div>
+        </div>
+
+        <!-- Message 2: AI -->
+        <div class="message">
+          <div class="message-header">
+            <span class="message-avatar ai">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+            </span>
+            <span class="message-sender">Ditto AI</span>
+            <span class="message-time">14:20</span>
+          </div>
+          <div class="message-content">
+            <p>基于过去 5 个交易日（3月25日-3月31日）的数据，沪深300成分股的<strong>风格因子表现</strong>如下：</p>
+            <ul>
+              <li><strong>价值因子 (BP, EP_TTM)</strong>：IC = -0.032，IR = -0.51。连续第三周 IC 为负，价值风格持续承压，可能与成长板块资金回流有关。</li>
+              <li><strong>动量因子 (ROC_20)</strong>：IC = 0.078，IR = 1.24。动量因子表现强劲，5日和20日动量均呈现显著正向选股能力。</li>
+              <li><strong>质量因子 (ROE_ttm, DebtRatio)</strong>：IC = 0.045，IR = 0.72。质量因子稳定正向，ROE 单因子贡献最大。</li>
+            </ul>
+            <p>值得关注的是，<strong>波动率因子</strong>和<strong>换手率因子</strong>出现了与历史均值显著偏离的信号，我建议生成一个因子假设卡片进行深入验证。</p>
+
+            <!-- Structured Output: Factor Hypothesis Card -->
+            <div class="structured-card">
+              <div class="structured-card-header">
+                <span class="structured-card-title">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
+                  Factor Hypothesis — 低波动率溢价
+                </span>
+                <span class="confidence-tag high">
+                  <span class="confidence-tag-dot"></span>
+                  高置信
+                </span>
+              </div>
+              <table class="factor-table">
+                <thead>
+                  <tr>
+                    <th>属性</th>
+                    <th>详情</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="factor-name">因子名称</td>
+                    <td><span class="factor-name">低波动率溢价</span> <span class="factor-code">LOWVOL_PREM</span></td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">核心逻辑</td>
+                    <td>低波动率股票在市场不确定性上升期间（VIX > 22、A50 期权限波 > 2%）呈现超额收益，与 Beta 低敏和杠杆约束假说一致</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">数据源</td>
+                    <td>Wind 日线波动率 · 聚宽因子库 · 东方财富板块资金流</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">验证方法</td>
+                    <td>分层回测（5 分位）· Fama-MacBeth 回归 · IC/IR 滚动窗口（60 日/120 日）</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">初始指标</td>
+                    <td>
+                      IC = 0.092 (5d) · IR = 1.48 · 多空年化收益 12.3% · 最大回撤 -4.2%
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Message 3: User -->
+        <div class="message">
+          <div class="message-header">
+            <span class="message-avatar user">C</span>
+            <span class="message-sender">我</span>
+            <span class="message-time">14:22</span>
+          </div>
+          <div class="message-content">
+            <p>这个低波动率溢价假设看起来不错。能把这个假设和当前的市场状态结合一下吗？另外质量因子的 ROE 细分维度有哪些值得关注的？</p>
+          </div>
+        </div>
+
+        <!-- Message 4: AI -->
+        <div class="message">
+          <div class="message-header">
+            <span class="message-avatar ai">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+            </span>
+            <span class="message-sender">Ditto AI</span>
+            <span class="message-time">14:22</span>
+          </div>
+          <div class="message-content">
+            <p>好的，结合当前市场状态来看，低波动率溢价假设有<strong>三重支撑</strong>：</p>
+            <ul>
+              <li><strong>宏观层面</strong>：PMI 连续 2 月位于荣枯线以下，市场不确定性指标偏高（A50 隐含波动率 23.8%），低波动策略在风险厌恶环境下通常跑赢。</li>
+              <li><strong>资金层面</strong>：北向资金连续 5 日净流出，偏好低贝塔、高股息标的的防御性配置倾向明显。</li>
+              <li><strong>技术层面</strong>：沪深300指数近 20 日历史波动率降至 14.2%，处于近 1 年的 25% 分位，波动率压缩后往往迎来方向选择。</li>
+            </ul>
+            <p>关于<strong>ROE 质量因子的细分维度</strong>：</p>
+            <ul>
+              <li><strong>ROE 稳定性</strong>（5 年 ROE 标准差 &lt; 3%）：IC = 0.061，IR = 0.97，表现优于绝对 ROE 水平</li>
+              <li><strong>ROE 动量</strong>（ROE_QoQ 变化率）：IC = 0.038，IR = 0.61，环比改善的公司更受关注</li>
+              <li><strong>资产周转率</strong>（总资产周转率同比变化）：IC = 0.053，IR = 0.84，运营效率提升是质量因子的增量信息</li>
+            </ul>
+            <p>已生成第二个因子假设卡片，建议优先验证 <strong>ROE 稳定性</strong> 维度。</p>
+
+            <!-- Structured Output: Factor Hypothesis Card 2 -->
+            <div class="structured-card">
+              <div class="structured-card-header">
+                <span class="structured-card-title">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
+                  Factor Hypothesis — ROE 稳定性溢价
+                </span>
+                <span class="confidence-tag medium">
+                  <span class="confidence-tag-dot"></span>
+                  中置信
+                </span>
+              </div>
+              <table class="factor-table">
+                <thead>
+                  <tr>
+                    <th>属性</th>
+                    <th>详情</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="factor-name">因子名称</td>
+                    <td><span class="factor-name">ROE 稳定性溢价</span> <span class="factor-code">ROE_STABILITY</span></td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">核心逻辑</td>
+                    <td>连续 5 年 ROE 标准差低于 3% 的公司，在市场下行期表现出更强的抗跌能力和估值支撑</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">数据源</td>
+                    <td>Wind 财务数据 · 东方财富 Choice · Tushare 财报日历</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">验证方法</td>
+                    <td>分组回测 + 牛熊市分层 · IC 滚动衰减分析 · 与低波动率因子的正交化</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">初始指标</td>
+                    <td>
+                      IC = 0.061 (5d) · IR = 0.97 · 多空年化收益 8.7% · 信息比率 0.92
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="conversation-input">
+        <div class="input-wrapper">
+          <input type="text" placeholder="继续分析..." aria-label="输入消息">
+          <kbd>Enter</kbd>
+          <button class="input-send-btn" tabindex="0" role="button" aria-label="发送">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10l7-7v4.5h7v5h-7V17L3 10z"/></svg>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ======== Context Sidebar (280px) ======== -->
+    <aside class="copilot-context" aria-label="上下文面板">
+      <div class="context-rail">
+        <!-- Section 1: Related Objects -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">相关对象</span>
+            <span class="panel-count">8</span>
+          </div>
+          <div class="context-section-body">
+            <div class="object-chips">
+              <span class="object-chip">
+                <span class="object-chip-type">指数</span>
+                <span class="object-chip-name">沪深300</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">指数</span>
+                <span class="object-chip-name">中证500</span>
+                <span class="object-chip-market up">+0.82%</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">指数</span>
+                <span class="object-chip-name">创业板指</span>
+                <span class="object-chip-market down">-1.24%</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">因子</span>
+                <span class="object-chip-name">LOWVOL_PREM</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">因子</span>
+                <span class="object-chip-name">ROE_STABILITY</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">板块</span>
+                <span class="object-chip-name">新能源</span>
+                <span class="object-chip-market down">-0.56%</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">板块</span>
+                <span class="object-chip-name">银行</span>
+                <span class="object-chip-market up">+0.45%</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">宏观</span>
+                <span class="object-chip-name">PMI</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Evidence Chain -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">证据链</span>
+          </div>
+          <div class="context-section-body">
+            <div class="evidence-item">
+              <div class="evidence-header">
+                <span class="evidence-dot recent"></span>
+                <span class="evidence-source">Wind 因子库</span>
+                <span class="evidence-time">14:32:08</span>
+              </div>
+              <span class="evidence-desc">LOWVOL_PREM IC(5d) = 0.092，滚动 IR(60d) = 1.48</span>
+            </div>
+            <div class="evidence-item">
+              <div class="evidence-header">
+                <span class="evidence-dot"></span>
+                <span class="evidence-source">东方财富 Choice</span>
+                <span class="evidence-time">14:31:15</span>
+              </div>
+              <span class="evidence-desc">ROE 稳定性因子 IC(5d) = 0.061，资产周转率 IC = 0.053</span>
+            </div>
+            <div class="evidence-item">
+              <div class="evidence-header">
+                <span class="evidence-dot"></span>
+                <span class="evidence-source">Tushare 行情</span>
+                <span class="evidence-time">14:30:00</span>
+              </div>
+              <span class="evidence-desc">沪深300 20日历史波动率降至 14.2%（25% 分位）</span>
+            </div>
+            <div class="evidence-item">
+              <div class="evidence-header">
+                <span class="evidence-dot"></span>
+                <span class="evidence-source">Wind 宏观数据</span>
+                <span class="evidence-time">14:28:30</span>
+              </div>
+              <span class="evidence-desc">PMI 连续 2 月低于荣枯线，北向资金连续 5 日净流出</span>
+            </div>
+            <div class="evidence-item">
+              <div class="evidence-header">
+                <span class="evidence-dot"></span>
+                <span class="evidence-source">聚宽因子库</span>
+                <span class="evidence-time">14:20:00</span>
+              </div>
+              <span class="evidence-desc">动量因子 IC(5d) = 0.078，质量因子 IC = 0.045</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Actionable Actions -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">可执行操作</span>
+          </div>
+          <div class="context-section-body">
+            <div class="action-card" tabindex="0" role="button">
+              <span class="action-card-icon brand">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+              </span>
+              <div class="action-card-body">
+                <span class="action-card-title">发送到因子分析</span>
+                <span class="action-card-desc">LOWVOL_PREM + ROE_STABILITY</span>
+              </div>
+              <span class="action-card-arrow">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
+              </span>
+            </div>
+            <div class="action-card" tabindex="0" role="button">
+              <span class="action-card-icon green">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+              </span>
+              <div class="action-card-body">
+                <span class="action-card-title">加入策略工作室</span>
+                <span class="action-card-desc">低波 + 质量 双因子策略草案</span>
+              </div>
+              <span class="action-card-arrow">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
+              </span>
+            </div>
+            <div class="action-card" tabindex="0" role="button">
+              <span class="action-card-icon amber">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l5 5-9 9H3v-5l9-9z"/></svg>
+              </span>
+              <div class="action-card-body">
+                <span class="action-card-title">保存为笔记</span>
+                <span class="action-card-desc">含 2 个因子假设 + 5 条证据</span>
+              </div>
+              <span class="action-card-arrow">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar" role="status" aria-label="系统状态">
+    <span class="status-indicator" aria-hidden="true"></span>
+    <span class="status-live">LIVE</span>
+    <span class="status-sep">|</span>
+    <span>AI 模型 GPT-4o</span>
+    <span class="status-sep">|</span>
+    <span>令牌 <span class="status-live" style="color:var(--brand-accent)">3,847</span></span>
+    <span class="status-sep">|</span>
+    <span>Market Analysis 模式</span>
+    <span class="status-sep">|</span>
+    <span>14:22 CST</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl+K</span> 搜索
+  </div>
+
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

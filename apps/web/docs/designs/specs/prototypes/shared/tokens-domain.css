@@ -84,6 +84,43 @@
   --agent-failed-bg:            oklch(0.2242 0.0365 8.74 / 0.3);
 }
 
+/* ── Light Mode Domain Adjustments ── */
+/* Light mode uses lighter backgrounds for domain colors */
+[data-theme="light"] {
+  --market-up-bg:      oklch(0.670 0.170 20 / 0.08);
+  --market-up-subtle:  oklch(0.670 0.170 20 / 0.06);
+  --market-down-bg:    oklch(0.680 0.120 175 / 0.08);
+  --market-down-subtle:oklch(0.680 0.120 175 / 0.06);
+
+  --risk-low-bg:       oklch(0.700 0.120 162 / 0.15);
+  --risk-medium-bg:    oklch(0.734 0.118 76 / 0.15);
+  --risk-high-bg:      oklch(0.719 0.127 48 / 0.15);
+  --risk-critical-bg:  oklch(0.632 0.157 9 / 0.15);
+
+  --execution-pending-bg:    oklch(0.734 0.118 76 / 0.15);
+  --execution-partial-bg:    oklch(0.731 0.111 226 / 0.15);
+  --execution-filled-bg:     oklch(0.700 0.120 162 / 0.15);
+  --execution-rejected-bg:   oklch(0.632 0.157 9 / 0.15);
+
+  --system-healthy-bg:   oklch(0.700 0.120 162 / 0.15);
+  --system-degraded-bg:  oklch(0.734 0.118 76 / 0.15);
+  --system-stale-bg:     oklch(0.719 0.127 48 / 0.15);
+  --system-down-bg:      oklch(0.632 0.157 9 / 0.15);
+
+  --data-quality-delayed-bg:  oklch(0.734 0.118 76 / 0.15);
+  --data-quality-missing-bg:  oklch(0.632 0.157 9 / 0.15);
+
+  --model-stable-bg:    oklch(0.700 0.120 162 / 0.15);
+  --model-degrading-bg: oklch(0.734 0.118 76 / 0.15);
+  --model-drifting-bg:  oklch(0.719 0.127 48 / 0.15);
+  --model-invalid-bg:   oklch(0.632 0.157 9 / 0.15);
+
+  --agent-running-bg:           oklch(0.742 0.133 264 / 0.15);
+  --agent-waiting-approval-bg:  oklch(0.734 0.118 76 / 0.15);
+  --agent-blocked-bg:           oklch(0.632 0.157 9 / 0.15);
+  --agent-failed-bg:            oklch(0.632 0.157 9 / 0.15);
+}
+
 /* ── International: 绿涨红跌 ── */
 [data-market-region="intl"] {
   --market-up-fg:      oklch(0.680 0.120 175);      /* green */

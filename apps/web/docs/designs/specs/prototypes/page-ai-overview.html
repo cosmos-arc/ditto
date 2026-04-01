@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — AI 总览</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base → semantic → domain → interaction → density → style) -->
+  <link rel="stylesheet" href="shared/tokens-base.css">
+  <link rel="stylesheet" href="shared/tokens-semantic.css">
+  <link rel="stylesheet" href="shared/tokens-domain.css">
+  <link rel="stylesheet" href="shared/tokens-interaction.css">
+  <link rel="stylesheet" href="shared/tokens-density.css">
+  <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- Mock Data -->
+  <script src="shared/mock-data.js"></script>
+
+  <style>
+    /* Style label for comparison */
+    .style-label {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    /* ── AI Domain Accent Override ──
+     * AI domain uses brand-purple as its visual identity
+     * to distinguish from other domains. */
+    :root {
+      --ai-accent:           var(--brand-500);
+      --ai-accent-hover:     var(--brand-400);
+      --ai-accent-subtle:    oklch(0.6642 0.1605 263.63 / 0.10);
+      --ai-accent-strong:    oklch(0.6642 0.1605 263.63 / 0.18);
+
+      /* AI Pulse animation */
+      --ai-pulse-duration:   2s;
+    }
+
+    /* ── AI Pulse Indicator (animated dot) ── */
+    .ai-pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ai-accent);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .ai-pulse-dot::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 1.5px solid var(--ai-accent);
+      opacity: 0;
+      animation: ai-pulse-ring var(--ai-pulse-duration) ease-out infinite;
+    }
+
+    @keyframes ai-pulse-ring {
+      0%   { transform: scale(0.8); opacity: 0.6; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    /* ── AI Pulse Strip (domain-specific status line) ── */
+    .ai-pulse {
+      grid-area: pulse;
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: var(--space-16);
+      height: calc(var(--density-strip-height) - 4px);
+      overflow: hidden;
+    }
+
+    .ai-pulse-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      white-space: nowrap;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .ai-pulse-label {
+      color: var(--text-tertiary);
+    }
+
+    .ai-pulse-value {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .ai-pulse-value.brand {
+      color: var(--ai-accent);
+    }
+
+    .ai-pulse-value.warning {
+      color: var(--amber-500);
+    }
+
+    .ai-pulse-value.success {
+      color: var(--system-healthy-fg);
+    }
+
+    .ai-pulse-separator {
+      width: 1px;
+      height: 10px;
+      background: var(--border-subtle);
+    }
+
+    /* ── AI Domain Layout (Command Center light variant) ──
+     * Reuses shell grid but with 2-col main + sidebar */
+    .ai-shell {
+      display: grid;
+      grid-template-columns: var(--shell-rail-width) 1fr var(--shell-sidebar-width);
+      grid-template-rows: var(--shell-header-height) auto 1fr;
+      grid-template-areas:
+        "rail header   header"
+        "rail pulse    pulse"
+        "rail main     sidebar";
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* ── AI Main Content (2-col: Agent + Copilot Quick Views) ── */
+    .ai-main {
+      grid-area: main;
+      display: flex;
+      flex-direction: column;
+      gap: var(--density-gutter);
+      padding: var(--density-gutter);
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .ai-main-primary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--density-gutter);
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* ── AI Actions Bar (bottom quick access) ── */
+    .ai-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--density-section-gap);
+      flex-shrink: 0;
+    }
+
+    .ai-action-card {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-8);
+      padding: var(--space-12) var(--space-16);
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .ai-action-card:hover {
+      border-color: var(--border-default);
+      background: var(--surface-panel-elevated);
+    }
+
+    .ai-action-card.primary-action {
+      border-color: var(--ai-accent);
+      background: var(--ai-accent-subtle);
+    }
+
+    .ai-action-card.primary-action:hover {
+      background: var(--ai-accent-strong);
+    }
+
+    .ai-action-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .ai-action-icon.copilot {
+      background: var(--ai-accent-subtle);
+      color: var(--ai-accent);
+    }
+
+    .ai-action-icon.agent {
+      background: var(--ai-accent-subtle);
+      color: var(--ai-accent);
+    }
+
+    .ai-action-icon.findings {
+      background: oklch(from var(--amber-500) l c h / 0.12);
+      color: var(--amber-500);
+    }
+
+    .ai-action-icon.factor {
+      background: oklch(from var(--cyan-500) l c h / 0.12);
+      color: var(--cyan-500);
+    }
+
+    .ai-action-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .ai-action-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .ai-action-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ai-action-desc {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── AI Panel Section Headers (tabbed sub-sections) ── */
+    .ai-section-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .ai-section-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .ai-section-count {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      background: var(--surface-strip);
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-2);
+      height: 16px;
+      display: flex;
+      align-items: center;
+    }
+
+    .ai-section-count.running {
+      color: var(--ai-accent);
+      background: var(--ai-accent-subtle);
+    }
+
+    .ai-section-count.pending {
+      color: var(--amber-500);
+      background: oklch(from var(--amber-500) l c h / 0.12);
+    }
+
+    /* ── AI Finding Row (with confidence badge) ── */
+    .ai-finding-row {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--density-cell-padding-y) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .ai-finding-row:last-child {
+      border-bottom: none;
+    }
+
+    .ai-finding-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+      margin: 0 calc(var(--space-12) * -1);
+      padding-left: var(--space-12);
+      padding-right: var(--space-12);
+    }
+
+    .ai-finding-bar {
+      width: 2px;
+      flex-shrink: 0;
+      align-self: stretch;
+      border-radius: 1px;
+    }
+
+    .ai-finding-bar.high     { background: var(--green-500); }
+    .ai-finding-bar.medium   { background: var(--amber-500); }
+    .ai-finding-bar.low      { background: var(--red-500); }
+
+    .ai-finding-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding-left: var(--space-8);
+    }
+
+    .ai-finding-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .ai-finding-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Confidence Badge ── */
+    .confidence-badge {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .confidence-badge.high {
+      background: oklch(from var(--green-500) l c h / 0.15);
+      color: var(--green-500);
+    }
+
+    .confidence-badge.medium {
+      background: oklch(from var(--amber-500) l c h / 0.15);
+      color: var(--amber-500);
+    }
+
+    .confidence-badge.low {
+      background: oklch(from var(--red-500) l c h / 0.15);
+      color: var(--red-500);
+    }
+
+    .ai-finding-evidence {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.4;
+    }
+
+    .ai-finding-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ai-finding-source {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .ai-finding-action {
+      font-size: var(--font-size-10);
+      color: var(--brand-accent);
+      cursor: pointer;
+    }
+
+    /* ── AI Plan / Run Row ── */
+    .ai-plan-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--density-cell-padding-y) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .ai-plan-row:last-child {
+      border-bottom: none;
+    }
+
+    .ai-plan-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+      margin: 0 calc(var(--space-12) * -1);
+      padding-left: var(--space-12);
+      padding-right: var(--space-12);
+    }
+
+    .ai-plan-status {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .ai-plan-status.running {
+      background: var(--ai-accent);
+      box-shadow: 0 0 6px var(--ai-accent);
+    }
+
+    .ai-plan-status.completed {
+      background: var(--system-healthy-fg);
+    }
+
+    .ai-plan-status.failed {
+      background: var(--red-500);
+    }
+
+    .ai-plan-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .ai-plan-name {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ai-plan-meta {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .ai-plan-progress {
+      width: 60px;
+      height: 3px;
+      background: var(--surface-strip);
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .ai-plan-progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .ai-plan-progress-fill.active {
+      background: var(--ai-accent);
+    }
+
+    .ai-plan-progress-fill.done {
+      background: var(--system-healthy-fg);
+    }
+
+    .ai-plan-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── AI Copilot Session ── */
+    .ai-copilot-session {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-12);
+      background: var(--ai-accent-subtle);
+      border: 1px solid oklch(from var(--ai-accent) l c h / 0.20);
+      border-radius: var(--radius-6);
+      margin-bottom: var(--space-8);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .ai-copilot-session:hover {
+      background: var(--ai-accent-strong);
+    }
+
+    .ai-copilot-session-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ai-accent);
+      flex-shrink: 0;
+      margin-top: 3px;
+      box-shadow: 0 0 6px var(--ai-accent);
+    }
+
+    .ai-copilot-session-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .ai-copilot-session-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .ai-copilot-session-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .ai-copilot-session-mode {
+      font-size: var(--font-size-10);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+      background: oklch(from var(--ai-accent) l c h / 0.20);
+      color: var(--ai-accent);
+    }
+
+    .ai-copilot-session-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .ai-copilot-session-time {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── AI Output / Note Row ── */
+    .ai-output-row {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--density-cell-padding-y) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .ai-output-row:last-child {
+      border-bottom: none;
+    }
+
+    .ai-output-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+      margin: 0 calc(var(--space-12) * -1);
+      padding-left: var(--space-12);
+      padding-right: var(--space-12);
+    }
+
+    .ai-output-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+      color: var(--ai-accent);
+    }
+
+    .ai-output-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .ai-output-title {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .ai-output-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .ai-output-tag {
+      font-size: var(--font-size-10);
+      color: var(--ai-accent);
+      background: var(--ai-accent-subtle);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+    }
+
+    .ai-output-time {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .ai-output-note-row .ai-output-icon {
+      color: var(--text-tertiary);
+    }
+
+    /* ── AI Sidebar Stats ── */
+    .ai-stat-block {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-12);
+      background: var(--surface-panel-elevated);
+      border-radius: var(--radius-6);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .ai-stat-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .ai-stat-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-24);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .ai-stat-value.brand { color: var(--ai-accent); }
+    .ai-stat-value.warning { color: var(--amber-500); }
+
+    .ai-stat-sub {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── AI Confidence Legend ── */
+    .ai-confidence-legend {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      padding: var(--space-8) var(--space-12);
+    }
+
+    .ai-confidence-legend-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .ai-confidence-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .ai-confidence-dot.high   { background: var(--green-500); }
+    .ai-confidence-dot.medium { background: var(--amber-500); }
+    .ai-confidence-dot.low    { background: var(--red-500); }
+  </style>
+</head>
+<body>
+  <div class="style-label">AI Overview — Command Center Light · Brand Purple</div>
+
+  <div class="ai-shell">
+    <!-- ====== Rail ====== -->
+    <nav class="shell-rail">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon active" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ====== Header ====== -->
+    <header class="shell-header">
+      <span class="header-title">AI</span>
+      <div class="header-spacer"></div>
+      <div class="header-search">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        搜索 AI 会话 / Plan / Finding...
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="header-actions">
+        <!-- AI CTAs -->
+        <span class="queue-batch-btn" title="新建 Copilot 会话">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;vertical-align:-1px;margin-right:4px;"><path d="M10 3a7 7 0 00-7 7h3l-3.5 4L-1 10h3a7 7 0 1112 4.9"/></svg>
+          Copilot 会话
+        </span>
+        <span class="queue-batch-btn" title="新建 Agent Plan">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;vertical-align:-1px;margin-right:4px;"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+          Agent Plan
+        </span>
+
+        <div class="theme-switcher">
+          <div class="switcher-group" role="group" aria-label="密度">
+            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          </div>
+          <div class="switcher-sep"></div>
+          <div class="switcher-group" role="group" aria-label="主题">
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+          </div>
+        </div>
+        <div class="header-action-btn" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </div>
+        <div class="header-action-btn" title="Help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ====== AI Pulse Strip ====== -->
+    <div class="ai-pulse">
+      <div class="ai-pulse-item">
+        <div class="ai-pulse-dot"></div>
+        <span class="ai-pulse-label">Agent 运行中</span>
+        <span class="ai-pulse-value brand">2</span>
+      </div>
+      <div class="ai-pulse-separator"></div>
+      <div class="ai-pulse-item">
+        <span class="ai-pulse-label">待审批</span>
+        <span class="ai-pulse-value warning">3</span>
+      </div>
+      <div class="ai-pulse-separator"></div>
+      <div class="ai-pulse-item">
+        <span class="ai-pulse-label">Copilot 活跃</span>
+        <span class="ai-pulse-value brand">1</span>
+      </div>
+      <div class="ai-pulse-separator"></div>
+      <div class="ai-pulse-item">
+        <span class="ai-pulse-label">本周产出</span>
+        <span class="ai-pulse-value success">12 条 Finding</span>
+      </div>
+      <div class="ai-pulse-separator"></div>
+      <div class="ai-pulse-item">
+        <span class="ai-pulse-label">模型状态</span>
+        <span class="ai-pulse-value">正常</span>
+      </div>
+      <div style="flex:1;"></div>
+      <div class="ai-pulse-item">
+        <span class="panel-action">查看待审批 (3) →</span>
+      </div>
+    </div>
+
+    <!-- ====== Main Content ====== -->
+    <div class="ai-main">
+      <!-- Primary: Agent Quick View + Copilot Quick View -->
+      <div class="ai-main-primary">
+        <!-- ── Agent Quick View (left column) ── -->
+        <div class="panel" style="display:flex;flex-direction:column;">
+          <div class="panel-header">
+            <span class="panel-title">Agent <span class="panel-subtitle">自动化执行引擎</span></span>
+            <span class="panel-action">进入 Agent →</span>
+          </div>
+
+          <div class="panel-body">
+            <!-- Running Plans -->
+            <div class="ai-section-header">
+              <span class="ai-section-title">运行中的 Plans</span>
+              <span class="ai-section-count running">2</span>
+            </div>
+
+            <div class="ai-plan-row">
+              <span class="ai-plan-status running"></span>
+              <div class="ai-plan-body">
+                <span class="ai-plan-name">行业轮动扫描 — Q1 季报因子验证</span>
+                <span class="ai-plan-meta">步骤 3/7 · 当前: 财报数据采集</span>
+              </div>
+              <div class="ai-plan-progress">
+                <div class="ai-plan-progress-fill active" style="width: 43%;"></div>
+              </div>
+              <span class="ai-plan-time">~15min 剩余</span>
+            </div>
+
+            <div class="ai-plan-row">
+              <span class="ai-plan-status running"></span>
+              <div class="ai-plan-body">
+                <span class="ai-plan-name">持仓集中度监控 — 每日巡检</span>
+                <span class="ai-plan-meta">步骤 5/6 · 当前: 生成报告</span>
+              </div>
+              <div class="ai-plan-progress">
+                <div class="ai-plan-progress-fill active" style="width: 83%;"></div>
+              </div>
+              <span class="ai-plan-time">~3min 剩余</span>
+            </div>
+
+            <!-- Pending Findings -->
+            <div class="ai-section-header" style="margin-top: var(--space-8);">
+              <span class="ai-section-title">待审批 Findings</span>
+              <span class="ai-section-count pending">3</span>
+            </div>
+
+            <div class="ai-finding-row">
+              <div class="ai-finding-bar high"></div>
+              <div class="ai-finding-body">
+                <div class="ai-finding-header">
+                  <span class="ai-finding-title">贵州茅台 — 量价背离卖出信号</span>
+                  <span class="confidence-badge high">92%</span>
+                </div>
+                <span class="ai-finding-evidence">RSI 背离 + 放量下跌 + 北向连续 3 日净卖出，多因子共振信号。</span>
+                <div class="ai-finding-footer">
+                  <span class="ai-finding-source">Alpha v3 策略 · 3分钟前</span>
+                  <span class="ai-finding-action">审批 →</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ai-finding-row">
+              <div class="ai-finding-bar medium"></div>
+              <div class="ai-finding-body">
+                <div class="ai-finding-header">
+                  <span class="ai-finding-title">科技板块拥挤度预警 — 超过 2 倍标准差</span>
+                  <span class="confidence-badge medium">67%</span>
+                </div>
+                <span class="ai-finding-evidence">换手率分位数 98.5%，估值分位数 92%，建议关注回调风险。</span>
+                <div class="ai-finding-footer">
+                  <span class="ai-finding-source">风控巡检 · 18分钟前</span>
+                  <span class="ai-finding-action">审批 →</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ai-finding-row">
+              <div class="ai-finding-bar low"></div>
+              <div class="ai-finding-body">
+                <div class="ai-finding-header">
+                  <span class="ai-finding-title">情绪 Alpha v2 — IC 衰减至 0.028</span>
+                  <span class="confidence-badge low">45%</span>
+                </div>
+                <span class="ai-finding-evidence">近 5 日 IC 从 0.041 持续下滑，可能存在短期模型退化。</span>
+                <div class="ai-finding-footer">
+                  <span class="ai-finding-source">模型监控 · 2小时前</span>
+                  <span class="ai-finding-action">审批 →</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Completed Runs -->
+            <div class="ai-section-header" style="margin-top: var(--space-8);">
+              <span class="ai-section-title">最近完成</span>
+              <span class="ai-section-count">3</span>
+            </div>
+
+            <div class="ai-plan-row">
+              <span class="ai-plan-status completed"></span>
+              <div class="ai-plan-body">
+                <span class="ai-plan-name">价值因子 Q1 回测</span>
+                <span class="ai-plan-meta">Sharpe 1.42 · 最大回撤 -8.3% · 产出 2 条 Finding</span>
+              </div>
+              <div class="ai-plan-progress">
+                <div class="ai-plan-progress-fill done" style="width: 100%;"></div>
+              </div>
+              <span class="ai-plan-time">1小时前</span>
+            </div>
+
+            <div class="ai-plan-row">
+              <span class="ai-plan-status completed"></span>
+              <div class="ai-plan-body">
+                <span class="ai-plan-name">北向资金异动扫描</span>
+                <span class="ai-plan-meta">无异常 · 4 只股票触发阈值 · 产出 0 条 Finding</span>
+              </div>
+              <div class="ai-plan-progress">
+                <div class="ai-plan-progress-fill done" style="width: 100%;"></div>
+              </div>
+              <span class="ai-plan-time">3小时前</span>
+            </div>
+
+            <div class="ai-plan-row">
+              <span class="ai-plan-status failed"></span>
+              <div class="ai-plan-body">
+                <span class="ai-plan-name">期权波动率曲面校准</span>
+                <span class="ai-plan-meta">数据源超时 · Tushare API 限频</span>
+              </div>
+              <div class="ai-plan-progress">
+                <div class="ai-plan-progress-fill" style="width: 35%; background: var(--red-500);"></div>
+              </div>
+              <span class="ai-plan-time">5小时前</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Copilot Quick View (right column) ── -->
+        <div class="panel" style="display:flex;flex-direction:column;">
+          <div class="panel-header">
+            <span class="panel-title">Copilot <span class="panel-subtitle">AI 对话助手</span></span>
+            <span class="panel-action">进入 Copilot →</span>
+          </div>
+
+          <div class="panel-body">
+            <!-- Active Session -->
+            <div class="ai-section-header">
+              <span class="ai-section-title">活跃会话</span>
+              <span class="ai-section-count running">1</span>
+            </div>
+
+            <div class="ai-copilot-session">
+              <span class="ai-copilot-session-indicator"></span>
+              <div class="ai-copilot-session-body">
+                <div class="ai-copilot-session-header">
+                  <span class="ai-copilot-session-title">A股科技板块深度分析</span>
+                  <span class="ai-copilot-session-mode">市场分析</span>
+                </div>
+                <span class="ai-copilot-session-desc">正在分析半导体/消费电子/软件服务三个子行业的轮动节奏和资金流向...</span>
+                <span class="ai-copilot-session-time">已进行 23 分钟 · 12 轮对话</span>
+              </div>
+            </div>
+
+            <!-- Recent Outputs -->
+            <div class="ai-section-header" style="margin-top: var(--space-4);">
+              <span class="ai-section-title">最近产出</span>
+              <span class="ai-section-count">4</span>
+            </div>
+
+            <div class="ai-output-row">
+              <span class="ai-output-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12M9 4v12"/></svg>
+              </span>
+              <div class="ai-output-body">
+                <span class="ai-output-title">消费电子行业轮动分析报告</span>
+                <div class="ai-output-meta">
+                  <span class="ai-output-tag">市场分析</span>
+                  <span class="ai-output-time">2小时前</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ai-output-row">
+              <span class="ai-output-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+              </span>
+              <div class="ai-output-body">
+                <span class="ai-output-title">北向资金 + 公募持仓交叉验证结论</span>
+                <div class="ai-output-meta">
+                  <span class="ai-output-tag">交叉验证</span>
+                  <span class="ai-output-time">昨天</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ai-output-row">
+              <span class="ai-output-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+              </span>
+              <div class="ai-output-body">
+                <span class="ai-output-title">情绪因子 v2 退化原因初判</span>
+                <div class="ai-output-meta">
+                  <span class="ai-output-tag">因子诊断</span>
+                  <span class="ai-output-time">昨天</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ai-output-row">
+              <span class="ai-output-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+              </span>
+              <div class="ai-output-body">
+                <span class="ai-output-title">沪深300 成分股权重偏离分析</span>
+                <div class="ai-output-meta">
+                  <span class="ai-output-tag">组合优化</span>
+                  <span class="ai-output-time">2天前</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Saved Notes -->
+            <div class="ai-section-header" style="margin-top: var(--space-8);">
+              <span class="ai-section-title">保存的笔记</span>
+              <span class="ai-section-count">3</span>
+            </div>
+
+            <div class="ai-output-row ai-output-note-row">
+              <span class="ai-output-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M8 8h4M8 11h4"/></svg>
+              </span>
+              <div class="ai-output-body">
+                <span class="ai-output-title">Q1 回测结论备忘 — 价值因子可部署</span>
+                <div class="ai-output-meta">
+                  <span class="ai-output-time">1小时前</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ai-output-row ai-output-note-row">
+              <span class="ai-output-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M8 8h4M8 11h4"/></svg>
+              </span>
+              <div class="ai-output-body">
+                <span class="ai-output-title">茅台信号处理策略 — 等待回踩确认</span>
+                <div class="ai-output-meta">
+                  <span class="ai-output-time">昨天</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ai-output-row ai-output-note-row">
+              <span class="ai-output-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M8 8h4M8 11h4"/></svg>
+              </span>
+              <div class="ai-output-body">
+                <span class="ai-output-title">API 频率优化方案 — 峰值错开请求</span>
+                <div class="ai-output-meta">
+                  <span class="ai-output-time">3天前</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Actions (bottom quick access bar) -->
+      <div class="ai-actions">
+        <div class="ai-action-card primary-action">
+          <div class="ai-action-icon copilot">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10a7 7 0 0113.9 1.5M17 10a7 7 0 01-13.9-1.5M10 3v3m0 8v3"/></svg>
+          </div>
+          <div class="ai-action-content">
+            <span class="ai-action-title">新建 Copilot 会话</span>
+            <span class="ai-action-desc">市场分析 / 因子研究 / 组合诊断</span>
+          </div>
+        </div>
+
+        <div class="ai-action-card primary-action">
+          <div class="ai-action-icon agent">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+          </div>
+          <div class="ai-action-content">
+            <span class="ai-action-title">新建 Agent Plan</span>
+            <span class="ai-action-desc">巡检 / 扫描 / 回测 / 监控</span>
+          </div>
+        </div>
+
+        <div class="ai-action-card">
+          <div class="ai-action-icon findings">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2v1"/></svg>
+          </div>
+          <div class="ai-action-content">
+            <span class="ai-action-title">查看全部 Finding</span>
+            <span class="ai-action-desc">12 条本周产出 · 3 条待审批</span>
+          </div>
+        </div>
+
+        <div class="ai-action-card">
+          <div class="ai-action-icon factor">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 3v14M3 10h14M5.3 5.3l9.4 9.4M14.7 5.3L5.3 14.7"/></svg>
+          </div>
+          <div class="ai-action-content">
+            <span class="ai-action-title">Factor Discovery</span>
+            <span class="ai-action-desc">AI 驱动的新因子探索</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== Sidebar ====== -->
+    <div class="shell-sidebar">
+      <div class="context-rail">
+        <!-- AI Overview Stats -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">AI 状态概览</span>
+          </div>
+          <div class="context-section-body" style="padding: var(--space-12); display: flex; flex-direction: column; gap: var(--space-8);">
+            <div class="ai-stat-block">
+              <span class="ai-stat-label">Agent Plans 今日</span>
+              <div style="display:flex; align-items:baseline; gap:var(--space-8);">
+                <span class="ai-stat-value brand">5</span>
+                <span class="ai-stat-sub">运行中 2 · 完成 3</span>
+              </div>
+            </div>
+            <div class="ai-stat-block">
+              <span class="ai-stat-label">Copilot 本周对话</span>
+              <div style="display:flex; align-items:baseline; gap:var(--space-8);">
+                <span class="ai-stat-value">18</span>
+                <span class="ai-stat-sub">活跃 1 · 归档 17</span>
+              </div>
+            </div>
+            <div class="ai-stat-block">
+              <span class="ai-stat-label">待审批</span>
+              <div style="display:flex; align-items:baseline; gap:var(--space-8);">
+                <span class="ai-stat-value warning">3</span>
+                <span class="ai-stat-sub">高 1 · 中 1 · 低 1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Confidence Distribution -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">置信度分布</span>
+          </div>
+          <div class="context-section-body">
+            <div class="ai-confidence-legend">
+              <div class="ai-confidence-legend-item">
+                <span class="ai-confidence-dot high"></span>
+                <span>高置信 (80-100)</span>
+                <span class="ai-section-count" style="margin-left:auto;">5</span>
+              </div>
+              <div class="ai-confidence-legend-item">
+                <span class="ai-confidence-dot medium"></span>
+                <span>中置信 (50-79)</span>
+                <span class="ai-section-count pending" style="margin-left:auto;">4</span>
+              </div>
+              <div class="ai-confidence-legend-item">
+                <span class="ai-confidence-dot low"></span>
+                <span>低置信 (0-49)</span>
+                <span class="ai-section-count" style="margin-left:auto;">3</span>
+              </div>
+            </div>
+
+            <!-- Mini bar chart -->
+            <div style="padding: var(--space-8) 0; border-top: 1px solid var(--border-subtle);">
+              <div style="display:flex; align-items:center; gap:var(--space-6); margin-bottom:var(--space-4);">
+                <span style="flex:3; height:6px; background:var(--green-500); border-radius:3px; opacity:0.6;"></span>
+                <span style="flex:2; height:6px; background:var(--amber-500); border-radius:3px; opacity:0.6;"></span>
+                <span style="flex:2; height:6px; background:var(--red-500); border-radius:3px; opacity:0.6;"></span>
+              </div>
+              <div style="display:flex; align-items:center; gap:var(--space-6); font-size:var(--font-size-10); color:var(--text-tertiary);">
+                <span style="flex:3; text-align:center;">42%</span>
+                <span style="flex:2; text-align:center;">33%</span>
+                <span style="flex:2; text-align:center;">25%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Global Alerts (AI-related) -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">AI 预警</span>
+            <span class="panel-count">2</span>
+          </div>
+          <div class="context-section-body">
+            <div class="alert-row">
+              <span class="alert-dot critical"></span>
+              <span class="alert-title">情绪 Alpha v2 IC 持续衰减</span>
+              <span class="alert-time">2小时</span>
+            </div>
+            <div class="alert-row">
+              <span class="alert-dot warning"></span>
+              <span class="alert-title">Tushare API 接近频率上限</span>
+              <span class="alert-time">持续</span>
+            </div>
+          </div>
+          <div class="context-section-footer">
+            <a href="#">查看全部 AI 预警 →</a>
+          </div>
+        </div>
+
+        <!-- Agent Resource Usage -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">资源用量</span>
+          </div>
+          <div class="context-section-body">
+            <div class="pulse-metric">
+              <span class="pulse-metric-label">API 调用</span>
+              <span class="pulse-metric-value" style="color:var(--amber-500);">4,820 / 5,000</span>
+            </div>
+            <div class="pulse-metric">
+              <span class="pulse-metric-label">GPU 使用</span>
+              <span class="pulse-metric-value">32%</span>
+            </div>
+            <div class="pulse-metric">
+              <span class="pulse-metric-label">Agent 并发</span>
+              <span class="pulse-metric-value brand">2 / 4</span>
+            </div>
+            <div class="pulse-metric">
+              <span class="pulse-metric-label">模型延迟</span>
+              <span class="pulse-metric-value">180ms</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation Hints -->
+        <div class="context-section" style="flex: 0 0 auto;">
+          <div class="context-section-header">
+            <span class="context-section-title">快捷导航</span>
+          </div>
+          <div class="context-section-body" style="padding-bottom: var(--space-12);">
+            <div style="display:flex; flex-direction:column; gap:var(--space-4);">
+              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition:color 100ms;">
+                <span style="color:var(--text-tertiary); margin-right:var(--space-8);">→</span>/ai/agent — Agent 管理中心
+              </a>
+              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition:color 100ms;">
+                <span style="color:var(--text-tertiary); margin-right:var(--space-8);">→</span>/ai/copilot — Copilot 对话
+              </a>
+              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition:color 100ms;">
+                <span style="color:var(--text-tertiary); margin-right:var(--space-8);">→</span>/trading/signals — 待审批信号
+              </a>
+              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition:color 100ms;">
+                <span style="color:var(--text-tertiary); margin-right:var(--space-8);">→</span>/research/factors — Factor Discovery
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>
