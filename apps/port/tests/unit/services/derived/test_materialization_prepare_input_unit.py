@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_port.services.derived.materialization import (
     MissingDependencyError,
     prepare_input_frame,

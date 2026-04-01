@@ -12,12 +12,12 @@ from dataclasses import asdict
 from typing import cast
 
 import polars as pl
-from ditto_core.engine.publication_safety import DerivedMinimalDQSummary
-from ditto_core.engine.specs import DerivedSpec
 from ditto_datahub.models.publication_safety import (
     DerivedMinimalDQSummaryRecord,
     JsonDict,
 )
+from ditto_engine.engine.publication_safety import DerivedMinimalDQSummary
+from ditto_engine.engine.specs import DerivedSpec
 
 from ._utils import now_iso
 

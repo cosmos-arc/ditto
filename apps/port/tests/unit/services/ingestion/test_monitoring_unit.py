@@ -1,7 +1,7 @@
 """Tests for ingestion monitoring task."""
 
 import pytest
-from ditto_core.quality.spec import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_data.quality.spec import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing
 from ditto_infra.foundation.observability.config import ObservabilityConfig

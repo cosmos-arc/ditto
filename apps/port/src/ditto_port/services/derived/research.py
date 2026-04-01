@@ -13,15 +13,6 @@ from uuid import uuid4
 
 import orjson
 import polars as pl
-from ditto_core.engine.research import (
-    DatasetSnapshot,
-    KnownAtPolicy,
-    LateArrivalPolicy,
-    ResearchDatasetSpec,
-    SpineSnapshot,
-    SpineSpec,
-)
-from ditto_core.engine.specs import CalendarId, GrainId
 from ditto_datahub.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_datahub.models.research import (
     ResearchDatasetSnapshotRecord,
@@ -33,6 +24,15 @@ from ditto_datahub.services import DerivedArtifactReader, ResearchCatalogService
 from ditto_datahub.services.derived import VersionResolutionStrategy
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.research_artifact_service import ResearchArtifactService
+from ditto_engine.engine.research import (
+    DatasetSnapshot,
+    KnownAtPolicy,
+    LateArrivalPolicy,
+    ResearchDatasetSpec,
+    SpineSnapshot,
+    SpineSpec,
+)
+from ditto_engine.engine.specs import CalendarId, GrainId
 
 from ._utils import now_iso
 

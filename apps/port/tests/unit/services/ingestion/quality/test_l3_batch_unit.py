@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_core.quality.severity import DQSeverity
-from ditto_core.quality.spec import DQIssue, DQLevel, DQResult
+from ditto_data.quality.severity import DQSeverity
+from ditto_data.quality.spec import DQIssue, DQLevel, DQResult
 from ditto_port.services.ingestion.quality.l3_batch_service import L3BatchService
 
 

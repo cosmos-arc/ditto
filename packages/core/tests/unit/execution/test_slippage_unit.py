@@ -3,10 +3,13 @@
 from datetime import datetime
 
 import pytest
-from ditto_core.accounting.order_book import Order
-from ditto_core.execution.reality.market import MarketSnapshot
-from ditto_core.execution.reality.slippage import FixedBpsSlippage, VolumeShareSlippage
-from ditto_core.execution.rules import InstrumentDefinition
+from ditto_engine.accounting.order_book import Order
+from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_engine.execution.reality.slippage import (
+    FixedBpsSlippage,
+    VolumeShareSlippage,
+)
+from ditto_engine.execution.rules import InstrumentDefinition
 from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ditto_core.engine.publication_safety import CertificationStage
+from ditto_engine.engine.publication_safety import CertificationStage
 from ditto_port.jobs.flows.materialization import (
     certify_publication_flow,
     daily_materialization_flow,

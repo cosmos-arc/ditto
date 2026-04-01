@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 import polars as pl
 import polars.exceptions as pl_exceptions
-from ditto_core.quality import QualityEngine
+from ditto_data.quality import QualityEngine
 from ditto_datahub.services.market_service import MarketBarsQuery, MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 from loguru import logger

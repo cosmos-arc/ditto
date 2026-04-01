@@ -15,10 +15,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
-from ditto_core.backtest.data_feed import Slice
-from ditto_core.backtest.engine import EngineLoop, EngineOptions
-from ditto_core.strategy.pipeline import StrategyInputBundle
-from ditto_core.strategy.templates.stock_sector_rotation import (
+from ditto_engine.backtest.data_feed import Slice
+from ditto_engine.backtest.engine import EngineLoop, EngineOptions
+from ditto_engine.strategy.pipeline import StrategyInputBundle
+from ditto_engine.strategy.templates.stock_sector_rotation import (
     StockSectorRotationConfig,
     build_stock_sector_rotation_pipeline,
 )

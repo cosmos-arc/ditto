@@ -9,14 +9,12 @@ from unittest.mock import MagicMock
 
 import orjson
 import polars as pl
-from ditto_core.engine.materialization import DerivedMaterializationRequest
-from ditto_core.engine.materialization.models import (
+from ditto_analytics.materialization import DerivedMaterializationRequest
+from ditto_analytics.materialization.models import (
     DerivedRunMode,
     DerivedRunTrigger,
     DerivedVersionStatus,
 )
-from ditto_core.engine.publication_safety import CompatibilityManifest
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_datahub.models.derived import (
     DerivedCheckpointRecord,
     DerivedSpecRecord,
@@ -45,6 +43,8 @@ from ditto_datahub.stores.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
 )
+from ditto_engine.engine.publication_safety import CompatibilityManifest
+from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_port.services.derived import (
     InMemoryDerivedInputProvider,
     RuntimeDerivedInputProvider,

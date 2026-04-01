@@ -7,7 +7,7 @@ import pytest
 
 class TestParamConstraint:
     def test_create_int_param(self) -> None:
-        from ditto_core.strategy.specs import ParamConstraint
+        from ditto_engine.strategy.specs import ParamConstraint
 
         param = ParamConstraint(
             name="lookback",
@@ -21,7 +21,7 @@ class TestParamConstraint:
         assert param.step == 10
 
     def test_create_enum_param(self) -> None:
-        from ditto_core.strategy.specs import ParamConstraint
+        from ditto_engine.strategy.specs import ParamConstraint
 
         param = ParamConstraint(
             name="method",
@@ -31,7 +31,7 @@ class TestParamConstraint:
         assert param.allowed_values == ("equal_weight", "score_weight", "risk_parity")
 
     def test_is_frozen(self) -> None:
-        from ditto_core.strategy.specs import ParamConstraint
+        from ditto_engine.strategy.specs import ParamConstraint
 
         param = ParamConstraint(name="k", dtype="int", min_value=1, max_value=10)
         with pytest.raises(FrozenInstanceError):
@@ -40,14 +40,14 @@ class TestParamConstraint:
 
 class TestExecutionSpec:
     def test_create_calendar_trigger(self) -> None:
-        from ditto_core.strategy.specs import ExecutionSpec
+        from ditto_engine.strategy.specs import ExecutionSpec
 
         spec = ExecutionSpec(frequency="M", method="calendar")
         assert spec.frequency == "M"
         assert spec.method == "calendar"
 
     def test_create_with_cost_model(self) -> None:
-        from ditto_core.strategy.specs import CostModelSpec, ExecutionSpec
+        from ditto_engine.strategy.specs import CostModelSpec, ExecutionSpec
 
         spec = ExecutionSpec(
             frequency="W",
@@ -61,7 +61,7 @@ class TestExecutionSpec:
         assert spec.cost_model.slippage_bps == 5.0
 
     def test_is_frozen(self) -> None:
-        from ditto_core.strategy.specs import ExecutionSpec
+        from ditto_engine.strategy.specs import ExecutionSpec
 
         spec = ExecutionSpec(frequency="M", method="calendar")
         with pytest.raises(FrozenInstanceError):
@@ -70,7 +70,7 @@ class TestExecutionSpec:
 
 class TestConstraintSpec:
     def test_create_max_weight(self) -> None:
-        from ditto_core.strategy.specs import ConstraintSpec
+        from ditto_engine.strategy.specs import ConstraintSpec
 
         constraint = ConstraintSpec(
             type="max_weight_per_instrument",
@@ -80,7 +80,7 @@ class TestConstraintSpec:
         assert constraint.priority == 1
 
     def test_create_max_turnover(self) -> None:
-        from ditto_core.strategy.specs import ConstraintSpec
+        from ditto_engine.strategy.specs import ConstraintSpec
 
         constraint = ConstraintSpec(
             type="max_turnover",
@@ -90,7 +90,7 @@ class TestConstraintSpec:
         assert constraint.priority == 2
 
     def test_default_priority(self) -> None:
-        from ditto_core.strategy.specs import ConstraintSpec
+        from ditto_engine.strategy.specs import ConstraintSpec
 
         constraint = ConstraintSpec(type="max_drawdown", params={"value": 0.15})
         assert constraint.priority == 100  # 默认低优先级
@@ -98,13 +98,13 @@ class TestConstraintSpec:
 
 class TestScorerSpec:
     def test_create_builtin_scorer(self) -> None:
-        from ditto_core.strategy.specs import ScorerSpec
+        from ditto_engine.strategy.specs import ScorerSpec
 
         spec = ScorerSpec(method="rank_then_combine")
         assert spec.method == "rank_then_combine"
 
     def test_create_with_weights(self) -> None:
-        from ditto_core.strategy.specs import ScorerSpec
+        from ditto_engine.strategy.specs import ScorerSpec
 
         spec = ScorerSpec(
             method="rank_then_combine",
@@ -115,7 +115,7 @@ class TestScorerSpec:
 
 class TestSelectorSpec:
     def test_create_top_k(self) -> None:
-        from ditto_core.strategy.specs import SelectorSpec
+        from ditto_engine.strategy.specs import SelectorSpec
 
         spec = SelectorSpec(method="top_k", params={"k": 5, "min_count": 1})
         assert spec.method == "top_k"
@@ -123,7 +123,7 @@ class TestSelectorSpec:
 
 class TestStrategySpec:
     def test_create_minimal_spec(self) -> None:
-        from ditto_core.strategy.specs import StrategySpec
+        from ditto_engine.strategy.specs import StrategySpec
 
         spec = StrategySpec(
             strategy_id="etf_momentum_rotation",
@@ -136,7 +136,7 @@ class TestStrategySpec:
         assert spec.template == "etf_rotation"
 
     def test_create_full_spec(self) -> None:
-        from ditto_core.strategy.specs import (
+        from ditto_engine.strategy.specs import (
             ConstraintSpec,
             CostModelSpec,
             ExecutionSpec,
@@ -173,7 +173,7 @@ class TestStrategySpec:
         assert spec.tags == ("momentum", "rotation", "etf")
 
     def test_is_frozen(self) -> None:
-        from ditto_core.strategy.specs import StrategySpec
+        from ditto_engine.strategy.specs import StrategySpec
 
         spec = StrategySpec(
             strategy_id="test",

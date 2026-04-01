@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import pytest
-from ditto_core.backtest.statistics import (
+from ditto_engine.backtest.statistics import (
     AggregatedTradeStatistics,
     AlphaStatistics,
     BacktestReport,
 )
-from ditto_core.portfolio.comparison import (
+from ditto_engine.portfolio.comparison import (
     MetricsDelta,
     StrategyComparisonReport,
     compare_reports,

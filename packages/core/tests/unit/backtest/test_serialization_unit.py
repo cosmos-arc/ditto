@@ -7,18 +7,18 @@ from pathlib import Path
 
 import orjson
 import polars as pl
-from ditto_core.accounting.fills import FillEvent
-from ditto_core.backtest.audit.records import PreTradeDecisionRecord, RiskScanRecord
-from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
-from ditto_core.backtest.serialization import serialize
-from ditto_core.backtest.statistics import (
+from ditto_engine.accounting.fills import FillEvent
+from ditto_engine.backtest.audit.records import PreTradeDecisionRecord, RiskScanRecord
+from ditto_engine.backtest.risk.post_trade import RiskActionType, RiskSeverity
+from ditto_engine.backtest.serialization import serialize
+from ditto_engine.backtest.statistics import (
     AggregatedTradeStatistics,
     AlphaStatistics,
     BacktestReport,
     PortfolioStatistics,
     TradeStatistics,
 )
-from ditto_core.execution.trade_builder import TradeRecord
+from ditto_engine.execution.trade_builder import TradeRecord
 from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------

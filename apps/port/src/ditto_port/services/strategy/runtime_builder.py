@@ -5,9 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import cast
 
-from ditto_core.strategy.builtins.scoring import ScoringMethod
-from ditto_core.strategy.pipeline import StrategyPipeline
-from ditto_core.strategy.specs import (
+from ditto_datahub.models.strategy import StrategySpecRecord
+from ditto_datahub.services.strategy.strategy_catalog_service import (
+    StrategyCatalogService,
+)
+from ditto_engine.strategy.builtins.scoring import ScoringMethod
+from ditto_engine.strategy.pipeline import StrategyPipeline
+from ditto_engine.strategy.specs import (
     ConstraintSpec,
     CostModelSpec,
     ExecutionSpec,
@@ -16,7 +20,7 @@ from ditto_core.strategy.specs import (
     SelectorSpec,
     StrategySpec,
 )
-from ditto_core.strategy.templates import (
+from ditto_engine.strategy.templates import (
     ETFRotationConfig,
     ETFTrendSwingConfig,
     StockSectorRotationConfig,
@@ -28,15 +32,11 @@ from ditto_core.strategy.templates import (
     get_sector_rotation_param_constraints,
     validate_sector_rotation_config,
 )
-from ditto_core.strategy.templates import (
+from ditto_engine.strategy.templates import (
     get_param_constraints as get_stock_selection_param_constraints,
 )
-from ditto_core.strategy.templates import (
+from ditto_engine.strategy.templates import (
     validate_config as validate_stock_selection_config,
-)
-from ditto_datahub.models.strategy import StrategySpecRecord
-from ditto_datahub.services.strategy.strategy_catalog_service import (
-    StrategyCatalogService,
 )
 
 __all__ = ["PublishedStrategyRuntime", "StrategyRuntimeBuilder"]

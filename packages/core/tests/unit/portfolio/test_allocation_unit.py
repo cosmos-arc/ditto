@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_core.portfolio.allocation import (
+from ditto_engine.portfolio.allocation import (
     AllocationStage,
     EqualWeightAllocator,
     InverseVolAllocator,

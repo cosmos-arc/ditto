@@ -8,14 +8,12 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_core.engine.materialization.models import (
+from ditto_analytics.materialization.models import (
     DerivedRunMode,
     DerivedRunStatus,
     DerivedRunTrigger,
     DerivedVersionStatus,
 )
-from ditto_core.engine.publication_safety import CertificationStage
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_datahub.models.derived import (
     DerivedRunRecord,
     DerivedSpecRecord,
@@ -53,6 +51,8 @@ from ditto_datahub.stores.runtime.publication_shadow_sqlite import (
     SQLiteDerivedShadowSlotWriter,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_engine.engine.publication_safety import CertificationStage
+from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_infra.foundation import SQLitePool
 from ditto_port.services.derived.publication import DerivedPublicationFacade
 

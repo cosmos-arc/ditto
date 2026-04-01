@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from ditto_core.backtest.data_feed import Slice
-from ditto_core.backtest.statistics import BacktestReport
+from ditto_engine.backtest.data_feed import Slice
+from ditto_engine.backtest.statistics import BacktestReport
 
 from ditto_port.services.strategy.backtest_service import (
     BacktestServiceConfig,

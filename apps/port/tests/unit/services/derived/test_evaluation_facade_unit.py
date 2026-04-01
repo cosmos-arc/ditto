@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_core.engine.evaluation.report import (
+from ditto_engine.engine.evaluation.report import (
     FactorEvaluationReport,
 )
 from ditto_port.services.derived.evaluation_facade import (

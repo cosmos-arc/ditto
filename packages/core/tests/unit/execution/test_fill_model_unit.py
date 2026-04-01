@@ -4,15 +4,15 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import pytest
-from ditto_core.accounting.order_book import Order, OrderType
-from ditto_core.execution.fills import Filled, FillOutcome, NoFill
-from ditto_core.execution.reality.fill import (
+from ditto_engine.accounting.order_book import Order, OrderType
+from ditto_engine.execution.fills import Filled, FillOutcome, NoFill
+from ditto_engine.execution.reality.fill import (
     AShareFillModel,
     ClosingAuctionFillModel,
     SimpleFillModel,
 )
-from ditto_core.execution.reality.market import MarketSnapshot
-from ditto_core.execution.rules import InstrumentDefinition, TradingRuleSet
+from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_engine.execution.rules import InstrumentDefinition, TradingRuleSet
 from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------

@@ -2788,17 +2788,17 @@ packages:
   - pkg:pypi/distlib?source=hash-mapping
   size: 275642
   timestamp: 1752823081585
-- pypi: ./packages/core
-  name: ditto-core
-  version: 0.1.0
-  sha256: 125b710d76873a44409d2df10261e950673537234bcc891541b8a9bb920812b2
-  requires_dist:
-  - ditto-kernel
-  requires_python: '>=3.13'
 - pypi: ./packages/datahub
   name: ditto-datahub
   version: 0.1.0
   sha256: 5bc852d0f966fe2640950c044a7216c346af489e0064c0afbd64a745638a8177
+  requires_dist:
+  - ditto-kernel
+  requires_python: '>=3.13'
+- pypi: ./packages/core
+  name: ditto-engine
+  version: 0.1.0
+  sha256: 295b231176dc55582aae6ed6e0f25e496829fb5173c2dc8d5d550c19ed077fc5
   requires_dist:
   - ditto-kernel
   requires_python: '>=3.13'

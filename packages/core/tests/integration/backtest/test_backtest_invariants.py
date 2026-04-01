@@ -9,10 +9,10 @@ from datetime import datetime
 from types import MappingProxyType
 
 import pytest
-from ditto_core.accounting.account import Account, AccountView
-from ditto_core.accounting.buying_power import CashAccountBuyingPower
-from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.order_book import (
+from ditto_engine.accounting.account import Account, AccountView
+from ditto_engine.accounting.buying_power import CashAccountBuyingPower
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.accounting.order_book import (
     Order,
     OrderBook,
     OrderBookReadOnly,
@@ -23,27 +23,27 @@ from ditto_core.accounting.order_book import (
     OrderType,
     StateTransitionError,
 )
-from ditto_core.backtest.risk.pre_trade import (
+from ditto_engine.backtest.risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
     PreTradeContext,
 )
-from ditto_core.backtest.statistics import ExecutionAuditCollector
-from ditto_core.execution.brokerage import BacktestBrokerage, ProcessInput
-from ditto_core.execution.planner import SimpleExecutionPlanner
-from ditto_core.execution.reality import (
+from ditto_engine.backtest.statistics import ExecutionAuditCollector
+from ditto_engine.execution.brokerage import BacktestBrokerage, ProcessInput
+from ditto_engine.execution.planner import SimpleExecutionPlanner
+from ditto_engine.execution.reality import (
     BrokerageModel,
     SimpleFeeModel,
 )
-from ditto_core.execution.reality.market import MarketSnapshot
-from ditto_core.execution.rules import (
+from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_engine.execution.rules import (
     FeeSchedule,
     InstrumentDefinition,
     InstrumentRules,
     TradingRuleSet,
 )
-from ditto_core.strategy.context import StrategyContext
+from ditto_engine.strategy.context import StrategyContext
 
 from .conftest import (
     INITIAL_CASH,
@@ -173,7 +173,7 @@ class TestFrozenImmutability:
 
     def test_account_view_positions_readonly(self) -> None:
         """AccountView.positions 是 MappingProxyType — 不可通过 view 修改。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -384,7 +384,7 @@ class TestPendingAwarePlanner:
 
     def test_no_duplicate_sell_with_pending(self) -> None:
         """已有 pending sell → planner 不再生成同标的 sell。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -421,7 +421,7 @@ class TestPendingAwarePlanner:
             order_book=ob.readonly_view(),
         )
 
-        from ditto_core.strategy.models import TargetPortfolio
+        from ditto_engine.strategy.models import TargetPortfolio
 
         # Target: 0 weight → wants to exit ETF-001
         target = TargetPortfolio(
@@ -465,7 +465,7 @@ class TestPlannerLock:
             order_book=OrderBookReadOnly({}),
         )
 
-        from ditto_core.strategy.models import TargetPortfolio
+        from ditto_engine.strategy.models import TargetPortfolio
 
         target = TargetPortfolio(
             trade_date="2026-01-05",
@@ -599,7 +599,7 @@ class TestCashConservation:
 
     def test_sell_fill_cash_conservation(self) -> None:
         """卖出 fill 后: cash 增加 = price * qty - fee。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -661,7 +661,7 @@ class TestNoOversell:
 
     def test_sell_does_not_exceed_position(self) -> None:
         """卖出不超过持仓。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -709,7 +709,7 @@ class TestNoOversell:
 
     def test_pre_trade_context_prevents_oversell_in_batch(self) -> None:
         """PreTradeContext.with_order_accepted 防止批内超卖。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -758,7 +758,7 @@ class TestStatsPostFillSnapshot:
 
     def test_audit_collector_uses_post_fill_view(self) -> None:
         """ExecutionAuditCollector 应在 fill 后记录 AccountView。"""
-        from ditto_core.backtest.statistics import (
+        from ditto_engine.backtest.statistics import (
             compute_portfolio_statistics,
         )
 
@@ -845,7 +845,7 @@ class TestPriceLimitInvariants:
 
     def test_limit_up_blocks_buy(self) -> None:
         """涨停买入不成交 — close >= limit_up。"""
-        from ditto_core.execution.reality import AShareFillModel
+        from ditto_engine.execution.reality import AShareFillModel
 
         model = BrokerageModel(fill_model=AShareFillModel())
         account = Account(
@@ -881,8 +881,8 @@ class TestPriceLimitInvariants:
 
     def test_limit_down_blocks_sell(self) -> None:
         """跌停卖出不成交 — close <= limit_down。"""
-        from ditto_core.accounting.position import Position
-        from ditto_core.execution.reality import AShareFillModel
+        from ditto_engine.accounting.position import Position
+        from ditto_engine.execution.reality import AShareFillModel
 
         pos = Position(
             instrument_id=1,
@@ -929,8 +929,8 @@ class TestPriceLimitInvariants:
 
     def test_limit_up_allows_sell(self) -> None:
         """涨停可以卖出 — close >= limit_up + SELL → 正常成交。"""
-        from ditto_core.accounting.position import Position
-        from ditto_core.execution.reality import AShareFillModel
+        from ditto_engine.accounting.position import Position
+        from ditto_engine.execution.reality import AShareFillModel
 
         pos = Position(
             instrument_id=1,
@@ -977,7 +977,7 @@ class TestPriceLimitInvariants:
 
     def test_limit_down_allows_buy(self) -> None:
         """跌停可以买入 — close <= limit_down + BUY → 正常成交。"""
-        from ditto_core.execution.reality import AShareFillModel
+        from ditto_engine.execution.reality import AShareFillModel
 
         model = BrokerageModel(fill_model=AShareFillModel())
         account = Account(
@@ -1013,8 +1013,8 @@ class TestPriceLimitInvariants:
 
     def test_no_limit_allows_both_directions(self) -> None:
         """无涨跌停限制 — 买卖均可成交。"""
-        from ditto_core.accounting.position import Position
-        from ditto_core.execution.reality import AShareFillModel
+        from ditto_engine.accounting.position import Position
+        from ditto_engine.execution.reality import AShareFillModel
 
         pos = Position(
             instrument_id=1,
@@ -1149,7 +1149,7 @@ class TestLotSizeRounding:
 
     def test_sell_not_affected_by_lot_size(self) -> None:
         """卖出不受 lot_size 限制（零股可卖）。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -1208,13 +1208,13 @@ class TestSuspendedE2E:
         """is_suspended=True 的标的不产生成交。"""
 
         import polars as pl
-        from ditto_core.backtest.engine import (
+        from ditto_engine.backtest.engine import (
             EngineConfig,
             EngineLoop,
             EngineMode,
             EngineOptions,
         )
-        from ditto_core.strategy.templates.etf_rotation import (
+        from ditto_engine.strategy.templates.etf_rotation import (
             ETFRotationConfig,
             build_etf_rotation_pipeline,
         )
@@ -1222,7 +1222,7 @@ class TestSuspendedE2E:
         from .conftest import (
             INSTRUMENT_IDS,
             TRADE_DATES_3,
-            TestParquetDataFeed,
+            build_test_data_feed,
             generate_3day_data,
             write_parquet_data,
         )
@@ -1252,9 +1252,8 @@ class TestSuspendedE2E:
 
         # 写 parquet + 创建 DataFeed
         data_dir = write_parquet_data(tmp_path, suspended_data)
-        data_feed = TestParquetDataFeed(
-            data_dir=data_dir,
-            instrument_ids=INSTRUMENT_IDS,
+        data_feed = build_test_data_feed(
+            parquet_dir=data_dir,
             start_date="2026-01-05",
             end_date="2026-01-07",
         )
@@ -1324,15 +1323,15 @@ class TestExitOrderRules:
         """持有标的不在 target 中 → 退出 SELL 订单获得三层规则校验。"""
 
         import polars as pl
-        from ditto_core.accounting.position import Position
-        from ditto_core.backtest.engine import (
+        from ditto_engine.accounting.position import Position
+        from ditto_engine.backtest.engine import (
             EngineConfig,
             EngineLoop,
             EngineMode,
             EngineOptions,
         )
-        from ditto_core.execution.rules import InMemoryRuleProvider
-        from ditto_core.strategy.templates.etf_rotation import (
+        from ditto_engine.execution.rules import InMemoryRuleProvider
+        from ditto_engine.strategy.templates.etf_rotation import (
             ETFRotationConfig,
             build_etf_rotation_pipeline,
         )
@@ -1340,7 +1339,7 @@ class TestExitOrderRules:
         from .conftest import (
             INSTRUMENT_IDS,
             TRADE_DATES_3,
-            TestParquetDataFeed,
+            build_test_data_feed,
             generate_3day_data,
             write_parquet_data,
         )
@@ -1362,9 +1361,8 @@ class TestExitOrderRules:
         )
 
         data_dir = write_parquet_data(tmp_path, data)
-        data_feed = TestParquetDataFeed(
-            data_dir=data_dir,
-            instrument_ids=INSTRUMENT_IDS,
+        data_feed = build_test_data_feed(
+            parquet_dir=data_dir,
             start_date="2026-01-05",
             end_date="2026-01-07",
         )
@@ -1471,30 +1469,29 @@ class TestRuleRefsPreserved:
     def test_rule_refs_all_versions_preserved(self, tmp_path) -> None:
         """跨 3 日运行 — 不同 as_of_date 的规则版本都被保留。"""
 
-        from ditto_core.backtest.engine import (
+        from ditto_engine.backtest.engine import (
             EngineConfig,
             EngineLoop,
             EngineMode,
             EngineOptions,
         )
-        from ditto_core.execution.rules import InMemoryRuleProvider
-        from ditto_core.strategy.templates.etf_rotation import (
+        from ditto_engine.execution.rules import InMemoryRuleProvider
+        from ditto_engine.strategy.templates.etf_rotation import (
             ETFRotationConfig,
             build_etf_rotation_pipeline,
         )
 
         from .conftest import (
             INSTRUMENT_IDS,
-            TestParquetDataFeed,
+            build_test_data_feed,
             generate_3day_data,
             write_parquet_data,
         )
 
         data = generate_3day_data()
         data_dir = write_parquet_data(tmp_path, data)
-        data_feed = TestParquetDataFeed(
-            data_dir=data_dir,
-            instrument_ids=INSTRUMENT_IDS,
+        data_feed = build_test_data_feed(
+            parquet_dir=data_dir,
             start_date="2026-01-05",
             end_date="2026-01-07",
         )

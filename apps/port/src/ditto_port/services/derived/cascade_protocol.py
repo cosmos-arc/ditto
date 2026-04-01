@@ -18,12 +18,12 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import uuid4
 
-from ditto_core.engine.materialization import (
+from ditto_analytics.materialization import (
     DerivedInvalidationEvent,
     DerivedMaterializationRequest,
     DerivedMaterializationResult,
 )
-from ditto_core.engine.materialization.models import DerivedRunMode, DerivedRunTrigger
+from ditto_analytics.materialization.models import DerivedRunMode, DerivedRunTrigger
 from ditto_datahub.models.derived import DerivedInvalidationRecord
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
 from loguru import logger

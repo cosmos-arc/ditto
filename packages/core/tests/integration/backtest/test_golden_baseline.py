@@ -14,28 +14,21 @@
 from __future__ import annotations
 
 import pytest
-from ditto_core.accounting.account import Account
-from ditto_core.accounting.cash import CashBook
-from ditto_core.backtest.audit import ExecutionAuditCollector
-from ditto_core.backtest.engine import (
+from ditto_engine.accounting.account import Account
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.backtest.audit import ExecutionAuditCollector
+from ditto_engine.backtest.engine import (
     EngineConfig,
     EngineLoop,
     EngineMode,
     EngineOptions,
 )
-from ditto_core.backtest.statistics import build_report
-from ditto_core.execution.brokerage import BacktestBrokerage
-from ditto_core.execution.planner import SimpleExecutionPlanner
-from ditto_core.execution.reality import BrokerageModel
-from ditto_kernel.identity import InstrumentId
+from ditto_engine.backtest.statistics import build_report
+from ditto_engine.execution.brokerage import BacktestBrokerage
+from ditto_engine.execution.planner import SimpleExecutionPlanner
+from ditto_engine.execution.reality import BrokerageModel
 
-from .conftest import INITIAL_CASH, TestParquetDataFeed, write_parquet_data
-
-_INSTRUMENT_IDS: list[InstrumentId] = [
-    InstrumentId(1),
-    InstrumentId(2),
-    InstrumentId(3),
-]
+from .conftest import INITIAL_CASH, build_test_data_feed, write_parquet_data
 
 
 def _build_engine_with_audit(
@@ -48,12 +41,7 @@ def _build_engine_with_audit(
 ) -> tuple[EngineLoop, ExecutionAuditCollector]:
     """组装带审计收集器的回测引擎。"""
     audit = ExecutionAuditCollector()
-    data_feed = TestParquetDataFeed(
-        data_dir=data_dir,
-        instrument_ids=_INSTRUMENT_IDS,
-        start_date=start_date,
-        end_date=end_date,
-    )
+    data_feed = build_test_data_feed(data_dir, start_date, end_date)
     account = Account(
         cash=CashBook(
             available=INITIAL_CASH,

@@ -11,29 +11,28 @@ Phase 3 新增:
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import polars as pl
 import pytest
-from ditto_core.accounting.account import Account
-from ditto_core.accounting.cash import CashBook
-from ditto_core.backtest.data_feed import DataFeed, Slice
-from ditto_core.backtest.engine import (
+from ditto_engine.accounting.account import Account
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.backtest.data_feed import DataFeed, ProviderBackedDataFeed
+from ditto_engine.backtest.engine import (
     EngineConfig,
     EngineLoop,
     EngineMode,
     EngineOptions,
 )
-from ditto_core.backtest.risk.pre_trade import (
+from ditto_engine.backtest.risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
 )
-from ditto_core.execution.brokerage import BacktestBrokerage
-from ditto_core.execution.planner import SimpleExecutionPlanner
-from ditto_core.execution.reality import (
+from ditto_engine.execution.brokerage import BacktestBrokerage
+from ditto_engine.execution.planner import SimpleExecutionPlanner
+from ditto_engine.execution.reality import (
     AShareFeeModel,
     AShareFillModel,
     AShareSettlementModel,
@@ -41,35 +40,31 @@ from ditto_core.execution.reality import (
     FixedBpsSlippage,
     SimpleFeeModel,
 )
-from ditto_core.execution.reality.market import MarketSnapshot
-from ditto_core.strategy.templates.etf_rotation import (
+from ditto_engine.strategy.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
 )
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.provider import BarQuery, InstrumentQuery
 
 # ---------------------------------------------------------------------------
-# TestParquetDataFeed — 测试专用的 parquet 数据源
+# TestParquetProvider — 测试专用 DataProvider 实现
 # ---------------------------------------------------------------------------
 
 
-class TestParquetDataFeed:
-    """测试专用的 Parquet-backed DataFeed — 从 parquet 文件读取市场数据。
+class TestParquetProvider:
+    """测试专用 DataProvider — 从 parquet 文件读取数据，满足 DataProvider Protocol.
 
-    接受 ``list[int]`` 并内部转换为 ``InstrumentId``，方便测试使用。
+    仅 get_bars 和 get_schedule 被 ProviderBackedDataFeed 实际使用。
     """
 
     def __init__(
         self,
-        data_dir: str | Path,
-        instrument_ids: list[Any],
-        start_date: str,
-        end_date: str,
+        parquet_dir: Path,
+        id_map: dict[str, InstrumentId],
     ) -> None:
-        self._data_dir = Path(data_dir)
-        self._instrument_ids = [InstrumentId(i) for i in instrument_ids]
-        self._start_date = start_date
-        self._end_date = end_date
+        self._parquet_dir = parquet_dir
+        self._id_map = id_map
         self._data: dict[InstrumentId, pl.DataFrame] | None = None
 
     def _load(self) -> dict[InstrumentId, pl.DataFrame]:
@@ -78,70 +73,49 @@ class TestParquetDataFeed:
             return self._data
 
         data: dict[InstrumentId, pl.DataFrame] = {}
-        for iid in self._instrument_ids:
-            path = self._data_dir / f"{iid}.parquet"
-            if not path.exists():
-                continue
-            data[iid] = pl.read_parquet(path)
+        for iid in self._id_map.values():
+            path = self._parquet_dir / f"{iid}.parquet"
+            if path.exists():
+                data[iid] = pl.read_parquet(path)
         self._data = data
         return data
 
-    @staticmethod
-    def _row_to_snapshot(
-        date: str,
-        iid: InstrumentId,
-        row: dict[str, Any],
-    ) -> MarketSnapshot:
-        """Convert a polars row dict to a MarketSnapshot."""
-        return MarketSnapshot(
-            trade_date=date,
-            instrument_id=iid,
-            open=float(row["open"]),
-            high=float(row["high"]),
-            low=float(row["low"]),
-            close=float(row["close"]),
-            prev_close=float(row["prev_close"]),
-            volume=float(row["volume"]),
-            amount=float(row["amount"]),
-            is_suspended=bool(row["is_suspended"]),
-            limit_up=(
-                float(row["limit_up"]) if row.get("limit_up") is not None else None
-            ),
-            limit_down=(
-                float(row["limit_down"]) if row.get("limit_down") is not None else None
-            ),
-            avg_volume_20d=(
-                float(row["avg_volume_20d"])
-                if row.get("avg_volume_20d") is not None
-                else None
-            ),
+    def get_bars(self, query: BarQuery) -> pl.DataFrame:
+        """读取 parquet 文件，拼接为包含 instrument_id 列的 DataFrame。"""
+        data = self._load()
+        frames: list[pl.DataFrame] = []
+        for ticker in query.instruments:
+            iid = self._id_map.get(ticker)
+            if iid is None or iid not in data:
+                continue
+            df = data[iid].with_columns(instrument_id=pl.lit(int(iid)))
+            frames.append(df)
+        if not frames:
+            return pl.DataFrame()
+        result = pl.concat(frames)
+        result = result.filter(
+            (pl.col("trade_date") >= query.start) & (pl.col("trade_date") <= query.end)
         )
+        return result
 
-    def trading_days(self) -> list[str]:
-        """Return sorted list of unique trade dates in [start_date, end_date]."""
+    def get_schedule(self, start: str, end: str) -> pl.DataFrame:
+        """从已加载数据中提取去重排序的 trade_date 列表。"""
         data = self._load()
         all_dates: set[str] = set()
         for df in data.values():
-            dates = df["trade_date"].cast(pl.String)
-            all_dates.update(dates.to_list())
+            all_dates.update(df["trade_date"].cast(pl.String).to_list())
+        filtered = sorted(d for d in all_dates if start <= d <= end)
+        return pl.DataFrame({"trade_date": filtered})
 
-        filtered = {d for d in all_dates if self._start_date <= d <= self._end_date}
-        return sorted(filtered)
+    def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
+        """ProviderBackedDataFeed 不调用此方法。"""
+        return pl.DataFrame()
 
-    def get_slice(self, date: str) -> Slice:
-        """Build Slice with all instruments' data for the given date."""
-        data = self._load()
-        date_obj = datetime.strptime(date, "%Y-%m-%d")
-        step_time = date_obj.replace(hour=15, minute=0, second=0)
-
-        bars: dict[InstrumentId, MarketSnapshot] = {}
-        for iid, df in data.items():
-            row = df.filter(pl.col("trade_date") == date)
-            if row.height == 0:
-                continue
-            bars[iid] = self._row_to_snapshot(date, iid, row.to_dicts()[0])
-
-        return Slice(trade_date=date, step_time=step_time, bars=bars)
+    def get_factor(
+        self, name: str, instruments: tuple[str, ...], start: str, end: str
+    ) -> pl.DataFrame:
+        """ProviderBackedDataFeed 不调用此方法。"""
+        return pl.DataFrame()
 
 
 # ---------------------------------------------------------------------------
@@ -153,11 +127,46 @@ INITIAL_CASH = 1_000_000.0
 # 3 个 ETF 标的
 INSTRUMENT_IDS = [1, 2, 3]
 
+# ticker → InstrumentId 映射
+ID_MAP: dict[str, InstrumentId] = {str(i): InstrumentId(i) for i in INSTRUMENT_IDS}
+TICKERS: tuple[str, ...] = tuple(str(i) for i in INSTRUMENT_IDS)
+
 # 3 个交易日
 TRADE_DATES_3 = ["2026-01-05", "2026-01-06", "2026-01-07"]
 
 # 5 个交易日
 TRADE_DATES_5 = ["2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09"]
+
+
+# ---------------------------------------------------------------------------
+# DataFeed helper
+# ---------------------------------------------------------------------------
+
+
+def build_test_data_feed(
+    parquet_dir: Path,
+    start_date: str,
+    end_date: str,
+    id_map: dict[str, InstrumentId] | None = None,
+) -> ProviderBackedDataFeed:
+    """构建测试用 ProviderBackedDataFeed。
+
+    Args:
+        parquet_dir: parquet 数据目录。
+        start_date: 回测起始日期。
+        end_date: 回测结束日期。
+        id_map: ticker → InstrumentId 映射，默认使用 ID_MAP。
+    """
+    _id_map = id_map or ID_MAP
+    _tickers = tuple(_id_map.keys())
+    provider = TestParquetProvider(parquet_dir=parquet_dir, id_map=_id_map)
+    return ProviderBackedDataFeed(
+        provider=provider,
+        tickers=_tickers,
+        start_date=start_date,
+        end_date=end_date,
+        id_map=_id_map,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -367,13 +376,8 @@ def three_day_parquet_dir(
 
 @pytest.fixture
 def three_day_data_feed(three_day_parquet_dir: Path) -> DataFeed:
-    """3 日 TestParquetDataFeed。"""
-    return TestParquetDataFeed(
-        data_dir=three_day_parquet_dir,
-        instrument_ids=INSTRUMENT_IDS,
-        start_date="2026-01-05",
-        end_date="2026-01-07",
-    )
+    """3 日回测数据源。"""
+    return build_test_data_feed(three_day_parquet_dir, "2026-01-05", "2026-01-07")
 
 
 @pytest.fixture
@@ -471,13 +475,8 @@ def five_day_parquet_dir(
 
 @pytest.fixture
 def five_day_data_feed(five_day_parquet_dir: Path) -> DataFeed:
-    """5 日 TestParquetDataFeed。"""
-    return TestParquetDataFeed(
-        data_dir=five_day_parquet_dir,
-        instrument_ids=INSTRUMENT_IDS,
-        start_date="2026-01-05",
-        end_date="2026-01-09",
-    )
+    """5 日回测数据源。"""
+    return build_test_data_feed(five_day_parquet_dir, "2026-01-05", "2026-01-09")
 
 
 @pytest.fixture
@@ -565,13 +564,8 @@ def limit_up_parquet_dir(
 
 @pytest.fixture
 def limit_up_data_feed(limit_up_parquet_dir: Path) -> DataFeed:
-    """涨停场景 TestParquetDataFeed。"""
-    return TestParquetDataFeed(
-        data_dir=limit_up_parquet_dir,
-        instrument_ids=INSTRUMENT_IDS,
-        start_date="2026-01-05",
-        end_date="2026-01-07",
-    )
+    """涨停场景回测数据源。"""
+    return build_test_data_feed(limit_up_parquet_dir, "2026-01-05", "2026-01-07")
 
 
 @pytest.fixture
@@ -625,13 +619,8 @@ def limit_down_parquet_dir(
 
 @pytest.fixture
 def limit_down_data_feed(limit_down_parquet_dir: Path) -> DataFeed:
-    """跌停场景 TestParquetDataFeed。"""
-    return TestParquetDataFeed(
-        data_dir=limit_down_parquet_dir,
-        instrument_ids=INSTRUMENT_IDS,
-        start_date="2026-01-05",
-        end_date="2026-01-07",
-    )
+    """跌停场景回测数据源。"""
+    return build_test_data_feed(limit_down_parquet_dir, "2026-01-05", "2026-01-07")
 
 
 @pytest.fixture
@@ -685,13 +674,8 @@ def st_parquet_dir(
 
 @pytest.fixture
 def st_data_feed(st_parquet_dir: Path) -> DataFeed:
-    """ST 场景 TestParquetDataFeed。"""
-    return TestParquetDataFeed(
-        data_dir=st_parquet_dir,
-        instrument_ids=INSTRUMENT_IDS,
-        start_date="2026-01-05",
-        end_date="2026-01-07",
-    )
+    """ST 场景回测数据源。"""
+    return build_test_data_feed(st_parquet_dir, "2026-01-05", "2026-01-07")
 
 
 @pytest.fixture

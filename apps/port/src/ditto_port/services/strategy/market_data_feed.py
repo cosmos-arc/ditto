@@ -6,10 +6,10 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import polars as pl
-from ditto_core.backtest.data_feed import Slice
-from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
+from ditto_engine.backtest.data_feed import Slice
+from ditto_engine.execution.reality.market import MarketSnapshot
 from ditto_kernel.enums import AssetClass
 from ditto_kernel.identity import InstrumentId
 

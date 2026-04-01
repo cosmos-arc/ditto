@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from ditto_core.accounting.account import Account
-from ditto_core.accounting.cash import CashBook
-from ditto_core.backtest.risk.pre_trade import (
+from ditto_datahub.models.strategy import StrategySpecRecord
+from ditto_datahub.services.market_service import MarketService
+from ditto_datahub.services.metadata_service import MetadataService
+from ditto_engine.accounting.account import Account
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.backtest.risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
 )
-from ditto_core.execution.brokerage import BacktestBrokerage
-from ditto_core.execution.planner import SimpleExecutionPlanner
-from ditto_core.execution.reality import BrokerageModel, FeeModel, SimpleFeeModel
-from ditto_core.strategy.pipeline import StrategyPipeline
-from ditto_core.strategy.specs import StrategySpec
-from ditto_datahub.models.strategy import StrategySpecRecord
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_engine.execution.brokerage import BacktestBrokerage
+from ditto_engine.execution.planner import SimpleExecutionPlanner
+from ditto_engine.execution.reality import BrokerageModel, FeeModel, SimpleFeeModel
+from ditto_engine.strategy.pipeline import StrategyPipeline
+from ditto_engine.strategy.specs import StrategySpec
 from ditto_kernel.identity import InstrumentId
 
 from ditto_port.services.strategy.backtest_service import BacktestServiceConfig

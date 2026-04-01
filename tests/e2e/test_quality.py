@@ -23,11 +23,11 @@ from typing import TYPE_CHECKING
 
 import polars as pl
 import pytest
-from ditto_core.quality import QualityEngine
-from ditto_core.quality.spec import DatasetRules, DQSpec
+from ditto_data.quality import QualityEngine
+from ditto_data.quality.spec import DatasetRules, DQSpec
 
 if TYPE_CHECKING:
-    from ditto_core.quality import GoldenDatasetSpec
+    from ditto_data.quality import GoldenDatasetSpec
 
 
 @pytest.fixture

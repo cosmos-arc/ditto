@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_core.quality import GoldenDatasetSpec
+from ditto_data.quality import GoldenDatasetSpec
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.services.market_service import (
     AdjType,

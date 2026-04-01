@@ -108,9 +108,9 @@ unfixable = []
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
 "apps/port/src/ditto_port/services/derived/research.py" = ["S608"]
 # EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
-"packages/core/src/ditto_core/backtest/engine.py" = ["PLR0913"]
+"packages/core/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
-"packages/core/src/ditto_core/portfolio/report_views.py" = ["D102"]
+"packages/core/src/ditto_engine/portfolio/report_views.py" = ["D102"]
 
 # 测试文件 - 最宽松
 "tests/**/*.py" = [
@@ -159,7 +159,7 @@ unfixable = []
 "**/sources/provider.py" = ["PLC0415"]
 
 # 中文 description 中使用全角标点
-"packages/core/src/ditto_core/quality/golden.py" = ["RUF001"]
+"packages/data/src/ditto_data/quality/golden.py" = ["RUF001"]
 "packages/datahub/src/ditto_datahub/sources/tushare/adapters/index.py" = ["RUF001"]
 "packages/datahub/src/ditto_datahub/sources/tushare/adapters/fundamental.py" = ["RUF001"]
 
@@ -278,6 +278,8 @@ extraPaths = [
     "packages/infra/src",
     "packages/kernel/src",
     "packages/datahub/src",
+    "packages/data/src",
+    "packages/analytics/src",
     "apps/port/src",
 ]
 
@@ -295,6 +297,8 @@ pythonpath = [
     "packages/infra/src",
     "packages/kernel/src",
     "packages/datahub/src",
+    "packages/data/src",
+    "packages/analytics/src",
     "apps/port/src",
 ]
 
@@ -370,7 +374,7 @@ name = "cz_conventional_commits"
 version = "0.1.0"
 tag_format = "v$version"
 version_files = [
-    "packages/core/src/ditto_core/__init__.py:__version__",
+    "packages/core/src/ditto_engine/__init__.py:__version__",
     "packages/infra/src/ditto_infra/__init__.py:__version__",
     "packages/kernel/src/ditto_kernel/__init__.py:__version__",
     "packages/datahub/src/ditto_datahub/__init__.py:__version__",

@@ -9,27 +9,27 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_core.backtest.engine import EngineConfig, EngineLoop, EngineOptions
-from ditto_core.portfolio.allocation import (
+from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineOptions
+from ditto_engine.portfolio.allocation import (
     AllocationStage,
     EqualWeightAllocator,
     InverseVolAllocator,
 )
-from ditto_core.portfolio.constraints import (
+from ditto_engine.portfolio.constraints import (
     ConstraintChecker,
     ConstraintStage,
     MaxWeightConstraint,
 )
-from ditto_core.strategy.builtins.filtering import (
+from ditto_engine.strategy.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
 )
-from ditto_core.strategy.builtins.scoring import ScoringStage
-from ditto_core.strategy.builtins.selection import SelectionStage
-from ditto_core.strategy.context import StrategyContext
-from ditto_core.strategy.pipeline import StrategyInputBundle
-from ditto_core.strategy.specs import ParamConstraint
-from ditto_core.strategy.templates.stock_selection_trend import (
+from ditto_engine.strategy.builtins.scoring import ScoringStage
+from ditto_engine.strategy.builtins.selection import SelectionStage
+from ditto_engine.strategy.context import StrategyContext
+from ditto_engine.strategy.pipeline import StrategyInputBundle
+from ditto_engine.strategy.specs import ParamConstraint
+from ditto_engine.strategy.templates.stock_selection_trend import (
     MultiFactorSignalStage,
     StockSelectionTrendConfig,
     build_stock_selection_trend_pipeline,

@@ -118,7 +118,7 @@
 | 模块 | 职责 | 状态 |
 |------|------|------|
 | `EngineLoop` | 日历步进回测主循环 | ✅ |
-| `ParquetDataFeed` | Parquet 数据源适配（DataFeed Protocol） | ✅ |
+| `ProviderBackedDataFeed` | DataProvider → DataFeed 适配器 | ✅ |
 | `EngineConfig` | 回测配置（日期/资金/模式/频率/匹配方式） | ✅ |
 | `BacktestReport` | 回测报告（NAV/收益/回撤/Sharpe/Calmar/CVaR） | ✅ |
 | `RunManifest` | 运行清单（规则引用、输入引用、配置哈希） | ✅ |
@@ -215,7 +215,7 @@ print(result.target_portfolio)  # TargetPortfolio
 from ditto_core.backtest import (
     EngineLoop,
     EngineConfig,
-    ParquetDataFeed,
+    ProviderBackedDataFeed,
 )
 from ditto_core.execution import BacktestBrokerage
 from ditto_core.accounting import Account
@@ -229,7 +229,7 @@ config = EngineConfig(
 
 # 运行回测
 engine = EngineLoop(config)
-data_feed = ParquetDataFeed(...)
+data_feed = ProviderBackedDataFeed(provider=..., tickers=..., start_date=..., end_date=..., id_map=...)
 account = Account(cash=1_000_000)
 result = engine.run(data_feed, pipeline, account)
 
@@ -388,7 +388,7 @@ result = pipeline.run(bundle)
 ### v0.5.0 (2026-03-22)
 **新增** — Phase 2: 回测引擎闭环
 - `execution/` 扩展: `ExecutionPlanner` + `BacktestBrokerage` + `TradeBuilder` (FIFO) + Reality Model (佣金/滑点/结算)
-- `backtest/` 新增: `EngineLoop` (日历步进) + `ParquetDataFeed` + `ExecutionAuditCollector` + PreTrade 风控
+- `backtest/` 新增: `EngineLoop` (日历步进) + `ProviderBackedDataFeed` + `ExecutionAuditCollector` + PreTrade 风控
 - 3 日/5 日 etf_rotation 回测集成测试（快照 + 16 个不变量测试）
 - 3260 个测试全部通过
 

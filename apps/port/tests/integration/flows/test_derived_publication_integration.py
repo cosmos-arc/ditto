@@ -11,17 +11,12 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
-from ditto_core.engine.materialization import DerivedMaterializationRequest
-from ditto_core.engine.materialization.models import (
+from ditto_analytics.materialization import DerivedMaterializationRequest
+from ditto_analytics.materialization.models import (
     DerivedRunMode,
     DerivedRunTrigger,
     DerivedVersionStatus,
 )
-from ditto_core.engine.publication_safety import (
-    CertificationStage,
-    CompatibilityManifest,
-)
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_datahub.models.publication_safety import CompatibilityManifestRecord
 from ditto_datahub.services import (
@@ -32,6 +27,11 @@ from ditto_datahub.services import (
 )
 from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.sources.source import DataSources
+from ditto_engine.engine.publication_safety import (
+    CertificationStage,
+    CompatibilityManifest,
+)
+from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_port.jobs.flows.materialization import (
     certify_publication_flow,
     promote_publication_flow,

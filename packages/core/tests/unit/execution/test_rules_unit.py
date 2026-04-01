@@ -7,7 +7,7 @@ Part 08: default_price_limit_pct lifecycle mapping.
 from dataclasses import FrozenInstanceError
 
 import pytest
-from ditto_core.execution.rules import (
+from ditto_engine.execution.rules import (
     FeeSchedule,
     InMemoryRuleProvider,
     InstrumentDefinition,

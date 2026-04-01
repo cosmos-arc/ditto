@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ditto_core.quality import GoldenDatasetSpec
+    from ditto_data.quality import GoldenDatasetSpec
 
 
 @dataclass

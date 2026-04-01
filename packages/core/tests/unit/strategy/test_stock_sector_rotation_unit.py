@@ -10,16 +10,16 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_core.portfolio.constraints import (
+from ditto_engine.portfolio.constraints import (
     ConstraintChecker,
     ConstraintStage,
     MaxWeightConstraint,
 )
-from ditto_core.strategy.builtins.filtering import RiskLockFilter
-from ditto_core.strategy.context import StrategyContext
-from ditto_core.strategy.pipeline import StrategyInputBundle
-from ditto_core.strategy.specs import ParamConstraint
-from ditto_core.strategy.templates.stock_sector_rotation import (
+from ditto_engine.strategy.builtins.filtering import RiskLockFilter
+from ditto_engine.strategy.context import StrategyContext
+from ditto_engine.strategy.pipeline import StrategyInputBundle
+from ditto_engine.strategy.specs import ParamConstraint
+from ditto_engine.strategy.templates.stock_sector_rotation import (
     FinalStockFilterStage,
     IntraSectorSelectStage,
     SectorScoreAndSelectStage,

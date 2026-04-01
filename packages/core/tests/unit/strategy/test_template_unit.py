@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_core.portfolio.allocation import AllocationStage, ScoreWeightAllocator
-from ditto_core.portfolio.constraints import ConstraintStage
-from ditto_core.strategy.builtins.filtering import RiskLockFilter
-from ditto_core.strategy.builtins.selection import SelectionStage
-from ditto_core.strategy.builtins.signal import SignalStage
-from ditto_core.strategy.context import StrategyContext
-from ditto_core.strategy.pipeline import StrategyInputBundle
-from ditto_core.strategy.templates.etf_rotation import (
+from ditto_engine.portfolio.allocation import AllocationStage, ScoreWeightAllocator
+from ditto_engine.portfolio.constraints import ConstraintStage
+from ditto_engine.strategy.builtins.filtering import RiskLockFilter
+from ditto_engine.strategy.builtins.selection import SelectionStage
+from ditto_engine.strategy.builtins.signal import SignalStage
+from ditto_engine.strategy.context import StrategyContext
+from ditto_engine.strategy.pipeline import StrategyInputBundle
+from ditto_engine.strategy.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
 )

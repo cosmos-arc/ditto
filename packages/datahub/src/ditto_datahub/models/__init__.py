@@ -109,7 +109,7 @@ from ditto_datahub.models.strategy_audit import (
 )
 from ditto_datahub.models.strategy_run import StrategyRunRecord
 
-# deprecated: Order/OrderStatus 请使用 Core 层 ditto_core.accounting.order_book
+# deprecated: Order/OrderStatus 请使用 Core 层 ditto_engine.accounting.order_book
 from ditto_datahub.models.trading import Order, OrderStatus, Trade
 
 __all__ = [

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from ditto_core.backtest.data_feed import Slice
-from ditto_core.backtest.statistics import BacktestReport
-from ditto_core.strategy.models import TargetPortfolio
+from ditto_engine.backtest.data_feed import Slice
+from ditto_engine.backtest.statistics import BacktestReport
+from ditto_engine.strategy.models import TargetPortfolio
 from ditto_port.services.strategy import (
     BacktestServiceConfig,
     StrategyFacade,

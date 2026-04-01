@@ -11,9 +11,11 @@
 root_packages =
     ditto_infra
     ditto_datahub
-    ditto_core
+    ditto_engine
     ditto_port
     ditto_kernel
+    ditto_data
+    ditto_analytics
 
 # 不包含外部包
 include_external_packages = false
@@ -31,7 +33,7 @@ type = layers
 # Kernel 在最底层，但 layers 检查不包含它（Kernel 无业务依赖，被所有层依赖）
 layers =
     ditto_port
-    ditto_core
+    ditto_engine
     ditto_datahub
     ditto_infra
 
@@ -44,7 +46,7 @@ type = forbidden
 source_modules =
     ditto_kernel.**
 forbidden_modules =
-    ditto_core.**
+    ditto_engine.**
     ditto_datahub.**
     ditto_port.**
     ditto_infra.**
@@ -59,9 +61,11 @@ source_modules =
     ditto_infra.**
 forbidden_modules =
     ditto_datahub.**
-    ditto_core.**
+    ditto_engine.**
     ditto_port.**
     ditto_kernel.**
+    ditto_data.**
+    ditto_analytics.**
 
 # ═══════════════════════════════════════════════════════════════════
 # DataHub 层边界：禁止依赖 Core/Port
@@ -72,7 +76,7 @@ type = forbidden
 source_modules =
     ditto_datahub.**
 forbidden_modules =
-    ditto_core.**
+    ditto_engine.**
     ditto_port.**
 
 # ═══════════════════════════════════════════════════════════════════
@@ -84,12 +88,14 @@ forbidden_modules =
 name = Core must not depend on DataHub (except errors)
 type = forbidden
 source_modules =
-    ditto_core.**
+    ditto_engine.**
 forbidden_modules =
     ditto_datahub.**
+    ditto_data.**
 ignore_imports =
-    ditto_core.** -> ditto_kernel.*
-    ditto_core.** -> ditto_datahub.errors
+    ditto_engine.** -> ditto_kernel.*
+    ditto_engine.** -> ditto_datahub.errors
+    ditto_engine.** -> ditto_data.errors
 unmatched_ignore_imports_alerting = none
 
 [importlinter:contract:datahub-must-not-depend-on-core]
@@ -98,7 +104,7 @@ type = forbidden
 source_modules =
     ditto_datahub.**
 forbidden_modules =
-    ditto_core.**
+    ditto_engine.**
 ignore_imports =
     ditto_datahub.** -> ditto_kernel.*
 unmatched_ignore_imports_alerting = none
@@ -133,7 +139,45 @@ type = acyclic_siblings
 ancestors =
     ditto_infra
     ditto_datahub
-    ditto_core
+    ditto_engine
     ditto_port
     ditto_kernel
+    ditto_data
+    ditto_analytics
 depth = 10
+
+# ═══════════════════════════════════════════════════════════════════
+# Data 层边界：禁止依赖 Engine/Port
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:data-boundary]
+name = Data must not depend on Engine/Port
+type = forbidden
+source_modules =
+    ditto_data.**
+forbidden_modules =
+    ditto_engine.**
+    ditto_port.**
+unmatched_ignore_imports_alerting = none
+
+# ═══════════════════════════════════════════════════════════════════
+# Analytics 层隔离：禁止依赖 DataHub/Port
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:analytics-no-datahub-import]
+name = Analytics must not depend on DataHub
+type = forbidden
+source_modules =
+    ditto_analytics.**
+forbidden_modules =
+    ditto_datahub.**
+ignore_imports =
+    ditto_analytics.** -> ditto_engine.engine.specs
+unmatched_ignore_imports_alerting = none
+
+[importlinter:contract:analytics-must-not-depend-on-port]
+name = Analytics must not depend on Port
+type = forbidden
+source_modules =
+    ditto_analytics.**
+forbidden_modules =
+    ditto_port.**
+unmatched_ignore_imports_alerting = none

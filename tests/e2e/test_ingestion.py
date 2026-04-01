@@ -19,7 +19,7 @@ from typing import ClassVar
 
 import polars as pl
 import pytest
-from ditto_core.quality import GoldenDatasetSpec
+from ditto_data.quality import GoldenDatasetSpec
 from ditto_datahub.sources import TushareSource
 from ditto_datahub.sources.tdx import TdxSource
 

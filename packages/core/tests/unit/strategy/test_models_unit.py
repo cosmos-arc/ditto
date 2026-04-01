@@ -7,7 +7,7 @@ import pytest
 
 class TestStrategyVersion:
     def test_create_version(self) -> None:
-        from ditto_core.strategy.models import StrategyVersion
+        from ditto_engine.strategy.models import StrategyVersion
 
         ver = StrategyVersion(
             version=1,
@@ -20,7 +20,7 @@ class TestStrategyVersion:
         assert ver.status == "draft"
 
     def test_published_version(self) -> None:
-        from ditto_core.strategy.models import StrategyVersion
+        from ditto_engine.strategy.models import StrategyVersion
 
         ver = StrategyVersion(
             version=1,
@@ -32,7 +32,7 @@ class TestStrategyVersion:
         assert ver.status == "published"
 
     def test_is_frozen(self) -> None:
-        from ditto_core.strategy.models import StrategyVersion
+        from ditto_engine.strategy.models import StrategyVersion
 
         ver = StrategyVersion(
             version=1,
@@ -46,7 +46,7 @@ class TestStrategyVersion:
 
 class TestStrategyTemplate:
     def test_create_template(self) -> None:
-        from ditto_core.strategy.models import StrategyTemplate
+        from ditto_engine.strategy.models import StrategyTemplate
 
         tpl = StrategyTemplate(
             template_id="etf_rotation",
@@ -62,7 +62,7 @@ class TestStrategyTemplate:
 
 class TestStrategyRun:
     def test_create_run(self) -> None:
-        from ditto_core.strategy.models import StrategyRun
+        from ditto_engine.strategy.models import StrategyRun
 
         run = StrategyRun(
             run_id="RUN-20260115-001",
@@ -79,7 +79,7 @@ class TestStrategyRun:
         assert run.parameters["lookback"] == 252
 
     def test_create_with_baseline(self) -> None:
-        from ditto_core.strategy.models import StrategyRun
+        from ditto_engine.strategy.models import StrategyRun
 
         run = StrategyRun(
             run_id="RUN-20260115-002",
@@ -94,7 +94,7 @@ class TestStrategyRun:
         assert run.baseline_run_id == "RUN-20260115-001"
 
     def test_is_frozen(self) -> None:
-        from ditto_core.strategy.models import StrategyRun
+        from ditto_engine.strategy.models import StrategyRun
 
         run = StrategyRun(
             run_id="RUN-001",
@@ -109,7 +109,7 @@ class TestStrategyRun:
 
 class TestSignalSnapshot:
     def test_create_signal_snapshot(self) -> None:
-        from ditto_core.strategy.models import SignalSnapshot
+        from ditto_engine.strategy.models import SignalSnapshot
 
         snapshot = SignalSnapshot(
             trade_date="2026-01-15",
@@ -126,7 +126,7 @@ class TestSignalSnapshot:
         assert snapshot.signals[1] == pytest.approx(0.85)
 
     def test_is_frozen(self) -> None:
-        from ditto_core.strategy.models import SignalSnapshot
+        from ditto_engine.strategy.models import SignalSnapshot
 
         snapshot = SignalSnapshot(
             trade_date="2026-01-15",
@@ -139,7 +139,7 @@ class TestSignalSnapshot:
 
     def test_valid_until_default_none(self) -> None:
         """默认 valid_until 为 None（仅当日有效）。"""
-        from ditto_core.strategy.models import SignalSnapshot
+        from ditto_engine.strategy.models import SignalSnapshot
 
         snapshot = SignalSnapshot(
             trade_date="2026-01-15",
@@ -150,7 +150,7 @@ class TestSignalSnapshot:
 
     def test_valid_until_explicit(self) -> None:
         """显式设置 valid_until。"""
-        from ditto_core.strategy.models import SignalSnapshot
+        from ditto_engine.strategy.models import SignalSnapshot
 
         snapshot = SignalSnapshot(
             trade_date="2026-01-15",
@@ -163,7 +163,7 @@ class TestSignalSnapshot:
 
 class TestTargetPortfolio:
     def test_create_target_portfolio(self) -> None:
-        from ditto_core.strategy.models import TargetPortfolio
+        from ditto_engine.strategy.models import TargetPortfolio
 
         target = TargetPortfolio(
             trade_date="2026-01-15",
@@ -180,7 +180,7 @@ class TestTargetPortfolio:
         assert sum(target.positions.values()) == pytest.approx(1.0)
 
     def test_with_cash_reserve(self) -> None:
-        from ditto_core.strategy.models import TargetPortfolio
+        from ditto_engine.strategy.models import TargetPortfolio
 
         target = TargetPortfolio(
             trade_date="2026-01-15",
@@ -194,7 +194,7 @@ class TestTargetPortfolio:
 
 class TestRebalancePlan:
     def test_create_rebalance_plan(self) -> None:
-        from ditto_core.strategy.models import RebalancePlan
+        from ditto_engine.strategy.models import RebalancePlan
 
         plan = RebalancePlan(
             trade_date="2026-01-15",
@@ -211,7 +211,7 @@ class TestRebalancePlan:
         assert len(plan.target_weights) == 3
 
     def test_rebalance_plan_default_weights(self) -> None:
-        from ditto_core.strategy.models import RebalancePlan
+        from ditto_engine.strategy.models import RebalancePlan
 
         plan = RebalancePlan(
             trade_date="2026-01-15",
@@ -221,7 +221,7 @@ class TestRebalancePlan:
         assert plan.target_weights == {}
 
     def test_rebalance_plan_executed(self) -> None:
-        from ditto_core.strategy.models import RebalancePlan
+        from ditto_engine.strategy.models import RebalancePlan
 
         plan = RebalancePlan(
             trade_date="2026-01-15",
@@ -234,7 +234,7 @@ class TestRebalancePlan:
         assert plan.execution_date == "2026-01-16"
 
     def test_is_frozen(self) -> None:
-        from ditto_core.strategy.models import RebalancePlan
+        from ditto_engine.strategy.models import RebalancePlan
 
         plan = RebalancePlan(
             trade_date="2026-01-15",

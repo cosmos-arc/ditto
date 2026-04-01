@@ -7,13 +7,13 @@ import inspect
 
 import polars as pl
 import pytest
-from ditto_core.engine.materialization import (
+from ditto_analytics.materialization import (
     DerivedExecutionPlan,
     DerivedMaterializationRequest,
     DerivedRunMode,
     DerivedRunTrigger,
 )
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_port.services.derived.materialization import (
     DerivedInputProvider,
     InMemoryDerivedInputProvider,

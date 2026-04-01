@@ -6,10 +6,10 @@ from dataclasses import FrozenInstanceError
 from datetime import datetime
 
 import pytest
-from ditto_core.accounting.account import Account
-from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.fills import FillEvent
-from ditto_core.accounting.position import Position
+from ditto_engine.accounting.account import Account
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.accounting.fills import FillEvent
+from ditto_engine.accounting.position import Position
 from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------

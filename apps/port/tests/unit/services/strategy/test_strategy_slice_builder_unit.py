@@ -6,11 +6,11 @@ from dataclasses import asdict
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_core.strategy.pipeline import StrategyPipeline
-from ditto_core.strategy.specs import StrategySpec
 from ditto_datahub.models.strategy import StrategySpecRecord
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
+from ditto_engine.strategy.pipeline import StrategyPipeline
+from ditto_engine.strategy.specs import StrategySpec
 from ditto_kernel.identity import InstrumentId as _InstrumentId
 from ditto_port.services.strategy import (
     PublishedStrategyRuntime,

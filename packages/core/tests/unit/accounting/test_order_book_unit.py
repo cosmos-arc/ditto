@@ -6,7 +6,7 @@ from dataclasses import FrozenInstanceError, replace
 from datetime import datetime
 
 import pytest
-from ditto_core.accounting.order_book import (
+from ditto_engine.accounting.order_book import (
     Order,
     OrderBook,
     OrderEvent,

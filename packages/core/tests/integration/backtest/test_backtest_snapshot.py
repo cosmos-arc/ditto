@@ -10,7 +10,7 @@ Phase 3 新增:
 
 from __future__ import annotations
 
-from ditto_core.backtest.engine import EngineLoop
+from ditto_engine.backtest.engine import EngineLoop
 
 
 class TestThreeDaySnapshot:

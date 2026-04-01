@@ -7,7 +7,7 @@ import pytest
 
 class TestPosition:
     def test_create_position(self) -> None:
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -26,7 +26,7 @@ class TestPosition:
         assert pos.total_fees == 2.26
 
     def test_position_is_frozen(self) -> None:
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -42,7 +42,7 @@ class TestPosition:
             pos.quantity = 500  # type: ignore[misc]
 
     def test_position_with_update_returns_new_instance(self) -> None:
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -65,7 +65,7 @@ class TestPosition:
         assert pos.available_quantity == 0
 
     def test_position_with_realized_pnl(self) -> None:
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,

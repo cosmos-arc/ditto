@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import polars as pl
-from ditto_core.quality import QualityEngine
+from ditto_data.quality import QualityEngine
 from ditto_datahub.services.quality_record_service import QualityRecordService
 from loguru import logger
 

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from ditto_core.strategy.specs import (
+from ditto_engine.strategy.specs import (
     ParamConstraint,
     StrategySpec,
 )
-from ditto_core.strategy.validation import validate_spec_params
+from ditto_engine.strategy.validation import validate_spec_params
 
 
 def _make_spec(

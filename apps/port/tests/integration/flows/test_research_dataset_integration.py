@@ -12,8 +12,7 @@ import orjson
 import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
-from ditto_core.engine.materialization.models import DerivedVersionStatus
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_analytics.materialization.models import DerivedVersionStatus
 from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_datahub.models.research import (
     ResearchDatasetSpecRecord,
@@ -23,6 +22,7 @@ from ditto_datahub.services import DerivedCatalogService, ResearchCatalogService
 from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_port.jobs.flows.research import research_dataset_build_flow
 from ditto_port.registry import ConfigProvider
 from ditto_port.registry.contexts.bundle import MaterializationBundle

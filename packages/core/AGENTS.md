@@ -110,7 +110,7 @@ ditto_core/
 
 ### Backtest（回测引擎）
 
-**职责**：EngineLoop / EngineConfig / ParquetDataFeed / BacktestReport / RunManifest / PreTrade / PostTrade / Statistics / Audit / Serialization
+**职责**：EngineLoop / EngineConfig / ProviderBackedDataFeed / BacktestReport / RunManifest / PreTrade / PostTrade / Statistics / Audit / Serialization
 
 **关键点**：
 - EngineLoop 日历步进回测主循环，逐日推进

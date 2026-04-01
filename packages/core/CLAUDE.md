@@ -1,8 +1,8 @@
-# Core 层架构规范
+# Engine 层架构规范
 
 ## 定位
 
-Core 层是 **Domain Layer（领域层）**，包含量化系统的核心业务逻辑、领域知识和算法。
+Engine 层是 **Domain Layer（领域层）**，包含量化系统的核心业务逻辑、领域知识和算法。
 
 **核心原则**：
 - 纯业务逻辑，无 I/O 操作
@@ -12,19 +12,8 @@ Core 层是 **Domain Layer（领域层）**，包含量化系统的核心业务�
 ## 模块结构
 
 ```
-ditto_core/
-├── quality/           # 数据质量引擎（已实现）
-│   ├── checkers/      # DQ 检查器
-│   │   ├── technical.py    # L1 技术检查
-│   │   ├── business.py     # L2 业务检查
-│   │   ├── statistical.py  # L3 统计检查
-│   │   └── cross_source.py # 跨源检查
-│   ├── engine.py      # DQ 引擎
-│   ├── spec.py        # 规则配置模型
-│   ├── config.py      # DQ 配置
-│   ├── report.py      # 检查报告
-│   └── severity.py    # 严重程度
-├── engine/            # 核心引擎（表达式编译器、因子定义、评估指标、物化模型）
+ditto_engine/
+├── engine/            # 核心引擎（specs、评估指标、publication_safety、research）
 ├── accounting/        # 共享账户契约层（Account / CashBook / OrderBook / Position）
 ├── execution/         # 执行层（Planner / Brokerage / TradeBuilder / Reality Model）
 ├── strategy/          # 策略决策层（StrategySpec / Pipeline / 内置 Stages / 策略模板）
@@ -34,28 +23,12 @@ ditto_core/
 
 ## 子领域规范
 
-### Quality（数据质量）
-
-**职责**：检查规则算法（OHLC、涨跌停、成交量异常）
-
-| 检查层级 | 职责 | 示例 |
-|---------|------|------|
-| L1 Technical | 技术校验 | 非空、唯一、外键 |
-| L2 Business | 业务规则 | OHLC 一致性、涨跌幅限制 |
-| L3 Statistical | 统计异常 | Z-score、完整性 |
-| Cross Source | 跨源校验 | 价格与指数对齐 |
-
-**关键点**：
-- DQ 是量化业务规则，不是通用技术约束
-- 配置文件（YAML）定义业务规则
-- 检查逻辑在 Core，编排流程在 Port，结果存储在 DataHub
-
 ### Factor（因子计算）
 
 **职责**：因子计算算法（RS、动量、波动率）
 
 **关键点**：
-- 计算逻辑在 Core（纯函数、无状态）
+- 计算逻辑在 Engine（纯函数、无状态）
 - 编排流程在 Application（获取数据、调用计算、保存结果）
 - 存储在 DataHub（parquet 文件）
 
@@ -110,7 +83,7 @@ ditto_core/
 
 ### Backtest（回测引擎）
 
-**职责**：EngineLoop / EngineConfig / ParquetDataFeed / BacktestReport / RunManifest / PreTrade / PostTrade / Statistics / Audit / Serialization
+**职责**：EngineLoop / EngineConfig / ProviderBackedDataFeed / BacktestReport / RunManifest / PreTrade / PostTrade / Statistics / Audit / Serialization
 
 **关键点**：
 - EngineLoop 日历步进回测主循环，逐日推进
@@ -127,7 +100,7 @@ ditto_core/
 **职责**：风险模型（回撤检测、风险度量）
 
 **关键点**：
-- 风险计算逻辑在 Core
+- 风险计算逻辑在 Engine
 - 告警编排在 Port
 - 指标存储在 DataHub
 
@@ -135,15 +108,15 @@ ditto_core/
 
 ```
 ┌─────────────────────────────────────┐
-│  Core 可依赖                        │
-│  core → kernel ✅                   │
-│  core → datahub ✅                  │
-│  core → infra ✅                    │
+│  Engine 可依赖                        │
+│  engine → kernel ✅                   │
+│  engine → datahub ✅                  │
+│  engine → infra ✅                    │
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
-│  Core 禁止依赖                      │
-│  core → port ❌                     │
+│  Engine 禁止依赖                      │
+│  engine → port ❌                     │
 └─────────────────────────────────────┘
 ```
 
@@ -159,7 +132,7 @@ def calculate_momentum(prices: pl.DataFrame, window: int) -> pl.Series:
 # ❌ 错误：包含 I/O 操作
 def calculate_momentum_and_save(prices: pl.DataFrame) -> None:
     result = prices["close"].pct_change(20)
-    save_to_parquet(result, "momentum.parquet")  # 不应在 Core 层
+    save_to_parquet(result, "momentum.parquet")  # 不应在 Engine 层
 ```
 
 ### 无状态设计
@@ -185,7 +158,7 @@ class QualityEngine:
 
 ```
 packages/core/
-├── src/ditto_core/
+├── src/ditto_engine/
 └── tests/
     ├── unit/
     │   ├── accounting/
@@ -193,7 +166,6 @@ packages/core/
     │   ├── engine/
     │   ├── execution/
     │   ├── portfolio/
-    │   ├── quality/
     │   └── strategy/
     └── integration/
 ```
@@ -207,13 +179,13 @@ pixi run -e dev pytest packages/core/tests/
 ## 判断决策树
 
 ```
-问题：这个组件应该放在 Core 层吗？
+问题：这个组件应该放在 Engine 层吗？
 
 1. 是否是业务逻辑/规则？
-   YES → Core 层 ✅
+   YES → Engine 层 ✅
 
 2. 是否是纯计算/算法？
-   YES → Core 层 ✅
+   YES → Engine 层 ✅
 
 3. 是否需要访问数据库/文件？
    YES → DataHub 层 ❌

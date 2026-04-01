@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from ditto_core.engine.publication_safety import (
+from ditto_datahub.models.publication_safety import (
+    DerivedMinimalDQSummaryRecord,
+    ShadowDiffReportRecord,
+)
+from ditto_engine.engine.publication_safety import (
     CertificationCheckResult,
     CertificationStage,
     CompatibilityManifest,
     PublicationSafetySeverity,
 )
-from ditto_core.engine.specs import DerivedRole, MaterializationProfile
-from ditto_datahub.models.publication_safety import (
-    DerivedMinimalDQSummaryRecord,
-    ShadowDiffReportRecord,
-)
+from ditto_engine.engine.specs import DerivedRole, MaterializationProfile
 
 __all__ = ["build_certification_checks"]
 

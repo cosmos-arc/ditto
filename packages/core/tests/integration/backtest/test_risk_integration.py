@@ -13,43 +13,42 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
-from ditto_core.accounting.account import Account
-from ditto_core.accounting.cash import CashBook
-from ditto_core.backtest.engine import (
+from ditto_engine.accounting.account import Account
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.backtest.engine import (
     EngineConfig,
     EngineLoop,
     EngineMode,
     EngineOptions,
 )
-from ditto_core.backtest.risk.post_trade import (
+from ditto_engine.backtest.risk.post_trade import (
     CompositePostTradeGuard,
     ConcentrationLimitRule,
     MarketAnomalyRule,
     SingleLossLimitRule,
 )
-from ditto_core.backtest.risk.pre_trade import (
+from ditto_engine.backtest.risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
 )
-from ditto_core.backtest.statistics import (
+from ditto_engine.backtest.statistics import (
     ExecutionAuditCollector,
 )
-from ditto_core.execution.brokerage import BacktestBrokerage
-from ditto_core.execution.planner import SimpleExecutionPlanner
-from ditto_core.execution.reality import BrokerageModel, SimpleFeeModel
-from ditto_core.strategy.templates.etf_rotation import (
+from ditto_engine.execution.brokerage import BacktestBrokerage
+from ditto_engine.execution.planner import SimpleExecutionPlanner
+from ditto_engine.execution.reality import BrokerageModel, SimpleFeeModel
+from ditto_engine.strategy.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
 )
 
 from .conftest import (
     INITIAL_CASH,
-    INSTRUMENT_IDS,
     TRADE_DATES_3,
     TRADE_DATES_5,
-    TestParquetDataFeed,
     _make_market_df,
+    build_test_data_feed,
     write_parquet_data,
 )
 
@@ -154,9 +153,8 @@ def _build_engine_with_risk_and_audit(
     """
     data_dir = write_parquet_data(tmp_path, data)
 
-    data_feed = TestParquetDataFeed(
-        data_dir=data_dir,
-        instrument_ids=INSTRUMENT_IDS,
+    data_feed = build_test_data_feed(
+        parquet_dir=data_dir,
         start_date=start_date,
         end_date=end_date,
     )

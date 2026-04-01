@@ -12,7 +12,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from ditto_core.quality import QualityEngine
+from ditto_data.quality import QualityEngine
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 

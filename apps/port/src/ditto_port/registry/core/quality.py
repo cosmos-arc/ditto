@@ -5,8 +5,8 @@ from pathlib import Path
 
 import yaml
 from dishka import Provider, Scope, provide
-from ditto_core.quality import QualityEngine
-from ditto_core.quality.spec import DatasetRules, DQSpec
+from ditto_data.quality import QualityEngine
+from ditto_data.quality.spec import DatasetRules, DQSpec
 from ditto_infra.foundation.config import get_default_dq_rules_dir
 from loguru import logger
 from pydantic import ValidationError

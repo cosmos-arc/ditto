@@ -6,11 +6,11 @@ from datetime import date, timedelta
 
 import numpy as np
 import polars as pl
-from ditto_core.engine.evaluation.metrics import (
+from ditto_engine.engine.evaluation.metrics import (
     ic_momentum,
     regime_adjusted_ic,
 )
-from ditto_core.engine.evaluation.report import RegimeICResult
+from ditto_engine.engine.evaluation.report import RegimeICResult
 
 # ---------------------------------------------------------------------------
 # Test data factories

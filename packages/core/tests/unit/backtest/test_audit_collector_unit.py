@@ -4,16 +4,16 @@ from datetime import datetime
 from types import MappingProxyType
 
 import pytest
-from ditto_core.accounting.account import AccountView
-from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.fills import FillEvent
-from ditto_core.accounting.order_book import (
+from ditto_engine.accounting.account import AccountView
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.accounting.fills import FillEvent
+from ditto_engine.accounting.order_book import (
     OrderBookReadOnly,
     OrderSide,
 )
-from ditto_core.accounting.position import Position
-from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
-from ditto_core.backtest.statistics import (
+from ditto_engine.accounting.position import Position
+from ditto_engine.backtest.risk.post_trade import RiskActionType, RiskSeverity
+from ditto_engine.backtest.statistics import (
     AggregatedTradeStatistics,
     AlphaStatistics,
     BacktestReport,
@@ -28,7 +28,7 @@ from ditto_core.backtest.statistics import (
     compute_portfolio_statistics,
     compute_trade_statistics,
 )
-from ditto_core.execution.trade_builder import TradeRecord
+from ditto_engine.execution.trade_builder import TradeRecord
 
 # ---------------------------------------------------------------------------
 # Helpers

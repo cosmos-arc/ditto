@@ -4,11 +4,11 @@ from datetime import datetime
 from types import MappingProxyType
 
 import pytest
-from ditto_core.accounting.account import AccountView
-from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.fills import FillEvent
-from ditto_core.accounting.order_book import OrderBookReadOnly
-from ditto_core.execution.trade_builder import (
+from ditto_engine.accounting.account import AccountView
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.accounting.fills import FillEvent
+from ditto_engine.accounting.order_book import OrderBookReadOnly
+from ditto_engine.execution.trade_builder import (
     FifoTradeBuilder,
     FlatToFlatTradeBuilder,
     TradeMatchingMethod,

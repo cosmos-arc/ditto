@@ -1,6 +1,6 @@
 """Tests for publication safety models."""
 
-from ditto_core.engine.publication_safety import (
+from ditto_engine.engine.publication_safety import (
     CertificationCheckResult,
     CertificationPack,
     CertificationReport,

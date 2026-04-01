@@ -7,19 +7,10 @@ from typing import cast
 from uuid import uuid4
 
 import polars as pl
-from ditto_core.engine.materialization.models import (
+from ditto_analytics.materialization.models import (
     DerivedRunStatus,
     DerivedVersionStatus,
 )
-from ditto_core.engine.publication_safety import (
-    CertificationPack,
-    CertificationReport,
-    CertificationStage,
-    CompatibilityManifest,
-    ShadowDiffReport,
-    ShadowTraceRecord,
-)
-from ditto_core.engine.specs import DerivedRole, MaterializationProfile
 from ditto_datahub.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_datahub.models.publication_safety import (
@@ -37,6 +28,15 @@ from ditto_datahub.services import (
     PublicationSafetyRecordService,
 )
 from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
+from ditto_engine.engine.publication_safety import (
+    CertificationPack,
+    CertificationReport,
+    CertificationStage,
+    CompatibilityManifest,
+    ShadowDiffReport,
+    ShadowTraceRecord,
+)
+from ditto_engine.engine.specs import DerivedRole, MaterializationProfile
 
 from ditto_port.services.derived.publication_rules import build_certification_checks
 

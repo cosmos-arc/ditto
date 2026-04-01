@@ -16,13 +16,13 @@ from datetime import date, timedelta
 import numpy as np
 import polars as pl
 import pytest
-from ditto_core.engine.evaluation.evaluator import EvaluationConfig
-from ditto_core.engine.evaluation.metrics import (
+from ditto_engine.engine.evaluation.evaluator import EvaluationConfig
+from ditto_engine.engine.evaluation.metrics import (
     grinold_kahn_ir,
     long_short_returns,
     tail_risk_metrics,
 )
-from ditto_core.engine.evaluation.report import (
+from ditto_engine.engine.evaluation.report import (
     TailRiskMetrics,
 )
 

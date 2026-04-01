@@ -14,47 +14,47 @@ from typing import Any
 import orjson
 import polars as pl
 import pytest
-from ditto_core.accounting.account import Account
-from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.fills import FillEvent
-from ditto_core.backtest.engine import (
+from ditto_engine.accounting.account import Account
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.accounting.fills import FillEvent
+from ditto_engine.backtest.engine import (
     EngineConfig,
     EngineLoop,
     EngineMode,
     EngineOptions,
     EngineResult,
 )
-from ditto_core.backtest.manifest import (
+from ditto_engine.backtest.manifest import (
     RuleRef,
     RunManifest,
     RunMode,
     serialize_manifest,
 )
-from ditto_core.backtest.risk.pre_trade import (
+from ditto_engine.backtest.risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
 )
-from ditto_core.backtest.statistics import (
+from ditto_engine.backtest.statistics import (
     ExecutionAuditCollector,
     PreTradeDecisionRecord,
     build_report,
 )
-from ditto_core.execution.brokerage import BacktestBrokerage
-from ditto_core.execution.planner import SimpleExecutionPlanner
-from ditto_core.execution.reality import (
+from ditto_engine.execution.brokerage import BacktestBrokerage
+from ditto_engine.execution.planner import SimpleExecutionPlanner
+from ditto_engine.execution.reality import (
     AShareFeeModel,
     BrokerageModel,
     SimpleFeeModel,
 )
-from ditto_core.execution.rules import (
+from ditto_engine.execution.rules import (
     FeeSchedule,
     InstrumentDefinition,
     InstrumentRules,
     RulesGetter,
     TradingRuleSet,
 )
-from ditto_core.strategy.templates.etf_rotation import (
+from ditto_engine.strategy.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
 )
@@ -62,7 +62,7 @@ from ditto_core.strategy.templates.etf_rotation import (
 from .conftest import (
     INITIAL_CASH,
     INSTRUMENT_IDS,
-    TestParquetDataFeed,
+    build_test_data_feed,
     generate_3day_data,
     write_parquet_data,
 )
@@ -160,9 +160,8 @@ def _build_engine_loop(
     instance_dir = tmp_path / f"engine_{instance_id}"
     instance_dir.mkdir(parents=True)
     data_dir = write_parquet_data(instance_dir, data)
-    data_feed = TestParquetDataFeed(
-        data_dir=data_dir,
-        instrument_ids=INSTRUMENT_IDS,
+    data_feed = build_test_data_feed(
+        parquet_dir=data_dir,
         start_date=config.start_date,
         end_date=config.end_date,
     )
@@ -206,9 +205,8 @@ def _build_audited_engine_loop(
     instance_dir = tmp_path / f"audited_{instance_id}"
     instance_dir.mkdir(parents=True)
     data_dir = write_parquet_data(instance_dir, data)
-    data_feed = TestParquetDataFeed(
-        data_dir=data_dir,
-        instrument_ids=INSTRUMENT_IDS,
+    data_feed = build_test_data_feed(
+        parquet_dir=data_dir,
         start_date=config.start_date,
         end_date=config.end_date,
     )

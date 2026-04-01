@@ -18,16 +18,16 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from ditto_core.backtest.data_feed import Slice
-from ditto_core.strategy.context import StrategyContext
-from ditto_core.strategy.models import TargetPortfolio
-from ditto_core.strategy.pipeline import StrategyPipeline
-from ditto_core.strategy.specs import StrategySpec
-from ditto_core.strategy.validation import validate_spec_params
 from ditto_datahub.models.strategy import ArtifactKind, StrategyArtifactRecord
 from ditto_datahub.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
+from ditto_engine.backtest.data_feed import Slice
+from ditto_engine.strategy.context import StrategyContext
+from ditto_engine.strategy.models import TargetPortfolio
+from ditto_engine.strategy.pipeline import StrategyPipeline
+from ditto_engine.strategy.specs import StrategySpec
+from ditto_engine.strategy.validation import validate_spec_params
 
 from ditto_port.services.strategy.input_assembler import StrategyInputAssembler
 from ditto_port.services.strategy.lifecycle import RunLifecycleService

@@ -6,12 +6,6 @@ from dataclasses import asdict
 from unittest.mock import MagicMock
 
 from dishka import Container, Provider, Scope, make_container, provide
-from ditto_core.backtest.data_feed import DataFeed
-from ditto_core.backtest.risk.pre_trade import CompositePreTradeCheck
-from ditto_core.execution.brokerage import Brokerage
-from ditto_core.execution.planner import ExecutionPlanner
-from ditto_core.strategy.pipeline import StrategyPipeline
-from ditto_core.strategy.specs import StrategySpec
 from ditto_datahub.models.strategy import StrategySpecRecord
 from ditto_datahub.services.audit import ExecutionAuditService
 from ditto_datahub.services.market_service import MarketService
@@ -26,6 +20,12 @@ from ditto_datahub.services.strategy.strategy_run_service import (
     StrategyRunService as DataHubStrategyRunService,
 )
 from ditto_datahub.sources.source import DataSources
+from ditto_engine.backtest.data_feed import DataFeed
+from ditto_engine.backtest.risk.pre_trade import CompositePreTradeCheck
+from ditto_engine.execution.brokerage import Brokerage
+from ditto_engine.execution.planner import ExecutionPlanner
+from ditto_engine.strategy.pipeline import StrategyPipeline
+from ditto_engine.strategy.specs import StrategySpec
 from ditto_port.registry import ConfigProvider
 from ditto_port.registry.datahub import RuntimeProvider
 from ditto_port.registry.port import StrategyProvider, get_port_providers

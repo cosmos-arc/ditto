@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_core.strategy.builtins.regime import (
+from ditto_engine.strategy.builtins.regime import (
     RegimeLabel,
     RegimeMethod,
     RegimeStage,
 )
-from ditto_core.strategy.context import StrategyContext
+from ditto_engine.strategy.context import StrategyContext
 
 # ---------------------------------------------------------------------------
 # Fixtures

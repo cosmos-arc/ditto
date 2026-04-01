@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ditto_core.backtest.engine import EngineLoop
-from ditto_core.strategy.templates.stock_selection_trend import (
+from ditto_engine.backtest.engine import EngineLoop
+from ditto_engine.strategy.templates.stock_selection_trend import (
     StockSelectionTrendConfig,
     build_stock_selection_trend_pipeline,
 )

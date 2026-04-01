@@ -25,7 +25,7 @@ from datetime import date  # noqa: E402
 
 import polars as pl  # noqa: E402
 import pytest  # noqa: E402
-from ditto_core.quality import GoldenDatasetSpec  # noqa: E402
+from ditto_data.quality import GoldenDatasetSpec  # noqa: E402
 from ditto_datahub.config import DataSourceSettings  # noqa: E402
 from ditto_datahub.sources import TushareSource  # noqa: E402
 from ditto_datahub.sources.tdx import TdxSource  # noqa: E402

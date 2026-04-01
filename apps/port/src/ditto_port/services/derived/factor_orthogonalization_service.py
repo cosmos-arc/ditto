@@ -8,8 +8,8 @@ orthogonalize() pure function.
 from __future__ import annotations
 
 import polars as pl
-from ditto_core.engine.evaluation.metrics import orthogonalize
 from ditto_datahub.services.derived import DerivedArtifactReader
+from ditto_engine.engine.evaluation.metrics import orthogonalize
 
 __all__ = ["FactorOrthogonalizationService"]
 
@@ -21,8 +21,8 @@ class FactorOrthogonalizationService:
     Loads the target and control factor artifacts via
     :class:`DerivedArtifactReader`, joins them on
     ``(trade_date, instrument_id)``, and delegates to the pure-function
-    :func:`~ditto_core.engine.evaluation.metrics.orthogonalize` from
-    ``ditto_core``.
+    :func:`~ditto_engine.engine.evaluation.metrics.orthogonalize` from
+    ``ditto_engine``.
     """
 
     def __init__(self, artifact_reader: DerivedArtifactReader) -> None:

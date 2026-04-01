@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from ditto_core.quality.spec import DQIssue
+from ditto_data.quality.spec import DQIssue
 from ditto_datahub.models import Dataset
 from ditto_datahub.services.market_service import MarketBarsQuery
 from ditto_infra.foundation import Metrics, logger

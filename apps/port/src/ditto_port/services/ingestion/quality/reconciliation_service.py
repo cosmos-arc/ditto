@@ -3,8 +3,8 @@
 from typing import Any, Protocol
 
 import polars as pl
-from ditto_core.quality.golden import GoldenDatasetSpec
-from ditto_core.quality.spec import DQResult
+from ditto_data.quality.golden import GoldenDatasetSpec
+from ditto_data.quality.spec import DQResult
 from loguru import logger
 
 from .models import ReconciliationResult

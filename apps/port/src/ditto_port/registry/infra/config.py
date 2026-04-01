@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from dishka import Provider, Scope, provide
-from ditto_core.quality.config import DQSettings
+from ditto_data.quality.config import DQSettings
 from ditto_datahub.config import (
     DataSourceSettings,
     FileStorageSettings,

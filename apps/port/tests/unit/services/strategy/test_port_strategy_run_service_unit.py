@@ -7,16 +7,16 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_core.backtest.data_feed import Slice
-from ditto_core.execution.reality.market import MarketSnapshot
-from ditto_core.strategy.context import StrategyContext
-from ditto_core.strategy.models import TargetPortfolio
-from ditto_core.strategy.pipeline import StrategyPipeline
-from ditto_core.strategy.specs import ParamConstraint, StrategySpec
 from ditto_datahub.models.strategy import StrategyArtifactRecord
 from ditto_datahub.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
+from ditto_engine.backtest.data_feed import Slice
+from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_engine.strategy.context import StrategyContext
+from ditto_engine.strategy.models import TargetPortfolio
+from ditto_engine.strategy.pipeline import StrategyPipeline
+from ditto_engine.strategy.specs import ParamConstraint, StrategySpec
 from ditto_port.services.strategy.input_assembler import StrategyInputAssembler
 from ditto_port.services.strategy.strategy_run_service import (
     StrategyRunMode,
@@ -82,7 +82,7 @@ def _make_mock_assembler() -> MagicMock:
     assembler = MagicMock(spec=StrategyInputAssembler)
     # 返回一个最小 StrategyInputBundle — 仅用于验证调用参数
     import polars as pl
-    from ditto_core.strategy.pipeline import StrategyInputBundle
+    from ditto_engine.strategy.pipeline import StrategyInputBundle
 
     assembler.assemble.return_value = StrategyInputBundle(
         trade_date=TRADE_DATE,

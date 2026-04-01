@@ -53,7 +53,7 @@ class TestCheckAndQuarantine:
     ) -> None:
         """L2 警告不阻断写入."""
         # Arrange
-        from ditto_core.quality.spec import DQResult
+        from ditto_data.quality.spec import DQResult
 
         service = QualityService(engine=mock_quality_engine)
         mock_quality_engine.check.return_value = DQResult(
@@ -80,7 +80,7 @@ class TestCheckAndQuarantine:
     ) -> None:
         """L1 错误阻断写入."""
         # Arrange
-        from ditto_core.quality.spec import DQResult
+        from ditto_data.quality.spec import DQResult
 
         service = QualityService(engine=mock_quality_engine)
         mock_quality_engine.check.return_value = DQResult(

@@ -3,9 +3,9 @@
 from types import MappingProxyType
 
 import pytest
-from ditto_core.accounting.account import AccountView
-from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.order_book import (
+from ditto_engine.accounting.account import AccountView
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.accounting.order_book import (
     Order,
     OrderBookReadOnly,
     OrderSide,
@@ -13,22 +13,22 @@ from ditto_core.accounting.order_book import (
     OrderTicket,
     OrderType,
 )
-from ditto_core.accounting.position import Position
-from ditto_core.execution.planner import (
+from ditto_engine.accounting.position import Position
+from ditto_engine.execution.planner import (
     BlockedOrder,
     BlockSeverity,
     ExecutionPlan,
     ExecutionPlanner,
     SimpleExecutionPlanner,
 )
-from ditto_core.execution.reality.market import MarketSnapshot
-from ditto_core.execution.rules import (
+from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_engine.execution.rules import (
     FeeSchedule,
     InstrumentDefinition,
     InstrumentRules,
     TradingRuleSet,
 )
-from ditto_core.strategy.models import TargetPortfolio
+from ditto_engine.strategy.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------
 # Helpers

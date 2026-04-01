@@ -23,7 +23,7 @@ if str(_tests_root) not in sys.path:
     sys.path.insert(0, str(_tests_root))
 
 import pytest  # noqa: E402
-from ditto_core.quality import GoldenDatasetSpec  # noqa: E402
+from ditto_data.quality import GoldenDatasetSpec  # noqa: E402
 
 from tests.e2e.reporter import E2EReporter, StageResult  # noqa: E402
 

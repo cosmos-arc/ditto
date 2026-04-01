@@ -23,9 +23,9 @@ from dataclasses import replace
 from pathlib import Path
 
 import orjson
-from ditto_core.backtest.manifest import RunManifest, serialize_manifest
-from ditto_core.backtest.serialization import serialize
-from ditto_core.backtest.statistics import (
+from ditto_engine.backtest.manifest import RunManifest, serialize_manifest
+from ditto_engine.backtest.serialization import serialize
+from ditto_engine.backtest.statistics import (
     BacktestReport,
     PreTradeDecisionRecord,
     RiskScanRecord,

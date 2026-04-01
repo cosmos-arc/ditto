@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ditto_core.backtest.engine import EngineLoop
-from ditto_core.strategy.templates.etf_trend_swing import (
+from ditto_engine.backtest.engine import EngineLoop
+from ditto_engine.strategy.templates.etf_trend_swing import (
     ETFTrendSwingConfig,
     build_etf_trend_swing_pipeline,
 )

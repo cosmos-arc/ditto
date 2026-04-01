@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_core.engine import SQLiteCompileCache
+from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_datahub.services import (
     DerivedArtifactReader,

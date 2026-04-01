@@ -7,10 +7,10 @@ from unittest.mock import MagicMock, patch
 
 import orjson
 import pytest
-from ditto_core.backtest.audit import RiskScanRecord
-from ditto_core.backtest.manifest import RunManifest, RunMode
-from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
-from ditto_core.backtest.statistics import PreTradeDecisionRecord
+from ditto_engine.backtest.audit import RiskScanRecord
+from ditto_engine.backtest.manifest import RunManifest, RunMode
+from ditto_engine.backtest.risk.post_trade import RiskActionType, RiskSeverity
+from ditto_engine.backtest.statistics import PreTradeDecisionRecord
 from ditto_kernel.identity import InstrumentId
 from ditto_port.services.strategy.artifact_writer import (
     enrich_record_with_symbol,

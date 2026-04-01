@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import pytest
-from ditto_core.engine.expression.compiler import (
+from ditto_analytics.expression.compiler import (
     ExpressionCompiler,
     detect_dependency_cycles,
 )
-from ditto_core.engine.factors import ALL_FACTOR_SPECS
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_engine.engine.factors import ALL_FACTOR_SPECS
+from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
 # Task 3A: detect_dependency_cycles

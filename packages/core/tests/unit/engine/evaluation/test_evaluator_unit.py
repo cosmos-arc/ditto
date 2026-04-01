@@ -8,7 +8,7 @@ from datetime import date, timedelta
 import numpy as np
 import polars as pl
 import pytest
-from ditto_core.engine.evaluation.evaluator import (
+from ditto_engine.engine.evaluation.evaluator import (
     EvaluationConfig,
     FactorEvaluator,
     _compute_ic_decay_safe,
@@ -18,7 +18,7 @@ from ditto_core.engine.evaluation.evaluator import (
     _prepare_data,
     _resolve_period,
 )
-from ditto_core.engine.evaluation.report import (
+from ditto_engine.engine.evaluation.report import (
     FactorEvaluationReport,
     ICSummary,
     LongShortResult,

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import polars as pl
-from ditto_core.backtest.data_feed import ProviderBackedDataFeed
+from ditto_engine.backtest.data_feed import ProviderBackedDataFeed
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.provider import BarQuery
 

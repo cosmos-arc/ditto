@@ -1,7 +1,7 @@
 """Tests for DataHub common models."""
 
 import pytest
-from ditto_core.quality.severity import DQSeverity
+from ditto_data.quality.severity import DQSeverity
 from ditto_datahub.models import Dataset, Domain
 from ditto_datahub.models.common import InstrumentIdRange, OnDuplicate
 

@@ -6,7 +6,7 @@ from dataclasses import FrozenInstanceError
 from datetime import datetime
 
 import pytest
-from ditto_core.execution.fills import Filled, FillEvent, FillOutcome, NoFill
+from ditto_engine.execution.fills import Filled, FillEvent, FillOutcome, NoFill
 from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------

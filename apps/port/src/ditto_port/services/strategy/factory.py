@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from ditto_core.backtest.data_feed import DataFeed
-from ditto_core.backtest.risk.pre_trade import CompositePreTradeCheck
-from ditto_core.execution.brokerage import Brokerage
-from ditto_core.execution.planner import ExecutionPlanner
-from ditto_core.strategy.pipeline import StrategyPipeline
 from ditto_datahub.services.audit import ExecutionAuditService
 from ditto_datahub.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
+from ditto_engine.backtest.data_feed import DataFeed
+from ditto_engine.backtest.risk.pre_trade import CompositePreTradeCheck
+from ditto_engine.execution.brokerage import Brokerage
+from ditto_engine.execution.planner import ExecutionPlanner
+from ditto_engine.strategy.pipeline import StrategyPipeline
 
 from ditto_port.services.strategy.backtest_runtime_builder import (
     BacktestRuntimeBuilder,

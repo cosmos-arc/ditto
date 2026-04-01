@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_core.quality import DQSpec, GoldenDatasetSpec, QualityEngine
+from ditto_data.quality import DQSpec, GoldenDatasetSpec, QualityEngine
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.services.market_service import MarketBarsQuery, MarketService
 from ditto_datahub.sources import TushareSource

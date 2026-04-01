@@ -3,8 +3,8 @@
 from typing import get_args
 
 import pytest
-from ditto_core.engine.errors import DerivedNotImplementedError
-from ditto_core.engine.specs import (
+from ditto_engine.engine.errors import DerivedNotImplementedError
+from ditto_engine.engine.specs import (
     CalendarId,
     DerivedRole,
     DerivedSpec,

@@ -8,8 +8,8 @@ from typing import NamedTuple, Protocol, runtime_checkable
 from uuid import uuid4
 
 import polars as pl
-from ditto_core.engine import SQLiteCompileCache
-from ditto_core.engine.materialization import (
+from ditto_analytics.compile_cache import SQLiteCompileCache
+from ditto_analytics.materialization import (
     CompileIdentity,
     DerivedExecutionPlan,
     DerivedExecutionPlanner,
@@ -18,10 +18,6 @@ from ditto_core.engine.materialization import (
     DerivedRunMode,
     DerivedRunStatus,
     DerivedRunTrigger,
-)
-from ditto_core.engine.specs import (
-    DerivedSpec,
-    MaterializationProfile,
 )
 from ditto_datahub.models.derived import (
     DerivedCheckpointRecord,
@@ -42,6 +38,10 @@ from ditto_datahub.services.derived.artifact_persistence_service import (
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
 from ditto_datahub.services.publication_safety_record_service import (
     PublicationSafetyRecordService,
+)
+from ditto_engine.engine.specs import (
+    DerivedSpec,
+    MaterializationProfile,
 )
 
 from ditto_port.services.derived.materialization import (

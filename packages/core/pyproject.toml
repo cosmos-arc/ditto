@@ -1,5 +1,5 @@
 [project]
-name = "ditto-core"
+name = "ditto-engine"
 requires-python = ">= 3.13"
 version = "0.1.0"
 dependencies = ["ditto-kernel"]

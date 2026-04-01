@@ -14,14 +14,14 @@ from hashlib import sha256
 from typing import cast
 
 import orjson
-from ditto_core.engine.materialization import CompileIdentity
-from ditto_core.engine.publication_safety import CompatibilityManifest
-from ditto_core.engine.specs import DerivedSpec
+from ditto_analytics.materialization import CompileIdentity
 from ditto_datahub.models.publication_safety import (
     CompatibilityManifestRecord,
     JsonDict,
 )
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
+from ditto_engine.engine.publication_safety import CompatibilityManifest
+from ditto_engine.engine.specs import DerivedSpec
 
 from ._utils import now_iso
 

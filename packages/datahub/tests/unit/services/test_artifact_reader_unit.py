@@ -6,7 +6,6 @@ from dataclasses import asdict
 from pathlib import Path
 
 import pytest
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_datahub.errors import DerivedVersionError
 from ditto_datahub.models.derived import (
     DerivedSpecRecord,
@@ -22,6 +21,7 @@ from ditto_datahub.stores.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
+from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _catalog_service(sqlite_client) -> DerivedCatalogService:

@@ -11,9 +11,8 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
-from ditto_core.engine.materialization import DerivedInvalidationEvent
-from ditto_core.engine.materialization.models import DerivedVersionStatus
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_analytics.materialization import DerivedInvalidationEvent
+from ditto_analytics.materialization.models import DerivedVersionStatus
 from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_datahub.services import (
     DerivedCatalogService,
@@ -22,6 +21,7 @@ from ditto_datahub.services import (
 )
 from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.sources.source import DataSources
+from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_port.jobs.flows.materialization import (
     daily_materialization_flow,
     repair_from_invalidation_flow,

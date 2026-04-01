@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_core.portfolio.constraints import (
+from ditto_engine.portfolio.constraints import (
     ConstraintChecker,
     ConstraintStage,
     MaxPositionsConstraint,

@@ -7,11 +7,11 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_core.engine.materialization.contracts import (
+from ditto_analytics.materialization.contracts import (
     DerivedExecutionPlan,
     DerivedRunMode,
 )
-from ditto_core.engine.specs import (
+from ditto_engine.engine.specs import (
     DerivedRole,
     DerivedSpec,
     ExecutionPolicy,

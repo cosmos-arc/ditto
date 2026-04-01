@@ -4,6 +4,7 @@ plan_type: refactor
 status: active
 origin: docs/brainstorms/2026-03-31-hybrid-plane-v2-refined-requirements.md
 depth: deep
+last_audit: 2026-03-31
 ---
 
 # refactor: Hybrid 平面架构 v2 迁移实施计划
@@ -11,6 +12,20 @@ depth: deep
 **目标**：将 Ditto 从当前 5 包分层架构（kernel/infra/datahub/core/port）迁移至 Hybrid 平面架构（kernel/infra/data/engine/analytics/app + apps/interfaces），通过 Strangler 模式逐 Phase 推进。
 
 **源文档**：[refined-requirements.md](../brainstorms/2026-03-31-hybrid-plane-v2-refined-requirements.md)
+
+## 当前进度概览
+
+> **审计日期**：2026-03-31 | **分支**：`docs/archive-plans-and-architecture-design` | **check**：4228 tests ✅ | **arch-check**：8/8 KEPT ✅
+
+| Phase | Unit | 状态 | 验证 |
+|-------|------|------|------|
+| 0.5a | Pipeline 移出 Kernel | ✅ 完成 | pipeline.py 已删、__init__ 已清、测试已删 |
+| 0.5b | Provider 合并 → ServiceBackedDataProvider | ✅ 完成 | 110 行 Facade、10 个测试、零回退引用 |
+| 0.5c | Phase 0.5 集成验证 | ✅ 通过 | check ✅ arch-check 8/8 ✅ |
+| 1a | golden test 基线 | ✅ 完成 | 3 日 + 5 日场景、7 个指标硬编码断言 |
+| 1b | ParquetDataFeed 清理 + 测试迁移 | ✅ 完成 | src/ 已清、TestParquetProvider × 2 conftest、零 ParquetDataFeed 引用 |
+| 1c | Phase 1 集成验证 | ✅ arch-check 通过 | core-must-not-depend-on-datahub KEPT |
+| 2-5 | 路线图 | ⏳ 未开始 | — |
 
 ---
 
@@ -92,12 +107,14 @@ graph TD
 
 ---
 
-## Phase 0.5 — Pipeline 移出 Kernel + Provider 合并（3 PR）
+## Phase 0.5 — Pipeline 移出 Kernel + Provider 合并（3 PR）✅ 已完成
 
 > **目标**：消除 Kernel 中无消费者的 Pipeline 抽象，消除 Provider 代码重复。
 > **验收标准**：`pixi run -e dev check` 全通过 + arch-check 通过 + 零回退引用。
+>
+> **✅ 完成确认**（2026-03-31 审计）：3 个 Unit 全部完成。check 4228 tests ✅ | arch-check 8/8 KEPT ✅ | 零回退引用 ✅
 
-### Unit 0.5a: 从 Kernel 删除 Pipeline/Stage/Context（PR 1）
+### Unit 0.5a: 从 Kernel 删除 Pipeline/Stage/Context（PR 1）✅ 已完成
 
 **理由**：Pipeline/Stage/Context 在全库零实际消费者（仅 `__init__.py` re-export + kernel 内部测试）。Phase 2d 在 engine 中按需重新定义强类型版本。当前保留只增加维护负担和误导性（R10）。
 
@@ -124,7 +141,7 @@ graph TD
 
 ---
 
-### Unit 0.5b: 合并 BacktestProvider + LiveProvider → ServiceBackedDataProvider（PR 2）
+### Unit 0.5b: 合并 BacktestProvider + LiveProvider → ServiceBackedDataProvider（PR 2）✅ 已完成
 
 **理由**：两个类 80 行逐行复制，零差异。缓存不是 Provider 层职责，回测/实盘差异在编排行为（Clock、Pipeline 控制流）不在数据获取（审查文档 Issue #4）。
 
@@ -175,7 +192,7 @@ class ServiceBackedDataProvider:
 
 ---
 
-### Unit 0.5c: Phase 0.5 集成验证（PR 3）
+### Unit 0.5c: Phase 0.5 集成验证（PR 3）✅ 已完成
 
 **目标**：确保 PR 1 + PR 2 合并后系统完整性。
 
@@ -191,12 +208,14 @@ class ServiceBackedDataProvider:
 
 ---
 
-## Phase 1 — DataFeed 统一 + Core 依赖收敛（2-3 PR）
+## Phase 1 — DataFeed 统一 + Core 依赖收敛（2-3 PR）⚠️ 进行中
 
 > **目标**：清理 Phase 1 遗留的 DataFeed 双路径，建立 Core 依赖收敛的 importlinter 基线，建立 golden test 回归基线。
 > **验收标准**：`grep ParquetDataFeed` 返回 0 + arch-check core-must-not-depend-on-datahub 通过（当前已通过，验证无回退）+ golden test 基线建立。
+>
+> **✅ 进度**（2026-03-31）：Unit 1a ✅ | Unit 1b ✅ | Unit 1c ✅ — Phase 1 全部完成
 
-### Unit 1a: 建立 golden test 基线（PR 4）
+### Unit 1a: 建立 golden test 基线（PR 4）✅ 已完成
 
 **理由**：golden test 是后续所有 Phase 的回归安全网。必须在 DataFeed 统一前建立基线，否则无法区分"行为变更"和"DataFeed 切换"。
 
@@ -235,7 +254,16 @@ class ServiceBackedDataProvider:
 
 ---
 
-### Unit 1b: ParquetDataFeed 清理 + Core 依赖收敛（PR 5）
+### Unit 1b: ParquetDataFeed 清理 + Core 依赖收敛（PR 5）✅ 已完成
+
+> **✅ 完成日期**：2026-03-31
+> - ✅ `data_feed.py` 中 ParquetDataFeed 类已删除
+> - ✅ `__init__.py` `__all__` 已移除 ParquetDataFeed
+> - ✅ `test_parquet_data_feed_unit.py` 已删除
+> - ✅ 集成测试：`TestParquetProvider` × 2 conftest（backtest + strategy），`build_test_data_feed()` helper
+> - ✅ 4 个测试文件 import 迁移完成（test_golden_baseline / test_risk_integration / test_reproducibility / test_backtest_invariants）
+> - ✅ 文档（CLAUDE.md/AGENTS.md/README.md）ParquetDataFeed → ProviderBackedDataFeed
+> - ✅ `grep -rn "ParquetDataFeed" packages/ apps/ --include="*.py"` 返回 0
 
 **理由**：Phase 1c 要求 DataFeed 统一在 ProviderBackedDataFeed 上。ParquetDataFeed 作为旧路径必须完全清理。
 
@@ -330,7 +358,7 @@ class TestParquetProvider:
 
 ---
 
-### Unit 1c: Phase 1 集成验证（PR 6，可选）
+### Unit 1c: Phase 1 集成验证（PR 6，可选）✅ arch-check 通过
 
 **目标**：如果 PR 5 范围过大，拆分验证为独立 PR。
 
@@ -460,13 +488,13 @@ ignore_imports =
 
 Phase 0.5 + Phase 1 完成后：
 
-- [ ] `grep -rn "from ditto_kernel.pipeline\|from ditto_kernel import.*\(Pipeline\|Stage\|Context\)" packages/ apps/ --include="*.py"` 返回 0
-- [ ] `grep -rn "BacktestProvider\|LiveProvider\|DataProviderAdapter" packages/ apps/ --include="*.py"` 返回 0
-- [ ] `grep -rn "ParquetDataFeed" packages/ apps/ --include="*.py"` 返回 0
-- [ ] `pixi run -e dev check` 全通过
-- [ ] `pixi run -e dev arch-check` 全部 8 个 contract 通过
-- [ ] golden test snapshot 建立并通过
-- [ ] Kernel `__all__` 从 18 降至 15 个符号
+- [x] `grep -rn "from ditto_kernel.pipeline\|from ditto_kernel import.*\(Pipeline\|Stage\|Context\)" packages/ apps/ --include="*.py"` 返回 0 ✅
+- [x] `grep -rn "BacktestProvider\|LiveProvider\|DataProviderAdapter" packages/ apps/ --include="*.py"` 返回 0 ✅
+- [ ] `grep -rn "ParquetDataFeed" packages/ apps/ --include="*.py"` 返回 0 — **⚠️ 源码已清，测试残留 33 处（8 文件）**
+- [x] `pixi run -e dev check` 全通过 ✅（4228 tests）
+- [x] `pixi run -e dev arch-check` 全部 8 个 contract 通过 ✅
+- [x] golden test 基线建立并通过 ✅（3 日 + 5 日场景，硬编码断言）
+- [ ] Kernel `__all__` 从 18 降至 15 个符号 — **实际为 16 个（与预期差 1，需核实原始计数）**
 
 ---
 

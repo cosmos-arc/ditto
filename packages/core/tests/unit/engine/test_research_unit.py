@@ -6,8 +6,8 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_core.engine.errors import DerivedNotImplementedError
-from ditto_core.engine.research import (
+from ditto_engine.engine.errors import DerivedNotImplementedError
+from ditto_engine.engine.research import (
     DatasetSnapshot,
     LateArrivalError,
     LateArrivalPolicy,

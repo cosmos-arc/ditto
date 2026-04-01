@@ -7,13 +7,13 @@ from types import MappingProxyType
 from unittest.mock import Mock
 
 import pytest
-from ditto_core.accounting.account import AccountView
-from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.order_book import OrderBook
-from ditto_core.accounting.position import Position
-from ditto_core.backtest.data_feed import Slice
-from ditto_core.backtest.engine import EngineConfig, EngineLoop, EngineOptions
-from ditto_core.backtest.risk.post_trade import (
+from ditto_engine.accounting.account import AccountView
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.accounting.order_book import OrderBook
+from ditto_engine.accounting.position import Position
+from ditto_engine.backtest.data_feed import Slice
+from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineOptions
+from ditto_engine.backtest.risk.post_trade import (
     CompositePostTradeGuard,
     ConcentrationLimitRule,
     MarketAnomalyRule,
@@ -24,9 +24,9 @@ from ditto_core.backtest.risk.post_trade import (
     RiskSeverity,
     SingleLossLimitRule,
 )
-from ditto_core.backtest.risk.pre_trade import Decision, OrderCheckResult
-from ditto_core.execution.reality.market import MarketSnapshot
-from ditto_core.strategy.models import TargetPortfolio
+from ditto_engine.backtest.risk.pre_trade import Decision, OrderCheckResult
+from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_engine.strategy.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------
 # Helpers

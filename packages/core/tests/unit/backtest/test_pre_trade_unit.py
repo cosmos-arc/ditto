@@ -3,10 +3,10 @@
 from types import MappingProxyType
 
 import pytest
-from ditto_core.accounting.account import AccountView
-from ditto_core.accounting.buying_power import CashAccountBuyingPower
-from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.order_book import (
+from ditto_engine.accounting.account import AccountView
+from ditto_engine.accounting.buying_power import CashAccountBuyingPower
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.accounting.order_book import (
     Order,
     OrderBookReadOnly,
     OrderSide,
@@ -14,7 +14,7 @@ from ditto_core.accounting.order_book import (
     OrderTicket,
     OrderType,
 )
-from ditto_core.backtest.risk.pre_trade import (
+from ditto_engine.backtest.risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     ConcentrationPreCheck,
@@ -27,9 +27,9 @@ from ditto_core.backtest.risk.pre_trade import (
     PreTradeRiskCheck,
     PriceValidityCheck,
 )
-from ditto_core.execution.reality import SimpleFeeModel
-from ditto_core.execution.reality.market import MarketSnapshot
-from ditto_core.execution.rules import (
+from ditto_engine.execution.reality import SimpleFeeModel
+from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_engine.execution.rules import (
     FeeSchedule,
     InstrumentDefinition,
     InstrumentRules,
@@ -304,7 +304,7 @@ class TestPreTradeContext:
         empty_context: PreTradeContext,
     ) -> None:
         """B3: sell order decreases available_quantity。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -343,7 +343,7 @@ class TestPreTradeContext:
         empty_context: PreTradeContext,
     ) -> None:
         """B3: sell available_quantity cannot go below 0。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -434,7 +434,7 @@ class TestNoShortSellCheck:
 
     def test_sell_with_position_accepts(self, empty_context: PreTradeContext) -> None:
         """有充足持仓时卖出通过。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -482,7 +482,7 @@ class TestNoShortSellCheck:
         empty_context: PreTradeContext,
     ) -> None:
         """持仓数量不足时卖出拒绝。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,
@@ -786,7 +786,7 @@ class TestConcentrationPreCheck:
 
     def test_with_existing_position(self, empty_context: PreTradeContext) -> None:
         """已有持仓 150k + 新买 60k = 210k > 200k (20%)。"""
-        from ditto_core.accounting.position import Position
+        from ditto_engine.accounting.position import Position
 
         pos = Position(
             instrument_id=1,

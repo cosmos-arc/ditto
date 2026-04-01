@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from ditto_core.backtest.statistics import BacktestReport
+from ditto_engine.backtest.statistics import BacktestReport
 from ditto_port.services.strategy.backtest_service import (
     BacktestService,
     BacktestServiceConfig,

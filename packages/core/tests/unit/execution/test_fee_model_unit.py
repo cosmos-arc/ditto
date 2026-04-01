@@ -3,9 +3,9 @@
 from datetime import datetime
 
 import pytest
-from ditto_core.accounting.order_book import Order
-from ditto_core.execution.reality.fee import AShareFeeModel, SimpleFeeModel
-from ditto_core.execution.rules import FeeSchedule
+from ditto_engine.accounting.order_book import Order
+from ditto_engine.execution.reality.fee import AShareFeeModel, SimpleFeeModel
+from ditto_engine.execution.rules import FeeSchedule
 from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 """Unified derived service exports."""
 
-from ditto_core.engine import SQLiteCompileCache, SQLiteCompileCacheBackend
+from ditto_analytics.compile_cache import SQLiteCompileCache, SQLiteCompileCacheBackend
 from ditto_datahub.services.hot_layer import (
     HotLayerReader,
     HotLayerWriter,

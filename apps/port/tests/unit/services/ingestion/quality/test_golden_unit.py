@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_core.quality.golden import GoldenDatasetOptions, GoldenDatasetSpec
+from ditto_data.quality.golden import GoldenDatasetOptions, GoldenDatasetSpec
 from ditto_port.services.ingestion.quality.reconciliation_service import (
     QualityReconciliationService,
 )

@@ -8,22 +8,22 @@ from types import MappingProxyType
 from unittest.mock import Mock
 
 import pytest
-from ditto_core.accounting.account import AccountView
-from ditto_core.accounting.cash import CashBook
-from ditto_core.accounting.fills import FillEvent
-from ditto_core.accounting.order_book import (
+from ditto_engine.accounting.account import AccountView
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.accounting.fills import FillEvent
+from ditto_engine.accounting.order_book import (
     Order,
     OrderBookReadOnly,
     OrderSide,
     OrderType,
 )
-from ditto_core.backtest.data_feed import MarketSnapshot, Slice
-from ditto_core.backtest.engine import EngineConfig, EngineLoop, EngineOptions
-from ditto_core.backtest.risk.pre_trade import (
+from ditto_engine.backtest.data_feed import MarketSnapshot, Slice
+from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineOptions
+from ditto_engine.backtest.risk.pre_trade import (
     Decision,
     OrderCheckResult,
 )
-from ditto_core.strategy.models import TargetPortfolio
+from ditto_engine.strategy.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -443,7 +443,7 @@ class TestProcessInputConversion:
     def test_process_input_conversion(self) -> None:
         """Slice is correctly converted to ProcessInput
         for brokerage.process_pending."""
-        from ditto_core.execution.brokerage import ProcessInput
+        from ditto_engine.execution.brokerage import ProcessInput
 
         config = _make_config()
         bars = {
@@ -508,7 +508,7 @@ class TestRuleProviderInjection:
 
     def test_rule_provider_passes_rules_to_planner(self) -> None:
         """rule_provider 存在时，planner.plan 收到 rules 参数。"""
-        from ditto_core.execution.rules import InstrumentRuleProvider
+        from ditto_engine.execution.rules import InstrumentRuleProvider
 
         config = _make_config()
         bars = {

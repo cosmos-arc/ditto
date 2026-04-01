@@ -7,10 +7,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from ditto_core.backtest.audit import ExecutionAuditCollector
-from ditto_core.backtest.engine import EngineConfig, EngineLoop, EngineResult
-from ditto_core.backtest.manifest import RunManifest, RunMode
-from ditto_core.backtest.statistics import BacktestReport
+from ditto_engine.backtest.audit import ExecutionAuditCollector
+from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineResult
+from ditto_engine.backtest.manifest import RunManifest, RunMode
+from ditto_engine.backtest.statistics import BacktestReport
 from ditto_kernel.identity import InstrumentId
 from ditto_port.services.strategy.backtest_service import (
     BacktestService,
@@ -330,8 +330,8 @@ class TestAuditPersistence:
         mock_engine_run: MagicMock,
     ) -> None:
         """Portfolio-wide 风控记录在持久化时 instrument_id=None, scope='portfolio'。"""
-        from ditto_core.backtest.audit import RiskScanRecord
-        from ditto_core.backtest.risk.post_trade import (
+        from ditto_engine.backtest.audit import RiskScanRecord
+        from ditto_engine.backtest.risk.post_trade import (
             RiskActionType,
             RiskScope,
             RiskSeverity,

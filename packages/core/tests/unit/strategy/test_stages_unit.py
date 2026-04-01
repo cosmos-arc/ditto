@@ -8,17 +8,17 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_core.strategy.builtins.filtering import (
+from ditto_engine.strategy.builtins.filtering import (
     FilterCondition,
     FilteringStage,
     RiskLockFilter,
     TrendFilterStage,
 )
-from ditto_core.strategy.builtins.scoring import ScoringMethod, ScoringStage
-from ditto_core.strategy.builtins.selection import SelectionStage
-from ditto_core.strategy.builtins.signal import SignalStage
-from ditto_core.strategy.builtins.universe import UniverseStage
-from ditto_core.strategy.context import StrategyContext
+from ditto_engine.strategy.builtins.scoring import ScoringMethod, ScoringStage
+from ditto_engine.strategy.builtins.selection import SelectionStage
+from ditto_engine.strategy.builtins.signal import SignalStage
+from ditto_engine.strategy.builtins.universe import UniverseStage
+from ditto_engine.strategy.context import StrategyContext
 
 # ---------------------------------------------------------------------------
 # Fixtures

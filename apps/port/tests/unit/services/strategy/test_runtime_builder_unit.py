@@ -7,17 +7,17 @@ from unittest.mock import MagicMock
 
 import ditto_port.services.strategy as strategy_services
 import pytest
-from ditto_core.strategy.pipeline import StrategyPipeline
-from ditto_core.strategy.specs import (
+from ditto_datahub.models.strategy import StrategySpecRecord
+from ditto_datahub.services.strategy.strategy_catalog_service import (
+    StrategyCatalogService,
+)
+from ditto_engine.strategy.pipeline import StrategyPipeline
+from ditto_engine.strategy.specs import (
     CostModelSpec,
     ExecutionSpec,
     ScorerSpec,
     SelectorSpec,
     StrategySpec,
-)
-from ditto_datahub.models.strategy import StrategySpecRecord
-from ditto_datahub.services.strategy.strategy_catalog_service import (
-    StrategyCatalogService,
 )
 
 

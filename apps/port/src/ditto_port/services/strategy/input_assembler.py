@@ -13,8 +13,8 @@ BACKTEST / RESEARCH / RECOMMENDATION 等模式。
 from __future__ import annotations
 
 import polars as pl
-from ditto_core.backtest.data_feed import Slice
-from ditto_core.strategy.pipeline import StrategyInputBundle
+from ditto_engine.backtest.data_feed import Slice
+from ditto_engine.strategy.pipeline import StrategyInputBundle
 
 __all__ = ["StrategyInputAssembler"]
 

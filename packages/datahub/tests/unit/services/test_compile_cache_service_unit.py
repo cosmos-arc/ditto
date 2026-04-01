@@ -9,11 +9,11 @@ from typing import Any
 import orjson
 import polars as pl
 import pytest
-from ditto_core.engine.compile_cache import SQLiteCompileCache
-from ditto_core.engine.materialization import (
+from ditto_analytics.compile_cache import SQLiteCompileCache
+from ditto_analytics.materialization import (
     CompiledDerivedExpression,
 )
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
 # Schema SQL (excerpt for compile cache tables)

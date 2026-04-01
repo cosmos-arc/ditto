@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from ditto_core.backtest.data_feed import Slice
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
+from ditto_engine.backtest.data_feed import Slice
 from ditto_kernel.identity import InstrumentId
 
 from ditto_port.services.strategy.market_data_feed import (

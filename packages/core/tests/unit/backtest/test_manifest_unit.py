@@ -7,14 +7,14 @@ from __future__ import annotations
 
 import orjson
 import pytest
-from ditto_core.backtest.manifest import (
+from ditto_engine.backtest.manifest import (
     RuleRef,
     RuleRefCollector,
     RunManifest,
     RunMode,
     serialize_manifest,
 )
-from ditto_core.execution.rules import (
+from ditto_engine.execution.rules import (
     FeeSchedule,
     InstrumentDefinition,
     InstrumentRules,

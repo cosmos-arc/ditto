@@ -25,7 +25,7 @@ class OrderStatus(StrEnum):
 
     .. deprecated::
         DataHub 层不再独立定义订单状态枚举，请使用 Core 层的权威定义：
-        ``from ditto_core.accounting.order_book import OrderStatus``
+        ``from ditto_engine.accounting.order_book import OrderStatus``
         本定义仅保留向后兼容，未来版本将移除。
     """
 
@@ -45,7 +45,7 @@ class Order:
 
     .. deprecated::
         DataHub 层不再独立定义订单模型，请使用 Core 层的权威定义：
-        ``from ditto_core.accounting.order_book import Order``
+        ``from ditto_engine.accounting.order_book import Order``
         本定义仅保留向后兼容，未来版本将移除。
 
     Attributes:

@@ -6,9 +6,9 @@ from dataclasses import FrozenInstanceError
 
 import polars as pl
 import pytest
-from ditto_core.strategy.context import StrategyContext
-from ditto_core.strategy.models import TargetPortfolio
-from ditto_core.strategy.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_engine.strategy.context import StrategyContext
+from ditto_engine.strategy.models import TargetPortfolio
+from ditto_engine.strategy.pipeline import StrategyInputBundle, StrategyPipeline
 
 # ---------------------------------------------------------------------------
 # Helpers: lightweight DecisionStage fakes for testing

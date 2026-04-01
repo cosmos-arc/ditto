@@ -3,13 +3,13 @@
 
 class TestStrategyContext:
     def test_create_context(self) -> None:
-        from ditto_core.strategy.context import StrategyContext
+        from ditto_engine.strategy.context import StrategyContext
 
         ctx = StrategyContext()
         assert ctx.risk_locked_instruments == {}
 
     def test_lock_and_unlock(self) -> None:
-        from ditto_core.strategy.context import StrategyContext
+        from ditto_engine.strategy.context import StrategyContext
 
         ctx = StrategyContext()
         ctx.lock_instrument(1, "max_drawdown")
@@ -18,7 +18,7 @@ class TestStrategyContext:
         assert ctx.risk_locked_instruments[1] == ("max_drawdown", None)
 
     def test_clear_locks(self) -> None:
-        from ditto_core.strategy.context import StrategyContext
+        from ditto_engine.strategy.context import StrategyContext
 
         ctx = StrategyContext()
         ctx.lock_instrument(1, "max_drawdown")
@@ -27,7 +27,7 @@ class TestStrategyContext:
         assert ctx.risk_locked_instruments == {}
 
     def test_lock_instrument_overwrite(self) -> None:
-        from ditto_core.strategy.context import StrategyContext
+        from ditto_engine.strategy.context import StrategyContext
 
         ctx = StrategyContext()
         ctx.lock_instrument(1, "max_drawdown")
@@ -37,7 +37,7 @@ class TestStrategyContext:
 
 class TestStrategyContextPositions:
     def test_create_with_positions(self) -> None:
-        from ditto_core.strategy.context import StrategyContext
+        from ditto_engine.strategy.context import StrategyContext
 
         ctx = StrategyContext(
             positions={1: 0.85, 2: 4.20},
@@ -45,13 +45,13 @@ class TestStrategyContextPositions:
         assert ctx.positions == {1: 0.85, 2: 4.20}
 
     def test_default_empty_positions(self) -> None:
-        from ditto_core.strategy.context import StrategyContext
+        from ditto_engine.strategy.context import StrategyContext
 
         ctx = StrategyContext()
         assert ctx.positions == {}
 
     def test_positions_not_cleared_by_clear_locks(self) -> None:
-        from ditto_core.strategy.context import StrategyContext
+        from ditto_engine.strategy.context import StrategyContext
 
         ctx = StrategyContext(
             risk_locked_instruments={1: ("max_drawdown", None)},
@@ -64,14 +64,14 @@ class TestStrategyContextPositions:
 
 class TestDecisionStageProtocol:
     def test_protocol_is_defined(self) -> None:
-        from ditto_core.strategy.protocols import DecisionStage
+        from ditto_engine.strategy.protocols import DecisionStage
 
         # Protocol 存在且有 process 方法签名
         assert hasattr(DecisionStage, "process")
 
     def test_concrete_stage_implements_protocol(self) -> None:
         import polars as pl
-        from ditto_core.strategy.context import StrategyContext
+        from ditto_engine.strategy.context import StrategyContext
 
         class DummyStage:
             def process(
