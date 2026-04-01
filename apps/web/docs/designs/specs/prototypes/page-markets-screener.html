@@ -140,7 +140,7 @@
     .risk-dot.medium::before { background: var(--risk-medium-fg); }
     .risk-dot.high::before   { background: var(--risk-high-fg); }
 
-    /* ── Sparkline — SVG inline mini-chart ── */
+    /* ── Sparkline — SVG inline mini-chart with area fill ── */
     :root {
       --sparkline-w: 3rem;
       --sparkline-h: 1.25rem;
@@ -158,6 +158,11 @@
     .sparkline-up svg polyline,
     .sparkline-down svg polyline {
       transition: stroke-width var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .sparkline-up svg polygon.spark-area,
+    .sparkline-down svg polygon.spark-area {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .sparkline-up {
@@ -185,7 +190,7 @@
       transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
-    /* Sparkline hover — reveal trend clarity */
+    /* Sparkline hover — reveal trend clarity + area fill lift */
     .sparkline-up:hover svg,
     .sparkline-down:hover svg {
       opacity: 1;
@@ -193,6 +198,10 @@
     .sparkline-up:hover svg polyline,
     .sparkline-down:hover svg polyline {
       stroke-width: 1.8;
+    }
+    .sparkline-up:hover svg polygon.spark-area,
+    .sparkline-down:hover svg polygon.spark-area {
+      opacity: 0.22;
     }
     .sparkline-flat:hover {
       opacity: 0.8;
@@ -204,6 +213,10 @@
     .data-table tr:hover .sparkline-up svg polyline,
     .data-table tr:hover .sparkline-down svg polyline {
       stroke-width: 1.8;
+    }
+    .data-table tr:hover .sparkline-up svg polygon.spark-area,
+    .data-table tr:hover .sparkline-down svg polygon.spark-area {
+      opacity: 0.22;
     }
     .data-table tr:hover .sparkline-flat {
       opacity: 0.8;
@@ -271,6 +284,26 @@
       font-weight: var(--font-weight-medium);
       color: var(--brand-accent);
       font-feature-settings: 'tnum' 1;
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    /* ── Match indicator bar ── */
+    .match-indicator {
+      width: 2.5rem;
+      height: 2px;
+      background: var(--neutral-200);
+      border-radius: var(--radius-2);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .match-indicator-fill {
+      height: 100%;
+      border-radius: var(--radius-2);
+      background: var(--brand-accent);
+      opacity: 0.5;
     }
 
     /* ── Score row ── */
@@ -340,6 +373,12 @@
       border-bottom: none;
     }
 
+    .compare-item-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
     .compare-item-name {
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
@@ -351,6 +390,19 @@
       font-size: var(--font-size-12);
       color: var(--text-tertiary);
       font-feature-settings: 'tnum' 1;
+    }
+
+    .compare-item-spark svg {
+      width: 2rem;
+      height: 0.75rem;
+      display: block;
+      opacity: 0.7;
+    }
+
+    .compare-item-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
     }
 
     .compare-item-remove {
@@ -518,6 +570,69 @@
       border-top: 1px solid var(--border-subtle);
     }
 
+    /* ── Score Radar Chart ── */
+    .score-radar {
+      display: flex;
+      justify-content: center;
+      padding: var(--space-8) 0 var(--space-6);
+    }
+
+    .score-radar svg {
+      width: 7rem;
+      height: 7rem;
+    }
+
+    .score-radar .radar-grid {
+      fill: none;
+      stroke: var(--border-subtle);
+      stroke-width: 0.5;
+    }
+
+    .score-radar .radar-axis {
+      stroke: var(--border-subtle);
+      stroke-width: 0.3;
+    }
+
+    .score-radar .radar-data-ok {
+      fill: var(--system-healthy-fg);
+      fill-opacity: 0.08;
+      stroke: var(--system-healthy-fg);
+      stroke-width: 0.8;
+      stroke-opacity: 0.5;
+    }
+
+    .score-radar .radar-data-warn {
+      fill: var(--system-degraded-fg);
+      fill-opacity: 0.08;
+      stroke: var(--system-degraded-fg);
+      stroke-width: 0.8;
+      stroke-opacity: 0.5;
+    }
+
+    .score-radar .radar-data-brand {
+      fill: var(--brand-accent);
+      fill-opacity: 0.10;
+      stroke: var(--brand-accent);
+      stroke-width: 1;
+      stroke-opacity: 0.6;
+    }
+
+    .score-radar .radar-label {
+      font-family: var(--font-family-ui);
+      font-size: 5px;
+      fill: var(--text-tertiary);
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+
+    .score-radar .radar-value {
+      font-family: var(--font-family-numeric);
+      font-size: 4.5px;
+      fill: var(--text-secondary);
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+
     /* ── Detail last section flex ── */
     .catalog-detail .context-section:last-child {
       flex: 1 0 auto;
@@ -568,6 +683,7 @@
       .filter-chip { transition: none !important; }
       .pagination-btn { transition: none !important; }
       .compare-item-remove { transition: none !important; }
+      .compare-item-spark svg { transition: none !important; }
       .btn { transition: none !important; }
       .risk-dot { transition: none !important; }
       .sparkline-up svg,
@@ -725,7 +841,7 @@
                 <td><span class="cell-badge sector">消费</span></td>
                 <td><span class="signal-pill buy">买入</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,9 4,7 7,8 10,6 13,4 16,3 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,9 4,7 7,8 10,6 13,4 16,3 19,1 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,9 4,7 7,8 10,6 13,4 16,3 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 300750 宁德时代 -->
               <tr class="row">
@@ -739,7 +855,7 @@
                 <td><span class="cell-badge sector">新能源</span></td>
                 <td><span class="signal-pill buy">买入</span></td>
                 <td><span class="risk-dot medium">中</span></td>
-                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,8 4,9 7,5 10,7 13,3 16,4 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,8 4,9 7,5 10,7 13,3 16,4 19,1 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,8 4,9 7,5 10,7 13,3 16,4 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 002594 比亚迪 -->
               <tr class="row">
@@ -753,7 +869,7 @@
                 <td><span class="cell-badge sector">新能源</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,6 4,6 7,7 10,5 13,4 16,2 19,3" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,6 4,6 7,7 10,5 13,4 16,2 19,3 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,6 4,6 7,7 10,5 13,4 16,2 19,3" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 601318 中国平安 -->
               <tr class="row">
@@ -767,7 +883,7 @@
                 <td><span class="cell-badge sector">金融</span></td>
                 <td><span class="signal-pill buy">买入</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,7 4,6 7,7 10,5 13,5 16,3 19,2" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,7 4,6 7,7 10,5 13,5 16,3 19,2 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,7 4,6 7,7 10,5 13,5 16,3 19,2" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 000333 美的集团 -->
               <tr class="row">
@@ -781,7 +897,7 @@
                 <td><span class="cell-badge sector">制造</span></td>
                 <td><span class="signal-pill sell">卖出</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,3 4,4 7,5 10,3 13,6 16,7 19,8" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkDown" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,3 4,4 7,5 10,3 13,6 16,7 19,8 19,10 1,10" fill="url(#sparkDown)"/><polyline points="1,3 4,4 7,5 10,3 13,6 16,7 19,8" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 600900 长江电力 -->
               <tr class="row">
@@ -795,7 +911,7 @@
                 <td><span class="cell-badge sector">公用</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,8 4,7 7,6 10,5 13,4 16,3 19,2" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,8 4,7 7,6 10,5 13,4 16,3 19,2 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,8 4,7 7,6 10,5 13,4 16,3 19,2" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 002475 立讯精密 -->
               <tr class="row">
@@ -809,7 +925,7 @@
                 <td><span class="cell-badge sector">科技</span></td>
                 <td><span class="signal-pill sell">卖出</span></td>
                 <td><span class="risk-dot medium">中</span></td>
-                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,2 4,3 7,4 10,5 13,7 16,8 19,9" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkDown" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,2 4,3 7,4 10,5 13,7 16,8 19,9 19,10 1,10" fill="url(#sparkDown)"/><polyline points="1,2 4,3 7,4 10,5 13,7 16,8 19,9" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 688981 中芯国际 -->
               <tr class="row">
@@ -823,7 +939,7 @@
                 <td><span class="cell-badge sector">科技</span></td>
                 <td><span class="signal-pill buy">买入</span></td>
                 <td><span class="risk-dot high">高</span></td>
-                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,9 4,8 7,6 10,5 13,2 16,3 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,9 4,8 7,6 10,5 13,2 16,3 19,1 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,9 4,8 7,6 10,5 13,2 16,3 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 300760 迈瑞医疗 -->
               <tr class="row">
@@ -851,7 +967,7 @@
                 <td><span class="cell-badge sector">科技</span></td>
                 <td><span class="signal-pill buy">买入</span></td>
                 <td><span class="risk-dot medium">中</span></td>
-                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,7 4,8 7,6 10,4 13,5 16,3 19,2" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,7 4,8 7,6 10,4 13,5 16,3 19,2 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,7 4,8 7,6 10,4 13,5 16,3 19,2" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 688012 中微公司 -->
               <tr class="row">
@@ -865,7 +981,7 @@
                 <td><span class="cell-badge sector">科技</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,2 4,3 7,4 10,3 13,5 16,6 19,7" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkDown" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,2 4,3 7,4 10,3 13,5 16,6 19,7 19,10 1,10" fill="url(#sparkDown)"/><polyline points="1,2 4,3 7,4 10,3 13,5 16,6 19,7" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 603259 药明康德 -->
               <tr class="row">
@@ -879,7 +995,7 @@
                 <td><span class="cell-badge sector">医药</span></td>
                 <td><span class="signal-pill sell">卖出</span></td>
                 <td><span class="risk-dot high">高</span></td>
-                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,4 4,5 7,3 10,6 13,5 16,7 19,8" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkDown" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,4 4,5 7,3 10,6 13,5 16,7 19,8 19,10 1,10" fill="url(#sparkDown)"/><polyline points="1,4 4,5 7,3 10,6 13,5 16,7 19,8" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 601888 中国中免 -->
               <tr class="row">
@@ -893,7 +1009,7 @@
                 <td><span class="cell-badge sector">消费</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,3 4,4 7,5 10,6 13,7 16,8 19,9" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkDown" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,3 4,4 7,5 10,6 13,7 16,8 19,9 19,10 1,10" fill="url(#sparkDown)"/><polyline points="1,3 4,4 7,5 10,6 13,7 16,8 19,9" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 601012 隆基绿能 -->
               <tr class="row">
@@ -907,7 +1023,7 @@
                 <td><span class="cell-badge sector">新能源</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot medium">中</span></td>
-                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,4 4,5 7,6 10,5 13,7 16,7 19,8" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkDown" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,4 4,5 7,6 10,5 13,7 16,7 19,8 19,10 1,10" fill="url(#sparkDown)"/><polyline points="1,4 4,5 7,6 10,5 13,7 16,7 19,8" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 002049 紫光国微 -->
               <tr class="row">
@@ -921,7 +1037,7 @@
                 <td><span class="cell-badge sector">科技</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,7 4,6 7,7 10,6 13,5 16,4 19,3" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><defs><linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><polygon class="spark-area" points="1,7 4,6 7,7 10,6 13,5 16,4 19,3 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,7 4,6 7,7 10,6 13,5 16,4 19,3" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
             </tbody>
           </table>
@@ -968,19 +1084,19 @@
           <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：高ROE低估值">
             <div class="preset-card-title">高ROE低估值</div>
             <div class="preset-card-desc">ROE&gt;15%, PE&lt;20</div>
-            <div class="preset-card-match">匹配 23 只</div>
+            <div class="preset-card-match">匹配 23 只 <span class="match-indicator"><span class="match-indicator-fill" style="width: 10%"></span></span></div>
           </div>
           <!-- Preset 2 -->
           <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：动量强势">
             <div class="preset-card-title">动量强势</div>
             <div class="preset-card-desc">20日涨幅&gt;10%, 成交额放大</div>
-            <div class="preset-card-match">匹配 45 只</div>
+            <div class="preset-card-match">匹配 45 只 <span class="match-indicator"><span class="match-indicator-fill" style="width: 19%"></span></span></div>
           </div>
           <!-- Preset 3 -->
           <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：低波动红利">
             <div class="preset-card-title">低波动红利</div>
             <div class="preset-card-desc">波动率&lt;15%, 股息率&gt;3%</div>
-            <div class="preset-card-match">匹配 18 只</div>
+            <div class="preset-card-match">匹配 18 只 <span class="match-indicator"><span class="match-indicator-fill" style="width: 8%"></span></span></div>
           </div>
         </div>
       </div>
@@ -992,6 +1108,37 @@
           <span class="context-section-count">贵州茅台</span>
         </div>
         <div class="context-section-body">
+          <!-- Radar Chart -->
+          <div class="score-radar">
+            <svg viewBox="0 0 100 100">
+              <!-- Grid: outer pentagon -->
+              <polygon class="radar-grid" points="50,12 86.1,38.3 72.3,80.7 27.7,80.7 13.9,38.3"/>
+              <!-- Grid: inner pentagon (50% mark) -->
+              <polygon class="radar-grid" points="50,31 68,44.2 61.2,65.4 38.8,65.4 32,44.2" opacity="0.5"/>
+              <!-- Axes -->
+              <line class="radar-axis" x1="50" y1="50" x2="50" y2="12"/>
+              <line class="radar-axis" x1="50" y1="50" x2="86.1" y2="38.3"/>
+              <line class="radar-axis" x1="50" y1="50" x2="72.3" y2="80.7"/>
+              <line class="radar-axis" x1="50" y1="50" x2="27.7" y2="80.7"/>
+              <line class="radar-axis" x1="50" y1="50" x2="13.9" y2="38.3"/>
+              <!-- Data: individual dimensions (value/growth/quality/momentum) -->
+              <polygon class="radar-data-ok" points="50,20.4 73.5,42.4 68.3,75.2 29.7,77.9 21.5,40.8"/>
+              <!-- Composite overlay (all axes at 79%) -->
+              <polygon class="radar-data-brand" points="50,20 73.5,42.6 68.1,75.1 31.9,75.1 26.5,42.6"/>
+              <!-- Axis labels -->
+              <text class="radar-label" x="50" y="8">价值</text>
+              <text class="radar-label" x="94" y="38">成长</text>
+              <text class="radar-label" x="80" y="90">质量</text>
+              <text class="radar-label" x="20" y="90">动量</text>
+              <text class="radar-label" x="6" y="38">综合</text>
+              <!-- Score values near data points -->
+              <text class="radar-value" x="50" y="16.5" fill="var(--system-healthy-fg)">78</text>
+              <text class="radar-value" x="80" y="40" fill="var(--system-degraded-fg)">65</text>
+              <text class="radar-value" x="75" y="80" fill="var(--system-healthy-fg)">82</text>
+              <text class="radar-value" x="25" y="82" fill="var(--system-healthy-fg)">91</text>
+              <text class="radar-value" x="17" y="40" fill="var(--brand-accent)">79</text>
+            </svg>
+          </div>
           <!-- 价值 -->
           <div class="score-row">
             <span class="score-label">价值</span>
@@ -1043,25 +1190,40 @@
         </div>
         <div class="context-section-body">
           <div class="compare-item">
-            <div>
-              <div class="compare-item-name">贵州茅台</div>
-              <div class="compare-item-code">600519</div>
+            <div class="compare-item-info">
+              <div>
+                <div class="compare-item-name">贵州茅台</div>
+                <div class="compare-item-code">600519</div>
+              </div>
+              <span class="compare-item-spark sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,9 4,7 7,8 10,6 13,4 16,3 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span>
             </div>
-            <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除贵州茅台">&times;</span>
+            <div class="compare-item-actions">
+              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除贵州茅台">&times;</span>
+            </div>
           </div>
           <div class="compare-item">
-            <div>
-              <div class="compare-item-name">宁德时代</div>
-              <div class="compare-item-code">300750</div>
+            <div class="compare-item-info">
+              <div>
+                <div class="compare-item-name">宁德时代</div>
+                <div class="compare-item-code">300750</div>
+              </div>
+              <span class="compare-item-spark sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,8 4,9 7,5 10,7 13,3 16,4 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span>
             </div>
-            <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除宁德时代">&times;</span>
+            <div class="compare-item-actions">
+              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除宁德时代">&times;</span>
+            </div>
           </div>
           <div class="compare-item">
-            <div>
-              <div class="compare-item-name">中芯国际</div>
-              <div class="compare-item-code">688981</div>
+            <div class="compare-item-info">
+              <div>
+                <div class="compare-item-name">中芯国际</div>
+                <div class="compare-item-code">688981</div>
+              </div>
+              <span class="compare-item-spark sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,9 4,8 7,6 10,5 13,2 16,3 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span>
             </div>
-            <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除中芯国际">&times;</span>
+            <div class="compare-item-actions">
+              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除中芯国际">&times;</span>
+            </div>
           </div>
           <button class="btn btn-primary compare-cta">开始对比 &rarr;</button>
         </div>
