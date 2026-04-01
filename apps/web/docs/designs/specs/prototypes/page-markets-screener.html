@@ -46,6 +46,7 @@
       font-weight: var(--font-weight-regular);
       color: var(--text-tertiary);
       margin-left: var(--space-8);
+      letter-spacing: 0.01em;
     }
 
     /* ── Header button group ── */
@@ -99,6 +100,7 @@
       padding: 1px var(--space-8);
       border-radius: var(--radius-12);
       white-space: nowrap;
+      font-feature-settings: 'kern' 1;
     }
 
     .signal-pill.buy {
@@ -128,8 +130,8 @@
 
     .risk-dot::before {
       content: '';
-      width: 6px;
-      height: 6px;
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
       border-radius: 50%;
       flex-shrink: 0;
     }
@@ -140,8 +142,8 @@
 
     /* ── Sparkline — SVG inline mini-chart ── */
     :root {
-      --sparkline-w: 48px;
-      --sparkline-h: 20px;
+      --sparkline-w: 3rem;
+      --sparkline-h: 1.25rem;
     }
 
     .sparkline-up svg,
@@ -153,6 +155,11 @@
       transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
+    .sparkline-up svg polyline,
+    .sparkline-down svg polyline {
+      transition: stroke-width var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
     .sparkline-up {
       color: var(--market-up-fg);
     }
@@ -162,6 +169,20 @@
     .sparkline-flat {
       color: var(--text-tertiary);
       opacity: 0.5;
+    }
+
+    /* ── Sector badge: subtle lift on row hover ── */
+    .data-table tr:hover .cell-badge.sector {
+      background: var(--interaction-hover-strong-bg);
+      color: var(--text-primary);
+    }
+
+    /* ── Risk dot: crisp on row hover ── */
+    .data-table tr:hover .risk-dot {
+      opacity: 0.9;
+    }
+    .risk-dot {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     /* Sparkline hover — reveal trend clarity */
@@ -191,9 +212,10 @@
     /* ── Detail Panel Sections ── */
     .detail-actions {
       padding: var(--space-12);
+      padding-bottom: var(--space-10);
       display: flex;
       flex-direction: column;
-      gap: var(--space-8);
+      gap: var(--space-6);
       border-bottom: 1px solid var(--border-subtle);
     }
 
@@ -208,13 +230,21 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
-      margin-bottom: var(--space-8);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      margin-bottom: var(--space-6);
     }
 
     .preset-card:hover {
       border-color: var(--border-default);
       background: var(--interaction-hover-subtle-bg);
+    }
+
+    .preset-card:hover .preset-card-match {
+      opacity: 0.85;
+    }
+    .preset-card-match {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .preset-card:last-child {
@@ -232,13 +262,15 @@
       font-size: var(--font-size-12);
       color: var(--text-tertiary);
       line-height: 1.4;
-      margin-bottom: var(--space-6);
+      margin-bottom: var(--space-4);
     }
 
     .preset-card-match {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
       color: var(--brand-accent);
+      font-feature-settings: 'tnum' 1;
     }
 
     /* ── Score row ── */
@@ -246,29 +278,29 @@
       display: flex;
       align-items: center;
       gap: var(--space-8);
-      padding: var(--space-6) 0;
+      padding: var(--space-4) 0;
     }
 
     .score-label {
       font-size: var(--font-size-12);
       color: var(--text-secondary);
-      width: 36px;
+      width: 2.25rem;
       flex-shrink: 0;
     }
 
     .score-bar-wrap {
       flex: 1;
-      height: 4px;
+      height: 3px;
       background: var(--neutral-200);
-      border-radius: 2px;
+      border-radius: var(--radius-2);
       overflow: hidden;
     }
 
     .score-bar-fill {
       height: 100%;
-      border-radius: 2px;
+      border-radius: var(--radius-2);
       transition: width var(--motion-duration-normal) var(--motion-easing-standard);
-      box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.15);
+      box-shadow: inset 0 1px 2px var(--overlay-6);
     }
 
     .score-bar-fill.brand { background: var(--brand-accent); }
@@ -279,7 +311,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       color: var(--text-tertiary);
-      width: 32px;
+      width: 2rem;
       text-align: right;
       flex-shrink: 0;
     }
@@ -290,8 +322,9 @@
     }
 
     .score-row.composite .score-value {
-      font-weight: var(--font-weight-medium);
+      font-weight: var(--font-weight-semibold);
       color: var(--brand-accent);
+      font-size: var(--font-size-13);
     }
 
     /* ── Compare basket items ── */
@@ -299,7 +332,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: var(--space-6) 0;
+      padding: var(--space-4) 0;
       border-bottom: 1px solid var(--border-subtle);
     }
 
@@ -309,6 +342,7 @@
 
     .compare-item-name {
       font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
       color: var(--text-primary);
     }
 
@@ -316,6 +350,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
     }
 
     .compare-item-remove {
@@ -324,16 +359,18 @@
       cursor: pointer;
       padding: var(--space-4);
       border-radius: var(--radius-2);
-      min-width: 24px;
-      min-height: 24px;
+      min-width: 1.5rem;
+      min-height: 1.5rem;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .compare-item-remove:hover {
-      color: var(--text-secondary);
+      color: var(--market-down-fg);
+      background: var(--market-down-bg);
     }
 
     .compare-cta {
@@ -381,9 +418,9 @@
     .header-action-btn:focus-visible,
     .header-avatar:focus-visible {
       outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px oklch(from var(--brand-accent) l c h / 0.25);
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-bg);
       border-radius: var(--radius-4);
-      transition: box-shadow 150ms ease-out;
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     /* ── Frosted glass header ── */
@@ -425,17 +462,35 @@
       position: absolute;
       top: 0;
       left: 0;
-      width: 3px;
+      width: var(--space-3);
       height: 100%;
       background: var(--brand-accent);
-      border-radius: 0 2px 2px 0;
+      border-radius: 0 var(--radius-2) var(--radius-2) 0;
       opacity: 0.6;
+    }
+
+    /* ── Overdrive: selection color matches brand ── */
+    .data-table ::selection {
+      background: var(--interaction-selected-bg);
+      color: var(--text-primary);
+    }
+
+    /* ── Overdrive: text rendering optimization ── */
+    .data-table th,
+    .data-table td.numeric {
+      text-rendering: optimizeLegibility;
     }
 
     /* ── Numeric data: tabular-nums ── */
     .data-table td.numeric {
       font-feature-settings: 'tnum' 1, 'zero' 1;
       letter-spacing: -0.02em;
+    }
+
+    /* ── Change cells: reinforce direction with weight ── */
+    .cell-change-up,
+    .cell-change-down {
+      font-weight: var(--font-weight-medium);
     }
 
     /* ── Table empty state ── */
@@ -450,15 +505,16 @@
 
     /* ── Pagination ellipsis ── */
     .pagination-ellipsis {
-      color: var(--text-tertiary);
+      color: var(--text-disabled);
       padding: 0 var(--space-4);
       user-select: none;
+      letter-spacing: 0.05em;
     }
 
     /* ── Score composite separator ── */
     .score-row-composite-separator {
-      margin-top: var(--space-4);
-      padding-top: var(--space-8);
+      margin-top: var(--space-2);
+      padding-top: var(--space-6);
       border-top: 1px solid var(--border-subtle);
     }
 
@@ -469,26 +525,58 @@
 
     /* ── Detail panel depth shadow ── */
     .shell-catalog .catalog-detail {
-      box-shadow: inset 4px 0 8px -4px oklch(0 0 0 / 0.06);
+      box-shadow: inset 4px 0 8px -4px var(--overlay-3);
+    }
+
+    /* ── Overdrive: detail panel section header alignment ── */
+    .catalog-detail .context-section-header {
+      min-height: var(--density-header-height);
+      align-items: center;
+    }
+
+    /* ── Overdrive: style label refined ── */
+    .style-label {
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Overdrive: filter count emphasis ── */
+    .filter-count {
+      font-feature-settings: 'tnum' 1;
+    }
+
+    /* ── Overdrive: preset card desc uses lighter weight for hierarchy ── */
+    .preset-card-desc {
+      font-feature-settings: 'kern' 1;
     }
 
     /* ── Sorted column brand accent ── */
     .data-table th.sorted {
       border-bottom: 2px solid var(--brand-accent);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .data-table td.col-sorted {
       background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     /* ── Reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
       .score-bar-fill { transition: none !important; }
       .preset-card { transition: none !important; }
+      .preset-card-match { transition: none !important; }
       .signal-pill { transition: none !important; }
       .filter-chip { transition: none !important; }
       .pagination-btn { transition: none !important; }
       .compare-item-remove { transition: none !important; }
       .btn { transition: none !important; }
+      .risk-dot { transition: none !important; }
+      .sparkline-up svg,
+      .sparkline-down svg,
+      .sparkline-flat svg { transition: none !important; }
+      .sparkline-up svg polyline,
+      .sparkline-down svg polyline { transition: none !important; }
+      .data-table th.sorted { transition: none !important; }
+      .data-table td.col-sorted { transition: none !important; }
     }
   </style>
 </head>
