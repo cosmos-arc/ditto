@@ -34,10 +34,10 @@
     {
       "id": "markets-screener",
       "file": "page-markets-screener.html",
-      "status": "created",
-      "score": null,
+      "status": "done",
+      "score": 9.64,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 10,
       "createdAt": "2026-04-01"
     },
     {
