@@ -15,7 +15,7 @@ last_audit: 2026-03-31
 
 ## 当前进度概览
 
-> **审计日期**：2026-03-31 | **分支**：`docs/archive-plans-and-architecture-design` | **check**：4228 tests ✅ | **arch-check**：8/8 KEPT ✅
+> **审计日期**：2026-04-01 | **分支**：`docs/archive-plans-and-architecture-design` | **check**：1456+ unit tests ✅ | **arch-check**：11/11 KEPT ✅
 
 | Phase | Unit | 状态 | 验证 |
 |-------|------|------|------|
@@ -25,7 +25,13 @@ last_audit: 2026-03-31
 | 1a | golden test 基线 | ✅ 完成 | 3 日 + 5 日场景、7 个指标硬编码断言 |
 | 1b | ParquetDataFeed 清理 + 测试迁移 | ✅ 完成 | src/ 已清、TestParquetProvider × 2 conftest、零 ParquetDataFeed 引用 |
 | 1c | Phase 1 集成验证 | ✅ arch-check 通过 | core-must-not-depend-on-datahub KEPT |
-| 2-5 | 路线图 | ⏳ 未开始 | — |
+| 2a-1 | 创建 ditto_data + 迁移 quality/errors | ✅ 完成 | quality + errors → ditto_data，datahub errors re-export shim |
+| 2a-2 | 迁移 quality 消费者 + 清理 core quality | ✅ 完成 | 83 测试迁移到 ditto_data，core quality 目录删除 |
+| 2b-1 | 创建 ditto_analytics + 迁移 expression/materialization | ✅ 完成 | expression/ + materialization/ + compile_cache → ditto_analytics，re-export shim |
+| 2b-2 | 迁移 analytics 消费者 + 清理 engine re-export | ✅ 完成 | 所有消费者切换到 ditto_analytics，shim 删除 |
+| 2c-1 | ditto_core → ditto_engine 机械改名 | ✅ 完成 | 全库 0 ditto_core 残留，11/11 arch-check KEPT |
+| 2c-2 | 文档更新 + 最终验证 | ✅ 完成 | CLAUDE.md + core/CLAUDE.md 更新 |
+| 2-5 | 路线图剩余 | ⏳ Phase 2 完成，Phase 3-5 待规划 | — |
 
 ---
 
