@@ -202,6 +202,7 @@
       flex-direction: column;
       overflow: hidden;
       height: 100%;
+      border-top: 1px solid color-mix(in oklch, var(--brand-accent) 25%, transparent);
     }
 
     .monitor-panel .panel-header {
@@ -403,6 +404,12 @@
       color: var(--text-tertiary);
     }
 
+    /* ── Activity Stack section title — 14px for typographic ladder ── */
+    .context-section-title {
+      font-size: var(--font-size-14) !important;
+      letter-spacing: 0.01em;
+    }
+
     /* ── Queue review item ── */
     .queue-review-item {
       display: flex;
@@ -563,7 +570,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: oklch(1 0 0 / 0.04);
+      background: color-mix(in oklch, var(--text-tertiary) 8%, transparent);
     }
 
     .chart-grid-label {
@@ -590,8 +597,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: oklch(1 0 0 / 0.08);
-      border-top: 1px dashed oklch(1 0 0 / 0.12);
+      background: color-mix(in oklch, var(--text-tertiary) 12%, transparent);
     }
 
     .chart-placeholder-line {
@@ -632,6 +638,22 @@
 
     .spinner {
       animation: spin 1.5s linear infinite;
+    }
+
+    /* ── Running status pulse ── */
+    @keyframes status-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .run-item-status.running {
+      animation: status-pulse 2s ease-in-out infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .run-item-status.running {
+        animation: none;
+      }
     }
   </style>
 </head>
