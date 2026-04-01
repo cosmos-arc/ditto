@@ -1,6 +1,6 @@
 ---
 name: ditto-design-cycle
-description: Use when creating UI prototypes from blueprints, reviewing HTML prototypes or UI pages for visual quality, UX interaction, feature completeness, copy clarity, brand temperament, or information architecture. Supports --create mode (from blueprint to prototype), 6-role parallel review, autonomous iteration, and doc sync.
+description: Use when creating UI prototypes from blueprints, reviewing HTML prototypes or UI pages for visual quality, UX interaction, feature completeness, copy clarity, brand temperament, or information architecture. Supports --create mode (from blueprint to prototype), --create-all (batch Edition creation with style anchoring), --edition-review (Edition-level acceptance), 6-role parallel review, autonomous iteration, and doc sync.
 disable-model-invocation: true
 ---
 
@@ -21,6 +21,16 @@ UI 创建与设计审查编排。支持两种模式：**创建模式**（`--crea
 - **用户是最终决策者**，选择采纳哪些建议
 - 审查可能产生**新的设计决策**，自动记录到 `docs/designs/decisions/`
 - 如果信息架构或交互流程有重大调整，同步更新 spec 文档
+
+## Edition 机制
+
+> **Edition** = 一个产品 UI 版本的全部页面原型集合，以 manifest 清单跟踪状态。
+
+- **Manifest 文件**: `docs/designs/specs/prototypes/.edition-manifest.json`
+- **版本标识**: manifest 中 `edition` 字段 + git tag `edition/<ver>/*`
+- **页面状态**: `created` → `audit-passed` → `reviewed` → `needs-refinement` → `done`
+- **风格锚点 (styleAnchor)**: 首个页面是基准，后续页面以上一个最高分 done 页面为参考
+- **不引入 git worktree**：在当前分支操作，通过 manifest + tag 管理
 
 ---
 
@@ -50,7 +60,7 @@ UI 创建与设计审查编排。支持两种模式：**创建模式**（`--crea
 # === 审查模式（已有原型）===
 
 # 全流程审查
-/ditto-design-cycle docs/designs/specs/prototypes/style-b-graphite-studio/page-cross-market.html
+/ditto-design-cycle docs/designs/specs/prototypes/page-cross-market.html
 
 # 指定质量等级（默认 polished）
 /ditto-design-cycle page-cross-market.html --level best
@@ -83,6 +93,26 @@ UI 创建与设计审查编排。支持两种模式：**创建模式**（`--crea
 
 # 清理已完成任务的历史 tag
 /ditto-design-cycle --cleanup cross-market
+
+# === Edition 模式 ===
+
+# 批量创建所有页面（基于蓝图，带 style anchoring）
+/ditto-design-cycle --create-all
+
+# 创建指定 Edition（默认 v1）
+/ditto-design-cycle --create-all --edition v1
+
+# 只创建特定页面（跳过已完成的）
+/ditto-design-cycle --create-all --only markets,trading,research
+
+# 带参考页面的单页创建（--create 的扩展，向后兼容）
+/ditto-design-cycle page-markets.html --create --page markets --reference page-cross-market.html
+
+# Edition 级验收（所有 done 页面的最终走查）
+/ditto-design-cycle --edition-review
+
+# 指定 Edition 验收
+/ditto-design-cycle --edition-review --edition v1
 ```
 
 ---
@@ -204,6 +234,7 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 |------|------|------|
 | Phase 0: VERSION | sonnet | git 操作，纯机械 |
 | Phase 0.5: CREATE [--create] | sonnet | 基于蓝图生成 UI 原型 |
+| Phase 0.5: CREATE [--create-all] | sonnet | 循环调用单页 --create，带 style anchoring |
 | Phase 1: BASELINE | sonnet | 数据采集 + 脚本执行 |
 | Phase 2: CREATIVE DIRECTION | **opus** | 创意方向判断，策略选择和蓝图定义 |
 | Phase 3: Art Director | **opus** | 审美判断核心，气质评分 |
@@ -221,6 +252,7 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 | Phase 8: 自动化检测 | sonnet | Lighthouse/Token/视口 |
 | Phase 8: 最终气质评分 | **opus** | 最终审美裁决 |
 | Phase 9: SYNC | sonnet | 文档同步 |
+| Edition Review [--edition-review] | sonnet | 截图采集 + image analysis，无创意判断 |
 
 **实现方式**：Agent 工具调用时传入 `model` 参数，如 `Agent(prompt="...", model="opus")`。
 
@@ -279,13 +311,38 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │          （密度准则、字号映射、间距梯度）                  │
 │   2. 读取 Design Token（tokens-style.css）               │
 │   3. 读取设计决策（docs/designs/decisions/）             │
-│   4. 读取同风格参考页面（如有已完成的原型）               │
+│   4. [如 --reference <file>] 读取参考页面 HTML            │
+│      ├─ 提取参考页面的视觉指纹和组件模式                  │
+│      └─ 作为 impeccable:frontend-design 的 style reference│
 │   5. 调用 impeccable:frontend-design 生成 HTML 原型      │
 │      ├─ 传入蓝图中的模块清单和信息优先级                  │
 │      ├─ 传入产品规格中的密度/字号/间距标准                 │
-│      └─ 传入品牌 DNA（Graphite Studio 风格）             │
+│      ├─ 传入品牌 DNA（Graphite Studio 风格）             │
+│      └─ [如 --reference] 传入参考页面确保风格对齐         │
 │   6. 写入目标文件                                        │
 │   7. git add → commit → tag review/<task>/round-0        │
+│                                                         │
+│   ── --create-all 批量创建（Phase 0.5 循环变体）──       │
+│                                                         │
+│   触发条件: $ARGUMENTS 包含 --create-all                  │
+│                                                         │
+│   1. 读取页面蓝图（02_core_page_blueprints.md）           │
+│      └─ 提取所有需要 HTML 原型的页面 + 优先级            │
+│   2. 读取/创建 manifest（.edition-manifest.json）        │
+│      ├─ 不存在 → 初始化 edition v1，status="creating"     │
+│      └─ 已存在 → 跳过 status="done" 的页面               │
+│   3. 按 --only 参数过滤（如有），否则按蓝图优先级排序     │
+│   4. 逐页调用 impeccable:frontend-design：               │
+│      ├─ 第一个页面：无 reference，是 Edition 风格基准      │
+│      ├─ 后续页面：以 manifest 中最高分 done 页面为 anchor│
+│      │   └─ 传入 anchor 页面 HTML 作为 --reference        │
+│      ├─ 传入蓝图模块清单 + 产品规格 + 品牌 DNA           │
+│      └─ 写入目标文件 → 更新 manifest pages[]             │
+│   5. 全部完成后：                                        │
+│      ├─ manifest.status = "in-progress"                  │
+│      ├─ git add → commit → tag edition/v1/created        │
+│      └─ 输出创建摘要（页面数、anchor 链路、跳过列表）     │
+│   不做审查——批量创建阶段只产出初始原型                    │
 ├─────────────────────────────────────────────────────────┤
 │ Phase 1: BASELINE（基线采集 + 跨页视觉指纹）        [sonnet] │
 │                                                         │
@@ -301,11 +358,25 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │   7. [多视口] VP-STANDARD 内容溢出检测（详见 viewport.md） │
 │   8. [多视口] VP-COMPACT (1366x768) 抽检                 │
 │   9. [多视口] 恢复 VP-STANDARD，记录基线视口报告          │
-│  10. [跨页] 视觉指纹采集：                                │
-│      ├─ evaluate_script 提取各页面的视觉指纹：             │
-│      │   高亮描边密度 / 强调色面积比 / 视觉元素层级数     │
-│      │   留白节奏比 / 色彩种类数                          │
-│      └─ 生成「跨页一致性基线」                            │
+│  10. [跨页] 结构化 metrics 提取 + 一致性基线：            │
+│      ├─ 读取 manifest，确定需要采集的页面列表             │
+│      │   └─ 遍历 manifest 中 status != "done" 的页面      │
+│      │      （排除当前审查页）                             │
+│      ├─ 对每个页面执行：                                  │
+│      │   ├─ Chrome MCP: emulate(VP-STANDARD)              │
+│      │   │   → navigate → evaluate_script                 │
+│      │   └─ 提取结构化 metrics：                          │
+│      │       shell: { railWidth, headerHeight,           │
+│      │               mainPadding }                       │
+│      │       components: { tableHeaderHeight[],           │
+│      │       cardPadding[], badgeSize[], buttonHeight[] } │
+│      │       typography: { h1:{size,weight}, h2:{...},    │
+│      │       body:{...}, isUsingTokens:bool }             │
+│      │       colors: { brandAccentCount,                  │
+│      │       surfaceElevations[], functionalColorSet }    │
+│      ├─ 比对所有页面 metrics，标记偏离值                  │
+│      └─ 生成「跨页一致性基线报告」（结构化 JSON）         │
+│         作为 Phase 3 各角色的审查输入                     │
 ├─────────────────────────────────────────────────────────┤
 │ Phase 2: CREATIVE DIRECTION（创意蓝图）              [opus]  │
 │                                                         │
@@ -330,6 +401,15 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │   - 🟡 P1: 建议修复（影响体验）                           │
 │   - 🟢 P2: 可选优化（锦上添花）                           │
 │   - 💡 建议：对设计/信息架构的调整建议                     │
+│                                                         │
+│   ── Edition 增强：跨页一致性输入 ──                     │
+│                                                         │
+│   每个 Agent 的 prompt 追加（当 manifest 存在时）：       │
+│   "## 跨页一致性基线                                     │
+│    以下是本 Edition 已完成页面的结构化 metrics 对比。     │
+│    请特别关注：与其他页面不一致的组件尺寸、               │
+│    偏离 token 体系的硬编码值、与整体排版层级不符的字号。   │
+│    {跨页一致性基线报告（Phase 1 Step 10 生成）}"           │
 ├─────────────────────────────────────────────────────────┤
 │ Phase 4: CONFLICT RESOLUTION（冲突协调）            [opus]  │
 │                                                         │
@@ -421,11 +501,52 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │   9. 生成审查报告 → docs/reviews/（含 tag 引用）          │
 │  10. 更新 design decisions（如有架构调整）                 │
 │  11. 生成待同步清单（嵌入报告末尾）                       │
+│  12. [Edition 增强] 如 manifest 存在：                   │
+│      ├─ 更新对应 page 的 {status:"done", score, rounds}  │
+│      ├─ 如所有页面 status="done"                          │
+│      │   → manifest.status = "reviewing"                 │
+│      └─ 写入 .edition-manifest.json → git add             │
+│  13. [布局 bug 检测 — 仅 iterate 最后一轮或              │
+│      edition-review 时执行完整分析]                       │
+│      ├─ take_screenshot（VP-STANDARD, fullPage）          │
+│      ├─ analyze_image 检测：                             │
+│      │   内容溢出/截断 / 元素重叠/遮挡                   │
+│      │   对齐偏移 / 留白异常                              │
+│      └─ evaluate_script 交叉验证：                       │
+│          ├─ scrollHeight > clientHeight → 溢出确认        │
+│          └─ getBoundingClientRect() → 偏移量化             │
 ├─────────────────────────────────────────────────────────┤
 │ Phase 9: SYNC（反向同步，独立触发）                 [sonnet] │
 │                                                         │
 │   触发: /ditto-design-cycle <file> --sync              │
 │   详情见 [sync.md](../design-review/sync.md)             │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Edition 级验收
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Edition Review                              [--edition-review] [混合] │
+│                                                         │
+│   1. 读取 manifest，获取所有 status="done" 的页面       │
+│   2. 逐页打开 Chrome MCP：                             │
+│      ├─ emulate(VP-STANDARD 1536x1080)                │
+│      ├─ navigate → take_screenshot(fullPage)           │
+│      └─ analyze_image 检测：                          │
+│          ├─ 布局 bug（溢出、截断、重叠）               │
+│          ├─ 风格偏差（与 Edition 整体不一致的元素）     │
+│          └─ 排版问题（字号层级混乱、间距异常）          │
+│   3. 生成 Edition 级验收报告                           │
+│      ├─ 逐页截图 + 问题标记                            │
+│      ├─ 跨页一致性摘要                                │
+│      └─ 只标记 P0/P1 问题，不跑完整六角色审查          │
+│   4. 更新 manifest：                                   │
+│      ├─ crossPageAudit.lastRun / issues                │
+│      └─ 如无 P0 → manifest.status = "reviewed"        │
+│   5. git commit + tag edition/v1/reviewed             │
+│   6. 如有 P0 问题 → 逐页运行审查修复                   │
+│   7. 修复后 tag edition/v1/final                      │
 └─────────────────────────────────────────────────────────┘
 ```
 
