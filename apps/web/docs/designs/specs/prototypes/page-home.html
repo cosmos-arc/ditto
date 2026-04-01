@@ -75,7 +75,8 @@
     .header-action-btn:focus-visible,
     .panel-action:focus-visible,
     .header-avatar:focus-visible,
-    .decision-cta:focus-visible {
+    .decision-cta:focus-visible,
+    .workspace-quick-action:focus-visible {
       outline: none;
       box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
       border-radius: var(--radius-4);
@@ -289,11 +290,6 @@
       100% { opacity: 1; transform: translateY(0); }
     }
 
-    /* Pulse strip live indicators */
-    .shell-home .pulse-value[data-live] {
-      animation: dot-pulse 3s ease-in-out infinite;
-    }
-
     /* Alert critical dot pulse */
     .shell-home .alert-dot.critical {
       animation: dot-critical-pulse 2s ease-in-out infinite;
@@ -302,6 +298,197 @@
     /* Health degraded dot pulse */
     .shell-home .health-dot.degraded {
       animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Indicator semantic symbols (replaces hardcoded ▲▼)
+     * ══════════════════════════════════════════════ */
+    .indicator-up::before {
+      content: var(--indicator-up-sym, '▲');
+      color: var(--market-up-fg, var(--market-strong-fg));
+      font-size: 0.85em;
+      margin-right: 2px;
+    }
+    .indicator-down::before {
+      content: var(--indicator-down-sym, '▼');
+      color: var(--market-down-fg, var(--market-weak-fg));
+      font-size: 0.85em;
+      margin-right: 2px;
+    }
+
+    /* ── Status dot — live indicator lamp ── */
+    .status-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .status-dot.live {
+      background: var(--system-healthy-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    .status-dot.running {
+      width: 4px;
+      height: 4px;
+      background: var(--system-healthy-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    .status-dot.paused {
+      width: 4px;
+      height: 4px;
+      background: var(--text-disabled);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Regime tag capsule — extreme restraint
+     * ══════════════════════════════════════════════ */
+    .regime-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 8px;
+      border-radius: 10px;
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      letter-spacing: 0.02em;
+    }
+    .regime-tag.risk-on {
+      background: color-mix(in oklch, var(--market-strong-fg) 8%, transparent);
+      color: var(--market-strong-fg);
+    }
+    .regime-tag.risk-off {
+      background: color-mix(in oklch, var(--market-weak-fg) 8%, transparent);
+      color: var(--market-weak-fg);
+    }
+    .regime-tag.moderate {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+    }
+    .regime-tag.volatile {
+      background: color-mix(in oklch, var(--risk-high-fg) 8%, transparent);
+      color: var(--risk-high-fg);
+    }
+
+    /* ── Sparkline inline SVG ── */
+    .sparkline {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: var(--space-2);
+      flex-shrink: 0;
+    }
+
+    /* ── Pulse item label spacer ── */
+    .pulse-label-spacer { margin-left: var(--space-8); }
+
+    /* ── Risk level colors for pulse ── */
+    .pulse-value.risk-medium { color: var(--risk-high-fg); }
+
+    /* ══════════════════════════════════════════════
+     * R2: My Workspace — 4-column widget grid
+     * ══════════════════════════════════════════════ */
+    .workspace-panel {
+      background: var(--surface-panel-base);
+      border-radius: var(--radius-6);
+      padding: var(--space-10);
+    }
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-6);
+    }
+    .workspace-widget {
+      background: var(--surface-panel-elevated);
+      border-radius: var(--radius-4);
+      padding: var(--space-10);
+    }
+    .workspace-widget-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+    .workspace-widget-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .workspace-strategy-item,
+    .workspace-watchlist-item,
+    .workspace-backtest-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-2) 0;
+    }
+    .workspace-strategy-name,
+    .workspace-watchlist-name,
+    .workspace-backtest-name {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+    .workspace-strategy-status,
+    .workspace-watchlist-count,
+    .workspace-backtest-status {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .workspace-backtest-bar {
+      width: 100%;
+      height: 2px;
+      background: var(--border-subtle);
+      border-radius: 1px;
+      margin-top: var(--space-2);
+      overflow: hidden;
+    }
+    .workspace-backtest-bar-fill {
+      height: 100%;
+      border-radius: 1px;
+      background: var(--brand-accent);
+      transition: width var(--motion-duration-slow) var(--motion-easing-standard);
+    }
+    .workspace-quick-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .workspace-quick-action {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      padding: var(--space-3) 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-family-ui);
+      width: 100%;
+      text-align: left;
+      border-radius: var(--radius-3);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .workspace-quick-action:hover {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .workspace-quick-action svg {
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    /* ── R2 POLISH: Activate value-flash on PnL (one-shot on load) ── */
+    .shell-home .metric-value {
+      animation: value-flash 400ms ease-out;
+    }
+
+    /* ── R2 POLISH: task-breathe on running strategy names ── */
+    .workspace-strategy-item:has(.status-dot.running) .workspace-strategy-name {
+      animation: task-breathe 4s ease-in-out infinite;
     }
 
     /* ── Respect reduced motion ── */
@@ -400,32 +587,34 @@
 
     <!-- ═══ Pulse Strip (operational status line) ═══ -->
     <div class="shell-pulse">
+      <!-- 1. Time + Status -->
       <div class="pulse-item">
-        <span class="pulse-value">2026-03-28</span>
+        <span class="pulse-value"><span class="status-dot live"></span>2026-03-28 · 盘中交易</span>
       </div>
       <div class="pulse-separator"></div>
+      <!-- 2. PnL -->
       <div class="pulse-item">
-        <span class="pulse-value" data-live>盘中交易</span>
+        <span class="pulse-label">盈亏</span>
+        <span class="pulse-value positive">+0.34%</span>
       </div>
       <div class="pulse-separator"></div>
+      <!-- 3. Risk -->
       <div class="pulse-item">
-        <span class="pulse-label">预警</span>
-        <span class="pulse-value negative">4</span>
+        <span class="pulse-label">风险</span>
+        <span class="pulse-value risk-medium">中等</span>
       </div>
       <div class="pulse-separator"></div>
+      <!-- 4. Regime -->
       <div class="pulse-item">
-        <span class="pulse-label">任务</span>
-        <span class="pulse-value" data-live>3 个运行中</span>
+        <span class="regime-tag moderate">温和风险偏好</span>
       </div>
       <div class="pulse-separator"></div>
+      <!-- 5. Pending + Jobs -->
       <div class="pulse-item">
-        <span class="pulse-label">连接</span>
-        <span class="pulse-value" data-live>正常</span>
-      </div>
-      <div class="pulse-separator"></div>
-      <div class="pulse-item">
-        <span class="pulse-label">数据</span>
-        <span class="pulse-value" data-live>实时</span>
+        <span class="pulse-label">待处理</span>
+        <span class="pulse-value">2</span>
+        <span class="pulse-label pulse-label-spacer">运行中</span>
+        <span class="pulse-value">3</span>
       </div>
     </div>
 
@@ -440,11 +629,11 @@
             <div class="decision-primary">
               <span class="metric-label">今日盈亏</span>
               <span class="metric-value positive">+¥86,472.50</span>
-              <span class="metric-sub">+0.34% · 总权益 ¥25,432,180 · ▲ 较昨日 +¥21,400</span>
+              <span class="metric-sub">+0.34% · 总权益 ¥25,432,180 · <span class="indicator-up">较昨日 +¥21,400</span></span>
             </div>
             <!-- Middle: Market context + judgment (~33%) -->
             <div class="decision-judgment">
-              <div class="decision-judgment-text">温和风险偏好，波动回落，北向转暖，但局部拥挤。</div>
+              <div class="decision-judgment-text"><span class="regime-tag moderate">温和风险偏好</span> 波动回落，北向转暖，但局部拥挤。</div>
               <div class="decision-judgment-metrics">
                 <div class="decision-judgment-metric">
                   <span class="status-label">IVIX</span>
@@ -567,6 +756,112 @@
             </div>
           </div>
         </div>
+
+        <!-- My Workspace — user-customizable quick access (full-width, 4-column) -->
+        <div class="panel workspace-panel">
+          <div class="panel-header">
+            <span class="panel-title">My Workspace</span>
+            <span class="panel-subtitle">个人工作台</span>
+            <div class="panel-actions">
+              <button class="panel-action" role="link">编辑工作台 →</button>
+            </div>
+          </div>
+          <div class="workspace-grid">
+            <!-- Widget 1: 常用策略 -->
+            <div class="workspace-widget">
+              <div class="workspace-widget-header">
+                <span class="workspace-widget-title">常用策略</span>
+                <button class="panel-action" role="link">管理</button>
+              </div>
+              <div class="workspace-strategy-item">
+                <span class="workspace-strategy-name">Alpha v3 — 日内</span>
+                <span class="workspace-strategy-status">
+                  <span class="status-dot running" aria-hidden="true"></span>运行中
+                </span>
+              </div>
+              <div class="workspace-strategy-item">
+                <span class="workspace-strategy-name">情绪因子 v2</span>
+                <span class="workspace-strategy-status">
+                  <span class="status-dot running" aria-hidden="true"></span>运行中
+                </span>
+              </div>
+              <div class="workspace-strategy-item">
+                <span class="workspace-strategy-name">价值因子 Q1</span>
+                <span class="workspace-strategy-status">
+                  <span class="status-dot paused" aria-hidden="true"></span>已暂停
+                </span>
+              </div>
+            </div>
+
+            <!-- Widget 2: 观察列表 -->
+            <div class="workspace-widget">
+              <div class="workspace-widget-header">
+                <span class="workspace-widget-title">观察列表</span>
+                <button class="panel-action" role="link">管理</button>
+              </div>
+              <div class="workspace-watchlist-item">
+                <span class="workspace-watchlist-name">核心持仓</span>
+                <span class="workspace-watchlist-count">8 只</span>
+              </div>
+              <div class="workspace-watchlist-item">
+                <span class="workspace-watchlist-name">今日关注</span>
+                <span class="workspace-watchlist-count">5 只</span>
+              </div>
+              <div class="workspace-watchlist-item">
+                <span class="workspace-watchlist-name">因子跟踪</span>
+                <span class="workspace-watchlist-count">12 只</span>
+              </div>
+              <div class="workspace-watchlist-item">
+                <span class="workspace-watchlist-name">行业轮动</span>
+                <span class="workspace-watchlist-count">6 只</span>
+              </div>
+            </div>
+
+            <!-- Widget 3: 回测任务 -->
+            <div class="workspace-widget">
+              <div class="workspace-widget-header">
+                <span class="workspace-widget-title">回测任务</span>
+                <button class="panel-action" role="link">查看全部</button>
+              </div>
+              <div class="workspace-backtest-item">
+                <span class="workspace-backtest-name">价值因子 Q1</span>
+                <span class="workspace-backtest-status icon-healthy">完成</span>
+              </div>
+              <div class="workspace-backtest-item">
+                <span class="workspace-backtest-name">行业轮动优化</span>
+                <span class="workspace-backtest-status">67%</span>
+              </div>
+              <div class="workspace-backtest-bar">
+                <div class="workspace-backtest-bar-fill" style="width: 67%"></div>
+              </div>
+              <div class="workspace-backtest-item">
+                <span class="workspace-backtest-name">北向因子 v2</span>
+                <span class="workspace-backtest-status">排队中</span>
+              </div>
+            </div>
+
+            <!-- Widget 4: 快速操作 -->
+            <div class="workspace-widget">
+              <div class="workspace-widget-header">
+                <span class="workspace-widget-title">快速操作</span>
+              </div>
+              <div class="workspace-quick-actions">
+                <button class="workspace-quick-action" type="button">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+                  新建模拟组合
+                </button>
+                <button class="workspace-quick-action" type="button">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+                  批量下单
+                </button>
+                <button class="workspace-quick-action" type="button">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12M9 4v12"/></svg>
+                  策略回测
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Secondary: Research Progress + Agent Insights -->
@@ -660,19 +955,27 @@
           <div class="context-section-body">
             <div class="pulse-metric">
               <span class="pulse-metric-label">沪深300</span>
-              <span class="pulse-metric-value up">3,432 · +0.82%</span>
+              <span class="pulse-metric-value up">3,432 · +0.82%
+                <svg class="sparkline" width="48" height="16" viewBox="0 0 48 16" fill="none" aria-hidden="true">
+                  <polyline points="2,12 8,10 14,11 20,8 26,9 32,5 38,4 44,3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">波动率</span>
-              <span class="pulse-metric-value">IVIX 18.52 · -3.1%</span>
+              <span class="pulse-metric-value">IVIX 18.52 · <span class="indicator-down">-3.1%</span></span>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">涨跌比</span>
-              <span class="pulse-metric-value up">2.1:1</span>
+              <span class="pulse-metric-value up">2.1:1 · <span class="indicator-up">偏多</span></span>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">北向资金</span>
-              <span class="pulse-metric-value up">+12.4 亿</span>
+              <span class="pulse-metric-value up">+12.4 亿
+                <svg class="sparkline" width="48" height="16" viewBox="0 0 48 16" fill="none" aria-hidden="true">
+                  <polyline points="2,10 8,12 14,9 20,11 26,7 32,8 38,5 44,4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
             </div>
           </div>
         </div>
