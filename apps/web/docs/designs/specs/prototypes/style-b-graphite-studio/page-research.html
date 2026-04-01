@@ -392,6 +392,20 @@
       color: var(--system-down-fg);
     }
 
+    /* ── Validating status pulse ── */
+    .status-dot.brand {
+      animation: validating-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes validating-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in oklch, var(--brand-accent) 40%, transparent); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 3px color-mix(in oklch, var(--brand-accent) 15%, transparent); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .status-dot.brand { animation: none; }
+    }
+
     .cell-universe {
       display: inline-flex;
       align-items: center;
