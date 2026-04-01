@@ -1,0 +1,86 @@
+{
+  "edition": "v1",
+  "style": "style-b-graphite-studio",
+  "created": "2026-04-01",
+  "status": "in-progress",
+  "pages": [
+    {
+      "id": "cross-market",
+      "file": "page-cross-market.html",
+      "status": "done",
+      "score": 9.33,
+      "styleAnchor": null,
+      "rounds": 2,
+      "createdAt": "2026-03-28"
+    },
+    {
+      "id": "platform",
+      "file": "page-platform.html",
+      "status": "done",
+      "score": 9.5,
+      "styleAnchor": "cross-market",
+      "rounds": 4,
+      "createdAt": "2026-03-29"
+    },
+    {
+      "id": "research",
+      "file": "page-research.html",
+      "status": "needs-refinement",
+      "score": null,
+      "styleAnchor": "cross-market",
+      "rounds": 7,
+      "createdAt": "2026-03-30"
+    },
+    {
+      "id": "markets",
+      "file": "page-markets.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": null,
+      "rounds": 0,
+      "createdAt": "2026-03-31"
+    },
+    {
+      "id": "markets-screener",
+      "file": "page-markets-screener.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": null,
+      "rounds": 0,
+      "createdAt": "2026-03-31"
+    },
+    {
+      "id": "trading",
+      "file": "page-trading.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": null,
+      "rounds": 0,
+      "createdAt": "2026-03-31"
+    },
+    {
+      "id": "home-compact",
+      "file": "prototype-compact.html",
+      "status": "created",
+      "score": null,
+      "styleAnchor": null,
+      "rounds": 0,
+      "createdAt": "2026-03-31"
+    }
+  ],
+  "auxiliary": [
+    { "id": "home-dense", "file": "prototype-dense.html", "role": "density-variant", "base": "home-compact" },
+    { "id": "home-comfortable", "file": "prototype-comfortable.html", "role": "density-variant", "base": "home-compact" }
+  ],
+  "legacy": [
+    { "id": "research-legacy", "file": "research_legacy.html", "supersededBy": "research" },
+    { "id": "screener-legacy", "file": "screener_legacy.html", "supersededBy": "markets-screener" },
+    { "id": "signals-legacy", "file": "signals_legacy.html", "supersededBy": null },
+    { "id": "risk-legacy", "file": "risk_legacy.html", "supersededBy": null }
+  ],
+  "crossPageAudit": {
+    "lastRun": null,
+    "issues": 0,
+    "fixed": 0
+  }
+}
