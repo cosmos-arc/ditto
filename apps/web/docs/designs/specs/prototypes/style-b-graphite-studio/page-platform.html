@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ditto — Platform</title>
+  <title>Ditto — 平台运维</title>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -91,14 +91,62 @@
       -webkit-backdrop-filter: blur(12px);
     }
 
-    /* ── Brand anchor: health strip accent underline ── */
+    /* Brand anchor: health strip accent light band */
     .shell-ops .ops-health {
-      border-bottom: 1px solid var(--brand-accent-subtle);
+      border-bottom: 2px solid var(--brand-accent);
+      position: relative;
+    }
+    /* Subtle glow below the accent line */
+    .shell-ops .ops-health::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 10%;
+      right: 10%;
+      height: 3px;
+      background: var(--brand-accent);
+      opacity: 0.08;
+      border-radius: 2px;
+      pointer-events: none;
     }
 
     /* ── Panel body breathing room ── */
     .shell-ops .panel-body {
       padding: var(--space-4) 0;
+    }
+
+    /* ── Panel Tabs ── */
+    .panel-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex: 1;
+    }
+
+    .panel-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-4) var(--space-8);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      border-radius: var(--radius-4) var(--radius-4) 0 0;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-8);
+    }
+
+    .panel-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .panel-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
     }
 
     /* ── Header subtitle ── */
@@ -107,6 +155,17 @@
       color: var(--text-tertiary);
       font-weight: var(--font-weight-regular);
       margin-left: var(--space-8);
+    }
+
+    /* Accessibility: auxiliary labels — upgrade to 12px for readability */
+    .panel-subtitle {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+
+    /* Alert timestamp — upgrade from 10px for consistency */
+    .alert-time {
+      font-size: var(--font-size-12);
     }
 
     /* ── Environment Badge ── */
@@ -120,7 +179,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--system-healthy-fg);
-      border-left: 2px solid var(--brand-accent);
+      border-left: 2px solid var(--system-healthy-fg);
     }
 
     .env-badge-dot {
@@ -235,6 +294,12 @@
     }
 
     /* ── Ops Main: stacked panels ── */
+    /* Data source panel: primary workspace */
+    .ops-main .panel:first-child {
+      flex: 1;
+      min-height: 0;
+    }
+
     .ops-main .panel + .panel {
       border-top: none;
       margin-top: -1px;
@@ -298,8 +363,8 @@
     .quota-text.critical { color: var(--system-down-fg); }
 
     .quota-bar {
-      width: 60px;
-      height: 3px;
+      width: 80px;
+      height: 4px;
       background: var(--neutral-200);
       border-radius: 2px;
       overflow: hidden;
@@ -308,6 +373,7 @@
     .quota-bar-fill {
       height: 100%;
       border-radius: 2px;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     .quota-bar-fill.ok       { background: var(--system-healthy-fg); }
@@ -474,7 +540,7 @@
 
     /* ── Sort indicator ── */
     .sort-indicator {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-disabled);
       margin-left: var(--space-2);
     }
@@ -488,7 +554,7 @@
 
     /* ── Alert severity text label ── */
     .alert-severity {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-semibold);
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -522,11 +588,11 @@
       width: 6px; height: 6px;
       border-radius: 50%;
       background: var(--system-healthy-fg);
-      margin-right: var(--space-4);
+      margin-right: var(--space-6);
       flex-shrink: 0;
     }
     .status-sep {
-      margin: 0 var(--space-6);
+      margin: 0 var(--space-4);
       color: var(--border-subtle);
     }
     .status-spacer { flex: 1; }
@@ -544,7 +610,7 @@
       .btn, .rail-icon, .header-btn-badge, .header-action-btn,
       .panel-action, .quota-bar-fill, .resource-bar-fill,
       .status-indicator, .alert-row, .data-table tr,
-      .skeleton, .task-item.running .task-status::after {
+      .skeleton, .task-item.running, .task-item.running .task-status::after {
         transition: none !important;
         animation: none !important;
       }
@@ -577,6 +643,11 @@
       background: var(--interaction-hover-strong-bg);
     }
 
+    /* Brand anchor: table header bottom accent */
+    .data-table thead {
+      border-bottom: 2px solid color-mix(in oklch, var(--brand-accent) 35%, transparent);
+    }
+
     /* Disconnected row persistent highlight */
     .data-table tr.row-down td {
       background: var(--system-down-bg);
@@ -587,15 +658,26 @@
 
     /* Alert row entrance */
     .alert-row {
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  padding-left var(--motion-duration-fast) var(--motion-easing-standard);
+      border-left: 2px solid transparent;
+      padding-left: var(--space-8);
     }
     .alert-row:hover {
       background: var(--interaction-hover-subtle-bg);
+      border-left-color: color-mix(in oklch, var(--text-tertiary) 40%, transparent);
     }
     /* Critical alert left accent — scan priority */
     .alert-row:has(.alert-dot.critical) {
-      border-left: 2px solid var(--system-down-fg);
-      padding-left: calc(var(--space-8) - 2px);
+      border-left-color: var(--system-down-fg);
+    }
+    .alert-row:has(.alert-dot.critical):hover {
+      border-left-color: var(--system-down-fg);
+    }
+    /* Warning alert hover — warm indicator */
+    .alert-row:has(.alert-dot.warning):hover {
+      border-left-color: color-mix(in oklch, var(--system-degraded-fg) 50%, transparent);
     }
 
     /* ══════════════════════════════════════════════
@@ -616,14 +698,14 @@
 
     /* Rail logo subtle brand glow */
     .rail-logo {
-      text-shadow: 0 0 12px oklch(0.700 0.165 255 / 0.15);
+      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
     }
 
     /* ══════════════════════════════════════════════
      * R2: Trend indicators — health metric arrows
      * ══════════════════════════════════════════════ */
     .health-trend {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       margin-left: var(--space-2);
       font-family: var(--font-family-numeric);
     }
@@ -668,15 +750,54 @@
     /* ══════════════════════════════════════════════
      * R3: Detail Panel — first section priority weight
      * ══════════════════════════════════════════════ */
+    /* Brand anchor: detail panel top glow bar */
     .context-section:first-child {
-      border-top: 2px solid oklch(0.700 0.165 255 / 0.20);
+      border-top: none;
+    }
+    .ops-detail .context-rail::before {
+      content: '';
+      display: block;
+      height: 4px;
+      flex-shrink: 0;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 50%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 70%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 50%, transparent) 70%,
+        transparent 100%
+      );
+    }
+
+    /* Detail panel section proportions: tasks 35%, resources 30%, events 35% */
+    .ops-detail .context-section:nth-child(1) {
+      flex: 3.5;
+      min-height: 0;
+    }
+    .ops-detail .context-section:nth-child(2) {
+      flex: 3;
+      min-height: 0;
+    }
+    .ops-detail .context-section:nth-child(3) {
+      flex: 3.5;
+      min-height: 0;
+    }
+    /* Override layout-base.css last-child:0 0 auto */
+    .ops-detail .context-section:last-child {
+      flex: 3.5;
+      min-height: 0;
     }
 
     .task-item.running {
-      background: oklch(0.700 0.165 255 / 0.03);
+      background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
       border-radius: var(--radius-4);
       padding-left: var(--space-4);
       padding-right: var(--space-4);
+      animation: task-breathe 3s ease-in-out infinite;
+    }
+    @keyframes task-breathe {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.88; }
     }
 
     /* ══════════════════════════════════════════════
@@ -709,7 +830,7 @@
      * R3: Row-down action hint
      * ══════════════════════════════════════════════ */
     .row-action {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: color-mix(in oklch, var(--brand-accent) 60%, transparent);
       cursor: pointer;
       padding: 1px var(--space-4);
@@ -752,9 +873,9 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        oklch(0.700 0.165 255 / 0.10) 20%,
-        oklch(0.700 0.165 255 / 0.18) 50%,
-        oklch(0.700 0.165 255 / 0.10) 80%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
         transparent 100%
       );
       pointer-events: none;
@@ -804,7 +925,7 @@
       vertical-align: middle;
       width: 40px;
       height: 14px;
-      margin-left: var(--space-4);
+      margin-left: var(--space-8);
     }
     .sparkline path {
       fill: none;
@@ -827,22 +948,77 @@
       right: -8px;
       top: 50%;
       transform: translateY(-50%);
-      width: 5px;
-      height: 5px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: var(--brand-accent);
       animation: task-pulse 2s ease-in-out infinite;
     }
     @keyframes task-pulse {
-      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 oklch(0.700 0.165 255 / 0.4); }
-      50%      { opacity: 0.7; box-shadow: 0 0 0 4px oklch(0.700 0.165 255 / 0); }
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in oklch, var(--brand-accent) 40%, transparent); }
+      50%      { opacity: 0.7; box-shadow: 0 0 0 4px color-mix(in oklch, var(--brand-accent) 0%, transparent); }
     }
 
     /* ══════════════════════════════════════════════
      * R6: Alert panel flex fix
      * ══════════════════════════════════════════════ */
+    /* Alert panel: compact, scrollable */
     .ops-main .panel.panel-alerts {
-      flex: 1;
+      flex: 0 0 auto;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    /* Brand anchor: rail active indicator */
+    .rail-icon.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: var(--brand-accent);
+    }
+
+    /* ── DQ Badge ── */
+    .dq-badge {
+      display: inline-block;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      margin-left: var(--space-4);
+      vertical-align: middle;
+    }
+    .dq-badge.ok {
+      background: oklch(0.68 0.12 175 / 0.15);
+      color: var(--system-healthy-fg);
+    }
+    .dq-badge.warn {
+      background: oklch(0.77 0.14 80 / 0.15);
+      color: var(--system-degraded-fg);
+    }
+    .dq-badge.critical {
+      background: oklch(0.63 0.16 22 / 0.15);
+      color: var(--system-down-fg);
+    }
+
+    /* Health strip grouping */
+    .health-metric-group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+    .health-metric-group + .health-metric-group {
+      margin-left: var(--space-8);
+      padding-left: var(--space-8);
+      border-left: 1px solid var(--border-subtle);
+    }
+
+    /* Consistent table row height */
+    .data-table tbody tr {
+      height: var(--density-row-height);
     }
   </style>
 </head>
@@ -869,27 +1045,27 @@
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="Home" title="Home">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="Markets" title="Markets">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="Research" title="Research">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="Trading" title="Trading">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
         <div class="rail-icon" tabindex="0" role="button" aria-label="AI" title="AI">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
-        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="Platform" title="Platform">
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="运维" title="运维">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
       <div class="rail-bottom">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="Settings" title="Settings">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
         </div>
       </div>
@@ -912,7 +1088,7 @@
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h14v12H3z"/><path d="M3 9h14M7 4v12M10 9v7"/></svg>
           <span class="badge-count">4</span>
         </div>
-        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="Notifications">
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
         </div>
         <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
@@ -921,40 +1097,39 @@
 
     <!-- ═══ Health Strip (36px) ═══ -->
     <div class="ops-health" role="status" aria-label="系统健康指标">
-      <div class="health-metric">
-        <span class="health-metric-dot healthy"></span>
-        <span class="health-metric-label">数据新鲜度</span>
-        <span class="health-metric-value ok">98.2%</span><span class="health-trend up">↑</span>
+      <div class="health-metric-group">
+        <div class="health-metric">
+          <span class="health-metric-dot healthy"></span>
+          <span class="health-metric-label">数据新鲜度</span>
+          <span class="health-metric-value ok">98.2%</span><span class="health-trend up">↑</span>
+        </div>
+        <div class="health-metric">
+          <span class="health-metric-dot healthy"></span>
+          <span class="health-metric-label">完整度</span>
+          <span class="health-metric-value ok">99.4%</span><span class="health-trend flat">→</span>
+        </div>
+        <div class="health-metric">
+          <span class="health-metric-dot healthy"></span>
+          <span class="health-metric-label">准确度</span>
+          <span class="health-metric-value ok">99.8%</span><span class="health-trend flat">→</span>
+        </div>
       </div>
-      <div class="health-metric-separator"></div>
-      <div class="health-metric">
-        <span class="health-metric-dot healthy"></span>
-        <span class="health-metric-label">数据完整度</span>
-        <span class="health-metric-value ok">99.4%</span><span class="health-trend flat">→</span>
-      </div>
-      <div class="health-metric-separator"></div>
-      <div class="health-metric">
-        <span class="health-metric-dot healthy"></span>
-        <span class="health-metric-label">数据准确度</span>
-        <span class="health-metric-value ok">99.8%</span><span class="health-trend flat">→</span>
-      </div>
-      <div class="health-metric-separator"></div>
-      <div class="health-metric">
-        <span class="health-metric-dot degraded"></span>
-        <span class="health-metric-label">数据源在线</span>
-        <span class="health-metric-value warn">4/5</span><span class="health-trend down">↓</span>
-      </div>
-      <div class="health-metric-separator"></div>
-      <div class="health-metric">
-        <span class="health-metric-dot brand"></span>
-        <span class="health-metric-label">任务运行</span>
-        <span class="health-metric-value brand">3/4</span>
-      </div>
-      <div class="health-metric-separator"></div>
-      <div class="health-metric">
-        <span class="health-metric-dot healthy"></span>
-        <span class="health-metric-label">系统负载</span>
-        <span class="health-metric-value ok">23%</span><span class="health-trend up">↑</span>
+      <div class="health-metric-group">
+        <div class="health-metric">
+          <span class="health-metric-dot degraded"></span>
+          <span class="health-metric-label">数据源在线</span>
+          <span class="health-metric-value warn">4/5</span><span class="health-trend down">↓</span>
+        </div>
+        <div class="health-metric">
+          <span class="health-metric-dot brand"></span>
+          <span class="health-metric-label">任务运行</span>
+          <span class="health-metric-value brand">3/4</span>
+        </div>
+        <div class="health-metric">
+          <span class="health-metric-dot healthy"></span>
+          <span class="health-metric-label">系统负载</span>
+          <span class="health-metric-value ok">23%</span><span class="health-trend up">↑</span>
+        </div>
       </div>
     </div>
 
@@ -963,7 +1138,10 @@
       <!-- Panel 1: 数据源 / 数据质量 -->
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">数据源 <span class="panel-subtitle">5 个源</span></span>
+          <div class="panel-tabs">
+            <span class="panel-tab active" role="tab" aria-selected="true">数据源 <span class="panel-subtitle">5 个源</span></span>
+            <span class="panel-tab" role="tab" aria-selected="false">管道与任务 <span class="panel-subtitle">运行中 2</span></span>
+          </div>
         </div>
         <div class="panel-body">
           <table class="data-table">
@@ -971,6 +1149,7 @@
               <tr>
                 <th scope="col">数据源</th>
                 <th scope="col">状态 <span class="sort-indicator" aria-label="按严重程度排序">▼</span></th>
+                <th scope="col">质量 <span class="sort-indicator">▼</span></th>
                 <th scope="col">延迟</th>
                 <th scope="col">API 配额</th>
                 <th scope="col">上次同步</th>
@@ -987,6 +1166,7 @@
                     正常
                   </span>
                 </td>
+                <td class="cell-numeric">99.8<span class="dq-badge ok">优</span></td>
                 <td class="cell-numeric">2s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 5 L16 8 L24 4 L32 6 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 5 L16 8 L24 4 L32 6 L40 7"/></svg></td>
                 <td>
                   <div class="quota-cell">
@@ -1006,6 +1186,7 @@
                     正常
                   </span>
                 </td>
+                <td class="cell-numeric">99.9<span class="dq-badge ok">优</span></td>
                 <td class="cell-numeric">1s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 6 L16 7 L24 5 L32 7 L40 6 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 6 L16 7 L24 5 L32 7 L40 6"/></svg></td>
                 <td>
                   <span class="quota-text ok">无限制</span>
@@ -1022,6 +1203,7 @@
                     延迟
                   </span>
                 </td>
+                <td class="cell-numeric">97.2<span class="dq-badge warn">良</span></td>
                 <td class="cell-numeric cell-warn">45s<svg class="sparkline warn" viewBox="0 0 40 14"><path d="M0 14 L0 6 L8 7 L16 10 L24 12 L32 13 L40 13 L40 14Z" fill="url(#spark-fill-warn)"/><path d="M0 6 L8 7 L16 10 L24 12 L32 13 L40 13"/></svg></td>
                 <td>
                   <div class="quota-cell">
@@ -1041,6 +1223,7 @@
                     正常
                   </span>
                 </td>
+                <td class="cell-numeric">99.5<span class="dq-badge ok">优</span></td>
                 <td class="cell-numeric">3s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 8 L8 7 L16 6 L24 8 L32 5 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 8 L8 7 L16 6 L24 8 L32 5 L40 7"/></svg></td>
                 <td>
                   <div class="quota-cell">
@@ -1062,6 +1245,7 @@
                   <span class="row-action" tabindex="0" role="button" aria-label="重试连接聚宽">重试</span>
                 </td>
                 <td class="cell-disabled">—</td>
+                <td class="cell-disabled">—</td>
                 <td>
                   <span class="quota-text muted">—</span>
                 </td>
@@ -1076,8 +1260,10 @@
       <!-- Panel 2: 系统预警 -->
       <div class="panel panel-alerts">
         <div class="panel-header">
-          <span class="panel-title">系统预警</span>
-          <span class="panel-count panel-count-critical">4</span>
+          <div class="panel-tabs">
+            <span class="panel-tab active" role="tab" aria-selected="true">系统告警 <span class="panel-count panel-count-critical" style="margin-left:var(--space-4)">4</span></span>
+            <span class="panel-tab" role="tab" aria-selected="false">日志</span>
+          </div>
           <div class="panel-actions">
             <span class="panel-action" tabindex="0" role="button">查看全部 →</span>
           </div>
@@ -1090,7 +1276,7 @@
               <span class="alert-title">上交所行情接口响应超时 <span class="alert-severity critical">严重</span></span>
               <span class="alert-desc">超时 45s，已自动切换备用源</span>
             </div>
-            <span class="alert-time">28 分钟前</span>
+            <span class="alert-time">13:54:00</span>
           </div>
           <!-- Alert 2 — critical -->
           <div class="alert-row">
@@ -1099,7 +1285,7 @@
               <span class="alert-title">模型评分服务异常 <span class="alert-severity critical">严重</span></span>
               <span class="alert-desc">情绪 Alpha v2 评分返回 503，已自动重试 2 次</span>
             </div>
-            <span class="alert-time">2 小时前</span>
+            <span class="alert-time">12:32:15</span>
           </div>
           <!-- Alert 3 — warning -->
           <div class="alert-row">
@@ -1108,7 +1294,7 @@
               <span class="alert-title">Tushare API 日配额即将耗尽 <span class="alert-severity warning">警告</span></span>
               <span class="alert-desc">4,820/5,000 今日请求，预计 3 小时后重置</span>
             </div>
-            <span class="alert-time">12 分钟前</span>
+            <span class="alert-time">14:20:15</span>
           </div>
           <!-- Alert 4 — warning -->
           <div class="alert-row">
@@ -1117,7 +1303,7 @@
               <span class="alert-title">因子计算任务延迟 <span class="alert-severity warning">警告</span></span>
               <span class="alert-desc">北向持仓变化率因子计算积压 15 分钟</span>
             </div>
-            <span class="alert-time">1 小时前</span>
+            <span class="alert-time">13:32:08</span>
           </div>
         </div>
       </div>
@@ -1129,7 +1315,7 @@
         <!-- Section 1: 管道/任务 -->
         <div class="context-section">
           <div class="context-section-header">
-            <span class="context-section-title">Pipeline & 任务</span>
+            <span class="context-section-title">管道与任务</span>
             <span class="panel-count panel-count-healthy">运行中 2</span>
           </div>
           <div class="context-section-body">
@@ -1183,7 +1369,7 @@
         <!-- Section 2: 资源/配额 -->
         <div class="context-section">
           <div class="context-section-header">
-            <span class="context-section-title">资源 & 配额</span>
+            <span class="context-section-title">资源与配额</span>
           </div>
           <div class="context-section-body">
             <!-- API 配额 (Tushare) — critical -->
