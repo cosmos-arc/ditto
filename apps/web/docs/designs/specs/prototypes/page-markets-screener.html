@@ -138,31 +138,28 @@
     .risk-dot.medium::before { background: var(--risk-medium-fg); }
     .risk-dot.high::before   { background: var(--risk-high-fg); }
 
-    /* ── Sparkline variants ── */
+    /* ── Sparkline — SVG inline mini-chart ── */
     :root {
       --sparkline-w: 48px;
       --sparkline-h: 20px;
     }
 
+    .sparkline-up svg,
+    .sparkline-down svg,
+    .sparkline-flat svg {
+      width: var(--sparkline-w);
+      height: var(--sparkline-h);
+      display: block;
+    }
+
     .sparkline-up {
-      width: var(--sparkline-w);
-      height: var(--sparkline-h);
-      background: linear-gradient(135deg, transparent 35%, var(--market-up-subtle) 35%);
-      border-radius: 2px;
+      color: var(--market-up-fg);
     }
-
     .sparkline-down {
-      width: var(--sparkline-w);
-      height: var(--sparkline-h);
-      background: linear-gradient(135deg, var(--market-down-subtle) 35%, transparent 35%);
-      border-radius: 2px;
+      color: var(--market-down-fg);
     }
-
     .sparkline-flat {
-      width: var(--sparkline-w);
-      height: var(--sparkline-h);
-      background: linear-gradient(0deg, transparent 45%, var(--neutral-200) 45%, var(--neutral-200) 55%, transparent 55%);
-      border-radius: 2px;
+      color: var(--text-tertiary);
       opacity: 0.5;
     }
 
@@ -246,6 +243,7 @@
       height: 100%;
       border-radius: 2px;
       transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.15);
     }
 
     .score-bar-fill.brand { background: var(--brand-accent); }
@@ -445,6 +443,16 @@
       flex: 1 0 auto;
     }
 
+    /* ── Detail panel depth shadow ── */
+    .shell-catalog .catalog-detail {
+      box-shadow: inset 4px 0 8px -4px oklch(0 0 0 / 0.06);
+    }
+
+    /* ── Sorted column brand accent ── */
+    .data-table th.sorted {
+      border-bottom: 2px solid var(--brand-accent);
+    }
+
     /* ── Reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
       .score-bar-fill { transition: none !important; }
@@ -601,7 +609,7 @@
                 <td><span class="cell-badge sector">消费</span></td>
                 <td><span class="signal-pill buy">买入</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><div class="sparkline-up"></div></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,9 4,7 7,8 10,6 13,4 16,3 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 300750 宁德时代 -->
               <tr class="row">
@@ -615,7 +623,7 @@
                 <td><span class="cell-badge sector">新能源</span></td>
                 <td><span class="signal-pill buy">买入</span></td>
                 <td><span class="risk-dot medium">中</span></td>
-                <td><div class="sparkline-up"></div></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,8 4,9 7,5 10,7 13,3 16,4 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 002594 比亚迪 -->
               <tr class="row">
@@ -629,7 +637,7 @@
                 <td><span class="cell-badge sector">新能源</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><div class="sparkline-up"></div></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,6 4,6 7,7 10,5 13,4 16,2 19,3" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 601318 中国平安 -->
               <tr class="row">
@@ -643,7 +651,7 @@
                 <td><span class="cell-badge sector">金融</span></td>
                 <td><span class="signal-pill buy">买入</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><div class="sparkline-up"></div></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,7 4,6 7,7 10,5 13,5 16,3 19,2" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 000333 美的集团 -->
               <tr class="row">
@@ -657,7 +665,7 @@
                 <td><span class="cell-badge sector">制造</span></td>
                 <td><span class="signal-pill sell">卖出</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><div class="sparkline-down"></div></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,3 4,4 7,5 10,3 13,6 16,7 19,8" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 600900 长江电力 -->
               <tr class="row">
@@ -671,7 +679,7 @@
                 <td><span class="cell-badge sector">公用</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><div class="sparkline-up"></div></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,8 4,7 7,6 10,5 13,4 16,3 19,2" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 002475 立讯精密 -->
               <tr class="row">
@@ -685,7 +693,7 @@
                 <td><span class="cell-badge sector">科技</span></td>
                 <td><span class="signal-pill sell">卖出</span></td>
                 <td><span class="risk-dot medium">中</span></td>
-                <td><div class="sparkline-down"></div></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,2 4,3 7,4 10,5 13,7 16,8 19,9" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 688981 中芯国际 -->
               <tr class="row">
@@ -699,7 +707,7 @@
                 <td><span class="cell-badge sector">科技</span></td>
                 <td><span class="signal-pill buy">买入</span></td>
                 <td><span class="risk-dot high">高</span></td>
-                <td><div class="sparkline-up"></div></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,9 4,8 7,6 10,5 13,2 16,3 19,1" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 300760 迈瑞医疗 -->
               <tr class="row">
@@ -713,7 +721,7 @@
                 <td><span class="cell-badge sector">医药</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><div class="sparkline-flat"></div></td>
+                <td><span class="sparkline-flat"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,5 4,4 7,6 10,5 13,5 16,5 19,5" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 002371 北方华创 -->
               <tr class="row">
@@ -727,7 +735,7 @@
                 <td><span class="cell-badge sector">科技</span></td>
                 <td><span class="signal-pill buy">买入</span></td>
                 <td><span class="risk-dot medium">中</span></td>
-                <td><div class="sparkline-up"></div></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,7 4,8 7,6 10,4 13,5 16,3 19,2" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 688012 中微公司 -->
               <tr class="row">
@@ -741,7 +749,7 @@
                 <td><span class="cell-badge sector">科技</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><div class="sparkline-down"></div></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,2 4,3 7,4 10,3 13,5 16,6 19,7" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 603259 药明康德 -->
               <tr class="row">
@@ -755,7 +763,7 @@
                 <td><span class="cell-badge sector">医药</span></td>
                 <td><span class="signal-pill sell">卖出</span></td>
                 <td><span class="risk-dot high">高</span></td>
-                <td><div class="sparkline-down"></div></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,4 4,5 7,3 10,6 13,5 16,7 19,8" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 601888 中国中免 -->
               <tr class="row">
@@ -769,7 +777,7 @@
                 <td><span class="cell-badge sector">消费</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><div class="sparkline-down"></div></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,3 4,4 7,5 10,6 13,7 16,8 19,9" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 601012 隆基绿能 -->
               <tr class="row">
@@ -783,7 +791,7 @@
                 <td><span class="cell-badge sector">新能源</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot medium">中</span></td>
-                <td><div class="sparkline-down"></div></td>
+                <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,4 4,5 7,6 10,5 13,7 16,7 19,8" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
               <!-- 002049 紫光国微 -->
               <tr class="row">
@@ -797,7 +805,7 @@
                 <td><span class="cell-badge sector">科技</span></td>
                 <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
-                <td><div class="sparkline-up"></div></td>
+                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polyline points="1,7 4,6 7,7 10,6 13,5 16,4 19,3" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
             </tbody>
           </table>
