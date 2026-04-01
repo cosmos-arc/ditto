@@ -27,23 +27,23 @@
     /* ── Style label for visual comparison ── */
     .style-label {
       position: fixed;
-      top: 8px;
-      right: 8px;
+      top: var(--space-8);
+      right: var(--space-8);
       z-index: 999;
       font-family: var(--font-family-ui);
-      font-size: 11px;
+      font-size: var(--font-size-10);
       color: var(--text-tertiary);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
-      padding: 3px 8px;
-      border-radius: 4px;
+      padding: var(--space-3) var(--space-8);
+      border-radius: var(--radius-4);
       pointer-events: none;
     }
 
     /* ── Header subtitle (breadcrumb sub-text) ── */
     .header-subtitle {
       font-size: var(--font-size-12);
-      font-weight: var(--font-weight-normal);
+      font-weight: var(--font-weight-regular);
       color: var(--text-tertiary);
       margin-left: var(--space-8);
     }
@@ -72,25 +72,6 @@
       align-items: baseline;
     }
 
-    /* ── Density toggle icon ── */
-    .density-toggle {
-      width: var(--header-btn-size);
-      height: var(--header-btn-size);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: var(--radius-6);
-      color: var(--icon-secondary);
-      cursor: pointer;
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
-                  color var(--motion-duration-fast) var(--motion-easing-standard);
-    }
-
-    .density-toggle:hover {
-      background: var(--interaction-hover-subtle-bg);
-      color: var(--icon-primary);
-    }
-
     /* ── Catalog table wrapper ── */
     .catalog-table-inner {
       height: 100%;
@@ -113,10 +94,10 @@
     .signal-pill {
       display: inline-flex;
       align-items: center;
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       padding: 1px var(--space-8);
-      border-radius: 10px;
+      border-radius: var(--radius-12);
       white-space: nowrap;
     }
 
@@ -140,7 +121,7 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-4);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-secondary);
       white-space: nowrap;
     }
@@ -157,24 +138,29 @@
     .risk-dot.medium::before { background: var(--risk-medium-fg); }
     .risk-dot.high::before   { background: var(--risk-high-fg); }
 
-    /* ── Sparkline variants (48x20px, tinted by direction) ── */
+    /* ── Sparkline variants ── */
+    :root {
+      --sparkline-w: 48px;
+      --sparkline-h: 20px;
+    }
+
     .sparkline-up {
-      width: 48px;
-      height: 20px;
+      width: var(--sparkline-w);
+      height: var(--sparkline-h);
       background: linear-gradient(135deg, transparent 35%, var(--market-up-subtle) 35%);
       border-radius: 2px;
     }
 
     .sparkline-down {
-      width: 48px;
-      height: 20px;
+      width: var(--sparkline-w);
+      height: var(--sparkline-h);
       background: linear-gradient(135deg, var(--market-down-subtle) 35%, transparent 35%);
       border-radius: 2px;
     }
 
     .sparkline-flat {
-      width: 48px;
-      height: 20px;
+      width: var(--sparkline-w);
+      height: var(--sparkline-h);
       background: linear-gradient(0deg, transparent 45%, var(--neutral-200) 45%, var(--neutral-200) 55%, transparent 55%);
       border-radius: 2px;
       opacity: 0.5;
@@ -221,7 +207,7 @@
     }
 
     .preset-card-desc {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       line-height: 1.4;
       margin-bottom: var(--space-6);
@@ -229,7 +215,7 @@
 
     .preset-card-match {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--brand-accent);
     }
 
@@ -268,7 +254,7 @@
 
     .score-value {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       width: 32px;
       text-align: right;
@@ -305,16 +291,21 @@
 
     .compare-item-code {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
 
     .compare-item-remove {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       cursor: pointer;
-      padding: 2px;
+      padding: var(--space-4);
       border-radius: var(--radius-2);
+      min-width: 24px;
+      min-height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       transition: color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
@@ -328,52 +319,189 @@
       padding: var(--space-8);
       text-align: center;
     }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .filter-chip:focus-visible,
+    .filter-select:focus-visible,
+    .preset-card:focus-visible,
+    .compare-item-remove:focus-visible,
+    .pagination-btn:focus-visible,
+    .header-action-btn:focus-visible,
+    .header-avatar:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px oklch(from var(--brand-accent) l c h / 0.25);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
+
+    /* ── Frosted glass header ── */
+    .shell-catalog .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    .shell-catalog .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── Detail panel brand touchpoint ── */
+    .detail-actions {
+      position: relative;
+    }
+    .detail-actions-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      padding-top: var(--space-8);
+    }
+    .detail-actions::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--brand-accent);
+      border-radius: 0 2px 2px 0;
+      opacity: 0.6;
+    }
+
+    /* ── Numeric data: tabular-nums ── */
+    .data-table td.numeric {
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+      letter-spacing: -0.02em;
+    }
+
+    /* ── Table empty state ── */
+    .table-empty {
+      display: none;
+      text-align: center;
+      padding: var(--space-32) var(--space-16);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+    .table-empty.visible { display: block; }
+
+    /* ── Pagination ellipsis ── */
+    .pagination-ellipsis {
+      color: var(--text-tertiary);
+      padding: 0 var(--space-4);
+      user-select: none;
+    }
+
+    /* ── Score composite separator ── */
+    .score-row-composite-separator {
+      margin-top: var(--space-4);
+      padding-top: var(--space-8);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* ── Detail last section flex ── */
+    .catalog-detail .context-section:last-child {
+      flex: 1 0 auto;
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .score-bar-fill { transition: none !important; }
+      .preset-card { transition: none !important; }
+      .signal-pill { transition: none !important; }
+      .filter-chip { transition: none !important; }
+      .pagination-btn { transition: none !important; }
+      .compare-item-remove { transition: none !important; }
+      .btn { transition: none !important; }
+    }
   </style>
 </head>
 <body>
-  <div class="style-label">Graphite Studio — Markets Screener · Compact · A股</div>
+  <a class="skip-link" href="#main-content">跳至主要内容</a>
+  <div class="style-label">Graphite Studio — 筛选器 · Compact · A股</div>
 
   <div class="shell-catalog">
     <!-- ═══ Rail ═══ -->
-    <nav class="shell-rail">
+    <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo">D</div>
-      <div class="rail-nav">
-        <div class="rail-icon" title="Home">
+      <div class="rail-nav" role="list">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon active" title="Markets">
+        <div class="rail-icon active" role="listitem" tabindex="0" aria-label="市场" aria-current="page">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" title="Research">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="研究">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" title="Trading">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" title="AI">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
-        <div class="rail-icon" title="Platform">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="运维">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" title="Settings">
+      <div class="rail-bottom" role="list">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="设置">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
         </div>
       </div>
     </nav>
 
     <!-- ═══ Header (60px) ═══ -->
-    <header class="shell-header">
+    <header class="shell-header" role="toolbar" aria-label="筛选器工具栏">
       <div class="header-title-group">
-        <span class="header-title">Markets / Screener</span>
-        <span class="header-subtitle">筛选器</span>
+        <span class="header-title">筛选器</span>
+        <span class="header-subtitle">Markets · Screener</span>
       </div>
       <div class="header-spacer"></div>
       <div class="header-btn-group-left">
         <button class="btn">保存视图</button>
-        <button class="btn btn-primary">运行筛选</button>
+        <button class="btn btn-primary">执行筛选</button>
       </div>
       <div class="header-btn-group-right">
         <div class="theme-switcher">
@@ -390,11 +518,11 @@
         </div>
         <button class="btn btn-ghost">重置</button>
         <button class="btn btn-ghost">导出</button>
-        <div class="header-action-btn" title="通知">
+        <button class="header-action-btn" title="通知" aria-label="通知">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
-        </div>
-        <div class="header-avatar">C</div>
+        </button>
+        <button class="header-avatar" aria-label="用户菜单">C</button>
       </div>
     </header>
 
@@ -410,8 +538,8 @@
       <div class="filter-divider"></div>
       <div class="filter-group">
         <span class="filter-label">行业:</span>
-        <select class="filter-select">
-          <option>All Sectors</option>
+        <select class="filter-select" aria-label="行业筛选">
+          <option>全部行业</option>
           <option>科技</option>
           <option>医药</option>
           <option>消费</option>
@@ -432,34 +560,32 @@
       <div class="filter-group">
         <span class="filter-label">信号:</span>
         <button class="filter-chip active">全部</button>
-        <button class="filter-chip">有买入</button>
-        <button class="filter-chip">有卖出</button>
+        <button class="filter-chip">买入信号</button>
+        <button class="filter-chip">卖出信号</button>
       </div>
       <div class="filter-spacer"></div>
-      <span class="filter-count">238 只</span>
-      <div class="density-toggle" title="密度切换">
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h12M4 10h12M4 14h12"/></svg>
-      </div>
+      <span class="filter-count" role="status" aria-live="polite">共 238 只</span>
     </div>
 
     <!-- ═══ Main Table Area ═══ -->
     <div class="catalog-table">
-      <div class="catalog-table-inner">
+      <div class="catalog-table-inner" id="main-content">
         <div class="table-container">
-          <table class="data-table">
+          <table class="data-table" aria-label="筛选结果">
+            <caption class="sr-only">筛选结果：共 238 只标的</caption>
             <thead>
               <tr>
-                <th style="width:80px" class="sorted">代码 <span class="sort-icon">▲</span></th>
-                <th style="width:100px">名称</th>
-                <th style="width:90px" class="right">最新价 <span class="sort-icon">│</span></th>
-                <th style="width:80px" class="right">涨跌幅 <span class="sort-icon">│</span></th>
-                <th style="width:80px" class="right">涨跌额 <span class="sort-icon">│</span></th>
-                <th style="width:80px" class="right">成交额 <span class="sort-icon">│</span></th>
-                <th style="width:90px" class="right">流通市值 <span class="sort-icon">│</span></th>
-                <th style="width:60px">行业</th>
-                <th style="width:60px">信号</th>
-                <th style="width:50px">风险</th>
-                <th style="width:56px">趋势</th>
+                <th scope="col" style="width:80px" class="sorted">代码 <span class="sort-icon">▲</span></th>
+                <th scope="col" style="width:100px">名称</th>
+                <th scope="col" style="width:90px" class="right">最新价 <span class="sort-icon"></span></th>
+                <th scope="col" style="width:80px" class="right">涨跌幅 <span class="sort-icon"></span></th>
+                <th scope="col" style="width:80px" class="right">涨跌额 <span class="sort-icon"></span></th>
+                <th scope="col" style="width:80px" class="right">成交额 <span class="sort-icon"></span></th>
+                <th scope="col" style="width:90px" class="right">流通市值 <span class="sort-icon"></span></th>
+                <th scope="col" style="width:60px">行业</th>
+                <th scope="col" style="width:60px">信号</th>
+                <th scope="col" style="width:50px">风险</th>
+                <th scope="col" style="width:56px">趋势</th>
               </tr>
             </thead>
             <tbody>
@@ -543,7 +669,7 @@
                 <td class="right numeric cell-volume">18.6亿</td>
                 <td class="right numeric cell-volume">7,120亿</td>
                 <td><span class="cell-badge sector">公用</span></td>
-                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
                 <td><div class="sparkline-up"></div></td>
               </tr>
@@ -585,7 +711,7 @@
                 <td class="right numeric cell-volume">12.3亿</td>
                 <td class="right numeric cell-volume">3,240亿</td>
                 <td><span class="cell-badge sector">医药</span></td>
-                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
                 <td><div class="sparkline-flat"></div></td>
               </tr>
@@ -613,7 +739,7 @@
                 <td class="right numeric cell-volume">15.4亿</td>
                 <td class="right numeric cell-volume">1,120亿</td>
                 <td><span class="cell-badge sector">科技</span></td>
-                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
                 <td><div class="sparkline-down"></div></td>
               </tr>
@@ -641,7 +767,7 @@
                 <td class="right numeric cell-volume">18.7亿</td>
                 <td class="right numeric cell-volume">1,620亿</td>
                 <td><span class="cell-badge sector">消费</span></td>
-                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
                 <td><div class="sparkline-down"></div></td>
               </tr>
@@ -655,7 +781,7 @@
                 <td class="right numeric cell-volume">25.3亿</td>
                 <td class="right numeric cell-volume">1,730亿</td>
                 <td><span class="cell-badge sector">新能源</span></td>
-                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot medium">中</span></td>
                 <td><div class="sparkline-down"></div></td>
               </tr>
@@ -669,7 +795,7 @@
                 <td class="right numeric cell-volume">8.9亿</td>
                 <td class="right numeric cell-volume">580亿</td>
                 <td><span class="cell-badge sector">科技</span></td>
-                <td><span class="signal-pill hold">—</span></td>
+                <td><span class="signal-pill hold">持有</span></td>
                 <td><span class="risk-dot low">低</span></td>
                 <td><div class="sparkline-up"></div></td>
               </tr>
@@ -686,7 +812,7 @@
             <button class="pagination-btn active">1</button>
             <button class="pagination-btn">2</button>
             <button class="pagination-btn">3</button>
-            <span style="color:var(--text-tertiary)">...</span>
+            <span class="pagination-ellipsis">···</span>
             <button class="pagination-btn">16</button>
           </div>
         </div>
@@ -697,9 +823,15 @@
     <div class="catalog-detail">
       <!-- Section 1: 快捷操作 -->
       <div class="detail-actions">
-        <button class="btn">加入观察</button>
-        <button class="btn">加入标的池</button>
-        <button class="btn btn-ghost">发送到研究</button>
+        <div class="context-section-header">
+          <span class="context-section-title">快捷操作</span>
+          <span class="context-section-count">贵州茅台</span>
+        </div>
+        <div class="detail-actions-body">
+          <button class="btn">加入观察</button>
+          <button class="btn btn-primary">加入标的池</button>
+          <button class="btn btn-ghost">发送到研究</button>
+        </div>
       </div>
 
       <!-- Section 2: 筛选预设 -->
@@ -709,19 +841,19 @@
         </div>
         <div class="context-section-body">
           <!-- Preset 1 -->
-          <div class="preset-card">
+          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：高ROE低估值">
             <div class="preset-card-title">高ROE低估值</div>
             <div class="preset-card-desc">ROE&gt;15%, PE&lt;20</div>
             <div class="preset-card-match">匹配 23 只</div>
           </div>
           <!-- Preset 2 -->
-          <div class="preset-card">
+          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：动量强势">
             <div class="preset-card-title">动量强势</div>
             <div class="preset-card-desc">20日涨幅&gt;10%, 成交额放大</div>
             <div class="preset-card-match">匹配 45 只</div>
           </div>
           <!-- Preset 3 -->
-          <div class="preset-card">
+          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：低波动红利">
             <div class="preset-card-title">低波动红利</div>
             <div class="preset-card-desc">波动率&lt;15%, 股息率&gt;3%</div>
             <div class="preset-card-match">匹配 18 只</div>
@@ -769,7 +901,7 @@
             <span class="score-value">91</span>
           </div>
           <!-- 综合 -->
-          <div class="score-row composite" style="margin-top: var(--space-4); padding-top: var(--space-8); border-top: 1px solid var(--border-subtle);">
+          <div class="score-row composite score-row-composite-separator">
             <span class="score-label">综合</span>
             <div class="score-bar-wrap">
               <div class="score-bar-fill brand" style="width: 79%"></div>
@@ -780,7 +912,7 @@
       </div>
 
       <!-- Section 4: 对比篮 -->
-      <div class="context-section" style="flex: 1 0 auto;">
+      <div class="context-section">
         <div class="context-section-header">
           <span class="context-section-title">对比篮</span>
           <span class="context-section-action">已选 3 只</span>
@@ -791,21 +923,21 @@
               <div class="compare-item-name">贵州茅台</div>
               <div class="compare-item-code">600519</div>
             </div>
-            <span class="compare-item-remove">&times;</span>
+            <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除贵州茅台">&times;</span>
           </div>
           <div class="compare-item">
             <div>
               <div class="compare-item-name">宁德时代</div>
               <div class="compare-item-code">300750</div>
             </div>
-            <span class="compare-item-remove">&times;</span>
+            <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除宁德时代">&times;</span>
           </div>
           <div class="compare-item">
             <div>
               <div class="compare-item-name">中芯国际</div>
               <div class="compare-item-code">688981</div>
             </div>
-            <span class="compare-item-remove">&times;</span>
+            <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除中芯国际">&times;</span>
           </div>
           <button class="btn btn-primary compare-cta">开始对比 &rarr;</button>
         </div>
