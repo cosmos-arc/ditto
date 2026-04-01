@@ -353,7 +353,9 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/1a/62/c8d562e7766786ba6587d09c5a8ba9f718ed3fa8af7f4553e8f91c36f302/xlrd-2.0.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5e/1e/3c3d3ef071b051cc3abbe3721ffb8365033a172613c04af2da89d5548a87/xxhash-3.6.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: ./apps/port
+      - pypi: ./packages/analytics
       - pypi: ./packages/core
+      - pypi: ./packages/data
       - pypi: ./packages/datahub
       - pypi: ./packages/infra
       - pypi: ./packages/kernel
@@ -652,7 +654,9 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/1a/62/c8d562e7766786ba6587d09c5a8ba9f718ed3fa8af7f4553e8f91c36f302/xlrd-2.0.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/86/15/9bc32671e9a38b413a76d24722a2bf8784a132c043063a8f5152d390b0f9/xxhash-3.6.0-cp313-cp313-win_amd64.whl
       - pypi: ./apps/port
+      - pypi: ./packages/analytics
       - pypi: ./packages/core
+      - pypi: ./packages/data
       - pypi: ./packages/datahub
       - pypi: ./packages/infra
       - pypi: ./packages/kernel
@@ -1107,7 +1111,9 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/1a/62/c8d562e7766786ba6587d09c5a8ba9f718ed3fa8af7f4553e8f91c36f302/xlrd-2.0.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5e/1e/3c3d3ef071b051cc3abbe3721ffb8365033a172613c04af2da89d5548a87/xxhash-3.6.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: ./apps/port
+      - pypi: ./packages/analytics
       - pypi: ./packages/core
+      - pypi: ./packages/data
       - pypi: ./packages/datahub
       - pypi: ./packages/infra
       - pypi: ./packages/kernel
@@ -1504,7 +1510,9 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/1a/62/c8d562e7766786ba6587d09c5a8ba9f718ed3fa8af7f4553e8f91c36f302/xlrd-2.0.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/86/15/9bc32671e9a38b413a76d24722a2bf8784a132c043063a8f5152d390b0f9/xxhash-3.6.0-cp313-cp313-win_amd64.whl
       - pypi: ./apps/port
+      - pypi: ./packages/analytics
       - pypi: ./packages/core
+      - pypi: ./packages/data
       - pypi: ./packages/datahub
       - pypi: ./packages/infra
       - pypi: ./packages/kernel
@@ -2788,6 +2796,21 @@ packages:
   - pkg:pypi/distlib?source=hash-mapping
   size: 275642
   timestamp: 1752823081585
+- pypi: ./packages/analytics
+  name: ditto-analytics
+  version: 0.1.0
+  sha256: 1581942822a4a24d4f927c585853a98bc15ad26e860b62c3ec8b694bbf63006c
+  requires_dist:
+  - ditto-kernel
+  - ditto-engine
+  requires_python: '>=3.13'
+- pypi: ./packages/data
+  name: ditto-data
+  version: 0.1.0
+  sha256: f26b4cda537c5a04908eadce5a865785816785fee97a02adfcb79282b5953aed
+  requires_dist:
+  - ditto-kernel
+  requires_python: '>=3.13'
 - pypi: ./packages/datahub
   name: ditto-datahub
   version: 0.1.0

@@ -51,9 +51,11 @@ matplotlib = ">=3.9,<4"
 # ==========================================================
 [pypi-dependencies]
 # 本地包（editable 安装）
+ditto-data = { path = "packages/data", editable = true }
 ditto-engine = { path = "packages/core", editable = true }
 ditto-infra = { path = "packages/infra", editable = true }
 ditto-kernel = { path = "packages/kernel", editable = true }
+ditto-analytics = { path = "packages/analytics", editable = true }
 ditto-datahub = { path = "packages/datahub", editable = true }
 ditto-port = { path = "apps/port", editable = true }
 
