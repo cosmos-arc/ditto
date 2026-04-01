@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import orjson
-from ditto_datahub.models.research import (
+from ditto_analytics.models.research import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,

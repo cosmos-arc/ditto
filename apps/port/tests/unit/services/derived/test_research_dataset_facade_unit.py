@@ -12,11 +12,11 @@ import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_analytics.materialization.models import DerivedVersionStatus
-from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
-from ditto_datahub.models.research import (
+from ditto_analytics.models.research import (
     ResearchDatasetSpecRecord,
     ResearchSpineSpecRecord,
 )
+from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_datahub.services import DerivedCatalogService, ResearchCatalogService
 from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.sources.source import DataSources

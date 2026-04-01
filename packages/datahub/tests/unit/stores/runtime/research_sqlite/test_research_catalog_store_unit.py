@@ -1,6 +1,6 @@
 """Tests for SQLite-backed research catalog stores."""
 
-from ditto_datahub.models.research import (
+from ditto_analytics.models.research import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,

@@ -13,13 +13,13 @@ from uuid import uuid4
 
 import orjson
 import polars as pl
-from ditto_datahub.errors import DerivedNotFoundError, DerivedValidationError
-from ditto_datahub.models.research import (
+from ditto_analytics.models.research import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,
     ResearchSpineSpecRecord,
 )
+from ditto_datahub.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_datahub.services import DerivedArtifactReader, ResearchCatalogService
 from ditto_datahub.services.derived import VersionResolutionStrategy
 from ditto_datahub.services.metadata_service import MetadataService

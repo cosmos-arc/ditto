@@ -2814,9 +2814,10 @@ packages:
 - pypi: ./packages/datahub
   name: ditto-datahub
   version: 0.1.0
-  sha256: 5bc852d0f966fe2640950c044a7216c346af489e0064c0afbd64a745638a8177
+  sha256: 194ee694a0dcaac72cc34d2459e450a0261e6fdbb5d7b4c6d0d60e27004ae9b2
   requires_dist:
   - ditto-kernel
+  - ditto-analytics
   requires_python: '>=3.13'
 - pypi: ./packages/core
   name: ditto-engine

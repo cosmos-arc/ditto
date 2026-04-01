@@ -72,7 +72,6 @@ from ditto_datahub.models.metadata import (
     InstrumentRegistration,
     StockExtension,
 )
-from ditto_datahub.models.portfolio import Portfolio, Position
 from ditto_datahub.models.publication_safety import (
     CertificationReportRecord,
     CompatibilityManifestRecord,
@@ -80,12 +79,6 @@ from ditto_datahub.models.publication_safety import (
     DerivedShadowSlotRecord,
     ShadowDiffReportRecord,
     ShadowTraceRecordRecord,
-)
-from ditto_datahub.models.research import (
-    ResearchDatasetSnapshotRecord,
-    ResearchDatasetSpecRecord,
-    ResearchSpineSnapshotRecord,
-    ResearchSpineSpecRecord,
 )
 from ditto_datahub.models.source_codes import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
@@ -108,9 +101,6 @@ from ditto_datahub.models.strategy_audit import (
     RiskScanPayload,
 )
 from ditto_datahub.models.strategy_run import StrategyRunRecord
-
-# deprecated: Order/OrderStatus 请使用 Core 层 ditto_engine.accounting.order_book
-from ditto_datahub.models.trading import Order, OrderStatus, Trade
 
 __all__ = [
     "BAR_ENRICHED_SCHEMA",
@@ -181,16 +171,8 @@ __all__ = [
     "MarketState",
     "NotTradingDayError",
     "OnDuplicate",
-    "Order",
     "OrderSide",
-    "OrderStatus",
-    "Portfolio",
-    "Position",
     "PreTradeDecisionPayload",
-    "ResearchDatasetSnapshotRecord",
-    "ResearchDatasetSpecRecord",
-    "ResearchSpineSnapshotRecord",
-    "ResearchSpineSpecRecord",
     "RiskScanPayload",
     "RunStatus",
     "ShadowDiffReportRecord",
@@ -202,7 +184,6 @@ __all__ = [
     "StrategyArtifactRecord",
     "StrategyRunRecord",
     "StrategySpecRecord",
-    "Trade",
     "WriteResult",
     "WriteStoreResult",
 ]

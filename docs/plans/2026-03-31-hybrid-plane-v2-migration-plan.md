@@ -15,7 +15,7 @@ last_audit: 2026-03-31
 
 ## 当前进度概览
 
-> **审计日期**：2026-04-01 | **分支**：`docs/archive-plans-and-architecture-design` | **check**：1456+ unit tests ✅ | **arch-check**：11/11 KEPT ✅
+> **审计日期**：2026-04-01 | **分支**：`docs/archive-plans-and-architecture-design` | **check**：4218 tests ✅ | **arch-check**：11/11 KEPT ✅
 
 | Phase | Unit | 状态 | 验证 |
 |-------|------|------|------|
@@ -31,7 +31,10 @@ last_audit: 2026-03-31
 | 2b-2 | 迁移 analytics 消费者 + 清理 engine re-export | ✅ 完成 | 所有消费者切换到 ditto_analytics，shim 删除 |
 | 2c-1 | ditto_core → ditto_engine 机械改名 | ✅ 完成 | 全库 0 ditto_core 残留，11/11 arch-check KEPT |
 | 2c-2 | 文档更新 + 最终验证 | ✅ 完成 | CLAUDE.md + core/CLAUDE.md 更新 |
-| 2-5 | 路线图剩余 | ⏳ Phase 2 完成，Phase 3-5 待规划 | — |
+| 3a | 清理 deprecated 模型（trading.py + portfolio.py） | ✅ 完成 | 3 文件删除，__init__.py 清理，零残留 |
+| 3b | factors + features 迁入 ditto_analytics | ✅ 完成 | re-export shim 兼容层，消费者零改动 |
+| 3c | research 迁入 ditto_analytics + 消费者迁移 | ✅ 完成 | 9 消费者更新，shim 直接删除 |
+| 4-5 | 路线图剩余 | ⏳ Phase 3 完成，Phase 4-5 待规划 | — |
 
 ---
 
