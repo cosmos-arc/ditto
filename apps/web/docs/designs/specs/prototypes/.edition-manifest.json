@@ -25,10 +25,10 @@
     {
       "id": "home",
       "file": "page-home.html",
-      "status": "created",
-      "score": null,
+      "status": "done",
+      "score": 9.4,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 2,
       "createdAt": "2026-04-01"
     },
     {
