@@ -380,6 +380,18 @@
       background: var(--brand-accent);
     }
 
+    .status-dot.critical {
+      background: var(--system-down-fg);
+    }
+
+    /* ── Status text semantic coloring ── */
+    .cell-status.degraded-text {
+      color: var(--system-degraded-fg);
+    }
+    .cell-status.critical-text {
+      color: var(--system-down-fg);
+    }
+
     .cell-universe {
       display: inline-flex;
       align-items: center;
@@ -469,7 +481,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       padding: 1px var(--space-6);
-      border-radius: var(--radius-2);
+      border-radius: var(--radius-4);
       line-height: 1.4;
     }
 
@@ -1083,9 +1095,7 @@
                 <td class="right"><span class="cell-numeric">7.2%</span></td>
                 <td class="right"><span class="cell-numeric">85%</span></td>
                 <td><span class="cell-universe">中证500</span></td>
-                <td><span class="cell-status"><span class="status-dot warning"></span> 退化</span></td>
-              </tr>
-              <!-- 换手率动量 -->
+                <td><span class="cell-status degraded-text"><span class="status-dot warning"></span> 退化</span></td>
               <tr class="row">
                 <td></td>
                 <td><span class="cell-ticker">换手率动量</span></td>
@@ -1109,7 +1119,7 @@
                 <td class="right"><span class="cell-numeric">3.8%</span></td>
                 <td class="right"><span class="cell-numeric">94%</span></td>
                 <td><span class="cell-universe">中证500</span></td>
-                <td><span class="cell-status"><span class="status-dot warning"></span> 退化</span></td>
+                <td><span class="cell-status degraded-text"><span class="status-dot warning"></span> 退化</span></td>
               </tr>
               <!-- 波动率偏斜 -->
               <tr class="row">
@@ -1122,7 +1132,7 @@
                 <td class="right"><span class="cell-numeric">1.5%</span></td>
                 <td class="right"><span class="cell-numeric">97%</span></td>
                 <td><span class="cell-universe">沪深300</span></td>
-                <td><span class="cell-status"><span class="status-dot critical"></span> 异常</span></td>
+                <td><span class="cell-status critical-text"><span class="status-dot critical"></span> 异常</span></td>
               </tr>
               <!-- 分析师预期变化 -->
               <tr class="row">
