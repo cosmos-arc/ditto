@@ -195,7 +195,7 @@ class TestBacktestServiceRun:
     """测试 BacktestService 核心运行流程。"""
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_returns_backtest_report(
         self,
         mock_build_report: MagicMock,
@@ -213,7 +213,7 @@ class TestBacktestServiceRun:
         mock_engine_run.assert_called_once()
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_creates_audit_collector(
         self,
         mock_build_report: MagicMock,
@@ -232,7 +232,7 @@ class TestBacktestServiceRun:
         assert isinstance(collector, ExecutionAuditCollector)
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_builds_engine_config_from_service_config(
         self,
         mock_build_report: MagicMock,
@@ -267,7 +267,7 @@ class TestAuditPersistence:
     """测试审计日志持久化。"""
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_persists_risk_log_when_audit_service_provided(
         self,
         mock_build_report: MagicMock,
@@ -286,7 +286,7 @@ class TestAuditPersistence:
         mock_audit.save_risk_log.assert_called_once()
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_persists_pre_trade_log_when_audit_service_provided(
         self,
         mock_build_report: MagicMock,
@@ -305,7 +305,7 @@ class TestAuditPersistence:
         mock_audit.save_pre_trade_log.assert_called_once()
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_no_audit_persistence_without_service(
         self,
         mock_build_report: MagicMock,
@@ -323,7 +323,7 @@ class TestAuditPersistence:
         # No error should occur — service should skip persistence gracefully
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_maps_portfolio_wide_id_to_asterisk(
         self,
         mock_build_report: MagicMock,
@@ -373,12 +373,12 @@ class TestArtifactPersistence:
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
-        "ditto_port.services.strategy.backtest_service.write_backtest_artifacts",
+        "ditto_app.process.strategy.write_backtest_artifacts",
         return_value={
             "backtest_report": Path("/tmp/ditto/run-001/backtest_report.json"),
         },
     )
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_persists_artifact_when_artifact_service_provided(
         self,
         mock_build_report: MagicMock,
@@ -416,7 +416,7 @@ class TestArtifactPersistence:
         assert call_arg.artifact_type == "backtest_report"
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_no_artifact_persistence_without_service(
         self,
         mock_build_report: MagicMock,
@@ -435,12 +435,12 @@ class TestArtifactPersistence:
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
-        "ditto_port.services.strategy.backtest_service.write_backtest_artifacts",
+        "ditto_app.process.strategy.write_backtest_artifacts",
         return_value={
             "backtest_report": Path("/tmp/test/run-001/backtest_report.json"),
         },
     )
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_serializes_report_when_artifact_dir_provided(
         self,
         mock_build_report: MagicMock,
@@ -488,12 +488,12 @@ class TestArtifactPersistence:
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
-        "ditto_port.services.strategy.backtest_service.write_backtest_artifacts",
+        "ditto_app.process.strategy.write_backtest_artifacts",
         return_value={
             "backtest_report": Path("/tmp/ditto/run-001/backtest_report.json"),
         },
     )
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_artifact_without_dir_still_writes_file(
         self,
         mock_build_report: MagicMock,
@@ -534,13 +534,13 @@ class TestArtifactPersistence:
         assert "backtest_report" in call_arg.file_path
 
     @patch(
-        "ditto_port.services.strategy.backtest_service.write_backtest_artifacts",
+        "ditto_app.process.strategy.write_backtest_artifacts",
         return_value={
             "backtest_report": Path("/tmp/ditto/run-001/backtest_report.json"),
             "manifest": Path("/tmp/ditto/run-001/manifest.json"),
         },
     )
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_passes_engine_manifest_to_artifact_writer(
         self,
         mock_build_report: MagicMock,
@@ -600,7 +600,7 @@ class TestRunIdPropagation:
 
     @patch.object(EngineLoop, "__init__", return_value=None)
     @patch.object(EngineLoop, "run")
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_id_propagates_to_report(
         self,
         mock_build_report: MagicMock,
@@ -625,7 +625,7 @@ class TestRunIdPropagation:
 
     @patch.object(EngineLoop, "__init__", return_value=None)
     @patch.object(EngineLoop, "run")
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_empty_run_id_is_generated_before_engine_construction(
         self,
         mock_build_report: MagicMock,
@@ -649,7 +649,7 @@ class TestRunIdPropagation:
 
     @patch.object(EngineLoop, "__init__", return_value=None)
     @patch.object(EngineLoop, "run")
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_id_propagates_to_audit_service(
         self,
         mock_build_report: MagicMock,
@@ -684,7 +684,7 @@ class TestWithoutPersistence:
     """测试不提供持久化服务时的行为。"""
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    @patch("ditto_app.process.strategy.build_report")
     def test_run_without_persistence_services(
         self,
         mock_build_report: MagicMock,

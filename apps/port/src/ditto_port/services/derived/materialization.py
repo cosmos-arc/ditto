@@ -1,34 +1,20 @@
-"""
-Port-side unified derived materialization helpers and input providers.
+"""Shim — 真实实现已迁移至 ditto_app.process.materialization."""
 
-This module serves as the public entry point for materialization helpers.
-Implementation lives in focused submodules:
-
-* :mod:`input_preparation` -- ``InputContext``, ``DerivedInputProvider``,
-  ``prepare_input_frame``, ``hydrate_spec``, etc.
-* :mod:`dq_summary` -- ``build_minimal_dq_record`` and DQ computation helpers.
-* :mod:`manifest_builder` -- ``build_manifest_record``,
-  ``resolve_shadow_baseline``, ``dependency_refs``.
-"""
-
-from ditto_port.services.derived.dq_summary import build_minimal_dq_record
-from ditto_port.services.derived.input_preparation import (
+from ditto_app.process.materialization import (
     DerivedInputProvider,
     InMemoryDerivedInputProvider,
     InputContext,
     MissingDependencyError,
     UnavailableDerivedInputProvider,
+    build_manifest_record,
+    build_minimal_dq_record,
+    dependency_refs,
     earliest_pending_start,
     hydrate_spec,
     prepare_input_frame,
-)
-from ditto_port.services.derived.manifest_builder import (
-    build_manifest_record,
-    dependency_refs,
     resolve_shadow_baseline,
 )
-
-from ._utils import now_iso
+from ditto_app.query._utils import now_iso
 
 __all__ = [
     "DerivedInputProvider",

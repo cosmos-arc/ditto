@@ -36,6 +36,6 @@
     "quantitative-trading@claude-code-workflows": true,
     "claude-md-management@claude-plugins-official": false,
     "pyright-lsp@claude-plugins-official": true,
-    "compound-engineering@compound-engineering-plugin": true
+    "compound-engineering@compound-engineering-plugin": false
   }
 }

@@ -16,8 +16,8 @@ from ditto_port.services.strategy.backtest_service import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-ENGINE_LOOP_PATH = "ditto_port.services.strategy.backtest_service.EngineLoop"
-BUILD_REPORT_PATH = "ditto_port.services.strategy.backtest_service.build_report"
+ENGINE_LOOP_PATH = "ditto_app.process.strategy.EngineLoop"
+BUILD_REPORT_PATH = "ditto_app.process.strategy.build_report"
 
 
 def _make_service_config(

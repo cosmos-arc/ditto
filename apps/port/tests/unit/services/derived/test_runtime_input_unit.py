@@ -11,6 +11,11 @@ from ditto_analytics.materialization.contracts import (
     DerivedExecutionPlan,
     DerivedRunMode,
 )
+from ditto_app.process.materialization import (
+    RuntimeDerivedInputProvider,
+    _resolve_etf_dependency,
+    _resolve_market_dependency,
+)
 from ditto_engine.engine.specs import (
     DerivedRole,
     DerivedSpec,
@@ -18,11 +23,6 @@ from ditto_engine.engine.specs import (
     MaterializationProfile,
 )
 from ditto_port.services.derived.materialization import InputContext
-from ditto_port.services.derived.runtime_input import (
-    RuntimeDerivedInputProvider,
-    _resolve_etf_dependency,
-    _resolve_market_dependency,
-)
 
 
 def _make_spec(**overrides: object) -> DerivedSpec:

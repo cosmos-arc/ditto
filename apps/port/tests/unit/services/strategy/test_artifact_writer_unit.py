@@ -105,7 +105,7 @@ class TestWriteBacktestArtifacts:
             engine_version="0.2.0",
         )
 
-    @patch("ditto_port.services.strategy.artifact_writer.serialize")
+    @patch("ditto_app.process.strategy.serialize")
     def test_returns_backtest_report_path(
         self,
         mock_serialize: MagicMock,
@@ -125,7 +125,7 @@ class TestWriteBacktestArtifacts:
         assert "backtest_report" in result
         assert result["backtest_report"] == fake_json_path
 
-    @patch("ditto_port.services.strategy.artifact_writer.serialize")
+    @patch("ditto_app.process.strategy.serialize")
     def test_passes_output_dir_to_serialize(
         self,
         mock_serialize: MagicMock,
@@ -143,7 +143,7 @@ class TestWriteBacktestArtifacts:
         call_args = mock_serialize.call_args
         assert call_args[0][1] == output_dir
 
-    @patch("ditto_port.services.strategy.artifact_writer.serialize")
+    @patch("ditto_app.process.strategy.serialize")
     def test_uses_temp_dir_when_no_output_dir(
         self,
         mock_serialize: MagicMock,
@@ -157,7 +157,7 @@ class TestWriteBacktestArtifacts:
         mock_serialize.return_value = output_dir / "backtest_report.json"
 
         # Patch tempfile.gettempdir to use tmp_path
-        with patch("ditto_port.services.strategy.artifact_writer.tempfile") as mock_tmp:
+        with patch("ditto_app.process.strategy.tempfile") as mock_tmp:
             mock_tmp.gettempdir.return_value = str(tmp_path)
             write_backtest_artifacts(mock_report)
 
@@ -166,7 +166,7 @@ class TestWriteBacktestArtifacts:
         assert "ditto" in str(passed_dir)
         assert "run-xyz" in str(passed_dir)
 
-    @patch("ditto_port.services.strategy.artifact_writer.serialize")
+    @patch("ditto_app.process.strategy.serialize")
     def test_propagates_serialize_error(
         self,
         mock_serialize: MagicMock,
@@ -179,7 +179,7 @@ class TestWriteBacktestArtifacts:
         with pytest.raises(OSError, match="disk full"):
             write_backtest_artifacts(mock_report)
 
-    @patch("ditto_port.services.strategy.artifact_writer.serialize")
+    @patch("ditto_app.process.strategy.serialize")
     def test_collects_additional_files(
         self,
         mock_serialize: MagicMock,
@@ -202,7 +202,7 @@ class TestWriteBacktestArtifacts:
         assert "nav" in result
         assert result["nav"] == out_dir / "nav.parquet"
 
-    @patch("ditto_port.services.strategy.artifact_writer.serialize")
+    @patch("ditto_app.process.strategy.serialize")
     def test_writes_manifest_json_with_artifact_refs(
         self,
         mock_serialize: MagicMock,
@@ -232,7 +232,7 @@ class TestWriteBacktestArtifacts:
         assert parsed["parameter_overrides"] == ["top_k=3"]
         assert parsed["artifacts"] == ["backtest_report.json", "manifest.json"]
 
-    @patch("ditto_port.services.strategy.artifact_writer.serialize")
+    @patch("ditto_app.process.strategy.serialize")
     def test_display_map_injects_instrument_symbol_into_risk_log(
         self,
         mock_serialize: MagicMock,
@@ -273,7 +273,7 @@ class TestWriteBacktestArtifacts:
         assert records[0]["instrument_id"] == 2_000_001
         assert records[0]["instrument_symbol"] == "510300.SH"
 
-    @patch("ditto_port.services.strategy.artifact_writer.serialize")
+    @patch("ditto_app.process.strategy.serialize")
     def test_no_display_map_skips_instrument_symbol(
         self,
         mock_serialize: MagicMock,
