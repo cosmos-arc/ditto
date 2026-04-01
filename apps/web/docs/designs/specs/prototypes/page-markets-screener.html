@@ -460,6 +460,20 @@
       transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
+    /* ── Focus-visible: per-element interaction parity ── */
+    .filter-chip:focus-visible {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .preset-card:focus-visible {
+      border-color: var(--border-default);
+    }
+    .pagination-btn:focus-visible {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .compare-item-remove:focus-visible {
+      color: var(--text-primary);
+    }
+
     /* ── Frosted glass header ── */
     .shell-catalog .shell-header {
       background: var(--surface-frosted);
@@ -536,6 +550,14 @@
 
     .data-table tr:hover td.numeric {
       color: color-mix(in oklch, var(--text-primary) 88%, var(--brand-accent) 12%);
+    }
+
+    /* ── Row selected: brand-accent tint + left accent bar ── */
+    .data-table tr.row.selected {
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+    }
+    .data-table tr.row.selected td:first-child {
+      box-shadow: inset 3px 0 0 var(--brand-accent);
     }
 
     /* ── Table empty state ── */
