@@ -27,83 +27,342 @@
   <script src="shared/mock-data.js"></script>
 
   <style>
-    /* Style label for comparison */
+    /* ── Style label for comparison (L4 — prototype annotation) ── */
     .style-label {
       position: fixed;
-      top: 8px;
-      right: 8px;
-      z-index: 999;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
       font-family: var(--font-family-ui);
-      font-size: 11px;
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
-      padding: 3px 8px;
-      border-radius: 4px;
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
       pointer-events: none;
     }
 
-    :root {
-      /* ── Compact typography (base scale — no shift) ── */
-      /* Inherits from tokens-base.css: 10-28px standard scale */
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
 
-      /* ── Compact spacing (standard 4pt grid) ── */
-      /* Inherits from tokens-base.css: space-2 to space-32 */
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
 
-      /* ── Compact layout ── */
-      /* Inherits layout-base.css defaults:
-         --shell-rail-width: 56px
-         --shell-header-height: 68px
-         --shell-sidebar-width: 320px
-         --shell-detail-width: 340px
-         --rail-logo-size: 32px
-         --rail-icon-size: 36px
-         --rail-icon-svg-size: 18px
-         --header-btn-size: 32px
-         --header-avatar-size: 28px */
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .header-action-btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible,
+    .decision-cta:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
 
-      /* ── Compact density tokens ── */
-      /* Inherits from tokens-style.css:
-         --density-row-height: 2.25rem (36px)
-         --density-strip-height: 2.25rem (36px)
-         --density-cell-padding-x: var(--space-12) (12px)
-         --density-cell-padding-y: var(--space-6) (6px)
-         --density-header-height: 2rem (32px) */
+    /* ══════════════════════════════════════════════
+     * R1: Material layer — Graphite Studio triple
+     * ══════════════════════════════════════════════ */
+
+    /* ── Frosted glass header ── */
+    .shell-home .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    /* Header bottom accent — brand light leaking through */
+    .shell-home .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── Header title brand underline ── */
+    .shell-home .header-title {
+      position: relative;
+    }
+    .shell-home .header-title::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 40%;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent),
+        transparent
+      );
+      border-radius: 1px;
+      pointer-events: none;
+    }
+
+    /* ── Rail active indicator — brand accent left bar ── */
+    .shell-home .rail-icon.active {
+      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
+    }
+
+    /* ── Pulse strip subtle brand glow ── */
+    .shell-home .shell-pulse {
+      position: relative;
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 8%, var(--border-subtle));
+      box-shadow: 0 1px 4px -1px color-mix(in oklch, var(--brand-accent) 6%, transparent);
+    }
+
+    /* ── Decision Banner visual anchor — left brand border ── */
+    .shell-home .decision-banner {
+      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 35%, transparent);
+      padding-left: var(--space-16);
+    }
+
+    /* ── Icon semantic color classes (replaces inline styles) ── */
+    .icon-healthy   { color: var(--system-healthy-fg); }
+    .icon-brand     { color: var(--brand-accent); }
+    .icon-warning   { color: var(--system-degraded-fg); }
+    .icon-muted     { color: var(--text-tertiary); }
+    .icon-agent     { color: var(--agent-running-fg); }
+    .icon-risk      { color: var(--risk-high-fg); }
+
+    /* ── Panel grow utility (replaces inline flex:1) ── */
+    .panel-grow { flex: 1; }
+
+    /* ── Panel subtitle — upgrade from 10px to 12px ── */
+    .panel-subtitle {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Alert timestamp — upgrade from 10px to 12px ── */
+    .alert-time {
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Shell children elevation above noise layer ── */
+    .shell-home > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Noise texture overlay ── */
+    .noise-layer {
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Ambient light bars ── */
+    .ambient-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .ambient-rail {
+      position: absolute;
+      top: 0;
+      right: -1px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* ── Decision routing label ── */
+    .decision-routing-label {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Queue item active state ── */
+    .queue-item:active {
+      background: var(--interaction-hover-strong-bg);
+    }
+
+    /* ── Decision CTA active/pressed state ── */
+    .decision-cta:active {
+      transform: scale(0.97);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Context section dual-line separator — light from above ── */
+    .shell-home .context-section + .context-section {
+      position: relative;
+    }
+    .shell-home .context-section + .context-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, white 3%, transparent);
+      pointer-events: none;
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Micro-animations — living data feel
+     * ══════════════════════════════════════════════ */
+
+    /* Pulse dot — live indicator breathing */
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Critical alert dot — faster urgency pulse */
+    @keyframes dot-critical-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Task breathe — running items subtle opacity */
+    @keyframes task-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.88; }
+    }
+
+    /* Value flash — data update feedback */
+    @keyframes value-flash {
+      0%   { opacity: 0.85; transform: translateY(0.5px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Pulse strip live indicators */
+    .shell-home .pulse-value[data-live] {
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    /* Alert critical dot pulse */
+    .shell-home .alert-dot.critical {
+      animation: dot-critical-pulse 2s ease-in-out infinite;
+    }
+
+    /* Health degraded dot pulse */
+    .shell-home .health-dot.degraded {
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    /* ── Respect reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .shell-home *,
+      .shell-home *::before,
+      .shell-home *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="style-label">Compact 适中 — 12/13px · 36px rows · 56px rail · A股为主</div>
+  <!-- SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+  <a class="skip-link" href="#main-content">跳到主内容</a>
 
-  <div class="shell">
+  <div class="style-label">Compact 适中 · 12px · 36px rows · 56px rail · A股</div>
+
+  <div class="shell shell-home">
+    <!-- R1: Noise texture overlay -->
+    <div class="noise-layer" aria-hidden="true"></div>
+    <!-- R1: Top-edge ambient light -->
+    <div class="ambient-top" aria-hidden="true"></div>
+
     <!-- ═══ Rail ═══ -->
-    <nav class="shell-rail">
-      <div class="rail-logo">D</div>
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon active" title="Home">
+        <button class="rail-icon active" aria-label="Home" aria-current="page" title="Home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
-        </div>
-        <div class="rail-icon" title="Markets">
+        </button>
+        <button class="rail-icon" aria-label="Markets" title="Markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
-        </div>
-        <div class="rail-icon" title="Research">
+        </button>
+        <button class="rail-icon" aria-label="Research" title="Research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-        </div>
-        <div class="rail-icon" title="Trading">
+        </button>
+        <button class="rail-icon" aria-label="Trading" title="Trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
-        </div>
-        <div class="rail-icon" title="AI">
+        </button>
+        <button class="rail-icon" aria-label="AI" title="AI">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </div>
-        <div class="rail-icon" title="Platform">
+        </button>
+        <button class="rail-icon" aria-label="Platform" title="Platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
-        </div>
+        </button>
       </div>
       <div class="rail-bottom">
-        <div class="rail-icon" title="Settings">
+        <button class="rail-icon" aria-label="Settings" title="Settings">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
+        </button>
       </div>
+      <!-- R1: Rail right edge ambient light -->
+      <div class="ambient-rail" aria-hidden="true"></div>
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -128,14 +387,14 @@
             <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
           </div>
         </div>
-        <div class="header-action-btn" title="Notifications">
+        <button class="header-action-btn" aria-label="Notifications" title="Notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
-        </div>
-        <div class="header-action-btn" title="Help">
+        </button>
+        <button class="header-action-btn" aria-label="Help" title="Help">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
-        </div>
-        <div class="header-avatar">C</div>
+        </button>
+        <button class="header-avatar" aria-label="用户菜单">C</button>
       </div>
     </header>
 
@@ -146,32 +405,32 @@
       </div>
       <div class="pulse-separator"></div>
       <div class="pulse-item">
-        <span class="pulse-value">盘中交易</span>
+        <span class="pulse-value" data-live>盘中交易</span>
       </div>
       <div class="pulse-separator"></div>
       <div class="pulse-item">
         <span class="pulse-label">预警</span>
-        <span class="pulse-value negative">2</span>
+        <span class="pulse-value negative">4</span>
       </div>
       <div class="pulse-separator"></div>
       <div class="pulse-item">
         <span class="pulse-label">任务</span>
-        <span class="pulse-value">3 运行中</span>
+        <span class="pulse-value" data-live>3 个运行中</span>
       </div>
       <div class="pulse-separator"></div>
       <div class="pulse-item">
         <span class="pulse-label">连接</span>
-        <span class="pulse-value">正常</span>
+        <span class="pulse-value" data-live>正常</span>
       </div>
       <div class="pulse-separator"></div>
       <div class="pulse-item">
         <span class="pulse-label">数据</span>
-        <span class="pulse-value">实时</span>
+        <span class="pulse-value" data-live>实时</span>
       </div>
     </div>
 
     <!-- ═══ Main Content (Decision Banner + Execution Queue + Signals/Findings) ═══ -->
-    <div class="shell-main">
+    <div class="shell-main" id="main-content">
       <!-- Primary: Decision Banner + Execution Queue -->
       <div class="main-primary">
         <!-- Decision Banner: Account status + Regime judgment + Execution summary -->
@@ -185,7 +444,7 @@
             </div>
             <!-- Middle: Market context + judgment (~33%) -->
             <div class="decision-judgment">
-              <div class="decision-judgment-text">偏 Risk-On，波动回落，北向转暖，但局部拥挤。</div>
+              <div class="decision-judgment-text">温和风险偏好，波动回落，北向转暖，但局部拥挤。</div>
               <div class="decision-judgment-metrics">
                 <div class="decision-judgment-metric">
                   <span class="status-label">IVIX</span>
@@ -199,39 +458,40 @@
             </div>
             <!-- Right: Routing CTAs (~25%) -->
             <div class="decision-execution">
-              <span class="decision-routing-label">推荐入口</span>
+              <span class="decision-routing-label">下一步</span>
               <div class="decision-cta-row">
-                <span class="decision-cta primary">查看信号总览</span>
-                <span class="decision-cta secondary">进入研究</span>
-                <span class="decision-cta ghost">风控中心</span>
+                <button class="decision-cta primary" role="link">查看信号总览</button>
+                <button class="decision-cta secondary" role="link">进入研究</button>
+                <button class="decision-cta ghost" role="link">查看风控</button>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Today's Priority Items — Main Work Surface -->
-        <div class="panel" style="flex: 1;">
+        <div class="panel panel-grow">
           <div class="panel-header">
-            <span class="panel-title">今日优先事项 <span class="panel-subtitle">系统为你整理的跨域关注项</span></span>
+            <span class="panel-title">今日优先事项 <span class="panel-subtitle">跨域关注项</span></span>
             <span class="panel-count">5</span>
             <div class="panel-actions">
-              <span class="panel-action">查看全部 →</span>
+              <button class="panel-action" role="link">查看全部 →</button>
             </div>
           </div>
           <div class="panel-body">
+            <!-- P1 items first -->
             <div class="queue-item">
-              <div class="queue-item-bar p2"></div>
+              <div class="queue-item-bar p1"></div>
               <div class="queue-item-body">
                 <div class="queue-item-header">
-                  <span class="queue-item-title">价值因子 2026 Q1 回测完成</span>
-                  <span class="queue-item-tag domain">研究</span>
+                  <span class="queue-item-title">贵州茅台（600519）出现卖出信号</span>
+                  <span class="queue-item-tag trade">交易</span><span class="queue-item-tag priority">P1</span>
                 </div>
                 <div class="queue-item-detail">
-                  <span class="queue-item-reason">Sharpe 1.42，最大回撤 -8.3%，建议审阅后决定是否部署。</span>
+                  <span class="queue-item-reason">RSI 背离叠加放量，Alpha v3 置信度 87%，建议查看卖出上下文。</span>
                 </div>
                 <div class="queue-item-footer">
-                  <span class="queue-item-source">回测引擎 · 1小时前</span>
-                  <span class="panel-action">查看报告</span>
+                  <span class="queue-item-source">策略引擎 · 3分钟前</span>
+                  <button class="panel-action" role="link">查看详情</button>
                 </div>
               </div>
             </div>
@@ -248,45 +508,30 @@
                 </div>
                 <div class="queue-item-footer">
                   <span class="queue-item-source">风控引擎 · 12分钟前</span>
-                  <span class="panel-action">查看详情</span>
+                  <button class="panel-action" role="link">查看详情</button>
                 </div>
               </div>
             </div>
 
+            <!-- P2 item -->
             <div class="queue-item">
-              <div class="queue-item-bar p1"></div>
+              <div class="queue-item-bar p2"></div>
               <div class="queue-item-body">
                 <div class="queue-item-header">
-                  <span class="queue-item-title">贵州茅台（600519）出现卖出信号</span>
-                  <span class="queue-item-tag trade">交易</span><span class="queue-item-tag priority">P1</span>
+                  <span class="queue-item-title">价值因子 2026 Q1 回测完成</span>
+                  <span class="queue-item-tag research">研究</span>
                 </div>
                 <div class="queue-item-detail">
-                  <span class="queue-item-reason">RSI 背离叠加放量，Alpha v3 置信度 87%，建议查看卖出上下文。</span>
+                  <span class="queue-item-reason">Sharpe 1.42，最大回撤 -8.3%，建议审阅后决定是否部署。</span>
                 </div>
                 <div class="queue-item-footer">
-                  <span class="queue-item-source">策略引擎 · 3分钟前</span>
-                  <span class="panel-action">查看详情</span>
+                  <span class="queue-item-source">回测引擎 · 1小时前</span>
+                  <button class="panel-action" role="link">查看报告</button>
                 </div>
               </div>
             </div>
 
-            <div class="queue-item">
-              <div class="queue-item-bar p3"></div>
-              <div class="queue-item-body">
-                <div class="queue-item-header">
-                  <span class="queue-item-title">沪深300 1 分钟 K 线缺失</span>
-                  <span class="queue-item-tag data">数据</span>
-                </div>
-                <div class="queue-item-detail">
-                  <span class="queue-item-reason">14:32–14:33 数据缺失，当前自动补中，建议关注修复结果。</span>
-                </div>
-                <div class="queue-item-footer">
-                  <span class="queue-item-source">数据管道 · 42分钟前</span>
-                  <span class="panel-action">查看详情</span>
-                </div>
-              </div>
-            </div>
-
+            <!-- P3 items -->
             <div class="queue-item">
               <div class="queue-item-bar p3"></div>
               <div class="queue-item-body">
@@ -295,11 +540,28 @@
                   <span class="queue-item-tag platform">平台</span>
                 </div>
                 <div class="queue-item-detail">
-                  <span class="queue-item-reason">4,820 / 5,000 次今日请求，3 小时后自动重置。</span>
+                  <span class="queue-item-reason">今日已用 4,820 / 5,000 次，3 小时后重置。</span>
                 </div>
                 <div class="queue-item-footer">
                   <span class="queue-item-source">系统监控 · 2小时前</span>
-                  <span class="panel-action">查看用量</span>
+                  <button class="panel-action" role="link">查看用量</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="queue-item">
+              <div class="queue-item-bar p3"></div>
+              <div class="queue-item-body">
+                <div class="queue-item-header">
+                  <span class="queue-item-title">沪深300 1 分钟 K线缺失</span>
+                  <span class="queue-item-tag data">数据</span>
+                </div>
+                <div class="queue-item-detail">
+                  <span class="queue-item-reason">14:32–14:33 数据缺失，正在自动补全，建议关注修复结果。</span>
+                </div>
+                <div class="queue-item-footer">
+                  <span class="queue-item-source">数据管道 · 42分钟前</span>
+                  <button class="panel-action" role="link">查看详情</button>
                 </div>
               </div>
             </div>
@@ -312,44 +574,38 @@
         <!-- Research Progress (cross-domain, not trading-specific) -->
         <div class="secondary-panel">
           <div class="panel-header">
-            <span class="panel-title">研究进展 <span class="panel-subtitle">最近的研究与验证动态</span></span>
-            <span class="panel-action">查看全部</span>
+            <span class="panel-title">研究进展 <span class="panel-subtitle">研究动态</span></span>
+            <button class="panel-action" role="link">查看全部 →</button>
           </div>
           <div class="panel-body">
-            <div class="research-item highlighted">
-              <span class="research-item-icon" style="color:var(--system-healthy-fg);">
+            <!-- Deduplicated: removed "价值因子 Q1 回测完成" (already in Priority Items) -->
+            <div class="research-item">
+              <span class="research-item-icon icon-healthy">
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10l3 3 9-9"/></svg>
               </span>
               <div>
-                <div class="research-item-text">价值因子 Q1 回测完成</div>
-                <div class="research-item-summary">Sharpe 1.42，最大回撤 -8.3%，建议部署到实盘观察。</div>
-                <div class="research-item-source">回测引擎 · 1小时前</div>
-              </div>
-            </div>
-            <div class="research-item">
-              <span class="research-item-icon" style="color:var(--brand-accent);">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
-              </span>
-              <div>
-                <div class="research-item-text">情绪 Alpha v2 模型漂移检测 — 近 5 日 IC 从 0.041 降至 0.028，需关注。</div>
+                <div class="research-item-text">情绪 Alpha v2 模型漂移检测</div>
+                <div class="research-item-summary">近 5 日 IC 从 0.041 降至 0.028，需关注。</div>
                 <div class="research-item-source">模型监控 · 2小时前</div>
               </div>
             </div>
             <div class="research-item">
-              <span class="research-item-icon" style="color:var(--amber-500);">
+              <span class="research-item-icon icon-warning">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
               </span>
               <div>
-                <div class="research-item-text">新因子「北向持仓变化率」验证中 — 初步 IC 0.055，待 3 个月滚动验证。</div>
+                <div class="research-item-text">新因子「北向持仓变化率」验证中</div>
+                <div class="research-item-summary">初步 IC 0.055，待 3 个月滚动验证。</div>
                 <div class="research-item-source">因子研究 · 4小时前</div>
               </div>
             </div>
             <div class="research-item">
-              <span class="research-item-icon" style="color:var(--text-tertiary);">
+              <span class="research-item-icon icon-muted">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12M9 4v12"/></svg>
               </span>
               <div>
-                <div class="research-item-text">行业轮动策略参数优化完成 — 新参数组夏普比提升 0.15，待人工复核。</div>
+                <div class="research-item-text">行业轮动策略参数优化完成</div>
+                <div class="research-item-summary">新参数组 Sharpe 提升 0.15，待人工复核。</div>
                 <div class="research-item-source">优化引擎 · 6小时前</div>
               </div>
             </div>
@@ -358,9 +614,9 @@
 
         <!-- Agent Insights (cross-domain intelligence summary) -->
         <div class="findings-feed">
-          <div class="findings-feed-label">Agent 洞察 <span class="findings-feed-subtitle">跨域智能洞察摘要</span></div>
+          <div class="findings-feed-label">Agent 洞察 <span class="findings-feed-subtitle">智能关联分析</span></div>
           <div class="finding-item">
-            <span class="finding-icon" style="color:var(--agent-running-fg);">
+            <span class="finding-icon icon-agent">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
             </span>
             <div>
@@ -369,7 +625,7 @@
             </div>
           </div>
           <div class="finding-item">
-            <span class="finding-icon" style="color:var(--risk-high-fg);">
+            <span class="finding-icon icon-risk">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2v1"/></svg>
             </span>
             <div>
@@ -378,7 +634,7 @@
             </div>
           </div>
           <div class="finding-item">
-            <span class="finding-icon" style="color:var(--brand-accent);">
+            <span class="finding-icon icon-brand">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
             </span>
             <div>
@@ -403,16 +659,16 @@
           </div>
           <div class="context-section-body">
             <div class="pulse-metric">
-              <span class="pulse-metric-label">大盘</span>
+              <span class="pulse-metric-label">沪深300</span>
               <span class="pulse-metric-value up">3,432 · +0.82%</span>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">波动率</span>
-              <span class="pulse-metric-value down">IVIX 18.52 -3.1%</span>
+              <span class="pulse-metric-value">IVIX 18.52 · -3.1%</span>
             </div>
             <div class="pulse-metric">
-              <span class="pulse-metric-label">市场宽度</span>
-              <span class="pulse-metric-value up">偏强</span>
+              <span class="pulse-metric-label">涨跌比</span>
+              <span class="pulse-metric-value up">2.1:1</span>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">北向资金</span>
@@ -483,7 +739,7 @@
             <div class="health-item">
               <span class="health-dot degraded"></span>
               <span class="health-label">另类数据</span>
-              <span class="health-status warning">陈旧 (3天)</span>
+              <span class="health-status warning">陈旧（3天）</span>
             </div>
           </div>
           <div class="health-preview-footer">
