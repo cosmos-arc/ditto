@@ -176,6 +176,23 @@
 **Art Director 裁决记录**:
 - {描述降级/移除的 polish 变更及理由}
 
+## 跨页一致性
+
+> 仅在 Edition manifest 存在时输出此章节。
+
+| 指标 | 本页值 | Edition 基线 | 偏离 | 状态 |
+|------|--------|-------------|------|------|
+| table header height | Xpx | Xpx | +/-Xpx | 一致/偏离 |
+| card padding | Xpx | Xpx | +/-Xpx | 一致/偏离 |
+| badge size | Xpx | Xpx | +/-Xpx | 一致/偏离 |
+| button height | Xpx | Xpx | +/-Xpx | 一致/偏离 |
+| h1 font-size | Xpx | Xpx | +/-Xpx | 一致/偏离 |
+| brand accent count | N | N | +/-N | 一致/偏离 |
+| surface elevation 步数 | N | N | +/-N | 一致/偏离 |
+
+**偏离项**: X 项（P0: X, P1: X）
+**manifest 更新**: styleAnchor 链路 → 下一页将以本页为 reference
+
 ## 视口验证
 
 | 视口 | 分辨率 | 内容完整 | 截断(px) | 可滚动 | sticky 正常 | 状态 |

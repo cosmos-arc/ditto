@@ -20,6 +20,7 @@
 | 布局平衡 | 对齐方式、留白比例、视觉重心 |
 | 响应式 | 不同断点下的布局表现 |
 | 风格一致性 | 与其他页面的视觉风格是否统一 |
+| 跨页组件尺寸一致性 | 与 manifest 中其他 done 页面的组件 metrics（table header / card padding / badge / button）对比，标记偏离值 |
 
 **使用工具：**
 - Chrome DevTools MCP: `take_screenshot` + `evaluate_script` 提取 computed styles
@@ -44,6 +45,7 @@
 | 错误处理 | 错误状态是否有清晰提示和恢复路径 |
 | 空状态 | 列表/数据为空时的展示是否友好 |
 | 响应式交互 | 移动端触摸目标大小、手势交互 |
+| 跨页交互模式一致性 | 同类型页面（如表格页 vs 表格页）的交互模式（hover、sort、filter）是否一致 |
 | 认知负荷 | 单屏信息量是否适中，是否需要渐进展示 |
 
 #### 产品适配检查（参考 [00_ditto_product_criteria.md](../../docs/designs/specs/00_ditto_product_criteria.md)）
@@ -197,6 +199,7 @@
 | 视觉元素层级数 | 不同装饰元素类型数（badge/标签/状态点/编号/箭头/分隔线/图标） | ≤ 6 种 |
 | 色彩种类数 | 页面中使用的不同语义色彩种类（不含 neutral） | ≤ 4 种功能色 |
 | 跨页语言一致性 | 对比其他页面的视觉指纹差异度 | ≥ 7/10 |
+| 跨页 metrics 偏离 | 与 Phase 1 跨页一致性基线的偏离项数（组件尺寸/排版/色彩） | 0 项偏离（新增偏离标记为 P1） |
 | 品牌方向评分 | 整体气质偏向 Bloomberg/quant desk 还是 SaaS dashboard | ≥ 8/10 Bloomberg 方向 |
 
 #### 产品适配指标（参考 [00_ditto_product_criteria.md](../../docs/designs/specs/00_ditto_product_criteria.md)）
