@@ -655,6 +655,75 @@
         animation: none;
       }
     }
+
+    /* ── IC value conditional formatting (information density: signal strength scanning) ── */
+    .cell-ic-strong { color: var(--brand-accent); font-weight: var(--font-weight-semibold); }
+    .cell-ic-normal { color: var(--text-primary); }
+    .cell-ic-muted { color: var(--text-secondary); }
+    .cell-ic-dim { color: var(--text-tertiary); }
+
+    /* ── IR value conditional formatting ── */
+    .cell-ir-strong { color: var(--brand-accent); }
+    .cell-ir-normal { color: var(--text-primary); }
+    .cell-ir-muted { color: var(--text-secondary); }
+    .cell-ir-dim { color: var(--text-tertiary); }
+
+    /* ── Inline spark bar (IC relative strength visualization) ── */
+    .ic-bar {
+      display: inline-block;
+      width: 2px;
+      border-radius: 1px;
+      vertical-align: middle;
+      margin-left: var(--space-4);
+      opacity: 0.6;
+    }
+
+    .ic-bar.bar-accent { background: var(--brand-accent); }
+    .ic-bar.bar-muted { background: var(--text-tertiary); }
+
+    /* ── Running task progress bar ── */
+    .run-item-progress {
+      height: 2px;
+      background: var(--brand-accent);
+      border-radius: 1px;
+      margin-top: var(--space-4);
+      opacity: 0.5;
+      animation: progress-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes progress-pulse {
+      0% { width: 30%; opacity: 0.3; }
+      50% { width: 45%; opacity: 0.6; }
+      100% { width: 30%; opacity: 0.3; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .run-item-progress {
+        animation: none;
+        width: 38%;
+        opacity: 0.4;
+      }
+    }
+
+    /* ── Sharpe trend indicator (directional context for Sharpe ratio) ── */
+    .trend-up::after {
+      content: var(--indicator-up-sym);
+      color: var(--system-healthy-fg);
+      font-size: var(--font-size-10);
+      margin-left: var(--space-2);
+    }
+    .trend-down::after {
+      content: var(--indicator-down-sym);
+      color: var(--system-down-fg);
+      font-size: var(--font-size-10);
+      margin-left: var(--space-2);
+    }
+    .trend-flat::after {
+      content: var(--indicator-flat-sym);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      margin-left: var(--space-2);
+    }
   </style>
 </head>
 <body>
@@ -789,9 +858,9 @@
               <!-- 动量12M -->
               <tr class="row">
                 <td><span class="cell-ticker">动量12M</span></td>
-                <td class="right"><span class="cell-numeric accent">0.041</span></td>
-                <td class="right"><span class="cell-numeric accent">0.82</span></td>
-                <td class="right"><span class="cell-numeric">1.42</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-strong">0.041</span><span class="ic-bar bar-accent" style="height:14px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-strong">0.82</span></td>
+                <td class="right"><span class="cell-numeric trend-up">1.42</span></td>
                 <td class="right"><span class="cell-numeric">15.2%</span></td>
                 <td class="right"><span class="cell-numeric">3.2%</span></td>
                 <td class="right"><span class="cell-numeric">98%</span></td>
@@ -801,9 +870,9 @@
               <!-- 价值PE -->
               <tr class="row">
                 <td><span class="cell-ticker">价值PE</span></td>
-                <td class="right"><span class="cell-numeric accent">0.038</span></td>
-                <td class="right"><span class="cell-numeric accent">0.75</span></td>
-                <td class="right"><span class="cell-numeric">1.28</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-strong">0.038</span><span class="ic-bar bar-accent" style="height:13px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-strong">0.75</span></td>
+                <td class="right"><span class="cell-numeric trend-flat">1.28</span></td>
                 <td class="right"><span class="cell-numeric">8.4%</span></td>
                 <td class="right"><span class="cell-numeric">1.8%</span></td>
                 <td class="right"><span class="cell-numeric">95%</span></td>
@@ -813,9 +882,9 @@
               <!-- 低波动 -->
               <tr class="row">
                 <td><span class="cell-ticker">低波动</span></td>
-                <td class="right"><span class="cell-numeric accent">0.032</span></td>
-                <td class="right"><span class="cell-numeric">0.68</span></td>
-                <td class="right"><span class="cell-numeric">1.15</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-normal">0.032</span><span class="ic-bar bar-muted" style="height:12px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-normal">0.68</span></td>
+                <td class="right"><span class="cell-numeric trend-flat">1.15</span></td>
                 <td class="right"><span class="cell-numeric">12.1%</span></td>
                 <td class="right"><span class="cell-numeric">2.5%</span></td>
                 <td class="right"><span class="cell-numeric">99%</span></td>
@@ -825,9 +894,9 @@
               <!-- 质量ROE -->
               <tr class="row">
                 <td><span class="cell-ticker">质量ROE</span></td>
-                <td class="right"><span class="cell-numeric muted">0.029</span></td>
-                <td class="right"><span class="cell-numeric">0.61</span></td>
-                <td class="right"><span class="cell-numeric">1.02</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-muted">0.029</span><span class="ic-bar bar-muted" style="height:11px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-normal">0.61</span></td>
+                <td class="right"><span class="cell-numeric trend-flat">1.02</span></td>
                 <td class="right"><span class="cell-numeric">6.8%</span></td>
                 <td class="right"><span class="cell-numeric">1.2%</span></td>
                 <td class="right"><span class="cell-numeric">92%</span></td>
@@ -837,9 +906,9 @@
               <!-- 规模 -->
               <tr class="row">
                 <td><span class="cell-ticker">规模</span></td>
-                <td class="right"><span class="cell-numeric muted">0.025</span></td>
-                <td class="right"><span class="cell-numeric muted">0.55</span></td>
-                <td class="right"><span class="cell-numeric">0.92</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-muted">0.025</span><span class="ic-bar bar-muted" style="height:9px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-normal">0.55</span></td>
+                <td class="right"><span class="cell-numeric trend-flat">0.92</span></td>
                 <td class="right"><span class="cell-numeric">5.2%</span></td>
                 <td class="right"><span class="cell-numeric">0.8%</span></td>
                 <td class="right"><span class="cell-numeric">100%</span></td>
@@ -849,9 +918,9 @@
               <!-- 成长（营收） -->
               <tr class="row">
                 <td><span class="cell-ticker">成长（营收）</span></td>
-                <td class="right"><span class="cell-numeric muted">0.022</span></td>
-                <td class="right"><span class="cell-numeric muted">0.48</span></td>
-                <td class="right"><span class="cell-numeric">0.85</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-muted">0.022</span><span class="ic-bar bar-muted" style="height:8px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-muted">0.48</span></td>
+                <td class="right"><span class="cell-numeric trend-flat">0.85</span></td>
                 <td class="right"><span class="cell-numeric">18.6%</span></td>
                 <td class="right"><span class="cell-numeric">4.1%</span></td>
                 <td class="right"><span class="cell-numeric">88%</span></td>
@@ -861,9 +930,9 @@
               <!-- 北向持仓变化率 -->
               <tr class="row">
                 <td><span class="cell-ticker">北向持仓变化率</span></td>
-                <td class="right"><span class="cell-numeric accent">0.055</span></td>
-                <td class="right"><span class="cell-numeric accent">0.92</span></td>
-                <td class="right"><span class="cell-numeric">1.58</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-strong">0.055</span><span class="ic-bar bar-accent" style="height:16px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-strong">0.92</span></td>
+                <td class="right"><span class="cell-numeric trend-up">1.58</span></td>
                 <td class="right"><span class="cell-numeric">22.3%</span></td>
                 <td class="right"><span class="cell-numeric">5.8%</span></td>
                 <td class="right"><span class="cell-numeric">76%</span></td>
@@ -873,9 +942,9 @@
               <!-- 情绪Alpha -->
               <tr class="row">
                 <td><span class="cell-ticker">情绪Alpha</span></td>
-                <td class="right"><span class="cell-numeric muted">0.028</span></td>
-                <td class="right"><span class="cell-numeric muted">0.45</span></td>
-                <td class="right"><span class="cell-numeric">0.78</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-muted">0.028</span><span class="ic-bar bar-muted" style="height:10px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-muted">0.45</span></td>
+                <td class="right"><span class="cell-numeric trend-down">0.78</span></td>
                 <td class="right"><span class="cell-numeric">25.1%</span></td>
                 <td class="right"><span class="cell-numeric">7.2%</span></td>
                 <td class="right"><span class="cell-numeric">85%</span></td>
@@ -885,9 +954,9 @@
               <!-- 换手率动量 -->
               <tr class="row">
                 <td><span class="cell-ticker">换手率动量</span></td>
-                <td class="right"><span class="cell-numeric accent">0.033</span></td>
-                <td class="right"><span class="cell-numeric accent">0.71</span></td>
-                <td class="right"><span class="cell-numeric">1.22</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-normal">0.033</span><span class="ic-bar bar-muted" style="height:12px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-strong">0.71</span></td>
+                <td class="right"><span class="cell-numeric trend-flat">1.22</span></td>
                 <td class="right"><span class="cell-numeric">32.8%</span></td>
                 <td class="right"><span class="cell-numeric">6.1%</span></td>
                 <td class="right"><span class="cell-numeric">91%</span></td>
@@ -897,9 +966,9 @@
               <!-- 行业动量 -->
               <tr class="row">
                 <td><span class="cell-ticker">行业动量</span></td>
-                <td class="right"><span class="cell-numeric muted">0.019</span></td>
-                <td class="right"><span class="cell-numeric muted">0.38</span></td>
-                <td class="right"><span class="cell-numeric">0.72</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-dim">0.019</span><span class="ic-bar bar-muted" style="height:7px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-muted">0.38</span></td>
+                <td class="right"><span class="cell-numeric trend-down">0.72</span></td>
                 <td class="right"><span class="cell-numeric">14.6%</span></td>
                 <td class="right"><span class="cell-numeric">3.8%</span></td>
                 <td class="right"><span class="cell-numeric">94%</span></td>
@@ -909,9 +978,9 @@
               <!-- 波动率偏斜 -->
               <tr class="row">
                 <td><span class="cell-ticker">波动率偏斜</span></td>
-                <td class="right"><span class="cell-numeric">0.021</span></td>
-                <td class="right"><span class="cell-numeric">0.42</span></td>
-                <td class="right"><span class="cell-numeric">0.68</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-dim">0.021</span><span class="ic-bar bar-muted" style="height:8px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-muted">0.42</span></td>
+                <td class="right"><span class="cell-numeric trend-down">0.68</span></td>
                 <td class="right"><span class="cell-numeric">9.3%</span></td>
                 <td class="right"><span class="cell-numeric">1.5%</span></td>
                 <td class="right"><span class="cell-numeric">97%</span></td>
@@ -921,9 +990,9 @@
               <!-- 分析师预期变化 -->
               <tr class="row">
                 <td><span class="cell-ticker">分析师预期变化</span></td>
-                <td class="right"><span class="cell-numeric muted">0.018</span></td>
-                <td class="right"><span class="cell-numeric muted">0.35</span></td>
-                <td class="right"><span class="cell-numeric">0.62</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-dim">0.018</span><span class="ic-bar bar-muted" style="height:7px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-dim">0.35</span></td>
+                <td class="right"><span class="cell-numeric trend-down">0.62</span></td>
                 <td class="right"><span class="cell-numeric">7.8%</span></td>
                 <td class="right"><span class="cell-numeric">2.1%</span></td>
                 <td class="right"><span class="cell-numeric">82%</span></td>
@@ -994,6 +1063,7 @@
             <div class="run-item-content">
               <div class="run-item-title">北向持仓变化率 3月滚动验证</div>
               <div class="run-item-detail">IC 0.055, 覆盖率 76%</div>
+              <div class="run-item-progress"></div>
               <div class="run-item-footer">
                 <span class="run-item-status running">运行中</span>
                 <span class="run-item-time">4小时前</span>
