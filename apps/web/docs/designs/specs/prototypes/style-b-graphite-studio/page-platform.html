@@ -89,25 +89,46 @@
       background: var(--surface-frosted);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    /* Header floating layer — light from behind */
+    .shell-ops .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
     }
 
     /* Brand anchor: health strip accent light band */
     .shell-ops .ops-health {
       border-bottom: 2px solid var(--brand-accent);
       position: relative;
+      box-shadow: 0 2px 8px -2px color-mix(in oklch, var(--brand-accent) 12%, transparent);
     }
     /* Subtle glow below the accent line */
     .shell-ops .ops-health::after {
       content: '';
       position: absolute;
-      bottom: -4px;
-      left: 10%;
-      right: 10%;
-      height: 3px;
+      bottom: -6px;
+      left: 15%;
+      right: 15%;
+      height: 4px;
       background: var(--brand-accent);
-      opacity: 0.08;
+      opacity: 0.06;
       border-radius: 2px;
       pointer-events: none;
+      filter: blur(3px);
     }
 
     /* ── Panel body breathing room ── */
@@ -243,10 +264,15 @@
       flex-shrink: 0;
     }
 
-    .health-metric-dot.healthy  { background: var(--system-healthy-fg); }
-    .health-metric-dot.degraded { background: var(--system-degraded-fg); }
-    .health-metric-dot.down     { background: var(--system-down-fg); }
+    .health-metric-dot.healthy  { background: var(--system-healthy-fg); filter: drop-shadow(0 0 3px color-mix(in oklch, var(--system-healthy-fg) 40%, transparent)); }
+    .health-metric-dot.degraded { background: var(--system-degraded-fg); filter: drop-shadow(0 0 3px color-mix(in oklch, var(--system-degraded-fg) 40%, transparent)); }
+    .health-metric-dot.down     { background: var(--system-down-fg); animation: dot-critical-pulse 2s ease-in-out infinite; }
     .health-metric-dot.brand    { background: var(--brand-accent); }
+
+    @keyframes dot-critical-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
 
     .health-metric-label {
       color: var(--text-tertiary);
@@ -301,8 +327,20 @@
     }
 
     .ops-main .panel + .panel {
-      border-top: none;
-      margin-top: -1px;
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 0;
+      position: relative;
+    }
+    /* Highlight line — light from top */
+    .ops-main .panel + .panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, white 3%, transparent);
+      pointer-events: none;
     }
 
     /* ── Alert Row with description ── */
@@ -368,6 +406,7 @@
       background: var(--neutral-200);
       border-radius: 2px;
       overflow: hidden;
+      box-shadow: inset 0 1px 2px color-mix(in oklch, var(--neutral-0) 40%, transparent);
     }
 
     .quota-bar-fill {
@@ -376,9 +415,9 @@
       transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
-    .quota-bar-fill.ok       { background: var(--system-healthy-fg); }
-    .quota-bar-fill.warn     { background: var(--system-degraded-fg); }
-    .quota-bar-fill.critical { background: var(--system-down-fg); }
+    .quota-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, white)); }
+    .quota-bar-fill.warn     { background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 80%, white)); }
+    .quota-bar-fill.critical { background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, white)); }
 
     /* ── Task Row ── */
     .task-item {
@@ -480,6 +519,7 @@
       background: var(--neutral-200);
       border-radius: 2px;
       overflow: hidden;
+      box-shadow: inset 0 1px 2px color-mix(in oklch, var(--neutral-0) 40%, transparent);
     }
 
     .resource-bar-fill {
@@ -610,7 +650,8 @@
       .btn, .rail-icon, .header-btn-badge, .header-action-btn,
       .panel-action, .quota-bar-fill, .resource-bar-fill,
       .status-indicator, .alert-row, .data-table tr,
-      .skeleton, .task-item.running, .task-item.running .task-status::after {
+      .skeleton, .task-item.running, .task-item.running .task-status::after,
+      .health-metric-dot {
         transition: none !important;
         animation: none !important;
       }
@@ -671,6 +712,10 @@
     /* Critical alert left accent — scan priority */
     .alert-row:has(.alert-dot.critical) {
       border-left-color: var(--system-down-fg);
+      background: color-mix(in oklch, var(--system-down-fg) 4%, transparent);
+    }
+    .alert-row:has(.alert-dot.warning) {
+      background: color-mix(in oklch, var(--system-degraded-fg) 2%, transparent);
     }
     .alert-row:has(.alert-dot.critical):hover {
       border-left-color: var(--system-down-fg);
@@ -789,7 +834,7 @@
     }
 
     .task-item.running {
-      background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
       border-radius: var(--radius-4);
       padding-left: var(--space-4);
       padding-right: var(--space-4);
