@@ -170,6 +170,18 @@
       border-bottom-color: var(--brand-accent);
     }
 
+    /* Panel tab entrance — stagger */
+    .panel-tab {
+      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .panel-tabs .panel-tab:nth-child(1) { animation-delay: 50ms; }
+    .panel-tabs .panel-tab:nth-child(2) { animation-delay: 100ms; }
+
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
     /* ── Header subtitle ── */
     .header-subtitle {
       font-size: var(--font-size-12);
@@ -651,7 +663,7 @@
       .panel-action, .quota-bar-fill, .resource-bar-fill,
       .status-indicator, .alert-row, .data-table tr,
       .skeleton, .task-item.running, .task-item.running .task-status::after,
-      .health-metric-dot {
+      .health-metric-dot, .panel-tab {
         transition: none !important;
         animation: none !important;
       }
@@ -677,7 +689,8 @@
 
     /* Data table row hover — subtle interactive hint */
     .data-table tbody tr {
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: pointer;
     }
     .data-table tbody tr:hover {
@@ -843,6 +856,24 @@
     @keyframes task-breathe {
       0%, 100% { opacity: 1; }
       50%      { opacity: 0.88; }
+    }
+
+    /* ══════════════════════════════════════════════
+     * R3: System-wide dual-line separator — detail panel sections
+     * ══════════════════════════════════════════════ */
+    .context-section + .context-section {
+      border-top: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    .context-section + .context-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, white 3%, transparent);
+      pointer-events: none;
     }
 
     /* ══════════════════════════════════════════════
@@ -1026,6 +1057,29 @@
       background: var(--brand-accent);
     }
 
+    /* Rail right edge ambient light — brand continuity */
+    .shell-ops .shell-rail {
+      position: relative;
+    }
+    .shell-ops .shell-rail::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -1px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 5;
+    }
+
     /* ── DQ Badge ── */
     .dq-badge {
       display: inline-block;
@@ -1059,6 +1113,21 @@
       margin-left: var(--space-8);
       padding-left: var(--space-8);
       border-left: 1px solid var(--border-subtle);
+    }
+
+    /* Panel header depth — subtle bottom highlight */
+    .ops-main > .panel > .panel-header {
+      position: relative;
+    }
+    .ops-main > .panel > .panel-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, white 2%, transparent);
+      pointer-events: none;
     }
 
     /* Consistent table row height */
@@ -1498,6 +1567,8 @@
     <span class="status-live">LIVE</span>
     <span class="status-sep">│</span>
     <span>4/5 数据源在线</span>
+    <span class="status-sep">│</span>
+    <span>延迟 <span class="status-live" style="color:var(--system-healthy-fg)">2s</span></span>
     <span class="status-sep">│</span>
     <span>14:32:15 CST</span>
     <span class="status-sep">│</span>
