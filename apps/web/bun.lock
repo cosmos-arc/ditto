@@ -4,6 +4,9 @@
     "": {
       "name": "ditto-app",
       "dependencies": {
+        "@fontsource-variable/noto-sans-sc": "^5.2.10",
+        "@fontsource/geist-mono": "^5.2.7",
+        "@fontsource/geist-sans": "^5.2.5",
         "@tanstack/react-query": "^5.95.2",
         "@tanstack/react-router": "^1.168.4",
         "clsx": "^2.1.1",
@@ -176,6 +179,12 @@
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.27.4", "https://registry.npmmirror.com/@esbuild/win32-x64/-/win32-x64-0.27.4.tgz", { "os": "win32", "cpu": "x64" }, "sha512-+knoa0BDoeXgkNvvV1vvbZX4+hizelrkwmGJBdT17t8FNPwG2lKemmuMZlmaNQ3ws3DKKCxpb4zRZEIp3UxFCg=="],
 
     "@exodus/bytes": ["@exodus/bytes@1.15.0", "https://registry.npmmirror.com/@exodus/bytes/-/bytes-1.15.0.tgz", { "peerDependencies": { "@noble/hashes": "^1.8.0 || ^2.0.0" }, "optionalPeers": ["@noble/hashes"] }, "sha512-UY0nlA+feH81UGSHv92sLEPLCeZFjXOuHhrIo0HQydScuQc8s0A7kL/UdgwgDq8g8ilksmuoF35YVTNphV2aBQ=="],
+
+    "@fontsource-variable/noto-sans-sc": ["@fontsource-variable/noto-sans-sc@5.2.10", "https://registry.npmmirror.com/@fontsource-variable/noto-sans-sc/-/noto-sans-sc-5.2.10.tgz", {}, "sha512-zdk10i5HrDQTXI7ldD61zToX1fsgig8vDTsu7zB48SXOitWfuX0e5viZAwnkHuhwh096PU6X6i1AyAsbBCISpA=="],
+
+    "@fontsource/geist-mono": ["@fontsource/geist-mono@5.2.7", "https://registry.npmmirror.com/@fontsource/geist-mono/-/geist-mono-5.2.7.tgz", {}, "sha512-xVPVFISJg/K0VVd+aQN0Y7X/sw9hUcJPyDWFJ5GpyU3bHELhoRsJkPSRSHXW32mOi0xZCUQDOaPj1sqIFJ1FGg=="],
+
+    "@fontsource/geist-sans": ["@fontsource/geist-sans@5.2.5", "https://registry.npmmirror.com/@fontsource/geist-sans/-/geist-sans-5.2.5.tgz", {}, "sha512-anllOHyJbElRs9fV15TeDRqAeb1IKm4bSknPl6ZMoyPTx1BBy7logudcUwpNjmQLkzn4Q0JGQLRCUKJYoyST6A=="],
 
     "@inquirer/ansi": ["@inquirer/ansi@1.0.2", "https://registry.npmmirror.com/@inquirer/ansi/-/ansi-1.0.2.tgz", {}, "sha512-S8qNSZiYzFd0wAcyG5AXCvUHC5Sr7xpZ9wZ2py9XR88jUz8wooStVx5M6dRzczbBWjic9NP7+rY0Xi7qqK/aMQ=="],
 

@@ -187,6 +187,8 @@
 | badge size | Xpx | Xpx | +/-Xpx | 一致/偏离 |
 | button height | Xpx | Xpx | +/-Xpx | 一致/偏离 |
 | h1 font-size | Xpx | Xpx | +/-Xpx | 一致/偏离 |
+| font-family-* 4-role | heading/body/data/code 各司其职 | — | 违规 N 处 | 一致/偏离 |
+| tabular-nums | data 组件已启用 | — | 缺失 N 处 | 一致/偏离 |
 | brand accent count | N | N | +/-N | 一致/偏离 |
 | surface elevation 步数 | N | N | +/-N | 一致/偏离 |
 

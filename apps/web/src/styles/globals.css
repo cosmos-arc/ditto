@@ -81,9 +81,10 @@
   --color-functional-purple: var(--purple-500);
 
   /* ── Fonts ── */
-  --font-ui: var(--font-family-ui);
-  --font-numeric: var(--font-family-numeric);
-  --font-code: var(--font-family-code);
+  --font-body:    var(--font-family-body);
+  --font-heading: var(--font-family-heading);
+  --font-data:    var(--font-family-data);
+  --font-code:    var(--font-family-code);
 }
 
 /* ─────────────────────────────────────────────
@@ -156,10 +157,46 @@
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
 
-  /* ── Font Families ── */
-  --font-family-ui: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
-  --font-family-numeric: 'JetBrains Mono', monospace;
-  --font-family-code: 'JetBrains Mono', monospace;
+  /* ── Font Families (4-role system) ── */
+  --font-family-body:
+    "Inter",
+    "Noto Sans SC Variable",
+    "Source Han Sans SC",
+    "PingFang SC",
+    system-ui,
+    -apple-system,
+    sans-serif;
+
+  --font-family-heading:
+    "Geist Sans",
+    "Inter",
+    "Noto Sans SC Variable",
+    "Source Han Sans SC",
+    "PingFang SC",
+    system-ui,
+    -apple-system,
+    sans-serif;
+
+  --font-family-data:
+    "Inter",
+    "Noto Sans SC Variable",
+    "Source Han Sans SC",
+    "PingFang SC",
+    system-ui,
+    sans-serif;
+
+  --font-family-code:
+    "Geist Mono",
+    "JetBrains Mono",
+    ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+
+  /* ── Line Heights ── */
+  --line-height-compact:  1.25;
+  --line-height-normal:   1.45;
+  --line-height-relaxed:  1.60;
 
   /* ── Spacing Scale (4pt base) ── */
   --space-2:  0.125rem;
@@ -356,9 +393,9 @@ body {
   overflow: hidden;
   background: var(--surface-app);
   color: var(--text-primary);
-  font-family: var(--font-family-ui);
+  font-family: var(--font-family-body);
   font-size: var(--font-size-13);
-  line-height: 1.5;
+  line-height: var(--line-height-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

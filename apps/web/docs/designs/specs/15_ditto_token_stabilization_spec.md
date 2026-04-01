@@ -195,17 +195,29 @@ R1 精简后的 6 级字号体系。与上游规范 §6 相比，移除了 11/18
 
 | Token | Value | Role |
 |-------|-------|------|
-| `--font-weight-regular` | 400 | 正文、辅助文本 |
-| `--font-weight-medium` | 500 | 区块标题、交互元素 |
-| `--font-weight-semibold` | 600 | 页面标题、强调文本 |
+| `--font-weight-regular` | 400 | 正文、表格正文、表单输入、tooltip |
+| `--font-weight-medium` | 500 | 二级标题、表头、导航项、按钮文字、KPI 标签 |
+| `--font-weight-semibold` | 600 | 一级标题、关键模块标题、极少量强调 |
 
-### 字体家族
+### 字体家族（4-role system）
+
+> **更新**：2026-03-31，从 3 套升级为 4 套
+> **完整规范**：[2026-04-01-typography-system-design.md](../../../plans/2026-04-01-typography-system-design.md)
 
 | Token | Value | Role |
 |-------|-------|------|
-| `--font-family-ui` | (系统 UI 字体栈) | 界面文本 |
-| `--font-family-numeric` | (等宽数字字体栈) | 数值、金融数据、ID |
-| `--font-family-code` | (等宽代码字体栈) | 代码片段、run name、技术标识符 |
+| `--font-family-body` | Inter, Noto Sans SC Variable, Source Han Sans SC, PingFang SC, system-ui | 正文、表单、筛选器、KPI 标签 |
+| `--font-family-heading` | Geist Sans, Inter, Noto Sans SC Variable, ... | 页面标题、模块标题、一级导航 |
+| `--font-family-data` | Inter, Noto Sans SC Variable, PingFang SC, system-ui | 价格、PnL、收益率 + `tabular-nums slashed-zero` |
+| `--font-family-code` | Geist Mono, JetBrains Mono, ui-monospace, ... | 代码编辑器、日志、DSL + `font-variant-ligatures: none` |
+
+### 行高
+
+| Token | Value | Role |
+|-------|-------|------|
+| `--line-height-compact` | 1.25 | 表格、紧凑列表、导航 |
+| `--line-height-normal` | 1.45 | 全局默认（body） |
+| `--line-height-relaxed` | 1.60 | 说明文字、长段落、文档型内容 |
 
 ### DEPRECATED Token
 

@@ -10,17 +10,26 @@
 - **Why:** 现代 Sans 主导，信息密度与可读性平衡，适合日常量化工作台。非 Mono 极密风格，减少长时间使用疲劳
 - **How to apply:** 所有原型和 Token 以 `docs/designs/specs/prototypes/style-b-graphite-studio/` 为基准
 
-## 2. UI 字体 → Inter + Noto Sans SC
+## 2. 排版系统 → 4-role Font System
 
-- **选择**：`'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif`
-- **Why:** 中文内容为主，Inter 搭配 Noto Sans SC 覆盖中英文，Google Fonts 免费，渲染质量优秀，广泛用于 Linear/Vercel/Raycast
-- **How to apply:** `--font-family-ui` token，全局 UI 文本
+> **更新**：2026-03-31，从 3 套 token 升级为 4 套
+> **完整规范**：[2026-04-01-typography-system-design.md](../../plans/2026-04-01-typography-system-design.md)
 
-## 3. 数据/代码字体 → JetBrains Mono
+- **选择**：4 套字体 token，按职责分工
+  - `--font-family-body`：Inter + Noto Sans SC Variable（Source Han 同源）→ 正文底座
+  - `--font-family-heading`：Geist Sans + Inter → 标题/导航气质层
+  - `--font-family-data`：Inter → 数据精度层 + `tabular-nums slashed-zero`
+  - `--font-family-code`：Geist Mono + JetBrains Mono(fallback) → 代码终端层
+- **Why:** 每个字族按官方定位分工：Geist 负责气质，Inter 负责数据精度，Geist Mono 负责代码终端感，Source Han 负责中文底座。数字不再用 mono，标题不再等于正文
+- **How to apply:** 见 [typography-system-design.md](../../plans/2026-04-01-typography-system-design.md)
 
-- **选择**：`'JetBrains Mono', monospace`
-- **Why:** 等宽字体，数字列对齐优秀，代码高亮 ligature 支持，量化平台标配
-- **How to apply:** `--font-family-numeric` + `--font-family-code` token
+### 废弃（2026-03-31）
+
+| 旧 Token | 替换为 |
+|----------|--------|
+| `--font-family-ui` | `--font-family-body` + `--font-family-heading` |
+| `--font-family-numeric` | `--font-family-data` |
+| `--font-family-code` (JetBrains Mono) | `--font-family-code` (Geist Mono) |
 
 ## 4. 密度系统 → 3 级 (Dense / Compact / Comfortable)
 
