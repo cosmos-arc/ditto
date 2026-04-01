@@ -486,6 +486,19 @@
       color: var(--text-tertiary);
     }
 
+    /* ── Analysis Band body: flex column so chart flex:1 works ── */
+    .analysis-band-body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Analysis Band tab active indicator ── */
+    .analysis-band-tab.active {
+      border-bottom: 2px solid var(--brand-accent);
+      border-radius: 0;
+      padding-bottom: calc(var(--space-4) - 2px);
+    }
+
     /* ── Analysis Band metrics ── */
     .analysis-metrics {
       display: flex;
@@ -668,9 +681,11 @@
     .cell-ic-muted { color: var(--text-secondary); }
     .cell-ic-dim { color: var(--text-tertiary); }
 
-    /* ── IC/IR conditional formatting for degraded rows ── */
+    /* ── IC/IR conditional formatting for degraded/down rows ── */
     .cell-ic-degraded { color: var(--system-degraded-fg); }
     .cell-ir-degraded { color: var(--system-degraded-fg); }
+    .cell-ic-down { color: var(--system-down-fg); }
+    .cell-ir-down { color: var(--system-down-fg); }
 
     /* ── IR value conditional formatting ── */
     .cell-ir-strong { color: var(--brand-accent); }
@@ -1011,8 +1026,8 @@
               <tr class="row">
                 <td class="cell-status-bar down"></td>
                 <td><span class="cell-ticker">波动率偏斜</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-degraded">0.021</span><span class="ic-bar bar-muted" style="height:8px;"></span></td>
-                <td class="right"><span class="cell-numeric cell-ir-degraded">0.42</span></td>
+                <td class="right"><span class="cell-numeric cell-ic-down">0.021</span><span class="ic-bar bar-muted" style="height:8px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ir-down">0.42</span></td>
                 <td class="right"><span class="cell-numeric trend-down">0.68</span></td>
                 <td class="right"><span class="cell-numeric">9.3%</span></td>
                 <td class="right"><span class="cell-numeric">1.5%</span></td>
