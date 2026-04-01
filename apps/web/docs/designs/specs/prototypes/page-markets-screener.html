@@ -150,6 +150,7 @@
       width: var(--sparkline-w);
       height: var(--sparkline-h);
       display: block;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .sparkline-up {
@@ -163,6 +164,30 @@
       opacity: 0.5;
     }
 
+    /* Sparkline hover — reveal trend clarity */
+    .sparkline-up:hover svg,
+    .sparkline-down:hover svg {
+      opacity: 1;
+    }
+    .sparkline-up:hover svg polyline,
+    .sparkline-down:hover svg polyline {
+      stroke-width: 1.8;
+    }
+    .sparkline-flat:hover {
+      opacity: 0.8;
+    }
+    .data-table tr:hover .sparkline-up svg,
+    .data-table tr:hover .sparkline-down svg {
+      opacity: 1;
+    }
+    .data-table tr:hover .sparkline-up svg polyline,
+    .data-table tr:hover .sparkline-down svg polyline {
+      stroke-width: 1.8;
+    }
+    .data-table tr:hover .sparkline-flat {
+      opacity: 0.8;
+    }
+
     /* ── Detail Panel Sections ── */
     .detail-actions {
       padding: var(--space-12);
@@ -173,7 +198,7 @@
     }
 
     .detail-actions .btn {
-      width: 100%;
+      flex: 1;
       justify-content: center;
     }
 
@@ -378,9 +403,9 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 80%,
         transparent 100%
       );
       pointer-events: none;
@@ -392,7 +417,6 @@
     }
     .detail-actions-body {
       display: flex;
-      flex-direction: column;
       gap: var(--space-6);
       padding-top: var(--space-8);
     }
@@ -451,6 +475,9 @@
     /* ── Sorted column brand accent ── */
     .data-table th.sorted {
       border-bottom: 2px solid var(--brand-accent);
+    }
+    .data-table td.col-sorted {
+      background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
     }
 
     /* ── Reduced motion ── */
@@ -581,6 +608,7 @@
         <div class="table-container">
           <table class="data-table" aria-label="筛选结果">
             <caption class="sr-only">筛选结果：共 238 只标的</caption>
+            <colgroup><col class="col-sorted"></colgroup>
             <thead>
               <tr>
                 <th scope="col" style="width:80px" class="sorted">代码 <span class="sort-icon">▲</span></th>
