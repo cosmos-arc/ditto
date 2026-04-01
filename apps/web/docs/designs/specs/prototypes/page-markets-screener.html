@@ -102,6 +102,7 @@
       border-radius: var(--radius-12);
       white-space: nowrap;
       font-feature-settings: 'kern' 1;
+      position: relative;
     }
 
     .signal-pill.buy {
@@ -155,6 +156,7 @@
       font-feature-settings: 'tnum' 1;
       opacity: 0.7;
       margin-left: var(--space-4);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     /* ── Risk score numeric value ── */
@@ -163,6 +165,17 @@
       font-feature-settings: 'tnum' 1;
       opacity: 0.5;
       margin-left: var(--space-4);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Signal pill hover: reveal full strength ── */
+    .signal-pill:hover .signal-strength {
+      opacity: 1;
+    }
+
+    /* ── Risk dot hover: reveal score ── */
+    .risk-dot:hover .risk-score {
+      opacity: 0.8;
     }
 
     /* ── Sparkline extrema markers (high/low) ── */
@@ -604,6 +617,11 @@
       border-radius: 0;
     }
 
+    /* ── Focus + Selected 叠加：加粗左侧指示条 ── */
+    .data-table tr.row.selected:focus-within td:first-child {
+      box-shadow: inset 3px 0 0 var(--brand-accent), 0 0 0 1px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+    }
+
     /* ── Table empty state ── */
     .table-empty {
       display: none;
@@ -752,6 +770,8 @@
       .preset-card { transition: none !important; }
       .preset-card-match { transition: none !important; }
       .signal-pill { transition: none !important; }
+      .signal-strength { transition: none !important; }
+      .risk-score { transition: none !important; }
       .filter-chip { transition: none !important; }
       .pagination-btn { transition: none !important; }
       .compare-item-remove { transition: none !important; }
@@ -952,7 +972,7 @@
                 <td class="right numeric cell-volume">98.4亿</td>
                 <td class="right numeric cell-volume">8,450亿</td>
                 <td><span class="cell-badge sector">新能源</span></td>
-                <td><span class="signal-pill hold">持有 <span class="signal-strength">0.55</span></span></td>
+                <td><span class="signal-pill sell s0">卖出 <span class="signal-strength">0.35</span></span></td>
                 <td><span class="risk-dot low">低 <span class="risk-score">18</span></span></td>
                 <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polygon class="spark-area" points="1,6 4,6 7,7 10,5 13,4 16,2 19,3 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,6 4,6 7,7 10,5 13,4 16,2 19,3" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/><circle class="spark-extrema spark-high" cx="16" cy="2" r="1.2"/><circle class="spark-extrema spark-low" cx="7" cy="7" r="1.2"/></svg></span></td>
               </tr>
@@ -1120,7 +1140,7 @@
                 <td class="right numeric cell-volume">8.9亿</td>
                 <td class="right numeric cell-volume">580亿</td>
                 <td><span class="cell-badge sector">科技</span></td>
-                <td><span class="signal-pill hold">持有 <span class="signal-strength">0.58</span></span></td>
+                <td><span class="signal-pill buy s0">买入 <span class="signal-strength">0.58</span></span></td>
                 <td><span class="risk-dot low">低 <span class="risk-score">16</span></span></td>
                 <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polygon class="spark-area" points="1,7 4,6 7,7 10,6 13,5 16,4 19,3 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,7 4,6 7,7 10,6 13,5 16,4 19,3" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/><circle class="spark-extrema spark-high" cx="19" cy="3" r="1.2"/><circle class="spark-extrema spark-low" cx="1" cy="7" r="1.2"/></svg></span></td>
               </tr>
