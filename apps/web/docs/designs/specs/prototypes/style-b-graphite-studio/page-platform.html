@@ -116,20 +116,8 @@
       position: relative;
       box-shadow: 0 2px 8px -2px color-mix(in oklch, var(--brand-accent) 12%, transparent);
     }
-    /* Subtle glow below the accent line */
-    .shell-ops .ops-health::after {
-      content: '';
-      position: absolute;
-      bottom: -6px;
-      left: 15%;
-      right: 15%;
-      height: 4px;
-      background: var(--brand-accent);
-      opacity: 0.06;
-      border-radius: 2px;
-      pointer-events: none;
-      filter: blur(3px);
-    }
+    /* Health strip glow: box-shadow only — removed redundant ::after bar for restraint */
+    /* (glow handled by box-shadow on .ops-health above) */
 
     /* ── Panel body breathing room ── */
     .shell-ops .panel-body {
@@ -327,7 +315,7 @@
 
     .health-metric-separator {
       width: 1px;
-      height: 10px;
+      height: 14px;
       background: var(--border-subtle);
     }
 
@@ -814,9 +802,11 @@
     }
     .ops-detail .context-rail::before {
       content: '';
-      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
       height: 4px;
-      flex-shrink: 0;
       background: linear-gradient(
         90deg,
         transparent 0%,
@@ -1045,7 +1035,7 @@
       overflow-y: auto;
     }
 
-    /* Brand anchor: rail active indicator */
+    /* Brand anchor: rail active indicator — 80% saturation for even distribution */
     .rail-icon.active::before {
       content: '';
       position: absolute;
@@ -1054,7 +1044,7 @@
       bottom: 6px;
       width: 3px;
       border-radius: 0 2px 2px 0;
-      background: var(--brand-accent);
+      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
     }
 
     /* Rail right edge ambient light — brand continuity */
@@ -1133,6 +1123,12 @@
     /* Consistent table row height */
     .data-table tbody tr {
       height: var(--density-row-height);
+    }
+
+    /* Token consistency: force oklch borders on all table cells */
+    .data-table td,
+    .data-table th {
+      border-color: var(--border-subtle);
     }
   </style>
 </head>
