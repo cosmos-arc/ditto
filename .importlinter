@@ -10,12 +10,13 @@
 # 多个 root packages
 root_packages =
     ditto_infra
-    ditto_datahub
-    ditto_engine
-    ditto_port
     ditto_kernel
+    ditto_datahub
     ditto_data
     ditto_analytics
+    ditto_engine
+    ditto_app
+    ditto_port
 
 # 不包含外部包
 include_external_packages = false
@@ -29,10 +30,11 @@ exclude_type_checking_imports = true
 [importlinter:contract:layered-architecture]
 name = Layered Architecture
 type = layers
-# 从高层到低层：Port → Core → DataHub → Infra
+# 从高层到低层：Port → App → Engine → DataHub → Infra
 # Kernel 在最底层，但 layers 检查不包含它（Kernel 无业务依赖，被所有层依赖）
 layers =
     ditto_port
+    ditto_app
     ditto_engine
     ditto_datahub
     ditto_infra
@@ -49,7 +51,10 @@ forbidden_modules =
     ditto_engine.**
     ditto_datahub.**
     ditto_port.**
+    ditto_app.**
     ditto_infra.**
+    ditto_data.**
+    ditto_analytics.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Infra 层隔离：禁止依赖其他层
@@ -66,85 +71,7 @@ forbidden_modules =
     ditto_kernel.**
     ditto_data.**
     ditto_analytics.**
-
-# ═══════════════════════════════════════════════════════════════════
-# DataHub 层边界：禁止依赖 Core/Port
-# ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:datahub-boundary]
-name = DataHub must not depend on Core/Port
-type = forbidden
-source_modules =
-    ditto_datahub.**
-forbidden_modules =
-    ditto_engine.**
-    ditto_port.**
-
-# ═══════════════════════════════════════════════════════════════════
-# Core ↔ DataHub 边界：双向禁止互相依赖
-# 两者均可依赖 ditto_kernel
-# Core 保留对 ditto_datahub.errors 的 re-export 依赖
-# ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:core-must-not-depend-on-datahub]
-name = Core must not depend on DataHub (except errors)
-type = forbidden
-source_modules =
-    ditto_engine.**
-forbidden_modules =
-    ditto_datahub.**
-    ditto_data.**
-ignore_imports =
-    ditto_engine.** -> ditto_kernel.*
-    ditto_engine.** -> ditto_datahub.errors
-    ditto_engine.** -> ditto_data.errors
-unmatched_ignore_imports_alerting = none
-
-[importlinter:contract:datahub-must-not-depend-on-core]
-name = DataHub must not depend on Core
-type = forbidden
-source_modules =
-    ditto_datahub.**
-forbidden_modules =
-    ditto_engine.**
-ignore_imports =
-    ditto_datahub.** -> ditto_kernel.*
-unmatched_ignore_imports_alerting = none
-
-# ═══════════════════════════════════════════════════════════════════
-# Port 层边界：禁止直接依赖 DataHub 存储/运行时实现
-# 注意：sources 层（数据获取）可以由 Port 层直接访问
-# 注意：allow_indirect_imports = true 只检查直接导入，允许通过 hub 的间接使用
-# ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:port-boundary]
-name = Port must not directly depend on DataHub stores/runtime
-type = forbidden
-source_modules =
-    ditto_port.**
-forbidden_modules =
-    ditto_datahub.stores.**
-    ditto_datahub.runtime.**
-# 忽略 registry 模块的导入
-ignore_imports =
-    ditto_port.registry.** -> ditto_datahub.stores.**
-    ditto_port.registry.** -> ditto_datahub.runtime.**
-# 只检查直接导入，允许通过 hub 的间接使用
-allow_indirect_imports = true
-unmatched_ignore_imports_alerting = none
-
-# ═══════════════════════════════════════════════════════════════════
-# 循环依赖检测
-# ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:acyclic-packages]
-name = No circular dependencies between packages
-type = acyclic_siblings
-ancestors =
-    ditto_infra
-    ditto_datahub
-    ditto_engine
-    ditto_port
-    ditto_kernel
-    ditto_data
-    ditto_analytics
-depth = 10
+    ditto_app.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Data 层边界：禁止依赖 Engine/Port
@@ -157,6 +84,7 @@ source_modules =
 forbidden_modules =
     ditto_engine.**
     ditto_port.**
+    ditto_app.**
 unmatched_ignore_imports_alerting = none
 
 # ═══════════════════════════════════════════════════════════════════
@@ -181,3 +109,93 @@ source_modules =
 forbidden_modules =
     ditto_port.**
 unmatched_ignore_imports_alerting = none
+
+# ═══════════════════════════════════════════════════════════════════
+# DataHub 层边界：禁止依赖 Engine/Port/App
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:datahub-boundary]
+name = DataHub must not depend on Core/Port/App
+type = forbidden
+source_modules =
+    ditto_datahub.**
+forbidden_modules =
+    ditto_engine.**
+    ditto_port.**
+    ditto_app.**
+
+# ═══════════════════════════════════════════════════════════════════
+# Engine ↔ DataHub 边界：双向禁止互相依赖
+# 两者均可依赖 ditto_kernel
+# Engine 保留对 ditto_datahub.errors 的 re-export 依赖
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:core-must-not-depend-on-datahub]
+name = Engine must not depend on DataHub (except errors)
+type = forbidden
+source_modules =
+    ditto_engine.**
+forbidden_modules =
+    ditto_datahub.**
+    ditto_data.**
+ignore_imports =
+    ditto_engine.** -> ditto_kernel.*
+    ditto_engine.** -> ditto_datahub.errors
+    ditto_engine.** -> ditto_data.errors
+unmatched_ignore_imports_alerting = none
+
+[importlinter:contract:datahub-must-not-depend-on-core]
+name = DataHub must not depend on Engine
+type = forbidden
+source_modules =
+    ditto_datahub.**
+forbidden_modules =
+    ditto_engine.**
+ignore_imports =
+    ditto_datahub.** -> ditto_kernel.*
+unmatched_ignore_imports_alerting = none
+
+# ═══════════════════════════════════════════════════════════════════
+# Port 层边界：禁止直接依赖 DataHub 存储/运行时实现
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:port-boundary]
+name = Port must not directly depend on DataHub stores/runtime
+type = forbidden
+source_modules =
+    ditto_port.**
+forbidden_modules =
+    ditto_datahub.stores.**
+    ditto_datahub.runtime.**
+# 忽略 registry 模块的导入
+ignore_imports =
+    ditto_port.registry.** -> ditto_datahub.stores.**
+    ditto_port.registry.** -> ditto_datahub.runtime.**
+# 只检查直接导入，允许通过 hub 的间接使用
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = none
+
+# ═══════════════════════════════════════════════════════════════════
+# App 层边界：禁止依赖 Port 层
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:app-no-port-import]
+name = App must not import Port layer
+type = forbidden
+source_modules =
+    ditto_app.**
+forbidden_modules =
+    ditto_port.**
+
+# ═══════════════════════════════════════════════════════════════════
+# 循环依赖检测
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:acyclic-packages]
+name = No circular dependencies between packages
+type = acyclic_siblings
+ancestors =
+    ditto_infra
+    ditto_kernel
+    ditto_datahub
+    ditto_data
+    ditto_analytics
+    ditto_engine
+    ditto_app
+    ditto_port
+depth = 10

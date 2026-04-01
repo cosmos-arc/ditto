@@ -1,12 +1,5 @@
-"""Shared utilities for derived services."""
+"""Re-export shim — 实际实现已迁移至 ditto_app.query._utils."""
 
-from __future__ import annotations
-
-from datetime import UTC, datetime
+from ditto_app.query._utils import now_iso
 
 __all__ = ["now_iso"]
-
-
-def now_iso() -> str:
-    """Return current UTC timestamp in ISO format."""
-    return datetime.now(UTC).isoformat()
