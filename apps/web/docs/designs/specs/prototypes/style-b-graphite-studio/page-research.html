@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ditto — Research 研究工作台</title>
+  <title>Ditto — Research 研究工作区</title>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,16 +26,16 @@
     /* Style label for comparison */
     .style-label {
       position: fixed;
-      top: 8px;
-      right: 8px;
+      top: var(--space-6);
+      right: var(--space-6);
       z-index: 999;
       font-family: var(--font-family-ui);
-      font-size: 11px;
+      font-size: var(--font-size-10);
       color: var(--text-tertiary);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
-      padding: 3px 8px;
-      border-radius: 4px;
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
       pointer-events: none;
     }
 
@@ -47,7 +47,7 @@
     /* ── Header subtitle ── */
     .header-subtitle {
       font-size: var(--font-size-12);
-      font-weight: var(--font-weight-normal);
+      font-weight: var(--font-weight-regular);
       color: var(--text-tertiary);
       margin-left: var(--space-8);
     }
@@ -89,6 +89,28 @@
       background: var(--interaction-hover-subtle-bg);
     }
 
+    .header-btn-ghost {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-4) var(--space-10);
+      border-radius: var(--radius-6);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      color: var(--text-tertiary);
+      background: transparent;
+      border: none;
+    }
+
+    .header-btn-ghost:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
     /* ── Scope Strip pulse items (Research-specific) ── */
     .scope-strip .pulse-item .pulse-value.ok {
       color: var(--system-healthy-fg);
@@ -104,6 +126,71 @@
 
     .scope-strip .pulse-item .pulse-value.brand {
       color: var(--brand-accent);
+    }
+
+    /* ── Scope Strip clickable filter ── */
+    .scope-strip .pulse-item {
+      cursor: pointer;
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .scope-strip .pulse-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Table row hover + click ── */
+    .data-table tbody tr.row {
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .data-table tbody tr.row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .data-table tbody tr.row:hover .cell-ticker {
+      color: var(--brand-accent);
+    }
+
+    /* ── Factor name overflow protection ── */
+    .cell-ticker {
+      display: inline-block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Sort indicator ── */
+    .th-sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .th-sortable::after {
+      content: '';
+      display: inline-block;
+      margin-left: var(--space-4);
+      width: 0;
+      height: 0;
+      border-left: 3px solid transparent;
+      border-right: 3px solid transparent;
+      border-bottom: 4px solid var(--text-tertiary);
+      vertical-align: middle;
+      opacity: 0.5;
+    }
+
+    .th-sortable:hover::after {
+      opacity: 1;
+      border-bottom-color: var(--text-secondary);
+    }
+
+    .th-sorted::after {
+      opacity: 1;
+      border-bottom-color: var(--brand-accent);
     }
 
     /* ── Factor Monitor Panel ── */
@@ -137,7 +224,7 @@
 
     .monitor-panel .panel-header .panel-subtitle {
       font-size: var(--font-size-12);
-      font-weight: var(--font-weight-normal);
+      font-weight: var(--font-weight-regular);
       color: var(--text-tertiary);
     }
 
@@ -185,8 +272,8 @@
     }
 
     .status-dot {
-      width: 6px;
-      height: 6px;
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
       border-radius: 50%;
       flex-shrink: 0;
     }
@@ -220,6 +307,19 @@
       gap: var(--space-8);
       padding: var(--space-8) 0;
       border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .run-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+      margin: 0 calc(var(--space-8) * -1);
+      padding: var(--space-8);
+    }
+
+    .run-item:hover .run-item-title {
+      color: var(--brand-accent);
     }
 
     .run-item:last-child {
@@ -227,8 +327,8 @@
     }
 
     .run-item-icon {
-      width: 16px;
-      height: 16px;
+      width: var(--icon-size-sm);
+      height: var(--icon-size-sm);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -258,6 +358,7 @@
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
       line-height: 1.4;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .run-item-detail {
@@ -275,10 +376,11 @@
     }
 
     .run-item-status {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       padding: 1px var(--space-6);
       border-radius: var(--radius-2);
+      line-height: 1.4;
     }
 
     .run-item-status.complete {
@@ -308,6 +410,19 @@
       gap: var(--space-8);
       padding: var(--space-6) 0;
       border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .queue-review-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+      margin: 0 calc(var(--space-8) * -1);
+      padding: var(--space-6) var(--space-8);
+    }
+
+    .queue-review-item:hover .queue-review-title {
+      color: var(--brand-accent);
     }
 
     .queue-review-item:last-child {
@@ -325,6 +440,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .queue-review-sub {
@@ -334,7 +450,7 @@
     }
 
     .queue-review-badge {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       padding: 2px var(--space-6);
       border-radius: var(--radius-4);
@@ -367,7 +483,7 @@
     .analysis-metric {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--space-2);
     }
 
     .analysis-metric-label {
@@ -410,7 +526,17 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-tertiary);
-      z-index: 1;
+      z-index: 2;
+    }
+
+    .chart-placeholder-sublabel {
+      position: absolute;
+      top: var(--space-8);
+      right: var(--space-12);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      z-index: 2;
+      font-family: var(--font-family-numeric);
     }
 
     .chart-placeholder-area {
@@ -418,10 +544,54 @@
       inset: 0;
       background: linear-gradient(
         180deg,
-        oklch(0.700 0.165 255 / 0.06) 0%,
-        oklch(0.700 0.165 255 / 0.02) 40%,
+        oklch(from var(--brand-accent) l c h / 0.06) 0%,
+        oklch(from var(--brand-accent) l c h / 0.02) 40%,
         transparent 100%
       );
+    }
+
+    /* ── Chart grid lines ── */
+    .chart-grid {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .chart-grid-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: oklch(1 0 0 / 0.04);
+    }
+
+    .chart-grid-label {
+      position: absolute;
+      left: var(--space-12);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+      transform: translateY(-50%);
+    }
+
+    .chart-grid-label-right {
+      position: absolute;
+      right: var(--space-12);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+      transform: translateY(-50%);
+    }
+
+    /* ── Chart zero line (IC = 0 baseline) ── */
+    .chart-zero-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: oklch(1 0 0 / 0.08);
+      border-top: 1px dashed oklch(1 0 0 / 0.12);
     }
 
     .chart-placeholder-line {
@@ -435,6 +605,24 @@
     .chart-placeholder-line svg {
       width: 100%;
       height: 100%;
+    }
+
+    /* ── Chart x-axis labels ── */
+    .chart-x-labels {
+      position: absolute;
+      bottom: var(--space-4);
+      left: var(--space-12);
+      right: var(--space-12);
+      display: flex;
+      justify-content: space-between;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .chart-x-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
     }
 
     /* ── Spinner animation ── */
@@ -484,16 +672,18 @@
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">Research <span class="header-subtitle">研究工作台</span></span>
+      <span class="header-title">Research <span class="header-subtitle">研究工作区</span></span>
       <div class="header-spacer"></div>
       <div class="header-search">
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-        搜索因子、回测、实验...
+        搜索因子、回测、实验……
         <kbd>⌘K</kbd>
       </div>
       <div class="header-actions">
         <span class="header-btn header-btn-primary">新建回测</span>
+        <span class="header-btn header-btn-secondary">新建策略</span>
         <span class="header-btn header-btn-secondary">新建实验</span>
+        <span class="header-btn header-btn-ghost">进入因子分析</span>
         <div class="header-action-btn" title="Notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
@@ -515,7 +705,7 @@
       </div>
       <div class="pulse-separator"></div>
       <div class="pulse-item">
-        <span class="pulse-label">失败</span>
+        <span class="pulse-label">异常</span>
         <span class="pulse-value critical">1</span>
       </div>
       <div class="pulse-separator"></div>
@@ -549,17 +739,28 @@
         </div>
         <div class="panel-body">
           <table class="data-table">
+            <colgroup>
+              <col style="width: 20%;">
+              <col style="width: 8%;">
+              <col style="width: 8%;">
+              <col style="width: 10%;">
+              <col style="width: 10%;">
+              <col style="width: 8%;">
+              <col style="width: 10%;">
+              <col style="width: 12%;">
+              <col style="width: 14%;">
+            </colgroup>
             <thead>
               <tr>
-                <th style="width: 20%;">因子名</th>
-                <th class="right" style="width: 8%;">IC</th>
-                <th class="right" style="width: 8%;">IR</th>
-                <th class="right" style="width: 10%;">Sharpe</th>
-                <th class="right" style="width: 10%;">换手率</th>
-                <th class="right" style="width: 8%;">衰减</th>
-                <th class="right" style="width: 10%;">覆盖率</th>
-                <th style="width: 12%;">Universe</th>
-                <th style="width: 14%;">状态</th>
+                <th>因子名</th>
+                <th class="right th-sortable th-sorted">IC</th>
+                <th class="right">IR</th>
+                <th class="right">Sharpe</th>
+                <th class="right">换手率</th>
+                <th class="right">衰减</th>
+                <th class="right">覆盖率</th>
+                <th>Universe</th>
+                <th>状态</th>
               </tr>
             </thead>
             <tbody>
@@ -623,9 +824,9 @@
                 <td><span class="cell-universe">全A</span></td>
                 <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span></td>
               </tr>
-              <!-- 成长(营收) -->
+              <!-- 成长（营收） -->
               <tr class="row">
-                <td><span class="cell-ticker">成长(营收)</span></td>
+                <td><span class="cell-ticker">成长（营收）</span></td>
                 <td class="right"><span class="cell-numeric muted">0.022</span></td>
                 <td class="right"><span class="cell-numeric muted">0.48</span></td>
                 <td class="right"><span class="cell-numeric">0.85</span></td>
@@ -658,6 +859,54 @@
                 <td class="right"><span class="cell-numeric">85%</span></td>
                 <td><span class="cell-universe">中证500</span></td>
                 <td><span class="cell-status"><span class="status-dot warning"></span> 退化</span></td>
+              </tr>
+              <!-- 换手率动量 -->
+              <tr class="row">
+                <td><span class="cell-ticker">换手率动量</span></td>
+                <td class="right"><span class="cell-numeric accent">0.033</span></td>
+                <td class="right"><span class="cell-numeric accent">0.71</span></td>
+                <td class="right"><span class="cell-numeric">1.22</span></td>
+                <td class="right"><span class="cell-numeric">32.8%</span></td>
+                <td class="right"><span class="cell-numeric">6.1%</span></td>
+                <td class="right"><span class="cell-numeric">91%</span></td>
+                <td><span class="cell-universe">沪深300</span></td>
+                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span></td>
+              </tr>
+              <!-- 行业动量 -->
+              <tr class="row">
+                <td><span class="cell-ticker">行业动量</span></td>
+                <td class="right"><span class="cell-numeric muted">0.019</span></td>
+                <td class="right"><span class="cell-numeric muted">0.38</span></td>
+                <td class="right"><span class="cell-numeric">0.72</span></td>
+                <td class="right"><span class="cell-numeric">14.6%</span></td>
+                <td class="right"><span class="cell-numeric">3.8%</span></td>
+                <td class="right"><span class="cell-numeric">94%</span></td>
+                <td><span class="cell-universe">中证500</span></td>
+                <td><span class="cell-status"><span class="status-dot warning"></span> 退化</span></td>
+              </tr>
+              <!-- 波动率偏斜 -->
+              <tr class="row">
+                <td><span class="cell-ticker">波动率偏斜</span></td>
+                <td class="right"><span class="cell-numeric">0.021</span></td>
+                <td class="right"><span class="cell-numeric">0.42</span></td>
+                <td class="right"><span class="cell-numeric">0.68</span></td>
+                <td class="right"><span class="cell-numeric">9.3%</span></td>
+                <td class="right"><span class="cell-numeric">1.5%</span></td>
+                <td class="right"><span class="cell-numeric">97%</span></td>
+                <td><span class="cell-universe">沪深300</span></td>
+                <td><span class="cell-status"><span class="status-dot critical"></span> 异常</span></td>
+              </tr>
+              <!-- 分析师预期变化 -->
+              <tr class="row">
+                <td><span class="cell-ticker">分析师预期变化</span></td>
+                <td class="right"><span class="cell-numeric muted">0.018</span></td>
+                <td class="right"><span class="cell-numeric muted">0.35</span></td>
+                <td class="right"><span class="cell-numeric">0.62</span></td>
+                <td class="right"><span class="cell-numeric">7.8%</span></td>
+                <td class="right"><span class="cell-numeric">2.1%</span></td>
+                <td class="right"><span class="cell-numeric">82%</span></td>
+                <td><span class="cell-universe">沪深300</span></td>
+                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span></td>
               </tr>
             </tbody>
           </table>
@@ -708,7 +957,7 @@
             </span>
             <div class="run-item-content">
               <div class="run-item-title">行业轮动策略参数优化</div>
-              <div class="run-item-detail">新参数组夏普比提升 0.15</div>
+              <div class="run-item-detail">新参数组 Sharpe 提升 0.15</div>
               <div class="run-item-footer">
                 <span class="run-item-status complete">完成</span>
                 <span class="run-item-time">3小时前</span>
@@ -735,7 +984,7 @@
       <!-- Section 2: 审核/实验队列 -->
       <div class="context-section">
         <div class="context-section-header">
-          <span class="context-section-title">审核/实验队列</span>
+          <span class="context-section-title">复审队列</span>
           <span class="context-section-count">3</span>
         </div>
         <div class="context-section-body">
@@ -758,7 +1007,7 @@
           <!-- Review 3 -->
           <div class="queue-review-item">
             <div class="queue-review-content">
-              <div class="queue-review-title">新因子「分析师预期变化」</div>
+              <div class="queue-review-title">新因子"分析师预期变化"</div>
               <div class="queue-review-sub">IC 0.018 · 待改进</div>
             </div>
             <span class="queue-review-badge improve">待改进</span>
@@ -779,31 +1028,61 @@
         <!-- Metrics row -->
         <div class="analysis-metrics">
           <div class="analysis-metric">
-            <span class="analysis-metric-label">平均 IC (20日)</span>
+            <span class="analysis-metric-label">平均 IC (20日) <span style="color: var(--system-degraded-fg);">↓</span></span>
             <span class="analysis-metric-value ok">0.032</span>
           </div>
           <div class="analysis-metric">
-            <span class="analysis-metric-label">IC_IR</span>
+            <span class="analysis-metric-label">IC_IR <span style="color: var(--system-degraded-fg);">↓</span></span>
             <span class="analysis-metric-value ok">0.61</span>
           </div>
           <div class="analysis-metric">
-            <span class="analysis-metric-label">IC &gt; 0.02 占比</span>
+            <span class="analysis-metric-label">IC &gt; 0.02 占比 <span style="color: var(--system-degraded-fg);">↓</span></span>
             <span class="analysis-metric-value ok">72%</span>
           </div>
           <div class="analysis-metric">
-            <span class="analysis-metric-label">IC 衰减率</span>
+            <span class="analysis-metric-label">IC 衰减率 <span style="color: var(--system-degraded-fg);">↑</span></span>
             <span class="analysis-metric-value warning">2.8%</span>
           </div>
         </div>
         <!-- Chart placeholder -->
         <div class="chart-placeholder">
           <span class="chart-placeholder-label">因子 IC 趋势 · 近 60 日</span>
+          <span class="chart-placeholder-sublabel">动量12M</span>
           <div class="chart-placeholder-area"></div>
+          <!-- Grid lines -->
+          <div class="chart-grid">
+            <div class="chart-grid-line" style="top: 15%;"></div>
+            <span class="chart-grid-label" style="top: 15%;">0.05</span>
+            <div class="chart-grid-line" style="top: 35%;"></div>
+            <span class="chart-grid-label" style="top: 35%;">0.04</span>
+            <div class="chart-grid-line" style="top: 55%;"></div>
+            <span class="chart-grid-label" style="top: 55%;">0.03</span>
+            <div class="chart-grid-line" style="top: 75%;"></div>
+            <span class="chart-grid-label" style="top: 75%;">0.02</span>
+            <!-- IC = 0 zero baseline -->
+            <div class="chart-zero-line" style="top: 92%;"></div>
+            <span class="chart-grid-label" style="top: 92%;">0</span>
+          </div>
+          <!-- X-axis labels -->
+          <div class="chart-x-labels">
+            <span class="chart-x-label">T-60</span>
+            <span class="chart-x-label">T-40</span>
+            <span class="chart-x-label">T-20</span>
+            <span class="chart-x-label">Today</span>
+          </div>
+          <!-- IC trend line -->
           <div class="chart-placeholder-line">
-            <svg viewBox="0 0 800 40" preserveAspectRatio="none" fill="none" stroke="var(--brand-accent)" stroke-width="1.5" opacity="0.6">
-              <polyline points="0,8 40,6 80,10 120,5 160,8 200,12 240,10 280,14 320,16 360,13 400,18 440,15 480,20 520,22 560,19 600,24 640,26 680,23 720,28 760,30 800,32"/>
+            <svg viewBox="0 0 800 40" preserveAspectRatio="none" fill="none" stroke="var(--brand-accent)" stroke-width="1.5" opacity="0.7">
+              <polyline points="0,10 30,8 60,12 90,9 120,7 150,10 180,13 210,11 240,14 270,16 300,13 330,18 360,15 390,20 420,18 450,22 480,20 510,24 540,22 570,26 600,24 630,28 660,26 690,30 720,28 750,32 800,30"/>
             </svg>
           </div>
+          <!-- Data point markers at key inflections -->
+          <svg style="position:absolute;inset:0;z-index:2;pointer-events:none;" viewBox="0 0 800 40" preserveAspectRatio="none" fill="var(--brand-accent)" opacity="0.8">
+            <circle cx="120" cy="7" r="2"/>
+            <circle cx="300" cy="13" r="2"/>
+            <circle cx="480" cy="20" r="2"/>
+            <circle cx="660" cy="26" r="2"/>
+          </svg>
         </div>
       </div>
     </div>
