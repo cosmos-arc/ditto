@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-regime-monitor
+  Edition: v1
+  Generated: 2026-04-02
+
+  Route: /research/regime
+  Pattern: Analytical Overview Workspace (Chart-first variant)
+
+  Tabs: 3
+  - regime-status (Regime Status) [covered]
+  - switch-history (Switch History) [covered]
+  - strategy-impact (Strategy Impact) [covered]
+
+  Overlays: 1
+  - overlay-ai-regime (Drawer: AI Regime 解读) [covered]
+
+  State Variants: 5 components x 5 states (default/loading/empty/failed/stale)
+  - regime-indicator: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - status-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - drivers-panel: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - switch-history: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - strategy-impact: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Regime Monitor</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="shared/tokens-base.css">
+  <link rel="stylesheet" href="shared/tokens-semantic.css">
+  <link rel="stylesheet" href="shared/tokens-domain.css">
+  <link rel="stylesheet" href="shared/tokens-interaction.css">
+  <link rel="stylesheet" href="shared/tokens-density.css">
+  <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <!-- Noise Texture (SVG filter) -->
+  <svg style="position:absolute;width:0;height:0;">
+    <filter id="noise-filter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </svg>
+
+  <style>
+    /* Style label for comparison */
+    .style-label {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-action-btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
+
+    /* ── Noise texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      filter: url(#noise-filter);
+      opacity: 0.018;
+    }
+
+    /* ── Regime Monitor Shell (Chart-first variant of Analytical) ── */
+    .shell-regime {
+      display: grid;
+      grid-template-columns: var(--shell-rail-width) 1fr var(--shell-activity-width);
+      grid-template-rows: 64px auto 1fr;
+      grid-template-areas:
+        "rail header   header"
+        "rail strip    strip"
+        "rail main     activity";
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    .shell-regime .shell-rail {
+      grid-area: rail;
+    }
+
+    .shell-regime .shell-header {
+      grid-area: header;
+      height: 64px;
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+
+    /* Header bottom ambient glow */
+    .shell-regime .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Rail right edge ambient glow */
+    .shell-regime .shell-rail::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -1px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(
+        180deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 70%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Rail logo subtle brand glow */
+    .rail-logo {
+      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+    }
+
+    /* ── Header title underline (brand anchor) ── */
+    .header-title {
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 2px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: 2px;
+    }
+
+    /* ── Header: Selector ── */
+    .header-selector {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      padding: var(--space-4) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+    .header-selector:hover { border-color: var(--border-default); }
+    .header-selector-value {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+    .header-selector-chevron {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+    }
+
+    /* ── Header: CTA Button ── */
+    .btn-cta-sm {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-4) var(--space-10);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--brand-accent);
+      background: transparent;
+      color: var(--brand-accent);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+    .btn-cta-sm:hover { background: var(--brand-accent-subtle); }
+
+    /* ── Status Strip (Regime key metrics) ── */
+    .shell-regime .scope-strip {
+      grid-area: strip;
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--density-gutter);
+      gap: var(--space-12);
+      height: var(--density-strip-height);
+      overflow-x: auto;
+    }
+
+    .regime-strip-metric {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      white-space: nowrap;
+    }
+    .regime-strip-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .regime-strip-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .regime-strip-value.ok { color: var(--risk-low-fg); }
+    .regime-strip-value.warn { color: var(--risk-near-limit-fg); }
+    .regime-strip-value.critical { color: var(--risk-breach-fg); }
+    .regime-strip-value.neutral { color: var(--text-secondary); }
+    .regime-strip-value.up { color: var(--market-up-fg); }
+    .regime-strip-value.down { color: var(--market-down-fg); }
+
+    .regime-strip-separator {
+      width: 1px;
+      height: 14px;
+      background: var(--border-subtle);
+    }
+
+    /* ── Main Content ── */
+    .shell-regime .main-content {
+      grid-area: main;
+      overflow-y: auto;
+      padding: var(--density-gutter);
+      min-height: 0;
+    }
+
+    /* ── Activity Stack (right sidebar) ── */
+    .shell-regime .activity-stack {
+      grid-area: activity;
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Tab Bar ── */
+    .regime-tab-bar {
+      display: flex;
+      align-items: center;
+      padding: 0 var(--density-gutter);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-strip);
+      gap: var(--space-4);
+    }
+
+    .regime-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-8) var(--space-12);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: baseline;
+      gap: var(--space-6);
+    }
+    .regime-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Tab entrance stagger */
+    .regime-tab {
+      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .regime-tab:nth-child(2) { animation-delay: 50ms; }
+    .regime-tab:nth-child(3) { animation-delay: 100ms; }
+    .regime-tab:nth-child(4) { animation-delay: 150ms; }
+
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Tab Panels ── */
+    .tab-panels {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .tab-panel {
+      display: none;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Tab Activation Rules
+     * ══════════════════════════════════════════════ */
+    .tab-group:has(#regime-status:checked) [data-panel="regime-status"] { display: block; }
+    .tab-group:has(#switch-history:checked) [data-panel="switch-history"] { display: block; }
+    .tab-group:has(#strategy-impact:checked) [data-panel="strategy-impact"] { display: block; }
+
+    .tab-group:has(#regime-status:checked) label[for="regime-status"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+    .tab-group:has(#switch-history:checked) label[for="switch-history"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+    .tab-group:has(#strategy-impact:checked) label[for="strategy-impact"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules
+     * ══════════════════════════════════════════════ */
+    :root:has(#overlay-ai-regime:checked)
+      [data-overlay="overlay-ai-regime"] { display: flex; }
+
+    /* ── Overlay content ── */
+    .overlay-drawer .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-18);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-body h4:first-child { margin-top: 0; }
+
+    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
+
+    /* ── Regime Indicator (gauge-like display) ── */
+    .regime-indicator {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      padding: var(--space-12);
+    }
+
+    .regime-indicator-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .regime-indicator-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .regime-indicator-time {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .regime-time-btn {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      padding: var(--space-2) var(--space-6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      background: transparent;
+    }
+    .regime-time-btn:hover { border-color: var(--border-default); color: var(--text-secondary); }
+    .regime-time-btn.active {
+      border-color: var(--brand-accent);
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+
+    .regime-gauge {
+      display: flex;
+      align-items: center;
+      gap: var(--space-16);
+      padding: var(--space-12) 0;
+    }
+
+    .regime-gauge-visual {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      flex-shrink: 0;
+    }
+
+    /* CSS-only gauge arc */
+    .regime-gauge-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 4px solid var(--border-subtle);
+    }
+    .regime-gauge-fill {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 4px solid transparent;
+      border-top-color: var(--market-up-fg);
+      border-right-color: var(--market-up-fg);
+      transform: rotate(-45deg);
+      clip-path: polygon(0% 0%, 72% 0%, 0% 72%);
+    }
+
+    .regime-gauge-center {
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      background: var(--surface-panel-base);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .regime-gauge-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-18);
+      font-weight: var(--font-weight-semibold);
+      color: var(--market-up-fg);
+      letter-spacing: -0.02em;
+    }
+
+    .regime-gauge-unit {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .regime-gauge-info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .regime-status-name {
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .regime-status-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .regime-confidence {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      margin-top: var(--space-4);
+    }
+
+    .regime-confidence-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .regime-confidence-bar {
+      flex: 1;
+      max-width: 120px;
+      height: 4px;
+      background: var(--border-subtle);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .regime-confidence-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--market-up-fg);
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .regime-confidence-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--market-up-fg);
+    }
+
+    /* ── Regime Chart (CSS-only placeholder) ── */
+    .regime-chart {
+      flex: 1;
+      min-height: 160px;
+      position: relative;
+      overflow: hidden;
+      background: var(--chart-bg);
+      border-radius: var(--radius-6);
+    }
+
+    .chart-grid-lines {
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          var(--chart-grid) 0px,
+          var(--chart-grid) 1px,
+          transparent 1px,
+          transparent 40px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          var(--chart-grid) 0px,
+          var(--chart-grid) 1px,
+          transparent 1px,
+          transparent 60px
+        );
+    }
+
+    .chart-axis-y {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 1px;
+      background: var(--chart-axis-line);
+    }
+    .chart-axis-x {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 1px;
+      background: var(--chart-axis-line);
+    }
+
+    /* Simulated regime timeline line */
+    .regime-timeline-line {
+      position: absolute;
+      bottom: 25%;
+      left: 8%;
+      right: 8%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--market-down-fg), var(--risk-near-limit-fg) 30%, var(--market-up-fg) 60%, var(--market-up-fg));
+      opacity: 0.7;
+      transform: rotate(-1deg);
+      transform-origin: left center;
+    }
+    .regime-timeline-line::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 0;
+      right: 0;
+      bottom: -24px;
+      background: linear-gradient(180deg, color-mix(in oklch, var(--market-up-fg) 10%, transparent) 0%, transparent 100%);
+      clip-path: polygon(0% 0%, 8% 40%, 18% 35%, 28% 30%, 38% 25%, 48% 20%, 58% 18%, 68% 15%, 78% 12%, 88% 10%, 95% 8%, 100% 100%, 0% 100%);
+    }
+
+    /* Zone bands for regime */
+    .regime-zone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      opacity: 0.08;
+    }
+    .regime-zone.risk-off {
+      left: 8%;
+      width: 25%;
+      background: var(--market-down-fg);
+    }
+    .regime-zone.mixed {
+      left: 33%;
+      width: 20%;
+      background: var(--risk-near-limit-fg);
+    }
+    .regime-zone.risk-on {
+      left: 53%;
+      width: 40%;
+      background: var(--market-up-fg);
+    }
+
+    .regime-zone-label {
+      position: absolute;
+      top: 8px;
+      font-size: var(--font-size-10);
+      color: var(--chart-axis-text);
+      opacity: 0.6;
+    }
+
+    /* Crosshair */
+    .chart-crosshair {
+      position: absolute;
+      top: 20%;
+      left: 72%;
+      width: 1px;
+      height: 60%;
+      background: var(--chart-crosshair);
+      pointer-events: none;
+    }
+    .chart-crosshair::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -40px;
+      right: 0;
+      height: 1px;
+      background: var(--chart-crosshair);
+    }
+
+    /* ── Drivers Panel ── */
+    .driver-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .driver-item:last-child { border-bottom: none; }
+
+    .driver-name {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .driver-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .driver-value.ok { color: var(--risk-low-fg); }
+    .driver-value.warn { color: var(--risk-near-limit-fg); }
+    .driver-value.up { color: var(--market-up-fg); }
+    .driver-value.down { color: var(--market-down-fg); }
+
+    .driver-direction {
+      font-size: var(--font-size-10);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      flex-shrink: 0;
+    }
+    .driver-direction.bullish {
+      background: var(--market-up-bg);
+      color: var(--market-up-fg);
+    }
+    .driver-direction.bearish {
+      background: var(--market-down-bg);
+      color: var(--market-down-fg);
+    }
+    .driver-direction.neutral {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Switch History Timeline ── */
+    .switch-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    .switch-item:last-child { border-bottom: none; }
+
+    /* Timeline connector */
+    .switch-item::before {
+      content: '';
+      position: absolute;
+      left: 14px;
+      top: 28px;
+      bottom: -8px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+    .switch-item:last-child::before { display: none; }
+
+    .switch-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+      min-width: 70px;
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .switch-time-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .switch-time-dot.ok { background: var(--risk-low-fg); }
+    .switch-time-dot.warn { background: var(--risk-near-limit-fg); }
+    .switch-time-dot.critical { background: var(--risk-breach-fg); }
+
+    .switch-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .switch-transition {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-bottom: var(--space-2);
+    }
+
+    .switch-from-tag,
+    .switch-to-tag {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-3);
+      white-space: nowrap;
+    }
+    .switch-from-tag {
+      background: var(--market-down-bg);
+      color: var(--market-down-fg);
+    }
+    .switch-to-tag.risk-on {
+      background: var(--market-up-bg);
+      color: var(--market-up-fg);
+    }
+    .switch-to-tag.risk-off {
+      background: var(--market-down-bg);
+      color: var(--market-down-fg);
+    }
+    .switch-to-tag.mixed {
+      background: var(--risk-medium-bg);
+      color: var(--risk-medium-fg);
+    }
+
+    .switch-arrow {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .switch-trigger {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .switch-duration {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-top: 2px;
+    }
+
+    /* ── Strategy Impact Table ── */
+    .strategy-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .strategy-row:last-child { border-bottom: none; }
+    .strategy-row:hover { background: var(--interaction-hover-subtle-bg); margin: 0 calc(var(--space-12) * -1); padding-left: var(--space-12); padding-right: var(--space-12); }
+
+    .strategy-name {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      width: 120px;
+      flex-shrink: 0;
+    }
+
+    .strategy-return {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      width: 80px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .strategy-return.up { color: var(--market-up-fg); }
+    .strategy-return.down { color: var(--market-down-fg); }
+    .strategy-return.neutral { color: var(--text-secondary); }
+
+    .strategy-sharpe {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      width: 60px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .strategy-fit {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-3);
+      flex-shrink: 0;
+    }
+    .strategy-fit.good {
+      background: var(--risk-low-bg);
+      color: var(--risk-low-fg);
+    }
+    .strategy-fit.moderate {
+      background: var(--risk-medium-bg);
+      color: var(--risk-medium-fg);
+    }
+    .strategy-fit.poor {
+      background: var(--risk-critical-bg);
+      color: var(--risk-critical-fg);
+    }
+
+    .strategy-advice {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Status bar (terminal DNA) ── */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: 1.5rem;
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+
+    /* Brand accent bottom bar */
+    .status-bar::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--brand-accent);
+      opacity: 0.4;
+    }
+
+    .status-indicator {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--risk-low-fg);
+      margin-right: var(--space-6);
+      flex-shrink: 0;
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .status-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+    .status-spacer { flex: 1; }
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* Stale state indicator */
+    .state-stale {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-8);
+      padding: var(--space-16) var(--space-12);
+      text-align: center;
+    }
+    .state-stale-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: color-mix(in oklch, var(--risk-near-limit-fg) 10%, transparent);
+      color: var(--risk-near-limit-fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .state-stale-title {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+    .state-stale-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      max-width: 280px;
+      line-height: 1.5;
+    }
+    .state-stale-retry {
+      margin-top: var(--space-4);
+      padding: var(--space-2) var(--space-10);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+      background: var(--surface-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-default);
+      cursor: pointer;
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .btn, .rail-icon, .header-action-btn,
+      .panel-action, .breach-progress-fill,
+      .breach-dot, .regime-tab {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="style-label">Graphite Studio — Regime Monitor · Compact · A股</div>
+
+  <!-- ═══ Overlay Checkbox (placed before shell for :has() to work) ═══ -->
+  <input type="checkbox" id="overlay-ai-regime" class="overlay-radio sr-only">
+
+  <div class="shell-regime">
+
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" title="Home">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" title="Markets">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon active" title="Research">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" title="Trading">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" title="Platform">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+        <div class="rail-icon" title="Risk">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l7 12H3L10 2z"/><line x1="10" y1="7" x2="10" y2="10"/><circle cx="10" cy="12" r="0.5" fill="currentColor"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" title="Settings">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <span class="header-title">Regime Monitor</span>
+
+      <div class="header-spacer"></div>
+
+      <!-- Portfolio Selector -->
+      <div class="header-selector">
+        <span style="color: var(--text-tertiary);">组合</span>
+        <span class="header-selector-value">主策略组合</span>
+        <span class="header-selector-chevron">▾</span>
+      </div>
+
+      <!-- Search -->
+      <div class="header-search">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        搜索 Regime...
+        <kbd>⌘K</kbd>
+      </div>
+
+      <!-- Actions -->
+      <div class="header-actions">
+        <div class="theme-switcher">
+          <div class="switcher-group" role="group" aria-label="密度">
+            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          </div>
+          <div class="switcher-sep"></div>
+          <div class="switcher-group" role="group" aria-label="主题">
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+          </div>
+        </div>
+        <label for="overlay-ai-regime" class="btn-cta-sm" style="cursor:pointer">AI 解读</label>
+        <div class="header-action-btn" title="刷新">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><polyline points="14 5 15.5 7.5 12.5 7.5"/><polyline points="6 15 4.5 12.5 7.5 12.5"/></svg>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Regime Status Strip ═══ -->
+    <div class="scope-strip">
+      <div class="regime-strip-metric">
+        <span class="regime-strip-label">当前 Regime</span>
+        <span class="regime-strip-value up">温和风险偏好</span>
+      </div>
+      <div class="regime-strip-separator"></div>
+      <div class="regime-strip-metric">
+        <span class="regime-strip-label">置信度</span>
+        <span class="regime-strip-value up">72%</span>
+      </div>
+      <div class="regime-strip-separator"></div>
+      <div class="regime-strip-metric">
+        <span class="regime-strip-label">IVIX</span>
+        <span class="regime-strip-value ok">18.52</span>
+      </div>
+      <div class="regime-strip-separator"></div>
+      <div class="regime-strip-metric">
+        <span class="regime-strip-label">北向资金</span>
+        <span class="regime-strip-value up">+12.4亿</span>
+      </div>
+      <div class="regime-strip-separator"></div>
+      <div class="regime-strip-metric">
+        <span class="regime-strip-label">涨跌比</span>
+        <span class="regime-strip-value up">2.1:1</span>
+      </div>
+      <div class="regime-strip-separator"></div>
+      <div class="regime-strip-metric">
+        <span class="regime-strip-label">上次切换</span>
+        <span class="regime-strip-value neutral">2026-03-18</span>
+      </div>
+      <div class="regime-strip-separator"></div>
+      <div class="regime-strip-metric">
+        <span class="regime-strip-label">持续天数</span>
+        <span class="regime-strip-value neutral">15天</span>
+      </div>
+    </div>
+
+    <!-- ═══ Tab Bar ═══ -->
+    <div class="regime-tab-bar">
+      <div class="tab-group" data-tab-group="regime">
+
+        <!-- Tab radios -->
+        <input type="radio" name="regime-tab" id="regime-status" checked class="tab-radio sr-only">
+        <input type="radio" name="regime-tab" id="switch-history" class="tab-radio sr-only">
+        <input type="radio" name="regime-tab" id="strategy-impact" class="tab-radio sr-only">
+
+        <!-- Tab labels -->
+        <label for="regime-status" class="regime-tab" role="tab">Regime Status</label>
+        <label for="switch-history" class="regime-tab" role="tab">Switch History</label>
+        <label for="strategy-impact" class="regime-tab" role="tab">Strategy Impact</label>
+      </div>
+    </div>
+
+    <!-- ═══ Tab Panels ═══ -->
+    <div class="tab-panels">
+
+      <!-- ─── Tab Panel: Regime Status (default) ─── -->
+      <div class="tab-panel" data-panel="regime-status">
+        <div class="main-content">
+          <div style="display: grid; grid-template-columns: 1fr var(--shell-activity-width); gap: var(--density-gutter); height: 100%; min-height: 0;">
+
+            <!-- Left: Regime Indicator + Chart -->
+            <div style="display: flex; flex-direction: column; gap: var(--density-gutter); min-height: 0; overflow: hidden;">
+
+              <!-- Regime Indicator Panel -->
+              <div class="panel" style="flex: 0 0 auto;">
+                <div class="panel-header">
+                  <span class="panel-title">Regime Indicator</span>
+                  <span class="panel-subtitle" style="margin-left: var(--space-4);">Regime Engine 实时判定</span>
+                  <div class="panel-actions">
+                    <span class="regime-time-btn">1M</span>
+                    <span class="regime-time-btn active">3M</span>
+                    <span class="regime-time-btn">6M</span>
+                    <span class="regime-time-btn">1Y</span>
+                  </div>
+                </div>
+                <div class="regime-indicator">
+                  <div class="regime-gauge">
+                    <div class="regime-gauge-visual">
+                      <div class="regime-gauge-ring"></div>
+                      <div class="regime-gauge-fill"></div>
+                      <div class="regime-gauge-center">
+                        <span class="regime-gauge-value">72%</span>
+                        <span class="regime-gauge-unit">置信度</span>
+                      </div>
+                    </div>
+                    <div class="regime-gauge-info">
+                      <span class="regime-status-name">温和风险偏好 (Moderate)</span>
+                      <span class="regime-status-desc">市场情绪偏暖，波动率处于低位，资金面宽松。北向资金持续净流入，个股涨跌比健康。</span>
+                      <div class="regime-confidence">
+                        <span class="regime-confidence-label">判定强度</span>
+                        <div class="regime-confidence-bar">
+                          <div class="regime-confidence-fill" style="width: 72%;"></div>
+                        </div>
+                        <span class="regime-confidence-value">72%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Regime Timeline Chart -->
+              <div class="panel chart-panel" style="flex: 1; min-height: 0;">
+                <div class="panel-header">
+                  <span class="panel-title">Regime Timeline</span>
+                  <span class="panel-subtitle" style="margin-left: var(--space-4);">近 3 个月 Regime 变化</span>
+                  <div class="panel-actions">
+                    <span class="panel-action">日线</span>
+                    <span class="panel-action" style="color: var(--text-primary); background: var(--interaction-hover-subtle-bg);">周线</span>
+                  </div>
+                </div>
+                <div class="chart-panel-body">
+                  <div class="regime-chart">
+                    <div class="chart-grid-lines"></div>
+                    <div class="chart-axis-y"></div>
+                    <div class="chart-axis-x"></div>
+                    <div class="regime-zone risk-off"></div>
+                    <div class="regime-zone mixed"></div>
+                    <div class="regime-zone risk-on"></div>
+                    <div style="position:absolute; top:8px; left:10%; font-size:var(--font-size-10); color:var(--market-down-fg); opacity:0.5;">Risk-Off</div>
+                    <div style="position:absolute; top:8px; left:37%; font-size:var(--font-size-10); color:var(--risk-near-limit-fg); opacity:0.5;">Mixed</div>
+                    <div style="position:absolute; top:8px; left:65%; font-size:var(--font-size-10); color:var(--market-up-fg); opacity:0.5;">Risk-On</div>
+                    <div class="regime-timeline-line"></div>
+                    <div class="chart-crosshair"></div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right: Drivers Panel -->
+            <div class="activity-stack">
+              <div class="context-rail">
+
+                <!-- Section: Key Drivers -->
+                <div class="context-section">
+                  <div class="context-section-header">
+                    <span class="context-section-title">Key Drivers</span>
+                    <span class="context-section-count">5 因子</span>
+                  </div>
+                  <div class="context-section-body">
+
+                    <div class="driver-item">
+                      <span class="driver-name">IVIX 波动率指数</span>
+                      <span class="driver-value ok">18.52</span>
+                      <span class="driver-direction bullish">偏多</span>
+                    </div>
+
+                    <div class="driver-item">
+                      <span class="driver-name">北向资金净流入</span>
+                      <span class="driver-value up">+12.4亿</span>
+                      <span class="driver-direction bullish">偏多</span>
+                    </div>
+
+                    <div class="driver-item">
+                      <span class="driver-name">全市场涨跌比</span>
+                      <span class="driver-value up">2.1:1</span>
+                      <span class="driver-direction bullish">偏多</span>
+                    </div>
+
+                    <div class="driver-item">
+                      <span class="driver-name">融资余额变化</span>
+                      <span class="driver-value up">+86亿</span>
+                      <span class="driver-direction bullish">偏多</span>
+                    </div>
+
+                    <div class="driver-item">
+                      <span class="driver-name">10Y 国债收益率</span>
+                      <span class="driver-value neutral">1.72%</span>
+                      <span class="driver-direction neutral">中性</span>
+                    </div>
+
+                  </div>
+                </div>
+
+                <!-- Section: Regime Composition -->
+                <div class="context-section">
+                  <div class="context-section-header">
+                    <span class="context-section-title">Regime Composition</span>
+                    <span class="context-section-count">多因子</span>
+                  </div>
+                  <div class="context-section-body">
+                    <div style="padding: var(--space-8) 0;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+                        <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">情绪因子</span>
+                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-up-fg); font-weight: var(--font-weight-medium);">78%</span>
+                      </div>
+                      <div style="height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
+                        <div style="width: 78%; height: 100%; background: var(--market-up-fg); border-radius: 2px;"></div>
+                      </div>
+                    </div>
+                    <div style="padding: var(--space-8) 0;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+                        <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">资金因子</span>
+                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-up-fg); font-weight: var(--font-weight-medium);">71%</span>
+                      </div>
+                      <div style="height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
+                        <div style="width: 71%; height: 100%; background: var(--market-up-fg); border-radius: 2px;"></div>
+                      </div>
+                    </div>
+                    <div style="padding: var(--space-8) 0;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+                        <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">波动率因子</span>
+                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--risk-low-fg); font-weight: var(--font-weight-medium);">82%</span>
+                      </div>
+                      <div style="height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
+                        <div style="width: 82%; height: 100%; background: var(--risk-low-fg); border-radius: 2px;"></div>
+                      </div>
+                    </div>
+                    <div style="padding: var(--space-8) 0;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+                        <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">宏观因子</span>
+                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary); font-weight: var(--font-weight-medium);">55%</span>
+                      </div>
+                      <div style="height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
+                        <div style="width: 55%; height: 100%; background: var(--text-secondary); border-radius: 2px;"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div><!-- /tab-panel: regime-status -->
+
+      <!-- ─── Tab Panel: Switch History ─── -->
+      <div class="tab-panel" data-panel="switch-history">
+        <div style="padding: var(--space-12) var(--density-gutter); border-bottom: 1px solid var(--border-subtle);">
+          <div style="display: flex; align-items: center; gap: var(--space-12);">
+            <span style="font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">Regime 切换历史</span>
+            <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">市场状态变迁时间线</span>
+            <div style="flex:1"></div>
+            <div class="filter-group" role="group" aria-label="事件筛选">
+              <button class="filter-btn active">全部</button>
+              <button class="filter-btn">Risk-On</button>
+              <button class="filter-btn">Risk-Off</button>
+              <button class="filter-btn">Mixed</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: var(--space-12) var(--density-gutter);">
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-12);">
+
+            <!-- Switch 1 -->
+            <div class="switch-item">
+              <div class="switch-time">
+                <span class="switch-time-dot ok"></span>
+                03-18
+              </div>
+              <div class="switch-body">
+                <div class="switch-transition">
+                  <span class="switch-from-tag">Mixed</span>
+                  <span class="switch-arrow">→</span>
+                  <span class="switch-to-tag risk-on">Risk-On</span>
+                </div>
+                <div class="switch-trigger">触发因子：北向资金连续 5 日净流入，IVIX 降至 20 以下</div>
+                <div class="switch-duration">已持续 15 天 · 当前活跃</div>
+              </div>
+            </div>
+
+            <!-- Switch 2 -->
+            <div class="switch-item">
+              <div class="switch-time">
+                <span class="switch-time-dot warn"></span>
+                02-24
+              </div>
+              <div class="switch-body">
+                <div class="switch-transition">
+                  <span class="switch-from-tag">Risk-Off</span>
+                  <span class="switch-arrow">→</span>
+                  <span class="switch-to-tag mixed">Mixed</span>
+                </div>
+                <div class="switch-trigger">触发因子：两会政策落地，央行降准 50bp，市场情绪回暖</div>
+                <div class="switch-duration">持续 22 天</div>
+              </div>
+            </div>
+
+            <!-- Switch 3 -->
+            <div class="switch-item">
+              <div class="switch-time">
+                <span class="switch-time-dot critical"></span>
+                01-15
+              </div>
+              <div class="switch-body">
+                <div class="switch-transition">
+                  <span class="switch-from-tag risk-on">Risk-On</span>
+                  <span class="switch-arrow">→</span>
+                  <span class="switch-from-tag">Risk-Off</span>
+                </div>
+                <div class="switch-trigger">触发因子：美联储鹰派发言、人民币快速贬值、北向资金大幅流出</div>
+                <div class="switch-duration">持续 40 天</div>
+              </div>
+            </div>
+
+            <!-- Switch 4 -->
+            <div class="switch-item">
+              <div class="switch-time">
+                <span class="switch-time-dot ok"></span>
+                11-28
+              </div>
+              <div class="switch-body">
+                <div class="switch-transition">
+                  <span class="switch-from-tag mixed">Mixed</span>
+                  <span class="switch-arrow">→</span>
+                  <span class="switch-to-tag risk-on">Risk-On</span>
+                </div>
+                <div class="switch-trigger">触发因子：年末机构调仓完成，增量资金入场，涨跌比持续 > 2:1</div>
+                <div class="switch-duration">持续 48 天</div>
+              </div>
+            </div>
+
+            <!-- Switch 5 -->
+            <div class="switch-item">
+              <div class="switch-time">
+                <span class="switch-time-dot warn"></span>
+                10-22
+              </div>
+              <div class="switch-body">
+                <div class="switch-transition">
+                  <span class="switch-from-tag risk-on">Risk-On</span>
+                  <span class="switch-arrow">→</span>
+                  <span class="switch-to-tag mixed">Mixed</span>
+                </div>
+                <div class="switch-trigger">触发因子：三季报密集披露期，科技板块业绩不及预期，波动率上升</div>
+                <div class="switch-duration">持续 37 天</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div><!-- /tab-panel: switch-history -->
+
+      <!-- ─── Tab Panel: Strategy Impact ─── -->
+      <div class="tab-panel" data-panel="strategy-impact">
+        <div style="padding: var(--space-12) var(--density-gutter); border-bottom: 1px solid var(--border-subtle);">
+          <div style="display: flex; align-items: center; gap: var(--space-12);">
+            <span style="font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">策略表现对比</span>
+            <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">不同 Regime 下的策略适配度</span>
+            <div style="flex:1"></div>
+            <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">当前 Regime: </span>
+            <span style="font-size: var(--font-size-10); font-weight: var(--font-weight-medium); color: var(--market-up-fg);">温和风险偏好</span>
+          </div>
+        </div>
+
+        <!-- Strategy Table -->
+        <div style="padding: var(--space-12) var(--density-gutter);">
+          <table class="data-table" style="width: 100%;">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 140px;">策略名称</th>
+                <th scope="col" style="width: 100px;">近 1 月</th>
+                <th scope="col" style="width: 100px;">近 3 月</th>
+                <th scope="col" style="width: 80px;">Sharpe</th>
+                <th scope="col" style="width: 100px;">最大回撤</th>
+                <th scope="col" style="width: 80px;">适配度</th>
+                <th scope="col">调整建议</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="row">
+                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">Alpha v2</span></td>
+                <td class="cell-numeric up">+4.82%</td>
+                <td class="cell-numeric up">+12.35%</td>
+                <td class="cell-numeric">1.85</td>
+                <td class="cell-numeric down">-2.10%</td>
+                <td><span class="strategy-fit good">良好</span></td>
+                <td style="color: var(--text-tertiary); font-size: var(--font-size-12);">维持当前仓位，关注风格切换信号</td>
+              </tr>
+              <tr class="row">
+                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">价值因子</span></td>
+                <td class="cell-numeric up">+2.15%</td>
+                <td class="cell-numeric up">+6.78%</td>
+                <td class="cell-numeric">1.42</td>
+                <td class="cell-numeric down">-3.50%</td>
+                <td><span class="strategy-fit good">良好</span></td>
+                <td style="color: var(--text-tertiary); font-size: var(--font-size-12);">低估值板块表现稳健，可适当加仓</td>
+              </tr>
+              <tr class="row">
+                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">行业轮动</span></td>
+                <td class="cell-numeric up">+3.67%</td>
+                <td class="cell-numeric up">+8.92%</td>
+                <td class="cell-numeric">1.23</td>
+                <td class="cell-numeric down">-5.80%</td>
+                <td><span class="strategy-fit moderate">一般</span></td>
+                <td style="color: var(--text-tertiary); font-size: var(--font-size-12);">轮动信号频繁，建议降低换手率，关注板块持续性</td>
+              </tr>
+              <tr class="row">
+                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">动量策略</span></td>
+                <td class="cell-numeric down">-1.23%</td>
+                <td class="cell-numeric up">+2.10%</td>
+                <td class="cell-numeric">0.68</td>
+                <td class="cell-numeric down">-8.40%</td>
+                <td><span class="strategy-fit poor">不佳</span></td>
+                <td style="color: var(--risk-near-limit-fg); font-size: var(--font-size-12);">当前市场缺乏明确趋势，动量因子失效，建议减仓或暂停</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- AI Suggestion Panel -->
+        <div style="padding: var(--space-12) var(--density-gutter); border-top: 1px solid var(--border-subtle);">
+          <div style="display: flex; align-items: flex-start; gap: var(--space-12); padding: var(--space-12); background: var(--interaction-hover-subtle-bg); border-left: 2px solid var(--brand-accent); border-radius: 0 var(--radius-6) var(--radius-6) 0;">
+            <div style="font-size: var(--font-size-10); font-weight: var(--font-weight-medium); color: var(--brand-accent); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; margin-top: 1px;">AI 建议</div>
+            <div style="font-size: var(--font-size-12); color: var(--text-secondary); line-height: 1.6;">
+              当前温和 Risk-On 环境下，<strong style="color: var(--text-primary);">Alpha v2 和价值因子</strong>表现最佳。行业轮动策略信号噪声较高，建议收紧轮动阈值。动量策略在震荡市中持续亏损，<strong style="color: var(--risk-near-limit-fg);">建议减仓至 30% 以下</strong>或暂停运行。关注 IVIX 是否突破 22 阈值，若突破则需整体降低风险敞口。
+            </div>
+          </div>
+        </div>
+      </div><!-- /tab-panel: strategy-impact -->
+
+    </div><!-- /tab-panels -->
+
+  </div><!-- /shell-regime -->
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="status-indicator"></span>
+    <span>REGIME LIVE</span>
+    <span class="status-sep">|</span>
+    <span>最后刷新: 5s ago</span>
+    <span class="status-sep">|</span>
+    <span>组合: 主策略组合</span>
+    <span class="status-sep">|</span>
+    <span>Engine: v2.4.1</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">R</span>
+    <span>刷新</span>
+    <span style="margin: 0 var(--space-4); color: var(--border-subtle);">·</span>
+    <span class="status-kbd">⌘K</span>
+    <span>搜索</span>
+  </div>
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay: AI Regime Drawer -->
+    <div class="overlay-backdrop" data-overlay="overlay-ai-regime">
+      <label class="overlay-dismiss" for="overlay-ai-regime" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="AI Regime 解读">
+        <div class="overlay-header">
+          <span class="overlay-title">AI Regime 解读</span>
+          <label for="overlay-ai-regime" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>当前 Regime 判定</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">Regime 状态</span>
+            <span class="overlay-field-value" style="color: var(--market-up-fg);">温和风险偏好 (Moderate)</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">判定置信度</span>
+            <span class="overlay-field-value">72%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">持续时间</span>
+            <span class="overlay-field-value">15 天 (2026-03-18 至今)</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">前序 Regime</span>
+            <span class="overlay-field-value">Mixed (22 天)</span>
+          </div>
+
+          <h4>核心驱动因子</h4>
+          <div style="display: flex; flex-direction: column; gap: var(--space-6); margin-bottom: var(--space-12);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: var(--text-secondary);">波动率 (IVIX)</span>
+              <div style="display: flex; align-items: center; gap: var(--space-6);">
+                <span style="font-family: var(--font-family-numeric); color: var(--market-up-fg);">18.52</span>
+                <span class="driver-direction bullish">偏多</span>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: var(--text-secondary);">北向资金</span>
+              <div style="display: flex; align-items: center; gap: var(--space-6);">
+                <span style="font-family: var(--font-family-numeric); color: var(--market-up-fg);">+12.4亿</span>
+                <span class="driver-direction bullish">偏多</span>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: var(--text-secondary);">涨跌比</span>
+              <div style="display: flex; align-items: center; gap: var(--space-6);">
+                <span style="font-family: var(--font-family-numeric); color: var(--market-up-fg);">2.1:1</span>
+                <span class="driver-direction bullish">偏多</span>
+              </div>
+            </div>
+          </div>
+
+          <h4>AI 分析摘要</h4>
+          <p style="line-height: 1.8;">
+            当前市场处于<strong style="color: var(--text-primary);">温和 Risk-On</strong>阶段，核心驱动力来自资金面的持续改善。北向资金连续净流入叠加融资余额回升，显示场外资金入市意愿增强。波动率 IVIX 维持在 20 以下低位，市场恐慌情绪消散。
+          </p>
+          <p style="line-height: 1.8; margin-top: var(--space-8);">
+            需关注的风险点：宏观因子（10Y 国债收益率）置信度仅 55%，暗示利率环境存在不确定性。若 IVIX 突破 22 或北向资金出现连续净流出，Regime 可能切换至 Mixed 或 Risk-Off。
+          </p>
+
+          <h4>策略配置建议</h4>
+          <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+            <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0; border-bottom: 1px solid var(--border-subtle);">
+              <span style="color: var(--text-secondary);">Alpha v2</span>
+              <span style="color: var(--risk-low-fg); font-weight: var(--font-weight-medium);">加仓 → 80%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0; border-bottom: 1px solid var(--border-subtle);">
+              <span style="color: var(--text-secondary);">价值因子</span>
+              <span style="color: var(--risk-low-fg); font-weight: var(--font-weight-medium);">维持 → 60%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0; border-bottom: 1px solid var(--border-subtle);">
+              <span style="color: var(--text-secondary);">行业轮动</span>
+              <span style="color: var(--risk-near-limit-fg); font-weight: var(--font-weight-medium);">减仓 → 40%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0;">
+              <span style="color: var(--text-secondary);">动量策略</span>
+              <span style="color: var(--risk-critical-fg); font-weight: var(--font-weight-medium);">减仓 → 20%</span>
+            </div>
+          </div>
+
+          <div class="overlay-actions" style="margin-top: var(--space-16);">
+            <label for="overlay-ai-regime" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">关闭</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /overlays -->
+
+  <!-- ═══ State Variant Blocks ═══ -->
+
+  <!-- State Variants: Regime Indicator -->
+  <div style="padding: var(--space-8) var(--density-gutter);">
+    <details class="state-variant">
+      <summary class="state-variant-label">Regime Indicator — Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l7 12H3L10 2z"/><line x1="10" y1="7" x2="10" y2="10"/><circle cx="10" cy="12" r="0.5" fill="currentColor"/></svg>
+          </div>
+          <div class="state-empty-title">暂无 Regime 数据</div>
+          <div class="state-empty-desc">Regime Engine 尚未产出判定结果，请确认数据源接入和引擎运行状态</div>
+          <button class="state-empty-cta">检查 Engine 状态</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Regime Indicator — Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading" style="gap: var(--space-12); padding: var(--space-16);">
+          <div style="display: flex; align-items: center; gap: var(--space-12);">
+            <div class="skeleton" style="width: 100px; height: 100px; border-radius: 50%;"></div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: var(--space-8);">
+              <div class="skeleton skeleton-heading" style="width: 60%;"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text-sm" style="width: 80%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Regime Indicator — Error State</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">Regime Engine 异常</div>
+          <div class="state-error-desc">无法获取 Regime 判定结果，Regime Engine 服务可能不可用或数据源断开</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Regime Indicator — Stale State</summary>
+      <div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">数据可能过期</div>
+          <div class="state-stale-desc">Regime 判定结果最后更新于 2 小时前，当前数据可能已过时</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- State Variants: Status Strip -->
+  <div style="padding: var(--space-8) var(--density-gutter);">
+    <details class="state-variant">
+      <summary class="state-variant-label">Status Strip — Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+          </div>
+          <div class="state-empty-title">暂无 Regime 指标</div>
+          <div class="state-empty-desc">等待 Regime Engine 初始化并产出首条判定数据</div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Status Strip — Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading" style="flex-direction: row; gap: var(--space-12);">
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-badge"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Status Strip — Error State</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">指标加载失败</div>
+          <div class="state-error-desc">无法获取 Regime 指标数据，请检查数据源连接</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Status Strip — Stale State</summary>
+      <div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">指标数据过期</div>
+          <div class="state-stale-desc">部分指标数据超过 30 分钟未更新，显示值可能不准确</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- State Variants: Drivers Panel -->
+  <div style="padding: var(--space-8) var(--density-gutter);">
+    <details class="state-variant">
+      <summary class="state-variant-label">Drivers Panel — Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+          </div>
+          <div class="state-empty-title">暂无驱动因子</div>
+          <div class="state-empty-desc">Regime Engine 未配置驱动因子或因子数据尚未就绪</div>
+          <button class="state-empty-cta">配置因子</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Drivers Panel — Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Drivers Panel — Error State</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">因子数据加载失败</div>
+          <div class="state-error-desc">无法获取驱动因子数据，请检查数据源配置</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Drivers Panel — Stale State</summary>
+      <div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">因子数据过期</div>
+          <div class="state-empty-desc">部分因子数据延迟更新，可能影响 Regime 判定准确性</div>
+          <button class="state-stale-retry">刷新因子数据</button>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- State Variants: Switch History -->
+  <div style="padding: var(--space-8) var(--density-gutter);">
+    <details class="state-variant">
+      <summary class="state-variant-label">Switch History — Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 10 9 13 14 7"/></svg>
+          </div>
+          <div class="state-empty-title">暂无切换记录</div>
+          <div class="state-empty-desc">Regime Engine 运行后将记录所有 Regime 切换事件，包括时间、方向和触发因子</div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Switch History — Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Switch History — Error State</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">切换历史加载失败</div>
+          <div class="state-error-desc">无法获取 Regime 切换记录，请稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Switch History — Stale State</summary>
+      <div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">切换记录可能不完整</div>
+          <div class="state-empty-desc">切换记录最后同步于 1 小时前，最新切换事件可能未显示</div>
+          <button class="state-stale-retry">立即同步</button>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- State Variants: Strategy Impact -->
+  <div style="padding: var(--space-8) var(--density-gutter);">
+    <details class="state-variant">
+      <summary class="state-variant-label">Strategy Impact — Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+          </div>
+          <div class="state-empty-title">暂无策略数据</div>
+          <div class="state-empty-desc">请先在 Trading 模块配置策略，此处将展示各策略在不同 Regime 下的表现对比</div>
+          <button class="state-empty-cta">配置策略</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Strategy Impact — Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Strategy Impact — Error State</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">策略数据加载失败</div>
+          <div class="state-error-desc">无法获取策略表现数据，请检查 Trading Engine 连接状态</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Strategy Impact — Stale State</summary>
+      <div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">策略数据过期</div>
+          <div class="state-empty-desc">策略表现数据延迟更新，收益和回撤数值可能非最新值</div>
+          <button class="state-stale-retry">刷新策略数据</button>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

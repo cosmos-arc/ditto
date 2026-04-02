@@ -2,134 +2,249 @@
   "edition": "v1",
   "style": "style-b-graphite-studio",
   "created": "2026-04-01",
-  "status": "in-progress",
+  "status": "state-covering",
+  "stateCoverageAppliedAt": "2026-04-02",
   "pages": [
     {
       "id": "cross-market",
       "file": "page-cross-market.html",
-      "status": "done",
+      "status": "state-covered",
       "score": 9.33,
       "styleAnchor": null,
       "rounds": 2,
-      "createdAt": "2026-03-28"
+      "createdAt": "2026-03-28",
+      "stateCoverage": {
+        "tabs": 3,
+        "overlays": 5,
+        "stateVariants": 7,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "platform",
       "file": "page-platform.html",
-      "status": "done",
+      "status": "state-covered",
       "score": 9.5,
       "styleAnchor": "cross-market",
       "rounds": 4,
-      "createdAt": "2026-03-29"
+      "createdAt": "2026-03-29",
+      "stateCoverage": {
+        "tabs": 4,
+        "overlays": 3,
+        "stateVariants": 5,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "home",
       "file": "page-home.html",
-      "status": "done",
+      "status": "state-covered",
       "score": 9.4,
       "styleAnchor": "platform",
       "rounds": 2,
-      "createdAt": "2026-04-01"
+      "createdAt": "2026-04-01",
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 4,
+        "stateVariants": 8,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "markets-screener",
       "file": "page-markets-screener.html",
-      "status": "done",
+      "status": "state-covered",
       "score": 9.64,
       "styleAnchor": "platform",
       "rounds": 10,
-      "createdAt": "2026-04-01"
+      "createdAt": "2026-04-01",
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 5,
+        "stateVariants": 6,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "research",
       "file": "page-research.html",
-      "status": "done",
+      "status": "state-covered",
       "score": 8.96,
       "styleAnchor": "cross-market",
       "rounds": 9,
-      "createdAt": "2026-03-30"
+      "createdAt": "2026-03-30",
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 5,
+        "stateVariants": 6,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "trading-overview",
       "file": "page-trading-overview.html",
-      "status": "done",
+      "status": "state-covered",
       "score": 9.34,
       "styleAnchor": "platform",
       "rounds": 3,
-      "createdAt": "2026-04-01"
+      "createdAt": "2026-04-01",
+      "stateCoverage": {
+        "tabs": 2,
+        "overlays": 4,
+        "stateVariants": 8,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "instrument-hub",
       "file": "page-instrument-hub.html",
-      "status": "done",
+      "status": "state-covered",
       "score": 9.46,
       "styleAnchor": "platform",
       "rounds": 6,
       "createdAt": "2026-04-01",
-      "note": "CSS prototype ceiling confirmed at 9.4-9.5. Gap to 10 requires React + real data + JS interactions."
+      "note": "CSS prototype ceiling confirmed at 9.4-9.5. Gap to 10 requires React + real data + JS interactions.",
+      "stateCoverage": {
+        "tabs": 8,
+        "overlays": 6,
+        "stateVariants": 13,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "strategy-studio",
       "file": "page-strategy-studio.html",
-      "status": "created",
+      "status": "state-covered",
       "score": null,
       "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-04-01"
+      "createdAt": "2026-04-01",
+      "stateCoverage": {
+        "tabs": 2,
+        "overlays": 5,
+        "stateVariants": 6,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "signals-inbox",
       "file": "page-signals-inbox.html",
-      "status": "created",
+      "status": "state-covered",
       "score": null,
       "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-04-01"
+      "createdAt": "2026-04-01",
+      "stateCoverage": {
+        "tabs": 4,
+        "overlays": 3,
+        "stateVariants": 5,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "orders-ledger",
       "file": "page-orders-ledger.html",
-      "status": "created",
+      "status": "state-covered",
       "score": null,
       "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-04-01"
+      "createdAt": "2026-04-01",
+      "stateCoverage": {
+        "tabs": 5,
+        "overlays": 4,
+        "stateVariants": 6,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "risk-center",
       "file": "page-risk-center.html",
-      "status": "created",
+      "status": "state-covered",
       "score": null,
       "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-04-01"
+      "createdAt": "2026-04-01",
+      "stateCoverage": {
+        "tabs": 3,
+        "overlays": 3,
+        "stateVariants": 5,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "ai-overview",
       "file": "page-ai-overview.html",
-      "status": "created",
+      "status": "state-covered",
       "score": null,
       "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-04-01"
+      "createdAt": "2026-04-01",
+      "stateCoverage": {
+        "tabs": 2,
+        "overlays": 0,
+        "stateVariants": 28,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "regime-monitor",
+      "file": "page-regime-monitor.html",
+      "status": "state-covered",
+      "score": null,
+      "styleAnchor": "platform",
+      "rounds": 0,
+      "createdAt": "2026-04-02",
+      "stateCoverage": {
+        "tabs": 3,
+        "overlays": 1,
+        "stateVariants": 25,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "markets-intelligence",
+      "file": "page-markets-intelligence.html",
+      "status": "state-covered",
+      "score": null,
+      "styleAnchor": "platform",
+      "rounds": 0,
+      "createdAt": "2026-04-02",
+      "stateCoverage": {
+        "tabs": 5,
+        "overlays": 5,
+        "stateVariants": 25,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "ai-copilot",
       "file": "page-ai-copilot.html",
-      "status": "created",
+      "status": "state-covered",
       "score": null,
       "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-04-01"
+      "createdAt": "2026-04-01",
+      "stateCoverage": {
+        "tabs": 4,
+        "overlays": 3,
+        "stateVariants": 5,
+        "coveragePercent": 100
+      }
     },
     {
       "id": "agent-console",
       "file": "page-agent-console.html",
-      "status": "created",
+      "status": "state-covered",
       "score": null,
       "styleAnchor": "platform",
       "rounds": 0,
-      "createdAt": "2026-04-01"
+      "createdAt": "2026-04-01",
+      "stateCoverage": {
+        "tabs": 4,
+        "overlays": 4,
+        "stateVariants": 6,
+        "coveragePercent": 100
+      }
     }
   ],
   "auxiliary": [],

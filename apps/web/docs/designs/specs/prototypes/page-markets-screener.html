@@ -1,4 +1,28 @@
 <!DOCTYPE html>
+<!--
+  State Coverage Index: page-markets-screener
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 0 (Screener 无 tab 系统)
+
+  Overlays: 5
+  - overlay-save-preset (Sheet: 保存预设) [covered]
+  - overlay-column-manage (Sheet: 列管理) [covered]
+  - overlay-compare (Drawer: 对比 Drawer) [covered]
+  - overlay-generate-pool (Modal: 生成标的池确认) [covered]
+  - overlay-export (Sheet: 导出结果) [covered]
+
+  State Variants: 6 components × 3 states (empty/loading/error) + bulk
+  - filters: default[covered] loading[n/a] empty[covered] failed[covered] stale[n/a] selected[covered] bulk[n/a]
+  - results-table: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[covered]
+  - compare-cart: default[covered] loading[n/a] empty[covered] failed[n/a] stale[n/a] selected[n/a] bulk[covered]
+  - compare-drawer: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[n/a]
+  - scoring-presets: default[covered] loading[covered] empty[covered] failed[n/a] stale[n/a] selected[covered] bulk[n/a]
+  - result-destinations: default[covered] loading[covered] empty[covered] failed[n/a] stale[n/a] selected[n/a] bulk[covered]
+
+  Coverage Score: 100%
+-->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
@@ -22,6 +46,9 @@
   <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- State Toggle System (pure CSS: checkbox overlays + details state variants) -->
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
     /* ── Style label for visual comparison ── */
@@ -745,6 +772,75 @@
       .score-radar .radar-value { transition: none !important; }
       .score-radar .radar-label { transition: none !important; }
     }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* Overlay: 保存预设 Sheet */
+    :root:has(#overlay-save-preset:checked)
+      [data-overlay="overlay-save-preset"] { display: flex; }
+
+    /* Overlay: 列管理 Sheet */
+    :root:has(#overlay-column-manage:checked)
+      [data-overlay="overlay-column-manage"] { display: flex; }
+
+    /* Overlay: Compare Drawer */
+    :root:has(#overlay-compare:checked)
+      [data-overlay="overlay-compare"] { display: flex; }
+
+    /* Overlay: 生成标的池确认 Modal */
+    :root:has(#overlay-generate-pool:checked)
+      [data-overlay="overlay-generate-pool"] { display: flex; }
+
+    /* Overlay: 导出结果 Sheet */
+    :root:has(#overlay-export:checked)
+      [data-overlay="overlay-export"] { display: flex; }
+
+    /* ── Overlay content refinement ── */
+    .overlay-sheet .overlay-header,
+    .overlay-drawer .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-18);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-body h4:first-child { margin-top: 0; }
+
+    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
+
+    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
+    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
+    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
+    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
   </style>
 </head>
 <body>
@@ -804,7 +900,7 @@
       </div>
       <div class="header-spacer"></div>
       <div class="header-btn-group-left">
-        <button class="btn">保存视图</button>
+        <label for="overlay-save-preset" class="btn" style="cursor:pointer">保存视图</label>
         <button class="btn btn-primary">执行筛选</button>
       </div>
       <div class="header-btn-group-right">
@@ -821,7 +917,7 @@
           </div>
         </div>
         <button class="btn btn-ghost">重置</button>
-        <button class="btn btn-ghost">导出</button>
+        <label for="overlay-export" class="btn btn-ghost" style="cursor:pointer">导出</label>
         <button class="header-action-btn" title="通知" aria-label="通知">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
@@ -864,6 +960,53 @@
       <div class="filter-spacer"></div>
       <span class="filter-count" role="status" aria-live="polite">共 238 只</span>
     </div>
+
+    <!-- State Variants: 筛选条件 / Filter Toolbar -->
+    <details class="state-variant">
+      <summary class="state-variant-label">Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">🔍</div>
+          <div class="state-empty-title">筛选条件不可用</div>
+          <div class="state-empty-desc">筛选服务未返回可用条件，请检查网络连接或刷新页面重试</div>
+          <button class="state-empty-cta">重试加载</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
+          <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
+          <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Error State</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">筛选条件加载失败</div>
+          <div class="state-error-desc">无法获取筛选条件配置，可能是数据服务异常或网络中断</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- State Variants: 筛选条件 selected 高亮 -->
+    <details class="state-variant">
+      <summary class="state-variant-label">Selected State</summary>
+      <div class="state-variant-content" data-state="selected">
+        <div style="padding:var(--space-8) 0;display:flex;gap:var(--space-6);flex-wrap:wrap;">
+          <span class="filter-chip active" style="box-shadow:0 0 0 2px var(--brand-accent)">沪深300</span>
+          <span class="filter-chip active" style="box-shadow:0 0 0 2px var(--brand-accent)">科技</span>
+          <span class="filter-chip active" style="box-shadow:0 0 0 2px var(--brand-accent)">买入信号</span>
+          <span style="font-size:var(--font-size-12);color:var(--text-tertiary);padding:var(--space-4);">↑ 激活筛选条件时高亮边框</span>
+        </div>
+      </div>
+    </details>
 
     <!-- ═══ Main Table Area ═══ -->
     <div class="catalog-table">
@@ -1118,6 +1261,74 @@
       </div>
     </div>
 
+    <!-- State Variants: Results Table -->
+    <details class="state-variant">
+      <summary class="state-variant-label">Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📋</div>
+          <div class="state-empty-title">暂无匹配标的</div>
+          <div class="state-empty-desc">当前筛选条件下没有匹配的标的，请尝试调整筛选条件或扩大股票池范围</div>
+          <button class="state-empty-cta">重置筛选条件</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Error State</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">筛选结果加载失败</div>
+          <div class="state-error-desc">无法获取筛选结果数据，可能是数据服务异常或网络连接中断，请检查后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Stale State</summary>
+      <div class="state-variant-content" data-state="stale">
+        <div style="padding:var(--space-12);display:flex;align-items:center;gap:var(--space-6);">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+          <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">数据更新于 3 分钟前，可能不是最新状态</span>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Selected State</summary>
+      <div class="state-variant-content" data-state="selected">
+        <div style="padding:var(--space-8);">
+          <div style="border:1px solid var(--border-default);border-radius:var(--radius-4);overflow:hidden;">
+            <div style="padding:var(--space-6) var(--space-10);background:color-mix(in oklch, var(--brand-accent) 5%, transparent);display:flex;align-items:center;gap:var(--space-6);font-size:var(--font-size-12);color:var(--text-primary);">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)">
+              <span style="flex:1;">600519 贵州茅台</span>
+              <span style="color:var(--market-up-fg)">+3.10%</span>
+            </div>
+            <div style="padding:var(--space-6) var(--space-10);display:flex;align-items:center;gap:var(--space-6);font-size:var(--font-size-12);color:var(--text-primary);">
+              <input type="checkbox" style="accent-color:var(--brand-accent)">
+              <span style="flex:1;">300750 宁德时代</span>
+              <span style="color:var(--market-up-fg)">+5.20%</span>
+            </div>
+          </div>
+          <span style="font-size:var(--font-size-11);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 选中行高亮 + 左侧蓝色指示条</span>
+        </div>
+      </div>
+    </details>
+
     <!-- ═══ Detail Panel (320px right side) ═══ -->
     <div class="catalog-detail">
       <!-- Section 1: 结果去向 -->
@@ -1128,7 +1339,7 @@
         </div>
         <div class="detail-actions-body">
           <button class="btn">加入观察</button>
-          <button class="btn btn-primary">加入标的池</button>
+          <label for="overlay-generate-pool" class="btn btn-primary" style="cursor:pointer">加入标的池</label>
           <button class="btn btn-ghost">发送到研究</button>
         </div>
       </div>
@@ -1284,11 +1495,438 @@
               <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除中芯国际">&times;</span>
             </div>
           </div>
-          <button class="btn btn-primary compare-cta">开始对比 &rarr;</button>
+          <label for="overlay-compare" class="btn btn-primary compare-cta" style="cursor:pointer">开始对比 &rarr;</label>
         </div>
       </div>
     </div>
+
+    <!-- State Variants: Compare Cart -->
+    <details class="state-variant">
+      <summary class="state-variant-label">Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">⚖️</div>
+          <div class="state-empty-title">对比篮为空</div>
+          <div class="state-empty-desc">从筛选结果中勾选标的添加到对比篮，最多支持 6 个标的同时对比</div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Bulk Selected State</summary>
+      <div class="state-variant-content" data-state="bulk">
+        <div style="padding:var(--space-8);">
+          <div style="border:1px solid var(--brand-accent);border-radius:var(--radius-4);padding:var(--space-6);background:color-mix(in oklch, var(--brand-accent) 5%, transparent);margin-bottom:var(--space-8);">
+            <div style="font-size:var(--font-size-12);color:var(--text-primary);font-weight:var(--font-weight-medium);">已选 5 只标的</div>
+          </div>
+          <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;">
+            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">贵州茅台 <span style="color:var(--text-tertiary);">&times;</span></span>
+            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">宁德时代 <span style="color:var(--text-tertiary);">&times;</span></span>
+            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">中芯国际 <span style="color:var(--text-tertiary);">&times;</span></span>
+            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">中国平安 <span style="color:var(--text-tertiary);">&times;</span></span>
+            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">比亚迪 <span style="color:var(--text-tertiary);">&times;</span></span>
+          </div>
+          <span style="font-size:var(--font-size-11);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 批量已选数量展示</span>
+        </div>
+      </div>
+    </details>
+
+    <!-- State Variants: Scoring Presets -->
+    <details class="state-variant">
+      <summary class="state-variant-label">Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📊</div>
+          <div class="state-empty-title">暂无评分模型</div>
+          <div class="state-empty-desc">评分模型列表为空，请先在研究模块创建因子评分模型</div>
+          <button class="state-empty-cta">前往研究模块</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton" style="height:48px;width:100%;border-radius:var(--radius-6)"></div>
+          <div class="skeleton" style="height:48px;width:100%;border-radius:var(--radius-6)"></div>
+          <div class="skeleton" style="height:48px;width:100%;border-radius:var(--radius-6)"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Selected State</summary>
+      <div class="state-variant-content" data-state="selected">
+        <div style="padding:var(--space-8);">
+          <div class="preset-card" style="border-color:var(--brand-accent);background:color-mix(in oklch, var(--brand-accent) 5%, transparent);">
+            <div class="preset-card-title">高ROE低估值</div>
+            <div class="preset-card-desc">ROE&gt;15%, PE&lt;20</div>
+            <div class="preset-card-match" style="color:var(--brand-accent)">匹配 23 只 ✓ 已应用</div>
+          </div>
+          <span style="font-size:var(--font-size-11);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 选中的预设卡片边框高亮</span>
+        </div>
+      </div>
+    </details>
+
+    <!-- State Variants: Result Destinations -->
+    <details class="state-variant">
+      <summary class="state-variant-label">Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📤</div>
+          <div class="state-empty-title">暂无可选目标</div>
+          <div class="state-empty-desc">没有已创建的观察列表或标的池，请先创建目标分组</div>
+          <button class="state-empty-cta">创建标的池</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton" style="height:24px;width:60%"></div>
+          <div class="skeleton" style="height:24px;width:45%"></div>
+          <div class="skeleton" style="height:24px;width:70%"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Bulk State</summary>
+      <div class="state-variant-content" data-state="bulk">
+        <div style="padding:var(--space-8);">
+          <div style="border:1px solid var(--border-default);border-radius:var(--radius-4);overflow:hidden;">
+            <div style="padding:var(--space-6) var(--space-10);background:var(--interaction-hover-subtle-bg);display:flex;align-items:center;justify-content:space-between;font-size:var(--font-size-12);color:var(--text-primary);">
+              <span>已选 15 只标的</span>
+              <div style="display:flex;gap:var(--space-6);">
+                <button class="btn" style="font-size:var(--font-size-11);padding:var(--space-2) var(--space-6);">加入观察</button>
+                <button class="btn btn-primary" style="font-size:var(--font-size-11);padding:var(--space-2) var(--space-6);">加入标的池</button>
+                <label for="overlay-export" class="btn btn-ghost" style="font-size:var(--font-size-11);padding:var(--space-2) var(--space-6);cursor:pointer">导出</label>
+                <label for="overlay-compare" class="btn btn-ghost" style="font-size:var(--font-size-11);padding:var(--space-2) var(--space-6);cursor:pointer">Compare</label>
+              </div>
+            </div>
+          </div>
+          <span style="font-size:var(--font-size-11);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 批量操作栏: 观察/标的池/导出/Compare</span>
+        </div>
+      </div>
+    </details>
+
+    <!-- State Variants: Compare Drawer (Overlay) -->
+    <details class="state-variant">
+      <summary class="state-variant-label">Compare Drawer Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">⚖️</div>
+          <div class="state-empty-title">请从结果表添加标的</div>
+          <div class="state-empty-desc">在筛选结果中勾选标的，点击"加入对比"即可开始对比分析</div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Compare Drawer Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-heading"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton" style="height:80px;width:100%;border-radius:var(--radius-6)"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Compare Drawer Error State</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">加载对比数据失败</div>
+          <div class="state-error-desc">无法获取标的对比数据，可能是数据服务异常或网络中断</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Compare Drawer Stale State</summary>
+      <div class="state-variant-content" data-state="stale">
+        <div style="padding:var(--space-12);display:flex;align-items:center;gap:var(--space-6);">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+          <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">对比数据更新于 5 分钟前</span>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Compare Drawer Selected State</summary>
+      <div class="state-variant-content" data-state="selected">
+        <div style="padding:var(--space-8);">
+          <div style="border:1px solid var(--border-default);border-radius:var(--radius-4);overflow:hidden;">
+            <div style="padding:var(--space-6) var(--space-10);background:color-mix(in oklch, var(--brand-accent) 5%, transparent);display:flex;align-items:center;gap:var(--space-8);font-size:var(--font-size-12);color:var(--text-primary);">
+              <span style="font-weight:var(--font-weight-medium)">贵州茅台</span>
+              <span style="color:var(--market-up-fg)">1,856.00</span>
+              <span style="color:var(--text-tertiary)">|</span>
+              <span>PE 28.5</span>
+            </div>
+          </div>
+          <span style="font-size:var(--font-size-11);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 对比项高亮显示</span>
+        </div>
+      </div>
+    </details>
   </div>
+
+  <!-- ═══ Overlay Checkbox Triggers ═══ -->
+  <input type="checkbox" id="overlay-save-preset" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-column-manage" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-compare" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-generate-pool" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-export" class="overlay-radio sr-only">
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay A: 保存预设 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-save-preset">
+      <label class="overlay-dismiss" for="overlay-save-preset" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="保存预设">
+        <div class="overlay-header">
+          <span class="overlay-title">保存筛选预设</span>
+          <label for="overlay-save-preset" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>预设名称</h4>
+          <div style="padding:var(--space-6) 0;">
+            <input type="text" placeholder="输入预设名称..." style="width:100%;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;">
+          </div>
+
+          <h4>当前筛选条件摘要</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">股票池</span>
+            <span class="overlay-field-value">沪深300</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">行业</span>
+            <span class="overlay-field-value">全部行业</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">市值</span>
+            <span class="overlay-field-value">全部</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">信号</span>
+            <span class="overlay-field-value">全部</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">匹配标的数</span>
+            <span class="overlay-field-value">238 只</span>
+          </div>
+
+          <h4>标签</h4>
+          <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
+            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-secondary);font-size:var(--font-size-12);">价值</span>
+            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-secondary);font-size:var(--font-size-12);">A股</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-save-preset" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-save-preset" class="overlay-btn overlay-btn-primary" style="cursor:pointer">保存</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: 列管理 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-column-manage">
+      <label class="overlay-dismiss" for="overlay-column-manage" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="列管理">
+        <div class="overlay-header">
+          <span class="overlay-title">列管理</span>
+          <label for="overlay-column-manage" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>搜索列</h4>
+          <div style="padding:var(--space-4) 0 var(--space-8);">
+            <input type="text" placeholder="搜索列名..." style="width:100%;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;">
+          </div>
+
+          <h4>已选列（拖拽排序）</h4>
+          <div style="display:flex;flex-direction:column;gap:var(--space-4);">
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 代码
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 名称
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 最新价
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 涨跌幅
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 行业
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 信号
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 风险
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-tertiary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 市盈率
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-tertiary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 市净率
+            </label>
+          </div>
+
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-secondary">重置默认</button>
+            <label for="overlay-column-manage" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: Compare Drawer (右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-compare">
+      <label class="overlay-dismiss" for="overlay-compare" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="标的对比">
+        <div class="overlay-header">
+          <span class="overlay-title">标的对比</span>
+          <label for="overlay-compare" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>已选标的</h4>
+          <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;margin-bottom:var(--space-12);">
+            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">贵州茅台 <span style="color:var(--text-tertiary);margin-left:var(--space-4);">&times;</span></span>
+            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">宁德时代 <span style="color:var(--text-tertiary);margin-left:var(--space-4);">&times;</span></span>
+            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">中芯国际 <span style="color:var(--text-tertiary);margin-left:var(--space-4);">&times;</span></span>
+          </div>
+
+          <h4>对比维度</h4>
+          <div style="display:flex;gap:var(--space-4);border-bottom:1px solid var(--border-subtle);margin-bottom:var(--space-12);">
+            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);border-bottom:2px solid var(--brand-accent);color:var(--text-primary);background:none;border-top:none;border-left:none;border-right:none;cursor:pointer;">概览</button>
+            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-tertiary);background:none;border:none;cursor:pointer;">技术面</button>
+            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-tertiary);background:none;border:none;cursor:pointer;">基本面</button>
+            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-tertiary);background:none;border:none;cursor:pointer;">风险</button>
+          </div>
+
+          <div class="overlay-field">
+            <span class="overlay-field-label"></span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">贵州茅台</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">宁德时代</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">中芯国际</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">最新价</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">1,856.00</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">218.00</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">51.00</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">涨跌幅</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center;color:var(--market-up-fg)">+3.10%</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center;color:var(--market-up-fg)">+5.20%</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center;color:var(--market-up-fg)">+6.25%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">市值</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">2.3万亿</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">5,320亿</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">4,060亿</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">PE(TTM)</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">28.5</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">32.1</span>
+            <span class="overlay-field-value" style="flex:1;text-align:center">68.2</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-primary" style="cursor:pointer">生成标的池</label>
+            <label for="overlay-compare" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">关闭</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay D: 生成标的池确认 (Modal 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-generate-pool">
+      <label class="overlay-dismiss" for="overlay-generate-pool" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="生成标的池确认">
+        <div class="overlay-header">
+          <span class="overlay-title">生成标的池</span>
+          <label for="overlay-generate-pool" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-12);">将当前筛选结果固化为标的池（Universe），后续可用于回测、策略构建和风控。</p>
+
+          <h4>标的池名称</h4>
+          <div style="padding:var(--space-4) 0 var(--space-8);">
+            <input type="text" placeholder="输入标的池名称..." style="width:100%;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;">
+          </div>
+
+          <div class="overlay-field">
+            <span class="overlay-field-label">包含标的数量</span>
+            <span class="overlay-field-value">238 只</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">筛选条件</span>
+            <span class="overlay-field-value">沪深300 · 全部行业</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认创建</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay E: 导出结果 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-export">
+      <label class="overlay-dismiss" for="overlay-export" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="导出筛选结果">
+        <div class="overlay-header">
+          <span class="overlay-title">导出筛选结果</span>
+          <label for="overlay-export" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>导出格式</h4>
+          <div style="display:flex;gap:var(--space-6);margin-bottom:var(--space-12);">
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="export-format" checked style="accent-color:var(--brand-accent)"> CSV
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="export-format" style="accent-color:var(--brand-accent)"> Excel
+            </label>
+          </div>
+
+          <h4>列范围</h4>
+          <div style="display:flex;gap:var(--space-6);margin-bottom:var(--space-12);">
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="export-columns" checked style="accent-color:var(--brand-accent)"> 当前列
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="export-columns" style="accent-color:var(--brand-accent)"> 全部列
+            </label>
+          </div>
+
+          <h4>数据范围</h4>
+          <div style="display:flex;gap:var(--space-6);margin-bottom:var(--space-8);">
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="export-scope" checked style="accent-color:var(--brand-accent)"> 全部（238 只）
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="export-scope" style="accent-color:var(--brand-accent)"> 已选（1 只）
+            </label>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-export" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-export" class="overlay-btn overlay-btn-primary" style="cursor:pointer">导出</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
   <script src="shared/theme-switcher.js"></script>
 </body>
 </html>

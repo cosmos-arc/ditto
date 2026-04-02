@@ -1,4 +1,29 @@
 <!DOCTYPE html>
+<!--
+  State Coverage Index: page-strategy-studio
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 2
+  - studio-mode (Form Builder / Code Editor) [covered]
+
+  Overlays: 5
+  - overlay-save-strategy (Modal: 策略保存) [covered]
+  - overlay-backtest-config (Sheet: 回测参数配置) [covered]
+  - overlay-factor-preview (Drawer: 因子预处理预览) [covered]
+  - overlay-validation-toast (Toast: 校验结果) [covered]
+  - overlay-delete-strategy (Modal: 确认策略删除) [covered]
+
+  State Variants: 6 components × 3 states (empty/loading/error)
+  - studio-header: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - mode-switch: default[covered] loading[covered] empty[n/a] failed[covered] stale[n/a] selected[n/a]
+  - snippets-sources: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - main-studio: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - inspector: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - logs: default[covered] loading[covered] empty[covered] failed[n/a] stale[n/a] selected[n/a]
+
+  Coverage Score: 100%
+-->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
@@ -23,6 +48,9 @@
   <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
     /* ── Skip link ── */
@@ -1031,6 +1059,156 @@
     }
 
     /* ══════════════════════════════════════════════
+     * Tab Panel Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* Form Builder tab active */
+    .tab-group:has(#studio-mode-form:checked)
+      [data-panel="studio-mode-form"] { display: flex; flex-direction: column; gap: var(--density-section-gap); }
+
+    /* Code Editor tab active */
+    .tab-group:has(#studio-mode-code:checked)
+      [data-panel="studio-mode-code"] { display: flex; flex-direction: column; gap: var(--density-section-gap); }
+
+    /* Radio-tab label styling when checked */
+    .tab-group:has(#studio-mode-form:checked)
+      label[for="studio-mode-form"] {
+        color: var(--text-primary);
+        border-bottom-color: var(--brand-accent);
+      }
+    .tab-group:has(#studio-mode-code:checked)
+      label[for="studio-mode-code"] {
+        color: var(--text-primary);
+        border-bottom-color: var(--brand-accent);
+      }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* Overlay 1: 策略保存 Modal */
+    :root:has(#overlay-save-strategy:checked)
+      [data-overlay="overlay-save-strategy"] { display: flex; }
+
+    /* Overlay 2: 回测参数配置 Sheet */
+    :root:has(#overlay-backtest-config:checked)
+      [data-overlay="overlay-backtest-config"] { display: flex; }
+
+    /* Overlay 3: 因子预处理预览 Drawer */
+    :root:has(#overlay-factor-preview:checked)
+      [data-overlay="overlay-factor-preview"] { display: flex; }
+
+    /* Overlay 4: 校验结果 Toast */
+    :root:has(#overlay-validation-toast:checked)
+      [data-overlay="overlay-validation-toast"] { display: flex; }
+
+    /* Overlay 5: 确认策略删除 Modal */
+    :root:has(#overlay-delete-strategy:checked)
+      [data-overlay="overlay-delete-strategy"] { display: flex; }
+
+    /* ── Overlay content refinement ── */
+    .overlay-sheet .overlay-header,
+    .overlay-drawer .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-18);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-body h4:first-child { margin-top: 0; }
+
+    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
+
+    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
+    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
+    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
+    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg, #ef4444); border-color: var(--risk-high-fg, #ef4444); }
+
+    /* Toast variant — narrow, top-right positioned */
+    .overlay-backdrop .overlay-toast {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      padding: var(--space-12) var(--space-16);
+      width: 360px;
+      position: absolute;
+      top: var(--space-24);
+      right: var(--space-24);
+      z-index: 1;
+    }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Code Editor panel styling
+     * ══════════════════════════════════════════════ */
+    .code-editor-mock {
+      background: var(--surface-app);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-12);
+      line-height: 1.7;
+      padding: var(--space-12);
+      color: var(--text-secondary);
+      min-height: 400px;
+      position: relative;
+      overflow: hidden;
+    }
+    .code-editor-mock::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 32px;
+      background: var(--surface-panel-base);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .code-line {
+      display: flex;
+      gap: var(--space-12);
+      white-space: pre;
+    }
+    .code-line-num {
+      color: var(--text-disabled);
+      min-width: 28px;
+      text-align: right;
+      user-select: none;
+    }
+    .code-keyword { color: var(--brand-accent); }
+    .code-string { color: var(--system-healthy-fg); }
+    .code-comment { color: var(--text-disabled); font-style: italic; }
+    .code-func { color: var(--system-degraded-fg); }
+    .code-param { color: var(--text-primary); }
+
+    /* ══════════════════════════════════════════════
      * Reduced motion
      * ══════════════════════════════════════════════ */
     @media (prefers-reduced-motion: reduce) {
@@ -1089,6 +1267,10 @@
           <span class="status-badge-dot"></span>
           已保存
         </span>
+        <input type="checkbox" id="overlay-delete-strategy" class="overlay-radio sr-only">
+        <label for="overlay-delete-strategy" style="cursor: pointer; color: var(--text-tertiary); margin-left: var(--space-4); font-size: var(--font-size-12); display: inline-flex; align-items: center; gap: var(--space-2);" title="删除策略" tabindex="0">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M7 5V3h6v2M6 5v12a1 1 0 001 1h6a1 1 0 001-1V5"/></svg>
+        </label>
       </div>
       <div class="header-spacer"></div>
       <div class="studio-actions" role="toolbar" aria-label="策略操作">
@@ -1104,36 +1286,41 @@
             <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
           </div>
         </div>
-        <button class="studio-action" tabindex="0" aria-label="保存策略">
+        <input type="checkbox" id="overlay-save-strategy" class="overlay-radio sr-only">
+        <label for="overlay-save-strategy" class="studio-action" tabindex="0" aria-label="保存策略" style="cursor:pointer">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h10l2 2v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4l2-1z"/><path d="M7 3v5h6V3"/><path d="M6 16h8"/></svg>
           保存
-        </button>
-        <button class="studio-action" tabindex="0" aria-label="校验策略">
+        </label>
+        <input type="checkbox" id="overlay-validation-toast" class="overlay-radio sr-only">
+        <label for="overlay-validation-toast" class="studio-action" tabindex="0" aria-label="校验策略" style="cursor:pointer">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3v14"/><path d="M6 7l10-2"/><path d="M6 11l10-2"/><path d="M6 15l10-2"/></svg>
           校验
-        </button>
+        </label>
         <button class="studio-action" tabindex="0" aria-label="Dry Run">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4l10 6-10 6V4z"/></svg>
           Dry Run
         </button>
-        <button class="studio-action primary" tabindex="0" aria-label="提交回测">
+        <input type="checkbox" id="overlay-backtest-config" class="overlay-radio sr-only">
+        <label for="overlay-backtest-config" class="studio-action primary" tabindex="0" aria-label="提交回测" style="cursor:pointer">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2a6 6 0 00-6 6v3l-2 3h16l-2-3V8a6 6 0 00-6-6z"/><path d="M8 16a2 2 0 004 0"/></svg>
           提交回测
-        </button>
+        </label>
       </div>
     </header>
 
-    <!-- ═══ Mode Switch Bar ═══ -->
-    <div class="studio-mode-bar" role="tablist" aria-label="编辑模式">
+    <!-- ═══ Mode Switch Bar (radio tab system) ═══ -->
+    <div class="studio-mode-bar tab-group" data-tab-group="studio-mode" role="tablist" aria-label="编辑模式">
+      <input type="radio" name="studio-mode" id="studio-mode-form" checked class="tab-radio sr-only">
+      <input type="radio" name="studio-mode" id="studio-mode-code" class="tab-radio sr-only">
       <div class="mode-tabs">
-        <span class="mode-tab active" role="tab" aria-selected="true" tabindex="0">
+        <label for="studio-mode-form" class="mode-tab active" role="tab" tabindex="0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="3" rx="1"/><rect x="3" y="8.5" width="14" height="3" rx="1"/><rect x="3" y="14" width="14" height="3" rx="1"/></svg>
           Form Builder
-        </span>
-        <span class="mode-tab" role="tab" aria-selected="false" tabindex="0">
+        </label>
+        <label for="studio-mode-code" class="mode-tab" role="tab" tabindex="0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12M4 8h8M4 12h10M4 16h6"/></svg>
           Code Editor
-        </span>
+        </label>
       </div>
       <div class="mode-bar-sep"></div>
       <div class="mode-bar-breadcrumb">
@@ -1260,12 +1447,17 @@
         </div>
         <div style="font-size: var(--font-size-12); color: var(--text-tertiary); margin-top: var(--space-4);">
           原始因子 → 处理后因子
+          <input type="checkbox" id="overlay-factor-preview" class="overlay-radio sr-only">
+          <label for="overlay-factor-preview" class="ai-action" style="margin-top: var(--space-4); display: inline-flex;" tabindex="0">预览处理后分布</label>
         </div>
       </div>
     </aside>
 
-    <!-- ═══ Main Studio Canvas ═══ -->
-    <main class="studio-main" id="main-content" role="main" aria-label="策略编辑器">
+    <!-- ═══ Main Studio Canvas (Tab Panels) ═══ -->
+    <main class="studio-main tab-panels" id="main-content" role="main" aria-label="策略编辑器">
+
+      <!-- Tab Panel: Form Builder -->
+      <div class="tab-panel" data-panel="studio-mode-form">
 
       <!-- Panel 1: Strategy Basic Info -->
       <div class="studio-panel">
@@ -1429,6 +1621,71 @@
           </div>
         </div>
       </div>
+      </div><!-- /tab-panel: Form Builder -->
+
+      <!-- Tab Panel: Code Editor -->
+      <div class="tab-panel" data-panel="studio-mode-code">
+        <div class="studio-panel">
+          <div class="studio-panel-header">
+            <div>
+              <div class="studio-panel-title">策略代码</div>
+              <div class="studio-panel-subtitle">Python · 多因子动量策略 v2.3</div>
+            </div>
+            <div class="studio-actions" style="gap: var(--space-4);">
+              <button class="studio-action" tabindex="0" aria-label="格式化代码">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h12M4 13h12M8 4v12"/></svg>
+                格式化
+              </button>
+              <button class="studio-action" tabindex="0" aria-label="版本对比">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v14M12 3v14M3 10h14"/></svg>
+                版本对比
+              </button>
+            </div>
+          </div>
+          <div class="studio-panel-body" style="padding: 0;">
+            <div class="code-editor-mock">
+              <!-- Editor toolbar area -->
+              <div style="height: 32px; display: flex; align-items: center; padding: 0 var(--space-12); position: relative; z-index: 1;">
+                <span style="color: var(--text-tertiary); font-size: var(--font-size-11); margin-right: var(--space-12);">strategy.py</span>
+                <span style="color: var(--text-disabled); font-size: var(--font-size-11);">UTF-8 · Python</span>
+              </div>
+              <div style="padding-top: var(--space-12);">
+                <div class="code-line"><span class="code-line-num"> 1</span><span class="code-comment"># 多因子动量策略 v2.3</span></div>
+                <div class="code-line"><span class="code-line-num"> 2</span><span class="code-keyword">from</span> <span class="code-param">ditto.strategy</span> <span class="code-keyword">import</span> <span class="code-param">Strategy, FactorWeight</span></div>
+                <div class="code-line"><span class="code-line-num"> 3</span><span class="code-keyword">from</span> <span class="code-param">ditto.risk</span> <span class="code-keyword">import</span> <span class="code-param">IndustryConstraint, ConcentrationLimit</span></div>
+                <div class="code-line"><span class="code-line-num"> 4</span></div>
+                <div class="code-line"><span class="code-line-num"> 5</span><span class="code-keyword">class</span> <span class="code-func">MomentumStrategy</span>(<span class="code-param">Strategy</span>):</div>
+                <div class="code-line"><span class="code-line-num"> 6</span>    <span class="code-param">name</span> = <span class="code-string">"多因子动量策略"</span></div>
+                <div class="code-line"><span class="code-line-num"> 7</span>    <span class="code-param">universe</span> = <span class="code-string">"CSI300"</span></div>
+                <div class="code-line"><span class="code-line-num"> 8</span></div>
+                <div class="code-line"><span class="code-line-num"> 9</span>    <span class="code-keyword">def</span> <span class="code-func">factors</span>(<span class="code-param">self</span>):</div>
+                <div class="code-line"><span class="code-line-num">10</span>        <span class="code-keyword">return</span> [</div>
+                <div class="code-line"><span class="code-line-num">11</span>            <span class="code-param">FactorWeight</span>(<span class="code-string">"动量因子"</span>, <span class="code-param">weight</span>=<span class="code-param">0.45</span>),</div>
+                <div class="code-line"><span class="code-line-num">12</span>            <span class="code-param">FactorWeight</span>(<span class="code-string">"波动率因子"</span>, <span class="code-param">weight</span>=<span class="code-param">0.30</span>),</div>
+                <div class="code-line"><span class="code-line-num">13</span>            <span class="code-param">FactorWeight</span>(<span class="code-string">"估值因子"</span>, <span class="code-param">weight</span>=<span class="code-param">0.25</span>),</div>
+                <div class="code-line"><span class="code-line-num">14</span>        ]</div>
+                <div class="code-line"><span class="code-line-num">15</span></div>
+                <div class="code-line"><span class="code-line-num">16</span>    <span class="code-keyword">def</span> <span class="code-func">preprocess</span>(<span class="code-param">self</span>, <span class="code-param">factor_data</span>):</div>
+                <div class="code-line"><span class="code-line-num">17</span>        <span class="code-param">factor_data</span>.<span class="code-func">winsorize</span>(<span class="code-param">method</span>=<span class="code-string">"mad"</span>)</div>
+                <div class="code-line"><span class="code-line-num">18</span>        <span class="code-param">factor_data</span>.<span class="code-func">standardize</span>(<span class="code-param">method</span>=<span class="code-string">"zscore"</span>)</div>
+                <div class="code-line"><span class="code-line-num">19</span>        <span class="code-param">factor_data</span>.<span class="code-func">neutralize</span>(<span class="code-param">industry</span>=<span class="code-keyword">True</span>)</div>
+                <div class="code-line"><span class="code-line-num">20</span></div>
+                <div class="code-line"><span class="code-line-num">21</span>    <span class="code-keyword">def</span> <span class="code-func">risk_rules</span>(<span class="code-param">self</span>):</div>
+                <div class="code-line"><span class="code-line-num">22</span>        <span class="code-keyword">return</span> [</div>
+                <div class="code-line"><span class="code-line-num">23</span>            <span class="code-param">IndustryConstraint</span>(<span class="code-param">max_deviation</span>=<span class="code-param">0.05</span>),</div>
+                <div class="code-line"><span class="code-line-num">24</span>            <span class="code-param">ConcentrationLimit</span>(<span class="code-param">max_weight</span>=<span class="code-param">0.10</span>),</div>
+                <div class="code-line"><span class="code-line-num">25</span>        ]</div>
+                <div class="code-line"><span class="code-line-num">26</span></div>
+                <div class="code-line"><span class="code-line-num">27</span>    <span class="code-keyword">def</span> <span class="code-func">rebalance</span>(<span class="code-param">self</span>, <span class="code-param">context</span>):</div>
+                <div class="code-line"><span class="code-line-num">28</span>        <span class="code-param">scores</span> = <span class="code-param">self</span>.<span class="code-func">score</span>(<span class="code-param">context</span>.<span class="code-param">universe</span>)</div>
+                <div class="code-line"><span class="code-line-num">29</span>        <span class="code-param">target</span> = <span class="code-param">self</span>.<span class="code-func">optimize</span>(<span class="code-param">scores</span>, <span class="code-param">method</span>=<span class="code-string">"risk_parity"</span>)</div>
+                <div class="code-line"><span class="code-line-num">30</span>        <span class="code-keyword">return</span> <span class="code-param">target</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /tab-panel: Code Editor -->
+
     </main>
 
     <!-- ═══ Inspector Panel (Right) ═══ -->
@@ -1555,6 +1812,470 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       State Variants: 6 components × 3 states = 18 blocks
+       Placed outside the shell-studio grid for clean layout.
+       ══════════════════════════════════════════════ -->
+
+  <!-- ── State Variants: studio-header ── -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Studio Header — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-heading"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-badge"></div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Studio Header — Empty State</summary>
+    <div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">&#9998;</div>
+        <div class="state-empty-title">未选择策略</div>
+        <div class="state-empty-desc">从策略列表中选择一个策略开始编辑，或创建新策略</div>
+        <button class="state-empty-cta">新建策略</button>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Studio Header — Failed State</summary>
+    <div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">策略加载失败</div>
+        <div class="state-error-desc">无法加载策略配置数据，请检查网络连接后重试</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── State Variants: mode-switch ── -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Mode Switch — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-text" style="width: 120px;"></div>
+        <div class="skeleton skeleton-text" style="width: 100px;"></div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Mode Switch — Failed State</summary>
+    <div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">编辑器加载失败</div>
+        <div class="state-error-desc">编辑模式切换服务暂时不可用，请刷新页面重试</div>
+        <button class="state-error-retry">刷新</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── State Variants: snippets-sources ── -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Snippets &amp; Sources — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-text" style="width: 60%;"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-text" style="width: 50%;"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Snippets &amp; Sources — Empty State</summary>
+    <div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">&#128269;</div>
+        <div class="state-empty-title">暂无可用因子</div>
+        <div class="state-empty-desc">请先在 Factor Library 中创建因子，因子将自动出现在此列表中</div>
+        <button class="state-empty-cta">前往 Factor Library</button>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Snippets &amp; Sources — Failed State</summary>
+    <div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">因子数据加载失败</div>
+        <div class="state-error-desc">无法获取因子列表和股票池数据，请检查数据源连接</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Snippets &amp; Sources — Stale State</summary>
+    <div class="state-variant-content" data-state="stale">
+      <div style="border: 1px solid var(--system-degraded-fg); border-radius: var(--radius-6); padding: var(--space-12); display: flex; align-items: center; gap: var(--space-8);">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--system-degraded-fg)" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+        <div>
+          <div style="font-size: var(--font-size-12); color: var(--system-degraded-fg); font-weight: var(--font-weight-medium);">因子数据可能已更新</div>
+          <div style="font-size: var(--font-size-11); color: var(--text-tertiary);">上次刷新: 3 小时前，建议刷新获取最新数据</div>
+        </div>
+        <button class="state-error-retry" style="margin-top: 0;">刷新</button>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Snippets &amp; Sources — Selected State</summary>
+    <div class="state-variant-content" data-state="selected">
+      <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+        <div class="source-item active" style="background: var(--brand-accent-subtle);">
+          <div class="source-item-info">
+            <div class="source-item-icon" style="color: var(--brand-accent);">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2v16M2 10h16"/><circle cx="10" cy="10" r="3"/></svg>
+            </div>
+            <span class="source-item-name">动量因子</span>
+          </div>
+          <span style="color: var(--brand-accent); font-size: var(--font-size-12);">&#10003; 选中</span>
+        </div>
+        <div class="source-item">
+          <div class="source-item-info">
+            <div class="source-item-icon" style="color: var(--text-tertiary);">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/></svg>
+            </div>
+            <span class="source-item-name">波动率因子</span>
+          </div>
+          <span class="source-item-badge ok">已启用</span>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── State Variants: main-studio ── -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Main Studio — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-heading" style="width: 30%;"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Main Studio — Empty State</summary>
+    <div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">&#128221;</div>
+        <div class="state-empty-title">请配置 Universe</div>
+        <div class="state-empty-desc">选择股票池后开始配置策略参数，或从模板快速加载</div>
+        <button class="state-empty-cta">从模板加载</button>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Main Studio — Failed State</summary>
+    <div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">策略配置加载失败</div>
+        <div class="state-error-desc">无法加载策略权重配置和优化参数，请重试</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Main Studio — Stale State</summary>
+    <div class="state-variant-content" data-state="stale">
+      <div style="border: 1px dashed var(--system-degraded-fg); border-radius: var(--radius-4); padding: var(--space-8); display: flex; align-items: center; gap: var(--space-6); margin-bottom: var(--space-8);">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--system-degraded-fg)" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+        <span style="font-size: var(--font-size-12); color: var(--system-degraded-fg);">因子权重配置可能已过时 — 最近一次因子数据更新于 2 小时前</span>
+      </div>
+      <div class="factor-weight-list">
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── State Variants: inspector ── -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Inspector — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-heading" style="width: 40%;"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text-sm"></div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Inspector — Empty State</summary>
+    <div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">&#129302;</div>
+        <div class="state-empty-title">配置策略后获取 AI 建议</div>
+        <div class="state-empty-desc">完成因子选择和权重配置后，AI 将实时提供优化建议和校验反馈</div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Inspector — Failed State</summary>
+    <div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">AI 分析服务异常</div>
+        <div class="state-error-desc">无法获取 AI 优化建议，策略校验功能暂时不可用</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Inspector — Stale State</summary>
+    <div class="state-variant-content" data-state="stale">
+      <div style="border: 1px dashed var(--system-degraded-fg); border-radius: var(--radius-4); padding: var(--space-8); display: flex; align-items: center; gap: var(--space-6); margin-bottom: var(--space-8);">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--system-degraded-fg)" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+        <span style="font-size: var(--font-size-12); color: var(--system-degraded-fg);">AI 分析结果可能已过时，点击刷新</span>
+      </div>
+      <div class="inspector-list">
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ── State Variants: logs ── -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Logs — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-text" style="width: 80%;"></div>
+        <div class="skeleton skeleton-text" style="width: 65%;"></div>
+        <div class="skeleton skeleton-text" style="width: 90%;"></div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Logs — Empty State</summary>
+    <div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">&#128220;</div>
+        <div class="state-empty-title">暂无日志输出</div>
+        <div class="state-empty-desc">执行校验或 Dry Run 后，日志结果将在此处展示</div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay 1: 策略保存 — Modal -->
+    <div class="overlay-backdrop" data-overlay="overlay-save-strategy">
+      <label class="overlay-dismiss" for="overlay-save-strategy" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="保存策略">
+        <div class="overlay-header">
+          <span class="overlay-title">保存策略</span>
+          <label for="overlay-save-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>策略信息</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">策略名称</span>
+            <span class="overlay-field-value">多因子动量策略 v2.3</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">策略类型</span>
+            <span class="overlay-field-value">多因子选股</span>
+          </div>
+
+          <h4>版本备注</h4>
+          <div style="padding: var(--space-6) 0;">
+            <textarea class="form-textarea" rows="2" placeholder="描述本次修改内容（可选）" style="width: 100%; box-sizing: border-box;"></textarea>
+          </div>
+
+          <h4>保存类型</h4>
+          <div style="display: flex; gap: var(--space-8); padding: var(--space-4) 0;">
+            <label style="display: flex; align-items: center; gap: var(--space-4); color: var(--text-primary); font-size: var(--font-size-12); cursor: pointer;">
+              <input type="radio" name="save-type" checked style="accent-color: var(--brand-accent);"> 新版本
+            </label>
+            <label style="display: flex; align-items: center; gap: var(--space-4); color: var(--text-secondary); font-size: var(--font-size-12); cursor: pointer;">
+              <input type="radio" name="save-type" style="accent-color: var(--brand-accent);"> 覆盖当前版本
+            </label>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-save-strategy" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-save-strategy" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认保存</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 2: 回测参数配置 — Sheet (右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-backtest-config">
+      <label class="overlay-dismiss" for="overlay-backtest-config" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="回测参数配置">
+        <div class="overlay-header">
+          <span class="overlay-title">回测参数配置</span>
+          <label for="overlay-backtest-config" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>回测区间</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">起始日期</span>
+            <span class="overlay-field-value">2020-01-02</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">结束日期</span>
+            <span class="overlay-field-value">2025-12-31</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">初始资金</span>
+            <span class="overlay-field-value">10,000,000</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">基准指数</span>
+            <span class="overlay-field-value">沪深300</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">调仓频率</span>
+            <span class="overlay-field-value">每月</span>
+          </div>
+
+          <h4>交易成本</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">印花税</span>
+            <span class="overlay-field-value">卖出 0.05%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">佣金</span>
+            <span class="overlay-field-value">万 2.5（双向）</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">滑点</span>
+            <span class="overlay-field-value">0.01%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">冲击成本</span>
+            <span class="overlay-field-value">自动估算</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-backtest-config" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-backtest-config" class="overlay-btn overlay-btn-primary" style="cursor:pointer">提交回测</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 3: 因子预处理预览 — Drawer (右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-factor-preview">
+      <label class="overlay-dismiss" for="overlay-factor-preview" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="因子预处理预览">
+        <div class="overlay-header">
+          <span class="overlay-title">因子预处理预览</span>
+          <label for="overlay-factor-preview" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>动量因子 — 处理前后分布对比</h4>
+          <div style="border: 1px solid var(--border-subtle); border-radius: var(--radius-6); padding: var(--space-16); background: var(--surface-panel-base); text-align: center; color: var(--text-tertiary); font-size: var(--font-size-11); line-height: 1.6;">
+            <!-- Distribution chart mock -->
+            <div style="display: flex; align-items: flex-end; justify-content: center; gap: 3px; height: 80px; margin-bottom: var(--space-8);">
+              <div style="width: 8px; background: color-mix(in oklch, var(--brand-accent) 30%, transparent); height: 20%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 8px; background: color-mix(in oklch, var(--brand-accent) 40%, transparent); height: 35%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 8px; background: color-mix(in oklch, var(--brand-accent) 55%, transparent); height: 55%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 8px; background: color-mix(in oklch, var(--brand-accent) 70%, transparent); height: 75%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 8px; background: color-mix(in oklch, var(--brand-accent) 85%, transparent); height: 95%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 8px; background: var(--brand-accent); height: 100%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 8px; background: color-mix(in oklch, var(--brand-accent) 85%, transparent); height: 90%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 8px; background: color-mix(in oklch, var(--brand-accent) 70%, transparent); height: 70%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 8px; background: color-mix(in oklch, var(--brand-accent) 55%, transparent); height: 45%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 8px; background: color-mix(in oklch, var(--brand-accent) 40%, transparent); height: 25%; border-radius: 2px 2px 0 0;"></div>
+              <div style="width: 8px; background: color-mix(in oklch, var(--brand-accent) 30%, transparent); height: 15%; border-radius: 2px 2px 0 0;"></div>
+            </div>
+            <div style="display: flex; justify-content: center; gap: var(--space-12); font-size: var(--font-size-10); margin-top: var(--space-4);">
+              <span style="display: flex; align-items: center; gap: var(--space-2);"><span style="width: 8px; height: 8px; border-radius: 2px; background: color-mix(in oklch, var(--brand-accent) 40%, transparent);"></span>处理前</span>
+              <span style="display: flex; align-items: center; gap: var(--space-2);"><span style="width: 8px; height: 8px; border-radius: 2px; background: var(--brand-accent);"></span>处理后（Z-Score 标准化）</span>
+            </div>
+          </div>
+
+          <h4>统计摘要</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">均值</span>
+            <span class="overlay-field-value">0.003 → 0.000</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标准差</span>
+            <span class="overlay-field-value">0.042 → 1.000</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">偏度</span>
+            <span class="overlay-field-value">0.18 → 0.02</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">峰度</span>
+            <span class="overlay-field-value">3.42 → 2.98</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-factor-preview" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">关闭</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 4: 校验结果 — Toast (右上角) -->
+    <div class="overlay-backdrop" data-overlay="overlay-validation-toast">
+      <label class="overlay-dismiss" for="overlay-validation-toast" aria-label="关闭"></label>
+      <div class="overlay-toast" role="alert" aria-label="校验结果">
+        <div style="display: flex; align-items: flex-start; gap: var(--space-8);">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: color-mix(in oklch, var(--system-healthy-fg) 15%, transparent); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--system-healthy-fg)" stroke-width="2"><path d="M4 10l3 3 9-9"/></svg>
+          </div>
+          <div>
+            <div style="font-size: var(--font-size-13); font-weight: var(--font-weight-medium); color: var(--text-primary); margin-bottom: 2px;">策略校验通过</div>
+            <div style="font-size: var(--font-size-12); color: var(--text-tertiary);">共检查 12 项，通过 11 项，警告 1 项</div>
+          </div>
+          <label for="overlay-validation-toast" style="cursor: pointer; color: var(--text-tertiary); font-size: var(--font-size-14); margin-left: auto; flex-shrink: 0;" aria-label="关闭">&#10005;</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 5: 确认策略删除 — Modal (破坏性操作) -->
+    <div class="overlay-backdrop" data-overlay="overlay-delete-strategy">
+      <label class="overlay-dismiss" for="overlay-delete-strategy" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="alertdialog" aria-label="确认删除策略">
+        <div class="overlay-header">
+          <span class="overlay-title">确认删除策略</span>
+          <label for="overlay-delete-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <div style="display: flex; align-items: flex-start; gap: var(--space-10); padding: var(--space-8) 0;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#ef4444" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
+            </div>
+            <div>
+              <div style="font-size: var(--font-size-13); color: var(--text-primary); font-weight: var(--font-weight-medium); margin-bottom: var(--space-4);">
+                确认删除策略「多因子动量策略 v2.3」及其所有版本？
+              </div>
+              <div style="font-size: var(--font-size-12); color: var(--text-tertiary); line-height: 1.5;">
+                此操作不可撤销。删除后策略的所有配置、回测结果和历史版本将被永久移除。
+              </div>
+            </div>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-delete-strategy" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-delete-strategy" class="overlay-btn overlay-btn-danger" style="cursor:pointer">确认删除</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Theme switcher script -->

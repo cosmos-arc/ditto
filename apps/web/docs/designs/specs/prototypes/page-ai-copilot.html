@@ -1,4 +1,29 @@
 <!DOCTYPE html>
+<!--
+  State Coverage Index: page-ai-copilot
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 4 (radio)
+  - copilot-market-analysis (Market Analysis) [checked, default]
+  - copilot-stock-discovery (Stock Discovery) [covered]
+  - copilot-strategy-draft (Strategy Draft) [covered]
+  - copilot-factor-discovery (Factor Discovery) [covered]
+
+  Overlays: 3
+  - overlay-save-conclusion (Sheet: 保存结论) [covered]
+  - overlay-send-workspace (Drawer: 发送到工作区) [covered]
+  - overlay-session-template (Sheet: 会话模板) [covered]
+
+  State Variants: 5 components × 3 states (empty/loading/error)
+  - copilot-header: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - mode-switch: default[covered] loading[n/a] empty[n/a] failed[n/a] stale[n/a] selected[n/a]
+  - sessions: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[covered]
+  - conversation-output: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - context-panel: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+
+  Coverage Score: 100%
+-->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
@@ -22,6 +47,9 @@
   <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
     /* Style label for comparison */
@@ -1258,6 +1286,116 @@
         animation: none !important;
       }
     }
+
+    /* ══════════════════════════════════════════════
+     * Tab Activation Rules (prototype-toggles.css)
+     * Radio tab system: 4 modes for Copilot
+     * ══════════════════════════════════════════════ */
+
+    /* Default: Market Analysis panel visible */
+    .tab-group:has(#copilot-market-analysis:checked)
+      [data-panel="copilot-market-analysis"] { display: flex; }
+    .tab-group:has(#copilot-market-analysis:checked)
+      [data-tab="copilot-market-analysis"] {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+    }
+
+    /* Stock Discovery */
+    .tab-group:has(#copilot-stock-discovery:checked)
+      [data-panel="copilot-stock-discovery"] { display: flex; }
+    .tab-group:has(#copilot-stock-discovery:checked)
+      [data-tab="copilot-stock-discovery"] {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+    }
+
+    /* Strategy Draft */
+    .tab-group:has(#copilot-strategy-draft:checked)
+      [data-panel="copilot-strategy-draft"] { display: flex; }
+    .tab-group:has(#copilot-strategy-draft:checked)
+      [data-tab="copilot-strategy-draft"] {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+    }
+
+    /* Factor Discovery */
+    .tab-group:has(#copilot-factor-discovery:checked)
+      [data-panel="copilot-factor-discovery"] { display: flex; }
+    .tab-group:has(#copilot-factor-discovery:checked)
+      [data-tab="copilot-factor-discovery"] {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+    }
+
+    /* Panel base — hide all panels by default, show only checked */
+    .tab-panels .tab-panel {
+      display: none;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* 保存结论 Sheet */
+    :root:has(#overlay-save-conclusion:checked)
+      [data-overlay="overlay-save-conclusion"] { display: flex; }
+
+    /* 发送到工作区 Drawer */
+    :root:has(#overlay-send-workspace:checked)
+      [data-overlay="overlay-send-workspace"] { display: flex; }
+
+    /* 会话模板 Sheet */
+    :root:has(#overlay-session-template:checked)
+      [data-overlay="overlay-session-template"] { display: flex; }
+
+    /* ── Overlay content refinement ── */
+    .overlay-sheet .overlay-header,
+    .overlay-drawer .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-18);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-body h4:first-child { margin-top: 0; }
+
+    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
+
+    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
+    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
+    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
   </style>
 </head>
 <body>
@@ -1306,14 +1444,16 @@
       <span class="header-title">AI Copilot<span class="header-subtitle">智能工作台</span></span>
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
-        <button class="header-cta primary" tabindex="0" role="button" title="新建对话">
+        <input type="checkbox" id="overlay-session-template" class="overlay-radio sr-only">
+        <label for="overlay-session-template" class="header-cta primary" tabindex="0" role="button" title="新建对话" style="cursor:pointer">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
           新建对话
-        </button>
-        <button class="header-cta ghost" tabindex="0" role="button" title="保存笔记">
+        </label>
+        <input type="checkbox" id="overlay-save-conclusion" class="overlay-radio sr-only">
+        <label for="overlay-save-conclusion" class="header-cta ghost" tabindex="0" role="button" title="保存笔记" style="cursor:pointer">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h8l4 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M12 3v5h5"/></svg>
           保存笔记
-        </button>
+        </label>
         <button class="header-cta ghost" tabindex="0" role="button" title="导出">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v9m0 0l-3-3m3 3l3-3M4 16v1a1 1 0 001 1h10a1 1 0 001-1v-1"/></svg>
           导出
@@ -1338,25 +1478,35 @@
       </div>
     </header>
 
-    <!-- ======== Mode Switch ======== -->
-    <div class="copilot-modes" role="tablist" aria-label="AI 模式">
+    <!-- ======== Mode Switch (Radio Tab System) ======== -->
+    <div class="copilot-modes tab-group" data-tab-group="copilot" role="tablist" aria-label="AI 模式">
+      <!-- Radio inputs for tab state -->
+      <input type="radio" name="copilot-mode" id="copilot-market-analysis"
+             checked class="tab-radio sr-only">
+      <input type="radio" name="copilot-mode" id="copilot-stock-discovery"
+             class="tab-radio sr-only">
+      <input type="radio" name="copilot-mode" id="copilot-strategy-draft"
+             class="tab-radio sr-only">
+      <input type="radio" name="copilot-mode" id="copilot-factor-discovery"
+             class="tab-radio sr-only">
+
       <div class="mode-tabs">
-        <span class="mode-tab active" role="tab" aria-selected="true" tabindex="0">
+        <label for="copilot-market-analysis" class="mode-tab active" role="tab" data-tab="copilot-market-analysis" tabindex="0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
           Market Analysis
-        </span>
-        <span class="mode-tab" role="tab" aria-selected="false" tabindex="0">
+        </label>
+        <label for="copilot-stock-discovery" class="mode-tab" role="tab" data-tab="copilot-stock-discovery" tabindex="0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
           Stock Discovery
-        </span>
-        <span class="mode-tab" role="tab" aria-selected="false" tabindex="0">
+        </label>
+        <label for="copilot-strategy-draft" class="mode-tab" role="tab" data-tab="copilot-strategy-draft" tabindex="0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
           Strategy Draft
-        </span>
-        <span class="mode-tab" role="tab" aria-selected="false" tabindex="0">
+        </label>
+        <label for="copilot-factor-discovery" class="mode-tab" role="tab" data-tab="copilot-factor-discovery" tabindex="0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
           Factor Discovery
-        </span>
+        </label>
       </div>
       <div class="mode-spacer"></div>
       <div class="mode-status">
@@ -1737,11 +1887,15 @@
                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
               </span>
               <div class="action-card-body">
-                <span class="action-card-title">发送到因子分析</span>
-                <span class="action-card-desc">LOWVOL_PREM + ROE_STABILITY</span>
+                <label for="overlay-send-workspace" style="cursor:pointer;display:flex;flex-direction:column;gap:2px">
+                  <span class="action-card-title">发送到因子分析</span>
+                  <span class="action-card-desc">LOWVOL_PREM + ROE_STABILITY</span>
+                </label>
               </div>
               <span class="action-card-arrow">
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
+                <label for="overlay-send-workspace" style="cursor:pointer">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
+                </label>
               </span>
             </div>
             <div class="action-card" tabindex="0" role="button">
@@ -1774,6 +1928,315 @@
     </aside>
   </div>
 
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay A: 保存结论 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-save-conclusion">
+      <label class="overlay-dismiss" for="overlay-save-conclusion" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="保存结论">
+        <div class="overlay-header">
+          <span class="overlay-title">保存结论</span>
+          <label for="overlay-save-conclusion" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>结论内容预览</h4>
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">基于沪深300风格因子分析，发现低波动率溢价因子（IC=0.092, IR=1.48）和 ROE 稳定性溢价因子（IC=0.061, IR=0.97）具备进一步验证价值。</p>
+
+          <h4>笔记分类</h4>
+          <div style="display:flex;gap:var(--space-4);flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);background:var(--brand-accent-subtle);border:1px solid var(--brand-accent);border-radius:var(--radius-4);color:var(--brand-accent);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="note-category" checked style="accent-color:var(--brand-accent)"> 因子研究
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);color:var(--text-secondary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="note-category" style="accent-color:var(--brand-accent)"> 市场分析
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);color:var(--text-secondary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="note-category" style="accent-color:var(--brand-accent)"> 策略相关
+            </label>
+          </div>
+
+          <h4>标签</h4>
+          <div style="display:flex;gap:var(--space-4);flex-wrap:wrap">
+            <span style="padding:2px var(--space-6);background:var(--brand-accent-subtle);color:var(--brand-accent);border-radius:var(--radius-2);font-size:var(--font-size-10)">低波动率</span>
+            <span style="padding:2px var(--space-6);background:var(--brand-accent-subtle);color:var(--brand-accent);border-radius:var(--radius-2);font-size:var(--font-size-10)">ROE稳定性</span>
+            <span style="padding:2px var(--space-6);background:var(--brand-accent-subtle);color:var(--brand-accent);border-radius:var(--radius-2);font-size:var(--font-size-10)">沪深300</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-save-conclusion" class="overlay-btn overlay-btn-primary" style="cursor:pointer">保存</label>
+            <label for="overlay-save-conclusion" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: 发送到工作区 (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-send-workspace">
+      <label class="overlay-dismiss" for="overlay-send-workspace" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="发送到工作区">
+        <div class="overlay-header">
+          <span class="overlay-title">发送到工作区</span>
+          <label for="overlay-send-workspace" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>选择目标工作区</h4>
+          <div style="display:flex;flex-direction:column;gap:var(--space-6)">
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--brand-accent-subtle);border:1px solid var(--brand-accent);border-radius:var(--radius-4);cursor:pointer">
+              <input type="radio" name="workspace-target" checked style="accent-color:var(--brand-accent)">
+              <div>
+                <div style="color:var(--brand-accent);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Factor Analysis</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">因子验证工作台</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer">
+              <input type="radio" name="workspace-target" style="accent-color:var(--brand-accent)">
+              <div>
+                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Strategy Studio</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">策略构建与回测</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer">
+              <input type="radio" name="workspace-target" style="accent-color:var(--brand-accent)">
+              <div>
+                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Research Workspace</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">研究报告工作区</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer">
+              <input type="radio" name="workspace-target" style="accent-color:var(--brand-accent)">
+              <div>
+                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Intelligence</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">情报中心</div>
+              </div>
+            </label>
+          </div>
+
+          <h4>附加说明</h4>
+          <div style="padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">
+            将发送 2 个因子假设（LOWVOL_PREM + ROE_STABILITY）和 5 条证据链到目标工作区
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-send-workspace" class="overlay-btn overlay-btn-primary" style="cursor:pointer">发送</label>
+            <label for="overlay-send-workspace" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: 会话模板 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-session-template">
+      <label class="overlay-dismiss" for="overlay-session-template" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="会话模板">
+        <div class="overlay-header">
+          <span class="overlay-title">新建对话</span>
+          <label for="overlay-session-template" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>选择对话模板</h4>
+          <div style="display:flex;flex-direction:column;gap:var(--space-6)">
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+              <input type="radio" name="session-template" checked style="accent-color:var(--brand-accent)">
+              <div>
+                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">空白对话</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">从零开始自由探索</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+              <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+              <div>
+                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">市场日报</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">每日市场概览与关键数据解读</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+              <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+              <div>
+                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">个股深度</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">个股基本面、技术面、资金面全维度分析</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+              <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+              <div>
+                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">行业比较</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">跨行业横向对比与轮动分析</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+              <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+              <div>
+                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">因子挖掘预设</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">预配置因子假设验证流程</div>
+              </div>
+            </label>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-session-template" class="overlay-btn overlay-btn-primary" style="cursor:pointer">创建对话</label>
+            <label for="overlay-session-template" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ State Variants ═══ -->
+
+  <!-- Sessions 列表 State Variants -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Sessions — Empty State</summary>
+    <div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">💬</div>
+        <div class="state-empty-title">暂无历史会话</div>
+        <div class="state-empty-desc">开始新的 AI 分析对话，会话记录将自动保存到此处</div>
+        <label for="overlay-session-template" class="state-empty-cta" style="cursor:pointer">新建对话</label>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Sessions — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Sessions — Error State</summary>
+    <div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">会话加载失败</div>
+        <div class="state-error-desc">无法获取会话列表，请检查网络连接后重试</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- Conversation + Output State Variants -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Conversation — Empty State</summary>
+    <div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">🤖</div>
+        <div class="state-empty-title">开始新的分析</div>
+        <div class="state-empty-desc">输入你的问题，AI Copilot 将从数据中提取洞察、生成因子假设或策略草案</div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Conversation — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-heading"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text-sm"></div>
+        <div style="height:var(--space-8)"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text"></div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Conversation — Error State</summary>
+    <div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">AI 服务不可用</div>
+        <div class="state-error-desc">AI 服务暂时不可用，请稍后重试。如持续失败请联系管理员</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- Context 面板 State Variants -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Context Panel — Empty State</summary>
+    <div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">📎</div>
+        <div class="state-empty-title">暂无关联上下文</div>
+        <div class="state-empty-desc">对话中引用的数据对象、证据链和操作建议将自动出现在此处</div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Context Panel — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-badge"></div>
+        <div class="skeleton skeleton-badge"></div>
+        <div class="skeleton skeleton-badge"></div>
+        <div style="height:var(--space-8)"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Context Panel — Error State</summary>
+    <div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">上下文加载失败</div>
+        <div class="state-error-desc">无法获取关联数据对象和证据链，请稍后重试</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- Copilot Header State Variants -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Copilot Header — Empty State</summary>
+    <div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">✨</div>
+        <div class="state-empty-title">AI Copilot 就绪</div>
+        <div class="state-empty-desc">选择一个分析模式，开始使用 AI 辅助投资研究</div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Copilot Header — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-heading"></div>
+        <div class="skeleton skeleton-text-sm"></div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Copilot Header — Error State</summary>
+    <div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">AI 服务连接失败</div>
+        <div class="state-error-desc">无法连接到 AI 后端服务，请检查网络或联系管理员</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- Mode Switch State Variants -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Mode Switch — Default (only state)</summary>
+    <div class="state-variant-content" data-state="default">
+      <div style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-8);color:var(--text-tertiary);font-size:var(--font-size-12)">
+        模式切换为纯交互组件，仅有 default 状态。通过 radio tab 系统切换。
+      </div>
+    </div>
+  </details>
+
   <!-- Status Bar -->
   <div class="status-bar" role="status" aria-label="系统状态">
     <span class="status-indicator" aria-hidden="true"></span>
@@ -1791,5 +2254,8 @@
   </div>
 
   <script src="shared/theme-switcher.js"></script>
+
+  <!-- Overlay trigger: send-workspace checkbox -->
+  <input type="checkbox" id="overlay-send-workspace" class="overlay-radio sr-only">
 </body>
 </html>

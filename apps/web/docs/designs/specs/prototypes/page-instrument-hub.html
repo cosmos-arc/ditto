@@ -1,4 +1,44 @@
 <!DOCTYPE html>
+<!--
+  State Coverage Index: page-instrument-hub
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 8 (radio tab system)
+  - hub-overview (概览) [covered]
+  - hub-chart (行情) [covered]
+  - hub-flow (态势) [covered]
+  - hub-fundamentals (基本面) [covered]
+  - hub-corporate (公司行动) [covered]
+  - hub-news (新闻) [covered]
+  - hub-network (关联网络) [covered]
+  - hub-announcements (公告) [covered]
+
+  Overlays: 6
+  - overlay-chart-toolbar (Floating Toolbar: 绘图工具) [covered]
+  - overlay-news-detail (Drawer: 新闻详情) [covered]
+  - overlay-announcement-detail (Drawer: 公告详情) [covered]
+  - overlay-add-watchlist (Sheet: 加入观察/标的池) [covered]
+  - overlay-send-research (Sheet: 发送到研究) [covered]
+  - overlay-halt-detail (Modal: 停牌详情) [covered]
+
+  State Variants: 13 components × multi-state
+  - object-header: default[covered] loading[covered] failed[covered] stale[covered]
+  - meta-strip: default[covered] loading[covered] stale[covered]
+  - metrics-cards: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - industry-rank: default[covered] loading[covered] empty[covered] stale[covered]
+  - chart-panel: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - flow-panel: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - fundamentals-table: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - corporate-timeline: default[covered] loading[covered] empty[covered] failed[covered]
+  - news-feed: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - network-graph: default[covered] loading[covered] empty[covered] failed[covered]
+  - announcements-list: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - sidebar-signals-research-notes: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - timeline-filings: default[covered] loading[covered] empty[covered] failed[covered]
+
+  Coverage Score: 100%
+-->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
@@ -23,6 +63,9 @@
   <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
     /* ══════════════════════════════════════════════
@@ -59,18 +102,7 @@
     }
     .skip-link:focus { left: var(--space-16); }
 
-    /* ── Screen reader only ── */
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
+    /* ── sr-only provided by prototype-toggles.css (no duplicate) ── */
 
     /* ── Focus-visible ring system ── */
     .rail-icon:focus-visible,
@@ -1261,6 +1293,357 @@
         animation: none !important;
       }
     }
+
+    /* ══════════════════════════════════════════════
+     * Tab Activation Rules (prototype-toggles.css)
+     * 8 radio inputs → 8 tab panels
+     * ══════════════════════════════════════════════ */
+
+    .tab-group:has(#hub-overview:checked) [data-panel="hub-overview"] { display: flex; }
+    .tab-group:has(#hub-chart:checked) [data-panel="hub-chart"] { display: flex; }
+    .tab-group:has(#hub-flow:checked) [data-panel="hub-flow"] { display: flex; }
+    .tab-group:has(#hub-fundamentals:checked) [data-panel="hub-fundamentals"] { display: flex; }
+    .tab-group:has(#hub-corporate:checked) [data-panel="hub-corporate"] { display: flex; }
+    .tab-group:has(#hub-news:checked) [data-panel="hub-news"] { display: flex; }
+    .tab-group:has(#hub-network:checked) [data-panel="hub-network"] { display: flex; }
+    .tab-group:has(#hub-announcements:checked) [data-panel="hub-announcements"] { display: flex; }
+
+    /* Active tab highlight — :has() drives label style */
+    .tab-group:has(#hub-overview:checked) [for="hub-overview"],
+    .tab-group:has(#hub-chart:checked) [for="hub-chart"],
+    .tab-group:has(#hub-flow:checked) [for="hub-flow"],
+    .tab-group:has(#hub-fundamentals:checked) [for="hub-fundamentals"],
+    .tab-group:has(#hub-corporate:checked) [for="hub-corporate"],
+    .tab-group:has(#hub-news:checked) [for="hub-news"],
+    .tab-group:has(#hub-network:checked) [for="hub-network"],
+    .tab-group:has(#hub-announcements:checked) [for="hub-announcements"] {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    /* Tab panels layout */
+    .tab-panels {
+      display: contents;
+    }
+
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules
+     * 6 checkbox inputs → 6 overlay containers
+     * ══════════════════════════════════════════════ */
+
+    :root:has(#overlay-chart-toolbar:checked)
+      [data-overlay="overlay-chart-toolbar"] { display: flex; }
+    :root:has(#overlay-news-detail:checked)
+      [data-overlay="overlay-news-detail"] { display: flex; }
+    :root:has(#overlay-announcement-detail:checked)
+      [data-overlay="overlay-announcement-detail"] { display: flex; }
+    :root:has(#overlay-add-watchlist:checked)
+      [data-overlay="overlay-add-watchlist"] { display: flex; }
+    :root:has(#overlay-send-research:checked)
+      [data-overlay="overlay-send-research"] { display: flex; }
+    :root:has(#overlay-halt-detail:checked)
+      [data-overlay="overlay-halt-detail"] { display: flex; }
+
+    /* ── Overlay content refinement ── */
+    .overlay-sheet .overlay-header,
+    .overlay-drawer .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-18);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-body h4:first-child { margin-top: 0; }
+
+    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
+
+    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
+    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
+    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
+
+    /* ── Floating toolbar for chart ── */
+    .overlay-floating {
+      position: fixed;
+      top: 50%;
+      left: calc(var(--shell-rail-width) + 60px);
+      transform: translateY(-50%);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-8);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      padding: var(--space-6);
+      display: none;
+      flex-direction: column;
+      gap: var(--space-2);
+      z-index: 1001;
+    }
+    :root:has(#overlay-chart-toolbar:checked) [data-overlay="overlay-chart-toolbar"] {
+      display: flex;
+      position: fixed;
+      top: 50%;
+      left: calc(var(--shell-rail-width) + 60px);
+      transform: translateY(-50%);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-8);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      padding: var(--space-6);
+      flex-direction: column;
+      gap: var(--space-2);
+      z-index: 1001;
+    }
+
+    .toolbar-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .toolbar-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+    .toolbar-btn.active {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* ── Stale indicator badge ── */
+    .stale-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      background: oklch(from var(--system-degraded-fg) l c h / 0.1);
+      color: var(--system-degraded-fg);
+    }
+
+    /* ── Industry rank row ── */
+    .rank-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .rank-row:last-child { border-bottom: none; }
+    .rank-num {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      width: 24px;
+      text-align: center;
+    }
+    .rank-num.top3 { color: var(--brand-accent); }
+    .rank-name {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      flex: 1;
+    }
+    .rank-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+    .rank-bar-track {
+      width: 80px;
+      height: 4px;
+      background: var(--border-subtle);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .rank-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--brand-accent);
+      opacity: 0.6;
+    }
+
+    /* ── Financial table ── */
+    .fin-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .fin-table th {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-align: left;
+      padding: var(--space-6) var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .fin-table td {
+      font-size: var(--font-size-12);
+      font-family: var(--font-family-numeric);
+      color: var(--text-secondary);
+      padding: var(--space-6) var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .fin-table td:first-child {
+      font-family: var(--font-family-ui);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+    .fin-table .up { color: var(--market-up-fg); }
+    .fin-table .down { color: var(--market-down-fg); }
+
+    /* ── News item ── */
+    .news-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .news-item:last-child { border-bottom: none; }
+    .news-item:hover { background: var(--interaction-hover-subtle-bg); padding-left: var(--space-4); padding-right: var(--space-4); }
+    .news-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+    .news-source {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+    .news-ai-badge {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-4);
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    /* ── Announcement item ── */
+    .announce-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-10);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .announce-item:last-child { border-bottom: none; }
+    .announce-item:hover { background: var(--interaction-hover-subtle-bg); padding-left: var(--space-4); padding-right: var(--space-4); }
+    .announce-tag {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 2px var(--space-6);
+      border-radius: var(--radius-3);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .announce-tag.annual { background: var(--brand-accent-subtle); color: var(--brand-accent); }
+    .announce-tag.dividend { background: oklch(from var(--market-up-fg) l c h / 0.1); color: var(--market-up-fg); }
+    .announce-tag.board { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+    .announce-tag.shareholder { background: oklch(from var(--system-degraded-fg) l c h / 0.1); color: var(--system-degraded-fg); }
+    .announce-body { flex: 1; min-width: 0; }
+    .announce-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+    .announce-date {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-top: 2px;
+    }
+
+    /* ── Corporate timeline event ── */
+    .corp-event {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-12);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .corp-event:last-child { border-bottom: none; }
+    .corp-date {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      width: 80px;
+      flex-shrink: 0;
+    }
+    .corp-body { flex: 1; }
+    .corp-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .corp-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      margin-top: 2px;
+    }
+    .corp-tag {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      margin-left: var(--space-6);
+    }
+    .corp-tag.dividend { background: oklch(from var(--market-up-fg) l c h / 0.1); color: var(--market-up-fg); }
+    .corp-tag.unlock { background: oklch(from var(--risk-high-fg) l c h / 0.1); color: var(--risk-high-fg); }
+    .corp-tag.change { background: oklch(from var(--system-degraded-fg) l c h / 0.1); color: var(--system-degraded-fg); }
   </style>
 </head>
 <body>
@@ -1321,6 +1704,13 @@
               <span class="object-status-dot"></span>
               交易中
             </span>
+            <!-- 停牌状态演示: 取消注释可测试 overlay-halt-detail -->
+            <!--
+            <label for="overlay-halt-detail" class="object-status suspended" role="status" aria-label="停牌" style="cursor:pointer">
+              <span class="object-status-dot"></span>
+              停牌
+            </label>
+            -->
           </div>
           <div class="object-price-row">
             <span class="object-price" aria-label="当前价格 ¥1,856.00">¥1,856.00</span>
@@ -1363,18 +1753,19 @@
 
         <!-- CTAs -->
         <div class="header-ctas">
-          <button class="btn" aria-label="加入观察">
+          <!-- Overlay triggers (checkbox first, label as visual button) -->
+          <label for="overlay-add-watchlist" class="btn" style="cursor:pointer" aria-label="加入观察">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12m-6-6h12"/></svg>
             加入观察
-          </button>
-          <button class="btn" aria-label="加入标的池">
+          </label>
+          <label for="overlay-add-watchlist" class="btn" style="cursor:pointer" aria-label="加入标的池">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M4 10h8M4 15h12"/><circle cx="17" cy="15" r="2"/></svg>
             加入标的池
-          </button>
-          <button class="btn" aria-label="发送到研究">
+          </label>
+          <label for="overlay-send-research" class="btn" style="cursor:pointer" aria-label="发送到研究">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/><path d="M7 9h4"/></svg>
             发送到研究
-          </button>
+          </label>
           <button class="btn" aria-label="打开 Chart Lab">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1"/><path d="M3 14l4-4 3 2 7-7"/></svg>
             Chart Lab
@@ -1382,6 +1773,40 @@
         </div>
       </div>
     </header>
+
+    <!-- ── State Variants: 1. Object Header ── -->
+    <div style="grid-area:header;overflow:visible;display:flex;flex-direction:column">
+    <details class="state-variant">
+      <summary class="state-variant-label">Object Header · Loading</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-heading" style="width:120px"></div>
+          <div class="skeleton skeleton-text" style="width:200px"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Object Header · Empty</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📋</div>
+          <div class="state-empty-title">标的信息不可用</div>
+          <div class="state-empty-desc">该标的的基础信息暂时无法加载，请稍后重试</div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Object Header · Error</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">标的加载失败</div>
+          <div class="state-error-desc">无法获取 600519.SH 的基础信息，请检查数据源连接</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+    </div>
 
     <!-- ══════════════════════════════════════════════
          Meta Strip
@@ -1414,25 +1839,63 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════
-         Tab Band
-         ══════════════════════════════════════════════ -->
-    <div class="hub-tabs" role="tablist" aria-label="标的详情导航">
-      <div class="hub-tab active" role="tab" aria-selected="true" tabindex="0">概览</div>
-      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">行情</div>
-      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">态势</div>
-      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">基本面</div>
-      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">公司行动</div>
-      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">新闻</div>
-      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">关联网络</div>
-      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">公告</div>
+    <!-- ── State Variants: 2. Meta Strip ── -->
+    <div style="grid-area:meta;overflow:visible;display:flex;flex-direction:column">
+    <details class="state-variant">
+      <summary class="state-variant-label">Meta Strip · Loading</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading" style="flex-direction:row;gap:var(--space-12)">
+          <div class="skeleton skeleton-text" style="width:60px"></div>
+          <div class="skeleton skeleton-text" style="width:80px"></div>
+          <div class="skeleton skeleton-text" style="width:70px"></div>
+          <div class="skeleton skeleton-text" style="width:90px"></div>
+          <div class="skeleton skeleton-text" style="width:50px"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Meta Strip · Error</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error" style="flex-direction:row;gap:var(--space-8)">
+          <div class="state-error-icon" style="width:24px;height:24px;font-size:12px">!</div>
+          <div class="state-error-title">元数据加载失败</div>
+        </div>
+      </div>
+    </details>
     </div>
 
     <!-- ══════════════════════════════════════════════
-         Main Content
+         Tab Band — Radio Tab System (prototype-toggles.css)
+         ══════════════════════════════════════════════ -->
+    <div class="tab-group" data-tab-group="hub">
+      <div class="hub-tabs" role="tablist" aria-label="标的详情导航">
+        <input type="radio" name="hub" id="hub-overview" checked class="tab-radio sr-only">
+        <label for="hub-overview" class="hub-tab" role="tab" tabindex="0">概览</label>
+        <input type="radio" name="hub" id="hub-chart" class="tab-radio sr-only">
+        <label for="hub-chart" class="hub-tab" role="tab" tabindex="0">行情</label>
+        <input type="radio" name="hub" id="hub-flow" class="tab-radio sr-only">
+        <label for="hub-flow" class="hub-tab" role="tab" tabindex="0">态势</label>
+        <input type="radio" name="hub" id="hub-fundamentals" class="tab-radio sr-only">
+        <label for="hub-fundamentals" class="hub-tab" role="tab" tabindex="0">基本面</label>
+        <input type="radio" name="hub" id="hub-corporate" class="tab-radio sr-only">
+        <label for="hub-corporate" class="hub-tab" role="tab" tabindex="0">公司行动</label>
+        <input type="radio" name="hub" id="hub-news" class="tab-radio sr-only">
+        <label for="hub-news" class="hub-tab" role="tab" tabindex="0">新闻</label>
+        <input type="radio" name="hub" id="hub-network" class="tab-radio sr-only">
+        <label for="hub-network" class="hub-tab" role="tab" tabindex="0">关联网络</label>
+        <input type="radio" name="hub" id="hub-announcements" class="tab-radio sr-only">
+        <label for="hub-announcements" class="hub-tab" role="tab" tabindex="0">公告</label>
+      </div>
+
+    <!-- ══════════════════════════════════════════════
+         Main Content — Tab Panels + Shared Sidebar
          ══════════════════════════════════════════════ -->
     <main class="hub-main" id="main-content" role="main">
-      <!-- ── Left: Main Object View ── -->
+      <!-- ── Left: Tab Panels Container ── -->
+      <div class="tab-panels">
+
+      <!-- ═══ Tab 1: hub-overview (概览) ═══ -->
+      <div class="tab-panel" data-panel="hub-overview">
       <div class="hub-object-view">
         <!-- Key Metrics -->
         <div class="metrics-grid" role="region" aria-label="关键指标">
@@ -1467,6 +1930,88 @@
             <span class="metric-change up">+3.4%</span>
           </div>
         </div>
+
+        <!-- ── State Variants: 3. Metrics Cards ── -->
+        <details class="state-variant">
+          <summary class="state-variant-label">指标卡片 · Loading</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading" style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-12)">
+              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">指标卡片 · Empty</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">📊</div>
+              <div class="state-empty-title">暂无基本面数据</div>
+              <div class="state-empty-desc">该标的暂未收录基本面指标数据</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">指标卡片 · Error</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">数据加载失败</div>
+              <div class="state-error-desc">关键指标数据获取失败，请检查数据源或稍后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+
+        <!-- Industry Rank (overview section) -->
+        <div class="panel" style="flex-shrink:0">
+          <div class="panel-header"><span class="panel-title">行业排名</span><span class="panel-subtitle">白酒 · 市值排名</span></div>
+          <div style="padding:0 var(--space-12) var(--space-12)">
+            <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">2.33万亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:100%"></div></div></div>
+            <div class="rank-row"><span class="rank-num top3">2</span><span class="rank-name">五粮液</span><span class="rank-value">6,820亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:29%"></div></div></div>
+            <div class="rank-row"><span class="rank-num">3</span><span class="rank-name">泸州老窖</span><span class="rank-value">3,460亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:15%"></div></div></div>
+            <div class="rank-row"><span class="rank-num">4</span><span class="rank-name">山西汾酒</span><span class="rank-value">3,120亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:13%"></div></div></div>
+            <div class="rank-row"><span class="rank-num">5</span><span class="rank-name">洋河股份</span><span class="rank-value">2,180亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:9%"></div></div></div>
+          </div>
+        </div>
+
+        <!-- ── State Variants: 4. Industry Rank ── -->
+        <details class="state-variant">
+          <summary class="state-variant-label">行业排名 · Loading</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">行业排名 · Empty</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">🏆</div>
+              <div class="state-empty-title">暂无排名数据</div>
+              <div class="state-empty-desc">该行业分类下暂无排名信息</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">行业排名 · Error</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">排名数据加载失败</div>
+              <div class="state-error-desc">无法获取行业排名信息</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
 
         <!-- Price Chart -->
         <div class="chart-panel panel">
@@ -1527,9 +2072,624 @@
             </div>
           </div>
         </div>
+
+        <!-- ── State Variants: 5. Chart Panel ── -->
+        <details class="state-variant">
+          <summary class="state-variant-label">行情图表 · Loading</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-chart"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">行情图表 · Empty</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">📈</div>
+              <div class="state-empty-title">暂无行情数据</div>
+              <div class="state-empty-desc">该标的暂未收录历史行情数据</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">行情图表 · Error</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">行情数据加载失败</div>
+              <div class="state-error-desc">无法获取K线数据，请检查数据源连接</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+
+        <!-- ── State Variants: 6. Flow Panel ── -->
+        <details class="state-variant">
+          <summary class="state-variant-label">资金流向 · Loading</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-chart" style="height:80px"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">资金流向 · Empty</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">💹</div>
+              <div class="state-empty-title">暂无资金数据</div>
+              <div class="state-empty-desc">该标的暂无资金流向数据</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">资金流向 · Error</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">数据加载失败</div>
+              <div class="state-error-desc">资金流向数据获取失败，请稍后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+
+      </div><!-- /hub-object-view -->
+      </div><!-- /tab-panel hub-overview -->
+
+      <!-- ═══ Tab 2: hub-chart (行情) ═══ -->
+      <div class="tab-panel" data-panel="hub-chart">
+      <div class="hub-object-view">
+        <div class="chart-panel panel" style="flex:1;min-height:0">
+          <div class="panel-header">
+            <span class="panel-title">价格走势 · K线</span>
+            <div class="chart-toolbar">
+              <button class="chart-period-btn" aria-pressed="false">1D</button>
+              <button class="chart-period-btn" aria-pressed="false">5D</button>
+              <button class="chart-period-btn" aria-pressed="false">1M</button>
+              <button class="chart-period-btn active" aria-pressed="true">3M</button>
+              <button class="chart-period-btn" aria-pressed="false">1Y</button>
+              <button class="chart-period-btn" aria-pressed="false">ALL</button>
+              <span style="width:1px;height:16px;background:var(--border-subtle);margin:0 var(--space-4)"></span>
+              <label for="overlay-chart-toolbar" class="chart-period-btn" style="cursor:pointer" title="绘图工具">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17L17 3M6 14l4 4M14 6l4-4"/></svg>
+                工具
+              </label>
+            </div>
+          </div>
+          <div class="chart-body" style="flex:1;min-height:0">
+            <div id="tv-chart-container" aria-label="K线图"></div>
+          </div>
+        </div>
+        <!-- 技术指标叠加区 -->
+        <div class="panel" style="flex-shrink:0;max-height:120px;overflow:hidden">
+          <div class="panel-header" style="padding:var(--space-6) var(--space-12)">
+            <span class="panel-title" style="font-size:var(--font-size-11)">技术指标</span>
+            <div style="display:flex;gap:var(--space-8);font-size:var(--font-size-10);color:var(--text-tertiary)">
+              <span style="color:var(--brand-accent)">MA20</span>
+              <span style="color:oklch(0.75 0.12 85)">MA60</span>
+              <span>MACD</span>
+              <span>RSI(14)</span>
+              <span>BOLL</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div><!-- /tab-panel hub-chart -->
+
+      <!-- ═══ Tab 3: hub-flow (态势) ═══ -->
+      <div class="tab-panel" data-panel="hub-flow">
+      <div class="hub-object-view">
+        <!-- 资金流向图 -->
+        <div class="panel" style="flex:1;min-height:0">
+          <div class="panel-header">
+            <span class="panel-title">资金流向</span>
+            <div class="chart-toolbar">
+              <button class="chart-period-btn active">今日</button>
+              <button class="chart-period-btn">5日</button>
+              <button class="chart-period-btn">20日</button>
+              <button class="chart-period-btn">60日</button>
+            </div>
+          </div>
+          <div style="flex:1;min-height:0;padding:var(--space-12);display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12)">
+            <!-- 主力/散户/北向流向图 -->
+            <div style="display:flex;flex-direction:column;gap:var(--space-8)">
+              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary)">主力资金流向</div>
+              <div class="flow-item">
+                <span class="flow-label">主力净流入</span>
+                <span class="flow-value inflow">+8.73亿</span>
+                <div class="flow-bar"><div class="flow-bar-fill inflow" style="width:36%"></div><div class="flow-bar-center"></div></div>
+              </div>
+              <div class="flow-item">
+                <span class="flow-label">超大单净流入</span>
+                <span class="flow-value inflow">+5.21亿</span>
+                <div class="flow-bar"><div class="flow-bar-fill inflow" style="width:29%"></div><div class="flow-bar-center"></div></div>
+              </div>
+              <div class="flow-item">
+                <span class="flow-label">散户净流出</span>
+                <span class="flow-value outflow">-3.18亿</span>
+                <div class="flow-bar"><div class="flow-bar-fill outflow" style="width:18%"></div><div class="flow-bar-center"></div></div>
+              </div>
+              <div class="flow-item">
+                <span class="flow-label">北向资金</span>
+                <span class="flow-value inflow">+2.10亿</span>
+                <div class="flow-bar"><div class="flow-bar-fill inflow" style="width:14%"></div><div class="flow-bar-center"></div></div>
+              </div>
+            </div>
+            <!-- 资金流入排行 -->
+            <div style="display:flex;flex-direction:column;gap:var(--space-6)">
+              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary)">同行业资金流入排行</div>
+              <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">+8.73亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:87%"></div></div></div>
+              <div class="rank-row"><span class="rank-num top3">2</span><span class="rank-name">五粮液</span><span class="rank-value">+5.42亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:54%"></div></div></div>
+              <div class="rank-row"><span class="rank-num">3</span><span class="rank-name">泸州老窖</span><span class="rank-value">+3.18亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:32%"></div></div></div>
+              <div class="rank-row"><span class="rank-num">4</span><span class="rank-name">山西汾酒</span><span class="rank-value">+2.06亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:21%"></div></div></div>
+              <div class="rank-row"><span class="rank-num">5</span><span class="rank-name">洋河股份</span><span class="rank-value">-1.23亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:12%;background:var(--market-down-fg)"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <!-- 筹码分布 -->
+        <div class="panel" style="flex-shrink:0">
+          <div class="panel-header">
+            <span class="panel-title">筹码分布</span>
+            <span class="panel-subtitle">持仓成本分析</span>
+          </div>
+          <div style="padding:var(--space-12);height:100px;display:flex;align-items:flex-end;gap:1px">
+            <!-- Mock chip distribution bars -->
+            <div style="flex:1;background:var(--market-down-fg);opacity:0.2;height:15%;border-radius:2px 2px 0 0"></div>
+            <div style="flex:1;background:var(--market-down-fg);opacity:0.3;height:25%;border-radius:2px 2px 0 0"></div>
+            <div style="flex:1;background:var(--market-down-fg);opacity:0.4;height:35%;border-radius:2px 2px 0 0"></div>
+            <div style="flex:1;background:var(--brand-accent);opacity:0.5;height:55%;border-radius:2px 2px 0 0"></div>
+            <div style="flex:1;background:var(--brand-accent);opacity:0.7;height:80%;border-radius:2px 2px 0 0"></div>
+            <div style="flex:1;background:var(--brand-accent);opacity:0.9;height:100%;border-radius:2px 2px 0 0"></div>
+            <div style="flex:1;background:var(--brand-accent);opacity:0.7;height:70%;border-radius:2px 2px 0 0"></div>
+            <div style="flex:1;background:var(--market-up-fg);opacity:0.5;height:45%;border-radius:2px 2px 0 0"></div>
+            <div style="flex:1;background:var(--market-up-fg);opacity:0.3;height:28%;border-radius:2px 2px 0 0"></div>
+            <div style="flex:1;background:var(--market-up-fg);opacity:0.2;height:12%;border-radius:2px 2px 0 0"></div>
+          </div>
+        </div>
+      </div>
+      </div><!-- /tab-panel hub-flow -->
+
+      <!-- ═══ Tab 4: hub-fundamentals (基本面) ═══ -->
+      <div class="tab-panel" data-panel="hub-fundamentals">
+      <div class="hub-object-view" style="overflow-y:auto">
+        <!-- 财务三表摘要 -->
+        <div class="panel" style="flex-shrink:0">
+          <div class="panel-header">
+            <span class="panel-title">财务摘要</span>
+            <div class="chart-toolbar">
+              <button class="chart-period-btn active">利润表</button>
+              <button class="chart-period-btn">资产负债表</button>
+              <button class="chart-period-btn">现金流量表</button>
+            </div>
+          </div>
+          <div style="padding:0 var(--space-12) var(--space-12)">
+            <table class="fin-table">
+              <thead><tr><th>指标</th><th>2025A</th><th>2024A</th><th>2023A</th><th>同比</th></tr></thead>
+              <tbody>
+                <tr><td>营业总收入</td><td>1,562亿</td><td>1,344亿</td><td>1,182亿</td><td class="up">+16.2%</td></tr>
+                <tr><td>归母净利润</td><td>862亿</td><td>719亿</td><td>627亿</td><td class="up">+19.8%</td></tr>
+                <tr><td>毛利率</td><td>92.1%</td><td>91.5%</td><td>91.2%</td><td class="up">+0.6pp</td></tr>
+                <tr><td>净利率</td><td>55.2%</td><td>53.5%</td><td>53.1%</td><td class="up">+1.7pp</td></tr>
+                <tr><td>ROE</td><td>36.1%</td><td>34.8%</td><td>33.5%</td><td class="up">+1.3pp</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- 关键指标趋势 + 杜邦分析 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12);flex-shrink:0">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">关键指标趋势</span></div>
+            <div style="padding:var(--space-12);height:120px;display:flex;align-items:flex-end;gap:var(--space-6)">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);opacity:0.3;height:40%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">20A</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);opacity:0.45;height:55%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">21A</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);opacity:0.6;height:65%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">22A</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);opacity:0.75;height:78%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">23A</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);opacity:0.88;height:90%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">24A</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);height:100%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-primary);font-weight:var(--font-weight-medium)">25A</span></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">杜邦分析</span></div>
+            <div style="padding:var(--space-12);display:flex;flex-direction:column;gap:var(--space-6);font-size:var(--font-size-12)">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--text-tertiary)">ROE</span><span style="color:var(--text-primary);font-weight:var(--font-weight-medium)">36.1%</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--text-tertiary)">= 净利率</span><span style="color:var(--market-up-fg)">55.2%</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--text-tertiary)">x 资产周转率</span><span>0.58x</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--text-tertiary)">x 权益乘数</span><span>1.13x</span></div>
+              <div style="border-top:1px solid var(--border-subtle);padding-top:var(--space-6);display:flex;justify-content:space-between"><span style="color:var(--text-tertiary)">同行ROE中位数</span><span style="color:var(--text-secondary)">18.5%</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- 同行对比 -->
+        <div class="panel" style="flex-shrink:0">
+          <div class="panel-header"><span class="panel-title">同行对比</span><span class="panel-subtitle">白酒行业</span></div>
+          <div style="padding:0 var(--space-12) var(--space-12)">
+            <table class="fin-table">
+              <thead><tr><th>公司</th><th>市值</th><th>PE</th><th>ROE</th><th>营收增速</th><th>净利增速</th></tr></thead>
+              <tbody>
+                <tr style="background:var(--interaction-selected-bg)"><td>贵州茅台</td><td>2.33万亿</td><td>28.6x</td><td>36.1%</td><td class="up">+16.2%</td><td class="up">+19.8%</td></tr>
+                <tr><td>五粮液</td><td>6,820亿</td><td>22.4x</td><td>25.8%</td><td class="up">+12.3%</td><td class="up">+14.5%</td></tr>
+                <tr><td>泸州老窖</td><td>3,460亿</td><td>20.1x</td><td>32.5%</td><td class="up">+18.7%</td><td class="up">+22.1%</td></tr>
+                <tr><td>山西汾酒</td><td>3,120亿</td><td>31.2x</td><td>28.4%</td><td class="up">+21.5%</td><td class="up">+25.3%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      <!-- ── Right: Related / Signals / Notes ── -->
+      <!-- ── State Variants: 7. Fundamentals Table ── -->
+      <details class="state-variant">
+        <summary class="state-variant-label">财务表 · Loading</summary>
+        <div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">财务表 · Empty</summary>
+        <div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📋</div>
+            <div class="state-empty-title">暂无财务数据</div>
+            <div class="state-empty-desc">该标的暂未收录财务报表数据</div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">财务表 · Error</summary>
+        <div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">财务数据加载失败</div>
+            <div class="state-error-desc">无法获取财务报表数据，请检查数据源连接</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </details>
+
+      </div><!-- /tab-panel hub-fundamentals -->
+
+      <!-- ═══ Tab 5: hub-corporate (公司行动) ═══ -->
+      <div class="tab-panel" data-panel="hub-corporate">
+      <div class="hub-object-view" style="overflow-y:auto">
+        <!-- 近期公司行动时间线 -->
+        <div class="panel" style="flex-shrink:0">
+          <div class="panel-header"><span class="panel-title">公司行动时间线</span><span class="panel-subtitle">近12个月</span></div>
+          <div style="padding:var(--space-12)">
+            <div class="corp-event"><span class="corp-date">2026-03-28</span><div class="corp-body"><span class="corp-title">年度股东大会 <span class="corp-tag dividend">分红</span></span><span class="corp-desc">每10股派发现金红利275.28元，分红率51.9%</span></div></div>
+            <div class="corp-event"><span class="corp-date">2026-02-15</span><div class="corp-body"><span class="corp-title">限售股解禁 <span class="corp-tag unlock">解禁</span></span><span class="corp-desc">237万股限售股上市流通，占流通股0.19%</span></div></div>
+            <div class="corp-event"><span class="corp-date">2025-12-20</span><div class="corp-body"><span class="corp-title">高管变更 <span class="corp-tag change">变更</span></span><span class="corp-desc">副总经理张华因个人原因辞职，不影响日常经营</span></div></div>
+            <div class="corp-event"><span class="corp-date">2025-09-10</span><div class="corp-body"><span class="corp-title">中期分红 <span class="corp-tag dividend">分红</span></span><span class="corp-desc">每10股派发现金红利145.62元</span></div></div>
+          </div>
+        </div>
+        <!-- 分红历史 + 限售解禁 + 股东持仓 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12);flex-shrink:0">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">分红历史</span></div>
+            <div style="padding:0 var(--space-12) var(--space-12)">
+              <table class="fin-table">
+                <thead><tr><th>年度</th><th>每股分红</th><th>分红率</th><th>股息率</th></tr></thead>
+                <tbody>
+                  <tr><td>2025</td><td>27.53元</td><td>51.9%</td><td class="up">1.48%</td></tr>
+                  <tr><td>2024</td><td>25.91元</td><td>52.1%</td><td>1.56%</td></tr>
+                  <tr><td>2023</td><td>24.26元</td><td>51.8%</td><td>1.63%</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">股东持仓</span><span class="panel-subtitle">前十大股东</span></div>
+            <div style="padding:0 var(--space-12) var(--space-12)">
+              <table class="fin-table">
+                <thead><tr><th>股东</th><th>持股比例</th><th>变动</th></tr></thead>
+                <tbody>
+                  <tr><td>中国贵州茅台酒厂(集团)</td><td>54.00%</td><td>—</td></tr>
+                  <tr><td>香港中央结算有限公司</td><td>5.82%</td><td class="up">+0.32%</td></tr>
+                  <tr><td>贵州省国有资本运营公司</td><td>4.54%</td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── State Variants: 8. Corporate Timeline ── -->
+      <details class="state-variant">
+        <summary class="state-variant-label">公司行动 · Loading</summary>
+        <div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">公司行动 · Empty</summary>
+        <div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📅</div>
+            <div class="state-empty-title">近30天无公司行动</div>
+            <div class="state-empty-desc">该标的近期无分红、解禁、变更等公司行动</div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">公司行动 · Error</summary>
+        <div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">加载失败</div>
+            <div class="state-error-desc">公司行动数据获取失败，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </details>
+
+      </div><!-- /tab-panel hub-corporate -->
+
+      <!-- ═══ Tab 6: hub-news (新闻) ═══ -->
+      <div class="tab-panel" data-panel="hub-news">
+      <div class="hub-object-view" style="overflow-y:auto">
+        <div class="panel" style="flex:1">
+          <div class="panel-header">
+            <span class="panel-title">相关新闻</span>
+            <div class="chart-toolbar">
+              <button class="chart-period-btn active">全部</button>
+              <button class="chart-period-btn">利好</button>
+              <button class="chart-period-btn">利空</button>
+              <button class="chart-period-btn">公告</button>
+            </div>
+          </div>
+          <div style="padding:var(--space-8) var(--space-12)">
+            <div class="news-item" tabindex="0">
+              <label for="overlay-news-detail" style="cursor:pointer;display:flex;flex-direction:column;gap:var(--space-4);width:100%">
+                <span class="news-title">贵州茅台2025年年报：净利润862亿超预期，直销渠道占比提升至45%</span>
+                <span class="news-source"><span>财联社</span><span>2小时前</span><span class="news-ai-badge">AI 摘要</span></span>
+              </label>
+            </div>
+            <div class="news-item" tabindex="0">
+              <label for="overlay-news-detail" style="cursor:pointer;display:flex;flex-direction:column;gap:var(--space-4);width:100%">
+                <span class="news-title">白酒板块集体走强，北向资金净买入超15亿</span>
+                <span class="news-source"><span>东方财富</span><span>4小时前</span></span>
+              </label>
+            </div>
+            <div class="news-item" tabindex="0">
+              <label for="overlay-news-detail" style="cursor:pointer;display:flex;flex-direction:column;gap:var(--space-4);width:100%">
+                <span class="news-title">茅台集团2026年营收目标锁定1800亿，系列酒占比将提升至15%</span>
+                <span class="news-source"><span>证券时报</span><span>昨日</span></span>
+              </label>
+            </div>
+            <div class="news-item" tabindex="0">
+              <label for="overlay-news-detail" style="cursor:pointer;display:flex;flex-direction:column;gap:var(--space-4);width:100%">
+                <span class="news-title">招商证券：上调贵州茅台目标价至2,200元，维持"强烈推荐"</span>
+                <span class="news-source"><span>招商证券</span><span>昨日</span><span class="news-ai-badge">AI 摘要</span></span>
+              </label>
+            </div>
+            <div class="news-item" tabindex="0">
+              <label for="overlay-news-detail" style="cursor:pointer;display:flex;flex-direction:column;gap:var(--space-4);width:100%">
+                <span class="news-title">飞天茅台批价站稳2,700元，经销商信心持续回暖</span>
+                <span class="news-source"><span>21世纪经济报道</span><span>2天前</span></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── State Variants: 9. News Feed ── -->
+      <details class="state-variant">
+        <summary class="state-variant-label">新闻流 · Loading</summary>
+        <div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">新闻流 · Empty</summary>
+        <div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📰</div>
+            <div class="state-empty-title">暂无相关新闻</div>
+            <div class="state-empty-desc">该标的近期无相关新闻报道</div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">新闻流 · Error</summary>
+        <div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">新闻加载失败</div>
+            <div class="state-error-desc">无法获取相关新闻，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </details>
+
+      </div><!-- /tab-panel hub-news -->
+      <div class="tab-panel" data-panel="hub-network">
+      <div class="hub-object-view">
+        <div class="panel" style="flex:1;min-height:0">
+          <div class="panel-header">
+            <span class="panel-title">关联网络</span>
+            <span class="panel-subtitle">力导向关系图</span>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:var(--space-16)">
+            <!-- Mock force-directed graph with CSS -->
+            <div style="position:relative;width:320px;height:240px">
+              <!-- Central node: 贵州茅台 -->
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;background:var(--brand-accent-subtle);border:2px solid var(--brand-accent);display:flex;align-items:center;justify-content:center;font-size:var(--font-size-10);font-weight:var(--font-weight-semibold);color:var(--brand-accent);z-index:2">茅台</div>
+              <!-- Connection lines (simplified with borders) -->
+              <div style="position:absolute;top:30%;left:15%;width:8px;height:8px;border-radius:50%;background:var(--market-up-fg);opacity:0.6"></div>
+              <div style="position:absolute;top:18%;left:60%;width:10px;height:10px;border-radius:50%;background:var(--text-tertiary);opacity:0.5"></div>
+              <div style="position:absolute;top:70%;left:20%;width:6px;height:6px;border-radius:50%;background:var(--market-up-fg);opacity:0.5"></div>
+              <div style="position:absolute;top:75%;left:65%;width:10px;height:10px;border-radius:50%;background:var(--text-tertiary);opacity:0.6"></div>
+              <div style="position:absolute;top:45%;left:85%;width:8px;height:8px;border-radius:50%;background:var(--brand-accent);opacity:0.4"></div>
+              <div style="position:absolute;top:85%;left:45%;width:6px;height:6px;border-radius:50%;background:var(--market-down-fg);opacity:0.4"></div>
+              <!-- SVG lines -->
+              <svg style="position:absolute;inset:0;width:100%;height:100%;z-index:1" viewBox="0 0 320 240">
+                <line x1="160" y1="120" x2="48" y2="72" stroke="var(--border-default)" stroke-width="1" opacity="0.4"/>
+                <line x1="160" y1="120" x2="192" y2="43" stroke="var(--border-default)" stroke-width="1" opacity="0.3"/>
+                <line x1="160" y1="120" x2="64" y2="168" stroke="var(--border-default)" stroke-width="1" opacity="0.3"/>
+                <line x1="160" y1="120" x2="208" y2="180" stroke="var(--border-default)" stroke-width="1" opacity="0.5"/>
+                <line x1="160" y1="120" x2="272" y2="108" stroke="var(--border-default)" stroke-width="1.5" opacity="0.4"/>
+                <line x1="160" y1="120" x2="144" y2="204" stroke="var(--border-default)" stroke-width="1" opacity="0.2"/>
+              </svg>
+              <!-- Labels -->
+              <span style="position:absolute;top:26%;left:2%;font-size:var(--font-size-10);color:var(--text-secondary)">五粮液</span>
+              <span style="position:absolute;top:12%;left:55%;font-size:var(--font-size-10);color:var(--text-secondary)">泸州老窖</span>
+              <span style="position:absolute;top:66%;left:7%;font-size:var(--font-size-10);color:var(--text-tertiary)">洋河</span>
+              <span style="position:absolute;top:71%;left:60%;font-size:var(--font-size-10);color:var(--text-secondary)">沪深300</span>
+              <span style="position:absolute;top:42%;left:82%;font-size:var(--font-size-10);color:var(--brand-accent)">白酒ETF</span>
+              <span style="position:absolute;top:82%;left:40%;font-size:var(--font-size-10);color:var(--text-tertiary)">中证白酒</span>
+            </div>
+          </div>
+        </div>
+        <!-- 关联强度 -->
+        <div class="panel" style="flex-shrink:0">
+          <div class="panel-header"><span class="panel-title">关联强度</span></div>
+          <div style="padding:var(--space-8) var(--space-12);display:flex;flex-direction:column;gap:var(--space-4)">
+            <div style="display:flex;align-items:center;gap:var(--space-8)"><span style="font-size:var(--font-size-12);color:var(--text-primary);width:80px">五粮液</span><div style="flex:1;height:4px;background:var(--border-subtle);border-radius:2px;overflow:hidden"><div style="width:82%;height:100%;background:var(--brand-accent);border-radius:2px"></div></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">0.82</span></div>
+            <div style="display:flex;align-items:center;gap:var(--space-8)"><span style="font-size:var(--font-size-12);color:var(--text-primary);width:80px">沪深300</span><div style="flex:1;height:4px;background:var(--border-subtle);border-radius:2px;overflow:hidden"><div style="width:65%;height:100%;background:var(--brand-accent);opacity:0.7;border-radius:2px"></div></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">0.65</span></div>
+            <div style="display:flex;align-items:center;gap:var(--space-8)"><span style="font-size:var(--font-size-12);color:var(--text-primary);width:80px">泸州老窖</span><div style="flex:1;height:4px;background:var(--border-subtle);border-radius:2px;overflow:hidden"><div style="width:58%;height:100%;background:var(--brand-accent);opacity:0.6;border-radius:2px"></div></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">0.58</span></div>
+            <div style="display:flex;align-items:center;gap:var(--space-8)"><span style="font-size:var(--font-size-12);color:var(--text-primary);width:80px">白酒ETF</span><div style="flex:1;height:4px;background:var(--border-subtle);border-radius:2px;overflow:hidden"><div style="width:71%;height:100%;background:var(--brand-accent);opacity:0.8;border-radius:2px"></div></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">0.71</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── State Variants: 10. Network Graph ── -->
+      <details class="state-variant">
+        <summary class="state-variant-label">关联网络 · Loading</summary>
+        <div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-chart" style="height:200px"></div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">关联网络 · Empty</summary>
+        <div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">🔗</div>
+            <div class="state-empty-title">暂无关联标的</div>
+            <div class="state-empty-desc">该标的暂无关联网络数据</div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">关联网络 · Error</summary>
+        <div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">关联数据加载失败</div>
+            <div class="state-error-desc">无法获取关联标的网络数据</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </details>
+
+      </div><!-- /tab-panel hub-network -->
+
+      <!-- ═══ Tab 8: hub-announcements (公告) ═══ -->
+      <div class="tab-panel" data-panel="hub-announcements">
+      <div class="hub-object-view" style="overflow-y:auto">
+        <div class="panel" style="flex:1">
+          <div class="panel-header">
+            <span class="panel-title">公司公告</span>
+            <div class="chart-toolbar">
+              <button class="chart-period-btn active">全部</button>
+              <button class="chart-period-btn">年报</button>
+              <button class="chart-period-btn">分红</button>
+              <button class="chart-period-btn">董事会</button>
+              <button class="chart-period-btn">股东</button>
+            </div>
+          </div>
+          <div style="padding:var(--space-8) var(--space-12)">
+            <div class="announce-item" tabindex="0">
+              <label for="overlay-announcement-detail" style="cursor:pointer;display:flex;align-items:flex-start;gap:var(--space-10);width:100%">
+                <span class="announce-tag annual">年报</span>
+                <div class="announce-body"><span class="announce-title">2025年年度报告</span><span class="announce-date">2026-03-25</span></div>
+              </label>
+            </div>
+            <div class="announce-item" tabindex="0">
+              <label for="overlay-announcement-detail" style="cursor:pointer;display:flex;align-items:flex-start;gap:var(--space-10);width:100%">
+                <span class="announce-tag dividend">分红</span>
+                <div class="announce-body"><span class="announce-title">2025年度利润分配方案公告</span><span class="announce-date">2026-03-25</span></div>
+              </label>
+            </div>
+            <div class="announce-item" tabindex="0">
+              <label for="overlay-announcement-detail" style="cursor:pointer;display:flex;align-items:flex-start;gap:var(--space-10);width:100%">
+                <span class="announce-tag board">董事会</span>
+                <div class="announce-body"><span class="announce-title">第二届董事会第四十二次会议决议公告</span><span class="announce-date">2026-03-20</span></div>
+              </label>
+            </div>
+            <div class="announce-item" tabindex="0">
+              <label for="overlay-announcement-detail" style="cursor:pointer;display:flex;align-items:flex-start;gap:var(--space-10);width:100%">
+                <span class="announce-tag shareholder">股东</span>
+                <div class="announce-body"><span class="announce-title">关于召开2025年年度股东大会的通知</span><span class="announce-date">2026-03-15</span></div>
+              </label>
+            </div>
+            <div class="announce-item" tabindex="0">
+              <label for="overlay-announcement-detail" style="cursor:pointer;display:flex;align-items:flex-start;gap:var(--space-10);width:100%">
+                <span class="announce-tag board">董事会</span>
+                <div class="announce-body"><span class="announce-title">投资者关系活动记录表（2026年3月）</span><span class="announce-date">2026-03-10</span></div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── State Variants: 11. Announcements List ── -->
+      <details class="state-variant">
+        <summary class="state-variant-label">公告列表 · Loading</summary>
+        <div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">公告列表 · Empty</summary>
+        <div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📑</div>
+            <div class="state-empty-title">暂无公告</div>
+            <div class="state-empty-desc">该标的暂无相关公告信息</div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">公告列表 · Error</summary>
+        <div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">公告加载失败</div>
+            <div class="state-error-desc">无法获取公告列表，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </details>
+
+      </div><!-- /tab-panel hub-announcements -->
+
+      </div><!-- /tab-panels -->
+
+      <!-- ── Right: Related / Signals / Notes (shared across all tabs) ── -->
       <aside class="hub-sidebar" aria-label="标的辅助信息">
         <!-- Signals -->
         <section class="context-section" style="position:relative" aria-label="相关信号">
@@ -1608,6 +2768,40 @@
           </div>
         </section>
       </aside>
+
+      <!-- ── State Variants: 12. Sidebar (Related/Signals/Notes) ── -->
+      <details class="state-variant">
+        <summary class="state-variant-label">侧边栏 · Loading</summary>
+        <div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">侧边栏 · Empty</summary>
+        <div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📋</div>
+            <div class="state-empty-title">暂无关联内容</div>
+            <div class="state-empty-desc">暂无信号、研究或备注</div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">侧边栏 · Error</summary>
+        <div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">加载失败</div>
+            <div class="state-error-desc">关联数据获取失败，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </details>
+
     </main>
 
     <!-- ══════════════════════════════════════════════
@@ -1656,6 +2850,269 @@
         </div>
       </div>
     </footer>
+
+    <!-- ── State Variants: 13. Timeline / Filings ── -->
+    <details class="state-variant">
+      <summary class="state-variant-label">时间线 · Loading</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">时间线 · Empty</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📋</div>
+          <div class="state-empty-title">暂无记录</div>
+          <div class="state-empty-desc">该标的暂无历史事件或公告记录</div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">时间线 · Error</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">加载失败</div>
+          <div class="state-error-desc">时间线数据获取失败，请稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+
+    </div><!-- /tab-group -->
+  </div><!-- /shell-hub -->
+
+  <!-- ══════════════════════════════════════════════
+       Overlay Triggers (checkbox inputs)
+       Must be in DOM for :root:has() activation
+       ══════════════════════════════════════════════ -->
+  <input type="checkbox" id="overlay-chart-toolbar" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-news-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-announcement-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-add-watchlist" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-send-research" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-halt-detail" class="overlay-radio sr-only">
+
+  <!-- ══════════════════════════════════════════════
+       Overlay Containers
+       ══════════════════════════════════════════════ -->
+  <div class="overlays">
+
+    <!-- Overlay 1: Chart Tools (Floating Toolbar) -->
+    <div data-overlay="overlay-chart-toolbar">
+      <div class="toolbar-btn active" title="选择" tabindex="0">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2l12 8-12 8V2z"/></svg>
+      </div>
+      <div class="toolbar-btn" title="趋势线" tabindex="0">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17L17 3"/></svg>
+      </div>
+      <div class="toolbar-btn" title="水平线" tabindex="0">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10h14"/></svg>
+      </div>
+      <div class="toolbar-btn" title="斐波那契" tabindex="0">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17h14M3 12h14M3 7h14M3 2h14"/></svg>
+      </div>
+      <div class="toolbar-btn" title="标注" tabindex="0">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v10M10 16v1"/><circle cx="10" cy="3" r="1" fill="currentColor"/></svg>
+      </div>
+      <div style="height:1px;background:var(--border-subtle);margin:var(--space-2) 0"></div>
+      <div style="display:flex;gap:var(--space-2);padding:var(--space-2)">
+        <div style="width:14px;height:14px;border-radius:50%;background:var(--brand-accent);cursor:pointer"></div>
+        <div style="width:14px;height:14px;border-radius:50%;background:var(--market-up-fg);cursor:pointer"></div>
+        <div style="width:14px;height:14px;border-radius:50%;background:var(--market-down-fg);cursor:pointer"></div>
+      </div>
+      <div style="height:1px;background:var(--border-subtle);margin:var(--space-2) 0"></div>
+      <div class="toolbar-btn" title="清除全部" tabindex="0">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l12 12M16 4L4 16"/></svg>
+      </div>
+    </div>
+
+    <!-- Overlay 2: News Detail (Drawer) -->
+    <div class="overlay-backdrop" data-overlay="overlay-news-detail">
+      <label class="overlay-dismiss" for="overlay-news-detail" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="新闻详情">
+        <div class="overlay-header">
+          <span class="overlay-title">新闻详情</span>
+          <label for="overlay-news-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>贵州茅台2025年年报：净利润862亿超预期，直销渠道占比提升至45%</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">来源</span>
+            <span class="overlay-field-value">财联社</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">时间</span>
+            <span class="overlay-field-value">2026-04-02 10:32</span>
+          </div>
+          <div style="margin-top:var(--space-10)">
+            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0">贵州茅台(600519.SH)发布2025年年度报告，全年实现营业总收入1,562亿元，同比增长16.2%；归属于母公司所有者的净利润862亿元，同比增长19.8%，超出市场预期。其中直销渠道收入占比提升至45%，i茅台平台贡献显著增量。公司拟每10股派发现金红利275.28元，分红率51.9%。</p>
+          </div>
+          <h4>AI 摘要</h4>
+          <div style="background:var(--brand-accent-subtle);border:1px solid color-mix(in oklch, var(--brand-accent) 20%, transparent);border-radius:var(--radius-4);padding:var(--space-8)">
+            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0">年报整体超预期：净利润+19.8%超市场一致预期2.3pp，直销占比持续提升是核心亮点。分红率维持50%+，股息率1.48%具备防御价值。关注点：系列酒增速放缓及渠道库存变化。</p>
+          </div>
+          <h4>关联标的</h4>
+          <div style="display:flex;gap:var(--space-6);flex-wrap:wrap">
+            <span class="meta-tag">五粮液</span>
+            <span class="meta-tag">泸州老窖</span>
+            <span class="meta-tag brand">白酒ETF</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 3: Announcement Detail (Drawer) -->
+    <div class="overlay-backdrop" data-overlay="overlay-announcement-detail">
+      <label class="overlay-dismiss" for="overlay-announcement-detail" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="公告详情">
+        <div class="overlay-header">
+          <span class="overlay-title">公告详情</span>
+          <label for="overlay-announcement-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>2025年年度报告</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">公告日期</span>
+            <span class="overlay-field-value">2026-03-25</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">公告类型</span>
+            <span class="overlay-field-value"><span class="announce-tag annual" style="display:inline">年报</span></span>
+          </div>
+          <div style="margin-top:var(--space-10)">
+            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0">报告期内，公司实现营业总收入1,562.34亿元，同比增长16.23%；实现归属于母公司所有者的净利润862.28亿元，同比增长19.82%。截至2025年末，公司总资产2,856.12亿元，归属于母公司股东的权益2,387.54亿元。公司拟向全体股东每10股派发现金红利275.28元（含税）。</p>
+          </div>
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-secondary">下载 PDF</button>
+            <button class="overlay-btn overlay-btn-primary">查看原文</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 4: Add to Watchlist (Sheet) -->
+    <div class="overlay-backdrop" data-overlay="overlay-add-watchlist">
+      <label class="overlay-dismiss" for="overlay-add-watchlist" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="加入观察/标的池">
+        <div class="overlay-header">
+          <span class="overlay-title">加入观察 / 标的池</span>
+          <label for="overlay-add-watchlist" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>已有列表</h4>
+          <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 核心池 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">12只</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 观察池 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">28只</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 消费龙头 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">8只</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 白酒专题 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">5只</span>
+            </label>
+          </div>
+          <h4>新建列表</h4>
+          <div style="display:flex;gap:var(--space-6)">
+            <input type="text" placeholder="输入列表名称..." style="flex:1;background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-primary);font-family:var(--font-family-ui)">
+            <button class="btn" style="flex-shrink:0">新建</button>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-add-watchlist" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-add-watchlist" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认加入</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 5: Send to Research (Sheet) -->
+    <div class="overlay-backdrop" data-overlay="overlay-send-research">
+      <label class="overlay-dismiss" for="overlay-send-research" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="发送到研究">
+        <div class="overlay-header">
+          <span class="overlay-title">发送到研究</span>
+          <label for="overlay-send-research" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>选择目标</h4>
+          <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
+              <input type="radio" name="research-target" checked style="accent-color:var(--brand-accent)">
+              <div><div style="font-weight:var(--font-weight-medium)">回测验证</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">将该标的加入回测策略</div></div>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
+              <input type="radio" name="research-target" style="accent-color:var(--brand-accent)">
+              <div><div style="font-weight:var(--font-weight-medium)">策略跟踪</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">纳入现有策略持续跟踪</div></div>
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
+              <input type="radio" name="research-target" style="accent-color:var(--brand-accent)">
+              <div><div style="font-weight:var(--font-weight-medium)">AI 实验</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">加入 AI 研究实验队列</div></div>
+            </label>
+          </div>
+          <h4>附注</h4>
+          <textarea placeholder="添加备注..." style="width:100%;background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8);font-size:var(--font-size-12);color:var(--text-primary);font-family:var(--font-family-ui);min-height:60px;resize:vertical"></textarea>
+          <div class="overlay-actions">
+            <label for="overlay-send-research" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-send-research" class="overlay-btn overlay-btn-primary" style="cursor:pointer">发送</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 6: Halt Detail (Modal) -->
+    <div class="overlay-backdrop" data-overlay="overlay-halt-detail">
+      <label class="overlay-dismiss" for="overlay-halt-detail" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="停牌详情">
+        <div class="overlay-header">
+          <span class="overlay-title">停牌详情</span>
+          <label for="overlay-halt-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>停牌信息</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标的</span>
+            <span class="overlay-field-value">贵州茅台（600519.SH）</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">停牌原因</span>
+            <span class="overlay-field-value" style="color:var(--system-degraded-fg)">重大事项公告</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">停牌日期</span>
+            <span class="overlay-field-value">2026-04-01</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">预计复牌</span>
+            <span class="overlay-field-value">2026-04-03</span>
+          </div>
+          <h4>历史停牌记录</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">2025-09-15</span>
+            <span class="overlay-field-value">临时停牌（1天）</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">2024-06-20</span>
+            <span class="overlay-field-value">股东大会（1天）</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">2023-03-28</span>
+            <span class="overlay-field-value">年报披露（半天）</span>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-halt-detail" class="overlay-btn overlay-btn-primary" style="cursor:pointer">关闭</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Status Bar -->

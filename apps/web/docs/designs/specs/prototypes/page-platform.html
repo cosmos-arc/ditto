@@ -1,4 +1,29 @@
 <!DOCTYPE html>
+<!--
+  State Coverage Index: page-platform
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 4
+  - tab-providers (Data Providers / DQ) [covered]
+  - tab-pipelines (Pipelines / Jobs) [covered]
+  - tab-alerts (System Alerts) [covered]
+  - tab-resources (Resources / Quotas) [covered]
+
+  Overlays: 3
+  - overlay-alert-handle (Modal: 异常处理) [covered]
+  - overlay-pipeline-rerun (Dialog: Pipeline 重跑确认) [covered]
+  - overlay-task-detail (Drawer: 任务详情) [covered]
+
+  State Variants: 5 components × 3 states (loading/empty/error)
+  - health-strip: default[covered] loading[covered] empty[n/a] failed[covered] stale[n/a] selected[n/a]
+  - data-providers: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - pipelines-jobs: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - system-alerts: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - resources-quotas: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+
+  Coverage Score: 100%
+-->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
@@ -22,6 +47,9 @@
   <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
     /* Style label for comparison */
@@ -165,6 +193,8 @@
     }
     .panel-tabs .panel-tab:nth-child(1) { animation-delay: 50ms; }
     .panel-tabs .panel-tab:nth-child(2) { animation-delay: 100ms; }
+    .panel-tabs .panel-tab:nth-child(3) { animation-delay: 150ms; }
+    .panel-tabs .panel-tab:nth-child(4) { animation-delay: 200ms; }
 
     @keyframes tab-fade-in {
       from { opacity: 0; transform: translateY(2px); }
@@ -1131,6 +1161,138 @@
     .data-table th {
       border-color: var(--border-subtle);
     }
+
+    /* ══════════════════════════════════════════════
+     * Activation CSS — Tab Panel System (4 tabs)
+     * ══════════════════════════════════════════════ */
+    .tab-group:has(#tab-providers:checked)
+      [data-panel="tab-providers"] { display: block; }
+    .tab-group:has(#tab-providers:checked)
+      [data-tab-label="tab-providers"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+
+    .tab-group:has(#tab-pipelines:checked)
+      [data-panel="tab-pipelines"] { display: block; }
+    .tab-group:has(#tab-pipelines:checked)
+      [data-tab-label="tab-pipelines"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+
+    .tab-group:has(#tab-alerts:checked)
+      [data-panel="tab-alerts"] { display: block; }
+    .tab-group:has(#tab-alerts:checked)
+      [data-tab-label="tab-alerts"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+
+    .tab-group:has(#tab-resources:checked)
+      [data-panel="tab-resources"] { display: block; }
+    .tab-group:has(#tab-resources:checked)
+      [data-tab-label="tab-resources"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+
+    /* Hide default-tab content when non-default tab is active */
+    .tab-group:has(#tab-pipelines:checked)
+      [data-panel="tab-providers"],
+    .tab-group:has(#tab-alerts:checked)
+      [data-panel="tab-providers"],
+    .tab-group:has(#tab-resources:checked)
+      [data-panel="tab-providers"] { display: none; }
+    .tab-group:has(#tab-providers:checked)
+      [data-panel="tab-pipelines"],
+    .tab-group:has(#tab-alerts:checked)
+      [data-panel="tab-pipelines"],
+    .tab-group:has(#tab-resources:checked)
+      [data-panel="tab-pipelines"],
+    .tab-group:has(#tab-providers:checked)
+      [data-panel="tab-alerts"],
+    .tab-group:has(#tab-pipelines:checked)
+      [data-panel="tab-alerts"],
+    .tab-group:has(#tab-resources:checked)
+      [data-panel="tab-alerts"],
+    .tab-group:has(#tab-providers:checked)
+      [data-panel="tab-resources"],
+    .tab-group:has(#tab-pipelines:checked)
+      [data-panel="tab-resources"],
+    .tab-group:has(#tab-alerts:checked)
+      [data-panel="tab-resources"] { display: none; }
+
+    /* ══════════════════════════════════════════════
+     * Activation CSS — Overlays (3 overlays)
+     * ══════════════════════════════════════════════ */
+    :root:has(#overlay-alert-handle:checked)
+      [data-overlay="overlay-alert-handle"] { display: flex; }
+    :root:has(#overlay-pipeline-rerun:checked)
+      [data-overlay="overlay-pipeline-rerun"] { display: flex; }
+    :root:has(#overlay-task-detail:checked)
+      [data-overlay="overlay-task-detail"] { display: flex; }
+
+    /* ── Overlay content refinement ── */
+    .overlay-sheet .overlay-header,
+    .overlay-drawer .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-18);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-field {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+    }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-weight: var(--font-weight-medium); }
+    .overlay-actions {
+      display: flex;
+      gap: var(--space-6);
+      margin-top: var(--space-16);
+      justify-content: flex-end;
+    }
+    .overlay-btn {
+      padding: var(--space-4) var(--space-12);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      border: 1px solid var(--border-default);
+      background: var(--surface-elevated);
+      color: var(--text-secondary);
+    }
+    .overlay-btn-primary {
+      background: var(--brand-accent);
+      color: var(--text-inverse);
+      border-color: var(--brand-accent);
+    }
+    .overlay-btn-danger {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* Tab label as label[for] for interactive tabs */
+    .panel-tab-radio {
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -1150,6 +1312,45 @@
   </svg>
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Platform Ops · Compact · A股</div>
+
+  <!-- ═══ State Variants: Health Strip ═══ -->
+  <details class="state-variant">
+    <summary class="state-variant-label">Health Strip — Loading State</summary>
+    <div class="state-variant-content" data-state="loading">
+      <div class="state-loading" style="flex-direction:row;gap:var(--space-16);padding:var(--space-8) var(--space-16);">
+        <div style="display:flex;align-items:center;gap:var(--space-6);">
+          <div class="skeleton" style="width:6px;height:6px;border-radius:50%;"></div>
+          <div class="skeleton skeleton-text-sm" style="width:50px;"></div>
+          <div class="skeleton skeleton-text-sm" style="width:40px;"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-6);">
+          <div class="skeleton" style="width:6px;height:6px;border-radius:50%;"></div>
+          <div class="skeleton skeleton-text-sm" style="width:50px;"></div>
+          <div class="skeleton skeleton-text-sm" style="width:40px;"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-6);">
+          <div class="skeleton" style="width:6px;height:6px;border-radius:50%;"></div>
+          <div class="skeleton skeleton-text-sm" style="width:50px;"></div>
+          <div class="skeleton skeleton-text-sm" style="width:40px;"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-6);">
+          <div class="skeleton" style="width:6px;height:6px;border-radius:50%;"></div>
+          <div class="skeleton skeleton-text-sm" style="width:50px;"></div>
+          <div class="skeleton skeleton-text-sm" style="width:40px;"></div>
+        </div>
+      </div>
+    </div>
+  </details>
+  <details class="state-variant">
+    <summary class="state-variant-label">Health Strip — Error State</summary>
+    <div class="state-variant-content" data-state="failed">
+      <div class="state-error" style="flex-direction:row;gap:var(--space-12);padding:var(--space-8) var(--space-16);">
+        <div class="state-error-icon" style="width:20px;height:20px;font-size:12px;">!</div>
+        <span style="color:var(--text-secondary);font-size:var(--font-size-12);">健康检查异常，无法获取系统指标</span>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+  </details>
 
   <div class="shell-ops">
     <!-- ═══ Rail ═══ -->
@@ -1256,177 +1457,443 @@
       </div>
     </div>
 
-    <!-- ═══ Main Content (Data Sources + Alerts) ═══ -->
-    <div class="ops-main" id="main-content">
-      <!-- Panel 1: 数据源 / 数据质量 -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-tabs">
-            <span class="panel-tab active" role="tab" aria-selected="true">数据源 <span class="panel-subtitle">5 个源</span></span>
-            <span class="panel-tab" role="tab" aria-selected="false">管道与任务 <span class="panel-subtitle">运行中 2</span></span>
-          </div>
-        </div>
-        <div class="panel-body">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th scope="col">数据源</th>
-                <th scope="col">状态 <span class="sort-indicator" aria-label="按严重程度排序">▼</span></th>
-                <th scope="col">质量 <span class="sort-indicator">▼</span></th>
-                <th scope="col">延迟</th>
-                <th scope="col">API 配额</th>
-                <th scope="col">上次同步</th>
-                <th scope="col" class="right">今日请求</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Tushare -->
-              <tr>
-                <td class="cell-name">Tushare</td>
-                <td>
-                  <span class="status-dot ok">
-                    <span class="status-dot-dot ok"></span>
-                    正常
-                  </span>
-                </td>
-                <td class="cell-numeric">99.8<span class="dq-badge ok">优</span></td>
-                <td class="cell-numeric">2s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 5 L16 8 L24 4 L32 6 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 5 L16 8 L24 4 L32 6 L40 7"/></svg></td>
-                <td>
-                  <div class="quota-cell">
-                    <span class="quota-text critical">4,820/5,000</span>
-                    <div class="quota-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="Tushare API 配额 96.4%"><div class="quota-bar-fill critical" style="width: 96.4%;"></div></div>
-                  </div>
-                </td>
-                <td class="cell-time">14:32:15</td>
-                <td class="right cell-numeric">4,820</td>
-              </tr>
-              <!-- Wind -->
-              <tr>
-                <td class="cell-name">Wind</td>
-                <td>
-                  <span class="status-dot ok">
-                    <span class="status-dot-dot ok"></span>
-                    正常
-                  </span>
-                </td>
-                <td class="cell-numeric">99.9<span class="dq-badge ok">优</span></td>
-                <td class="cell-numeric">1s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 6 L16 7 L24 5 L32 7 L40 6 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 6 L16 7 L24 5 L32 7 L40 6"/></svg></td>
-                <td>
-                  <span class="quota-text ok">无限制</span>
-                </td>
-                <td class="cell-time">14:32:10</td>
-                <td class="right cell-numeric">1,247</td>
-              </tr>
-              <!-- 东方财富 Choice -->
-              <tr>
-                <td class="cell-name">东方财富 Choice</td>
-                <td>
-                  <span class="status-dot warn">
-                    <span class="status-dot-dot warn"></span>
-                    延迟
-                  </span>
-                </td>
-                <td class="cell-numeric">97.2<span class="dq-badge warn">良</span></td>
-                <td class="cell-numeric cell-warn">45s<svg class="sparkline warn" viewBox="0 0 40 14"><path d="M0 14 L0 6 L8 7 L16 10 L24 12 L32 13 L40 13 L40 14Z" fill="url(#spark-fill-warn)"/><path d="M0 6 L8 7 L16 10 L24 12 L32 13 L40 13"/></svg></td>
-                <td>
-                  <div class="quota-cell">
-                    <span class="quota-text warn">8,200/10,000</span>
-                    <div class="quota-bar" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="东方财富 Choice API 配额 82%"><div class="quota-bar-fill warn" style="width: 82%;"></div></div>
-                  </div>
-                </td>
-                <td class="cell-time">14:31:28</td>
-                <td class="right cell-numeric">8,200</td>
-              </tr>
-              <!-- 同花顺 iFind -->
-              <tr>
-                <td class="cell-name">同花顺 iFind</td>
-                <td>
-                  <span class="status-dot ok">
-                    <span class="status-dot-dot ok"></span>
-                    正常
-                  </span>
-                </td>
-                <td class="cell-numeric">99.5<span class="dq-badge ok">优</span></td>
-                <td class="cell-numeric">3s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 8 L8 7 L16 6 L24 8 L32 5 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 8 L8 7 L16 6 L24 8 L32 5 L40 7"/></svg></td>
-                <td>
-                  <div class="quota-cell">
-                    <span class="quota-text ok">2,100/3,000</span>
-                    <div class="quota-bar" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" aria-label="同花顺 iFind API 配额 70%"><div class="quota-bar-fill ok" style="width: 70%;"></div></div>
-                  </div>
-                </td>
-                <td class="cell-time">14:32:08</td>
-                <td class="right cell-numeric">2,100</td>
-              </tr>
-              <!-- 聚宽 -->
-              <tr class="row-down">
-                <td class="cell-name">聚宽</td>
-                <td>
-                  <span class="status-dot down">
-                    <span class="status-dot-dot down"></span>
-                    断开
-                  </span>
-                  <span class="row-action" tabindex="0" role="button" aria-label="重试连接聚宽">重试</span>
-                </td>
-                <td class="cell-disabled">—</td>
-                <td class="cell-disabled">—</td>
-                <td>
-                  <span class="quota-text muted">—</span>
-                </td>
-                <td class="cell-disabled">14:15:00</td>
-                <td class="right cell-disabled">0</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+    <!-- ═══ Main Content: Tab Group (4 Tabs) ═══ -->
+    <div class="tab-group" data-tab-group="ops" id="main-content">
+      <!-- Tab radios (hidden) -->
+      <input type="radio" name="ops" id="tab-providers" checked class="tab-radio sr-only">
+      <input type="radio" name="ops" id="tab-pipelines" class="tab-radio sr-only">
+      <input type="radio" name="ops" id="tab-alerts" class="tab-radio sr-only">
+      <input type="radio" name="ops" id="tab-resources" class="tab-radio sr-only">
 
-      <!-- Panel 2: 系统预警 -->
-      <div class="panel panel-alerts">
-        <div class="panel-header">
-          <div class="panel-tabs">
-            <span class="panel-tab active" role="tab" aria-selected="true">系统告警 <span class="panel-count panel-count-critical" style="margin-left:var(--space-4)">4</span></span>
-            <span class="panel-tab" role="tab" aria-selected="false">日志</span>
-          </div>
-          <div class="panel-actions">
-            <span class="panel-action" tabindex="0" role="button">查看全部 →</span>
-          </div>
-        </div>
-        <div class="panel-body">
-          <!-- Alert 1 — critical (sorted: severity first, then time) -->
-          <div class="alert-row">
-            <span class="alert-dot critical"></span>
-            <div class="alert-content">
-              <span class="alert-title">上交所行情接口响应超时 <span class="alert-severity critical">严重</span></span>
-              <span class="alert-desc">超时 45s，已自动切换备用源</span>
+      <!-- Tab labels -->
+      <div class="ops-main">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-tabs">
+              <label for="tab-providers" class="panel-tab panel-tab-radio" data-tab-label="tab-providers" role="tab" aria-selected="true">数据源 <span class="panel-subtitle">5 个源</span></label>
+              <label for="tab-pipelines" class="panel-tab panel-tab-radio" data-tab-label="tab-pipelines" role="tab" aria-selected="false">管道与任务 <span class="panel-subtitle">运行中 2</span></label>
+              <label for="tab-alerts" class="panel-tab panel-tab-radio" data-tab-label="tab-alerts" role="tab" aria-selected="false">系统告警 <span class="panel-count panel-count-critical" style="margin-left:var(--space-4)">4</span></label>
+              <label for="tab-resources" class="panel-tab panel-tab-radio" data-tab-label="tab-resources" role="tab" aria-selected="false">资源/配额</label>
             </div>
-            <span class="alert-time">13:54:00</span>
           </div>
-          <!-- Alert 2 — critical -->
-          <div class="alert-row">
-            <span class="alert-dot critical"></span>
-            <div class="alert-content">
-              <span class="alert-title">模型评分服务异常 <span class="alert-severity critical">严重</span></span>
-              <span class="alert-desc">情绪 Alpha v2 评分返回 503，已自动重试 2 次</span>
+          <div class="panel-body">
+            <div class="tab-panels">
+              <!-- Tab Panel 1: Data Providers / DQ -->
+              <div class="tab-panel" data-panel="tab-providers">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">数据源</th>
+                      <th scope="col">状态 <span class="sort-indicator" aria-label="按严重程度排序">▼</span></th>
+                      <th scope="col">质量 <span class="sort-indicator">▼</span></th>
+                      <th scope="col">延迟</th>
+                      <th scope="col">API 配额</th>
+                      <th scope="col">上次同步</th>
+                      <th scope="col" class="right">今日请求</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Tushare -->
+                    <tr>
+                      <td class="cell-name">Tushare</td>
+                      <td>
+                        <span class="status-dot ok">
+                          <span class="status-dot-dot ok"></span>
+                          正常
+                        </span>
+                      </td>
+                      <td class="cell-numeric">99.8<span class="dq-badge ok">优</span></td>
+                      <td class="cell-numeric">2s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 5 L16 8 L24 4 L32 6 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 5 L16 8 L24 4 L32 6 L40 7"/></svg></td>
+                      <td>
+                        <div class="quota-cell">
+                          <span class="quota-text critical">4,820/5,000</span>
+                          <div class="quota-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="Tushare API 配额 96.4%"><div class="quota-bar-fill critical" style="width: 96.4%;"></div></div>
+                        </div>
+                      </td>
+                      <td class="cell-time">14:32:15</td>
+                      <td class="right cell-numeric">4,820</td>
+                    </tr>
+                    <!-- Wind -->
+                    <tr>
+                      <td class="cell-name">Wind</td>
+                      <td>
+                        <span class="status-dot ok">
+                          <span class="status-dot-dot ok"></span>
+                          正常
+                        </span>
+                      </td>
+                      <td class="cell-numeric">99.9<span class="dq-badge ok">优</span></td>
+                      <td class="cell-numeric">1s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 6 L16 7 L24 5 L32 7 L40 6 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 6 L16 7 L24 5 L32 7 L40 6"/></svg></td>
+                      <td>
+                        <span class="quota-text ok">无限制</span>
+                      </td>
+                      <td class="cell-time">14:32:10</td>
+                      <td class="right cell-numeric">1,247</td>
+                    </tr>
+                    <!-- 东方财富 Choice -->
+                    <tr>
+                      <td class="cell-name">东方财富 Choice</td>
+                      <td>
+                        <span class="status-dot warn">
+                          <span class="status-dot-dot warn"></span>
+                          延迟
+                        </span>
+                      </td>
+                      <td class="cell-numeric">97.2<span class="dq-badge warn">良</span></td>
+                      <td class="cell-numeric cell-warn">45s<svg class="sparkline warn" viewBox="0 0 40 14"><path d="M0 14 L0 6 L8 7 L16 10 L24 12 L32 13 L40 13 L40 14Z" fill="url(#spark-fill-warn)"/><path d="M0 6 L8 7 L16 10 L24 12 L32 13 L40 13"/></svg></td>
+                      <td>
+                        <div class="quota-cell">
+                          <span class="quota-text warn">8,200/10,000</span>
+                          <div class="quota-bar" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="东方财富 Choice API 配额 82%"><div class="quota-bar-fill warn" style="width: 82%;"></div></div>
+                        </div>
+                      </td>
+                      <td class="cell-time">14:31:28</td>
+                      <td class="right cell-numeric">8,200</td>
+                    </tr>
+                    <!-- 同花顺 iFind -->
+                    <tr>
+                      <td class="cell-name">同花顺 iFind</td>
+                      <td>
+                        <span class="status-dot ok">
+                          <span class="status-dot-dot ok"></span>
+                          正常
+                        </span>
+                      </td>
+                      <td class="cell-numeric">99.5<span class="dq-badge ok">优</span></td>
+                      <td class="cell-numeric">3s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 8 L8 7 L16 6 L24 8 L32 5 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 8 L8 7 L16 6 L24 8 L32 5 L40 7"/></svg></td>
+                      <td>
+                        <div class="quota-cell">
+                          <span class="quota-text ok">2,100/3,000</span>
+                          <div class="quota-bar" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" aria-label="同花顺 iFind API 配额 70%"><div class="quota-bar-fill ok" style="width: 70%;"></div></div>
+                        </div>
+                      </td>
+                      <td class="cell-time">14:32:08</td>
+                      <td class="right cell-numeric">2,100</td>
+                    </tr>
+                    <!-- 聚宽 -->
+                    <tr class="row-down">
+                      <td class="cell-name">聚宽</td>
+                      <td>
+                        <span class="status-dot down">
+                          <span class="status-dot-dot down"></span>
+                          断开
+                        </span>
+                        <span class="row-action" tabindex="0" role="button" aria-label="重试连接聚宽">重试</span>
+                      </td>
+                      <td class="cell-disabled">—</td>
+                      <td class="cell-disabled">—</td>
+                      <td>
+                        <span class="quota-text muted">—</span>
+                      </td>
+                      <td class="cell-disabled">14:15:00</td>
+                      <td class="right cell-disabled">0</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!-- State Variants: Data Providers -->
+                <details class="state-variant">
+                  <summary class="state-variant-label">Data Providers — Loading State</summary>
+                  <div class="state-variant-content" data-state="loading">
+                    <div class="state-loading">
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                    </div>
+                  </div>
+                </details>
+                <details class="state-variant">
+                  <summary class="state-variant-label">Data Providers — Empty State</summary>
+                  <div class="state-variant-content" data-state="empty">
+                    <div class="state-empty">
+                      <div class="state-empty-icon">📡</div>
+                      <div class="state-empty-title">暂无数据源配置</div>
+                      <div class="state-empty-desc">请先添加数据源，系统将自动监控连接状态与数据质量</div>
+                      <button class="state-empty-cta">添加数据源</button>
+                    </div>
+                  </div>
+                </details>
+                <details class="state-variant">
+                  <summary class="state-variant-label">Data Providers — Error State</summary>
+                  <div class="state-variant-content" data-state="failed">
+                    <div class="state-error">
+                      <div class="state-error-icon">!</div>
+                      <div class="state-error-title">Provider 数据异常</div>
+                      <div class="state-error-desc">无法获取数据源状态信息，请检查服务连接或稍后重试</div>
+                      <button class="state-error-retry">重试</button>
+                    </div>
+                  </div>
+                </details>
+              </div>
+
+              <!-- Tab Panel 2: Pipelines / Jobs -->
+              <div class="tab-panel" data-panel="tab-pipelines">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">管道名称</th>
+                      <th scope="col">状态</th>
+                      <th scope="col">上次执行</th>
+                      <th scope="col">耗时</th>
+                      <th scope="col">触发方式</th>
+                      <th scope="col" class="right">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="cell-name">日线行情同步</td>
+                      <td><span class="status-dot ok"><span class="status-dot-dot ok"></span>运行中</span></td>
+                      <td class="cell-time">14:30:00</td>
+                      <td class="cell-numeric">—</td>
+                      <td>定时（每 30 分钟）</td>
+                      <td class="right">
+                        <input type="checkbox" id="overlay-pipeline-rerun" class="overlay-radio sr-only">
+                        <label for="overlay-pipeline-rerun" class="row-action" style="cursor:pointer">重跑</label>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-name">财务数据更新</td>
+                      <td><span class="status-dot warn"><span class="status-dot-dot warn"></span>排队中</span></td>
+                      <td class="cell-time">14:00:00</td>
+                      <td class="cell-numeric">12 分钟</td>
+                      <td>手动触发</td>
+                      <td class="right">
+                        <label for="overlay-task-detail" class="row-action" style="cursor:pointer">详情</label>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-name">因子计算 · 北向持仓变化率</td>
+                      <td><span class="status-dot warn"><span class="status-dot-dot warn"></span>计算中 67%</span></td>
+                      <td class="cell-time">14:28:00</td>
+                      <td class="cell-numeric">—</td>
+                      <td>依赖触发</td>
+                      <td class="right">
+                        <label for="overlay-task-detail" class="row-action" style="cursor:pointer">详情</label>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-name">模型评分 · 情绪 Alpha v2</td>
+                      <td><span class="status-dot down"><span class="status-dot-dot down"></span>已失败</span></td>
+                      <td class="cell-time">12:32:15</td>
+                      <td class="cell-numeric">2 分钟</td>
+                      <td>手动触发</td>
+                      <td class="right">
+                        <label for="overlay-pipeline-rerun" class="row-action" style="cursor:pointer">重试</label>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!-- State Variants: Pipelines / Jobs -->
+                <details class="state-variant">
+                  <summary class="state-variant-label">Pipelines / Jobs — Loading State</summary>
+                  <div class="state-variant-content" data-state="loading">
+                    <div class="state-loading">
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                    </div>
+                  </div>
+                </details>
+                <details class="state-variant">
+                  <summary class="state-variant-label">Pipelines / Jobs — Empty State</summary>
+                  <div class="state-variant-content" data-state="empty">
+                    <div class="state-empty">
+                      <div class="state-empty-icon">⚡</div>
+                      <div class="state-empty-title">暂无运行中任务</div>
+                      <div class="state-empty-desc">所有管道任务已完成或尚未配置，点击刷新检查最新状态</div>
+                      <button class="state-empty-cta">刷新任务列表</button>
+                    </div>
+                  </div>
+                </details>
+                <details class="state-variant">
+                  <summary class="state-variant-label">Pipelines / Jobs — Error State</summary>
+                  <div class="state-variant-content" data-state="failed">
+                    <div class="state-error">
+                      <div class="state-error-icon">!</div>
+                      <div class="state-error-title">Job 调度器异常</div>
+                      <div class="state-error-desc">无法获取任务队列信息，调度服务可能未启动</div>
+                      <button class="state-error-retry">重试</button>
+                    </div>
+                  </div>
+                </details>
+              </div>
+
+              <!-- Tab Panel 3: System Alerts -->
+              <div class="tab-panel" data-panel="tab-alerts">
+                <!-- Alert 1 — critical -->
+                <div class="alert-row">
+                  <span class="alert-dot critical"></span>
+                  <div class="alert-content">
+                    <span class="alert-title">上交所行情接口响应超时 <span class="alert-severity critical">严重</span></span>
+                    <span class="alert-desc">超时 45s，已自动切换备用源</span>
+                  </div>
+                  <span class="alert-time">13:54:00</span>
+                  <input type="checkbox" id="overlay-alert-handle" class="overlay-radio sr-only">
+                  <label for="overlay-alert-handle" class="row-action" style="cursor:pointer">处理</label>
+                </div>
+                <!-- Alert 2 — critical -->
+                <div class="alert-row">
+                  <span class="alert-dot critical"></span>
+                  <div class="alert-content">
+                    <span class="alert-title">模型评分服务异常 <span class="alert-severity critical">严重</span></span>
+                    <span class="alert-desc">情绪 Alpha v2 评分返回 503，已自动重试 2 次</span>
+                  </div>
+                  <span class="alert-time">12:32:15</span>
+                  <label for="overlay-alert-handle" class="row-action" style="cursor:pointer">处理</label>
+                </div>
+                <!-- Alert 3 — warning -->
+                <div class="alert-row">
+                  <span class="alert-dot warning"></span>
+                  <div class="alert-content">
+                    <span class="alert-title">Tushare API 日配额即将耗尽 <span class="alert-severity warning">警告</span></span>
+                    <span class="alert-desc">4,820/5,000 今日请求，预计 3 小时后重置</span>
+                  </div>
+                  <span class="alert-time">14:20:15</span>
+                </div>
+                <!-- Alert 4 — warning -->
+                <div class="alert-row">
+                  <span class="alert-dot warning"></span>
+                  <div class="alert-content">
+                    <span class="alert-title">因子计算任务延迟 <span class="alert-severity warning">警告</span></span>
+                    <span class="alert-desc">北向持仓变化率因子计算积压 15 分钟</span>
+                  </div>
+                  <span class="alert-time">13:32:08</span>
+                </div>
+
+                <!-- State Variants: System Alerts -->
+                <details class="state-variant">
+                  <summary class="state-variant-label">System Alerts — Loading State</summary>
+                  <div class="state-variant-content" data-state="loading">
+                    <div class="state-loading">
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                    </div>
+                  </div>
+                </details>
+                <details class="state-variant">
+                  <summary class="state-variant-label">System Alerts — Empty State</summary>
+                  <div class="state-variant-content" data-state="empty">
+                    <div class="state-empty">
+                      <div class="state-empty-icon">✓</div>
+                      <div class="state-empty-title">当前无系统告警</div>
+                      <div class="state-empty-desc">所有服务运行正常，没有待处理的告警信息</div>
+                    </div>
+                  </div>
+                </details>
+                <details class="state-variant">
+                  <summary class="state-variant-label">System Alerts — Error State</summary>
+                  <div class="state-variant-content" data-state="failed">
+                    <div class="state-error">
+                      <div class="state-error-icon">!</div>
+                      <div class="state-error-title">告警加载失败</div>
+                      <div class="state-error-desc">无法获取系统告警信息，请检查连接或稍后重试</div>
+                      <button class="state-error-retry">重试</button>
+                    </div>
+                  </div>
+                </details>
+              </div>
+
+              <!-- Tab Panel 4: Resources / Quotas -->
+              <div class="tab-panel" data-panel="tab-resources">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">资源</th>
+                      <th scope="col">使用量</th>
+                      <th scope="col">占比</th>
+                      <th scope="col">状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="cell-name">API 配额 (Tushare)</td>
+                      <td class="cell-numeric">4,820 / 5,000</td>
+                      <td>
+                        <div class="quota-cell">
+                          <span class="quota-text critical">96.4%</span>
+                          <div class="quota-bar"><div class="quota-bar-fill critical" style="width: 96.4%;"></div></div>
+                        </div>
+                      </td>
+                      <td><span class="status-dot down"><span class="status-dot-dot down"></span>即将耗尽</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-name">CPU 使用率</td>
+                      <td class="cell-numeric">—</td>
+                      <td>
+                        <div class="quota-cell">
+                          <span class="quota-text ok">23%</span>
+                          <div class="quota-bar"><div class="quota-bar-fill ok" style="width: 23%;"></div></div>
+                        </div>
+                      </td>
+                      <td><span class="status-dot ok"><span class="status-dot-dot ok"></span>正常</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-name">内存使用</td>
+                      <td class="cell-numeric">4.2 / 16 GB</td>
+                      <td>
+                        <div class="quota-cell">
+                          <span class="quota-text ok">26%</span>
+                          <div class="quota-bar"><div class="quota-bar-fill ok" style="width: 26%;"></div></div>
+                        </div>
+                      </td>
+                      <td><span class="status-dot ok"><span class="status-dot-dot ok"></span>正常</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-name">磁盘空间</td>
+                      <td class="cell-numeric">128 / 512 GB</td>
+                      <td>
+                        <div class="quota-cell">
+                          <span class="quota-text ok">25%</span>
+                          <div class="quota-bar"><div class="quota-bar-fill ok" style="width: 25%;"></div></div>
+                        </div>
+                      </td>
+                      <td><span class="status-dot ok"><span class="status-dot-dot ok"></span>正常</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!-- State Variants: Resources / Quotas -->
+                <details class="state-variant">
+                  <summary class="state-variant-label">Resources / Quotas — Loading State</summary>
+                  <div class="state-variant-content" data-state="loading">
+                    <div class="state-loading">
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                      <div class="skeleton skeleton-row"></div>
+                    </div>
+                  </div>
+                </details>
+                <details class="state-variant">
+                  <summary class="state-variant-label">Resources / Quotas — Empty State</summary>
+                  <div class="state-variant-content" data-state="empty">
+                    <div class="state-empty">
+                      <div class="state-empty-icon">📊</div>
+                      <div class="state-empty-title">暂无资源监控数据</div>
+                      <div class="state-empty-desc">资源监控服务尚未连接，请检查基础设施配置</div>
+                      <button class="state-empty-cta">连接监控</button>
+                    </div>
+                  </div>
+                </details>
+                <details class="state-variant">
+                  <summary class="state-variant-label">Resources / Quotas — Error State</summary>
+                  <div class="state-variant-content" data-state="failed">
+                    <div class="state-error">
+                      <div class="state-error-icon">!</div>
+                      <div class="state-error-title">资源数据加载失败</div>
+                      <div class="state-error-desc">无法获取资源使用信息，Infrastructure Monitor 服务可能异常</div>
+                      <button class="state-error-retry">重试</button>
+                    </div>
+                  </div>
+                </details>
+              </div>
             </div>
-            <span class="alert-time">12:32:15</span>
-          </div>
-          <!-- Alert 3 — warning -->
-          <div class="alert-row">
-            <span class="alert-dot warning"></span>
-            <div class="alert-content">
-              <span class="alert-title">Tushare API 日配额即将耗尽 <span class="alert-severity warning">警告</span></span>
-              <span class="alert-desc">4,820/5,000 今日请求，预计 3 小时后重置</span>
-            </div>
-            <span class="alert-time">14:20:15</span>
-          </div>
-          <!-- Alert 4 — warning -->
-          <div class="alert-row">
-            <span class="alert-dot warning"></span>
-            <div class="alert-content">
-              <span class="alert-title">因子计算任务延迟 <span class="alert-severity warning">警告</span></span>
-              <span class="alert-desc">北向持仓变化率因子计算积压 15 分钟</span>
-            </div>
-            <span class="alert-time">13:32:08</span>
           </div>
         </div>
       </div>
@@ -1586,6 +2053,138 @@
     <span class="status-kbd">Ctrl+K</span> 搜索
   </div>
 
+  <!-- Overlay trigger: task-detail checkbox -->
+  <input type="checkbox" id="overlay-task-detail" class="overlay-radio sr-only">
+
   <script src="shared/theme-switcher.js"></script>
+
+  <!-- ══════════════════════════════════════════════
+       Overlays (3: Modal + Dialog + Drawer)
+       ══════════════════════════════════════════════ -->
+  <div class="overlays">
+    <!-- Overlay A: 异常处理 Modal (居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-alert-handle">
+      <label class="overlay-dismiss" for="overlay-alert-handle" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="异常处理">
+        <div class="overlay-header">
+          <span class="overlay-title">异常处理</span>
+          <label for="overlay-alert-handle" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>告警摘要</h4>
+          <p style="color:var(--text-primary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-8) 0;">上交所行情接口响应超时，超时 45s，已自动切换备用源。</p>
+
+          <h4>影响范围</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">受影响服务</span>
+            <span class="overlay-field-value">行情数据同步 Pipeline</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">数据源</span>
+            <span class="overlay-field-value">东方财富 Choice（备用）</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">持续时间</span>
+            <span class="overlay-field-value" style="color:var(--system-down-fg);">38 分钟</span>
+          </div>
+
+          <h4>根因分析</h4>
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">上交所 Level-2 行情网关在 13:54 触发超时，疑似上游机房网络波动。备用源（东方财富）已接管，延迟略高于正常水平（45s vs 2s）。</p>
+
+          <div class="overlay-actions">
+            <label for="overlay-alert-handle" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">忽略</label>
+            <button class="overlay-btn overlay-btn-danger">升级</button>
+            <label for="overlay-alert-handle" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认处理</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: Pipeline 重跑确认 Dialog (居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-pipeline-rerun">
+      <label class="overlay-dismiss" for="overlay-pipeline-rerun" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="确认重跑" style="max-width:400px;">
+        <div class="overlay-header">
+          <span class="overlay-title">确认重跑 Pipeline</span>
+          <label for="overlay-pipeline-rerun" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-12) 0;">
+            确认重跑 <strong style="color:var(--text-primary);">日线行情同步</strong>？
+          </p>
+          <div style="background:var(--surface-muted);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8) var(--space-10);font-size:var(--font-size-12);color:var(--system-degraded-fg);line-height:1.5;">
+            注意：当前正在执行的任务将被中断，重新开始获取数据。已完成的部分结果不会被保留。
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-pipeline-rerun" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-pipeline-rerun" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认重跑</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: 任务详情 Drawer (右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-task-detail">
+      <label class="overlay-dismiss" for="overlay-task-detail" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="任务详情">
+        <div class="overlay-header">
+          <span class="overlay-title">任务详情</span>
+          <label for="overlay-task-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>基本信息</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">任务名称</span>
+            <span class="overlay-field-value">日线行情同步</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">Pipeline</span>
+            <span class="overlay-field-value">daily-quote-sync</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">状态</span>
+            <span class="overlay-field-value" style="color:var(--system-healthy-fg);">运行中</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">触发方式</span>
+            <span class="overlay-field-value">定时（每 30 分钟）</span>
+          </div>
+
+          <h4>执行参数</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">数据源</span>
+            <span class="overlay-field-value">Tushare + Wind</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">数据范围</span>
+            <span class="overlay-field-value">全市场 A 股</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">开始时间</span>
+            <span class="overlay-field-value">14:30:00</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">预计剩余</span>
+            <span class="overlay-field-value">2 分钟</span>
+          </div>
+
+          <h4>运行日志</h4>
+          <div style="background:var(--surface-muted);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-numeric);font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.8;">
+            <div>14:30:00 任务启动</div>
+            <div>14:30:01 连接 Tushare API...</div>
+            <div>14:30:03 获取日线数据 · 共 5,242 条</div>
+            <div>14:30:15 Tushare 同步完成 · 5,242/5,242</div>
+            <div>14:30:16 连接 Wind API...</div>
+            <div style="color:var(--system-healthy-fg);">14:30:18 Wind 同步进行中 · 3,812/4,100</div>
+          </div>
+
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-secondary">查看完整日志</button>
+            <label for="overlay-task-detail" class="overlay-btn overlay-btn-primary" style="cursor:pointer">关闭</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

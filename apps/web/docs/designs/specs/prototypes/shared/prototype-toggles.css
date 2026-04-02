@@ -1,0 +1,402 @@
+/* ─────────────────────────────────────────────
+ * Ditto Prototype — State Toggle System
+ * Pure CSS interactive states for prototypes.
+ * Loaded after all token & layout layers.
+ * ─────────────────────────────────────────────
+ *
+ * Three toggle mechanisms:
+ *   1. Tab panels    — input[type="radio"] + :has()
+ *   2. Modal/Drawer  — input[type="checkbox"] + :has()
+ *   3. State variants — <details> element
+ *
+ * No JavaScript required. All states live in the
+ * DOM for review and accessibility.
+ * ───────────────────────────────────────────── */
+
+/* ── 0. Shared Utilities ── */
+
+.sr-only {
+  position: absolute;
+  width:   1px;
+  height:  1px;
+  padding: 0;
+  margin:  -1px;
+  overflow: hidden;
+  clip:    rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border:  0;
+}
+
+/* ── 1. Tab Panel System ──────────────────────
+ *
+ * HTML pattern:
+ *   <div class="tab-group" data-tab-group="hub">
+ *     <input type="radio" name="hub" id="hub-overview"
+ *            checked class="tab-radio sr-only">
+ *     <label for="hub-overview" class="hub-tab" role="tab">
+ *       概览
+ *     </label>
+ *     <input type="radio" name="hub" id="hub-quote"
+ *            class="tab-radio sr-only">
+ *     <label for="hub-quote" class="hub-tab" role="tab">
+ *       行情
+ *     </label>
+ *
+ *     <div class="tab-panels">
+ *       <div class="tab-panel" data-panel="hub-overview">
+ *         ... overview content ...
+ *       </div>
+ *       <div class="tab-panel" data-panel="hub-quote">
+ *         ... quote content ...
+ *       </div>
+ *     </div>
+ *   </div>
+ *
+ * CSS activation rule (add per-page in <style>):
+ *   .tab-group:has(#hub-overview:checked)
+ *     [data-panel="hub-overview"] { display: block; }
+ *
+ * Convention: radio id = label for = data-panel value
+ * All three must match for the toggle to work.
+ */
+
+.tab-group {
+  display: contents;
+}
+
+.tab-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.tab-panel {
+  display: none;
+}
+
+/* ── 2. Overlay System (Modal / Sheet / Drawer) ─
+ *
+ * HTML pattern — checkbox can be placed anywhere,
+ * overlay content can be placed anywhere:
+ *
+ *   <!-- Trigger (inline in page) -->
+ *   <input type="checkbox" id="overlay-watchlist"
+ *          class="overlay-radio sr-only">
+ *   <label for="overlay-watchlist" class="btn">
+ *     + 加入观察列表
+ *   </label>
+ *
+ *   <!-- Overlay (at end of body, inside .overlays) -->
+ *   <div class="overlays">
+ *     <div class="overlay-backdrop"
+ *          data-overlay="overlay-watchlist">
+ *       <label class="overlay-dismiss"
+ *              for="overlay-watchlist"
+ *              aria-label="关闭"></label>
+ *       <div class="overlay-sheet" role="dialog"
+ *            aria-label="加入观察列表">
+ *         ... sheet content ...
+ *       </div>
+ *     </div>
+ *   </div>
+ *
+ * CSS activation rule (add per-page in <style>):
+ *   :root:has(#overlay-watchlist:checked)
+ *     [data-overlay="overlay-watchlist"] { display: flex; }
+ *
+ * Close overlay: clicking the backdrop label toggles
+ * the checkbox off.
+ */
+
+.overlays {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.overlay-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.overlay-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sheet — centered modal, max 480px wide */
+.overlay-backdrop .overlay-sheet {
+  background: var(--surface-elevated, #1e1e1e);
+  border: 1px solid var(--border-subtle, #2a2a2a);
+  border-radius: var(--panel-radius, 8px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+  padding: var(--space-16, 24px);
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* Drawer — right-aligned slide-over, 380px wide */
+.overlay-backdrop .overlay-drawer {
+  background: var(--surface-elevated, #1e1e1e);
+  border: 1px solid var(--border-subtle, #2a2a2a);
+  border-radius: var(--panel-radius, 8px) 0 0 var(--panel-radius, 8px);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+  padding: var(--space-16, 24px);
+  width: 380px;
+  height: 100vh;
+  overflow-y: auto;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 1;
+}
+
+/* Click backdrop to close */
+.overlay-dismiss {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  z-index: 0;
+}
+
+/* ── 3. State Variant System ───────────────────
+ *
+ * Uses native <details>/<summary> for expandable
+ * state previews. Each variant is a collapsible
+ * section showing how a component looks in a
+ * specific state (empty / loading / error).
+ *
+ * HTML pattern:
+ *   <details class="state-variant">
+ *     <summary class="state-variant-label">
+ *       Empty State
+ *     </summary>
+ *     <div class="state-variant-content"
+ *          data-state="empty">
+ *       ... empty state mockup ...
+ *     </div>
+ *   </details>
+ *
+ * No activation CSS needed — <details> is natively
+ * interactive. Styling below makes it blend with
+ * the prototype visual language.
+ */
+
+.state-variant {
+  border: 1px dashed var(--border-default, #333);
+  border-radius: var(--radius-6, 6px);
+  margin: var(--space-8, 12px) 0;
+  overflow: hidden;
+}
+
+.state-variant-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4, 6px);
+  padding: var(--space-6, 8px) var(--space-10, 16px);
+  font-size: var(--font-size-11, 11px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--text-tertiary, #888);
+  background: var(--surface-muted, #141414);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.state-variant-label::-webkit-details-marker {
+  display: none;
+}
+
+.state-variant-label::before {
+  content: "▶";
+  font-size: 8px;
+  transition: transform 0.15s ease;
+}
+
+.state-variant[open] > .state-variant-label::before {
+  transform: rotate(90deg);
+}
+
+.state-variant[open] > .state-variant-label {
+  color: var(--text-secondary, #aaa);
+  border-bottom: 1px solid var(--border-subtle, #2a2a2a);
+}
+
+.state-variant-content {
+  padding: var(--space-12, 16px);
+  min-height: 120px;
+  background: var(--surface-app, #0a0a0a);
+}
+
+/* ── 4. State Variant Content Patterns ──────── */
+
+/* Empty state */
+.state-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8, 12px);
+  padding: var(--space-16, 24px) var(--space-12, 16px);
+  color: var(--text-tertiary, #888);
+  text-align: center;
+}
+
+.state-empty-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-muted, #141414);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.state-empty-title {
+  font-size: var(--font-size-13, 13px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--text-secondary, #aaa);
+}
+
+.state-empty-desc {
+  font-size: var(--font-size-12, 12px);
+  color: var(--text-tertiary, #888);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.state-empty-cta {
+  margin-top: var(--space-4, 6px);
+  padding: var(--btn-sm-padding-y, 2px) var(--btn-cta-padding-x, 16px);
+  font-size: var(--font-size-12, 12px);
+  border-radius: var(--btn-radius, 4px);
+  background: var(--accent-bg, #1a1a2e);
+  color: var(--accent-fg, #a0a0ff);
+  border: 1px solid var(--accent-border, #2a2a4e);
+  cursor: pointer;
+}
+
+/* Loading / Skeleton state */
+.state-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6, 8px);
+  padding: var(--space-12, 16px);
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-muted, #141414) 25%,
+    var(--surface-overlay, #1a1a1a) 50%,
+    var(--surface-muted, #141414) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-4, 4px);
+}
+
+.skeleton-text {
+  height: 12px;
+  width: 100%;
+}
+
+.skeleton-text-sm {
+  height: 10px;
+  width: 70%;
+}
+
+.skeleton-heading {
+  height: 16px;
+  width: 40%;
+}
+
+.skeleton-row {
+  height: 36px;
+  width: 100%;
+}
+
+.skeleton-chart {
+  height: 160px;
+  width: 100%;
+  border-radius: var(--radius-6, 6px);
+}
+
+.skeleton-badge {
+  display: inline-block;
+  height: 20px;
+  width: 56px;
+  border-radius: var(--radius-10, 10px);
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Error state */
+.state-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8, 12px);
+  padding: var(--space-16, 24px) var(--space-12, 16px);
+  text-align: center;
+}
+
+.state-error-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.state-error-title {
+  font-size: var(--font-size-13, 13px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--text-secondary, #aaa);
+}
+
+.state-error-desc {
+  font-size: var(--font-size-12, 12px);
+  color: var(--text-tertiary, #888);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.state-error-retry {
+  margin-top: var(--space-4, 6px);
+  padding: var(--btn-sm-padding-y, 2px) var(--btn-cta-padding-x, 16px);
+  font-size: var(--font-size-12, 12px);
+  border-radius: var(--btn-radius, 4px);
+  background: var(--surface-elevated, #1e1e1e);
+  color: var(--text-secondary, #aaa);
+  border: 1px solid var(--border-default, #333);
+  cursor: pointer;
+}

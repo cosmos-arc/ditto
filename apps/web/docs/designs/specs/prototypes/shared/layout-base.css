@@ -29,6 +29,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Button Reset ──
+ * Remove browser default background, border, color on all <button> elements.
+ * Individual component classes (decision-cta, switcher-btn, etc.) override as needed.
+ */
+button {
+  background: transparent;
+  border: none;
+  color: inherit;
+}
+
 /* ── Layout Component Variables (density-sensitive) ── */
 :root {
   /* Shell grid */
@@ -299,7 +309,7 @@ body {
 
 .pulse-item .pulse-value {
   font-family: var(--font-family-numeric);
-  font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-regular);
   color: var(--text-secondary);
 }
 
@@ -387,8 +397,8 @@ body {
 }
 
 .panel-subtitle {
-  font-size: var(--font-size-10);
-  font-weight: var(--font-weight-normal);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-regular);
   color: var(--text-tertiary);
 }
 
@@ -539,6 +549,8 @@ body {
 }
 
 .decision-judgment-metric .status-value.warning { color: var(--risk-high-fg); }
+.decision-judgment-metric .status-value.up { color: var(--market-up-fg); }
+.decision-judgment-metric .status-value.down { color: var(--market-down-fg); }
 
 .decision-execution .exec-summary {
   font-size: var(--font-size-12);
@@ -602,8 +614,8 @@ body {
 }
 
 .decision-routing-label {
-  font-size: var(--font-size-10);
-  color: var(--text-disabled);
+  font-size: var(--font-size-12);
+  color: var(--text-tertiary);
   margin-bottom: var(--space-4);
   align-self: flex-end;
 }
@@ -1029,7 +1041,7 @@ body {
 
 .market-name {
   font-size: var(--font-size-12);
-  font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-regular);
   color: var(--text-secondary);
 }
 
@@ -1084,7 +1096,7 @@ body {
 
 .alert-time {
   font-family: var(--font-family-numeric);
-  font-size: var(--font-size-10);
+  font-size: var(--font-size-12);
   color: var(--text-tertiary);
   white-space: nowrap;
   flex-shrink: 0;
@@ -1184,7 +1196,7 @@ body {
 
 .findings-feed-subtitle {
   font-size: var(--font-size-10);
-  font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-regular);
   color: var(--text-tertiary);
   text-transform: none;
   letter-spacing: 0;

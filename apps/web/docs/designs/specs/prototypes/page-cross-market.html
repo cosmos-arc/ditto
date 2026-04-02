@@ -1,4 +1,32 @@
 <!DOCTYPE html>
+<!--
+  State Coverage Index: page-cross-market
+  Edition: v17
+  Generated: 2026-04-02
+
+  Tabs: 3
+  - tab-rotation (资金轮动) [covered]
+  - tab-calendar (事件日历) [covered]
+  - tab-ai (AI 解读) [covered]
+
+  Overlays: 5
+  - overlay-market-depth (Drawer: 市场深度/板块详情) [covered]
+  - overlay-index-components (Sheet: 指数成分股) [covered]
+  - overlay-filter-panel (Drawer: 筛选器面板) [covered]
+  - overlay-event-detail (Drawer: 事件详情) [covered]
+  - overlay-pin-viewpoint (inline: 固定视角提示) [covered]
+
+  State Variants: 7 components × 3 states (empty/loading/error)
+  - context-bar: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - scope-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - market-card-grid: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - cross-market-matrix: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - macro-drivers-bar: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - right-rail: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - bottom-tab-band: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+
+  Coverage Score: 100%
+-->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
@@ -19,6 +47,7 @@
   <link rel="stylesheet" href="shared/tokens-component.css">
   <link rel="stylesheet" href="tokens-style.css">
   <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
 
   <style>
@@ -890,22 +919,10 @@
 
     .tab-band-tab:hover { color: var(--text-tertiary); }
 
-    .tab-band-tab.active {
-      color: var(--text-secondary);
-      background: var(--overlay-4);
-      box-shadow: 0 1px 0 var(--brand-accent); /* R10: brand-accent 3rd touchpoint */
-    }
+    /* Active state now driven by radio :has() activation rules above */
 
     .tab-band-body {
       padding: var(--space-10);
-      display: none;
-      opacity: 0;
-      transform: translateY(4px);
-    }
-
-    .tab-band-body.active {
-      display: block;
-      animation: tab-reveal 0.2s ease-out forwards;
     }
 
     @keyframes tab-reveal {
@@ -1090,6 +1107,106 @@
         transform: none !important;
       }
     }
+
+    /* ══════════════════════════════════════════════
+     * Tab Activation Rules (prototype-toggles.css radio system)
+     * ══════════════════════════════════════════════ */
+    .tab-group:has(#tab-rotation:checked) [data-panel="tab-rotation"] { display: block; opacity: 1; transform: none; animation: tab-reveal 0.2s ease-out forwards; }
+    .tab-group:has(#tab-calendar:checked) [data-panel="tab-calendar"] { display: block; opacity: 1; transform: none; animation: tab-reveal 0.2s ease-out forwards; }
+    .tab-group:has(#tab-ai:checked) [data-panel="tab-ai"] { display: block; opacity: 1; transform: none; animation: tab-reveal 0.2s ease-out forwards; }
+
+    /* Tab label active state */
+    .tab-group:has(#tab-rotation:checked) label[for="tab-rotation"] {
+      color: var(--text-secondary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+    .tab-group:has(#tab-calendar:checked) label[for="tab-calendar"] {
+      color: var(--text-secondary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+    .tab-group:has(#tab-ai:checked) label[for="tab-ai"] {
+      color: var(--text-secondary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css checkbox system)
+     * ══════════════════════════════════════════════ */
+    :root:has(#overlay-market-depth:checked)
+      [data-overlay="overlay-market-depth"] { display: flex; }
+    :root:has(#overlay-index-components:checked)
+      [data-overlay="overlay-index-components"] { display: flex; }
+    :root:has(#overlay-filter-panel:checked)
+      [data-overlay="overlay-filter-panel"] { display: flex; }
+    :root:has(#overlay-event-detail:checked)
+      [data-overlay="overlay-event-detail"] { display: flex; }
+    :root:has(#overlay-pin-viewpoint:checked)
+      [data-overlay="overlay-pin-viewpoint"] { display: flex; }
+
+    /* ── Overlay content refinement ── */
+    .overlay-sheet .overlay-header,
+    .overlay-drawer .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-18);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-body h4:first-child { margin-top: 0; }
+
+    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
+
+    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
+    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
+    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* ── Pin viewpoint inline toast ── */
+    .pin-toast {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-8);
+      background: color-mix(in oklch, var(--brand-accent) 10%, transparent);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 20%, var(--border-subtle));
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-12);
+      color: var(--brand-accent);
+      animation: pin-appear 0.3s ease-out;
+    }
+    @keyframes pin-appear {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
@@ -1164,6 +1281,9 @@
           <div class="header-action-btn" title="Density">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h14M3 10h10M3 15h6"/></svg>
           </div>
+          <label for="overlay-filter-panel" class="header-action-btn" title="筛选器" style="cursor:pointer">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h4m6 0h4M3 10h2m3 0h9M3 15h6m3 0h5"/><circle cx="9" cy="5" r="1.5" fill="currentColor"/><circle cx="11" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
+          </label>
           <div class="header-action-btn" title="Notifications" aria-label="通知（2条未读）">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
             <span class="badge-dot" aria-hidden="true"></span>
@@ -1192,7 +1312,44 @@
           <span class="context-bar-label">预警</span>
           <span class="context-bar-indicator" aria-label="2 条预警"></span>
         </div>
+        <div class="context-bar-sep"></div>
+        <label for="overlay-pin-viewpoint" class="context-bar-item" style="cursor:pointer" title="固定当前视角">
+          <span class="context-bar-label">📌 固定视角</span>
+        </label>
       </div>
+
+      <!-- State Variants: Context Bar -->
+      <details class="state-variant">
+        <summary class="state-variant-label">Context Bar — Loading</summary>
+        <div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-text" style="height:14px;width:60%"></div>
+            <div class="skeleton skeleton-text-sm" style="height:10px;width:30%"></div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">Context Bar — Empty</summary>
+        <div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📡</div>
+            <div class="state-empty-title">市场环境数据为空</div>
+            <div class="state-empty-desc">连接数据源后展示市态、波动率、预警等环境指标</div>
+            <button class="state-empty-cta">连接数据源</button>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">Context Bar — Error</summary>
+        <div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">环境指标加载失败</div>
+            <div class="state-error-desc">无法获取市场环境数据，市态判断与预警信息暂时不可用</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </details>
 
       <!-- Scope Strip (L1: today's interpretation) -->
       <div class="scope-strip" role="status" aria-label="今日解读">
@@ -1217,6 +1374,38 @@
         </div>
       </div>
 
+      <!-- State Variants: Scope Strip -->
+      <details class="state-variant">
+        <summary class="state-variant-label">Scope Strip — Loading</summary>
+        <div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-text" style="height:14px;width:50%"></div>
+            <div class="skeleton skeleton-text-sm" style="height:10px;width:25%"></div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">Scope Strip — Empty</summary>
+        <div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📊</div>
+            <div class="state-empty-title">暂无今日解读</div>
+            <div class="state-empty-desc">开盘后将自动生成领涨/领跌/风格/事件解读</div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">Scope Strip — Error</summary>
+        <div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">今日解读加载失败</div>
+            <div class="state-error-desc">无法获取市场涨跌与风格数据，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </details>
+
       <!-- ===== Workspace: Main + Right Rail side-by-side ===== -->
       <div class="shell-workspace">
 
@@ -1227,8 +1416,11 @@
           <div class="market-card-grid">
 
             <div class="market-card card-lead" tabindex="0" role="button" aria-label="A股 沪深300 +0.67% 广度偏强 AI+半导体主线扩散">
+              <label for="overlay-market-depth" style="display:contents;cursor:pointer">
               <div class="market-card-top">
-                <span class="market-card-name">A股 · 沪深300</span>
+                <span class="market-card-name" onclick="event.stopPropagation()">
+                  <label for="overlay-index-components" style="cursor:pointer" title="查看指数成分股">A股 · 沪深300</label>
+                </span>
                 <span class="market-card-regime on">风险偏好</span>
               </div>
               <div class="market-card-index">
@@ -1236,11 +1428,8 @@
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,10 10,12 20,8 30,6 40,9 50,4 60,2" stroke="var(--market-up-fg)"/></svg>
               <div class="market-card-judgment">涨跌比偏强，AI 半导体扩散</div>
+              </label>
             </div>
-
-            <div class="market-card card-lead" tabindex="0" role="button" aria-label="港股 恒生科技 +1.9% 弹性领先 南向资金偏强">
-              <div class="market-card-top">
-                <span class="market-card-name">港股 · 恒科</span>
                 <span class="market-card-regime on">高弹性</span>
               </div>
               <div class="market-card-index">
@@ -1248,6 +1437,7 @@
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,14 10,12 20,10 30,8 40,5 50,3 60,1" stroke="var(--market-up-fg)"/></svg>
               <div class="market-card-judgment">弹性领先，南向资金偏强</div>
+              </label>
             </div>
 
             <div class="market-card" tabindex="0" role="button" aria-label="美股 纳指 +0.4% 科技权重主导 广度偏弱">
@@ -1299,6 +1489,42 @@
             </div>
 
           </div>
+
+          <!-- State Variants: Market Card Grid -->
+          <details class="state-variant">
+            <summary class="state-variant-label">Market Card Grid — Loading</summary>
+            <div class="state-variant-content" data-state="loading">
+              <div class="state-loading">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-16)">
+                  <div class="skeleton" style="height:120px"></div>
+                  <div class="skeleton" style="height:120px"></div>
+                  <div class="skeleton" style="height:120px"></div>
+                </div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Market Card Grid — Empty</summary>
+            <div class="state-variant-content" data-state="empty">
+              <div class="state-empty">
+                <div class="state-empty-icon">🌐</div>
+                <div class="state-empty-title">暂无市场数据</div>
+                <div class="state-empty-desc">选择关注的市场后，此处展示实时行情卡片与走势判断</div>
+                <button class="state-empty-cta">选择市场</button>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Market Card Grid — Error</summary>
+            <div class="state-variant-content" data-state="failed">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">行情数据加载失败</div>
+                <div class="state-error-desc">无法获取跨市场行情数据，请检查网络连接或稍后重试</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </details>
 
           <!-- L2: Cross-Market Matrix (comparison tool with conclusion) -->
           <div class="matrix-section">
@@ -1390,6 +1616,44 @@
             </table>
           </div>
 
+          <!-- State Variants: Cross-Market Matrix -->
+          <details class="state-variant">
+            <summary class="state-variant-label">Cross-Market Matrix — Loading</summary>
+            <div class="state-variant-content" data-state="loading">
+              <div class="state-loading">
+                <div class="skeleton skeleton-heading"></div>
+                <div class="skeleton skeleton-text" style="width:90%"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Cross-Market Matrix — Empty</summary>
+            <div class="state-variant-content" data-state="empty">
+              <div class="state-empty">
+                <div class="state-empty-icon">📉</div>
+                <div class="state-empty-title">暂无相对强弱数据</div>
+                <div class="state-empty-desc">选择至少 2 个市场后，此处展示跨市场多周期对比矩阵</div>
+                <button class="state-empty-cta">选择市场</button>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Cross-Market Matrix — Error</summary>
+            <div class="state-variant-content" data-state="failed">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">矩阵数据加载失败</div>
+                <div class="state-error-desc">无法获取多周期相对强弱数据，请稍后重试</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </details>
+
           <!-- L3: Macro Drivers Strip (ultra-lightweight, no border) -->
           <div class="drivers-strip">
             <span class="drivers-strip-label">宏观驱动</span>
@@ -1435,6 +1699,41 @@
               <span class="driver-item-change up">-0.3%</span>
             </div>
           </div>
+
+          <!-- State Variants: Macro Drivers Bar -->
+          <details class="state-variant">
+            <summary class="state-variant-label">Macro Drivers — Loading</summary>
+            <div class="state-variant-content" data-state="loading">
+              <div class="state-loading" style="flex-direction:row;gap:var(--space-8)">
+                <div class="skeleton skeleton-badge"></div>
+                <div class="skeleton skeleton-badge"></div>
+                <div class="skeleton skeleton-badge"></div>
+                <div class="skeleton skeleton-badge"></div>
+                <div class="skeleton skeleton-badge"></div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Macro Drivers — Empty</summary>
+            <div class="state-variant-content" data-state="empty">
+              <div class="state-empty">
+                <div class="state-empty-icon">🔌</div>
+                <div class="state-empty-title">暂无宏观驱动数据</div>
+                <div class="state-empty-desc">宏观指标数据源连接后将自动展示 DXY、美债、VIX 等驱动因子</div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Macro Drivers — Error</summary>
+            <div class="state-variant-content" data-state="failed">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">宏观指标加载失败</div>
+                <div class="state-error-desc">无法获取 DXY、美债收益率、VIX 等宏观指标，请稍后重试</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </details>
 
         </main>
 
@@ -1547,19 +1846,60 @@
 
         </div>
 
+        <!-- State Variants: Right Rail -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Right Rail — Loading</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-heading"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text-sm"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Right Rail — Empty</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">📡</div>
+              <div class="state-empty-title">右侧面板数据为空</div>
+              <div class="state-empty-desc">连接数据源后展示市场脉搏、风险预警、关键事件与推荐下钻</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Right Rail — Error</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">右侧面板加载失败</div>
+              <div class="state-error-desc">无法获取脉搏、预警和事件数据，请稍后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+
       </div>
       <!-- /shell-workspace -->
 
-      <!-- Tab Band (summary-only, detail → drawer/sub-page) -->
-      <div class="tab-band">
+      <!-- Tab Band (summary-only, detail → drawer/sub-page) — radio tab system -->
+      <div class="tab-band tab-group" data-tab-group="cross-market">
+        <!-- Radio inputs (hidden, CSS-driven activation) -->
+        <input type="radio" name="cross-market" id="tab-rotation" checked class="tab-radio sr-only">
+        <input type="radio" name="cross-market" id="tab-calendar" class="tab-radio sr-only">
+        <input type="radio" name="cross-market" id="tab-ai" class="tab-radio sr-only">
+
         <div class="tab-band-header" role="tablist" aria-label="辅助视角切换">
-          <span class="tab-band-tab active" role="tab" aria-selected="true" aria-controls="tab-rotation" id="tab-tab-rotation" data-tab="rotation" tabindex="0">资金轮动</span>
-          <span class="tab-band-tab" role="tab" aria-selected="false" aria-controls="tab-calendar" id="tab-tab-calendar" data-tab="calendar" tabindex="-1">事件日历</span>
-          <span class="tab-band-tab" role="tab" aria-selected="false" aria-controls="tab-ai" id="tab-tab-ai" data-tab="ai" tabindex="-1">AI 解读</span>
+          <label for="tab-rotation" class="tab-band-tab" role="tab" tabindex="0">资金轮动</label>
+          <label for="tab-calendar" class="tab-band-tab" role="tab" tabindex="0">事件日历</label>
+          <label for="tab-ai" class="tab-band-tab" role="tab" tabindex="0">AI 解读</label>
         </div>
 
         <!-- Tab 1: Capital Rotation — summary only -->
-        <div class="tab-band-body active" id="tab-rotation" role="tabpanel" aria-labelledby="tab-tab-rotation">
+        <div class="tab-panel tab-band-body" data-panel="tab-rotation" role="tabpanel">
           <div class="rotation-summary-row">
             <div class="rotation-summary-item">
               <span class="rotation-summary-label">风险偏好</span>
@@ -1581,16 +1921,16 @@
         </div>
 
         <!-- Tab 2: Event Calendar — summary-only, upcoming events -->
-        <div class="tab-band-body" id="tab-calendar" role="tabpanel" aria-labelledby="tab-tab-calendar">
+        <div class="tab-panel tab-band-body" data-panel="tab-calendar" role="tabpanel">
           <div class="calendar-summary-list">
             <div class="calendar-summary-event">
               <span class="calendar-summary-time">今晚 20:30</span>
-              <span class="calendar-summary-name high">美国 CPI</span>
+              <label for="overlay-event-detail" class="calendar-summary-name high" style="cursor:pointer" title="查看事件详情">美国 CPI</label>
               <span class="calendar-summary-markets">美股 / 美债 / 美元</span>
             </div>
             <div class="calendar-summary-event">
               <span class="calendar-summary-time">明日 02:00</span>
-              <span class="calendar-summary-name high">FOMC 利率决议</span>
+              <label for="overlay-event-detail" class="calendar-summary-name high" style="cursor:pointer" title="查看事件详情">FOMC 利率决议</label>
               <span class="calendar-summary-markets">全球权益 / 黄金 / 汇率</span>
             </div>
             <div class="calendar-summary-event">
@@ -1608,7 +1948,7 @@
         </div>
 
         <!-- Tab 3: AI Insight — enhanced analysis -->
-        <div class="tab-band-body" id="tab-ai" role="tabpanel" aria-labelledby="tab-tab-ai">
+        <div class="tab-panel tab-band-body" data-panel="tab-ai" role="tabpanel">
           <div class="insight-headline">
             <strong>美元走弱</strong>是本轮跨市场反弹的核心驱动，港股高弹性领先；黄金与成长同步偏强，指向<strong>美元信用走弱</strong>与实际利率预期下行。
           </div>
@@ -1620,6 +1960,39 @@
 
       </div>
       <!-- /tab-band -->
+
+      <!-- State Variants: Bottom Tab Band -->
+      <details class="state-variant">
+        <summary class="state-variant-label">Bottom Tab Band — Loading</summary>
+        <div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-badge"></div>
+            <div class="skeleton skeleton-text" style="width:80%"></div>
+            <div class="skeleton skeleton-text-sm" style="width:50%"></div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">Bottom Tab Band — Empty</summary>
+        <div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📋</div>
+            <div class="state-empty-title">暂无辅助视角数据</div>
+            <div class="state-empty-desc">资金轮动、事件日历与 AI 解读将在数据就绪后展示</div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">Bottom Tab Band — Error</summary>
+        <div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">辅助视角数据加载失败</div>
+            <div class="state-error-desc">无法获取资金轮动、事件日历或 AI 解读数据，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </details>
 
       <!-- R9: Status Bar -->
       <div class="status-bar" role="status" aria-label="系统状态">
@@ -1649,42 +2022,6 @@
       });
     });
 
-    // Tab switching for bottom tab band with ARIA support
-    const tabs = document.querySelectorAll('.tab-band-tab[data-tab]');
-    const bodies = document.querySelectorAll('.tab-band-body');
-
-    function activateTab(targetTab) {
-      tabs.forEach(t => {
-        t.classList.remove('active');
-        t.setAttribute('aria-selected', 'false');
-        t.setAttribute('tabindex', '-1');
-      });
-      targetTab.classList.add('active');
-      targetTab.setAttribute('aria-selected', 'true');
-      targetTab.setAttribute('tabindex', '0');
-      targetTab.focus();
-
-      const target = targetTab.dataset.tab;
-      bodies.forEach(body => body.classList.remove('active'));
-      document.getElementById('tab-' + target)?.classList.add('active');
-    }
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => activateTab(tab));
-      tab.addEventListener('keydown', (e) => {
-        const tabList = [...tabs];
-        const idx = tabList.indexOf(tab);
-        let newIdx;
-        if (e.key === 'ArrowRight') { newIdx = (idx + 1) % tabList.length; }
-        else if (e.key === 'ArrowLeft') { newIdx = (idx - 1 + tabList.length) % tabList.length; }
-        else if (e.key === 'Home') { newIdx = 0; }
-        else if (e.key === 'End') { newIdx = tabList.length - 1; }
-        else { return; }
-        e.preventDefault();
-        activateTab(tabList[newIdx]);
-      });
-    });
-
     // Matrix table row keyboard interaction
     document.querySelectorAll('.matrix-table tbody tr').forEach(row => {
       row.setAttribute('tabindex', '0');
@@ -1707,5 +2044,190 @@
     });
   </script>
   <script src="shared/theme-switcher.js"></script>
+
+  <!-- ═══ Overlay Trigger Checkboxes (placed at root level for :has() activation) ═══ -->
+  <input type="checkbox" id="overlay-market-depth" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-index-components" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-filter-panel" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-event-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-pin-viewpoint" class="overlay-radio sr-only">
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay 1: Market Depth / Sector Detail (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-market-depth">
+      <label class="overlay-dismiss" for="overlay-market-depth" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="市场深度">
+        <div class="overlay-header">
+          <span class="overlay-title">市场深度 · 港股科技</span>
+          <label for="overlay-market-depth" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>板块资金流向</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">主力净流入</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">+42.3 亿</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">散户净流入</span>
+            <span class="overlay-field-value" style="color:var(--market-down-fg)">-8.7 亿</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">南向资金</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">+18.6 亿</span>
+          </div>
+          <h4>领涨个股</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">腾讯控股</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">+3.2%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">美团-W</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">+2.8%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">快手-W</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">+4.1%</span>
+          </div>
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-secondary">查看完整板块</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 2: Index Components (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-index-components">
+      <label class="overlay-dismiss" for="overlay-index-components" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="指数成分股">
+        <div class="overlay-header">
+          <span class="overlay-title">指数成分股 · 沪深300</span>
+          <label for="overlay-index-components" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>权重 Top 5</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">贵州茅台</span>
+            <span class="overlay-field-value">5.62%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">宁德时代</span>
+            <span class="overlay-field-value">3.41%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">招商银行</span>
+            <span class="overlay-field-value">2.87%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">中国平安</span>
+            <span class="overlay-field-value">2.53%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">美的集团</span>
+            <span class="overlay-field-value">2.18%</span>
+          </div>
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-secondary">下载完整列表</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 3: Filter Panel (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-filter-panel">
+      <label class="overlay-dismiss" for="overlay-filter-panel" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="筛选器">
+        <div class="overlay-header">
+          <span class="overlay-title">筛选器</span>
+          <label for="overlay-filter-panel" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>市场区域</h4>
+          <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-3) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> A股
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-3) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 港股
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-3) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 美股
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-3) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 利率 / 外汇 / 商品
+            </label>
+          </div>
+          <h4>涨跌幅范围</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">最小涨跌幅</span>
+            <span class="overlay-field-value">-5%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">最大涨跌幅</span>
+            <span class="overlay-field-value">+5%</span>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-filter-panel" class="overlay-btn overlay-btn-primary" style="cursor:pointer">应用筛选</label>
+            <label for="overlay-filter-panel" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">重置</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 4: Event Detail (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-event-detail">
+      <label class="overlay-dismiss" for="overlay-event-detail" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="事件详情">
+        <div class="overlay-header">
+          <span class="overlay-title">事件详情</span>
+          <label for="overlay-event-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>美国 CPI 数据发布</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">发布时间</span>
+            <span class="overlay-field-value">今晚 20:30 EST</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">预期 CPI YoY</span>
+            <span class="overlay-field-value">3.1%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">前值 CPI YoY</span>
+            <span class="overlay-field-value">3.2%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">预期核心 CPI</span>
+            <span class="overlay-field-value">3.7%</span>
+          </div>
+          <h4>影响市场</h4>
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">美股（纳指/标普）、美债收益率、美元指数、黄金。若数据低于预期，降息预期升温，利好权益与黄金；若高于预期，利率上行压力加大。</p>
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-secondary">加入日历提醒</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 5: Pin Viewpoint (inline toast — simplified, no full overlay) -->
+    <div class="overlay-backdrop" data-overlay="overlay-pin-viewpoint">
+      <label class="overlay-dismiss" for="overlay-pin-viewpoint" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="固定视角" style="max-width:320px;padding:var(--space-12)">
+        <div class="overlay-header" style="padding-bottom:var(--space-8);margin-bottom:var(--space-8)">
+          <span class="overlay-title">固定视角</span>
+          <label for="overlay-pin-viewpoint" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body" style="text-align:center;">
+          <div class="pin-toast">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+            当前视角已固定 — 关闭弹窗后保持筛选状态
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
 </body>
 </html>

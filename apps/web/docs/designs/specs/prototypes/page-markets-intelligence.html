@@ -1,0 +1,2311 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-markets-intelligence
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 5
+  - tab-capital-flow (资金面) [covered]
+  - tab-macro (宏观) [covered]
+  - tab-fundamental (基本面) [covered]
+  - tab-news (新闻) [covered]
+  - tab-network (关联网络) [covered]
+
+  Overlays: 5
+  - overlay-intelligence-detail (Drawer: 情报详情) [covered]
+  - overlay-custom-filter (Sheet: 自定义筛选) [covered]
+  - overlay-bookmark-success (Toast/checkbox: 收藏成功) [covered]
+  - overlay-delete-confirm (Sheet: 删除标注确认) [covered]
+  - overlay-send-to-copilot (Drawer: 发送到 Copilot) [covered]
+
+  State Variants: 5 components x 5 states (default/loading/empty/failed/stale) + partial selected
+  - tab-view: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - right-rail-stocks: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - right-rail-filter: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[covered]
+  - right-rail-ai-summary: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - analysis-band: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Markets / Intelligence</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="shared/tokens-base.css">
+  <link rel="stylesheet" href="shared/tokens-semantic.css">
+  <link rel="stylesheet" href="shared/tokens-domain.css">
+  <link rel="stylesheet" href="shared/tokens-interaction.css">
+  <link rel="stylesheet" href="shared/tokens-density.css">
+  <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- State Toggle System (pure CSS: checkbox overlays + details state variants) -->
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    /* ── Style label for visual comparison ── */
+    .style-label {
+      position: fixed;
+      top: var(--space-8);
+      right: var(--space-8);
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-3) var(--space-8);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Header subtitle (breadcrumb sub-text) ── */
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-regular);
+      color: var(--text-tertiary);
+      margin-left: var(--space-8);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Header button group ── */
+    .header-btn-group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+    .header-btn-group-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+    .header-btn-group-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+    .header-title-group {
+      display: flex;
+      align-items: baseline;
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .intel-tab:focus-visible,
+    .header-action-btn:focus-visible,
+    .header-avatar:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-bg);
+      border-radius: var(--radius-4);
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Shell: Intelligence Layout (Rail | Header | Tab Strip | Main+RightRail | Analysis Band)
+     * ══════════════════════════════════════════════ */
+    body { overflow-y: auto; }
+
+    .shell-intel {
+      display: flex;
+      width: 100vw;
+      min-height: 100vh;
+    }
+
+    /* Rail: sticky left, full viewport height */
+    .shell-intel .shell-rail {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      flex-shrink: 0;
+      width: var(--shell-rail-width);
+      z-index: 30;
+      background: var(--surface-app);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--space-8) 0;
+      gap: var(--space-4);
+    }
+
+    .shell-intel .rail-logo {
+      width: var(--rail-logo-size);
+      height: var(--rail-logo-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--space-12);
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-semibold);
+      font-size: var(--font-size-14);
+      color: var(--brand-accent);
+      letter-spacing: -0.02em;
+    }
+
+    .shell-intel .rail-nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      flex: 1;
+    }
+
+    .shell-intel .rail-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .shell-intel .rail-icon {
+      width: var(--rail-icon-size);
+      height: var(--rail-icon-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-8);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+      position: relative;
+    }
+    .shell-intel .rail-icon:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+    .shell-intel .rail-icon.active {
+      background: var(--interaction-selected-bg);
+      color: var(--brand-accent);
+    }
+
+    /* Body: natural flow, no height constraint */
+    .shell-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* Header: sticky top with frosted glass */
+    .shell-intel .shell-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: var(--shell-header-height);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--density-gutter);
+      gap: var(--space-8);
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .shell-intel .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    .shell-header h1.header-title {
+      margin: 0;
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .header-spacer { flex: 1; }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+    .header-timeframe {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+    .header-timestamp {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+    }
+    .header-action-btn {
+      width: var(--header-btn-size);
+      height: var(--header-btn-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-4);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+      position: relative;
+      border: none;
+      background: none;
+    }
+    .header-action-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+    .header-avatar {
+      width: var(--header-avatar-size);
+      height: var(--header-avatar-size);
+      border-radius: 50%;
+      background: var(--interaction-hover-subtle-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .badge-dot {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--risk-high-fg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Tab Strip (primary navigation for 5 intel tabs)
+     * ══════════════════════════════════════════════ */
+    .intel-tab-strip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-4) var(--density-gutter);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-app);
+      position: sticky;
+      top: var(--shell-header-height);
+      z-index: 15;
+    }
+
+    .intel-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-quaternary);
+      padding: var(--space-4) var(--space-10);
+      cursor: pointer;
+      border-radius: var(--radius-4);
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      letter-spacing: 0.02em;
+      min-height: 2rem;
+      display: inline-flex;
+      align-items: center;
+      border: none;
+      background: none;
+    }
+    .intel-tab:hover { color: var(--text-tertiary); }
+    .intel-tab.active {
+      color: var(--text-primary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+    .tab-strip-spacer { flex: 1; }
+    .tab-strip-meta {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Workspace: Main Content + Right Rail
+     * ══════════════════════════════════════════════ */
+    .intel-workspace {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .intel-main {
+      padding: var(--space-12) var(--density-gutter);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-12);
+      overflow-y: auto;
+    }
+
+    /* ── Right Rail (sticky) ── */
+    .intel-right-rail {
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: calc(var(--shell-header-height) + 2.5rem);
+      align-self: start;
+      max-height: calc(100vh - var(--shell-header-height) - 2.5rem);
+      overflow-y: auto;
+    }
+
+    .rail-section {
+      border-bottom: 1px solid var(--overlay-4);
+      flex-shrink: 0;
+      padding: var(--space-6) 0;
+    }
+    .rail-section:last-child { border-bottom: none; }
+    .rail-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-6) var(--space-12);
+      gap: var(--space-4);
+    }
+    .rail-section-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .rail-section-action {
+      font-size: var(--font-size-10);
+      color: var(--brand-accent);
+      cursor: pointer;
+    }
+    .rail-section-body {
+      padding: 0 var(--space-12) var(--space-10);
+    }
+
+    /* ── Stock Quick View Item ── */
+    .stock-quick-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--overlay-3);
+      font-size: var(--font-size-12);
+    }
+    .stock-quick-item:last-child { border-bottom: none; }
+    .stock-quick-name {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+    .stock-quick-code {
+      font-family: var(--font-family-numeric);
+      color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
+      font-size: var(--font-size-10);
+      margin-left: var(--space-4);
+    }
+    .stock-quick-change {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      font-weight: var(--font-weight-medium);
+      font-size: var(--font-size-12);
+      letter-spacing: -0.02em;
+    }
+    .stock-quick-change.up { color: var(--market-up-fg); }
+    .stock-quick-change.down { color: var(--market-down-fg); }
+
+    /* ── Filter Tags ── */
+    .filter-tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }
+    .filter-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-12);
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+    .filter-tag-remove {
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-14);
+      line-height: 1;
+    }
+    .filter-tag-remove:hover { color: var(--market-down-fg); }
+
+    /* ── AI Summary ── */
+    .ai-summary-text {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .ai-summary-text strong {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+    .ai-summary-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-top: var(--space-6);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
+    }
+    .ai-summary-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      animation: status-breathe 2s ease-in-out infinite;
+    }
+    @keyframes status-breathe {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Intelligence Table (shared across tabs)
+     * ══════════════════════════════════════════════ */
+    .intel-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-12);
+    }
+    .intel-table th {
+      text-align: right;
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-tertiary);
+      padding: var(--space-6) var(--space-10);
+      border-bottom: 1px solid var(--border-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+      text-rendering: optimizeLegibility;
+    }
+    .intel-table th:first-child { text-align: left; }
+    .intel-table td {
+      text-align: right;
+      font-family: var(--font-family-numeric);
+      padding: var(--space-6) var(--space-10);
+      border-bottom: 1px solid var(--overlay-2);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+      letter-spacing: -0.02em;
+      text-rendering: optimizeLegibility;
+    }
+    .intel-table td:first-child {
+      text-align: left;
+      font-family: var(--font-family-ui);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .intel-table tr:hover td { background: var(--interaction-hover-subtle-bg); }
+    .intel-table .up { color: var(--market-up-fg); font-weight: var(--font-weight-medium); }
+    .intel-table .down { color: var(--market-down-fg); font-weight: var(--font-weight-medium); }
+    .intel-table .cell-badge {
+      display: inline-flex;
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-10);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      font-family: var(--font-family-ui);
+    }
+    .intel-table .cell-badge.up { background: var(--market-up-bg); color: var(--market-up-fg); }
+    .intel-table .cell-badge.down { background: var(--market-down-bg); color: var(--market-down-fg); }
+    .intel-table .cell-badge.neutral { background: var(--overlay-4); color: var(--text-tertiary); }
+
+    /* ── Section Title (for panels) ── */
+    .section-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── KPI Cards Row ── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-8);
+      margin-bottom: var(--space-12);
+    }
+    .kpi-card {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-10) var(--space-12);
+    }
+    .kpi-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: var(--space-4);
+    }
+    .kpi-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+    }
+    .kpi-change {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+    }
+    .kpi-change.up { color: var(--market-up-fg); }
+    .kpi-change.down { color: var(--market-down-fg); }
+
+    /* ── News List ── */
+    .news-item {
+      display: flex;
+      gap: var(--space-10);
+      padding: var(--space-10) 0;
+      border-bottom: 1px solid var(--overlay-3);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .news-item:last-child { border-bottom: none; }
+    .news-item:hover { background: var(--interaction-hover-subtle-bg); margin: 0 calc(var(--space-10) * -1); padding-left: var(--space-10); padding-right: var(--space-10); border-radius: var(--radius-4); }
+    .news-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+      width: 3rem;
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+    }
+    .news-body { flex: 1; min-width: 0; }
+    .news-headline {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      line-height: 1.5;
+      margin-bottom: var(--space-2);
+    }
+    .news-source {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .news-tag {
+      display: inline-flex;
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-10);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      margin-left: var(--space-6);
+    }
+    .news-tag.hot { background: var(--risk-high-bg, color-mix(in oklch, var(--risk-high-fg) 15%, transparent)); color: var(--risk-high-fg); }
+    .news-tag.policy { background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent); }
+    .news-tag.report { background: var(--overlay-4); color: var(--text-tertiary); }
+
+    /* ── Macro Calendar ── */
+    .macro-event {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-10);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--overlay-3);
+      font-size: var(--font-size-12);
+    }
+    .macro-event:last-child { border-bottom: none; }
+    .macro-event-time {
+      font-family: var(--font-family-numeric);
+      color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+      flex-shrink: 0;
+      width: 3rem;
+    }
+    .macro-event-name {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      flex: 1;
+    }
+    .macro-event-importance {
+      display: flex;
+      gap: 2px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .importance-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-quaternary);
+    }
+    .importance-dot.active { background: var(--amber-500); }
+
+    /* ── Network Correlation Matrix ── */
+    .correlation-grid {
+      display: grid;
+      grid-template-columns: 120px repeat(5, 1fr);
+      gap: 2px;
+      font-size: var(--font-size-11);
+    }
+    .correlation-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-6);
+      border-radius: var(--radius-2);
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+      font-weight: var(--font-weight-medium);
+    }
+    .correlation-cell.header {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-medium);
+    }
+    .correlation-cell.label {
+      justify-content: flex-end;
+      padding-right: var(--space-8);
+      font-family: var(--font-family-ui);
+      color: var(--text-secondary);
+    }
+    .correlation-cell.strong { background: color-mix(in oklch, var(--market-up-fg) 15%, transparent); color: var(--market-up-fg); }
+    .correlation-cell.moderate { background: color-mix(in oklch, var(--market-up-fg) 8%, transparent); color: var(--market-up-fg); }
+    .correlation-cell.weak { color: var(--text-tertiary); }
+    .correlation-cell.negative { background: color-mix(in oklch, var(--market-down-fg) 12%, transparent); color: var(--market-down-fg); }
+
+    /* ══════════════════════════════════════════════
+     * Analysis Band (bottom strip)
+     * ══════════════════════════════════════════════ */
+    .analysis-band {
+      border-top: 1px solid var(--border-subtle);
+      background: var(--surface-panel-base);
+      padding: var(--space-10) var(--density-gutter);
+      display: flex;
+      gap: var(--space-16);
+    }
+    .analysis-band-section {
+      flex: 1;
+    }
+    .analysis-band-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: var(--space-6);
+    }
+    .analysis-band-text {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .analysis-band-text strong {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+    .analysis-band-text .up { color: var(--market-up-fg); }
+    .analysis-band-text .down { color: var(--market-down-fg); }
+
+    /* ══════════════════════════════════════════════
+     * Tab Panel Activation Rules
+     * ══════════════════════════════════════════════ */
+    .tab-group { display: contents; }
+    .tab-panel { display: none; }
+
+    .tab-group:has(#tab-capital-flow:checked) [data-panel="tab-capital-flow"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
+    .tab-group:has(#tab-macro:checked) [data-panel="tab-macro"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
+    .tab-group:has(#tab-fundamental:checked) [data-panel="tab-fundamental"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
+    .tab-group:has(#tab-news:checked) [data-panel="tab-news"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
+    .tab-group:has(#tab-network:checked) [data-panel="tab-network"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
+
+    /* Tab label active state (tab strip uses buttons + :has) */
+    .intel-tab-strip:has(#tab-capital-flow:checked) label[for="tab-capital-flow"] {
+      color: var(--text-primary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+    .intel-tab-strip:has(#tab-macro:checked) label[for="tab-macro"] {
+      color: var(--text-primary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+    .intel-tab-strip:has(#tab-fundamental:checked) label[for="tab-fundamental"] {
+      color: var(--text-primary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+    .intel-tab-strip:has(#tab-news:checked) label[for="tab-news"] {
+      color: var(--text-primary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+    .intel-tab-strip:has(#tab-network:checked) label[for="tab-network"] {
+      color: var(--text-primary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+
+    @keyframes tab-reveal {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules
+     * ══════════════════════════════════════════════ */
+    :root:has(#overlay-intelligence-detail:checked)
+      [data-overlay="overlay-intelligence-detail"] { display: flex; }
+    :root:has(#overlay-custom-filter:checked)
+      [data-overlay="overlay-custom-filter"] { display: flex; }
+    :root:has(#overlay-bookmark-success:checked)
+      [data-overlay="overlay-bookmark-success"] { display: flex; }
+    :root:has(#overlay-delete-confirm:checked)
+      [data-overlay="overlay-delete-confirm"] { display: flex; }
+    :root:has(#overlay-send-to-copilot:checked)
+      [data-overlay="overlay-send-to-copilot"] { display: flex; }
+
+    /* ── Overlay content refinement ── */
+    .overlay-sheet .overlay-header,
+    .overlay-drawer .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-18);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-body h4:first-child { margin-top: 0; }
+
+    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
+
+    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
+    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
+    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
+    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
+
+    /* ── Toast overlay (bookmark success) ── */
+    .overlay-toast {
+      position: fixed;
+      bottom: var(--space-32);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-8) var(--space-16);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      z-index: 1100;
+      display: none;
+      align-items: center;
+      gap: var(--space-8);
+      pointer-events: auto;
+      animation: toast-appear 0.3s ease-out;
+    }
+    .overlay-toast .toast-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: var(--font-size-12);
+      flex-shrink: 0;
+    }
+    .overlay-toast .toast-text {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+    @keyframes toast-appear {
+      from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* ── Noise texture ── */
+    .shell-intel::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.02;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .shell-intel > * { position: relative; z-index: 1; }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .intel-tab, .news-item, .intel-table tr td, .kpi-card,
+      .stock-quick-item, .macro-event { transition: none !important; }
+      .ai-summary-dot { animation: none !important; opacity: 1; }
+      .overlay-toast { animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    <defs>
+      <linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="sparkDown" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <a class="skip-link" href="#main-content">跳至主要内容</a>
+  <div class="style-label">Graphite Studio — 市场情报 · Compact · A股</div>
+
+  <div class="shell-intel">
+
+    <!-- ===== Rail (sticky left) ===== -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav" role="list">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon active" role="listitem" tabindex="0" aria-label="市场" aria-current="page">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="研究">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="平台">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom" role="list">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="设置">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ===== Shell Body ===== -->
+    <div class="shell-body">
+
+      <!-- Header (sticky top with frosted glass) -->
+      <header class="shell-header">
+        <h1 class="header-title">市场情报</h1>
+        <span class="header-subtitle">Markets · Intelligence</span>
+        <div class="header-spacer"></div>
+        <div class="header-actions">
+          <div class="theme-switcher">
+            <div class="switcher-group" role="group" aria-label="密度">
+              <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+            </div>
+            <div class="switcher-sep"></div>
+            <div class="switcher-group" role="group" aria-label="主题">
+              <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+            </div>
+          </div>
+          <div class="header-action-btn" title="时间框架">
+            <span class="header-timeframe">1D</span>
+          </div>
+          <div class="header-timestamp">09:46 CST</div>
+          <label for="overlay-custom-filter" class="header-action-btn" title="筛选" style="cursor:pointer">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h4m6 0h4M3 10h2m3 0h9M3 15h6m3 0h5"/><circle cx="9" cy="5" r="1.5" fill="currentColor"/><circle cx="11" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
+          </label>
+          <button class="header-action-btn" title="通知" aria-label="通知">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+            <span class="badge-dot" aria-hidden="true"></span>
+          </button>
+          <div class="header-avatar" aria-label="用户菜单">C</div>
+        </div>
+      </header>
+
+      <!-- Tab Strip (5 primary tabs) -->
+      <div class="intel-tab-strip" role="tablist" aria-label="情报分类">
+        <!-- Radio inputs (hidden) -->
+        <input type="radio" name="intel-tab" id="tab-capital-flow" checked class="tab-radio sr-only">
+        <input type="radio" name="intel-tab" id="tab-macro" class="tab-radio sr-only">
+        <input type="radio" name="intel-tab" id="tab-fundamental" class="tab-radio sr-only">
+        <input type="radio" name="intel-tab" id="tab-news" class="tab-radio sr-only">
+        <input type="radio" name="intel-tab" id="tab-network" class="tab-radio sr-only">
+        <!-- Tab labels -->
+        <label for="tab-capital-flow" class="intel-tab active" role="tab">资金面</label>
+        <label for="tab-macro" class="intel-tab" role="tab">宏观</label>
+        <label for="tab-fundamental" class="intel-tab" role="tab">基本面</label>
+        <label for="tab-news" class="intel-tab" role="tab">新闻</label>
+        <label for="tab-network" class="intel-tab" role="tab">关联网络</label>
+        <div class="tab-strip-spacer"></div>
+        <span class="tab-strip-meta">资金面</span>
+        <span class="tab-strip-meta">1D</span>
+        <span class="tab-strip-meta">09:46</span>
+      </div>
+
+      <!-- ===== Workspace: Main + Right Rail ===== -->
+      <div class="intel-workspace">
+
+        <!-- ===== Main Content ===== -->
+        <main id="main-content" class="intel-main">
+          <div class="tab-group">
+
+            <!-- ═══ Tab 1: 资金面 (Capital Flow) ═══ -->
+            <div class="tab-panel" data-panel="tab-capital-flow">
+
+              <!-- KPI Cards -->
+              <div class="kpi-row">
+                <div class="kpi-card">
+                  <div class="kpi-label">北向资金</div>
+                  <div class="kpi-value" style="color:var(--market-up-fg)">+12.4亿</div>
+                  <div class="kpi-change up">净买入</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">主力资金</div>
+                  <div class="kpi-value" style="color:var(--market-up-fg)">+86.7亿</div>
+                  <div class="kpi-change up">净流入</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">融资余额</div>
+                  <div class="kpi-value">18,432亿</div>
+                  <div class="kpi-change up">+52.3亿</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">成交额</div>
+                  <div class="kpi-value">9,856亿</div>
+                  <div class="kpi-change down">-12.3%</div>
+                </div>
+              </div>
+
+              <!-- Sector Capital Flow Table -->
+              <div>
+                <div class="section-title">板块资金流向 Top10</div>
+                <table class="intel-table" aria-label="板块资金流向">
+                  <caption class="sr-only">板块资金流入流出排行</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" style="text-align:left">#</th>
+                      <th scope="col">板块</th>
+                      <th scope="col">净流入</th>
+                      <th scope="col">净占比</th>
+                      <th scope="col">涨跌比</th>
+                      <th scope="col">领涨股</th>
+                      <th scope="col">趋势</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="font-family:var(--font-family-numeric)">1</td>
+                      <td>科技</td>
+                      <td class="up">+12.3亿</td>
+                      <td class="up">+2.8%</td>
+                      <td>186/54</td>
+                      <td>中芯国际</td>
+                      <td><span class="cell-badge up">强势流入</span></td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:var(--font-family-numeric)">2</td>
+                      <td>消费</td>
+                      <td class="up">+8.5亿</td>
+                      <td class="up">+1.9%</td>
+                      <td>142/68</td>
+                      <td>贵州茅台</td>
+                      <td><span class="cell-badge up">持续流入</span></td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:var(--font-family-numeric)">3</td>
+                      <td>新能源</td>
+                      <td class="up">+6.2亿</td>
+                      <td class="up">+1.4%</td>
+                      <td>98/82</td>
+                      <td>宁德时代</td>
+                      <td><span class="cell-badge up">温和流入</span></td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:var(--font-family-numeric)">4</td>
+                      <td>医药</td>
+                      <td class="up">+4.1亿</td>
+                      <td class="up">+0.9%</td>
+                      <td>110/95</td>
+                      <td>迈瑞医疗</td>
+                      <td><span class="cell-badge neutral">均衡</span></td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:var(--font-family-numeric)">5</td>
+                      <td>制造</td>
+                      <td class="up">+2.8亿</td>
+                      <td class="up">+0.6%</td>
+                      <td>88/76</td>
+                      <td>比亚迪</td>
+                      <td><span class="cell-badge neutral">均衡</span></td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:var(--font-family-numeric)">6</td>
+                      <td>公用</td>
+                      <td class="up">+1.5亿</td>
+                      <td class="up">+0.3%</td>
+                      <td>45/38</td>
+                      <td>长江电力</td>
+                      <td><span class="cell-badge neutral">均衡</span></td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:var(--font-family-numeric)">7</td>
+                      <td>地产</td>
+                      <td class="down">-1.2亿</td>
+                      <td class="down">-0.3%</td>
+                      <td>32/88</td>
+                      <td>万科A</td>
+                      <td><span class="cell-badge down">流出</span></td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:var(--font-family-numeric)">8</td>
+                      <td>金融</td>
+                      <td class="down">-3.2亿</td>
+                      <td class="down">-0.7%</td>
+                      <td>42/96</td>
+                      <td>招商银行</td>
+                      <td><span class="cell-badge down">持续流出</span></td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:var(--font-family-numeric)">9</td>
+                      <td>钢铁</td>
+                      <td class="down">-2.1亿</td>
+                      <td class="down">-0.5%</td>
+                      <td>18/62</td>
+                      <td>宝钢股份</td>
+                      <td><span class="cell-badge down">流出</span></td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:var(--font-family-numeric)">10</td>
+                      <td>煤炭</td>
+                      <td class="down">-1.8亿</td>
+                      <td class="down">-0.4%</td>
+                      <td>15/48</td>
+                      <td>中国神华</td>
+                      <td><span class="cell-badge down">流出</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Big Order Tracking -->
+              <div>
+                <div class="section-title">大单追踪</div>
+                <table class="intel-table" aria-label="大单追踪">
+                  <thead>
+                    <tr>
+                      <th scope="col" style="text-align:left">时间</th>
+                      <th scope="col">标的</th>
+                      <th scope="col">方向</th>
+                      <th scope="col">金额</th>
+                      <th scope="col">价格</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>09:42</td>
+                      <td>600519 贵州茅台</td>
+                      <td><span class="cell-badge up">买入</span></td>
+                      <td class="up">2.3亿</td>
+                      <td>1,856.00</td>
+                    </tr>
+                    <tr>
+                      <td>09:38</td>
+                      <td>300750 宁德时代</td>
+                      <td><span class="cell-badge up">买入</span></td>
+                      <td class="up">1.8亿</td>
+                      <td>218.00</td>
+                    </tr>
+                    <tr>
+                      <td>09:35</td>
+                      <td>688981 中芯国际</td>
+                      <td><span class="cell-badge up">买入</span></td>
+                      <td class="up">1.5亿</td>
+                      <td>51.00</td>
+                    </tr>
+                    <tr>
+                      <td>09:31</td>
+                      <td>601318 中国平安</td>
+                      <td><span class="cell-badge down">卖出</span></td>
+                      <td class="down">-2.1亿</td>
+                      <td>53.80</td>
+                    </tr>
+                    <tr>
+                      <td>09:28</td>
+                      <td>000333 美的集团</td>
+                      <td><span class="cell-badge down">卖出</span></td>
+                      <td class="down">-1.4亿</td>
+                      <td>66.50</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- ═══ Tab 2: 宏观 (Macro) ═══ -->
+            <div class="tab-panel" data-panel="tab-macro">
+
+              <!-- Macro KPI Cards -->
+              <div class="kpi-row">
+                <div class="kpi-card">
+                  <div class="kpi-label">CPI 同比</div>
+                  <div class="kpi-value">102.3</div>
+                  <div class="kpi-change up">+0.7%</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">PPI 同比</div>
+                  <div class="kpi-value">98.5</div>
+                  <div class="kpi-change down">-1.5%</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">PMI</div>
+                  <div class="kpi-value" style="color:var(--market-up-fg)">51.2</div>
+                  <div class="kpi-change up">+0.4</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">M2 增速</div>
+                  <div class="kpi-value">7.8%</div>
+                  <div class="kpi-change down">-0.3%</div>
+                </div>
+              </div>
+
+              <!-- Macro Event Calendar -->
+              <div>
+                <div class="section-title">宏观经济日历</div>
+                <div style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-6);padding:var(--space-10) var(--space-12);">
+                  <div class="macro-event">
+                    <div class="macro-event-time">09:30</div>
+                    <div class="macro-event-name">中国 3月 PMI (官方)</div>
+                    <div class="macro-event-importance">
+                      <span class="importance-dot active"></span>
+                      <span class="importance-dot active"></span>
+                      <span class="importance-dot active"></span>
+                    </div>
+                    <div style="font-family:var(--font-family-numeric);color:var(--market-up-fg);font-weight:var(--font-weight-medium);font-feature-settings:'tnum' 1;letter-spacing:-0.02em;">51.2 &gt; 预期 50.8</div>
+                  </div>
+                  <div class="macro-event">
+                    <div class="macro-event-time">10:00</div>
+                    <div class="macro-event-name">中国 3月 财新 PMI</div>
+                    <div class="macro-event-importance">
+                      <span class="importance-dot active"></span>
+                      <span class="importance-dot active"></span>
+                      <span class="importance-dot"></span>
+                    </div>
+                    <div style="font-family:var(--font-family-numeric);color:var(--text-tertiary);font-feature-settings:'tnum' 1;letter-spacing:-0.02em;">待公布</div>
+                  </div>
+                  <div class="macro-event">
+                    <div class="macro-event-time">14:00</div>
+                    <div class="macro-event-name">中国 2月 社融 / 新增信贷</div>
+                    <div class="macro-event-importance">
+                      <span class="importance-dot active"></span>
+                      <span class="importance-dot active"></span>
+                      <span class="importance-dot active"></span>
+                    </div>
+                    <div style="font-family:var(--font-family-numeric);color:var(--text-tertiary);font-feature-settings:'tnum' 1;letter-spacing:-0.02em;">待公布</div>
+                  </div>
+                  <div class="macro-event">
+                    <div class="macro-event-time">20:30</div>
+                    <div class="macro-event-name">美国 3月 非农就业</div>
+                    <div class="macro-event-importance">
+                      <span class="importance-dot active"></span>
+                      <span class="importance-dot active"></span>
+                      <span class="importance-dot active"></span>
+                    </div>
+                    <div style="font-family:var(--font-family-numeric);color:var(--text-tertiary);font-feature-settings:'tnum' 1;letter-spacing:-0.02em;">预期 180K</div>
+                  </div>
+                  <div class="macro-event">
+                    <div class="macro-event-time">22:00</div>
+                    <div class="macro-event-name">美国 3月 ISM 非制造业 PMI</div>
+                    <div class="macro-event-importance">
+                      <span class="importance-dot active"></span>
+                      <span class="importance-dot"></span>
+                      <span class="importance-dot"></span>
+                    </div>
+                    <div style="font-family:var(--font-family-numeric);color:var(--text-tertiary);font-feature-settings:'tnum' 1;letter-spacing:-0.02em;">预期 52.5</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Key Indicators Detail -->
+              <div>
+                <div class="section-title">关键指标追踪</div>
+                <table class="intel-table" aria-label="关键宏观指标">
+                  <thead>
+                    <tr>
+                      <th scope="col" style="text-align:left">指标</th>
+                      <th scope="col">最新值</th>
+                      <th scope="col">前值</th>
+                      <th scope="col">预期</th>
+                      <th scope="col">变动</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>CPI 同比</td>
+                      <td>102.3</td>
+                      <td>101.6</td>
+                      <td>101.8</td>
+                      <td class="up">+0.7%</td>
+                    </tr>
+                    <tr>
+                      <td>PPI 同比</td>
+                      <td>98.5</td>
+                      <td>99.0</td>
+                      <td>99.2</td>
+                      <td class="down">-1.5%</td>
+                    </tr>
+                    <tr>
+                      <td>PMI (官方)</td>
+                      <td style="color:var(--market-up-fg);font-weight:var(--font-weight-semibold)">51.2</td>
+                      <td>50.8</td>
+                      <td>50.8</td>
+                      <td class="up">+0.4</td>
+                    </tr>
+                    <tr>
+                      <td>M2 同比</td>
+                      <td>7.8%</td>
+                      <td>8.1%</td>
+                      <td>8.0%</td>
+                      <td class="down">-0.3%</td>
+                    </tr>
+                    <tr>
+                      <td>中美利差 (10Y)</td>
+                      <td style="color:var(--risk-medium-fg);font-weight:var(--font-weight-medium)">-142bp</td>
+                      <td>-138bp</td>
+                      <td>-140bp</td>
+                      <td class="down">-4bp</td>
+                    </tr>
+                    <tr>
+                      <td>USD/CNY</td>
+                      <td>7.2450</td>
+                      <td>7.2380</td>
+                      <td>7.2400</td>
+                      <td class="down">+70pips</td>
+                    </tr>
+                    <tr>
+                      <td>外汇储备</td>
+                      <td>3.24万亿$</td>
+                      <td>3.22万亿$</td>
+                      <td>—</td>
+                      <td class="up">+200亿$</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- ═══ Tab 3: 基本面 (Fundamental) ═══ -->
+            <div class="tab-panel" data-panel="tab-fundamental">
+
+              <!-- Earnings Calendar KPI -->
+              <div class="kpi-row">
+                <div class="kpi-card">
+                  <div class="kpi-label">本周财报</div>
+                  <div class="kpi-value">42家</div>
+                  <div class="kpi-change up">+12 家 vs 上周</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">业绩预增</div>
+                  <div class="kpi-value" style="color:var(--market-up-fg)">28家</div>
+                  <div class="kpi-change up">66.7%</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">业绩预减</div>
+                  <div class="kpi-value" style="color:var(--market-down-fg)">14家</div>
+                  <div class="kpi-change down">33.3%</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">分析师上调</div>
+                  <div class="kpi-value">15只</div>
+                  <div class="kpi-change up">+5 只</div>
+                </div>
+              </div>
+
+              <!-- Earnings Calendar -->
+              <div>
+                <div class="section-title">财报日历</div>
+                <table class="intel-table" aria-label="财报日历">
+                  <thead>
+                    <tr>
+                      <th scope="col" style="text-align:left">日期</th>
+                      <th scope="col">标的</th>
+                      <th scope="col">类型</th>
+                      <th scope="col">预期 EPS</th>
+                      <th scope="col">评级变动</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>04-02</td>
+                      <td>600519 贵州茅台</td>
+                      <td><span class="cell-badge neutral">年报</span></td>
+                      <td>68.50</td>
+                      <td><span class="cell-badge up">买入</span></td>
+                    </tr>
+                    <tr>
+                      <td>04-02</td>
+                      <td>300750 宁德时代</td>
+                      <td><span class="cell-badge neutral">一季报预告</span></td>
+                      <td>12.80</td>
+                      <td><span class="cell-badge up">增持</span></td>
+                    </tr>
+                    <tr>
+                      <td>04-03</td>
+                      <td>002594 比亚迪</td>
+                      <td><span class="cell-badge neutral">年报</span></td>
+                      <td>32.10</td>
+                      <td><span class="cell-badge up">买入</span></td>
+                    </tr>
+                    <tr>
+                      <td>04-03</td>
+                      <td>601318 中国平安</td>
+                      <td><span class="cell-badge neutral">年报</span></td>
+                      <td>5.60</td>
+                      <td><span class="cell-badge neutral">持有</span></td>
+                    </tr>
+                    <tr>
+                      <td>04-04</td>
+                      <td>000333 美的集团</td>
+                      <td><span class="cell-badge neutral">一季报预告</span></td>
+                      <td>4.20</td>
+                      <td><span class="cell-badge down">减持</span></td>
+                    </tr>
+                    <tr>
+                      <td>04-04</td>
+                      <td>688981 中芯国际</td>
+                      <td><span class="cell-badge neutral">一季报预告</span></td>
+                      <td>0.85</td>
+                      <td><span class="cell-badge up">买入</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Analyst Rating Changes -->
+              <div>
+                <div class="section-title">分析师评级变动</div>
+                <table class="intel-table" aria-label="分析师评级变动">
+                  <thead>
+                    <tr>
+                      <th scope="col" style="text-align:left">日期</th>
+                      <th scope="col">标的</th>
+                      <th scope="col">机构</th>
+                      <th scope="col">调整</th>
+                      <th scope="col">目标价</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>04-01</td>
+                      <td>600519 贵州茅台</td>
+                      <td>中信证券</td>
+                      <td><span class="cell-badge up">增持→买入</span></td>
+                      <td>2,100.00</td>
+                    </tr>
+                    <tr>
+                      <td>04-01</td>
+                      <td>300750 宁德时代</td>
+                      <td>国泰君安</td>
+                      <td><span class="cell-badge up">买入→增持</span></td>
+                      <td>268.00</td>
+                    </tr>
+                    <tr>
+                      <td>03-31</td>
+                      <td>002475 立讯精密</td>
+                      <td>华泰证券</td>
+                      <td><span class="cell-badge down">买入→减持</span></td>
+                      <td>38.50</td>
+                    </tr>
+                    <tr>
+                      <td>03-31</td>
+                      <td>603259 药明康德</td>
+                      <td>中金公司</td>
+                      <td><span class="cell-badge down">持有→减持</span></td>
+                      <td>48.00</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- ═══ Tab 4: 新闻 (News) ═══ -->
+            <div class="tab-panel" data-panel="tab-news">
+
+              <!-- Hot Topics -->
+              <div>
+                <div class="section-title">热点追踪</div>
+                <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;margin-bottom:var(--space-4);">
+                  <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:color-mix(in oklch, var(--risk-high-fg) 12%, transparent);color:var(--risk-high-fg);font-size:var(--font-size-12);font-weight:var(--font-weight-medium);">AI芯片国产替代</span>
+                  <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:color-mix(in oklch, var(--brand-accent) 12%, transparent);color:var(--brand-accent);font-size:var(--font-size-12);font-weight:var(--font-weight-medium);">PMI超预期回升</span>
+                  <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-secondary);font-size:var(--font-size-12);">北向资金持续流入</span>
+                  <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-secondary);font-size:var(--font-size-12);">房地产政策优化</span>
+                </div>
+              </div>
+
+              <!-- News Flow -->
+              <div>
+                <div class="section-title">实时新闻流</div>
+                <div>
+                  <label for="overlay-intelligence-detail" style="cursor:pointer;display:contents">
+                  <div class="news-item">
+                    <div class="news-time">09:45</div>
+                    <div class="news-body">
+                      <div class="news-headline">PMI连续3个月回升，经济复苏动能增强 <span class="news-tag hot">热点</span></div>
+                      <div class="news-source">新华财经 <span class="news-tag policy">政策</span></div>
+                    </div>
+                  </div>
+                  </label>
+                  <div class="news-item">
+                    <div class="news-time">09:38</div>
+                    <div class="news-body">
+                      <div class="news-headline">北向资金早盘净买入12.4亿，沪股通占主导 <span class="news-tag hot">热点</span></div>
+                      <div class="news-source">东方财富</div>
+                    </div>
+                  </div>
+                  <div class="news-item">
+                    <div class="news-time">09:32</div>
+                    <div class="news-body">
+                      <div class="news-headline">半导体设备国产化率突破30%，中芯国际获大额订单</div>
+                      <div class="news-source">证券时报 <span class="news-tag report">研报</span></div>
+                    </div>
+                  </div>
+                  <div class="news-item">
+                    <div class="news-time">09:25</div>
+                    <div class="news-body">
+                      <div class="news-headline">央行开展1000亿7天逆回购，流动性保持合理充裕 <span class="news-tag policy">政策</span></div>
+                      <div class="news-source">央行公告</div>
+                    </div>
+                  </div>
+                  <div class="news-item">
+                    <div class="news-time">09:18</div>
+                    <div class="news-body">
+                      <div class="news-headline">宁德时代发布新一代钠离子电池，能量密度提升40%</div>
+                      <div class="news-source">中国证券报 <span class="news-tag report">研报</span></div>
+                    </div>
+                  </div>
+                  <div class="news-item">
+                    <div class="news-time">09:12</div>
+                    <div class="news-body">
+                      <div class="news-headline">国务院常务会议：加大科技创新支持力度</div>
+                      <div class="news-source">中国政府网 <span class="news-tag policy">政策</span></div>
+                    </div>
+                  </div>
+                  <div class="news-item">
+                    <div class="news-time">09:05</div>
+                    <div class="news-body">
+                      <div class="news-headline">贵州茅台2025年报：营收同比增长15.2%，拟每股派现51.91元</div>
+                      <div class="news-source">上交所公告</div>
+                    </div>
+                  </div>
+                  <div class="news-item">
+                    <div class="news-time">08:58</div>
+                    <div class="news-body">
+                      <div class="news-headline">美国对华芯片出口限制新规即将生效，半导体板块承压</div>
+                      <div class="news-source">路透社 <span class="news-tag hot">热点</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ═══ Tab 5: 关联网络 (Network) ═══ -->
+            <div class="tab-panel" data-panel="tab-network">
+
+              <!-- Correlation KPI -->
+              <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+                <div class="kpi-card">
+                  <div class="kpi-label">强关联对</div>
+                  <div class="kpi-value" style="color:var(--market-up-fg)">12对</div>
+                  <div class="kpi-change up">相关系数 &gt; 0.8</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">板块联动</div>
+                  <div class="kpi-value">5组</div>
+                  <div class="kpi-change up">活跃联动</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">异常信号</div>
+                  <div class="kpi-value" style="color:var(--risk-medium-fg)">3条</div>
+                  <div class="kpi-change down">背离预警</div>
+                </div>
+              </div>
+
+              <!-- Correlation Matrix -->
+              <div>
+                <div class="section-title">标的相关性矩阵</div>
+                <div style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-6);padding:var(--space-10);overflow-x:auto;">
+                  <div class="correlation-grid">
+                    <div class="correlation-cell header"></div>
+                    <div class="correlation-cell header">贵州茅台</div>
+                    <div class="correlation-cell header">宁德时代</div>
+                    <div class="correlation-cell header">招商银行</div>
+                    <div class="correlation-cell header">中芯国际</div>
+                    <div class="correlation-cell header">比亚迪</div>
+
+                    <div class="correlation-cell label">贵州茅台</div>
+                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell moderate">0.52</div>
+                    <div class="correlation-cell weak">0.28</div>
+                    <div class="correlation-cell weak">0.15</div>
+                    <div class="correlation-cell weak">0.22</div>
+
+                    <div class="correlation-cell label">宁德时代</div>
+                    <div class="correlation-cell moderate">0.52</div>
+                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell weak">0.18</div>
+                    <div class="correlation-cell strong">0.78</div>
+                    <div class="correlation-cell strong">0.85</div>
+
+                    <div class="correlation-cell label">招商银行</div>
+                    <div class="correlation-cell weak">0.28</div>
+                    <div class="correlation-cell weak">0.18</div>
+                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell weak">0.08</div>
+                    <div class="correlation-cell weak">0.12</div>
+
+                    <div class="correlation-cell label">中芯国际</div>
+                    <div class="correlation-cell weak">0.15</div>
+                    <div class="correlation-cell strong">0.78</div>
+                    <div class="correlation-cell weak">0.08</div>
+                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell moderate">0.62</div>
+
+                    <div class="correlation-cell label">比亚迪</div>
+                    <div class="correlation-cell weak">0.22</div>
+                    <div class="correlation-cell strong">0.85</div>
+                    <div class="correlation-cell weak">0.12</div>
+                    <div class="correlation-cell moderate">0.62</div>
+                    <div class="correlation-cell strong">1.00</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sector Linkage -->
+              <div>
+                <div class="section-title">板块联动分析</div>
+                <table class="intel-table" aria-label="板块联动">
+                  <thead>
+                    <tr>
+                      <th scope="col" style="text-align:left">联动组</th>
+                      <th scope="col">板块</th>
+                      <th scope="col">联动系数</th>
+                      <th scope="col">资金共振</th>
+                      <th scope="col">信号</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>组1</td>
+                      <td>新能源 + 科技</td>
+                      <td class="up">0.85</td>
+                      <td class="up">+18.5亿</td>
+                      <td><span class="cell-badge up">强联动</span></td>
+                    </tr>
+                    <tr>
+                      <td>组2</td>
+                      <td>消费 + 医药</td>
+                      <td class="up">0.72</td>
+                      <td class="up">+12.6亿</td>
+                      <td><span class="cell-badge up">协同流入</span></td>
+                    </tr>
+                    <tr>
+                      <td>组3</td>
+                      <td>金融 + 地产</td>
+                      <td class="down">0.68</td>
+                      <td class="down">-4.4亿</td>
+                      <td><span class="cell-badge down">共振流出</span></td>
+                    </tr>
+                    <tr>
+                      <td>组4</td>
+                      <td>钢铁 + 煤炭</td>
+                      <td class="up">0.78</td>
+                      <td class="down">-3.9亿</td>
+                      <td><span class="cell-badge neutral">观望</span></td>
+                    </tr>
+                    <tr>
+                      <td>组5</td>
+                      <td>制造 + 公用</td>
+                      <td class="up">0.45</td>
+                      <td class="up">+4.3亿</td>
+                      <td><span class="cell-badge neutral">弱联动</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Divergence Alerts -->
+              <div>
+                <div class="section-title">背离预警</div>
+                <div style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-6);padding:var(--space-10) var(--space-12);">
+                  <div style="display:flex;align-items:flex-start;gap:var(--space-8);padding:var(--space-6) 0;border-bottom:1px solid var(--overlay-3);font-size:var(--font-size-12);">
+                    <span style="width:6px;height:6px;border-radius:50%;background:var(--risk-medium-fg);margin-top:6px;flex-shrink:0;"></span>
+                    <div>
+                      <div style="color:var(--text-primary);font-weight:var(--font-weight-medium);margin-bottom:var(--space-2);">立讯精密 vs 科技板块</div>
+                      <div style="color:var(--text-secondary);">个股走势与板块指数出现 3 日背离，资金持续流出但板块整体偏强</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:flex-start;gap:var(--space-8);padding:var(--space-6) 0;border-bottom:1px solid var(--overlay-3);font-size:var(--font-size-12);">
+                    <span style="width:6px;height:6px;border-radius:50%;background:var(--risk-medium-fg);margin-top:6px;flex-shrink:0;"></span>
+                    <div>
+                      <div style="color:var(--text-primary);font-weight:var(--font-weight-medium);margin-bottom:var(--space-2);">中国平安 vs 金融板块</div>
+                      <div style="color:var(--text-secondary);">个股逆板块上涨，北向资金净买入 1.2 亿，可能存在独立逻辑</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:flex-start;gap:var(--space-8);padding:var(--space-6) 0;font-size:var(--font-size-12);">
+                    <span style="width:6px;height:6px;border-radius:50%;background:var(--risk-high-fg);margin-top:6px;flex-shrink:0;"></span>
+                    <div>
+                      <div style="color:var(--text-primary);font-weight:var(--font-weight-medium);margin-bottom:var(--space-2);">美的集团 vs 制造板块</div>
+                      <div style="color:var(--text-secondary);">大单持续流出但股价未跌，分析师下调评级，资金链路异常</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div><!-- .tab-group -->
+
+          <!-- State Variants: Tab View -->
+          <details class="state-variant">
+            <summary class="state-variant-label">Tab View — Loading</summary>
+            <div class="state-variant-content" data-state="loading">
+              <div class="state-loading">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-8);">
+                  <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
+                  <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
+                  <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
+                  <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
+                </div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Tab View — Empty</summary>
+            <div class="state-variant-content" data-state="empty">
+              <div class="state-empty">
+                <div class="state-empty-icon">📡</div>
+                <div class="state-empty-title">暂无情报数据</div>
+                <div class="state-empty-desc">当前分类下没有可用的市场情报，请切换分类或稍后查看</div>
+                <button class="state-empty-cta">刷新数据</button>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Tab View — Error</summary>
+            <div class="state-variant-content" data-state="failed">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">情报数据加载失败</div>
+                <div class="state-error-desc">无法获取市场情报数据，可能是数据源异常或网络连接中断</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Tab View — Stale</summary>
+            <div class="state-variant-content" data-state="stale">
+              <div style="padding:var(--space-10);display:flex;align-items:center;gap:var(--space-6);background:color-mix(in oklch, var(--system-degraded-fg) 5%, transparent);border-radius:var(--radius-4);">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">数据更新于 5 分钟前，当前情报可能不是最新状态</span>
+                <button style="margin-left:auto;font-size:var(--font-size-10);color:var(--brand-accent);cursor:pointer;background:none;border:none;">立即刷新</button>
+              </div>
+            </div>
+          </details>
+
+        </main>
+
+        <!-- ===== Right Rail ===== -->
+        <aside class="intel-right-rail" aria-label="侧边面板">
+
+          <!-- Section: 关联标的 -->
+          <div class="rail-section">
+            <div class="rail-section-header">
+              <span class="rail-section-title">关联标的</span>
+              <span class="rail-section-action" role="button" tabindex="0">管理</span>
+            </div>
+            <div class="rail-section-body">
+              <div class="stock-quick-item">
+                <div>
+                  <div class="stock-quick-name">贵州茅台</div>
+                  <span class="stock-quick-code">600519</span>
+                </div>
+                <span class="stock-quick-change up">+3.10%</span>
+              </div>
+              <div class="stock-quick-item">
+                <div>
+                  <div class="stock-quick-name">宁德时代</div>
+                  <span class="stock-quick-code">300750</span>
+                </div>
+                <span class="stock-quick-change up">+5.20%</span>
+              </div>
+              <div class="stock-quick-item">
+                <div>
+                  <div class="stock-quick-name">招商银行</div>
+                  <span class="stock-quick-code">600036</span>
+                </div>
+                <span class="stock-quick-change down">-0.85%</span>
+              </div>
+              <div class="stock-quick-item">
+                <div>
+                  <div class="stock-quick-name">中芯国际</div>
+                  <span class="stock-quick-code">688981</span>
+                </div>
+                <span class="stock-quick-change up">+6.25%</span>
+              </div>
+              <div class="stock-quick-item">
+                <div>
+                  <div class="stock-quick-name">比亚迪</div>
+                  <span class="stock-quick-code">002594</span>
+                </div>
+                <span class="stock-quick-change up">+2.80%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- State Variants: Right Rail - 关联标的 -->
+          <details class="state-variant">
+            <summary class="state-variant-label">关联标的 — Loading</summary>
+            <div class="state-variant-content" data-state="loading">
+              <div class="state-loading">
+                <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
+                <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
+                <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">关联标的 — Empty</summary>
+            <div class="state-variant-content" data-state="empty">
+              <div class="state-empty">
+                <div class="state-empty-icon">📌</div>
+                <div class="state-empty-title">暂无关联标的</div>
+                <div class="state-empty-desc">在情报详情中添加关联标的，方便快速监控</div>
+                <button class="state-empty-cta">添加标的</button>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">关联标的 — Error</summary>
+            <div class="state-variant-content" data-state="failed">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">关联标的数据加载失败</div>
+                <div class="state-error-desc">无法获取关联标的数据，请稍后重试</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">关联标的 — Stale</summary>
+            <div class="state-variant-content" data-state="stale">
+              <div style="padding:var(--space-8);display:flex;align-items:center;gap:var(--space-6);">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">行情数据更新于 2 分钟前</span>
+              </div>
+            </div>
+          </details>
+
+          <!-- Section: 筛选器 -->
+          <div class="rail-section">
+            <div class="rail-section-header">
+              <span class="rail-section-title">筛选条件</span>
+              <label for="overlay-custom-filter" class="rail-section-action" style="cursor:pointer" tabindex="0">编辑</label>
+            </div>
+            <div class="rail-section-body">
+              <div class="filter-tag-list">
+                <span class="filter-tag">资金面 <span class="filter-tag-remove">&times;</span></span>
+                <span class="filter-tag">沪深300 <span class="filter-tag-remove">&times;</span></span>
+                <span class="filter-tag">净流入 > 1亿 <span class="filter-tag-remove">&times;</span></span>
+                <span class="filter-tag">今日 <span class="filter-tag-remove">&times;</span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- State Variants: Right Rail - 筛选器 -->
+          <details class="state-variant">
+            <summary class="state-variant-label">筛选器 — Loading</summary>
+            <div class="state-variant-content" data-state="loading">
+              <div class="state-loading">
+                <div class="skeleton" style="height:24px;width:60%"></div>
+                <div class="skeleton" style="height:24px;width:45%"></div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">筛选器 — Empty</summary>
+            <div class="state-variant-content" data-state="empty">
+              <div class="state-empty">
+                <div class="state-empty-icon">🔍</div>
+                <div class="state-empty-title">未设置筛选条件</div>
+                <div class="state-empty-desc">添加筛选条件以缩小情报范围</div>
+                <button class="state-empty-cta">设置筛选</button>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">筛选器 — Error</summary>
+            <div class="state-variant-content" data-state="failed">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">筛选条件加载失败</div>
+                <div class="state-error-desc">无法获取筛选条件配置</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">筛选器 — Selected</summary>
+            <div class="state-variant-content" data-state="selected">
+              <div style="padding:var(--space-8);">
+                <div class="filter-tag-list">
+                  <span class="filter-tag" style="box-shadow:0 0 0 2px var(--brand-accent)">资金面 <span class="filter-tag-remove">&times;</span></span>
+                  <span class="filter-tag" style="box-shadow:0 0 0 2px var(--brand-accent)">沪深300 <span class="filter-tag-remove">&times;</span></span>
+                  <span class="filter-tag" style="box-shadow:0 0 0 2px var(--brand-accent)">净流入 > 1亿 <span class="filter-tag-remove">&times;</span></span>
+                </div>
+                <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 激活筛选条件时边框高亮</span>
+              </div>
+            </div>
+          </details>
+
+          <!-- Section: AI 摘要 -->
+          <div class="rail-section">
+            <div class="rail-section-header">
+              <span class="rail-section-title">AI 摘要</span>
+              <label for="overlay-send-to-copilot" class="rail-section-action" style="cursor:pointer" tabindex="0">发送到 Copilot</label>
+            </div>
+            <div class="rail-section-body">
+              <div class="ai-summary-text">
+                今日资金面整体偏暖，<strong>科技板块</strong>以 +12.3亿净流入领涨，北向资金净买入 12.4亿。宏观方面 PMI 连续回升至 51.2 超预期，经济复苏动能增强。注意<strong>金融板块</strong>持续流出 -3.2亿，与大盘走势形成背离。
+              </div>
+              <div class="ai-summary-meta">
+                <span class="ai-summary-dot"></span>
+                <span>实时更新 · 09:46</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- State Variants: Right Rail - AI 摘要 -->
+          <details class="state-variant">
+            <summary class="state-variant-label">AI 摘要 — Loading</summary>
+            <div class="state-variant-content" data-state="loading">
+              <div class="state-loading">
+                <div class="skeleton" style="height:12px;width:100%"></div>
+                <div class="skeleton" style="height:12px;width:85%"></div>
+                <div class="skeleton" style="height:12px;width:92%"></div>
+                <div class="skeleton" style="height:12px;width:60%"></div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">AI 摘要 — Empty</summary>
+            <div class="state-variant-content" data-state="empty">
+              <div class="state-empty">
+                <div class="state-empty-icon">🤖</div>
+                <div class="state-empty-title">暂无 AI 摘要</div>
+                <div class="state-empty-desc">AI 正在分析当前市场情报，稍后将自动生成摘要</div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">AI 摘要 — Error</summary>
+            <div class="state-variant-content" data-state="failed">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">AI 摘要生成失败</div>
+                <div class="state-error-desc">AI 服务暂时不可用，请稍后重试</div>
+                <button class="state-error-retry">重新生成</button>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">AI 摘要 — Stale</summary>
+            <div class="state-variant-content" data-state="stale">
+              <div style="padding:var(--space-8);display:flex;align-items:center;gap:var(--space-6);">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">摘要基于 8 分钟前数据生成</span>
+              </div>
+            </div>
+          </details>
+
+        </aside>
+      </div><!-- .intel-workspace -->
+
+      <!-- ===== Analysis Band (bottom) ===== -->
+      <div class="analysis-band">
+        <div class="analysis-band-section">
+          <div class="analysis-band-title">趋势判断</div>
+          <div class="analysis-band-text">
+            资金面 <strong class="up">偏多</strong>，北向与主力资金共振流入科技板块；宏观 PMI <strong class="up">超预期</strong>提振市场情绪，但中美利差走阔值得关注。
+          </div>
+        </div>
+        <div class="analysis-band-section">
+          <div class="analysis-band-title">对比参考</div>
+          <div class="analysis-band-text">
+            近5日资金净流入合计 <strong class="up">+386亿</strong>，高于20日均值 +215亿；板块集中度提升，科技+消费占比 62%。
+          </div>
+        </div>
+        <div class="analysis-band-section">
+          <div class="analysis-band-title">备注</div>
+          <div class="analysis-band-text">
+            14:00 社融数据发布后可能引发资金面波动，建议关注 <strong>金融板块</strong>走势变化。
+          </div>
+        </div>
+      </div>
+
+      <!-- State Variants: Analysis Band -->
+      <details class="state-variant">
+        <summary class="state-variant-label">Analysis Band — Loading</summary>
+        <div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton" style="height:14px;width:60%"></div>
+            <div class="skeleton" style="height:14px;width:80%"></div>
+            <div class="skeleton" style="height:14px;width:50%"></div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">Analysis Band — Empty</summary>
+        <div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📝</div>
+            <div class="state-empty-title">暂无分析内容</div>
+            <div class="state-empty-desc">AI 将根据当前情报自动生成趋势判断和对比分析</div>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">Analysis Band — Error</summary>
+        <div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">分析带加载失败</div>
+            <div class="state-error-desc">无法获取 AI 分析内容，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </details>
+      <details class="state-variant">
+        <summary class="state-variant-label">Analysis Band — Stale</summary>
+        <div class="state-variant-content" data-state="stale">
+          <div style="padding:var(--space-10);display:flex;align-items:center;gap:var(--space-6);">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+            <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">分析基于 10 分钟前数据生成</span>
+          </div>
+        </div>
+      </details>
+
+    </div><!-- .shell-body -->
+  </div><!-- .shell-intel -->
+
+  <!-- ═══ Overlay Checkbox Triggers ═══ -->
+  <input type="checkbox" id="overlay-intelligence-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-custom-filter" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-bookmark-success" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-delete-confirm" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-send-to-copilot" class="overlay-radio sr-only">
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay A: 情报详情 (Drawer — right slide) -->
+    <div class="overlay-backdrop" data-overlay="overlay-intelligence-detail">
+      <label class="overlay-dismiss" for="overlay-intelligence-detail" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="情报详情">
+        <div class="overlay-header">
+          <span class="overlay-title">情报详情</span>
+          <label for="overlay-intelligence-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>PMI连续3个月回升，经济复苏动能增强</h4>
+          <div style="font-size:var(--font-size-12);color:var(--text-tertiary);margin-bottom:var(--space-12);">
+            新华财经 · 2026-04-02 09:45
+          </div>
+          <p style="line-height:1.8;color:var(--text-secondary);">
+            国家统计局公布数据显示，3月份中国制造业采购经理指数（PMI）为51.2%，比上月上升0.4个百分点，连续3个月运行在扩张区间，创下近12个月新高。其中新订单指数为53.2%，生产指数为52.8%，均高于荣枯线。
+          </p>
+          <p style="line-height:1.8;color:var(--text-secondary);margin-top:var(--space-8);">
+            分行业看，高技术制造业PMI为53.5%，继续保持高景气度；装备制造业PMI为52.8%，较上月回升1.2个百分点。小型企业PMI为49.8%，虽仍在荣枯线下方但环比改善明显。
+          </p>
+
+          <h4>关联标的</h4>
+          <div style="display:flex;flex-direction:column;gap:var(--space-4);">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) 0;">
+              <span>贵州茅台 600519</span>
+              <span class="stock-quick-change up" style="font-size:var(--font-size-12)">+3.10%</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) 0;">
+              <span>宁德时代 300750</span>
+              <span class="stock-quick-change up" style="font-size:var(--font-size-12)">+5.20%</span>
+            </div>
+          </div>
+
+          <h4>AI 解读</h4>
+          <p style="line-height:1.8;color:var(--text-secondary);">
+            PMI超预期回升表明制造业景气度持续改善，利好<strong style="color:var(--text-primary)">消费</strong>和<strong style="color:var(--text-primary)">制造</strong>板块。新订单指数连续走强预示需求端回暖，建议关注库存周期反转机会。
+          </p>
+
+          <div class="overlay-actions">
+            <label for="overlay-bookmark-success" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">收藏</label>
+            <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-primary" style="cursor:pointer">发送到 Copilot</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: 自定义筛选 (Sheet — centered modal) -->
+    <div class="overlay-backdrop" data-overlay="overlay-custom-filter">
+      <label class="overlay-dismiss" for="overlay-custom-filter" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="自定义筛选">
+        <div class="overlay-header">
+          <span class="overlay-title">自定义筛选</span>
+          <label for="overlay-custom-filter" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>情报分类</h4>
+          <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 资金面
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 宏观
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 基本面
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 新闻
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 关联网络
+            </label>
+          </div>
+
+          <h4>股票池</h4>
+          <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="filter-pool" checked style="accent-color:var(--brand-accent)"> 沪深300
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="filter-pool" style="accent-color:var(--brand-accent)"> 中证500
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="filter-pool" style="accent-color:var(--brand-accent)"> 全A
+            </label>
+          </div>
+
+          <h4>资金阈值</h4>
+          <div style="display:flex;gap:var(--space-8);align-items:center;padding:var(--space-4) 0;">
+            <span style="font-size:var(--font-size-12);color:var(--text-tertiary);">净流入 &gt;</span>
+            <input type="text" value="1亿" style="width:80px;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);font-family:var(--font-family-numeric);outline:none;">
+          </div>
+
+          <h4>时间范围</h4>
+          <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="filter-time" checked style="accent-color:var(--brand-accent)"> 今日
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="filter-time" style="accent-color:var(--brand-accent)"> 1周
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="radio" name="filter-time" style="accent-color:var(--brand-accent)"> 1月
+            </label>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-custom-filter" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">重置</label>
+            <label for="overlay-custom-filter" class="overlay-btn overlay-btn-primary" style="cursor:pointer">应用筛选</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: 收藏成功 (Toast — checkbox toggled overlay) -->
+    <div class="overlay-toast" data-overlay="overlay-bookmark-success">
+      <label for="overlay-bookmark-success" class="overlay-dismiss" style="position:absolute;inset:0;cursor:pointer;z-index:0;" aria-label="关闭"></label>
+      <div class="toast-icon" style="position:relative;z-index:1;">&#10003;</div>
+      <span class="toast-text" style="position:relative;z-index:1;">已收藏到情报库</span>
+    </div>
+
+    <!-- Overlay D: 删除标注确认 (Sheet — centered modal) -->
+    <div class="overlay-backdrop" data-overlay="overlay-delete-confirm">
+      <label class="overlay-dismiss" for="overlay-delete-confirm" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="删除标注确认">
+        <div class="overlay-header">
+          <span class="overlay-title">删除标注</span>
+          <label for="overlay-delete-confirm" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-12);">
+            确认删除此情报标注？删除后相关笔记和关联将被移除，此操作不可撤销。
+          </p>
+
+          <div class="overlay-field">
+            <span class="overlay-field-label">标注标题</span>
+            <span class="overlay-field-value">PMI超预期回升 — 重点关注</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">创建时间</span>
+            <span class="overlay-field-value">2026-04-02 09:46</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">关联笔记</span>
+            <span class="overlay-field-value">3 条</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-danger" style="cursor:pointer">确认删除</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay E: 发送到 Copilot (Drawer — right slide) -->
+    <div class="overlay-backdrop" data-overlay="overlay-send-to-copilot">
+      <label class="overlay-dismiss" for="overlay-send-to-copilot" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="发送到 Copilot">
+        <div class="overlay-header">
+          <span class="overlay-title">发送到 Copilot</span>
+          <label for="overlay-send-to-copilot" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>发送内容</h4>
+          <p style="line-height:1.6;color:var(--text-secondary);margin-bottom:var(--space-8);">
+            将当前情报摘要与分析发送到 Copilot，AI 将基于最新数据生成深度研究报告。
+          </p>
+
+          <h4>包含内容</h4>
+          <div style="display:flex;flex-direction:column;gap:var(--space-4);">
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> AI 摘要
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 趋势判断
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 关联标的
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 资金面数据
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 宏观指标
+            </label>
+          </div>
+
+          <h4>附加指令</h4>
+          <div style="padding:var(--space-6) 0;">
+            <textarea placeholder="输入附加指令，如：重点分析科技板块资金流向..." style="width:100%;height:80px;padding:var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;resize:vertical;font-family:var(--font-family-ui);line-height:1.5;"></textarea>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-primary" style="cursor:pointer">发送</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .overlays -->
+
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

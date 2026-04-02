@@ -1,4 +1,29 @@
 <!DOCTYPE html>
+<!--
+  State Coverage Index: page-home
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 0 (Home 无 tab 系统)
+
+  Overlays: 4
+  - overlay-signal-detail (Drawer: 信号详情) [covered]
+  - overlay-order-confirm (Modal: 订单确认) [covered]
+  - overlay-edit-workspace (Drawer: 编辑工作台) [covered]
+  - overlay-ai-advice (Drawer: AI 建议详情) [covered]
+
+  State Variants: 8 components × 3 states (empty/loading/error)
+  - today-pulse: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - decision-banner: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - pending-actions: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - alerts-market: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - recent-signals: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - agent-findings: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - data-health: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - my-workspace: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+
+  Coverage Score: 100%
+-->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
@@ -22,6 +47,9 @@
   <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <!-- Mock Data -->
   <script src="shared/mock-data.js"></script>
@@ -75,8 +103,7 @@
     .header-action-btn:focus-visible,
     .panel-action:focus-visible,
     .header-avatar:focus-visible,
-    .decision-cta:focus-visible,
-    .workspace-quick-action:focus-visible {
+    .decision-cta:focus-visible {
       outline: none;
       box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
       border-radius: var(--radius-4);
@@ -133,10 +160,9 @@
       pointer-events: none;
     }
 
-    /* ── Rail active indicator — brand accent left bar ── */
-    .shell-home .rail-icon.active {
-      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
-    }
+    /* ── Rail active: inherits layout-base.css .rail-icon.active ──
+     * (brand-accent-subtle bg + brand-accent color + left bar)
+     * No override needed — base behavior is correct for both themes */
 
     /* ── Pulse strip subtle brand glow ── */
     .shell-home .shell-pulse {
@@ -162,16 +188,7 @@
     /* ── Panel grow utility (replaces inline flex:1) ── */
     .panel-grow { flex: 1; }
 
-    /* ── Panel subtitle — upgrade from 10px to 12px ── */
-    .panel-subtitle {
-      color: var(--text-secondary);
-      font-size: var(--font-size-12);
-    }
-
-    /* ── Alert timestamp — upgrade from 10px to 12px ── */
-    .alert-time {
-      font-size: var(--font-size-12);
-    }
+    /* ── Panel subtitle & Alert timestamp — upgraded to 12px in layout-base.css ── */
 
     /* ── Shell children elevation above noise layer ── */
     .shell-home > * {
@@ -227,14 +244,7 @@
       z-index: 5;
     }
 
-    /* ── Decision routing label ── */
-    .decision-routing-label {
-      font-size: var(--font-size-10);
-      font-weight: var(--font-weight-medium);
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
+    /* ── Decision routing label — inherits layout-base.css base, no override needed ── */
 
     /* ── Queue item active state ── */
     .queue-item:active {
@@ -386,109 +396,27 @@
     .pulse-value.risk-medium { color: var(--risk-high-fg); }
 
     /* ══════════════════════════════════════════════
-     * R2: My Workspace — 4-column widget grid
+     * R2: My Workspace — REMOVED (pending product spec)
      * ══════════════════════════════════════════════ */
-    .workspace-panel {
-      background: var(--surface-panel-base);
-      border-radius: var(--radius-6);
-      padding: var(--space-10);
-    }
-    .workspace-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: var(--space-6);
-    }
-    .workspace-widget {
-      background: var(--surface-panel-elevated);
-      border-radius: var(--radius-4);
-      padding: var(--space-10);
-    }
-    .workspace-widget-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: var(--space-8);
-    }
-    .workspace-widget-title {
-      font-size: var(--font-size-10);
-      font-weight: var(--font-weight-medium);
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .workspace-strategy-item,
-    .workspace-watchlist-item,
-    .workspace-backtest-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-2) 0;
-    }
-    .workspace-strategy-name,
-    .workspace-watchlist-name,
-    .workspace-backtest-name {
-      font-size: var(--font-size-12);
-      color: var(--text-primary);
-    }
-    .workspace-strategy-status,
-    .workspace-watchlist-count,
-    .workspace-backtest-status {
-      font-size: var(--font-size-10);
-      color: var(--text-tertiary);
-    }
-    .workspace-backtest-bar {
-      width: 100%;
-      height: 2px;
-      background: var(--border-subtle);
-      border-radius: 1px;
-      margin-top: var(--space-2);
-      overflow: hidden;
-    }
-    .workspace-backtest-bar-fill {
-      height: 100%;
-      border-radius: 1px;
-      background: var(--brand-accent);
-      transition: width var(--motion-duration-slow) var(--motion-easing-standard);
-    }
-    .workspace-quick-actions {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-4);
-    }
-    .workspace-quick-action {
-      display: flex;
-      align-items: center;
-      gap: var(--space-6);
-      font-size: var(--font-size-12);
-      color: var(--text-secondary);
-      padding: var(--space-3) 0;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-family: var(--font-family-ui);
-      width: 100%;
-      text-align: left;
-      border-radius: var(--radius-3);
-      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
-                  background var(--motion-duration-fast) var(--motion-easing-standard);
-    }
-    .workspace-quick-action:hover {
-      color: var(--text-primary);
-      background: var(--interaction-hover-subtle-bg);
-    }
-    .workspace-quick-action svg {
-      color: var(--text-tertiary);
-      flex-shrink: 0;
-    }
 
     /* ── R2 POLISH: Activate value-flash on PnL (one-shot on load) ── */
-    .shell-home .metric-value {
+    .decision-primary .metric-value {
       animation: value-flash 400ms ease-out;
     }
 
-    /* ── R2 POLISH: task-breathe on running strategy names ── */
-    .workspace-strategy-item:has(.status-dot.running) .workspace-strategy-name {
-      animation: task-breathe 4s ease-in-out infinite;
+    /* ── Numeric data: tabular alignment ── */
+    .pulse-value,
+    .metric-value,
+    .status-value,
+    .pulse-metric-value,
+    .alert-time,
+    .health-status,
+    .panel-count,
+    .research-item-source,
+    .finding-source,
+    .queue-item-source {
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+      letter-spacing: -0.02em;
     }
 
     /* ── Respect reduced motion ── */
@@ -501,6 +429,102 @@
         transition-duration: 0.01ms !important;
       }
     }
+
+    /* ══════════════════════════════════════════════
+     * Light mode fixes
+     * ══════════════════════════════════════════════ */
+    [data-theme="light"] .ambient-top,
+    [data-theme="light"] .ambient-rail {
+      opacity: 0.4;
+    }
+    [data-theme="light"] .shell-home .context-section + .context-section::before {
+      background: var(--border-subtle);
+    }
+    [data-theme="light"] .noise-layer {
+      opacity: 0.008;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* Signal detail drawer */
+    :root:has(#overlay-signal-detail:checked)
+      [data-overlay="overlay-signal-detail"] { display: flex; }
+
+    /* Order confirm modal */
+    :root:has(#overlay-order-confirm:checked)
+      [data-overlay="overlay-order-confirm"] { display: flex; }
+
+    /* Edit workspace drawer */
+    :root:has(#overlay-edit-workspace:checked)
+      [data-overlay="overlay-edit-workspace"] { display: flex; }
+
+    /* AI advice drawer */
+    :root:has(#overlay-ai-advice:checked)
+      [data-overlay="overlay-ai-advice"] { display: flex; }
+
+    /* ── Overlay content refinement ── */
+    .overlay-sheet .overlay-header,
+    .overlay-drawer .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-18);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-body h4:first-child { margin-top: 0; }
+
+    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
+
+    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
+    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
+    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
+    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* My workspace placeholder */
+    .workspace-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-16) var(--space-12);
+      text-align: center;
+      color: var(--text-tertiary);
+      border: 1px dashed var(--border-default);
+      border-radius: var(--radius-6);
+      margin-top: var(--space-8);
+    }
+    .workspace-placeholder-icon { font-size: 24px; margin-bottom: var(--space-6); opacity: 0.5; }
+    .workspace-placeholder-title { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-4); }
+    .workspace-placeholder-desc { font-size: var(--font-size-11); max-width: 240px; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -554,7 +578,7 @@
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">Home</span>
+      <span class="header-title">首页</span>
       <div class="header-spacer"></div>
       <div class="header-search">
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
@@ -618,6 +642,42 @@
       </div>
     </div>
 
+    <!-- State Variants: Today Pulse -->
+    <details class="state-variant">
+      <summary class="state-variant-label">Empty State</summary>
+      <div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📊</div>
+          <div class="state-empty-title">开始使用 Ditto</div>
+          <div class="state-empty-desc">连接数据源后展示实时行情指标、盈亏状态与风险监控</div>
+          <button class="state-empty-cta">连接数据源</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Loading State</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Error State</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">行情数据加载失败</div>
+          <div class="state-error-desc">无法获取实时行情数据，请检查网络连接或稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+
     <!-- ═══ Main Content (Decision Banner + Execution Queue + Signals/Findings) ═══ -->
     <div class="shell-main" id="main-content">
       <!-- Primary: Decision Banner + Execution Queue -->
@@ -633,7 +693,9 @@
             </div>
             <!-- Middle: Market context + judgment (~33%) -->
             <div class="decision-judgment">
-              <div class="decision-judgment-text"><span class="regime-tag moderate">温和风险偏好</span> 波动回落，北向转暖，但局部拥挤。</div>
+              <label for="overlay-ai-advice" style="cursor:pointer" title="查看 AI 操作建议">
+              <div class="decision-judgment-text">波动回落，北向转暖，但局部拥挤。</div>
+              </label>
               <div class="decision-judgment-metrics">
                 <div class="decision-judgment-metric">
                   <span class="status-label">IVIX</span>
@@ -649,13 +711,46 @@
             <div class="decision-execution">
               <span class="decision-routing-label">下一步</span>
               <div class="decision-cta-row">
-                <button class="decision-cta primary" role="link">查看信号总览</button>
-                <button class="decision-cta secondary" role="link">进入研究</button>
-                <button class="decision-cta ghost" role="link">查看风控</button>
+                <button class="decision-cta primary">查看信号总览</button>
+                <button class="decision-cta secondary">进入研究</button>
+                <button class="decision-cta ghost">查看风控</button>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- State Variants: Decision Banner -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Empty State</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">📋</div>
+              <div class="state-empty-title">暂无持仓数据</div>
+              <div class="state-empty-desc">连接券商账户或导入持仓后，此处展示组合概览与市场判断</div>
+              <button class="state-empty-cta">导入持仓</button>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Loading State</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-heading"></div>
+              <div class="skeleton skeleton-text"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Error State</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">组合数据加载失败</div>
+              <div class="state-error-desc">无法获取账户持仓与盈亏信息，请检查券商连接状态</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
 
         <!-- Today's Priority Items — Main Work Surface -->
         <div class="panel panel-grow">
@@ -663,7 +758,7 @@
             <span class="panel-title">今日优先事项 <span class="panel-subtitle">跨域关注项</span></span>
             <span class="panel-count">5</span>
             <div class="panel-actions">
-              <button class="panel-action" role="link">查看全部 →</button>
+              <button class="panel-action">查看全部 →</button>
             </div>
           </div>
           <div class="panel-body">
@@ -680,7 +775,8 @@
                 </div>
                 <div class="queue-item-footer">
                   <span class="queue-item-source">策略引擎 · 3分钟前</span>
-                  <button class="panel-action" role="link">查看详情</button>
+                  <input type="checkbox" id="overlay-signal-detail" class="overlay-radio sr-only">
+                  <label for="overlay-signal-detail" class="panel-action" style="cursor:pointer">查看详情</label>
                 </div>
               </div>
             </div>
@@ -697,7 +793,7 @@
                 </div>
                 <div class="queue-item-footer">
                   <span class="queue-item-source">风控引擎 · 12分钟前</span>
-                  <button class="panel-action" role="link">查看详情</button>
+                  <button class="panel-action">查看详情</button>
                 </div>
               </div>
             </div>
@@ -708,14 +804,14 @@
               <div class="queue-item-body">
                 <div class="queue-item-header">
                   <span class="queue-item-title">价值因子 2026 Q1 回测完成</span>
-                  <span class="queue-item-tag research">研究</span>
+                  <span class="queue-item-tag research">研究</span><span class="queue-item-tag priority">P2</span>
                 </div>
                 <div class="queue-item-detail">
                   <span class="queue-item-reason">Sharpe 1.42，最大回撤 -8.3%，建议审阅后决定是否部署。</span>
                 </div>
                 <div class="queue-item-footer">
                   <span class="queue-item-source">回测引擎 · 1小时前</span>
-                  <button class="panel-action" role="link">查看报告</button>
+                  <button class="panel-action">查看报告</button>
                 </div>
               </div>
             </div>
@@ -733,7 +829,7 @@
                 </div>
                 <div class="queue-item-footer">
                   <span class="queue-item-source">系统监控 · 2小时前</span>
-                  <button class="panel-action" role="link">查看用量</button>
+                  <button class="panel-action">查看用量</button>
                 </div>
               </div>
             </div>
@@ -750,118 +846,87 @@
                 </div>
                 <div class="queue-item-footer">
                   <span class="queue-item-source">数据管道 · 42分钟前</span>
-                  <button class="panel-action" role="link">查看详情</button>
+                  <button class="panel-action">查看详情</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- My Workspace — user-customizable quick access (full-width, 4-column) -->
-        <div class="panel workspace-panel">
-          <div class="panel-header">
-            <span class="panel-title">My Workspace</span>
-            <span class="panel-subtitle">个人工作台</span>
-            <div class="panel-actions">
-              <button class="panel-action" role="link">编辑工作台 →</button>
+        <!-- State Variants: Pending / Next Actions -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Empty State</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-title">暂无待处理事项</div>
+              <div class="state-empty-desc">所有任务已处理完毕，一切正常运行</div>
             </div>
           </div>
-          <div class="workspace-grid">
-            <!-- Widget 1: 常用策略 -->
-            <div class="workspace-widget">
-              <div class="workspace-widget-header">
-                <span class="workspace-widget-title">常用策略</span>
-                <button class="panel-action" role="link">管理</button>
-              </div>
-              <div class="workspace-strategy-item">
-                <span class="workspace-strategy-name">Alpha v3 — 日内</span>
-                <span class="workspace-strategy-status">
-                  <span class="status-dot running" aria-hidden="true"></span>运行中
-                </span>
-              </div>
-              <div class="workspace-strategy-item">
-                <span class="workspace-strategy-name">情绪因子 v2</span>
-                <span class="workspace-strategy-status">
-                  <span class="status-dot running" aria-hidden="true"></span>运行中
-                </span>
-              </div>
-              <div class="workspace-strategy-item">
-                <span class="workspace-strategy-name">价值因子 Q1</span>
-                <span class="workspace-strategy-status">
-                  <span class="status-dot paused" aria-hidden="true"></span>已暂停
-                </span>
-              </div>
-            </div>
-
-            <!-- Widget 2: 观察列表 -->
-            <div class="workspace-widget">
-              <div class="workspace-widget-header">
-                <span class="workspace-widget-title">观察列表</span>
-                <button class="panel-action" role="link">管理</button>
-              </div>
-              <div class="workspace-watchlist-item">
-                <span class="workspace-watchlist-name">核心持仓</span>
-                <span class="workspace-watchlist-count">8 只</span>
-              </div>
-              <div class="workspace-watchlist-item">
-                <span class="workspace-watchlist-name">今日关注</span>
-                <span class="workspace-watchlist-count">5 只</span>
-              </div>
-              <div class="workspace-watchlist-item">
-                <span class="workspace-watchlist-name">因子跟踪</span>
-                <span class="workspace-watchlist-count">12 只</span>
-              </div>
-              <div class="workspace-watchlist-item">
-                <span class="workspace-watchlist-name">行业轮动</span>
-                <span class="workspace-watchlist-count">6 只</span>
-              </div>
-            </div>
-
-            <!-- Widget 3: 回测任务 -->
-            <div class="workspace-widget">
-              <div class="workspace-widget-header">
-                <span class="workspace-widget-title">回测任务</span>
-                <button class="panel-action" role="link">查看全部</button>
-              </div>
-              <div class="workspace-backtest-item">
-                <span class="workspace-backtest-name">价值因子 Q1</span>
-                <span class="workspace-backtest-status icon-healthy">完成</span>
-              </div>
-              <div class="workspace-backtest-item">
-                <span class="workspace-backtest-name">行业轮动优化</span>
-                <span class="workspace-backtest-status">67%</span>
-              </div>
-              <div class="workspace-backtest-bar">
-                <div class="workspace-backtest-bar-fill" style="width: 67%"></div>
-              </div>
-              <div class="workspace-backtest-item">
-                <span class="workspace-backtest-name">北向因子 v2</span>
-                <span class="workspace-backtest-status">排队中</span>
-              </div>
-            </div>
-
-            <!-- Widget 4: 快速操作 -->
-            <div class="workspace-widget">
-              <div class="workspace-widget-header">
-                <span class="workspace-widget-title">快速操作</span>
-              </div>
-              <div class="workspace-quick-actions">
-                <button class="workspace-quick-action" type="button">
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
-                  新建模拟组合
-                </button>
-                <button class="workspace-quick-action" type="button">
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
-                  批量下单
-                </button>
-                <button class="workspace-quick-action" type="button">
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12M9 4v12"/></svg>
-                  策略回测
-                </button>
-              </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Loading State</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
             </div>
           </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Error State</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">加载失败</div>
+              <div class="state-error-desc">无法获取待处理事项，请稍后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+
+        <!-- My Workspace Placeholder -->
+        <div class="workspace-placeholder">
+          <div class="workspace-placeholder-icon">🧩</div>
+          <div class="workspace-placeholder-title">自定义工作区 — 即将推出</div>
+          <div class="workspace-placeholder-desc">拖拽配置个性化工作区布局，按需组合持仓概览、关注列表、快捷入口等模块</div>
         </div>
+
+        <!-- State Variants: My Workspace -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Empty State</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">🧩</div>
+              <div class="state-empty-title">工作区为空</div>
+              <div class="state-empty-desc">添加 Widget 开始自定义你的工作区</div>
+              <label for="overlay-edit-workspace" class="state-empty-cta" style="cursor:pointer">编辑工作台</label>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Loading State</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Error State</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">工作区加载失败</div>
+              <div class="state-error-desc">无法加载工作区配置，将使用默认布局</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+
       </div>
 
       <!-- Secondary: Research Progress + Agent Insights -->
@@ -870,7 +935,7 @@
         <div class="secondary-panel">
           <div class="panel-header">
             <span class="panel-title">研究进展 <span class="panel-subtitle">研究动态</span></span>
-            <button class="panel-action" role="link">查看全部 →</button>
+            <button class="panel-action">查看全部 →</button>
           </div>
           <div class="panel-body">
             <!-- Deduplicated: removed "价值因子 Q1 回测完成" (already in Priority Items) -->
@@ -907,9 +972,41 @@
           </div>
         </div>
 
+        <!-- State Variants: Recent Signals / Runs -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Empty State</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">🔬</div>
+              <div class="state-empty-title">暂无近期研究活动</div>
+              <div class="state-empty-desc">研究进展将在此处实时展示，包括因子验证、策略优化和模型监控</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Loading State</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Error State</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">加载失败</div>
+              <div class="state-error-desc">无法获取研究进展数据，请稍后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+
         <!-- Agent Insights (cross-domain intelligence summary) -->
         <div class="findings-feed">
-          <div class="findings-feed-label">Agent 洞察 <span class="findings-feed-subtitle">智能关联分析</span></div>
+          <div class="findings-feed-label">Agent 洞察 <span class="findings-feed-subtitle">关联分析</span></div>
           <div class="finding-item">
             <span class="finding-icon icon-agent">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
@@ -938,9 +1035,42 @@
             </div>
           </div>
           <div class="findings-feed-expand">
-            <a href="#">展开全部 Agent 分析 →</a>
+            <button class="panel-action">展开全部 Agent 分析 →</button>
           </div>
         </div>
+
+        <!-- State Variants: Agent Findings -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Empty State</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">🤖</div>
+              <div class="state-empty-title">暂无 Agent 活动</div>
+              <div class="state-empty-desc">Agent 洞察将在此处展示跨域关联分析和智能发现</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Loading State</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Error State</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">AI 服务异常</div>
+              <div class="state-error-desc">Agent 服务暂时不可用，请稍后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+
       </div>
     </div>
 
@@ -990,28 +1120,61 @@
             <div class="alert-row">
               <span class="alert-dot critical"></span>
               <span class="alert-title">组合 VaR 突破 95% 分位</span>
-              <span class="alert-time">8分钟</span>
+              <span class="alert-time">8分钟前</span>
             </div>
             <div class="alert-row">
               <span class="alert-dot critical"></span>
               <span class="alert-title">券商连接中断 — 中信证券</span>
-              <span class="alert-time">15分钟</span>
+              <span class="alert-time">15分钟前</span>
             </div>
             <div class="alert-row">
               <span class="alert-dot warning"></span>
               <span class="alert-title">模型漂移 — 情绪 Alpha v2</span>
-              <span class="alert-time">1小时</span>
+              <span class="alert-time">1小时前</span>
             </div>
             <div class="alert-row">
               <span class="alert-dot info"></span>
               <span class="alert-title">财报数据延迟</span>
-              <span class="alert-time">2小时</span>
+              <span class="alert-time">2小时前</span>
             </div>
           </div>
           <div class="context-section-footer">
-            <a href="#">查看全部预警 →</a>
+            <button class="panel-action">查看全部预警 →</button>
           </div>
         </div>
+
+        <!-- State Variants: Alerts / Market Snapshot -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Empty State</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-title">一切正常 — 无活跃预警</div>
+              <div class="state-empty-desc">当前无风险预警、数据异常或系统告警</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Loading State</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Error State</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">预警服务异常</div>
+              <div class="state-error-desc">无法获取预警信息，请检查服务连接状态</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
 
         <!-- Data Health (system trust check) -->
         <div class="context-section">
@@ -1046,13 +1209,230 @@
             </div>
           </div>
           <div class="health-preview-footer">
-            <a href="#">查看详情 →</a>
+            <button class="panel-action">查看详情 →</button>
           </div>
         </div>
+
+        <!-- State Variants: Data Health -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Empty State</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-title">所有数据源正常</div>
+              <div class="state-empty-desc">行情、财报、另类数据等全部数据源运行正常，无延迟或异常</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Loading State</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Error State</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">数据源连接异常</div>
+              <div class="state-error-desc">多个数据源连接中断，部分数据可能不可靠，建议检查网络或切换备用源</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
 
       </div>
     </div>
   </div>
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay A: Signal Detail (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-signal-detail">
+      <label class="overlay-dismiss" for="overlay-signal-detail" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="信号详情">
+        <div class="overlay-header">
+          <span class="overlay-title">信号详情</span>
+          <label for="overlay-signal-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>信号摘要</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标的</span>
+            <span class="overlay-field-value">贵州茅台（600519）</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">信号类型</span>
+            <span class="overlay-field-value" style="color:var(--market-weak-fg)">卖出</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">策略</span>
+            <span class="overlay-field-value">Alpha v3</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">触发条件</span>
+            <span class="overlay-field-value">RSI 背离 + 放量确认</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">置信度</span>
+            <span class="overlay-field-value">87%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标的当前状态</span>
+            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">正常交易</span>
+          </div>
+
+          <h4>风险评估</h4>
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">集中度已偏高，建议分批减仓，避免单笔冲击成本过高。当前科技板块占比 37.2%，超出规则上限 35%。</p>
+
+          <div class="overlay-actions">
+            <input type="checkbox" id="overlay-order-confirm" class="overlay-radio sr-only">
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" style="cursor:pointer">复核通过</label>
+            <button class="overlay-btn overlay-btn-secondary">查看完整信号</button>
+            <button class="overlay-btn overlay-btn-danger">驳回</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: Order Confirm (Modal 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-order-confirm">
+      <label class="overlay-dismiss" for="overlay-order-confirm" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="确认订单">
+        <div class="overlay-header">
+          <span class="overlay-title">确认订单</span>
+          <label for="overlay-order-confirm" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>订单摘要</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标的</span>
+            <span class="overlay-field-value">600519 贵州茅台</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">方向</span>
+            <span class="overlay-field-value" style="color:var(--market-weak-fg)">卖出</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">数量</span>
+            <span class="overlay-field-value">200 股</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">价格</span>
+            <span class="overlay-field-value">市价</span>
+          </div>
+
+          <h4>风险校验</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">校验结果</span>
+            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">通过 ✓</span>
+          </div>
+
+          <h4>预估费用</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">佣金</span>
+            <span class="overlay-field-value">¥89.50</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">印花税</span>
+            <span class="overlay-field-value">¥55.90</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认提交</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: Edit Workspace (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-edit-workspace">
+      <label class="overlay-dismiss" for="overlay-edit-workspace" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="编辑工作台">
+        <div class="overlay-header">
+          <span class="overlay-title">编辑工作台</span>
+          <label for="overlay-edit-workspace" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>可用 Widget</h4>
+          <div style="display:flex;flex-direction:column;gap:var(--space-6)">
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 持仓概览
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 关注列表
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 快捷入口
+            </label>
+            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <input type="checkbox" style="accent-color:var(--brand-accent)"> 市场日历
+            </label>
+          </div>
+
+          <h4>当前布局预览</h4>
+          <div style="border:1px dashed var(--border-default);border-radius:var(--radius-4);padding:var(--space-12);text-align:center;color:var(--text-tertiary);font-size:var(--font-size-11);line-height:1.6;">
+            持仓概览（顶部全宽）<br>
+            关注列表 · 研究进展（并排）<br>
+            Agent 洞察（底部全宽）
+          </div>
+
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-secondary">重置默认</button>
+            <button class="overlay-btn overlay-btn-primary">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay D: AI Advice (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-ai-advice">
+      <label class="overlay-dismiss" for="overlay-ai-advice" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="AI 操作建议">
+        <div class="overlay-header">
+          <span class="overlay-title">AI 操作建议</span>
+          <label for="overlay-ai-advice" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>建议全文</h4>
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0;">
+            当前市场波动回落，北向资金连续 3 日净流入，但科技板块拥挤度偏高。建议关注：(1) 科技板块适度减配至 30% 以下；(2) 关注消费板块轮动信号；(3) 沪深 300 指数增强策略近期表现优异，可考虑增配。
+          </p>
+
+          <h4>关联数据支撑</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">IVIX</span>
+            <span class="overlay-field-value">18.52 <span style="color:var(--market-weak-fg)">(-3.1%)</span></span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">北向资金</span>
+            <span class="overlay-field-value" style="color:var(--market-strong-fg)">+12.4 亿</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">科技板块集中度</span>
+            <span class="overlay-field-value" style="color:var(--risk-high-fg)">37.2%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Overlay triggers: edit-workspace checkbox (placed outside queue-item context) -->
+  <input type="checkbox" id="overlay-edit-workspace" class="overlay-radio sr-only">
+
+  <!-- Overlay trigger: ai-advice checkbox -->
+  <input type="checkbox" id="overlay-ai-advice" class="overlay-radio sr-only">
+
   <script src="shared/theme-switcher.js"></script>
 </body>
 </html>

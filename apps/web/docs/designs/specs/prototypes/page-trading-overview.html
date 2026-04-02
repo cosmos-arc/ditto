@@ -1,4 +1,31 @@
 <!DOCTYPE html>
+<!--
+  State Coverage Index: page-trading-overview
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 2
+  - trading-mode (交易模式) [covered]
+  - review-mode (复盘模式) [covered]
+
+  Overlays: 4
+  - overlay-pause-trading (Modal: 暂停交易确认) [covered]
+  - overlay-position-detail (Sheet: 持仓详情) [covered]
+  - overlay-risk-alert-detail (Drawer: 风控预警详情) [covered]
+  - overlay-limit-status (Sheet: 涨跌停标的状态概览) [covered]
+
+  State Variants: 8 components × multi-state
+  - session-strip: default[covered] loading[covered] failed[covered] stale[covered]
+  - equity-pnl: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - risk-alerts: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - positions-summary: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[covered]
+  - signal-queue: default[covered] loading[covered] empty[covered] failed[covered] selected[covered]
+  - order-status: default[covered] loading[covered] empty[covered] failed[covered]
+  - daily-attribution: default[covered] loading[covered] empty[covered] failed[covered]
+  - position-health: default[covered] loading[covered] empty[covered] failed[covered]
+
+  Coverage Score: 100%
+-->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
   <meta charset="UTF-8">
@@ -22,6 +49,9 @@
   <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
     /* Skip link (accessible) */
@@ -1038,6 +1068,342 @@
         animation: none !important;
       }
     }
+
+    /* ══════════════════════════════════════════════
+     * Tab Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+    .tab-group:has(#trading-mode:checked)
+      [data-panel="trading-mode"] { display: block; }
+    .tab-group:has(#review-mode:checked)
+      [data-panel="review-mode"] { display: block; }
+
+    /* Tab pill styling — reuses order-tab visual language */
+    .trading-mode-tab {
+      font-size: var(--font-size-12);
+      padding: var(--tab-pill-padding-y, var(--space-4)) var(--tab-pill-padding-x, var(--space-8));
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      color: var(--text-tertiary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      min-height: 24px;
+      display: inline-flex;
+      align-items: center;
+      user-select: none;
+    }
+    .trading-mode-tab:hover {
+      color: var(--text-secondary);
+      background: color-mix(in oklch, var(--interaction-hover-subtle-bg) 50%, transparent);
+    }
+    /* Active state driven by :has() */
+    .tab-group:has(#trading-mode:checked) label[for="trading-mode"],
+    .tab-group:has(#review-mode:checked) label[for="review-mode"] {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Tab bar container */
+    .trading-tab-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* Pause trading modal */
+    :root:has(#overlay-pause-trading:checked)
+      [data-overlay="overlay-pause-trading"] { display: flex; }
+
+    /* Position detail sheet */
+    :root:has(#overlay-position-detail:checked)
+      [data-overlay="overlay-position-detail"] { display: flex; }
+
+    /* Risk alert detail drawer */
+    :root:has(#overlay-risk-alert-detail:checked)
+      [data-overlay="overlay-risk-alert-detail"] { display: flex; }
+
+    /* Limit status sheet */
+    :root:has(#overlay-limit-status:checked)
+      [data-overlay="overlay-limit-status"] { display: flex; }
+
+    /* ── Overlay content refinement ── */
+    .overlay-sheet .overlay-header,
+    .overlay-drawer .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-18);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-body h4:first-child { margin-top: 0; }
+
+    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
+
+    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
+    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
+    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
+    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* Stale state — yellow border + warning text */
+    .state-stale {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-8) var(--space-12);
+      border: 1px solid var(--risk-high-fg);
+      border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--risk-high-fg) 6%, transparent);
+      color: var(--risk-high-fg);
+      font-size: var(--font-size-12);
+    }
+
+    /* Review mode panel styles */
+    .review-panel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--density-gutter);
+      height: 100%;
+      min-height: 0;
+    }
+
+    .attribution-section {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .attribution-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-4) 0;
+    }
+
+    .attribution-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      width: 60px;
+      flex-shrink: 0;
+    }
+
+    .attribution-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--surface-muted);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .attribution-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .attribution-bar-fill.up {
+      background: linear-gradient(90deg, var(--market-up-fg), color-mix(in oklch, var(--market-up-fg) 60%, transparent));
+    }
+
+    .attribution-bar-fill.down {
+      background: linear-gradient(90deg, var(--market-down-fg), color-mix(in oklch, var(--market-down-fg) 60%, transparent));
+    }
+
+    .attribution-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      width: 80px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .attribution-value.up { color: var(--market-up-fg); }
+    .attribution-value.down { color: var(--market-down-fg); }
+
+    .health-check-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .health-check-item:last-child { border-bottom: none; }
+    .health-check-item:hover { background: var(--interaction-hover-subtle-bg); }
+
+    .health-check-icon {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .health-check-icon.danger { background: var(--risk-critical-fg); }
+    .health-check-icon.warning { background: var(--risk-high-fg); }
+    .health-check-icon.ok { background: var(--system-healthy-fg); }
+
+    .health-check-label {
+      flex: 1;
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .health-check-value {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+    }
+
+    .strategy-preview-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .strategy-preview-item:last-child { border-bottom: none; }
+
+    .strategy-preview-bar {
+      width: 2px;
+      flex-shrink: 0;
+      align-self: stretch;
+      border-radius: 1px;
+    }
+
+    .strategy-preview-bar.p1 { background: var(--risk-critical-fg); }
+    .strategy-preview-bar.p2 { background: var(--risk-high-fg); }
+    .strategy-preview-bar.p3 { background: var(--text-tertiary); }
+
+    .strategy-preview-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding-left: var(--space-8);
+    }
+
+    .strategy-preview-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .strategy-preview-desc {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      line-height: 1.5;
+    }
+
+    /* Header limit-status trigger button */
+    .header-limit-btn {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-4) var(--space-10);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-default);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+      min-height: 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .header-limit-btn:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    /* Selected state highlight for risk items */
+    .risk-item.selected {
+      background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
+      border-left: 2px solid var(--brand-accent);
+      padding-left: var(--space-8);
+      margin: var(--space-2) calc(var(--space-8) * -1);
+      padding-right: var(--space-8);
+      border-radius: 0 var(--radius-3) var(--radius-3) 0;
+    }
+
+    /* Positions table selected row */
+    .panel-positions .data-table tbody tr.selected {
+      background: color-mix(in oklch, var(--brand-accent) 10%, transparent);
+      outline: 1px solid color-mix(in oklch, var(--brand-accent) 30%, transparent);
+      outline-offset: -1px;
+    }
+
+    /* Bulk action bar */
+    .bulk-action-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-12);
+      background: var(--surface-panel-elevated);
+      border-top: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .bulk-action-btn {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-default);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .bulk-action-btn:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+    .bulk-action-btn.danger {
+      border-color: var(--risk-high-fg);
+      color: var(--risk-high-fg);
+    }
+
+    /* Signal queue selected item */
+    .signal-queue-item.selected {
+      background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
+      margin: 0 calc(var(--space-12) * -1);
+      padding-left: var(--space-12);
+      padding-right: var(--space-12);
+    }
   </style>
 </head>
 <body>
@@ -1094,6 +1460,14 @@
       <span class="header-title">Trading</span>
       <span class="header-subtitle">实盘控制中心</span>
 
+      <!-- Tab Bar: 交易模式 / 复盘模式 -->
+      <div class="trading-tab-bar">
+        <input type="radio" name="trading-tabs" id="trading-mode" checked class="tab-radio sr-only">
+        <label for="trading-mode" class="trading-mode-tab" role="tab">交易模式</label>
+        <input type="radio" name="trading-tabs" id="review-mode" class="tab-radio sr-only">
+        <label for="review-mode" class="trading-mode-tab" role="tab">复盘模式</label>
+      </div>
+
       <div class="header-spacer"></div>
 
       <!-- Account Selector -->
@@ -1125,7 +1499,12 @@
             <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
           </div>
         </div>
-        <button class="btn-danger-sm" aria-label="暂停交易">暂停交易</button>
+        <label for="overlay-limit-status" class="header-limit-btn" title="涨跌停标的状态概览">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12M9 4v12"/></svg>
+          涨跌停
+        </label>
+        <input type="checkbox" id="overlay-pause-trading" class="overlay-radio sr-only">
+        <label for="overlay-pause-trading" class="btn-danger-sm" aria-label="暂停交易">暂停交易</label>
         <button class="header-action-btn" title="Notifications" aria-label="通知">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
@@ -1168,6 +1547,42 @@
       </div>
     </div>
 
+    <!-- State Variants: Session Strip -->
+    <details class="state-variant">
+      <summary class="state-variant-label">Session Strip · Loading</summary>
+      <div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div style="display:flex;gap:var(--space-8);align-items:center;">
+            <div class="skeleton skeleton-badge"></div>
+            <div class="skeleton skeleton-text-sm" style="width:80px;"></div>
+            <div class="skeleton skeleton-text-sm" style="width:100px;"></div>
+            <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
+            <div class="skeleton skeleton-text-sm" style="width:80px;"></div>
+          </div>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Session Strip · Failed</summary>
+      <div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">交易数据连接失败</div>
+          <div class="state-error-desc">无法获取实时交易数据与券商连接状态，请检查网络或重新连接</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+    </details>
+    <details class="state-variant">
+      <summary class="state-variant-label">Session Strip · Stale</summary>
+      <div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          数据延迟 — Session Strip 指标可能不是最新，上次更新 45 秒前
+        </div>
+      </div>
+    </details>
+
     <!-- ═══ Decision Banner ═══ -->
     <div class="trading-banner">
       <div class="panel">
@@ -1208,8 +1623,12 @@
       </div>
     </div>
 
-    <!-- ═══ Main Content — Three stacked panels ═══ -->
+    <!-- ═══ Main Content — Tab Panels ═══ -->
     <div class="main-content" id="main-content" aria-live="polite">
+      <div class="tab-group" data-tab-group="trading">
+
+      <!-- Tab Panel 1: 交易模式（默认） -->
+      <div class="tab-panel" data-panel="trading-mode" style="display:block">
       <div class="trading-panels">
 
         <!-- Panel 1: 权益/盈亏 (~35%) -->
@@ -1253,6 +1672,52 @@
           </div>
         </div>
 
+        <!-- State Variants: Equity/PnL -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Equity/PnL · Loading</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-heading"></div>
+              <div style="display:flex;gap:var(--space-16);">
+                <div class="skeleton skeleton-text-sm" style="width:100px;"></div>
+                <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
+                <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
+              </div>
+              <div class="skeleton skeleton-chart"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Equity/PnL · Empty</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">📈</div>
+              <div class="state-empty-title">交易时段内无持仓</div>
+              <div class="state-empty-desc">当前账户无持仓记录，盈亏曲线将在有持仓后展示</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Equity/PnL · Failed</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">盈亏数据加载失败</div>
+              <div class="state-error-desc">无法获取权益与盈亏数据，请检查券商连接状态</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Equity/PnL · Stale</summary>
+          <div class="state-variant-content" data-state="stale">
+            <div class="state-stale">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+              数据延迟 — 权益数据可能不是最新，上次更新 30 秒前
+            </div>
+          </div>
+        </details>
+
         <!-- Panel 2: 持仓汇总 (~38%) -->
         <div class="panel panel-positions">
           <div class="panel-header">
@@ -1276,7 +1741,8 @@
                 </tr>
               </thead>
               <tbody>
-                <tr class="row">
+                <input type="checkbox" id="overlay-position-detail" class="overlay-radio sr-only">
+                <tr class="row" style="cursor:pointer">
                   <td class="cell-ticker">600519</td>
                   <td class="cell-name">贵州茅台</td>
                   <td class="numeric right">200</td>
@@ -1353,6 +1819,107 @@
           </div>
         </div>
 
+        <!-- State Variants: Positions Summary -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Positions · Loading</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Positions · Empty</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">📊</div>
+              <div class="state-empty-title">当前无持仓</div>
+              <div class="state-empty-desc">账户暂无持仓记录，买入后持仓将在此处展示</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Positions · Failed</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">持仓数据加载失败</div>
+              <div class="state-error-desc">无法获取持仓信息，请检查券商连接状态后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Positions · Stale</summary>
+          <div class="state-variant-content" data-state="stale">
+            <div class="state-stale">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+              数据延迟 — 持仓数据可能不是最新，上次更新 20 秒前
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Positions · Selected</summary>
+          <div class="state-variant-content" data-state="selected">
+            <table class="data-table">
+              <thead>
+                <tr><th>代码</th><th>名称</th><th class="right">数量</th><th class="right">盈亏%</th></tr>
+              </thead>
+              <tbody>
+                <tr class="row selected">
+                  <td class="cell-ticker">600519</td>
+                  <td class="cell-name">贵州茅台</td>
+                  <td class="numeric right">200</td>
+                  <td class="numeric right cell-change-up">+3.98%</td>
+                </tr>
+                <tr class="row">
+                  <td class="cell-ticker">300750</td>
+                  <td class="cell-name">宁德时代</td>
+                  <td class="numeric right">500</td>
+                  <td class="numeric right cell-change-up">+1.40%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Positions · Bulk Select</summary>
+          <div class="state-variant-content" data-state="bulk">
+            <table class="data-table">
+              <thead>
+                <tr><th>代码</th><th>名称</th><th class="right">数量</th><th class="right">盈亏%</th></tr>
+              </thead>
+              <tbody>
+                <tr class="row selected">
+                  <td class="cell-ticker">000333</td>
+                  <td class="cell-name">美的集团</td>
+                  <td class="numeric right">600</td>
+                  <td class="numeric right cell-change-down">-2.21%</td>
+                </tr>
+                <tr class="row selected">
+                  <td class="cell-ticker">002475</td>
+                  <td class="cell-name">立讯精密</td>
+                  <td class="numeric right">400</td>
+                  <td class="numeric right cell-change-down">-6.32%</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="bulk-action-bar">
+              <span>已选择 2 只标的</span>
+              <div style="flex:1;"></div>
+              <button class="bulk-action-btn">批量调整</button>
+              <button class="bulk-action-btn danger">批量平仓</button>
+            </div>
+          </div>
+        </details>
+
         <!-- Panel 3: 订单状态 (~27%) -->
         <div class="panel panel-orders">
           <div class="panel-header">
@@ -1410,7 +1977,270 @@
           </div>
         </div>
 
+        <!-- State Variants: Order Status -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Order Status · Loading</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Order Status · Empty</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">📋</div>
+              <div class="state-empty-title">今日无订单</div>
+              <div class="state-empty-desc">当前交易日尚未提交任何订单</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Order Status · Failed</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">订单数据加载失败</div>
+              <div class="state-error-desc">无法获取订单状态信息，请检查券商连接</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+
       </div>
+      </div><!-- /tab-panel trading-mode -->
+
+      <!-- Tab Panel 2: 复盘模式（Review Mode） -->
+      <div class="tab-panel" data-panel="review-mode">
+        <div class="review-panel">
+
+          <!-- Review: 当日交易摘要 -->
+          <div class="panel" style="flex:0 0 auto;">
+            <div class="equity-metrics">
+              <div class="equity-primary">
+                <span class="equity-label">今日盈亏</span>
+                <span class="equity-value">+¥86,472.50</span>
+                <span class="equity-pct">+0.34%</span>
+              </div>
+              <div class="equity-sub-row">
+                <div class="equity-sub-item">
+                  <span class="equity-sub-label">交易笔数</span>
+                  <span class="equity-sub-value">47 笔</span>
+                </div>
+                <div class="equity-sub-item">
+                  <span class="equity-sub-label">胜率</span>
+                  <span class="equity-sub-value up">68%</span>
+                </div>
+                <div class="equity-sub-item">
+                  <span class="equity-sub-label">最大单笔盈利</span>
+                  <span class="equity-sub-value up">+¥12,400</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Review: 当日归因 -->
+          <div class="panel attribution-section">
+            <div class="panel-header">
+              <span class="panel-title">当日归因</span>
+              <div class="panel-actions">
+                <button class="panel-action">查看详情 →</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <h4 style="font-size:var(--font-size-11);color:var(--text-tertiary);margin:0 0 var(--space-6);">行业贡献</h4>
+              <div class="attribution-row">
+                <span class="attribution-label">科技</span>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:65%;"></div></div>
+                <span class="attribution-value up">+8,200</span>
+              </div>
+              <div class="attribution-row">
+                <span class="attribution-label">消费</span>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:38%;"></div></div>
+                <span class="attribution-value up">+3,100</span>
+              </div>
+              <div class="attribution-row">
+                <span class="attribution-label">金融</span>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:12%;"></div></div>
+                <span class="attribution-value up">+1,040</span>
+              </div>
+
+              <h4 style="font-size:var(--font-size-11);color:var(--text-tertiary);margin:var(--space-10) 0 var(--space-6);">个股贡献</h4>
+              <div class="attribution-row">
+                <span class="attribution-label">贵州茅台</span>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:45%;"></div></div>
+                <span class="attribution-value up">+5,600</span>
+              </div>
+              <div class="attribution-row">
+                <span class="attribution-label">宁德时代</span>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:34%;"></div></div>
+                <span class="attribution-value up">+4,200</span>
+              </div>
+              <div class="attribution-row">
+                <span class="attribution-label">比亚迪</span>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill down" style="width:10%;"></div></div>
+                <span class="attribution-value down">-1,200</span>
+              </div>
+
+              <h4 style="font-size:var(--font-size-11);color:var(--text-tertiary);margin:var(--space-10) 0 var(--space-6);">因子贡献</h4>
+              <div class="attribution-row">
+                <span class="attribution-label">动量</span>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:55%;"></div></div>
+                <span class="attribution-value up">+6,800</span>
+              </div>
+              <div class="attribution-row">
+                <span class="attribution-label">价值</span>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:28%;"></div></div>
+                <span class="attribution-value up">+3,500</span>
+              </div>
+              <div class="attribution-row">
+                <span class="attribution-label">质量</span>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:16%;"></div></div>
+                <span class="attribution-value up">+2,040</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- State Variants: Daily Attribution (Review) -->
+          <details class="state-variant">
+            <summary class="state-variant-label">当日归因 · Loading</summary>
+            <div class="state-variant-content" data-state="loading">
+              <div class="state-loading">
+                <div class="skeleton skeleton-heading"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">当日归因 · Empty</summary>
+            <div class="state-variant-content" data-state="empty">
+              <div class="state-empty">
+                <div class="state-empty-icon">📊</div>
+                <div class="state-empty-title">今日无归因数据</div>
+                <div class="state-empty-desc">当日未产生交易盈亏，归因分析将在有成交后生成</div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">当日归因 · Failed</summary>
+            <div class="state-variant-content" data-state="failed">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">归因数据加载失败</div>
+                <div class="state-error-desc">无法获取当日归因分析数据，请检查归因引擎状态</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </details>
+
+          <!-- Review: 持仓健康检查 -->
+          <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+            <div class="panel-header">
+              <span class="panel-title">持仓健康检查</span>
+              <span class="panel-count">3</span>
+            </div>
+            <div class="panel-body" style="flex:1;overflow-y:auto;">
+              <div class="health-check-item">
+                <span class="health-check-icon danger"></span>
+                <span class="health-check-label">立讯精密 (002475) — 明日可能触及跌停</span>
+                <span class="health-check-value" style="color:var(--risk-critical-fg)">-6.32%</span>
+              </div>
+              <div class="health-check-item">
+                <span class="health-check-icon warning"></span>
+                <span class="health-check-label">美的集团 (000333) — 偏离成本 >5%</span>
+                <span class="health-check-value" style="color:var(--risk-high-fg)">-2.21%</span>
+              </div>
+              <div class="health-check-item">
+                <span class="health-check-icon ok"></span>
+                <span class="health-check-label">贵州茅台 (600519) — 明日财报披露</span>
+                <span class="health-check-value" style="color:var(--system-healthy-fg)">+3.98%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- State Variants: 持仓健康检查 (Review) -->
+          <details class="state-variant">
+            <summary class="state-variant-label">Position Health · Loading</summary>
+            <div class="state-variant-content" data-state="loading">
+              <div class="state-loading">
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Position Health · Empty</summary>
+            <div class="state-variant-content" data-state="empty">
+              <div class="state-empty">
+                <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+                <div class="state-empty-title">所有持仓状态正常</div>
+                <div class="state-empty-desc">无涨跌停风险持仓、无异常波动、无偏离成本预警</div>
+              </div>
+            </div>
+          </details>
+          <details class="state-variant">
+            <summary class="state-variant-label">Position Health · Failed</summary>
+            <div class="state-variant-content" data-state="failed">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">持仓健康检查加载失败</div>
+                <div class="state-error-desc">无法获取持仓风险数据，请检查风险引擎连接</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </details>
+
+          <!-- Review: 明日策略预演 -->
+          <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+            <div class="panel-header">
+              <span class="panel-title">明日策略预演</span>
+            </div>
+            <div class="panel-body" style="flex:1;overflow-y:auto;">
+              <div class="strategy-preview-item">
+                <div class="strategy-preview-bar p1"></div>
+                <div class="strategy-preview-body">
+                  <span class="strategy-preview-title">贵州茅台 — 关注财报结果，预设止损单</span>
+                  <span class="strategy-preview-desc">明日财报披露，建议预设 1,780 止损单（成本 1,785 以下），降低事件风险</span>
+                </div>
+              </div>
+              <div class="strategy-preview-item">
+                <div class="strategy-preview-bar p1"></div>
+                <div class="strategy-preview-body">
+                  <span class="strategy-preview-title">立讯精密 — 评估是否减仓</span>
+                  <span class="strategy-preview-desc">连续下跌 -6.32%，偏离成本价 6.3%，建议评估是否在集合竞价阶段减仓 200 股</span>
+                </div>
+              </div>
+              <div class="strategy-preview-item">
+                <div class="strategy-preview-bar p2"></div>
+                <div class="strategy-preview-body">
+                  <span class="strategy-preview-title">科技板块 — Regime 偏震荡，建议降集中度</span>
+                  <span class="strategy-preview-desc">当前科技占比 37.2%，超出规则上限 35%。建议明日开盘后适度减配至 33%</span>
+                </div>
+              </div>
+              <div class="strategy-preview-item">
+                <div class="strategy-preview-bar p3"></div>
+                <div class="strategy-preview-body">
+                  <span class="strategy-preview-title">美的集团 — 偏离成本，观望为宜</span>
+                  <span class="strategy-preview-desc">亏损 -2.21% 在可接受范围，因子模型建议持有，等待均值回归</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /tab-panel review-mode -->
+
+      </div><!-- /tab-group -->
     </div>
 
     <!-- ═══ Activity Stack (300px right side) ═══ -->
@@ -1434,6 +2264,8 @@
                   <div class="risk-progress-fill critical" style="width: 68.2%;"></div>
                 </div>
               </div>
+              <input type="checkbox" id="overlay-risk-alert-detail" class="overlay-radio sr-only">
+              <label for="overlay-risk-alert-detail" class="panel-action" style="cursor:pointer;flex-shrink:0;align-self:center;" title="查看详情">详情</label>
             </div>
             <div class="risk-item">
               <div class="risk-item-dot warning"></div>
@@ -1467,6 +2299,80 @@
             </div>
           </div>
         </div>
+
+        <!-- State Variants: Risk/Alerts -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Risk/Alerts · Loading</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Risk/Alerts · Empty</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-title">当前无风险预警</div>
+              <div class="state-empty-desc">所有风控指标在正常范围内，暂无预警信息</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Risk/Alerts · Failed</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">风控数据加载失败</div>
+              <div class="state-error-desc">无法获取风控预警数据，请检查风险引擎连接</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Risk/Alerts · Stale</summary>
+          <div class="state-variant-content" data-state="stale">
+            <div class="state-stale" style="border-color:var(--risk-critical-fg);background:color-mix(in oklch, var(--risk-critical-fg) 6%, transparent);color:var(--risk-critical-fg);">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+              预警数据可能过期 — 上次更新 60 秒前
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Risk/Alerts · Selected</summary>
+          <div class="state-variant-content" data-state="selected">
+            <div style="display:flex;flex-direction:column;">
+              <div class="risk-item critical-alert selected">
+                <div class="risk-item-dot critical"></div>
+                <div class="risk-item-body">
+                  <div class="risk-item-row">
+                    <span class="risk-item-label">行业集中度</span>
+                    <span class="risk-item-value critical">科技 37.2% <span class="risk-item-annotation">超限 +2.2%</span></span>
+                  </div>
+                  <div class="risk-progress">
+                    <div class="risk-progress-fill critical" style="width: 68.2%;"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="risk-item">
+                <div class="risk-item-dot warning"></div>
+                <div class="risk-item-body">
+                  <div class="risk-item-row">
+                    <span class="risk-item-label">风险预算</span>
+                    <span class="risk-item-value warning">68.2%</span>
+                  </div>
+                  <div class="risk-progress">
+                    <div class="risk-progress-fill warning" style="width: 68.2%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
 
         <!-- Section 2: 信号队列 -->
         <div class="context-section">
@@ -1533,6 +2439,76 @@
           </div>
         </div>
 
+        <!-- State Variants: Signal Queue -->
+        <details class="state-variant">
+          <summary class="state-variant-label">Signal Queue · Loading</summary>
+          <div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Signal Queue · Empty</summary>
+          <div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-title">暂无待处理信号</div>
+              <div class="state-empty-desc">所有信号已处理完毕，信号队列将在新信号产生时更新</div>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Signal Queue · Failed</summary>
+          <div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">信号引擎连接失败</div>
+              <div class="state-error-desc">无法获取信号队列数据，请检查策略引擎连接</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+        </details>
+        <details class="state-variant">
+          <summary class="state-variant-label">Signal Queue · Selected</summary>
+          <div class="state-variant-content" data-state="selected">
+            <div style="display:flex;flex-direction:column;">
+              <div class="signal-queue-item selected" role="button" tabindex="0">
+                <div class="signal-queue-bar p1"></div>
+                <div class="signal-queue-body">
+                  <div class="signal-queue-header">
+                    <span class="signal-queue-title">贵州茅台</span>
+                    <span class="signal-queue-direction sell">卖出信号</span>
+                  </div>
+                  <span class="signal-queue-reason">RSI背离+放量, Alpha v3</span>
+                  <div class="signal-queue-footer">
+                    <span class="signal-queue-meta">3分钟前</span>
+                    <span class="signal-queue-confidence high">置信度 87%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="signal-queue-item" role="button" tabindex="0">
+                <div class="signal-queue-bar p2"></div>
+                <div class="signal-queue-body">
+                  <div class="signal-queue-header">
+                    <span class="signal-queue-title">宁德时代</span>
+                    <span class="signal-queue-direction buy">买入信号</span>
+                  </div>
+                  <span class="signal-queue-reason">均值回归 v2</span>
+                  <div class="signal-queue-footer">
+                    <span class="signal-queue-meta">12分钟前</span>
+                    <span class="signal-queue-confidence medium">置信度 72%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+
         <!-- Section 3: 今日成交 -->
         <div class="context-section">
           <div class="context-section-header">
@@ -1566,6 +2542,181 @@
           </div>
         </div>
 
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay A: 暂停交易确认 (Modal 破坏性操作) -->
+    <div class="overlay-backdrop" data-overlay="overlay-pause-trading">
+      <label class="overlay-dismiss" for="overlay-pause-trading" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="暂停交易确认">
+        <div class="overlay-header">
+          <span class="overlay-title" style="color:var(--risk-critical-fg);">确认暂停交易</span>
+          <label for="overlay-pause-trading" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <div style="display:flex;align-items:flex-start;gap:var(--space-10);padding:var(--space-8) 0;">
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--risk-critical-fg);font-size:16px;font-weight:var(--font-weight-semibold);">!</div>
+            <div>
+              <p style="margin:0 0 var(--space-6);color:var(--text-primary);font-size:var(--font-size-13);font-weight:var(--font-weight-medium);">暂停后所有新订单将被拦截</p>
+              <p style="margin:0;color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
+            </div>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-danger" style="cursor:pointer;border-color:var(--risk-critical-fg);color:var(--risk-critical-fg);">确认暂停</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: 持仓详情 (Sheet) -->
+    <div class="overlay-backdrop" data-overlay="overlay-position-detail">
+      <label class="overlay-dismiss" for="overlay-position-detail" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="持仓详情">
+        <div class="overlay-header">
+          <span class="overlay-title">持仓详情 — 贵州茅台 (600519)</span>
+          <label for="overlay-position-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>标的信息</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">代码</span>
+            <span class="overlay-field-value">600519</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">名称</span>
+            <span class="overlay-field-value">贵州茅台</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">现价</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">¥1,856.00</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">涨跌幅</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">+3.98%</span>
+          </div>
+
+          <h4>持仓信息</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">持有数量</span>
+            <span class="overlay-field-value">200 股</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">成本价</span>
+            <span class="overlay-field-value">¥1,785.00</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">市值</span>
+            <span class="overlay-field-value">¥371,200.00</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">浮动盈亏</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">+¥14,200.00 (+3.98%)</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">T+1 状态</span>
+            <span class="overlay-field-value">全部可卖</span>
+          </div>
+
+          <h4>当日成交记录</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">14:30</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">买入 100股 @ ¥1,850.00</span>
+          </div>
+
+          <h4>关联信号</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">卖出信号</span>
+            <span class="overlay-field-value" style="color:var(--market-down-fg)">Alpha v3 · RSI背离+放量 · 置信度 87%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: 风控预警详情 (Drawer) -->
+    <div class="overlay-backdrop" data-overlay="overlay-risk-alert-detail">
+      <label class="overlay-dismiss" for="overlay-risk-alert-detail" aria-label="关闭"></label>
+      <div class="overlay-drawer" role="dialog" aria-label="风控预警详情">
+        <div class="overlay-header">
+          <span class="overlay-title">风控预警详情</span>
+          <label for="overlay-risk-alert-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>预警概要</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">类型</span>
+            <span class="overlay-field-value">行业集中度超限</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">级别</span>
+            <span class="overlay-field-value" style="color:var(--risk-critical-fg)">严重</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">触发时间</span>
+            <span class="overlay-field-value">14:20:33</span>
+          </div>
+
+          <h4>详细描述</h4>
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            科技板块持仓集中度达到 37.2%，超过规则上限 35%。当前科技板块持仓包括：宁德时代、比亚迪、立讯精密、中芯国际。建议适度减配至 33% 以下，降低单一板块风险敞口。
+          </p>
+
+          <h4>影响范围</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">受影响持仓</span>
+            <span class="overlay-field-value">4 只标的</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">涉及市值</span>
+            <span class="overlay-field-value">¥9,453,000</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">占总权益</span>
+            <span class="overlay-field-value" style="color:var(--risk-critical-fg)">37.2%</span>
+          </div>
+
+          <h4>建议操作</h4>
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            1. 优先减持立讯精密（亏损 -6.32%，动量反转信号明确）<br>
+            2. 评估宁德时代仓位，当前盈利 +1.40% 可适度止盈<br>
+            3. 将科技板块集中度降至 33% 以下
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay D: 涨跌停标的状态概览 (Sheet) -->
+    <div class="overlay-backdrop" data-overlay="overlay-limit-status">
+      <label class="overlay-dismiss" for="overlay-limit-status" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="涨跌停标的状态概览">
+        <div class="overlay-header">
+          <span class="overlay-title">涨跌停标的状态概览</span>
+          <label for="overlay-limit-status" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>接近涨停</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">中芯国际 (688981)</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">¥51.00 (+6.25%) · 距涨停 3.75%</span>
+          </div>
+
+          <h4>接近跌停</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">立讯精密 (002475)</span>
+            <span class="overlay-field-value" style="color:var(--market-down-fg)">¥35.60 (-6.32%) · 距跌停 3.68%</span>
+          </div>
+
+          <h4>今日已涨停</h4>
+          <div style="padding:var(--space-6) 0;color:var(--text-tertiary);font-size:var(--font-size-12);">暂无标的触及涨停</div>
+
+          <h4>今日已跌停</h4>
+          <div style="padding:var(--space-6) 0;color:var(--text-tertiary);font-size:var(--font-size-12);">暂无标的触及跌停</div>
+        </div>
       </div>
     </div>
 
