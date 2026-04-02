@@ -96,7 +96,7 @@ disable-model-invocation: true
 | 产出物 | 路径 | 说明 |
 |--------|------|------|
 | 信息架构 | [01_product_information_architecture.md](../../docs/designs/specs/01_product_information_architecture.md) | 全局 IA、导航结构、页面层级 |
-| 页面蓝图 | [02_core_page_blueprints.md](../../docs/designs/specs/02_core_page_blueprints.md) | 每页的模块、优先级、交互 |
+| 页面蓝图 | [02_core_page_blueprints.md](../../docs/designs/specs/02_core_page_blueprints.md) | 每页的模块、优先级、交互、**tab 面板内容、overlay 注册、组件×状态矩阵** |
 | 用户流程 | （内嵌于 IA 文档或独立） | 核心任务的端到端路径 |
 | 术语表 | （内嵌于 IA 文档或独立） | 统一标签/术语/中英对齐 |
 
@@ -131,6 +131,23 @@ disable-model-invocation: true
 │   ├─ 主/辅工作面
 │   ├─ 默认信息排序（首屏优先级）
 │   ├─ 核心模块清单
+│   ├─ Tab Content Sections（每个 tab 的面板内容）
+│   │   ├─ Tab: [名称]
+│   │   │   ├─ 子模块清单
+│   │   │   ├─ 数据字段（来源: 01 IA 或 04 状态规范）
+│   │   │   └─ 交互说明
+│   │   └─ ...
+│   ├─ Overlay Registry（所有弹出层）
+│   │   ├─ Overlay: [名称] (Modal/Drawer/Sheet/Toast)
+│   │   │   ├─ 触发条件
+│   │   │   ├─ 内容结构
+│   │   │   └─ 关闭行为
+│   │   └─ ...
+│   ├─ Component × State Matrix（组件状态矩阵）
+│   │   │  ← 桥接 04_interaction_state_spec.md 的通用状态
+│   │   │    到本页具体组件，是原型全状态生成的直接输入
+│   │   └─ 矩阵格式：组件 × (default/loading/empty/failed/
+│   │       stale/selected/bulk/running/blocker...)
 │   ├─ 主 CTA
 │   ├─ 与其他页面的关系
 │   └─ 线框图（ASCII art）
@@ -174,7 +191,31 @@ disable-model-invocation: true
 │   ├─ Product Strategist  → opus  → 产品范围 + 用户场景  │
 │   ├─ Information Architect → opus  → IA 结构 + 蓝图框架 │
 │   ├─ UX Strategist       → sonnet → 用户流程 + 交互模式 │
+│   │   + Tab Content Sections（每 tab 面板的子模块/字段）  │
+│   │   + Overlay Registry（弹出层注册表）                  │
+│   │   + Component × State Matrix（组件状态矩阵）          │
 │   └─ Domain Expert       → sonnet → 领域约束 + 术语验证 │
+│                                                         │
+│   ⚠️ UX Strategist 状态定义职责：                        │
+│   UX Strategist 必须为每个页面产出以下三项，               │
+│   这些是 ditto-design-cycle --create 的直接输入：          │
+│                                                         │
+│   A. Tab Content Sections：                              │
+│      每个 tab 必须定义子模块清单、数据字段、交互说明。     │
+│      不允许只写标签名。数据字段优先引用 01 IA 文档中      │
+│      已定义的字段，避免重复定义。                          │
+│                                                         │
+│   B. Overlay Registry：                                  │
+│      列出所有 Modal / Drawer / Sheet / Toast 等弹出层，   │
+│      每项必须包含：触发条件、内容结构、关闭行为。          │
+│      破坏性操作（删除、取消订单等）必须有 Confirm Dialog。 │
+│                                                         │
+│   C. Component × State Matrix：                          │
+│      把 04_interaction_state_spec.md 的 15 种通用状态     │
+│      映射到本页每个数据组件。矩阵格式：                    │
+│      行 = 组件名，列 = 状态（default/loading/empty/       │
+│      failed/stale/selected/bulk/running/blocker...）。    │
+│      每个单元格简要描述该组件在该状态下的表现。             │
 │                                                         │
 │   每个角色的输出格式：                                    │
 │   - 📋 设计草案（结构化 Markdown）                       │
@@ -197,6 +238,11 @@ disable-model-invocation: true
 │   1. 写入/更新目标文档                                    │
 │      ├─ 01_product_information_architecture.md           │
 │      ├─ 02_core_page_blueprints.md                       │
+│      │   ⚠️ 每个页面必须包含：                            │
+│      │   ├─ Tab Content Sections（所有 tab 面板内容）     │
+│      │   ├─ Overlay Registry（弹出层注册表）              │
+│      │   └─ Component × State Matrix（组件状态矩阵）      │
+│      │   缺失任一项 → 文档不完整，Phase 5 必须标记        │
 │      └─ 用户流程 + 术语表（内嵌或独立）                   │
 │   2. 更新设计决策（如有架构变更）                         │
 │   3. git commit                                          │
@@ -206,7 +252,16 @@ disable-model-invocation: true
 │   1. 检查与现有 spec（10-15）的一致性                     │
 │   2. 检查与原型的对齐度                                   │
 │   3. 检查术语表一致性                                    │
-│   4. 输出一致性报告 + 待同步清单                          │
+│   4. [新增] 状态定义完整性验证：                           │
+│      ├─ 每个 tab 是否有 Tab Content Section              │
+│      ├─ 破坏性操作是否在 Overlay Registry 中有 Confirm    │
+│      ├─ 数据组件是否在 Component × State Matrix 中定义    │
+│      │   了 loading/empty/failed 三态                    │
+│      ├─ 04_interaction_state_spec.md 的通用状态是否被     │
+│      │   正确映射（无遗漏、无矛盾）                       │
+│      └─ 生成「状态定义覆盖率报告」                        │
+│          （tab: N/M, overlay: N/M, state: N/M）          │
+│   5. 输出一致性报告 + 待同步清单 + 状态覆盖率报告         │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -225,6 +280,7 @@ CONTEXT [sonnet] → 完整性评分 [4 角色并行] → 问题汇总 → 修�
 | 可达性 | 所有页面是否在导航中可达、所有流程是否有出口 |
 | 时效性 | 与最新设计决策是否同步、与原型是否对齐 |
 | 扩展性 | 新增页面时 IA 是否需要大规模重构 |
+| 状态覆盖 | 每个 tab 是否有面板内容、每个数据组件是否有 loading/empty/failed 定义、破坏性操作是否有 overlay 定义 |
 
 ### 迭代模式（--iterate）
 
@@ -262,6 +318,7 @@ CONTEXT [sonnet] → 读取现有文档 → RESEARCH（轻量） → DESIGN（�
 | 导航可达性 | X/10 | 发现 J 个不可达页面/状态 |
 | 流程完整性 | X/10 | 核心任务覆盖 L/M |
 | 文档同步度 | X/10 | 与设计决策有 D 处不同步 |
+| 状态定义覆盖 | X/10 | Tab 面板覆盖 M/N，Overlay 定义 K 个，状态矩阵覆盖 L/N 组件 |
 
 ## 发现的问题
 
@@ -285,12 +342,17 @@ CONTEXT [sonnet] → 读取现有文档 → RESEARCH（轻量） → DESIGN（�
 
 ```
 /ditto-product-arch                    /ditto-design-cycle
-（上游：定义做什么）                    （下游：创建 UI + 审查迭代）
+（上游：定义做什么 + 什么状态）           （下游：创建全状态 UI + 审查迭代）
         │                                      │
         ├─ 产出 IA 文档                        ├─ --create 模式基于蓝图生成 UI 原型
-        ├─ 产出页面蓝图                        ├─ IA Specialist 审查流程完整性
-        ├─ 产出用户流程                        ├─ Copy Editor 审查标签一致性
-        └─ 产出术语表                          └─ 反馈 → 回到 product-arch 优化
+        ├─ 产出页面蓝图                        │  ├─ 读取 Tab Content → 生成所有 tab 面板
+        │   ├─ Tab Content Sections ─────────────┤  ├─ 读取 Overlay Registry → 生成弹出层
+        │   ├─ Overlay Registry ─────────────────┤  └─ 读取 State Matrix → 生成状态变体
+        │   └─ Component × State Matrix ─────────┤  └─ 注入 State Coverage Index
+        ├─ 产出用户流程                        ├─ IA Specialist 审查流程完整性
+        ├─ 产出术语表                          ├─ Copy Editor 审查标签一致性
+        └─ 产出状态定义                        ├─ Phase 3 审查状态覆盖完整度
+                                                  └─ 反馈 → 回到 product-arch 优化
 ```
 
 **关键区别：**

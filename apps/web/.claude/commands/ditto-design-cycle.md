@@ -38,6 +38,7 @@ UI 创建与设计审查编排。支持两种模式：**创建模式**（`--crea
 
 - **设计规范**: [docs/designs/specs/](../../docs/designs/specs/)（参考起点，非刚性约束）
 - **Design Token**: [docs/designs/specs/prototypes/shared/tokens-base.css](../../docs/designs/specs/prototypes/shared/tokens-base.css) 及其 9 层体系
+- **原型三区架构**: [docs/designs/specs/prototypes/shared/prototype-toggles.css](../../docs/designs/specs/prototypes/shared/prototype-toggles.css)（三区导航 / tab 面板 / gallery grid / state patterns）
 - **设计决策**: [docs/designs/decisions/](../../docs/designs/decisions/)（**Art Director 刚性锚点** — 9 项关键决策定义了 Graphite Studio 的审美方向）
 - **品牌 DNA**: Style B Graphite Studio — Linear/Vercel/Raycast 的克制感 + Bloomberg/quant desk 的专业终端感
 - **架构规范**: [architecture.md](../rules/architecture.md)
@@ -219,7 +220,7 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 |------|-------|---------|------|
 | UI Designer | opus | Token 一致性、视觉层次、色彩排版 | [roles.md](../design-review/roles.md#ui-designer) |
 | UX Reviewer | sonnet | 可用性、可访问性、交互流程 | [roles.md](../design-review/roles.md#ux-reviewer) |
-| Product Mgr | sonnet | 功能完整性、用户场景、业务规则 | [roles.md](../design-review/roles.md#product-manager) |
+| Product Mgr | sonnet | Spec 落地合规、重要性层级、交互意图、产品边界守卫 | [roles.md](../design-review/roles.md#product-manager) |
 | IA Specialist | sonnet | 信息架构、用户流程、页面蓝图、标签体系 | [roles.md](../design-review/roles.md#ia-specialist) |
 | Copy Editor | sonnet | 文案清晰度、语气一致、中文表达 | [roles.md](../design-review/roles.md#copy-editor) |
 | Art Director | opus | 克制度、高级感、品牌方向锚定 | [roles.md](../design-review/roles.md#art-director) |
@@ -297,30 +298,105 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │   5. git tag review/<task>/round-{N}                    │
 │   6. 后续修改直接在原文件上进行                           │
 ├─────────────────────────────────────────────────────────┤
-│ Phase 0.5: CREATE（基于蓝图生成 UI 原型）   [--create] [sonnet] │
+│ Phase 0.5: CREATE（全状态 UI 原型生成）      [--create] [sonnet] │
 │                                                         │
 │   仅在 --create 模式下执行。基于 product-arch 产出物     │
-│   生成初始 HTML 原型，然后进入正常审查流程。             │
+│   生成全状态 HTML 原型，然后进入正常审查流程。           │
+│                                                         │
+│   ⚠️ 核心原则：原型不是只渲染"默认态"，必须覆盖所有     │
+│   可见 UI 状态（tab 面板、overlay、empty/loading/error）。│
+│   CSS 切换系统：prototype-toggles.css（radio/checkbox/   │
+│   details），详见 shared/prototype-toggles.css。          │
 │                                                         │
 │   1. 读取 product-arch 产出物                           │
 │      ├─ 01_product_information_architecture.md           │
 │      │   （页面角色、导航上下文、术语表）                  │
 │      ├─ 02_core_page_blueprints.md                      │
-│      │   （--page 指定页面：模块清单、优先级、交互设计）   │
+│      │   （--page 指定页面：模块清单、优先级、交互设计、   │
+│      │    tab 面板内容、overlay 注册表、组件×状态矩阵）   │
+│      ├─ 04_interaction_state_spec.md                     │
+│      │   （通用状态定义 + 页面状态映射，如有）            │
 │      └─ 00_ditto_product_criteria.md                     │
 │          （密度准则、字号映射、间距梯度）                  │
 │   2. 读取 Design Token（tokens-style.css）               │
 │   3. 读取设计决策（docs/designs/decisions/）             │
-│   4. [如 --reference <file>] 读取参考页面 HTML            │
+│   4. 读取 prototype-toggles.css（共享 CSS 切换系统）      │
+│   5. [如 --reference <file>] 读取参考页面 HTML            │
 │      ├─ 提取参考页面的视觉指纹和组件模式                  │
 │      └─ 作为 impeccable:frontend-design 的 style reference│
-│   5. 调用 impeccable:frontend-design 生成 HTML 原型      │
+│   6. 调用 impeccable:frontend-design 生成 HTML 原型      │
 │      ├─ 传入蓝图中的模块清单和信息优先级                  │
 │      ├─ 传入产品规格中的密度/字号/间距标准                 │
 │      ├─ 传入品牌 DNA（Graphite Studio 风格）             │
 │      └─ [如 --reference] 传入参考页面确保风格对齐         │
-│   6. 写入目标文件                                        │
-│   7. git add → commit → tag review/<task>/round-0        │
+│                                                         │
+│   ── 6a. 三区结构生成（CREATE 核心扩展）──                │
+│                                                         │
+│   原型采用三区 Hash 导航架构（借鉴 Figma frame +          │
+│   Storybook 导航 + Design System 文档画廊）：             │
+│   - Zone 1: default-view（纯净默认视图）                 │
+│   - Zone 2: states-gallery（状态变体画廊）               │
+│   - Zone 3: overlays-gallery（弹层设计画廊）             │
+│                                                         │
+│   HTML 骨架：                                           │
+│   <input type="radio" id="view-default" name="proto-view" │
+│          checked class="sr-only">                        │
+│   <input type="radio" id="view-states" name="proto-view" │
+│          class="sr-only">                                │
+│   <input type="radio" id="view-overlays"                 │
+│          name="proto-view" class="sr-only">              │
+│   <nav class="proto-nav">...</nav>                       │
+│   <section id="default-view" class="proto-section">...   │
+│   <section id="states-gallery" class="proto-section">... │
+│   <section id="overlays-gallery" class="proto-section">..│
+│                                                         │
+│   A. Zone 1: Default View（主视图）：                    │
+│      ├─ 完整渲染页面默认状态，与生产环境一致              │
+│      ├─ 不包含任何 state variant 或 overlay              │
+│      ├─ Tab 面板（radio 切换）保留在此 zone：            │
+│      │   ├─ 为蓝图定义的每个 tab 生成面板内容             │
+│      │   ├─ 在 <style> 中添加 :has() 激活规则            │
+│      │   └─ 蓝图内容不足时分级处理：                      │
+│      │       ├─ 有子模块清单 → 按清单生成 mock 数据面板   │
+│      │       ├─ 有标签名+上下文可推断 → 推理生成合理内容  │
+│      │       └─ 仅有标签名无法推断 → 骨架占位             │
+│      │           + 标注 <!-- ⚠️ 待 PM 定义 -->            │
+│      └─ Tab 是页面功能导航，不是组件生命周期状态          │
+│                                                         │
+│   B. Zone 3: Overlays Gallery（弹层设计画廊）：          │
+│      ├─ 所有弹层直接渲染在 .gallery-card 中              │
+│      ├─ 无需 checkbox toggle，直接可见                   │
+│      ├─ 蓝图有明确交互设计的（如 Order Confirmation）    │
+│      │   → 全量渲染在 .gallery-card__preview--overlay 中  │
+│      ├─ 表格行"查看详情"操作                             │
+│      │   → 渲染通用 detail drawer，标注 [示意]            │
+│      ├─ 破坏性操作（删除/取消）                          │
+│      │   → 渲染通用 confirm dialog 模板                   │
+│      └─ 每个 overlay card 含 label + trigger 描述        │
+│                                                         │
+│   C. Zone 2: States Gallery（状态变体画廊）：            │
+│      ├─ 每个数据区块生成 empty/loading/error 三态         │
+│      ├─ 按 .gallery-group[data-component] 分组           │
+│      ├─ 每个状态用 .gallery-card 包裹：                  │
+│      │   .gallery-card__label + .gallery-card__preview   │
+│      └─ 使用 prototype-toggles.css 预设样式               │
+│          （.state-empty / .state-loading / .state-error） │
+│                                                         │
+│   D. State Coverage Index 注入：                         │
+│      ├─ 在 HTML 顶部注入机器可读注释块                   │
+│      ├─ 列出所有 tab / overlay / state variant           │
+│      ├─ [✓] 已渲染 / [ ] 未定义                          │
+│      └─ Tab 面板必须全部 [✓]，不允许空壳                  │
+│                                                         │
+│   E. 三区 CSS 引用：                                     │
+│      ├─ 在 <head> 中加载 prototype-toggles.css           │
+│      ├─ View-level radio + proto-nav（zone 切换）        │
+│      ├─ default-view 内保留 tab 切换（如蓝图有 tab）     │
+│      └─ states-gallery / overlays-gallery 使用           │
+│          gallery grid 样式                               │
+│                                                         │
+│   7. 写入目标文件                                        │
+│   8. git add → commit → tag review/<task>/round-0        │
 │                                                         │
 │   ── --create-all 批量创建（Phase 0.5 循环变体）──       │
 │                                                         │
@@ -337,6 +413,8 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      ├─ 后续页面：以 manifest 中最高分 done 页面为 anchor│
 │      │   └─ 传入 anchor 页面 HTML 作为 --reference        │
 │      ├─ 传入蓝图模块清单 + 产品规格 + 品牌 DNA           │
+│      ├─ 执行步骤 6a 全状态生成（tab/overlay/state）      │
+│      │   （详见上方 Phase 0.5 步骤 6a）                   │
 │      └─ 写入目标文件 → 更新 manifest pages[]             │
 │   5. 全部完成后：                                        │
 │      ├─ manifest.status = "in-progress"                  │
@@ -353,11 +431,29 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │   4a. 读取信息架构文档（IA Specialist 参考锚点）          │
 │      ├─ 01_product_information_architecture.md           │
 │      └─ 02_core_page_blueprints.md                        │
+│   4b. [新增] 解析 State Coverage Index                   │
+│      ├─ 提取 HTML 顶部的状态覆盖索引注释块               │
+│      ├─ 统计 tab 面板覆盖数 / 总数                        │
+│      ├─ 统计 overlay 覆盖数 / 总数                       │
+│      ├─ 统计 state variant (empty/loading/error) 覆盖数   │
+│      ├─ [三区格式] 检查 states-gallery 中 .gallery-card   │
+│      │   数量和 label 是否匹配 State Coverage Index       │
+│      ├─ 生成「状态覆盖率报告」作为 Phase 3 审查输入       │
+│      └─ [旧格式] 标记为「旧格式原型，需迁移到三区结构」  │
 │   5. Chrome MCP: emulate(VP-STANDARD 1536x1080)          │
-│   6. Chrome MCP: evaluate_script（提取关键元素 styles）    │
-│   7. [多视口] VP-STANDARD 内容溢出检测（详见 viewport.md） │
-│   8. [多视口] VP-COMPACT (1366x768) 抽检                 │
-│   9. [多视口] 恢复 VP-STANDARD，记录基线视口报告          │
+│   6. 三区截图策略（每个 zone 独立截图）：                 │
+│      ├─ evaluate_script → view-default radio checked      │
+│      │   → 截图（默认 tab）                               │
+│      ├─ 对 default-view 中每个 tab group:                 │
+│      │   evaluate_script → 点击 tab label → 截图         │
+│      ├─ evaluate_script → view-states radio checked       │
+│      │   → 截图（状态画廊）                               │
+│      └─ evaluate_script → view-overlays radio checked     │
+│          → 截图（弹层画廊）                               │
+│   7. Chrome MCP: evaluate_script（提取关键元素 styles）    │
+│   8. [多视口] VP-STANDARD 内容溢出检测（详见 viewport.md） │
+│   9. [多视口] VP-COMPACT (1366x768) 抽检                 │
+│  10. [多视口] 恢复 VP-STANDARD，记录基线视口报告          │
 │  10. [跨页] 结构化 metrics 提取 + 一致性基线：            │
 │      ├─ 读取 manifest，确定需要采集的页面列表             │
 │      │   └─ 遍历 manifest 中 status != "done" 的页面      │
@@ -380,11 +476,19 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 ├─────────────────────────────────────────────────────────┤
 │ Phase 2: CREATIVE DIRECTION（创意蓝图）              [opus]  │
 │                                                         │
+│   ⚠️ 产品边界约束：                                      │
+│   - 不得发明 spec 未定义的功能内容/模块/组件             │
+│   - 视觉策略（间距、材质、动画、色彩）可自由提案         │
+│   - 产品级变更（增删功能、调整模块内容/数据）必须标记    │
+│     "⚠️ 需 PM 确认"并在 Phase 5 交由 PM 深度分析流程    │
+│     裁定（低/中分歧自动裁决，高分歧 ESCALATE 给用户）    │
+│                                                         │
 │   1. 读取前轮评分快照和反思记录（首轮跳过）              │
 │   2. 识别当前最低分维度和天花板维度                     │
 │   3. 从策略矩阵选择本轮创意策略                        │
 │   4. 轻量标杆调研（WebSearch 1-2 个参考）              │
 │   5. 输出本轮创意蓝图（策略/区域/参考/预期/约束）      │
+│      └─ 如含产品级变更 → 明确标注并附 spec 依据（如有）│
 ├─────────────────────────────────────────────────────────┤
 │ Phase 3: PARALLEL REVIEW（并行审查）                      │
 │                                                         │
@@ -392,7 +496,8 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │   ├─ Art Director Agent  → opus  → 气质问题清单 + 评分卡 │
 │   ├─ UI Designer Agent   → opus  → UI 问题清单           │
 │   ├─ UX Reviewer Agent   → sonnet → UX 问题清单          │
-│   ├─ Product Mgr Agent   → sonnet → 产品问题清单         │
+│   ├─ Product Mgr Agent   → sonnet → spec 合规/层级验证/  │
+│   │                               边界守卫/产品问题清单   │
 │   ├─ IA Specialist Agent → sonnet → 信息架构 + 流程问题  │
 │   └─ Copy Editor Agent   → sonnet → 文案问题清单         │
 │                                                         │
@@ -410,6 +515,39 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │    请特别关注：与其他页面不一致的组件尺寸、               │
 │    偏离 token 体系的硬编码值、与整体排版层级不符的字号。   │
 │    {跨页一致性基线报告（Phase 1 Step 10 生成）}"           │
+│                                                         │
+│   ── 三区审查指引（当原型使用三区架构时）──              │
+│                                                         │
+│   各角色按 zone 分工审查：                               │
+│   ├─ Zone 1 (default-view):                              │
+│   │   ├─ UI Designer: 视觉品质主战场                     │
+│   │   ├─ UX Reviewer: 交互流程主战场                     │
+│   │   ├─ Product Mgr: 产品规格合规主战场                 │
+│   │   ├─ IA Specialist: 信息架构主战场                   │
+│   │   ├─ Copy Editor: 文案审查主战场                     │
+│   │   └─ Art Director: 气质评分主战场                    │
+│   ├─ Zone 2 (states-gallery):                            │
+│   │   ├─ UI Designer: 卡片样式一致性                     │
+│   │   ├─ UX Reviewer: empty state CTA / error 恢复路径   │
+│   │   └─ Product Mgr: 状态覆盖完整性                     │
+│   └─ Zone 3 (overlays-gallery):                          │
+│       ├─ UX Reviewer: 弹层可用性                         │
+│       ├─ Product Mgr: overlay 与蓝图定义一致性            │
+│       └─ Art Director: 三区整体协调性                    │
+│                                                         │
+│   ── 状态覆盖完整度输入（Phase 4b 生成）──               │
+│                                                         │
+│   每个 Agent 的 prompt 追加（当状态覆盖率报告存在时）：   │
+│   "## 状态覆盖完整度                                     │
+│    以下是本原型的状态覆盖率报告（来自 Phase 1 Step 4b）。  │
+│    三区架构：gallery-card 数量与 State Coverage Index 匹配。│
+│    请在审查中额外关注：                                   │
+│    - [ ] tab 面板是否全部渲染（不允许空壳 tab）           │
+│    - [ ] overlay 画廊是否覆盖蓝图定义的所有弹层           │
+│    - [ ] 状态画廊每个组件组是否包含完整的三态卡片          │
+│    - [ ] State Coverage Index 标注 [✓] 的内容是否质量合格 │
+│    - [ ] 标注 [⚠️ 待 PM 定义] 的内容是否需要产品确认      │
+│    {状态覆盖率报告（Phase 1 Step 4b 生成）}"              │
 ├─────────────────────────────────────────────────────────┤
 │ Phase 4: CONFLICT RESOLUTION（冲突协调）            [opus]  │
 │                                                         │
@@ -422,30 +560,67 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      用于后续 AUTO-DECISION 阶段的优先级排序              │
 │   7. [--iterate] 标注每个变更与创意蓝图的方向对齐度      │
 │                                                         │
-│   Art Director 冲突优先级规则：                            │
+│   双轨权威制冲突优先级规则：                              │
+│                                                         │
+│   ── 视觉决策轨（AD 最高）──                            │
 │   ├─ AD vs UI（装饰 vs Token）→ AD 优先                  │
-│   ├─ AD vs PM（功能标签 vs 克制）→ 协商，AD 可要求更     │
-│   │  安静的实现方式                                      │
 │   ├─ AD vs UX（affordance vs 高级感）→ UX 优先           │
 │   │  （可访问性不妥协）                                  │
 │   ├─ AD vs IA（信息密度 vs 克制留白）→ 协商，参考       │
 │   │  00_ditto_product_criteria.md 的 L1/L2/L3 分层     │
+│   └─ AD vs 所有（整体气质 vs 局部优化）→ AD 整体视角     │
+│     优先                                                │
+│                                                         │
+│   ── 产品决策轨（PM 最高）──                            │
+│   ├─ PM vs AD（产品内容 vs 视觉表达）→ PM 定义内容边界，  │
+│   │  AD 决定视觉实现方式                                │
+│   ├─ PM vs IA（功能范围 vs 信息结构）→ PM 定范围，      │
+│   │  IA 定组织结构                                      │
+│   ├─ PM vs UX（功能完整 vs 交互简化）→ PM 裁定功能必要性│
+│   ├─ 任何角色 vs PM（涉及产品功能/内容）→ PM 一票否决    │
+│   └─ 高分歧 C 类变更 → PM 深度分析流程                  │
+│      ├─ 低/中分歧 → PM 自行裁决                        │
+│      └─ 高分歧 → 先执行 PM 推荐（待确认）+ ESCALATE     │
+│                                                         │
+│   ── 信息架构决策轨（IA 最高）──                        │
 │   ├─ IA vs UX（信息分组 vs 交互路径）→ 先 IA 定结构，   │
 │   │  再 UX 审交互                                      │
-│   ├─ IA vs PM（内容边界 vs 功能完整性）→ 协商，IA 可    │
-│   │  建议"移到其他页面"                                │
-│   └─ AD vs 所有（整体气质 vs 局部优化）→ AD 整体视角     │
-│     优先
+│   └─ IA vs AD（信息架构 vs 视觉留白）→ 协商            │
 ├─────────────────────────────────────────────────────────┤
 │ Phase 5: DECISION（用户决策 / AUTO-DECISION）      [sonnet] │
 │                                                         │
-│   使用 AskUserQuestion 呈现：                             │
-│   - 共识点（所有角色一致认同，建议直接采纳）               │
-│   - 冲突点（角色意见不一致，附分析 + 折中方案）            │
-│   - 各角色独立建议（可选择性采纳）                         │
-│   - 信息架构/交互流程的重大调整建议                        │
+│   产品边界分类（每个变更必须归类）：                       │
+│   ├─ A 类：视觉微调（间距/材质/动画/色彩调整）           │
+│   │  → AUTO by AD（Art Director 自动裁定）               │
+│   ├─ B 类：spec 内产品微调（调整优先级/布局/交互方式，    │
+│   │  spec 有明确定义）→ AUTO by PM（需 Phase 3 PM        │
+│   │  Agent 确认在 spec 范围内）                          │
+│   └─ C 类：超出 spec / 重大战略变更                      │
+│      ├─ 新增 spec 未定义的功能/模块/内容                 │
+│      ├─ 删除 spec 中定义的功能                           │
+│      └─ PM 无法权衡的大方向产品决策                      │
+│      → PM 深度分析流程（详见 iterate.md）                │
 │                                                         │
-│   [--iterate] AUTO-DECISION 自动裁决，不阻塞用户          │
+│   PM 深度分析流程（C 类处理）：                           │
+│   ├─ Step 1: 分歧评估 → 低/中/高                       │
+│   ├─ Step 2: 业界调研（WebSearch 2-3 标杆）             │
+│   ├─ Step 3: 调研能解决 → PM 自动裁决                  │
+│   └─ Step 4: 分歧等级裁决                               │
+│       ├─ 低/中分歧 → PM 裁决 + 记录分析                │
+│       └─ 高分歧 → 先执行 PM 推荐（标记待确认）           │
+│                + ESCALATE 结构化分析给用户               │
+│                                                         │
+│   [--iterate] AUTO-DECISION：                            │
+│   ├─ A/B 类变更 → 按权威轨自动裁决（AD/PM）              │
+│   ├─ C 类变更 → PM 深度分析（见上）                      │
+│   └─ 详见 iterate.md AUTO-DECISION 规则                  │
+│                                                         │
+│   [--人工] 使用 AskUserQuestion 呈现：                   │
+│   ├─ 共识点（所有角色一致认同，建议直接采纳）               │
+│   ├─ 冲突点（角色意见不一致，附分析 + 折中方案）            │
+│   ├─ 各角色独立建议（可选择性采纳）                         │
+│   ├─ 信息架构/交互流程的重大调整建议                        │
+│   └─ [如有 ESCALATE] 结构化分歧分析（见 templates.md）     │
 │   [--人工] 用户选择：采纳 / 否决 / 替代方案               │
 ├─────────────────────────────────────────────────────────┤
 │ Phase 6: FIX（执行修改）                            [sonnet] │

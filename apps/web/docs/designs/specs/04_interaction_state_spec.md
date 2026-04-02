@@ -299,3 +299,106 @@ Selected 是 Ditto 最重要的交互状态之一。
 - [ ] 是否存在 blocker 场景但未被表达
 - [ ] compare / bulk / review 模式是否完整
 - [ ] 右侧 detail 是否能承接状态 drill-down
+
+---
+
+## 13. 页面状态映射示例
+
+> 本章节展示如何将第 1 节的 15 种通用状态映射到具体页面组件。
+> 完整的 Component × State Matrix 见 [02 核心页面蓝图](./02_core_page_blueprints.md)。
+> 此处选取 4 个代表性页面，覆盖"列表筛选 / 对象详情 / 结果展示 / 长任务审批"四种页面类型。
+
+---
+
+### 13.1 列表筛选型 — Markets Screener
+
+| 组件 | default | hover | selected | loading | empty | failed | stale | bulk | compare |
+|------|---------|-------|----------|---------|-------|--------|-------|------|---------|
+| 筛选条件面板 | 展示当前条件 | 条件项 hover | — | 面板整体 loading | 无默认条件时展示"添加筛选条件" | 加载筛选预设失败 | 条件面板显示"条件可能过时" | — | — |
+| 结果表格 | 展示筛选结果 | 行 hover 背景变深 | 行高亮 + 右侧面板刷新 | skeleton 行 × N | "无符合条件的结果，调整筛选条件" + 清除筛选 CTA | "加载失败" + 重试按钮 | 整表黄色边框 + "数据已 X 分钟未刷新" | 多选栏 + 批量操作 bar | 对比勾选 + 对比 bar |
+| 右侧详情面板 | 无选中时 placeholder | — | 展示选中标的信息 | 面板 skeleton | — | "详情加载失败" | — | — | 展示对比结果 |
+| 排序/分页 | 展示当前排序 | 排序项 hover | — | — | — | — | — | — | — |
+
+**关键映射说明**：
+- `bulk` 和 `compare` 是 Screener 特有的模式状态，需与 `selected` 区分（selected 是单选，bulk/compare 是多选后进入的特殊模式）
+- `stale` 用黄色边框 + 时间戳提示，不阻止操作但提醒用户
+- 筛选面板的 `empty` 不是"无数据"，而是"无筛选条件"的引导态
+
+---
+
+### 13.2 对象详情型 — Instrument Hub
+
+| 组件 | default | loading | empty | failed | stale | selected |
+|------|---------|---------|-------|--------|-------|----------|
+| 行情 Tab — 价格面板 | 实时价格 + K 线 | 价格区 skeleton + K 线骨架 | 非交易时段显示"休市中" | "行情数据加载失败" + 重试 | 黄色闪烁 + "数据延迟 Xs" | Tab 高亮 |
+| 财务 Tab — 利润表 | 三年利润表数据 | 表格 skeleton 行 | "暂无财务数据" | "财务数据加载失败" | — | Tab 高亮 |
+| 公告 Tab — 公告列表 | 公告时间线 | 列表 skeleton | "暂无公告" | — | "有 N 条新公告未展示" | Tab 高亮 |
+| 关联 Tab — 关联模型 | 模型列表 + 收益 | 列表 skeleton | "暂无关联模型" | — | "模型评分已更新" | Tab 高亮 |
+| Watchlist 按钮 | "+ 加入观察列表" | disabled | — | — | — | — |
+| 快速下单按钮 | 可点击下单 | disabled | — | — | — | 选中标的后 enabled |
+
+**关键映射说明**：
+- Hub 类页面的 `selected` 主要体现在 Tab 切换上
+- `stale` 在行情类组件中用闪烁效果强化，与其他页面的黄色边框不同
+- 交易时段外的 `empty` 是业务语义的空（休市），不是错误
+- Watchlist / 下单按钮在数据未就绪时为 `disabled`（blocked 的轻量形式）
+
+---
+
+### 13.3 结果展示型 — Backtest Result
+
+| 组件 | default | loading | empty | failed | stale | running | partial |
+|------|---------|---------|-------|--------|-------|---------|---------|
+| 概览 Tab — 指标卡片 | 收益/风险/回撤等 KPI | 卡片 skeleton | "选择一次回测查看结果" | — | — | — | — |
+| 收益曲线 Tab — 图表 | 净值曲线 + 基准对比 | 图表骨架 | "无收益数据" | "图表渲染失败" | — | 进度指示（增量加载） | 部分日期数据可用时显示已有部分 + 灰色占位 |
+| 交易记录 Tab — 表格 | 全部交易记录 | 表格 skeleton | "回测期间无交易" | — | — | 显示已生成的交易 | "仅显示前 X 笔，完整数据生成中" |
+| 风险分析 Tab | VaR / 最大回撤 / 蒙特卡洛 | 分析骨架 | "风险数据不足" | — | — | — | "部分风险指标计算中" |
+| 因子暴露 Tab | 因子载荷热力图 | 热力图骨架 | "无因子暴露数据" | — | — | — | — |
+| 回测任务状态 | completed / failed | queued → running | — | failed + 错误详情 | — | progress bar + ETA | — |
+
+**关键映射说明**：
+- Backtest 是唯一需要 `running` + `partial` 组合的页面（回测进行中，部分结果已可用）
+- `partial` 在这里不是错误，而是"已完成部分可预览"的体验
+- 概览的 `empty` 是"无选中回测"，不是"数据为空"
+- 收益曲线的 `loading` 可以是增量式的（新数据逐段加入）
+
+---
+
+### 13.4 长任务/审批型 — Agent Console
+
+| 组件 | default | loading | empty | failed | stale | running | blocked | waiting-approval |
+|------|---------|---------|-------|--------|-------|---------|---------|-----------------|
+| Agent 列表 | Agent 状态卡片 | 列表 skeleton | "暂无配置的 Agent" | "Agent 列表加载失败" | Agent 状态标记过时 | 绿色脉动 + "运行中" | 红色 + "已阻断" | 黄色 + "等待审批" |
+| Agent 详情 — 输出流 | 展示执行输出 | 首次加载 skeleton | "Agent 尚未运行" | "输出加载失败" | "输出最后更新于 XX" | 流式输出（逐行追加） | 阻断原因展示 + 重新排队按钮 | 审批操作面板 |
+| 审批操作面板 | 隐藏 | — | — | — | — | — | — | 显示 Approve / Reject / Comment |
+| Pipeline 时间线 | 历史 Pipeline | 时间线 skeleton | "暂无 Pipeline 记录" | — | — | 当前节点高亮 + 脉动 | 红色节点 + 错误信息 | 黄色节点 + "等待审批" |
+| Agent 置信度 | 显示置信度评分 | 评分区 skeleton | — | — | "置信度模型已过期" | 动态更新 | — | — |
+
+**关键映射说明**：
+- Agent Console 是 `blocked` + `waiting-approval` 两种状态的核心使用场景
+- `running` 在 Agent 场景中是长时间持续的，需要脉动动画而非进度条
+- Pipeline 时间线的每个节点都有独立状态（pending/running/success/failed/blocked）
+- 审批面板的显隐由 `waiting-approval` 状态驱动，不是由用户主动打开
+- `stale` 在 Agent 场域中可能意味着底层模型版本过旧，风险更高
+
+---
+
+### 13.5 映射规则总结
+
+| 通用状态 | 列表筛选型 | 对象详情型 | 结果展示型 | 长任务/审批型 |
+|---------|-----------|-----------|-----------|-------------|
+| default | 结果行展示 | Tab 默认内容 | KPI 卡片 | Agent 状态卡片 |
+| hover | 行背景变深 | Tab hover | 卡片 hover | 卡片 hover |
+| selected | 行高亮+面板联动 | Tab 高亮 | — | Agent 选中 |
+| loading | 表格 skeleton | 面板 skeleton | 图表/表格 skeleton | 列表 skeleton |
+| empty | "无结果"+CTA | 业务语义空 | "无选中回测" | "暂无 Agent" |
+| failed | 错误+重试 | 错误+重试 | — | 错误详情 |
+| stale | 黄色边框 | 闪烁+延迟提示 | — | "模型已过期" |
+| running | — | — | 进度指示 | 脉动+流式输出 |
+| partial | — | — | 部分可预览 | — |
+| blocked | — | 按钮 disabled | — | 红色+阻断原因 |
+| waiting-approval | — | — | — | 审批面板 |
+| bulk | 批量操作 bar | — | — | — |
+| compare | 对比 bar | — | — | — |
+
+> 此表为映射规则的模式总结，实际每个页面的 Component × State Matrix 见 [02 核心页面蓝图](./02_core_page_blueprints.md)。
