@@ -226,12 +226,19 @@
     }
 
     .object-change {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: var(--space-4);
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       color: var(--market-up-fg);
+      padding: var(--space-1) var(--space-6);
+      border-radius: var(--radius-3);
+      background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
+    }
+
+    .object-change.down {
+      background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
     }
 
     .object-change-value {
@@ -519,11 +526,34 @@
       display: flex;
       flex-direction: column;
       gap: var(--space-4);
-      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      position: relative;
+      overflow: hidden;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .metric-card:hover {
       border-color: var(--border-default);
+      background: var(--surface-panel-elevated);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+    }
+
+    /* ── Metric Sparkline (positioned top-right) ── */
+    .metric-sparkline {
+      position: absolute;
+      top: var(--space-6);
+      right: var(--space-8);
+      width: 48px;
+      height: 20px;
+      opacity: 0.5;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .metric-card:hover .metric-sparkline {
+      opacity: 0.8;
     }
 
     .metric-label {
@@ -540,12 +570,22 @@
     }
 
     .metric-change {
+      display: inline-flex;
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
+      padding: var(--space-1) var(--space-4);
+      border-radius: var(--radius-3);
+      align-self: flex-start;
     }
 
-    .metric-change.up { color: var(--market-up-fg); }
-    .metric-change.down { color: var(--market-down-fg); }
+    .metric-change.up {
+      color: var(--market-up-fg);
+      background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
+    }
+    .metric-change.down {
+      color: var(--market-down-fg);
+      background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
+    }
 
     /* ── Price Chart Panel ── */
     .chart-panel {
@@ -647,20 +687,43 @@
 
     .flow-bar {
       width: 100%;
-      height: 4px;
-      background: var(--border-default);
-      border-radius: 2px;
+      height: 6px;
+      background: var(--border-subtle);
+      border-radius: 3px;
       overflow: hidden;
+      position: relative;
     }
 
     .flow-bar-fill {
+      position: absolute;
+      top: 0;
       height: 100%;
-      border-radius: 2px;
+      border-radius: 3px;
       transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .flow-bar-fill.inflow { background: var(--market-up-fg); }
-    .flow-bar-fill.outflow { background: var(--market-down-fg); }
+    .flow-bar-fill.inflow {
+      left: 50%;
+      background: var(--market-up-fg);
+      opacity: 0.35;
+    }
+
+    .flow-bar-fill.outflow {
+      right: 50%;
+      background: var(--market-down-fg);
+      opacity: 0.35;
+    }
+
+    .flow-bar-center {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--text-tertiary);
+      opacity: 0.3;
+      transform: translateX(-0.5px);
+    }
 
     /* ══════════════════════════════════════════════
      * Right Sidebar — Related / Signals / Notes
@@ -702,8 +765,26 @@
     }
 
     .context-section + .context-section {
-      border-top: 1px solid var(--border-subtle);
+      border-top: 1px solid transparent;
       position: relative;
+      margin-top: calc(-1 * var(--space-1));
+    }
+
+    .context-section + .context-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: var(--space-12);
+      right: var(--space-12);
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--border-subtle) 15%,
+        var(--border-subtle) 85%,
+        transparent 100%
+      );
+      z-index: 1;
     }
 
     .context-header {
@@ -763,6 +844,17 @@
       align-items: center;
       gap: var(--space-6);
     }
+
+    .signal-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .signal-dot.opportunity { background: var(--system-healthy-fg); }
+    .signal-dot.alert { background: var(--risk-medium-fg); }
+    .signal-dot.warning { background: var(--risk-high-fg); }
 
     .signal-type {
       font-size: var(--font-size-10);
@@ -1275,26 +1367,31 @@
         <!-- Key Metrics -->
         <div class="metrics-grid" role="region" aria-label="关键指标">
           <div class="metric-card">
+            <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,12 8,10 16,14 24,8 32,11 40,6 48,9" stroke="var(--market-down-fg)" stroke-width="1.2" fill="none"/></svg>
             <span class="metric-label">PE (TTM)</span>
             <span class="metric-value">28.6x</span>
             <span class="metric-change down">-1.2x</span>
           </div>
           <div class="metric-card">
+            <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,10 8,12 16,11 24,14 32,13 40,15 48,14" stroke="var(--market-down-fg)" stroke-width="1.2" fill="none"/></svg>
             <span class="metric-label">PB</span>
             <span class="metric-value">10.3x</span>
             <span class="metric-change down">-0.4x</span>
           </div>
           <div class="metric-card">
+            <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,14 8,12 16,11 24,9 32,8 40,6 48,5" stroke="var(--market-up-fg)" stroke-width="1.2" fill="none"/></svg>
             <span class="metric-label">ROE</span>
             <span class="metric-value">36.1%</span>
             <span class="metric-change up">+0.8%</span>
           </div>
           <div class="metric-card">
+            <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,16 8,14 16,12 24,10 32,8 40,6 48,4" stroke="var(--market-up-fg)" stroke-width="1.2" fill="none"/></svg>
             <span class="metric-label">营收增速</span>
             <span class="metric-value">16.2%</span>
             <span class="metric-change up">+2.1%</span>
           </div>
           <div class="metric-card">
+            <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,18 8,16 16,14 24,11 32,8 40,5 48,3" stroke="var(--market-up-fg)" stroke-width="1.2" fill="none"/></svg>
             <span class="metric-label">净利润增速</span>
             <span class="metric-value">19.8%</span>
             <span class="metric-change up">+3.4%</span>
@@ -1330,28 +1427,32 @@
               <span class="flow-label">主力净流入</span>
               <span class="flow-value inflow">+8.73亿</span>
               <div class="flow-bar">
-                <div class="flow-bar-fill inflow" style="width:72%"></div>
+                <div class="flow-bar-fill inflow" style="width:36%"></div>
+                <div class="flow-bar-center"></div>
               </div>
             </div>
             <div class="flow-item">
               <span class="flow-label">超大单净流入</span>
               <span class="flow-value inflow">+5.21亿</span>
               <div class="flow-bar">
-                <div class="flow-bar-fill inflow" style="width:58%"></div>
+                <div class="flow-bar-fill inflow" style="width:29%"></div>
+                <div class="flow-bar-center"></div>
               </div>
             </div>
             <div class="flow-item">
               <span class="flow-label">中单净流入</span>
               <span class="flow-value inflow">+3.52亿</span>
               <div class="flow-bar">
-                <div class="flow-bar-fill inflow" style="width:40%"></div>
+                <div class="flow-bar-fill inflow" style="width:20%"></div>
+                <div class="flow-bar-center"></div>
               </div>
             </div>
             <div class="flow-item">
               <span class="flow-label">小单净流出</span>
               <span class="flow-value outflow">-1.86亿</span>
               <div class="flow-bar">
-                <div class="flow-bar-fill outflow" style="width:22%"></div>
+                <div class="flow-bar-fill outflow" style="width:11%"></div>
+                <div class="flow-bar-center"></div>
               </div>
             </div>
           </div>
@@ -1369,6 +1470,7 @@
           <div class="context-body">
             <div class="signal-item" tabindex="0" role="button">
               <div class="signal-header">
+                <span class="signal-dot opportunity" aria-hidden="true"></span>
                 <span class="signal-type opportunity">机会</span>
                 <span class="signal-time">10:32</span>
               </div>
@@ -1377,6 +1479,7 @@
             </div>
             <div class="signal-item" tabindex="0" role="button">
               <div class="signal-header">
+                <span class="signal-dot alert" aria-hidden="true"></span>
                 <span class="signal-type alert">预警</span>
                 <span class="signal-time">09:15</span>
               </div>
@@ -1385,6 +1488,7 @@
             </div>
             <div class="signal-item" tabindex="0" role="button">
               <div class="signal-header">
+                <span class="signal-dot alert" aria-hidden="true"></span>
                 <span class="signal-type alert">关注</span>
                 <span class="signal-time">昨日</span>
               </div>
