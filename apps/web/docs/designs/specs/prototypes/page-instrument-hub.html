@@ -223,6 +223,12 @@
       color: var(--market-up-fg);
       letter-spacing: -0.02em;
       line-height: 1.2;
+      animation: price-breathe 3s ease-in-out infinite;
+    }
+
+    @keyframes price-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.92; }
     }
 
     .object-change {
@@ -341,8 +347,8 @@
     }
 
     .btn svg {
-      width: 14px;
-      height: 14px;
+      width: var(--btn-icon-size);
+      height: var(--btn-icon-size);
       flex-shrink: 0;
     }
 
@@ -393,7 +399,7 @@
 
     .meta-separator {
       width: 1px;
-      height: 12px;
+      height: var(--meta-sep-height);
       background: var(--border-subtle);
       flex-shrink: 0;
     }
@@ -546,8 +552,8 @@
       position: absolute;
       top: var(--space-6);
       right: var(--space-8);
-      width: 48px;
-      height: 20px;
+      width: var(--sparkline-width);
+      height: var(--sparkline-height);
       opacity: 0.5;
       transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
@@ -591,6 +597,15 @@
     .chart-panel {
       flex: 1;
       min-height: 0;
+      border-top: none;
+    }
+
+    /* Metrics → Chart visual merge: eliminate the gap between metrics-grid and chart */
+    .metrics-grid + .chart-panel {
+      margin-top: calc(-1 * var(--density-section-gap));
+      border-top: none;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
     }
 
     .chart-panel .panel-header {
@@ -598,6 +613,12 @@
       align-items: center;
       padding: var(--space-8) var(--space-12);
       border-bottom: 1px solid var(--border-subtle);
+      border-top: 1px solid var(--border-subtle);
+      background: linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-base)) 0%,
+        var(--surface-panel-base) 100%
+      );
       flex-shrink: 0;
     }
 
@@ -618,7 +639,7 @@
       font-size: var(--font-size-12);
       font-family: var(--font-family-numeric);
       color: var(--text-tertiary);
-      min-height: 24px;
+      min-height: var(--density-action-height);
       padding: var(--space-2) var(--space-8);
       border-radius: var(--radius-3);
       cursor: pointer;
@@ -687,9 +708,9 @@
 
     .flow-bar {
       width: 100%;
-      height: 6px;
+      height: var(--flow-bar-height);
       background: var(--border-subtle);
-      border-radius: 3px;
+      border-radius: var(--radius-3);
       overflow: hidden;
       position: relative;
     }
@@ -698,7 +719,7 @@
       position: absolute;
       top: 0;
       height: 100%;
-      border-radius: 3px;
+      border-radius: var(--radius-3);
       transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -745,7 +766,7 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 4px;
+      height: var(--sidebar-glow-height);
       background: linear-gradient(
         90deg,
         transparent 0%,
@@ -792,6 +813,11 @@
       align-items: center;
       padding: var(--space-8) var(--space-12);
       border-bottom: 1px solid var(--border-subtle);
+      background: linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--surface-panel-elevated) 60%, transparent) 0%,
+        transparent 100%
+      );
       flex-shrink: 0;
     }
 
@@ -812,7 +838,7 @@
       background: var(--surface-strip);
       padding: 0 var(--space-6);
       border-radius: var(--radius-4);
-      height: 18px;
+      height: var(--context-count-height);
       display: flex;
       align-items: center;
     }
@@ -896,6 +922,11 @@
       color: var(--risk-high-fg);
     }
 
+    .signal-type.watch {
+      background: color-mix(in oklch, var(--brand-accent) 10%, transparent);
+      color: var(--brand-accent);
+    }
+
     .signal-time {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
@@ -961,7 +992,7 @@
       font-size: var(--font-size-12);
       color: var(--text-primary);
       resize: vertical;
-      min-height: 60px;
+      min-height: var(--note-input-min-h);
       line-height: 1.5;
       transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
@@ -1053,7 +1084,7 @@
       padding: var(--space-8) var(--space-16);
       gap: var(--space-16);
       overflow-y: auto;
-      max-height: 180px;
+      max-height: var(--timeline-bottom-max-h);
     }
 
     /* ── Timeline ── */
@@ -1147,7 +1178,7 @@
       right: 0;
       display: flex;
       align-items: center;
-      height: 1.5rem;
+      height: var(--status-bar-height);
       padding: 0 var(--space-8);
       background: var(--surface-app);
       backdrop-filter: blur(8px);
@@ -1204,7 +1235,7 @@
     @media (prefers-reduced-motion: reduce) {
       .btn, .rail-icon, .hub-tab, .header-action-btn,
       .metric-card, .signal-item, .research-item,
-      .timeline-marker, .object-status-dot {
+      .timeline-marker, .object-status-dot, .object-price {
         transition: none !important;
         animation: none !important;
       }
@@ -1507,7 +1538,7 @@
             <div class="signal-item" tabindex="0" role="button">
               <div class="signal-header">
                 <span class="signal-dot watch" aria-hidden="true"></span>
-                <span class="signal-type alert">关注</span>
+                <span class="signal-type watch">关注</span>
                 <span class="signal-time">昨日</span>
               </div>
               <span class="signal-title">白酒板块资金面异动</span>
