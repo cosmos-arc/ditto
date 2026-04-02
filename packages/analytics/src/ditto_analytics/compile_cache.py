@@ -20,7 +20,7 @@ from typing import Any, Protocol
 
 import cachebox
 import orjson
-from ditto_engine.engine.specs import DerivedSpec
+from ditto_kernel.specs import DerivedSpec
 
 from ditto_analytics.expression import ExpressionCompiler, compute_compile_cache_key
 from ditto_analytics.materialization import CompiledDerivedExpression

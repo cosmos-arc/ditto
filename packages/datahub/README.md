@@ -745,7 +745,7 @@ DataHub 提供三级数据质量检查机制：
 **L3 统计检查**: Z-score 异常检测、完整性检查
 
 ```python
-from ditto_core.quality import QualityEngine
+from ditto_engine.quality import QualityEngine
 
 # QualityEngine 由容器注入（DataHub 本身不持有 dq_checker）
 engine: QualityEngine = container.get(QualityEngine)

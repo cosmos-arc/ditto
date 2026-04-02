@@ -16,6 +16,7 @@ from typing import Any
 
 import polars as pl
 import pytest
+from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_engine.accounting.account import Account
 from ditto_engine.accounting.cash import CashBook
 from ditto_engine.backtest.data_feed import DataFeed, ProviderBackedDataFeed
@@ -45,7 +46,6 @@ from ditto_engine.strategy.templates.etf_rotation import (
     build_etf_rotation_pipeline,
 )
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.provider import BarQuery, InstrumentQuery
 
 # ---------------------------------------------------------------------------
 # TestParquetProvider — 测试专用 DataProvider 实现

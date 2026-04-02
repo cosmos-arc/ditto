@@ -163,7 +163,7 @@ ditto/
 │   └── web/                   # Next.js 前端 (Phase 4+，待实现)
 ├── packages/
 │   ├── core/                  # 核心业务逻辑（纯函数，无 I/O）
-│   │   ├── src/ditto_core/
+│   │   ├── src/ditto_engine/
 │   │   │   ├── strategy/      # 策略引擎（Pipeline + Stage + 模板）
 │   │   │   ├── execution/     # 执行层（Brokerage + Planner + Reality Model）
 │   │   │   ├── backtest/      # 回测引擎（EngineLoop + PreTrade + PostTrade）

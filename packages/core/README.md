@@ -184,12 +184,12 @@
 ### 策略 Pipeline
 
 ```python
-from ditto_core.strategy import (
+from ditto_engine.strategy import (
     StrategySpec,
     StrategyPipeline,
     StrategyInputBundle,
 )
-from ditto_core.strategy.templates import (
+from ditto_engine.strategy.templates import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
 )
@@ -212,13 +212,13 @@ print(result.target_portfolio)  # TargetPortfolio
 ### 回测
 
 ```python
-from ditto_core.backtest import (
+from ditto_engine.backtest import (
     EngineLoop,
     EngineConfig,
     ProviderBackedDataFeed,
 )
-from ditto_core.execution import BacktestBrokerage
-from ditto_core.accounting import Account
+from ditto_engine.execution import BacktestBrokerage
+from ditto_engine.accounting import Account
 
 # 配置回测
 config = EngineConfig(
@@ -292,7 +292,7 @@ df = (
 
 ```python
 # 列名约定: instrument_id (必须), signal_value, score, weight, reason_codes
-from ditto_core.strategy import StrategyPipeline, StrategyInputBundle
+from ditto_engine.strategy import StrategyPipeline, StrategyInputBundle
 
 pipeline = StrategyPipeline(stages=[universe, signal, scoring, selection])
 result = pipeline.run(bundle)

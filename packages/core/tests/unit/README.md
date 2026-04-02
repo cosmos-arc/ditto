@@ -91,10 +91,10 @@ pixi run -e dev pytest packages/core/tests/unit -k "regime" -v
 
 ```bash
 # 生成覆盖率报告
-pixi run -e dev pytest packages/core/tests/unit --cov=ditto_core --cov-report=term-missing
+pixi run -e dev pytest packages/core/tests/unit --cov=ditto_engine --cov-report=term-missing
 
 # 生成 HTML 覆盖率报告
-pixi run -e dev pytest packages/core/tests/unit --cov=ditto_core --cov-report=html
+pixi run -e dev pytest packages/core/tests/unit --cov=ditto_engine --cov-report=html
 ```
 
 ## 测试示例
@@ -104,7 +104,7 @@ pixi run -e dev pytest packages/core/tests/unit --cov=ditto_core --cov-report=ht
 ```python
 import pytest
 from datetime import date
-from ditto_core.engine.regime import RegimeEngine
+from ditto_engine.engine.regime import RegimeEngine
 
 @pytest.mark.unit
 def test_regime_engine_initialization(hub):
@@ -364,7 +364,7 @@ def test_with_mock_hub(mock_hub):
 from unittest.mock import patch
 
 @pytest.mark.unit
-@patch('ditto_core.engine.regime.fetch_index_data')
+@patch('ditto_engine.engine.regime.fetch_index_data')
 def test_regime_with_patch(mock_fetch):
     """使用 patch 测试"""
     mock_fetch.return_value = test_df

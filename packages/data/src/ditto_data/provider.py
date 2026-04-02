@@ -1,23 +1,18 @@
 """
 DataProvider Protocol + 查询契约.
 
-满足 kernel Protocol/薄实现准入标准：
-1. 预期跨层使用：core + datahub + port
-2. 零业务逻辑：纯接口定义 + 查询值对象
-3. 无外部依赖：仅标准库
-4. Protocol 无实现体（查询对象为 frozen dataclass）
-5. 无 I/O
+从 ditto_kernel.provider 迁入（Phase 5 — AnyFrame 消除）。
+Kernel 零外部依赖约束禁止 import polars，因此 Protocol 定义迁入 ditto_data。
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Protocol
 
-__all__ = ["AnyFrame", "BarQuery", "DataProvider", "InstrumentQuery"]
+import polars as pl
 
-# Protocol 层不引入 polars 依赖，实际实现用 pl.DataFrame
-AnyFrame = Any
+__all__ = ["BarQuery", "DataProvider", "InstrumentQuery"]
 
 
 @dataclass(frozen=True)
@@ -76,22 +71,17 @@ class InstrumentQuery:
 
 
 class DataProvider(Protocol):
-    """
-    统一数据访问抽象.
+    """统一数据访问抽象."""
 
-    所有平面通过此 Protocol 获取数据，不直接依赖存储实现。
-    返回类型为 AnyFrame（Any），实现侧和消费者侧用 pl.DataFrame。
-    """
-
-    def get_bars(self, query: BarQuery) -> AnyFrame:
+    def get_bars(self, query: BarQuery) -> pl.DataFrame:
         """获取行情数据."""
         ...
 
-    def get_instruments(self, query: InstrumentQuery) -> AnyFrame:
+    def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
         """获取标的列表."""
         ...
 
-    def get_schedule(self, start: str, end: str) -> AnyFrame:
+    def get_schedule(self, start: str, end: str) -> pl.DataFrame:
         """获取交易日历."""
         ...
 
@@ -101,6 +91,6 @@ class DataProvider(Protocol):
         instruments: tuple[str, ...],
         start: str,
         end: str,
-    ) -> AnyFrame:
+    ) -> pl.DataFrame:
         """获取因子数据."""
         ...

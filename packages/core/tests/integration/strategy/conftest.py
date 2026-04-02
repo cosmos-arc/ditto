@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
+from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_engine.accounting.account import Account
 from ditto_engine.accounting.cash import CashBook
 from ditto_engine.backtest.data_feed import ProviderBackedDataFeed
@@ -35,7 +36,6 @@ from ditto_engine.execution.reality import (
 )
 from ditto_engine.strategy.pipeline import StrategyPipeline
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.provider import BarQuery, InstrumentQuery
 
 # ---------------------------------------------------------------------------
 # TestParquetProvider — 测试专用 DataProvider 实现（与 backtest/conftest.py 一致）

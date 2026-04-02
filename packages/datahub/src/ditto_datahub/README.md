@@ -145,7 +145,7 @@ df = bars_store.read(
 )
 
 # 数据质量检查（需使用 ditto-core.quality 模块）
-from ditto_core.quality import QualityEngine
+from ditto_engine.quality import QualityEngine
 dq_engine = QualityEngine(data_root=Path("data"))
 result = dq_engine.check(df, dataset="etf_daily")
 ```

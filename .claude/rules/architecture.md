@@ -36,7 +36,7 @@ paths:
 | 层 | 包 | 职责 | 类比 |
 |----|-----|------|------|
 | **共享内核** | `ditto_kernel` | 领域原语：枚举、值对象、NewType | DDD Shared Kernel |
-| **领域层** | `ditto_core` | 业务决策：引擎、策略、回测、风险、质量 | DDD Domain Service |
+| **领域层** | `ditto_engine` | 业务决策：引擎、策略、回测、风险、质量 | DDD Domain Service |
 | **数据服务层** | `ditto_datahub` | 统一查询：存储、数据源、领域感知的数据编排 | DDD Rich Repository |
 | **应用服务层** | `ditto_port` | 编排协调：组合 Core 行为 + DataHub 数据服务 | DDD Application Service |
 | **基础设施层** | `ditto_infra` | 技术设施：配置、日志、缓存、数据库连接池 | Technical Infrastructure |
@@ -51,13 +51,13 @@ paths:
 ### 依赖规则
 
 ```
-ditto_port      → ditto_core, ditto_datahub, ditto_kernel, ditto_infra  ✅
-ditto_core      → ditto_kernel                                            ✅
+ditto_port      → ditto_engine, ditto_datahub, ditto_kernel, ditto_infra  ✅
+ditto_engine      → ditto_kernel                                            ✅
 ditto_datahub   → ditto_kernel, ditto_infra                               ✅
 ditto_kernel    → (无业务依赖)                                             ✅
 ditto_infra     → (无业务依赖)                                             ✅
-ditto_core      → ditto_datahub                                           ❌
-ditto_datahub   → ditto_core                                              ❌
+ditto_engine      → ditto_datahub                                           ❌
+ditto_datahub   → ditto_engine                                              ❌
 ditto_datahub   → ditto_port                                              ❌
 ditto_infra     → 其他层                                                  ❌
 ```
@@ -149,7 +149,7 @@ store = BarsStore(...)  # ❌
 - 不允许 `import polars` / `import orjson` 等第三方库
 - pyproject.toml 不声明运行时依赖
 
-#### ditto_core（领域层）
+#### ditto_engine（领域层）
 
 **做什么**：业务决策和领域行为 — 引擎执行、策略评估、风险判断、组合优化。
 
@@ -212,7 +212,7 @@ store = BarsStore(...)  # ❌
 
 2. 是业务决策或领域行为？
    （策略评估、交易决策、风险判断、引擎执行）
-   YES → ditto_core
+   YES → ditto_engine
 
 3. 是数据查询、存储或领域感知的数据编排？
    （复权、PIT 过滤、前向收益率、Universe 过滤）
@@ -337,7 +337,7 @@ def get_source(name: str) -> DataSource:
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/core/src/ditto_core/quality/` | 检查规则算法（OHLC、涨跌停、成交量异常） |
+| **Domain** | `packages/core/src/ditto_engine/quality/` | 检查规则算法（OHLC、涨跌停、成交量异常） |
 | **Data Service** | `packages/datahub/` | DQ 结果持久化、数据质量元数据管理 |
 | **Application** | `apps/port/src/ditto_port/services/ingestion/` | 编排 dq 检查流程 |
 
@@ -350,7 +350,7 @@ def get_source(name: str) -> DataSource:
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/core/src/ditto_core/engine/` | 因子表达式编译、物化计划 |
+| **Domain** | `packages/core/src/ditto_engine/engine/` | 因子表达式编译、物化计划 |
 | **Data Service** | `packages/datahub/` | 因子数据查询、存储、前向收益率计算 |
 | **Application** | `apps/port/src/ditto_port/services/derived/` | 编排计算流程 |
 
@@ -363,7 +363,7 @@ def get_source(name: str) -> DataSource:
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/core/src/ditto_core/backtest/` | 风险检查（PreTrade/PostTrade） |
+| **Domain** | `packages/core/src/ditto_engine/backtest/` | 风险检查（PreTrade/PostTrade） |
 | **Application** | `apps/port/src/ditto_port/services/strategy/` | 风险编排（注入到回测流程） |
 | **Data Service** | `packages/datahub/` | 风险审计记录持久化 |
 
@@ -371,7 +371,7 @@ def get_source(name: str) -> DataSource:
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/core/src/ditto_core/strategy/` | 策略 Pipeline、信号生成、模板 |
+| **Domain** | `packages/core/src/ditto_engine/strategy/` | 策略 Pipeline、信号生成、模板 |
 | **Application** | `apps/port/src/ditto_port/services/strategy/` | 策略运行编排、输入组装、结果持久化 |
 | **Data Service** | `packages/datahub/` | 策略定义存储、运行记录存储、产物持久化 |
 
@@ -379,7 +379,7 @@ def get_source(name: str) -> DataSource:
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/core/src/ditto_core/execution/` | 执行计划、撮合模型、交易规则 |
+| **Domain** | `packages/core/src/ditto_engine/execution/` | 执行计划、撮合模型、交易规则 |
 | **Application** | `apps/port/src/ditto_port/services/strategy/` | 执行编排（注入到回测流程） |
 | **Data Service** | `packages/datahub/` | 执行审计记录持久化 |
 
@@ -390,7 +390,7 @@ def get_source(name: str) -> DataSource:
 | 问题 | 回答 Yes → 归属 | 回答 No → 归属 |
 |------|----------------|---------------|
 | 是跨层共享的纯类型？ | ditto_kernel（检查准入标准） | 继续下一个问题 |
-| 是业务决策或领域行为？ | ditto_core | 继续下一个问题 |
+| 是业务决策或领域行为？ | ditto_engine | 继续下一个问题 |
 | 是数据查询、存储或数据编排？ | ditto_datahub | 继续下一个问题 |
 | 是应用编排或工作流？ | ditto_port | 继续下一个问题 |
 | 是技术基础设施？ | ditto_infra | 重新审视设计 |

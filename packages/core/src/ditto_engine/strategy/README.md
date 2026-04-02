@@ -50,7 +50,7 @@ strategy/
 ## 依赖
 
 - 上游: `ditto_datahub` (数据访问)
-- 下游: 被 `ditto_core.portfolio`、`ditto_core.execution` 和 `ditto_port.services.strategy` 消费
+- 下游: 被 `ditto_engine.portfolio`、`ditto_engine.execution` 和 `ditto_port.services.strategy` 消费
 
 ## Port 侧入口
 

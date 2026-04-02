@@ -1,15 +1,18 @@
-"""Unified derived semantic spec models."""
+"""Re-export shim — canonical definitions moved to ditto_kernel.specs."""
 
-from __future__ import annotations
-
-from dataclasses import dataclass, field
-from enum import StrEnum
-from typing import Literal
+from ditto_kernel.specs import (
+    CALENDAR_TO_TIMEZONE,
+    GRAIN_TO_TIME_KEYS,
+    CalendarId,
+    DerivedRole,
+    DerivedSpec,
+    ExecutionPolicy,
+    GrainId,
+    MaterializationProfile,
+    TimeSpec,
+)
 
 from ditto_engine.engine.errors import DerivedNotImplementedError
-
-type CalendarId = Literal["cn_stock"]
-type GrainId = Literal["1d", "1m"]
 
 __all__ = [
     "CALENDAR_TO_TIMEZONE",
@@ -21,101 +24,20 @@ __all__ = [
     "GrainId",
     "MaterializationProfile",
     "TimeSpec",
+    "validate_derived_spec",
 ]
 
 
-class DerivedRole(StrEnum):
-    """Derived entity role."""
+def validate_derived_spec(spec: DerivedSpec) -> None:
+    """Validate current v1 boundaries. Raises DerivedNotImplementedError."""
+    if len(spec.entity_keys) != 1:
+        raise DerivedNotImplementedError(
+            feature=f"复合键已预留、暂未实现: entity_keys={spec.entity_keys}",
+            derived_id=spec.id,
+        )
 
-    FEATURE = "feature"
-    FACTOR = "factor"
-    SIGNAL = "signal"
-    LABEL = "label"
-
-
-class MaterializationProfile(StrEnum):
-    """Derived materialization profile."""
-
-    SERIES = "SERIES"
-    STATE = "STATE"
-    DERIVE = "DERIVE"
-    OFFLINE = "OFFLINE"
-
-
-GRAIN_TO_TIME_KEYS: dict[GrainId, tuple[str, ...]] = {
-    "1d": ("trade_date",),
-    "1m": ("trade_date", "bar_time"),
-}
-
-CALENDAR_TO_TIMEZONE: dict[CalendarId, str] = {
-    "cn_stock": "Asia/Shanghai",
-}
-
-
-@dataclass(frozen=True)
-class TimeSpec:
-    """时间语义规范"""
-
-    event_time_key: str
-    availability_time_key: str | None = None
-
-
-@dataclass(frozen=True)
-class ExecutionPolicy:
-    """
-    执行策略配置。
-
-    Attributes:
-        pit_required: 是否要求 PIT (Point-in-Time) 数据。
-        normalization_preset: 因子标准化预设名称。
-        adj_type: 复权类型，"none"/"qfq"/"hfq"。
-
-    """
-
-    pit_required: bool = True
-    normalization_preset: str = "default"
-    adj_type: str = "none"
-
-
-@dataclass(frozen=True)
-class DerivedSpec:
-    """Unified derived semantic contract."""
-
-    id: str
-    version: int
-    role: DerivedRole
-    materialization_profile: MaterializationProfile
-    expression: str
-    entity_keys: tuple[str, ...] = field(default_factory=lambda: ("instrument_id",))
-    grain: GrainId = "1d"
-    time_keys: tuple[str, ...] | None = None
-    calendar: CalendarId = "cn_stock"
-    description: str | None = None
-    time_spec: TimeSpec | None = None
-    operator_versions: dict[str, str] = field(default_factory=dict)
-    universe_id: str | None = None
-    execution_policy: ExecutionPolicy = field(default_factory=ExecutionPolicy)
-
-    @property
-    def effective_time_keys(self) -> tuple[str, ...]:
-        """Return explicit time keys or the grain-derived default."""
-        return self.time_keys or GRAIN_TO_TIME_KEYS[self.grain]
-
-    @property
-    def timezone(self) -> str:
-        """Return timezone implied by the calendar."""
-        return CALENDAR_TO_TIMEZONE[self.calendar]
-
-    def validate_spec(self) -> None:
-        """Validate current v1 boundaries."""
-        if len(self.entity_keys) != 1:
-            raise DerivedNotImplementedError(
-                feature=f"复合键已预留、暂未实现: entity_keys={self.entity_keys}",
-                derived_id=self.id,
-            )
-
-        if self.grain == "1m":
-            raise DerivedNotImplementedError(
-                feature="grain='1m' 已预留、暂未实现",
-                derived_id=self.id,
-            )
+    if spec.grain == "1m":
+        raise DerivedNotImplementedError(
+            feature="grain='1m' 已预留、暂未实现",
+            derived_id=spec.id,
+        )

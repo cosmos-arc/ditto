@@ -23,7 +23,7 @@ Kernel 层是 **Shared Kernel — 类型 + Protocol 抽象 + 薄实现**，提�
 
 ### Protocol / 薄实现准入标准
 
-适用于 Clock、DataProvider、EventBus 等 Protocol 及其薄实现类
+适用于 Clock、EventBus 等 Protocol 及其薄实现类
 （SimulatedClock、RealtimeClock、SimpleEventBus）。
 
 1. **预期跨层使用**：至少被 2 个业务包消费
@@ -51,8 +51,8 @@ ditto_kernel/
 ├── identity.py        # 共享身份类型（NewType）
 ├── enums.py           # 共享枚举类型（StrEnum）
 ├── clock.py           # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
-├── provider.py        # DataProvider Protocol + 查询契约（BarQuery / InstrumentQuery）
-└── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
+├── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
+└── specs.py           # 衍生规格数据类（DerivedSpec / DerivedRole / TimeSpec 等，Phase 5 从 Engine 迁入）
 ```
 
 ## 当前类型清单
@@ -64,6 +64,13 @@ ditto_kernel/
 | `Exchange` | enums.py | `StrEnum`（XSHE/XSHG/XBSE） | DataHub |
 | `OrderSide` | enums.py | `StrEnum`（BUY/SELL） | DataHub, Core |
 | `RunStatus` | enums.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | DataHub |
+| `DerivedRole` | specs.py | `StrEnum`（FACTOR/FEATURE/COMPOSITE） | Analytics, Engine |
+| `DerivedSpec` | specs.py | frozen dataclass | Analytics, Engine |
+| `MaterializationProfile` | specs.py | `StrEnum`（SERIES/STATE） | Analytics, Engine |
+| `TimeSpec` | specs.py | frozen dataclass | Analytics, Engine |
+| `ExecutionPolicy` | specs.py | frozen dataclass（含默认值） | Analytics, Engine |
+| `CalendarId` | specs.py | `Literal["cn_stock"]` | Analytics |
+| `GrainId` | specs.py | `Literal["1d", "1m"]` | Analytics |
 
 ## 导入规范
 
@@ -74,6 +81,7 @@ from ditto_kernel import AssetClass, OrderSide, InstrumentId
 # ✅ 正确：从子模块导入
 from ditto_kernel.enums import AssetClass, Exchange
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.specs import DerivedSpec, DerivedRole, MaterializationProfile
 
 # ❌ 禁止：kernel 导入任何其他 ditto 包
 from ditto_datahub.models.enums import ...  # kernel 中禁止

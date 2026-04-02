@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import polars as pl
-from ditto_kernel.provider import AnyFrame, BarQuery, InstrumentQuery
+from ditto_data.provider import BarQuery, InstrumentQuery
 
 from ditto_datahub.services.market_service import AdjType, MarketBarsQuery
 
@@ -40,7 +40,7 @@ class ServiceBackedDataProvider:
         self._metadata = metadata_service
         self._derived = derived_service
 
-    def get_bars(self, query: BarQuery) -> AnyFrame:
+    def get_bars(self, query: BarQuery) -> pl.DataFrame:
         """
         获取行情数据.
 
@@ -69,7 +69,7 @@ class ServiceBackedDataProvider:
         )
         return self._market.find_bars(bars_query)
 
-    def get_instruments(self, query: InstrumentQuery) -> AnyFrame:
+    def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
         """获取标的列表."""
         return self._metadata.find_securities(
             None,
@@ -77,7 +77,7 @@ class ServiceBackedDataProvider:
             exchange=query.exchange,
         )
 
-    def get_schedule(self, start: str, end: str) -> AnyFrame:
+    def get_schedule(self, start: str, end: str) -> pl.DataFrame:
         """获取交易日历."""
         return self._metadata.list_calendar_range(start, end, only_open=True)
 
@@ -87,7 +87,7 @@ class ServiceBackedDataProvider:
         instruments: tuple[str, ...],
         start: str,
         end: str,
-    ) -> AnyFrame:
+    ) -> pl.DataFrame:
         """获取因子数据."""
         ticker_to_id = self._metadata.resolve_instrument_ids_batch(
             identifiers=list(instruments),

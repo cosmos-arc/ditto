@@ -1,6 +1,6 @@
 """Derived materialization models."""
 
-from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 from ditto_analytics.materialization.contracts import (
     Analysis,

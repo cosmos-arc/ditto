@@ -12,6 +12,7 @@ from ditto_engine.engine.specs import (
     GrainId,
     MaterializationProfile,
     TimeSpec,
+    validate_derived_spec,
 )
 
 
@@ -172,7 +173,7 @@ class TestDerivedSpec:
         )
 
         with pytest.raises(DerivedNotImplementedError, match="复合键已预留、暂未实现"):
-            spec.validate_spec()
+            validate_derived_spec(spec)
 
     def test_validate_spec_rejects_intraday_grain(self) -> None:
         """Intraday grain is reserved but not yet implemented."""
@@ -188,7 +189,7 @@ class TestDerivedSpec:
         with pytest.raises(
             DerivedNotImplementedError, match="grain='1m' 已预留、暂未实现"
         ):
-            spec.validate_spec()
+            validate_derived_spec(spec)
 
     def test_no_pit_required_or_normalization_fields(self) -> None:
         """DerivedSpec should not have pit_required or normalization_preset."""
@@ -238,4 +239,4 @@ class TestDerivedSpec:
             expression="close",
         )
         # Should not raise
-        spec.validate_spec()
+        validate_derived_spec(spec)

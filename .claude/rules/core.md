@@ -480,7 +480,7 @@ tar -tzf dist/*.whl | grep py.typed
 
 | 包 | py.typed 状态 | 路径 |
 |---|--------------|------|
-| ditto_core | ✅ | `packages/core/src/ditto_core/py.typed` |
+| ditto_engine | ✅ | `packages/core/src/ditto_engine/py.typed` |
 | ditto_datahub | ✅ | `packages/datahub/src/ditto_datahub/py.typed` |
 | ditto_infra | ✅ | `packages/infra/src/ditto_infra/py.typed` |
 | ditto_port | ✅ | `apps/port/src/ditto_port/py.typed` |

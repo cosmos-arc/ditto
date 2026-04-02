@@ -7,7 +7,8 @@ from hashlib import sha256
 
 import orjson
 import polars as pl
-from ditto_engine.engine.specs import DerivedSpec
+from ditto_engine.engine.specs import validate_derived_spec
+from ditto_kernel.specs import DerivedSpec
 
 from ditto_analytics.expression.analyzer import analyze_expression
 from ditto_analytics.expression.ast import (
@@ -58,7 +59,7 @@ def compute_compile_cache_key(
     resolved, but no Polars expression is generated.  The parsed AST is
     returned so callers can avoid double-parsing on cache hits.
     """
-    spec.validate_spec()
+    validate_derived_spec(spec)
     tokens = tokenize(spec.expression)
     ast = ExpressionParser(tokens, spec.expression).parse()
     analysis = analyze_expression(ast)

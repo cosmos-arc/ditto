@@ -98,6 +98,7 @@ source_modules =
 forbidden_modules =
     ditto_datahub.**
 ignore_imports =
+    # validate_derived_spec 通过 engine.specs → engine.errors → datahub.errors 传递依赖
     ditto_analytics.** -> ditto_engine.engine.specs
 unmatched_ignore_imports_alerting = none
 
@@ -137,9 +138,11 @@ forbidden_modules =
     ditto_datahub.**
     ditto_data.**
 ignore_imports =
-    ditto_engine.** -> ditto_kernel.*
+    # re-export anti-corruption layer: Engine 重新导出错误类型供上层消费
     ditto_engine.** -> ditto_datahub.errors
     ditto_engine.** -> ditto_data.errors
+    # DataProvider Protocol 位置（Phase 5 从 kernel 移入 ditto_data，需 polars 返回类型）
+    ditto_engine.** -> ditto_data.provider
 unmatched_ignore_imports_alerting = none
 
 [importlinter:contract:datahub-must-not-depend-on-core]
@@ -164,7 +167,7 @@ source_modules =
 forbidden_modules =
     ditto_datahub.stores.**
     ditto_datahub.runtime.**
-# 忽略 registry 模块的导入
+# 忽略 registry 模块的导入（Composition Root 模式：registry 负责组装存储实现）
 ignore_imports =
     ditto_interfaces.registry.** -> ditto_datahub.stores.**
     ditto_interfaces.registry.** -> ditto_datahub.runtime.**

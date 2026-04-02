@@ -251,8 +251,8 @@ pixi run python scripts/verify_test_data.py
 # tests/conftest.py
 import pytest
 from ditto_datahub import DataHub
-from ditto_core.engine import RegimeEngine, FactorEngine
-from ditto_core.portfolio import PortfolioManager
+from ditto_engine.engine import RegimeEngine, FactorEngine
+from ditto_engine.portfolio import PortfolioManager
 
 @pytest.fixture(scope="session")
 def test_hub():

@@ -1,11 +1,7 @@
-"""ditto_kernel.provider 单元测试."""
+"""ditto_data.provider 单元测试（DataProvider Protocol + 查询契约）."""
 
-from ditto_kernel.provider import (
-    AnyFrame,
-    BarQuery,
-    DataProvider,
-    InstrumentQuery,
-)
+import polars as pl
+from ditto_data.provider import BarQuery, DataProvider, InstrumentQuery
 
 
 class TestBarQuery:
@@ -92,14 +88,6 @@ class TestInstrumentQuery:
             pass
 
 
-class TestAnyFrame:
-    """AnyFrame 类型别名测试."""
-
-    def test_is_any(self) -> None:
-        """AnyFrame 应为 Any 类型别名."""
-        assert AnyFrame is not None  # 确保别名存在
-
-
 class TestDataProviderProtocol:
     """DataProvider Protocol 一致性测试."""
 
@@ -107,14 +95,14 @@ class TestDataProviderProtocol:
         """DataProvider 应定义所需方法签名."""
 
         class StubProvider:
-            def get_bars(self, query: BarQuery) -> AnyFrame:
-                return None  # stub
+            def get_bars(self, query: BarQuery) -> pl.DataFrame:
+                return pl.DataFrame()
 
-            def get_instruments(self, query: InstrumentQuery) -> AnyFrame:
-                return None  # stub
+            def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
+                return pl.DataFrame()
 
-            def get_schedule(self, start: str, end: str) -> AnyFrame:
-                return None  # stub
+            def get_schedule(self, start: str, end: str) -> pl.DataFrame:
+                return pl.DataFrame()
 
             def get_factor(
                 self,
@@ -122,8 +110,8 @@ class TestDataProviderProtocol:
                 instruments: tuple[str, ...],
                 start: str,
                 end: str,
-            ) -> AnyFrame:
-                return None  # stub
+            ) -> pl.DataFrame:
+                return pl.DataFrame()
 
         provider: DataProvider = StubProvider()
         result = provider.get_bars(
@@ -133,4 +121,4 @@ class TestDataProviderProtocol:
                 end="2024-12-31",
             ),
         )
-        assert result is None
+        assert isinstance(result, pl.DataFrame)

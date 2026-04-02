@@ -12,7 +12,7 @@ Core 层是 **Domain Layer（领域层）**，包含量化系统的核心业务�
 ## 模块结构
 
 ```
-ditto_core/
+ditto_engine/
 ├── quality/           # 数据质量引擎（已实现）
 │   ├── checkers/      # DQ 检查器
 │   │   ├── technical.py    # L1 技术检查
@@ -184,7 +184,7 @@ class QualityEngine:
 
 ```
 packages/core/
-├── src/ditto_core/
+├── src/ditto_engine/
 └── tests/
     ├── unit/
     │   ├── accounting/

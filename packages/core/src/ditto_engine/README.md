@@ -40,7 +40,7 @@
 ## 三、目录结构
 
 ```
-src/ditto_core/
+src/ditto_engine/
 ├── quality/           # 数据质量模块（Domain Layer）
 │   ├── checkers/      # DQ 检查器
 │   │   ├── technical.py      # L1 技术检查
@@ -150,9 +150,9 @@ logger.info(
 
 ```python
 from pathlib import Path
-from ditto_core.quality import QualityEngine
-from ditto_core.engine import RegimeEngine, FactorEngine
-from ditto_core.portfolio import PortfolioManager
+from ditto_engine.quality import QualityEngine
+from ditto_engine.engine import RegimeEngine, FactorEngine
+from ditto_engine.portfolio import PortfolioManager
 from ditto_datahub import DataHub
 from ditto_datahub.stores.market import MarketBarsQuery
 import polars as pl

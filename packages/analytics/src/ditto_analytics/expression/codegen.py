@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 import polars as pl
-from ditto_engine.engine.specs import DerivedSpec
+from ditto_kernel.specs import DerivedSpec
 
 from ditto_analytics.expression.ast import (
     BinaryOpNode,

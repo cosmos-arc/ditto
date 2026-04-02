@@ -67,9 +67,9 @@ DRAWDOWN_TOLERANCE = 0.005    # 0.5%
 
 #### 任务1: 实现FastBacktester
 - **文件**：
-  - `packages/core/src/ditto_core/backtest/fast_backtester.py`
-  - `packages/core/src/ditto_core/backtest/models/backtest_result.py`
-  - `packages/core/src/ditto_core/backtest/models/cost_model.py`
+  - `packages/core/src/ditto_engine/backtest/fast_backtester.py`
+  - `packages/core/src/ditto_engine/backtest/models/backtest_result.py`
+  - `packages/core/src/ditto_engine/backtest/models/cost_model.py`
 - **测试**：`packages/core/tests/unit/test_fast_backtester.py`
 - **关键实现**：
   - 向量化计算（基于Polars）
@@ -80,10 +80,10 @@ DRAWDOWN_TOLERANCE = 0.005    # 0.5%
 
 #### 任务2: 实现ProductionBacktester
 - **文件**：
-  - `packages/core/src/ditto_core/backtest/production_backtester.py`
-  - `packages/core/src/ditto_core/backtest/event_engine.py`
-  - `packages/core/src/ditto_core/backtest/portfolio.py`
-  - `packages/core/src/ditto_core/backtest/order.py`
+  - `packages/core/src/ditto_engine/backtest/production_backtester.py`
+  - `packages/core/src/ditto_engine/backtest/event_engine.py`
+  - `packages/core/src/ditto_engine/backtest/portfolio.py`
+  - `packages/core/src/ditto_engine/backtest/order.py`
 - **测试**：`packages/core/tests/unit/test_production_backtester.py`
 - **关键实现**：
   - 事件驱动架构
@@ -94,9 +94,9 @@ DRAWDOWN_TOLERANCE = 0.005    # 0.5%
 
 #### 任务3: 实现RiskEngine
 - **文件**：
-  - `packages/core/src/ditto_core/risk/risk_engine.py`
-  - `packages/core/src/ditto_core/risk/kill_switch.py`
-  - `packages/core/src/ditto_core/risk/drawdown_monitor.py`
+  - `packages/core/src/ditto_engine/risk/risk_engine.py`
+  - `packages/core/src/ditto_engine/risk/kill_switch.py`
+  - `packages/core/src/ditto_engine/risk/drawdown_monitor.py`
 - **测试**：`packages/core/tests/unit/test_risk_engine.py`
 - **关键实现**：
   - 三级Kill Switch（严格按风险宪法）
@@ -107,7 +107,7 @@ DRAWDOWN_TOLERANCE = 0.005    # 0.5%
 
 #### 任务4: 实现对齐测试框架
 - **文件**：
-  - `packages/core/src/ditto_core/backtest/alignment_tester.py`
+  - `packages/core/src/ditto_engine/backtest/alignment_tester.py`
   - `packages/core/tests/integration/test_backtest_alignment.py`
 - **验收**：
   - 误差<0.1%（RETURN_TOLERANCE）
@@ -119,7 +119,7 @@ DRAWDOWN_TOLERANCE = 0.005    # 0.5%
 
 #### 任务5: 实现Walk-Forward验证器
 - **文件**：
-  - `packages/core/src/ditto_core/backtest/walk_forward.py`
+  - `packages/core/src/ditto_engine/backtest/walk_forward.py`
 - **功能**：
   - 滚动窗口验证
   - 避免过拟合
@@ -129,7 +129,7 @@ DRAWDOWN_TOLERANCE = 0.005    # 0.5%
 
 #### 任务6: 实现BacktestOrchestrator
 - **文件**：
-  - `packages/core/src/ditto_core/backtest/orchestrator.py`
+  - `packages/core/src/ditto_engine/backtest/orchestrator.py`
 - **功能**：
   - 协调各类回测任务
   - 统一结果格式
@@ -251,7 +251,7 @@ class KillSwitch:
 ## 关键文件清单
 
 ```
-packages/core/src/ditto_core/
+packages/core/src/ditto_engine/
 ├── backtest/
 │   ├── __init__.py
 │   ├── fast_backtester.py        # 向量化引擎

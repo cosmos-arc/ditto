@@ -47,7 +47,7 @@
 pixi run -e dev pytest packages/core/tests
 
 # 运行所有测试（带覆盖率）
-pixi run -e dev pytest packages/core/tests --cov=ditto_core --cov-report=html
+pixi run -e dev pytest packages/core/tests --cov=ditto_engine --cov-report=html
 ```
 
 ### 运行单元测试
@@ -256,7 +256,7 @@ def test_factor_engine_with_mock():
 
 ```bash
 # 生成 HTML 覆盖率报告
-pixi run -e dev pytest packages/core/tests --cov=ditto_core --cov-report=html
+pixi run -e dev pytest packages/core/tests --cov=ditto_engine --cov-report=html
 
 # 查看报告
 # 打开 packages/core/htmlcov/index.html

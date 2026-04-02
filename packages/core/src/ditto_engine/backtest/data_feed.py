@@ -13,13 +13,13 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
 import polars as pl
+from ditto_data.provider import BarQuery
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.provider import BarQuery
 
 from ditto_engine.execution.reality.market import MarketSnapshot
 
 if TYPE_CHECKING:
-    from ditto_kernel.provider import DataProvider
+    from ditto_data.provider import DataProvider
 
 __all__ = [
     "DataFeed",
@@ -151,10 +151,7 @@ class ProviderBackedDataFeed:
             end=self._end_date,
         )
         result = self._provider.get_bars(query)
-        if isinstance(result, pl.DataFrame):
-            self._bars_df = result
-        else:
-            self._bars_df = pl.DataFrame()
+        self._bars_df = result
         return self._bars_df
 
     # -- public interface --------------------------------------------------
@@ -165,7 +162,7 @@ class ProviderBackedDataFeed:
             return self._trading_days_cache
 
         schedule = self._provider.get_schedule(self._start_date, self._end_date)
-        if isinstance(schedule, pl.DataFrame) and "trade_date" in schedule.columns:
+        if "trade_date" in schedule.columns:
             self._trading_days_cache = sorted(
                 schedule["trade_date"].cast(pl.String).to_list()
             )
