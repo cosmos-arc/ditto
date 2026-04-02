@@ -190,21 +190,13 @@ forbidden_modules =
 # R8 — App 内部互斥规则（Use Case 间职责隔离）
 # ═══════════════════════════════════════════════════════════════════
 # 矩阵：
-#   app.query     -X-> app.command, app.process, app.builders  (只读)
-#   app.command   -X-> app.query, app.process                  (单次写)
-#   app.process   ->  app.query, app.command                   (允许协调)
-#   app.builders  -X-> app.query, app.command                  (只装配)
+#   app.query     -X-> app.process, app.builders  (只读)
+#   app.process   ->  app.query                   (允许协调)
+#   app.builders  -X-> app.query                  (只装配)
 #   process <-> builders 允许双向
+#
+# 注：app.command 模块尚未创建，相关 R8 规则在模块创建时补充
 # ═══════════════════════════════════════════════════════════════════
-
-[importlinter:contract:r8-query-no-command]
-name = R8: app.query must not import app.command
-type = forbidden
-source_modules =
-    ditto_app.query.**
-forbidden_modules =
-    ditto_app.command.**
-unmatched_ignore_imports_alerting = none
 
 [importlinter:contract:r8-query-no-process]
 name = R8: app.query must not import app.process
@@ -224,24 +216,6 @@ forbidden_modules =
     ditto_app.builders.**
 unmatched_ignore_imports_alerting = none
 
-[importlinter:contract:r8-command-no-query]
-name = R8: app.command must not import app.query
-type = forbidden
-source_modules =
-    ditto_app.command.**
-forbidden_modules =
-    ditto_app.query.**
-unmatched_ignore_imports_alerting = none
-
-[importlinter:contract:r8-command-no-process]
-name = R8: app.command must not import app.process
-type = forbidden
-source_modules =
-    ditto_app.command.**
-forbidden_modules =
-    ditto_app.process.**
-unmatched_ignore_imports_alerting = none
-
 [importlinter:contract:r8-builders-no-query]
 name = R8: app.builders must not import app.query
 type = forbidden
@@ -249,15 +223,6 @@ source_modules =
     ditto_app.builders.**
 forbidden_modules =
     ditto_app.query.**
-unmatched_ignore_imports_alerting = none
-
-[importlinter:contract:r8-builders-no-command]
-name = R8: app.builders must not import app.command
-type = forbidden
-source_modules =
-    ditto_app.builders.**
-forbidden_modules =
-    ditto_app.command.**
 unmatched_ignore_imports_alerting = none
 
 # ═══════════════════════════════════════════════════════════════════

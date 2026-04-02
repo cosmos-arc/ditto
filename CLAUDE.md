@@ -246,7 +246,8 @@ ditto/
 │   ├── datahub/       # 数据访问层
 │   ├── data/          # 数据质量 + 错误定义
 │   ├── analytics/     # 表达式编译 + 物化
-│   └── core/          # 核心引擎（→ ditto_engine）
+│   ├── app/           # 应用编排层（CQRS: query/process/builders）
+│   └── core/          # 核心引擎（ditto_engine，物理目录: core）
 ├── apps/              # 应用
 │   ├── interfaces/    # Server 应用（API/CLI/Jobs）
 │   └── web/           # Web 应用

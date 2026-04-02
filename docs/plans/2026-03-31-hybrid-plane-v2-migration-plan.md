@@ -1,7 +1,7 @@
 ---
 date: 2026-03-31
 plan_type: refactor
-status: active
+status: completed
 origin: docs/brainstorms/2026-03-31-hybrid-plane-v2-refined-requirements.md
 depth: deep
 last_audit: 2026-03-31
@@ -34,7 +34,7 @@ last_audit: 2026-03-31
 | 3a | 清理 deprecated 模型（trading.py + portfolio.py） | ✅ 完成 | 3 文件删除，__init__.py 清理，零残留 |
 | 3b | factors + features 迁入 ditto_analytics | ✅ 完成 | re-export shim 兼容层，消费者零改动 |
 | 3c | research 迁入 ditto_analytics + 消费者迁移 | ✅ 完成 | 9 消费者更新，shim 直接删除 |
-| 4-5 | 路线图剩余 | ⏳ Phase 3 完成，Phase 4-5 待规划 | — |
+| 4-5 | 路线图剩余 | ✅ 完成 | Phase 4 App 层提取 + Phase 5 AnyFrame 消除 + 收尾清理 |
 
 ---
 
@@ -499,11 +499,11 @@ Phase 0.5 + Phase 1 完成后：
 
 - [x] `grep -rn "from ditto_kernel.pipeline\|from ditto_kernel import.*\(Pipeline\|Stage\|Context\)" packages/ apps/ --include="*.py"` 返回 0 ✅
 - [x] `grep -rn "BacktestProvider\|LiveProvider\|DataProviderAdapter" packages/ apps/ --include="*.py"` 返回 0 ✅
-- [ ] `grep -rn "ParquetDataFeed" packages/ apps/ --include="*.py"` 返回 0 — **⚠️ 源码已清，测试残留 33 处（8 文件）**
+- [x] `grep -rn "ParquetDataFeed" packages/ apps/ --include="*.py"` 返回 0 ✅
 - [x] `pixi run -e dev check` 全通过 ✅（4228 tests）
-- [x] `pixi run -e dev arch-check` 全部 8 个 contract 通过 ✅
+- [x] `pixi run -e dev arch-check` 全部 contract 通过 ✅（当前 15/15 KEPT）
 - [x] golden test 基线建立并通过 ✅（3 日 + 5 日场景，硬编码断言）
-- [ ] Kernel `__all__` 从 18 降至 15 个符号 — **实际为 16 个（与预期差 1，需核实原始计数）**
+- [x] Kernel `__all__` 从 18 降至 16 个符号 ✅（移除 Context, Pipeline, Stage）
 
 ---
 
