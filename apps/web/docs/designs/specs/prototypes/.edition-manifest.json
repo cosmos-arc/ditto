@@ -52,10 +52,10 @@
     {
       "id": "trading-overview",
       "file": "page-trading-overview.html",
-      "status": "created",
-      "score": null,
+      "status": "needs-refinement",
+      "score": 9.02,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-01"
     },
     {
