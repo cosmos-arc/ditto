@@ -42,7 +42,7 @@ jobs:
           filters: |
             python:
               - 'packages/**/*.py'
-              - 'apps/port/**/*.py'
+              - 'apps/interfaces/**/*.py'
               - 'tests/**/*.py'
               - 'scripts/**/*.py'
               - 'pyproject.toml'
@@ -163,7 +163,7 @@ jobs:
             --durations=10
 
           # Port 单元测试：有限并行（需验证）
-          pixi run -e dev pytest apps/port/tests/unit/ \
+          pixi run -e dev pytest apps/interfaces/tests/unit/ \
             -m "not integration and not slow" \
             -n 2 \
             --cov=apps \

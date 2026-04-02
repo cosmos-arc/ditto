@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
       - 'packages/**'
-      - 'apps/port/**'
+      - 'apps/interfaces/**'
       - 'tests/e2e/**'
     types: [labeled]     # 带有 e2e 标签时触发
 

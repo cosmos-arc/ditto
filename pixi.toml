@@ -204,10 +204,10 @@ ci = { depends-on = [
 # 辅助命令
 # ──────────────────────────────────────────────────────────
 # Dev：开发服务（热重载）
-dev = "granian apps.port.src.ditto_port.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
+dev = "granian apps.interfaces.src.ditto_interfaces.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
 
 # Server：生产服务
-server = "granian apps.port.src.ditto_port.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
+server = "granian apps.interfaces.src.ditto_interfaces.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
 
 # Clean：清理缓存
 clean = """
