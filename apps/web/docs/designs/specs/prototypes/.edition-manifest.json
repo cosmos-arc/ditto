@@ -43,10 +43,10 @@
     {
       "id": "research",
       "file": "page-research.html",
-      "status": "needs-refinement",
-      "score": null,
+      "status": "done",
+      "score": 8.96,
       "styleAnchor": "cross-market",
-      "rounds": 7,
+      "rounds": 9,
       "createdAt": "2026-03-30"
     },
     {
