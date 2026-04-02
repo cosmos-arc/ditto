@@ -80,6 +80,30 @@
   --scrollbar-track:        oklch(0.155 0.005 260);
   --scrollbar-thumb:        oklch(0.310 0.010 260);
   --scrollbar-thumb-hover:  oklch(0.370 0.012 260);
+
+  /* ── Instrument Hub — Domain-specific structural tokens ── */
+  --sparkline-width:        48px;    /* metric-card inline sparkline */
+  --sparkline-height:       20px;
+  --flow-bar-height:        6px;     /* capital flow indicator bar */
+  --context-count-height:   18px;    /* sidebar section count badge */
+  --timeline-bottom-max-h:  160px;   /* bottom timeline max scrollable height — tighter for rhythm */
+  --note-input-min-h:       60px;    /* note textarea minimum height */
+  --btn-icon-size:          14px;    /* icon size inside buttons */
+  --meta-sep-height:        12px;    /* meta strip separator height */
+  --sidebar-glow-height:    4px;     /* sidebar top brand accent bar */
+  --status-bar-height:      1.5rem;  /* fixed status bar height */
+
+  /* ── Rhythm Tokens — differentiated section gaps ── */
+  --rhythm-merge-gap:        0px;       /* metrics-chart: visual fusion */
+  --rhythm-section-gap:      var(--space-12); /* chart-flow: standard density */
+  --rhythm-breath-gap:       var(--space-16); /* major section transitions */
+
+  /* ── Signal / Status Dot ── */
+  --signal-dot-size:         6px;      /* signal indicator dot */
+  --timeline-marker-size:    11px;     /* timeline event marker */
+  --timeline-marker-offset-top: 3px;   /* marker vertical alignment */
+  --timeline-line-left:      5px;      /* timeline connector line left offset */
+  --timeline-line-top:       18px;     /* timeline connector line start */
 }
 
 /* ── Light Mode Override — Graphite Studio ── */

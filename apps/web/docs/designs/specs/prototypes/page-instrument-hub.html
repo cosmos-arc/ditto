@@ -501,17 +501,17 @@
       grid-area: main;
       display: grid;
       grid-template-columns: 1fr var(--shell-detail-width);
-      gap: var(--density-gutter);
+      gap: var(--rhythm-breath-gap);
       padding: var(--density-gutter);
       overflow: hidden;
       min-height: 0;
     }
 
-    /* ── Main Object View ── */
+    /* ── Main Object View — Rhythmic gap system ── */
     .hub-object-view {
       display: flex;
       flex-direction: column;
-      gap: var(--density-section-gap);
+      gap: 0; /* override: each section pair defines its own gap */
       overflow: hidden;
       min-height: 0;
     }
@@ -593,6 +593,11 @@
       background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
     }
 
+    /* ── Sidebar structural separator ── */
+    .hub-sidebar {
+      border-left: 1px solid var(--border-subtle);
+    }
+
     /* ── Price Chart Panel ── */
     .chart-panel {
       flex: 1;
@@ -602,7 +607,7 @@
 
     /* Metrics → Chart visual merge: eliminate the gap between metrics-grid and chart */
     .metrics-grid + .chart-panel {
-      margin-top: calc(-1 * var(--density-section-gap));
+      margin-top: var(--rhythm-merge-gap);
       border-top: none;
       border-top-left-radius: 0;
       border-top-right-radius: 0;
@@ -673,6 +678,11 @@
     }
 
     /* ── Flow Summary Panel ── */
+    /* Chart → Flow: standard section gap — different data type, needs separation */
+    .chart-panel + .flow-panel {
+      margin-top: var(--rhythm-section-gap);
+    }
+
     .flow-panel {
       flex-shrink: 0;
     }
@@ -860,7 +870,8 @@
       border-left: 2px solid transparent;
       cursor: pointer;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard),
-                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .signal-item:has(.signal-dot.opportunity) {
@@ -881,6 +892,7 @@
 
     .signal-item:hover {
       background: var(--interaction-hover-subtle-bg);
+      transform: translateX(1px);
     }
 
     .signal-header {
@@ -890,8 +902,8 @@
     }
 
     .signal-dot {
-      width: 6px;
-      height: 6px;
+      width: var(--signal-dot-size);
+      height: var(--signal-dot-size);
       border-radius: 50%;
       flex-shrink: 0;
     }
@@ -955,11 +967,13 @@
       padding: var(--space-6) var(--space-8);
       border-radius: var(--radius-4);
       cursor: pointer;
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .research-item:hover {
       background: var(--interaction-hover-subtle-bg);
+      transform: translateX(1px);
     }
 
     .research-title {
@@ -1101,13 +1115,19 @@
       gap: var(--space-12);
       padding: var(--space-6) 0;
       position: relative;
+      border-radius: var(--radius-3);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .timeline-item:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
 
     .timeline-item::before {
       content: '';
       position: absolute;
-      left: 5px;
-      top: 18px;
+      left: var(--timeline-line-left);
+      top: var(--timeline-line-top);
       bottom: -6px;
       width: 1px;
       background: var(--border-subtle);
@@ -1118,11 +1138,11 @@
     }
 
     .timeline-marker {
-      width: 11px;
-      height: 11px;
+      width: var(--timeline-marker-size);
+      height: var(--timeline-marker-size);
       border-radius: 50%;
       flex-shrink: 0;
-      margin-top: 3px;
+      margin-top: var(--timeline-marker-offset-top);
       position: relative;
       z-index: 1;
     }
@@ -1193,8 +1213,8 @@
     }
 
     .status-indicator {
-      width: 6px;
-      height: 6px;
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
       border-radius: 50%;
       background: var(--system-healthy-fg);
       margin-right: var(--space-6);
@@ -1235,7 +1255,8 @@
     @media (prefers-reduced-motion: reduce) {
       .btn, .rail-icon, .hub-tab, .header-action-btn,
       .metric-card, .signal-item, .research-item,
-      .timeline-marker, .object-status-dot, .object-price {
+      .timeline-marker, .object-status-dot, .object-price,
+      .bottom-tab, .chart-period-btn, .meta-chip {
         transition: none !important;
         animation: none !important;
       }
