@@ -1,6 +1,28 @@
 """DataHub models for data transfer objects."""
 
 # DataHub 层自己的 models
+from ditto_analytics.models.factors import (
+    FACTOR_CLASS_FUNDAMENTAL,
+    FACTOR_CLASS_MACRO,
+    FACTOR_CLASS_STATISTICAL,
+    FACTOR_CLASS_TECHNICAL,
+    FACTOR_FAMILY_MOMENTUM,
+    FACTOR_FAMILY_QUALITY,
+    FACTOR_FAMILY_SIZE,
+    FACTOR_FAMILY_VALUE,
+    FACTOR_FAMILY_VOLATILITY,
+    FactorClass,
+    FactorFamily,
+    FactorMetadata,
+)
+from ditto_analytics.models.features import (
+    INDICATOR_TYPE_MOMENTUM,
+    INDICATOR_TYPE_TREND,
+    INDICATOR_TYPE_VOLATILITY,
+    INDICATOR_TYPE_VOLUME,
+    IndicatorMetadata,
+    IndicatorType,
+)
 from ditto_kernel.enums import AssetClass, Exchange, OrderSide, RunStatus
 
 from ditto_datahub.models.common import (
@@ -23,28 +45,6 @@ from ditto_datahub.models.derived import (
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
-)
-from ditto_datahub.models.factors import (
-    FACTOR_CLASS_FUNDAMENTAL,
-    FACTOR_CLASS_MACRO,
-    FACTOR_CLASS_STATISTICAL,
-    FACTOR_CLASS_TECHNICAL,
-    FACTOR_FAMILY_MOMENTUM,
-    FACTOR_FAMILY_QUALITY,
-    FACTOR_FAMILY_SIZE,
-    FACTOR_FAMILY_VALUE,
-    FACTOR_FAMILY_VOLATILITY,
-    FactorClass,
-    FactorFamily,
-    FactorMetadata,
-)
-from ditto_datahub.models.features import (
-    INDICATOR_TYPE_MOMENTUM,
-    INDICATOR_TYPE_TREND,
-    INDICATOR_TYPE_VOLATILITY,
-    INDICATOR_TYPE_VOLUME,
-    IndicatorMetadata,
-    IndicatorType,
 )
 from ditto_datahub.models.ingestion import (
     DataChangedError,

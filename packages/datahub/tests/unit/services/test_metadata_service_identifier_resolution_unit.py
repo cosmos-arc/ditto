@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.errors import (
+from ditto_data.errors import (
     NoIdentifierProvidedError,
 )
 from ditto_datahub.services.metadata_service import MetadataService

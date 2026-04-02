@@ -12,7 +12,12 @@ from typing import Literal, Protocol, cast
 
 import httpx
 import polars as pl
-from ditto_data.errors import NetworkError, SourceFetchError
+from ditto_data.errors import (
+    AmbiguousTickerError,
+    IdentifierNotFoundError,
+    NetworkError,
+    SourceFetchError,
+)
 from ditto_data.models.ingestion import (
     BackfillResult,
     IngestionResult,
@@ -20,7 +25,6 @@ from ditto_data.models.ingestion import (
     ResultCounts,
     RetryResult,
 )
-from ditto_datahub.errors import AmbiguousTickerError, IdentifierNotFoundError
 from ditto_datahub.models import (
     FX_CODE_TO_INSTRUMENT_ID,
     METAL_CODE_ALIASES,

@@ -21,7 +21,7 @@ from datetime import time
 from enum import StrEnum
 from typing import Annotated, cast, overload
 
-from ditto_datahub.errors import DatasetNotFoundError
+from ditto_data.errors import DatasetNotFoundError
 from ditto_datahub.models import Dataset
 from pydantic import BaseModel, Field
 

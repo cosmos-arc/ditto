@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.errors import (
+from ditto_data.errors import (
     AmbiguousTickerError,
 )
 from ditto_interfaces.api.routes.fundamental import _resolve_identifier

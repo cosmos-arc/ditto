@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_analytics.materialization.models import DerivedVersionStatus
-from ditto_datahub.errors import DerivedNotFoundError
+from ditto_data.errors import DerivedNotFoundError
 from ditto_datahub.models.derived import (
     DerivedSpecRecord,
     DerivedStateRecord,

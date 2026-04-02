@@ -9,15 +9,15 @@ from __future__ import annotations
 from typing import Any, Literal
 
 import polars as pl
-from ditto_infra.foundation import logger, traced
-from ditto_infra.foundation.util.checksum import ChecksumCompute
-from ditto_kernel.identity import InstrumentId
-
-from ditto_datahub.errors import (
+from ditto_data.errors import (
     AmbiguousTickerError,
     IdentifierNotFoundError,
     NoIdentifierProvidedError,
 )
+from ditto_infra.foundation import logger, traced
+from ditto_infra.foundation.util.checksum import ChecksumCompute
+from ditto_kernel.identity import InstrumentId
+
 from ditto_datahub.models.metadata import (
     InstrumentExtension,
     InstrumentRegistration,

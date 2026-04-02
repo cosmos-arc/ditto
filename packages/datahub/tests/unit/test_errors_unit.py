@@ -1,6 +1,6 @@
 """Tests for DataHub error types."""
 
-from ditto_datahub.errors import (
+from ditto_data.errors import (
     CalendarError,
     DataHubError,
     DatasetNotFoundError,

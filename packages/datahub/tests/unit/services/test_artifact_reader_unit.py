@@ -6,7 +6,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import pytest
-from ditto_datahub.errors import DerivedVersionError
+from ditto_data.errors import DerivedVersionError
 from ditto_datahub.models.derived import (
     DerivedSpecRecord,
     DerivedStateRecord,

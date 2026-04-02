@@ -19,7 +19,7 @@ from ditto_analytics.models.research import (
     ResearchSpineSnapshotRecord,
     ResearchSpineSpecRecord,
 )
-from ditto_datahub.errors import DerivedNotFoundError, DerivedValidationError
+from ditto_data.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_datahub.services import DerivedArtifactReader, ResearchCatalogService
 from ditto_datahub.services.derived import VersionResolutionStrategy
 from ditto_datahub.services.metadata_service import MetadataService

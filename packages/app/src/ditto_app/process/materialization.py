@@ -28,7 +28,7 @@ from ditto_analytics.materialization import (
     DerivedRunTrigger,
     DerivedVersionStatus,
 )
-from ditto_datahub.errors import DerivedNotFoundError, DerivedValidationError
+from ditto_data.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_datahub.models.derived import (
     DerivedCheckpointRecord,
     DerivedDependencyRecord,

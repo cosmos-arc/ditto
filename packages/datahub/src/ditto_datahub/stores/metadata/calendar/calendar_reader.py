@@ -12,10 +12,10 @@ import threading
 from typing import Any, Literal
 
 import polars as pl
+from ditto_data.errors import TradingDateNotFoundError
 from ditto_infra.foundation import logger, span, traced
 from ditto_infra.foundation.cache import DataCache
 
-from ditto_datahub.errors import TradingDateNotFoundError
 from ditto_datahub.models.metadata import CalendarDay
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 

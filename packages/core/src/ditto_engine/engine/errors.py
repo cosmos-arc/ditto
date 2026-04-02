@@ -1,14 +1,14 @@
 """
 Derived engine error hierarchy.
 
-Canonical definitions live in ditto_datahub.errors (DataHub owns these
-because DataHub services raise them).  This module re-exports so that
+Canonical definitions live in ditto_data.errors (DataHub owns these
+because Data services raise them).  This module re-exports so that
 existing Core consumers continue to work.
 """
 
 from __future__ import annotations
 
-from ditto_datahub.errors import (
+from ditto_data.errors import (
     DerivedDependencyError,
     DerivedError,
     DerivedMaterializationError,

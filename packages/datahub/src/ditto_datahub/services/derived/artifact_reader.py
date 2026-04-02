@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Literal, Protocol, overload
 
 import polars as pl
+from ditto_data.errors import DerivedNotFoundError, DerivedVersionError
 
-from ditto_datahub.errors import DerivedNotFoundError, DerivedVersionError
 from ditto_datahub.models.derived import (
     DerivedSpecRecord,
     DerivedStateRecord,
