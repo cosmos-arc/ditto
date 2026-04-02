@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ditto — 标的详情</title>
+  <title>贵州茅台 600519.SH — Ditto</title>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -79,7 +79,9 @@
     .header-action-btn:focus-visible,
     .panel-action:focus-visible,
     .header-avatar:focus-visible,
-    .meta-chip:focus-visible {
+    .meta-chip:focus-visible,
+    .bottom-tab:focus-visible,
+    .chart-period-btn:focus-visible {
       outline: none;
       box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
       border-radius: var(--radius-4);
@@ -104,6 +106,8 @@
       width: 100vw;
       overflow: hidden;
       position: relative;
+      padding-bottom: 1.5rem;
+      box-sizing: border-box;
     }
 
     /* ── Noise texture ── */
@@ -469,6 +473,7 @@
     .hub-tab:nth-child(5) { animation-delay: 150ms; }
     .hub-tab:nth-child(6) { animation-delay: 180ms; }
     .hub-tab:nth-child(7) { animation-delay: 210ms; }
+    .hub-tab:nth-child(8) { animation-delay: 240ms; }
 
     @keyframes tab-fade-in {
       from { opacity: 0; transform: translateY(2px); }
@@ -502,7 +507,7 @@
     .metrics-grid {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: var(--space-8);
+      gap: var(--space-12);
       flex-shrink: 0;
     }
 
@@ -570,10 +575,11 @@
     }
 
     .chart-period-btn {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-family: var(--font-family-numeric);
       color: var(--text-tertiary);
-      padding: var(--space-2) var(--space-6);
+      min-height: 24px;
+      padding: var(--space-2) var(--space-8);
       border-radius: var(--radius-3);
       cursor: pointer;
       background: transparent;
@@ -595,29 +601,14 @@
     .chart-body {
       flex: 1;
       min-height: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       position: relative;
       overflow: hidden;
     }
 
-    .chart-placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--space-8);
-      color: var(--text-tertiary);
-    }
-
-    .chart-placeholder svg {
-      width: 48px;
-      height: 48px;
-      opacity: 0.3;
-    }
-
-    .chart-placeholder-text {
-      font-size: var(--font-size-12);
+    /* ── TradingView Chart Container ── */
+    #tv-chart-container {
+      width: 100%;
+      height: 100%;
     }
 
     /* ── Flow Summary Panel ── */
@@ -657,7 +648,7 @@
     .flow-bar {
       width: 100%;
       height: 4px;
-      background: var(--neutral-200);
+      background: var(--border-default);
       border-radius: 2px;
       overflow: hidden;
     }
@@ -681,6 +672,7 @@
       overflow-y: auto;
       overflow-x: hidden;
       min-height: 0;
+      position: relative;
     }
 
     /* Brand anchor: sidebar top glow bar */
@@ -1052,8 +1044,8 @@
       -webkit-backdrop-filter: blur(8px);
       border-top: 1px solid var(--border-subtle);
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-10);
-      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
       letter-spacing: 0.02em;
       user-select: none;
       z-index: 25;
@@ -1217,7 +1209,11 @@
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M4 10h8M4 15h12"/><circle cx="17" cy="15" r="2"/></svg>
             加入标的池
           </button>
-          <button class="btn btn-primary" aria-label="Chart Lab">
+          <button class="btn" aria-label="发送到研究">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/><path d="M7 9h4"/></svg>
+            发送到研究
+          </button>
+          <button class="btn" aria-label="打开 Chart Lab">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1"/><path d="M3 14l4-4 3 2 7-7"/></svg>
             Chart Lab
           </button>
@@ -1267,6 +1263,7 @@
       <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">公司行动</div>
       <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">新闻</div>
       <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">关联网络</div>
+      <div class="hub-tab" role="tab" aria-selected="false" tabindex="0">公告</div>
     </div>
 
     <!-- ══════════════════════════════════════════════
@@ -1280,12 +1277,12 @@
           <div class="metric-card">
             <span class="metric-label">PE (TTM)</span>
             <span class="metric-value">28.6x</span>
-            <span class="metric-change down">-1.2</span>
+            <span class="metric-change down">-1.2x</span>
           </div>
           <div class="metric-card">
             <span class="metric-label">PB</span>
             <span class="metric-value">10.3x</span>
-            <span class="metric-change down">-0.4</span>
+            <span class="metric-change down">-0.4x</span>
           </div>
           <div class="metric-card">
             <span class="metric-label">ROE</span>
@@ -1318,14 +1315,7 @@
             </div>
           </div>
           <div class="chart-body">
-            <div class="chart-placeholder">
-              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                <rect x="4" y="4" width="40" height="40" rx="4"/>
-                <path d="M10 34l8-10 6 6 12-16"/>
-                <circle cx="36" cy="14" r="2" fill="currentColor"/>
-              </svg>
-              <span class="chart-placeholder-text">Chart Lab 集成区域 — 价格走势图</span>
-            </div>
+            <div id="tv-chart-container" aria-label="价格走势图"></div>
           </div>
         </div>
 
@@ -1333,7 +1323,7 @@
         <div class="flow-panel panel">
           <div class="panel-header">
             <span class="panel-title">资金流向</span>
-            <span class="panel-subtitle">2026-03-31</span>
+            <span class="panel-subtitle">截至 2026-03-31</span>
           </div>
           <div class="flow-summary">
             <div class="flow-item">
@@ -1395,7 +1385,7 @@
             </div>
             <div class="signal-item" tabindex="0" role="button">
               <div class="signal-header">
-                <span class="signal-type warning">关注</span>
+                <span class="signal-type alert">关注</span>
                 <span class="signal-time">昨日</span>
               </div>
               <span class="signal-title">白酒板块资金面异动</span>
@@ -1451,9 +1441,9 @@
          ══════════════════════════════════════════════ -->
     <footer class="hub-bottom" aria-label="时间线">
       <div class="bottom-tabs" role="tablist">
-        <div class="bottom-tab active" role="tab" aria-selected="true">最近事件</div>
-        <div class="bottom-tab" role="tab" aria-selected="false">公告</div>
-        <div class="bottom-tab" role="tab" aria-selected="false">关联研究</div>
+        <div class="bottom-tab active" role="tab" aria-selected="true" tabindex="0">最近事件</div>
+        <div class="bottom-tab" role="tab" aria-selected="false" tabindex="0">公告</div>
+        <div class="bottom-tab" role="tab" aria-selected="false" tabindex="0">关联研究</div>
       </div>
       <div class="bottom-content" role="tabpanel">
         <div class="timeline-list">
@@ -1509,10 +1499,143 @@
     <span class="status-kbd">?</span>
     <span>快捷键</span>
     <span class="status-sep">|</span>
-    <span>Instrument Hub</span>
+    <span>标的详情</span>
   </div>
 
   <!-- Theme Switcher Script -->
   <script src="shared/theme-switcher.js"></script>
+
+  <!-- TradingView Lightweight Charts -->
+  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+  <script>
+  (function() {
+    'use strict';
+    const container = document.getElementById('tv-chart-container');
+    if (!container) return;
+
+    // Read Design Tokens from CSS custom properties
+    const cs = getComputedStyle(document.documentElement);
+    const tk = (v) => cs.getPropertyValue(v).trim();
+    const tokens = {
+      surfaceApp:   tk('--surface-app')       || 'oklch(0.155 0.005 260)',
+      surfacePanel: tk('--surface-panel-base') || 'oklch(0.185 0.005 260)',
+      surfaceOverlay: tk('--surface-overlay')  || 'oklch(0.260 0.008 260)',
+      borderSubtle: tk('--border-subtle')      || 'oklch(0.220 0.005 260)',
+      textTertiary: tk('--text-tertiary')      || 'oklch(0.550 0.010 260)',
+      marketUp:     tk('--market-up-fg')       || 'oklch(0.670 0.170 20)',
+      marketDown:   tk('--market-down-fg')     || 'oklch(0.680 0.120 175)',
+      brandAccent:  tk('--brand-accent')       || 'oklch(0.700 0.165 255)',
+    };
+
+    const chart = LightweightCharts.createChart(container, {
+      layout: {
+        background: { type: 'solid', color: tokens.surfaceApp },
+        textColor: tokens.textTertiary,
+        fontSize: 12,
+        fontFamily: tk('--font-family-numeric') || '"JetBrains Mono", monospace',
+      },
+      grid: {
+        vertLines: { color: tokens.borderSubtle },
+        horzLines: { color: tokens.borderSubtle },
+      },
+      crosshair: {
+        mode: LightweightCharts.CrosshairMode.Normal,
+        vertLine: { color: tokens.brandAccent.replace('oklch', 'oklch').replace(')', ' / 0.4)'), width: 1, style: 2, labelBackgroundColor: tokens.surfaceOverlay },
+        horzLine: { color: tokens.brandAccent.replace('oklch', 'oklch').replace(')', ' / 0.4)'), width: 1, style: 2, labelBackgroundColor: tokens.surfaceOverlay },
+      },
+      rightPriceScale: {
+        borderColor: tokens.borderSubtle,
+        textColor: tokens.textTertiary,
+      },
+      timeScale: {
+        borderColor: tokens.borderSubtle,
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
+      handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+    });
+
+    // Generate realistic A-share price data (3 months, ~60 trading days)
+    function generateOHLC(basePrice, days, volatility) {
+      const data = [];
+      let price = basePrice * 0.92;
+      const start = new Date('2026-01-02');
+      for (let i = 0; i < days; i++) {
+        const d = new Date(start);
+        d.setDate(d.getDate() + Math.floor(i * 1.4));
+        if (d.getDay() === 0 || d.getDay() === 6) continue;
+        const change = (Math.random() - 0.47) * volatility * price;
+        const open = price;
+        const close = price + change;
+        const high = Math.max(open, close) + Math.random() * volatility * price * 0.5;
+        const low = Math.min(open, close) - Math.random() * volatility * price * 0.5;
+        const vol = Math.floor(80000 + Math.random() * 200000);
+        data.push({ time: d.toISOString().split('T')[0], open: +open.toFixed(2), high: +high.toFixed(2), low: +low.toFixed(2), close: +close.toFixed(2), volume: vol });
+        price = close;
+      }
+      return data;
+    }
+
+    const ohlcData = generateOHLC(1856, 90, 0.018);
+    const candleSeries = chart.addCandlestickSeries({
+      upColor: tokens.marketUp,
+      downColor: tokens.marketDown,
+      borderUpColor: tokens.marketUp,
+      borderDownColor: tokens.marketDown,
+      wickUpColor: tokens.marketUp.replace(')', ' / 0.6)'),
+      wickDownColor: tokens.marketDown.replace(')', ' / 0.6)'),
+    });
+    candleSeries.setData(ohlcData);
+
+    // Volume series
+    const volumeSeries = chart.addHistogramSeries({
+      priceFormat: { type: 'volume' },
+      priceScaleId: '',
+    });
+    volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+    const volData = ohlcData.map(d => ({
+      time: d.time,
+      value: d.volume,
+      color: d.close >= d.open ? tokens.marketUp.replace(')', ' / 0.2)') : tokens.marketDown.replace(')', ' / 0.2)'),
+    }));
+    volumeSeries.setData(volData);
+
+    // MA lines
+    function calcMA(data, period) {
+      const result = [];
+      for (let i = period - 1; i < data.length; i++) {
+        let sum = 0;
+        for (let j = 0; j < period; j++) sum += data[i - j].close;
+        result.push({ time: data[i].time, value: +(sum / period).toFixed(2) });
+      }
+      return result;
+    }
+
+    const ma20 = chart.addLineSeries({
+      color: tokens.brandAccent.replace(')', ' / 0.6)'),
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+    });
+    ma20.setData(calcMA(ohlcData, 20));
+
+    const ma60 = chart.addLineSeries({
+      color: 'oklch(0.75 0.12 85 / 0.5)',
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+    });
+    ma60.setData(calcMA(ohlcData, 60));
+
+    chart.timeScale().fitContent();
+
+    // Resize handling
+    const ro = new ResizeObserver(() => {
+      chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+    });
+    ro.observe(container);
+  })();
+  </script>
 </body>
 </html>
