@@ -232,7 +232,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       color: var(--market-up-fg);
-      padding: var(--space-1) var(--space-6);
+      padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-3);
       background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
     }
@@ -573,7 +573,7 @@
       display: inline-flex;
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
-      padding: var(--space-1) var(--space-4);
+      padding: var(--space-2) var(--space-4);
       border-radius: var(--radius-3);
       align-self: flex-start;
     }
@@ -704,14 +704,14 @@
 
     .flow-bar-fill.inflow {
       left: 50%;
-      background: var(--market-up-fg);
-      opacity: 0.35;
+      background: linear-gradient(to right, color-mix(in oklch, var(--market-up-fg) 40%, transparent), color-mix(in oklch, var(--market-up-fg) 15%, transparent));
+      opacity: 1;
     }
 
     .flow-bar-fill.outflow {
       right: 50%;
-      background: var(--market-down-fg);
-      opacity: 0.35;
+      background: linear-gradient(to left, color-mix(in oklch, var(--market-down-fg) 40%, transparent), color-mix(in oklch, var(--market-down-fg) 15%, transparent));
+      opacity: 1;
     }
 
     .flow-bar-center {
@@ -831,8 +831,22 @@
       gap: var(--space-4);
       padding: var(--space-6) var(--space-8);
       border-radius: var(--radius-4);
+      border-left: 2px solid transparent;
       cursor: pointer;
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .signal-item:has(.signal-dot.opportunity) {
+      border-left-color: color-mix(in oklch, var(--system-healthy-fg) 40%, transparent);
+    }
+
+    .signal-item:has(.signal-dot.alert) {
+      border-left-color: color-mix(in oklch, var(--risk-medium-fg) 40%, transparent);
+    }
+
+    .signal-item:has(.signal-dot.warning) {
+      border-left-color: color-mix(in oklch, var(--risk-high-fg) 40%, transparent);
     }
 
     .signal-item:hover {
