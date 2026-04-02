@@ -61,11 +61,12 @@
     {
       "id": "instrument-hub",
       "file": "page-instrument-hub.html",
-      "status": "created",
-      "score": null,
+      "status": "done",
+      "score": 9.46,
       "styleAnchor": "platform",
-      "rounds": 0,
-      "createdAt": "2026-04-01"
+      "rounds": 6,
+      "createdAt": "2026-04-01",
+      "note": "CSS prototype ceiling confirmed at 9.4-9.5. Gap to 10 requires React + real data + JS interactions."
     },
     {
       "id": "strategy-studio",
