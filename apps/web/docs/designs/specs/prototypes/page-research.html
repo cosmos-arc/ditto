@@ -828,6 +828,7 @@
     }
     .cell-status-bar.degraded { background: var(--system-degraded-fg); }
     .cell-status-bar.down { background: var(--system-down-fg); }
+    .cell-status-bar.brand { background: var(--brand-accent); }
 
     /* ── Running task progress bar ── */
     .run-item-progress {
@@ -871,6 +872,130 @@
       color: var(--text-tertiary);
       font-size: var(--font-size-10);
       margin-left: var(--space-2);
+    }
+
+    /* ── P0 Fix: pulse-item minimum size (≥24px, ≥12px) ── */
+    .scope-strip .pulse-item {
+      min-height: 24px;
+      min-width: 24px;
+      font-size: var(--font-size-12);
+      padding: var(--space-4) var(--space-8);
+      gap: var(--space-4);
+      display: inline-flex;
+      align-items: center;
+    }
+    .scope-strip .pulse-label {
+      font-size: var(--font-size-12);
+    }
+    .scope-strip .pulse-value {
+      font-size: var(--font-size-12);
+    }
+
+    /* ── P0 Fix: 10px contrast — local override to text-secondary (L=0.61) ── */
+    .run-item-time,
+    .queue-review-sub,
+    .analysis-metric-label,
+    .chart-placeholder-sublabel,
+    .chart-grid-label,
+    .chart-grid-label-right,
+    .chart-x-label {
+      color: var(--text-secondary);
+    }
+
+    /* ── P1: focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .header-btn:focus-visible,
+    .header-btn-ghost:focus-visible,
+    .header-action-btn:focus-visible,
+    .column-icon:focus-visible,
+    .pulse-item:focus-visible,
+    .analysis-band-tab:focus-visible,
+    .run-item:focus-visible,
+    .queue-review-item:focus-visible,
+    .th-sortable:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--interaction-focus-border), 0 0 0 4px var(--interaction-selected-bg);
+      border-radius: var(--radius-4);
+    }
+    .data-table tbody tr.row:focus-within {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .data-table tbody tr.row.selected {
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+      box-shadow: inset 3px 0 0 var(--brand-accent);
+    }
+
+    /* ── P1: tabular-nums for numeric cells ── */
+    .cell-numeric,
+    .analysis-metric-value,
+    .chart-grid-label,
+    .chart-grid-label-right,
+    .chart-x-label {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── P1: ::selection brand color ── */
+    .data-table ::selection,
+    .monitor-panel ::selection,
+    .analysis-band ::selection {
+      background: var(--interaction-selected-bg);
+      color: var(--text-primary);
+    }
+
+    /* ── P1: metric arrow CSS class (replaces inline style) ── */
+    .metric-arrow-down {
+      color: var(--text-secondary);
+    }
+    .metric-arrow-up-warn {
+      color: var(--system-degraded-fg);
+    }
+
+    /* ── R8 Blueprint: IC column heatmap background ── */
+    .data-table tbody tr.row td:nth-child(3) {
+      position: relative;
+    }
+    .data-table tbody tr.row td:nth-child(3)::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 2px;
+      bottom: 2px;
+      right: 0;
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .data-table tbody tr.row td:nth-child(3) > * {
+      position: relative;
+      z-index: 1;
+    }
+    .cell-ic-strong ~ .ic-bar,
+    tr.row:has(.cell-ic-strong) td:nth-child(3)::before {
+      background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+    }
+    tr.row:has(.cell-ic-normal) td:nth-child(3)::before {
+      background: color-mix(in oklch, var(--brand-accent) 7%, transparent);
+    }
+    tr.row:has(.cell-ic-muted) td:nth-child(3)::before {
+      background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
+    }
+    tr.row:has(.cell-ic-dim) td:nth-child(3)::before {
+      background: color-mix(in oklch, var(--brand-accent) 1.5%, transparent);
+    }
+    tr.row:has(.cell-ic-degraded) td:nth-child(3)::before {
+      background: color-mix(in oklch, var(--system-degraded-fg) 8%, transparent);
+    }
+    tr.row:has(.cell-ic-down) td:nth-child(3)::before {
+      background: color-mix(in oklch, var(--system-down-fg) 8%, transparent);
+    }
+
+    /* ── R8 Blueprint: Row hover data enhancement ── */
+    .data-table tbody tr.row:hover .cell-ic-strong,
+    .data-table tbody tr.row:hover .cell-ic-normal,
+    .data-table tbody tr.row:hover .cell-ic-muted,
+    .data-table tbody tr.row:hover .cell-ir-strong,
+    .data-table tbody tr.row:hover .cell-ir-normal {
+      font-weight: var(--font-weight-semibold);
     }
   </style>
 </head>
@@ -1104,7 +1229,7 @@
               </tr>
               <!-- 北向持仓变化率 -->
               <tr class="row">
-                <td></td>
+                <td class="cell-status-bar brand"></td>
                 <td><span class="cell-ticker">北向持仓变化率</span></td>
                 <td class="right"><span class="cell-numeric cell-ic-strong">0.055</span><span class="ic-bar bar-accent" style="height:16px;"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-strong">0.92</span></td>
@@ -1127,6 +1252,7 @@
                 <td class="right"><span class="cell-numeric">85%</span></td>
                 <td><span class="cell-universe">中证500</span></td>
                 <td><span class="cell-status degraded-text"><span class="status-dot warning"></span> 退化</span></td>
+              </tr>
               <tr class="row">
                 <td></td>
                 <td><span class="cell-ticker">换手率动量</span></td>
@@ -1299,19 +1425,19 @@
         <!-- Metrics row -->
         <div class="analysis-metrics">
           <div class="analysis-metric">
-            <span class="analysis-metric-label">平均 IC (20日) <span style="color: var(--text-tertiary);">↓</span></span>
+            <span class="analysis-metric-label">平均 IC (20日) <span class="metric-arrow-down">↓</span></span>
             <span class="analysis-metric-value ok">0.032</span>
           </div>
           <div class="analysis-metric">
-            <span class="analysis-metric-label">IC_IR <span style="color: var(--text-tertiary);">↓</span></span>
+            <span class="analysis-metric-label">IC_IR <span class="metric-arrow-down">↓</span></span>
             <span class="analysis-metric-value ok">0.61</span>
           </div>
           <div class="analysis-metric">
-            <span class="analysis-metric-label">IC &gt; 0.02 占比 <span style="color: var(--text-tertiary);">↓</span></span>
+            <span class="analysis-metric-label">IC &gt; 0.02 占比 <span class="metric-arrow-down">↓</span></span>
             <span class="analysis-metric-value ok">72%</span>
           </div>
           <div class="analysis-metric">
-            <span class="analysis-metric-label">IC 衰减率 <span style="color: var(--system-degraded-fg);">↑</span></span>
+            <span class="analysis-metric-label">IC 衰减率 <span class="metric-arrow-up-warn">↑</span></span>
             <span class="analysis-metric-value warning">2.8%</span>
           </div>
         </div>
