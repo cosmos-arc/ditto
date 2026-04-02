@@ -43,6 +43,9 @@
     :root {
       /* Inherits all tokens from tokens-style.css (Graphite Studio Compact) */
       /* Inherits shell-analytical grid from layout-base.css */
+
+      /* ── R9: Reduce analysis band to show more table rows ── */
+      --shell-analysis-band-height: 180px;
     }
 
     /* ── Material depth: noise texture ── */
@@ -521,8 +524,8 @@
     }
 
     /* ── Activity Stack section title — 14px for typographic ladder ── */
-    .context-section-title {
-      font-size: var(--font-size-14) !important;
+    .activity-stack .context-section-title {
+      font-size: var(--font-size-14);
       letter-spacing: 0.01em;
     }
 
@@ -997,6 +1000,60 @@
     .data-table tbody tr.row:hover .cell-ir-normal {
       font-weight: var(--font-weight-semibold);
     }
+
+    /* ── R9 Fix: Analysis band background alignment ── */
+    .shell-analytical .analysis-band {
+      background: var(--surface-panel-base);
+    }
+
+    /* ── R9 Fix: Enhanced row hover visibility ── */
+    .data-table tbody tr.row:hover {
+      background: color-mix(in oklch, var(--text-primary) 4%, transparent);
+    }
+    .data-table tbody tr.row:hover td:nth-child(3)::before {
+      opacity: 1;
+    }
+    .data-table tbody tr.row:hover .cell-status-bar {
+      opacity: 1;
+    }
+
+    /* ── R9: Gradient fade section dividers ── */
+    .activity-stack .context-section + .context-section {
+      border-top: none;
+      position: relative;
+    }
+    .activity-stack .context-section + .context-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: var(--space-12);
+      right: var(--space-12);
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--text-primary) 8%, transparent) 20%,
+        color-mix(in oklch, var(--text-primary) 12%, transparent) 50%,
+        color-mix(in oklch, var(--text-primary) 8%, transparent) 80%,
+        transparent 100%
+      );
+    }
+
+    /* ── R9: Scope strip IC sparkline ── */
+    .scope-strip .pulse-item.ic-pulse {
+      gap: var(--space-4);
+    }
+    .scope-strip .ic-sparkline {
+      display: inline-flex;
+      align-items: center;
+      height: 16px;
+      width: 48px;
+      opacity: 0.6;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .scope-strip .pulse-item:hover .ic-sparkline {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
@@ -1004,6 +1061,10 @@
   <svg style="position:absolute;width:0;height:0" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+      <linearGradient id="ic-spark-fill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="1"/>
+        <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
+      </linearGradient>
     </defs>
   </svg>
   <div class="style-label">Graphite Studio — Research Workspace · Compact · A股</div>
@@ -1075,8 +1136,12 @@
     <!-- ═══ Scope Strip (Research context) ═══ -->
     <div class="scope-strip">
       <!-- Health group -->
-      <div class="pulse-item">
+      <div class="pulse-item ic-pulse">
         <span class="pulse-label">活跃因子</span>
+        <svg class="ic-sparkline" width="48" height="16" viewBox="0 0 48 16" fill="none" preserveAspectRatio="none">
+          <polyline points="0,12 6,10 12,8 18,11 24,6 30,4 36,7 42,5 48,3" stroke="var(--brand-accent)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="0,12 6,10 12,8 18,11 24,6 30,4 36,7 42,5 48,3" stroke="var(--brand-accent)" stroke-width="0" fill="url(#ic-spark-fill)" opacity="0.15"/>
+        </svg>
         <span class="pulse-value ok">12</span>
       </div>
       <div class="pulse-separator"></div>
