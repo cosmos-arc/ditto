@@ -24,32 +24,286 @@
   <link rel="stylesheet" href="shared/theme-switcher.css">
 
   <style>
+    /* Skip link (accessible) */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
     /* Style label for comparison */
     .style-label {
       position: fixed;
-      top: 8px;
-      right: 8px;
+      top: var(--space-6);
+      right: var(--space-6);
       z-index: 999;
       font-family: var(--font-family-ui);
       font-size: 11px;
       color: var(--text-tertiary);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
-      padding: 3px 8px;
-      border-radius: 4px;
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
       pointer-events: none;
     }
 
-    /* ── Trading Variant: 3-row override (no analysis band) ── */
+    /* ══════════════════════════════════════════════
+     * Material layer — Graphite Studio triple
+     * ══════════════════════════════════════════════ */
+
+    /* Frosted glass header */
+    .shell-analytical.trading-variant .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    .shell-analytical.trading-variant .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Header title brand underline */
+    .shell-analytical.trading-variant .header-title {
+      position: relative;
+    }
+    .shell-analytical.trading-variant .header-title::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 40%;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent),
+        transparent
+      );
+      border-radius: 1px;
+      pointer-events: none;
+    }
+
+    /* Header subtitle (token-prefixed) */
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      margin-left: var(--space-4);
+    }
+
+    /* Scope strip brand glow */
+    .shell-analytical.trading-variant .scope-strip {
+      position: relative;
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 8%, var(--border-subtle));
+      box-shadow: 0 1px 4px -1px color-mix(in oklch, var(--brand-accent) 6%, transparent);
+    }
+
+    /* Noise texture overlay */
+    .noise-layer {
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Ensure material layers stay absolute (override > * rule) */
+    .shell-analytical.trading-variant > .noise-layer,
+    .shell-analytical.trading-variant > .ambient-top {
+      position: absolute;
+    }
+
+    /* Ambient light bars */
+    .ambient-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .ambient-rail {
+      position: absolute;
+      top: 0;
+      right: -1px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* Shell children elevation above noise layer */
+    .shell-analytical.trading-variant > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Context section dual-line separator — light from above */
+    .shell-analytical.trading-variant .context-section + .context-section {
+      position: relative;
+    }
+    .shell-analytical.trading-variant .context-section + .context-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, white 3%, transparent);
+      pointer-events: none;
+    }
+
+    /* Focus-visible ring system */
+    .rail-icon:focus-visible,
+    .header-action-btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible,
+    .btn-danger-sm:focus-visible,
+    .decision-cta:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
+
+    /* Decision Banner visual anchor — left brand border */
+    .shell-analytical.trading-variant .decision-banner {
+      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 35%, transparent);
+      padding-left: var(--space-16);
+    }
+
+    /* Decision Banner regime tag */
+    .decision-regime-tag {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      padding: 1px var(--space-4);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-3);
+      flex-shrink: 0;
+    }
+    .decision-judgment-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Micro-animations
+     * ══════════════════════════════════════════════ */
+
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes dot-critical-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.3); }
+    }
+    .status-dot.live {
+      animation: dot-pulse 2s ease-in-out infinite;
+    }
+    .risk-item-dot.critical {
+      animation: dot-critical-pulse 1.5s ease-in-out infinite;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Trading Variant: 4-row override (banner + no analysis band)
+     * ══════════════════════════════════════════════ */
     .shell-analytical.trading-variant {
-      grid-template-rows: 64px auto 1fr;
+      grid-template-rows: 64px auto auto 1fr;
       grid-template-areas:
         "rail header   header"
         "rail strip    strip"
+        "rail banner   banner"
         "rail main     activity";
     }
 
-    /* ── Scope Strip — Trading Session Metrics ── */
+    /* Banner grid area */
+    .trading-banner {
+      grid-area: banner;
+      padding: var(--density-gutter);
+      padding-top: 0;
+      overflow: hidden;
+    }
+    .trading-banner .panel {
+      padding: var(--space-8) var(--space-12);
+    }
+    .trading-banner .decision-banner {
+      gap: var(--space-12);
+    }
+
+    /* ── Session Strip — Trading Phase Indicator + Metrics ── */
+    .scope-strip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      white-space: nowrap;
+      height: var(--density-strip-height, 36px);
+      min-height: var(--density-strip-height, 36px);
+      max-height: calc(var(--density-strip-height, 36px) + var(--space-1));
+    }
+
+    /* Trading phase pill */
+    .scope-phase {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--system-healthy-fg);
+      padding: var(--space-1) var(--space-6);
+      border-radius: var(--radius-3);
+      background: color-mix(in oklch, var(--system-healthy-fg) 12%, transparent);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex-shrink: 0;
+      box-shadow: 0 0 6px -1px color-mix(in oklch, var(--system-healthy-fg) 12%, transparent);
+    }
+    .scope-phase .phase-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      animation: dot-pulse 2s ease-in-out infinite;
+    }
+
     .scope-metric {
       display: flex;
       align-items: center;
@@ -132,28 +386,39 @@
       font-size: var(--font-size-10);
     }
 
+    .header-account-sep {
+      color: var(--text-tertiary);
+    }
+
     .header-account-chevron {
       color: var(--text-tertiary);
       font-size: var(--font-size-10);
     }
 
-    /* ── Header: Danger Button ── */
+    /* ── Header: Danger Button (semantic token) ── */
     .btn-danger-sm {
       font-family: var(--font-family-ui);
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       padding: var(--space-4) var(--space-10);
       border-radius: var(--radius-4);
-      border: 1px solid var(--red-500);
+      border: 1px solid var(--risk-critical-fg);
       background: transparent;
-      color: var(--red-500);
+      color: var(--risk-critical-fg);
       cursor: pointer;
       transition: all var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
+      min-height: 24px;
+      display: inline-flex;
+      align-items: center;
     }
 
     .btn-danger-sm:hover {
-      background: oklch(from var(--red-500) l c h / 0.1);
+      background: color-mix(in oklch, var(--risk-critical-fg) 10%, transparent);
+    }
+
+    .btn-danger-sm:active {
+      transform: scale(0.97);
     }
 
     /* ── Main Content: Trading Panels ── */
@@ -165,9 +430,9 @@
       min-height: 0;
     }
 
-    /* Panel 1: Equity / PnL (~40%) */
+    /* Panel 1: Equity / PnL (~30%) */
     .panel-equity {
-      flex: 4;
+      flex: 3;
       min-height: 0;
       display: flex;
       flex-direction: column;
@@ -176,8 +441,8 @@
     .equity-metrics {
       display: flex;
       flex-direction: column;
-      gap: var(--space-12);
-      padding: var(--space-12) var(--space-16);
+      gap: var(--space-8);
+      padding: var(--space-8) var(--space-12);
     }
 
     .equity-primary {
@@ -193,7 +458,7 @@
 
     .equity-value {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-28);
+      font-size: var(--font-size-24);
       font-weight: var(--font-weight-semibold);
       color: var(--market-up-fg);
       letter-spacing: -0.02em;
@@ -233,11 +498,11 @@
       color: var(--market-up-fg);
     }
 
-    /* Chart placeholder */
+    /* Chart placeholder — SVG inline sparkline */
     .equity-chart {
       flex: 1;
-      min-height: 80px;
-      margin: 0 var(--space-16) var(--space-12);
+      min-height: calc(var(--density-row-height, 36px) * 2);
+      margin: 0 var(--space-12) var(--space-8);
       background: var(--surface-panel-elevated);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
@@ -254,34 +519,27 @@
       z-index: 1;
     }
 
-    .equity-chart-trend {
+    .equity-chart svg {
       position: absolute;
-      bottom: 16px;
-      left: 10%;
-      right: 15%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent 0%, var(--market-up-fg) 20%, var(--market-up-fg) 100%);
-      transform: rotate(-3deg);
-      transform-origin: left center;
-      opacity: 0.6;
+      inset: 0;
+      width: 100%;
+      height: 100%;
     }
 
-    .equity-chart-area {
-      position: absolute;
-      bottom: 16px;
-      left: 10%;
-      right: 15%;
-      height: 40%;
-      background: linear-gradient(180deg, var(--market-up-subtle) 0%, transparent 100%);
-      clip-path: polygon(0% 100%, 5% 85%, 15% 70%, 25% 75%, 35% 60%, 45% 55%, 55% 50%, 65% 45%, 75% 35%, 85% 30%, 95% 20%, 100% 15%, 100% 100%);
-    }
-
-    /* Panel 2: Positions (~35%) */
+    /* Panel 2: Positions (~38%) */
     .panel-positions {
-      flex: 3.5;
+      flex: 3.8;
       min-height: 0;
       display: flex;
       flex-direction: column;
+    }
+
+    .panel-positions .data-table tbody tr {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .panel-positions .data-table tbody tr:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
 
     .panel-positions .panel-body {
@@ -289,9 +547,9 @@
       overflow-y: auto;
     }
 
-    /* Panel 3: Orders (~25%) */
+    /* Panel 3: Orders (~27%) */
     .panel-orders {
-      flex: 2.5;
+      flex: 2.7;
       min-height: 0;
       display: flex;
       flex-direction: column;
@@ -322,9 +580,9 @@
     }
 
     .order-side-pill {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
-      padding: 1px var(--space-6);
+      padding: var(--space-1) var(--space-6);
       border-radius: var(--radius-4);
       white-space: nowrap;
     }
@@ -347,7 +605,7 @@
     }
 
     .order-type {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       white-space: nowrap;
     }
@@ -363,7 +621,7 @@
     }
 
     .order-status {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       white-space: nowrap;
     }
@@ -377,7 +635,7 @@
     }
 
     .order-status.cancelled {
-      color: var(--text-disabled);
+      color: var(--text-tertiary);
     }
 
     .order-status.partial {
@@ -391,7 +649,7 @@
       white-space: nowrap;
     }
 
-    /* ── Order Tabs ── */
+    /* ── Order Tabs (semantic) ── */
     .order-tabs {
       display: flex;
       gap: var(--space-2);
@@ -399,16 +657,20 @@
 
     .order-tab {
       font-size: var(--font-size-12);
-      padding: var(--space-2) var(--space-8);
+      padding: var(--tab-pill-padding-y, var(--space-4)) var(--tab-pill-padding-x, var(--space-8));
       border-radius: var(--radius-4);
       cursor: pointer;
       color: var(--text-tertiary);
       transition: color var(--motion-duration-fast) var(--motion-easing-standard),
                   background var(--motion-duration-fast) var(--motion-easing-standard);
+      min-height: 24px;
+      display: inline-flex;
+      align-items: center;
     }
 
     .order-tab:hover {
       color: var(--text-secondary);
+      background: color-mix(in oklch, var(--interaction-hover-subtle-bg) 50%, transparent);
     }
 
     .order-tab.active {
@@ -424,7 +686,7 @@
     /* ── Activity Stack: Risk Items ── */
     .risk-item {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: var(--space-8);
       padding: var(--space-6) 0;
       border-bottom: 1px solid var(--border-subtle);
@@ -439,6 +701,7 @@
       height: 6px;
       border-radius: 50%;
       flex-shrink: 0;
+      margin-top: 5px;
     }
 
     .risk-item-dot.warning {
@@ -456,6 +719,15 @@
     .risk-item-body {
       flex: 1;
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .risk-item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .risk-item-label {
@@ -474,8 +746,21 @@
       color: var(--risk-high-fg);
     }
 
+    .risk-item-value.critical {
+      color: var(--risk-critical-fg);
+    }
+
     .risk-item-value.ok {
       color: var(--system-healthy-fg);
+    }
+
+    /* Critical alert with left border */
+    .risk-item.critical-alert {
+      padding-left: var(--space-8);
+      border-left: 2px solid var(--risk-critical-fg);
+      margin: var(--space-2) calc(var(--space-8) * -1);
+      padding-right: var(--space-8);
+      border-radius: 0 var(--radius-3) var(--radius-3) 0;
     }
 
     .risk-progress {
@@ -493,7 +778,7 @@
     }
 
     .risk-progress-fill.warning {
-      background: var(--risk-high-fg);
+      background: linear-gradient(90deg, var(--risk-high-fg), color-mix(in oklch, var(--risk-critical-fg) 50%, var(--risk-high-fg)));
     }
 
     .risk-progress-fill.critical {
@@ -502,6 +787,22 @@
 
     .risk-progress-fill.ok {
       background: var(--system-healthy-fg);
+    }
+
+    /* Progress bar threshold marker */
+    .risk-progress {
+      position: relative;
+    }
+
+    .risk-progress::after {
+      content: '';
+      position: absolute;
+      left: 35%;
+      top: -1px;
+      width: 1px;
+      height: 5px;
+      background: var(--text-tertiary);
+      opacity: 0.5;
     }
 
     /* ── Activity Stack: Signal Queue ── */
@@ -529,14 +830,14 @@
 
     .signal-queue-bar.p1 { background: var(--risk-critical-fg); }
     .signal-queue-bar.p2 { background: var(--risk-high-fg); }
-    .signal-queue-bar.p3 { background: var(--text-disabled); }
+    .signal-queue-bar.p3 { background: var(--text-tertiary); }
 
     .signal-queue-body {
       flex: 1;
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--space-2);
       padding-left: var(--space-8);
     }
 
@@ -556,7 +857,7 @@
     }
 
     .signal-queue-direction {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       white-space: nowrap;
     }
@@ -625,7 +926,7 @@
     }
 
     .fill-side {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       white-space: nowrap;
     }
@@ -649,57 +950,85 @@
       color: var(--text-tertiary);
       white-space: nowrap;
     }
+
+    /* ══════════════════════════════════════════════
+     * Light mode fixes
+     * ══════════════════════════════════════════════ */
+    [data-theme="light"] .ambient-top,
+    [data-theme="light"] .ambient-rail {
+      opacity: 0.4;
+    }
+    [data-theme="light"] .shell-analytical.trading-variant .context-section + .context-section::before {
+      background: var(--border-subtle);
+    }
+    [data-theme="light"] .noise-layer {
+      opacity: 0.008;
+    }
   </style>
 </head>
 <body>
+  <!-- SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+
   <div class="style-label">Graphite Studio — Trading Overview · Compact · A股</div>
 
   <div class="shell-analytical trading-variant">
+    <!-- R1: Noise texture overlay -->
+    <div class="noise-layer" aria-hidden="true"></div>
+    <!-- R1: Top-edge ambient light -->
+    <div class="ambient-top" aria-hidden="true"></div>
 
     <!-- ═══ Rail ═══ -->
-    <nav class="shell-rail">
-      <div class="rail-logo">D</div>
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" title="Home">
+        <button class="rail-icon" aria-label="Home" title="Home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
-        </div>
-        <div class="rail-icon" title="Markets">
+        </button>
+        <button class="rail-icon" aria-label="Markets" title="Markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
-        </div>
-        <div class="rail-icon" title="Research">
+        </button>
+        <button class="rail-icon" aria-label="Research" title="Research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-        </div>
-        <div class="rail-icon active" title="Trading">
+        </button>
+        <button class="rail-icon active" aria-label="Trading" aria-current="page" title="Trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
-        </div>
-        <div class="rail-icon" title="AI">
+        </button>
+        <button class="rail-icon" aria-label="AI" title="AI">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </div>
-        <div class="rail-icon" title="Platform">
+        </button>
+        <button class="rail-icon" aria-label="Platform" title="Platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
-        </div>
+        </button>
       </div>
       <div class="rail-bottom">
-        <div class="rail-icon" title="Settings">
+        <button class="rail-icon" aria-label="Settings" title="Settings">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
+        </button>
       </div>
+      <!-- R1: Rail right edge ambient light -->
+      <div class="ambient-rail" aria-hidden="true"></div>
     </nav>
 
-    <!-- ═══ Header (64px) ═══ -->
+    <!-- ═══ Header (68px) ═══ -->
     <header class="shell-header">
       <span class="header-title">Trading</span>
-      <span style="font-size: var(--font-size-12); color: var(--text-tertiary); margin-left: var(--space-4);">交易控制中心</span>
+      <span class="header-subtitle">实盘控制中心</span>
 
       <div class="header-spacer"></div>
 
       <!-- Account Selector -->
-      <div class="header-account">
+      <button class="header-account" aria-haspopup="listbox" aria-expanded="false">
         <span class="header-account-name">主账户</span>
-        <span style="color: var(--text-tertiary);">·</span>
+        <span class="header-account-sep">·</span>
         <span class="header-account-broker">华泰证券</span>
         <span class="header-account-chevron">▾</span>
-      </div>
+      </button>
 
       <!-- Search -->
       <div class="header-search">
@@ -722,36 +1051,36 @@
             <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
           </div>
         </div>
-        <span class="btn-danger-sm">暂停交易</span>
-        <div class="header-action-btn" title="Notifications">
+        <button class="btn-danger-sm" aria-label="暂停交易">暂停交易</button>
+        <button class="header-action-btn" title="Notifications" aria-label="通知">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
-        </div>
-        <div class="header-avatar">C</div>
+        </button>
+        <button class="header-avatar" aria-label="用户菜单">C</button>
       </div>
     </header>
 
-    <!-- ═══ Session Strip ═══ -->
+    <!-- ═══ Session Strip (with Trading Phase Indicator) ═══ -->
     <div class="scope-strip">
+      <div class="scope-phase">
+        <span class="phase-dot"></span>
+        连续竞价
+      </div>
+      <div class="scope-separator"></div>
       <div class="scope-metric">
         <span class="scope-metric-label">可用资金</span>
         <span class="scope-metric-value">¥8,432,180.50</span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric">
-        <span class="scope-metric-label">融资余额</span>
-        <span class="scope-metric-value">¥12,000,000</span>
-      </div>
-      <div class="scope-separator"></div>
-      <div class="scope-metric">
-        <span class="scope-metric-label">风控占用</span>
+        <span class="scope-metric-label">风险预算</span>
         <span class="scope-metric-value warning">68.2%</span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric">
         <span class="scope-status-dot green"></span>
         <span class="scope-metric-label">券商连接</span>
-        <span class="scope-metric-value ok">正常</span>
+        <span class="scope-metric-value ok">已连接</span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric">
@@ -765,22 +1094,62 @@
       </div>
     </div>
 
+    <!-- ═══ Decision Banner ═══ -->
+    <div class="trading-banner">
+      <div class="panel">
+        <div class="decision-banner">
+          <!-- Left: Primary status (~42%) -->
+          <div class="decision-primary">
+            <span class="metric-label">今日盈亏</span>
+            <span class="metric-value positive">+¥86,472.50</span>
+            <span class="metric-sub">+0.34% · 总权益 ¥25,432,180 · <span class="indicator-up">较昨日 +¥21,400</span></span>
+          </div>
+          <!-- Middle: Context judgment (~33%) -->
+          <div class="decision-judgment">
+            <div class="decision-judgment-header">
+              <span class="decision-regime-tag">震荡市</span>
+              <span class="decision-judgment-text">科技板块集中度超限 2.2%，贵州茅台出现卖出信号待复核。</span>
+            </div>
+            <div class="decision-judgment-metrics">
+              <div class="decision-judgment-metric">
+                <span class="status-label">待处理信号</span>
+                <span class="status-value warning">4</span>
+              </div>
+              <div class="decision-judgment-metric">
+                <span class="status-label">待成交订单</span>
+                <span class="status-value">2</span>
+              </div>
+            </div>
+          </div>
+          <!-- Right: Routing CTAs (~25%) -->
+          <div class="decision-execution">
+            <span class="decision-routing-label">下一步</span>
+            <div class="decision-cta-row">
+              <button class="decision-cta primary">复核信号</button>
+              <button class="decision-cta secondary">查看持仓</button>
+              <button class="decision-cta ghost">查看风控</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ Main Content — Three stacked panels ═══ -->
-    <div class="main-content">
+    <div class="main-content" id="main-content" aria-live="polite">
       <div class="trading-panels">
 
-        <!-- Panel 1: 权益/盈亏 (~40%) -->
+        <!-- Panel 1: 权益/盈亏 (~35%) -->
         <div class="panel panel-equity">
           <div class="equity-metrics">
             <div class="equity-primary">
-              <span class="equity-label">今日盈亏</span>
-              <span class="equity-value">+¥86,472.50</span>
-              <span class="equity-pct">(+0.34%)</span>
+              <span class="equity-label">权益曲线</span>
+              <span class="equity-value">¥25,432,180</span>
+              <span class="equity-pct">+0.34%</span>
             </div>
             <div class="equity-sub-row">
               <div class="equity-sub-item">
-                <span class="equity-sub-label">总权益</span>
-                <span class="equity-sub-value">¥25,432,180.00</span>
+                <span class="equity-sub-label">今日盈亏</span>
+                <span class="equity-sub-value up">+¥86,472.50</span>
               </div>
               <div class="equity-sub-item">
                 <span class="equity-sub-label">昨日权益</span>
@@ -794,18 +1163,26 @@
           </div>
           <div class="equity-chart">
             <span class="equity-chart-label">权益曲线 · 日线</span>
-            <div class="equity-chart-area"></div>
-            <div class="equity-chart-trend"></div>
+            <svg viewBox="0 0 800 200" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="eq-gradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--market-up-subtle)" stop-opacity="0.5"/>
+                  <stop offset="100%" stop-color="var(--market-up-subtle)" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,160 C6.7,159.2 26.7,157 40,155 C53.3,153 66.7,148.5 80,148 C93.3,147.5 106.7,153.3 120,152 C133.3,150.7 146.7,142.8 160,140 C173.3,137.2 186.7,136.7 200,135 C213.3,133.3 226.7,131.7 240,130 C253.3,128.3 266.7,127 280,125 C293.3,123 306.7,119.7 320,118 C333.3,116.3 346.7,116.7 360,115 C373.3,113.3 386.7,110.5 400,108 C413.3,105.5 426.7,102.2 440,100 C453.3,97.8 466.7,96.7 480,95 C493.3,93.3 506.7,91.7 520,90 C533.3,88.3 546.7,87 560,85 C573.3,83 586.7,80.2 600,78 C613.3,75.8 626.7,74.2 640,72 C653.3,69.8 666.7,67.8 680,65 C693.3,62.2 706.7,57.8 720,55 C733.3,52.2 746.7,50.5 760,48 C773.3,45.5 793.3,41.3 800,40 L800,200 L0,200 Z" fill="url(#eq-gradient)" opacity="0.6"/>
+              <path d="M0,160 C6.7,159.2 26.7,157 40,155 C53.3,153 66.7,148.5 80,148 C93.3,147.5 106.7,153.3 120,152 C133.3,150.7 146.7,142.8 160,140 C173.3,137.2 186.7,136.7 200,135 C213.3,133.3 226.7,131.7 240,130 C253.3,128.3 266.7,127 280,125 C293.3,123 306.7,119.7 320,118 C333.3,116.3 346.7,116.7 360,115 C373.3,113.3 386.7,110.5 400,108 C413.3,105.5 426.7,102.2 440,100 C453.3,97.8 466.7,96.7 480,95 C493.3,93.3 506.7,91.7 520,90 C533.3,88.3 546.7,87 560,85 C573.3,83 586.7,80.2 600,78 C613.3,75.8 626.7,74.2 640,72 C653.3,69.8 666.7,67.8 680,65 C693.3,62.2 706.7,57.8 720,55 C733.3,52.2 746.7,50.5 760,48 C773.3,45.5 793.3,41.3 800,40" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5" opacity="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </div>
         </div>
 
-        <!-- Panel 2: 持仓汇总 (~35%) -->
+        <!-- Panel 2: 持仓汇总 (~38%) -->
         <div class="panel panel-positions">
           <div class="panel-header">
             <span class="panel-title">持仓</span>
             <span class="panel-count">8</span>
             <div class="panel-actions">
-              <span class="panel-action">查看全部 →</span>
+              <button class="panel-action">查看全部 →</button>
             </div>
           </div>
           <div class="panel-body">
@@ -899,21 +1276,21 @@
           </div>
         </div>
 
-        <!-- Panel 3: 订单状态 (~25%) -->
+        <!-- Panel 3: 订单状态 (~27%) -->
         <div class="panel panel-orders">
           <div class="panel-header">
             <span class="panel-title">订单</span>
-            <div class="order-tabs">
-              <span class="order-tab active">待成交 <span class="tab-count">2</span></span>
-              <span class="order-tab">已成交 <span class="tab-count">5</span></span>
-              <span class="order-tab">已撤 <span class="tab-count">1</span></span>
+            <div class="order-tabs" role="tablist">
+              <button class="order-tab active" role="tab" aria-selected="true">待成交 <span class="tab-count">2</span></button>
+              <button class="order-tab" role="tab" aria-selected="false">已成交 <span class="tab-count">5</span></button>
+              <button class="order-tab" role="tab" aria-selected="false">已撤单 <span class="tab-count">1</span></button>
             </div>
             <div class="panel-actions">
-              <span class="panel-action">查看全部 →</span>
+              <button class="panel-action">查看全部 →</button>
             </div>
           </div>
-          <div class="panel-body">
-            <div class="order-row">
+          <div class="panel-body" role="tabpanel">
+            <div class="order-row" role="button" tabindex="0" aria-label="买入 600519 100股 ¥1,850.00 待成交">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">600519</span>
               <span class="order-type">限价</span>
@@ -921,7 +1298,7 @@
               <span class="order-status pending">待成交</span>
               <span class="order-time">2分钟前</span>
             </div>
-            <div class="order-row">
+            <div class="order-row" role="button" tabindex="0" aria-label="卖出 300750 50股 部分成交">
               <span class="order-side-pill sell">卖出</span>
               <span class="order-ticker">300750</span>
               <span class="order-type">市价</span>
@@ -929,7 +1306,7 @@
               <span class="order-status partial">部分成交 30/50</span>
               <span class="order-time">8分钟前</span>
             </div>
-            <div class="order-row">
+            <div class="order-row" role="button" tabindex="0" aria-label="买入 002594 200股 ¥288.00 已成交">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">002594</span>
               <span class="order-type">限价</span>
@@ -937,7 +1314,7 @@
               <span class="order-status filled">已成交</span>
               <span class="order-time">15分钟前</span>
             </div>
-            <div class="order-row">
+            <div class="order-row" role="button" tabindex="0" aria-label="卖出 601318 500股 ¥54.00 已撤单">
               <span class="order-side-pill sell">卖出</span>
               <span class="order-ticker">601318</span>
               <span class="order-type">限价</span>
@@ -945,7 +1322,7 @@
               <span class="order-status cancelled">已撤单</span>
               <span class="order-time">28分钟前</span>
             </div>
-            <div class="order-row">
+            <div class="order-row" role="button" tabindex="0" aria-label="买入 000333 200股 市价 已成交">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">000333</span>
               <span class="order-type">市价</span>
@@ -963,17 +1340,29 @@
     <div class="activity-stack">
       <div class="context-rail">
 
-        <!-- Section 1: 风控/预警 -->
+        <!-- Section 1: 风控监控 -->
         <div class="context-section">
           <div class="context-section-header">
-            <span class="context-section-title">风控 / 预警</span>
+            <span class="context-section-title">风控监控</span>
           </div>
           <div class="context-section-body">
+            <div class="risk-item critical-alert">
+              <div class="risk-item-dot critical"></div>
+              <div class="risk-item-body">
+                <div class="risk-item-row">
+                  <span class="risk-item-label">行业集中度</span>
+                  <span class="risk-item-value critical">科技 37.2% <span style="font-size:var(--font-size-10); opacity:0.7;">超限 +2.2%</span></span>
+                </div>
+                <div class="risk-progress">
+                  <div class="risk-progress-fill critical" style="width: 68.2%;"></div>
+                </div>
+              </div>
+            </div>
             <div class="risk-item">
               <div class="risk-item-dot warning"></div>
               <div class="risk-item-body">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span class="risk-item-label">组合 VaR</span>
+                <div class="risk-item-row">
+                  <span class="risk-item-label">风险预算</span>
                   <span class="risk-item-value warning">68.2%</span>
                 </div>
                 <div class="risk-progress">
@@ -982,18 +1371,9 @@
               </div>
             </div>
             <div class="risk-item">
-              <div class="risk-item-dot critical"></div>
-              <div class="risk-item-body">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span class="risk-item-label">行业集中度</span>
-                  <span class="risk-item-value" style="color: var(--risk-critical-fg);">科技 37.2% / 限制 35%</span>
-                </div>
-              </div>
-            </div>
-            <div class="risk-item">
               <div class="risk-item-dot ok"></div>
               <div class="risk-item-body">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="risk-item-row">
                   <span class="risk-item-label">最大持仓</span>
                   <span class="risk-item-value ok">贵州茅台 14.2%</span>
                 </div>
@@ -1002,7 +1382,7 @@
             <div class="risk-item">
               <div class="risk-item-dot ok"></div>
               <div class="risk-item-body">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="risk-item-row">
                   <span class="risk-item-label">日内回撤</span>
                   <span class="risk-item-value ok">-0.12%</span>
                 </div>
@@ -1017,7 +1397,7 @@
             <span class="context-section-title">信号队列</span>
           </div>
           <div class="context-section-body">
-            <div class="signal-queue-item">
+            <div class="signal-queue-item" role="button" tabindex="0" aria-label="贵州茅台 卖出信号 置信度 87%">
               <div class="signal-queue-bar p1"></div>
               <div class="signal-queue-body">
                 <div class="signal-queue-header">
@@ -1031,7 +1411,7 @@
                 </div>
               </div>
             </div>
-            <div class="signal-queue-item">
+            <div class="signal-queue-item" role="button" tabindex="0" aria-label="宁德时代 买入信号 置信度 72%">
               <div class="signal-queue-bar p2"></div>
               <div class="signal-queue-body">
                 <div class="signal-queue-header">
@@ -1045,21 +1425,21 @@
                 </div>
               </div>
             </div>
-            <div class="signal-queue-item">
+            <div class="signal-queue-item" role="button" tabindex="0" aria-label="中国平安 持有信号 置信度 91%">
               <div class="signal-queue-bar p3"></div>
               <div class="signal-queue-body">
                 <div class="signal-queue-header">
                   <span class="signal-queue-title">中国平安</span>
                   <span class="signal-queue-direction hold">持有信号</span>
                 </div>
-                <span class="signal-queue-reason">Regime Filter</span>
+                <span class="signal-queue-reason">市场状态过滤</span>
                 <div class="signal-queue-footer">
                   <span class="signal-queue-meta">28分钟前</span>
                   <span class="signal-queue-confidence high">置信度 91%</span>
                 </div>
               </div>
             </div>
-            <div class="signal-queue-item">
+            <div class="signal-queue-item" role="button" tabindex="0" aria-label="美的集团 卖出信号 置信度 68%">
               <div class="signal-queue-bar p3"></div>
               <div class="signal-queue-body">
                 <div class="signal-queue-header">
@@ -1076,10 +1456,10 @@
           </div>
         </div>
 
-        <!-- Section 3: 最近成交 -->
+        <!-- Section 3: 今日成交 -->
         <div class="context-section">
           <div class="context-section-header">
-            <span class="context-section-title">最近成交</span>
+            <span class="context-section-title">今日成交</span>
           </div>
           <div class="context-section-body">
             <div class="fill-row">
