@@ -13,12 +13,12 @@ class TestAdjFactorIngestion:
     def test_ingest_adj_factor_uses_source_ticker_column(self, mocker):
         """Test that adj_factor ingestion uses source_ticker column for ID mapping."""
         from ditto_app.process.ingestion import IngestionCoordinator
-        from ditto_datahub.services import IngestionLogService
-        from ditto_datahub.services.capital_service import CapitalService
-        from ditto_datahub.services.fundamental_service import FundamentalService
-        from ditto_datahub.services.macro_service import MacroService
-        from ditto_datahub.services.market_service import MarketService
-        from ditto_datahub.services.metadata_service import MetadataService
+        from ditto_data.services import IngestionLogService
+        from ditto_data.services.capital_service import CapitalService
+        from ditto_data.services.fundamental_service import FundamentalService
+        from ditto_data.services.macro_service import MacroService
+        from ditto_data.services.market_service import MarketService
+        from ditto_data.services.metadata_service import MetadataService
 
         # Mock services
         mock_metadata_service = mocker.MagicMock(spec=MetadataService)
@@ -89,12 +89,12 @@ class TestAdjFactorIngestion:
     def test_ingest_fund_adj_uses_source_ticker_column(self, mocker):
         """Test that fund_adj ingestion uses source_ticker column for ID mapping."""
         from ditto_app.process.ingestion import IngestionCoordinator
-        from ditto_datahub.services import IngestionLogService
-        from ditto_datahub.services.capital_service import CapitalService
-        from ditto_datahub.services.fundamental_service import FundamentalService
-        from ditto_datahub.services.macro_service import MacroService
-        from ditto_datahub.services.market_service import MarketService
-        from ditto_datahub.services.metadata_service import MetadataService
+        from ditto_data.services import IngestionLogService
+        from ditto_data.services.capital_service import CapitalService
+        from ditto_data.services.fundamental_service import FundamentalService
+        from ditto_data.services.macro_service import MacroService
+        from ditto_data.services.market_service import MarketService
+        from ditto_data.services.metadata_service import MetadataService
 
         # Mock services
         mock_metadata_service = mocker.MagicMock(spec=MetadataService)

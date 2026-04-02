@@ -15,7 +15,7 @@ from ditto_app.config import (
     get_datasets_by_tier,
     get_parallel_datasets,
 )
-from ditto_datahub.models import Dataset
+from ditto_data.models import Dataset
 
 
 @pytest.mark.unit

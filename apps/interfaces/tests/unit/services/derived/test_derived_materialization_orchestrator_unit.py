@@ -16,30 +16,31 @@ from ditto_analytics.materialization.models import (
     DerivedRunTrigger,
     DerivedVersionStatus,
 )
+from ditto_analytics.publication_safety import CompatibilityManifest
 from ditto_app.process.materialization import (
     DerivedMaterializationOrchestrator,
     InMemoryDerivedInputProvider,
     RuntimeDerivedInputProvider,
 )
-from ditto_datahub.models.derived import (
+from ditto_data.models.derived import (
     DerivedCheckpointRecord,
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_datahub.services import PublicationSafetyRecordService
-from ditto_datahub.services.derived.artifact_persistence_service import (
+from ditto_data.services import PublicationSafetyRecordService
+from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )
-from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
-from ditto_datahub.services.publication_safety_record_service import (
+from ditto_data.services.derived_catalog_service import DerivedCatalogService
+from ditto_data.services.publication_safety_record_service import (
     PublicationSafetyRuntimeStores,
 )
-from ditto_datahub.stores.runtime.derived_sqlite import (
+from ditto_data.stores.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_datahub.stores.runtime.publication_safety import (
+from ditto_data.stores.runtime.publication_safety import (
     CertificationReader,
     CertificationWriter,
     ManifestReader,
@@ -49,8 +50,7 @@ from ditto_datahub.stores.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
 )
-from ditto_engine.engine.publication_safety import CompatibilityManifest
-from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _spec(profile: MaterializationProfile) -> DerivedSpec:

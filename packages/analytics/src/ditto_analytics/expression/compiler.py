@@ -7,7 +7,6 @@ from hashlib import sha256
 
 import orjson
 import polars as pl
-from ditto_engine.engine.specs import validate_derived_spec
 from ditto_kernel.specs import DerivedSpec
 
 from ditto_analytics.expression.analyzer import analyze_expression
@@ -32,6 +31,7 @@ from ditto_analytics.materialization.contracts import (
     CompiledDerivedExpression,
     CompileIdentity,
 )
+from ditto_analytics.validation import validate_derived_spec
 
 __all__ = [
     "ExpressionCompiler",

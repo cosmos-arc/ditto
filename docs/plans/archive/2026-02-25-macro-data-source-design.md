@@ -332,11 +332,11 @@ from datetime import date
 import polars as pl
 from ditto_infra.foundation import logger, traced
 
-from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
-from ditto_datahub.sources.tushare.processors.error_handler import (
+from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
+from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
 )
-from ditto_datahub.sources.schemas.macro_schemas import MACRO_INDICATOR_SOURCE_SCHEMA
+from ditto_data.sources.schemas.macro_schemas import MACRO_INDICATOR_SOURCE_SCHEMA
 
 from .indicators import (
     TUSHARE_MACRO_INDICATORS,
@@ -474,7 +474,7 @@ def _empty_macro_dataframe() -> pl.DataFrame:
 ### 3.5 目录结构（扩展 Tushare）
 
 ```
-packages/datahub/src/ditto_datahub/sources/tushare/
+packages/data/src/ditto_data/sources/tushare/
 ├── adapters/
 │   ├── macro.py                    # 扩展现有实现
 │   └── ...
@@ -649,7 +649,7 @@ import httpx
 import polars as pl
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from ditto_datahub.sources.base import (
+from ditto_data.sources.base import (
     SourceAuthenticationError,
     SourceConfigurationError,
     SourceFetchError,
@@ -760,7 +760,7 @@ class FredClient:
 ### 4.6 FRED 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/sources/fred/
+packages/data/src/ditto_data/sources/fred/
 ├── __init__.py
 ├── client.py              # FredClient: HTTP 请求封装
 ├── fred_source.py         # FredSource: DataSource 实现
@@ -837,7 +837,7 @@ FRED_API_KEY=your_fred_api_key
 ### 7.1 测试文件结构
 
 ```
-packages/datahub/tests/unit/sources/
+packages/data/tests/unit/sources/
 ├── tushare/
 │   └── test_macro_adapter_unit.py    # Tushare 宏观适配器测试
 └── fred/

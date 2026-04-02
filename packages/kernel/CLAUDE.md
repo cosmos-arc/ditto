@@ -84,7 +84,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.specs import DerivedSpec, DerivedRole, MaterializationProfile
 
 # ❌ 禁止：kernel 导入任何其他 ditto 包
-from ditto_datahub.models.enums import ...  # kernel 中禁止
+from ditto_data.models.enums import ...  # kernel 中禁止
 ```
 
 ## 依赖规则

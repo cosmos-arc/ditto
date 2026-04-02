@@ -158,7 +158,7 @@ class TradingCalendar(Protocol):
 | Q-023 | 跨源查询性能预估 | ❌ | 需要多长时间 |
 
 ```python
-# 待定义：packages/datahub/src/ditto_datahub/services/derived/diff_report.py
+# 待定义：packages/data/src/ditto_data/services/derived/diff_report.py
 
 @dataclass
 class DiffReport:

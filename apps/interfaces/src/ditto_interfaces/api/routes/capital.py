@@ -7,8 +7,8 @@ from typing import Annotated
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_data.errors import AmbiguousTickerError, NoIdentifierProvidedError
-from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.metadata_service import MetadataService
 from ditto_infra.foundation import logger
 from fastapi import APIRouter, HTTPException, Query
 

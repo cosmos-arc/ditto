@@ -4,14 +4,14 @@ from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_analytics.compile_cache import SQLiteCompileCache
-from ditto_datahub.config.data_store import DataStoreSettings
-from ditto_datahub.services import (
+from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
     DerivedQueryService,
 )
-from ditto_datahub.services.research_artifact_service import ResearchArtifactService
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.services.research_artifact_service import ResearchArtifactService
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 __all__ = ["DerivedProvider"]
 

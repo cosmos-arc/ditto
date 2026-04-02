@@ -129,23 +129,23 @@ reportUninitializedInstanceVariable = "error"  # 未初始化实例变量
 
 - [ ] **Task 2.1**: 创建共享类型文件 `[M]`
   - 验收: 定义 WriteResult 等共享类型
-  - 文件: `packages/datahub/src/ditto_datahub/types.py`
+  - 文件: `packages/data/src/ditto_data/types.py`
 
 - [ ] **Task 2.2**: 重构 adj_factor.py `[S]`
   - 验收: 移除 1 处 PLC0415，使用 types.WriteResult
-  - 文件: `packages/datahub/src/ditto_datahub/repositories/adj_factor.py`
+  - 文件: `packages/data/src/ditto_data/repositories/adj_factor.py`
 
 - [ ] **Task 2.3**: 重构 bars.py 注入依赖 `[M]`
   - 验收: 移除 4 处 PLC0415，注入 QuarantineStore
-  - 文件: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+  - 文件: `packages/data/src/ditto_data/repositories/bars.py`
 
 - [ ] **Task 2.4**: 重构 sources/base.py `[S]`
   - 验收: 移除 1 处 PLC0415，优化延迟导入
-  - 文件: `packages/datahub/src/ditto_datahub/sources/base.py`
+  - 文件: `packages/data/src/ditto_data/sources/base.py`
 
 - [ ] **Task 2.5**: 重构 tushare/client.py `[S]`
   - 验收: 移除 1 处 PLC0415，优化 keyring 导入
-  - 文件: `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
+  - 文件: `packages/data/src/ditto_data/sources/tushare/client.py`
 
 - [ ] **Task 2.6**: 重构 observability/logging.py `[S]`
   - 验收: 移除 1 处 PLC0415，注入 Paths 实例
@@ -157,7 +157,7 @@ reportUninitializedInstanceVariable = "error"  # 未初始化实例变量
 
 - [ ] **Task 2.8**: 重构 hub.py `[M]`
   - 验收: 移除 PLC0415 豁免
-  - 文件: `packages/datahub/src/ditto_datahub/hub.py`, `pyproject.toml`
+  - 文件: `packages/data/src/ditto_data/hub.py`, `pyproject.toml`
 
 ### Phase 3: 类型忽略清理
 
@@ -214,7 +214,7 @@ reportUninitializedInstanceVariable = "error"  # 未初始化实例变量
 
 ### 新建文件
 1. `packages/foundation/src/ditto_foundation/config/manager.py`
-2. `packages/datahub/src/ditto_datahub/types.py`
+2. `packages/data/src/ditto_data/types.py`
 3. `.claude/rules/noqa-ignore.md` ⭐ 新增
 
 ### 修改文件
@@ -225,11 +225,11 @@ reportUninitializedInstanceVariable = "error"  # 未初始化实例变量
 5. `packages/foundation/src/ditto_foundation/observability/logging.py`
 6. `packages/foundation/src/ditto_foundation/util/dates.py`
 7. `packages/foundation/src/ditto_foundation/app_initializer.py`
-8. `packages/datahub/src/ditto_datahub/repositories/adj_factor.py`
-9. `packages/datahub/src/ditto_datahub/repositories/bars.py`
-10. `packages/datahub/src/ditto_datahub/sources/base.py`
-11. `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
-12. `packages/datahub/src/ditto_datahub/hub.py`
+8. `packages/data/src/ditto_data/repositories/adj_factor.py`
+9. `packages/data/src/ditto_data/repositories/bars.py`
+10. `packages/data/src/ditto_data/sources/base.py`
+11. `packages/data/src/ditto_data/sources/tushare/client.py`
+12. `packages/data/src/ditto_data/hub.py`
 13. `apps/port/src/ditto_port/cli/context.py`
 14. `apps/port/src/ditto_port/jobs/flows/deploy.py`
 15. `pyproject.toml`
@@ -531,9 +531,9 @@ git grep "^global " packages/*/src apps/*/src | wc -l
 - `apps/port/src/ditto_port/jobs/flows/backfill.py` = ["PLR0913"]
 - `apps/port/src/ditto_port/services/ingestion/config/datasets.py` = ["PLR0913"]
 - `apps/port/src/ditto_port/services/ingestion/coordinator.py` = ["PLR0911"]
-- `packages/datahub/src/ditto_datahub/repositories/security.py` = ["PLR0913"]
+- `packages/data/src/ditto_data/repositories/security.py` = ["PLR0913"]
 - `packages/foundation/src/ditto_foundation/config/paths.py` = ["PLR0913"]
-- `packages/datahub/src/ditto_datahub/dq/models.py` = ["S112"]
+- `packages/data/src/ditto_data/dq/models.py` = ["S112"]
 
 ### 保留的豁免配置（经安全评估）
 

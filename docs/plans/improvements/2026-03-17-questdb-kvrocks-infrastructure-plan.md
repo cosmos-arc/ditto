@@ -109,13 +109,13 @@
 
 **Files**
 
-- Create: `packages/datahub/src/ditto_datahub/stores/market/stock/bars_minute/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/stock/bars_minute/bars_reader.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/stock/bars_minute/bars_writer.py`
-- Modify: `packages/datahub/src/ditto_datahub/config/data_store.py`
+- Create: `packages/data/src/ditto_data/stores/market/stock/bars_minute/__init__.py`
+- Create: `packages/data/src/ditto_data/stores/market/stock/bars_minute/bars_reader.py`
+- Create: `packages/data/src/ditto_data/stores/market/stock/bars_minute/bars_writer.py`
+- Modify: `packages/data/src/ditto_data/config/data_store.py`
 - Modify: `packages/infra/src/ditto_infra/foundation/config/providers/data_root.py`
 - Modify: `apps/port/src/ditto_port/registry/datahub/market.py`
-- Test: `packages/datahub/tests/unit/stores/market/stock/bars_minute/test_bars_minute_store_unit.py`
+- Test: `packages/data/tests/unit/stores/market/stock/bars_minute/test_bars_minute_store_unit.py`
 
 **实现要点**
 
@@ -128,7 +128,7 @@
 
 **验证**
 
-- `pixi run -e dev pytest packages/datahub/tests/unit/stores/market/stock/bars_minute/test_bars_minute_store_unit.py -v`
+- `pixi run -e dev pytest packages/data/tests/unit/stores/market/stock/bars_minute/test_bars_minute_store_unit.py -v`
 
 **建议提交**
 
@@ -145,7 +145,7 @@
 **Files**
 
 - Modify: `pixi.toml`
-- Modify: `packages/datahub/src/ditto_datahub/config/data_store.py`
+- Modify: `packages/data/src/ditto_data/config/data_store.py`
 - Modify: `apps/port/src/ditto_port/registry/infra/config.py`
 - Modify: `config/development/data_store.env`
 - Modify: `config/testing/data_store.env`
@@ -207,14 +207,14 @@
 
 **Files**
 
-- Modify: `packages/datahub/src/ditto_datahub/services/hot_layer/__init__.py`
-- Modify: `packages/datahub/src/ditto_datahub/services/__init__.py`
+- Modify: `packages/data/src/ditto_data/services/hot_layer/__init__.py`
+- Modify: `packages/data/src/ditto_data/services/__init__.py`
 - Modify: `apps/port/src/ditto_port/services/derived/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_backend.py`
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_series_reader.py`
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_snapshot_store.py`
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_control_state_store.py`
-- Test: `packages/datahub/tests/unit/services/test_hot_layer_unit.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/in_memory_backend.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/in_memory_series_reader.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/in_memory_snapshot_store.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/in_memory_control_state_store.py`
+- Test: `packages/data/tests/unit/services/test_hot_layer_unit.py`
 - Test: `apps/port/tests/unit/services/derived/test_query_facade_unit.py`
 
 **实现要点**
@@ -232,7 +232,7 @@
 
 **验证**
 
-- `pixi run -e dev pytest packages/datahub/tests/unit/services/test_hot_layer_unit.py -v`
+- `pixi run -e dev pytest packages/data/tests/unit/services/test_hot_layer_unit.py -v`
 - `pixi run -e dev pytest apps/port/tests/unit/services/derived/test_query_facade_unit.py -v`
 
 **建议提交**
@@ -292,13 +292,13 @@
 
 **Files**
 
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_ddl.py`
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_series_reader.py`
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_hot_writer.py`
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_frame_codec.py`
-- Test: `packages/datahub/tests/integration/services/hot_layer/test_questdb_ddl_integration.py`
-- Test: `packages/datahub/tests/integration/services/hot_layer/test_questdb_series_reader_integration.py`
-- Test: `packages/datahub/tests/integration/services/hot_layer/test_questdb_hot_writer_integration.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/questdb_ddl.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/questdb_series_reader.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/questdb_hot_writer.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/questdb_frame_codec.py`
+- Test: `packages/data/tests/integration/services/hot_layer/test_questdb_ddl_integration.py`
+- Test: `packages/data/tests/integration/services/hot_layer/test_questdb_series_reader_integration.py`
+- Test: `packages/data/tests/integration/services/hot_layer/test_questdb_hot_writer_integration.py`
 
 **实现要点**
 
@@ -316,9 +316,9 @@
 
 **验证**
 
-- `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer/test_questdb_ddl_integration.py -v`
-- `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer/test_questdb_series_reader_integration.py -v`
-- `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer/test_questdb_hot_writer_integration.py -v`
+- `pixi run -e dev pytest packages/data/tests/integration/services/hot_layer/test_questdb_ddl_integration.py -v`
+- `pixi run -e dev pytest packages/data/tests/integration/services/hot_layer/test_questdb_series_reader_integration.py -v`
+- `pixi run -e dev pytest packages/data/tests/integration/services/hot_layer/test_questdb_hot_writer_integration.py -v`
 
 **建议提交**
 
@@ -334,13 +334,13 @@
 
 **Files**
 
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/namespace.py`
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/kvrocks_snapshot_store.py`
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/kvrocks_control_state_store.py`
-- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/kvrocks_snapshot_codec.py`
-- Test: `packages/datahub/tests/unit/services/hot_layer/test_namespace_unit.py`
-- Test: `packages/datahub/tests/integration/services/hot_layer/test_kvrocks_snapshot_store_integration.py`
-- Test: `packages/datahub/tests/integration/services/hot_layer/test_kvrocks_control_state_store_integration.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/namespace.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/kvrocks_snapshot_store.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/kvrocks_control_state_store.py`
+- Create: `packages/data/src/ditto_data/services/hot_layer/kvrocks_snapshot_codec.py`
+- Test: `packages/data/tests/unit/services/hot_layer/test_namespace_unit.py`
+- Test: `packages/data/tests/integration/services/hot_layer/test_kvrocks_snapshot_store_integration.py`
+- Test: `packages/data/tests/integration/services/hot_layer/test_kvrocks_control_state_store_integration.py`
 
 **实现要点**
 
@@ -358,9 +358,9 @@
 
 **验证**
 
-- `pixi run -e dev pytest packages/datahub/tests/unit/services/hot_layer/test_namespace_unit.py -v`
-- `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer/test_kvrocks_snapshot_store_integration.py -v`
-- `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer/test_kvrocks_control_state_store_integration.py -v`
+- `pixi run -e dev pytest packages/data/tests/unit/services/hot_layer/test_namespace_unit.py -v`
+- `pixi run -e dev pytest packages/data/tests/integration/services/hot_layer/test_kvrocks_snapshot_store_integration.py -v`
+- `pixi run -e dev pytest packages/data/tests/integration/services/hot_layer/test_kvrocks_control_state_store_integration.py -v`
 
 **建议提交**
 
@@ -379,7 +379,7 @@
 - Modify: `apps/port/src/ditto_port/services/derived/query_facade.py`
 - Modify: `apps/port/src/ditto_port/registry/datahub/derived.py`
 - Modify: `apps/port/tests/unit/services/derived/test_query_facade_unit.py`
-- Modify: `packages/datahub/src/ditto_datahub/services/__init__.py`
+- Modify: `packages/data/src/ditto_data/services/__init__.py`
 
 **实现要点**
 
@@ -454,10 +454,10 @@
 
 ### 里程碑级验证
 
-1. `pixi run -e dev pytest packages/datahub/tests/unit/services/test_hot_layer_unit.py -v`
+1. `pixi run -e dev pytest packages/data/tests/unit/services/test_hot_layer_unit.py -v`
 2. `pixi run -e dev pytest apps/port/tests/unit/services/derived/test_query_facade_unit.py -v`
 3. `pixi run -e dev pytest packages/infra/tests/integration/clients -v`
-4. `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer -v`
+4. `pixi run -e dev pytest packages/data/tests/integration/services/hot_layer -v`
 
 ### 最终门禁
 

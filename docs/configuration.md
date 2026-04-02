@@ -52,8 +52,8 @@ Ditto 配置系统采用**分层架构**设计，支持多环境配置、路径�
 |------|--------|------|
 | 环境管理 | `ditto_infra.foundation.config` | 环境检测、配置加载 |
 | 系统配置 | `ditto_infra.foundation.config.settings` | SystemSettings, ObservabilitySettings |
-| 存储配置 | `ditto_datahub.config.data_store` | DataStoreSettings |
-| 数据源配置 | `ditto_datahub.config.data_source` | DataSourceSettings |
+| 存储配置 | `ditto_data.config.data_store` | DataStoreSettings |
+| 数据源配置 | `ditto_data.config.data_source` | DataSourceSettings |
 | 通知配置 | `ditto_infra.services.notification.config` | NotificationSettings |
 | 质量配置 | `ditto_core.quality.config` | DQSettings |
 
@@ -121,7 +121,7 @@ print(f'当前环境: {get_environment().value}')
 pixi run -e dev python -c "
 from dishka import make_container
 from ditto_port.registry.infra.config import ConfigProvider
-from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_data.config.data_store import DataStoreSettings
 import os
 os.environ['ENVIRONMENT'] = 'development'
 container = make_container(ConfigProvider())
@@ -330,7 +330,7 @@ SQL_ENGINE__PLAN_CACHE_SIZE=1000
 1. **定义配置模型**（在对应包的 `config/` 目录）
 
 ```python
-# packages/datahub/src/ditto_datahub/config/data_store.py
+# packages/data/src/ditto_data/config/data_store.py
 class DataStoreSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -410,7 +410,7 @@ print(get_environment())
 pixi run -e dev python -c "
 from dishka import make_container
 from ditto_port.registry.infra.config import ConfigProvider
-from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_data.config.data_store import DataStoreSettings
 import os
 os.environ['ENVIRONMENT'] = 'development'
 c = make_container(ConfigProvider())
@@ -578,9 +578,9 @@ c.close()
 |------|------|---------|
 | `SystemSettings` | `ditto_infra/foundation/config/settings.py` | `system.env` |
 | `ObservabilitySettings` | `ditto_infra/foundation/config/settings.py` | `observability.env` |
-| `DataStoreSettings` | `ditto_datahub/config/data_store.py` | `data_store.env` |
-| `DataSourceSettings` | `ditto_datahub/config/data_source.py` | `data_source.env` |
-| `FileStorageSettings` | `ditto_datahub/config/` | 派生自 `DataStoreSettings` |
+| `DataStoreSettings` | `ditto_data/config/data_store.py` | `data_store.env` |
+| `DataSourceSettings` | `ditto_data/config/data_source.py` | `data_source.env` |
+| `FileStorageSettings` | `ditto_data/config/` | 派生自 `DataStoreSettings` |
 | `DQSettings` | `ditto_core/quality/config/` | `dq.env` |
 | `NotificationSettings` | `ditto_infra/services/notification/config.py` | `notification.env` |
 

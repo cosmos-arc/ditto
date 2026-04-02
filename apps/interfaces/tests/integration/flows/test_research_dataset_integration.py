@@ -22,12 +22,12 @@ from ditto_app.process.materialization import (
     InvalidationCascadeOrchestrator,
 )
 from ditto_app.query.research import ResearchDatasetFacade
-from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
-from ditto_datahub.services import DerivedCatalogService, ResearchCatalogService
-from ditto_datahub.sources import ExchangeTransformers
-from ditto_datahub.sources.source import DataSources
-from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
+from ditto_data.services import DerivedCatalogService, ResearchCatalogService
+from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.source import DataSources
+from ditto_data.stores.sqlite_client import SQLiteClient
+from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_interfaces.jobs.flows.research import research_dataset_build_flow
 from ditto_interfaces.registry import ConfigProvider
 from ditto_interfaces.registry.contexts.bundle import MaterializationBundle

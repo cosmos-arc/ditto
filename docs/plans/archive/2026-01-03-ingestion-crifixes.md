@@ -241,7 +241,7 @@ def _write_data(
 
 **状态**: 已完成 (2026-01-03)
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+**文件**: `packages/data/src/ditto_data/repositories/bars.py`
 
 ### 修改点: get 方法添加 market_wide 参数 (line 86)
 
@@ -282,7 +282,7 @@ def get(
 
 ### 4.2 DQ 调用传递 market_wide
 
-**文件**: `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py`
+**文件**: `packages/data/src/ditto_data/dq/checkers/statistical.py`
 
 在 `_check_zscore` 和 `_check_completeness` 方法中添加 `market_wide` 参数传递。
 
@@ -427,9 +427,9 @@ for level in levels:
 
 ### 修改文件
 - `apps/server/src/ditto_port/ingestion/services/coordinator.py` - 核心修改
-- `packages/datahub/src/ditto_datahub/repositories/bars.py`
+- `packages/data/src/ditto_data/repositories/bars.py`
 - `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py`
-- `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py`
+- `packages/data/src/ditto_data/dq/checkers/statistical.py`
 - `apps/server/src/ditto_port/ingestion/flows/daily.py`
 - `apps/server/src/ditto_port/ingestion/services/metadata.py`
 - `apps/server/src/ditto_port/ingestion/flows/backfill.py`

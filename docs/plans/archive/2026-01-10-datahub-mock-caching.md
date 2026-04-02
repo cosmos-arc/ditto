@@ -68,7 +68,7 @@ def patch_datahub(mock_datahub_session: MagicMock, mocker: MockerFixture) -> Mag
             patch_datahub.calendar.is_trading_day.return_value = False
             # ... 测试逻辑
     """
-    return mocker.patch("ditto_datahub.DataHub", return_value=mock_datahub_session)
+    return mocker.patch("ditto_data.DataHub", return_value=mock_datahub_session)
 ```
 
 ### Step 3: 更新测试文件使用新 Fixture
@@ -85,7 +85,7 @@ def patch_datahub(mock_datahub_session: MagicMock, mocker: MockerFixture) -> Mag
 def test_flow_exists(self, mocker):
     mock_hub = mocker.MagicMock()
     mock_hub.calendar.is_trading_day.return_value = True
-    mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+    mocker.patch("ditto_data.DataHub", return_value=mock_hub)
 
     result = daily_ingestion_flow(trade_date="2024-01-02", data_root="data")
 ```

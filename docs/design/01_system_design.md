@@ -96,7 +96,7 @@
 | ├── strategy | 策略逻辑、信号生成、执行逻辑 | `core/strategy/` |
 | ├── signal | 信号生成逻辑 | `core/strategy/signal/` |
 | └── execution | 执行逻辑（订单拆分、路由） | `core/strategy/execution/` |
-| **Infrastructure Layer** | 数据访问、存储、持久化 | `packages/datahub/` |
+| **Infrastructure Layer** | 数据访问、存储、持久化 | `packages/data/` |
 | ├── stores | 数据存储（parquet、sqlite） | `datahub/stores/` |
 | ├── accessors | 业务聚合层 | `datahub/accessors/` |
 | └── sources | 外部数据源适配 | `datahub/sources/` |
@@ -210,7 +210,7 @@ packages/
 
   datahub/                   # Infrastructure Layer（数据访问）
     src/
-      ditto_datahub/
+      ditto_data/
         hub.py             # DataHub Facade
         sources/           # 外部数据提供者
           tushare/         # Tushare 实现
@@ -279,7 +279,7 @@ packages/
          │
          ↓ 依赖
 ┌─────────────────────────────────────────────────┐
-│ Infrastructure Layer (packages/datahub/)        │
+│ Infrastructure Layer (packages/data/)        │
 │                                                  │
 │  stores/  accessors/  sources/             │
 │  （数据访问、存储、持久化）                       │

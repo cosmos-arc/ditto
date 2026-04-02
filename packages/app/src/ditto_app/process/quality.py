@@ -11,9 +11,9 @@ import polars.exceptions as pl_exceptions
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.spec import DQResult
-from ditto_datahub.services.market_service import MarketBarsQuery, MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.quality_record_service import QualityRecordService
+from ditto_data.services.market_service import MarketBarsQuery, MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.quality_record_service import QualityRecordService
 from loguru import logger
 
 # ---------------------------------------------------------------------------

@@ -347,7 +347,7 @@ fields="ts_code,trade_date,up_limit,down_limit"
 
 ### SID 分配范围
 ```python
-# packages/datahub/src/ditto_datahub/models/common.py
+# packages/data/src/ditto_data/models/common.py
 stock: (1_000_000, 1_999_999)  # 股票
 etf:   (2_000_000, 2_999_999)  # ETF/基金
 index: (3_000_000, 3_999_999)  # 指数
@@ -355,7 +355,7 @@ index: (3_000_000, 3_999_999)  # 指数
 
 ### Transformer 配置示例
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/processors/transformer.py
+# packages/data/src/ditto_data/sources/tushare/processors/transformer.py
 DAILY_OHLCV_MAPPING = ColumnMapping(
     rename={"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"},
     date_columns={"trade_date": "%Y%m%d"},
@@ -367,7 +367,7 @@ DAILY_OHLCV_MAPPING = ColumnMapping(
 
 ### Enrichment 流程
 ```python
-# packages/datahub/src/ditto_datahub/accessors/internal/enrichment.py
+# packages/data/src/ditto_data/accessors/internal/enrichment.py
 def enrich_with_sid(df, sid_mapping, src_code_col, source):
     """添加 sid 和 source 列"""
     return df.with_columns(
@@ -397,11 +397,11 @@ LIMIT 1
 
 | 组件 | 路径 |
 |------|------|
-| Schema 定义 | `packages/datahub/src/ditto_datahub/meta/schemas.py` |
-| Transformer 配置 | `packages/datahub/src/ditto_datahub/sources/tushare/processors/transformer.py` |
-| Stock Adapter | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock.py` |
-| ETF Adapter | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/etf.py` |
-| Calendar Adapter | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/calendar.py` |
-| Status Merger | `packages/datahub/src/ditto_datahub/sources/tushare/processors/merger.py` |
-| Enrichment | `packages/datahub/src/ditto_datahub/accessors/internal/enrichment.py` |
+| Schema 定义 | `packages/data/src/ditto_data/meta/schemas.py` |
+| Transformer 配置 | `packages/data/src/ditto_data/sources/tushare/processors/transformer.py` |
+| Stock Adapter | `packages/data/src/ditto_data/sources/tushare/adapters/stock.py` |
+| ETF Adapter | `packages/data/src/ditto_data/sources/tushare/adapters/etf.py` |
+| Calendar Adapter | `packages/data/src/ditto_data/sources/tushare/adapters/calendar.py` |
+| Status Merger | `packages/data/src/ditto_data/sources/tushare/processors/merger.py` |
+| Enrichment | `packages/data/src/ditto_data/accessors/internal/enrichment.py` |
 | Data Writer | `apps/port/src/ditto_port/services/ingestion/data_writer.py` |

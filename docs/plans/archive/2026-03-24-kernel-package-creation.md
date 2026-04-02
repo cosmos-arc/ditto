@@ -20,7 +20,7 @@
 | `InstrumentIdRange` | **暂不迁入** kernel | 仅 DataHub 使用，且含业务方法，不满足准入标准 #1 和 #2 |
 | `Exchange` (normalization.py) | **保持分离**不重命名 | 与 enums.py 版本职责不同（外部 source 转换 vs 项目数据标准） |
 | `AssetClass` 成员数 | **6 成员**（DataHub 完整版） | Port 3 成员子集删除，API 层如需限制在 API 层做 validation |
-| Core → DataHub errors | **保留** ignore_imports | Core `engine/errors.py` 从 `ditto_datahub.errors` re-export，本轮不迁移 |
+| Core → DataHub errors | **保留** ignore_imports | Core `engine/errors.py` 从 `ditto_data.errors` re-export，本轮不迁移 |
 | Core `OrderDirection` | **统一为** kernel `OrderSide` | 值完全一致（BUY/SELL），消除命名歧义 |
 
 ## 迁移范围
@@ -435,18 +435,18 @@ git commit -m "feat(kernel): 定义 InstrumentId, AssetClass, Exchange, OrderSid
 
 **前置:** Task 2
 
-**策略:** DataHub 原有模块保留类型定义，改为从 `ditto_kernel` 导入再 re-export。这样外部消费者（Port、测试）的 `from ditto_datahub.models.enums import AssetClass` 等导入路径不受影响。
+**策略:** DataHub 原有模块保留类型定义，改为从 `ditto_kernel` 导入再 re-export。这样外部消费者（Port、测试）的 `from ditto_data.models.enums import AssetClass` 等导入路径不受影响。
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/models/enums.py`
-- Modify: `packages/datahub/src/ditto_datahub/models/trading.py:17-21`
-- Modify: `packages/datahub/src/ditto_datahub/models/strategy_run.py:13-19`
-- Modify: `packages/datahub/src/ditto_datahub/models/common.py:9`
-- Modify: `packages/datahub/pyproject.toml` (添加 ditto-kernel 依赖)
+- Modify: `packages/data/src/ditto_data/models/enums.py`
+- Modify: `packages/data/src/ditto_data/models/trading.py:17-21`
+- Modify: `packages/data/src/ditto_data/models/strategy_run.py:13-19`
+- Modify: `packages/data/src/ditto_data/models/common.py:9`
+- Modify: `packages/data/pyproject.toml` (添加 ditto-kernel 依赖)
 
 **Step 1: DataHub 添加 kernel 依赖**
 
-在 `packages/datahub/pyproject.toml` 中添加：
+在 `packages/data/pyproject.toml` 中添加：
 
 ```toml
 [project]
@@ -461,7 +461,7 @@ dependencies = [
 
 **Step 2: 改写 `enums.py` — 从 kernel 导入并 re-export**
 
-替换整个 `packages/datahub/src/ditto_datahub/models/enums.py`：
+替换整个 `packages/data/src/ditto_data/models/enums.py`：
 
 ```python
 """
@@ -478,7 +478,7 @@ __all__ = ["AssetClass", "Exchange"]
 
 **Step 3: 改写 `trading.py` 中的 OrderSide — 从 kernel 导入**
 
-修改 `packages/datahub/src/ditto_datahub/models/trading.py`，将 `OrderSide` 的定义替换为从 kernel 的 re-export：
+修改 `packages/data/src/ditto_data/models/trading.py`，将 `OrderSide` 的定义替换为从 kernel 的 re-export：
 
 在文件头部的导入区域添加：
 ```python
@@ -495,7 +495,7 @@ OrderSide = _KernelOrderSide
 
 **Step 4: 改写 `strategy_run.py` 中的 RunStatus — 从 kernel 导入**
 
-修改 `packages/datahub/src/ditto_datahub/models/strategy_run.py`，将 `RunStatus` 的定义替换为从 kernel 的 re-export：
+修改 `packages/data/src/ditto_data/models/strategy_run.py`，将 `RunStatus` 的定义替换为从 kernel 的 re-export：
 
 在文件头部的导入区域添加：
 ```python
@@ -510,20 +510,20 @@ RunStatus = _KernelRunStatus
 
 **Step 5: 更新 `common.py` 的 AssetClass 导入**
 
-修改 `packages/datahub/src/ditto_datahub/models/common.py:9`：
+修改 `packages/data/src/ditto_data/models/common.py:9`：
 
 ```python
-# 原: from ditto_datahub.models.enums import AssetClass
+# 原: from ditto_data.models.enums import AssetClass
 # 改为从 kernel 导入（enums.py 已是 kernel 的 re-export）
 from ditto_kernel.enums import AssetClass
 ```
 
-> 或者保持 `from ditto_datahub.models.enums import AssetClass` 也可以（因为 enums.py 现在是从 kernel re-export 的），但直接从 kernel 导入更明确。
+> 或者保持 `from ditto_data.models.enums import AssetClass` 也可以（因为 enums.py 现在是从 kernel re-export 的），但直接从 kernel 导入更明确。
 
 **Step 6: 运行 DataHub 测试验证**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/models/ -v
+pixi run -e dev pytest packages/data/tests/unit/models/ -v
 ```
 
 Expected: ALL PASSED
@@ -531,7 +531,7 @@ Expected: ALL PASSED
 **Step 7: Commit**
 
 ```bash
-git add packages/datahub/
+git add packages/data/
 git commit -m "refactor(datahub): 枚举类型改为从 ditto_kernel 导入并 re-export"
 ```
 
@@ -782,7 +782,7 @@ git commit -m "refactor(port): AssetClass 改为从 ditto_kernel 导入，删除
 [importlinter]
 root_packages =
     ditto_infra
-    ditto_datahub
+    ditto_data
     ditto_core
     ditto_port
     ditto_kernel
@@ -799,7 +799,7 @@ type = layers
 layers =
     ditto_port
     ditto_core
-    ditto_datahub
+    ditto_data
     ditto_infra
 ```
 
@@ -820,7 +820,7 @@ source_modules =
     ditto_kernel.**
 forbidden_modules =
     ditto_core.**
-    ditto_datahub.**
+    ditto_data.**
     ditto_port.**
     ditto_infra.**
 ```
@@ -831,21 +831,21 @@ forbidden_modules =
 # ═══════════════════════════════════════════════════════════════════
 # Core ↔ DataHub 边界：双向禁止互相依赖
 # 两者均可依赖 ditto_kernel
-# Core 保留对 ditto_datahub.errors 的 re-export 依赖
+# Core 保留对 ditto_data.errors 的 re-export 依赖
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:core-datahub-boundary]
 name = Core and DataHub must not depend on each other
 type = forbidden
 source_modules =
     ditto_core.**
-    ditto_datahub.**
+    ditto_data.**
 forbidden_modules =
     ditto_core.**
-    ditto_datahub.**
+    ditto_data.**
 ignore_imports =
     ditto_core.** -> ditto_kernel.*
-    ditto_datahub.** -> ditto_kernel.*
-    ditto_core.** -> ditto_datahub.errors
+    ditto_data.** -> ditto_kernel.*
+    ditto_core.** -> ditto_data.errors
 unmatched_ignore_imports_alerting = none
 ```
 
@@ -859,7 +859,7 @@ name = No circular dependencies between packages
 type = acyclic_siblings
 ancestors =
     ditto_infra
-    ditto_datahub
+    ditto_data
     ditto_core
     ditto_port
     ditto_kernel
@@ -877,10 +877,10 @@ Expected: ALL CONTRACTS PASSED
 如果 `core-datahub-boundary` 报 Core 仍有对 `datahub.models.*` 的导入（除了 errors），需要先清理。检查：
 
 ```bash
-grep -r "from ditto_datahub" packages/core/src/ --include="*.py" | grep -v errors
+grep -r "from ditto_data" packages/core/src/ --include="*.py" | grep -v errors
 ```
 
-根据当前分析，Core 只在 `engine/errors.py` 导入 `ditto_datahub.errors`，不应有其他 `datahub.models` 导入。如果发现，需要在本次清理。
+根据当前分析，Core 只在 `engine/errors.py` 导入 `ditto_data.errors`，不应有其他 `datahub.models` 导入。如果发现，需要在本次清理。
 
 **Step 7: Commit**
 
@@ -898,14 +898,14 @@ git commit -m "refactor(arch): import-linter 添加 kernel 隔离规则，Core�
 **前置:** Task 3
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/models/__init__.py:25, 109-110`
+- Modify: `packages/data/src/ditto_data/models/__init__.py:25, 109-110`
 
 **Step 1: 更新 enums 导入行**
 
 修改第 25 行：
 
 ```python
-# 原: from ditto_datahub.models.enums import AssetClass, Exchange
+# 原: from ditto_data.models.enums import AssetClass, Exchange
 # 改为: 直接从 kernel 导入（enums.py 已是 re-export，但顶层 __init__ 应指向权威来源）
 from ditto_kernel.enums import AssetClass, Exchange
 ```
@@ -915,10 +915,10 @@ from ditto_kernel.enums import AssetClass, Exchange
 修改第 109 行：
 
 ```python
-# 原: from ditto_datahub.models.strategy_run import RunStatus, StrategyRunRecord
+# 原: from ditto_data.models.strategy_run import RunStatus, StrategyRunRecord
 # 改为:
 from ditto_kernel.enums import RunStatus
-from ditto_datahub.models.strategy_run import StrategyRunRecord
+from ditto_data.models.strategy_run import StrategyRunRecord
 ```
 
 **Step 3: 更新 OrderSide 导入行**
@@ -926,16 +926,16 @@ from ditto_datahub.models.strategy_run import StrategyRunRecord
 修改第 110 行：
 
 ```python
-# 原: from ditto_datahub.models.trading import Order, OrderSide, OrderStatus, Trade
+# 原: from ditto_data.models.trading import Order, OrderSide, OrderStatus, Trade
 # 改为:
 from ditto_kernel.enums import OrderSide
-from ditto_datahub.models.trading import Order, OrderStatus, Trade
+from ditto_data.models.trading import Order, OrderStatus, Trade
 ```
 
 **Step 4: 验证 DataHub 测试通过**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/ -v --fast
+pixi run -e dev pytest packages/data/tests/unit/ -v --fast
 ```
 
 Expected: ALL PASSED
@@ -943,7 +943,7 @@ Expected: ALL PASSED
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/models/__init__.py
+git add packages/data/src/ditto_data/models/__init__.py
 git commit -m "refactor(datahub): models/__init__ 改为从 ditto_kernel 导入共享类型"
 ```
 
@@ -1000,10 +1000,10 @@ RunStatus members: 4
 ```bash
 pixi run -e dev python -c "
 # 旧路径仍然可用
-from ditto_datahub.models.enums import AssetClass, Exchange
-from ditto_datahub.models import OrderSide, RunStatus
-from ditto_datahub.models.trading import OrderSide as OS2
-from ditto_datahub.models.strategy_run import RunStatus as RS2
+from ditto_data.models.enums import AssetClass, Exchange
+from ditto_data.models import OrderSide, RunStatus
+from ditto_data.models.trading import OrderSide as OS2
+from ditto_data.models.strategy_run import RunStatus as RS2
 assert AssetClass.STOCK == 'stock'
 assert OrderSide.BUY == 'buy'
 assert RunStatus.PENDING == 'pending'
@@ -1076,13 +1076,13 @@ Task 1 (kernel 骨架)
 | Core 仍有对 `datahub.models` 的导入导致 arch-check 失败 | Task 6 Step 6 的 grep 检查；如有发现立即清理 |
 | Port 测试中 AssetClass 值从 3 扩展到 6 导致断言失败 | Task 5 Step 4 验证；如有失败需更新测试中的硬编码枚举值 |
 | `InstrumentIdRange.get_range()` 依赖 `AssetClass`，迁移后 import 路径变化 | Task 3 Step 5 已处理：`common.py` 直接从 kernel 导入 `AssetClass` |
-| `normalization.py` 中的 `Exchange` 与 kernel `Exchange` 同名但值不同 | 两者在不同模块，通过导入路径区分。`normalization.Exchange` 仍在 `ditto_datahub.sources` 内部使用 |
+| `normalization.py` 中的 `Exchange` 与 kernel `Exchange` 同名但值不同 | 两者在不同模块，通过导入路径区分。`normalization.Exchange` 仍在 `ditto_data.sources` 内部使用 |
 
 ---
 
 ## 后续演进（不在本次范围）
 
-1. **instrument-id-semantics-unification 计划更新** — Phase 0 中 `InstrumentId` 归属从 `ditto_datahub.models.kernel` 改为 `ditto_kernel.identity`
+1. **instrument-id-semantics-unification 计划更新** — Phase 0 中 `InstrumentId` 归属从 `ditto_data.models.kernel` 改为 `ditto_kernel.identity`
 2. **Port 层业务逻辑下沉到 Core** — `StrategyInputAssembler` 默认信号、`DerivedPublicationFacade` shadow diff、`CS amplification` 等 5 个模块
 3. **`InstrumentIdRange` 重新评估** — 当 instrument-id 统一计划让 Core 也使用 IDRange 时，再评估是否迁入 kernel
 4. **`OrderDirection` 别名清理** — 后续逐步将 Core 源码中的 `OrderDirection` 使用点改为 `OrderSide`，移除 `as OrderDirection` 别名

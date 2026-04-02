@@ -7,7 +7,7 @@ from typing import Any
 
 import orjson
 import typer
-from ditto_datahub.services.market_service import (
+from ditto_data.services.market_service import (
     AdjType,
     MarketBarsQuery,
     MarketService,

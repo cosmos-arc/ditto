@@ -17,16 +17,16 @@
 ## Task 1: TradingRuleStore (PIT 版本化) `[M]` ✅
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_writer.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_reader.py`
-- Test: `packages/datahub/tests/unit/stores/metadata/test_trading_rule_store_unit.py`
+- Create: `packages/data/src/ditto_data/stores/metadata/trading_rule_writer.py`
+- Create: `packages/data/src/ditto_data/stores/metadata/trading_rule_reader.py`
+- Test: `packages/data/tests/unit/stores/metadata/test_trading_rule_store_unit.py`
 
 > **关键约定**: 遵循 `.claude/rules/pit.md` 中的 PIT 查询规范。
 
 **Step 1: Write the failing test**
 
 ```python
-# packages/datahub/tests/unit/stores/metadata/test_trading_rule_store_unit.py
+# packages/data/tests/unit/stores/metadata/test_trading_rule_store_unit.py
 """Tests for TradingRuleReader / TradingRuleWriter (PIT versioned)."""
 
 import pytest
@@ -35,7 +35,7 @@ from dataclasses import FrozenInstanceError
 
 class TestTradingRuleRecord:
     def test_create_record(self) -> None:
-        from ditto_datahub.stores.metadata.trading_rule_reader import TradingRuleRecord
+        from ditto_data.stores.metadata.trading_rule_reader import TradingRuleRecord
 
         record = TradingRuleRecord(
             instrument_id="159915.SZ",
@@ -52,7 +52,7 @@ class TestTradingRuleRecord:
         assert record.effective_to is None
 
     def test_record_is_frozen(self) -> None:
-        from ditto_datahub.stores.metadata.trading_rule_reader import TradingRuleRecord
+        from ditto_data.stores.metadata.trading_rule_reader import TradingRuleRecord
 
         record = TradingRuleRecord(
             instrument_id="159915.SZ",
@@ -70,7 +70,7 @@ class TestTradingRuleRecord:
 
     def test_to_core_model(self) -> None:
         from ditto_core.execution.rules import TradingRuleSet
-        from ditto_datahub.stores.metadata.trading_rule_reader import TradingRuleRecord
+        from ditto_data.stores.metadata.trading_rule_reader import TradingRuleRecord
 
         record = TradingRuleRecord(
             instrument_id="159915.SZ",
@@ -93,7 +93,7 @@ class TestTradingRuleRecord:
 **Step 3: Write implementation**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_reader.py
+# packages/data/src/ditto_data/stores/metadata/trading_rule_reader.py
 """TradingRuleReader — PIT 版本化交易规则查询."""
 
 from __future__ import annotations
@@ -177,12 +177,12 @@ class TradingRuleReader:
 ```
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_writer.py
+# packages/data/src/ditto_data/stores/metadata/trading_rule_writer.py
 """TradingRuleWriter — PIT 版本化交易规则写入."""
 
 from __future__ import annotations
 
-from ditto_datahub.stores.metadata.trading_rule_reader import TradingRuleRecord
+from ditto_data.stores.metadata.trading_rule_reader import TradingRuleRecord
 
 __all__ = ["TradingRuleWriter"]
 
@@ -208,15 +208,15 @@ class TradingRuleWriter:
 **Step 4: Run test to verify it passes**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/stores/metadata/test_trading_rule_store_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/stores/metadata/test_trading_rule_store_unit.py -v
 ```
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_reader.py \
-        packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_writer.py \
-        packages/datahub/tests/unit/stores/metadata/test_trading_rule_store_unit.py
+git add packages/data/src/ditto_data/stores/metadata/trading_rule_reader.py \
+        packages/data/src/ditto_data/stores/metadata/trading_rule_writer.py \
+        packages/data/tests/unit/stores/metadata/test_trading_rule_store_unit.py
 git commit -m "feat(datahub): add TradingRuleReader/Writer with PIT versioning"
 ```
 
@@ -225,14 +225,14 @@ git commit -m "feat(datahub): add TradingRuleReader/Writer with PIT versioning"
 ## Task 2: FeeScheduleStore (PIT 版本化) `[M]` ✅
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_writer.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_reader.py`
-- Test: `packages/datahub/tests/unit/stores/metadata/test_fee_schedule_store_unit.py`
+- Create: `packages/data/src/ditto_data/stores/metadata/fee_schedule_writer.py`
+- Create: `packages/data/src/ditto_data/stores/metadata/fee_schedule_reader.py`
+- Test: `packages/data/tests/unit/stores/metadata/test_fee_schedule_store_unit.py`
 
 **Step 1: Write the failing test**
 
 ```python
-# packages/datahub/tests/unit/stores/metadata/test_fee_schedule_store_unit.py
+# packages/data/tests/unit/stores/metadata/test_fee_schedule_store_unit.py
 """Tests for FeeScheduleReader / FeeScheduleWriter (PIT versioned)."""
 
 import pytest
@@ -241,7 +241,7 @@ from dataclasses import FrozenInstanceError
 
 class TestFeeScheduleRecord:
     def test_create_record(self) -> None:
-        from ditto_datahub.stores.metadata.fee_schedule_reader import FeeScheduleRecord
+        from ditto_data.stores.metadata.fee_schedule_reader import FeeScheduleRecord
 
         record = FeeScheduleRecord(
             instrument_id="159915.SZ",
@@ -256,7 +256,7 @@ class TestFeeScheduleRecord:
         assert record.stamp_duty_rate == 0.0
 
     def test_record_is_frozen(self) -> None:
-        from ditto_datahub.stores.metadata.fee_schedule_reader import FeeScheduleRecord
+        from ditto_data.stores.metadata.fee_schedule_reader import FeeScheduleRecord
 
         record = FeeScheduleRecord(
             instrument_id="159915.SZ",
@@ -273,7 +273,7 @@ class TestFeeScheduleRecord:
 
     def test_to_core_model(self) -> None:
         from ditto_core.execution.rules import FeeSchedule
-        from ditto_datahub.stores.metadata.fee_schedule_reader import FeeScheduleRecord
+        from ditto_data.stores.metadata.fee_schedule_reader import FeeScheduleRecord
 
         record = FeeScheduleRecord(
             instrument_id="600000.SH",
@@ -292,7 +292,7 @@ class TestFeeScheduleRecord:
 
 class TestFeeScheduleReaderPIT:
     def test_get_current_version(self) -> None:
-        from ditto_datahub.stores.metadata.fee_schedule_reader import (
+        from ditto_data.stores.metadata.fee_schedule_reader import (
             FeeScheduleReader,
             FeeScheduleRecord,
         )
@@ -325,7 +325,7 @@ class TestFeeScheduleReaderPIT:
         assert result.stamp_duty_rate == pytest.approx(0.00025)
 
     def test_get_historical_version(self) -> None:
-        from ditto_datahub.stores.metadata.fee_schedule_reader import (
+        from ditto_data.stores.metadata.fee_schedule_reader import (
             FeeScheduleReader,
             FeeScheduleRecord,
         )
@@ -364,7 +364,7 @@ class TestFeeScheduleReaderPIT:
 **Step 3: Write implementation**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_reader.py
+# packages/data/src/ditto_data/stores/metadata/fee_schedule_reader.py
 """FeeScheduleReader — PIT 版本化费率查询."""
 
 from __future__ import annotations
@@ -422,12 +422,12 @@ class FeeScheduleReader:
 ```
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_writer.py
+# packages/data/src/ditto_data/stores/metadata/fee_schedule_writer.py
 """FeeScheduleWriter — PIT 版本化费率写入."""
 
 from __future__ import annotations
 
-from ditto_datahub.stores.metadata.fee_schedule_reader import FeeScheduleRecord
+from ditto_data.stores.metadata.fee_schedule_reader import FeeScheduleRecord
 
 __all__ = ["FeeScheduleWriter"]
 
@@ -448,15 +448,15 @@ class FeeScheduleWriter:
 **Step 4: Run test to verify it passes**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/stores/metadata/test_fee_schedule_store_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/stores/metadata/test_fee_schedule_store_unit.py -v
 ```
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_reader.py \
-        packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_writer.py \
-        packages/datahub/tests/unit/stores/metadata/test_fee_schedule_store_unit.py
+git add packages/data/src/ditto_data/stores/metadata/fee_schedule_reader.py \
+        packages/data/src/ditto_data/stores/metadata/fee_schedule_writer.py \
+        packages/data/tests/unit/stores/metadata/test_fee_schedule_store_unit.py
 git commit -m "feat(datahub): add FeeScheduleReader/Writer with PIT versioning"
 ```
 
@@ -465,14 +465,14 @@ git commit -m "feat(datahub): add FeeScheduleReader/Writer with PIT versioning"
 ## Task 3: InstrumentRuleProvider `[L]` ✅
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/services/strategy/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/services/strategy/instrument_rule_provider.py`
-- Test: `packages/datahub/tests/unit/services/strategy/test_instrument_rule_provider_unit.py`
+- Create: `packages/data/src/ditto_data/services/strategy/__init__.py`
+- Create: `packages/data/src/ditto_data/services/strategy/instrument_rule_provider.py`
+- Test: `packages/data/tests/unit/services/strategy/test_instrument_rule_provider_unit.py`
 
 **Step 1: Write the failing test**
 
 ```python
-# packages/datahub/tests/unit/services/strategy/test_instrument_rule_provider_unit.py
+# packages/data/tests/unit/services/strategy/test_instrument_rule_provider_unit.py
 """Tests for InstrumentRuleProvider — 三层规则组装."""
 
 import pytest
@@ -481,7 +481,7 @@ import pytest
 class TestInstrumentRuleProvider:
     def test_get_definition(self) -> None:
         from ditto_core.execution.rules import InstrumentDefinition
-        from ditto_datahub.services.strategy.instrument_rule_provider import (
+        from ditto_data.services.strategy.instrument_rule_provider import (
             InstrumentRuleProvider,
         )
 
@@ -502,7 +502,7 @@ class TestInstrumentRuleProvider:
         assert defn.lot_size == 100
 
     def test_get_definition_not_found(self) -> None:
-        from ditto_datahub.services.strategy.instrument_rule_provider import (
+        from ditto_data.services.strategy.instrument_rule_provider import (
             InstrumentRuleProvider,
         )
 
@@ -510,10 +510,10 @@ class TestInstrumentRuleProvider:
         assert provider.get_definition("NONEXISTENT") is None
 
     def test_get_trading_rule(self) -> None:
-        from ditto_datahub.services.strategy.instrument_rule_provider import (
+        from ditto_data.services.strategy.instrument_rule_provider import (
             InstrumentRuleProvider,
         )
-        from ditto_datahub.stores.metadata.trading_rule_reader import TradingRuleRecord
+        from ditto_data.stores.metadata.trading_rule_reader import TradingRuleRecord
 
         provider = InstrumentRuleProvider()
         provider.load_trading_rules([
@@ -534,10 +534,10 @@ class TestInstrumentRuleProvider:
         assert rule.settlement_cycle == 1
 
     def test_get_fee_schedule(self) -> None:
-        from ditto_datahub.services.strategy.instrument_rule_provider import (
+        from ditto_data.services.strategy.instrument_rule_provider import (
             InstrumentRuleProvider,
         )
-        from ditto_datahub.stores.metadata.fee_schedule_reader import FeeScheduleRecord
+        from ditto_data.stores.metadata.fee_schedule_reader import FeeScheduleRecord
 
         provider = InstrumentRuleProvider()
         provider.load_fee_schedules([
@@ -558,11 +558,11 @@ class TestInstrumentRuleProvider:
 
     def test_get_rules_batch(self) -> None:
         from ditto_core.execution.rules import InstrumentDefinition
-        from ditto_datahub.services.strategy.instrument_rule_provider import (
+        from ditto_data.services.strategy.instrument_rule_provider import (
             InstrumentRuleProvider,
         )
-        from ditto_datahub.stores.metadata.fee_schedule_reader import FeeScheduleRecord
-        from ditto_datahub.stores.metadata.trading_rule_reader import TradingRuleRecord
+        from ditto_data.stores.metadata.fee_schedule_reader import FeeScheduleRecord
+        from ditto_data.stores.metadata.trading_rule_reader import TradingRuleRecord
 
         provider = InstrumentRuleProvider()
         provider.load_definition(InstrumentDefinition(
@@ -623,10 +623,10 @@ class TestInstrumentRuleProvider:
 **Step 3: Write implementation**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/strategy/__init__.py
+# packages/data/src/ditto_data/services/strategy/__init__.py
 """Strategy DataHub services."""
 
-from ditto_datahub.services.strategy.instrument_rule_provider import (
+from ditto_data.services.strategy.instrument_rule_provider import (
     InstrumentRuleProvider,
 )
 
@@ -634,7 +634,7 @@ __all__ = ["InstrumentRuleProvider"]
 ```
 
 ```python
-# packages/datahub/src/ditto_datahub/services/strategy/instrument_rule_provider.py
+# packages/data/src/ditto_data/services/strategy/instrument_rule_provider.py
 """InstrumentRuleProvider — 三层规则组装层 (R6).
 
 从 InstrumentRegistration + Extension 组装 InstrumentDefinition，
@@ -649,11 +649,11 @@ from ditto_core.execution.rules import (
     InstrumentDefinition,
     TradingRuleSet,
 )
-from ditto_datahub.stores.metadata.fee_schedule_reader import (
+from ditto_data.stores.metadata.fee_schedule_reader import (
     FeeScheduleReader,
     FeeScheduleRecord,
 )
-from ditto_datahub.stores.metadata.trading_rule_reader import (
+from ditto_data.stores.metadata.trading_rule_reader import (
     TradingRuleReader,
     TradingRuleRecord,
 )
@@ -733,14 +733,14 @@ class InstrumentRuleProvider:
 **Step 4: Run test to verify it passes**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/services/strategy/test_instrument_rule_provider_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/services/strategy/test_instrument_rule_provider_unit.py -v
 ```
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/strategy/ \
-        packages/datahub/tests/unit/services/strategy/
+git add packages/data/src/ditto_data/services/strategy/ \
+        packages/data/tests/unit/services/strategy/
 git commit -m "feat(datahub): add InstrumentRuleProvider with three-layer rule assembly"
 ```
 
@@ -749,9 +749,9 @@ git commit -m "feat(datahub): add InstrumentRuleProvider with three-layer rule a
 ## Task 4: DataHub 层完整验证 `[S]` ✅
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/stores/metadata/test_trading_rule_store_unit.py \
-                        packages/datahub/tests/unit/stores/metadata/test_fee_schedule_store_unit.py \
-                        packages/datahub/tests/unit/services/strategy/ -v
+pixi run -e dev pytest packages/data/tests/unit/stores/metadata/test_trading_rule_store_unit.py \
+                        packages/data/tests/unit/stores/metadata/test_fee_schedule_store_unit.py \
+                        packages/data/tests/unit/services/strategy/ -v
 pixi run -e dev check
 ```
 
@@ -767,12 +767,12 @@ pixi run -e dev check
 3. **泛型基类提取**: 代码简化器将 PIT 查询逻辑提取到 `_pit_base.py` 中的 `PITRecordReader[RecordT]` / `PITRecordWriter[RecordT]` / `PITRecord` Protocol，TradingRuleReader/Writer 和 FeeScheduleReader/Writer 继承自泛型基类。
 
 **新增文件:**
-- `packages/datahub/src/ditto_datahub/stores/metadata/_pit_base.py` — 泛型 PIT 基类
-- `packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_reader.py`
-- `packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_writer.py`
-- `packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_reader.py`
-- `packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_writer.py`
-- `packages/datahub/src/ditto_datahub/services/strategy/instrument_rule_provider.py`
-- `packages/datahub/tests/unit/stores/metadata/test_trading_rule_store_unit.py`
-- `packages/datahub/tests/unit/stores/metadata/test_fee_schedule_store_unit.py`
-- `packages/datahub/tests/unit/services/strategy/test_instrument_rule_provider_unit.py`
+- `packages/data/src/ditto_data/stores/metadata/_pit_base.py` — 泛型 PIT 基类
+- `packages/data/src/ditto_data/stores/metadata/trading_rule_reader.py`
+- `packages/data/src/ditto_data/stores/metadata/trading_rule_writer.py`
+- `packages/data/src/ditto_data/stores/metadata/fee_schedule_reader.py`
+- `packages/data/src/ditto_data/stores/metadata/fee_schedule_writer.py`
+- `packages/data/src/ditto_data/services/strategy/instrument_rule_provider.py`
+- `packages/data/tests/unit/stores/metadata/test_trading_rule_store_unit.py`
+- `packages/data/tests/unit/stores/metadata/test_fee_schedule_store_unit.py`
+- `packages/data/tests/unit/services/strategy/test_instrument_rule_provider_unit.py`

@@ -17,13 +17,13 @@ from ditto_engine.accounting.order_book import (
     OrderSide,
     OrderType,
 )
+from ditto_engine.alpha.models import TargetPortfolio
 from ditto_engine.backtest.data_feed import MarketSnapshot, Slice
 from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineOptions
-from ditto_engine.backtest.risk.pre_trade import (
+from ditto_engine.risk.pre_trade import (
     Decision,
     OrderCheckResult,
 )
-from ditto_engine.strategy.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------
 # Helpers

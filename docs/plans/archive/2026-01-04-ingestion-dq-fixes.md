@@ -228,8 +228,8 @@ git commit -m "fix(ingestion): 修复 adj_factor SID 映射列名
 #### Task 2.1: 修复 SQLite datetime.date 绑定问题
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/repositories/security.py`
-- Modify: `packages/datahub/tests/unit/repositories/test_security_repository.py`
+- Modify: `packages/data/src/ditto_data/repositories/security.py`
+- Modify: `packages/data/tests/unit/repositories/test_security_repository.py`
 
 **Step 1: 添加日期转换函数**
 
@@ -288,14 +288,14 @@ def test_register_batch_with_date():
 **Step 4: 运行测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/repositories/test_security_repository.py::test_register_batch_with_date -v
+pixi run -e dev pytest packages/data/tests/unit/repositories/test_security_repository.py::test_register_batch_with_date -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/repositories/security.py
-git add packages/datahub/tests/unit/repositories/test_security_repository.py
+git add packages/data/src/ditto_data/repositories/security.py
+git add packages/data/tests/unit/repositories/test_security_repository.py
 git commit -m "fix(datahub): 修复 SQLite 日期绑定问题
 
 - 添加 _format_date_for_sqlite() 转换函数
@@ -310,9 +310,9 @@ git commit -m "fix(datahub): 修复 SQLite 日期绑定问题
 
 **Files:**
 - Modify: `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py:30-90`
-- Modify: `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py:15-44, 77-97`
-- Modify: `packages/datahub/src/ditto_datahub/repositories/bars.py:396-440`
-- Create: `packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py`
+- Modify: `packages/data/src/ditto_data/dq/checkers/statistical.py:15-44, 77-97`
+- Modify: `packages/data/src/ditto_data/repositories/bars.py:396-440`
+- Create: `packages/data/tests/unit/dq/checkers/test_statistical_checker.py`
 
 **Step 1: 在 dq_batch_check 中推断 asset_class**
 
@@ -413,15 +413,15 @@ def test_zscore_with_asset_class():
 **Step 5: 运行测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py -v
+pixi run -e dev pytest packages/data/tests/unit/dq/checkers/test_statistical_checker.py -v
 ```
 
 **Step 6: 提交**
 
 ```bash
 git add apps/server/src/ditto_port/ingestion/tasks/dq_batch.py
-git add packages/datahub/src/ditto_datahub/dq/checkers/statistical.py
-git add packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py
+git add packages/data/src/ditto_data/dq/checkers/statistical.py
+git add packages/data/tests/unit/dq/checkers/test_statistical_checker.py
 git commit -m "fix(dq): 修复 market_wide 查询 asset_class 缺失
 
 - dq_batch_check 根据 dataset 推断 asset_class
@@ -437,8 +437,8 @@ git commit -m "fix(dq): 修复 market_wide 查询 asset_class 缺失
 #### Task 3.1: 统一 SID 范围到百万级
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/types.py:8-26`
-- Create: `packages/datahub/migrations/002_unify_sid_range.py`
+- Modify: `packages/data/src/ditto_data/types.py:8-26`
+- Create: `packages/data/migrations/002_unify_sid_range.py`
 
 **Step 1: 修改 types.py 中的 SidRange**
 
@@ -478,8 +478,8 @@ def upgrade():
 **Step 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/types.py
-git add packages/datahub/migrations/002_unify_sid_range.py
+git add packages/data/src/ditto_data/types.py
+git add packages/data/migrations/002_unify_sid_range.py
 git commit -m "refactor(datahub): 统一 SID 范围到百万级
 
 - 修改 SidRange 使用百万级范围(1M/2M/3M)
@@ -583,13 +583,13 @@ git commit -m "refactor(ingestion): 明确 backfill 并发策略
 
 ```bash
 # 单元测试
-pixi run -e dev pytest packages/datahub/tests/ -v -m unit
+pixi run -e dev pytest packages/data/tests/ -v -m unit
 
 # 集成测试
 pixi run -e dev pytest apps/server/tests/ -v -m integration
 
 # 覆盖率检查
-pixi run -e dev pytest --cov=ditto_datahub --cov=ditto_port \
+pixi run -e dev pytest --cov=ditto_data --cov=ditto_port \
     --cov-report=html --cov-fail-under=80
 ```
 
@@ -604,7 +604,7 @@ pixi run -e dev pre-commit-run
 #### Task 4.2: 更新文档
 
 **Files:**
-- Modify: `packages/datahub/README.md`
+- Modify: `packages/data/README.md`
 - Modify: `docs/design/09_data_quality_design.md`
 - Create: `docs/adr/XXXX-ingestion-dq-fixes.md`
 
@@ -640,7 +640,7 @@ pixi run -e dev pre-commit-run
 **Step 2: 提交文档**
 
 ```bash
-git add packages/datahub/README.md
+git add packages/data/README.md
 git add docs/design/09_data_quality_design.md
 git add docs/adr/XXXX-ingestion-dq-fixes.md
 git commit -m "docs: 更新 DQ 系统修复文档
@@ -685,10 +685,10 @@ git commit -m "docs: 更新 DQ 系统修复文档
 ## 关键实施文件清单
 
 1. `apps/server/src/ditto_port/ingestion/services/coordinator.py`
-2. `packages/datahub/src/ditto_datahub/repositories/security.py`
-3. `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py`
+2. `packages/data/src/ditto_data/repositories/security.py`
+3. `packages/data/src/ditto_data/dq/checkers/statistical.py`
 4. `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py`
-5. `packages/datahub/src/ditto_datahub/types.py`
+5. `packages/data/src/ditto_data/types.py`
 6. `apps/server/src/ditto_port/ingestion/services/backfill.py`
 
 ---

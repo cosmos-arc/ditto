@@ -23,12 +23,7 @@ from ditto_engine.accounting.order_book import (
     OrderType,
     StateTransitionError,
 )
-from ditto_engine.backtest.risk.pre_trade import (
-    BuyingPowerCheck,
-    CompositePreTradeCheck,
-    LotSizeCheck,
-    PreTradeContext,
-)
+from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.backtest.statistics import ExecutionAuditCollector
 from ditto_engine.execution.brokerage import BacktestBrokerage, ProcessInput
 from ditto_engine.execution.planner import SimpleExecutionPlanner
@@ -43,7 +38,12 @@ from ditto_engine.execution.rules import (
     InstrumentRules,
     TradingRuleSet,
 )
-from ditto_engine.strategy.context import StrategyContext
+from ditto_engine.risk.pre_trade import (
+    BuyingPowerCheck,
+    CompositePreTradeCheck,
+    LotSizeCheck,
+    PreTradeContext,
+)
 
 from .conftest import (
     INITIAL_CASH,
@@ -421,7 +421,7 @@ class TestPendingAwarePlanner:
             order_book=ob.readonly_view(),
         )
 
-        from ditto_engine.strategy.models import TargetPortfolio
+        from ditto_engine.alpha.models import TargetPortfolio
 
         # Target: 0 weight → wants to exit ETF-001
         target = TargetPortfolio(
@@ -465,7 +465,7 @@ class TestPlannerLock:
             order_book=OrderBookReadOnly({}),
         )
 
-        from ditto_engine.strategy.models import TargetPortfolio
+        from ditto_engine.alpha.models import TargetPortfolio
 
         target = TargetPortfolio(
             trade_date="2026-01-05",
@@ -1208,15 +1208,15 @@ class TestSuspendedE2E:
         """is_suspended=True 的标的不产生成交。"""
 
         import polars as pl
+        from ditto_engine.alpha.templates.etf_rotation import (
+            ETFRotationConfig,
+            build_etf_rotation_pipeline,
+        )
         from ditto_engine.backtest.engine import (
             EngineConfig,
             EngineLoop,
             EngineMode,
             EngineOptions,
-        )
-        from ditto_engine.strategy.templates.etf_rotation import (
-            ETFRotationConfig,
-            build_etf_rotation_pipeline,
         )
 
         from .conftest import (
@@ -1324,6 +1324,10 @@ class TestExitOrderRules:
 
         import polars as pl
         from ditto_engine.accounting.position import Position
+        from ditto_engine.alpha.templates.etf_rotation import (
+            ETFRotationConfig,
+            build_etf_rotation_pipeline,
+        )
         from ditto_engine.backtest.engine import (
             EngineConfig,
             EngineLoop,
@@ -1331,10 +1335,6 @@ class TestExitOrderRules:
             EngineOptions,
         )
         from ditto_engine.execution.rules import InMemoryRuleProvider
-        from ditto_engine.strategy.templates.etf_rotation import (
-            ETFRotationConfig,
-            build_etf_rotation_pipeline,
-        )
 
         from .conftest import (
             INSTRUMENT_IDS,
@@ -1469,6 +1469,10 @@ class TestRuleRefsPreserved:
     def test_rule_refs_all_versions_preserved(self, tmp_path) -> None:
         """跨 3 日运行 — 不同 as_of_date 的规则版本都被保留。"""
 
+        from ditto_engine.alpha.templates.etf_rotation import (
+            ETFRotationConfig,
+            build_etf_rotation_pipeline,
+        )
         from ditto_engine.backtest.engine import (
             EngineConfig,
             EngineLoop,
@@ -1476,10 +1480,6 @@ class TestRuleRefsPreserved:
             EngineOptions,
         )
         from ditto_engine.execution.rules import InMemoryRuleProvider
-        from ditto_engine.strategy.templates.etf_rotation import (
-            ETFRotationConfig,
-            build_etf_rotation_pipeline,
-        )
 
         from .conftest import (
             INSTRUMENT_IDS,

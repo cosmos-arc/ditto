@@ -7,8 +7,8 @@ from typing import Any
 import orjson
 import polars as pl
 import typer
-from ditto_datahub.services.metadata import SecurityQuery
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.metadata import SecurityQuery
+from ditto_data.services.metadata_service import MetadataService
 from rich.console import Console
 from rich.table import Table
 

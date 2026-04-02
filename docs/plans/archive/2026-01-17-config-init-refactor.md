@@ -10,13 +10,13 @@
 
 | 问题 | 描述 | 影响 |
 |------|------|------|
-| **分层违规** | `packages/datahub/src/ditto_datahub/cli/init_dq_config.py` 存在于数据层 | DataHub 不应包含 CLI 工具 |
+| **分层违规** | `packages/data/src/ditto_data/cli/init_dq_config.py` 存在于数据层 | DataHub 不应包含 CLI 工具 |
 | **职责混乱** | 配置初始化逻辑分散，缺乏统一协调 | 难以维护和扩展 |
 | **依赖倒置** | 数据层提供"工具"而非"能力" | 违反 `port → datahub → foundation` 依赖原则 |
 
 ### 需要初始化的配置
 
-1. **DQ 配置**：`packages/datahub/config/dq_rules/*.yml` → `{data_root}/config/dq/`
+1. **DQ 配置**：`packages/data/config/dq_rules/*.yml` → `{data_root}/config/dq/`
 2. **数据库 Schema**：SQLite 表结构初始化
 3. **数据集配置**：datasets.yaml（未来扩展）
 
@@ -76,7 +76,7 @@ class ConfigInitCoordinator:
 
 ### 2. DataHub 提供者（新建）
 
-**文件**：`packages/datahub/src/ditto_datahub/init_providers.py`
+**文件**：`packages/data/src/ditto_data/init_providers.py`
 
 **实现类**：
 - `DQConfigProvider` - DQ 配置初始化（复制 YAML 文件）
@@ -109,7 +109,7 @@ ditto init
 **添加自动初始化**：
 ```python
 from ditto_foundation.config.initializer import get_config_coordinator, InitScope
-from ditto_datahub.init_providers import register_datahub_providers
+from ditto_data.init_providers import register_datahub_providers
 
 register_datahub_providers()
 coordinator = get_config_coordinator()
@@ -123,7 +123,7 @@ coordinator.initialize(scope=InitScope.STARTUP)  # 自动检测并初始化
 | 文件 | 用途 |
 |------|------|
 | `packages/foundation/src/ditto_foundation/config/initializer.py` | 配置初始化框架 |
-| `packages/datahub/src/ditto_datahub/init_providers.py` | DataHub 配置提供者 |
+| `packages/data/src/ditto_data/init_providers.py` | DataHub 配置提供者 |
 | `apps/port/src/ditto_port/cli/commands/init.py` | CLI 命令实现 |
 
 ### 需要修改的文件
@@ -131,7 +131,7 @@ coordinator.initialize(scope=InitScope.STARTUP)  # 自动检测并初始化
 | 文件 | 修改内容 |
 |------|---------|
 | `packages/foundation/src/ditto_foundation/config/__init__.py` | 导出 `initializer` 模块 |
-| `packages/datahub/src/ditto_datahub/__init__.py` | 导出 `register_datahub_providers` |
+| `packages/data/src/ditto_data/__init__.py` | 导出 `register_datahub_providers` |
 | `apps/port/src/ditto_port/cli/main.py` | 添加 `init` 命令组 |
 | `apps/port/src/ditto_port/main.py` | lifespan 中添加自动初始化 |
 
@@ -139,7 +139,7 @@ coordinator.initialize(scope=InitScope.STARTUP)  # 自动检测并初始化
 
 | 文件 | 原因 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/cli/` | 违反分层架构 |
+| `packages/data/src/ditto_data/cli/` | 违反分层架构 |
 
 ## 实现步骤
 
@@ -153,11 +153,11 @@ coordinator.initialize(scope=InitScope.STARTUP)  # 自动检测并初始化
 
 ### 阶段 2：DataHub 适配 ✅
 
-1. ✅ 创建 `packages/datahub/src/ditto_datahub/init_providers.py`
+1. ✅ 创建 `packages/data/src/ditto_data/init_providers.py`
 2. ✅ 实现 `DQConfigProvider`（迁移 `init_dq_config.py` 逻辑）
 3. ✅ 实现 `DatabaseSchemaProvider`（使用 `SQLitePool.init_schema()`）
 4. ✅ 实现 `register_datahub_providers()` 函数
-5. ✅ 删除 `packages/datahub/src/ditto_datahub/cli/` 目录
+5. ✅ 删除 `packages/data/src/ditto_data/cli/` 目录
 6. ✅ 添加单元测试（14 个测试通过）
 
 ### 阶段 3：Port 应用集成 ✅

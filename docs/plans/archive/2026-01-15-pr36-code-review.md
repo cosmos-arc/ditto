@@ -39,7 +39,7 @@
 
 #### ✅ 已修复项
 
-**重要** - `packages/datahub/src/ditto_datahub/stores/security_store.py:405-410` ✅
+**重要** - `packages/data/src/ditto_data/stores/security_store.py:405-410` ✅
 ```python
 # 修复：恢复条件判断
 if is_active is not None:
@@ -49,7 +49,7 @@ if is_active is not None:
 **Commit**: f440837dd189d2eee57c3c09efcdf5e1fb93aa23
 **修复内容**: 恢复 `if is_active is not None` 条件判断，添加 `is_active=None` 测试用例
 
-**次要** - `packages/datahub/src/ditto_datahub/runtime/pit_helper.py` ✅
+**次要** - `packages/data/src/ditto_data/runtime/pit_helper.py` ✅
 - SQL 安全注释已恢复详细说明
 - **Commit**: 67a1f01
 - **修复内容**: 为两处 `# noqa: S608` 添加了详细的安全说明，解释输入验证机制
@@ -63,8 +63,8 @@ if is_active is not None:
 #### ✅ 已修复项
 
 **🔴 禁止使用标准库 json 模块** ✅
-- `packages/datahub/src/ditto_datahub/stores/quarantine_store.py` ✅ (Commit: 08a6bef)
-- `packages/datahub/src/ditto_datahub/repositories/security.py` ✅ (Commit: 383b044)
+- `packages/data/src/ditto_data/stores/quarantine_store.py` ✅ (Commit: 08a6bef)
+- `packages/data/src/ditto_data/repositories/security.py` ✅ (Commit: 383b044)
 - `packages/foundation/src/ditto_foundation/observability/logging.py` ✅ (Commit: f8d01ab)
 
 **修复方案**: 全部替换为 `import orjson`
@@ -205,7 +205,7 @@ class ChecksumCompute:
 | 1 | `packages/foundation/src/ditto_foundation/util/checksum.py` | **新建** | 统一 ChecksumCompute 工具类 |
 | 2 | `packages/foundation/src/ditto_foundation/util/__init__.py` | **修改** | 导出 ChecksumCompute |
 | 3 | `apps/port/src/ditto_port/services/ingestion/coordinator.py` | **修改** | 删除提前计算；修改 calendar；移除 fallback |
-| 4 | `packages/datahub/src/ditto_datahub/repositories/security.py` | **修改** | register_batch 使用 ChecksumCompute，添加 source |
+| 4 | `packages/data/src/ditto_data/repositories/security.py` | **修改** | register_batch 使用 ChecksumCompute，添加 source |
 | 5 | `packages/foundation/tests/unit/util/test_checksum_unit.py` | **新建** | ChecksumCompute 单元测试 |
 | 6 | `apps/port/src/ditto_port/services/ingestion/metadata.py` | **修改** | 删除 compute_checksum()、_json_serializable()，更新 compare_data() 使用 ChecksumCompute |
 | 7 | `apps/port/tests/unit/ingestion/test_metadata_unit.py` | **修改** | 删除 TestComputeChecksum、TestJsonSerializable 测试类 |
@@ -228,7 +228,7 @@ class ChecksumCompute:
 
 #### ✅ 问题 1: save_log() 竞态条件 - 已修复
 
-**文件**: `packages/datahub/src/ditto_datahub/stores/ingestion_log.py`
+**文件**: `packages/data/src/ditto_data/stores/ingestion_log.py`
 
 **修复方案**：
 - 使用 SQLite 的 `INSERT ... ON CONFLICT ... DO UPDATE` 语法实现原子化 UPSERT
@@ -280,7 +280,7 @@ Thread B: INSERT → PRIMARY KEY 冲突 OR 覆盖 A
 
 #### 对比：SidAllocator 的正确实现
 
-**文件**: `packages/datahub/src/ditto_datahub/runtime/sid_allocator.py:37-75`
+**文件**: `packages/data/src/ditto_data/runtime/sid_allocator.py:37-75`
 
 ```python
 # ✅ 正确: 使用 BEGIN IMMEDIATE 确保原子性
@@ -517,7 +517,7 @@ def _setup_observability(self, settings: Any) -> None:
 
 #### 问题 1: UniverseRepository 绕过 Store 层 ✅
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/universe.py:316-327`
+**文件**: `packages/data/src/ditto_data/repositories/universe.py:316-327`
 
 **当前实现（违反封装）**:
 ```python
@@ -571,7 +571,7 @@ security_rows = client.fetchall(query, sids)
 
 #### SecurityStore 已有相同功能
 
-**文件**: `packages/datahub/src/ditto_datahub/stores/security_store.py:469-493`
+**文件**: `packages/data/src/ditto_data/stores/security_store.py:469-493`
 
 ```python
 def enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -596,7 +596,7 @@ def enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
 
 #### PR 的"修复"只是掩盖问题
 
-**文件**: `packages/datahub/src/ditto_datahub/stores/universe_store.py:45-48`
+**文件**: `packages/data/src/ditto_data/stores/universe_store.py:45-48`
 
 ```python
 @property
@@ -663,10 +663,10 @@ class UniverseRepository:
 
 | # | 文件 | 修改类型 | 描述 |
 |---|------|----------|------|
-| 1 | `packages/datahub/src/ditto_datahub/repositories/universe.py` | **修改** | 添加 `security_store` 依赖注入；直接调用 `self._security_store.enrich_with_symbol()` |
-| 2 | `packages/datahub/src/ditto_datahub/stores/universe_store.py` | **修改** | 删除 `client` property；简化 `get_constituents_sids` 复用 `get_constituents` |
-| 3 | `packages/datahub/src/ditto_datahub/hub.py` | **修改** | `UniverseRepository` 初始化传入 `security_store` |
-| 4 | `packages/datahub/tests/unit/repositories/test_universe_repository_unit.py` | **修改** | 添加 `SecurityStore` 依赖注入测试 |
+| 1 | `packages/data/src/ditto_data/repositories/universe.py` | **修改** | 添加 `security_store` 依赖注入；直接调用 `self._security_store.enrich_with_symbol()` |
+| 2 | `packages/data/src/ditto_data/stores/universe_store.py` | **修改** | 删除 `client` property；简化 `get_constituents_sids` 复用 `get_constituents` |
+| 3 | `packages/data/src/ditto_data/hub.py` | **修改** | `UniverseRepository` 初始化传入 `security_store` |
+| 4 | `packages/data/tests/unit/repositories/test_universe_repository_unit.py` | **修改** | 添加 `SecurityStore` 依赖注入测试 |
 
 **测试验证**:
 - ✅ 所有 36 个 UniverseRepository 和 UniverseStore 测试通过
@@ -684,7 +684,7 @@ class UniverseRepository:
 
 #### 问题 2: DataHub 生命周期管理设计不合理
 
-**文件**: `packages/datahub/src/ditto_datahub/hub.py`
+**文件**: `packages/data/src/ditto_data/hub.py`
 
 **当前实现分析**:
 
@@ -1279,12 +1279,12 @@ class IngestionResult:
 ### P0 修复文件（必改）
 ```
 apps/port/src/ditto_port/services/ingestion/coordinator.py
-packages/datahub/src/ditto_datahub/stores/ingestion_log.py
-packages/datahub/src/ditto_datahub/stores/security_store.py
-packages/datahub/src/ditto_datahub/stores/quarantine_store.py
-packages/datahub/src/ditto_datahub/repositories/security.py
-packages/datahub/src/ditto_datahub/repositories/universe.py
-packages/datahub/src/ditto_datahub/stores/universe_store.py (移除 client property)
+packages/data/src/ditto_data/stores/ingestion_log.py
+packages/data/src/ditto_data/stores/security_store.py
+packages/data/src/ditto_data/stores/quarantine_store.py
+packages/data/src/ditto_data/repositories/security.py
+packages/data/src/ditto_data/repositories/universe.py
+packages/data/src/ditto_data/stores/universe_store.py (移除 client property)
 packages/foundation/src/ditto_foundation/observability/logging.py
 ```
 
@@ -1293,13 +1293,13 @@ packages/foundation/src/ditto_foundation/observability/logging.py
 apps/port/src/ditto_port/services/ingestion/metadata.py
 apps/port/src/ditto_port/cli/context.py
 packages/foundation/src/ditto_foundation/app_initializer.py
-packages/datahub/src/ditto_datahub/stores/ingestion_log.py (索引)
+packages/data/src/ditto_data/stores/ingestion_log.py (索引)
 ```
 
 ### P2 改进文件（合并后跟进）
 ```
-packages/datahub/src/ditto_datahub/hub.py (生命周期文档)
-packages/datahub/src/ditto_datahub/runtime/sqlite_pool.py (连接池重构，可选)
+packages/data/src/ditto_data/hub.py (生命周期文档)
+packages/data/src/ditto_data/runtime/sqlite_pool.py (连接池重构，可选)
 ```
 
 ### 测试文件（需新增）

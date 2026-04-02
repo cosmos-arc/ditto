@@ -158,9 +158,9 @@ graph TD
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| REWRITE | [provider.py](../packages/datahub/src/ditto_datahub/query/provider.py) | 删除 BacktestProvider + LiveProvider（类体共 172 行），替换为单一 `ServiceBackedDataProvider`（~50 行） |
-| EDIT | [query/__init__.py](../packages/datahub/src/ditto_datahub/query/__init__.py) | 导出 `ServiceBackedDataProvider`，移除 `BacktestProvider` / `LiveProvider` |
-| REWRITE | [test_backtest_provider.py](../packages/datahub/tests/unit/test_backtest_provider.py) | 重命名为 `test_service_backed_provider.py`，更新所有 `BacktestProvider` → `ServiceBackedDataProvider` |
+| REWRITE | [provider.py](../packages/data/src/ditto_data/query/provider.py) | 删除 BacktestProvider + LiveProvider（类体共 172 行），替换为单一 `ServiceBackedDataProvider`（~50 行） |
+| EDIT | [query/__init__.py](../packages/data/src/ditto_data/query/__init__.py) | 导出 `ServiceBackedDataProvider`，移除 `BacktestProvider` / `LiveProvider` |
+| REWRITE | [test_backtest_provider.py](../packages/data/tests/unit/test_backtest_provider.py) | 重命名为 `test_service_backed_provider.py`，更新所有 `BacktestProvider` → `ServiceBackedDataProvider` |
 
 **ServiceBackedDataProvider 设计**（Facade 模式 — 组合 3 个 Service，满足 DataProvider Protocol）：
 
@@ -184,7 +184,7 @@ class ServiceBackedDataProvider:
 
 | 消费者 | 导入路径 | 影响评估 |
 |--------|---------|---------|
-| `ditto_datahub.query.__init__` | re-export | 低 — 仅更新导出名 |
+| `ditto_data.query.__init__` | re-export | 低 — 仅更新导出名 |
 | `ditto_core.backtest.data_feed:200` | docstring 引用 | 低 — 仅更新注释 |
 | `apps/port/` | 无导入 | 无影响 — grep 确认零引用 |
 
@@ -212,7 +212,7 @@ class ServiceBackedDataProvider:
 | V1 | 全量 check | `pixi run -e dev check` | lint + type + test 全通过 |
 | V2 | arch-check | `pixi run -e dev arch-check` | 全部 8 个 contract 通过 |
 | V3 | 零回退引用 | `grep -rn "from ditto_kernel.pipeline\|BacktestProvider\|LiveProvider" packages/ apps/ --include="*.py"` | 返回 0 结果 |
-| V5 | 新名称生效 | `grep -rn "ServiceBackedDataProvider" packages/datahub/src/ --include="*.py"` | query/provider.py + query/__init__.py 引用正确 |
+| V5 | 新名称生效 | `grep -rn "ServiceBackedDataProvider" packages/data/src/ --include="*.py"` | query/provider.py + query/__init__.py 引用正确 |
 | V4 | Kernel __all__ 审计 | 检查 `ditto_kernel.__all__` | 15 个符号（原 18 减 3：Context, Pipeline, Stage 移除） |
 
 ---
@@ -401,16 +401,16 @@ class TestParquetProvider:
 
 1. **datahub→data 重命名**（Unit 2a）：
    - 创建 `ditto_data` 包，pyproject.toml 声明
-   - `ditto_datahub/__init__.py` 改为 re-export 层：`from ditto_data.models import *` 等
+   - `ditto_data/__init__.py` 改为 re-export 层：`from ditto_data.models import *` 等
    - 逐步迁移模块，更新 import 路径
-   - 全部迁移完成后删除 `ditto_datahub` 包
+   - 全部迁移完成后删除 `ditto_data` 包
 
 2. **compile_cache 依赖链**（Unit 2b）：
    - compile_cache.py 依赖 engine.expression + engine.materialization + engine.specs
    - 迁入 analytics 后，consumers（port/services/derived/、port/registry/datahub/derived.py）需要改为 `from ditto_analytics.compile_cache import ...`
 
 3. **R19 storage→model 违规**（Unit 2a）：
-   - datahub stores/ 中 ~30 处 `from ditto_datahub.models import ...`
+   - datahub stores/ 中 ~30 处 `from ditto_data.models import ...`
    - 迁移到 data.storage/ 后，这些 import 变为 `from ditto_data.models import ...`
    - 新增 importlinter contract `data-storage-no-model-import`，先用 `ignore_imports` 锁定现有违规
    - 后续 Phase 逐步清理

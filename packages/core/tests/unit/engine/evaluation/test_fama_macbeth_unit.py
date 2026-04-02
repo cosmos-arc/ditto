@@ -86,7 +86,7 @@ class TestFamaMacBethSingleFactor:
 
     def test_slope_matches_manual_ols(self) -> None:
         """Single-factor synthetic data: mean slope should be near beta_true."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(
             n_dates=100,
@@ -100,7 +100,7 @@ class TestFamaMacBethSingleFactor:
 
     def test_perfect_linear_relationship(self) -> None:
         """When return = alpha + beta * factor (no noise), slope should be exact."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         n = 50
         dates = [date(2024, 1, 2) + timedelta(days=i) for i in range(10)]
@@ -136,7 +136,7 @@ class TestFamaMacBethSingleFactor:
 
     def test_zero_slope_when_no_relationship(self) -> None:
         """When factor and return are independent, mean slope should be near 0."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         rng = np.random.default_rng(42)
         n_dates = 100
@@ -175,7 +175,7 @@ class TestFamaMacBethSingleFactor:
 
     def test_t_statistic_sign(self) -> None:
         """t-statistic should have the same sign as factor_exposure."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(
             n_dates=100,
@@ -190,7 +190,7 @@ class TestFamaMacBethSingleFactor:
 
     def test_negative_beta(self) -> None:
         """Negative true beta should produce negative mean slope."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(
             n_dates=100,
@@ -204,7 +204,7 @@ class TestFamaMacBethSingleFactor:
 
     def test_r_squared_avg_in_valid_range(self) -> None:
         """Average R-squared should be between 0 and 1."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(n_dates=50, n_entities=100)
         result = fama_macbeth(factor_df, return_df)
@@ -213,7 +213,7 @@ class TestFamaMacBethSingleFactor:
 
     def test_n_periods_matches_dates(self) -> None:
         """Number of periods should equal the number of unique dates."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(n_dates=50, n_entities=100)
         result = fama_macbeth(factor_df, return_df)
@@ -222,7 +222,7 @@ class TestFamaMacBethSingleFactor:
 
     def test_slopes_tuple_format(self) -> None:
         """slopes should be a tuple of (factor_name, mean_slope) tuples."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(n_dates=10, n_entities=50)
         result = fama_macbeth(factor_df, return_df)
@@ -235,7 +235,7 @@ class TestFamaMacBethSingleFactor:
 
     def test_exposure_stderr_is_nonnegative(self) -> None:
         """Standard error should be non-negative."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(n_dates=50, n_entities=100)
         result = fama_macbeth(factor_df, return_df)
@@ -253,7 +253,7 @@ class TestFamaMacBethMultiFactor:
 
     def test_multi_factor_slope_adjustment(self) -> None:
         """Adding a correlated risk factor should change the target slope."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         rng = np.random.default_rng(42)
         n_dates = 100
@@ -310,7 +310,7 @@ class TestFamaMacBethMultiFactor:
 
     def test_multi_factor_slopes_tuple_has_multiple_entries(self) -> None:
         """With risk factors, slopes tuple should contain entries for each factor."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(n_dates=50, n_entities=100)
         risk_df = _make_risk_factor_df(50, 100, seed=10)
@@ -328,7 +328,7 @@ class TestFamaMacBethMultiFactor:
 
     def test_empty_risk_factors_equivalent_to_none(self) -> None:
         """Empty risk_factors dict should behave like None."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(n_dates=50, n_entities=100)
         result_none = fama_macbeth(factor_df, return_df, risk_factors=None)
@@ -352,7 +352,7 @@ class TestFamaMacBethEdgeCases:
 
     def test_small_cross_section_returns_zero(self) -> None:
         """Fewer entities than min_cross_section should produce zero result."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(
             n_dates=10,
@@ -370,7 +370,7 @@ class TestFamaMacBethEdgeCases:
 
     def test_empty_dataframes_return_zero(self) -> None:
         """Empty input DataFrames should produce zero result."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df = pl.DataFrame(
             schema={
@@ -393,7 +393,7 @@ class TestFamaMacBethEdgeCases:
 
     def test_single_period_returns_valid_stats(self) -> None:
         """Single period should still produce valid stats."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         factor_df, return_df = _make_linear_data(n_dates=1, n_entities=100)
         result = fama_macbeth(factor_df, return_df)
@@ -404,7 +404,7 @@ class TestFamaMacBethEdgeCases:
 
     def test_custom_column_names(self) -> None:
         """Custom column name parameters should be respected."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.metrics import fama_macbeth
 
         rng = np.random.default_rng(42)
         n = 100
@@ -421,7 +421,7 @@ class TestFamaMacBethEdgeCases:
 
         factor_df = pl.DataFrame(rows_f)
         return_df = pl.DataFrame(rows_r)
-        from ditto_engine.engine.evaluation.metrics import EvaluationColumns
+        from ditto_analytics.evaluation.metrics import EvaluationColumns
 
         result = fama_macbeth(
             factor_df,
@@ -439,8 +439,8 @@ class TestFamaMacBethEdgeCases:
 
     def test_frozen_dataclass(self) -> None:
         """FamaMacBethResult should be a frozen dataclass."""
-        from ditto_engine.engine.evaluation.metrics import fama_macbeth
-        from ditto_engine.engine.evaluation.report import FamaMacBethResult
+        from ditto_analytics.evaluation.metrics import fama_macbeth
+        from ditto_analytics.evaluation.report import FamaMacBethResult
 
         factor_df, return_df = _make_linear_data(n_dates=10, n_entities=50)
         result = fama_macbeth(factor_df, return_df)

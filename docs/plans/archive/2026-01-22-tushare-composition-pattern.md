@@ -31,7 +31,7 @@ git branch --show-current
 **步骤 2: 运行基线测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_source_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/test_source_unit.py -v
 ```
 
 期望输出: 所有测试通过
@@ -39,7 +39,7 @@ pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_source_u
 **步骤 3: 检查类型**
 
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py
+pixi run -e dev type packages/data/src/ditto_data/sources/tushare/tushare_source.py
 ```
 
 期望输出: 0 errors
@@ -53,7 +53,7 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/tushare_
 **目的:** 提取共享逻辑，为专门 Source 类提供基础
 
 **文件:**
-- Create: `packages/datahub/src/ditto_datahub/sources/tushare/_base.py`
+- Create: `packages/data/src/ditto_data/sources/tushare/_base.py`
 
 **步骤 1: 创建基类文件**
 
@@ -63,7 +63,7 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/tushare_
 from __future__ import annotations
 
 from ditto_foundation import logger
-from ditto_datahub.sources.tushare.client import TushareClient
+from ditto_data.sources.tushare.client import TushareClient
 
 
 class _BaseTushareSource:
@@ -95,7 +95,7 @@ class _BaseTushareSource:
 **步骤 2: 验证类型检查**
 
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/_base.py
+pixi run -e dev type packages/data/src/ditto_data/sources/tushare/_base.py
 ```
 
 期望输出: 0 errors
@@ -103,7 +103,7 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/_base.py
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/_base.py
+git add packages/data/src/ditto_data/sources/tushare/_base.py
 git commit -m "feat(tushare): add _BaseTushareSource base class"
 ```
 
@@ -116,7 +116,7 @@ git commit -m "feat(tushare): add _BaseTushareSource base class"
 **目的:** 处理交易日历数据
 
 **文件:**
-- Create: `packages/datahub/src/ditto_datahub/sources/tushare/calendar_source.py`
+- Create: `packages/data/src/ditto_data/sources/tushare/calendar_source.py`
 
 **步骤 1: 创建 CalendarTushareAdapter 类**
 
@@ -128,9 +128,9 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import traced, logger
 
-from ditto_datahub.sources.tushare._base import _BaseTushareSource
-from ditto_datahub.sources.tushare.error_handler import tushare_fetch_error_handler
-from ditto_datahub.sources.tushare.transformer import (
+from ditto_data.sources.tushare._base import _BaseTushareSource
+from ditto_data.sources.tushare.error_handler import tushare_fetch_error_handler
+from ditto_data.sources.tushare.transformer import (
     CALENDAR_MAPPING,
     TushareDataTransformer,
 )
@@ -190,7 +190,7 @@ class CalendarTushareAdapter(_BaseTushareSource):
 **步骤 2: 验证类型检查**
 
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/calendar_source.py
+pixi run -e dev type packages/data/src/ditto_data/sources/tushare/calendar_source.py
 ```
 
 期望输出: 0 errors
@@ -198,7 +198,7 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/calendar
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/calendar_source.py
+git add packages/data/src/ditto_data/sources/tushare/calendar_source.py
 git commit -m "feat(tushare): add CalendarTushareAdapter for calendar data"
 ```
 
@@ -209,7 +209,7 @@ git commit -m "feat(tushare): add CalendarTushareAdapter for calendar data"
 **目的:** 处理股票相关数据
 
 **文件:**
-- Create: `packages/datahub/src/ditto_datahub/sources/tushare/stock_source.py`
+- Create: `packages/data/src/ditto_data/sources/tushare/stock_source.py`
 
 **步骤 1: 创建 StockTushareAdapter 类**
 
@@ -221,10 +221,10 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.sources.tushare._base import _BaseTushareSource
-from ditto_datahub.sources.tushare.error_handler import tushare_fetch_error_handler
-from ditto_datahub.sources.tushare.status_merger import StockStatusMerger
-from ditto_datahub.sources.tushare.transformer import (
+from ditto_data.sources.tushare._base import _BaseTushareSource
+from ditto_data.sources.tushare.error_handler import tushare_fetch_error_handler
+from ditto_data.sources.tushare.status_merger import StockStatusMerger
+from ditto_data.sources.tushare.transformer import (
     ADJ_FACTOR_MAPPING,
     STOCK_BASIC_MAPPING,
     STOCK_LIMIT_MAPPING,
@@ -480,7 +480,7 @@ class StockTushareAdapter(_BaseTushareSource):
 **步骤 2: 验证类型检查**
 
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/stock_source.py
+pixi run -e dev type packages/data/src/ditto_data/sources/tushare/stock_source.py
 ```
 
 期望输出: 0 errors
@@ -488,7 +488,7 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/stock_so
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/stock_source.py
+git add packages/data/src/ditto_data/sources/tushare/stock_source.py
 git commit -m "feat(tushare): add StockTushareAdapter for stock data"
 ```
 
@@ -499,7 +499,7 @@ git commit -m "feat(tushare): add StockTushareAdapter for stock data"
 **目的:** 处理 ETF 相关数据
 
 **文件:**
-- Create: `packages/datahub/src/ditto_datahub/sources/tushare/etf_source.py`
+- Create: `packages/data/src/ditto_data/sources/tushare/etf_source.py`
 
 **步骤 1: 创建 ETFTushareAdapter 类**
 
@@ -511,9 +511,9 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import traced, logger
 
-from ditto_datahub.sources.tushare._base import _BaseTushareSource
-from ditto_datahub.sources.tushare.error_handler import tushare_fetch_error_handler
-from ditto_datahub.sources.tushare.transformer import (
+from ditto_data.sources.tushare._base import _BaseTushareSource
+from ditto_data.sources.tushare.error_handler import tushare_fetch_error_handler
+from ditto_data.sources.tushare.transformer import (
     ETF_BASIC_MAPPING,
     FUND_ADJ_MAPPING,
     TushareDataTransformer,
@@ -645,7 +645,7 @@ class ETFTushareAdapter(_BaseTushareSource):
 **步骤 2: 验证类型检查**
 
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/etf_source.py
+pixi run -e dev type packages/data/src/ditto_data/sources/tushare/etf_source.py
 ```
 
 期望输出: 0 errors
@@ -653,7 +653,7 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/etf_sour
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/etf_source.py
+git add packages/data/src/ditto_data/sources/tushare/etf_source.py
 git commit -m "feat(tushare): add ETFTushareAdapter for ETF data"
 ```
 
@@ -666,13 +666,13 @@ git commit -m "feat(tushare): add ETFTushareAdapter for ETF data"
 **目的:** 更新 TushareSource 使用组合模式，保持向后兼容
 
 **文件:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/tushare_source.py`
 
 **步骤 1: 备份并读取当前实现**
 
 ```bash
 # 查看当前文件行数
-wc -l packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py
+wc -l packages/data/src/ditto_data/sources/tushare/tushare_source.py
 ```
 
 期望输出: 约 426 行
@@ -688,11 +688,11 @@ from __future__ import annotations
 
 import polars as pl
 
-from ditto_datahub.sources.base import DataSource
-from ditto_datahub.sources.tushare._base import _BaseTushareSource
-from ditto_datahub.sources.tushare.calendar_source import CalendarTushareAdapter
-from ditto_datahub.sources.tushare.etf_source import ETFTushareAdapter
-from ditto_datahub.sources.tushare.stock_source import StockTushareAdapter
+from ditto_data.sources.base import DataSource
+from ditto_data.sources.tushare._base import _BaseTushareSource
+from ditto_data.sources.tushare.calendar_source import CalendarTushareAdapter
+from ditto_data.sources.tushare.etf_source import ETFTushareAdapter
+from ditto_data.sources.tushare.stock_source import StockTushareAdapter
 
 
 class TushareSource(DataSource):
@@ -928,7 +928,7 @@ class TushareSource(DataSource):
 **步骤 3: 验证文件行数**
 
 ```bash
-wc -l packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py
+wc -l packages/data/src/ditto_data/sources/tushare/tushare_source.py
 ```
 
 期望输出: < 250 行（从 426 行大幅减少）
@@ -936,7 +936,7 @@ wc -l packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py
 **步骤 4: 验证类型检查**
 
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py
+pixi run -e dev type packages/data/src/ditto_data/sources/tushare/tushare_source.py
 ```
 
 期望输出: 0 errors
@@ -944,7 +944,7 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/tushare_
 **步骤 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py
+git add packages/data/src/ditto_data/sources/tushare/tushare_source.py
 git commit -m "refactor(tushare): use composition pattern for TushareSource"
 ```
 
@@ -957,12 +957,12 @@ git commit -m "refactor(tushare): use composition pattern for TushareSource"
 **目的:** 确保新类可以被正确导入
 
 **文件:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/__init__.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/__init__.py`
 
 **步骤 1: 读取当前导出**
 
 ```bash
-cat packages/datahub/src/ditto_datahub/sources/tushare/__init__.py
+cat packages/data/src/ditto_data/sources/tushare/__init__.py
 ```
 
 **步骤 2: 更新导出（如果需要）**
@@ -976,7 +976,7 @@ cat packages/datahub/src/ditto_datahub/sources/tushare/__init__.py
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/__init__.py
+git add packages/data/src/ditto_data/sources/tushare/__init__.py
 git commit -m "chore(tushare): update module exports"
 ```
 
@@ -991,7 +991,7 @@ git commit -m "chore(tushare): update module exports"
 **步骤 1: 运行 Tushare 单元测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_source_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/test_source_unit.py -v
 ```
 
 期望输出: 所有测试通过（保持向后兼容）
@@ -999,7 +999,7 @@ pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_source_u
 **步骤 2: 运行所有 Tushare 相关测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/ -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/ -v
 ```
 
 期望输出: 所有测试通过
@@ -1048,13 +1048,13 @@ pixi run -e dev ci
 
 ```bash
 # 检查主文件行数
-wc -l packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py
+wc -l packages/data/src/ditto_data/sources/tushare/tushare_source.py
 
 # 检查所有新文件
-wc -l packages/datahub/src/ditto_datahub/sources/tushare/_base.py
-wc -l packages/datahub/src/ditto_datahub/sources/tushare/calendar_source.py
-wc -l packages/datahub/src/ditto_datahub/sources/tushare/stock_source.py
-wc -l packages/datahub/src/ditto_datahub/sources/tushare/etf_source.py
+wc -l packages/data/src/ditto_data/sources/tushare/_base.py
+wc -l packages/data/src/ditto_data/sources/tushare/calendar_source.py
+wc -l packages/data/src/ditto_data/sources/tushare/stock_source.py
+wc -l packages/data/src/ditto_data/sources/tushare/etf_source.py
 ```
 
 期望输出:

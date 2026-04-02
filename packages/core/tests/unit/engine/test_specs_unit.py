@@ -3,8 +3,7 @@
 from typing import get_args
 
 import pytest
-from ditto_engine.engine.errors import DerivedNotImplementedError
-from ditto_engine.engine.specs import (
+from ditto_engine.specs import (
     CalendarId,
     DerivedRole,
     DerivedSpec,
@@ -12,7 +11,6 @@ from ditto_engine.engine.specs import (
     GrainId,
     MaterializationProfile,
     TimeSpec,
-    validate_derived_spec,
 )
 
 
@@ -161,36 +159,6 @@ class TestDerivedSpec:
 
         assert spec.effective_time_keys == ("session_date", "snapshot_time")
 
-    def test_validate_spec_rejects_composite_entity_keys(self) -> None:
-        """Composite keys are reserved but not yet supported."""
-        spec = DerivedSpec(
-            id="factor.multi_key",
-            version=1,
-            role=DerivedRole.FACTOR,
-            materialization_profile=MaterializationProfile.SERIES,
-            expression="close",
-            entity_keys=("instrument_id", "exchange"),
-        )
-
-        with pytest.raises(DerivedNotImplementedError, match="复合键已预留、暂未实现"):
-            validate_derived_spec(spec)
-
-    def test_validate_spec_rejects_intraday_grain(self) -> None:
-        """Intraday grain is reserved but not yet implemented."""
-        spec = DerivedSpec(
-            id="factor.intraday_alpha",
-            version=1,
-            role=DerivedRole.FACTOR,
-            materialization_profile=MaterializationProfile.SERIES,
-            expression="close",
-            grain="1m",
-        )
-
-        with pytest.raises(
-            DerivedNotImplementedError, match="grain='1m' 已预留、暂未实现"
-        ):
-            validate_derived_spec(spec)
-
     def test_no_pit_required_or_normalization_fields(self) -> None:
         """DerivedSpec should not have pit_required or normalization_preset."""
         spec = DerivedSpec(
@@ -228,15 +196,3 @@ class TestDerivedSpec:
         assert spec.time_spec is ts
         assert spec.time_spec is not None
         assert spec.time_spec.event_time_key == "trade_date"
-
-    def test_validate_spec_no_normalization_validation(self) -> None:
-        """validate_spec should not check normalization_preset."""
-        spec = DerivedSpec(
-            id="factor.simple",
-            version=1,
-            role=DerivedRole.FACTOR,
-            materialization_profile=MaterializationProfile.SERIES,
-            expression="close",
-        )
-        # Should not raise
-        validate_derived_spec(spec)

@@ -3,23 +3,23 @@
 from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_container, provide
-from ditto_datahub.models.strategy import (
+from ditto_data.models.strategy import (
     ArtifactKind,
     StrategyArtifactRecord,
     StrategySpecRecord,
 )
-from ditto_datahub.models.strategy_audit import RiskScanPayload, RiskScope
-from ditto_datahub.services import DerivedCatalogService
-from ditto_datahub.services.audit import ExecutionAuditService
-from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
-from ditto_datahub.services.strategy.strategy_artifact_service import (
+from ditto_data.models.strategy_audit import RiskScanPayload, RiskScope
+from ditto_data.services import DerivedCatalogService
+from ditto_data.services.audit import ExecutionAuditService
+from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotService
+from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_datahub.services.strategy.strategy_catalog_service import (
+from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_datahub.services.strategy.strategy_run_service import StrategyRunService
-from ditto_datahub.sources.source import DataSources
+from ditto_data.services.strategy.strategy_run_service import StrategyRunService
+from ditto_data.sources.source import DataSources
 from ditto_interfaces.registry.datahub import RuntimeProvider
 from ditto_interfaces.registry.infra import ConfigProvider
 

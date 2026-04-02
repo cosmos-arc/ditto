@@ -1,20 +1,20 @@
 """DataHub 层 - Macro Domain Provider。"""
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.services.macro_service import MacroService
-from ditto_datahub.stores.macro.indicator.indicator_reader import (
+from ditto_data.services.macro_service import MacroService
+from ditto_data.stores.macro.indicator.indicator_reader import (
     IndicatorReader as MacroIndicatorReader,
 )
-from ditto_datahub.stores.macro.indicator.indicator_writer import (
+from ditto_data.stores.macro.indicator.indicator_writer import (
     IndicatorWriter as MacroIndicatorWriter,
 )
-from ditto_datahub.stores.macro.indicator.metadata_reader import (
+from ditto_data.stores.macro.indicator.metadata_reader import (
     IndicatorMetadataReader as MacroIndicatorMetadataReader,
 )
-from ditto_datahub.stores.macro.indicator.metadata_writer import (
+from ditto_data.stores.macro.indicator.metadata_writer import (
     IndicatorMetadataWriter as MacroIndicatorMetadataWriter,
 )
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 __all__ = ["MacroProvider"]
 

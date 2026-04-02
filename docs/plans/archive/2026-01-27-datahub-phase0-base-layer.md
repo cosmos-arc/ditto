@@ -17,15 +17,15 @@
 ## 任务 1: 创建 BaseStore 抽象基类
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/stores/base/base_store.py`
-- 新建: `packages/datahub/src/ditto_datahub/stores/base/__init__.py`
+- 新建: `packages/data/src/ditto_data/stores/base/base_store.py`
+- 新建: `packages/data/src/ditto_data/stores/base/__init__.py`
 
 **步骤 1: 编写失败测试**
 
 ```python
-# packages/datahub/tests/unit/stores/base/test_base_store_unit.py
+# packages/data/tests/unit/stores/base/test_base_store_unit.py
 import pytest
-from ditto_datahub.stores.base import BaseStore
+from ditto_data.stores.base import BaseStore
 
 def test_base_store_cannot_be_instantiated():
     """BaseStore 是抽象类，不能直接实例化."""
@@ -51,13 +51,13 @@ pixi run -e dev pytest tests/unit/stores/base/test_base_store_unit.py::test_base
 **步骤 3: 实现 BaseStore 抽象基类**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/base/base_store.py
+# packages/data/src/ditto_data/stores/base/base_store.py
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from ditto_datahub.models import WriteResult
+from ditto_data.models import WriteResult
 
 
 class BaseStore(ABC):
@@ -165,8 +165,8 @@ pixi run -e dev pytest tests/unit/stores/base/test_base_store_unit.py -v
 **步骤 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/base/
-git add packages/datahub/tests/unit/stores/base/
+git add packages/data/src/ditto_data/stores/base/
+git add packages/data/tests/unit/stores/base/
 git commit -m "feat(datahub): add BaseStore abstract base class"
 ```
 
@@ -175,14 +175,14 @@ git commit -m "feat(datahub): add BaseStore abstract base class"
 ## 任务 2: 实现 ParquetStore 基类
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/stores/base/parquet_store.py`
-- 修改: `packages/datahub/src/ditto_datahub/stores/base/__init__.py`
-- 新建: `packages/datahub/tests/unit/stores/base/test_parquet_store_unit.py`
+- 新建: `packages/data/src/ditto_data/stores/base/parquet_store.py`
+- 修改: `packages/data/src/ditto_data/stores/base/__init__.py`
+- 新建: `packages/data/tests/unit/stores/base/test_parquet_store_unit.py`
 
 **步骤 1: 编写失败测试**
 
 ```python
-# packages/datahub/tests/unit/stores/base/test_parquet_store_unit.py
+# packages/data/tests/unit/stores/base/test_parquet_store_unit.py
 import polars as pl
 from pathlib import Path
 import tempfile
@@ -195,7 +195,7 @@ def test_parquet_store_write_and_read():
     data_root = Path(temp_dir)
 
     try:
-        from ditto_datahub.stores.base import ParquetStore
+        from ditto_data.stores.base import ParquetStore
 
         # 初始化 store
         store = ParquetStore(data_root)
@@ -244,7 +244,7 @@ pixi run -e dev pytest tests/unit/stores/base/test_parquet_store_unit.py::test_p
 从现有的 `ParquetStoreBase` 迁移核心功能到新的 `ParquetStore`:
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/base/parquet_store.py
+# packages/data/src/ditto_data/stores/base/parquet_store.py
 from __future__ import annotations
 
 from pathlib import Path
@@ -254,8 +254,8 @@ from typing import Any
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.models import OnDuplicate, WriteResult
-from ditto_datahub.stores.base.base_store import BaseStore
+from ditto_data.models import OnDuplicate, WriteResult
+from ditto_data.stores.base.base_store import BaseStore
 
 
 class ParquetStore(BaseStore):
@@ -470,9 +470,9 @@ class ParquetStore(BaseStore):
 **步骤 4: 更新 __init__.py**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/base/__init__.py
-from ditto_datahub.stores.base.base_store import BaseStore
-from ditto_datahub.stores.base.parquet_store import ParquetStore
+# packages/data/src/ditto_data/stores/base/__init__.py
+from ditto_data.stores.base.base_store import BaseStore
+from ditto_data.stores.base.parquet_store import ParquetStore
 
 __all__ = ["BaseStore", "ParquetStore"]
 ```
@@ -487,8 +487,8 @@ pixi run -e dev pytest tests/unit/stores/base/test_parquet_store_unit.py -v
 **步骤 6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/base/parquet_store.py
-git add packages/datahub/tests/unit/stores/base/
+git add packages/data/src/ditto_data/stores/base/parquet_store.py
+git add packages/data/tests/unit/stores/base/
 git commit -m "feat(datahub): implement ParquetStore base class"
 ```
 
@@ -497,14 +497,14 @@ git commit -m "feat(datahub): implement ParquetStore base class"
 ## 任务 3: 实现 SQLiteStore 基类
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/stores/base/sqlite_store.py`
-- 修改: `packages/datahub/src/ditto_datahub/stores/base/__init__.py`
-- 新建: `packages/datahub/tests/unit/stores/base/test_sqlite_store_unit.py`
+- 新建: `packages/data/src/ditto_data/stores/base/sqlite_store.py`
+- 修改: `packages/data/src/ditto_data/stores/base/__init__.py`
+- 新建: `packages/data/tests/unit/stores/base/test_sqlite_store_unit.py`
 
 **步骤 1: 编写失败测试**
 
 ```python
-# packages/datahub/tests/unit/stores/base/test_sqlite_store_unit.py
+# packages/data/tests/unit/stores/base/test_sqlite_store_unit.py
 import polars as pl
 import tempfile
 import shutil
@@ -516,7 +516,7 @@ def test_sqlite_store_write_and_read():
     db_path = Path(temp_dir) / "test.sqlite"
 
     try:
-        from ditto_datahub.stores.base import SQLiteStore
+        from ditto_data.stores.base import SQLiteStore
 
         # 初始化 store
         store = SQLiteStore(db_path)
@@ -569,7 +569,7 @@ pixi run -e dev pytest tests/unit/stores/base/test_sqlite_store_unit.py::test_sq
 **步骤 3: 实现 SQLiteStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/base/sqlite_store.py
+# packages/data/src/ditto_data/stores/base/sqlite_store.py
 from __future__ import annotations
 
 from datetime import date
@@ -579,8 +579,8 @@ from typing import Any
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.models import WriteResult
-from ditto_datahub.stores.base.base_store import BaseStore
+from ditto_data.models import WriteResult
+from ditto_data.stores.base.base_store import BaseStore
 
 
 class SQLiteStore(BaseStore):
@@ -877,10 +877,10 @@ class SQLiteStore(BaseStore):
 **步骤 4: 更新 __init__.py**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/base/__init__.py
-from ditto_datahub.stores.base.base_store import BaseStore
-from ditto_datahub.stores.base.parquet_store import ParquetStore
-from ditto_datahub.stores.base.sqlite_store import SQLiteStore
+# packages/data/src/ditto_data/stores/base/__init__.py
+from ditto_data.stores.base.base_store import BaseStore
+from ditto_data.stores.base.parquet_store import ParquetStore
+from ditto_data.stores.base.sqlite_store import SQLiteStore
 
 __all__ = ["BaseStore", "ParquetStore", "SQLiteStore"]
 ```
@@ -895,8 +895,8 @@ pixi run -e dev pytest tests/unit/stores/base/test_sqlite_store_unit.py -v
 **步骤 6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/base/sqlite_store.py
-git add packages/datahub/tests/unit/stores/base/
+git add packages/data/src/ditto_data/stores/base/sqlite_store.py
+git add packages/data/tests/unit/stores/base/
 git commit -m "feat(datahub): implement SQLiteStore base class"
 ```
 
@@ -905,20 +905,20 @@ git commit -m "feat(datahub): implement SQLiteStore base class"
 ## 任务 4: 重构配置系统 - 单 DATAROOT 配置
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/config/data_root.py`
-- 新建: `packages/datahub/src/ditto_datahub/config/__init__.py`
-- 修改: `packages/datahub/pixi.toml` (更新环境变量)
+- 新建: `packages/data/src/ditto_data/config/data_root.py`
+- 新建: `packages/data/src/ditto_data/config/__init__.py`
+- 修改: `packages/data/pixi.toml` (更新环境变量)
 
 **步骤 1: 编写失败测试**
 
 ```python
-# packages/datahub/tests/unit/config/test_data_root_config_unit.py
+# packages/data/tests/unit/config/test_data_root_config_unit.py
 from pathlib import Path
 import tempfile
 
 def test_data_root_config_generates_all_paths():
     """测试 DataRootConfig 能够生成所有必要的路径."""
-    from ditto_datahub.config import DataRootConfig
+    from ditto_data.config import DataRootConfig
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # 使用临时目录作为 DATAROOT
@@ -942,7 +942,7 @@ pixi run -e dev pytest tests/unit/config/test_data_root_config_unit.py::test_dat
 **步骤 3: 实现 DataRootConfig**
 
 ```python
-# packages/datahub/src/ditto_datahub/config/data_root.py
+# packages/data/src/ditto_data/config/data_root.py
 from __future__ import annotations
 
 from pathlib import Path
@@ -1105,8 +1105,8 @@ class DataRootConfig(BaseSettings):
 **步骤 4: 更新 __init__.py**
 
 ```python
-# packages/datahub/src/ditto_datahub/config/__init__.py
-from ditto_datahub.config.data_root import DataRootConfig
+# packages/data/src/ditto_data/config/__init__.py
+from ditto_data.config.data_root import DataRootConfig
 
 __all__ = ["DataRootConfig"]
 ```
@@ -1121,8 +1121,8 @@ pixi run -e dev pytest tests/unit/config/test_data_root_config_unit.py -v
 **步骤 6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/config/
-git add packages/datahub/tests/unit/config/
+git add packages/data/src/ditto_data/config/
+git add packages/data/tests/unit/config/
 git commit -m "feat(datahub): add DataRootConfig for simplified path configuration"
 ```
 
@@ -1131,19 +1131,19 @@ git commit -m "feat(datahub): add DataRootConfig for simplified path configurati
 ## 任务 5: 迁移 BarsStore 使用新基类
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/stores/bars_store.py`
+- 修改: `packages/data/src/ditto_data/stores/bars_store.py`
 
 **步骤 1: 阅读现有实现**
 
 ```bash
 # 确认现有 BarsStore 的结构
-pixi run -e dev python -c "from ditto_datahub.stores.bars_store import BarsStore; print(BarsStore.__mro__)"
+pixi run -e dev python -c "from ditto_data.stores.bars_store import BarsStore; print(BarsStore.__mro__)"
 ```
 
 **步骤 2: 重构 BarsStore 继承 ParquetStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/bars_store.py
+# packages/data/src/ditto_data/stores/bars_store.py
 """
 Market bars storage with year partitioning.
 
@@ -1161,8 +1161,8 @@ from typing import Any
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.models import OnDuplicate, WriteResult
-from ditto_datahub.stores.base.parquet_store import ParquetStore
+from ditto_data.models import OnDuplicate, WriteResult
+from ditto_data.stores.base.parquet_store import ParquetStore
 
 # Default year range for date filters
 DEFAULT_START_YEAR = 1990
@@ -1420,7 +1420,7 @@ pixi run -e dev pytest tests/unit/stores/test_bars_store_unit.py -v
 **步骤 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/bars_store.py
+git add packages/data/src/ditto_data/stores/bars_store.py
 git commit -m "refactor(datahub): migrate BarsStore to inherit from ParquetStore"
 ```
 
@@ -1429,14 +1429,14 @@ git commit -m "refactor(datahub): migrate BarsStore to inherit from ParquetStore
 ## 任务 6: 迁移 SecurityStore 使用新基类
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/stores/security_store.py`
+- 修改: `packages/data/src/ditto_data/stores/security_store.py`
 
 **步骤 1: 重构 SecurityStore 继承 SQLiteStore**
 
 由于 SecurityStore 使用 SQLiteClient 而不是直接操作数据库，需要创建适配器：
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/security_store.py
+# packages/data/src/ditto_data/stores/security_store.py
 """
 SecurityStore for securities master data with PIT support.
 
@@ -1456,10 +1456,10 @@ import polars as pl
 from ditto_foundation import M, logger, traced
 from ditto_foundation.cache import DataCache
 
-from ditto_datahub.accessors.internal.enrichment import (
+from ditto_data.accessors.internal.enrichment import (
     enrich_with_symbol as enrich_with_symbol_fn,
 )
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 @dataclass(frozen=True)
@@ -1568,7 +1568,7 @@ pixi run -e dev pytest tests/unit/stores/test_security_store_unit.py -v
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/security_store.py
+git add packages/data/src/ditto_data/stores/security_store.py
 git commit -m "refactor(datahub): update SecurityStore doc for future SQLiteStore migration"
 ```
 
@@ -1577,13 +1577,13 @@ git commit -m "refactor(datahub): update SecurityStore doc for future SQLiteStor
 ## 任务 7: 更新依赖注入配置
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/init_providers.py`
-- 修改: `packages/datahub/src/ditto_datahub/hub.py`
+- 修改: `packages/data/src/ditto_data/init_providers.py`
+- 修改: `packages/data/src/ditto_data/hub.py`
 
 **步骤 1: 更新 Provider 以使用新配置**
 
 ```python
-# packages/datahub/src/ditto_datahub/init_providers.py
+# packages/data/src/ditto_data/init_providers.py
 """DataHub 依赖注入提供者配置."""
 
 from __future__ import annotations
@@ -1598,20 +1598,20 @@ from ditto_foundation import SQLitePool
 from ditto_foundation.cache import DataCache
 from ditto_foundation.concurrency import FileLockManager
 
-from ditto_datahub.config import DataRootConfig
-from ditto_datahub.runtime.freeze_manager import FreezeManager
-from ditto_datahub.runtime.sid_allocator import SidAllocator
-from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.calendar_store import CalendarStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
-from ditto_datahub.stores.quarantine_store import QuarantineStore
-from ditto_datahub.stores.security_store import SecurityStore
-from ditto_datahub.stores.stock_status_store import StockStatusStore
-from ditto_datahub.stores.universe_store import UniverseStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.config import DataRootConfig
+from ditto_data.runtime.freeze_manager import FreezeManager
+from ditto_data.runtime.sid_allocator import SidAllocator
+from ditto_data.runtime.sql_engine import SqlEngine
+from ditto_data.stores.adj_factor_store import AdjFactorStore
+from ditto_data.stores.bars_store import BarsStore
+from ditto_data.stores.calendar_store import CalendarStore
+from ditto_data.stores.index_weight_store import IndexWeightStore
+from ditto_data.stores.ingestion_log import IngestionLogStore
+from ditto_data.stores.quarantine_store import QuarantineStore
+from ditto_data.stores.security_store import SecurityStore
+from ditto_data.stores.stock_status_store import StockStatusStore
+from ditto_data.stores.universe_store import UniverseStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class DataHubProvider(Provider):
@@ -1740,7 +1740,7 @@ pixi run -e dev pytest tests/integration/ -k "not slow" -v
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/init_providers.py
+git add packages/data/src/ditto_data/init_providers.py
 git commit -m "refactor(datahub): update providers to use DataRootConfig"
 ```
 
@@ -1749,7 +1749,7 @@ git commit -m "refactor(datahub): update providers to use DataRootConfig"
 ## 任务 8: 清理和文档更新
 
 **文件:**
-- 修改: `packages/datahub/README.md`
+- 修改: `packages/data/README.md`
 - 修改: `docs/design/02_data_design.md`
 
 **步骤 1: 更新 README**
@@ -1782,8 +1782,8 @@ git commit -m "refactor(datahub): update providers to use DataRootConfig"
 ## 使用示例
 
 ```python
-from ditto_datahub.config import DataRootConfig
-from ditto_datahub.stores.bars_store import BarsStore
+from ditto_data.config import DataRootConfig
+from ditto_data.stores.bars_store import BarsStore
 
 # 初始化配置
 config = DataRootConfig()
@@ -1843,7 +1843,7 @@ SQLite 数据库存储实现：
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/README.md
+git add packages/data/README.md
 git add docs/design/02_data_design.md
 git commit -m "docs(datahub): update documentation for base layer refactoring"
 ```

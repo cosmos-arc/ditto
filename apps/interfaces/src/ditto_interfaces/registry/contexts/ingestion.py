@@ -5,18 +5,18 @@ from contextlib import contextmanager
 
 from ditto_app.process.ingestion import BackfillManager, create_coordinator
 from ditto_app.process.quality import QualityService
-from ditto_datahub.services import (
+from ditto_data.services import (
     FreezeService,
     IngestionCursorService,
     IngestionLogService,
 )
-from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.fundamental_service import FundamentalService
-from ditto_datahub.services.macro_service import MacroService
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.source_service import SourceService
-from ditto_datahub.sources import ExchangeTransformers
+from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.macro_service import MacroService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.source_service import SourceService
+from ditto_data.sources import ExchangeTransformers
 
 from ditto_interfaces.registry.container import make_app_container
 from ditto_interfaces.registry.contexts.bundle import IngestionBundle

@@ -9,7 +9,6 @@ import orjson
 import polars as pl
 from ditto_engine.accounting.fills import FillEvent
 from ditto_engine.backtest.audit.records import PreTradeDecisionRecord, RiskScanRecord
-from ditto_engine.backtest.risk.post_trade import RiskActionType, RiskSeverity
 from ditto_engine.backtest.serialization import serialize
 from ditto_engine.backtest.statistics import (
     AggregatedTradeStatistics,
@@ -19,6 +18,7 @@ from ditto_engine.backtest.statistics import (
     TradeStatistics,
 )
 from ditto_engine.execution.trade_builder import TradeRecord
+from ditto_engine.risk.post_trade import RiskActionType, RiskSeverity
 from ditto_kernel.enums import OrderSide
 
 # ---------------------------------------------------------------------------

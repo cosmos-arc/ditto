@@ -68,7 +68,7 @@ DataHub → 删除 DQSeverity 定义
 **改动文件**：
 - `+ packages/core/src/ditto_core/quality/severity.py`（新增）
 - `- packages/infra/src/ditto_infra/foundation/quality/`（整个目录删除）
-- `~ packages/datahub/src/ditto_datahub/models/common.py`（删除 DQSeverity）
+- `~ packages/data/src/ditto_data/models/common.py`（删除 DQSeverity）
 - `~ 6 处导入修正`：`from ditto_infra.foundation import DQSeverity` → `from ditto_core.quality import DQSeverity`
 
 ---

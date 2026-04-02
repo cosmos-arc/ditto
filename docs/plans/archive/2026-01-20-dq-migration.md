@@ -5,13 +5,13 @@
 
 ## 执行摘要
 
-将 DQ（数据质量）模块从 `packages/datahub/dq/` **完整迁移**到 `packages/core/quality/`，严格按照 [architecture.md](d:\\code\\quant\\ditto\\.claude\\rules\\architecture.md) 的分层规范实现：
+将 DQ（数据质量）模块从 `packages/data/dq/` **完整迁移**到 `packages/core/quality/`，严格按照 [architecture.md](d:\\code\\quant\\ditto\\.claude\\rules\\architecture.md) 的分层规范实现：
 
 ```
 Quality（数据质量）
 ├── Domain Layer    → packages/core/src/ditto_core/quality/    (纯业务逻辑，零数据访问)
 ├── Application     → apps/port/services/ingestion/quality/   (编排层，获取数据并注入)
-└── Infrastructure  → packages/datahub/accessors/             (数据存储能力)
+└── Infrastructure  → packages/data/accessors/             (数据存储能力)
 ```
 
 ---
@@ -164,7 +164,7 @@ class DQSettings(BaseSettings):
 
 | 源位置 | 目标位置 |
 |--------|----------|
-| `packages/datahub/config/dq_rules/*` | `config/default/dq_rules/*` |
+| `packages/data/config/dq_rules/*` | `config/default/dq_rules/*` |
 | 新建 | `config/development/dq.env` |
 | 新建 | `config/testing/dq.env` |
 | 新建 | `config/production/dq.env` |
@@ -308,19 +308,19 @@ mkdir -p apps/port/tests/unit/ingestion/quality
 ### Phase 2: Domain Layer 迁移
 
 #### 2.1 迁移模型定义
-**源文件**: `packages/datahub/src/ditto_datahub/models/quality.py`
+**源文件**: `packages/data/src/ditto_data/models/quality.py`
 **目标文件**: `packages/core/src/ditto_core/quality/spec.py`
 
 #### 2.2 迁移 TechnicalChecker
-**源文件**: `packages/datahub/src/ditto_datahub/dq/checkers/technical.py`
+**源文件**: `packages/data/src/ditto_data/dq/checkers/technical.py`
 **目标文件**: `packages/core/src/ditto_core/quality/checkers/technical.py`
 
 #### 2.3 迁移 BusinessChecker
-**源文件**: `packages/datahub/src/ditto_datahub/dq/checkers/business.py`
+**源文件**: `packages/data/src/ditto_data/dq/checkers/business.py`
 **目标文件**: `packages/core/src/ditto_core/quality/checkers/business.py`
 
 #### 2.4 迁移 StatisticalChecker（核心重构）
-**源文件**: `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py`
+**源文件**: `packages/data/src/ditto_data/dq/checkers/statistical.py`
 **目标文件**: `packages/core/src/ditto_core/quality/checkers/statistical.py`
 
 **重构内容**：
@@ -330,7 +330,7 @@ mkdir -p apps/port/tests/unit/ingestion/quality
 - 纯函数式实现，无外部调用
 
 #### 2.5 迁移 QualityEngine
-**源文件**: `packages/datahub/src/ditto_datahub/dq/engine.py`
+**源文件**: `packages/data/src/ditto_data/dq/engine.py`
 **目标文件**: `packages/core/src/ditto_core/quality/engine.py`
 
 **重构内容**：
@@ -347,7 +347,7 @@ mkdir -p apps/port/tests/unit/ingestion/quality
 - 实现 `get_rules_paths()` 方法（支持覆盖机制）
 
 #### 2.7 迁移配置文件
-**源目录**: `packages/datahub/config/dq_rules/`
+**源目录**: `packages/data/config/dq_rules/`
 **目标目录**: `config/default/dq_rules/`
 
 **操作**：
@@ -389,7 +389,7 @@ mkdir -p apps/port/tests/unit/ingestion/quality
 - 修改 `dq_engine` Provider
 
 #### 4.2 更新 BarsAccessor
-**文件**: `packages/datahub/src/ditto_datahub/accessors/bars/accessor.py`
+**文件**: `packages/data/src/ditto_data/accessors/bars/accessor.py`
 
 **操作**：
 - 更新导入：`from ditto_core.quality import QualityEngine`
@@ -405,7 +405,7 @@ mkdir -p apps/port/tests/unit/ingestion/quality
 ### Phase 5: 测试迁移
 
 #### 5.1 迁移 Domain Layer 测试
-**源目录**: `packages/datahub/tests/unit/dq/`
+**源目录**: `packages/data/tests/unit/dq/`
 **目标目录**: `packages/core/tests/unit/quality/`
 
 #### 5.2 创建 Application Layer 测试
@@ -416,11 +416,11 @@ mkdir -p apps/port/tests/unit/ingestion/quality
 ### Phase 6: 清理与文档
 
 #### 6.1 移除旧代码
-- 删除 `packages/datahub/src/ditto_datahub/dq/`
-- 删除 `packages/datahub/tests/unit/dq/`
+- 删除 `packages/data/src/ditto_data/dq/`
+- 删除 `packages/data/tests/unit/dq/`
 
 #### 6.2 向后兼容层
-**文件**: `packages/datahub/src/ditto_datahub/models/quality.py`
+**文件**: `packages/data/src/ditto_data/models/quality.py`
 - 重新导出 Core 的模型
 
 ---
@@ -447,20 +447,20 @@ mkdir -p apps/port/tests/unit/ingestion/quality
 | 文件 | 修改内容 |
 |------|----------|
 | `apps/port/src/ditto_port/registry/datahub.py` | 修改 dq_engine Provider |
-| `packages/datahub/src/ditto_datahub/accessors/bars/accessor.py` | 更新导入路径 |
+| `packages/data/src/ditto_data/accessors/bars/accessor.py` | 更新导入路径 |
 | `apps/port/src/ditto_port/jobs/tasks/dq_batch.py` | 使用 L3BatchService |
 
 ### 需要迁移的文件
 
 | 源文件 | 目标文件 |
 |--------|----------|
-| `packages/datahub/src/ditto_datahub/models/quality.py` | `packages/core/src/ditto_core/quality/spec.py` |
-| `packages/datahub/src/ditto_datahub/dq/engine.py` | `packages/core/src/ditto_core/quality/engine.py` |
-| `packages/datahub/src/ditto_datahub/dq/checkers/technical.py` | `packages/core/src/ditto_core/quality/checkers/technical.py` |
-| `packages/datahub/src/ditto_datahub/dq/checkers/business.py` | `packages/core/src/ditto_core/quality/checkers/business.py` |
-| `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py` | `packages/core/src/ditto_core/quality/checkers/statistical.py` |
-| `packages/datahub/src/ditto_datahub/dq/report.py` | `packages/core/src/ditto_core/quality/report.py` |
-| `packages/datahub/config/dq_rules/*` | `config/default/dq_rules/*` |
+| `packages/data/src/ditto_data/models/quality.py` | `packages/core/src/ditto_core/quality/spec.py` |
+| `packages/data/src/ditto_data/dq/engine.py` | `packages/core/src/ditto_core/quality/engine.py` |
+| `packages/data/src/ditto_data/dq/checkers/technical.py` | `packages/core/src/ditto_core/quality/checkers/technical.py` |
+| `packages/data/src/ditto_data/dq/checkers/business.py` | `packages/core/src/ditto_core/quality/checkers/business.py` |
+| `packages/data/src/ditto_data/dq/checkers/statistical.py` | `packages/core/src/ditto_core/quality/checkers/statistical.py` |
+| `packages/data/src/ditto_data/dq/report.py` | `packages/core/src/ditto_core/quality/report.py` |
+| `packages/data/config/dq_rules/*` | `config/default/dq_rules/*` |
 
 ---
 

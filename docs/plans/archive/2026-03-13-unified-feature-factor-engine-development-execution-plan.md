@@ -55,22 +55,22 @@
 3. 主设计与控制面口径已对齐。
 4. 发布安全控制面第一批代码已落地：
    - `packages/core/src/ditto_core/engine/publication_safety.py`
-   - `packages/datahub/src/ditto_datahub/models/publication_safety.py`
-   - `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/*`
-   - `packages/datahub/src/ditto_datahub/services/publication_safety_record_service.py`
+   - `packages/data/src/ditto_data/models/publication_safety.py`
+   - `packages/data/src/ditto_data/stores/runtime/publication_safety/*`
+   - `packages/data/src/ditto_data/services/publication_safety_record_service.py`
    - `apps/port/src/ditto_port/registry/datahub/runtime.py`
 5. 发布安全控制面最小测试已落地并通过。
 6. Phase 1 runtime metadata / derived catalog SQLite 基线已落地：
    - `packages/core/src/ditto_core/engine/specs.py`
    - `packages/core/src/ditto_core/engine/materialization/models.py`
-   - `packages/datahub/src/ditto_datahub/models/derived.py`
-   - `packages/datahub/src/ditto_datahub/stores/runtime/derived_catalog/*`
-   - `packages/datahub/src/ditto_datahub/stores/runtime/derived_sqlite/*`
-   - `packages/datahub/src/ditto_datahub/services/derived_catalog_service.py`
-   - `packages/datahub/src/ditto_datahub/scripts/schema.sql`
+   - `packages/data/src/ditto_data/models/derived.py`
+   - `packages/data/src/ditto_data/stores/runtime/derived_catalog/*`
+   - `packages/data/src/ditto_data/stores/runtime/derived_sqlite/*`
+   - `packages/data/src/ditto_data/services/derived_catalog_service.py`
+   - `packages/data/src/ditto_data/scripts/schema.sql`
    - `apps/port/src/ditto_port/registry/datahub/runtime.py`
 7. Phase 2 unified derived query contract layer 已落地：
-   - `packages/datahub/src/ditto_datahub/services/derived/*`
+   - `packages/data/src/ditto_data/services/derived/*`
    - `apps/port/src/ditto_port/models/derived.py`
    - `apps/port/src/ditto_port/services/derived/query_facade.py`
    - `apps/port/src/ditto_port/registry/datahub/derived.py`
@@ -92,11 +92,11 @@
    - `packages/core/tests/unit/engine/test_expression_parser_unit.py`
    - `packages/core/tests/unit/engine/test_expression_diagnostics_unit.py`
    - `packages/core/tests/unit/engine/test_expression_engine_unit.py`
-   - `packages/datahub/tests/unit/stores/runtime/derived_catalog/test_derived_catalog_store_unit.py`
-   - `packages/datahub/tests/unit/services/test_derived_catalog_service.py`
-   - `packages/datahub/tests/unit/services/test_derived_query_service.py`
-   - `packages/datahub/tests/unit/services/test_derived_materialization_service_unit.py`
-   - `packages/datahub/tests/unit/services/test_derived_invalidation_service_unit.py`
+   - `packages/data/tests/unit/stores/runtime/derived_catalog/test_derived_catalog_store_unit.py`
+   - `packages/data/tests/unit/services/test_derived_catalog_service.py`
+   - `packages/data/tests/unit/services/test_derived_query_service.py`
+   - `packages/data/tests/unit/services/test_derived_materialization_service_unit.py`
+   - `packages/data/tests/unit/services/test_derived_invalidation_service_unit.py`
    - `apps/port/tests/registry/test_runtime_provider_derived_catalog_unit.py`
    - `apps/port/tests/registry/test_derived_provider_unit.py`
    - `apps/port/tests/unit/jobs/flows/test_materialization_flows_unit.py`
@@ -156,16 +156,16 @@
 - Create: `packages/core/src/ditto_core/engine/materialization/models.py`
 
 **DataHub Models**
-- Create: `packages/datahub/src/ditto_datahub/models/derived.py`
+- Create: `packages/data/src/ditto_data/models/derived.py`
 
 **DataHub Stores**
-- Create: `packages/datahub/src/ditto_datahub/stores/runtime/derived_catalog/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/runtime/derived_catalog/derived_catalog_reader.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/runtime/derived_catalog/derived_catalog_writer.py`
+- Create: `packages/data/src/ditto_data/stores/runtime/derived_catalog/__init__.py`
+- Create: `packages/data/src/ditto_data/stores/runtime/derived_catalog/derived_catalog_reader.py`
+- Create: `packages/data/src/ditto_data/stores/runtime/derived_catalog/derived_catalog_writer.py`
 
 **DataHub Services**
-- Create: `packages/datahub/src/ditto_datahub/services/derived_catalog_service.py`
-- Modify: `packages/datahub/src/ditto_datahub/services/__init__.py`
+- Create: `packages/data/src/ditto_data/services/derived_catalog_service.py`
+- Modify: `packages/data/src/ditto_data/services/__init__.py`
 
 **Port Registry**
 - Modify: `apps/port/src/ditto_port/registry/datahub/runtime.py`
@@ -178,8 +178,8 @@
 
 ### 验证
 
-1. `pixi run -e dev pytest packages/datahub/tests/unit/stores/runtime/derived_catalog -v`
-2. `pixi run -e dev pytest packages/datahub/tests/unit/services/test_derived_catalog_service.py -v`
+1. `pixi run -e dev pytest packages/data/tests/unit/stores/runtime/derived_catalog -v`
+2. `pixi run -e dev pytest packages/data/tests/unit/services/test_derived_catalog_service.py -v`
 3. `pixi run -e dev arch-check`
 
 ---
@@ -228,12 +228,12 @@
 ### 推荐文件落点
 
 **DataHub Services**
-- Create: `packages/datahub/src/ditto_datahub/services/derived/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/services/derived/queries.py`
-- Create: `packages/datahub/src/ditto_datahub/services/derived/results.py`
-- Create: `packages/datahub/src/ditto_datahub/services/derived/query_service.py`
-- Modify: `packages/datahub/src/ditto_datahub/services/__init__.py`
-- Modify: `packages/datahub/src/ditto_datahub/__init__.py`
+- Create: `packages/data/src/ditto_data/services/derived/__init__.py`
+- Create: `packages/data/src/ditto_data/services/derived/queries.py`
+- Create: `packages/data/src/ditto_data/services/derived/results.py`
+- Create: `packages/data/src/ditto_data/services/derived/query_service.py`
+- Modify: `packages/data/src/ditto_data/services/__init__.py`
+- Modify: `packages/data/src/ditto_data/__init__.py`
 
 **Port Models**
 - Create: `apps/port/src/ditto_port/models/derived.py`
@@ -262,7 +262,7 @@
 
 1. 删除 `FeatureService`、`FactorService`、`FeatureQuery`、`FactorQuery`。
 2. 删除 `FeaturesProvider`，改为 `DerivedProvider`。
-3. `ditto_datahub.services`、`ditto_datahub.__init__`、Port registry 聚合不再暴露旧名字或兼容别名。
+3. `ditto_data.services`、`ditto_data.__init__`、Port registry 聚合不再暴露旧名字或兼容别名。
 4. 对应旧单元测试一并删除，由 `DerivedQuery*` 契约测试替代。
 
 ### 验收标准
@@ -274,7 +274,7 @@
 
 ### 验证
 
-1. `pixi run -e dev pytest packages/datahub/tests/unit/services/test_derived_query_service.py -v`
+1. `pixi run -e dev pytest packages/data/tests/unit/services/test_derived_query_service.py -v`
 2. `pixi run -e dev pytest apps/port/tests/unit/services/derived/test_query_facade_unit.py -v`
 3. `pixi run -e dev pytest apps/port/tests/registry/test_derived_provider_unit.py -v`
 
@@ -325,9 +325,9 @@
 - Modify: `packages/core/src/ditto_core/engine/materialization/__init__.py`
 
 **DataHub**
-- Create: `packages/datahub/src/ditto_datahub/stores/runtime/derived_sqlite/*`
-- Modify: `packages/datahub/src/ditto_datahub/services/derived_catalog_service.py`
-- Modify: `packages/datahub/src/ditto_datahub/scripts/schema.sql`
+- Create: `packages/data/src/ditto_data/stores/runtime/derived_sqlite/*`
+- Modify: `packages/data/src/ditto_data/services/derived_catalog_service.py`
+- Modify: `packages/data/src/ditto_data/scripts/schema.sql`
 
 **Port**
 - Create: `apps/port/src/ditto_port/services/derived/compile_cache.py`
@@ -358,7 +358,7 @@
 ### 验证
 
 1. `pixi run -e dev pytest packages/core/tests/unit/engine -v`
-2. `pixi run -e dev pytest packages/datahub/tests -k "derived_materialization or invalidation or compile_cache" -v`
+2. `pixi run -e dev pytest packages/data/tests -k "derived_materialization or invalidation or compile_cache" -v`
 3. `pixi run -e dev pytest apps/port/tests -k "materialization_flow or invalidation_flow" -v`
 4. `pixi run -e dev check`
 
@@ -382,7 +382,7 @@
 - Create: `packages/core/src/ditto_core/engine/research/pit_join.py`
 
 **DataHub**
-- Create: `packages/datahub/src/ditto_datahub/services/research_dataset_service.py`
+- Create: `packages/data/src/ditto_data/services/research_dataset_service.py`
 
 **Port**
 - Create: `apps/port/src/ditto_port/services/derived/research_dataset_facade.py`
@@ -396,7 +396,7 @@
 ### 验证
 
 1. `pixi run -e dev pytest packages/core/tests/unit/engine/research -v`
-2. `pixi run -e dev pytest packages/datahub/tests/unit/services/test_research_dataset_service.py -v`
+2. `pixi run -e dev pytest packages/data/tests/unit/services/test_research_dataset_service.py -v`
 
 ---
 
@@ -425,7 +425,7 @@
 - Create: `packages/core/src/ditto_core/engine/publish/certification.py`
 
 **DataHub**
-- Create: `packages/datahub/src/ditto_datahub/services/publication_service.py`
+- Create: `packages/data/src/ditto_data/services/publication_service.py`
 
 **Port**
 - Create: `apps/port/src/ditto_port/services/derived/publication_facade.py`
@@ -439,7 +439,7 @@
 
 ### 验证
 
-1. `pixi run -e dev pytest packages/datahub/tests/unit/services/test_publication_service.py -v`
+1. `pixi run -e dev pytest packages/data/tests/unit/services/test_publication_service.py -v`
 2. `pixi run -e dev pytest apps/port/tests/unit/services/derived/test_publication_facade_unit.py -v`
 3. `pixi run -e dev pytest --integration -k publication`
 

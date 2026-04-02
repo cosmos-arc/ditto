@@ -164,7 +164,7 @@ packages/
 - 稳定输出契约定义在 `metadata / marketdata`
 - `datahub` 仅负责实现这些契约
 
-否则所有权仍会漂移到实现层，继续让类似 [metadata_service.py](../../packages/datahub/src/ditto_datahub/services/metadata_service.py) 和 [market_service.py](../../packages/datahub/src/ditto_datahub/services/market_service.py) 成为事实 owner。
+否则所有权仍会漂移到实现层，继续让类似 [metadata_service.py](../../packages/data/src/ditto_data/services/metadata_service.py) 和 [market_service.py](../../packages/data/src/ditto_data/services/market_service.py) 成为事实 owner。
 
 ### 4.3 P1：迁移顺序必须从“先抽边界”改写，不能先全量改包名
 
@@ -352,7 +352,7 @@ provider raw payload
 - `packages/trading/CLAUDE.md`
 - `packages/analytics/CLAUDE.md`
 - `packages/sources/CLAUDE.md`
-- `packages/datahub/CLAUDE.md`
+- `packages/data/CLAUDE.md`
 - `apps/interfaces/CLAUDE.md`
 
 ### 7.3 superseded 标记

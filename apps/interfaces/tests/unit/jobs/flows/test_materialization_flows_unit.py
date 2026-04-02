@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from ditto_analytics.publication_safety import CertificationStage
 from ditto_app.process.materialization import RepairBatchResult
-from ditto_engine.engine.publication_safety import CertificationStage
 from ditto_interfaces.jobs.flows.materialization import (
     certify_publication_flow,
     daily_materialization_flow,

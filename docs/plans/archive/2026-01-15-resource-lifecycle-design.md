@@ -60,7 +60,7 @@
 **设计**: 每个实例注册自己的 `atexit` 处理器
 
 ```python
-# packages/datahub/src/ditto_datahub/hub.py
+# packages/data/src/ditto_data/hub.py
 
 import atexit
 
@@ -101,7 +101,7 @@ import threading
 from contextlib import contextmanager
 from typing import Any
 
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 from ditto_port.cli.executor import CLIExecutor
 
@@ -208,7 +208,7 @@ def _setup_observability(self, settings: Any) -> None:
 
 | # | 文件 | 修改类型 | 描述 |
 |---|------|----------|------|
-| 1 | `packages/datahub/src/ditto_datahub/hub.py` | 修改 | 添加 atexit 清理 |
+| 1 | `packages/data/src/ditto_data/hub.py` | 修改 | 添加 atexit 清理 |
 | 2 | `apps/port/src/ditto_port/cli/context.py` | 重写 | 删除 `ensure_executor`，添加 `create_executor` 和 `get_hub` |
 | 3 | `apps/port/src/ditto_port/cli/commands/factory.py` | 更新 | 3 个工厂函数改用 `create_executor` |
 | 4 | `apps/port/src/ditto_port/cli/commands/calendar.py` | 更新 | 命令改用 `create_executor` |
@@ -222,7 +222,7 @@ def _setup_observability(self, settings: Any) -> None:
 ### 单元测试
 
 ```python
-# packages/datahub/tests/unit/test_hub_lifecycle.py
+# packages/data/tests/unit/test_hub_lifecycle.py
 
 def test_atexit_registered_on_init():
     """验证 atexit 在初始化时注册."""

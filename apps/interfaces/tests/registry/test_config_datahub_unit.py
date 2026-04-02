@@ -1,11 +1,11 @@
 """ConfigProvider DataHub 配置测试."""
 
 from dishka import make_container
-from ditto_datahub.config import (
+from ditto_data.config import (
     DataSourceSettings,
     FileStorageSettings,
 )
-from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_interfaces.registry.infra import ConfigProvider
 
 

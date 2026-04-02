@@ -16,12 +16,12 @@
    - `services/coordinator.py` - 摄取协调器
    - `tasks/dq_batch.py` - DQ 批量检查任务
 
-2. **Tushare 数据源** (`packages/datahub/src/ditto_datahub/sources/tushare/`)
+2. **Tushare 数据源** (`packages/data/src/ditto_data/sources/tushare/`)
    - `client.py` - HTTP 客户端重构
    - `http_utils.py` - HTTP 工具函数
    - `source.py` - 数据源实现
 
-3. **Repository 层** (`packages/datahub/src/ditto_datahub/repositories/`)
+3. **Repository 层** (`packages/data/src/ditto_data/repositories/`)
    - `security.py` - 证券仓库
    - `adj_factor.py` - **新增** 复权因子仓库
 
@@ -44,7 +44,7 @@
    - 避免了 `closed="left"` 参数遗漏的 PIT 风险
 
 2. **knowledge_date 正确使用**
-   - [test_end_to_end.py:188](packages/datahub/tests/integration/sources/tushare/test_end_to_end.py#L188) 验证了 `knowledge_date == trade_date`（复权因子数据即日可用）
+   - [test_end_to_end.py:188](packages/data/tests/integration/sources/tushare/test_end_to_end.py#L188) 验证了 `knowledge_date == trade_date`（复权因子数据即日可用）
    - adj_factor schema 正确定义了 knowledge_date 字段
 
 3. **游标管理改进**
@@ -61,8 +61,8 @@
    - **问题**: 需要确保所有数据源正确设置 knowledge_date
    - **建议**: 在 DQ 检查中验证 knowledge_date <= 当前日期
    - **文件**:
-     - [pit_helper.py](packages/datahub/src/ditto_datahub/runtime/pit_helper.py)
-     - [bars.py](packages/datahub/src/ditto_datahub/repositories/bars.py)
+     - [pit_helper.py](packages/data/src/ditto_data/runtime/pit_helper.py)
+     - [bars.py](packages/data/src/ditto_data/repositories/bars.py)
 
 ### PIT 安全总体评级: 🟢 通过
 
@@ -73,29 +73,29 @@
 ### ✅ 通过项
 
 1. **认证错误处理** ✅
-   - [http_utils.py:33-40](packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py#L33-L40) 正确识别认证错误码（2002, 40101）
-   - [client.py:66-80](packages/datahub/src/ditto_datahub/sources/tushare/client.py#L66-L80) 支持 keyring/secrets.toml/env 多源 token 获取
+   - [http_utils.py:33-40](packages/data/src/ditto_data/sources/tushare/http_utils.py#L33-L40) 正确识别认证错误码（2002, 40101）
+   - [client.py:66-80](packages/data/src/ditto_data/sources/tushare/client.py#L66-L80) 支持 keyring/secrets.toml/env 多源 token 获取
 
 2. **限流机制** ✅
-   - [client.py:152-155](packages/datahub/src/ditto_datahub/sources/tushare/client.py#L152-L155) 使用 TushareRateLimiter
-   - [client.py:204-206](packages/datahub/src/ditto_datahub/sources/tushare/client.py#L204-L206) API 分组限流
-   - 端到端测试验证限流机制 ([test_end_to_end.py:253-281](packages/datahub/tests/integration/sources/tushare/test_end_to_end.py#L253-L281))
+   - [client.py:152-155](packages/data/src/ditto_data/sources/tushare/client.py#L152-L155) 使用 TushareRateLimiter
+   - [client.py:204-206](packages/data/src/ditto_data/sources/tushare/client.py#L204-L206) API 分组限流
+   - 端到端测试验证限流机制 ([test_end_to_end.py:253-281](packages/data/tests/integration/sources/tushare/test_end_to_end.py#L253-L281))
 
 3. **重试机制** ✅
-   - [client.py:251-255](packages/datahub/src/ditto_datahub/sources/tushare/client.py#L251-L255) 使用 tenacity 重试
+   - [client.py:251-255](packages/data/src/ditto_data/sources/tushare/client.py#L251-L255) 使用 tenacity 重试
    - 指数退避：1-10 秒，最多 3 次重试
 
 4. **并发写入保护** ✅
-   - [adj_factor.py:81-86](packages/datahub/src/ditto_datahub/repositories/adj_factor.py#L81-L86) 使用文件锁保护
+   - [adj_factor.py:81-86](packages/data/src/ditto_data/repositories/adj_factor.py#L81-L86) 使用文件锁保护
    - [coordinator.py:264](apps/server/src/ditto_port/ingestion/services/coordinator.py#L264) 使用 BarsRepository（带文件锁）
 
 5. **错误分类处理** ✅
-   - [http_utils.py:68-134](packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py#L68-L134) 完整的错误映射
+   - [http_utils.py:68-134](packages/data/src/ditto_data/sources/tushare/http_utils.py#L68-L134) 完整的错误映射
    - 区分认证错误、限流错误、网络错误、超时错误
 
 6. **空数据处理** ✅
    - [coordinator.py:138-153](apps/server/src/ditto_port/ingestion/services/coordinator.py#L138-L153) 正确处理空数据
-   - [source.py:99-107](packages/datahub/src/ditto_datahub/sources/tushare/source.py#L99-L107) 返回空 schema 而非错误
+   - [source.py:99-107](packages/data/src/ditto_data/sources/tushare/source.py#L99-L107) 返回空 schema 而非错误
 
 7. **降级策略** ✅
    - [coordinator.py:103-120](apps/server/src/ditto_port/ingestion/services/coordinator.py#L103-L120) 失败返回 IngestionResult 而非抛出异常
@@ -117,9 +117,9 @@
    - **指标**: 使用 M (metrics)（符合规范）
 
 2. **类型注解** ✅
-   - [client.py](packages/datahub/src/ditto_datahub/sources/tushare/client.py) 类型注解完整
-   - [adj_factor.py](packages/datahub/src/ditto_datahub/repositories/adj_factor.py) 使用 TYPE_CHECKING 避免循环导入
-   - [http_utils.py:68](packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py#L68) 使用 NoReturn 类型标注
+   - [client.py](packages/data/src/ditto_data/sources/tushare/client.py) 类型注解完整
+   - [adj_factor.py](packages/data/src/ditto_data/repositories/adj_factor.py) 使用 TYPE_CHECKING 避免循环导入
+   - [http_utils.py:68](packages/data/src/ditto_data/sources/tushare/http_utils.py#L68) 使用 NoReturn 类型标注
 
 3. **错误处理** ✅
    - 自定义异常体系（SourceAuthenticationError, SourceRateLimitError, SourceFetchError）
@@ -132,7 +132,7 @@
    - DRY 原则：_record_metrics 复用
 
 5. **测试覆盖** ✅
-   - [test_end_to_end.py](packages/datahub/tests/integration/sources/tushare/test_end_to_end.py) 330 行完整的端到端测试
+   - [test_end_to_end.py](packages/data/tests/integration/sources/tushare/test_end_to_end.py) 330 行完整的端到端测试
    - 测试场景：认证、限流、数据一致性、OHLC 逻辑验证
    - 使用 @pytest.mark.external 标记需要真实 API 的测试
 
@@ -175,8 +175,8 @@
    - DQ 三层架构完整实现 ✅
 
 3. **测试文档** ✅
-   - [test_end_to_end.py](packages/datahub/tests/integration/sources/tushare/test_end_to_end.py) 包含完整的测试说明文档
-   - [QUICK_REFERENCE.md](packages/datahub/tests/integration/sources/tushare/QUICK_REFERENCE.md) 测试快速参考（根据 git status）
+   - [test_end_to_end.py](packages/data/tests/integration/sources/tushare/test_end_to_end.py) 包含完整的测试说明文档
+   - [QUICK_REFERENCE.md](packages/data/tests/integration/sources/tushare/QUICK_REFERENCE.md) 测试快速参考（根据 git status）
 
 ### ❌ 需修复问题
 
@@ -197,7 +197,7 @@
    - 黄金数据集验证状态为 ⏳，需更新
 
 3. **README 更新**
-   - [packages/datahub/src/ditto_datahub/sources/tushare/](packages/datahub/src/ditto_datahub/sources/tushare/) 缺少 README
+   - [packages/data/src/ditto_data/sources/tushare/](packages/data/src/ditto_data/sources/tushare/) 缺少 README
    - 建议添加：
      - Tushare 数据源使用说明
      - HTTP API 规范
@@ -222,7 +222,7 @@
 ### ✅ 通过项
 
 1. **依赖方向** ✅
-   - apps/server → packages/datahub → packages/foundation
+   - apps/server → packages/data → packages/foundation
    - Coordinator 依赖 DataHub（正确）
    - TushareSource 依赖 DataSource 基类（正确）
 
@@ -288,12 +288,12 @@
 - [apps/server/src/ditto_port/ingestion/services/backfill.py](apps/server/src/ditto_port/ingestion/services/backfill.py)
 - [apps/server/src/ditto_port/ingestion/services/coordinator.py](apps/server/src/ditto_port/ingestion/services/coordinator.py)
 - [apps/server/src/ditto_port/ingestion/tasks/dq_batch.py](apps/server/src/ditto_port/ingestion/tasks/dq_batch.py)
-- [packages/datahub/src/ditto_datahub/sources/tushare/client.py](packages/datahub/src/ditto_datahub/sources/tushare/client.py)
-- [packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py](packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py)
-- [packages/datahub/src/ditto_datahub/repositories/adj_factor.py](packages/datahub/src/ditto_datahub/repositories/adj_factor.py)（新增）
+- [packages/data/src/ditto_data/sources/tushare/client.py](packages/data/src/ditto_data/sources/tushare/client.py)
+- [packages/data/src/ditto_data/sources/tushare/http_utils.py](packages/data/src/ditto_data/sources/tushare/http_utils.py)
+- [packages/data/src/ditto_data/repositories/adj_factor.py](packages/data/src/ditto_data/repositories/adj_factor.py)（新增）
 
 ### 测试文件
-- [packages/datahub/tests/integration/sources/tushare/test_end_to_end.py](packages/datahub/tests/integration/sources/tushare/test_end_to_end.py)（新增）
+- [packages/data/tests/integration/sources/tushare/test_end_to_end.py](packages/data/tests/integration/sources/tushare/test_end_to_end.py)（新增）
 
 ### 文档文件
 - [docs/plans/2026-01-03-tushare-http-refactor.md](docs/plans/2026-01-03-tushare-http-refactor.md)（新增）

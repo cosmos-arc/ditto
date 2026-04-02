@@ -99,7 +99,7 @@ DerivedSpec(
 
 - [ ] `ExecutionPolicy` 新增 `adj_type: AdjType = AdjType.NONE` 字段
 - [ ] 从 `datahub.models.enums` 或 `datahub.services.market_service` 导入 `AdjType`
-  - **注意**：`AdjType` 定义在 `packages/datahub/` 下，Core 层不能依赖 DataHub
+  - **注意**：`AdjType` 定义在 `packages/data/` 下，Core 层不能依赖 DataHub
   - **方案**：将 `AdjType` 提取为 Core 层的枚举（`Literal["none", "qfq", "hfq"]`），DataHub 层做映射
   - 或者：在 Core 层定义独立的 `AdjustmentType` 枚举
 
@@ -116,7 +116,7 @@ DerivedSpec(
 
 #### 2.3.2 DataHub 层
 
-**文件: `packages/datahub/src/ditto_datahub/services/market_service.py`**
+**文件: `packages/data/src/ditto_data/services/market_service.py`**
 
 - [ ] 新增 `get_etf_bars(start, end, adj=None)` 便捷方法
   - 参考 `get_stock_bars()` (行 591-628) 实现
@@ -177,7 +177,7 @@ _ETF_DATASET_COLUMNS: dict[str, frozenset[str]] = {
 |---------|---------|
 | `apps/port/tests/unit/services/derived/test_runtime_input_unit.py` | ETF 依赖解析、ETF 数据加载、列名映射 |
 | `apps/port/tests/unit/services/derived/test_materialization_flows_unit.py` | ETF 因子端到端物化 |
-| `packages/datahub/tests/unit/services/test_market_service_etf_unit.py` | get_etf_bars、ETF 复权逻辑 |
+| `packages/data/tests/unit/services/test_market_service_etf_unit.py` | get_etf_bars、ETF 复权逻辑 |
 | `packages/core/tests/unit/engine/test_expression_analyzer_unit.py` | etf.* 依赖提取 |
 
 ---
@@ -202,7 +202,7 @@ _ETF_DATASET_COLUMNS: dict[str, frozenset[str]] = {
 
 **放置位置**：
 - 纯计算逻辑 → `packages/core/src/ditto_core/engine/evaluation/`
-- 前向收益计算（需要 I/O）→ `packages/datahub/src/ditto_datahub/services/`
+- 前向收益计算（需要 I/O）→ `packages/data/src/ditto_data/services/`
 - 编排 Facade → `apps/port/src/ditto_port/services/derived/`
 
 ### 3.2 核心指标
@@ -430,7 +430,7 @@ class FactorEvaluator:
 
 ### 3.4 前向收益服务
 
-**文件: `packages/datahub/src/ditto_datahub/services/forward_return_service.py`**
+**文件: `packages/data/src/ditto_data/services/forward_return_service.py`**
 
 ```python
 class ForwardReturnService:
@@ -489,7 +489,7 @@ class FactorEvaluationFacade:
 
 ### 3.6 正交化服务
 
-**文件: `packages/datahub/src/ditto_datahub/services/factor_orthogonalization_service.py`**
+**文件: `packages/data/src/ditto_data/services/factor_orthogonalization_service.py`**
 
 ```python
 class FactorOrthogonalizationService:
@@ -529,8 +529,8 @@ class FactorOrthogonalizationService:
 | `packages/core/tests/unit/engine/evaluation/test_ic_decay_unit.py` | IC 衰减、IC half-life、IC 自相关 |
 | `packages/core/tests/unit/engine/evaluation/test_orthogonalize_unit.py` | 因子正交化（sequential + symmetric） |
 | `packages/core/tests/unit/engine/evaluation/test_evaluator_unit.py` | FactorEvaluator 编排 |
-| `packages/datahub/tests/unit/services/test_forward_return_service_unit.py` | 前向收益计算 |
-| `packages/datahub/tests/unit/services/test_factor_orthogonalization_service_unit.py` | 正交化服务 |
+| `packages/data/tests/unit/services/test_forward_return_service_unit.py` | 前向收益计算 |
+| `packages/data/tests/unit/services/test_factor_orthogonalization_service_unit.py` | 正交化服务 |
 | `apps/port/tests/unit/services/derived/test_evaluation_facade_unit.py` | Port Facade 端到端 |
 
 ---
@@ -579,10 +579,10 @@ Phase 1 已在 `RuntimeDerivedInputProvider` 中消费 `ExecutionPolicy.adj_type
 |------|---------|---------|
 | 修改 | `packages/core/src/ditto_core/engine/specs.py` | ExecutionPolicy + AdjType |
 | 修改 | `packages/core/src/ditto_core/engine/expression/analyzer.py` | etf.* 依赖识别 |
-| 修改 | `packages/datahub/src/ditto_datahub/services/market_service.py` | get_etf_bars, ETF 复权 |
+| 修改 | `packages/data/src/ditto_data/services/market_service.py` | get_etf_bars, ETF 复权 |
 | 修改 | `apps/port/src/ditto_port/services/derived/runtime_input.py` | ETF 数据路由 |
 | 修改 | `apps/port/src/ditto_port/services/derived/materialization_orchestrator.py` | 验证 ETF universe 兼容 |
-| 新建 | `packages/datahub/tests/unit/services/test_market_service_etf_unit.py` | ETF 查询测试 |
+| 新建 | `packages/data/tests/unit/services/test_market_service_etf_unit.py` | ETF 查询测试 |
 | 修改 | `apps/port/tests/unit/services/derived/test_runtime_input_unit.py` | ETF 路由测试 |
 | 修改 | `packages/core/tests/unit/engine/test_expression_engine_unit.py` | ETF 依赖提取测试 |
 
@@ -594,8 +594,8 @@ Phase 1 已在 `RuntimeDerivedInputProvider` 中消费 `ExecutionPolicy.adj_type
 | 新建 | `packages/core/src/ditto_core/engine/evaluation/metrics.py` | 纯计算 |
 | 新建 | `packages/core/src/ditto_core/engine/evaluation/report.py` | 报告模型 |
 | 新建 | `packages/core/src/ditto_core/engine/evaluation/evaluator.py` | 编排 |
-| 新建 | `packages/datahub/src/ditto_datahub/services/forward_return_service.py` | 前向收益 |
-| 新建 | `packages/datahub/src/ditto_datahub/services/factor_orthogonalization_service.py` | 正交化 |
+| 新建 | `packages/data/src/ditto_data/services/forward_return_service.py` | 前向收益 |
+| 新建 | `packages/data/src/ditto_data/services/factor_orthogonalization_service.py` | 正交化 |
 | 新建 | `apps/port/src/ditto_port/services/derived/evaluation_facade.py` | Port Facade |
 | 修改 | `apps/port/src/ditto_port/registry/datahub/derived.py` | DI 注册 |
 | 新建 | `packages/core/tests/unit/engine/evaluation/test_metrics_unit.py` | 指标测试 |
@@ -603,8 +603,8 @@ Phase 1 已在 `RuntimeDerivedInputProvider` 中消费 `ExecutionPolicy.adj_type
 | 新建 | `packages/core/tests/unit/engine/evaluation/test_ic_decay_unit.py` | IC 衰减测试 |
 | 新建 | `packages/core/tests/unit/engine/evaluation/test_orthogonalize_unit.py` | 正交化测试 |
 | 新建 | `packages/core/tests/unit/engine/evaluation/test_evaluator_unit.py` | 编排测试 |
-| 新建 | `packages/datahub/tests/unit/services/test_forward_return_service_unit.py` | 前向收益测试 |
-| 新建 | `packages/datahub/tests/unit/services/test_factor_orthogonalization_service_unit.py` | 正交化服务测试 |
+| 新建 | `packages/data/tests/unit/services/test_forward_return_service_unit.py` | 前向收益测试 |
+| 新建 | `packages/data/tests/unit/services/test_factor_orthogonalization_service_unit.py` | 正交化服务测试 |
 | 新建 | `apps/port/tests/unit/services/derived/test_evaluation_facade_unit.py` | Facade 测试 |
 
 ### Phase 3: 代码质量
@@ -714,7 +714,7 @@ pixi run -e dev arch-check  # 层边界检查
 
 ## 附录 A: AdjType 跨层依赖方案
 
-**问题**：`AdjType` 定义在 `packages/datahub/` 下（`services/market_service.py`），但 `ExecutionPolicy` 在 `packages/core/` 下，Core 层不能依赖 DataHub。
+**问题**：`AdjType` 定义在 `packages/data/` 下（`services/market_service.py`），但 `ExecutionPolicy` 在 `packages/core/` 下，Core 层不能依赖 DataHub。
 
 **方案 A（推荐）**：Core 层定义独立枚举
 
@@ -735,7 +735,7 @@ class ExecutionPolicy:
 DataHub 层做映射：
 
 ```python
-# packages/datahub/src/ditto_datahub/services/market_service.py
+# packages/data/src/ditto_data/services/market_service.py
 _ADJ_TYPE_MAP = {
     AdjustmentType.NONE: AdjType.NONE,
     AdjustmentType.QFQ: AdjType.QFQ,

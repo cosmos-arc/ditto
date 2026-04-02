@@ -9,14 +9,14 @@ from enum import StrEnum
 from typing import Protocol
 
 import polars as pl
-from ditto_datahub.services import (
+from ditto_data.services import (
     DerivedCompareQuery,
     DerivedLatestQuery,
     DerivedQueryService,
     DerivedSeriesQuery,
     DerivedSourceScope,
 )
-from ditto_datahub.services.hot_layer import HotLayerReader
+from ditto_data.services.hot_layer import HotLayerReader
 from loguru import logger
 
 type TemporalValue = date | datetime

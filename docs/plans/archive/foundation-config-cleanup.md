@@ -142,7 +142,7 @@ packages/foundation/src/ditto_foundation/config/README.md
 **当前问题**：`datahub/models/__init__.py` 重新导出 `core.quality.spec` 中的所有 DQ model
 
 ```python
-# packages/datahub/src/ditto_datahub/models/__init__.py
+# packages/data/src/ditto_data/models/__init__.py
 # ❌ 违反依赖方向：datahub → core
 from ditto_core.quality.spec import (
     ColumnRule, DatasetRules, DQIssue, DQLevel, ...
@@ -153,7 +153,7 @@ from ditto_core.quality.spec import (
 1. 删除 `datahub/models/__init__.py` 中所有 DQ model 的重新导出
 2. 更新引用文件：
    - `apps/port/src/ditto_port/jobs/tasks/monitoring.py`
-   - 测试文件：`packages/datahub/tests/unit/models/test_common_unit.py`
+   - 测试文件：`packages/data/tests/unit/models/test_common_unit.py`
 
 ### 4.2 问题 2：创建 CoreProvider，移除 DataHubProvider 对 core 的依赖
 
@@ -230,7 +230,7 @@ container = make_async_container(
 ### 5.1 创建完整的 DataSourceSettings
 
 ```python
-# packages/datahub/src/ditto_datahub/config/data_source.py
+# packages/data/src/ditto_data/config/data_source.py
 """数据源配置."""
 
 from pydantic import Field
@@ -304,7 +304,7 @@ class DataSourceSettings(BaseSettings):
 ### 5.2 创建完整的 DatabaseSettings
 
 ```python
-# packages/datahub/src/ditto_datahub/config/database.py
+# packages/data/src/ditto_data/config/database.py
 """数据库配置."""
 
 from pydantic import Field
@@ -372,7 +372,7 @@ class DatabaseSettings(BaseSettings):
 ### 5.3 创建完整的 FileStorageSettings
 
 ```python
-# packages/datahub/src/ditto_datahub/config/storage.py
+# packages/data/src/ditto_data/config/storage.py
 """文件存储配置（格式无关）."""
 
 from pydantic import Field
@@ -415,7 +415,7 @@ class FileStorageSettings(BaseSettings):
 ### 6.1 重构 TushareClient
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/client.py
+# packages/data/src/ditto_data/sources/tushare/client.py
 
 class TushareClient:
     def __init__(self, config: DataSourceSettings):

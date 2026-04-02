@@ -153,7 +153,7 @@ data_root/
 ## 四、代码结构设计
 
 ```
-packages/datahub/src/ditto_datahub/domains/
+packages/data/src/ditto_data/domains/
 │
 ├── features/                          # 第二层：特征域
 │   ├── __init__.py

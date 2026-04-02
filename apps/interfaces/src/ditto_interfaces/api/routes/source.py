@@ -7,9 +7,9 @@ from typing import Annotated, Any
 import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_datahub.models import Dataset
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.source_service import SourceService
+from ditto_data.models import Dataset
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.source_service import SourceService
 from ditto_infra.foundation import logger
 from fastapi import APIRouter, HTTPException, Path, Query
 

@@ -24,7 +24,7 @@
 
 | ID | 缺口 | 位置 | 说明 |
 |----|------|------|------|
-| ING-DQ-1 | DQ YAML 规则为空 | `packages/datahub/config/dq/*.yaml` | OHLCV 无校验（负数、零成交量、极端值），零自动化数据质量检查 |
+| ING-DQ-1 | DQ YAML 规则为空 | `packages/data/config/dq/*.yaml` | OHLCV 无校验（负数、零成交量、极端值），零自动化数据质量检查 |
 | ING-CU-1 | Cursor 读写器未实现 | `IngestionCursor` model 存在但无 reader/writer | 断点续传不可用 |
 | ING-IC-1 | 指数成分 out_date 未跟踪 | index constituent adapter | PIT 查询在成分退出后仍返回该成分 |
 

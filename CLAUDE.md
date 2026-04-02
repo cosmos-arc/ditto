@@ -64,14 +64,14 @@
 ### 架构原则
 ```
 依赖层级（从高到低）:
-  ditto_interfaces → ditto_app → ditto_engine → ditto_kernel → ditto_datahub → ditto_infra
+  ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_infra
   ditto_interfaces → ditto_analytics → ditto_engine → ditto_kernel
-  ditto_interfaces → ditto_datahub(data) → ditto_kernel, ditto_infra
+  ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
 
 允许的跨层依赖:
-  - interfaces 可以直接依赖 datahub.models/services/sources
+  - interfaces 可以直接依赖 data.models/services/sources
   - interfaces 可以直接依赖 infra.foundation
-  - interfaces 禁止直接依赖 datahub.stores/runtime（仅 registry 例外）
+  - interfaces 禁止直接依赖 data.stores/runtime（仅 registry 例外）
 
 详细约束见 .importlinter 配置
 ```
@@ -82,7 +82,7 @@
 
 详细分层规范：
 - Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
-- DataHub → [packages/datahub/CLAUDE.md](packages/datahub/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
+- Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
 - Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
 - Engine → [packages/core/CLAUDE.md](packages/core/CLAUDE.md)
 - Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
@@ -243,7 +243,7 @@ ditto/
 ├── packages/           # 核心包
 │   ├── infra/        # 基础设施
 │   ├── kernel/       # 共享内核（零业务行为类型）
-│   ├── datahub/       # 数据访问层
+│   ├── data/          # 数据访问层
 │   ├── data/          # 数据质量 + 错误定义
 │   ├── analytics/     # 表达式编译 + 物化
 │   ├── app/           # 应用编排层（CQRS: query/process/builders）

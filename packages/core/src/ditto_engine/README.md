@@ -153,8 +153,8 @@ from pathlib import Path
 from ditto_engine.quality import QualityEngine
 from ditto_engine.engine import RegimeEngine, FactorEngine
 from ditto_engine.portfolio import PortfolioManager
-from ditto_datahub import DataHub
-from ditto_datahub.stores.market import MarketBarsQuery
+from ditto_data import DataHub
+from ditto_data.stores.market import MarketBarsQuery
 import polars as pl
 
 # 初始化

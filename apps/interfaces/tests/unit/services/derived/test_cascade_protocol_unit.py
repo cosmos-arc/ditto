@@ -19,11 +19,11 @@ from ditto_app.process.materialization import (
     CascadeStatus,
     InvalidationCascadeOrchestrator,
 )
-from ditto_datahub.models.derived import (
+from ditto_data.models.derived import (
     DerivedDependencyRecord,
     DerivedInvalidationRecord,
 )
-from ditto_engine.engine.specs import MaterializationProfile
+from ditto_engine.specs import MaterializationProfile
 
 
 def _make_event(

@@ -38,30 +38,30 @@
 ### 新建文件
 | 文件路径 | 说明 |
 |---------|------|
-| `packages/datahub/src/ditto_datahub/sources/tushare/transformer.py` | TushareExchangeTransformer |
-| `packages/datahub/src/ditto_datahub/sources/tdx/transformer.py` | TdxExchangeTransformer |
-| `packages/datahub/tests/unit/models/test_exchange_unit.py` | Exchange 枚举测试 |
-| `packages/datahub/tests/unit/sources/test_exchange_transformers_unit.py` | Protocol + 工厂测试 |
-| `packages/datahub/tests/unit/sources/tushare/test_exchange_transformer_unit.py` | Tushare transformer 测试 |
-| `packages/datahub/tests/unit/sources/tdx/test_transformer_unit.py` | TDX transformer 测试 |
+| `packages/data/src/ditto_data/sources/tushare/transformer.py` | TushareExchangeTransformer |
+| `packages/data/src/ditto_data/sources/tdx/transformer.py` | TdxExchangeTransformer |
+| `packages/data/tests/unit/models/test_exchange_unit.py` | Exchange 枚举测试 |
+| `packages/data/tests/unit/sources/test_exchange_transformers_unit.py` | Protocol + 工厂测试 |
+| `packages/data/tests/unit/sources/tushare/test_exchange_transformer_unit.py` | Tushare transformer 测试 |
+| `packages/data/tests/unit/sources/tdx/test_transformer_unit.py` | TDX transformer 测试 |
 | `apps/port/tests/registry/test_sources_provider_unit.py` | DI 注册测试 |
 
 ### 修改文件
 | 文件路径 | 变更内容 |
 |---------|---------|
-| `packages/datahub/src/ditto_datahub/models/exchange.py` | 移除转换函数，只保留 Exchange 枚举 |
-| `packages/datahub/src/ditto_datahub/models/__init__.py` | 更新导出 |
-| `packages/datahub/src/ditto_datahub/sources/base.py` | 添加 Protocol + 工厂类 |
-| `packages/datahub/src/ditto_datahub/sources/__init__.py` | 更新导出 |
-| `packages/datahub/src/ditto_datahub/sources/tushare/__init__.py` | 添加 transformer 导出 |
-| `packages/datahub/src/ditto_datahub/sources/tdx/__init__.py` | 添加 transformer 导出 |
+| `packages/data/src/ditto_data/models/exchange.py` | 移除转换函数，只保留 Exchange 枚举 |
+| `packages/data/src/ditto_data/models/__init__.py` | 更新导出 |
+| `packages/data/src/ditto_data/sources/base.py` | 添加 Protocol + 工厂类 |
+| `packages/data/src/ditto_data/sources/__init__.py` | 更新导出 |
+| `packages/data/src/ditto_data/sources/tushare/__init__.py` | 添加 transformer 导出 |
+| `packages/data/src/ditto_data/sources/tdx/__init__.py` | 添加 transformer 导出 |
 | `apps/port/src/ditto_port/registry/datahub/sources.py` | 添加 DI 注册 |
-| `packages/datahub/src/ditto_datahub/services/metadata_service.py` | 注入 ExchangeTransformers，移除映射 |
+| `packages/data/src/ditto_data/services/metadata_service.py` | 注入 ExchangeTransformers，移除映射 |
 | `apps/port/src/ditto_port/registry/datahub/metadata.py` | 更新 DI 注册传递 transformer |
 | `apps/port/src/ditto_port/registry/contexts/bundle.py` | 添加 exchange_transformers 到 IngestionBundle |
 | `apps/port/src/ditto_port/registry/contexts/ingestion.py` | 提供 exchange_transformers |
 | `apps/port/src/ditto_port/jobs/flows/backfill.py` | 使用 transformer 替换旧函数 |
-| `packages/datahub/tests/unit/services/test_metadata_service_resolve.py` | 更新测试添加 transformer |
+| `packages/data/tests/unit/services/test_metadata_service_resolve.py` | 更新测试添加 transformer |
 
 ---
 
@@ -113,28 +113,28 @@
 
 ### Task 1.1: Exchange 枚举定义
 
-**文件**: `packages/datahub/src/ditto_datahub/models/exchange.py`
+**文件**: `packages/data/src/ditto_data/models/exchange.py`
 
 - 移除转换函数和映射
 - 只保留纯净的 `Exchange` 枚举
 
 ### Task 1.2: ExchangeTransformer Protocol + ExchangeTransformers 工厂
 
-**文件**: `packages/datahub/src/ditto_datahub/sources/base.py`
+**文件**: `packages/data/src/ditto_data/sources/base.py`
 
 - `ExchangeTransformer` Protocol
 - `ExchangeTransformers` 工厂类（通过 DI 注入）
 
 ### Task 1.3: TushareExchangeTransformer
 
-**文件**: `packages/datahub/src/ditto_datahub/sources/tushare/exchange_transformer.py`
+**文件**: `packages/data/src/ditto_data/sources/tushare/exchange_transformer.py`
 
 - 实现 `ExchangeTransformer` 协议
 - 包含 tushare 特定的映射逻辑
 
 ### Task 1.4: TdxExchangeTransformer
 
-**文件**: `packages/datahub/src/ditto_datahub/sources/tdx/exchange_transformer.py`
+**文件**: `packages/data/src/ditto_data/sources/tdx/exchange_transformer.py`
 
 - 实现 `ExchangeTransformer` 协议
 - 包含 tdx 特定的映射逻辑
@@ -148,7 +148,7 @@
 
 ### Task 1.6: MetadataService 重构
 
-**文件**: `packages/datahub/src/ditto_datahub/services/metadata_service.py`
+**文件**: `packages/data/src/ditto_data/services/metadata_service.py`
 
 - 移除 `_DITTO_TO_SOURCE_EXCHANGE` 映射
 - 通过 DI 获取 `ExchangeTransformers`
@@ -265,8 +265,8 @@ Phase 6: Fund 域 (Task 2.3)
 
 ```bash
 # Exchange 层使用
-from ditto_datahub.models import Exchange
-from ditto_datahub.sources import get_transformer
+from ditto_data.models import Exchange
+from ditto_data.sources import get_transformer
 
 transformer = get_transformer("tushare")
 standard = transformer.to_standard("000001.SZ")  # "000001.XSHE"

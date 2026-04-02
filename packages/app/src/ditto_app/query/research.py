@@ -19,12 +19,7 @@ from ditto_analytics.models.research import (
     ResearchSpineSnapshotRecord,
     ResearchSpineSpecRecord,
 )
-from ditto_data.errors import DerivedNotFoundError, DerivedValidationError
-from ditto_datahub.services import DerivedArtifactReader, ResearchCatalogService
-from ditto_datahub.services.derived import VersionResolutionStrategy
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.research_artifact_service import ResearchArtifactService
-from ditto_engine.engine.research import (
+from ditto_analytics.research.domain import (
     DatasetSnapshot,
     KnownAtPolicy,
     LateArrivalPolicy,
@@ -32,7 +27,12 @@ from ditto_engine.engine.research import (
     SpineSnapshot,
     SpineSpec,
 )
-from ditto_engine.engine.specs import CalendarId, GrainId
+from ditto_data.errors import DerivedNotFoundError, DerivedValidationError
+from ditto_data.services import DerivedArtifactReader, ResearchCatalogService
+from ditto_data.services.derived import VersionResolutionStrategy
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.research_artifact_service import ResearchArtifactService
+from ditto_engine.specs import CalendarId, GrainId
 
 from ditto_app.query._utils import now_iso
 

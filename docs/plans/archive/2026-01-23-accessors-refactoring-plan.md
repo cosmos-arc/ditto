@@ -54,7 +54,7 @@
 
 ### 2. 数据增强 - enrichment 纯函数模块
 
-**目标模块:** `packages/datahub/src/ditto_datahub/accessors/internal/enrichment.py`
+**目标模块:** `packages/data/src/ditto_data/accessors/internal/enrichment.py`
 
 ```python
 def enrich_with_sid(df: pl.DataFrame, sid_mapping: dict[str, int], ...) -> pl.DataFrame
@@ -64,7 +64,7 @@ def enrich_with_status(df: pl.DataFrame, status_df: pl.DataFrame, ...) -> pl.Dat
 
 ### 3. PIT 查询 - pit 纯函数模块
 
-**目标模块:** `packages/datahub/src/ditto_datahub/accessors/internal/pit.py`
+**目标模块:** `packages/data/src/ditto_data/accessors/internal/pit.py`
 
 ```python
 def parse_asof_date(asof: date | str) -> date
@@ -78,12 +78,12 @@ def filter_by_knowledge_date(df: pl.DataFrame, pit_dt: date, ...) -> pl.DataFram
 ### Task 1.1: 创建 enrichment.py 模块
 
 **文件:**
-- 创建: `packages/datahub/src/ditto_datahub/accessors/internal/enrichment.py`
-- 测试: `packages/datahub/tests/unit/accessors/internal/test_enrichment_unit.py`
+- 创建: `packages/data/src/ditto_data/accessors/internal/enrichment.py`
+- 测试: `packages/data/tests/unit/accessors/internal/test_enrichment_unit.py`
 
 **Step 1: 编写失败的测试**
 
-创建测试文件 `packages/datahub/tests/unit/accessors/internal/test_enrichment_unit.py`:
+创建测试文件 `packages/data/tests/unit/accessors/internal/test_enrichment_unit.py`:
 
 ```python
 """Enrichment 纯函数模块单元测试。"""
@@ -91,7 +91,7 @@ def filter_by_knowledge_date(df: pl.DataFrame, pit_dt: date, ...) -> pl.DataFram
 import polars as pl
 import pytest
 
-from ditto_datahub.accessors.internal.enrichment import (
+from ditto_data.accessors.internal.enrichment import (
     enrich_with_sid,
     enrich_with_symbol,
     enrich_with_status,
@@ -207,14 +207,14 @@ def test_enrich_with_status_empty_df():
 **Step 2: 运行测试验证失败**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/internal/test_enrichment_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/internal/test_enrichment_unit.py -v
 ```
 
-预期: FAIL - "ModuleNotFoundError: No module named 'ditto_datahub.accessors.internal.enrichment'"
+预期: FAIL - "ModuleNotFoundError: No module named 'ditto_data.accessors.internal.enrichment'"
 
 **Step 3: 实现最小代码**
 
-创建 `packages/datahub/src/ditto_datahub/accessors/internal/enrichment.py`:
+创建 `packages/data/src/ditto_data/accessors/internal/enrichment.py`:
 
 ```python
 """
@@ -313,20 +313,20 @@ def enrich_with_status(
     )
 ```
 
-更新 `packages/datahub/src/ditto_datahub/accessors/internal/__init__.py`:
+更新 `packages/data/src/ditto_data/accessors/internal/__init__.py`:
 
 ```python
 """Internal accessor utilities."""
 
-from ditto_datahub.accessors.internal.adjustment import (
+from ditto_data.accessors.internal.adjustment import (
     apply_hfq_adj,
     apply_qfq_adj,
 )
-from ditto_datahub.accessors.internal.enrichment import (
+from ditto_data.accessors.internal.enrichment import (
     enrich_with_sid,
     enrich_with_status,
     enrich_with_symbol,
-from ditto_datahub.accessors.internal.pit import (
+from ditto_data.accessors.internal.pit import (
     filter_by_knowledge_date,
     parse_asof_date,
 )
@@ -348,7 +348,7 @@ __all__ = [
 **Step 4: 运行测试验证通过**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/internal/test_enrichment_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/internal/test_enrichment_unit.py -v
 ```
 
 预期: PASS
@@ -356,9 +356,9 @@ pixi run -e dev pytest packages/datahub/tests/unit/accessors/internal/test_enric
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/accessors/internal/enrichment.py
-git add packages/datahub/src/ditto_datahub/accessors/internal/__init__.py
-git add packages/datahub/tests/unit/accessors/internal/test_enrichment_unit.py
+git add packages/data/src/ditto_data/accessors/internal/enrichment.py
+git add packages/data/src/ditto_data/accessors/internal/__init__.py
+git add packages/data/tests/unit/accessors/internal/test_enrichment_unit.py
 git commit -m "feat(accessors): add enrichment pure function module
 
 - Add enrich_with_sid, enrich_with_symbol, enrich_with_status
@@ -371,12 +371,12 @@ git commit -m "feat(accessors): add enrichment pure function module
 ### Task 1.2: 重构 SecuritiesAccessor 使用 enrichment 纯函数
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/accessors/security_accessor.py:433-494`
-- 测试: `packages/datahub/tests/unit/accessors/test_security_accessor_unit.py`
+- 修改: `packages/data/src/ditto_data/accessors/security_accessor.py:433-494`
+- 测试: `packages/data/tests/unit/accessors/test_security_accessor_unit.py`
 
 **Step 1: 编写失败的测试（验证现有行为）**
 
-在 `packages/datahub/tests/unit/accessors/test_security_accessor_unit.py` 中添加:
+在 `packages/data/tests/unit/accessors/test_security_accessor_unit.py` 中添加:
 
 ```python
 def test_enrich_dataframe_with_sid_returns_correct_columns():
@@ -407,16 +407,16 @@ def test_enrich_dataframe_with_sid_returns_correct_columns():
 **Step 2: 运行测试验证通过（现有实现应该通过）**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_security_accessor_unit.py::test_enrich_dataframe_with_sid_returns_correct_columns -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/test_security_accessor_unit.py::test_enrich_dataframe_with_sid_returns_correct_columns -v
 ```
 
 **Step 3: 重构代码使用 enrichment 纯函数**
 
-修改 `packages/datahub/src/ditto_datahub/accessors/security_accessor.py`:
+修改 `packages/data/src/ditto_data/accessors/security_accessor.py`:
 
 ```python
 # 在文件顶部添加导入
-from ditto_datahub.accessors.internal.enrichment import enrich_with_sid
+from ditto_data.accessors.internal.enrichment import enrich_with_sid
 
 # 修改 enrich_dataframe_with_sid 方法 (第 433-494 行)
 def enrich_dataframe_with_sid(
@@ -479,13 +479,13 @@ def enrich_dataframe_with_sid(
 **Step 4: 运行测试验证通过**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_security_accessor_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/test_security_accessor_unit.py -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/accessors/security_accessor.py
+git add packages/data/src/ditto_data/accessors/security_accessor.py
 git commit -m "refactor(accessors): use enrichment pure function in SecuritiesAccessor
 
 - Refactor enrich_dataframe_with_sid to use enrich_with_sid
@@ -497,8 +497,8 @@ git commit -m "refactor(accessors): use enrichment pure function in SecuritiesAc
 ### Task 1.3: 重构 SecurityStore 使用 enrichment 纯函数
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/stores/security_store.py`
-- 测试: `packages/datahub/tests/unit/stores/test_security_store_unit.py`
+- 修改: `packages/data/src/ditto_data/stores/security_store.py`
+- 测试: `packages/data/tests/unit/stores/test_security_store_unit.py`
 
 **Step 1: 查找 SecurityStore.enrich_with_symbol 方法**
 
@@ -509,13 +509,13 @@ git commit -m "refactor(accessors): use enrichment pure function in SecuritiesAc
 **Step 3: 运行测试验证**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/stores/test_security_store_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/stores/test_security_store_unit.py -v
 ```
 
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/security_store.py
+git add packages/data/src/ditto_data/stores/security_store.py
 git commit -m "refactor(stores): use enrichment.enrich_with_symbol in SecurityStore"
 ```
 
@@ -524,8 +524,8 @@ git commit -m "refactor(stores): use enrichment.enrich_with_symbol in SecuritySt
 ### Task 1.4: 重构 BarsAccessor 使用 enrichment 纯函数
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/accessors/bars_accessor.py`
-- 测试: `packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py`
+- 修改: `packages/data/src/ditto_data/accessors/bars_accessor.py`
+- 测试: `packages/data/tests/unit/accessors/test_bars_accessor_unit.py`
 
 **Step 1: 找到 _enrich_with_status 方法**
 
@@ -539,7 +539,7 @@ git commit -m "refactor(stores): use enrichment.enrich_with_symbol in SecuritySt
 
 ```python
 # 在顶部添加导入
-from ditto_datahub.accessors.internal.enrichment import enrich_with_status
+from ditto_data.accessors.internal.enrichment import enrich_with_status
 
 # 重构 _enrich_with_status 方法
 def _enrich_with_status(
@@ -560,13 +560,13 @@ def _enrich_with_status(
 **Step 4: 运行测试验证**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/test_bars_accessor_unit.py -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/accessors/bars_accessor.py
+git add packages/data/src/ditto_data/accessors/bars_accessor.py
 git commit -m "refactor(accessors): use enrichment.enrich_with_status in BarsAccessor"
 ```
 
@@ -577,19 +577,19 @@ git commit -m "refactor(accessors): use enrichment.enrich_with_status in BarsAcc
 **Step 1: 运行单元测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/ -v
+pixi run -e dev pytest packages/data/tests/unit/ -v
 ```
 
 **Step 2: 运行集成测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/integration/ -v
+pixi run -e dev pytest packages/data/tests/integration/ -v
 ```
 
 **Step 3: 运行类型检查**
 
 ```bash
-pixi run -e dev type --path packages/datahub
+pixi run -e dev type --path packages/data
 ```
 
 **Step 4: 如果全部通过，标记阶段 1 完成**
@@ -601,8 +601,8 @@ pixi run -e dev type --path packages/datahub
 ### Task 2.1: 简化 BarsAccessor 接口（移除 src_codes/symbols）
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/accessors/bars_accessor.py`
-- 测试: `packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py`
+- 修改: `packages/data/src/ditto_data/accessors/bars_accessor.py`
+- 测试: `packages/data/tests/unit/accessors/test_bars_accessor_unit.py`
 
 **Step 1: 编写测试验证新接口（只接受 sids）**
 
@@ -617,7 +617,7 @@ def test_bars_accessor_only_accepts_sids():
 
 **Step 2: 修改 BarsQuery 数据类**
 
-修改 `packages/datahub/src/ditto_datahub/accessors/bars_accessor.py` 中的 `BarsQuery`:
+修改 `packages/data/src/ditto_data/accessors/bars_accessor.py` 中的 `BarsQuery`:
 
 ```python
 @dataclass(frozen=True)
@@ -649,13 +649,13 @@ class BarsQuery:
 **Step 4: 运行测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/test_bars_accessor_unit.py -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/accessors/bars_accessor.py
+git add packages/data/src/ditto_data/accessors/bars_accessor.py
 git commit -m "refactor(accessors): simplify BarsAccessor to only accept sids
 
 - Remove src_codes and symbols from BarsQuery
@@ -668,8 +668,8 @@ git commit -m "refactor(accessors): simplify BarsAccessor to only accept sids
 ### Task 2.2: 简化 IndexAccessor 接口
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/accessors/index_accessor.py`
-- 测试: `packages/datahub/tests/unit/accessors/test_index_accessor_unit.py`
+- 修改: `packages/data/src/ditto_data/accessors/index_accessor.py`
+- 测试: `packages/data/tests/unit/accessors/test_index_accessor_unit.py`
 
 **Step 1: 查看当前 IndexAccessor 接口**
 
@@ -682,13 +682,13 @@ git commit -m "refactor(accessors): simplify BarsAccessor to only accept sids
 **Step 3: 运行测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_index_accessor_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/test_index_accessor_unit.py -v
 ```
 
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/accessors/index_accessor.py
+git add packages/data/src/ditto_data/accessors/index_accessor.py
 git commit -m "refactor(accessors): simplify IndexAccessor to only accept sids"
 ```
 
@@ -697,12 +697,12 @@ git commit -m "refactor(accessors): simplify IndexAccessor to only accept sids"
 ### Task 2.3: 增强 DataHub 添加标识符转换门面
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/hub.py`
-- 测试: `packages/datahub/tests/unit/test_hub_unit.py`
+- 修改: `packages/data/src/ditto_data/hub.py`
+- 测试: `packages/data/tests/unit/test_hub_unit.py`
 
 **Step 1: 编写失败的测试**
 
-在 `packages/datahub/tests/unit/test_hub_unit.py` 中添加:
+在 `packages/data/tests/unit/test_hub_unit.py` 中添加:
 
 ```python
 def test_resolve_identifiers_batch():
@@ -745,12 +745,12 @@ def test_get_sid_symbol_mapping():
 **Step 2: 运行测试验证失败**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/test_hub_unit.py::test_resolve_identifiers_batch -v
+pixi run -e dev pytest packages/data/tests/unit/test_hub_unit.py::test_resolve_identifiers_batch -v
 ```
 
 **Step 3: 在 DataHub 添加标识符转换方法**
 
-修改 `packages/datahub/src/ditto_datahub/hub.py`:
+修改 `packages/data/src/ditto_data/hub.py`:
 
 ```python
 # 在 DataHub 类中添加以下方法
@@ -844,16 +844,16 @@ def get_sid_symbol_mapping(self, sids: list[int]) -> dict[int, str]:
 **Step 4: 运行测试验证通过**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/test_hub_unit.py::test_resolve_identifiers_batch -v
-pixi run -e dev pytest packages/datahub/tests/unit/test_hub_unit.py::test_resolve_sids_from_inputs_mixed -v
-pixi run -e dev pytest packages/datahub/tests/unit/test_hub_unit.py::test_get_sid_symbol_mapping -v
+pixi run -e dev pytest packages/data/tests/unit/test_hub_unit.py::test_resolve_identifiers_batch -v
+pixi run -e dev pytest packages/data/tests/unit/test_hub_unit.py::test_resolve_sids_from_inputs_mixed -v
+pixi run -e dev pytest packages/data/tests/unit/test_hub_unit.py::test_get_sid_symbol_mapping -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/hub.py
-git add packages/datahub/tests/unit/test_hub_unit.py
+git add packages/data/src/ditto_data/hub.py
+git add packages/data/tests/unit/test_hub_unit.py
 git commit -m "feat(datahub): add identifier resolution facade methods
 
 - Add resolve_identifiers, resolve_sids_from_inputs
@@ -866,8 +866,8 @@ git commit -m "feat(datahub): add identifier resolution facade methods
 ### Task 2.4: 添加 DataHub 便捷 API 方法
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/hub.py`
-- 测试: `packages/datahub/tests/unit/test_hub_unit.py`
+- 修改: `packages/data/src/ditto_data/hub.py`
+- 测试: `packages/data/tests/unit/test_hub_unit.py`
 
 **Step 1: 编写失败的测试**
 
@@ -903,7 +903,7 @@ def test_get_bars_convenience_mixed_inputs():
 **Step 2: 运行测试验证失败**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/test_hub_unit.py::test_get_bars_convenience_with_src_codes -v
+pixi run -e dev pytest packages/data/tests/unit/test_hub_unit.py::test_get_bars_convenience_with_src_codes -v
 ```
 
 **Step 3: 实现便捷 API 方法**
@@ -960,7 +960,7 @@ def get_bars(
         ... )
 
     """
-    from ditto_datahub.accessors.bars_accessor import AdjType, BarsQuery
+    from ditto_data.accessors.bars_accessor import AdjType, BarsQuery
 
     # 解析 SID
     resolved_sids = self.resolve_sids_from_inputs(sids, src_codes, symbols, asof=asof)
@@ -1036,14 +1036,14 @@ def get_index_bars(
 **Step 4: 运行测试验证通过**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/test_hub_unit.py -k "convenience" -v
+pixi run -e dev pytest packages/data/tests/unit/test_hub_unit.py -k "convenience" -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/hub.py
-git add packages/datahub/tests/unit/test_hub_unit.py
+git add packages/data/src/ditto_data/hub.py
+git add packages/data/tests/unit/test_hub_unit.py
 git commit -m "feat(datahub): add convenience API methods for mixed identifiers
 
 - Add get_bars, get_securities, get_index_bars
@@ -1136,12 +1136,12 @@ pixi run -e dev type
 ### Task 3.1: 创建 pit.py 模块
 
 **文件:**
-- 创建: `packages/datahub/src/ditto_datahub/accessors/internal/pit.py`
-- 测试: `packages/datahub/tests/unit/accessors/internal/test_pit_unit.py`
+- 创建: `packages/data/src/ditto_data/accessors/internal/pit.py`
+- 测试: `packages/data/tests/unit/accessors/internal/test_pit_unit.py`
 
 **Step 1: 编写失败的测试**
 
-创建测试文件 `packages/datahub/tests/unit/accessors/internal/test_pit_unit.py`:
+创建测试文件 `packages/data/tests/unit/accessors/internal/test_pit_unit.py`:
 
 ```python
 """PIT 纯函数模块单元测试。"""
@@ -1151,7 +1151,7 @@ from datetime import date
 import polars as pl
 import pytest
 
-from ditto_datahub.accessors.internal.pit import (
+from ditto_data.accessors.internal.pit import (
     filter_by_knowledge_date,
     parse_asof_date,
 )
@@ -1207,12 +1207,12 @@ def test_filter_by_knowledge_date_fallback_to_trade_date(caplog):
 **Step 2: 运行测试验证失败**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/internal/test_pit_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/internal/test_pit_unit.py -v
 ```
 
 **Step 3: 实现最小代码**
 
-创建 `packages/datahub/src/ditto_datahub/accessors/internal/pit.py`:
+创建 `packages/data/src/ditto_data/accessors/internal/pit.py`:
 
 ```python
 """
@@ -1275,14 +1275,14 @@ def filter_by_knowledge_date(
 **Step 4: 运行测试验证通过**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/internal/test_pit_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/internal/test_pit_unit.py -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/accessors/internal/pit.py
-git add packages/datahub/tests/unit/accessors/internal/test_pit_unit.py
+git add packages/data/src/ditto_data/accessors/internal/pit.py
+git add packages/data/tests/unit/accessors/internal/test_pit_unit.py
 git commit -m "feat(accessors): add PIT pure function module
 
 - Add parse_asof_date, filter_by_knowledge_date
@@ -1295,8 +1295,8 @@ git commit -m "feat(accessors): add PIT pure function module
 ### Task 3.2: 重构 adjustment.py 使用 pit 纯函数
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/accessors/internal/adjustment.py`
-- 测试: `packages/datahub/tests/unit/accessors/internal/test_adjustment_unit.py`
+- 修改: `packages/data/src/ditto_data/accessors/internal/adjustment.py`
+- 测试: `packages/data/tests/unit/accessors/internal/test_adjustment_unit.py`
 
 **注意:** adjustment.py 已经有 `parse_asof_date` 和 `filter_baseline_by_asof`。需要重构使用 pit 模块。
 
@@ -1306,11 +1306,11 @@ git commit -m "feat(accessors): add PIT pure function module
 
 **Step 2: 重构 adjustment.py 导入并使用 pit 模块**
 
-修改 `packages/datahub/src/ditto_datahub/accessors/internal/adjustment.py`:
+修改 `packages/data/src/ditto_data/accessors/internal/adjustment.py`:
 
 ```python
 # 移除本地的 parse_asof_date，使用 pit 模块的
-from ditto_datahub.accessors.internal.pit import (
+from ditto_data.accessors.internal.pit import (
     filter_by_knowledge_date,
     parse_asof_date,
 )
@@ -1342,13 +1342,13 @@ baseline_df = filter_baseline_by_asof(adj_df, pit_dt)
 **Step 3: 运行测试验证**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/internal/ -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/internal/ -v
 ```
 
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/accessors/internal/adjustment.py
+git add packages/data/src/ditto_data/accessors/internal/adjustment.py
 git commit -m "refactor(accessors): use pit.parse_asof_date in adjustment module
 
 - Remove duplicate parse_asof_date
@@ -1395,7 +1395,7 @@ pixi run -e dev ci
 **Step 2: 检查测试覆盖率**
 
 ```bash
-pixi run -e dev pytest --cov=packages/datahub --cov-report=term-missing
+pixi run -e dev pytest --cov=packages/data --cov-report=term-missing
 ```
 
 **Step 3: 确认覆盖率 >= 80%**
@@ -1458,23 +1458,23 @@ All tests pass, coverage >= 80%, type checking clean."
 
 | 文件 | 用途 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/accessors/internal/enrichment.py` | 数据增强纯函数 |
-| `packages/datahub/src/ditto_datahub/accessors/internal/pit.py` | PIT 查询纯函数 |
-| `packages/datahub/tests/unit/accessors/internal/test_enrichment_unit.py` | enrichment 单元测试 |
-| `packages/datahub/tests/unit/accessors/internal/test_pit_unit.py` | pit 单元测试 |
+| `packages/data/src/ditto_data/accessors/internal/enrichment.py` | 数据增强纯函数 |
+| `packages/data/src/ditto_data/accessors/internal/pit.py` | PIT 查询纯函数 |
+| `packages/data/tests/unit/accessors/internal/test_enrichment_unit.py` | enrichment 单元测试 |
+| `packages/data/tests/unit/accessors/internal/test_pit_unit.py` | pit 单元测试 |
 
 ### 修改文件
 
 | 文件 | 修改内容 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/accessors/internal/__init__.py` | 导出 enrichment 和 pit 函数 |
-| `packages/datahub/src/ditto_datahub/accessors/internal/adjustment.py` | 使用 pit.parse_asof_date |
-| `packages/datahub/src/ditto_datahub/accessors/security_accessor.py` | 使用 enrichment.enrich_with_sid |
-| `packages/datahub/src/ditto_datahub/accessors/bars_accessor.py` | 使用 enrichment.enrich_with_status，简化接口 |
-| `packages/datahub/src/ditto_datahub/accessors/index_accessor.py` | 简化接口 |
-| `packages/datahub/src/ditto_datahub/stores/security_store.py` | 使用 enrichment.enrich_with_symbol |
-| `packages/datahub/src/ditto_datahub/hub.py` | 添加标识符转换门面和便捷 API |
-| `packages/datahub/tests/unit/test_hub_unit.py` | DataHub 新方法测试 |
+| `packages/data/src/ditto_data/accessors/internal/__init__.py` | 导出 enrichment 和 pit 函数 |
+| `packages/data/src/ditto_data/accessors/internal/adjustment.py` | 使用 pit.parse_asof_date |
+| `packages/data/src/ditto_data/accessors/security_accessor.py` | 使用 enrichment.enrich_with_sid |
+| `packages/data/src/ditto_data/accessors/bars_accessor.py` | 使用 enrichment.enrich_with_status，简化接口 |
+| `packages/data/src/ditto_data/accessors/index_accessor.py` | 简化接口 |
+| `packages/data/src/ditto_data/stores/security_store.py` | 使用 enrichment.enrich_with_symbol |
+| `packages/data/src/ditto_data/hub.py` | 添加标识符转换门面和便捷 API |
+| `packages/data/tests/unit/test_hub_unit.py` | DataHub 新方法测试 |
 | `apps/port/src/ditto_port/**/*.py` | 使用便捷 API |
 
 ---

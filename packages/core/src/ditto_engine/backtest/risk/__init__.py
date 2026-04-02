@@ -1,8 +1,8 @@
-"""Backtest risk — PreTrade 校验规则 + PostTrade 组合风控扫描。"""
+"""Re-export shim — canonical definitions moved to ditto_engine.risk."""
 
 from __future__ import annotations
 
-from ditto_engine.backtest.risk.post_trade import (
+from ditto_engine.risk.post_trade import (
     CompositePostTradeGuard,
     ConcentrationLimitRule,
     MarketAnomalyRule,
@@ -13,7 +13,7 @@ from ditto_engine.backtest.risk.post_trade import (
     RiskSeverity,
     SingleLossLimitRule,
 )
-from ditto_engine.backtest.risk.pre_trade import (
+from ditto_engine.risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     ConcentrationPreCheck,

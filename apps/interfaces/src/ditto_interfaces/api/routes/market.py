@@ -5,7 +5,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_datahub.services.market_service import (
+from ditto_data.services.market_service import (
     AdjType,
     MarketBarsQuery,
     MarketService,

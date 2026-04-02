@@ -5,7 +5,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.enums import AssetClass
 from fastapi import APIRouter, HTTPException, Query
 

@@ -334,7 +334,7 @@ pixi run -e dev lint  # All checks passed
 ### 架构原则
 ```
 依赖层级（从高到低）:
-  ditto_port → ditto_core → ditto_datahub → ditto_infra
+  ditto_port → ditto_core → ditto_data → ditto_infra
 
 允许的跨层依赖:
   - port 可以直接依赖 datahub.models/services

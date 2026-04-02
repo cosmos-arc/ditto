@@ -20,11 +20,11 @@
 
 | 层 | 当前主语义 | 证据 |
 |---|---|---|
-| DataHub 元数据/存储 | `instrument_id: int` 为主，`source_ticker: str` 为映射 | [schema.sql](/home/chevy/projects/ditto/packages/datahub/src/ditto_datahub/scripts/schema.sql), [metadata.py](/home/chevy/projects/ditto/packages/datahub/src/ditto_datahub/models/metadata.py), [instrument.py](/home/chevy/projects/ditto/packages/datahub/src/ditto_datahub/services/metadata/instrument.py) |
+| DataHub 元数据/存储 | `instrument_id: int` 为主，`source_ticker: str` 为映射 | [schema.sql](/home/chevy/projects/ditto/packages/data/src/ditto_data/scripts/schema.sql), [metadata.py](/home/chevy/projects/ditto/packages/data/src/ditto_data/models/metadata.py), [instrument.py](/home/chevy/projects/ditto/packages/data/src/ditto_data/services/metadata/instrument.py) |
 | Port 策略适配层 | 从 `int instrument_id` 解析到 `str source_ticker` 后再喂给 Core | [market_data_feed.py](/home/chevy/projects/ditto/apps/port/src/ditto_port/services/strategy/market_data_feed.py) |
 | Core 回测/执行/账户 | `instrument_id: str` 被当成运行时主键（实际存储 source_ticker） | [data_feed.py](/home/chevy/projects/ditto/packages/core/src/ditto_core/backtest/data_feed.py), [market.py](/home/chevy/projects/ditto/packages/core/src/ditto_core/execution/reality/market.py), [position.py](/home/chevy/projects/ditto/packages/core/src/ditto_core/accounting/position.py), [rules.py](/home/chevy/projects/ditto/packages/core/src/ditto_core/execution/rules.py) |
 
-更复杂的是，DataHub 内部也已经出现"执行子域提前切到字符串标识"的情况，例如 `trading_rule` 目前以 `TEXT instrument_id` 存储，见 [trading_rule_reader.py](/home/chevy/projects/ditto/packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_reader.py)。这说明问题不是"哪边改成另一边那么简单"，而是系统缺少一套显式的身份语义模型。
+更复杂的是，DataHub 内部也已经出现"执行子域提前切到字符串标识"的情况，例如 `trading_rule` 目前以 `TEXT instrument_id` 存储，见 [trading_rule_reader.py](/home/chevy/projects/ditto/packages/data/src/ditto_data/stores/metadata/trading_rule_reader.py)。这说明问题不是"哪边改成另一边那么简单"，而是系统缺少一套显式的身份语义模型。
 
 #### 受影响的完整链路
 
@@ -339,12 +339,12 @@ pixi run -e dev pytest packages/core/tests/integration/backtest/test_reproducibi
 - DataHub 侧 `InstrumentRuleProvider` 同步迁移
 
 **Files**
-- Modify: `packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/services/strategy/instrument_rule_provider.py` — `DefinitionRecord.instrument_id`、`_definitions` dict key、查询方法签名
-- Modify: `packages/datahub/src/ditto_datahub/scripts/schema.sql`
-- Modify: `packages/datahub/tests/unit/stores/metadata/...`
-- Modify: `packages/datahub/tests/unit/services/strategy/test_strategy_run_service_unit.py`
+- Modify: `packages/data/src/ditto_data/stores/metadata/trading_rule_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/metadata/fee_schedule_reader.py`
+- Modify: `packages/data/src/ditto_data/services/strategy/instrument_rule_provider.py` — `DefinitionRecord.instrument_id`、`_definitions` dict key、查询方法签名
+- Modify: `packages/data/src/ditto_data/scripts/schema.sql`
+- Modify: `packages/data/tests/unit/stores/metadata/...`
+- Modify: `packages/data/tests/unit/services/strategy/test_strategy_run_service_unit.py`
 
 **关键动作**
 1. 将 `TEXT instrument_id` 收敛为 canonical integer
@@ -408,7 +408,7 @@ pixi run -e dev pytest packages/core/tests/unit/execution -v
 pixi run -e dev pytest packages/core/tests/integration/backtest/test_reproducibility.py -v
 
 # Phase 3 完成后
-pixi run -e dev pytest packages/datahub/tests/unit/services/strategy/test_strategy_run_service_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/services/strategy/test_strategy_run_service_unit.py -v
 
 # 最终验收
 pixi run -e dev check

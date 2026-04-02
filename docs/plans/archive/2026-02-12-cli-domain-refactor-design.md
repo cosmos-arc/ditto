@@ -177,7 +177,7 @@ cli/commands/
 
 ### 需要修改的文件
 
-1. **Dataset 枚举** (`packages/datahub/src/ditto_datahub/models/common.py`)
+1. **Dataset 枚举** (`packages/data/src/ditto_data/models/common.py`)
    - `FUTURES` → `FUTURES_POSITION`
 
 2. **INGESTION_SPECS** (`apps/port/src/ditto_port/models/config.py`)
@@ -197,16 +197,16 @@ cli/commands/
 6. **DataWriter** (`apps/port/src/ditto_port/services/ingestion/data_writer.py`)
    - 更新 Dataset 枚举引用
 
-7. **Store 目录** (`packages/datahub/src/ditto_datahub/stores/capital/`)
+7. **Store 目录** (`packages/data/src/ditto_data/stores/capital/`)
    - `futures/` → `futures_position/`
 
-8. **CapitalService** (`packages/datahub/src/ditto_datahub/services/capital_service.py`)
+8. **CapitalService** (`packages/data/src/ditto_data/services/capital_service.py`)
    - 更新导入路径
 
 9. **DataSource Protocol** (`apps/port/src/ditto_port/services/ingestion/protocols.py`)
    - `fetch_futures` → `fetch_futures_position`
 
-10. **Tushare Source** (`packages/datahub/src/ditto_datahub/sources/tushare/`)
+10. **Tushare Source** (`packages/data/src/ditto_data/sources/tushare/`)
     - 更新方法名
 
 11. **测试文件**

@@ -133,10 +133,10 @@
 
 - **验收**：query 子模块创建完成，提供面向消费者的查询函数
 - **文件**：
-  - 新建 `packages/datahub/src/ditto_datahub/query/__init__.py`
-  - 新建 `packages/datahub/src/ditto_datahub/query/metadata.py` — 元数据查询（instrument, calendar, universe）
-  - 新建 `packages/datahub/src/ditto_datahub/query/market.py` — 行情查询（bars, adj, PIT）
-  - 修改 `packages/datahub/src/ditto_datahub/__init__.py` — 如需导出 query 入口
+  - 新建 `packages/data/src/ditto_data/query/__init__.py`
+  - 新建 `packages/data/src/ditto_data/query/metadata.py` — 元数据查询（instrument, calendar, universe）
+  - 新建 `packages/data/src/ditto_data/query/market.py` — 行情查询（bars, adj, PIT）
+  - 修改 `packages/data/src/ditto_data/__init__.py` — 如需导出 query 入口
 - **关键设计**：
   - query 层是现有 services 的消费者端门面（facade），不重复实现逻辑
   - 组合 `MetadataService`、`MarketService` 等，提供简化查询接口
@@ -147,8 +147,8 @@
 
 - **验收**：BacktestProvider 实现 DataProvider Protocol，通过一致性测试
 - **文件**：
-  - 新建 `packages/datahub/src/ditto_datahub/query/provider.py`
-  - 新建 `packages/datahub/tests/unit/test_backtest_provider.py`（或 integration）
+  - 新建 `packages/data/src/ditto_data/query/provider.py`
+  - 新建 `packages/data/tests/unit/test_backtest_provider.py`（或 integration）
 - **关键设计**：
   - `BacktestProvider` 实现 `kernel.DataProvider` Protocol
   - 组合 `MetadataService`、`MarketService` 等现有服务
@@ -177,7 +177,7 @@
 
 - **验收**：LiveProvider 实现 DataProvider Protocol，支持实时数据查询
 - **文件**：
-  - 修改 `packages/datahub/src/ditto_datahub/query/provider.py` — 添加 LiveProvider
+  - 修改 `packages/data/src/ditto_data/query/provider.py` — 添加 LiveProvider
   - 新建测试文件
 - **关键设计**：
   - `LiveProvider` 实现 `DataProvider` Protocol
@@ -206,7 +206,7 @@
 | `packages/kernel/pyproject.toml` | 保持零依赖，0c 升版本 |
 | `packages/core/src/ditto_core/backtest/data_feed.py` | Phase 1 核心改造点 |
 | `packages/core/src/ditto_core/backtest/engine.py` | 回测主循环，可能需调整注入 |
-| `packages/datahub/src/ditto_datahub/services/` | Provider 实现的底层依赖 |
+| `packages/data/src/ditto_data/services/` | Provider 实现的底层依赖 |
 | `apps/port/src/ditto_port/registry/` | DI 容器，Phase 1 需新增 Provider 注册 |
 | `.importlinter` | Phase 0/1 无需修改（无新包、无新依赖方向） |
 

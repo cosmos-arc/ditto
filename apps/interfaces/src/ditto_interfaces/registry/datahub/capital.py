@@ -3,33 +3,33 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.ports import CapitalReadPorts, CapitalWritePorts
-from ditto_datahub.stores.capital.index_composition.index_composition_reader import (
+from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.ports import CapitalReadPorts, CapitalWritePorts
+from ditto_data.stores.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
-from ditto_datahub.stores.capital.index_composition.index_composition_writer import (
+from ditto_data.stores.capital.index_composition.index_composition_writer import (
     IndexCompositionWriter,
 )
-from ditto_datahub.stores.capital.margin.margin_trading_reader import (
+from ditto_data.stores.capital.margin.margin_trading_reader import (
     MarginTradingReader,
 )
-from ditto_datahub.stores.capital.margin.margin_trading_writer import (
+from ditto_data.stores.capital.margin.margin_trading_writer import (
     MarginTradingWriter,
 )
-from ditto_datahub.stores.capital.pledge.pledge_ratio_reader import (
+from ditto_data.stores.capital.pledge.pledge_ratio_reader import (
     PledgeRatioReader,
 )
-from ditto_datahub.stores.capital.pledge.pledge_ratio_writer import (
+from ditto_data.stores.capital.pledge.pledge_ratio_writer import (
     PledgeRatioWriter,
 )
-from ditto_datahub.stores.capital.valuation.valuation_metrics_reader import (
+from ditto_data.stores.capital.valuation.valuation_metrics_reader import (
     ValuationMetricsReader,
 )
-from ditto_datahub.stores.capital.valuation.valuation_metrics_writer import (
+from ditto_data.stores.capital.valuation.valuation_metrics_writer import (
     ValuationMetricsWriter,
 )
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 from .builders import sqlite_store_pair
 

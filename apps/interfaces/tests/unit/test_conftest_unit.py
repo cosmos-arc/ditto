@@ -339,4 +339,4 @@ class TestPatchDatahubFixture:
         # DataHub 类不存在（已被删除），所以不需要测试创建 DataHub
         # 如果尝试导入会失败
         with pytest.raises(ImportError):
-            from ditto_datahub import DataHub  # noqa: F401
+            from ditto_data import DataHub  # noqa: F401

@@ -16,13 +16,13 @@
 ## Task 1: Dataset 枚举重命名 FUTURES → FUTURES_POSITION
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/models/common.py:70`
+- Modify: `packages/data/src/ditto_data/models/common.py:70`
 - Modify: `apps/port/src/ditto_port/models/config.py:52,604-611`
 
 **Step 1: 修改 DataHub Dataset 枚举**
 
 ```python
-# packages/datahub/src/ditto_datahub/models/common.py
+# packages/data/src/ditto_data/models/common.py
 # 将 FUTURES = "futures" 改为：
 FUTURES_POSITION = "futures_position"
 ```
@@ -61,7 +61,7 @@ pixi run -e dev type
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/models/common.py apps/port/src/ditto_port/models/config.py
+git add packages/data/src/ditto_data/models/common.py apps/port/src/ditto_port/models/config.py
 git commit -m "refactor: Dataset.FUTURES → FUTURES_POSITION"
 ```
 
@@ -72,14 +72,14 @@ git commit -m "refactor: Dataset.FUTURES → FUTURES_POSITION"
 **Files:**
 - Modify: `apps/port/src/ditto_port/services/ingestion/coordinator.py`
 - Modify: `apps/port/src/ditto_port/services/ingestion/data_writer.py`
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py`
-- Modify: `packages/datahub/src/ditto_datahub/sources/schemas/capital_schemas.py`
-- Modify: `packages/datahub/src/ditto_datahub/sources/schemas/__init__.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/adapters/capital.py`
+- Modify: `packages/data/src/ditto_data/sources/schemas/capital_schemas.py`
+- Modify: `packages/data/src/ditto_data/sources/schemas/__init__.py`
 
 **Step 1: 查找所有 FUTURES 引用**
 
 ```bash
-pixi run -e dev grep "FUTURES" packages/datahub apps/port
+pixi run -e dev grep "FUTURES" packages/data apps/port
 ```
 
 **Step 2: 全局替换 FUTURES → FUTURES_POSITION**
@@ -107,24 +107,24 @@ git commit -m "refactor: 更新 FUTURES → FUTURES_POSITION 引用"
 ## Task 3: 重命名 Store 目录 futures → futures_position
 
 **Files:**
-- Rename: `packages/datahub/src/ditto_datahub/stores/capital/futures/` → `futures_position/`
-- Modify: `packages/datahub/src/ditto_datahub/stores/capital/__init__.py`
+- Rename: `packages/data/src/ditto_data/stores/capital/futures/` → `futures_position/`
+- Modify: `packages/data/src/ditto_data/stores/capital/__init__.py`
 
 **Step 1: 重命名目录**
 
 ```bash
-mv packages/datahub/src/ditto_datahub/stores/capital/futures packages/datahub/src/ditto_datahub/stores/capital/futures_position
+mv packages/data/src/ditto_data/stores/capital/futures packages/data/src/ditto_data/stores/capital/futures_position
 ```
 
 **Step 2: 更新 __init__.py 导出**
 
-更新 `packages/datahub/src/ditto_datahub/stores/capital/__init__.py`
+更新 `packages/data/src/ditto_data/stores/capital/__init__.py`
 
 **Step 3: 更新导入此模块的文件**
 
 使用 Grep 查找引用：
 ```bash
-pixi run -e dev grep "stores/capital/futures" packages/datahub
+pixi run -e dev grep "stores/capital/futures" packages/data
 ```
 
 **Step 4: 验证**

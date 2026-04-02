@@ -28,7 +28,7 @@
 ### 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/domains/macro/
+packages/data/src/ditto_data/domains/macro/
 ├── __init__.py
 ├── indicator/
 │   ├── indicator_store.py
@@ -56,7 +56,7 @@ packages/datahub/src/ditto_datahub/domains/macro/
 ### 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/domains/features/
+packages/data/src/ditto_data/domains/features/
 ├── __init__.py
 ├── technical/
 │   ├── price/
@@ -93,7 +93,7 @@ packages/datahub/src/ditto_datahub/domains/features/
 ### 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/domains/factors/
+packages/data/src/ditto_data/domains/factors/
 ├── __init__.py
 ├── style/
 │   ├── value/

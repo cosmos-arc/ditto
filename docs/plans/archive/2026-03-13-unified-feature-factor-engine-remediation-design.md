@@ -29,7 +29,7 @@
 2. `ADR-043`: Role/Profile Certification 与 Compatibility Manifest
 3. 发布安全控制面第一批代码实现已落地：
    - `packages/core`: `CompatibilityManifest / ShadowDiffReport / CertificationReport` 等领域模型
-   - `packages/datahub`: publication safety runtime records / stores / service
+   - `packages/data`: publication safety runtime records / stores / service
    - `apps/port`: RuntimeProvider 接入 publication safety service
 4. 已形成发布安全最小实现计划：
    - [2026-03-13-derived-publication-safety-implementation-plan.md](2026-03-13-derived-publication-safety-implementation-plan.md)
@@ -37,7 +37,7 @@
    - [2026-03-13-unified-feature-factor-engine-development-execution-plan.md](2026-03-13-unified-feature-factor-engine-development-execution-plan.md)
 6. Phase 1 首批 runtime metadata 基线已落地：
    - `packages/core`: `DerivedSpec`、`DerivedVersion / DerivedRun / DerivedState / DerivedPartition`
-   - `packages/datahub`: `models/derived.py`、`stores/runtime/derived_catalog/*`、`DerivedCatalogService`
+   - `packages/data`: `models/derived.py`、`stores/runtime/derived_catalog/*`、`DerivedCatalogService`
    - `apps/port`: RuntimeProvider 接入 `DerivedCatalogService`
 7. 全量验证已通过：
    - `pixi run -e dev check`

@@ -75,7 +75,7 @@
 def create_ingestion_context(...) -> Iterator[tuple[Any, Any]]:
 
 # 修改为
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
 @contextmanager
@@ -121,7 +121,7 @@ def _get_flow(
 
 **代码变更**：
 ```python
-from ditto_datahub.repositories.bars import BarsQuery
+from ditto_data.repositories.bars import BarsQuery
 
 # 当前
 df = hub.bars.get(
@@ -174,7 +174,7 @@ def count_results(
   "python.analysis.extraPaths": [
     "packages/core/src",
     "packages/foundation/src",
-    "packages/datahub/src",
+    "packages/data/src",
     "apps/port/src",
     "apps/server/src"
   ],
@@ -199,7 +199,7 @@ def count_results(
 **方案**：使用类型断言（TypeAssert）或重构代码
 
 **修改文件**：
-- `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
+- `packages/data/src/ditto_data/runtime/freeze_manager.py`
 
 **代码变更**：
 ```python
@@ -225,7 +225,7 @@ def _try_single_file_mode(self, dataset: str) -> tuple[bool, dict[str, str]]:
 **方案**：使用 `Protocol` 定义 Source 接口
 
 **修改文件**：
-- `packages/datahub/src/ditto_datahub/sources/base.py`（添加 Protocol）
+- `packages/data/src/ditto_data/sources/base.py`（添加 Protocol）
 - `apps/port/src/ditto_port/services/ingestion/coordinator.py`（使用 Protocol）
 
 **代码变更**：
@@ -535,7 +535,7 @@ git grep "# type: ignore" -- '*.py' | grep -v "test" | wc -l
 ### 3. 验证 VSCode 配置
 
 1. 打开任意文件，确认 Pyright 正常工作
-2. 检查跨包引用（如 `from ditto_datahub import DataHub`）是否被正确识别
+2. 检查跨包引用（如 `from ditto_data import DataHub`）是否被正确识别
 3. 验证类型提示（inlay hints）是否显示
 
 ### 4. CI 验证
@@ -565,14 +565,14 @@ pixi run -e dev mypy packages/ apps/port/ --no-error-summary --show-error-codes
 ### 阶段 3：Type Ignore 优化
 | 文件 | 修改类型 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py` | 优化：类型收窄 |
-| `packages/datahub/src/ditto_datahub/sources/base.py` | 优化：Protocol 接口 |
+| `packages/data/src/ditto_data/runtime/freeze_manager.py` | 优化：类型收窄 |
+| `packages/data/src/ditto_data/sources/base.py` | 优化：Protocol 接口 |
 | `apps/port/src/ditto_port/services/ingestion/coordinator.py` | 优化：Protocol 使用 |
 
 ### 阶段 4：Noqa 注解治理
 | 文件 | 修改类型 | 优先级 |
 |------|----------|--------|
-| `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py` | 修复：类型断言 | 高 |
+| `packages/data/src/ditto_data/runtime/freeze_manager.py` | 修复：类型断言 | 高 |
 | `packages/foundation/src/ditto_foundation/config/paths.py` | 修复：hasattr 检查 | 高 |
 | `apps/port/src/ditto_port/jobs/tasks/dq_batch.py` | 修复：类型注解 | 高 |
 | `apps/port/src/ditto_port/jobs/flows/backfill.py` | 优化：配置对象 | 中 |

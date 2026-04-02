@@ -14,18 +14,18 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_data.models import OnDuplicate
 from ditto_data.quality import GoldenDatasetSpec
-from ditto_datahub.models import OnDuplicate
-from ditto_datahub.services.market_service import (
+from ditto_data.services.market_service import (
     AdjType,
     MarketBarsQuery,
     MarketService,
 )
-from ditto_datahub.stores.market.stock.adj import (
+from ditto_data.stores.market.stock.adj import (
     StockAdjFactorReader,
     StockAdjFactorWriter,
 )
-from ditto_datahub.stores.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_data.stores.market.stock.bars import StockBarsReader, StockBarsWriter
 from ditto_infra.foundation.concurrency import FileLockManager
 
 # ==============================================================================

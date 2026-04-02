@@ -76,11 +76,11 @@
 
 **严重度**: Blocker
 
-**位置**: `packages/datahub/src/ditto_datahub/models/__init__.py:4`
+**位置**: `packages/data/src/ditto_data/models/__init__.py:4`
 
 **证据**:
 ```python
-# packages/datahub/src/ditto_datahub/models/__init__.py:3-28
+# packages/data/src/ditto_data/models/__init__.py:3-28
 """DataHub models for data transfer objects."""
 
 # Re-export DQ models from Core Layer for backward compatibility
@@ -109,12 +109,12 @@ from ditto_core.quality.spec import (
 ```
 移动文件:
   packages/core/src/ditto_core/quality/spec.py
-  → packages/datahub/src/ditto_datahub/models/dq_spec.py
+  → packages/data/src/ditto_data/models/dq_spec.py
 
 影响范围:
   - ditto_core.quality.spec (移动)
   - ditto_core.quality (重导出)
-  - ditto_datahub.models (直接导出)
+  - ditto_data.models (直接导出)
   - datahub/models/__init__.py (删除反向导入)
 ```
 
@@ -261,12 +261,12 @@ __all__ = [
 **严重度**: Medium
 
 **位置**:
-- `packages/datahub/src/ditto_datahub/hub.py:44`
+- `packages/data/src/ditto_data/hub.py:44`
 - `packages/foundation/src/dditto_foundation/observability/__init__.py:86`
 
 **证据**:
 ```python
-# packages/datahub/src/ditto_datahub/hub.py:44
+# packages/data/src/ditto_data/hub.py:44
 def __init__(  # noqa: PLR0913
     self,
     data_root: Path,
@@ -351,11 +351,11 @@ def _resolve[T](
 **改动范围**:
 1. 移动 DQ 类型定义
    - `packages/core/src/ditto_core/quality/spec.py`
-   - → `packages/datahub/src/ditto_datahub/models/dq_spec.py`
+   - → `packages/data/src/ditto_data/models/dq_spec.py`
 
 2. 更新导入路径
    - `ditto_core.quality` 重导出新位置
-   - `ditto_datahub.models` 直接导出
+   - `ditto_data.models` 直接导出
    - 更新所有引用
 
 3. 更新测试
@@ -369,7 +369,7 @@ def _resolve[T](
 **验证命令**:
 ```bash
 # 验证无 datahub → core 导入
-grep -r "from ditto_core" packages/datahub/src --include="*.py"
+grep -r "from ditto_core" packages/data/src --include="*.py"
 
 # 验证类型检查通过
 pixi run -e dev type
@@ -443,7 +443,7 @@ echo "=== 架构合规检查 ==="
 
 # 1. 检查 datahub → core 依赖
 echo "检查 datahub → core 依赖..."
-if grep -r "from ditto_core" packages/datahub/src --include="*.py" | grep -v "__pycache__"; then
+if grep -r "from ditto_core" packages/data/src --include="*.py" | grep -v "__pycache__"; then
     echo "❌ 发现违规依赖"
     exit 1
 else
@@ -507,7 +507,7 @@ pixi run -e dev ci
 
 # 4. 依赖关系可视化（可选）
 pip install pydeps
-pydeps packages/datahub/src --max-bacon=3 --cluster
+pydeps packages/data/src --max-bacon=3 --cluster
 ```
 
 ### LSP 深度分析
@@ -515,7 +515,7 @@ pydeps packages/datahub/src --max-bacon=3 --cluster
 ```bash
 # 分析 datahub 模块依赖
 pixi run -e dev python .claude/scripts/lsp_pyright.py symbols \
-  packages/datahub/src/ditto_datahub/__init__.py
+  packages/data/src/ditto_data/__init__.py
 
 # 查找 DQSpec 所有引用
 pixi run -e dev python .claude/scripts/lsp_pyright.py refs \

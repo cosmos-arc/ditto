@@ -5,10 +5,9 @@ from datetime import date
 import polars as pl
 import pytest
 from ditto_app.process.ingestion import IngestionCoordinator
-from ditto_data.models.ingestion import IngestionResult
-from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.sources.base import DataSource, SourceFetchError
+from ditto_data.models import OnDuplicate
+from ditto_data.models.ingestion import IngestionLog, IngestionResult, IngestionStatus
+from ditto_data.sources.base import DataSource, SourceFetchError
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing
 from ditto_infra.foundation.observability.config import ObservabilityConfig

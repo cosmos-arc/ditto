@@ -28,7 +28,7 @@ packages/infra/src/ditto_infra/foundation/
   - quality/             # 删除整个目录
   ~ __init__.py          # 删除 DQSeverity 导出
 
-packages/datahub/src/ditto_datahub/models/
+packages/data/src/ditto_data/models/
   ~ common.py            # 删除 DQSeverity 定义和导出
 
 apps/port/tests/unit/services/ingestion/quality/
@@ -100,7 +100,7 @@ rm -rf packages/infra/src/ditto_infra/foundation/quality/
 
 **Step 5: 删除 DataHub 重复定义**
 
-从 `packages/datahub/src/ditto_datahub/models/common.py` 删除 DQSeverity 类定义和 `__all__` 中的导出。
+从 `packages/data/src/ditto_data/models/common.py` 删除 DQSeverity 类定义和 `__all__` 中的导出。
 
 #### 验收标准
 
@@ -239,10 +239,10 @@ def test_manual_scope_does_not_fail_fast():
 #### 改动范围
 
 ```
-packages/datahub/src/ditto_datahub/services/
+packages/data/src/ditto_data/services/
   ~ market_service.py    # 删除 _detect_asset_class_from_instrument_ids
 
-packages/datahub/tests/unit/services/
+packages/data/tests/unit/services/
   ~ test_market_service_unit.py  # 如有相关测试，更新导入
 ```
 
@@ -251,7 +251,7 @@ packages/datahub/tests/unit/services/
 **Step 1: 查找所有调用点**
 
 ```bash
-rg "_detect_asset_class_from_instrument_ids" packages/datahub/
+rg "_detect_asset_class_from_instrument_ids" packages/data/
 ```
 
 **Step 2: 替换为 InstrumentIdRange.detect_asset_class**
@@ -261,7 +261,7 @@ rg "_detect_asset_class_from_instrument_ids" packages/datahub/
 result = self._detect_asset_class_from_instrument_ids(instrument_ids)
 
 # After
-from ditto_datahub.models.common import InstrumentIdRange
+from ditto_data.models.common import InstrumentIdRange
 result = InstrumentIdRange.detect_asset_class(instrument_ids)
 ```
 

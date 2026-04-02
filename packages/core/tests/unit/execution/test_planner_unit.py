@@ -14,6 +14,7 @@ from ditto_engine.accounting.order_book import (
     OrderType,
 )
 from ditto_engine.accounting.position import Position
+from ditto_engine.alpha.models import TargetPortfolio
 from ditto_engine.execution.planner import (
     BlockedOrder,
     BlockSeverity,
@@ -28,7 +29,6 @@ from ditto_engine.execution.rules import (
     InstrumentRules,
     TradingRuleSet,
 )
-from ditto_engine.strategy.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------
 # Helpers

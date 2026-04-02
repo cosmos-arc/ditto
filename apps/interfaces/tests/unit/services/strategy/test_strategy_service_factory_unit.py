@@ -15,17 +15,17 @@ from ditto_app.process.strategy import (
     MarketServiceDataFeed,
     RunLifecycleService,
 )
-from ditto_datahub.models.strategy import StrategySpecRecord
-from ditto_datahub.services.audit import ExecutionAuditService
-from ditto_datahub.services.strategy.strategy_artifact_service import (
+from ditto_data.models.strategy import StrategySpecRecord
+from ditto_data.services.audit import ExecutionAuditService
+from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_engine.backtest.risk.pre_trade import CompositePreTradeCheck
+from ditto_engine.alpha.pipeline import StrategyPipeline
+from ditto_engine.alpha.specs import StrategySpec
 from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
 from ditto_engine.execution.reality import SimpleFeeModel
-from ditto_engine.strategy.pipeline import StrategyPipeline
-from ditto_engine.strategy.specs import StrategySpec
+from ditto_engine.risk.pre_trade import CompositePreTradeCheck
 from ditto_kernel.identity import InstrumentId
 
 

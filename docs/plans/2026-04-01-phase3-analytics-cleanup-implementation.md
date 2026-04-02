@@ -48,8 +48,8 @@ last_audit: 2026-04-01
 
 | 操作 | 文件 | 说明 |
 |------|------|------|
-| DELETE | `packages/datahub/src/ditto_datahub/models/trading.py` | 整个文件（113 行） |
-| DELETE | `packages/datahub/tests/unit/models/test_trading_models.py` | 专用测试文件 |
+| DELETE | `packages/data/src/ditto_data/models/trading.py` | 整个文件（113 行） |
+| DELETE | `packages/data/tests/unit/models/test_trading_models.py` | 专用测试文件 |
 
 **消费者分析**（已确认）：
 - `Order` / `OrderStatus` — 已 deprecated，指向 `ditto_engine.accounting.order_book`
@@ -60,7 +60,7 @@ last_audit: 2026-04-01
 
 | 操作 | 文件 | 说明 |
 |------|------|------|
-| DELETE | `packages/datahub/src/ditto_datahub/models/portfolio.py` | 整个文件（74 行） |
+| DELETE | `packages/data/src/ditto_data/models/portfolio.py` | 整个文件（74 行） |
 
 **消费者分析**（已确认）：
 - `Position` / `Portfolio` — 零业务消费者
@@ -69,12 +69,12 @@ last_audit: 2026-04-01
 
 #### Step 3: 更新 models/__init__.py
 
-从 `packages/datahub/src/ditto_datahub/models/__init__.py` 中移除：
-- `from ditto_datahub.models.trading import Order, OrderStatus, Trade` 行
-- `from ditto_datahub.models.portfolio import Portfolio, Position` 行
+从 `packages/data/src/ditto_data/models/__init__.py` 中移除：
+- `from ditto_data.models.trading import Order, OrderStatus, Trade` 行
+- `from ditto_data.models.portfolio import Portfolio, Position` 行
 - `__all__` 中移除：`"Order"`, `"OrderStatus"`, `"Trade"`, `"Portfolio"`, `"Position"`
 
-**验证**：`pixi run -e dev check` + `grep -rn "from ditto_datahub.models.trading\|from ditto_datahub.models.portfolio" packages/ apps/ tests/ --include="*.py"` 返回 0
+**验证**：`pixi run -e dev check` + `grep -rn "from ditto_data.models.trading\|from ditto_data.models.portfolio" packages/ apps/ tests/ --include="*.py"` 返回 0
 
 ---
 
@@ -93,25 +93,25 @@ last_audit: 2026-04-01
 
 #### Step 2: 迁移 factors.py
 
-复制 `packages/datahub/src/ditto_datahub/models/factors.py` → `packages/analytics/src/ditto_analytics/models/factors.py`
+复制 `packages/data/src/ditto_data/models/factors.py` → `packages/analytics/src/ditto_analytics/models/factors.py`
 
 **无需修改** — factors.py 零外部导入（仅 `dataclasses` + `typing`）。
 
 #### Step 3: 迁移 features.py
 
-复制 `packages/datahub/src/ditto_datahub/models/features.py` → `packages/analytics/src/ditto_analytics/models/features.py`
+复制 `packages/data/src/ditto_data/models/features.py` → `packages/analytics/src/ditto_analytics/models/features.py`
 
 **无需修改** — features.py 零外部导入（仅 `dataclasses` + `typing`）。
 
 #### Step 4: 转换 datahub 原文件为 re-export shim
 
-`packages/datahub/src/ditto_datahub/models/factors.py` 改为：
+`packages/data/src/ditto_data/models/factors.py` 改为：
 ```python
 from ditto_analytics.models.factors import *  # noqa: F401,F403
 from ditto_analytics.models.factors import __all__  # noqa: F401
 ```
 
-`packages/datahub/src/ditto_datahub/models/features.py` 改为：
+`packages/data/src/ditto_data/models/features.py` 改为：
 ```python
 from ditto_analytics.models.features import *  # noqa: F401,F403
 from ditto_analytics.models.features import __all__  # noqa: F401
@@ -121,7 +121,7 @@ from ditto_analytics.models.features import __all__  # noqa: F401
 
 | 文件 | 变更 |
 |------|------|
-| `packages/datahub/pyproject.toml` | deps 添加 `ditto-analytics`（re-export 兼容需要） |
+| `packages/data/pyproject.toml` | deps 添加 `ditto-analytics`（re-export 兼容需要） |
 
 #### Step 6: 更新 .importlinter
 
@@ -138,7 +138,7 @@ from ditto_analytics.models.features import __all__  # noqa: F401
 
 #### Step 1: 迁移 research.py
 
-复制 `packages/datahub/src/ditto_datahub/models/research.py` → `packages/analytics/src/ditto_analytics/models/research.py`
+复制 `packages/data/src/ditto_data/models/research.py` → `packages/analytics/src/ditto_analytics/models/research.py`
 
 **无需修改** — research.py 零外部导入（仅 `dataclasses`）。
 
@@ -156,15 +156,15 @@ from ditto_analytics.models.research import (
 
 #### Step 3: 更新 research 消费者（9 文件）
 
-所有 `from ditto_datahub.models.research import ...` → `from ditto_analytics.models.research import ...`：
+所有 `from ditto_data.models.research import ...` → `from ditto_analytics.models.research import ...`：
 
 | 文件 | 类型 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/models/__init__.py` | re-export |
-| `packages/datahub/src/ditto_datahub/services/research_catalog_service.py` | service |
-| `packages/datahub/src/ditto_datahub/stores/runtime/research_sqlite/reader.py` | store |
-| `packages/datahub/src/ditto_datahub/stores/runtime/research_sqlite/writer.py` | store |
-| `packages/datahub/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py` | test |
+| `packages/data/src/ditto_data/models/__init__.py` | re-export |
+| `packages/data/src/ditto_data/services/research_catalog_service.py` | service |
+| `packages/data/src/ditto_data/stores/runtime/research_sqlite/reader.py` | store |
+| `packages/data/src/ditto_data/stores/runtime/research_sqlite/writer.py` | store |
+| `packages/data/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py` | test |
 | `apps/port/src/ditto_port/services/derived/research.py` | port service |
 | `apps/port/tests/unit/services/derived/test_research_dataset_facade_unit.py` | port test |
 | `apps/port/tests/integration/flows/test_research_dataset_integration.py` | e2e test |
@@ -173,8 +173,8 @@ from ditto_analytics.models.research import (
 
 | 操作 | 文件 |
 |------|------|
-| DELETE | `packages/datahub/src/ditto_datahub/models/research.py` |
-| EDIT | `packages/datahub/src/ditto_datahub/models/__init__.py` — 移除 research import + __all__ 条目 |
+| DELETE | `packages/data/src/ditto_data/models/research.py` |
+| EDIT | `packages/data/src/ditto_data/models/__init__.py` — 移除 research import + __all__ 条目 |
 
 #### Step 5: 更新 .importlinter
 
@@ -183,11 +183,11 @@ from ditto_analytics.models.research import (
 
 #### Step 6: 更新 datahub README
 
-检查 `packages/datahub/README.md` 中是否有 research 相关引用需要更新。
+检查 `packages/data/README.md` 中是否有 research 相关引用需要更新。
 
 **验证**：
 - `pixi run -e dev check`
-- `grep -rn "from ditto_datahub.models.research" packages/ apps/ tests/ --include="*.py"` 返回 0
+- `grep -rn "from ditto_data.models.research" packages/ apps/ tests/ --include="*.py"` 返回 0
 
 ---
 

@@ -8,8 +8,8 @@ from typing import Any
 
 import orjson
 import typer
-from ditto_datahub.models import MacroCategory, MacroFrequency
-from ditto_datahub.services.macro_service import MacroQuery, MacroService
+from ditto_data.models import MacroCategory, MacroFrequency
+from ditto_data.services.macro_service import MacroQuery, MacroService
 from rich.console import Console
 from rich.table import Table
 

@@ -17,9 +17,9 @@ from dishka import Provider, Scope, provide
 # DataHub 层依赖（由更底层的 Provider 注册，此处仅声明类型）
 # ---------------------------------------------------------------------------
 from ditto_analytics.compile_cache import SQLiteCompileCache
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.quality import QualityEngine
-from ditto_datahub.config.data_store import DataStoreSettings
-from ditto_datahub.services import (
+from ditto_data.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
     DerivedQueryService,
@@ -27,21 +27,21 @@ from ditto_datahub.services import (
     PublicationSafetyRecordService,
     ResearchCatalogService,
 )
-from ditto_datahub.services.audit import ExecutionAuditService
-from ditto_datahub.services.derived.artifact_persistence_service import (
+from ditto_data.services.audit import ExecutionAuditService
+from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )
-from ditto_datahub.services.hot_layer import UnavailableHotLayerReader
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.research_artifact_service import ResearchArtifactService
-from ditto_datahub.services.strategy.strategy_artifact_service import (
+from ditto_data.services.hot_layer import UnavailableHotLayerReader
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.research_artifact_service import ResearchArtifactService
+from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_datahub.services.strategy.strategy_catalog_service import (
+from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_datahub.services.strategy.strategy_run_service import (
+from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunService as StrategyRunLifecycleService,
 )
 

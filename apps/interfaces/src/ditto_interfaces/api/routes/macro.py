@@ -5,8 +5,8 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_datahub.models import MacroCategory
-from ditto_datahub.services.macro_service import MacroQuery, MacroService
+from ditto_data.models import MacroCategory
+from ditto_data.services.macro_service import MacroQuery, MacroService
 from fastapi import APIRouter, Query
 
 from ditto_interfaces.models.common import APIResponse

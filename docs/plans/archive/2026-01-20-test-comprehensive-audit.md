@@ -60,8 +60,8 @@ mv packages/foundation/tests/unit/test_cache_unit.py \
    packages/foundation/tests/unit/test_cache_data_unit.py
 
 # DataHub 包的测试已有 runtime/ 路径区分，但为了一致性也重命名
-mv packages/datahub/tests/unit/runtime/test_cache_unit.py \
-   packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py
+mv packages/data/tests/unit/runtime/test_cache_unit.py \
+   packages/data/tests/unit/runtime/test_cache_runtime_unit.py
 ```
 
 **优先级**: 🔴 P0 - 立即修复，阻塞测试运行
@@ -72,7 +72,7 @@ mv packages/datahub/tests/unit/runtime/test_cache_unit.py \
 
 #### 问题 1: assert True
 
-**位置**: [test_common_unit.py:45](packages/datahub/tests/unit/models/test_common_unit.py:45)
+**位置**: [test_common_unit.py:45](packages/data/tests/unit/models/test_common_unit.py:45)
 
 ```python
 case Dataset.ETF_DAILY:
@@ -92,7 +92,7 @@ case Dataset.ETF_DAILY:
 **主要位置**:
 - [test_file_lock_unit.py](packages/foundation/tests/unit/concurrency/test_file_lock_unit.py) - 8 处
 - [test_observability_unit.py](packages/foundation/tests/unit/test_observability_unit.py) - 4 处
-- [test_ingestion_unit.py](packages/datahub/tests/unit/models/test_ingestion_unit.py) - 2 处
+- [test_ingestion_unit.py](packages/data/tests/unit/models/test_ingestion_unit.py) - 2 处
 - 其他测试文件 - 16+ 处
 
 **示例**:
@@ -122,7 +122,7 @@ grep -rn "^\s*pass\s*$" packages/ apps/
 
 ### 1.3 未实现的测试
 
-**位置**: [test_ingestion_unit.py:214, 260](packages/datahub/tests/unit/models/test_ingestion_unit.py)
+**位置**: [test_ingestion_unit.py:214, 260](packages/data/tests/unit/models/test_ingestion_unit.py)
 
 ```python
 # 行 214
@@ -161,13 +161,13 @@ def test_something(self, mocker: MockerFixture) -> None:
 
 **受影响文件列表**:
 1. packages/foundation/tests/unit/concurrency/test_file_lock_unit.py
-2. packages/datahub/tests/unit/runtime/test_sql_engine_unit.py
-3. packages/datahub/tests/unit/runtime/test_sid_allocator_unit.py
-4. packages/datahub/tests/unit/accessors/bars/test_accessor_unit.py
-5. packages/datahub/tests/unit/alerts/test_email_unit.py
-6. packages/datahub/tests/unit/alerts/test_telegram_unit.py
-7. packages/datahub/tests/unit/test_hub_unit.py
-8. packages/datahub/tests/unit/sources/test_accessor_unit.py
+2. packages/data/tests/unit/runtime/test_sql_engine_unit.py
+3. packages/data/tests/unit/runtime/test_sid_allocator_unit.py
+4. packages/data/tests/unit/accessors/bars/test_accessor_unit.py
+5. packages/data/tests/unit/alerts/test_email_unit.py
+6. packages/data/tests/unit/alerts/test_telegram_unit.py
+7. packages/data/tests/unit/test_hub_unit.py
+8. packages/data/tests/unit/sources/test_accessor_unit.py
 9. apps/port/tests/unit/ingestion/flows/test_daily_unit.py
 10. apps/port/tests/unit/cli/test_factory_unit.py
 11. apps/port/tests/unit/cli/commands/test_init_unit.py
@@ -177,11 +177,11 @@ def test_something(self, mocker: MockerFixture) -> None:
 15. apps/port/tests/unit/cli/commands/test_stock_unit.py
 16. apps/port/tests/unit/cli/commands/test_adj_unit.py
 17. apps/port/tests/unit/cli/commands/test_etf_unit.py
-18. packages/datahub/tests/unit/stores/test_security_store_unit.py
-19. packages/datahub/tests/unit/stores/test_calendar_store_unit.py
-20. packages/datahub/tests/unit/dq/test_init_dq_config_unit.py
-21. packages/datahub/tests/unit/accessors/test_ingestion_log_accessor_unit.py
-22. packages/datahub/tests/integration/runtime/test_sid_allocator_integration.py
+18. packages/data/tests/unit/stores/test_security_store_unit.py
+19. packages/data/tests/unit/stores/test_calendar_store_unit.py
+20. packages/data/tests/unit/dq/test_init_dq_config_unit.py
+21. packages/data/tests/unit/accessors/test_ingestion_log_accessor_unit.py
+22. packages/data/tests/integration/runtime/test_sid_allocator_integration.py
 23. apps/port/tests/unit/test_conftest_unit.py
 24. apps/port/tests/integration/flows/test_helpers_integration.py
 
@@ -315,7 +315,7 @@ def sample_df(self) -> pl.DataFrame:
 
 **改进建议**: 提取共享 fixture 到 conftest.py
 ```python
-# packages/datahub/tests/conftest.py
+# packages/data/tests/conftest.py
 @pytest.fixture
 def sample_adj_factor_df():
     """Reusable sample adjustment factor DataFrame."""
@@ -488,7 +488,7 @@ testpaths = ["packages/*/tests", "apps/*/tests"]  # 移除 "tests"
 
 ### 7.1 值得保持的优点
 
-1. ✅ **良好的 AAA 模式** ([test_client_unit.py](packages/datahub/tests/unit/sources/tushare/test_client_unit.py:96))
+1. ✅ **良好的 AAA 模式** ([test_client_unit.py](packages/data/tests/unit/sources/tushare/test_client_unit.py:96))
    ```python
    def test_successful_query_returns_dataframe(self, respx_mock) -> None:
        # Arrange
@@ -501,7 +501,7 @@ testpaths = ["packages/*/tests", "apps/*/tests"]  # 移除 "tests"
        assert result.height == 2
    ```
 
-2. ✅ **全面的异常测试** ([test_pit_helper_unit.py](packages/datahub/tests/unit/utils/test_pit_helper_unit.py:292))
+2. ✅ **全面的异常测试** ([test_pit_helper_unit.py](packages/data/tests/unit/utils/test_pit_helper_unit.py:292))
    - 14 个异常测试，覆盖各种边界条件
 
 3. ✅ **良好的测试隔离**
@@ -645,9 +645,9 @@ pixi run -e dev ci
 | 文件 | 问题描述 |
 |------|----------|
 | [test_cache_unit.py (foundation)](packages/foundation/tests/unit/test_cache_unit.py) | Import 冲突 |
-| [test_cache_unit.py (datahub)](packages/datahub/tests/unit/runtime/test_cache_unit.py) | Import 冲突 |
-| [test_common_unit.py:45](packages/datahub/tests/unit/models/test_common_unit.py:45) | assert True |
-| [test_ingestion_unit.py:214,260](packages/datahub/tests/unit/models/test_ingestion_unit.py) | 空 pass |
+| [test_cache_unit.py (datahub)](packages/data/tests/unit/runtime/test_cache_unit.py) | Import 冲突 |
+| [test_common_unit.py:45](packages/data/tests/unit/models/test_common_unit.py:45) | assert True |
+| [test_ingestion_unit.py:214,260](packages/data/tests/unit/models/test_ingestion_unit.py) | 空 pass |
 
 ---
 
@@ -701,7 +701,7 @@ pixi run -e dev ci
 - **提交**: `6394523`
 - **修改**:
   - `packages/foundation/tests/unit/test_cache_unit.py` → `test_cache_data_unit.py`
-  - `packages/datahub/tests/unit/runtime/test_cache_unit.py` → `test_cache_runtime_unit.py`
+  - `packages/data/tests/unit/runtime/test_cache_unit.py` → `test_cache_runtime_unit.py`
 
 #### P0-2: assert True 假测试
 - **状态**: ✅ 已完成
@@ -738,14 +738,14 @@ pixi run -e dev ci
 
 #### P1-3: 提取共享 fixtures
 - **状态**: ✅ 已完成
-- **修改**: `packages/datahub/tests/conftest.py`
+- **修改**: `packages/data/tests/conftest.py`
   - 新增 `sample_stock_daily_df` - OHLC 数据
   - 新增 `sample_calendar_df` - 日历数据
   - 新增 `sample_etf_daily_df` - ETF OHLC 数据
 
 #### P1-5: 异常路径测试
 - **状态**: ✅ 已完成
-- **修改**: `packages/datahub/tests/integration/stores/test_bars_store_integration.py`
+- **修改**: `packages/data/tests/integration/stores/test_bars_store_integration.py`
   - 新增 `test_read_corrupted_parquet_file_raises_error` - 损坏文件异常测试
   - 修复 SQLitePool fixture 参数错误
 
@@ -758,7 +758,7 @@ pixi run -e dev ci
 - **状态**: ✅ 已完成
 - **修改**:
   - 更新 `.claude/rules/python-test.md` - 添加自动标记规范
-  - 添加 `pytest_collection_modifyitems` hook 到 `packages/datahub/tests/conftest.py`
+  - 添加 `pytest_collection_modifyitems` hook 到 `packages/data/tests/conftest.py`
   - 添加 `pytest_collection_modifyitems` hook 到 `packages/foundation/tests/unit/conftest.py`
   - 移除未使用的 `@pytest.mark.external` 和 `@pytest.mark.pit`
 

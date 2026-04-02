@@ -147,7 +147,7 @@ def is_valid_config(obj: Any) -> TypeGuard[ValidConfig]:
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ditto_datahub.stores.bars_store import BarsStore
+    from ditto_data.stores.bars_store import BarsStore
 
 class BarsRepository:
     def __init__(self, store: Any):

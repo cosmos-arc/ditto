@@ -22,18 +22,18 @@
 
 ### 1.1 Bars 模块文件重命名
 
-**当前文件**: `packages/datahub/src/ditto_datahub/repositories/bars/repository.py`
-**重命名为**: `packages/datahub/src/ditto_datahub/repositories/bars/accessor.py`
+**当前文件**: `packages/data/src/ditto_data/repositories/bars/repository.py`
+**重命名为**: `packages/data/src/ditto_data/repositories/bars/accessor.py`
 
 ### 1.2 更新导入语句
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/bars/__init__.py`
+**文件**: `packages/data/src/ditto_data/repositories/bars/__init__.py`
 - [x] 更新：`from .repository import BarsAccessor` → `from .accessor import BarsAccessor`
 
 **需要更新导入的文件**:
-- [x] `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py` (重命名后)
-- [x] `packages/datahub/tests/unit/test_hub_unit.py`
-- [x] `packages/datahub/src/ditto_datahub/hub.py`
+- [x] `packages/data/tests/unit/repositories/test_bars_repository_unit.py` (重命名后)
+- [x] `packages/data/tests/unit/test_hub_unit.py`
+- [x] `packages/data/src/ditto_data/hub.py`
 
 ---
 
@@ -41,7 +41,7 @@
 
 ### 2.1 测试目录重命名
 
-- [x] `packages/datahub/tests/unit/repositories/` → `accessors/`
+- [x] `packages/data/tests/unit/repositories/` → `accessors/`
 
 ### 2.2 测试文件重命名（6个文件）
 
@@ -56,25 +56,25 @@
 
 ### 2.3 源代码目录重命名（Phase 2+ 新增任务）
 
-- [x] `packages/datahub/src/ditto_datahub/repositories/` → `accessors/`
+- [x] `packages/data/src/ditto_data/repositories/` → `accessors/`
 
 ### 2.4 更新导入语句（Phase 2+ 新增任务）
 
 **源代码文件更新（4个）**:
-- [x] `packages/datahub/src/ditto_datahub/accessors/__init__.py`
-- [x] `packages/datahub/src/ditto_datahub/accessors/bars/__init__.py`
-- [x] `packages/datahub/src/ditto_datahub/accessors/bars/accessor.py`
-- [x] `packages/datahub/src/ditto_datahub/hub.py`
+- [x] `packages/data/src/ditto_data/accessors/__init__.py`
+- [x] `packages/data/src/ditto_data/accessors/bars/__init__.py`
+- [x] `packages/data/src/ditto_data/accessors/bars/accessor.py`
+- [x] `packages/data/src/ditto_data/hub.py`
 
 **测试文件更新（8个）**:
-- [x] `packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py`
-- [x] `packages/datahub/tests/unit/accessors/test_adj_factor_accessor_unit.py`
-- [x] `packages/datahub/tests/unit/accessors/test_calendar_accessor_unit.py`
-- [x] `packages/datahub/tests/unit/accessors/test_index_accessor_unit.py`
-- [x] `packages/datahub/tests/unit/accessors/test_security_accessor_unit.py`
-- [x] `packages/datahub/tests/unit/accessors/test_universe_accessor_unit.py`
-- [x] `packages/datahub/tests/unit/accessors/test_filter_failed_rows.py`
-- [x] `packages/datahub/tests/unit/accessors/bars/test_adjustment_unit.py`
+- [x] `packages/data/tests/unit/accessors/test_bars_accessor_unit.py`
+- [x] `packages/data/tests/unit/accessors/test_adj_factor_accessor_unit.py`
+- [x] `packages/data/tests/unit/accessors/test_calendar_accessor_unit.py`
+- [x] `packages/data/tests/unit/accessors/test_index_accessor_unit.py`
+- [x] `packages/data/tests/unit/accessors/test_security_accessor_unit.py`
+- [x] `packages/data/tests/unit/accessors/test_universe_accessor_unit.py`
+- [x] `packages/data/tests/unit/accessors/test_filter_failed_rows.py`
+- [x] `packages/data/tests/unit/accessors/bars/test_adjustment_unit.py`
 
 **Apps 文件更新（4个）**:
 - [x] `apps/port/src/ditto_port/jobs/tasks/dq_batch.py`
@@ -82,7 +82,7 @@
 - [x] `apps/port/tests/integration/ingestion/test_coordinator_dq_blocking_integration.py`
 - [x] `apps/port/tests/integration/ingestion/test_adj_factor_ingestion_integration.py`
 
-**导入替换模式**: `from ditto_datahub.repositories.*` → `from ditto_datahub.accessors.*`
+**导入替换模式**: `from ditto_data.repositories.*` → `from ditto_data.accessors.*`
 
 ---
 
@@ -211,7 +211,7 @@
 
 ### 7.4 测试文档
 
-**packages/datahub/tests/README.md**
+**packages/data/tests/README.md**
 - [x] `repositories/` → `accessors/`
 
 ---
@@ -344,8 +344,8 @@ pixi run -e dev ci
 
 #### Phase 9.1 文件重命名
 
-- [x] `packages/datahub/src/ditto_datahub/sources/base.py` → `provider.py`（已合并到 provider.py）
-- [x] `packages/datahub/src/ditto_datahub/sources/tushare/source.py` → `tushare_provider.py`
+- [x] `packages/data/src/ditto_data/sources/base.py` → `provider.py`（已合并到 provider.py）
+- [x] `packages/data/src/ditto_data/sources/tushare/source.py` → `tushare_provider.py`
 
 #### Phase 9.2 类名重命名
 
@@ -361,21 +361,21 @@ pixi run -e dev ci
 #### Phase 9.3 导入语句更新（需要更新的文件）
 
 **源代码文件**:
-- [x] `packages/datahub/src/ditto_datahub/sources/__init__.py`
-- [x] `packages/datahub/src/ditto_datahub/sources/provider.py` (DataSources)
-- [x] `packages/datahub/src/ditto_datahub/sources/tushare/__init__.py`
-- [x] `packages/datahub/src/ditto_datahub/hub.py`
-- [x] `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
-- [x] `packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py`
+- [x] `packages/data/src/ditto_data/sources/__init__.py`
+- [x] `packages/data/src/ditto_data/sources/provider.py` (DataSources)
+- [x] `packages/data/src/ditto_data/sources/tushare/__init__.py`
+- [x] `packages/data/src/ditto_data/hub.py`
+- [x] `packages/data/src/ditto_data/sources/tushare/client.py`
+- [x] `packages/data/src/ditto_data/sources/tushare/http_utils.py`
 - [x] `apps/port/src/ditto_port/services/ingestion/coordinator.py`
 
 **测试文件**:
-- [x] `packages/datahub/tests/unit/sources/test_base_unit.py`
-- [x] `packages/datahub/tests/unit/sources/tushare/test_source_unit.py`
-- [x] `packages/datahub/tests/unit/sources/tushare/test_client_unit.py`
-- [x] `packages/datahub/tests/unit/sources/tushare/test_http_utils_unit.py`
-- [x] `packages/datahub/tests/unit/sources/test_accessor_unit.py`
-- [x] `packages/datahub/tests/integration/sources/tushare/test_end_to_end_integration.py`
+- [x] `packages/data/tests/unit/sources/test_base_unit.py`
+- [x] `packages/data/tests/unit/sources/tushare/test_source_unit.py`
+- [x] `packages/data/tests/unit/sources/tushare/test_client_unit.py`
+- [x] `packages/data/tests/unit/sources/tushare/test_http_utils_unit.py`
+- [x] `packages/data/tests/unit/sources/test_accessor_unit.py`
+- [x] `packages/data/tests/integration/sources/tushare/test_end_to_end_integration.py`
 - [x] `apps/port/tests/unit/ingestion/test_coordinator_unit.py`
 
 #### Phase 9.4 文档和注释更新
@@ -387,7 +387,7 @@ pixi run -e dev ci
 
 - [x] 类型检查: `pixi run -e dev type` → **0 errors**
 - [x] 代码检查: `pixi run -e dev lint` → **仅 2 个 PLC0415 警告（延迟导入，预期行为）**
-- [x] 单元测试: `pixi run -e dev test --unit packages/datahub` → **791 passed**
+- [x] 单元测试: `pixi run -e dev test --unit packages/data` → **791 passed**
 - [x] 循环导入问题已解决（使用延迟导入）
 
 **注意**: 此任务需要在新的计划文档中详细规划并执行。

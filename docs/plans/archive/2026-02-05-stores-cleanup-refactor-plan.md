@@ -305,8 +305,8 @@ def market_query_service(
 
 | 步骤 | 任务 | 验证方式 |
 |------|------|----------|
-| 6.1 | 运行 datahub 单元测试 | `pixi run -e dev pytest packages/datahub/tests/unit/` |
-| 6.2 | 运行 datahub 集成测试 | `pixi run -e dev pytest packages/datahub/tests/integration/` |
+| 6.1 | 运行 datahub 单元测试 | `pixi run -e dev pytest packages/data/tests/unit/` |
+| 6.2 | 运行 datahub 集成测试 | `pixi run -e dev pytest packages/data/tests/integration/` |
 | 6.3 | 运行 Port 层测试 | `pixi run -e dev pytest apps/port/tests/` |
 | 6.4 | 类型检查 | `pixi run -e dev type` |
 | 6.5 | Lint 检查 | `pixi run -e dev lint` |
@@ -383,7 +383,7 @@ def market_query_service(
 ### 3.2 清理后的目录结构
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── stores/                              # 只保留基础设施
 │   ├── base/
 │   │   ├── __init__.py

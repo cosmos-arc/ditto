@@ -151,7 +151,7 @@ class MLTrainingService:
 
 1. ✅ 是否是**业务逻辑/规则**？ → **Domain Layer** (`packages/core/`)
 2. ✅ 是否是**用例编排**？ → **Application Layer** (`apps/port/services/`)
-3. ✅ 是否是**数据访问**？ → **Infrastructure Layer** (`packages/datahub/`)
+3. ✅ 是否是**数据访问**？ → **Infrastructure Layer** (`packages/data/`)
 
 **完整映射表**：
 
@@ -203,7 +203,7 @@ Application Layer
     ↓ 依赖
 Domain Layer (packages/core/)
     ↓ 依赖
-Infrastructure Layer (packages/datahub/)
+Infrastructure Layer (packages/data/)
     ↓ 依赖
 Foundation Layer (packages/foundation/)
 ```
@@ -234,7 +234,7 @@ Foundation Layer (packages/foundation/)
 ### 需要调整的部分
 
 1. **重构 dq 模块**：
-   - 从 `packages/datahub/src/ditto_datahub/dq/`
+   - 从 `packages/data/src/ditto_data/dq/`
    - 移至 `packages/core/src/ditto_core/quality/`
 
 2. **更新依赖关系**：
@@ -242,7 +242,7 @@ Foundation Layer (packages/foundation/)
    - `port.services` 添加 `core.quality` 依赖
 
 3. **更新配置路径**：
-   - 从 `packages/datahub/config/dq/`
+   - 从 `packages/data/config/dq/`
    - 移至 `data_root/config/dq/`
 
 4. **更新文档**：

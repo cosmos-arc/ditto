@@ -32,7 +32,7 @@ portfolio/
 
 ## 依赖
 
-- 上游: `ditto_datahub` (数据访问)
+- 上游: `ditto_data` (数据访问)
 - 下游: 被 EngineLoop 消费
 
 ## 相关文档

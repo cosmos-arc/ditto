@@ -173,7 +173,7 @@ ditto/
 │   │   │   └── quality/       # 数据质量引擎（L1-L4 检查器）
 │   │   └── tests/
 │   ├── datahub/               # 数据访问层（CQRS + PIT）
-│   │   ├── src/ditto_datahub/
+│   │   ├── src/ditto_data/
 │   │   │   ├── services/      # 域服务（6 Facade + Strategy + Audit）
 │   │   │   ├── stores/        # 存储层（Reader/Writer 分离）
 │   │   │   ├── sources/       # 数据源（Tushare / FRED / TDX）

@@ -312,7 +312,7 @@ ON compiled_expression_operator(operator_name, operator_version);
 | `packages/core/src/ditto_core/engine/ops/registry.py` | 强制 `version` 声明，增加 `changelog` |
 | `packages/core/src/ditto_core/engine/specs.py` | 增加 `operator_versions` 字段 |
 | `packages/core/src/ditto_core/engine/expression/analyzer.py` | 产出 `operator_names` |
-| `packages/datahub/src/ditto_datahub/stores/catalog/schema.py` | 增加 `derived_spec_operator` 表 |
+| `packages/data/src/ditto_data/stores/catalog/schema.py` | 增加 `derived_spec_operator` 表 |
 
 ---
 

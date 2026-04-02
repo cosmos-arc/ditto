@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.metadata_service import MetadataService
 from ditto_interfaces.api.routes.metadata import router
 from fastapi import FastAPI
 from fastapi.testclient import TestClient

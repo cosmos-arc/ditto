@@ -493,7 +493,7 @@ Port 层通过 FastAPI middleware / CLI handler 捕获 `InfraError` / `DomainErr
 |------|------|
 | 语义过载 | "engine" 不传达具体领域含义，5 个子域（编译器、因子、物化、评估、研究）共用一个名字 |
 | 反向依赖 | `expression/analyzer.py` 导入 `materialization.contracts.Analysis`，编译器不应依赖物化层 |
-| 架构违规 | `errors.py` 从 `ditto_datahub.errors` 纯重导出 7 个 DerivedError，违反 Core↔DataHub 规则 |
+| 架构违规 | `errors.py` 从 `ditto_data.errors` 纯重导出 7 个 DerivedError，违反 Core↔DataHub 规则 |
 | I/O 混入 Core | `compile_cache.py` 包含 SQLite L2 缓存，Core 层应零 I/O |
 | `evaluation/` 完全独立 | 不依赖 expression/factors/materialization 中任何一个，挂在一起不合理 |
 
@@ -510,7 +510,7 @@ Port 层通过 FastAPI middleware / CLI handler 捕获 `InfraError` / `DomainErr
 | 消费者 | 导入数量 | 说明 |
 |--------|---------|------|
 | **Port 源码** (`apps/port/src/`) | ~20 处 | **主要消费者**，编排层直接依赖 engine |
-| **DataHub 源码** (`packages/datahub/src/`) | 0 处 | DataHub 不直接依赖 engine |
+| **DataHub 源码** (`packages/data/src/`) | 0 处 | DataHub 不直接依赖 engine |
 | **DataHub 测试** | ~8 处 | 仅测试中构造 DTO 使用 |
 | **Core 自身** | ~30 处 | 内部互依赖 |
 
@@ -560,8 +560,8 @@ ditto_core/
 | 问题 | 修复方案 |
 |------|---------|
 | `expression/analyzer.py` → `materialization.contracts.Analysis` | 将 `Analysis`/`AnalysisWarning` 提取为共享类型，放入 `derived/expression/analysis.py` |
-| `errors.py` re-export `ditto_datahub.errors` | DerivedError 系列定义为 `derived/errors.py` 的自有异常，DataHub 改为导入 Core |
-| `compile_cache.py` SQLite I/O | 移至 `ditto_datahub/stores/runtime/compile_cache.py` |
+| `errors.py` re-export `ditto_data.errors` | DerivedError 系列定义为 `derived/errors.py` 的自有异常，DataHub 改为导入 Core |
+| `compile_cache.py` SQLite I/O | 移至 `ditto_data/stores/runtime/compile_cache.py` |
 
 ---
 

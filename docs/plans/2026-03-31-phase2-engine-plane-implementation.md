@@ -64,7 +64,7 @@ engine → datahub.errors（re-export chain: engine.errors → datahub.errors �
 
 #### Step 3: 迁移 errors.py 到 ditto_data
 
-从 `packages/datahub/src/ditto_datahub/errors.py` 复制到 `packages/data/src/ditto_data/errors.py`。
+从 `packages/data/src/ditto_data/errors.py` 复制到 `packages/data/src/ditto_data/errors.py`。
 原文件改为 re-export shim：
 ```python
 from ditto_data.errors import *  # noqa: F401,F403
@@ -82,7 +82,7 @@ from ditto_data.errors import __all__  # noqa: F401
 |------|------|
 | `pixi.toml` [pypi-dependencies] | 添加 `ditto-data = { path = "packages/data", editable = true }` |
 | `packages/core/pyproject.toml` | deps 添加 `ditto-data`（re-export 兼容需要） |
-| `packages/datahub/pyproject.toml` | deps 添加 `ditto-data`（errors re-export 需要） |
+| `packages/data/pyproject.toml` | deps 添加 `ditto-data`（errors re-export 需要） |
 | `pyproject.toml` [basedpyright] extraPaths | 添加 `"packages/data/src"` |
 | `pyproject.toml` [pytest] pythonpath | 添加 `"packages/data/src"` |
 | `pyproject.toml` [pytest] testpaths | 添加 `"packages/data"` |
@@ -134,7 +134,7 @@ from ditto_data.errors import __all__  # noqa: F401
 
 #### Step 5: 更新 DataHub 测试导入
 
-`packages/datahub/tests/unit/models/test_common_unit.py`: `ditto_core.quality.severity` → `ditto_data.quality.severity`
+`packages/data/tests/unit/models/test_common_unit.py`: `ditto_core.quality.severity` → `ditto_data.quality.severity`
 
 #### Step 6: 清理
 
@@ -308,8 +308,8 @@ from ditto_data.errors import __all__  # noqa: F401
 - packages/core/tests/ — ~60 处
 - apps/port/src/ — ~30 处
 - apps/port/tests/ — ~20 处
-- packages/datahub/src/ — ~5 处
-- packages/datahub/tests/ — ~10 处
+- packages/data/src/ — ~5 处
+- packages/data/tests/ — ~10 处
 - packages/analytics/src/ — ~5 处（specs/errors 引用）
 - packages/analytics/tests/ — ~5 处
 
@@ -344,7 +344,7 @@ from ditto_data.errors import __all__  # noqa: F401
 |------|------|
 | `CLAUDE.md` | 架构图：添加 analytics/data 包，core→engine |
 | `packages/core/CLAUDE.md` | 模块结构移除 quality/，所有 ditto_core → ditto_engine |
-| `packages/datahub/CLAUDE.md` | 更新 errors 引用路径 |
+| `packages/data/CLAUDE.md` | 更新 errors 引用路径 |
 | 新建 `packages/analytics/CLAUDE.md` | analytics 模块规范 |
 | 新建 `packages/data/CLAUDE.md` | data 模块规范 |
 
@@ -367,11 +367,11 @@ grep -rn "ditto_core" packages/ apps/ tests/ --include="*.py"
 ## .importlinter 最终状态
 
 ```ini
-root_packages = ditto_infra, ditto_datahub, ditto_engine, ditto_port, ditto_kernel, ditto_data, ditto_analytics
+root_packages = ditto_infra, ditto_data, ditto_engine, ditto_port, ditto_kernel, ditto_data, ditto_analytics
 
 # 主分层：port → engine → datahub → infra
 # analytics 和 data 由独立 forbidden contract 管理
-layers = ditto_port, ditto_engine, ditto_datahub, ditto_infra
+layers = ditto_port, ditto_engine, ditto_data, ditto_infra
 
 # engine 隔离
 engine-must-not-depend-on-datahub: engine → {datahub, data} forbidden (ignore: errors re-export)

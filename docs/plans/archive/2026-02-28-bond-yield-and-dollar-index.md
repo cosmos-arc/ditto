@@ -15,7 +15,7 @@
 ## Task 1: FRED 添加贸易加权美元指数 DTWEXBGS
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/fred/indicators.py`
+- Modify: `packages/data/src/ditto_data/sources/fred/indicators.py`
 
 **Step 1: 添加 DTWEXBGS 指标定义**
 
@@ -53,7 +53,7 @@ CategoryType = Literal[
 
 运行测试确认指标定义正确：
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/fred/ -v -k "indicator"
+pixi run -e dev pytest packages/data/tests/unit/sources/fred/ -v -k "indicator"
 ```
 
 ---
@@ -61,9 +61,9 @@ pixi run -e dev pytest packages/datahub/tests/unit/sources/fred/ -v -k "indicato
 ## Task 2: Tushare 添加中国国债收益率数据
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/sources/tushare/adapters/bond_yield.py`
-- Create: `packages/datahub/tests/unit/sources/tushare/adapters/test_bond_yield.py`
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/adapters/__init__.py`
+- Create: `packages/data/src/ditto_data/sources/tushare/adapters/bond_yield.py`
+- Create: `packages/data/tests/unit/sources/tushare/adapters/test_bond_yield.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/adapters/__init__.py`
 
 **Step 1: 定义国债收益率指标映射**
 
@@ -181,7 +181,7 @@ CN_BOND_YIELD_10Y | 2024-01-01 | 2.7   | ...
 **Step 5: 更新 __init__.py**
 
 ```python
-from ditto_datahub.sources.tushare.adapters.bond_yield import (
+from ditto_data.sources.tushare.adapters.bond_yield import (
     BondYieldTushareAdapter,
     CN_BOND_YIELD_INDICATORS,
 )
@@ -218,8 +218,8 @@ class TestBondYieldTushareAdapter:
 ## Task 3: 集成测试
 
 **Files:**
-- Create: `packages/datahub/tests/integration/sources/fred/test_dollar_index.py`
-- Create: `packages/datahub/tests/integration/sources/tushare/test_bond_yield.py`
+- Create: `packages/data/tests/integration/sources/fred/test_dollar_index.py`
+- Create: `packages/data/tests/integration/sources/tushare/test_bond_yield.py`
 
 **Step 1: FRED DTWEXBGS 集成测试**
 

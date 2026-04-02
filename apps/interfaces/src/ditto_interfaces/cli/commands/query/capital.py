@@ -7,8 +7,8 @@ from typing import Any
 
 import orjson
 import typer
-from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.metadata_service import MetadataService
 from rich.console import Console
 from rich.table import Table
 

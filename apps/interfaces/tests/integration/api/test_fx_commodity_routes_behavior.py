@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.services.market_service import MarketService
+from ditto_data.services.market_service import MarketService
 from ditto_interfaces.api.routes.commodity import router as commodity_router
 from ditto_interfaces.api.routes.fx import router as fx_router
 from fastapi import FastAPI

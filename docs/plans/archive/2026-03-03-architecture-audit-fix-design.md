@@ -101,7 +101,7 @@ except httpx.TimeoutException as e:
 | `fred/adapters/commodity.py` | 从新位置 re-export（兼容） |
 | `tushare/adapters/fx.py` | 从新位置 re-export（兼容） |
 | `tushare/adapters/metal.py` | 从新位置 re-export（兼容） |
-| `coordinator.py` | 改为从 `ditto_datahub.models` 导入 |
+| `coordinator.py` | 改为从 `ditto_data.models` 导入 |
 
 ---
 
@@ -180,7 +180,7 @@ def __init__(self, read_ports: MarketReadPorts, write_ports: MarketWritePorts, f
 from collections.abc import Callable
 from pathlib import Path
 
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 def sqlite_store_pair[R, W](
@@ -365,30 +365,30 @@ PR-7 (CI 门禁) ─────────────────────
 
 ### PR-8：API 层常量解耦
 
-**目标**：API 层从 `ditto_datahub.models` 导入常量，而非直接从 adapter 导入。
+**目标**：API 层从 `ditto_data.models` 导入常量，而非直接从 adapter 导入。
 
 **修改范围**：
 
 ```python
 # apps/port/src/ditto_port/api/routes/fx.py
 # 之前
-from ditto_datahub.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
+from ditto_data.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
 
 # 之后
-from ditto_datahub.models import FX_CODE_TO_INSTRUMENT_ID
+from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID
 ```
 
 ```python
 # apps/port/src/ditto_port/api/routes/commodity.py
 # 之前
-from ditto_datahub.sources.fred.adapters.commodity import (
+from ditto_data.sources.fred.adapters.commodity import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
     VIX_CODE_TO_INSTRUMENT_ID,
 )
 
 # 之后
-from ditto_datahub.models import VIX_CODE_TO_INSTRUMENT_ID
-from ditto_datahub.sources.fred.adapters.commodity import COMMODITY_CODE_TO_INSTRUMENT_ID
+from ditto_data.models import VIX_CODE_TO_INSTRUMENT_ID
+from ditto_data.sources.fred.adapters.commodity import COMMODITY_CODE_TO_INSTRUMENT_ID
 # 注意：COMMODITY_CODE_TO_INSTRUMENT_ID 需要添加到 models/source_codes.py
 ```
 
@@ -406,7 +406,7 @@ pixi run -e dev check
 **目标**：移除 `__del__` 方法，改用 context manager。
 
 **修改范围**：
-- `packages/datahub/src/ditto_datahub/sources/fred/client.py`
+- `packages/data/src/ditto_data/sources/fred/client.py`
 
 **具体步骤**：
 
@@ -441,7 +441,7 @@ def __init__(self, api_key: str) -> None:
 **目标**：为静默吞掉的观测指标异常添加低噪日志。
 
 **修改范围**：
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/industry.py`
+- `packages/data/src/ditto_data/sources/tushare/adapters/industry.py`
 
 ```python
 # 之前

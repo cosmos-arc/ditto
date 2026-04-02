@@ -3,51 +3,51 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.services.fundamental_service import FundamentalService
-from ditto_datahub.services.ports import FundamentalReadPorts, FundamentalWritePorts
-from ditto_datahub.stores.fundamental.corporate.corporate_actions_reader import (
+from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.ports import FundamentalReadPorts, FundamentalWritePorts
+from ditto_data.stores.fundamental.corporate.corporate_actions_reader import (
     CorporateActionsReader,
 )
-from ditto_datahub.stores.fundamental.corporate.corporate_actions_writer import (
+from ditto_data.stores.fundamental.corporate.corporate_actions_writer import (
     CorporateActionsWriter,
 )
-from ditto_datahub.stores.fundamental.corporate.dividend_reader import (
+from ditto_data.stores.fundamental.corporate.dividend_reader import (
     DividendReader,
 )
-from ditto_datahub.stores.fundamental.corporate.dividend_writer import (
+from ditto_data.stores.fundamental.corporate.dividend_writer import (
     DividendWriter,
 )
-from ditto_datahub.stores.fundamental.financial.balance_sheet_reader import (
+from ditto_data.stores.fundamental.financial.balance_sheet_reader import (
     BalanceSheetReader,
 )
-from ditto_datahub.stores.fundamental.financial.balance_sheet_writer import (
+from ditto_data.stores.fundamental.financial.balance_sheet_writer import (
     BalanceSheetWriter,
 )
-from ditto_datahub.stores.fundamental.financial.cash_flow_reader import (
+from ditto_data.stores.fundamental.financial.cash_flow_reader import (
     CashFlowReader,
 )
-from ditto_datahub.stores.fundamental.financial.cash_flow_writer import (
+from ditto_data.stores.fundamental.financial.cash_flow_writer import (
     CashFlowWriter,
 )
-from ditto_datahub.stores.fundamental.financial.income_statement_reader import (
+from ditto_data.stores.fundamental.financial.income_statement_reader import (
     IncomeStatementReader,
 )
-from ditto_datahub.stores.fundamental.financial.income_statement_writer import (
+from ditto_data.stores.fundamental.financial.income_statement_writer import (
     IncomeStatementWriter,
 )
-from ditto_datahub.stores.fundamental.forecast.express_reader import (
+from ditto_data.stores.fundamental.forecast.express_reader import (
     ExpressReader,
 )
-from ditto_datahub.stores.fundamental.forecast.express_writer import (
+from ditto_data.stores.fundamental.forecast.express_writer import (
     ExpressWriter,
 )
-from ditto_datahub.stores.fundamental.forecast.forecast_reader import (
+from ditto_data.stores.fundamental.forecast.forecast_reader import (
     ForecastReader,
 )
-from ditto_datahub.stores.fundamental.forecast.forecast_writer import (
+from ditto_data.stores.fundamental.forecast.forecast_writer import (
     ForecastWriter,
 )
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 from .builders import sqlite_store_pair
 

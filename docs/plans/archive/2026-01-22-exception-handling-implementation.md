@@ -269,13 +269,13 @@ git commit -m "refactor(core): improve exception handling in StatisticalChecker
 ### Task 2.1: 为 keyring 错误编写测试
 
 **Files:**
-- Create: `packages/datahub/tests/sources/tushare/test_client_errors.py`
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/client.py:60-111`
+- Create: `packages/data/tests/sources/tushare/test_client_errors.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/client.py:60-111`
 
 **Step 1: 写 keyring 异常测试**
 
 ```python
-# packages/datahub/tests/sources/tushare/test_client_errors.py
+# packages/data/tests/sources/tushare/test_client_errors.py
 
 import pytest
 from unittest import mock
@@ -289,8 +289,8 @@ try:
 except ImportError:
     HAS_KEYRING = False
 
-from ditto_datahub.sources.tushare.client import _get_tushare_token
-from ditto_datahub.sources.base import SourceConfigurationError
+from ditto_data.sources.tushare.client import _get_tushare_token
+from ditto_data.sources.base import SourceConfigurationError
 
 
 @pytest.mark.skipif(not HAS_KEYRING, reason="keyring not installed")
@@ -311,7 +311,7 @@ class TestTushareClientKeyringErrors:
         secrets_file.write_text('[tushare]\ntoken = "test_token_from_file"')
 
         monkeypatch.setattr(
-            "ditto_datahub.sources.tushare.client.Path",
+            "ditto_data.sources.tushare.client.Path",
             lambda p: tmp_path / "secrets.toml" if "secrets.toml" in str(p) else Path(p)
         )
 
@@ -332,7 +332,7 @@ class TestTushareClientKeyringErrors:
         secrets_file.write_text('[tushare]\ntoken = "fallback_token"')
 
         monkeypatch.setattr(
-            "ditto_datahub.sources.tushare.client.Path",
+            "ditto_data.sources.tushare.client.Path",
             lambda p: tmp_path / "secrets.toml" if "secrets.toml" in str(p) else Path(p)
         )
 
@@ -351,7 +351,7 @@ class TestTushareClientKeyringErrors:
         secrets_file.write_text('[tushare]\ntoken = "os_error_fallback"')
 
         monkeypatch.setattr(
-            "ditto_datahub.sources.tushare.client.Path",
+            "ditto_data.sources.tushare.client.Path",
             lambda p: tmp_path / "secrets.toml" if "secrets.toml" in str(p) else Path(p)
         )
 
@@ -368,7 +368,7 @@ class TestTushareClientKeyringErrors:
 
         # Mock 不存在 secrets.toml
         monkeypatch.setattr(
-            "ditto_datahub.sources.tushare.client.Path",
+            "ditto_data.sources.tushare.client.Path",
             lambda p: Path(p)  # 不创建文件
         )
 
@@ -381,14 +381,14 @@ class TestTushareClientKeyringErrors:
 **Step 2: 运行测试验证失败**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/sources/tushare/test_client_errors.py -v
+pixi run -e dev pytest packages/data/tests/sources/tushare/test_client_errors.py -v
 # 预期: FAIL - keyring 错误目前被宽泛捕获，测试无法验证精确行为
 ```
 
 **Step 3: 提交测试**
 
 ```bash
-git add packages/datahub/tests/sources/tushare/test_client_errors.py
+git add packages/data/tests/sources/tushare/test_client_errors.py
 git commit -m "test(datahub): add keyring error handling tests for TushareClient"
 ```
 
@@ -397,12 +397,12 @@ git commit -m "test(datahub): add keyring error handling tests for TushareClient
 ### Task 2.2: 修改 client.py 异常处理
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/client.py:70-102`
+- Modify: `packages/data/src/ditto_data/sources/tushare/client.py:70-102`
 
 **Step 1: 修改 keyring 异常处理**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/client.py
+# packages/data/src/ditto_data/sources/tushare/client.py
 
 # 在文件顶部添加 keyring.errors 导入（如果尚未导入）
 try:
@@ -447,7 +447,7 @@ except ImportError:
 **Step 2: 修改 secrets.toml 异常处理**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/client.py
+# packages/data/src/ditto_data/sources/tushare/client.py
 
 # 替换 secrets.toml 加载的异常处理（约第 88-102 行）
 # 修改前:
@@ -483,18 +483,18 @@ except ImportError:
 **Step 3: 运行测试验证通过**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/sources/tushare/test_client_errors.py -v
+pixi run -e dev pytest packages/data/tests/sources/tushare/test_client_errors.py -v
 # 预期: PASS - 所有测试通过
 
 # 运行完整 tushare 测试套件
-pixi run -e dev pytest packages/datahub/tests/sources/tushare/ -v
+pixi run -e dev pytest packages/data/tests/sources/tushare/ -v
 # 预期: 所有现有测试仍然通过
 ```
 
 **Step 4: 提交修改**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/client.py
+git add packages/data/src/ditto_data/sources/tushare/client.py
 git commit -m "refactor(datahub): improve exception handling in TushareClient
 
 - Replace broad 'except Exception' with specific keyring/IO exceptions

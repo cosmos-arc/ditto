@@ -24,7 +24,7 @@
 
 ```
 # 变更前
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── accessors/
 │   ├── internal/
 │   │   ├── adjustment.py
@@ -42,7 +42,7 @@ packages/datahub/src/ditto_datahub/
 
 ```
 # 变更后
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── helpers/                           # 原 accessors/，重命名
 │   ├── __init__.py
 │   ├── adjustment.py                  # 复权计算
@@ -130,7 +130,7 @@ class MetadataService:
 
 ```python
 # 移除
-- from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
+- from ditto_data.accessors.instrument_accessor import InstrumentsAccessor
 
 # MetadataService 保持现有依赖注入（已有 sid_allocator）
 ```
@@ -154,7 +154,7 @@ class MetadataService:
 ### 测试目录结构
 
 ```
-packages/datahub/tests/
+packages/data/tests/
 ├── unit/
 │   ├── helpers/                          # 原 accessors/
 │   │   ├── test_adjustment_unit.py
@@ -185,7 +185,7 @@ packages/datahub/tests/
 
 ### 更新文档
 - `stores/README.md` - 移除 UniverseStore 引用
-- `packages/datahub/README.md` - 更新架构描述
+- `packages/data/README.md` - 更新架构描述
 
 ### 删除文档
 - `accessors/README.md`（目录重命名后无意义）

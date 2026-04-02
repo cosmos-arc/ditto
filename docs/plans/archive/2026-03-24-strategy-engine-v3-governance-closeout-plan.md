@@ -32,11 +32,11 @@
 ## Task 1: 修复 DataHub -> Core 审计依赖
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/audit/execution_audit_service.py`
-- Create: `packages/datahub/src/ditto_datahub/models/strategy_audit.py`
-- Modify: `packages/datahub/src/ditto_datahub/models/__init__.py`
-- Modify: `packages/datahub/tests/unit/services/test_execution_audit_service_unit.py`
-- Test: `packages/datahub/tests/unit/services/test_execution_audit_service_unit.py`
+- Modify: `packages/data/src/ditto_data/services/audit/execution_audit_service.py`
+- Create: `packages/data/src/ditto_data/models/strategy_audit.py`
+- Modify: `packages/data/src/ditto_data/models/__init__.py`
+- Modify: `packages/data/tests/unit/services/test_execution_audit_service_unit.py`
+- Test: `packages/data/tests/unit/services/test_execution_audit_service_unit.py`
 
 **Step 1: 写失败测试，锁定 DataHub 审计服务不再依赖 Core 记录类型**
 
@@ -48,7 +48,7 @@
 Run:
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/services/test_execution_audit_service_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/services/test_execution_audit_service_unit.py -v
 ```
 
 Expected:
@@ -80,7 +80,7 @@ Expected:
 Run:
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/services/test_execution_audit_service_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/services/test_execution_audit_service_unit.py -v
 ```
 
 Expected:
@@ -97,15 +97,15 @@ pixi run -e dev arch-check
 
 Expected:
 
-- `ditto_datahub.services.audit.execution_audit_service -> ditto_core.backtest.audit.records` 相关违规消失
+- `ditto_data.services.audit.execution_audit_service -> ditto_core.backtest.audit.records` 相关违规消失
 
 **Step 8: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/models/strategy_audit.py
-git add packages/datahub/src/ditto_datahub/models/__init__.py
-git add packages/datahub/src/ditto_datahub/services/audit/execution_audit_service.py
-git add packages/datahub/tests/unit/services/test_execution_audit_service_unit.py
+git add packages/data/src/ditto_data/models/strategy_audit.py
+git add packages/data/src/ditto_data/models/__init__.py
+git add packages/data/src/ditto_data/services/audit/execution_audit_service.py
+git add packages/data/tests/unit/services/test_execution_audit_service_unit.py
 git commit -m "refactor: decouple execution audit persistence from core records"
 ```
 
@@ -375,12 +375,12 @@ git commit -m "feat: persist minimal strategy engine artifacts to disk"
 ## Task 6: 补 strategy version/run 控制面最小闭环
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/models/strategy_run.py`
-- Create: `packages/datahub/src/ditto_datahub/services/strategy/strategy_run_service.py`
-- Modify: `packages/datahub/src/ditto_datahub/services/strategy/__init__.py`
-- Modify: `packages/datahub/src/ditto_datahub/scripts/schema.sql`
-- Create: `packages/datahub/tests/unit/services/strategy/test_strategy_run_service_unit.py`
-- Test: `packages/datahub/tests/unit/services/strategy/test_strategy_run_service_unit.py`
+- Create: `packages/data/src/ditto_data/models/strategy_run.py`
+- Create: `packages/data/src/ditto_data/services/strategy/strategy_run_service.py`
+- Modify: `packages/data/src/ditto_data/services/strategy/__init__.py`
+- Modify: `packages/data/src/ditto_data/scripts/schema.sql`
+- Create: `packages/data/tests/unit/services/strategy/test_strategy_run_service_unit.py`
+- Test: `packages/data/tests/unit/services/strategy/test_strategy_run_service_unit.py`
 
 **Step 1: 写失败测试，定义 run 生命周期最小能力**
 
@@ -394,7 +394,7 @@ git commit -m "feat: persist minimal strategy engine artifacts to disk"
 Run:
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/services/strategy/test_strategy_run_service_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/services/strategy/test_strategy_run_service_unit.py -v
 ```
 
 **Step 3: 定义 DataHub 侧 strategy run record**
@@ -419,17 +419,17 @@ pixi run -e dev pytest packages/datahub/tests/unit/services/strategy/test_strate
 Run:
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/services/strategy/test_strategy_run_service_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/services/strategy/test_strategy_run_service_unit.py -v
 ```
 
 **Step 6: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/models/strategy_run.py
-git add packages/datahub/src/ditto_datahub/services/strategy/strategy_run_service.py
-git add packages/datahub/src/ditto_datahub/services/strategy/__init__.py
-git add packages/datahub/src/ditto_datahub/scripts/schema.sql
-git add packages/datahub/tests/unit/services/strategy/test_strategy_run_service_unit.py
+git add packages/data/src/ditto_data/models/strategy_run.py
+git add packages/data/src/ditto_data/services/strategy/strategy_run_service.py
+git add packages/data/src/ditto_data/services/strategy/__init__.py
+git add packages/data/src/ditto_data/scripts/schema.sql
+git add packages/data/tests/unit/services/strategy/test_strategy_run_service_unit.py
 git commit -m "feat: add minimal strategy run control plane"
 ```
 

@@ -62,19 +62,19 @@ apps/port/src/ditto_port/services/
 **目标:** 删除 DataHub 层中的 IngestionCoordinator，因为业务编排应该在 Port 层
 
 **Files:**
-- Delete: `packages/datahub/src/ditto_datahub/ingestion/coordinator.py`
-- Delete: `packages/datahub/src/ditto_datahub/ingestion/__init__.py` (如果只导出 coordinator)
-- Modify: `packages/datahub/src/ditto_datahub/__init__.py` (移除相关导出)
-- Test: `packages/datahub/tests/unit/ingestion/test_coordinator_unit.py` (删除相关测试)
+- Delete: `packages/data/src/ditto_data/ingestion/coordinator.py`
+- Delete: `packages/data/src/ditto_data/ingestion/__init__.py` (如果只导出 coordinator)
+- Modify: `packages/data/src/ditto_data/__init__.py` (移除相关导出)
+- Test: `packages/data/tests/unit/ingestion/test_coordinator_unit.py` (删除相关测试)
 
 **Step 1: 确认当前实现**
 
-检查 `packages/datahub/src/ditto_datahub/ingestion/` 目录下的文件
+检查 `packages/data/src/ditto_data/ingestion/` 目录下的文件
 
 **Step 2: 删除 coordinator.py**
 
 ```bash
-rm packages/datahub/src/ditto_datahub/ingestion/coordinator.py
+rm packages/data/src/ditto_data/ingestion/coordinator.py
 ```
 
 **Step 3: 清理 __init__.py**
@@ -83,12 +83,12 @@ rm packages/datahub/src/ditto_datahub/ingestion/coordinator.py
 
 **Step 4: 更新主 __init__.py**
 
-从 `packages/datahub/src/ditto_datahub/__init__.py` 中移除 IngestionCoordinator 相关导出
+从 `packages/data/src/ditto_data/__init__.py` 中移除 IngestionCoordinator 相关导出
 
 **Step 5: 删除相关测试**
 
 ```bash
-rm packages/datahub/tests/unit/ingestion/test_coordinator_unit.py
+rm packages/data/tests/unit/ingestion/test_coordinator_unit.py
 ```
 
 **Step 6: 运行测试验证**
@@ -102,9 +102,9 @@ pixi run -e dev pytest --unit
 **Step 7: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/ingestion/
-git add packages/datahub/src/ditto_datahub/__init__.py
-git add packages/datahub/tests/unit/ingestion/test_coordinator_unit.py
+git add packages/data/src/ditto_data/ingestion/
+git add packages/data/src/ditto_data/__init__.py
+git add packages/data/tests/unit/ingestion/test_coordinator_unit.py
 git commit -m "refactor(datahub): remove IngestionCoordinator from DataHub layer
 
 Business orchestration should be in Port layer, not DataHub layer.
@@ -118,28 +118,28 @@ DataHub should only provide raw read/write capabilities."
 **目标:** 确保所有 Source 方法返回符合 SourceSchema 的标准化数据
 
 **Files:**
-- Verify: `packages/datahub/src/ditto_datahub/sources/tushare/*.py`
-- Verify: `packages/datahub/src/ditto_datahub/sources/akshare/*.py`
-- Test: `packages/datahub/tests/integration/sources/test_*.py`
+- Verify: `packages/data/src/ditto_data/sources/tushare/*.py`
+- Verify: `packages/data/src/ditto_data/sources/akshare/*.py`
+- Test: `packages/data/tests/integration/sources/test_*.py`
 
 **Step 1: 检查 SourceSchema 定义**
 
-查看 `packages/datahub/src/ditto_datahub/models/source_schemas.py` 中的 Schema 定义
+查看 `packages/data/src/ditto_data/models/source_schemas.py` 中的 Schema 定义
 
 **Step 2: 验证 Tushare Stock Source**
 
-检查 `packages/datahub/src/ditto_datahub/sources/tushare/stock.py`:
+检查 `packages/data/src/ditto_data/sources/tushare/stock.py`:
 - `fetch_daily_bars()` 返回数据符合 `STOCK_BARS_SOURCE_SCHEMA`
 - `fetch_status()` 返回数据符合 `STOCK_STATUS_SOURCE_SCHEMA`
 
 **Step 3: 编写集成测试验证**
 
 ```python
-# packages/datahub/tests/integration/sources/test_tushare_stock_schema.py
+# packages/data/tests/integration/sources/test_tushare_stock_schema.py
 
 import pytest
-from ditto_datahub.sources.tushare import TushareStockSource
-from ditto_datahub.models.source_schemas import STOCK_BARS_SOURCE_SCHEMA
+from ditto_data.sources.tushare import TushareStockSource
+from ditto_data.models.source_schemas import STOCK_BARS_SOURCE_SCHEMA
 
 
 @pytest.mark.integration
@@ -164,7 +164,7 @@ def test_stock_daily_bars_schema():
 **Step 4: 运行集成测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/integration/sources/test_tushare_stock_schema.py -v
+pixi run -e dev pytest packages/data/tests/integration/sources/test_tushare_stock_schema.py -v
 ```
 
 **Step 5: 对其他 Source 重复 Step 2-4**
@@ -177,7 +177,7 @@ pixi run -e dev pytest packages/datahub/tests/integration/sources/test_tushare_s
 **Step 6: 提交**
 
 ```bash
-git add packages/datahub/tests/integration/sources/
+git add packages/data/tests/integration/sources/
 git commit -m "test(datahub): add SourceSchema validation tests"
 ```
 
@@ -188,8 +188,8 @@ git commit -m "test(datahub): add SourceSchema validation tests"
 **目标:** 确保所有 Store 提供完整的读写接口
 
 **Files:**
-- Verify: `packages/datahub/src/ditto_datahub/domains/*/`
-- Test: `packages/datahub/tests/unit/stores/test_*.py`
+- Verify: `packages/data/src/ditto_data/domains/*/`
+- Test: `packages/data/tests/unit/stores/test_*.py`
 
 **Step 1: 检查 Store 接口规范**
 
@@ -200,10 +200,10 @@ git commit -m "test(datahub): add SourceSchema validation tests"
 **Step 2: 验证 InstrumentStore**
 
 ```python
-# packages/datahub/tests/unit/stores/test_instrument_store.py
+# packages/data/tests/unit/stores/test_instrument_store.py
 
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
-from ditto_datahub.models.common import OnDuplicate
+from ditto_data.domains.metadata.instrument import InstrumentStore
+from ditto_data.models.common import OnDuplicate
 
 
 def test_instrument_store_write():
@@ -215,7 +215,7 @@ def test_instrument_store_write():
 **Step 3: 运行 Store 测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/stores/ -v
+pixi run -e dev pytest packages/data/tests/unit/stores/ -v
 ```
 
 **Step 4: 修复任何缺失的接口**
@@ -225,8 +225,8 @@ pixi run -e dev pytest packages/datahub/tests/unit/stores/ -v
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/
-git add packages/datahub/tests/unit/stores/
+git add packages/data/src/ditto_data/domains/
+git add packages/data/tests/unit/stores/
 git commit -m "refactor(datahub): verify and fix Store interfaces"
 ```
 
@@ -237,19 +237,19 @@ git commit -m "refactor(datahub): verify and fix Store interfaces"
 **目标:** 为每个域实现基础查询编排服务（如果需要）
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/domains/metadata/metadata_query_service.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/market/market_query_service.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/capital/capital_query_service.py`
-- Test: `packages/datahub/tests/unit/query_services/test_*.py`
+- Create: `packages/data/src/ditto_data/domains/metadata/metadata_query_service.py`
+- Create: `packages/data/src/ditto_data/domains/market/market_query_service.py`
+- Create: `packages/data/src/ditto_data/domains/capital/capital_query_service.py`
+- Test: `packages/data/tests/unit/query_services/test_*.py`
 
 **Step 1: 实现 MetadataQueryService**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/metadata/metadata_query_service.py
+# packages/data/src/ditto_data/domains/metadata/metadata_query_service.py
 
 from dataclasses import dataclass
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
-from ditto_datahub.domains.metadata.calendar import TradingCalendarStore
+from ditto_data.domains.metadata.instrument import InstrumentStore
+from ditto_data.domains.metadata.calendar import TradingCalendarStore
 
 
 @dataclass
@@ -270,10 +270,10 @@ class MetadataQueryService:
 **Step 2: 实现 MarketQueryService**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/market_query_service.py
+# packages/data/src/ditto_data/domains/market/market_query_service.py
 
 from dataclasses import dataclass
-from ditto_datahub.domains.market.stock.bars import StockBarsStore
+from ditto_data.domains.market.stock.bars import StockBarsStore
 
 
 @dataclass
@@ -300,7 +300,7 @@ class MarketQueryService:
 **Step 4: 编写测试**
 
 ```python
-# packages/datahub/tests/unit/query_services/test_metadata_query_service.py
+# packages/data/tests/unit/query_services/test_metadata_query_service.py
 
 def test_get_active_instruments():
     """测试获取活跃标的"""
@@ -310,14 +310,14 @@ def test_get_active_instruments():
 **Step 5: 运行测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/query_services/ -v
+pixi run -e dev pytest packages/data/tests/unit/query_services/ -v
 ```
 
 **Step 6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/
-git add packages/datahub/tests/unit/query_services/
+git add packages/data/src/ditto_data/domains/
+git add packages/data/tests/unit/query_services/
 git commit -m "feat(datahub): implement QueryServices for all domains"
 ```
 
@@ -328,13 +328,13 @@ git commit -m "feat(datahub): implement QueryServices for all domains"
 **目标:** 确保 DataHub 层测试覆盖率达到标准
 
 **Files:**
-- All: `packages/datahub/src/ditto_datahub/`
+- All: `packages/data/src/ditto_data/`
 - Test: All test files
 
 **Step 1: 运行测试覆盖率检查**
 
 ```bash
-pixi run -e dev pytest --cov=packages/datahub/src/ditto_datahub --cov-report=term-missing
+pixi run -e dev pytest --cov=packages/data/src/ditto_data --cov-report=term-missing
 ```
 
 **Step 2: 分析覆盖率报告**
@@ -348,13 +348,13 @@ pixi run -e dev pytest --cov=packages/datahub/src/ditto_datahub --cov-report=ter
 **Step 4: 重新运行检查**
 
 ```bash
-pixi run -e dev pytest --cov=packages/datahub/src/ditto_datahub --cov-report=term-missing
+pixi run -e dev pytest --cov=packages/data/src/ditto_data --cov-report=term-missing
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/tests/
+git add packages/data/tests/
 git commit -m "test(datahub): improve test coverage to ≥80%"
 ```
 
@@ -495,7 +495,7 @@ git commit -m "feat(port): define IngestionResult and QualityReport models"
 # tests/port/services/data_writer/test_service.py
 
 import pytest
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 from ditto_port.services.data_writer import DataWriterService
 from ditto_port.services.models.common import OnDuplicate
 import polars as pl
@@ -541,8 +541,8 @@ pixi run -e dev pytest tests/port/services/data_writer/test_service.py -v
 from dataclasses import dataclass
 from pathlib import Path
 
-from ditto_datahub import DataHub
-from ditto_datahub.models.common import OnDuplicate, WriteResult
+from ditto_data import DataHub
+from ditto_data.models.common import OnDuplicate, WriteResult
 from ditto_port.services.models.common import Domain
 
 
@@ -822,7 +822,7 @@ def test_batch_check_stock_bars():
 from dataclasses import dataclass
 from datetime import date
 
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 from ditto_port.services.models.quality_report import BatchCheckResult
 
 
@@ -916,7 +916,7 @@ def test_reconcile_sources():
 from dataclasses import dataclass
 from datetime import date
 
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 from ditto_port.services.models.quality_report import ReconciliationResult
 
 
@@ -1006,7 +1006,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import date
 
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 from ditto_port.services.data_writer import DataWriterService
 from ditto_port.services.quality import QualityService
 from ditto_port.services.models.ingestion_result import IngestionResult
@@ -1109,7 +1109,7 @@ async def test_ingest_instruments():
 from dataclasses import dataclass
 from datetime import date
 
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 from ditto_port.services.data_writer import DataWriterService
 from ditto_port.services.quality import QualityService
 from ditto_port.services.ingestion.base_ingestion import BaseIngestionService

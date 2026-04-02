@@ -60,33 +60,33 @@ def get_standard_ticker(ticker: str, exchange: str) -> str:
 
 | 文件 | 修改内容 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/scripts/schema.sql` | `instrument.symbol` → `instrument.ticker`，索引重命名 |
+| `packages/data/src/ditto_data/scripts/schema.sql` | `instrument.symbol` → `instrument.ticker`，索引重命名 |
 
 ### Models 层
 
 | 文件 | 修改内容 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/models/metadata.py` | `InstrumentRegistration.symbol` → `ticker` |
+| `packages/data/src/ditto_data/models/metadata.py` | `InstrumentRegistration.symbol` → `ticker` |
 
 ### Store 层
 
 | 文件 | 修改内容 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_reader.py` | `get_symbol()` → `get_ticker()`，`enrich_with_symbol()` → `enrich_with_ticker()`，`get_instrument_id_symbol_map()` → `get_instrument_id_ticker_map()` |
-| `packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_writer.py` | 写入时使用 `ticker` |
+| `packages/data/src/ditto_data/stores/metadata/instrument/instrument_reader.py` | `get_symbol()` → `get_ticker()`，`enrich_with_symbol()` → `enrich_with_ticker()`，`get_instrument_id_symbol_map()` → `get_instrument_id_ticker_map()` |
+| `packages/data/src/ditto_data/stores/metadata/instrument/instrument_writer.py` | 写入时使用 `ticker` |
 
 ### Service 层
 
 | 文件 | 修改内容 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/services/metadata_service.py` | `get_symbol()` → `get_ticker()` |
+| `packages/data/src/ditto_data/services/metadata_service.py` | `get_symbol()` → `get_ticker()` |
 
 ### Source 层
 
 | 文件 | 修改内容 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/sources/tushare/processors/transformer.py` | computed_columns 中 `symbol` → `ticker` |
-| `packages/datahub/src/ditto_datahub/sources/schemas/metadata_schemas.py` | 移除模糊的 `ticker` 字段，保留 `source_ticker` |
+| `packages/data/src/ditto_data/sources/tushare/processors/transformer.py` | computed_columns 中 `symbol` → `ticker` |
+| `packages/data/src/ditto_data/sources/schemas/metadata_schemas.py` | 移除模糊的 `ticker` 字段，保留 `source_ticker` |
 | `packages/foundation/src/ditto_foundation/db/sqlite_pool.py` | schema 验证中 `symbol` → `ticker` |
 
 ### 展示层 - 新增
@@ -97,11 +97,11 @@ def get_standard_ticker(ticker: str, exchange: str) -> str:
 
 ### 测试文件（同步修改）
 
-- `packages/datahub/tests/unit/models/test_security_unit.py`
-- `packages/datahub/tests/unit/stores/test_security_store_unit.py`
-- `packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py`
-- `packages/datahub/tests/integration/stores/test_security_store_integration.py`
-- `packages/datahub/tests/integration/runtime/test_sql_engine_integration.py`
+- `packages/data/tests/unit/models/test_security_unit.py`
+- `packages/data/tests/unit/stores/test_security_store_unit.py`
+- `packages/data/tests/unit/sources/tushare/test_transformer_unit.py`
+- `packages/data/tests/integration/stores/test_security_store_integration.py`
+- `packages/data/tests/integration/runtime/test_sql_engine_integration.py`
 - `apps/port/tests/unit/services/ingestion/quality/test_reconciliation_service_unit.py`
 - 其他涉及 symbol 的测试文件
 

@@ -78,7 +78,7 @@ Run for each Service refactor:
 
 ```bash
 # Find all Service imports
-grep -r "from ditto_datahub.services import" packages/ apps/ --include="*.py"
+grep -r "from ditto_data.services import" packages/ apps/ --include="*.py"
 
 # Find old method calls
 grep -r "\.query(" packages/ apps/ --include="*.py"
@@ -94,8 +94,8 @@ grep -r "FundamentalQuery" packages/ apps/ --include="*.py"
 ## Task 1: SourceService (P0)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/source_service.py`
-- Test: `packages/datahub/tests/unit/services/test_source_service.py`
+- Modify: `packages/data/src/ditto_data/services/source_service.py`
+- Test: `packages/data/tests/unit/services/test_source_service.py`
 
 **Change:**
 ```python
@@ -109,7 +109,7 @@ def get_source(self, name: str | Source) -> DataSource
 **Step 1: Rename method**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/source_service.py
+# packages/data/src/ditto_data/services/source_service.py
 
 class SourceService:
     def get_source(self, name: str | Source) -> DataSource:  # renamed from get()
@@ -118,7 +118,7 @@ class SourceService:
 
 **Step 2: Update tests**
 
-Run: `pixi run -e dev test --unit packages/datahub/tests/unit/services/test_source_service.py -v`
+Run: `pixi run -e dev test --unit packages/data/tests/unit/services/test_source_service.py -v`
 Expected: FAIL with "attribute error: 'SourceService' has no attribute 'get'"
 
 Fix test: `service.get("tushare")` → `service.get_source("tushare")`
@@ -142,8 +142,8 @@ Expected: All pass
 **Step 6: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/source_service.py
-git add packages/datahub/tests/unit/services/test_source_service.py
+git add packages/data/src/ditto_data/services/source_service.py
+git add packages/data/tests/unit/services/test_source_service.py
 git commit -m "refactor(services): rename SourceService.get() to get_source()"
 ```
 
@@ -152,8 +152,8 @@ git commit -m "refactor(services): rename SourceService.get() to get_source()"
 ## Task 2: IngestionLogService (P1)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/ingestion_log_service.py`
-- Test: `packages/datahub/tests/unit/services/test_ingestion_log_service.py`
+- Modify: `packages/data/src/ditto_data/services/ingestion_log_service.py`
+- Test: `packages/data/tests/unit/services/test_ingestion_log_service.py`
 
 **Changes:**
 | Old | New | Reason |
@@ -168,7 +168,7 @@ git commit -m "refactor(services): rename SourceService.get() to get_source()"
 **Step 1: Rename methods**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/ingestion_log_service.py
+# packages/data/src/ditto_data/services/ingestion_log_service.py
 
 class IngestionLogService:
     def list_failed_dates(  # renamed from get_failed_dates
@@ -194,7 +194,7 @@ class IngestionLogService:
 
 **Step 2: Update tests**
 
-Run: `pixi run -e dev test --unit packages/datahub/tests/unit/services/test_ingestion_log_service.py -v`
+Run: `pixi run -e dev test --unit packages/data/tests/unit/services/test_ingestion_log_service.py -v`
 Expected: FAIL for renamed methods
 
 Fix all test calls to use new method names.
@@ -218,8 +218,8 @@ Expected: All pass
 **Step 6: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/ingestion_log_service.py
-git add packages/datahub/tests/unit/services/test_ingestion_log_service.py
+git add packages/data/src/ditto_data/services/ingestion_log_service.py
+git add packages/data/tests/unit/services/test_ingestion_log_service.py
 git commit -m "refactor(services): rename IngestionLogService methods to follow naming convention"
 ```
 
@@ -228,8 +228,8 @@ git commit -m "refactor(services): rename IngestionLogService methods to follow 
 ## Task 3: QualityRecordService (P1)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/quality_record_service.py`
-- Test: `packages/datahub/tests/unit/services/test_quality_record_service.py`
+- Modify: `packages/data/src/ditto_data/services/quality_record_service.py`
+- Test: `packages/data/tests/unit/services/test_quality_record_service.py`
 
 **Changes:**
 | Old | New | Reason |
@@ -242,7 +242,7 @@ git commit -m "refactor(services): rename IngestionLogService methods to follow 
 **Step 1: Rename methods**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/quality_record_service.py
+# packages/data/src/ditto_data/services/quality_record_service.py
 
 class QualityRecordService:
     def list_quarantined_data(  # renamed from get_quarantined_data
@@ -258,7 +258,7 @@ class QualityRecordService:
 
 **Step 2: Update tests**
 
-Run: `pixi run -e dev test --unit packages/datahub/tests/unit/services/test_quality_record_service.py -v`
+Run: `pixi run -e dev test --unit packages/data/tests/unit/services/test_quality_record_service.py -v`
 Expected: FAIL for renamed methods
 
 Fix test calls.
@@ -282,8 +282,8 @@ Expected: All pass
 **Step 6: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/quality_record_service.py
-git add packages/datahub/tests/unit/services/test_quality_record_service.py
+git add packages/data/src/ditto_data/services/quality_record_service.py
+git add packages/data/tests/unit/services/test_quality_record_service.py
 git commit -m "refactor(services): rename QualityRecordService methods to follow naming convention"
 ```
 
@@ -292,8 +292,8 @@ git commit -m "refactor(services): rename QualityRecordService methods to follow
 ## Task 4: FactorService (P2)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/factor_service.py`
-- Test: `packages/datahub/tests/unit/services/test_factor_service.py`
+- Modify: `packages/data/src/ditto_data/services/factor_service.py`
+- Test: `packages/data/tests/unit/services/test_factor_service.py`
 
 **Changes:**
 | Action | Method |
@@ -304,7 +304,7 @@ git commit -m "refactor(services): rename QualityRecordService methods to follow
 **Step 1: Rename query to find_factors**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/factor_service.py
+# packages/data/src/ditto_data/services/factor_service.py
 
 class FactorService:
     def find_factors(self, query: FactorQuery) -> pl.DataFrame:  # renamed from query()
@@ -329,7 +329,7 @@ def list_factors(
 **Step 3: Write failing test for new method**
 
 ```python
-# packages/datahub/tests/unit/services/test_factor_service.py
+# packages/data/tests/unit/services/test_factor_service.py
 
 def test_list_factors_convenience():
     result = factor_service.list_factors("2024-01-01", "2024-01-31")
@@ -339,7 +339,7 @@ def test_list_factors_convenience():
 
 **Step 4: Run test to verify it passes**
 
-Run: `pixi run -e dev test --unit packages/datahub/tests/unit/services/test_factor_service.py::test_list_factors_convenience -v`
+Run: `pixi run -e dev test --unit packages/data/tests/unit/services/test_factor_service.py::test_list_factors_convenience -v`
 Expected: PASS
 
 **Step 5: Find upstream callers**
@@ -365,8 +365,8 @@ Expected: All pass
 **Step 9: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/factor_service.py
-git add packages/datahub/tests/unit/services/test_factor_service.py
+git add packages/data/src/ditto_data/services/factor_service.py
+git add packages/data/tests/unit/services/test_factor_service.py
 git commit -m "refactor(services): rename FactorService.query() to find_factors() and add list_factors()"
 ```
 
@@ -375,8 +375,8 @@ git commit -m "refactor(services): rename FactorService.query() to find_factors(
 ## Task 5: FeatureService (P2)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/feature_service.py`
-- Test: `packages/datahub/tests/unit/services/test_feature_service.py`
+- Modify: `packages/data/src/ditto_data/services/feature_service.py`
+- Test: `packages/data/tests/unit/services/test_feature_service.py`
 
 **Changes:**
 | Action | Method |
@@ -387,7 +387,7 @@ git commit -m "refactor(services): rename FactorService.query() to find_factors(
 **Step 1: Rename query to find_indicators**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/feature_service.py
+# packages/data/src/ditto_data/services/feature_service.py
 
 class FeatureService:
     def find_indicators(self, query: FeatureQuery) -> pl.DataFrame:  # renamed from query()
@@ -412,7 +412,7 @@ def list_indicators(
 **Step 3: Write failing test for new method**
 
 ```python
-# packages/datahub/tests/unit/services/test_feature_service.py
+# packages/data/tests/unit/services/test_feature_service.py
 
 def test_list_indicators_convenience():
     result = feature_service.list_indicators("2024-01-01", "2024-01-31")
@@ -421,7 +421,7 @@ def test_list_indicators_convenience():
 
 **Step 4: Run test to verify it passes**
 
-Run: `pixi run -e dev test --unit packages/datahub/tests/unit/services/test_feature_service.py::test_list_indicators_convenience -v`
+Run: `pixi run -e dev test --unit packages/data/tests/unit/services/test_feature_service.py::test_list_indicators_convenience -v`
 Expected: PASS
 
 **Step 5: Find upstream callers**
@@ -443,8 +443,8 @@ Expected: All pass
 **Step 8: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/feature_service.py
-git add packages/datahub/tests/unit/services/test_feature_service.py
+git add packages/data/src/ditto_data/services/feature_service.py
+git add packages/data/tests/unit/services/test_feature_service.py
 git commit -m "refactor(services): rename FeatureService.query() to find_indicators() and add list_indicators()"
 ```
 
@@ -453,8 +453,8 @@ git commit -m "refactor(services): rename FeatureService.query() to find_indicat
 ## Task 6: MacroService (P2)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/macro_service.py`
-- Test: `packages/datahub/tests/unit/services/test_macro_service.py`
+- Modify: `packages/data/src/ditto_data/services/macro_service.py`
+- Test: `packages/data/tests/unit/services/test_macro_service.py`
 
 **Changes:**
 | Action | Method |
@@ -467,7 +467,7 @@ git commit -m "refactor(services): rename FeatureService.query() to find_indicat
 **Step 1: Rename methods**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/macro_service.py
+# packages/data/src/ditto_data/services/macro_service.py
 
 class MacroService:
     def find_indicators(self, query: MacroQuery) -> pl.DataFrame:  # renamed from query()
@@ -495,7 +495,7 @@ def list_indicators(
 **Step 3: Write failing test for new method**
 
 ```python
-# packages/datahub/tests/unit/services/test_macro_service.py
+# packages/data/tests/unit/services/test_macro_service.py
 
 def test_list_indicators_convenience():
     result = macro_service.list_indicators("2024-01-01", "2024-01-31")
@@ -504,7 +504,7 @@ def test_list_indicators_convenience():
 
 **Step 4: Run test to verify it passes**
 
-Run: `pixi run -e dev test --unit packages/datahub/tests/unit/services/test_macro_service.py::test_list_indicators_convenience -v`
+Run: `pixi run -e dev test --unit packages/data/tests/unit/services/test_macro_service.py::test_list_indicators_convenience -v`
 Expected: PASS
 
 **Step 5: Find upstream callers**
@@ -534,8 +534,8 @@ Expected: All pass
 **Step 9: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/macro_service.py
-git add packages/datahub/tests/unit/services/test_macro_service.py
+git add packages/data/src/ditto_data/services/macro_service.py
+git add packages/data/tests/unit/services/test_macro_service.py
 git commit -m "refactor(services): rename MacroService methods, add list_indicators(), delete deprecated types"
 ```
 
@@ -544,8 +544,8 @@ git commit -m "refactor(services): rename MacroService methods, add list_indicat
 ## Task 7: CapitalService (P3)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/capital_service.py`
-- Test: `packages/datahub/tests/unit/services/test_capital_service.py`
+- Modify: `packages/data/src/ditto_data/services/capital_service.py`
+- Test: `packages/data/tests/unit/services/test_capital_service.py`
 
 **Changes:**
 | Action | Methods |
@@ -558,7 +558,7 @@ git commit -m "refactor(services): rename MacroService methods, add list_indicat
 **Step 1: Add get_* methods**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/capital_service.py
+# packages/data/src/ditto_data/services/capital_service.py
 
 class CapitalService:
     # get_* - Single record queries
@@ -623,7 +623,7 @@ class CapitalService:
 **Step 3: Write failing tests for new methods**
 
 ```python
-# packages/datahub/tests/unit/services/test_capital_service.py
+# packages/data/tests/unit/services/test_capital_service.py
 
 def test_get_margin_trading():
     result = capital_service.get_margin_trading("000001.SZ", date(2024, 1, 1))
@@ -639,7 +639,7 @@ def test_save_margin_trading():
 
 **Step 4: Run tests to verify they pass**
 
-Run: `pixi run -e dev test --unit packages/datahub/tests/unit/services/test_capital_service.py -v`
+Run: `pixi run -e dev test --unit packages/data/tests/unit/services/test_capital_service.py -v`
 Expected: PASS for all new tests
 
 **Step 5: Find upstream callers**
@@ -682,8 +682,8 @@ Expected: All pass
 **Step 10: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/capital_service.py
-git add packages/datahub/tests/unit/services/test_capital_service.py
+git add packages/data/src/ditto_data/services/capital_service.py
+git add packages/data/tests/unit/services/test_capital_service.py
 git commit -m "refactor(services): CapitalService - replace query/write with dedicated get/save methods"
 ```
 
@@ -692,8 +692,8 @@ git commit -m "refactor(services): CapitalService - replace query/write with ded
 ## Task 8: FundamentalService (P3)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/fundamental_service.py`
-- Test: `packages/datahub/tests/unit/services/test_fundamental_service.py`
+- Modify: `packages/data/src/ditto_data/services/fundamental_service.py`
+- Test: `packages/data/tests/unit/services/test_fundamental_service.py`
 
 **Changes:**
 | Action | Methods |
@@ -707,7 +707,7 @@ git commit -m "refactor(services): CapitalService - replace query/write with ded
 **Step 1: Add get_* methods**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/fundamental_service.py
+# packages/data/src/ditto_data/services/fundamental_service.py
 
 class FundamentalService:
     # get_* - Single record queries
@@ -800,8 +800,8 @@ class FundamentalService:
 ## Task 9: MarketService (P4)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/market_service.py`
-- Test: `packages/datahub/tests/unit/services/test_market_service.py`
+- Modify: `packages/data/src/ditto_data/services/market_service.py`
+- Test: `packages/data/tests/unit/services/test_market_service.py`
 
 **Changes:**
 | Action | Methods |
@@ -816,7 +816,7 @@ class FundamentalService:
 **Step 1: Rename query to find_bars**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/market_service.py
+# packages/data/src/ditto_data/services/market_service.py
 
 class MarketService:
     def find_bars(self, query: BarsQuery) -> pl.DataFrame:  # renamed from query()
@@ -868,8 +868,8 @@ Remove method (was just forwarding to query).
 ## Task 10: MetadataService (P4)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/metadata_service.py`
-- Test: `packages/datahub/tests/unit/services/test_metadata_service.py`
+- Modify: `packages/data/src/ditto_data/services/metadata_service.py`
+- Test: `packages/data/tests/unit/services/test_metadata_service.py`
 
 **Keep (9 methods):**
 - `get_symbol()`, `get_source_ticker()`, `get_stock_industry()`
@@ -904,7 +904,7 @@ Remove method (was just forwarding to query).
 **Step 1: Rename methods**
 
 ```python
-# packages/datahub/src/ditto_datahub/services/metadata_service.py
+# packages/data/src/ditto_data/services/metadata_service.py
 
 class MetadataService:
     def list_trading_days(  # renamed from get_trading_days

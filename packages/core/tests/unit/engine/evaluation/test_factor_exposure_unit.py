@@ -112,8 +112,8 @@ class TestFactorExposureBasic:
 
     def test_returns_factor_exposure_result(self) -> None:
         """Should return a FactorExposureResult."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
-        from ditto_engine.engine.evaluation.report import FactorExposureResult
+        from ditto_analytics.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.report import FactorExposureResult
 
         target_df, risk_dfs, return_df = _make_target_and_risk()
         result = factor_exposure(target_df, risk_dfs, return_df=return_df)
@@ -122,7 +122,7 @@ class TestFactorExposureBasic:
 
     def test_single_risk_factor_exposure(self) -> None:
         """Single risk factor should produce non-zero target exposure."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         target_df, risk_dfs, return_df = _make_target_and_risk(
             n_dates=100,
@@ -137,7 +137,7 @@ class TestFactorExposureBasic:
 
     def test_residual_ic_after_orthogonalization(self) -> None:
         """Residual IC should be present after removing risk factor."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         target_df, risk_dfs, return_df = _make_target_and_risk(
             n_dates=100,
@@ -151,7 +151,7 @@ class TestFactorExposureBasic:
 
     def test_n_factors_and_n_dates(self) -> None:
         """n_factors and n_dates should be correctly reported."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         target_df, risk_dfs, _ = _make_target_and_risk(n_dates=50, n_entities=100)
         result = factor_exposure(target_df, risk_dfs)
@@ -170,7 +170,7 @@ class TestFactorExposureCorrelation:
 
     def test_correlation_matrix_structure(self) -> None:
         """Correlation matrix should include target and all risk factors."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         target_df, risk_dfs, _ = _make_target_and_risk(n_dates=50, n_entities=100)
         result = factor_exposure(target_df, risk_dfs)
@@ -185,7 +185,7 @@ class TestFactorExposureCorrelation:
 
     def test_correlation_values_in_valid_range(self) -> None:
         """All correlation values should be in [-1, 1]."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         target_df, risk_dfs, _ = _make_target_and_risk(
             n_dates=50,
@@ -202,7 +202,7 @@ class TestFactorExposureCorrelation:
 
     def test_self_correlation_is_one(self) -> None:
         """A factor's correlation with itself should be 1.0."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         target_df, risk_dfs, _ = _make_target_and_risk(n_dates=50, n_entities=100)
         result = factor_exposure(target_df, risk_dfs)
@@ -218,7 +218,7 @@ class TestFactorExposureCorrelation:
 
     def test_known_correlation_with_controlled_data(self) -> None:
         """Correlation between target and risk factor should match known exposure."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         # With high risk_exposure and low noise, correlation should be high
         target_df, risk_dfs, _ = _make_target_and_risk(
@@ -234,7 +234,7 @@ class TestFactorExposureCorrelation:
 
     def test_multi_factor_correlation_matrix(self) -> None:
         """Multiple risk factors should all appear in the correlation matrix."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         target_df, risk_dfs = _make_multi_risk_data(
             n_dates=50,
@@ -259,7 +259,7 @@ class TestFactorExposureEdgeCases:
 
     def test_empty_risk_factors_returns_zero_exposure(self) -> None:
         """Empty risk factors should produce zero exposure."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         rng = np.random.default_rng(42)
         n_dates = 50
@@ -285,7 +285,7 @@ class TestFactorExposureEdgeCases:
 
     def test_small_cross_section_returns_empty(self) -> None:
         """Fewer entities than min_cross_section should produce empty results."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         target_df, risk_dfs, _ = _make_target_and_risk(
             n_dates=10,
@@ -299,7 +299,7 @@ class TestFactorExposureEdgeCases:
 
     def test_empty_target_returns_empty(self) -> None:
         """Empty target DataFrame should produce empty results."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.metrics import factor_exposure
 
         target_df = pl.DataFrame(
             schema={
@@ -322,8 +322,8 @@ class TestFactorExposureEdgeCases:
 
     def test_frozen_dataclass(self) -> None:
         """FactorExposureResult should be a frozen dataclass."""
-        from ditto_engine.engine.evaluation.metrics import factor_exposure
-        from ditto_engine.engine.evaluation.report import FactorExposureResult
+        from ditto_analytics.evaluation.metrics import factor_exposure
+        from ditto_analytics.evaluation.report import FactorExposureResult
 
         target_df, risk_dfs, return_df = _make_target_and_risk()
         result = factor_exposure(target_df, risk_dfs, return_df=return_df)

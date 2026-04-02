@@ -23,7 +23,7 @@
 
 **文件:**
 - 检查: `apps/port/src/ditto_port/jobs/tasks/monitoring.py`
-- 检查: `packages/datahub/tests/unit/models/test_common_unit.py`
+- 检查: `packages/data/tests/unit/models/test_common_unit.py`
 
 **Step 1: 搜索 DQ models 引用**
 
@@ -31,8 +31,8 @@ Run: `pixi run -e dev python -c "
 import re
 from pathlib import Path
 
-# 查找所有从 ditto_datahub.models 导入 DQ 相关的文件
-pattern = re.compile(r'from ditto_datahub\.models import.*(?:DQIssue|DQLevel|DQResult|ColumnRule|DatasetRules)')
+# 查找所有从 ditto_data.models 导入 DQ 相关的文件
+pattern = re.compile(r'from ditto_data\.models import.*(?:DQIssue|DQLevel|DQResult|ColumnRule|DatasetRules)')
 
 for py_file in Path('apps').rglob('*.py'):
     content = py_file.read_text(encoding='utf-8')
@@ -65,17 +65,17 @@ Expected: 显示需要修改的具体行号
 ### Task 0.2: 删除 datahub/models/__init__.py 中的 DQ model 重新导出
 
 **文件:**
-- Modify: `packages/datahub/src/ditto_datahub/models/__init__.py`
+- Modify: `packages/data/src/ditto_data/models/__init__.py`
 
 **Step 1: 备份原文件**
 
-Run: `cp packages/datahub/src/ditto_datahub/models/__init__.py packages/datahub/src/ditto_datahub/models/__init__.py.bak`
+Run: `cp packages/data/src/ditto_data/models/__init__.py packages/data/src/ditto_data/models/__init__.py.bak`
 
 Expected: 备份文件创建成功
 
 **Step 2: 删除 DQ model 重新导出**
 
-Edit: `packages/datahub/src/ditto_datahub/models/__init__.py`
+Edit: `packages/data/src/ditto_data/models/__init__.py`
 
 ```python
 # 删除以下导入
@@ -95,15 +95,15 @@ from ditto_core.quality.spec import (
 """DataHub models for data transfer objects."""
 
 # DataHub 层自己的 models
-from ditto_datahub.models.common import AssetSidRange, Dataset, OnDuplicate, Source
-from ditto_datahub.models.ingestion import (
+from ditto_data.models.common import AssetSidRange, Dataset, OnDuplicate, Source
+from ditto_data.models.ingestion import (
     DataChangedError,
     IngestionCursor,
     IngestionLog,
     IngestionStatus,
     NotTradingDayError,
 )
-from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteResultStore
+from ditto_data.models.storage import FreezeManifest, WriteResult, WriteResultStore
 
 __all__ = [
     "AssetSidRange",
@@ -130,7 +130,7 @@ Expected: 类型检查通过（或显示需要修复的其他错误）
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/models/__init__.py
+git add packages/data/src/ditto_data/models/__init__.py
 git commit -m "refactor(datahub): remove DQ model re-exports from datahub layer"
 ```
 
@@ -153,7 +153,7 @@ Edit: `apps/port/src/ditto_port/jobs/tasks/monitoring.py`
 
 将:
 ```python
-from ditto_datahub.models import DQIssue, DQLevel, ...
+from ditto_data.models import DQIssue, DQLevel, ...
 ```
 
 替换为:
@@ -185,21 +185,21 @@ git commit -m "fix(monitoring): import DQ models from core layer"
 ### Task 0.4: 更新测试文件的 DQ imports
 
 **文件:**
-- Modify: `packages/datahub/tests/unit/models/test_common_unit.py`
+- Modify: `packages/data/tests/unit/models/test_common_unit.py`
 
 **Step 1: 查看当前导入**
 
-Run: `head -50 packages/datahub/tests/unit/models/test_common_unit.py | grep -E "^from|^import"`
+Run: `head -50 packages/data/tests/unit/models/test_common_unit.py | grep -E "^from|^import"`
 
 Expected: 显示当前的导入语句
 
 **Step 2: 更新导入语句**
 
-Edit: `packages/datahub/tests/unit/models/test_common_unit.py`
+Edit: `packages/data/tests/unit/models/test_common_unit.py`
 
 将:
 ```python
-from ditto_datahub.models import DQIssue, DQLevel, ...
+from ditto_data.models import DQIssue, DQLevel, ...
 ```
 
 替换为:
@@ -209,14 +209,14 @@ from ditto_core.quality.spec import DQIssue, DQLevel, ...
 
 **Step 3: 运行测试**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/models/test_common_unit.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/models/test_common_unit.py -v`
 
 Expected: 测试通过
 
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/tests/unit/models/test_common_unit.py
+git add packages/data/tests/unit/models/test_common_unit.py
 git commit -m "fix(tests): import DQ models from core layer in datahub tests"
 ```
 
@@ -603,7 +603,7 @@ import ast
 import sys
 from pathlib import Path
 
-datahub_files = Path('packages/datahub/src').rglob('*.py')
+datahub_files = Path('packages/data/src').rglob('*.py')
 has_core_import = False
 
 for py_file in datahub_files:
@@ -883,18 +883,18 @@ git commit -m "docs: complete Phase 1 - clean up Foundation layer"
 ### Task 2.1: 创建 DataSourceSettings（完整版）
 
 **文件:**
-- Create: `packages/datahub/src/ditto_datahub/config/data_source.py`
+- Create: `packages/data/src/ditto_data/config/data_source.py`
 
 **Step 1: 写测试（RED）**
 
-Create: `packages/datahub/tests/unit/config/test_data_source_settings.py`
+Create: `packages/data/tests/unit/config/test_data_source_settings.py`
 
 ```python
 """测试 DataSourceSettings."""
 
 from pydantic import ValidationError
 
-from ditto_datahub.config.data_source import DataSourceSettings
+from ditto_data.config.data_source import DataSourceSettings
 
 
 def test_default_values():
@@ -918,13 +918,13 @@ def test_validation():
 
 **Step 2: 运行测试（RED）**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/config/test_data_source_settings.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/config/test_data_source_settings.py -v`
 
 Expected: FAIL - ModuleNotFoundError
 
 **Step 3: 实现 DataSourceSettings（GREEN）**
 
-Create: `packages/datahub/src/ditto_datahub/config/data_source.py`
+Create: `packages/data/src/ditto_data/config/data_source.py`
 
 ```python
 """数据源配置."""
@@ -999,25 +999,25 @@ class DataSourceSettings(BaseSettings):
 
 **Step 4: 运行测试（GREEN）**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/config/test_data_source_settings.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/config/test_data_source_settings.py -v`
 
 Expected: PASS
 
 **Step 5: 更新 datahub/__init__.py**
 
-Edit: `packages/datahub/src/ditto_datahub/__init__.py`
+Edit: `packages/data/src/ditto_data/__init__.py`
 
 添加:
 ```python
-from ditto_datahub.config.data_source import DataSourceSettings
+from ditto_data.config.data_source import DataSourceSettings
 ```
 
 **Step 6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/config/data_source.py
-git add packages/datahub/src/ditto_datahub/__init__.py
-git add packages/datahub/tests/unit/config/test_data_source_settings.py
+git add packages/data/src/ditto_data/config/data_source.py
+git add packages/data/src/ditto_data/__init__.py
+git add packages/data/tests/unit/config/test_data_source_settings.py
 git commit -m "feat(datahub): add complete DataSourceSettings"
 ```
 
@@ -1026,16 +1026,16 @@ git commit -m "feat(datahub): add complete DataSourceSettings"
 ### Task 2.2: 创建 DatabaseSettings（完整版）
 
 **文件:**
-- Create: `packages/datahub/src/ditto_datahub/config/database.py`
+- Create: `packages/data/src/ditto_data/config/database.py`
 
 **Step 1: 写测试（RED）**
 
-Create: `packages/datahub/tests/unit/config/test_database_settings.py`
+Create: `packages/data/tests/unit/config/test_database_settings.py`
 
 ```python
 """测试 DatabaseSettings."""
 
-from ditto_datahub.config.database import DatabaseSettings
+from ditto_data.config.database import DatabaseSettings
 
 
 def test_default_values():
@@ -1049,13 +1049,13 @@ def test_default_values():
 
 **Step 2: 运行测试（RED）**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/config/test_database_settings.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/config/test_database_settings.py -v`
 
 Expected: FAIL - ModuleNotFoundError
 
 **Step 3: 实现 DatabaseSettings（GREEN）**
 
-Create: `packages/datahub/src/ditto_datahub/config/database.py`
+Create: `packages/data/src/ditto_data/config/database.py`
 
 ```python
 """数据库配置."""
@@ -1122,25 +1122,25 @@ class DatabaseSettings(BaseSettings):
 
 **Step 4: 运行测试（GREEN）**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/config/test_database_settings.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/config/test_database_settings.py -v`
 
 Expected: PASS
 
 **Step 5: 更新 datahub/__init__.py**
 
-Edit: `packages/datahub/src/ditto_datahub/__init__.py`
+Edit: `packages/data/src/ditto_data/__init__.py`
 
 添加:
 ```python
-from ditto_datahub.config.database import DatabaseSettings
+from ditto_data.config.database import DatabaseSettings
 ```
 
 **Step 6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/config/database.py
-git add packages/datahub/src/ditto_datahub/__init__.py
-git add packages/datahub/tests/unit/config/test_database_settings.py
+git add packages/data/src/ditto_data/config/database.py
+git add packages/data/src/ditto_data/__init__.py
+git add packages/data/tests/unit/config/test_database_settings.py
 git commit -m "feat(datahub): add complete DatabaseSettings"
 ```
 
@@ -1149,16 +1149,16 @@ git commit -m "feat(datahub): add complete DatabaseSettings"
 ### Task 2.3: 创建 FileStorageSettings（通用版）
 
 **文件:**
-- Create: `packages/datahub/src/ditto_datahub/config/storage.py`
+- Create: `packages/data/src/ditto_data/config/storage.py`
 
 **Step 1: 写测试（RED）**
 
-Create: `packages/datahub/tests/unit/config/test_storage_settings.py`
+Create: `packages/data/tests/unit/config/test_storage_settings.py`
 
 ```python
 """测试 FileStorageSettings."""
 
-from ditto_datahub.config.storage import FileStorageSettings
+from ditto_data.config.storage import FileStorageSettings
 
 
 def test_default_values():
@@ -1170,13 +1170,13 @@ def test_default_values():
 
 **Step 2: 运行测试（RED）**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/config/test_storage_settings.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/config/test_storage_settings.py -v`
 
 Expected: FAIL - ModuleNotFoundError
 
 **Step 3: 实现 FileStorageSettings（GREEN）**
 
-Create: `packages/datahub/src/ditto_datahub/config/storage.py`
+Create: `packages/data/src/ditto_data/config/storage.py`
 
 ```python
 """文件存储配置（格式无关）."""
@@ -1216,25 +1216,25 @@ class FileStorageSettings(BaseSettings):
 
 **Step 4: 运行测试（GREEN）**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/config/test_storage_settings.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/config/test_storage_settings.py -v`
 
 Expected: PASS
 
 **Step 5: 更新 datahub/__init__.py**
 
-Edit: `packages/datahub/src/ditto_datahub/__init__.py`
+Edit: `packages/data/src/ditto_data/__init__.py`
 
 添加:
 ```python
-from ditto_datahub.config.storage import FileStorageSettings
+from ditto_data.config.storage import FileStorageSettings
 ```
 
 **Step 6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/config/storage.py
-git add packages/datahub/src/ditto_datahub/__init__.py
-git add packages/datahub/tests/unit/config/test_storage_settings.py
+git add packages/data/src/ditto_data/config/storage.py
+git add packages/data/src/ditto_data/__init__.py
+git add packages/data/tests/unit/config/test_storage_settings.py
 git commit -m "feat(datahub): add FileStorageSettings (generic storage config)"
 ```
 
@@ -1253,7 +1253,7 @@ Create: `apps/port/tests/registry/test_config_datahub.py`
 """测试 ConfigProvider 的 DataHub 配置."""
 
 from dishka import make_container
-from ditto_datahub.config import (
+from ditto_data.config import (
     DatabaseSettings,
     DataSourceSettings,
     FileStorageSettings,
@@ -1297,7 +1297,7 @@ Edit: `apps/port/src/ditto_port/registry/config.py`
 
 添加导入:
 ```python
-from ditto_datahub.config import (
+from ditto_data.config import (
     DatabaseSettings,
     DataSourceSettings,
     FileStorageSettings,
@@ -1362,7 +1362,7 @@ Expected: 0 errors
 
 **Step 2: 运行相关测试**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/ apps/port/tests/registry/ -v`
+Run: `pixi run -e dev pytest packages/data/tests/ apps/port/tests/registry/ -v`
 
 Expected: 所有测试通过
 
@@ -1396,7 +1396,7 @@ Edit: `apps/port/src/ditto_port/registry/datahub.py`
     ) -> Iterator[SQLitePool]:
         """SQLite 连接池（应用级单例）."""
         db_path = data_root / "meta" / database_settings.sqlite_path
-        schema_traversable = files("ditto_datahub.scripts") / "schema.sql"
+        schema_traversable = files("ditto_data.scripts") / "schema.sql"
         schema_path = Path(str(schema_traversable))
         pool = SQLitePool(
             str(db_path),
@@ -1473,7 +1473,7 @@ git commit -m "refactor(sources): inject DataSourceSettings into tushare_source"
 
 **Step 1: 运行完整测试**
 
-Run: `pixi run -e dev pytest apps/port/tests/ packages/datahub/tests/ -v`
+Run: `pixi run -e dev pytest apps/port/tests/ packages/data/tests/ -v`
 
 Expected: 所有测试通过
 
@@ -1595,7 +1595,7 @@ git commit -m "config: add file_storage.env with generic storage config"
 Run: `pixi run -e dev python -c "
 from dishka import make_container
 from ditto_port.registry import ConfigProvider
-from ditto_datahub.config import DataSourceSettings, DatabaseSettings, FileStorageSettings
+from ditto_data.config import DataSourceSettings, DatabaseSettings, FileStorageSettings
 
 container = make_container(ConfigProvider())
 
@@ -1737,7 +1737,7 @@ def check_imports(package_dir, forbidden_import):
     return violations
 
 # datahub 不应依赖 core
-datahub_violations = check_imports('packages/datahub/src', 'ditto_core')
+datahub_violations = check_imports('packages/data/src', 'ditto_core')
 if datahub_violations:
     print(f'❌ datahub 仍然依赖 core:')
     for v in datahub_violations:
@@ -1746,7 +1746,7 @@ else:
     print('✅ datahub 不依赖 core')
 
 # foundation 不应依赖 datahub 或 core
-foundation_violations = check_imports('packages/foundation/src', 'ditto_datahub')
+foundation_violations = check_imports('packages/foundation/src', 'ditto_data')
 foundation_violations.extend(check_imports('packages/foundation/src', 'ditto_core'))
 if foundation_violations:
     print(f'❌ foundation 依赖了上层:')

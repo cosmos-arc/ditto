@@ -19,30 +19,21 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import cast
 
-from ditto_datahub.models.strategy import StrategySpecRecord
-from ditto_datahub.services.audit import ExecutionAuditService
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.strategy.strategy_artifact_service import (
+from ditto_data.models.strategy import StrategySpecRecord
+from ditto_data.services.audit import ExecutionAuditService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_datahub.services.strategy.strategy_catalog_service import (
+from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from ditto_engine.accounting.account import Account
 from ditto_engine.accounting.cash import CashBook
-from ditto_engine.backtest.data_feed import DataFeed, Slice
-from ditto_engine.backtest.risk.pre_trade import (
-    BuyingPowerCheck,
-    CompositePreTradeCheck,
-    LotSizeCheck,
-)
-from ditto_engine.execution.brokerage import BacktestBrokerage, Brokerage
-from ditto_engine.execution.planner import ExecutionPlanner, SimpleExecutionPlanner
-from ditto_engine.execution.reality import BrokerageModel, FeeModel, SimpleFeeModel
-from ditto_engine.strategy.builtins.scoring import ScoringMethod
-from ditto_engine.strategy.pipeline import StrategyPipeline
-from ditto_engine.strategy.specs import (
+from ditto_engine.alpha.builtins.scoring import ScoringMethod
+from ditto_engine.alpha.pipeline import StrategyPipeline
+from ditto_engine.alpha.specs import (
     ConstraintSpec,
     CostModelSpec,
     ExecutionSpec,
@@ -51,7 +42,7 @@ from ditto_engine.strategy.specs import (
     SelectorSpec,
     StrategySpec,
 )
-from ditto_engine.strategy.templates import (
+from ditto_engine.alpha.templates import (
     ETFRotationConfig,
     ETFTrendSwingConfig,
     StockSectorRotationConfig,
@@ -63,11 +54,20 @@ from ditto_engine.strategy.templates import (
     get_sector_rotation_param_constraints,
     validate_sector_rotation_config,
 )
-from ditto_engine.strategy.templates import (
+from ditto_engine.alpha.templates import (
     get_param_constraints as get_stock_selection_param_constraints,
 )
-from ditto_engine.strategy.templates import (
+from ditto_engine.alpha.templates import (
     validate_config as validate_stock_selection_config,
+)
+from ditto_engine.backtest.data_feed import DataFeed, Slice
+from ditto_engine.execution.brokerage import BacktestBrokerage, Brokerage
+from ditto_engine.execution.planner import ExecutionPlanner, SimpleExecutionPlanner
+from ditto_engine.execution.reality import BrokerageModel, FeeModel, SimpleFeeModel
+from ditto_engine.risk.pre_trade import (
+    BuyingPowerCheck,
+    CompositePreTradeCheck,
+    LotSizeCheck,
 )
 from ditto_kernel.identity import InstrumentId
 

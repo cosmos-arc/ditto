@@ -62,7 +62,7 @@
 | `Account.apply_fill()` | 已完成 | `packages/core/src/ditto_core/accounting/account.py` |
 | `FlatToFlatTradeBuilder` | 已完成 | `packages/core/src/ditto_core/execution/trade_builder.py` |
 | `audit/` 拆分 | 已完成 | `packages/core/src/ditto_core/backtest/audit/` |
-| `ExecutionAuditService` | 已完成 | `packages/datahub/src/ditto_datahub/services/audit/execution_audit_service.py` |
+| `ExecutionAuditService` | 已完成 | `packages/data/src/ditto_data/services/audit/execution_audit_service.py` |
 | `BacktestReport` 审计字段 | 已完成 | `packages/core/src/ditto_core/backtest/statistics.py` |
 | `StrategyInputAssembler` | 已完成 | `apps/port/src/ditto_port/services/strategy/input_assembler.py` |
 | `BacktestService` | 已完成骨架 | `apps/port/src/ditto_port/services/strategy/backtest_service.py` |
@@ -87,7 +87,7 @@ pixi run -e dev check         # 非零退出
 `arch-check` 暴露了三类问题：
 
 1. **DataHub -> Core 违规**
-   - `ditto_datahub.services.audit.execution_audit_service`
+   - `ditto_data.services.audit.execution_audit_service`
    - 直接依赖 `ditto_core.backtest.audit.records`
 
 2. **Core 内循环依赖**
@@ -95,7 +95,7 @@ pixi run -e dev check         # 非零退出
    - `.portfolio -> .backtest`
 
 3. **已有老问题仍在**
-   - `ditto_datahub.errors -> ditto_core.engine.errors`
+   - `ditto_data.errors -> ditto_core.engine.errors`
 
 其中第 1 类和策略引擎 v3 新增审计服务直接相关；第 2 类会影响长期演进，属于设计稿里“清晰边界、低耦合”尚未兑现。
 

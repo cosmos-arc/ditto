@@ -34,9 +34,9 @@ Task 4 ────────────────┘
 - [ ] 单元测试通过
 
 **文件**:
-- 新建: `packages/datahub/src/ditto_datahub/models/asset_class.py`
-- 修改: `packages/datahub/src/ditto_datahub/models/dataset.py`
-- 新建: `packages/datahub/tests/unit/models/test_asset_class_unit.py`
+- 新建: `packages/data/src/ditto_data/models/asset_class.py`
+- 修改: `packages/data/src/ditto_data/models/dataset.py`
+- 新建: `packages/data/tests/unit/models/test_asset_class_unit.py`
 
 **复杂度**: S（单文件枚举 + 属性扩展）
 
@@ -52,8 +52,8 @@ Task 4 ────────────────┘
 - [ ] 单元测试覆盖各种 exchange 组合
 
 **文件**:
-- 新建: `packages/datahub/src/ditto_datahub/models/exchange.py`
-- 新建: `packages/datahub/tests/unit/models/test_exchange_unit.py`
+- 新建: `packages/data/src/ditto_data/models/exchange.py`
+- 新建: `packages/data/tests/unit/models/test_exchange_unit.py`
 
 **复杂度**: S（单文件函数迁移）
 

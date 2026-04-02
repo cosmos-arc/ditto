@@ -8,7 +8,7 @@ Following design document at docs/design/02_data_design.md
 # ---------------------------------------------------------------------------
 # Derived* error hierarchy — canonical definition (DataHub owns these
 # because DataHub services raise them without depending on Core).
-# Core re-exports from here via ditto_engine.engine.errors.
+# Core re-exports from here via ditto_engine.errors.
 # ---------------------------------------------------------------------------
 
 

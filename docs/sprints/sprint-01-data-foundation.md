@@ -143,7 +143,7 @@
 #### 任务5: Sources 层（新增）✅ 已完成
 
 **5.1 DataSource 基类** [S] ✅
-- 文件：`packages/datahub/src/ditto_datahub/sources/base.py`
+- 文件：`packages/data/src/ditto_data/sources/base.py`
 - 功能：
   - DataSource 抽象基类定义
   - DataSourceError 异常体系
@@ -172,9 +172,9 @@
 
 **5.2 Tushare 适配器完整实现** [L] ✅
 - 文件：
-  - `packages/datahub/src/ditto_datahub/sources/tushare/__init__.py`
-  - `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
-  - `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
+  - `packages/data/src/ditto_data/sources/tushare/__init__.py`
+  - `packages/data/src/ditto_data/sources/tushare/client.py`
+  - `packages/data/src/ditto_data/sources/tushare/source.py`
 - 功能：
   - **TushareClient**：
     - Token fallback 链：keyring → secrets.toml → env var
@@ -195,7 +195,7 @@
   - ✅ 限流和重试机制生效
 
 **5.3 DataHub 集成 sources** [S] ✅
-- 文件：修改 `packages/datahub/src/ditto_datahub/hub.py`
+- 文件：修改 `packages/data/src/ditto_data/hub.py`
 - 功能：
   - 添加 `@cached_property sources`
   - 返回 DataSources 实例
@@ -337,12 +337,12 @@
 4. 测试 teardown 添加 `gc.collect()` 和延迟确保 Windows 释放句柄
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/stores/sqlite_client.py`
-- `packages/datahub/src/ditto_datahub/stores/security_store.py`
-- `packages/datahub/src/ditto_datahub/stores/calendar_store.py`
-- `packages/datahub/src/ditto_datahub/stores/pipeline_store.py`
-- `packages/datahub/src/ditto_datahub/hub.py`
-- `packages/datahub/tests/unit/test_hub.py`
+- `packages/data/src/ditto_data/stores/sqlite_client.py`
+- `packages/data/src/ditto_data/stores/security_store.py`
+- `packages/data/src/ditto_data/stores/calendar_store.py`
+- `packages/data/src/ditto_data/stores/pipeline_store.py`
+- `packages/data/src/ditto_data/hub.py`
+- `packages/data/tests/unit/test_hub.py`
 
 **验收**:
 - ✅ 所有测试通过（8 passed）
@@ -361,7 +361,7 @@
 - 添加 `import pandas as pd`
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
+- `packages/data/src/ditto_data/sources/tushare/client.py`
 
 **验收**:
 - ✅ Pylance 类型检查通过
@@ -399,8 +399,8 @@
 ### 新增文件
 
 ```
-packages/datahub/
-├── src/ditto_datahub/sources/
+packages/data/
+├── src/ditto_data/sources/
 │   ├── __init__.py                 # 导出 get_source, DataSource
 │   ├── base.py                     # DataSource 基类 + 异常（8个抽象方法）
 │   ├── README.md                   # Sources 模块说明
@@ -430,7 +430,7 @@ apps/port/
 ### 修改文件
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 └── hub.py                          # 添加 sources 属性
 ```
 

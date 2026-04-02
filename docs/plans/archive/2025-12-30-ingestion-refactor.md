@@ -463,9 +463,9 @@ DataSource.fetch_fund_adj()
 - `apps/server/deploy.py`
 
 ### 修改文件 - Source 层
-- `packages/datahub/src/ditto_datahub/sources/base.py`
-- `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
-- `packages/datahub/src/ditto_datahub/sources/metadata.py`
+- `packages/data/src/ditto_data/sources/base.py`
+- `packages/data/src/ditto_data/sources/tushare/source.py`
+- `packages/data/src/ditto_data/sources/metadata.py`
 
 ---
 
@@ -592,19 +592,19 @@ DataSource.fetch_fund_adj()
 ### Phase 4: Source 层简化 ✅ (100%)
 
 **Task 4.1**: 移除 DataSource.ingest_date() 抽象方法
-- 文件: `packages/datahub/src/ditto_datahub/sources/base.py`
+- 文件: `packages/data/src/ditto_data/sources/base.py`
 - 移除了 `ingest_date()` 抽象方法（~30 行）
 - 清理了未使用的导入（`DataChangedError`, `IngestionLog`, `NotTradingDayError`）
 - 状态: ✅ 完成
 
 **Task 4.2**: 移除 TushareSource.ingest_date() 实现
-- 文件: `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
+- 文件: `packages/data/src/ditto_data/sources/tushare/source.py`
 - 移除了 `ingest_date()` 方法实现（~173 行）
 - 清理了未使用的导入（`Callable`, `IngestionLog`, `IngestionStatus`, `NotTradingDayError`, `IngestionLogStore`, `TYPE_CHECKING`）
 - 状态: ✅ 完成
 
 **Task 4.3**: 废弃 fetch_etf_daily_incremental()
-- 文件: `packages/datahub/src/ditto_datahub/sources/base.py`
+- 文件: `packages/data/src/ditto_data/sources/base.py`
 - 更新了 `fetch_etf_daily_incremental()` 的废弃说明
 - 指向新的 `IngestionCoordinator` 接口
 - 状态: ✅ 完成
@@ -612,13 +612,13 @@ DataSource.fetch_fund_adj()
 ### Phase 5: 清理和文档 ✅ (100%)
 
 **Task 5.1**: 标记废弃组件
-- 文件: `packages/datahub/src/ditto_datahub/sources/metadata.py`
-- 文件: `packages/datahub/src/ditto_datahub/stores/ingestion_metadata_store.py`
+- 文件: `packages/data/src/ditto_data/sources/metadata.py`
+- 文件: `packages/data/src/ditto_data/stores/ingestion_metadata_store.py`
 - 为 `IncrementalMode`, `IngestionMetadata`, `IngestionMetadataStore` 添加了运行时废弃警告
 - 状态: ✅ 完成
 
 **Task 5.2**: 更新测试
-- 文件: `packages/datahub/tests/unit/stores/test_ingestion_metadata_store.py`
+- 文件: `packages/data/tests/unit/stores/test_ingestion_metadata_store.py`
 - 文件: `apps/server/tests/unit/ingestion/test_tasks.py`
 - 文件: `apps/server/tests/unit/ingestion/test_flows.py`
 - 为使用废弃组件的测试添加了警告抑制

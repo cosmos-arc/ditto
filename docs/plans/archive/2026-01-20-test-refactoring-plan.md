@@ -35,7 +35,7 @@
 |---------|---------|------|
 | `tests/integration/test_observability_e2e.py` | **删除** | 端到端测试，违反原则 |
 | `apps/port/tests/integration/cli/test_e2e.py` | `test_cli_integration.py` | 避免"e2e"命名误导 |
-| `packages/datahub/tests/integration/sources/tushare/test_end_to_end_integration.py` | `test_tushare_api_integration.py` | 避免"end_to_end"命名 |
+| `packages/data/tests/integration/sources/tushare/test_end_to_end_integration.py` | `test_tushare_api_integration.py` | 避免"end_to_end"命名 |
 
 #### P1 - 缺少 `_unit` 后缀（10个）
 | 当前文件 | 建议命名 |
@@ -44,10 +44,10 @@
 | `packages/foundation/tests/unit/config/test_environment.py` | `test_environment_unit.py` |
 | `packages/foundation/tests/unit/config/test_loader.py` | `test_loader_unit.py` |
 | `apps/port/tests/unit/cli/test_executor.py` | `test_executor_unit.py` |
-| `packages/datahub/tests/unit/runtime/test_freeze_manager_collect_checksums.py` | `test_freeze_manager_collect_checksums_unit.py` |
-| `packages/datahub/tests/unit/accessors/test_filter_failed_rows.py` | `test_filter_failed_rows_unit.py` |
-| `packages/datahub/tests/test_models_common.py` | `tests/unit/models/test_models_common_unit.py` (移动) |
-| `packages/datahub/tests/test_models_quality.py` | `tests/unit/models/test_models_quality_unit.py` (移动) |
+| `packages/data/tests/unit/runtime/test_freeze_manager_collect_checksums.py` | `test_freeze_manager_collect_checksums_unit.py` |
+| `packages/data/tests/unit/accessors/test_filter_failed_rows.py` | `test_filter_failed_rows_unit.py` |
+| `packages/data/tests/test_models_common.py` | `tests/unit/models/test_models_common_unit.py` (移动) |
+| `packages/data/tests/test_models_quality.py` | `tests/unit/models/test_models_quality_unit.py` (移动) |
 | `apps/port/tests/unit/test_conftest.py` | `test_conftest_unit.py` |
 | `apps/port/tests/unit/test_db_fixtures.py` | `test_db_fixtures_unit.py` |
 
@@ -208,8 +208,8 @@ git mv apps/port/tests/integration/cli/test_e2e.py \
         apps/port/tests/integration/cli/test_cli_integration.py
 
 # 重命名 Tushare 端到端测试
-git mv packages/datahub/tests/integration/sources/tushare/test_end_to_end_integration.py \
-        packages/datahub/tests/integration/sources/tushare/test_tushare_api_integration.py
+git mv packages/data/tests/integration/sources/tushare/test_end_to_end_integration.py \
+        packages/data/tests/integration/sources/tushare/test_tushare_api_integration.py
 ```
 
 #### 步骤 1.2：添加缺少的 `_unit` 后缀（10个文件）
@@ -231,17 +231,17 @@ git mv apps/port/tests/unit/test_db_fixtures.py \
         apps/port/tests/unit/test_db_fixtures_unit.py
 
 # DataHub 包
-git mv packages/datahub/tests/unit/runtime/test_freeze_manager_collect_checksums.py \
-        packages/datahub/tests/unit/runtime/test_freeze_manager_collect_checksums_unit.py
-git mv packages/datahub/tests/unit/accessors/test_filter_failed_rows.py \
-        packages/datahub/tests/unit/accessors/test_filter_failed_rows_unit.py
+git mv packages/data/tests/unit/runtime/test_freeze_manager_collect_checksums.py \
+        packages/data/tests/unit/runtime/test_freeze_manager_collect_checksums_unit.py
+git mv packages/data/tests/unit/accessors/test_filter_failed_rows.py \
+        packages/data/tests/unit/accessors/test_filter_failed_rows_unit.py
 
 # 移动位置
-mkdir -p packages/datahub/tests/unit/models/
-git mv packages/datahub/tests/test_models_common.py \
-        packages/datahub/tests/unit/models/test_models_common_unit.py
-git mv packages/datahub/tests/test_models_quality.py \
-        packages/datahub/tests/unit/models/test_models_quality_unit.py
+mkdir -p packages/data/tests/unit/models/
+git mv packages/data/tests/test_models_common.py \
+        packages/data/tests/unit/models/test_models_common_unit.py
+git mv packages/data/tests/test_models_quality.py \
+        packages/data/tests/unit/models/test_models_quality_unit.py
 ```
 
 #### 步骤 1.3：添加缺少的 `_integration` 后缀（5个文件）
@@ -302,7 +302,7 @@ git mv apps/port/tests/integration/ingestion/flows/test_daily_integration.py \
 ```python
 # 保留：test_quarantine_store_unit.py（更完整）
 # 删除：test_quarantine_store_integration.py
-rm packages/datahub/tests/integration/stores/test_quarantine_store_integration.py
+rm packages/data/tests/integration/stores/test_quarantine_store_integration.py
 ```
 
 **预期效果**：删除 ~1600 行重复测试代码
@@ -345,21 +345,21 @@ touch packages/core/tests/unit/test_performance_calculator_unit.py
 #### 步骤 4.2：补充基础设施测试
 ```bash
 # Runtime 模块
-touch packages/datahub/tests/unit/runtime/test_sid_allocator_unit.py
-touch packages/datahub/tests/unit/runtime/test_sql_engine_unit.py
+touch packages/data/tests/unit/runtime/test_sid_allocator_unit.py
+touch packages/data/tests/unit/runtime/test_sql_engine_unit.py
 touch packages/foundation/tests/unit/test_cache_unit.py
 
 # Alerts 模块
-touch packages/datahub/tests/unit/alerts/test_email_sender_unit.py
-touch packages/datahub/tests/unit/alerts/test_telegram_sender_unit.py
+touch packages/data/tests/unit/alerts/test_email_sender_unit.py
+touch packages/data/tests/unit/alerts/test_telegram_sender_unit.py
 ```
 
 #### 步骤 4.3：补充 Store 集成测试
 ```bash
 # 为每个 Store 创建集成测试（测试 SQLite 接缝）
-touch packages/datahub/tests/integration/stores/test_security_store_integration.py
-touch packages/datahub/tests/integration/stores/test_universe_store_integration.py
-touch packages/datahub/tests/integration/stores/test_ingestion_log_store_integration.py
+touch packages/data/tests/integration/stores/test_security_store_integration.py
+touch packages/data/tests/integration/stores/test_universe_store_integration.py
+touch packages/data/tests/integration/stores/test_ingestion_log_store_integration.py
 ```
 
 ---

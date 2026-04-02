@@ -94,7 +94,7 @@
 
 ### 2.2 MarketService 中的 Store 依赖
 
-MarketService (`packages/datahub/src/ditto_datahub/services/market/market_service.py`) 仍在使用以下 Store：
+MarketService (`packages/data/src/ditto_data/services/market/market_service.py`) 仍在使用以下 Store：
 
 | 当前依赖 | 应替换为 |
 |---------|---------|
@@ -129,14 +129,14 @@ MarketService (`packages/datahub/src/ditto_datahub/services/market/market_servic
 #### Task 1.1: 删除已被 Reader/Writer 替代的 Metadata Store
 
 **Files:**
-- Delete: `packages/datahub/src/ditto_datahub/stores/metadata/universe/universe_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/metadata/industry/industry_mapping_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/metadata/identity/identity_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/metadata/identity/identity_reader.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/metadata/identity/identity_writer.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/metadata/identity/__init__.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/metadata/universe/__init__.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/metadata/industry/__init__.py`
+- Delete: `packages/data/src/ditto_data/stores/metadata/universe/universe_store.py`
+- Delete: `packages/data/src/ditto_data/stores/metadata/industry/industry_mapping_store.py`
+- Delete: `packages/data/src/ditto_data/stores/metadata/identity/identity_store.py`
+- Delete: `packages/data/src/ditto_data/stores/metadata/identity/identity_reader.py`
+- Delete: `packages/data/src/ditto_data/stores/metadata/identity/identity_writer.py`
+- Modify: `packages/data/src/ditto_data/stores/metadata/identity/__init__.py`
+- Modify: `packages/data/src/ditto_data/stores/metadata/universe/__init__.py`
+- Modify: `packages/data/src/ditto_data/stores/metadata/industry/__init__.py`
 
 **Step 1: 检查引用**
 
@@ -152,9 +152,9 @@ rg "UniverseStore|IndustryMappingStore|IdentityStore" --type py packages/ | grep
 **Step 2: 删除 identity 相关文件（冗余代码）**
 
 ```bash
-rm packages/datahub/src/ditto_datahub/stores/metadata/identity/identity_store.py
-rm packages/datahub/src/ditto_datahub/stores/metadata/identity/identity_reader.py
-rm packages/datahub/src/ditto_datahub/stores/metadata/identity/identity_writer.py
+rm packages/data/src/ditto_data/stores/metadata/identity/identity_store.py
+rm packages/data/src/ditto_data/stores/metadata/identity/identity_reader.py
+rm packages/data/src/ditto_data/stores/metadata/identity/identity_writer.py
 ```
 
 **Step 3: 更新 identity/__init__.py**
@@ -162,23 +162,23 @@ rm packages/datahub/src/ditto_datahub/stores/metadata/identity/identity_writer.p
 移除已删除类的导出：
 ```python
 # 删除这些行
-from ditto_datahub.stores.metadata.identity.identity_store import IdentityStore
-from ditto_datahub.stores.metadata.identity.identity_reader import IdentityReader
-from ditto_datahub.stores.metadata.identity.identity_writer import IdentityWriter
+from ditto_data.stores.metadata.identity.identity_store import IdentityStore
+from ditto_data.stores.metadata.identity.identity_reader import IdentityReader
+from ditto_data.stores.metadata.identity.identity_writer import IdentityWriter
 ```
 
 **Step 4: 删除 universe_store.py**
 
 ```bash
-rm packages/datahub/src/ditto_datahub/stores/metadata/universe/universe_store.py
+rm packages/data/src/ditto_data/stores/metadata/universe/universe_store.py
 ```
 
 **Step 5: 更新 universe/__init__.py**
 
 确认只导出 Reader/Writer：
 ```python
-from ditto_datahub.stores.metadata.universe.universe_reader import UniverseReader
-from ditto_datahub.stores.metadata.universe.universe_writer import UniverseWriter
+from ditto_data.stores.metadata.universe.universe_reader import UniverseReader
+from ditto_data.stores.metadata.universe.universe_writer import UniverseWriter
 
 __all__ = ["UniverseReader", "UniverseWriter"]
 ```
@@ -186,21 +186,21 @@ __all__ = ["UniverseReader", "UniverseWriter"]
 **Step 6: 删除 industry_mapping_store.py**
 
 ```bash
-rm packages/datahub/src/ditto_datahub/stores/metadata/industry/industry_mapping_store.py
+rm packages/data/src/ditto_data/stores/metadata/industry/industry_mapping_store.py
 ```
 
 **Step 7: 更新 industry/__init__.py**
 
 确认只导出 Reader/Writer：
 ```python
-from ditto_datahub.stores.metadata.industry.industry_mapping_reader import (
+from ditto_data.stores.metadata.industry.industry_mapping_reader import (
     IndustryMappingReader,
 )
-from ditto_datahub.stores.metadata.industry.industry_mapping_writer import (
+from ditto_data.stores.metadata.industry.industry_mapping_writer import (
     IndustryMappingWriter,
 )
-from ditto_datahub.stores.metadata.industry.industry_reader import IndustryReader
-from ditto_datahub.stores.metadata.industry.industry_writer import IndustryWriter
+from ditto_data.stores.metadata.industry.industry_reader import IndustryReader
+from ditto_data.stores.metadata.industry.industry_writer import IndustryWriter
 
 __all__ = [
     "IndustryReader",
@@ -220,7 +220,7 @@ pixi run -e dev test --unit -k "metadata"
 **Step 9: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/metadata/
+git add packages/data/src/ditto_data/stores/metadata/
 git commit -m "refactor(datahub): 删除已被 Reader/Writer 替代的 Metadata Store
 
 - 删除 IdentityStore/Reader/Writer（冗余代码）
@@ -235,11 +235,11 @@ git commit -m "refactor(datahub): 删除已被 Reader/Writer 替代的 Metadata 
 #### Task 1.2: 删除 Market 域的废弃 Store
 
 **Files:**
-- Delete: `packages/datahub/src/ditto_datahub/stores/market/stock/bars/bars_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/market/stock/status/status_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/market/stock/adj/adj_factor_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/market/etf/bars/bars_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/market/etf/status/status_store.py`
+- Delete: `packages/data/src/ditto_data/stores/market/stock/bars/bars_store.py`
+- Delete: `packages/data/src/ditto_data/stores/market/stock/status/status_store.py`
+- Delete: `packages/data/src/ditto_data/stores/market/stock/adj/adj_factor_store.py`
+- Delete: `packages/data/src/ditto_data/stores/market/etf/bars/bars_store.py`
+- Delete: `packages/data/src/ditto_data/stores/market/etf/status/status_store.py`
 - Modify: 各域的 `__init__.py`
 
 **Step 1: 检查引用**
@@ -260,16 +260,16 @@ rg "EtfAdjFactorStore|EtfNavStore|IndexBarsStore|IndexConstituentStore" --type p
 
 ```bash
 # 这些已被 Reader/Writer 完全替代
-rm packages/datahub/src/ditto_datahub/stores/market/stock/bars/bars_store.py
-rm packages/datahub/src/ditto_datahub/stores/market/stock/status/status_store.py
-rm packages/datahub/src/ditto_datahub/stores/market/stock/adj/adj_factor_store.py
+rm packages/data/src/ditto_data/stores/market/stock/bars/bars_store.py
+rm packages/data/src/ditto_data/stores/market/stock/status/status_store.py
+rm packages/data/src/ditto_data/stores/market/stock/adj/adj_factor_store.py
 ```
 
 **Step 4: 删除 Market ETF 域的旧 Store**
 
 ```bash
-rm packages/datahub/src/ditto_datahub/stores/market/etf/bars/bars_store.py
-rm packages/datahub/src/ditto_datahub/stores/market/etf/status/status_store.py
+rm packages/data/src/ditto_data/stores/market/etf/bars/bars_store.py
+rm packages/data/src/ditto_data/stores/market/etf/status/status_store.py
 ```
 
 **注意**: 保留 `nav_store.py`, `adj_factor_store.py`（Facade 模式），这些在 Task 2 中处理
@@ -279,36 +279,36 @@ rm packages/datahub/src/ditto_datahub/stores/market/etf/status/status_store.py
 确认只导出 Reader/Writer：
 ```python
 # stores/market/stock/bars/__init__.py
-from ditto_datahub.stores.market.stock.bars.bars_reader import StockBarsReader
-from ditto_datahub.stores.market.stock.bars.bars_writer import StockBarsWriter
+from ditto_data.stores.market.stock.bars.bars_reader import StockBarsReader
+from ditto_data.stores.market.stock.bars.bars_writer import StockBarsWriter
 
 __all__ = ["StockBarsReader", "StockBarsWriter"]
 
 # stores/market/stock/status/__init__.py
-from ditto_datahub.stores.market.stock.status.status_reader import StockStatusReader
-from ditto_datahub.stores.market.stock.status.status_writer import StockStatusWriter
+from ditto_data.stores.market.stock.status.status_reader import StockStatusReader
+from ditto_data.stores.market.stock.status.status_writer import StockStatusWriter
 
 __all__ = ["StockStatusReader", "StockStatusWriter"]
 
 # stores/market/stock/adj/__init__.py
-from ditto_datahub.stores.market.stock.adj.adj_factor_reader import (
+from ditto_data.stores.market.stock.adj.adj_factor_reader import (
     StockAdjFactorReader,
 )
-from ditto_datahub.stores.market.stock.adj.adj_factor_writer import (
+from ditto_data.stores.market.stock.adj.adj_factor_writer import (
     StockAdjFactorWriter,
 )
 
 __all__ = ["StockAdjFactorReader", "StockAdjFactorWriter"]
 
 # stores/market/etf/bars/__init__.py
-from ditto_datahub.stores.market.etf.bars.bars_reader import EtfBarsReader
-from ditto_datahub.stores.market.etf.bars.bars_writer import EtfBarsWriter
+from ditto_data.stores.market.etf.bars.bars_reader import EtfBarsReader
+from ditto_data.stores.market.etf.bars.bars_writer import EtfBarsWriter
 
 __all__ = ["EtfBarsReader", "EtfBarsWriter"]
 
 # stores/market/etf/status/__init__.py
-from ditto_datahub.stores.market.etf.status.status_reader import EtfStatusReader
-from ditto_datahub.stores.market.etf.status.status_writer import EtfStatusWriter
+from ditto_data.stores.market.etf.status.status_reader import EtfStatusReader
+from ditto_data.stores.market.etf.status.status_writer import EtfStatusWriter
 
 __all__ = ["EtfStatusReader", "EtfStatusWriter"]
 ```
@@ -323,7 +323,7 @@ pixi run -e dev test --unit -k "market"
 **Step 7: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/market/
+git add packages/data/src/ditto_data/stores/market/
 git commit -m "refactor(datahub): 删除 Market 域已被 Reader/Writer 替代的 Store
 
 - 删除 StockBarsStore, StockStatusStore, StockAdjFactorStore
@@ -338,12 +338,12 @@ git commit -m "refactor(datahub): 删除 Market 域已被 Reader/Writer 替代�
 #### Task 1.3: 删除其他域的废弃 Store
 
 **Files:**
-- Delete: `packages/datahub/src/ditto_datahub/stores/macro/indicator/indicator_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/macro/indicator/metadata_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/factors/factor_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/factors/factor_metadata_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/features/technical/technical_indicator_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/features/technical/technical_indicator_metadata_store.py`
+- Delete: `packages/data/src/ditto_data/stores/macro/indicator/indicator_store.py`
+- Delete: `packages/data/src/ditto_data/stores/macro/indicator/metadata_store.py`
+- Delete: `packages/data/src/ditto_data/stores/factors/factor_store.py`
+- Delete: `packages/data/src/ditto_data/stores/factors/factor_metadata_store.py`
+- Delete: `packages/data/src/ditto_data/stores/features/technical/technical_indicator_store.py`
+- Delete: `packages/data/src/ditto_data/stores/features/technical/technical_indicator_metadata_store.py`
 - Modify: 各域的 `__init__.py`
 
 **Step 1: 检查引用**
@@ -355,24 +355,24 @@ rg "IndicatorStore|FactorStore|TechnicalIndicatorStore" --type py packages/ | gr
 **Step 2: 删除 Macro 域的旧 Store**
 
 ```bash
-rm packages/datahub/src/ditto_datahub/stores/macro/indicator/indicator_store.py
-rm packages/datahub/src/ditto_datahub/stores/macro/indicator/metadata_store.py
+rm packages/data/src/ditto_data/stores/macro/indicator/indicator_store.py
+rm packages/data/src/ditto_data/stores/macro/indicator/metadata_store.py
 ```
 
 **Step 3: 更新 Macro 域 __init__.py**
 
 ```python
 # stores/macro/indicator/__init__.py
-from ditto_datahub.stores.macro.indicator.indicator_reader import (
+from ditto_data.stores.macro.indicator.indicator_reader import (
     IndicatorReader,
 )
-from ditto_datahub.stores.macro.indicator.indicator_writer import (
+from ditto_data.stores.macro.indicator.indicator_writer import (
     IndicatorWriter,
 )
-from ditto_datahub.stores.macro.indicator.metadata_reader import (
+from ditto_data.stores.macro.indicator.metadata_reader import (
     IndicatorMetadataReader,
 )
-from ditto_datahub.stores.macro.indicator.metadata_writer import (
+from ditto_data.stores.macro.indicator.metadata_writer import (
     IndicatorMetadataWriter,
 )
 
@@ -387,20 +387,20 @@ __all__ = [
 **Step 4: 删除 Factors 域的旧 Store**
 
 ```bash
-rm packages/datahub/src/ditto_datahub/stores/factors/factor_store.py
-rm packages/datahub/src/ditto_datahub/stores/factors/factor_metadata_store.py
+rm packages/data/src/ditto_data/stores/factors/factor_store.py
+rm packages/data/src/ditto_data/stores/factors/factor_metadata_store.py
 ```
 
 **Step 5: 更新 Factors 域 __init__.py**
 
 ```python
 # stores/factors/__init__.py
-from ditto_datahub.stores.factors.factor_reader import FactorReader
-from ditto_datahub.stores.factors.factor_writer import FactorWriter
-from ditto_datahub.stores.factors.factor_metadata_reader import (
+from ditto_data.stores.factors.factor_reader import FactorReader
+from ditto_data.stores.factors.factor_writer import FactorWriter
+from ditto_data.stores.factors.factor_metadata_reader import (
     FactorMetadataReader,
 )
-from ditto_datahub.stores.factors.factor_metadata_writer import (
+from ditto_data.stores.factors.factor_metadata_writer import (
     FactorMetadataWriter,
 )
 
@@ -415,24 +415,24 @@ __all__ = [
 **Step 6: 删除 Features 域的旧 Store**
 
 ```bash
-rm packages/datahub/src/ditto_datahub/stores/features/technical/technical_indicator_store.py
-rm packages/datahub/src/ditto_datahub/stores/features/technical/technical_indicator_metadata_store.py
+rm packages/data/src/ditto_data/stores/features/technical/technical_indicator_store.py
+rm packages/data/src/ditto_data/stores/features/technical/technical_indicator_metadata_store.py
 ```
 
 **Step 7: 更新 Features 域 __init__.py**
 
 ```python
 # stores/features/technical/__init__.py
-from ditto_datahub.stores.features.technical.technical_indicator_reader import (
+from ditto_data.stores.features.technical.technical_indicator_reader import (
     TechnicalIndicatorReader,
 )
-from ditto_datahub.stores.features.technical.technical_indicator_writer import (
+from ditto_data.stores.features.technical.technical_indicator_writer import (
     TechnicalIndicatorWriter,
 )
-from ditto_datahub.stores.features.technical.technical_indicator_metadata_reader import (  # noqa: E501
+from ditto_data.stores.features.technical.technical_indicator_metadata_reader import (  # noqa: E501
     TechnicalIndicatorMetadataReader,
 )
-from ditto_datahub.stores.features.technical.technical_indicator_metadata_writer import (  # noqa: E501
+from ditto_data.stores.features.technical.technical_indicator_metadata_writer import (  # noqa: E501
     TechnicalIndicatorMetadataWriter,
 )
 
@@ -454,7 +454,7 @@ pixi run -e dev test --unit
 **Step 9: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/
+git add packages/data/src/ditto_data/stores/
 git commit -m "refactor(datahub): 删除其他域已被 Reader/Writer 替代的 Store
 
 - 删除 Macro 域的 IndicatorStore, MetadataStore
@@ -472,7 +472,7 @@ git commit -m "refactor(datahub): 删除其他域已被 Reader/Writer 替代的 
 #### Task 2.1: 将 MarketService 中的 Store 依赖替换为 Reader/Writer
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/market/market_service.py`
+- Modify: `packages/data/src/ditto_data/services/market/market_service.py`
 
 **Step 1: 更新构造函数签名**
 
@@ -645,10 +645,10 @@ write_result = self._index_bars_writer.write(...)
 移除 Store 的导入（如果直接导入）：
 ```python
 # 删除这些行
-from ditto_datahub.stores.market.etf.nav import EtfNavStore
-from ditto_datahub.stores.market.etf.adj import EtfAdjFactorStore
-from ditto_datahub.stores.market.index.bars import IndexBarsStore
-from ditto_datahub.stores.market.index.constituent import IndexConstituentStore
+from ditto_data.stores.market.etf.nav import EtfNavStore
+from ditto_data.stores.market.etf.adj import EtfAdjFactorStore
+from ditto_data.stores.market.index.bars import IndexBarsStore
+from ditto_data.stores.market.index.constituent import IndexConstituentStore
 ```
 
 **Step 9: 运行验证**
@@ -661,7 +661,7 @@ pixi run -e dev test --unit -k "market"
 **Step 10: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/market/market_service.py
+git add packages/data/src/ditto_data/services/market/market_service.py
 git commit -m "refactor(datahub): MarketService 使用 Reader/Writer 替代 Store
 
 - 将 etf_nav_store 拆分为 etf_nav_reader/writer
@@ -687,26 +687,26 @@ git commit -m "refactor(datahub): MarketService 使用 Reader/Writer 替代 Stor
 在导入部分移除或更新：
 ```python
 # 删除或更新这些导入（约第 148-180 行）
-from ditto_datahub.stores.market.etf.adj import EtfAdjFactorStore
-from ditto_datahub.stores.market.etf.nav import EtfNavStore
-from ditto_datahub.stores.market.index.bars import IndexBarsStore
-from ditto_datahub.stores.market.index.constituent import IndexConstituentStore
+from ditto_data.stores.market.etf.adj import EtfAdjFactorStore
+from ditto_data.stores.market.etf.nav import EtfNavStore
+from ditto_data.stores.market.index.bars import IndexBarsStore
+from ditto_data.stores.market.index.constituent import IndexConstituentStore
 
 # 替换为 Reader/Writer 导入
-from ditto_datahub.stores.market.etf.adj.adj_factor_reader import (
+from ditto_data.stores.market.etf.adj.adj_factor_reader import (
     EtfAdjFactorReader,
 )
-from ditto_datahub.stores.market.etf.adj.adj_factor_writer import (
+from ditto_data.stores.market.etf.adj.adj_factor_writer import (
     EtfAdjFactorWriter,
 )
-from ditto_datahub.stores.market.etf.nav.nav_reader import EtfNavReader
-from ditto_datahub.stores.market.etf.nav.nav_writer import EtfNavWriter
-from ditto_datahub.stores.market.index.bars.bars_reader import IndexBarsReader
-from ditto_datahub.stores.market.index.bars.bars_writer import IndexBarsWriter
-from ditto_datahub.stores.market.index.constituent.constituent_reader import (
+from ditto_data.stores.market.etf.nav.nav_reader import EtfNavReader
+from ditto_data.stores.market.etf.nav.nav_writer import EtfNavWriter
+from ditto_data.stores.market.index.bars.bars_reader import IndexBarsReader
+from ditto_data.stores.market.index.bars.bars_writer import IndexBarsWriter
+from ditto_data.stores.market.index.constituent.constituent_reader import (
     IndexConstituentReader,
 )
-from ditto_datahub.stores.market.index.constituent.constituent_writer import (
+from ditto_data.stores.market.index.constituent.constituent_writer import (
     IndexConstituentWriter,
 )
 ```
@@ -892,9 +892,9 @@ git commit -m "refactor(port): 更新 DI 容器使用 Reader/Writer
 #### Task 4.1: 删除已标记 DEPRECATED 的 Metadata Store
 
 **Files:**
-- Delete: `packages/datahub/src/ditto_datahub/stores/metadata/calendar/calendar_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/metadata/industry/industry_basic_store.py`
-- Delete: `packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_store.py`
+- Delete: `packages/data/src/ditto_data/stores/metadata/calendar/calendar_store.py`
+- Delete: `packages/data/src/ditto_data/stores/metadata/industry/industry_basic_store.py`
+- Delete: `packages/data/src/ditto_data/stores/metadata/instrument/instrument_store.py`
 - Modify: 各域的 `__init__.py`
 
 **Step 1: 检查引用**
@@ -945,7 +945,7 @@ def sql_engine(
 
 **Step 4: 更新 SqlEngine 类（如果需要）**
 
-检查 `packages/datahub/src/ditto_datahub/runtime/sql_engine.py`：
+检查 `packages/data/src/ditto_data/runtime/sql_engine.py`：
 ```python
 # 更新构造函数
 def __init__(
@@ -958,9 +958,9 @@ def __init__(
 **Step 5: 删除 DEPRECATED Store 文件**
 
 ```bash
-rm packages/datahub/src/ditto_datahub/stores/metadata/calendar/calendar_store.py
-rm packages/datahub/src/ditto_datahub/stores/metadata/industry/industry_basic_store.py
-rm packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_store.py
+rm packages/data/src/ditto_data/stores/metadata/calendar/calendar_store.py
+rm packages/data/src/ditto_data/stores/metadata/industry/industry_basic_store.py
+rm packages/data/src/ditto_data/stores/metadata/instrument/instrument_store.py
 ```
 
 **Step 6: 更新 __init__.py**
@@ -969,19 +969,19 @@ rm packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_stor
 ```python
 # stores/metadata/calendar/__init__.py
 # 移除: from ...calendar_store import CalendarStore
-from ditto_datahub.stores.metadata.calendar.calendar_reader import CalendarReader
-from ditto_datahub.stores.metadata.calendar.calendar_writer import CalendarWriter
+from ditto_data.stores.metadata.calendar.calendar_reader import CalendarReader
+from ditto_data.stores.metadata.calendar.calendar_writer import CalendarWriter
 
 __all__ = ["CalendarReader", "CalendarWriter"]
 
 # stores/metadata/industry/__init__.py
 # 移除: from ...industry_basic_store import IndustryBasicStore
-from ditto_datahub.stores.metadata.industry.industry_reader import IndustryReader
-from ditto_datahub.stores.metadata.industry.industry_writer import IndustryWriter
-from ditto_datahub.stores.metadata.industry.industry_mapping_reader import (
+from ditto_data.stores.metadata.industry.industry_reader import IndustryReader
+from ditto_data.stores.metadata.industry.industry_writer import IndustryWriter
+from ditto_data.stores.metadata.industry.industry_mapping_reader import (
     IndustryMappingReader,
 )
-from ditto_datahub.stores.metadata.industry.industry_mapping_writer import (
+from ditto_data.stores.metadata.industry.industry_mapping_writer import (
     IndustryMappingWriter,
 )
 
@@ -994,10 +994,10 @@ __all__ = [
 
 # stores/metadata/instrument/__init__.py
 # 移除: from ...instrument_store import InstrumentStore
-from ditto_datahub.stores.metadata.instrument.instrument_reader import (
+from ditto_data.stores.metadata.instrument.instrument_reader import (
     InstrumentReader,
 )
-from ditto_datahub.stores.metadata.instrument.instrument_writer import (
+from ditto_data.stores.metadata.instrument.instrument_writer import (
     InstrumentWriter,
 )
 
@@ -1009,10 +1009,10 @@ __all__ = ["InstrumentReader", "InstrumentWriter"]
 移除对已删除 Store 的导入：
 ```python
 # 删除这些行
-from ditto_datahub.stores.metadata.calendar.calendar_store import (
+from ditto_data.stores.metadata.calendar.calendar_store import (
     CalendarStore as MetadataCalendarStore,
 )
-from ditto_datahub.stores.metadata.instrument.instrument_store import (
+from ditto_data.stores.metadata.instrument.instrument_store import (
     InstrumentStore,
 )
 ```
@@ -1027,8 +1027,8 @@ pixi run -e dev test --unit -k "metadata"
 **Step 9: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/metadata/
-git add packages/datahub/src/ditto_datahub/runtime/sql_engine.py
+git add packages/data/src/ditto_data/stores/metadata/
+git add packages/data/src/ditto_data/runtime/sql_engine.py
 git add apps/port/src/ditto_port/registry/datahub.py
 git commit -m "refactor(datahub): 删除已标记 DEPRECATED 的 Metadata Store
 
@@ -1105,8 +1105,8 @@ git commit -m "style: 修复代码风格问题
 **Step 1: 查找需要更新的测试**
 
 ```bash
-rg "StockBarsStore|EtfNavStore|IndexBarsStore" --type py packages/datahub/tests/
-rg "CalendarStore|InstrumentStore|IndustryBasicStore" --type py packages/datahub/tests/
+rg "StockBarsStore|EtfNavStore|IndexBarsStore" --type py packages/data/tests/
+rg "CalendarStore|InstrumentStore|IndustryBasicStore" --type py packages/data/tests/
 ```
 
 **Step 2: 更新测试文件**
@@ -1144,7 +1144,7 @@ pixi run -e dev test --unit
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/tests/
+git add packages/data/tests/
 git commit -m "test: 更新单元测试使用 Reader/Writer
 
 - 替换所有 Store 引用为 Reader/Writer
@@ -1185,13 +1185,13 @@ pixi run -e dev arch-check
 
 ```bash
 # 检查剩余 Store 文件（应该只有基础类和运行时类）
-find packages/datahub/src/ditto_datahub/stores -name "*_store.py" -type f | grep -v "base_store\|parquet_store\|sqlite_store"
+find packages/data/src/ditto_data/stores -name "*_store.py" -type f | grep -v "base_store\|parquet_store\|sqlite_store"
 
 # 检查是否还有 Store 导入（应该只有 Facade 模式）
-rg "from.*stores.*import.*Store" --type py packages/datahub/src/ditto_datahub/services/ | grep -v "Reader\|Writer"
+rg "from.*stores.*import.*Store" --type py packages/data/src/ditto_data/services/ | grep -v "Reader\|Writer"
 
 # 检查是否还有 Facade Store 使用
-rg "EtfNavStore|EtfAdjFactorStore|IndexBarsStore|IndexConstituentStore" --type py packages/datahub/src/ditto_datahub/
+rg "EtfNavStore|EtfAdjFactorStore|IndexBarsStore|IndexConstituentStore" --type py packages/data/src/ditto_data/
 ```
 
 ---
@@ -1225,5 +1225,5 @@ rg "EtfNavStore|EtfAdjFactorStore|IndexBarsStore|IndexConstituentStore" --type p
 
 - `docs/plans/2026-02-08-ditto-v5.md` - Ditto V5 架构完整重构计划
 - `docs/plans/2026-02-09-datahub-cqrs-refactor.md` - DataHub Store 层 CQRS 重构实施计划
-- `packages/datahub/README.md` - DataHub 包说明
+- `packages/data/README.md` - DataHub 包说明
 - `.claude/rules/datahub.md` - DataHub 架构规范

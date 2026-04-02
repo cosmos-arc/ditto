@@ -180,8 +180,8 @@ FETCH_ERROR   df.is_empty()   DQ_BLOCKED / WRITE_ERROR
 **问题**: 游标表可能导致倒退，增加复杂度
 
 **文件**:
-- 删除: `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py`
-- 修改: `packages/datahub/src/ditto_datahub/hub.py`
+- 删除: `packages/data/src/ditto_data/stores/ingestion_cursor.py`
+- 修改: `packages/data/src/ditto_data/hub.py`
 - 修改: `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 - 修改: `apps/server/src/ditto_port/ingestion/services/backfill.py`
 
@@ -313,8 +313,8 @@ def _format_date_for_sqlite(self, date_str: str) -> str:
 **问题**: `_resolve_sids` 不传递 asof，`resolve_by_symbol` 只查当前有效
 
 **文件**:
-- `packages/datahub/src/ditto_datahub/stores/security_store.py`
-- `packages/datahub/src/ditto_datahub/repositories/bars.py`
+- `packages/data/src/ditto_data/stores/security_store.py`
+- `packages/data/src/ditto_data/repositories/bars.py`
 
 **修复**:
 
@@ -327,7 +327,7 @@ def _format_date_for_sqlite(self, date_str: str) -> str:
 
 **问题**: `group_by().last()` 无显式顺序保证
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+**文件**: `packages/data/src/ditto_data/repositories/bars.py`
 
 **修复**:
 
@@ -414,6 +414,6 @@ latest_factors = baseline_df_sorted.group_by("sid").agg(
 
 ### 验证命令
 ```bash
-pixi run -e dev pytest --cov=apps/server --cov=packages/datahub --cov-fail-under=80
+pixi run -e dev pytest --cov=apps/server --cov=packages/data --cov-fail-under=80
 pixi run -e dev pre-commit-run
 ```

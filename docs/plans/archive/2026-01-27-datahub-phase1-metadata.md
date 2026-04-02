@@ -32,7 +32,7 @@
 ## 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/domains/metadata/
+packages/data/src/ditto_data/domains/metadata/
 ├── __init__.py
 ├── security/
 │   ├── __init__.py
@@ -73,16 +73,16 @@ packages/datahub/src/ditto_datahub/domains/metadata/
 ## 任务 1: 创建 Metadata 域目录结构
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/__init__.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/__init__.py`
+- 新建: `packages/data/src/ditto_data/domains/__init__.py`
+- 新建: `packages/data/src/ditto_data/domains/metadata/__init__.py`
 
 **步骤 1: 创建域级 __init__.py**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/__init__.py
+# packages/data/src/ditto_data/domains/__init__.py
 """DataHub 域级组织."""
 
-from ditto_datahub.domains.metadata import MetadataQueryService
+from ditto_data.domains.metadata import MetadataQueryService
 
 __all__ = ["MetadataQueryService"]
 ```
@@ -90,10 +90,10 @@ __all__ = ["MetadataQueryService"]
 **步骤 2: 创建 Metadata 域 __init__.py**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/metadata/__init__.py
+# packages/data/src/ditto_data/domains/metadata/__init__.py
 """Metadata 域 - 元数据访问."""
 
-from ditto_datahub.domains.metadata.metadata_query_service import MetadataQueryService
+from ditto_data.domains.metadata.metadata_query_service import MetadataQueryService
 
 __all__ = ["MetadataQueryService"]
 ```
@@ -101,7 +101,7 @@ __all__ = ["MetadataQueryService"]
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/
+git add packages/data/src/ditto_data/domains/
 git commit -m "feat(datahub): create domain-level directory structure for Metadata"
 ```
 
@@ -110,15 +110,15 @@ git commit -m "feat(datahub): create domain-level directory structure for Metada
 ## 任务 2: 迁移 Security 相关代码到 Metadata 域
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/security/__init__.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/security/security_store.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/security/models.py`
-- 修改: `packages/datahub/src/ditto_datahub/stores/security_store.py` (添加弃用警告)
+- 新建: `packages/data/src/ditto_data/domains/metadata/security/__init__.py`
+- 新建: `packages/data/src/ditto_data/domains/metadata/security/security_store.py`
+- 新建: `packages/data/src/ditto_data/domains/metadata/security/models.py`
+- 修改: `packages/data/src/ditto_data/stores/security_store.py` (添加弃用警告)
 
 **步骤 1: 创建 models.py**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/metadata/security/models.py
+# packages/data/src/ditto_data/domains/metadata/security/models.py
 """Security 相关数据模型."""
 
 from __future__ import annotations
@@ -147,7 +147,7 @@ class SecurityRegistration:
 **步骤 2: 迁移 SecurityStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/metadata/security/security_store.py
+# packages/data/src/ditto_data/domains/metadata/security/security_store.py
 """
 SecurityStore for securities master data with PIT support.
 
@@ -163,9 +163,9 @@ import polars as pl
 from ditto_foundation import M, logger, traced
 from ditto_foundation.cache import DataCache
 
-from ditto_datahub.domains.metadata.security.models import SecurityRegistration
-from ditto_datahub.stores.base.sqlite_store import SQLiteStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.domains.metadata.security.models import SecurityRegistration
+from ditto_data.stores.base.sqlite_store import SQLiteStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 def _build_in_clause(
@@ -227,14 +227,14 @@ class SecurityStore:
 **步骤 3: 在旧位置添加弃用警告**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/security_store.py
+# packages/data/src/ditto_data/stores/security_store.py
 """
 SecurityStore for securities master data with PIT support.
 
 ⚠️ DEPRECATED: 此模块已迁移到 domains/metadata/security/security_store.py
 
 请使用新的导入路径：
-    from ditto_datahub.domains.metadata.security import SecurityStore
+    from ditto_data.domains.metadata.security import SecurityStore
 
 此文件保留用于向后兼容，将在未来版本中移除。
 """
@@ -242,13 +242,13 @@ SecurityStore for securities master data with PIT support.
 import warnings
 
 warnings.warn(
-    "SecurityStore 已迁移到 ditto_datahub.domains.metadata.security",
+    "SecurityStore 已迁移到 ditto_data.domains.metadata.security",
     DeprecationWarning,
     stacklevel=2,
 )
 
 # 从新位置导入
-from ditto_datahub.domains.metadata.security.security_store import (  # noqa: F401
+from ditto_data.domains.metadata.security.security_store import (  # noqa: F401
     SecurityStore,
     SecurityRegistration,
     _build_in_clause,
@@ -261,15 +261,15 @@ __all__ = ["SecurityStore", "SecurityRegistration", "_build_in_clause"]
 
 ```bash
 # 搜索所有使用旧导入的文件
-grep -r "from ditto_datahub.stores.security_store" packages/datahub/tests/
-grep -r "from ditto_datahub.stores import SecurityStore" packages/datahub/
+grep -r "from ditto_data.stores.security_store" packages/data/tests/
+grep -r "from ditto_data.stores import SecurityStore" packages/data/
 ```
 
 **步骤 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/metadata/security/
-git add packages/datahub/src/ditto_datahub/stores/security_store.py
+git add packages/data/src/ditto_data/domains/metadata/security/
+git add packages/data/src/ditto_data/stores/security_store.py
 git commit -m "refactor(datahub): migrate SecurityStore to domains/metadata/security/"
 ```
 
@@ -278,13 +278,13 @@ git commit -m "refactor(datahub): migrate SecurityStore to domains/metadata/secu
 ## 任务 3: 拆分 Identity 功能为独立 Store
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/identity/identity_store.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/identity/models.py`
+- 新建: `packages/data/src/ditto_data/domains/metadata/identity/identity_store.py`
+- 新建: `packages/data/src/ditto_data/domains/metadata/identity/models.py`
 
 **步骤 1: 编写失败测试**
 
 ```python
-# packages/datahub/tests/unit/domains/metadata/identity/test_identity_store_unit.py
+# packages/data/tests/unit/domains/metadata/identity/test_identity_store_unit.py
 def test_identity_resolve_sid_pit():
     """测试 PIT 查询功能."""
     # 测试代码...
@@ -294,7 +294,7 @@ def test_identity_resolve_sid_pit():
 **步骤 2: 实现 IdentityStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/metadata/identity/identity_store.py
+# packages/data/src/ditto_data/domains/metadata/identity/identity_store.py
 """
 IdentityStore for identity mapping with PIT support.
 
@@ -309,8 +309,8 @@ from typing import Any
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.stores.base.sqlite_store import SQLiteStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.base.sqlite_store import SQLiteStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class IdentityStore(SQLiteStore):
@@ -486,7 +486,7 @@ pixi run -e dev pytest tests/unit/domains/metadata/identity/test_identity_store_
 **步骤 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/metadata/identity/
+git add packages/data/src/ditto_data/domains/metadata/identity/
 git commit -m "feat(datahub): add IdentityStore for identity mapping"
 ```
 
@@ -495,14 +495,14 @@ git commit -m "feat(datahub): add IdentityStore for identity mapping"
 ## 任务 4: 实现 Industry 相关 Store
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/industry/industry_basic_store.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/industry/industry_mapping_store.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/industry/models.py`
+- 新建: `packages/data/src/ditto_data/domains/metadata/industry/industry_basic_store.py`
+- 新建: `packages/data/src/ditto_data/domains/metadata/industry/industry_mapping_store.py`
+- 新建: `packages/data/src/ditto_data/domains/metadata/industry/models.py`
 
 **步骤 1: 定义数据模型**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/metadata/industry/models.py
+# packages/data/src/ditto_data/domains/metadata/industry/models.py
 """Industry 相关数据模型."""
 
 from __future__ import annotations
@@ -537,7 +537,7 @@ class IndustryMapping:
 **步骤 2: 实现 IndustryBasicStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/metadata/industry/industry_basic_store.py
+# packages/data/src/ditto_data/domains/metadata/industry/industry_basic_store.py
 """
 IndustryBasicStore for industry master data.
 
@@ -551,8 +551,8 @@ from pathlib import Path
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.domains.metadata.industry.models import IndustryBasic
-from ditto_datahub.stores.base.sqlite_store import SQLiteStore
+from ditto_data.domains.metadata.industry.models import IndustryBasic
+from ditto_data.stores.base.sqlite_store import SQLiteStore
 
 
 class IndustryBasicStore(SQLiteStore):
@@ -642,7 +642,7 @@ class IndustryBasicStore(SQLiteStore):
 **步骤 3: 实现 IndustryMappingStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/metadata/industry/industry_mapping_store.py
+# packages/data/src/ditto_data/domains/metadata/industry/industry_mapping_store.py
 """
 IndustryMappingStore for stock-industry mapping with PIT support.
 
@@ -657,7 +657,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.stores.base.sqlite_store import SQLiteStore
+from ditto_data.stores.base.sqlite_store import SQLiteStore
 
 
 class IndustryMappingStore(SQLiteStore):
@@ -775,7 +775,7 @@ class IndustryMappingStore(SQLiteStore):
 **步骤 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/metadata/industry/
+git add packages/data/src/ditto_data/domains/metadata/industry/
 git commit -m "feat(datahub): add Industry stores (IndustryBasicStore, IndustryMappingStore)"
 ```
 
@@ -784,13 +784,13 @@ git commit -m "feat(datahub): add Industry stores (IndustryBasicStore, IndustryM
 ## 任务 5: 迁移 Calendar 到 Metadata 域
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/calendar/calendar_store.py`
-- 修改: `packages/datahub/src/ditto_datahub/stores/calendar_store.py` (添加弃用警告)
+- 新建: `packages/data/src/ditto_data/domains/metadata/calendar/calendar_store.py`
+- 修改: `packages/data/src/ditto_data/stores/calendar_store.py` (添加弃用警告)
 
 **步骤 1: 迁移 CalendarStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/metadata/calendar/calendar_store.py
+# packages/data/src/ditto_data/domains/metadata/calendar/calendar_store.py
 """
 CalendarStore for trading calendar data.
 
@@ -805,7 +805,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.stores.base.sqlite_store import SQLiteStore
+from ditto_data.stores.base.sqlite_store import SQLiteStore
 
 
 class CalendarStore(SQLiteStore):
@@ -839,25 +839,25 @@ class CalendarStore(SQLiteStore):
 **步骤 2: 在旧位置添加弃用警告**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/calendar_store.py
+# packages/data/src/ditto_data/stores/calendar_store.py
 """
 CalendarStore for trading calendar data.
 
 ⚠️ DEPRECATED: 此模块已迁移到 domains/metadata/calendar/calendar_store.py
 
 请使用新的导入路径：
-    from ditto_datahub.domains.metadata.calendar import CalendarStore
+    from ditto_data.domains.metadata.calendar import CalendarStore
 """
 
 import warnings
 
 warnings.warn(
-    "CalendarStore 已迁移到 ditto_datahub.domains.metadata.calendar",
+    "CalendarStore 已迁移到 ditto_data.domains.metadata.calendar",
     DeprecationWarning,
     stacklevel=2,
 )
 
-from ditto_datahub.domains.metadata.calendar.calendar_store import CalendarStore
+from ditto_data.domains.metadata.calendar.calendar_store import CalendarStore
 
 __all__ = ["CalendarStore"]
 ```
@@ -865,8 +865,8 @@ __all__ = ["CalendarStore"]
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/metadata/calendar/
-git add packages/datahub/src/ditto_datahub/stores/calendar_store.py
+git add packages/data/src/ditto_data/domains/metadata/calendar/
+git add packages/data/src/ditto_data/stores/calendar_store.py
 git commit -m "refactor(datahub): migrate CalendarStore to domains/metadata/calendar/"
 ```
 
@@ -875,12 +875,12 @@ git commit -m "refactor(datahub): migrate CalendarStore to domains/metadata/cale
 ## 任务 6: 实现 MetadataQueryService
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/metadata/metadata_query_service.py`
+- 新建: `packages/data/src/ditto_data/domains/metadata/metadata_query_service.py`
 
 **步骤 1: 编写失败测试**
 
 ```python
-# packages/datahub/tests/unit/domains/metadata/test_metadata_query_service_unit.py
+# packages/data/tests/unit/domains/metadata/test_metadata_query_service_unit.py
 def test_metadata_query_service_resolve_sid():
     """测试 MetadataQueryService 的 SID 解析功能."""
     # 测试代码...
@@ -890,7 +890,7 @@ def test_metadata_query_service_resolve_sid():
 **步骤 2: 实现 MetadataQueryService**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/metadata/metadata_query_service.py
+# packages/data/src/ditto_data/domains/metadata/metadata_query_service.py
 """
 MetadataQueryService - Metadata 域统一查询入口.
 
@@ -904,13 +904,13 @@ from typing import Any, Literal
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.domains.metadata.calendar.calendar_store import CalendarStore
-from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
-from ditto_datahub.domains.metadata.industry.industry_basic_store import IndustryBasicStore
-from ditto_datahub.domains.metadata.industry.industry_mapping_store import IndustryMappingStore
-from ditto_datahub.domains.metadata.security.security_store import SecurityStore
-from ditto_datahub.domains.metadata.universe.universe_store import UniverseStore
-from ditto_datahub.runtime.sid_allocator import SidAllocator
+from ditto_data.domains.metadata.calendar.calendar_store import CalendarStore
+from ditto_data.domains.metadata.identity.identity_store import IdentityStore
+from ditto_data.domains.metadata.industry.industry_basic_store import IndustryBasicStore
+from ditto_data.domains.metadata.industry.industry_mapping_store import IndustryMappingStore
+from ditto_data.domains.metadata.security.security_store import SecurityStore
+from ditto_data.domains.metadata.universe.universe_store import UniverseStore
+from ditto_data.runtime.sid_allocator import SidAllocator
 
 
 class MetadataQueryService:
@@ -1126,7 +1126,7 @@ class MetadataQueryService:
         sid = self._sid_allocator.allocate(asset_class)
 
         # 注册到 SecurityStore
-        from ditto_datahub.domains.metadata.security.models import SecurityRegistration
+        from ditto_data.domains.metadata.security.models import SecurityRegistration
 
         registration = SecurityRegistration(
             src_code=src_code,
@@ -1153,7 +1153,7 @@ pixi run -e dev pytest tests/unit/domains/metadata/test_metadata_query_service_u
 **步骤 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/metadata/metadata_query_service.py
+git add packages/data/src/ditto_data/domains/metadata/metadata_query_service.py
 git commit -m "feat(datahub): implement MetadataQueryService"
 ```
 
@@ -1162,16 +1162,16 @@ git commit -m "feat(datahub): implement MetadataQueryService"
 ## 任务 7: 更新 DataHub 集成
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/hub.py`
-- 修改: `packages/datahub/src/ditto_datahub/init_providers.py`
+- 修改: `packages/data/src/ditto_data/hub.py`
+- 修改: `packages/data/src/ditto_data/init_providers.py`
 
 **步骤 1: 更新 DataHub 使用 MetadataQueryService**
 
 ```python
-# packages/datahub/src/ditto_datahub/hub.py
+# packages/data/src/ditto_data/hub.py
 
 # 在导入部分添加
-from ditto_datahub.domains.metadata import MetadataQueryService
+from ditto_data.domains.metadata import MetadataQueryService
 
 # 在 DataHub 类中替换 SecuritiesAccessor 为 MetadataQueryService
 class DataHub:
@@ -1193,15 +1193,15 @@ class DataHub:
 **步骤 2: 更新 Provider**
 
 ```python
-# packages/datahub/src/ditto_datahub/init_providers.py
+# packages/data/src/ditto_data/init_providers.py
 
-from ditto_datahub.domains.metadata import MetadataQueryService
-from ditto_datahub.domains.metadata.calendar.calendar_store import CalendarStore
-from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
-from ditto_datahub.domains.metadata.industry.industry_basic_store import IndustryBasicStore
-from ditto_datahub.domains.metadata.industry.industry_mapping_store import IndustryMappingStore
-from ditto_datahub.domains.metadata.security.security_store import SecurityStore
-from ditto_datahub.domains.metadata.universe.universe_store import UniverseStore
+from ditto_data.domains.metadata import MetadataQueryService
+from ditto_data.domains.metadata.calendar.calendar_store import CalendarStore
+from ditto_data.domains.metadata.identity.identity_store import IdentityStore
+from ditto_data.domains.metadata.industry.industry_basic_store import IndustryBasicStore
+from ditto_data.domains.metadata.industry.industry_mapping_store import IndustryMappingStore
+from ditto_data.domains.metadata.security.security_store import SecurityStore
+from ditto_data.domains.metadata.universe.universe_store import UniverseStore
 
 class DataHubProvider(Provider):
     # ... 其他提供者 ...
@@ -1250,8 +1250,8 @@ class DataHubProvider(Provider):
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/hub.py
-git add packages/datahub/src/ditto_datahub/init_providers.py
+git add packages/data/src/ditto_data/hub.py
+git add packages/data/src/ditto_data/init_providers.py
 git commit -m "refactor(datahub): integrate MetadataQueryService into DataHub"
 ```
 
@@ -1260,20 +1260,20 @@ git commit -m "refactor(datahub): integrate MetadataQueryService into DataHub"
 ## 任务 8: 清理旧代码和文档更新
 
 **文件:**
-- 删除: `packages/datahub/src/ditto_datahub/accessors/security_accessor.py` (功能已迁移)
-- 删除: `packages/datahub/src/ditto_datahub/accessors/calendar_accessor.py` (功能已迁移)
-- 修改: `packages/datahub/README.md`
+- 删除: `packages/data/src/ditto_data/accessors/security_accessor.py` (功能已迁移)
+- 删除: `packages/data/src/ditto_data/accessors/calendar_accessor.py` (功能已迁移)
+- 修改: `packages/data/README.md`
 
 **步骤 1: 删除已迁移的 Accessor**
 
 ```bash
 # 确认没有其他代码引用这些 Accessor
-grep -r "from ditto_datahub.accessors.security_accessor" packages/datahub/
-grep -r "from ditto_datahub.accessors.calendar_accessor" packages/datahub/
+grep -r "from ditto_data.accessors.security_accessor" packages/data/
+grep -r "from ditto_data.accessors.calendar_accessor" packages/data/
 
 # 删除文件
-git rm packages/datahub/src/ditto_datahub/accessors/security_accessor.py
-git rm packages/datahub/src/ditto_datahub/accessors/calendar_accessor.py
+git rm packages/data/src/ditto_data/accessors/security_accessor.py
+git rm packages/data/src/ditto_data/accessors/calendar_accessor.py
 ```
 
 **步骤 2: 更新 README**
@@ -1299,7 +1299,7 @@ git rm packages/datahub/src/ditto_datahub/accessors/calendar_accessor.py
 
 ```python
 # Metadata 查询
-from ditto_datahub.domains.metadata import MetadataQueryService
+from ditto_data.domains.metadata import MetadataQueryService
 
 sid = metadata.resolve_sid("600000.SH", source="tushare")
 df = metadata.get_securities(sids=[sid], asset_class="stock")
@@ -1309,8 +1309,8 @@ df = metadata.get_securities(sids=[sid], asset_class="stock")
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/accessors/
-git add packages/datahub/README.md
+git add packages/data/src/ditto_data/accessors/
+git add packages/data/README.md
 git commit -m "refactor(datahub): remove migrated accessors and update documentation"
 ```
 

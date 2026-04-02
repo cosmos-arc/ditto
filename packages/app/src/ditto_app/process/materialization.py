@@ -16,6 +16,7 @@ from uuid import uuid4
 import orjson
 import polars as pl
 from ditto_analytics.compile_cache import SQLiteCompileCache
+from ditto_analytics.evaluation.metrics import orthogonalize
 from ditto_analytics.materialization import (
     CompileIdentity,
     DerivedExecutionPlan,
@@ -28,41 +29,7 @@ from ditto_analytics.materialization import (
     DerivedRunTrigger,
     DerivedVersionStatus,
 )
-from ditto_data.errors import DerivedNotFoundError, DerivedValidationError
-from ditto_datahub.models.derived import (
-    DerivedCheckpointRecord,
-    DerivedDependencyRecord,
-    DerivedInvalidationRecord,
-    DerivedPartitionRecord,
-    DerivedRunRecord,
-    DerivedSpecRecord,
-    DerivedStateRecord,
-    DerivedVersionRecord,
-    PartitionInfo,
-)
-from ditto_datahub.models.publication_safety import (
-    CertificationReportRecord,
-    CompatibilityManifestRecord,
-    DerivedMinimalDQSummaryRecord,
-    DerivedShadowSlotRecord,
-    JsonDict,
-    JsonValue,
-    ShadowDiffReportRecord,
-    ShadowTraceRecordRecord,
-)
-from ditto_datahub.services import (
-    DerivedArtifactReader,
-    DerivedCatalogService,
-    PublicationSafetyRecordService,
-)
-from ditto_datahub.services.derived.artifact_persistence_service import (
-    ArtifactMetadataParams,
-    ArtifactPersistenceService,
-)
-from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
-from ditto_datahub.services.market_service import MarketService
-from ditto_engine.engine.evaluation.metrics import orthogonalize
-from ditto_engine.engine.publication_safety import (
+from ditto_analytics.publication_safety import (
     CertificationCheckResult,
     CertificationPack,
     CertificationReport,
@@ -73,7 +40,40 @@ from ditto_engine.engine.publication_safety import (
     ShadowDiffReport,
     ShadowTraceRecord,
 )
-from ditto_engine.engine.specs import (
+from ditto_data.errors import DerivedNotFoundError, DerivedValidationError
+from ditto_data.models.derived import (
+    DerivedCheckpointRecord,
+    DerivedDependencyRecord,
+    DerivedInvalidationRecord,
+    DerivedPartitionRecord,
+    DerivedRunRecord,
+    DerivedSpecRecord,
+    DerivedStateRecord,
+    DerivedVersionRecord,
+    PartitionInfo,
+)
+from ditto_data.models.publication_safety import (
+    CertificationReportRecord,
+    CompatibilityManifestRecord,
+    DerivedMinimalDQSummaryRecord,
+    DerivedShadowSlotRecord,
+    JsonDict,
+    JsonValue,
+    ShadowDiffReportRecord,
+    ShadowTraceRecordRecord,
+)
+from ditto_data.services import (
+    DerivedArtifactReader,
+    DerivedCatalogService,
+    PublicationSafetyRecordService,
+)
+from ditto_data.services.derived.artifact_persistence_service import (
+    ArtifactMetadataParams,
+    ArtifactPersistenceService,
+)
+from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotService
+from ditto_data.services.market_service import MarketService
+from ditto_engine.specs import (
     CalendarId,
     DerivedRole,
     DerivedSpec,
@@ -2905,8 +2905,8 @@ class FactorOrthogonalizationService:
     Loads the target and control factor artifacts via
     :class:`DerivedArtifactReader`, joins them on
     ``(trade_date, instrument_id)``, and delegates to the pure-function
-    :func:`~ditto_engine.engine.evaluation.metrics.orthogonalize` from
-    ``ditto_engine``.
+    :func:`~ditto_analytics.evaluation.metrics.orthogonalize` from
+    ``ditto_analytics``.
     """
 
     def __init__(self, artifact_reader: DerivedArtifactReader) -> None:

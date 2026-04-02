@@ -13,8 +13,8 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.models import OnDuplicate
-from ditto_datahub.stores.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_data.models import OnDuplicate
+from ditto_data.stores.market.stock.bars import StockBarsReader, StockBarsWriter
 
 
 @pytest.mark.e2e

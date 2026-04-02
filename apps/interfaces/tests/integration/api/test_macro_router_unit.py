@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.services.macro_service import MacroService
+from ditto_data.services.macro_service import MacroService
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 

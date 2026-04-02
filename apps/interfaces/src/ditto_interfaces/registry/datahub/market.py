@@ -5,42 +5,42 @@ from __future__ import annotations
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.config.data_store import DataStoreSettings
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.ports import MarketReadPorts, MarketWritePorts
-from ditto_datahub.stores.market.commodity.bars import (
+from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.ports import MarketReadPorts, MarketWritePorts
+from ditto_data.stores.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,
 )
-from ditto_datahub.stores.market.etf.adj.adj_factor_reader import (
+from ditto_data.stores.market.etf.adj.adj_factor_reader import (
     EtfAdjFactorReader,
 )
-from ditto_datahub.stores.market.etf.adj.adj_factor_writer import (
+from ditto_data.stores.market.etf.adj.adj_factor_writer import (
     EtfAdjFactorWriter,
 )
-from ditto_datahub.stores.market.etf.bars import EtfBarsReader, EtfBarsWriter
-from ditto_datahub.stores.market.etf.nav.nav_reader import EtfNavReader
-from ditto_datahub.stores.market.etf.nav.nav_writer import EtfNavWriter
-from ditto_datahub.stores.market.etf.status import EtfStatusReader, EtfStatusWriter
-from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
-from ditto_datahub.stores.market.index.bars.bars_reader import IndexBarsReader
-from ditto_datahub.stores.market.index.bars.bars_writer import IndexBarsWriter
-from ditto_datahub.stores.market.index.constituent.constituent_reader import (
+from ditto_data.stores.market.etf.bars import EtfBarsReader, EtfBarsWriter
+from ditto_data.stores.market.etf.nav.nav_reader import EtfNavReader
+from ditto_data.stores.market.etf.nav.nav_writer import EtfNavWriter
+from ditto_data.stores.market.etf.status import EtfStatusReader, EtfStatusWriter
+from ditto_data.stores.market.fx.bars import FxBarsReader, FxBarsWriter
+from ditto_data.stores.market.index.bars.bars_reader import IndexBarsReader
+from ditto_data.stores.market.index.bars.bars_writer import IndexBarsWriter
+from ditto_data.stores.market.index.constituent.constituent_reader import (
     IndexConstituentReader,
 )
-from ditto_datahub.stores.market.index.constituent.constituent_writer import (
+from ditto_data.stores.market.index.constituent.constituent_writer import (
     IndexConstituentWriter,
 )
-from ditto_datahub.stores.market.stock.adj import (
+from ditto_data.stores.market.stock.adj import (
     StockAdjFactorReader,
     StockAdjFactorWriter,
 )
-from ditto_datahub.stores.market.stock.bars import StockBarsReader, StockBarsWriter
-from ditto_datahub.stores.market.stock.status import (
+from ditto_data.stores.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_data.stores.market.stock.status import (
     StockStatusReader,
     StockStatusWriter,
 )
-from ditto_datahub.stores.metadata.instrument import InstrumentReader
+from ditto_data.stores.metadata.instrument import InstrumentReader
 from ditto_infra.foundation.concurrency import FileLockManager
 
 __all__ = ["MarketProvider"]

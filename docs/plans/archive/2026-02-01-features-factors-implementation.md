@@ -23,10 +23,10 @@
 **Context you need:**
 1. Read design doc: `docs/plans/2026-02-01-features-factors-domain-design.md`
 2. Study existing patterns:
-   - `packages/datahub/src/ditto_datahub/stores/parquet_store_base.py` - Parquet storage base class
-   - `packages/datahub/src/ditto_datahub/domains/macro/indicator/indicator_store.py` - SQLite-based PIT pattern
-   - `packages/datahub/src/ditto_datahub/domains/market/stock/bars/bars_store.py` - ParquetStoreBase usage
-3. Understand DataRootConfig: `packages/datahub/src/ditto_datahub/config/data_root.py`
+   - `packages/data/src/ditto_data/stores/parquet_store_base.py` - Parquet storage base class
+   - `packages/data/src/ditto_data/domains/macro/indicator/indicator_store.py` - SQLite-based PIT pattern
+   - `packages/data/src/ditto_data/domains/market/stock/bars/bars_store.py` - ParquetStoreBase usage
+3. Understand DataRootConfig: `packages/data/src/ditto_data/config/data_root.py`
 
 **Key patterns to follow:**
 - ParquetStoreBase: Subclass implements `_get_dataset()` and `_get_key_columns()`
@@ -40,23 +40,23 @@
 ### Task 1: Create Features Domain Directory Structure
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/domains/features/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/features/technical/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/features/technical/indicator_store.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/features/technical/indicator_metadata_store.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/features/technical/metadata.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/features/feature_service.py`
+- Create: `packages/data/src/ditto_data/domains/features/__init__.py`
+- Create: `packages/data/src/ditto_data/domains/features/technical/__init__.py`
+- Create: `packages/data/src/ditto_data/domains/features/technical/indicator_store.py`
+- Create: `packages/data/src/ditto_data/domains/features/technical/indicator_metadata_store.py`
+- Create: `packages/data/src/ditto_data/domains/features/technical/metadata.py`
+- Create: `packages/data/src/ditto_data/domains/features/feature_service.py`
 
 **Step 1: Create features/__init__.py**
 
 ```python
 """Features domain - technical indicators and derived features."""
 
-from ditto_datahub.domains.features.technical import (
+from ditto_data.domains.features.technical import (
     IndicatorMetadataStore,
     IndicatorStore,
 )
-from ditto_datahub.domains.features.feature_service import (
+from ditto_data.domains.features.feature_service import (
     FeatureQuery,
     FeatureService,
 )
@@ -74,10 +74,10 @@ __all__ = [
 ```python
 """Technical indicators subdomain."""
 
-from ditto_datahub.domains.features.technical.indicator_metadata_store import (
+from ditto_data.domains.features.technical.indicator_metadata_store import (
     IndicatorMetadataStore,
 )
-from ditto_datahub.domains.features.technical.indicator_store import IndicatorStore
+from ditto_data.domains.features.technical.indicator_store import IndicatorStore
 
 __all__ = [
     "IndicatorMetadataStore",
@@ -142,8 +142,8 @@ __all__ = [
 **Step 4: Commit directory structure**
 
 ```bash
-cd packages/datahub
-git add src/ditto_datahub/domains/features/
+cd packages/data
+git add src/ditto_data/domains/features/
 git commit -m "feat(features): add Features domain directory structure"
 ```
 
@@ -152,11 +152,11 @@ git commit -m "feat(features): add Features domain directory structure"
 ### Task 2: Implement IndicatorMetadataStore
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/features/technical/indicator_metadata_store.py`
+- Modify: `packages/data/src/ditto_data/domains/features/technical/indicator_metadata_store.py`
 
 **Step 1: Write the failing test**
 
-Create: `packages/datahub/tests/unit/domains/features/technical/test_indicator_metadata_store.py`
+Create: `packages/data/tests/unit/domains/features/technical/test_indicator_metadata_store.py`
 
 ```python
 """Tests for IndicatorMetadataStore."""
@@ -166,10 +166,10 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from ditto_datahub.domains.features.technical.indicator_metadata_store import (
+from ditto_data.domains.features.technical.indicator_metadata_store import (
     IndicatorMetadataStore,
 )
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 @pytest.fixture
@@ -295,15 +295,15 @@ def test_get_by_code_not_found(metadata_store: IndicatorMetadataStore) -> None:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/features/technical/test_indicator_metadata_store.py -v
 ```
 
-Expected: `ModuleNotFoundError: No module named 'ditto_datahub.domains.features.technical.indicator_metadata_store'`
+Expected: `ModuleNotFoundError: No module named 'ditto_data.domains.features.technical.indicator_metadata_store'`
 
 **Step 3: Write minimal implementation**
 
-Modify: `packages/datahub/src/ditto_datahub/domains/features/technical/indicator_metadata_store.py`
+Modify: `packages/data/src/ditto_data/domains/features/technical/indicator_metadata_store.py`
 
 ```python
 """IndicatorMetadataStore for technical indicator metadata management."""
@@ -315,7 +315,7 @@ from typing import Literal
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class IndicatorMetadataStore:
@@ -529,7 +529,7 @@ class IndicatorMetadataStore:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/features/technical/test_indicator_metadata_store.py -v
 ```
 
@@ -547,11 +547,11 @@ git commit -m "feat(features): implement IndicatorMetadataStore with tests"
 ### Task 3: Implement IndicatorStore (Parquet-based)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/features/technical/indicator_store.py`
+- Modify: `packages/data/src/ditto_data/domains/features/technical/indicator_store.py`
 
 **Step 1: Write the failing test**
 
-Create: `packages/datahub/tests/unit/domains/features/technical/test_indicator_store.py`
+Create: `packages/data/tests/unit/domains/features/technical/test_indicator_store.py`
 
 ```python
 """Tests for IndicatorStore."""
@@ -561,7 +561,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from ditto_datahub.domains.features.technical.indicator_store import IndicatorStore
+from ditto_data.domains.features.technical.indicator_store import IndicatorStore
 
 
 @pytest.fixture
@@ -675,15 +675,15 @@ def test_read_filter_by_indicator_type(indicator_store: IndicatorStore) -> None:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/features/technical/test_indicator_store.py::test_write_and_read_indicator_data -v
 ```
 
-Expected: `ModuleNotFoundError: No module named 'ditto_datahub.domains.features.technical.indicator_store'` or method not found
+Expected: `ModuleNotFoundError: No module named 'ditto_data.domains.features.technical.indicator_store'` or method not found
 
 **Step 3: Write minimal implementation**
 
-Modify: `packages/datahub/src/ditto_datahub/domains/features/technical/indicator_store.py`
+Modify: `packages/data/src/ditto_data/domains/features/technical/indicator_store.py`
 
 ```python
 """IndicatorStore for technical indicator data storage."""
@@ -697,9 +697,9 @@ import polars as pl
 from ditto_foundation import logger, traced
 from ditto_foundation.util.io import atomic_write, file_md5
 
-from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.storage import WriteResultStore as WriteResult
-from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
+from ditto_data.models import OnDuplicate
+from ditto_data.models.storage import WriteResultStore as WriteResult
+from ditto_data.stores.parquet_store_base import ParquetStoreBase
 
 
 class IndicatorStore(ParquetStoreBase):
@@ -843,7 +843,7 @@ class IndicatorStore(ParquetStoreBase):
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/features/technical/test_indicator_store.py -v
 ```
 
@@ -861,11 +861,11 @@ git commit -m "feat(features): implement IndicatorStore with Parquet storage"
 ### Task 4: Implement FeatureService
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/features/feature_service.py`
+- Modify: `packages/data/src/ditto_data/domains/features/feature_service.py`
 
 **Step 1: Write the failing test**
 
-Create: `packages/datahub/tests/unit/domains/features/test_feature_service.py`
+Create: `packages/data/tests/unit/domains/features/test_feature_service.py`
 
 ```python
 """Tests for FeatureService."""
@@ -875,15 +875,15 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from ditto_datahub.domains.features.feature_service import (
+from ditto_data.domains.features.feature_service import (
     FeatureQuery,
     FeatureService,
 )
-from ditto_datahub.domains.features.technical.indicator_metadata_store import (
+from ditto_data.domains.features.technical.indicator_metadata_store import (
     IndicatorMetadataStore,
 )
-from ditto_datahub.domains.features.technical.indicator_store import IndicatorStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.domains.features.technical.indicator_store import IndicatorStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 @pytest.fixture
@@ -1000,7 +1000,7 @@ def test_get_indicators_filters_by_type(feature_service: FeatureService) -> None
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/features/test_feature_service.py -v
 ```
 
@@ -1008,7 +1008,7 @@ Expected: Module not found
 
 **Step 3: Write minimal implementation**
 
-Modify: `packages/datahub/src/ditto_datahub/domains/features/feature_service.py`
+Modify: `packages/data/src/ditto_data/domains/features/feature_service.py`
 
 ```python
 """FeatureService - Features domain unified query service."""
@@ -1021,8 +1021,8 @@ from typing import Literal
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.domains.features.technical.indicator_store import IndicatorStore
-from ditto_datahub.domains.features.technical.indicator_metadata_store import (
+from ditto_data.domains.features.technical.indicator_store import IndicatorStore
+from ditto_data.domains.features.technical.indicator_metadata_store import (
     IndicatorMetadataStore,
 )
 
@@ -1164,7 +1164,7 @@ class FeatureService:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/features/test_feature_service.py -v
 ```
 
@@ -1184,22 +1184,22 @@ git commit -m "feat(features): implement FeatureService for unified queries"
 ### Task 5: Create Factors Domain Directory Structure
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/domains/factors/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/factors/factor_store.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/factors/factor_metadata_store.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/factors/metadata.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/factors/factor_service.py`
+- Create: `packages/data/src/ditto_data/domains/factors/__init__.py`
+- Create: `packages/data/src/ditto_data/domains/factors/factor_store.py`
+- Create: `packages/data/src/ditto_data/domains/factors/factor_metadata_store.py`
+- Create: `packages/data/src/ditto_data/domains/factors/metadata.py`
+- Create: `packages/data/src/ditto_data/domains/factors/factor_service.py`
 
 **Step 1: Create factors/__init__.py**
 
 ```python
 """Factors domain - validated factor signals with PIT support."""
 
-from ditto_datahub.domains.factors.factor_metadata_store import (
+from ditto_data.domains.factors.factor_metadata_store import (
     FactorMetadataStore,
 )
-from ditto_datahub.domains.factors.factor_store import FactorStore
-from ditto_datahub.domains.factors.factor_service import FactorQuery, FactorService
+from ditto_data.domains.factors.factor_store import FactorStore
+from ditto_data.domains.factors.factor_service import FactorQuery, FactorService
 
 __all__ = [
     "FactorMetadataStore",
@@ -1284,7 +1284,7 @@ __all__ = [
 **Step 3: Commit directory structure**
 
 ```bash
-git add src/ditto_datahub/domains/factors/
+git add src/ditto_data/domains/factors/
 git commit -m "feat(factors): add Factors domain directory structure"
 ```
 
@@ -1293,11 +1293,11 @@ git commit -m "feat(factors): add Factors domain directory structure"
 ### Task 6: Implement FactorMetadataStore
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/factors/factor_metadata_store.py`
+- Modify: `packages/data/src/ditto_data/domains/factors/factor_metadata_store.py`
 
 **Step 1: Write the failing test**
 
-Create: `packages/datahub/tests/unit/domains/factors/test_factor_metadata_store.py`
+Create: `packages/data/tests/unit/domains/factors/test_factor_metadata_store.py`
 
 ```python
 """Tests for FactorMetadataStore."""
@@ -1307,8 +1307,8 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from ditto_datahub.domains.factors.factor_metadata_store import FactorMetadataStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.domains.factors.factor_metadata_store import FactorMetadataStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 @pytest.fixture
@@ -1410,7 +1410,7 @@ def test_list_by_family(metadata_store: FactorMetadataStore) -> None:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/factors/test_factor_metadata_store.py -v
 ```
 
@@ -1418,7 +1418,7 @@ Expected: ModuleNotFoundError
 
 **Step 3: Write minimal implementation**
 
-Modify: `packages/datahub/src/ditto_datahub/domains/factors/factor_metadata_store.py`
+Modify: `packages/data/src/ditto_data/domains/factors/factor_metadata_store.py`
 
 ```python
 """FactorMetadataStore for factor metadata management."""
@@ -1430,7 +1430,7 @@ from typing import Literal
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class FactorMetadataStore:
@@ -1655,7 +1655,7 @@ class FactorMetadataStore:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/factors/test_factor_metadata_store.py -v
 ```
 
@@ -1671,11 +1671,11 @@ git commit -m "feat(factors): implement FactorMetadataStore with tests"
 ### Task 7: Implement FactorStore (Parquet + PIT columns)
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/factors/factor_store.py`
+- Modify: `packages/data/src/ditto_data/domains/factors/factor_store.py`
 
 **Step 1: Write the failing test**
 
-Create: `packages/datahub/tests/unit/domains/factors/test_factor_store.py`
+Create: `packages/data/tests/unit/domains/factors/test_factor_store.py`
 
 ```python
 """Tests for FactorStore."""
@@ -1685,7 +1685,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from ditto_datahub.domains.factors.factor_store import FactorStore
+from ditto_data.domains.factors.factor_store import FactorStore
 
 
 @pytest.fixture
@@ -1803,7 +1803,7 @@ def test_read_with_as_of_date_pit_query(factor_store: FactorStore) -> None:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/factors/test_factor_store.py -v
 ```
 
@@ -1811,7 +1811,7 @@ Expected: ModuleNotFoundError or method not found
 
 **Step 3: Write minimal implementation**
 
-Modify: `packages/datahub/src/ditto_datahub/domains/factors/factor_store.py`
+Modify: `packages/data/src/ditto_data/domains/factors/factor_store.py`
 
 ```python
 """FactorStore for factor data storage with PIT support."""
@@ -1825,9 +1825,9 @@ import polars as pl
 from ditto_foundation import logger, traced
 from ditto_foundation.util.io import atomic_write, file_md5
 
-from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.storage import WriteResultStore as WriteResult
-from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
+from ditto_data.models import OnDuplicate
+from ditto_data.models.storage import WriteResultStore as WriteResult
+from ditto_data.stores.parquet_store_base import ParquetStoreBase
 
 
 class FactorStore(ParquetStoreBase):
@@ -2002,7 +2002,7 @@ class FactorStore(ParquetStoreBase):
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/factors/test_factor_store.py -v
 ```
 
@@ -2020,11 +2020,11 @@ git commit -m "feat(factors): implement FactorStore with Parquet + PIT support"
 ### Task 8: Implement FactorService
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/factors/factor_service.py`
+- Modify: `packages/data/src/ditto_data/domains/factors/factor_service.py`
 
 **Step 1: Write the failing test**
 
-Create: `packages/datahub/tests/unit/domains/factors/test_factor_service.py`
+Create: `packages/data/tests/unit/domains/factors/test_factor_service.py`
 
 ```python
 """Tests for FactorService."""
@@ -2034,10 +2034,10 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from ditto_datahub.domains.factors.factor_service import FactorQuery, FactorService
-from ditto_datahub.domains.factors.factor_metadata_store import FactorMetadataStore
-from ditto_datahub.domains.factors.factor_store import FactorStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.domains.factors.factor_service import FactorQuery, FactorService
+from ditto_data.domains.factors.factor_metadata_store import FactorMetadataStore
+from ditto_data.domains.factors.factor_store import FactorStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 @pytest.fixture
@@ -2181,7 +2181,7 @@ def test_get_factors_with_pit_query(factor_service: FactorService) -> None:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/factors/test_factor_service.py -v
 ```
 
@@ -2189,7 +2189,7 @@ Expected: ModuleNotFoundError
 
 **Step 3: Write minimal implementation**
 
-Modify: `packages/datahub/src/ditto_datahub/domains/factors/factor_service.py`
+Modify: `packages/data/src/ditto_data/domains/factors/factor_service.py`
 
 ```python
 """FactorService - Factors domain unified query service."""
@@ -2202,8 +2202,8 @@ from typing import Literal
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.domains.factors.factor_store import FactorStore
-from ditto_datahub.domains.factors.factor_metadata_store import FactorMetadataStore
+from ditto_data.domains.factors.factor_store import FactorStore
+from ditto_data.domains.factors.factor_metadata_store import FactorMetadataStore
 
 
 @dataclass(frozen=True)
@@ -2357,7 +2357,7 @@ class FactorService:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/factors/test_factor_service.py -v
 ```
 
@@ -2377,7 +2377,7 @@ git commit -m "feat(factors): implement FactorService with PIT query support"
 ### Task 9: Update DataRootConfig for Features/Factors Paths
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/config/data_root.py`
+- Modify: `packages/data/src/ditto_data/config/data_root.py`
 
 **Step 1: Update data_root.py**
 
@@ -2412,7 +2412,7 @@ Add to the existing properties (after line 165):
 **Step 2: Run type check**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev type
 ```
 
@@ -2421,7 +2421,7 @@ Expected: No errors
 **Step 3: Commit**
 
 ```bash
-git add src/ditto_datahub/config/data_root.py
+git add src/ditto_data/config/data_root.py
 git commit -m "feat(config): add Features and Factors paths to DataRootConfig"
 ```
 
@@ -2430,7 +2430,7 @@ git commit -m "feat(config): add Features and Factors paths to DataRootConfig"
 ### Task 10: Register Features/Factors in DataHub
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/hub.py`
+- Modify: `packages/data/src/ditto_data/hub.py`
 - Modify: `apps/port/src/ditto_port/registry/datahub.py`
 
 **Step 1: Update hub.py imports**
@@ -2438,16 +2438,16 @@ git commit -m "feat(config): add Features and Factors paths to DataRootConfig"
 Add to imports (around line 25):
 
 ```python
-from ditto_datahub.domains.features import FeatureService
-from ditto_datahub.domains.features.technical.indicator_store import (
+from ditto_data.domains.features import FeatureService
+from ditto_data.domains.features.technical.indicator_store import (
     IndicatorStore as FeatureIndicatorStore,
 )
-from ditto_datahub.domains.features.technical.indicator_metadata_store import (
+from ditto_data.domains.features.technical.indicator_metadata_store import (
     IndicatorMetadataStore as FeatureIndicatorMetadataStore,
 )
-from ditto_datahub.domains.factors import FactorService
-from ditto_datahub.domains.factors.factor_store import FactorStore
-from ditto_datahub.domains.factors.factor_metadata_store import (
+from ditto_data.domains.factors import FactorService
+from ditto_data.domains.factors.factor_store import FactorStore
+from ditto_data.domains.factors.factor_metadata_store import (
     FactorMetadataStore,
 )
 ```
@@ -2553,14 +2553,14 @@ factors_query_service=factors_query_service,
 **Step 6: Run type check**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev type
 ```
 
 **Step 7: Commit**
 
 ```bash
-git add src/ditto_datahub/hub.py apps/port/src/ditto_port/registry/datahub.py
+git add src/ditto_data/hub.py apps/port/src/ditto_port/registry/datahub.py
 git commit -m "feat(datahub): register Features and Factors services in DataHub"
 ```
 
@@ -2569,23 +2569,23 @@ git commit -m "feat(datahub): register Features and Factors services in DataHub"
 ### Task 11: Update Unit Tests
 
 **Files:**
-- Modify: `packages/datahub/tests/unit/test_hub_unit.py`
+- Modify: `packages/data/tests/unit/test_hub_unit.py`
 
 **Step 1: Add imports**
 
 Add after macro imports:
 
 ```python
-from ditto_datahub.domains.features import FeatureService
-from ditto_datahub.domains.features.technical.indicator_store import (
+from ditto_data.domains.features import FeatureService
+from ditto_data.domains.features.technical.indicator_store import (
     IndicatorStore as FeatureIndicatorStore,
 )
-from ditto_datahub.domains.features.technical.indicator_metadata_store import (
+from ditto_data.domains.features.technical.indicator_metadata_store import (
     IndicatorMetadataStore as FeatureIndicatorMetadataStore,
 )
-from ditto_datahub.domains.factors import FactorService
-from ditto_datahub.domains.factors.factor_store import FactorStore
-from ditto_datahub.domains.factors.factor_metadata_store import (
+from ditto_data.domains.factors import FactorService
+from ditto_data.domains.factors.factor_store import FactorStore
+from ditto_data.domains.factors.factor_metadata_store import (
     FactorMetadataStore,
 )
 ```
@@ -2637,7 +2637,7 @@ factors_query_service=factors_query_service,
 **Step 4: Run tests**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/test_hub_unit.py -v
 ```
 
@@ -2657,7 +2657,7 @@ git commit -m "test(datahub): add Features and Factors to unit tests"
 **Step 1: Run all new tests**
 
 ```bash
-cd packages/datahub
+cd packages/data
 pixi run -e dev pytest tests/unit/domains/features/ tests/unit/domains/factors/ -v
 ```
 

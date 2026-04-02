@@ -302,8 +302,8 @@ V1 可以不新增独立 comparison 表，先复用 `StrategyArtifactRecord.meta
 ### Task 4：引入 comparison artifact
 
 **Files**
-- Modify: `packages/datahub/src/ditto_datahub/models/strategy.py`
-- Modify: `packages/datahub/tests/unit/stores/metadata/test_strategy_artifact_store_unit.py`
+- Modify: `packages/data/src/ditto_data/models/strategy.py`
+- Modify: `packages/data/tests/unit/stores/metadata/test_strategy_artifact_store_unit.py`
 - Create: `apps/port/src/ditto_port/services/strategy/comparison_writer.py`
 - Test: `apps/port/tests/unit/services/strategy/test_comparison_writer_unit.py`
 

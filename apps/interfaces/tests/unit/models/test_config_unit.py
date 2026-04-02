@@ -9,14 +9,14 @@ class TestDatasetEnum:
 
     def test_index_basic_exists(self) -> None:
         """验证 INDEX_BASIC 枚举存在且值正确."""
-        from ditto_datahub.models import Dataset
+        from ditto_data.models import Dataset
 
         assert hasattr(Dataset, "INDEX_BASIC")
         assert Dataset.INDEX_BASIC.value == "index_basic"
 
     def test_index_daily_exists(self) -> None:
         """验证 INDEX_DAILY 枚举存在且值正确."""
-        from ditto_datahub.models import Dataset
+        from ditto_data.models import Dataset
 
         assert hasattr(Dataset, "INDEX_DAILY")
         assert Dataset.INDEX_DAILY.value == "index_daily"
@@ -29,7 +29,7 @@ class TestDatasetRegistry:
     def test_registry_has_index_basic(self) -> None:
         """验证 INGESTION_SPECS 包含 index_basic."""
         from ditto_app.config import INGESTION_SPECS, TaskTier
-        from ditto_datahub.models import Dataset
+        from ditto_data.models import Dataset
 
         assert Dataset.INDEX_BASIC in INGESTION_SPECS
         config = INGESTION_SPECS[Dataset.INDEX_BASIC]
@@ -39,7 +39,7 @@ class TestDatasetRegistry:
     def test_registry_has_index_daily(self) -> None:
         """验证 INGESTION_SPECS 包含 index_daily."""
         from ditto_app.config import INGESTION_SPECS, TaskTier
-        from ditto_datahub.models import Dataset
+        from ditto_data.models import Dataset
 
         assert Dataset.INDEX_DAILY in INGESTION_SPECS
         config = INGESTION_SPECS[Dataset.INDEX_DAILY]

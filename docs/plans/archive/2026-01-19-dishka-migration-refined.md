@@ -170,7 +170,7 @@ apps/port/          ← 容器在这里（Composition Root）
   ├── providers/    ← Provider 定义
   └── main.py       ← 容器初始化
 
-packages/datahub/   ← 纯粹领域逻辑，不依赖 dishka
+packages/data/   ← 纯粹领域逻辑，不依赖 dishka
 packages/core/      ← 纯粹领域逻辑，不依赖 dishka
 packages/foundation/ ← 基础设施，不依赖 dishka
 ```
@@ -351,7 +351,7 @@ def test_security_store_integration(sqlite_client):
   - 添加 fixtures 文档字符串
   - 检查 mock 使用是否规范
 - **文件**:
-  - `packages/datahub/tests/conftest.py`
+  - `packages/data/tests/conftest.py`
   - `packages/foundation/tests/conftest.py`
 
 #### Task 4.2: 检查测试覆盖率 `[S]`

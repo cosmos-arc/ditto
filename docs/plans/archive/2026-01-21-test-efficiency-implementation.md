@@ -26,19 +26,19 @@
 **目标:** 提供虚拟时间 fixture，替代真实的 time.sleep()
 
 **文件:**
-- Modify: `packages/datahub/tests/unit/runtime/conftest.py`
+- Modify: `packages/data/tests/unit/runtime/conftest.py`
 - Test: 由后续任务使用
 
 **Step 1: 读取现有 conftest.py**
 
 ```bash
 # 检查是否已有 frozen_time fixture
-cat packages/datahub/tests/unit/runtime/conftest.py
+cat packages/data/tests/unit/runtime/conftest.py
 ```
 
 **Step 2: 添加 frozen_time fixture**
 
-在 `packages/datahub/tests/unit/runtime/conftest.py` 中添加：
+在 `packages/data/tests/unit/runtime/conftest.py` 中添加：
 
 ```python
 @pytest.fixture
@@ -58,7 +58,7 @@ def frozen_time(time_machine):
 **Step 3: 验证 fixture 可被收集**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/runtime/conftest.py::frozen_time --collect-only
+pixi run -e dev pytest packages/data/tests/unit/runtime/conftest.py::frozen_time --collect-only
 ```
 
 Expected: FIXTURE 被收集
@@ -66,7 +66,7 @@ Expected: FIXTURE 被收集
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/tests/unit/runtime/conftest.py
+git add packages/data/tests/unit/runtime/conftest.py
 git commit -m "feat(runtime): add frozen_time fixture for virtual time control"
 ```
 
@@ -77,19 +77,19 @@ git commit -m "feat(runtime): add frozen_time fixture for virtual time control"
 **目标:** 使用 frozen_time 替代真实 time.sleep(3)
 
 **文件:**
-- Modify: `packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py`
+- Modify: `packages/data/tests/unit/runtime/test_cache_ttl_unit.py`
 
 **Step 1: 读取现有测试**
 
 ```bash
 # 查看当前测试实现
-cat packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py
+cat packages/data/tests/unit/runtime/test_cache_ttl_unit.py
 ```
 
 **Step 2: 运行测试确认当前耗时**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py --durations=5
+pixi run -e dev pytest packages/data/tests/unit/runtime/test_cache_ttl_unit.py --durations=5
 ```
 
 Expected: 测试通过，但耗时 >3 秒
@@ -130,7 +130,7 @@ def test_individual_ttl(frozen_time) -> None:
 **Step 4: 运行测试验证通过**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/runtime/test_cache_ttl_unit.py -v
 ```
 
 Expected: 所有测试通过
@@ -138,7 +138,7 @@ Expected: 所有测试通过
 **Step 5: 验证提速效果**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py --durations=5
+pixi run -e dev pytest packages/data/tests/unit/runtime/test_cache_ttl_unit.py --durations=5
 ```
 
 Expected: 每个测试 <0.1s（原来 3s）
@@ -146,7 +146,7 @@ Expected: 每个测试 <0.1s（原来 3s）
 **Step 6: 提交**
 
 ```bash
-git add packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py
+git add packages/data/tests/unit/runtime/test_cache_ttl_unit.py
 git commit -m "fix(runtime): use frozen_time in cache_ttl tests (3s → 0.1s)"
 ```
 
@@ -157,18 +157,18 @@ git commit -m "fix(runtime): use frozen_time in cache_ttl tests (3s → 0.1s)"
 **目标:** 使用 frozen_time 替代真实 time.sleep(1.2)
 
 **文件:**
-- Modify: `packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py`
+- Modify: `packages/data/tests/unit/runtime/test_cache_runtime_unit.py`
 
 **Step 1: 读取现有测试**
 
 ```bash
-cat packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py
+cat packages/data/tests/unit/runtime/test_cache_runtime_unit.py
 ```
 
 **Step 2: 运行测试确认当前耗时**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py::test_set_with_custom_ttl --durations=5
+pixi run -e dev pytest packages/data/tests/unit/runtime/test_cache_runtime_unit.py::test_set_with_custom_ttl --durations=5
 ```
 
 **Step 3: 修改测试使用 frozen_time**
@@ -196,7 +196,7 @@ def test_set_with_custom_ttl(frozen_time) -> None:
 **Step 4: 运行测试验证**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/runtime/test_cache_runtime_unit.py -v
 ```
 
 Expected: 所有测试通过
@@ -204,7 +204,7 @@ Expected: 所有测试通过
 **Step 5: 验证提速效果**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py --durations=5
+pixi run -e dev pytest packages/data/tests/unit/runtime/test_cache_runtime_unit.py --durations=5
 ```
 
 Expected: 每个测试 <0.1s（原来 1.2s）
@@ -212,7 +212,7 @@ Expected: 每个测试 <0.1s（原来 1.2s）
 **Step 6: 提交**
 
 ```bash
-git add packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py
+git add packages/data/tests/unit/runtime/test_cache_runtime_unit.py
 git commit -m "fix(runtime): use frozen_time in cache_runtime tests (1.2s → 0.1s)"
 ```
 
@@ -223,7 +223,7 @@ git commit -m "fix(runtime): use frozen_time in cache_runtime tests (1.2s → 0.
 **目标:** 确保 SQLite 连接在测试后正确关闭（Windows 兼容）
 
 **文件:**
-- Modify: `packages/datahub/tests/integration/conftest.py`
+- Modify: `packages/data/tests/integration/conftest.py`
 - Modify: `packages/foundation/tests/integration/conftest.py`（如果存在）
 - Modify: `packages/core/tests/integration/conftest.py`（如果存在）
 - Modify: `apps/port/tests/integration/conftest.py`
@@ -251,7 +251,7 @@ def ensure_sqlite_cleanup():
 **Step 3: 验证 fixture 可被收集**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/integration/conftest.py::ensure_sqlite_cleanup --collect-only
+pixi run -e dev pytest packages/data/tests/integration/conftest.py::ensure_sqlite_cleanup --collect-only
 ```
 
 **Step 4: 提交**
@@ -296,7 +296,7 @@ def metrics_registry():
 **Step 2: 验证 fixture 可被收集**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/integration/conftest.py::metrics_registry --collect-only
+pixi run -e dev pytest packages/data/tests/integration/conftest.py::metrics_registry --collect-only
 ```
 
 **Step 3: 提交**
@@ -313,30 +313,30 @@ git commit -m "feat(tests): add metrics_registry fixture for isolated observabil
 **目标:** 提供已初始化 schema 的 SQLite 连接池
 
 **文件:**
-- Modify: `packages/datahub/tests/integration/conftest.py`
+- Modify: `packages/data/tests/integration/conftest.py`
 
 **Step 1: 检查 schema.sql 位置**
 
 ```bash
 # 找到 schema.sql 文件
-find packages/datahub -name "schema.sql" -type f
+find packages/data -name "schema.sql" -type f
 ```
 
-Expected: 找到 schema.sql 路径（通常是 `packages/datahub/src/ditto_datahub/scripts/schema.sql`）
+Expected: 找到 schema.sql 路径（通常是 `packages/data/src/ditto_data/scripts/schema.sql`）
 
 **Step 2: 添加 fixtures**
 
-在 `packages/datahub/tests/integration/conftest.py` 中添加：
+在 `packages/data/tests/integration/conftest.py` 中添加：
 
 ```python
 from pathlib import Path
-from ditto_datahub.db.sqlite_pool import SQLitePool
+from ditto_data.db.sqlite_pool import SQLitePool
 
 @pytest.fixture
 def sqlite_schema_path() -> Path:
     """获取 schema.sql 路径"""
     return Path(__file__).parent.parent.parent.parent \
-        / "src" / "ditto_datahub" / "scripts" / "schema.sql"
+        / "src" / "ditto_data" / "scripts" / "schema.sql"
 
 @pytest.fixture
 def sqlite_pool_with_schema(sqlite_schema_path: Path, tmp_path: Path) -> SQLitePool:
@@ -359,13 +359,13 @@ def sqlite_pool_with_schema(sqlite_schema_path: Path, tmp_path: Path) -> SQLiteP
 **Step 3: 验证 fixture 可被收集**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/integration/conftest.py::sqlite_pool_with_schema --collect-only
+pixi run -e dev pytest packages/data/tests/integration/conftest.py::sqlite_pool_with_schema --collect-only
 ```
 
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/tests/integration/conftest.py
+git add packages/data/tests/integration/conftest.py
 git commit -m "feat(tests): add sqlite_pool_with_schema fixture for integration tests"
 ```
 
@@ -376,26 +376,26 @@ git commit -m "feat(tests): add sqlite_pool_with_schema fixture for integration 
 **目标:** 将边界混淆的单元测试迁移到集成测试目录
 
 **文件:**
-- Move: `packages/datahub/tests/unit/stores/test_bars_store_unit.py`
-- To: `packages/datahub/tests/integration/stores/test_bars_store_integration.py`
+- Move: `packages/data/tests/unit/stores/test_bars_store_unit.py`
+- To: `packages/data/tests/integration/stores/test_bars_store_integration.py`
 
 **Step 1: 确认源文件存在**
 
 ```bash
-ls -la packages/datahub/tests/unit/stores/test_bars_store_unit.py
+ls -la packages/data/tests/unit/stores/test_bars_store_unit.py
 ```
 
 **Step 2: 创建目标目录**
 
 ```bash
-mkdir -p packages/datahub/tests/integration/stores
+mkdir -p packages/data/tests/integration/stores
 ```
 
 **Step 3: 移动文件**
 
 ```bash
-git mv packages/datahub/tests/unit/stores/test_bars_store_unit.py \
-        packages/datahub/tests/integration/stores/test_bars_store_integration.py
+git mv packages/data/tests/unit/stores/test_bars_store_unit.py \
+        packages/data/tests/integration/stores/test_bars_store_integration.py
 ```
 
 **Step 4: 修改文件内的 marker**
@@ -417,19 +417,19 @@ class TestBarsStore:
 **Step 5: 验证测试可被收集**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/integration/stores/test_bars_store_integration.py --collect-only
+pixi run -e dev pytest packages/data/tests/integration/stores/test_bars_store_integration.py --collect-only
 ```
 
 **Step 6: 运行测试验证通过**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/integration/stores/test_bars_store_integration.py -v
+pixi run -e dev pytest packages/data/tests/integration/stores/test_bars_store_integration.py -v
 ```
 
 **Step 7: 提交**
 
 ```bash
-git add packages/datahub/tests/unit/stores packages/datahub/tests/integration/stores
+git add packages/data/tests/unit/stores packages/data/tests/integration/stores
 git commit -m "refactor(tests): migrate test_bars_store to integration tests"
 ```
 
@@ -513,7 +513,7 @@ addopts = [
 
 ```bash
 # 快速测试：并行运行
-pixi run -e dev pytest packages/datahub/tests/unit/cache -v
+pixi run -e dev pytest packages/data/tests/unit/cache -v
 ```
 
 Expected: 看到 `gw0`, `gw1` 等并行 worker

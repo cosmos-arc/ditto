@@ -4,7 +4,7 @@
 
 - **状态**: 当前真相源
 - **最后更新**: 2026-03-18
-- **适用范围**: `packages/core` + `packages/datahub` + `apps/port`
+- **适用范围**: `packages/core` + `packages/data` + `apps/port`
 - **定位**: 这是 unified-feature-factor-engine 的唯一完整设计入口；阅读本文件应能理解当前架构、语义、边界、控制面与剩余延期项。
 
 ### 0.1 当前真相源
@@ -147,10 +147,10 @@
 - 负责 artifact 持久化、catalog、runtime metadata、research artifact、publication safety record。
 - 封装文件 I/O、SQLite runtime、后续热层适配。
 - 当前关键入口：
-  - `packages/datahub/src/ditto_datahub/services/derived_catalog_service.py`
-  - `packages/datahub/src/ditto_datahub/services/derived/artifact_reader.py`
-  - `packages/datahub/src/ditto_datahub/services/derived/artifact_persistence_service.py`
-  - `packages/datahub/src/ditto_datahub/services/research_artifact_service.py`
+  - `packages/data/src/ditto_data/services/derived_catalog_service.py`
+  - `packages/data/src/ditto_data/services/derived/artifact_reader.py`
+  - `packages/data/src/ditto_data/services/derived/artifact_persistence_service.py`
+  - `packages/data/src/ditto_data/services/research_artifact_service.py`
 
 #### Infra
 

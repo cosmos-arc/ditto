@@ -73,7 +73,7 @@
 ## 任务分解（10 任务）
 
 ### Task 1.1: 创建 YAML 规则配置文件
-**文件**: `packages/datahub/config/dq_rules/*.yml`
+**文件**: `packages/data/config/dq_rules/*.yml`
 
 创建以下 YAML 文件：
 - `etf_daily.yml` - ETF 日频数据规则
@@ -132,19 +132,19 @@
 
 | 文件路径 | 用途 |
 |----------|------|
-| `packages/datahub/config/dq_rules/etf_daily.yml` | ETF 规则 |
-| `packages/datahub/config/dq_rules/index_daily.yml` | 指数规则 |
-| `packages/datahub/config/dq_rules/market_daily.yml` | 股票规则 |
-| `packages/datahub/config/dq_rules/index_weight.yml` | 权重规则 |
-| `packages/datahub/config/dq_rules/adj_factor.yml` | 复权规则 |
-| `packages/datahub/src/ditto_datahub/dq/models.py` | 模型定义 |
-| `packages/datahub/src/ditto_datahub/dq/engine.py` | DQ 引擎 |
-| `packages/datahub/src/ditto_datahub/dq/result.py` | 结果模型 |
-| `packages/datahub/src/ditto_datahub/dq/checkers/technical.py` | L1 检查器 |
-| `packages/datahub/src/ditto_datahub/dq/checkers/business.py` | L2 检查器 |
-| `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py` | L3 检查器 |
-| `packages/datahub/src/ditto_datahub/stores/quarantine_store.py` | 隔离区 |
-| `packages/datahub/src/ditto_datahub/dq/report.py` | 报告生成 |
+| `packages/data/config/dq_rules/etf_daily.yml` | ETF 规则 |
+| `packages/data/config/dq_rules/index_daily.yml` | 指数规则 |
+| `packages/data/config/dq_rules/market_daily.yml` | 股票规则 |
+| `packages/data/config/dq_rules/index_weight.yml` | 权重规则 |
+| `packages/data/config/dq_rules/adj_factor.yml` | 复权规则 |
+| `packages/data/src/ditto_data/dq/models.py` | 模型定义 |
+| `packages/data/src/ditto_data/dq/engine.py` | DQ 引擎 |
+| `packages/data/src/ditto_data/dq/result.py` | 结果模型 |
+| `packages/data/src/ditto_data/dq/checkers/technical.py` | L1 检查器 |
+| `packages/data/src/ditto_data/dq/checkers/business.py` | L2 检查器 |
+| `packages/data/src/ditto_data/dq/checkers/statistical.py` | L3 检查器 |
+| `packages/data/src/ditto_data/stores/quarantine_store.py` | 隔离区 |
+| `packages/data/src/ditto_data/dq/report.py` | 报告生成 |
 | `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py` | L3 任务 |
 | `tests/unit/dq/` | 测试文件 |
 
@@ -154,5 +154,5 @@
 
 | 文件路径 | 修改内容 |
 |----------|----------|
-| `packages/datahub/src/ditto_datahub/repositories/bars.py` | 集成 DQEngine，添加 DQ 检查逻辑 |
-| `packages/datahub/src/ditto_datahub/dq/__init__.py` | 导出 DQEngine, DQResult 等 |
+| `packages/data/src/ditto_data/repositories/bars.py` | 集成 DQEngine，添加 DQ 检查逻辑 |
+| `packages/data/src/ditto_data/dq/__init__.py` | 导出 DQEngine, DQResult 等 |

@@ -10,11 +10,11 @@ from ditto_app.builders.strategy import (
     PublishedStrategyRuntime,
     StrategySliceBuilder,
 )
-from ditto_datahub.models.strategy import StrategySpecRecord
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_engine.strategy.pipeline import StrategyPipeline
-from ditto_engine.strategy.specs import StrategySpec
+from ditto_data.models.strategy import StrategySpecRecord
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_engine.alpha.pipeline import StrategyPipeline
+from ditto_engine.alpha.specs import StrategySpec
 from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 InstrumentId = _InstrumentId

@@ -250,7 +250,7 @@ pixi run python scripts/verify_test_data.py
 ```python
 # tests/conftest.py
 import pytest
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 from ditto_engine.engine import RegimeEngine, FactorEngine
 from ditto_engine.portfolio import PortfolioManager
 
@@ -367,7 +367,7 @@ packages/core/data/
 ```python
 # scripts/prepare_test_data.py
 """准备测试数据"""
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 def prepare_test_data():
     """准备集成测试所需数据"""

@@ -40,7 +40,7 @@
 | **ERR-02** | 裸 `KeyError` 未替换 | [research.py:383](../../apps/port/src/ditto_port/services/derived/research.py#L383) | `raise KeyError(f"research spine spec not found for spine_id={spine_id}")` |
 | **ERR-03** | 裸 `ValueError` 未替换 | [publication.py:103](../../apps/port/src/ditto_port/services/derived/publication.py#L103) | `raise ValueError(f"shadow baseline not found for derived_id={derived_id}")` |
 
-> Q-ERR-01 范围限定在 `packages/datahub/services/derived/` 和 `packages/core/engine/`。上述 3 处位于 `apps/port/`，属于范围扩展。建议统一替换为 `DerivedNotFoundError`。
+> Q-ERR-01 范围限定在 `packages/data/services/derived/` 和 `packages/core/engine/`。上述 3 处位于 `apps/port/`，属于范围扩展。建议统一替换为 `DerivedNotFoundError`。
 
 ---
 
@@ -50,7 +50,7 @@
 |----|------|------|------|
 | **SM-02** | `# type: ignore` 集群 | [golden.py:112-149](../../packages/core/src/ditto_core/quality/golden.py#L112-L149) | 4 处 type ignore 集中在 golden 验证逻辑中。需审查是否可通过类型重构消除。 |
 | **SM-03** | `# type: ignore` 集群 | [deploy.py:81-92](../../apps/port/src/ditto_port/jobs/flows/deploy.py#L81-L92) | 3 处 `return-value` ignore。需审查。 |
-| **SM-04** | `# type: ignore` | [bond_yield.py:248-262](../../packages/datahub/src/ditto_datahub/sources/tushare/adapters/bond_yield.py#L248-L262) | 2 处 `arg-type` ignore。需审查。 |
+| **SM-04** | `# type: ignore` | [bond_yield.py:248-262](../../packages/data/src/ditto_data/sources/tushare/adapters/bond_yield.py#L248-L262) | 2 处 `arg-type` ignore。需审查。 |
 | ~~**SM-05**~~ | ~~`# type: ignore`~~ | ~~compile_cache_service.py~~ | 已随文件移除解决。 |
 
 ---
@@ -59,7 +59,7 @@
 
 | ID | 问题 | 位置 | 说明 |
 |----|------|------|------|
-| **TD-01** | TODO: 批量查询优化 | [tdx/source.py:109](../../packages/datahub/src/ditto_datahub/sources/tdx/source.py#L109) | `# TODO: 实现更高效的批量查询，从 InstrumentStore 获取` |
+| **TD-01** | TODO: 批量查询优化 | [tdx/source.py:109](../../packages/data/src/ditto_data/sources/tdx/source.py#L109) | `# TODO: 实现更高效的批量查询，从 InstrumentStore 获取` |
 | **TD-02** | TODO: 告警发送 | [reconciliation_service.py:295](../../apps/port/src/ditto_port/services/ingestion/quality/reconciliation_service.py#L295) | `# TODO: 实现告警发送（邮件、钉钉、微信等）` |
 | **TD-04** | `noqa: S110` 宽泛异常捕获 | [observability/testing.py:19](../../packages/infra/src/ditto_infra/foundation/observability/testing.py#L19) | 测试辅助代码中的 shutdown 异常吞没，已有注释说明。 |
 

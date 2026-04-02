@@ -19,17 +19,16 @@ import pytest
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_engine.accounting.account import Account
 from ditto_engine.accounting.cash import CashBook
+from ditto_engine.alpha.templates.etf_rotation import (
+    ETFRotationConfig,
+    build_etf_rotation_pipeline,
+)
 from ditto_engine.backtest.data_feed import DataFeed, ProviderBackedDataFeed
 from ditto_engine.backtest.engine import (
     EngineConfig,
     EngineLoop,
     EngineMode,
     EngineOptions,
-)
-from ditto_engine.backtest.risk.pre_trade import (
-    BuyingPowerCheck,
-    CompositePreTradeCheck,
-    LotSizeCheck,
 )
 from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
@@ -41,9 +40,10 @@ from ditto_engine.execution.reality import (
     FixedBpsSlippage,
     SimpleFeeModel,
 )
-from ditto_engine.strategy.templates.etf_rotation import (
-    ETFRotationConfig,
-    build_etf_rotation_pipeline,
+from ditto_engine.risk.pre_trade import (
+    BuyingPowerCheck,
+    CompositePreTradeCheck,
+    LotSizeCheck,
 )
 from ditto_kernel.identity import InstrumentId
 

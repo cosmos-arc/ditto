@@ -3,8 +3,8 @@ name = "ditto-analytics"
 requires-python = ">= 3.13"
 version = "0.1.0"
 dependencies = [
+    "ditto-data",
     "ditto-kernel",
-    "ditto-engine",
 ]
 
 [build-system]

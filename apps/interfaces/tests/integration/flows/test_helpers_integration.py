@@ -5,7 +5,7 @@ Tests for create_ingestion_bundle context manager.
 """
 
 import pytest
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.metadata_service import MetadataService
 from ditto_interfaces.registry import IngestionBundle, create_ingestion_bundle
 
 # 标记为串行执行，避免并行测试时数据库文件冲突

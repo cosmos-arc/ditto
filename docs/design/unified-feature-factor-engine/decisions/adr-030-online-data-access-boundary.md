@@ -67,7 +67,7 @@
 ### 查询服务设计
 
 ```python
-# packages/datahub/src/ditto_datahub/services/factor_query_service.py
+# packages/data/src/ditto_data/services/factor_query_service.py
 
 from enum import Enum
 from typing import TYPE_CHECKING

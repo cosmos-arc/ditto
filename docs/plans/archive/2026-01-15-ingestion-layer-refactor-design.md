@@ -178,7 +178,7 @@ DataHub Store (存储层)
 
 **Phase 1: 扩展 SecuritiesAccessor**
 ```python
-# packages/datahub/src/ditto_datahub/accessors/securities.py
+# packages/data/src/ditto_data/accessors/securities.py
 
 class SecuritiesAccessor:
     def resolve_or_create_batch(
@@ -266,7 +266,7 @@ class IngestionCoordinator:
 
 **任务 2.1: 扩展 SecuritiesAccessor** ✅
 
-添加新方法到 `packages/datahub/src/ditto_datahub/accessors/securities.py`：
+添加新方法到 `packages/data/src/ditto_data/accessors/securities.py`：
 - `resolve_or_create_batch()`: 批量解析 src_code，不存在则创建
 - `enrich_dataframe_with_sid()`: 为 DataFrame 添加 sid 列
 
@@ -317,7 +317,7 @@ ditto-port/services/ingestion/
     CalendarStore (datahub)
     IngestionLogStore
 
-packages/datahub/accessors/
+packages/data/accessors/
 └── securities.py (已扩展)
     ├── resolve_or_create_batch()  ✅ 新增方法
     └── enrich_dataframe_with_sid()  ✅ 新增方法
@@ -360,10 +360,10 @@ Server Flow → Server Service → DataHub Accessor → DataHub Store → Founda
 1. **导入语句检查**
    ```python
    # ❌ Server 层不应直接导入 Store
-   from ditto_datahub.stores.security_store import SecurityStore
+   from ditto_data.stores.security_store import SecurityStore
 
    # ✅ 应该使用 Accessor
-   from ditto_datahub.accessors.securities import SecuritiesAccessor
+   from ditto_data.accessors.securities import SecuritiesAccessor
    ```
 
 2. **职责检查**

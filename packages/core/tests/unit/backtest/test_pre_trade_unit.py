@@ -14,7 +14,15 @@ from ditto_engine.accounting.order_book import (
     OrderTicket,
     OrderType,
 )
-from ditto_engine.backtest.risk.pre_trade import (
+from ditto_engine.execution.reality import SimpleFeeModel
+from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_engine.execution.rules import (
+    FeeSchedule,
+    InstrumentDefinition,
+    InstrumentRules,
+    TradingRuleSet,
+)
+from ditto_engine.risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     ConcentrationPreCheck,
@@ -26,14 +34,6 @@ from ditto_engine.backtest.risk.pre_trade import (
     PreTradeContext,
     PreTradeRiskCheck,
     PriceValidityCheck,
-)
-from ditto_engine.execution.reality import SimpleFeeModel
-from ditto_engine.execution.reality.market import MarketSnapshot
-from ditto_engine.execution.rules import (
-    FeeSchedule,
-    InstrumentDefinition,
-    InstrumentRules,
-    TradingRuleSet,
 )
 
 # ---------------------------------------------------------------------------

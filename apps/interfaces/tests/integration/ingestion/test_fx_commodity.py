@@ -15,7 +15,7 @@ class TestFxCommodityIngestion:
         验证 FX_SOURCE_SCHEMA 定义中包含 trade_date_utc 字段，
         且类型为 UTC 午夜的 Datetime。
         """
-        from ditto_datahub.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
+        from ditto_data.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
 
         schema = FX_SOURCE_SCHEMA.schema
 
@@ -36,7 +36,7 @@ class TestFxCommodityIngestion:
         验证 COMMODITY_SOURCE_SCHEMA 定义中包含 trade_date_utc 字段，
         且类型为 UTC 午夜的 Datetime。
         """
-        from ditto_datahub.sources.schemas.commodity_schemas import (
+        from ditto_data.sources.schemas.commodity_schemas import (
             COMMODITY_SOURCE_SCHEMA,
         )
 

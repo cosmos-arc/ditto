@@ -3,13 +3,13 @@
 from collections.abc import Iterator
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.config import DataSourceSettings
-from ditto_datahub.sources import ExchangeTransformers
-from ditto_datahub.sources.fred.fred_source import FredSource
-from ditto_datahub.sources.source import DataSources
-from ditto_datahub.sources.tdx.transformer import TdxExchangeTransformer
-from ditto_datahub.sources.tushare.transformer import TushareExchangeTransformer
-from ditto_datahub.sources.tushare.tushare_source import TushareSource
+from ditto_data.config import DataSourceSettings
+from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.fred.fred_source import FredSource
+from ditto_data.sources.source import DataSources
+from ditto_data.sources.tdx.transformer import TdxExchangeTransformer
+from ditto_data.sources.tushare.transformer import TushareExchangeTransformer
+from ditto_data.sources.tushare.tushare_source import TushareSource
 
 __all__ = ["SourcesProvider"]
 

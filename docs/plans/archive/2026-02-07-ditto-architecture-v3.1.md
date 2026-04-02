@@ -105,7 +105,7 @@ Foundation Layer
 ### 3.1 Repository 模式
 
 ```python
-# packages/datahub/src/ditto_datahub/repositories/bars.py
+# packages/data/src/ditto_data/repositories/bars.py
 
 from abc import ABC, abstractmethod
 from datetime import date
@@ -221,7 +221,7 @@ class ETFBarsRepository(IBarsRepository):
 ### 3.2 其他 Repository 接口
 
 ```python
-# packages/datahub/src/ditto_datahub/repositories/factors.py
+# packages/data/src/ditto_data/repositories/factors.py
 
 class IFactorRepository(ABC):
     """因子仓储接口"""
@@ -657,7 +657,7 @@ ditto/
 │   │       └── ml/                     # ML 引擎
 │   │
 │   ├── datahub/                        # DataHub Layer（数据访问）
-│   │   └── src/ditto_datahub/
+│   │   └── src/ditto_data/
 │   │       ├── repositories/            # 仓储接口和实现
 │   │       │   ├── stock/              # 股票仓储
 │   │       │   │   ├── bars_repo.py

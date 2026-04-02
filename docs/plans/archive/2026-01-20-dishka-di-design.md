@@ -33,7 +33,7 @@ apps/port/          ← Composition Root（容器在这里）
   ├── registry/     ← Provider 定义（registry = 注册表）
   └── main.py       ← 容器初始化
 
-packages/datahub/   ← 纯粹领域逻辑，不依赖 dishka
+packages/data/   ← 纯粹领域逻辑，不依赖 dishka
 packages/core/      ← 纯粹领域逻辑，不依赖 dishka
 packages/foundation/ ← 基础设施，不依赖 dishka
 ```
@@ -255,7 +255,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 ```python
 from dishka.integrations.fastapi import FromDishka
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 @router.get("/api/securities")
 async def list_securities(

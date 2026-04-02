@@ -51,10 +51,10 @@
 
 | 文件 | 改动 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/stores/runtime/derived_sqlite/writer.py` | 每个 `write_*()` 新增 `_execute()` 变体（不 commit），原方法改为 enqueue + commit |
-| `packages/datahub/src/ditto_datahub/stores/runtime/research_sqlite/writer.py` | 同上 |
-| `packages/datahub/src/ditto_datahub/services/derived_catalog_service.py` | 关键编排方法注入 `UnitOfWork` |
-| `packages/datahub/src/ditto_datahub/services/research_catalog_service.py` | 同上 |
+| `packages/data/src/ditto_data/stores/runtime/derived_sqlite/writer.py` | 每个 `write_*()` 新增 `_execute()` 变体（不 commit），原方法改为 enqueue + commit |
+| `packages/data/src/ditto_data/stores/runtime/research_sqlite/writer.py` | 同上 |
+| `packages/data/src/ditto_data/services/derived_catalog_service.py` | 关键编排方法注入 `UnitOfWork` |
+| `packages/data/src/ditto_data/services/research_catalog_service.py` | 同上 |
 | `apps/port/src/ditto_port/services/derived/materialization_orchestrator.py` | 通过 Service 调用，不直接调用 Writer |
 
 **验收**：
@@ -181,7 +181,7 @@
 
 | 文件 | 改动 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/services/derived/artifact_reader.py` | `resolve_version()` 优先查询 `status='published'` 的版本 |
+| `packages/data/src/ditto_data/services/derived/artifact_reader.py` | `resolve_version()` 优先查询 `status='published'` 的版本 |
 | `apps/port/src/ditto_port/services/derived/research.py` | 确认不直接读 `active_version` |
 | `apps/port/src/ditto_port/services/derived/materialization_orchestrator.py` | `active_version` 只在 promote 时更新，materialize 不更新 |
 

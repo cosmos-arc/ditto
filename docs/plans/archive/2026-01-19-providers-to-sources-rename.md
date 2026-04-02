@@ -39,7 +39,7 @@ pixi run -e dev type
 
 ### Phase 1: 核心定义重命名
 
-**文件**: `packages/datahub/src/ditto_datahub/providers/provider.py`
+**文件**: `packages/data/src/ditto_data/providers/provider.py`
 
 **操作**: 使用 Edit 工具批量重命名
 
@@ -57,7 +57,7 @@ pixi run -e dev type
 
 **验证**：
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/providers/provider.py
+pixi run -e dev type packages/data/src/ditto_data/providers/provider.py
 ```
 
 ---
@@ -66,7 +66,7 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/providers/provider.py
 
 **2.1 文件重命名**（使用 git mv）:
 ```bash
-cd packages/datahub/src/ditto_datahub
+cd packages/data/src/ditto_data
 git mv providers/provider.py providers/source.py
 ```
 
@@ -86,34 +86,34 @@ git mv providers sources
 **2.3 更新内部导入**（约 7 个文件）:
 
 **源代码**：
-- `packages/datahub/src/ditto_datahub/sources/__init__.py`
-- `packages/datahub/src/ditto_datahub/sources/source.py`
-- `packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py`
-- `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
-- `packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py`
-- `packages/datahub/src/ditto_datahub/sources/tushare/__init__.py`
-- `packages/datahub/src/ditto_datahub/hub.py`
+- `packages/data/src/ditto_data/sources/__init__.py`
+- `packages/data/src/ditto_data/sources/source.py`
+- `packages/data/src/ditto_data/sources/tushare/tushare_source.py`
+- `packages/data/src/ditto_data/sources/tushare/client.py`
+- `packages/data/src/ditto_data/sources/tushare/http_utils.py`
+- `packages/data/src/ditto_data/sources/tushare/__init__.py`
+- `packages/data/src/ditto_data/hub.py`
 
 **导入替换模式**：
 ```python
 # 旧
-from ditto_datahub.sources.provider import DataSource
+from ditto_data.sources.provider import DataSource
 
 # 新
-from ditto_datahub.sources.source import DataSource
+from ditto_data.sources.source import DataSource
 ```
 
 **延迟导入需要更新**（`# noqa: PLC0415`）：
 ```python
 # sources/source.py
-from ditto_datahub.sources.tushare.tushare_source import (  # noqa: PLC0415
+from ditto_data.sources.tushare.tushare_source import (  # noqa: PLC0415
     TushareSource,
 )
 ```
 
 **验证**：
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/ -v
+pixi run -e dev pytest packages/data/tests/unit/ -v
 pixi run -e dev type
 ```
 
@@ -131,10 +131,10 @@ pixi run -e dev type
 **导入替换**：
 ```python
 # 旧
-from ditto_datahub.sources.provider import DataSource, SourceFetchError
+from ditto_data.sources.provider import DataSource, SourceFetchError
 
 # 新
-from ditto_datahub.sources.source import DataSource, SourceFetchError
+from ditto_data.sources.source import DataSource, SourceFetchError
 ```
 
 **3.2 更新 hub 属性访问**：
@@ -160,16 +160,16 @@ pixi run -e dev pytest apps/port/tests/ -v -m "not external"
 **4.1 更新测试导入**（约 12 个文件）：
 
 **单元测试**：
-- `packages/datahub/tests/unit/sources/test_accessor_unit.py`
-- `packages/datahub/tests/unit/sources/test_base_unit.py`
-- `packages/datahub/tests/unit/sources/tushare/test_client_unit.py`
-- `packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py`
-- `packages/datahub/tests/unit/sources/tushare/test_rate_limiter_unit.py`
-- `packages/datahub/tests/unit/sources/tushare/test_source_unit.py`
-- `packages/datahub/tests/unit/sources/tushare/test_http_utils_unit.py`
+- `packages/data/tests/unit/sources/test_accessor_unit.py`
+- `packages/data/tests/unit/sources/test_base_unit.py`
+- `packages/data/tests/unit/sources/tushare/test_client_unit.py`
+- `packages/data/tests/unit/sources/tushare/test_transformer_unit.py`
+- `packages/data/tests/unit/sources/tushare/test_rate_limiter_unit.py`
+- `packages/data/tests/unit/sources/tushare/test_source_unit.py`
+- `packages/data/tests/unit/sources/tushare/test_http_utils_unit.py`
 
 **集成测试**：
-- `packages/datahub/tests/integration/sources/tushare/test_end_to_end_integration.py`
+- `packages/data/tests/integration/sources/tushare/test_end_to_end_integration.py`
 
 **Apps 测试**：
 - `apps/port/tests/unit/ingestion/test_coordinator_unit.py`
@@ -183,11 +183,11 @@ pixi run -e dev pytest apps/port/tests/ -v -m "not external"
 **Mock 路径更新**：
 ```python
 # 旧
-mocker.patch("ditto_datahub.sources.tushare.client._get_tushare_token")
+mocker.patch("ditto_data.sources.tushare.client._get_tushare_token")
 mock_hub.sources.get.return_value = mock_source
 
 # 新
-mocker.patch("ditto_datahub.sources.tushare.client._get_tushare_token")
+mocker.patch("ditto_data.sources.tushare.client._get_tushare_token")
 mock_hub.sources.get.return_value = mock_source
 ```
 
@@ -213,7 +213,7 @@ def mock_datahub() -> MagicMock:
 
 **验证**：
 ```bash
-pixi run -e dev pytest packages/datahub/tests/ -v -m "not external"
+pixi run -e dev pytest packages/data/tests/ -v -m "not external"
 pixi run -e dev pytest apps/port/tests/ -v -m "not external"
 ```
 
@@ -235,11 +235,11 @@ pixi run -e dev pytest apps/port/tests/ -v -m "not external"
 
 **5.3 README 和示例**（约 5 个文件）：
 
-- `packages/datahub/README.md`
-- `packages/datahub/src/ditto_datahub/sources/README.md`
-- `packages/datahub/src/ditto_datahub/sources/tushare/README.md`
-- `packages/datahub/tests/unit/sources/README.md`
-- `packages/datahub/tests/integration/sources/README.md`
+- `packages/data/README.md`
+- `packages/data/src/ditto_data/sources/README.md`
+- `packages/data/src/ditto_data/sources/tushare/README.md`
+- `packages/data/tests/unit/sources/README.md`
+- `packages/data/tests/integration/sources/README.md`
 
 **5.4 计划文档**（标记为历史记录）：
 
@@ -261,8 +261,8 @@ sources/、DataSource、hub.sources
 **重要**: 所有异常类的 `details` 字典中，`"provider"` key 需要改为 `"source"`。
 
 **需要更新的文件**：
-- `packages/datahub/src/ditto_datahub/sources/source.py` - 异常定义
-- `packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py` - 异常构造
+- `packages/data/src/ditto_data/sources/source.py` - 异常定义
+- `packages/data/src/ditto_data/sources/tushare/http_utils.py` - 异常构造
 
 **更新模式**：
 ```python
@@ -298,7 +298,7 @@ pixi run -e dev fmt --check
 **7.4 残留检查**：
 ```bash
 # 检查残留的 providers 导入
-grep -r "from ditto_datahub\\.providers" packages/ apps/ --include="*.py"
+grep -r "from ditto_data\\.providers" packages/ apps/ --include="*.py"
 
 # 检查残留的 DataSource
 grep -r "DataSource" packages/ apps/ --include="*.py"
@@ -324,15 +324,15 @@ git diff --stat
 - 设计文档中的 `providers/` 路径引用
 
 **批次 1：核心源代码修复**（commit: fbd90f1）
-- `packages/datahub/src/ditto_datahub/sources/source.py` - 参数名、文档字符串（约 30 处）
-- `packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py` - 参数 `provider="tushare"` → `source="tushare"`（13 处）
-- `packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py` - 文档、日志、参数（6 处）
-- `packages/datahub/src/ditto_datahub/sources/__init__.py` - 模块文档（1 处）
+- `packages/data/src/ditto_data/sources/source.py` - 参数名、文档字符串（约 30 处）
+- `packages/data/src/ditto_data/sources/tushare/http_utils.py` - 参数 `provider="tushare"` → `source="tushare"`（13 处）
+- `packages/data/src/ditto_data/sources/tushare/tushare_source.py` - 文档、日志、参数（6 处）
+- `packages/data/src/ditto_data/sources/__init__.py` - 模块文档（1 处）
 
 **批次 2：单元测试修复**（commit: bdbe3ed）
-- `packages/datahub/tests/unit/sources/test_base_unit.py` - 参数、断言、方法名（6 处）
-- `packages/datahub/tests/unit/sources/tushare/test_http_utils_unit.py` - 断言 `error.details["provider"]` → `error.details["source"]`（7 处）
-- `packages/datahub/tests/unit/sources/test_accessor_unit.py` - 变量命名、错误消息（6 处）
+- `packages/data/tests/unit/sources/test_base_unit.py` - 参数、断言、方法名（6 处）
+- `packages/data/tests/unit/sources/tushare/test_http_utils_unit.py` - 断言 `error.details["provider"]` → `error.details["source"]`（7 处）
+- `packages/data/tests/unit/sources/test_accessor_unit.py` - 变量命名、错误消息（6 处）
 
 **批次 3：设计文档修复**（commit: 3e3e3cb）
 - `docs/design/01_system_design.md` - 架构表、目录结构、依赖图（3 处）
@@ -341,7 +341,7 @@ git diff --stat
 **验证**：
 ```bash
 pixi run -e dev type
-pixi run -e dev pytest packages/datahub/tests/unit/sources/ -v
+pixi run -e dev pytest packages/data/tests/unit/sources/ -v
 ```
 
 ---
@@ -354,8 +354,8 @@ pixi run -e dev pytest packages/datahub/tests/unit/sources/ -v
 - 测试目录：`providers/` → `sources/`（3 处）
 
 ### 需要类名重命名的文件（1 个核心 + 1 个实现）
-- `packages/datahub/src/ditto_datahub/providers/provider.py`（核心）
-- `packages/datahub/src/ditto_datahub/providers/tushare/tushare_provider.py`（实现）
+- `packages/data/src/ditto_data/providers/provider.py`（核心）
+- `packages/data/src/ditto_data/providers/tushare/tushare_provider.py`（实现）
 
 ### 需要更新导入的文件（约 20+ 个）
 **源代码**：7 个
@@ -384,7 +384,7 @@ pixi run -e dev pytest packages/datahub/tests/unit/sources/ -v
 - [x] 所有测试通过（100%+）
 - [x] pyright 类型检查通过（0 errors）
 - [x] ruff 代码检查通过
-- [x] 无残留的 `from ditto_datahub.sources.` 引用
+- [x] 无残留的 `from ditto_data.sources.` 引用
 - [x] 无残留的 `DataSource` 类名引用
 - [x] 异常 details 字段使用 "source" 而非 "provider"
 - [x] `hub.sources` 属性正常工作

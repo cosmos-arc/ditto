@@ -8,7 +8,7 @@ testing individual code paths and branches without full integration setup.
 from __future__ import annotations
 
 import pytest
-from ditto_datahub.models import Dataset
+from ditto_data.models import Dataset
 from ditto_interfaces.jobs.flows.daily import (
     _collect_results,
     check_trading_day,

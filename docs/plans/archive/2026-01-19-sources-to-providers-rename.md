@@ -45,7 +45,7 @@ stores/ingestion_log.py    sources/metadata.py
 | 类型 | 旧名称 | 新名称 |
 |------|--------|--------|
 | 目录 | `sources/` | `providers/` |
-| 模块 | `ditto_datahub.sources.*` | `ditto_datahub.sources.*` |
+| 模块 | `ditto_data.sources.*` | `ditto_data.sources.*` |
 | 文档引用 | `sources/` | `providers/` |
 | 共享模型 | `sources/metadata.py` | `models/ingestion.py` |
 
@@ -60,13 +60,13 @@ stores/ingestion_log.py    sources/metadata.py
 #### 0.1 创建 models 模块
 
 ```bash
-mkdir -p packages/datahub/src/ditto_datahub/models
+mkdir -p packages/data/src/ditto_data/models
 ```
 
 #### 0.2 移动 metadata.py → models/ingestion.py
 
 ```bash
-cd packages/datahub/src/ditto_datahub
+cd packages/data/src/ditto_data
 git mv sources/metadata.py models/ingestion.py
 ```
 
@@ -75,7 +75,7 @@ git mv sources/metadata.py models/ingestion.py
 ```python
 """Shared data models for DataHub."""
 
-from ditto_datahub.models.ingestion import (
+from ditto_data.models.ingestion import (
     IngestionCursor,
     IngestionLog,
     IngestionStatus,
@@ -91,27 +91,27 @@ __all__ = [
 #### 0.4 更新导入语句（约15个文件）
 
 **源代码**：
-- `packages/datahub/src/ditto_datahub/sources/provider.py`（延迟导入）
-- `packages/datahub/src/ditto_datahub/sources/__init__.py`
-- `packages/datahub/src/ditto_datahub/stores/ingestion_log.py`
+- `packages/data/src/ditto_data/sources/provider.py`（延迟导入）
+- `packages/data/src/ditto_data/sources/__init__.py`
+- `packages/data/src/ditto_data/stores/ingestion_log.py`
 
 **Apps 层**：
 - `apps/port/src/ditto_port/services/ingestion/coordinator.py`
 - `apps/port/src/ditto_port/services/ingestion/metadata.py`
 
 **测试文件**（约10个）：
-- `packages/datahub/tests/unit/sources/test_accessor_unit.py`
-- `packages/datahub/tests/unit/stores/test_ingestion_log_store_unit.py`
-- `packages/datahub/tests/integration/stores/test_ingestion_log_concurrent_integration.py`
+- `packages/data/tests/unit/sources/test_accessor_unit.py`
+- `packages/data/tests/unit/stores/test_ingestion_log_store_unit.py`
+- `packages/data/tests/integration/stores/test_ingestion_log_concurrent_integration.py`
 - 其他相关测试文件
 
 **导入替换模式**：
 ```python
 # 旧
-from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
+from ditto_data.sources.metadata import IngestionLog, IngestionStatus
 
 # 新
-from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
+from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 ```
 
 #### 0.5 更新 sources 层的导入
@@ -121,17 +121,17 @@ from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 **`sources/__init__.py`**：
 ```python
 # 添加
-from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus, IngestionCursor
+from ditto_data.models.ingestion import IngestionLog, IngestionStatus, IngestionCursor
 ```
 
 #### 验证步骤
 
 ```bash
 # 1. 确认无循环依赖
-pixi run -e dev python -c "from ditto_datahub import DataHub; print('OK')"
+pixi run -e dev python -c "from ditto_data import DataHub; print('OK')"
 
 # 2. 运行测试
-pixi run -e dev pytest packages/datahub/tests/unit/ -v
+pixi run -e dev pytest packages/data/tests/unit/ -v
 
 # 3. 类型检查
 pixi run -e dev type
@@ -143,24 +143,24 @@ pixi run -e dev type
 
 **目录重命名**（使用 `git mv`）：
 ```bash
-cd packages/datahub/src/ditto_datahub
+cd packages/data/src/ditto_data
 git mv sources providers
 ```
 
 **更新导入**（7个文件）：
-- `packages/datahub/src/ditto_datahub/providers/__init__.py`
-- `packages/datahub/src/ditto_datahub/providers/provider.py`
-- `packages/datahub/src/ditto_datahub/providers/tushare/tushare_provider.py`
-- `packages/datahub/src/ditto_datahub/providers/tushare/client.py`
-- `packages/datahub/src/ditto_datahub/providers/tushare/http_utils.py`
-- `packages/datahub/src/ditto_datahub/providers/tushare/__init__.py`
-- `packages/datahub/src/ditto_datahub/hub.py`
+- `packages/data/src/ditto_data/providers/__init__.py`
+- `packages/data/src/ditto_data/providers/provider.py`
+- `packages/data/src/ditto_data/providers/tushare/tushare_provider.py`
+- `packages/data/src/ditto_data/providers/tushare/client.py`
+- `packages/data/src/ditto_data/providers/tushare/http_utils.py`
+- `packages/data/src/ditto_data/providers/tushare/__init__.py`
+- `packages/data/src/ditto_data/hub.py`
 
-**导入替换模式**：`from ditto_datahub.sources.*` → `from ditto_datahub.sources.*`
+**导入替换模式**：`from ditto_data.sources.*` → `from ditto_data.sources.*`
 
 **验证**：
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/ -v
+pixi run -e dev pytest packages/data/tests/unit/ -v
 pixi run -e dev type
 ```
 
@@ -170,32 +170,32 @@ pixi run -e dev type
 
 **目录重命名**：
 ```bash
-cd packages/datahub/tests/unit
+cd packages/data/tests/unit
 git mv sources providers
 
-cd packages/datahub/tests/integration
+cd packages/data/tests/integration
 git mv sources providers
 ```
 
 **更新测试导入**（10个文件）：
-- `packages/datahub/tests/unit/providers/test_accessor_unit.py`
-- `packages/datahub/tests/unit/providers/test_base_unit.py`
-- `packages/datahub/tests/unit/providers/tushare/test_client_unit.py`
-- `packages/datahub/tests/unit/providers/tushare/test_transformer_unit.py`
-- `packages/datahub/tests/unit/providers/tushare/test_rate_limiter_unit.py`
-- `packages/datahub/tests/unit/providers/tushare/test_source_unit.py`
-- `packages/datahub/tests/unit/providers/tushare/test_http_utils_unit.py`
-- `packages/datahub/tests/integration/providers/tushare/test_end_to_end_integration.py`
-- `packages/datahub/tests/unit/stores/test_ingestion_log_store_unit.py`
-- `packages/datahub/tests/integration/stores/test_ingestion_log_concurrent_integration.py`
+- `packages/data/tests/unit/providers/test_accessor_unit.py`
+- `packages/data/tests/unit/providers/test_base_unit.py`
+- `packages/data/tests/unit/providers/tushare/test_client_unit.py`
+- `packages/data/tests/unit/providers/tushare/test_transformer_unit.py`
+- `packages/data/tests/unit/providers/tushare/test_rate_limiter_unit.py`
+- `packages/data/tests/unit/providers/tushare/test_source_unit.py`
+- `packages/data/tests/unit/providers/tushare/test_http_utils_unit.py`
+- `packages/data/tests/integration/providers/tushare/test_end_to_end_integration.py`
+- `packages/data/tests/unit/stores/test_ingestion_log_store_unit.py`
+- `packages/data/tests/integration/stores/test_ingestion_log_concurrent_integration.py`
 
 **更新测试 README**（2个）：
-- `packages/datahub/tests/unit/providers/README.md`
-- `packages/datahub/tests/integration/providers/README.md`
+- `packages/data/tests/unit/providers/README.md`
+- `packages/data/tests/integration/providers/README.md`
 
 **验证**：
 ```bash
-pixi run -e dev pytest packages/datahub/tests/ -v -m "not external"
+pixi run -e dev pytest packages/data/tests/ -v -m "not external"
 ```
 
 ---
@@ -233,22 +233,22 @@ pixi run -e dev pytest apps/port/tests/ -v -m "not external"
 - `docs/reviews/2026-01-18-architecture-audit.md`
 
 **README 文件**（5个）：
-- `packages/datahub/src/ditto_datahub/providers/README.md`
-- `packages/datahub/README.md`
-- `packages/datahub/tests/unit/providers/README.md`
-- `packages/datahub/tests/integration/providers/README.md`
-- `packages/datahub/tests/README.md`
+- `packages/data/src/ditto_data/providers/README.md`
+- `packages/data/README.md`
+- `packages/data/tests/unit/providers/README.md`
+- `packages/data/tests/integration/providers/README.md`
+- `packages/data/tests/README.md`
 
 ---
 
 ### Phase 5: 代码注释更新
 
 **源代码文件**：
-- `packages/datahub/src/ditto_datahub/hub.py`（第53、223行）
+- `packages/data/src/ditto_data/hub.py`（第53、223行）
 
 **Providers 文件**：
-- `packages/datahub/src/ditto_datahub/providers/provider.py`
-- `packages/datahub/src/ditto_datahub/providers/tushare/*.py`
+- `packages/data/src/ditto_data/providers/provider.py`
+- `packages/data/src/ditto_data/providers/tushare/*.py`
 
 ---
 
@@ -265,7 +265,7 @@ pixi run -e dev type --all
 pixi run -e dev lint
 
 # 4. 残留检查
-grep -r "from ditto_datahub\.sources" packages/ apps/ --include="*.py"
+grep -r "from ditto_data\.sources" packages/ apps/ --include="*.py"
 grep -r "sources/" docs/ packages/ --include="*.md" | grep -v "providers/"
 ```
 
@@ -274,15 +274,15 @@ grep -r "sources/" docs/ packages/ --include="*.md" | grep -v "providers/"
 ## 关键文件清单
 
 ### Phase 0: 创建 models 模块
-- **新建**：`packages/datahub/src/ditto_datahub/models/__init__.py`
+- **新建**：`packages/data/src/ditto_data/models/__init__.py`
 - **移动**：`sources/metadata.py` → `models/ingestion.py`
 - **更新导入**：约15个文件（源代码 + Apps + 测试）
 
 ### Phase 1-6: 目录重命名
 **需要重命名的目录（3个）**：
-- `packages/datahub/src/ditto_datahub/sources/`
-- `packages/datahub/tests/unit/sources/`
-- `packages/datahub/tests/integration/sources/`
+- `packages/data/src/ditto_data/sources/`
+- `packages/data/tests/unit/sources/`
+- `packages/data/tests/integration/sources/`
 
 **需要更新导入的文件（约20个）**：
 - 源代码：7个
@@ -314,7 +314,7 @@ grep -r "sources/" docs/ packages/ --include="*.md" | grep -v "providers/"
 - [x] 所有测试通过（100%+，1065 passed）
 - [x] pyright 类型检查通过（0 errors, 0 warnings）
 - [x] ruff 代码检查通过
-- [x] 无残留的 `from ditto_datahub.sources.` 引用（代码中）
+- [x] 无残留的 `from ditto_data.sources.` 引用（代码中）
 - [x] 无残留的 `sources/` 路径引用（文档中，排除 `data_sources/` 等合法词）
 - [x] `models/` 模块正确创建并导出共享数据模型
 

@@ -304,7 +304,7 @@ Part 01 (Protocol 升级 + MarketSnapshot)
 - [x] Task 7.3: 实现 `DataHubInstrumentRuleProvider` `[M]` ✅
   - 连接 `TradingRuleReader` + `FeeScheduleReader` PIT 查询
   - `InstrumentDefinition` 从 `InstrumentRegistration` + `Extension` 组装
-  - 文件: `packages/datahub/src/ditto_datahub/services/strategy/instrument_rule_provider.py`
+  - 文件: `packages/data/src/ditto_data/services/strategy/instrument_rule_provider.py`
   - 验收: PIT 查询正确返回对应版本规则
 
 - [x] Task 7.4: `EngineLoop` 注入 `InstrumentRuleProvider` `[M]` ✅
@@ -318,7 +318,7 @@ Part 01 (Protocol 升级 + MarketSnapshot)
   - InMemory 版: 多版本规则查询正确
   - PIT 边界: `effective_to` 不包含
   - 文件: `tests/unit/execution/test_rules_unit.py`
-  - 文件: `packages/datahub/tests/unit/services/strategy/` (新建)
+  - 文件: `packages/data/tests/unit/services/strategy/` (新建)
   - 验收: 规则查询测试通过
 
 ---

@@ -400,7 +400,7 @@ class MacroRelevance(StrEnum):
 ### 9.4 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── sources/
 │   ├── tushare/
 │   │   └── adapters/

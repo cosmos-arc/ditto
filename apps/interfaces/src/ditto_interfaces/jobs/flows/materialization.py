@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
-from ditto_engine.engine.publication_safety import CertificationStage
+from ditto_analytics.publication_safety import CertificationStage
 from prefect import flow
 
 from ditto_interfaces.registry import create_materialization_bundle

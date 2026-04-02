@@ -37,7 +37,7 @@ Ditto 的 DataHub 和 Core 两个包存在 6 个重叠领域概念（Trading、P
 
 | 方案 | 排除理由 |
 |------|---------|
-| `ditto_datahub.models.kernel` 子包 | 语义倒置 — 领域原语（`AssetClass`、`Exchange`）不应放在数据访问层；Core 获取领域类型需依赖数据层，逻辑上不自然 |
+| `ditto_data.models.kernel` 子包 | 语义倒置 — 领域原语（`AssetClass`、`Exchange`）不应放在数据访问层；Core 获取领域类型需依赖数据层，逻辑上不自然 |
 | 放入 `ditto_infra` | Infra 的定位是"zero-domain, zero-business-logic"的技术基础设施，领域类型原语不属于此 |
 | 放入 `ditto_core` | DataHub 无法反向依赖 Core；且 Core 应是领域行为的载体，不应承担"共享类型库"的角色 |
 
@@ -127,13 +127,13 @@ packages/kernel/
 ```
 ditto_port (应用服务层)
   ├── ditto_core (领域层)
-  ├── ditto_datahub (数据访问层)
+  ├── ditto_data (数据访问层)
   ├── ditto_kernel (共享内核)
   └── ditto_infra (基础设施层)
 
 ditto_core      → ditto_kernel
-ditto_datahub   → ditto_kernel
-ditto_port      → ditto_core, ditto_datahub, ditto_kernel, ditto_infra
+ditto_data   → ditto_kernel
+ditto_port      → ditto_core, ditto_data, ditto_kernel, ditto_infra
 ditto_infra     → (无业务依赖)
 ditto_kernel    → (无业务依赖)
 ```
@@ -141,7 +141,7 @@ ditto_kernel    → (无业务依赖)
 **关键约束**：
 - `ditto_kernel` 不依赖任何业务包（Core、DataHub、Port、Infra）
 - `ditto_kernel` 不依赖任何第三方库（仅 stdlib）
-- `ditto_core` 和 `ditto_datahub` 是同层关系，均可依赖 `ditto_kernel`，但彼此不依赖
+- `ditto_core` 和 `ditto_data` 是同层关系，均可依赖 `ditto_kernel`，但彼此不依赖
 
 ### 3.6 import-linter 规则更新
 
@@ -153,7 +153,7 @@ source_modules =
     ditto_kernel.**
 forbidden_modules =
     ditto_core.**
-    ditto_datahub.**
+    ditto_data.**
     ditto_port.**
     ditto_infra.**
 
@@ -162,14 +162,14 @@ name = Core and DataHub must not depend on each other
 type = forbidden
 source_modules =
     ditto_core.**
-    ditto_datahub.**
+    ditto_data.**
 forbidden_modules =
     ditto_core.**
-    ditto_datahub.**
+    ditto_data.**
 # 允许两者都依赖 kernel
 ignore_imports =
     ditto_core.** -> ditto_kernel.*
-    ditto_datahub.** -> ditto_kernel.*
+    ditto_data.** -> ditto_kernel.*
 unmatched_ignore_imports_alerting = none
 ```
 
@@ -210,7 +210,7 @@ DataHub DTO ──[Port 映射函数]──→ Core Domain Model
 
 本设计是 [instrument-id-semantics-unification](2026-03-24-instrument-id-semantics-unification-implementation-plan.md) 的前置架构决策。具体影响：
 
-1. **Phase 0 调整**：`InstrumentId` NewType 放入 `ditto_kernel.identity`（而非原计划的 `ditto_datahub.models.kernel`）
+1. **Phase 0 调整**：`InstrumentId` NewType 放入 `ditto_kernel.identity`（而非原计划的 `ditto_data.models.kernel`）
 2. **Phase 0 扩展**：同步迁移 `AssetClass`、`Exchange`、`InstrumentIdRange`、`OrderSide`、`RunStatus` 到 `ditto_kernel.enums`
 3. **Phase 2 调整**：Core 层 `instrument_id: str` → `instrument_id: InstrumentId` 时，直接从 `ditto_kernel` 导入
 4. **InstrumentRef**：放在 Port 层，不进入 kernel
@@ -304,7 +304,7 @@ DataHub 可以做                          DataHub 不应该做
 
 | 变更 | v1 | v2 | v3 | 理由 |
 |------|----|----|----|------|
-| kernel 位置 | `ditto_datahub.models.kernel` 子包 | 独立 `ditto_kernel` 包 | 不变 | 领域原语不属于数据层 |
+| kernel 位置 | `ditto_data.models.kernel` 子包 | 独立 `ditto_kernel` 包 | 不变 | 领域原语不属于数据层 |
 | 依赖方向 | 不变 | Kernel 作为底层被 Core 和 DataHub 平等依赖 | 不变 | 让依赖方向与语义层次一致 |
 | import-linter | 白名单允许 `core → datahub.models.*` | 双向禁止 core↔datahub | 不变 | 消除特殊规则 |
 | 准入标准 | 4 条 | 5 条（新增"纯值语义"） | 不变 | 防止 kernel 沦为 DTO 库 |

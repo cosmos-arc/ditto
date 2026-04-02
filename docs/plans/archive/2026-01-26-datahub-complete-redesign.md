@@ -106,7 +106,7 @@
 
 ```
 packages/
-├── datahub/src/ditto_datahub/
+├── datahub/src/ditto_data/
 │   ├── domains/
 │   │   ├── market/                      # Market 域：基础市场数据
 │   │   │   ├── stock/
@@ -1410,7 +1410,7 @@ class DataPaths:
 ### A.1 Store 实现
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/base_store.py
+# packages/data/src/ditto_data/stores/base_store.py
 class BaseStore(ABC):
     """Store 基类"""
 
@@ -1481,7 +1481,7 @@ class IngestionService:
 ## 完整数据域清单（最终版 v3.0）
 
 ```
-packages/datahub/src/ditto_datahub/domains/
+packages/data/src/ditto_data/domains/
 ├── market/                      # Market 域：基础市场数据
 │   ├── stock/                   # 股票
 │   ├── etf/                     # ETF

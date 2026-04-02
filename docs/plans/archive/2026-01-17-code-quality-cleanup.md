@@ -94,7 +94,7 @@ class WriteResult:  # ← 重复！
 
 #### 依赖关系验证
 ```bash
-# 在 packages/datahub 中搜索 "from ditto_port" 或 "import ditto_port"
+# 在 packages/data 中搜索 "from ditto_port" 或 "import ditto_port"
 # 结果：0 个匹配 ✅
 
 # DataHub 完全不依赖 Port 层
@@ -111,7 +111,7 @@ class WriteResult:  # ← 重复！
 | `apps/port/src/ditto_port/jobs/flows/helpers.py` | 16 | 删除空块 |
 | `apps/port/src/ditto_port/jobs/flows/daily.py` | 36 | 删除空块 |
 | `apps/port/src/ditto_port/jobs/flows/backfill.py` | 19 | 删除空块 |
-| `packages/datahub/src/ditto_datahub/sources/accessor.py` | 13 | 删除空块 |
+| `packages/data/src/ditto_data/sources/accessor.py` | 13 | 删除空块 |
 
 **🟡 P1：应该删除（10 个）** - 可安全改为直接导入
 
@@ -121,11 +121,11 @@ class WriteResult:  # ← 重复！
 | `apps/port/src/ditto_port/services/ingestion/retry.py` | 21 | `IngestionLogStore` | port → datahub 单向依赖 |
 | `apps/port/src/ditto_port/services/ingestion/coordinator.py` | 23 | `DataHub` | port → datahub 单向依赖 |
 | `apps/port/src/ditto_port/services/ingestion/config/datasets.py` | 22 | `from collections.abc import Iterator` | 标准库类型 |
-| `packages/datahub/src/ditto_datahub/repositories/universe.py` | 18 | `SidAllocator` | repository → runtime 单向依赖 |
-| `packages/datahub/src/ditto_datahub/repositories/security.py` | 13 | `SidAllocator` | repository → runtime 单向依赖 |
-| `packages/datahub/src/ditto_datahub/runtime/sql_engine.py` | 15 | `CalendarStore`, `SecurityStore` | runtime → stores 单向依赖 |
-| `packages/datahub/src/ditto_datahub/runtime/sid_allocator.py` | 9 | `SQLitePool` | 同层内部依赖 |
-| `packages/datahub/src/ditto_datahub/repositories/bars.py` | 27 | `DQIssue` | repository → dq 单向依赖 |
+| `packages/data/src/ditto_data/repositories/universe.py` | 18 | `SidAllocator` | repository → runtime 单向依赖 |
+| `packages/data/src/ditto_data/repositories/security.py` | 13 | `SidAllocator` | repository → runtime 单向依赖 |
+| `packages/data/src/ditto_data/runtime/sql_engine.py` | 15 | `CalendarStore`, `SecurityStore` | runtime → stores 单向依赖 |
+| `packages/data/src/ditto_data/runtime/sid_allocator.py` | 9 | `SQLitePool` | 同层内部依赖 |
+| `packages/data/src/ditto_data/repositories/bars.py` | 27 | `DQIssue` | repository → dq 单向依赖 |
 | `apps/port/src/ditto_port/services/ingestion/backfill.py` | 14 | `CalendarStore`, `IngestionLogStore` | port → datahub 单向依赖 |
 | `apps/port/src/ditto_port/cli/executor.py` | 12 | `DataHub` | port → datahub 单向依赖 |
 
@@ -150,11 +150,11 @@ class WriteResult:  # ← 重复！
 ### PR-1: 修复异常处理缺失上下文（ENG-002）【P0】
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/stores/calendar_store.py:597`
-- `packages/datahub/src/ditto_datahub/stores/security_store.py:586`
-- `packages/datahub/src/ditto_datahub/stores/quarantine_store.py:156`
-- `packages/datahub/src/ditto_datahub/stores/bars_store.py:70`
-- `packages/datahub/src/ditto_datahub/runtime/sid_allocator.py:85`
+- `packages/data/src/ditto_data/stores/calendar_store.py:597`
+- `packages/data/src/ditto_data/stores/security_store.py:586`
+- `packages/data/src/ditto_data/stores/quarantine_store.py:156`
+- `packages/data/src/ditto_data/stores/bars_store.py:70`
+- `packages/data/src/ditto_data/runtime/sid_allocator.py:85`
 
 **修改**：
 ```python
@@ -181,7 +181,7 @@ except Exception as e:
 ### PR-2: 统一 enrich_with_symbol 实现（ENG-001）【P1】
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/repositories/index.py`
+- `packages/data/src/ditto_data/repositories/index.py`
 
 **修改**：
 ```python
@@ -197,7 +197,7 @@ def get_constituents(self, ...) -> pl.DataFrame:
 ### PR-3: TushareClient 资源管理（ENG-003）【P1】
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
+- `packages/data/src/ditto_data/sources/tushare/client.py`
 
 **修改**：
 ```python
@@ -218,7 +218,7 @@ def __exit__(self, *args):  # type: ignore
 ### PR-4: 替换 MD5 为 xxhash（ENG-004）【P2】
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/runtime/sql_engine.py:248`
+- `packages/data/src/ditto_data/runtime/sql_engine.py:248`
 
 **修改**：
 ```python
@@ -231,7 +231,7 @@ cache_key = xxhash.xxh3_64_hexdigest(normalized.encode())
 ### PR-5: 硬编码日期提取为常量（ENG-005）【P2】
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/stores/bars_store.py:154-155`
+- `packages/data/src/ditto_data/stores/bars_store.py:154-155`
 
 **修改**：
 ```python
@@ -249,7 +249,7 @@ end_year = int(end_date[:4]) if end_date else DEFAULT_END_YEAR
 ### PR-6: QuarantineStore 吞异常（ENG-007）【P1】
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/stores/quarantine_store.py:156`
+- `packages/data/src/ditto_data/stores/quarantine_store.py:156`
 
 **修改**：
 ```python
@@ -271,14 +271,14 @@ except (orjson.JSONDecodeError, pl.SchemaError) as e:
 ### PR-7: 统一 WriteResult 定义（ENG-010）【P1】
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/stores/parquet_store_base.py`
-- `packages/datahub/src/ditto_datahub/types.py`
+- `packages/data/src/ditto_data/stores/parquet_store_base.py`
+- `packages/data/src/ditto_data/types.py`
 
 **修改**：
 ```python
 # parquet_store_base.py: 删除本地 WriteResult 定义
 # 从 types.py 导入 WriteResultStore
-from ditto_datahub.types import WriteResultStore as WriteResult
+from ditto_data.types import WriteResultStore as WriteResult
 
 # 或者统一使用 WriteResultStore 作为返回类型
 ```
@@ -288,7 +288,7 @@ from ditto_datahub.types import WriteResultStore as WriteResult
 ### PR-8: 删除未使用的 DataSourceMethods Protocol【P0】
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/sources/base.py:12-41`
+- `packages/data/src/ditto_data/sources/base.py:12-41`
 
 **问题**：
 ```python
@@ -314,8 +314,8 @@ class DataSourceMethods(Protocol):
 ### PR-9: 删除未使用的 get_source() 工厂函数【P1】
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/sources/factory.py`（整个文件）
-- `packages/datahub/src/ditto_datahub/sources/__init__.py:13,26`（移除导入和导出）
+- `packages/data/src/ditto_data/sources/factory.py`（整个文件）
+- `packages/data/src/ditto_data/sources/__init__.py:13,26`（移除导入和导出）
 
 **问题**：
 ```python
@@ -346,8 +346,8 @@ def get_source(name: str) -> DataSource:
 ### PR-10: 清理 Any 类型滥用（ENG-008）【P2】
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/dq/engine.py:125`
-- `packages/datahub/src/ditto_datahub/alerts/manager.py:33`
+- `packages/data/src/ditto_data/dq/engine.py:125`
+- `packages/data/src/ditto_data/alerts/manager.py:33`
 
 **修改**：
 ```python
@@ -375,7 +375,7 @@ def send_alert(
 - `apps/port/src/ditto_port/jobs/flows/helpers.py:16`
 - `apps/port/src/ditto_port/jobs/flows/daily.py:36`
 - `apps/port/src/ditto_port/jobs/flows/backfill.py:19`
-- `packages/datahub/src/ditto_datahub/sources/accessor.py:13`
+- `packages/data/src/ditto_data/sources/accessor.py:13`
 
 **修改**：直接删除 `if TYPE_CHECKING: pass` 代码块和对应的 `from typing import TYPE_CHECKING` 导入。
 
@@ -387,11 +387,11 @@ def send_alert(
 - `apps/port/src/ditto_port/services/ingestion/retry.py:21`
 - `apps/port/src/ditto_port/services/ingestion/coordinator.py:23`
 - `apps/port/src/ditto_port/services/ingestion/config/datasets.py:22`
-- `packages/datahub/src/ditto_datahub/repositories/universe.py:18`
-- `packages/datahub/src/ditto_datahub/repositories/security.py:13`
-- `packages/datahub/src/ditto_datahub/runtime/sql_engine.py:15`
-- `packages/datahub/src/ditto_datahub/runtime/sid_allocator.py:9`
-- `packages/datahub/src/ditto_datahub/repositories/bars.py:27`
+- `packages/data/src/ditto_data/repositories/universe.py:18`
+- `packages/data/src/ditto_data/repositories/security.py:13`
+- `packages/data/src/ditto_data/runtime/sql_engine.py:15`
+- `packages/data/src/ditto_data/runtime/sid_allocator.py:9`
+- `packages/data/src/ditto_data/repositories/bars.py:27`
 - `apps/port/src/ditto_port/services/ingestion/backfill.py:14`
 - `apps/port/src/ditto_port/cli/executor.py:12`
 
@@ -402,13 +402,13 @@ def send_alert(
 # 修改前
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from ditto_datahub.hub import DataHub
+    from ditto_data.hub import DataHub
 
 class Foo:
     hub: "DataHub"
 
 # 修改后
-from ditto_datahub.hub import DataHub
+from ditto_data.hub import DataHub
 
 class Foo:
     hub: DataHub

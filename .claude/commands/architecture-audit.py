@@ -675,7 +675,7 @@ pixi run -e dev lint
         # 统计各层级的模块
         layers = {
             "apps/port": set(),
-            "packages/datahub": set(),
+            "packages/data": set(),
             "packages/foundation": set(),
         }
 
@@ -683,7 +683,7 @@ pixi run -e dev lint
             if module.startswith("apps.port."):
                 layers["apps/port"].add(module)
             elif module.startswith("packages.datahub."):
-                layers["packages/datahub"].add(module)
+                layers["packages/data"].add(module)
             elif module.startswith("packages.foundation."):
                 layers["packages/foundation"].add(module)
 
@@ -695,8 +695,8 @@ pixi run -e dev lint
         diagram += "                 │\n"
         diagram += "                 ▼\n"
         diagram += "┌─────────────────────────────────────────┐\n"
-        diagram += "│  数据访问层 (packages/datahub)            │\n"
-        diagram += f"│  模块数: {len(layers['packages/datahub'])}                    │\n"
+        diagram += "│  数据访问层 (packages/data)            │\n"
+        diagram += f"│  模块数: {len(layers['packages/data'])}                    │\n"
         diagram += "└────────────────┬────────────────────────────┘\n"
         diagram += "                 │\n"
         diagram += "                 ▼\n"

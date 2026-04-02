@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from ditto_engine.engine.factors.spec import FactorContext, FactorSpec
+from ditto_analytics.factors.spec import FactorContext, FactorSpec
 
 
 class TestFactorContext:
@@ -101,7 +101,7 @@ class TestFactorContextInRegistry:
 
     def test_all_existing_specs_have_no_context(self) -> None:
         """All pre-existing specs should have calendar_context=None."""
-        from ditto_engine.engine.factors import ALL_FACTOR_SPECS
+        from ditto_analytics.factors import ALL_FACTOR_SPECS
 
         for spec_id, spec in ALL_FACTOR_SPECS.items():
             assert spec.calendar_context is None, (
@@ -110,4 +110,4 @@ class TestFactorContextInRegistry:
 
     def test_context_field_exported(self) -> None:
         """FactorContext should be importable from factors package."""
-        from ditto_engine.engine.factors import FactorContext  # noqa: F401
+        from ditto_analytics.factors import FactorContext  # noqa: F401

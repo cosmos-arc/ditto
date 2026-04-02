@@ -21,6 +21,7 @@ from ditto_app.query.derived import (
     SeriesDerivedRequest,
     SourceCompareRequest,
 )
+from ditto_data.models import Dataset
 from ditto_data.models.ingestion import (
     BackfillResult,
     IngestionResult,
@@ -28,7 +29,6 @@ from ditto_data.models.ingestion import (
     ResultCounts,
     RetryResult,
 )
-from ditto_datahub.models import Dataset
 from ditto_kernel.enums import AssetClass
 
 from ditto_interfaces.models.capital import (

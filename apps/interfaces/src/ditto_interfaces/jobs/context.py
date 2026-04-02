@@ -13,8 +13,8 @@ from contextlib import contextmanager
 from typing import Any
 
 from ditto_data.quality import QualityEngine
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
 
 from ditto_interfaces.registry.container import make_app_container
 

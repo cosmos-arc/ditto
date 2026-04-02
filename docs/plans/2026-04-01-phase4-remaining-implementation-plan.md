@@ -56,7 +56,7 @@ depth: deep
 
 **选择**：QualityService/L3BatchService/QualityReconciliationService 迁入 `app/process/quality.py`。
 
-**理由**：三个服务**零 port 依赖**（仅依赖 `ditto_data.quality` + `ditto_datahub.services`），是纯编排逻辑。放在 app 层符合 R8 Process 角色定义。
+**理由**：三个服务**零 port 依赖**（仅依赖 `ditto_data.quality` + `ditto_data.services`），是纯编排逻辑。放在 app 层符合 R8 Process 角色定义。
 
 ### D2: ingestion 合并策略
 
@@ -141,7 +141,7 @@ depth: deep
 | `get_all_datasets()` | function | 获取所有数据集 |
 | `get_parallel_datasets()` | function | 获取并行数据集 |
 
-**依赖**：`ditto_datahub.models.Dataset`, `ditto_datahub.errors.DatasetNotFoundError`
+**依赖**：`ditto_data.models.Dataset`, `ditto_data.errors.DatasetNotFoundError`
 
 **验收**：
 - [ ] 所有 11 个符号可从 `ditto_app.config` 导入
@@ -240,7 +240,7 @@ grep -rn "from ditto_port.errors" \
 | `quality/l3_batch_service.py` | 241 | `L3BatchService` |
 | `quality/reconciliation_service.py` | 310 | `QualityReconciliationService` |
 
-**依赖**：`ditto_data.quality`, `ditto_datahub.services`（零 port 依赖）
+**依赖**：`ditto_data.quality`, `ditto_data.services`（零 port 依赖）
 
 **验收**：
 - [ ] 所有 4 个类型可从 `ditto_app.process.quality` 导入
@@ -275,8 +275,8 @@ grep -rn "from ditto_port.errors" \
 - `ditto_data.models.ingestion`（A2 提取的结果类型）
 - `ditto_data.errors`（A1 提取的错误类型）
 - `ditto_app.config`（A3 提取的配置类型）
-- `ditto_datahub.services.*`（MetadataService, MarketService, ...）
-- `ditto_datahub.sources.*`（DataSources）
+- `ditto_data.services.*`（MetadataService, MarketService, ...）
+- `ditto_data.sources.*`（DataSources）
 - `ditto_data.quality`（QualityEngine）
 - `ditto_app.process.quality`（QualityService — B1）
 
@@ -602,7 +602,7 @@ find packages/ apps/ -name "*.py" -exec sed -i 's/ditto_port/ditto_interfaces/g'
 
 **影响的范围**：
 - `packages/app/` — `from ditto_app.query.derived` 无变化，但 `__init__.py` 可能引用 port
-- `packages/datahub/` — `importlinter` 配置引用
+- `packages/data/` — `importlinter` 配置引用
 - `packages/data/` — 测试中可能引用
 - `apps/interfaces/` — 自身内部引用
 - `apps/port/tests/` → `apps/interfaces/tests/`

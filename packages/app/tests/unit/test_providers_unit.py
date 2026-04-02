@@ -26,10 +26,10 @@ from ditto_app.providers import (
     get_app_providers,
 )
 from ditto_app.query.derived import DerivedQueryFacade, StaticRuntimeModeResolver
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.sources import ExchangeTransformers
-from ditto_datahub.sources.source import DataSources
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.source import DataSources
 from ditto_interfaces.registry.core import QualityProvider
 from ditto_interfaces.registry.datahub import (
     CapitalProvider,

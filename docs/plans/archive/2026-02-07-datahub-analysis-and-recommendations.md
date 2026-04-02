@@ -242,7 +242,7 @@ models/
 |------|------|------|------|
 | **A. 独立 contracts 包** | `packages/contracts/` | ✅ 完全独立<br>✅ Domain 和 DataHub 都依赖 | ❌ 增加一个包 |
 | **B. 放在 Domain** | `packages/core/contracts/` | ✅ 契约由 Domain 定义<br>✅ DataHub 实现 | ❌ Domain 依赖数据结构 |
-| **C. 放在 DataHub** | `packages/datahub/contracts/` | ✅ 数据相关<br>✅ 实现靠近定义 | ❌ Domain 依赖 DataHub |
+| **C. 放在 DataHub** | `packages/data/contracts/` | ✅ 数据相关<br>✅ 实现靠近定义 | ❌ Domain 依赖 DataHub |
 | **D. 放在 Foundation** | `packages/foundation/contracts/` | ✅ 基础类型<br>✅ 双方都依赖 | ❌ Foundation 不应包含业务契约 |
 
 ### 3.2 推荐方案：独立 contracts 包
@@ -268,7 +268,7 @@ packages/
 │       # 依赖 contracts
 │
 ├── datahub/                        # DataHub Layer
-│   └── src/ditto_datahub/
+│   └── src/ditto_data/
 │       ├── repositories/
 │       ├── stores/
 │       └── ...
@@ -377,7 +377,7 @@ class BarsData:
 ### 3.4 DataHub 实现契约
 
 ```python
-# packages/datahub/src/ditto_datahub/repositories/bars.py
+# packages/data/src/ditto_data/repositories/bars.py
 
 from ditto_contracts.bars import BarsSchema, BarsQuery, BarsData
 from abc import ABC, abstractmethod
@@ -424,7 +424,7 @@ class StockBarsRepository(IBarsRepository):
 # packages/core/src/ditto_core/factor/engine.py
 
 from ditto_contracts.bars import BarsQuery, BarsData
-from ditto_datahub.repositories import IBarsRepository
+from ditto_data.repositories import IBarsRepository
 
 
 class FactorEngine:
@@ -501,7 +501,7 @@ packages/
 │       └── ...
 │
 ├── datahub/                # 调整：DataHub Layer
-│   └── src/ditto_datahub/
+│   └── src/ditto_data/
 │       ├── repositories/   # 重命名：stores -> repositories
 │       │   ├── stock/
 │       │   ├── etf/

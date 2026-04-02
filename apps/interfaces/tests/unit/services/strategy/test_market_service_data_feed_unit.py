@@ -9,8 +9,8 @@ from ditto_app.process.strategy import (
     MarketServiceDataFeed,
     MarketServiceDataFeedConfig,
 )
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 InstrumentId = _InstrumentId

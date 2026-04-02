@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.services.capital_service import CapitalService
+from ditto_data.services.capital_service import CapitalService
 from ditto_interfaces.api.routes.capital import router
 from fastapi import FastAPI
 from fastapi.testclient import TestClient

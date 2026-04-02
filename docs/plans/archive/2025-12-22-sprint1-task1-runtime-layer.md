@@ -19,28 +19,28 @@ SQLitePool → FileLockManager → SidAllocator
 ## 实现计划
 
 ### Phase 1: 基础设施（必须按顺序）
-1. **类型定义** (`packages/datahub/src/ditto_data_hub/types.py`)
+1. **类型定义** (`packages/data/src/ditto_data_hub/types.py`)
    - SidRange NamedTuple
    - Asset Class枚举定义
 
-2. **SQLite连接池** (`packages/datahub/src/ditto_data_hub/runtime/sqlite_pool.py`)
+2. **SQLite连接池** (`packages/data/src/ditto_data_hub/runtime/sqlite_pool.py`)
    - 线程安全的连接管理
    - 简单的连接池实现
    - 支持事务操作
 
-3. **文件锁管理器** (`packages/datahub/src/ditto_data_hub/runtime/file_lock.py`)
+3. **文件锁管理器** (`packages/data/src/ditto_data_hub/runtime/file_lock.py`)
    - 跨平台文件锁（Windows/Unix）
    - 上下文管理器支持
    - 非阻塞模式
 
 ### Phase 2: 核心组件
-4. **SID分配器** (`packages/datahub/src/ditto_data_hub/runtime/sid_allocator.py`)
+4. **SID分配器** (`packages/data/src/ditto_data_hub/runtime/sid_allocator.py`)
    - 支持etf/stock/index三类资产
    - 原子性分配操作
    - SID范围检查
    - 数据持久化到sid_sequence表
 
-5. **DQ检查器** (`packages/datahub/src/ditto_data_hub/runtime/dq_checker.py`)
+5. **DQ检查器** (`packages/data/src/ditto_data_hub/runtime/dq_checker.py`)
    - 基础框架搭建
    - 支持YAML配置
    - 规则执行器
@@ -77,7 +77,7 @@ SQLitePool → FileLockManager → SidAllocator
 ## 文件清单
 
 ```
-packages/datahub/src/ditto_data_hub/
+packages/data/src/ditto_data_hub/
 ├── types.py                  # 类型定义
 ├── runtime/
 │   ├── __init__.py          # 模块导出

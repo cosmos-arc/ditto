@@ -14,30 +14,31 @@ from ditto_analytics.materialization.models import (
     DerivedRunTrigger,
     DerivedVersionStatus,
 )
+from ditto_analytics.publication_safety import CertificationStage
 from ditto_app.process.materialization import DerivedPublicationFacade
-from ditto_datahub.models.derived import (
+from ditto_data.models.derived import (
     DerivedRunRecord,
     DerivedSpecRecord,
     DerivedVersionRecord,
 )
-from ditto_datahub.models.publication_safety import (
+from ditto_data.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
-from ditto_datahub.services import (
+from ditto_data.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
     PublicationSafetyRecordService,
 )
-from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
-from ditto_datahub.services.publication_safety_record_service import (
+from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotService
+from ditto_data.services.publication_safety_record_service import (
     PublicationSafetyRuntimeStores,
 )
-from ditto_datahub.stores.runtime.derived_sqlite import (
+from ditto_data.stores.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_datahub.stores.runtime.publication_safety import (
+from ditto_data.stores.runtime.publication_safety import (
     CertificationReader,
     CertificationWriter,
     ManifestReader,
@@ -47,13 +48,12 @@ from ditto_datahub.stores.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
 )
-from ditto_datahub.stores.runtime.publication_shadow_sqlite import (
+from ditto_data.stores.runtime.publication_shadow_sqlite import (
     SQLiteDerivedShadowSlotReader,
     SQLiteDerivedShadowSlotWriter,
 )
-from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_engine.engine.publication_safety import CertificationStage
-from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_data.stores.sqlite_client import SQLiteClient
+from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_infra.foundation import SQLitePool
 
 
@@ -63,9 +63,9 @@ def sqlite_client(tmp_path: Path):
     schema_path = (
         Path(__file__).resolve().parents[6]
         / "packages"
-        / "datahub"
+        / "data"
         / "src"
-        / "ditto_datahub"
+        / "ditto_data"
         / "scripts"
         / "schema.sql"
     )

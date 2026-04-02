@@ -8,12 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from dishka import Provider, Scope, provide
-from ditto_data.quality.config import DQSettings
-from ditto_datahub.config import (
+from ditto_data.config import (
     DataSourceSettings,
     FileStorageSettings,
 )
-from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.quality.config import DQSettings
 from ditto_infra.foundation.cache import DataCache
 from ditto_infra.foundation.config import (
     ConfigInitCoordinator,

@@ -45,7 +45,7 @@
 
 ### 2.3 配置模型
 
-- `QuestDBSettings` / `KvrocksSettings` 放在 `packages/datahub/src/ditto_datahub/config/data_store.py`（D6）
+- `QuestDBSettings` / `KvrocksSettings` 放在 `packages/data/src/ditto_data/config/data_store.py`（D6）
 - `enabled: bool = False` 用于 DI 切换 Real/Fake（D3）
 - `ttl_profile: str = "intraday_hot"` 支持 D7
 - 环境变量使用 `QUESTDB_HOST`、`KVROCKS_PORT` 等（D5）

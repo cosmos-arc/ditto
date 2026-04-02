@@ -47,11 +47,11 @@
 **完成日期**: 2025-12-28
 
 **涉及文件**：
-- `packages/datahub/src/ditto_datahub/accessors/bars.py`
-- `packages/datahub/src/ditto_data_hub/stores/adj_factor_store.py`
-- `packages/datahub/src/ditto_data_hub/runtime/sqlite_pool.py`
-- `packages/datahub/tests/unit/accessors/test_bars_repository.py`
-- `packages/datahub/tests/test_adj_factor_store.py`
+- `packages/data/src/ditto_data/accessors/bars.py`
+- `packages/data/src/ditto_data_hub/stores/adj_factor_store.py`
+- `packages/data/src/ditto_data_hub/runtime/sqlite_pool.py`
+- `packages/data/tests/unit/accessors/test_bars_repository.py`
+- `packages/data/tests/test_adj_factor_store.py`
 
 **关键任务**：
 | Task | 描述 | 状态 |
@@ -86,7 +86,7 @@
 
 **新增文件结构**：
 ```
-packages/datahub/
+packages/data/
 ├── config/
 │   └── dq_rules/                     # YAML 规则定义
 │       ├── etf_daily.yml             # ETF 日频数据规则
@@ -95,7 +95,7 @@ packages/datahub/
 │       ├── index_weight.yml          # 指数权重规则
 │       └── adj_factor.yml            # 复权因子规则
 │
-├── src/ditto_datahub/
+├── src/ditto_data/
 │   ├── dq/
 │   │   ├── __init__.py
 │   │   ├── models.py                 # Pydantic 规则模型
@@ -196,7 +196,7 @@ apps/port/src/ditto_port/
 
 **新增文件结构**：
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── stores/
 │   ├── universe_store.py             # UniverseStore (PIT 查询)
 │   └── index_weight_store.py         # IndexWeightStore (PIT 查询)
@@ -244,7 +244,7 @@ packages/datahub/src/ditto_datahub/
 
 **新增文件结构**：
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── alerts/                            # 告警模块
 │   ├── __init__.py
 │   ├── base.py                        # AlertSender 抽象基类
@@ -320,16 +320,16 @@ apps/port/src/ditto_port/ingestion/
 
 **新增文件结构**：
 ```
-packages/datahub/src/ditto_datahub/runtime/
+packages/data/src/ditto_data/runtime/
 ├── sql_engine.py                      # 查询优化（增强）
 ├── cache.py                           # DataCache 实现
 └── pit_helper.py                      # PIT SQL 辅助函数
 
-packages/datahub/src/ditto_datahub/stores/
+packages/data/src/ditto_data/stores/
 ├── parquet_store_base.py              # ParquetStoreBase 基类 (B.4)
 └── stock_status_store.py              # StockStatusStore (B.3)
 
-packages/datahub/README.md              # DataHub 文档 (A.9)
+packages/data/README.md              # DataHub 文档 (A.9)
 docs/plans/2025-12-29-pr19-review-fixes.md  # PR #19 修复计划
 
 apps/port/src/ditto_port/
@@ -563,54 +563,54 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 ### 已完成文件（53 个）
 | 文件路径 | 用途 | 状态 |
 |----------|------|------|
-| `packages/datahub/config/dq_rules/etf_daily.yml` | ETF 规则 | ✅ |
-| `packages/datahub/config/dq_rules/index_daily.yml` | 指数规则 | ✅ |
-| `packages/datahub/config/dq_rules/stock_daily.yml` | 股票规则 | ✅ |
-| `packages/datahub/config/dq_rules/index_weight.yml` | 权重规则 | ✅ |
-| `packages/datahub/config/dq_rules/adj_factor.yml` | 复权规则 | ✅ |
-| `packages/datahub/src/ditto_datahub/dq/models.py` | 规则模型 | ✅ |
-| `packages/datahub/src/ditto_datahub/dq/engine.py` | DQ 引擎 | ✅ |
-| `packages/datahub/src/ditto_datahub/dq/result.py` | 结果模型 | ✅ |
-| `packages/datahub/src/ditto_datahub/dq/report.py` | 报告生成 | ✅ |
-| `packages/datahub/src/ditto_datahub/dq/checkers/technical.py` | L1 检查器 | ✅ |
-| `packages/datahub/src/ditto_datahub/dq/checkers/business.py` | L2 检查器 | ✅ |
-| `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py` | L3 检查器 | ✅ |
-| `packages/datahub/src/ditto_datahub/stores/quarantine_store.py` | 隔离区 | ✅ |
-| `packages/datahub/src/ditto_datahub/stores/universe_store.py` | Universe 存储 | ✅ |
-| `packages/datahub/src/ditto_datahub/stores/index_weight_store.py` | Index 权重存储 | ✅ |
-| `packages/datahub/src/ditto_datahub/stores/ingestion_metadata_store.py` | 摄取元数据 | ✅ Phase 3 |
-| `packages/datahub/src/ditto_datahub/accessors/universe.py` | Universe 仓库 | ✅ |
-| `packages/datahub/src/ditto_datahub/accessors/index.py` | Index 仓库 | ✅ |
-| `packages/datahub/src/ditto_datahub/accessors/bars.py` | Bars (含 DQ) | ✅ Phase 3 |
-| `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py` | Freeze 管理 | ✅ |
-| `packages/datahub/src/ditto_datahub/types.py` | FreezeManifest 类型 | ✅ |
-| `packages/datahub/src/ditto_datahub/alerts/base.py` | AlertSender 基类 | ✅ Phase 3 |
-| `packages/datahub/src/ditto_datahub/alerts/manager.py` | AlertManager | ✅ Phase 3 |
-| `packages/datahub/src/ditto_datahub/alerts/email.py` | Email 告警 | ✅ Phase 3 |
-| `packages/datahub/src/ditto_datahub/alerts/telegram.py` | Telegram 告警 | ✅ Phase 3 |
-| `packages/datahub/src/ditto_datahub/alerts/wechat.py` | WeChat 告警 | ✅ Phase 3 |
-| `packages/datahub/src/ditto_datahub/sources/base.py` | 增量接口 | ✅ Phase 3 |
-| `packages/datahub/src/ditto_datahub/sources/metadata.py` | 元数据源 | ✅ Phase 3 |
-| `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | Tushare 增量 | ✅ Phase 3 |
+| `packages/data/config/dq_rules/etf_daily.yml` | ETF 规则 | ✅ |
+| `packages/data/config/dq_rules/index_daily.yml` | 指数规则 | ✅ |
+| `packages/data/config/dq_rules/stock_daily.yml` | 股票规则 | ✅ |
+| `packages/data/config/dq_rules/index_weight.yml` | 权重规则 | ✅ |
+| `packages/data/config/dq_rules/adj_factor.yml` | 复权规则 | ✅ |
+| `packages/data/src/ditto_data/dq/models.py` | 规则模型 | ✅ |
+| `packages/data/src/ditto_data/dq/engine.py` | DQ 引擎 | ✅ |
+| `packages/data/src/ditto_data/dq/result.py` | 结果模型 | ✅ |
+| `packages/data/src/ditto_data/dq/report.py` | 报告生成 | ✅ |
+| `packages/data/src/ditto_data/dq/checkers/technical.py` | L1 检查器 | ✅ |
+| `packages/data/src/ditto_data/dq/checkers/business.py` | L2 检查器 | ✅ |
+| `packages/data/src/ditto_data/dq/checkers/statistical.py` | L3 检查器 | ✅ |
+| `packages/data/src/ditto_data/stores/quarantine_store.py` | 隔离区 | ✅ |
+| `packages/data/src/ditto_data/stores/universe_store.py` | Universe 存储 | ✅ |
+| `packages/data/src/ditto_data/stores/index_weight_store.py` | Index 权重存储 | ✅ |
+| `packages/data/src/ditto_data/stores/ingestion_metadata_store.py` | 摄取元数据 | ✅ Phase 3 |
+| `packages/data/src/ditto_data/accessors/universe.py` | Universe 仓库 | ✅ |
+| `packages/data/src/ditto_data/accessors/index.py` | Index 仓库 | ✅ |
+| `packages/data/src/ditto_data/accessors/bars.py` | Bars (含 DQ) | ✅ Phase 3 |
+| `packages/data/src/ditto_data/runtime/freeze_manager.py` | Freeze 管理 | ✅ |
+| `packages/data/src/ditto_data/types.py` | FreezeManifest 类型 | ✅ |
+| `packages/data/src/ditto_data/alerts/base.py` | AlertSender 基类 | ✅ Phase 3 |
+| `packages/data/src/ditto_data/alerts/manager.py` | AlertManager | ✅ Phase 3 |
+| `packages/data/src/ditto_data/alerts/email.py` | Email 告警 | ✅ Phase 3 |
+| `packages/data/src/ditto_data/alerts/telegram.py` | Telegram 告警 | ✅ Phase 3 |
+| `packages/data/src/ditto_data/alerts/wechat.py` | WeChat 告警 | ✅ Phase 3 |
+| `packages/data/src/ditto_data/sources/base.py` | 增量接口 | ✅ Phase 3 |
+| `packages/data/src/ditto_data/sources/metadata.py` | 元数据源 | ✅ Phase 3 |
+| `packages/data/src/ditto_data/sources/tushare/source.py` | Tushare 增量 | ✅ Phase 3 |
 | `apps/port/src/ditto_port/ingestion/tasks/dq_batch.py` | L3 任务 | ✅ |
 | `apps/port/src/ditto_port/ingestion/tasks/monitoring.py` | 质量监控 | ✅ Phase 3 |
 | `apps/port/src/ditto_port/ingestion/flows/scheduled_ingest.py` | 定时摄取 | ✅ Phase 3 |
 | **测试文件** (22 个) | | |
-| `packages/datahub/tests/unit/dq/*.py` | DQ 测试 | ✅ |
-| `packages/datahub/tests/unit/stores/test_*.py` | Store 测试 | ✅ |
-| `packages/datahub/tests/unit/accessors/test_*.py` | Accessor 测试 | ✅ |
-| `packages/datahub/tests/unit/alerts/*.py` | Alerts 测试 | ✅ Phase 3 |
-| `packages/datahub/tests/unit/sources/test_*.py` | Source 测试 | ✅ Phase 3 |
+| `packages/data/tests/unit/dq/*.py` | DQ 测试 | ✅ |
+| `packages/data/tests/unit/stores/test_*.py` | Store 测试 | ✅ |
+| `packages/data/tests/unit/accessors/test_*.py` | Accessor 测试 | ✅ |
+| `packages/data/tests/unit/alerts/*.py` | Alerts 测试 | ✅ Phase 3 |
+| `packages/data/tests/unit/sources/test_*.py` | Source 测试 | ✅ Phase 3 |
 | `apps/port/tests/unit/ingestion/test_monitoring.py` | 监控测试 | ✅ Phase 3 |
 
 ### 待建文件（Phase 4-5）
 | 文件路径 | 用途 | 状态 |
 |----------|------|------|
-| `packages/datahub/src/ditto_datahub/runtime/cache.py` | 缓存层 | ✅ Phase 4 |
-| `packages/datahub/src/ditto_datahub/runtime/pit_helper.py` | PIT 辅助函数 | ✅ Phase 4 |
-| `packages/datahub/tests/unit/runtime/test_cache.py` | 缓存测试 | ✅ Phase 4 |
-| `packages/datahub/tests/unit/runtime/test_pit_helper.py` | PIT 测试 | ✅ Phase 4 |
-| `packages/datahub/src/ditto_datahub/sources/failover.py` | 自动切换 | ❌ |
+| `packages/data/src/ditto_data/runtime/cache.py` | 缓存层 | ✅ Phase 4 |
+| `packages/data/src/ditto_data/runtime/pit_helper.py` | PIT 辅助函数 | ✅ Phase 4 |
+| `packages/data/tests/unit/runtime/test_cache.py` | 缓存测试 | ✅ Phase 4 |
+| `packages/data/tests/unit/runtime/test_pit_helper.py` | PIT 测试 | ✅ Phase 4 |
+| `packages/data/src/ditto_data/sources/failover.py` | 自动切换 | ❌ |
 | `apps/port/src/ditto_port/validation/golden_dataset.py` | 黄金数据集管理器 | ❌ |
 | `apps/port/src/ditto_port/validation/comparison.py` | 数据比对引擎 | ❌ |
 | `apps/port/src/ditto_port/validation/report.py` | 验证报告生成 | ❌ |
@@ -621,21 +621,21 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 |----------|----------|------|
 | `pixi.toml` | 添加 cachebox/granian/orjson，移除 uvicorn | ✅ Phase 4 |
 | `packages/foundation/src/ditto_foundation/observability/metrics.py` | 新增缓存/SQL/JSON 指标 | ✅ Phase 4 |
-| `packages/datahub/src/ditto_datahub/runtime/cache.py` | DataCache 实现 | ✅ Phase 4 |
-| `packages/datahub/src/ditto_datahub/runtime/pit_helper.py` | PIT 辅助函数 | ✅ Phase 4 |
-| `packages/datahub/src/ditto_datahub/runtime/sql_engine.py` | 查询计划缓存/慢查询日志/pit_query | ✅ Phase 4 |
-| `packages/datahub/src/ditto_datahub/runtime/__init__.py` | 导出 DataCache, PitHelper | ✅ Phase 4 |
-| `packages/datahub/src/ditto_datahub/stores/calendar_store.py` | 集成 DataCache | ✅ Phase 4 |
-| `packages/datahub/src/ditto_datahub/stores/security_store.py` | 集成 DataCache，移除 @lru_cache | ✅ Phase 4 |
+| `packages/data/src/ditto_data/runtime/cache.py` | DataCache 实现 | ✅ Phase 4 |
+| `packages/data/src/ditto_data/runtime/pit_helper.py` | PIT 辅助函数 | ✅ Phase 4 |
+| `packages/data/src/ditto_data/runtime/sql_engine.py` | 查询计划缓存/慢查询日志/pit_query | ✅ Phase 4 |
+| `packages/data/src/ditto_data/runtime/__init__.py` | 导出 DataCache, PitHelper | ✅ Phase 4 |
+| `packages/data/src/ditto_data/stores/calendar_store.py` | 集成 DataCache | ✅ Phase 4 |
+| `packages/data/src/ditto_data/stores/security_store.py` | 集成 DataCache，移除 @lru_cache | ✅ Phase 4 |
 | `apps/port/src/ditto_port/main.py` | Granian 服务器 + ORJSONResponse | ✅ Phase 4 |
-| `packages/datahub/src/ditto_datahub/accessors/bars.py` | 集成 DQEngine (Task 1.8) | 📝 Phase 3 |
-| `packages/datahub/src/ditto_datahub/sources/base.py` | 增量更新接口 | ❌ |
-| `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | 增量适配 | ❌ |
-| `packages/datahub/src/ditto_datahub/runtime/schema.sql` | 添加 index_weight 表 | ✅ |
-| `packages/datahub/src/ditto_datahub/stores/__init__.py` | 导出新 Store | ✅ |
-| `packages/datahub/src/ditto_datahub/accessors/__init__.py` | 导出新 Accessor | ✅ |
-| `packages/datahub/src/ditto_datahub/hub.py` | freeze/universe/index 接口 | ✅ |
-| `packages/datahub/tests/unit/test_hub.py` | DataHub 集成测试 | ✅ |
+| `packages/data/src/ditto_data/accessors/bars.py` | 集成 DQEngine (Task 1.8) | 📝 Phase 3 |
+| `packages/data/src/ditto_data/sources/base.py` | 增量更新接口 | ❌ |
+| `packages/data/src/ditto_data/sources/tushare/source.py` | 增量适配 | ❌ |
+| `packages/data/src/ditto_data/runtime/schema.sql` | 添加 index_weight 表 | ✅ |
+| `packages/data/src/ditto_data/stores/__init__.py` | 导出新 Store | ✅ |
+| `packages/data/src/ditto_data/accessors/__init__.py` | 导出新 Accessor | ✅ |
+| `packages/data/src/ditto_data/hub.py` | freeze/universe/index 接口 | ✅ |
+| `packages/data/tests/unit/test_hub.py` | DataHub 集成测试 | ✅ |
 | `apps/port/src/ditto_port/ingestion/scheduler.py` | 定时调度 | ❌ |
 | `apps/port/src/ditto_port/api/ingestion.py` | API 触发 | ❌ |
 
@@ -729,7 +729,7 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
   - 实现 `force` 参数强制重取
   - 实现 checksum 比较和数据变更检测
 - ✅ **DQ 配置路径修复** (commit fd279ae)
-  - 修复路径指向 `packages/datahub/config/dq_rules`
+  - 修复路径指向 `packages/data/config/dq_rules`
 - ✅ 测试覆盖：新增 20+ 测试全部通过
 
 ### 2025-12-28

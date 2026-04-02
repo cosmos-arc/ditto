@@ -18,14 +18,7 @@ from ditto_data.errors import (
     NetworkError,
     SourceFetchError,
 )
-from ditto_data.models.ingestion import (
-    BackfillResult,
-    IngestionResult,
-    InstrumentIngestParams,
-    ResultCounts,
-    RetryResult,
-)
-from ditto_datahub.models import (
+from ditto_data.models import (
     FX_CODE_TO_INSTRUMENT_ID,
     METAL_CODE_ALIASES,
     VIX_CODE_TO_INSTRUMENT_ID,
@@ -34,20 +27,28 @@ from ditto_datahub.models import (
     OnDuplicate,
     Source,
 )
-from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.models.storage import WriteResult
-from ditto_datahub.services import (
+from ditto_data.models.ingestion import (
+    BackfillResult,
+    IngestionLog,
+    IngestionResult,
+    IngestionStatus,
+    InstrumentIngestParams,
+    ResultCounts,
+    RetryResult,
+)
+from ditto_data.models.storage import WriteResult
+from ditto_data.services import (
     FreezeService,
     IngestionCursorService,
     IngestionLogService,
 )
-from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.fundamental_service import FundamentalService
-from ditto_datahub.services.macro_service import MacroService
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.source_service import SourceService
-from ditto_datahub.sources.base import DataSource
+from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.macro_service import MacroService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.source_service import SourceService
+from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger, traced
 from ditto_infra.foundation.util.checksum import ChecksumCompute
 from pydantic import BaseModel, ConfigDict, Field
@@ -991,7 +992,7 @@ def get_sw_index_codes(
         SW 行业指数代码列表（Tushare source_ticker 格式）.
 
     Example:
-        >>> from ditto_datahub.sources import TushareSource
+        >>> from ditto_data.sources import TushareSource
         >>> source = TushareSource(settings, token)
         >>> codes = get_sw_index_codes(source, level=1)
         >>> print(codes[:3])
@@ -1043,7 +1044,7 @@ def get_all_index_codes(
         指数代码列表（Tushare source_ticker 格式）。
 
     Example:
-        >>> from ditto_datahub.sources import TushareSource
+        >>> from ditto_data.sources import TushareSource
         >>> source = TushareSource(settings, token)
         >>> # 获取市场指数 + 风格指数 + SW L1/L2 行业指数
         >>> codes = get_all_index_codes(

@@ -67,7 +67,7 @@
 ## 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/domains/
+packages/data/src/ditto_data/domains/
 ├── fundamental/              # 新增
 │   ├── __init__.py
 │   ├── financial/           # 财务报表子域
@@ -113,15 +113,15 @@ packages/datahub/src/ditto_datahub/domains/
 #### Task 1: 创建 Fundamental 域目录和 __init__.py
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/domains/fundamental/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/fundamental/financial/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/fundamental/corporate/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/fundamental/forecast/__init__.py`
+- Create: `packages/data/src/ditto_data/domains/fundamental/__init__.py`
+- Create: `packages/data/src/ditto_data/domains/fundamental/financial/__init__.py`
+- Create: `packages/data/src/ditto_data/domains/fundamental/corporate/__init__.py`
+- Create: `packages/data/src/ditto_data/domains/fundamental/forecast/__init__.py`
 
 **Step 1: 创建域级 __init__.py**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/fundamental/__init__.py
+# packages/data/src/ditto_data/domains/fundamental/__init__.py
 """Fundamental Domain - 企业基本面数据域。
 
 提供财务报表、分红、公司行为、业绩预告等数据的存储和查询，
@@ -132,7 +132,7 @@ packages/datahub/src/ditto_datahub/domains/
 - PIT 时间: effective_from, effective_to
 """
 
-from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
+from ditto_data.domains.fundamental.fundamental_store import FundamentalStore
 
 __all__ = ["FundamentalStore"]
 ```
@@ -140,15 +140,15 @@ __all__ = ["FundamentalStore"]
 **Step 2: 创建子域 __init__.py 文件**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/fundamental/financial/__init__.py
+# packages/data/src/ditto_data/domains/fundamental/financial/__init__.py
 """Financial 子域 - 财务报表数据。"""
 
 # 导入将在后续任务中添加
 
-# packages/datahub/src/ditto_datahub/domains/fundamental/corporate/__init__.py
+# packages/data/src/ditto_data/domains/fundamental/corporate/__init__.py
 """Corporate 子域 - 公司行为数据。"""
 
-# packages/datahub/src/ditto_datahub/domains/fundamental/forecast/__init__.py
+# packages/data/src/ditto_data/domains/fundamental/forecast/__init__.py
 """Forecast 子域 - 业绩预告/快报数据。"""
 ```
 
@@ -163,7 +163,7 @@ Expected: PASS
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/fundamental/
+git add packages/data/src/ditto_data/domains/fundamental/
 git commit -m "feat(fundamental): create fundamental domain structure"
 ```
 
@@ -172,20 +172,20 @@ git commit -m "feat(fundamental): create fundamental domain structure"
 #### Task 2: 实现 FundamentalStore 基础结构
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/domains/fundamental/fundamental_store.py`
-- Test: `packages/datahub/tests/unit/domains/fundamental/test_fundamental_store_unit.py`
+- Create: `packages/data/src/ditto_data/domains/fundamental/fundamental_store.py`
+- Test: `packages/data/tests/unit/domains/fundamental/test_fundamental_store_unit.py`
 
 **Step 1: 编写测试 - 基础结构**
 
 ```python
-# packages/datahub/tests/unit/domains/fundamental/test_fundamental_store_unit.py
+# packages/data/tests/unit/domains/fundamental/test_fundamental_store_unit.py
 """Unit tests for FundamentalStore."""
 
 from __future__ import annotations
 
 import pytest
-from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.domains.fundamental.fundamental_store import FundamentalStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
 
@@ -220,12 +220,12 @@ Expected: FAIL with "FundamentalStore not defined"
 **Step 3: 实现 FundamentalStore 基础结构**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/fundamental/fundamental_store.py
+# packages/data/src/ditto_data/domains/fundamental/fundamental_store.py
 """FundamentalStore for fundamental data with PIT support."""
 
 from __future__ import annotations
 
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class FundamentalStore:
@@ -269,7 +269,7 @@ Expected: PASS
 **Step 5: 提交**
 
 ```bash
-git add tests/unit/domains/fundamental/ packages/datahub/src/ditto_datahub/domains/fundamental/fundamental_store.py
+git add tests/unit/domains/fundamental/ packages/data/src/ditto_data/domains/fundamental/fundamental_store.py
 git commit -m "feat(fundamental): implement FundamentalStore base structure"
 ```
 
@@ -280,8 +280,8 @@ git commit -m "feat(fundamental): implement FundamentalStore base structure"
 #### Task 3: 迁移 balance_sheet 功能
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/fundamental/fundamental_store.py`
-- Test: `packages/datahub/tests/unit/domains/fundamental/test_fundamental_store_unit.py`
+- Modify: `packages/data/src/ditto_data/domains/fundamental/fundamental_store.py`
+- Test: `packages/data/tests/unit/domains/fundamental/test_fundamental_store_unit.py`
 
 **Step 1: 编写测试 - balance_sheet**
 
@@ -468,7 +468,7 @@ Expected: PASS
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/fundamental/fundamental_store.py tests/unit/domains/fundamental/test_fundamental_store_unit.py
+git add packages/data/src/ditto_data/domains/fundamental/fundamental_store.py tests/unit/domains/fundamental/test_fundamental_store_unit.py
 git commit -m "feat(fundamental): migrate balance_sheet from capital"
 ```
 
@@ -479,8 +479,8 @@ git commit -m "feat(fundamental): migrate balance_sheet from capital"
 **Pattern 同 Task 3，迁移 income_statement 的 write/get 方法**
 
 **关键代码位置参考：**
-- 源文件：`packages/datahub/src/ditto_datahub/domains/capital/capital_store.py:224-363`
-- 测试：`packages/datahub/tests/unit/domains/capital/test_capital_store_unit.py`
+- 源文件：`packages/data/src/ditto_data/domains/capital/capital_store.py:224-363`
+- 测试：`packages/data/tests/unit/domains/capital/test_capital_store_unit.py`
 
 **提交：**
 ```bash
@@ -494,8 +494,8 @@ git commit -m "feat(fundamental): migrate income_statement from capital"
 **Pattern 同 Task 3，迁移 cash_flow 的 write/get 方法**
 
 **关键代码位置参考：**
-- 源文件：`packages/datahub/src/ditto_datahub/domains/capital/capital_store.py:366-505`
-- 测试：`packages/datahub/tests/unit/domains/capital/test_capital_store_unit.py`
+- 源文件：`packages/data/src/ditto_data/domains/capital/capital_store.py:366-505`
+- 测试：`packages/data/tests/unit/domains/capital/test_capital_store_unit.py`
 
 **提交：**
 ```bash
@@ -509,8 +509,8 @@ git commit -m "feat(fundamental): migrate cash_flow from capital"
 #### Task 6: 迁移 dividend 功能
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/fundamental/fundamental_store.py`
-- Test: `packages/datahub/tests/unit/domains/fundamental/test_fundamental_store_unit.py`
+- Modify: `packages/data/src/ditto_data/domains/fundamental/fundamental_store.py`
+- Test: `packages/data/tests/unit/domains/fundamental/test_fundamental_store_unit.py`
 
 **Step 1: 编写测试 - dividend**
 
@@ -571,7 +571,7 @@ def test_get_dividend_pit(dividend_table: None, store: FundamentalStore) -> None
 **Step 2-5: 运行测试 → 实现 → 验证 → 提交**
 
 **实现代码参考：**
-- 源文件：`packages/datahub/src/ditto_datahub/domains/capital/capital_store.py:943-1078`
+- 源文件：`packages/data/src/ditto_data/domains/capital/capital_store.py:943-1078`
 
 **提交：**
 ```bash
@@ -585,7 +585,7 @@ git commit -m "feat(fundamental): migrate dividend from capital"
 **Pattern 同上，注意 corporate_actions 是非 PIT 数据**
 
 **源文件参考：**
-- `packages/datahub/src/ditto_datahub/domains/capital/capital_store.py:1376-1512`
+- `packages/data/src/ditto_data/domains/capital/capital_store.py:1376-1512`
 
 **提交：**
 ```bash
@@ -599,21 +599,21 @@ git commit -m "feat(fundamental): migrate corporate_actions from capital"
 #### Task 8: 实现 forecast 功能
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/domains/fundamental/forecast/forecast_store.py`
-- Modify: `packages/datahub/src/ditto_datahub/domains/fundamental/fundamental_store.py`
-- Test: `packages/datahub/tests/unit/domains/fundamental/forecast/test_forecast_store_unit.py`
+- Create: `packages/data/src/ditto_data/domains/fundamental/forecast/forecast_store.py`
+- Modify: `packages/data/src/ditto_data/domains/fundamental/fundamental_store.py`
+- Test: `packages/data/tests/unit/domains/fundamental/forecast/test_forecast_store_unit.py`
 
 **Step 1: 编写测试 - forecast**
 
 ```python
-# packages/datahub/tests/unit/domains/fundamental/forecast/test_forecast_store_unit.py
+# packages/data/tests/unit/domains/fundamental/forecast/test_forecast_store_unit.py
 """Unit tests for ForecastStore."""
 
 from datetime import date
 import polars as pl
 import pytest
-from ditto_datahub.domains.fundamental.forecast.forecast_store import ForecastStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.domains.fundamental.forecast.forecast_store import ForecastStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
 
@@ -693,7 +693,7 @@ Expected: FAIL
 **Step 3: 实现 ForecastStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/fundamental/forecast/forecast_store.py
+# packages/data/src/ditto_data/domains/fundamental/forecast/forecast_store.py
 """ForecastStore for performance forecast data with PIT support."""
 
 from __future__ import annotations
@@ -703,7 +703,7 @@ from datetime import date
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class ForecastStore:
@@ -812,7 +812,7 @@ Expected: PASS
 
 ```python
 # 添加到 fundamental_store.py
-from ditto_datahub.domains.fundamental.forecast.forecast_store import ForecastStore
+from ditto_data.domains.fundamental.forecast.forecast_store import ForecastStore
 
 class FundamentalStore:
     def __init__(self, sqlite_client: SQLiteClient) -> None:
@@ -833,7 +833,7 @@ class FundamentalStore:
 **Step 6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/fundamental/forecast/
+git add packages/data/src/ditto_data/domains/fundamental/forecast/
 git add tests/unit/domains/fundamental/forecast/
 git commit -m "feat(fundamental): implement forecast store"
 ```
@@ -856,8 +856,8 @@ git commit -m "feat(fundamental): implement express store"
 #### Task 10: 清理 CapitalStore - 移除已迁移的功能
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/capital/capital_store.py`
-- Modify: `packages/datahub/tests/unit/domains/capital/test_capital_store_unit.py`
+- Modify: `packages/data/src/ditto_data/domains/capital/capital_store.py`
+- Modify: `packages/data/tests/unit/domains/capital/test_capital_store_unit.py`
 
 **Step 1: 从 CapitalStore 移除以下方法**
 - `write_balance_sheet / get_balance_sheet`
@@ -890,16 +890,16 @@ git commit -m "refactor(capital): remove migrated fundamental features"
 #### Task 11: 重构 Capital 域为子域结构
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/domains/capital/margin/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/capital/margin/margin_trading_store.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/capital/pledge/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/domains/capital/pledge/pledge_ratio_store.py`
-- Modify: `packages/datahub/src/ditto_datahub/domains/capital/capital_store.py`
+- Create: `packages/data/src/ditto_data/domains/capital/margin/__init__.py`
+- Create: `packages/data/src/ditto_data/domains/capital/margin/margin_trading_store.py`
+- Create: `packages/data/src/ditto_data/domains/capital/pledge/__init__.py`
+- Create: `packages/data/src/ditto_data/domains/capital/pledge/pledge_ratio_store.py`
+- Modify: `packages/data/src/ditto_data/domains/capital/capital_store.py`
 
 **Step 1: 创建 margin 子域**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/capital/margin/margin_trading_store.py
+# packages/data/src/ditto_data/domains/capital/margin/margin_trading_store.py
 """Margin trading data storage with PIT support."""
 
 from __future__ import annotations
@@ -909,7 +909,7 @@ from datetime import date
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class MarginTradingStore:
@@ -935,7 +935,7 @@ class MarginTradingStore:
 **Step 2: 创建 pledge 子域**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/capital/pledge/pledge_ratio_store.py
+# packages/data/src/ditto_data/domains/capital/pledge/pledge_ratio_store.py
 """Pledge ratio data storage with PIT support."""
 
 # Pattern 同 MarginTradingStore
@@ -944,12 +944,12 @@ class MarginTradingStore:
 **Step 3: 重构 CapitalStore 为组合入口**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/capital/capital_store.py
+# packages/data/src/ditto_data/domains/capital/capital_store.py
 """CapitalStore - Capital domain unified entry point."""
 
-from ditto_datahub.domains.capital.margin.margin_trading_store import MarginTradingStore
-from ditto_datahub.domains.capital.pledge.pledge_ratio_store import PledgeRatioStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.domains.capital.margin.margin_trading_store import MarginTradingStore
+from ditto_data.domains.capital.pledge.pledge_ratio_store import PledgeRatioStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class CapitalStore:
@@ -1002,19 +1002,19 @@ git commit -m "refactor(capital): restructure as sub-domain architecture"
 #### Task 12: 拆分 CapitalTushareAdapter
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/sources/tushare/adapters/fundamental.py`
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py`
-- Create: `packages/datahub/src/ditto_datahub/sources/schemas/fundamental_schemas.py`
-- Modify: `packages/datahub/src/ditto_datahub/sources/schemas/capital_schemas.py`
+- Create: `packages/data/src/ditto_data/sources/tushare/adapters/fundamental.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/adapters/capital.py`
+- Create: `packages/data/src/ditto_data/sources/schemas/fundamental_schemas.py`
+- Modify: `packages/data/src/ditto_data/sources/schemas/capital_schemas.py`
 
 **Step 1: 创建 fundamental_schemas.py**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/schemas/fundamental_schemas.py
+# packages/data/src/ditto_data/sources/schemas/fundamental_schemas.py
 """Fundamental SourceSchema definitions."""
 
 import polars as pl
-from ditto_datahub.sources.source_schema import SourceSchema
+from ditto_data.sources.source_schema import SourceSchema
 
 __all__ = [
     "BALANCE_SHEET_SOURCE_SCHEMA",
@@ -1033,7 +1033,7 @@ __all__ = [
 **Step 2: 创建 FundamentalTushareAdapter**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/adapters/fundamental.py
+# packages/data/src/ditto_data/sources/tushare/adapters/fundamental.py
 """Fundamental domain Tushare adapter implementation."""
 
 # 从 capital.py 迁移相关方法
@@ -1060,8 +1060,8 @@ git commit -m "refactor(sources): split adapters into fundamental and capital"
 #### Task 13: 创建 FundamentalIngestion 服务
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/domains/fundamental/fundamental_ingestion.py`
-- Test: `packages/datahub/tests/unit/domains/fundamental/test_fundamental_ingestion_unit.py`
+- Create: `packages/data/src/ditto_data/domains/fundamental/fundamental_ingestion.py`
+- Test: `packages/data/tests/unit/domains/fundamental/test_fundamental_ingestion_unit.py`
 
 **Pattern 参考：** `capital_ingestion.py`
 
@@ -1075,8 +1075,8 @@ git commit -m "feat(fundamental): implement FundamentalIngestion service"
 #### Task 14: 更新 CapitalIngestion 服务
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/capital/capital_ingestion.py`
-- Test: `packages/datahub/tests/unit/domains/capital/test_capital_ingestion_unit.py`
+- Modify: `packages/data/src/ditto_data/domains/capital/capital_ingestion.py`
+- Test: `packages/data/tests/unit/domains/capital/test_capital_ingestion_unit.py`
 
 **Step 1: 移除已迁移的 ingest 方法**
 
@@ -1113,18 +1113,18 @@ git commit -m "refactor(capital): remove migrated ingestion methods"
 #### Task 15: 更新 domains/__init__.py
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/domains/__init__.py`
+- Modify: `packages/data/src/ditto_data/domains/__init__.py`
 
 **Step 1: 添加 Fundamental 域导出**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/__init__.py
+# packages/data/src/ditto_data/domains/__init__.py
 """DataHub domains - organized by business domain."""
 
-from ditto_datahub.domains import capital
-from ditto_datahub.domains import fundamental  # 新增
-from ditto_datahub.domains import market
-from ditto_datahub.domains import metadata
+from ditto_data.domains import capital
+from ditto_data.domains import fundamental  # 新增
+from ditto_data.domains import market
+from ditto_data.domains import metadata
 
 __all__ = ["capital", "fundamental", "market", "metadata"]
 ```
@@ -1140,7 +1140,7 @@ git commit -m "feat(domains): add fundamental domain export"
 #### Task 16: 更新 README 和文档
 
 **Files:**
-- Modify: `packages/datahub/README.md`
+- Modify: `packages/data/README.md`
 - Create: `docs/design/05_domain_architecture.md`
 
 **Step 1: 更新 DataHub README**
@@ -1243,7 +1243,7 @@ git push origin feature/fundamental-domain
 ### 新增文件
 
 ```
-packages/datahub/src/ditto_datahub/domains/fundamental/
+packages/data/src/ditto_data/domains/fundamental/
 ├── __init__.py
 ├── financial/
 │   ├── __init__.py
@@ -1261,7 +1261,7 @@ packages/datahub/src/ditto_datahub/domains/fundamental/
 ├── fundamental_store.py
 └── fundamental_ingestion.py
 
-packages/datahub/src/ditto_datahub/domains/capital/
+packages/data/src/ditto_data/domains/capital/
 ├── margin/
 │   ├── __init__.py
 │   └── margin_trading_store.py
@@ -1269,13 +1269,13 @@ packages/datahub/src/ditto_datahub/domains/capital/
 │   ├── __init__.py
 │   └── pledge_ratio_store.py
 
-packages/datahub/src/ditto_datahub/sources/tushare/adapters/
+packages/data/src/ditto_data/sources/tushare/adapters/
 └── fundamental.py
 
-packages/datahub/src/ditto_datahub/sources/schemas/
+packages/data/src/ditto_data/sources/schemas/
 └── fundamental_schemas.py
 
-packages/datahub/tests/unit/domains/fundamental/
+packages/data/tests/unit/domains/fundamental/
 ├── __init__.py
 ├── test_fundamental_store_unit.py
 ├── test_fundamental_ingestion_unit.py
@@ -1287,13 +1287,13 @@ packages/datahub/tests/unit/domains/fundamental/
 ### 修改文件
 
 ```
-packages/datahub/src/ditto_datahub/domains/__init__.py
-packages/datahub/src/ditto_datahub/domains/capital/capital_store.py
-packages/datahub/src/ditto_datahub/domains/capital/capital_ingestion.py
-packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py
-packages/datahub/src/ditto_datahub/sources/schemas/capital_schemas.py
-packages/datahub/tests/unit/domains/capital/test_capital_store_unit.py
-packages/datahub/tests/unit/domains/capital/test_capital_ingestion_unit.py
+packages/data/src/ditto_data/domains/__init__.py
+packages/data/src/ditto_data/domains/capital/capital_store.py
+packages/data/src/ditto_data/domains/capital/capital_ingestion.py
+packages/data/src/ditto_data/sources/tushare/adapters/capital.py
+packages/data/src/ditto_data/sources/schemas/capital_schemas.py
+packages/data/tests/unit/domains/capital/test_capital_store_unit.py
+packages/data/tests/unit/domains/capital/test_capital_ingestion_unit.py
 ```
 
 ### 删除文件

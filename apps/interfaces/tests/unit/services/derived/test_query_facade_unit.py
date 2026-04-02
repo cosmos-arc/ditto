@@ -13,13 +13,13 @@ from ditto_app.query.derived import (
     SeriesDerivedRequest,
     SourceCompareRequest,
 )
-from ditto_datahub.services import (
+from ditto_data.services import (
     DerivedCompareQuery,
     DerivedLatestQuery,
     DerivedSeriesQuery,
     DerivedSourceScope,
 )
-from ditto_datahub.services.hot_layer import (
+from ditto_data.services.hot_layer import (
     UnavailableHotLayerReader,
 )
 from pytest_mock import MockerFixture

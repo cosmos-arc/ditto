@@ -1,7 +1,7 @@
 """
 Unified derived semantic spec models.
 
-从 ditto_engine.engine.specs 迁入（Phase 5 — specs 数据类提升至 kernel）。
+从 ditto_engine.specs 迁入（Phase 5 — specs 数据类提升至 kernel）。
 满足 kernel 准入标准：跨 4 个包消费、纯值语义、零外部依赖。
 """
 

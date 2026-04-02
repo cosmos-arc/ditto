@@ -49,7 +49,7 @@ src/ditto_infra/                         tests/unit/
 │   ├── config/               →          │   ├── config/
 │   └── observability/        →          │   └── observability/
 
-src/ditto_datahub/                       tests/unit/
+src/ditto_data/                       tests/unit/
 ├── alerts/                   →          ├── alerts/
 ├── accessors/                →          ├── accessors/
 ├── stores/                   →          ├── stores/
@@ -395,20 +395,20 @@ CLI 集成测试关注点：
 
 ```
 # ❌ 错误：会导致 pytest 收集冲突
-packages/datahub/tests/unit/stores/test_pipeline_store.py
-packages/datahub/tests/integration/stores/test_pipeline_store.py
+packages/data/tests/unit/stores/test_pipeline_store.py
+packages/data/tests/integration/stores/test_pipeline_store.py
 
 # ❌ 错误：跨包同名也会冲突
 packages/infra/tests/unit/observability/test_observability_unit.py
-packages/datahub/tests/unit/stores/test_observability_unit.py
+packages/data/tests/unit/stores/test_observability_unit.py
 
 # ✅ 正确：添加层级后缀区分
-packages/datahub/tests/unit/stores/test_pipeline_store_unit.py
-packages/datahub/tests/integration/stores/test_pipeline_store_integration.py
+packages/data/tests/unit/stores/test_pipeline_store_unit.py
+packages/data/tests/integration/stores/test_pipeline_store_integration.py
 
 # ✅ 正确：添加模块前缀避免跨包冲突
 packages/infra/tests/unit/observability/test_observability_unit.py
-packages/datahub/tests/unit/stores/test_stores_observability_unit.py
+packages/data/tests/unit/stores/test_stores_observability_unit.py
 ```
 
 #### 命名规则
@@ -781,7 +781,7 @@ def test_partitioned_write(store, sample_quotes):
 **实现原理**：
 - 使用 `pytest_collection_modifyitems` hook 在测试收集时自动标记
 - 配置文件位置：
-  - DataHub: `packages/datahub/tests/conftest.py`
+  - DataHub: `packages/data/tests/conftest.py`
   - Infra: `packages/infra/tests/unit/conftest.py`
 
 **手动标记需求**：
@@ -1016,7 +1016,7 @@ def check_structure(src_path, test_path, name):
 
 all_ok = True
 all_ok &= check_structure('packages/infra/src', 'packages/infra/tests/unit', 'Infra')
-all_ok &= check_structure('packages/datahub/src', 'packages/datahub/tests/unit', 'DataHub')
+all_ok &= check_structure('packages/data/src', 'packages/data/tests/unit', 'DataHub')
 all_ok &= check_structure('apps/port/src', 'apps/port/tests/unit', 'Port')
 
 if all_ok:

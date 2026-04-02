@@ -89,7 +89,7 @@
 ## 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/domains/capital/
+packages/data/src/ditto_data/domains/capital/
 ├── __init__.py
 ├── financial/
 │   ├── balance_sheet_store.py       # 资产负债表

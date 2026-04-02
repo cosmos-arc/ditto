@@ -85,7 +85,7 @@ HGETALL ditto:derived:state:factor:alpha_001:snapshot:000001.SZ
 ### Python 读写
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/derived/kvrocks_state_writer.py
+# packages/data/src/ditto_data/stores/derived/kvrocks_state_writer.py
 
 import orjson
 from datetime import datetime, date
@@ -234,7 +234,7 @@ def migrate_snapshot(raw: bytes, target_ver: int) -> dict:
 ### Python 读写
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/derived/kvrocks_state_writer.py
+# packages/data/src/ditto_data/stores/derived/kvrocks_state_writer.py
 
 class KvrocksStateWriter:
     CURRENT_SCHEMA_VER = 2

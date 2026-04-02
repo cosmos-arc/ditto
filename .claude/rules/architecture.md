@@ -37,7 +37,7 @@ paths:
 |----|-----|------|------|
 | **共享内核** | `ditto_kernel` | 领域原语：枚举、值对象、NewType | DDD Shared Kernel |
 | **领域层** | `ditto_engine` | 业务决策：引擎、策略、回测、风险、质量 | DDD Domain Service |
-| **数据服务层** | `ditto_datahub` | 统一查询：存储、数据源、领域感知的数据编排 | DDD Rich Repository |
+| **数据服务层** | `ditto_data` | 统一查询：存储、数据源、领域感知的数据编排 | DDD Rich Repository |
 | **应用服务层** | `ditto_port` | 编排协调：组合 Core 行为 + DataHub 数据服务 | DDD Application Service |
 | **基础设施层** | `ditto_infra` | 技术设施：配置、日志、缓存、数据库连接池 | Technical Infrastructure |
 
@@ -51,14 +51,14 @@ paths:
 ### 依赖规则
 
 ```
-ditto_port      → ditto_engine, ditto_datahub, ditto_kernel, ditto_infra  ✅
+ditto_port      → ditto_engine, ditto_data, ditto_kernel, ditto_infra  ✅
 ditto_engine      → ditto_kernel                                            ✅
-ditto_datahub   → ditto_kernel, ditto_infra                               ✅
+ditto_data   → ditto_kernel, ditto_infra                               ✅
 ditto_kernel    → (无业务依赖)                                             ✅
 ditto_infra     → (无业务依赖)                                             ✅
-ditto_engine      → ditto_datahub                                           ❌
-ditto_datahub   → ditto_engine                                              ❌
-ditto_datahub   → ditto_port                                              ❌
+ditto_engine      → ditto_data                                           ❌
+ditto_data   → ditto_engine                                              ❌
+ditto_data   → ditto_port                                              ❌
 ditto_infra     → 其他层                                                  ❌
 ```
 
@@ -111,7 +111,7 @@ def provide_sqlite_client(pool: SQLitePool) -> SQLiteClient:
     return SQLiteClient(pool)
 
 # ❌ 错误：直接访问 store（即使技术上可行）
-from ditto_datahub.stores.bars_store import BarsStore  # ❌
+from ditto_data.stores.bars_store import BarsStore  # ❌
 store = BarsStore(...)  # ❌
 ```
 
@@ -164,7 +164,7 @@ store = BarsStore(...)  # ❌
 - I/O 操作（文件读写、网络请求）
 - 应用编排（这是 Port 的职责）
 
-#### ditto_datahub（数据服务层 — Rich Data Service）
+#### ditto_data（数据服务层 — Rich Data Service）
 
 **做什么**：统一的数据查询、存储、数据源接入，以及**领域感知的数据编排**。
 
@@ -216,7 +216,7 @@ store = BarsStore(...)  # ❌
 
 3. 是数据查询、存储或领域感知的数据编排？
    （复权、PIT 过滤、前向收益率、Universe 过滤）
-   YES → ditto_datahub
+   YES → ditto_data
 
 4. 是应用编排或工作流协调？
    （组合 Core + DataHub、DTO 映射、CLI/API/Jobs）
@@ -391,7 +391,7 @@ def get_source(name: str) -> DataSource:
 |------|----------------|---------------|
 | 是跨层共享的纯类型？ | ditto_kernel（检查准入标准） | 继续下一个问题 |
 | 是业务决策或领域行为？ | ditto_engine | 继续下一个问题 |
-| 是数据查询、存储或数据编排？ | ditto_datahub | 继续下一个问题 |
+| 是数据查询、存储或数据编排？ | ditto_data | 继续下一个问题 |
 | 是应用编排或工作流？ | ditto_port | 继续下一个问题 |
 | 是技术基础设施？ | ditto_infra | 重新审视设计 |
 

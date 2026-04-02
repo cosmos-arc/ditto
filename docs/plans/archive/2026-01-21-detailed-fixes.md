@@ -11,7 +11,7 @@
 
 **当前状态**:
 ```python
-# packages/datahub/src/ditto_datahub/models/__init__.py:3-28
+# packages/data/src/ditto_data/models/__init__.py:3-28
 # Re-export DQ models from Core Layer for backward compatibility
 from ditto_core.quality.spec import (
     ColumnRule, CompletenessRule, ConsistencyRule,
@@ -43,22 +43,22 @@ from ditto_core.quality.spec import (
 **步骤 1**: 删除 datahub/models/__init__.py 中的重导出
 
 ```python
-# packages/datahub/src/ditto_datahub/models/__init__.py
+# packages/data/src/ditto_data/models/__init__.py
 """DataHub models for data transfer objects."""
 
 # ❌ 删除以下内容:
 # from ditto_core.quality.spec import (...)
 
 # ✅ 只保留本层定义的类型
-from ditto_datahub.models.common import AssetSidRange, Dataset, OnDuplicate, Source
-from ditto_datahub.models.ingestion import (
+from ditto_data.models.common import AssetSidRange, Dataset, OnDuplicate, Source
+from ditto_data.models.ingestion import (
     DataChangedError,
     IngestionCursor,
     IngestionLog,
     IngestionStatus,
     NotTradingDayError,
 )
-from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteResultStore
+from ditto_data.models.storage import FreezeManifest, WriteResult, WriteResultStore
 
 __all__ = [
     "AssetSidRange",
@@ -82,7 +82,7 @@ __all__ = [
 # 新建: packages/core/src/ditto_core/quality/types.py
 """Core 层使用的 DQ 类型定义."""
 
-from ditto_datahub.models.common import DQSeverity
+from ditto_data.models.common import DQSeverity
 
 __all__ = ["DQSeverity"]
 ```
@@ -91,10 +91,10 @@ __all__ = ["DQSeverity"]
 
 ```bash
 # 1. 确认无 datahub → core 导入
-grep -r "from ditto_core" packages/datahub/src --include="*.py"
+grep -r "from ditto_core" packages/data/src --include="*.py"
 
 # 2. 运行测试
-pixi run -e dev test packages/datahub/tests
+pixi run -e dev test packages/data/tests
 
 # 3. 类型检查
 pixi run -e dev type
@@ -395,11 +395,11 @@ result: DQResult = engine.check(df, rules)
 # 删除相关 __all__ 导出
 
 # 2. 运行验证
-pixi run -e dev test packages/datahub/tests
+pixi run -e dev test packages/data/tests
 pixi run -e dev type
 
 # 3. 提交
-git add packages/datahub/src/ditto_datahub/models/__init__.py
+git add packages/data/src/ditto_data/models/__init__.py
 git commit -m "fix(datahub): remove reverse dependency on core layer
 
 - Delete re-export of ditto_core.quality.types
@@ -465,7 +465,7 @@ git commit -m "docs(core): expose public APIs in __init__.py
 
 ```bash
 # 检查 datahub → core 依赖
-! grep -r "from ditto_core" packages/datahub/src --include="*.py"
+! grep -r "from ditto_core" packages/data/src --include="*.py"
 
 # 检查延迟导入
 ! grep -r "# noqa: PLC0415" packages/*/src --include="*.py"

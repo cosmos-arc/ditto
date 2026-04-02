@@ -353,9 +353,9 @@ builders -X-> query / write         # 只装配，不查询不写入
 | 验证项 | 方法 | 通过标准 |
 |--------|------|---------|
 | analytics 包自包含 | `pixi run -e dev type --all` | analytics 内部无 datahub import |
-| engine 域模型迁出 | `grep -r "ditto_datahub.models.strategy\|ditto_datahub.models.portfolio\|ditto_datahub.models.trading" packages/ apps/` | 返回 0 结果 |
-| strategy 服务迁出 | `grep -r "ditto_datahub.services.strategy" packages/ apps/` | 返回 0 结果 |
-| 因子/研究模块迁出 | `grep -r "ditto_datahub.models.factors\|ditto_datahub.models.research\|ditto_datahub.models.features" packages/ apps/` | 返回 0 结果（stores/factors 保留在 data） |
+| engine 域模型迁出 | `grep -r "ditto_data.models.strategy\|ditto_data.models.portfolio\|ditto_data.models.trading" packages/ apps/` | 返回 0 结果 |
+| strategy 服务迁出 | `grep -r "ditto_data.services.strategy" packages/ apps/` | 返回 0 结果 |
+| 因子/研究模块迁出 | `grep -r "ditto_data.models.factors\|ditto_data.models.research\|ditto_data.models.features" packages/ apps/` | 返回 0 结果（stores/factors 保留在 data） |
 | 功能完整 | 因子计算 + 评估 + 衍生物化集成测试 | 全部通过 |
 | 架构约束 | `pixi run -e dev arch-check` | engine -X-> data 规则通过（中间态 importlinter） |
 

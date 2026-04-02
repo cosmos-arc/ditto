@@ -38,7 +38,7 @@ MacroService
 ## 2. 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/domains/macro/
+packages/data/src/ditto_data/domains/macro/
 ├── __init__.py                    # 域入口
 ├── indicator/
 │   ├── __init__.py               # 导出 Store 类
@@ -293,11 +293,11 @@ tests/unit/domains/macro/
 ### 7.1 域导出
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/macro/__init__.py
+# packages/data/src/ditto_data/domains/macro/__init__.py
 
-from ditto_datahub.domains.macro.indicator.indicator_store import IndicatorStore
-from ditto_datahub.domains.macro.indicator.metadata_store import IndicatorMetadataStore
-from ditto_datahub.domains.macro.macro_service import MacroService
+from ditto_data.domains.macro.indicator.indicator_store import IndicatorStore
+from ditto_data.domains.macro.indicator.metadata_store import IndicatorMetadataStore
+from ditto_data.domains.macro.macro_service import MacroService
 
 __all__ = [
     "IndicatorStore",
@@ -309,7 +309,7 @@ __all__ = [
 ### 7.2 DataHub 集成
 
 ```python
-# packages/datahub/src/ditto_datahub/__init__.py
+# packages/data/src/ditto_data/__init__.py
 
 class DataHub:
     def __init__(self, ...) -> None:

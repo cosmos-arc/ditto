@@ -49,13 +49,13 @@ __all__ = [
 
 | 操作 | 文件 |
 |------|------|
-| 删除 | `packages/datahub/.pyrightignore` |
+| 删除 | `packages/data/.pyrightignore` |
 
 **当前内容**（全部过时）：
 ```
-src/ditto_datahub/domains/market/stock/adj/adj_factor_store.py  # 不存在
-packages/datahub/src/ditto_datahub/stores/adj_factor_store.py   # 不存在
-src/ditto_datahub/domains/market/market_query_service.py        # 不存在
+src/ditto_data/domains/market/stock/adj/adj_factor_store.py  # 不存在
+packages/data/src/ditto_data/stores/adj_factor_store.py   # 不存在
+src/ditto_data/domains/market/market_query_service.py        # 不存在
 ```
 
 ---
@@ -108,7 +108,7 @@ rm apps/port/src/ditto_port/registry/app.py
 
 ### Step 2: 删除 .pyrightignore
 ```bash
-rm packages/datahub/.pyrightignore
+rm packages/data/.pyrightignore
 ```
 
 ### Step 3: 清理重复 TODO

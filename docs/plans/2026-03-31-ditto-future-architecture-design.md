@@ -781,9 +781,9 @@ provider raw payload
 | `packages/core/execution` | `packages/engine/execution` | 迁移 |
 | `packages/core/accounting` | `packages/engine/accounting` | 迁移 |
 | `packages/core/backtest` | `packages/engine/sessions` | 回测 session driver |
-| `packages/datahub/services/metadata*` | `packages/metadata/*` | 语义 owner 回归 |
-| `packages/datahub/services/market*` | `packages/market/*` | 语义 owner 回归 |
-| `packages/datahub/sources/*` | `packages/integration/sources/*` | 外部世界 ACL |
+| `packages/data/services/metadata*` | `packages/metadata/*` | 语义 owner 回归 |
+| `packages/data/services/market*` | `packages/market/*` | 语义 owner 回归 |
+| `packages/data/sources/*` | `packages/integration/sources/*` | 外部世界 ACL |
 | `apps/port/services/*` | `packages/application/*` | application 收口 |
 | `apps/port/api/*` | `apps/api/*` | 入口适配 |
 | `apps/port/cli/*` | `apps/cli/*` | 入口适配 |

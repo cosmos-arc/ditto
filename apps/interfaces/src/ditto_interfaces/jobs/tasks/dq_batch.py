@@ -3,9 +3,9 @@
 from typing import Any
 
 from ditto_app.process.quality import L3BatchService
+from ditto_data.models import Dataset
 from ditto_data.quality.spec import DQIssue
-from ditto_datahub.models import Dataset
-from ditto_datahub.services.market_service import MarketBarsQuery
+from ditto_data.services.market_service import MarketBarsQuery
 from ditto_infra.foundation import Metrics, logger
 from prefect import task
 

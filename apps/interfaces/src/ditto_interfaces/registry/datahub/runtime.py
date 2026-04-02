@@ -7,11 +7,11 @@ from importlib.resources import files
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.config.data_store import DataStoreSettings
-from ditto_datahub.runtime.freeze_manager import FreezeManager
-from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_datahub.services import (
+from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.runtime.freeze_manager import FreezeManager
+from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
+from ditto_data.runtime.sql_engine import SqlEngine
+from ditto_data.services import (
     DerivedCatalogService,
     DerivedShadowSlotService,
     FreezeService,
@@ -21,20 +21,20 @@ from ditto_datahub.services import (
     QualityRecordService,
     ResearchCatalogService,
 )
-from ditto_datahub.services.audit import ExecutionAuditService
-from ditto_datahub.services.publication_safety_record_service import (
+from ditto_data.services.audit import ExecutionAuditService
+from ditto_data.services.publication_safety_record_service import (
     PublicationSafetyRuntimeStores,
 )
-from ditto_datahub.services.source_service import SourceService
-from ditto_datahub.services.strategy.strategy_artifact_service import (
+from ditto_data.services.source_service import SourceService
+from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_datahub.services.strategy.strategy_catalog_service import (
+from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_datahub.services.strategy.strategy_run_service import StrategyRunService
-from ditto_datahub.sources.source import DataSources
-from ditto_datahub.stores.metadata import (
+from ditto_data.services.strategy.strategy_run_service import StrategyRunService
+from ditto_data.sources.source import DataSources
+from ditto_data.stores.metadata import (
     SQLiteStrategyArtifactReader,
     SQLiteStrategyArtifactWriter,
     SQLiteStrategyRunReader,
@@ -42,17 +42,17 @@ from ditto_datahub.stores.metadata import (
     SQLiteStrategySpecReader,
     SQLiteStrategySpecWriter,
 )
-from ditto_datahub.stores.runtime.derived_sqlite import (
+from ditto_data.stores.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_datahub.stores.runtime.ingestion import (
+from ditto_data.stores.runtime.ingestion import (
     IngestionCursorReader,
     IngestionCursorWriter,
     IngestionLogReader,
     IngestionLogWriter,
 )
-from ditto_datahub.stores.runtime.publication_safety import (
+from ditto_data.stores.runtime.publication_safety import (
     CertificationReader,
     CertificationWriter,
     ManifestReader,
@@ -62,21 +62,21 @@ from ditto_datahub.stores.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
 )
-from ditto_datahub.stores.runtime.publication_shadow_sqlite import (
+from ditto_data.stores.runtime.publication_shadow_sqlite import (
     SQLiteDerivedShadowSlotReader,
     SQLiteDerivedShadowSlotWriter,
 )
-from ditto_datahub.stores.runtime.quality import (
+from ditto_data.stores.runtime.quality import (
     ComparisonReader,
     ComparisonWriter,
     QuarantineReader,
     QuarantineWriter,
 )
-from ditto_datahub.stores.runtime.research_sqlite import (
+from ditto_data.stores.runtime.research_sqlite import (
     SQLiteResearchCatalogReader,
     SQLiteResearchCatalogWriter,
 )
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
 from ditto_infra.foundation.concurrency import FileLockManager
 
@@ -101,7 +101,7 @@ class RuntimeProvider(Provider):
         db_path = settings.resolved_sqlite_path
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        schema_traversable = files("ditto_datahub.scripts") / "schema.sql"
+        schema_traversable = files("ditto_data.scripts") / "schema.sql"
         schema_path = Path(str(schema_traversable))
         pool = SQLitePool(str(db_path), schema_path=schema_path)
         pool.init_schema()

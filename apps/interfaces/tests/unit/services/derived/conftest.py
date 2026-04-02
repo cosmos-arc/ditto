@@ -4,7 +4,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
 
 
@@ -17,9 +17,9 @@ def sqlite_memory_pool() -> Generator[SQLitePool, None, None]:
     schema_path = (
         Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent
         / "packages"
-        / "datahub"
+        / "data"
         / "src"
-        / "ditto_datahub"
+        / "ditto_data"
         / "scripts"
         / "schema.sql"
     )

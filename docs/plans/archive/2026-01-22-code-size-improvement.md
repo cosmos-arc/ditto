@@ -133,35 +133,35 @@ class IngestionDataWriter:  # 数据写入
 
 - [ ] **Task: 提取 TushareTransformer** `[M]`
   - **验收**: 测试通过，独立模块可测试
-  - **文件**: `packages/datahub/src/ditto_datahub/sources/tushare/`
-  - **测试**: `packages/datahub/tests/unit/sources/tushare/`
+  - **文件**: `packages/data/src/ditto_data/sources/tushare/`
+  - **测试**: `packages/data/tests/unit/sources/tushare/`
 
 - [ ] **Task: 提取 TushareValidator** `[S]`
   - **验收**: 测试通过，独立模块可测试
-  - **文件**: `packages/datahub/src/ditto_datahub/sources/tushare/`
-  - **测试**: `packages/datahub/tests/unit/sources/tushare/`
+  - **文件**: `packages/data/src/ditto_data/sources/tushare/`
+  - **测试**: `packages/data/tests/unit/sources/tushare/`
 
 - [ ] **Task: 重构 TushareSource 为组合模式** `[M]`
   - **验收**: 文件行数 < 500，测试通过
-  - **文件**: `packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py`
-  - **测试**: `packages/datahub/tests/unit/sources/tushare/`
+  - **文件**: `packages/data/src/ditto_data/sources/tushare/tushare_source.py`
+  - **测试**: `packages/data/tests/unit/sources/tushare/`
 
 ### Phase 4: BarsAccessor 重构 (优先级: P2)
 
 - [ ] **Task: 提取 BarsQueryBuilder** `[M]`
   - **验收**: 测试通过，查询构建逻辑独立
-  - **文件**: `packages/datahub/src/ditto_datahub/accessors/bars/`
-  - **测试**: `packages/datahub/tests/unit/accessors/`
+  - **文件**: `packages/data/src/ditto_data/accessors/bars/`
+  - **测试**: `packages/data/tests/unit/accessors/`
 
 - [ ] **Task: 提取 BarsDataProcessor** `[M]`
   - **验收**: 测试通过，数据转换逻辑独立
-  - **文件**: `packages/datahub/src/ditto_datahub/accessors/bars/`
-  - **测试**: `packages/datahub/tests/unit/accessors/`
+  - **文件**: `packages/data/src/ditto_data/accessors/bars/`
+  - **测试**: `packages/data/tests/unit/accessors/`
 
 - [ ] **Task: 简化 BarsAccessor** `[S]`
   - **验收**: 文件行数 < 500，测试通过
-  - **文件**: `packages/datahub/src/ditto_datahub/accessors/bars/accessor.py`
-  - **测试**: `packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py`
+  - **文件**: `packages/data/src/ditto_data/accessors/bars/accessor.py`
+  - **测试**: `packages/data/tests/unit/accessors/test_bars_accessor_unit.py`
 
 ### Phase 5: 更新 DI 容器 (优先级: P3)
 

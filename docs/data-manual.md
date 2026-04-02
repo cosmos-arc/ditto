@@ -108,7 +108,7 @@
 | 利润表 | `income` | 财务 |
 | 现金流量表 | `cashflow` | 财务 |
 
-**适配器位置**：`packages/datahub/src/ditto_datahub/sources/tushare/adapters/`
+**适配器位置**：`packages/data/src/ditto_data/sources/tushare/adapters/`
 
 ### 2.2 FRED（美国宏观数据）
 
@@ -858,16 +858,16 @@ condition = """
 | 访问类型 | ✅ 允许 | ❌ 禁止 | 说明 |
 |---------|--------|--------|------|
 | **通过 Service** | `MetadataService`, `MarketService` 等 | - | **推荐方式**，通过 DI 容器注入 |
-| **直接导入 Sources** | `from ditto_datahub.sources.*` | - | Sources 可直接访问 |
-| **直接访问 Reader/Writer** | - | `from ditto_datahub.stores.*` | **禁止**直接访问 |
+| **直接导入 Sources** | `from ditto_data.sources.*` | - | Sources 可直接访问 |
+| **直接访问 Reader/Writer** | - | `from ditto_data.stores.*` | **禁止**直接访问 |
 
 ### 10.2 正确示例
 
 ```python
 # ✅ 推荐：通过 DI 容器注入 Domain Service
 from dishka import Container
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.market_service import MarketService
 
 container = Container()
 metadata_service: MetadataService = container.get(MetadataService)
@@ -878,7 +878,7 @@ trading_days = metadata_service.get_trading_days("2024-01-01", "2024-01-31")
 bars = market_service.query(query)
 
 # ❌ 禁止：直接访问 Reader/Writer
-from ditto_datahub.stores.metadata import InstrumentReader  # ❌
+from ditto_data.stores.metadata import InstrumentReader  # ❌
 reader = InstrumentReader(...)  # ❌
 ```
 
@@ -940,14 +940,14 @@ reader = InstrumentReader(...)  # ❌
 
 | 功能 | 路径 |
 |------|------|
-| Store Schema | `packages/datahub/src/ditto_datahub/stores/schemas/` |
-| 数据模型 | `packages/datahub/src/ditto_datahub/models/` |
-| Tushare 适配器 | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/` |
-| 列映射定义 | `packages/datahub/src/ditto_datahub/sources/tushare/processors/mappings/` |
-| Domain Service | `packages/datahub/src/ditto_datahub/services/` |
+| Store Schema | `packages/data/src/ditto_data/stores/schemas/` |
+| 数据模型 | `packages/data/src/ditto_data/models/` |
+| Tushare 适配器 | `packages/data/src/ditto_data/sources/tushare/adapters/` |
+| 列映射定义 | `packages/data/src/ditto_data/sources/tushare/processors/mappings/` |
+| Domain Service | `packages/data/src/ditto_data/services/` |
 
 ### D. 相关文档
 
 - [配置系统手册](/docs/configuration.md)
 - [运维手册](/docs/ops-manual.md)
-- [DataHub 架构规范](/packages/datahub/CLAUDE.md)
+- [DataHub 架构规范](/packages/data/CLAUDE.md)

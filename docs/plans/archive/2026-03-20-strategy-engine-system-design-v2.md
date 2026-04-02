@@ -1713,7 +1713,7 @@ class ArtifactEntry:
 
 ### B.4 query_service.py 硬编码评估
 
-文件：`packages/datahub/src/ditto_datahub/services/derived/query_service.py`
+文件：`packages/data/src/ditto_data/services/derived/query_service.py`
 
 硬编码假设：`instrument_id.cast(pl.Int64)`, schema = `instrument_id + trade_date + value`
 

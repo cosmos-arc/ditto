@@ -60,7 +60,7 @@ ditto_port/registry/
 |--------------|-------------|------|
 | **infra/** | `packages/infra` | 配置、观测、通知 |
 | **core/** | `packages/core` | DQ 引擎 |
-| **datahub/** | `packages/datahub` | 数据源、Store、Service |
+| **datahub/** | `packages/data` | 数据源、Store、Service |
 
 ### 1.4 各模块 `__init__.py` 导出模式
 
@@ -291,7 +291,7 @@ def test_something(reset_observability):  # 显式请求
 
 ```python
 # market.py (Port 层路由)
-from ditto_datahub.services.market_service import (
+from ditto_data.services.market_service import (
     AdjType,           # ← DataHub 层类型
     MarketBarsQuery,   # ← DataHub 层类型
     MarketService,     # ← DataHub 层 Service
@@ -315,7 +315,7 @@ def _map_adjustment(adj: Adjustment) -> AdjType:
 
 ```python
 # ditto_port/models/market.py
-from ditto_datahub.services.market_service import AdjType, MarketBarsQuery
+from ditto_data.services.market_service import AdjType, MarketBarsQuery
 
 class BarsRequest(BaseModel):  # 原 BarsQuery
     """K 线查询请求."""

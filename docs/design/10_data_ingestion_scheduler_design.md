@@ -696,7 +696,7 @@ from prefect import flow, get_run_logger
 
 from ditto_port.ingestion.config.datasets import Dataset
 from ditto_port.ingestion.tasks import backfill_chunk
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 
 @task(name="backfill_chunk")
@@ -804,7 +804,7 @@ from prefect import flow, get_run_logger
 
 from ditto_port.ingestion.config.datasets import Dataset, DATASET_REGISTRY
 from ditto_port.ingestion.services.retry import RetryManager
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 
 @flow(name="repair_holes")
@@ -978,7 +978,7 @@ from prefect.tasks import exponential_backoff
 
 from ditto_port.ingestion.config.datasets import Dataset, DATASET_REGISTRY
 from ditto_port.ingestion.services.coordinator import IngestionCoordinator
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 
 def create_ingest_task(dataset: Dataset):
@@ -1060,7 +1060,7 @@ ingest_adj_factor = create_ingest_task(Dataset.ADJ_FACTOR)
 from datetime import date
 from prefect import task, get_run_logger
 
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 
 @task(

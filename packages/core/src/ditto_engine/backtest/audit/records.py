@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from ditto_kernel.enums import RiskScope
 from ditto_kernel.identity import InstrumentId
 
-from ditto_engine.backtest.risk.post_trade import RiskActionType, RiskSeverity
+from ditto_engine.risk.post_trade import RiskActionType, RiskSeverity
 
 __all__ = [
     "PreTradeDecisionRecord",

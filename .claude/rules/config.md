@@ -75,8 +75,8 @@ config/
 | 包 | 位置 | 包含配置 |
 |---|------|----------|
 | `ditto_infra` | `foundation/config/settings.py` | `Settings`, `SystemSettings`, `ObservabilitySettings` |
-| `ditto_datahub` | `config/data_store.py` | `DataStoreSettings`, `FileStorageSettings` |
-| `ditto_datahub` | `config/data_source.py` | `DataSourceSettings` |
+| `ditto_data` | `config/data_store.py` | `DataStoreSettings`, `FileStorageSettings` |
+| `ditto_data` | `config/data_source.py` | `DataSourceSettings` |
 | `ditto_engine` | `quality/config.py` | `DQSettings` |
 
 ### 禁止事项

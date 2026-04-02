@@ -18,7 +18,7 @@ import orjson
 
 # Local imports - using editable packages
 from dishka.integrations.fastapi import setup_dishka
-from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_infra.foundation.config import ConfigInitError
 from ditto_infra.foundation.config.environment import get_environment
 from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope

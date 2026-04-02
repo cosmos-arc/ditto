@@ -4,7 +4,7 @@
 
 - **状态**: 设计完成（20 个 ADR 全部已决策）
 - **作者**: Codex（基于当前仓库代码与用户方案整合）
-- **适用范围**: `packages/core` + `packages/datahub` + `apps/port`
+- **适用范围**: `packages/core` + `packages/data` + `apps/port`
 - **约束前提**:
   - 不引入 Bronze/Silver/Gold/Platinum 命名
   - 不引入 Iceberg/Delta/Hudi
@@ -165,7 +165,7 @@
 ## 3.1 架构边界（必须遵守）
 
 1. 分层由 Import Linter 强约束：`Port -> Core -> DataHub -> Infra`。
-2. Core 对 DataHub 依赖受限，当前规则仅放行 `ditto_datahub.models.*`。
+2. Core 对 DataHub 依赖受限，当前规则仅放行 `ditto_data.models.*`。
 3. Port 运行路径不允许直接访问 DataHub stores/runtime（registry 装配例外）。
 
 ## 3.2 现有数据与任务结构
@@ -205,7 +205,7 @@
 3. `FeatureEngine`/`FactorEngine`：执行计划 + 标准化 + PIT 规整。
 4. `NormalizationPipeline`：`cs_rank/cs_zscore/winsorize/neutralize`。
 
-### C. `packages/datahub`（存储与元数据层）
+### C. `packages/data`（存储与元数据层）
 
 1. 读取 source domains 输入数据。
 2. 写入 derived domains（features/factors）。
@@ -266,7 +266,7 @@ packages/core/src/ditto_core/engine/
 建议目录：
 
 ```text
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
   services/
     derived_materialization_service.py
   stores/
@@ -5714,7 +5714,7 @@ class StreamConfig:
 
 ## 22. 最终决策声明
 
-本设计在不改变 Ditto 现有域命名和分层规则的前提下，吸收”编译期静态分析 + 一体化增量”核心思想，将复杂度集中在 `ditto_core` 的表达式与计划层，并通过 `ditto_datahub` 的锁与目录原子提交保证工程可用性。
+本设计在不改变 Ditto 现有域命名和分层规则的前提下，吸收”编译期静态分析 + 一体化增量”核心思想，将复杂度集中在 `ditto_core` 的表达式与计划层，并通过 `ditto_data` 的锁与目录原子提交保证工程可用性。
 
 这不是概念性蓝图，而是可按 Phase 0/1/2 直接拆任务执行的工程方案。
 

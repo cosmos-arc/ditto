@@ -3,7 +3,7 @@ Execution boundary types — decoupled from strategy module.
 
 Defines the minimal interface that the execution planner requires
 from a target portfolio, allowing execution to depend only on its
-own boundary types rather than on ditto_engine.strategy.models.
+own boundary types rather than on ditto_engine.alpha.models.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ class TargetPortfolioLike(Protocol):
     """
     Minimal interface for a target portfolio consumed by ExecutionPlanner.
 
-    ``ditto_engine.strategy.models.TargetPortfolio`` satisfies this protocol
+    ``ditto_engine.alpha.models.TargetPortfolio`` satisfies this protocol
     without any changes.
     """
 

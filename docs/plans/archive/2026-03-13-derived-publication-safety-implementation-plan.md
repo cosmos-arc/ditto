@@ -15,8 +15,8 @@
 1. Core 发布安全模型已落地：
    - `packages/core/src/ditto_core/engine/publication_safety.py`
 2. DataHub runtime record 与 file persistence 已落地：
-   - `packages/datahub/src/ditto_datahub/models/publication_safety.py`
-   - `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/*`
+   - `packages/data/src/ditto_data/models/publication_safety.py`
+   - `packages/data/src/ditto_data/stores/runtime/publication_safety/*`
 3. `PublicationSafetyRecordService` 已落地并接入 RuntimeProvider。
 4. 对应单元测试已补齐并通过。
 
@@ -38,12 +38,12 @@
    - `CertificationCheckResult`
    - `CertificationPack`
    - `CertificationReport`
-2. `packages/datahub` 新增 runtime 记录模型与文件持久化：
+2. `packages/data` 新增 runtime 记录模型与文件持久化：
    - manifest record
    - shadow diff record
    - shadow trace record
    - certification report record
-3. `packages/datahub` 新增统一服务：
+3. `packages/data` 新增统一服务：
    - `PublicationSafetyRecordService`
 4. `apps/port` registry 接入 DataHub runtime provider，使新服务可被容器组装。
 5. 补齐单元测试，覆盖模型行为、reader/writer roundtrip、service delegation。
@@ -77,31 +77,31 @@
 
 ### DataHub Models
 
-- `packages/datahub/src/ditto_datahub/models/publication_safety.py`
-- `packages/datahub/src/ditto_datahub/models/__init__.py`
+- `packages/data/src/ditto_data/models/publication_safety.py`
+- `packages/data/src/ditto_data/models/__init__.py`
 
 ### DataHub Runtime Stores
 
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/__init__.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/manifest_reader.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/manifest_writer.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/shadow_report_reader.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/shadow_report_writer.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/certification_reader.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/certification_writer.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/__init__.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/manifest_reader.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/manifest_writer.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/shadow_report_reader.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/shadow_report_writer.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/certification_reader.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/certification_writer.py`
 
 ### DataHub Service / Provider
 
-- `packages/datahub/src/ditto_datahub/services/publication_safety_record_service.py`
-- `packages/datahub/src/ditto_datahub/services/__init__.py`
+- `packages/data/src/ditto_data/services/publication_safety_record_service.py`
+- `packages/data/src/ditto_data/services/__init__.py`
 - `apps/port/src/ditto_port/registry/datahub/runtime.py`
 
 ### Tests
 
-- `packages/datahub/tests/unit/stores/runtime/publication_safety/test_manifest_store_unit.py`
-- `packages/datahub/tests/unit/stores/runtime/publication_safety/test_shadow_report_store_unit.py`
-- `packages/datahub/tests/unit/stores/runtime/publication_safety/test_certification_store_unit.py`
-- `packages/datahub/tests/unit/services/test_publication_safety_record_service.py`
+- `packages/data/tests/unit/stores/runtime/publication_safety/test_manifest_store_unit.py`
+- `packages/data/tests/unit/stores/runtime/publication_safety/test_shadow_report_store_unit.py`
+- `packages/data/tests/unit/stores/runtime/publication_safety/test_certification_store_unit.py`
+- `packages/data/tests/unit/services/test_publication_safety_record_service.py`
 
 ---
 
@@ -276,7 +276,7 @@ data_root/
 **先写测试**
 
 文件：
-- `packages/datahub/tests/unit/stores/runtime/publication_safety/test_manifest_store_unit.py`
+- `packages/data/tests/unit/stores/runtime/publication_safety/test_manifest_store_unit.py`
 
 覆盖：
 - writer 能落盘 manifest JSON
@@ -286,21 +286,21 @@ data_root/
 **再写实现**
 
 文件：
-- `packages/datahub/src/ditto_datahub/models/publication_safety.py`
-- `packages/datahub/src/ditto_datahub/models/__init__.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/manifest_reader.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/manifest_writer.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/__init__.py`
+- `packages/data/src/ditto_data/models/publication_safety.py`
+- `packages/data/src/ditto_data/models/__init__.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/manifest_reader.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/manifest_writer.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/__init__.py`
 
 验证：
-- `pixi run -e dev pytest packages/datahub/tests/unit/stores/runtime/publication_safety/test_manifest_store_unit.py`
+- `pixi run -e dev pytest packages/data/tests/unit/stores/runtime/publication_safety/test_manifest_store_unit.py`
 
 ### Task 3: shadow diff / trace store
 
 **先写测试**
 
 文件：
-- `packages/datahub/tests/unit/stores/runtime/publication_safety/test_shadow_report_store_unit.py`
+- `packages/data/tests/unit/stores/runtime/publication_safety/test_shadow_report_store_unit.py`
 
 覆盖：
 - writer 能同时写入 diff report 与 trace records
@@ -311,19 +311,19 @@ data_root/
 **再写实现**
 
 文件：
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/shadow_report_reader.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/shadow_report_writer.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/shadow_report_reader.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/shadow_report_writer.py`
 
 验证：
-- `pixi run -e dev pytest packages/datahub/tests/unit/stores/runtime/publication_safety/test_shadow_report_store_unit.py`
+- `pixi run -e dev pytest packages/data/tests/unit/stores/runtime/publication_safety/test_shadow_report_store_unit.py`
 
 ### Task 4: certification store 与统一 service
 
 **先写测试**
 
 文件：
-- `packages/datahub/tests/unit/stores/runtime/publication_safety/test_certification_store_unit.py`
-- `packages/datahub/tests/unit/services/test_publication_safety_record_service.py`
+- `packages/data/tests/unit/stores/runtime/publication_safety/test_certification_store_unit.py`
+- `packages/data/tests/unit/services/test_publication_safety_record_service.py`
 
 覆盖：
 - certification writer/read roundtrip
@@ -333,14 +333,14 @@ data_root/
 **再写实现**
 
 文件：
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/certification_reader.py`
-- `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/certification_writer.py`
-- `packages/datahub/src/ditto_datahub/services/publication_safety_record_service.py`
-- `packages/datahub/src/ditto_datahub/services/__init__.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/certification_reader.py`
+- `packages/data/src/ditto_data/stores/runtime/publication_safety/certification_writer.py`
+- `packages/data/src/ditto_data/services/publication_safety_record_service.py`
+- `packages/data/src/ditto_data/services/__init__.py`
 
 验证：
-- `pixi run -e dev pytest packages/datahub/tests/unit/stores/runtime/publication_safety/test_certification_store_unit.py`
-- `pixi run -e dev pytest packages/datahub/tests/unit/services/test_publication_safety_record_service.py`
+- `pixi run -e dev pytest packages/data/tests/unit/stores/runtime/publication_safety/test_certification_store_unit.py`
+- `pixi run -e dev pytest packages/data/tests/unit/services/test_publication_safety_record_service.py`
 
 ### Task 5: Provider 接线与文档回写
 

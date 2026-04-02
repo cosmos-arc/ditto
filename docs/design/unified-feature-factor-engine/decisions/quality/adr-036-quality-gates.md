@@ -324,7 +324,7 @@ class DQReport:
 | 文件路径 | 修改内容 |
 |---------|---------|
 | `packages/core/src/ditto_engine/engine/specs.py` | 增加 `null_rate_limit` 字段 |
-| `packages/datahub/src/ditto_datahub/stores/catalog/schema.py` | 增加 DQ 相关字段 |
+| `packages/data/src/ditto_data/stores/catalog/schema.py` | 增加 DQ 相关字段 |
 
 ---
 

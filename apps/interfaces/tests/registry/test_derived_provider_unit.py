@@ -10,9 +10,9 @@ from ditto_app.process.materialization import (
     DerivedPublicationFacade,
 )
 from ditto_app.query.derived import DerivedQueryFacade
-from ditto_datahub.services import DerivedQueryService
-from ditto_datahub.sources import ExchangeTransformers
-from ditto_datahub.sources.source import DataSources
+from ditto_data.services import DerivedQueryService
+from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.source import DataSources
 from ditto_interfaces.registry import ConfigProvider
 from ditto_interfaces.registry.core import QualityProvider
 from ditto_interfaces.registry.datahub import (

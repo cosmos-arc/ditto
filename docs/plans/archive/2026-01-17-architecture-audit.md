@@ -36,8 +36,8 @@
 |---|------|--------|------|
 | 1 | **apps/port → Store 层穿透** | 🔴 Blocker | 3 个文件 |
 | 2 | **apps/port → Source 层穿透** | 🟠 High | 2 个文件 |
-| 3 | **DQEngine 中的 Any 类型污染** | 🟠 High | [engine.py:125](packages/datahub/src/ditto_datahub/dq/engine.py#L125) |
-| 4 | **BarsRepository 可优化 (1081 行)** | 🟡 Medium | [bars.py](packages/datahub/src/ditto_datahub/repositories/bars.py) |
+| 3 | **DQEngine 中的 Any 类型污染** | 🟠 High | [engine.py:125](packages/data/src/ditto_data/dq/engine.py#L125) |
+| 4 | **BarsRepository 可优化 (1081 行)** | 🟡 Medium | [bars.py](packages/data/src/ditto_data/repositories/bars.py) |
 | 5 | **IngestionCoordinator 方法过多 (17 个)** | 🟡 Medium | [coordinator.py](apps/port/src/ditto_port/services/ingestion/coordinator.py) |
 
 ---
@@ -126,7 +126,7 @@ pixi run -e dev test --unit
 
 #### 🟡 Medium: 公共 API 暴露实现细节
 
-**文件**: [stores/__init__.py:7,17](packages/datahub/src/ditto_datahub/stores/__init__.py#L7)
+**文件**: [stores/__init__.py:7,17](packages/data/src/ditto_data/stores/__init__.py#L7)
 
 **问题**: 导出 `ParquetStoreBase` 实现类
 
@@ -140,7 +140,7 @@ pixi run -e dev test --unit
 
 #### 🟡 Medium #1: BarsRepository 可优化 (1081 行)
 
-**文件**: [repositories/bars.py](packages/datahub/src/ditto_datahub/repositories/bars.py)
+**文件**: [repositories/bars.py](packages/data/src/ditto_data/repositories/bars.py)
 
 **评估**: 职责相对清晰，主要是 Repository（数据访问）+ 计算逻辑混合
 
@@ -170,7 +170,7 @@ pixi run -e dev test --unit
 
 #### 🟠 High #1: DQEngine 中的 Any 类型
 
-**文件**: [dq/engine.py:125](packages/datahub/src/ditto_datahub/dq/engine.py#L125)
+**文件**: [dq/engine.py:125](packages/data/src/ditto_data/dq/engine.py#L125)
 
 **当前代码**:
 ```python
@@ -185,7 +185,7 @@ def check_statistical(
 ```python
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from ditto_datahub.hub import DataHub
+    from ditto_data.hub import DataHub
 
 def check_statistical(
     self,
@@ -284,7 +284,7 @@ ditto/
 
 #### 4. 重构 BarsRepository - 提取纯函数模块 + 移除 DQ 编排逻辑
 
-**影响**: [bars.py](packages/datahub/src/ditto_datahub/repositories/bars.py) (1081 → ~650 行)
+**影响**: [bars.py](packages/data/src/ditto_data/repositories/bars.py) (1081 → ~650 行)
 
 **方案**:
 1. **提取纯函数模块**（约 260 行）：

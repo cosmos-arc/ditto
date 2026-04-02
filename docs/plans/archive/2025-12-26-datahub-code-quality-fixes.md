@@ -76,9 +76,9 @@
 ### Phase 1: 关键业务逻辑修复（必须）
 
 #### 1.1 混合资产类别查询检测
-- **文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+- **文件**: `packages/data/src/ditto_data/repositories/bars.py`
 - **修改**: `_determine_dataset()` 方法
-- **测试**: `packages/datahub/tests/unit/repositories/test_bars_repository.py`
+- **测试**: `packages/data/tests/unit/repositories/test_bars_repository.py`
 - **Commit**: `fix(bars): detect and reject mixed asset class queries`
 - **状态**: [ ] 未完成
 
@@ -89,9 +89,9 @@ if has_stock and has_etf:
 ```
 
 #### 1.2 QFQ 前复权因子排序（存储层）
-- **文件**: `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py`
+- **文件**: `packages/data/src/ditto_data/stores/adj_factor_store.py`
 - **修改**: `_write_impl()` 排序逻辑
-- **测试**: `packages/datahub/tests/test_adj_factor_store.py`
+- **测试**: `packages/data/tests/test_adj_factor_store.py`
 - **Commit**: `fix(adj_factor_store): ensure sid, trade_date sorting on write`
 - **状态**: [ ] 未完成
 
@@ -101,9 +101,9 @@ combined = combined.sort(["sid", "trade_date"])
 ```
 
 #### 1.3 QFQ 前复权因子排序（查询层）
-- **文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+- **文件**: `packages/data/src/ditto_data/repositories/bars.py`
 - **修改**: `_apply_adj()` 方法
-- **测试**: `packages/datahub/tests/unit/repositories/test_bars_repository.py`
+- **测试**: `packages/data/tests/unit/repositories/test_bars_repository.py`
 - **Commit**: `fix(bars): sort adj_df before last() aggregation`
 - **状态**: [ ] 未完成
 
@@ -112,9 +112,9 @@ adj_df = adj_df.sort(["sid", "trade_date"])
 ```
 
 #### 1.4 复权因子缺失处理（QFQ）
-- **文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+- **文件**: `packages/data/src/ditto_data/repositories/bars.py`
 - **修改**: `_apply_adj()` QFQ 分支
-- **测试**: `packages/datahub/tests/unit/repositories/test_bars_repository.py`
+- **测试**: `packages/data/tests/unit/repositories/test_bars_repository.py`
 - **Commit**: `fix(bars): use coalesce for missing adj_factor in QFQ`
 - **状态**: [ ] 未完成
 
@@ -123,9 +123,9 @@ pl.col("open") * pl.coalesce("latest_factor", 1.0) / pl.coalesce("adj_factor", 1
 ```
 
 #### 1.5 复权因子缺失处理（HFQ）
-- **文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+- **文件**: `packages/data/src/ditto_data/repositories/bars.py`
 - **修改**: `_apply_adj()` HFQ 分支
-- **测试**: `packages/datahub/tests/unit/repositories/test_bars_repository.py`
+- **测试**: `packages/data/tests/unit/repositories/test_bars_repository.py`
 - **Commit**: `fix(bars): use coalesce for missing adj_factor in HFQ`
 - **状态**: [ ] 未完成
 
@@ -138,9 +138,9 @@ pl.col("open") * pl.coalesce("adj_factor", 1.0)
 ### Phase 2: 数据安全修复（必须）
 
 #### 2.1 SQLite 外键启用
-- **文件**: `packages/datahub/src/ditto_datahub/runtime/sqlite_pool.py`
+- **文件**: `packages/data/src/ditto_data/runtime/sqlite_pool.py`
 - **修改**: `get_connection()` 方法
-- **测试**: `packages/datahub/tests/unit/runtime/test_sqlite_pool.py` (新建)
+- **测试**: `packages/data/tests/unit/runtime/test_sqlite_pool.py` (新建)
 - **Commit**: `fix(sqlite_pool): enable foreign key constraints`
 - **状态**: [ ] 未完成
 
@@ -149,16 +149,16 @@ conn.execute("PRAGMA foreign_keys = ON;")
 ```
 
 #### 2.2 SQL 注入风险修复
-- **文件**: `packages/datahub/src/ditto_datahub/stores/security_store.py`
+- **文件**: `packages/data/src/ditto_data/stores/security_store.py`
 - **修改**: 创建 `_build_in_clause()` 辅助函数
-- **测试**: `packages/datahub/tests/unit/stores/test_security_store.py`
+- **测试**: `packages/data/tests/unit/stores/test_security_store.py`
 - **Commit**: `fix(security_store): refactor IN clause with helper function`
 - **状态**: [ ] 未完成
 
 #### 2.3 AdjFactorStore 日期规范化
-- **文件**: `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py`
+- **文件**: `packages/data/src/ditto_data/stores/adj_factor_store.py`
 - **修改**: `_write_impl()` 添加日期类型检查
-- **测试**: `packages/datahub/tests/test_adj_factor_store.py`
+- **测试**: `packages/data/tests/test_adj_factor_store.py`
 - **Commit**: `fix(adj_factor_store): normalize trade_date type on write`
 - **状态**: [ ] 未完成
 
@@ -167,28 +167,28 @@ conn.execute("PRAGMA foreign_keys = ON;")
 ### Phase 3: 代码质量提升（推荐）
 
 #### 3.1 拆分 _write_impl 函数
-- **文件**: `packages/datahub/src/ditto_datahub/stores/bars_store.py`
+- **文件**: `packages/data/src/ditto_data/stores/bars_store.py`
 - **修改**: 提取 `_ensure_dataset_dir()`, `_merge_with_existing()`, `_prepare_for_write()`
 - **测试**: 现有测试应继续通过
 - **Commit**: `refactor(bars_store): extract helper methods from _write_impl`
 - **状态**: [ ] 未完成
 
 #### 3.2 添加 BarsStore 输入验证
-- **文件**: `packages/datahub/src/ditto_datahub/stores/bars_store.py`
+- **文件**: `packages/data/src/ditto_data/stores/bars_store.py`
 - **修改**: 添加 `_validate_bars_schema()` 函数
-- **测试**: `packages/datahub/tests/unit/stores/test_bars_store.py`
+- **测试**: `packages/data/tests/unit/stores/test_bars_store.py`
 - **Commit**: `feat(bars_store): add DataFrame schema validation`
 - **状态**: [ ] 未完成
 
 #### 3.3 添加 AdjFactorStore 输入验证
-- **文件**: `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py`
+- **文件**: `packages/data/src/ditto_data/stores/adj_factor_store.py`
 - **修改**: 添加 `_validate_adj_factor_schema()` 函数
-- **测试**: `packages/datahub/tests/test_adj_factor_store.py`
+- **测试**: `packages/data/tests/test_adj_factor_store.py`
 - **Commit**: `feat(adj_factor_store): add DataFrame schema validation`
 - **状态**: [ ] 未完成
 
 #### 3.4 移除冗余类型断言
-- **文件**: `packages/datahub/src/ditto_datahub/runtime/sqlite_pool.py`
+- **文件**: `packages/data/src/ditto_data/runtime/sqlite_pool.py`
 - **修改**: 移除 `assert isinstance(...)` 行
 - **测试**: 现有测试应继续通过
 - **Commit**: `refactor(sqlite_pool): remove redundant type assertion`
@@ -199,9 +199,9 @@ conn.execute("PRAGMA foreign_keys = ON;")
 ### Phase 4: 代码风格改进（可选）
 
 #### 4.1 symbol 多重匹配警告
-- **文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+- **文件**: `packages/data/src/ditto_data/repositories/bars.py`
 - **修改**: `get_single()` 添加警告日志
-- **测试**: `packages/datahub/tests/unit/repositories/test_bars_repository.py`
+- **测试**: `packages/data/tests/unit/repositories/test_bars_repository.py`
 - **Commit**: `feat(bars): add warning for ambiguous symbol resolution`
 - **状态**: [ ] 未完成
 
@@ -296,7 +296,7 @@ git commit -m "feat(bars): add warning for ambiguous symbol resolution"
 ### 需要修改的文件
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── repositories/
 │   └── bars.py                    # 混合资产检测、QFQ 排序、null 处理、symbol 警告
 ├── stores/
@@ -310,7 +310,7 @@ packages/datahub/src/ditto_datahub/
 ### 需要添加测试的文件
 
 ```
-packages/datahub/tests/
+packages/data/tests/
 ├── unit/
 │   ├── repositories/
 │   │   └── test_bars_repository.py    # 混合资产、复权缺失、排序测试

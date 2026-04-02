@@ -15,7 +15,7 @@
 ### Task 1: 更新 schema.sql
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/scripts/schema.sql`
+- Modify: `packages/data/src/ditto_data/scripts/schema.sql`
 
 **Step 1: 修改 instrument 表字段名**
 
@@ -43,14 +43,14 @@ CREATE INDEX IF NOT EXISTS idx_instrument_ticker ON instrument(ticker);
 
 **Step 3: 验证修改**
 
-Run: `grep -n "symbol\|ticker" packages/datahub/src/ditto_datahub/scripts/schema.sql`
+Run: `grep -n "symbol\|ticker" packages/data/src/ditto_data/scripts/schema.sql`
 
 Expected: 只有 `ticker` 和 `source_ticker`，没有单独的 `symbol`
 
 **Step 4: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/scripts/schema.sql
+git add packages/data/src/ditto_data/scripts/schema.sql
 git commit -m "refactor(db): symbol → ticker 字段重命名"
 ```
 
@@ -103,8 +103,8 @@ git commit -m "refactor(foundation): schema 验证 symbol → ticker"
 ### Task 3: 更新 InstrumentRegistration 模型
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/models/metadata.py:129-131`
-- Test: `packages/datahub/tests/unit/models/test_security_unit.py`
+- Modify: `packages/data/src/ditto_data/models/metadata.py:129-131`
+- Test: `packages/data/tests/unit/models/test_security_unit.py`
 
 **Step 1: 修改 InstrumentRegistration 字段**
 
@@ -140,13 +140,13 @@ name: str
 
 **Step 3: 运行类型检查**
 
-Run: `pixi run -e dev type packages/datahub/src/ditto_datahub/models/metadata.py`
+Run: `pixi run -e dev type packages/data/src/ditto_data/models/metadata.py`
 
 Expected: PASS（可能有下游引用错误，后续 Task 修复）
 
 **Step 4: 更新测试文件断言**
 
-修改 `packages/datahub/tests/unit/models/test_security_unit.py`:
+修改 `packages/data/tests/unit/models/test_security_unit.py`:
 
 ```python
 # 修改前
@@ -158,15 +158,15 @@ assert registration.ticker == "600000"
 
 **Step 5: 运行测试验证**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/models/test_security_unit.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/models/test_security_unit.py -v`
 
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/models/metadata.py
-git add packages/datahub/tests/unit/models/test_security_unit.py
+git add packages/data/src/ditto_data/models/metadata.py
+git add packages/data/tests/unit/models/test_security_unit.py
 git commit -m "refactor(models): InstrumentRegistration.symbol → ticker"
 ```
 
@@ -177,8 +177,8 @@ git commit -m "refactor(models): InstrumentRegistration.symbol → ticker"
 ### Task 4: 重构 InstrumentReader 方法名
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_reader.py`
-- Test: `packages/datahub/tests/unit/stores/test_security_store_unit.py`
+- Modify: `packages/data/src/ditto_data/stores/metadata/instrument/instrument_reader.py`
+- Test: `packages/data/tests/unit/stores/test_security_store_unit.py`
 
 **Step 1: 重命名 get_symbol → get_ticker**
 
@@ -300,14 +300,14 @@ def enrich_with_ticker(self, df: pl.DataFrame) -> pl.DataFrame:
 
 **Step 4: 运行类型检查**
 
-Run: `pixi run -e dev type packages/datahub/src/ditto_datahub/stores/metadata/instrument/`
+Run: `pixi run -e dev type packages/data/src/ditto_data/stores/metadata/instrument/`
 
 Expected: 可能有下游引用错误，后续 Task 修复
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_reader.py
+git add packages/data/src/ditto_data/stores/metadata/instrument/instrument_reader.py
 git commit -m "refactor(store): InstrumentReader symbol → ticker 方法重命名"
 ```
 
@@ -316,7 +316,7 @@ git commit -m "refactor(store): InstrumentReader symbol → ticker 方法重命�
 ### Task 5: 更新 InstrumentWriter
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_writer.py`
+- Modify: `packages/data/src/ditto_data/stores/metadata/instrument/instrument_writer.py`
 
 **Step 1: 修改 register 方法中的 SQL**
 
@@ -368,14 +368,14 @@ ticker=registration.ticker,
 
 **Step 3: 运行类型检查**
 
-Run: `pixi run -e dev type packages/datahub/src/ditto_datahub/stores/metadata/instrument/`
+Run: `pixi run -e dev type packages/data/src/ditto_data/stores/metadata/instrument/`
 
 Expected: PASS
 
 **Step 4: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_writer.py
+git add packages/data/src/ditto_data/stores/metadata/instrument/instrument_writer.py
 git commit -m "refactor(store): InstrumentWriter symbol → ticker"
 ```
 
@@ -386,7 +386,7 @@ git commit -m "refactor(store): InstrumentWriter symbol → ticker"
 ### Task 6: 更新 MetadataService
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/metadata_service.py`
+- Modify: `packages/data/src/ditto_data/services/metadata_service.py`
 
 **Step 1: 重命名 get_symbol → get_ticker**
 
@@ -426,14 +426,14 @@ def get_ticker(self, instrument_id: int) -> str | None:
 
 **Step 2: 运行类型检查**
 
-Run: `pixi run -e dev type packages/datahub/src/ditto_datahub/services/metadata_service.py`
+Run: `pixi run -e dev type packages/data/src/ditto_data/services/metadata_service.py`
 
 Expected: PASS
 
 **Step 3: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/metadata_service.py
+git add packages/data/src/ditto_data/services/metadata_service.py
 git commit -m "refactor(service): MetadataService.get_symbol → get_ticker"
 ```
 
@@ -442,11 +442,11 @@ git commit -m "refactor(service): MetadataService.get_symbol → get_ticker"
 ### Task 7: 更新 MarketService
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/market_service.py`
+- Modify: `packages/data/src/ditto_data/services/market_service.py`
 
 **Step 1: 搜索 symbol 引用并替换**
 
-Run: `grep -n "symbol" packages/datahub/src/ditto_datahub/services/market_service.py`
+Run: `grep -n "symbol" packages/data/src/ditto_data/services/market_service.py`
 
 根据搜索结果，将所有 `symbol` 替换为 `ticker`，包括：
 - 方法名中的 `symbol`
@@ -455,14 +455,14 @@ Run: `grep -n "symbol" packages/datahub/src/ditto_datahub/services/market_servic
 
 **Step 2: 运行类型检查**
 
-Run: `pixi run -e dev type packages/datahub/src/ditto_datahub/services/market_service.py`
+Run: `pixi run -e dev type packages/data/src/ditto_data/services/market_service.py`
 
 Expected: PASS
 
 **Step 3: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/market_service.py
+git add packages/data/src/ditto_data/services/market_service.py
 git commit -m "refactor(service): MarketService symbol → ticker"
 ```
 
@@ -473,7 +473,7 @@ git commit -m "refactor(service): MarketService symbol → ticker"
 ### Task 8: 更新 TushareDataTransformer
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/processors/transformer.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/processors/transformer.py`
 
 **Step 1: 更新 ETF_BASIC_MAPPING 的 computed_columns**
 
@@ -535,19 +535,19 @@ STOCK_BASIC_MAPPING = ColumnMapping(
 
 **Step 3: 更新测试文件**
 
-修改 `packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py` 中的相关断言。
+修改 `packages/data/tests/unit/sources/tushare/test_transformer_unit.py` 中的相关断言。
 
 **Step 4: 运行测试**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/sources/tushare/test_transformer_unit.py -v`
 
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/processors/transformer.py
-git add packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py
+git add packages/data/src/ditto_data/sources/tushare/processors/transformer.py
+git add packages/data/tests/unit/sources/tushare/test_transformer_unit.py
 git commit -m "refactor(source): transformer symbol → ticker"
 ```
 
@@ -556,7 +556,7 @@ git commit -m "refactor(source): transformer symbol → ticker"
 ### Task 9: 清理 Source Schema 中的模糊 ticker 字段
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/schemas/metadata_schemas.py`
+- Modify: `packages/data/src/ditto_data/sources/schemas/metadata_schemas.py`
 
 **Step 1: 移除 INSTRUMENT_SOURCE_SCHEMA 中冗余的 ticker 字段**
 
@@ -597,14 +597,14 @@ INSTRUMENT_SOURCE_SCHEMA = SourceSchema(
 
 **Step 2: 运行类型检查**
 
-Run: `pixi run -e dev type packages/datahub/src/ditto_datahub/sources/schemas/metadata_schemas.py`
+Run: `pixi run -e dev type packages/data/src/ditto_data/sources/schemas/metadata_schemas.py`
 
 Expected: PASS
 
 **Step 3: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/schemas/metadata_schemas.py
+git add packages/data/src/ditto_data/sources/schemas/metadata_schemas.py
 git commit -m "refactor(source): 移除 INSTRUMENT_SOURCE_SCHEMA 中冗余的 ticker 字段"
 ```
 
@@ -701,12 +701,12 @@ git commit -m "feat(foundation): 添加 get_standard_ticker 工具函数"
 ### Task 11: 更新 Store 层测试
 
 **Files:**
-- Modify: `packages/datahub/tests/unit/stores/test_security_store_unit.py`
-- Modify: `packages/datahub/tests/integration/stores/test_security_store_integration.py`
+- Modify: `packages/data/tests/unit/stores/test_security_store_unit.py`
+- Modify: `packages/data/tests/integration/stores/test_security_store_integration.py`
 
 **Step 1: 批量替换 symbol → ticker**
 
-Run: `grep -n "symbol" packages/datahub/tests/unit/stores/test_security_store_unit.py`
+Run: `grep -n "symbol" packages/data/tests/unit/stores/test_security_store_unit.py`
 
 将所有 `symbol` 替换为 `ticker`，包括：
 - 断言中的字段名
@@ -715,7 +715,7 @@ Run: `grep -n "symbol" packages/datahub/tests/unit/stores/test_security_store_un
 
 **Step 2: 运行测试**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/stores/test_security_store_unit.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/stores/test_security_store_unit.py -v`
 
 Expected: PASS
 
@@ -724,8 +724,8 @@ Expected: PASS
 **Step 4: Commit**
 
 ```bash
-git add packages/datahub/tests/unit/stores/test_security_store_unit.py
-git add packages/datahub/tests/integration/stores/test_security_store_integration.py
+git add packages/data/tests/unit/stores/test_security_store_unit.py
+git add packages/data/tests/integration/stores/test_security_store_integration.py
 git commit -m "test: Store 层测试 symbol → ticker"
 ```
 
@@ -734,7 +734,7 @@ git commit -m "test: Store 层测试 symbol → ticker"
 ### Task 12: 更新其他测试文件
 
 **Files:**
-- Modify: `packages/datahub/tests/integration/runtime/test_sql_engine_integration.py`
+- Modify: `packages/data/tests/integration/runtime/test_sql_engine_integration.py`
 - Modify: `apps/port/tests/unit/services/ingestion/quality/test_reconciliation_service_unit.py`
 - Modify: `apps/port/tests/unit/services/ingestion/quality/conftest.py`
 - Modify: `apps/port/src/ditto_port/services/ingestion/quality/reconciliation_service.py`
@@ -749,7 +749,7 @@ git commit -m "test: Store 层测试 symbol → ticker"
 
 **Step 2: 运行受影响的测试**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/integration/runtime/test_sql_engine_integration.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/integration/runtime/test_sql_engine_integration.py -v`
 
 Run: `pixi run -e dev pytest apps/port/tests/unit/services/ingestion/quality/ -v`
 
@@ -758,7 +758,7 @@ Expected: PASS
 **Step 3: Commit**
 
 ```bash
-git add packages/datahub/tests/integration/runtime/test_sql_engine_integration.py
+git add packages/data/tests/integration/runtime/test_sql_engine_integration.py
 git add apps/port/tests/unit/services/ingestion/quality/
 git add apps/port/src/ditto_port/services/ingestion/quality/reconciliation_service.py
 git commit -m "test: 剩余测试文件 symbol → ticker"

@@ -195,7 +195,7 @@ def test_calc_mean(input_data, expected):
 
 ```python
 import pytest
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 @pytest.fixture
 def hub():

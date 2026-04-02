@@ -1,6 +1,6 @@
 """共享标识符解析工具。"""
 
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.metadata_service import MetadataService
 
 __all__ = ["resolve_instrument_identifier"]
 

@@ -58,19 +58,19 @@ ditto_port/
 | 访问类型 | ✅ 允许 | ❌ 禁止 |
 |---------|--------|--------|
 | **通过 Domain Service** | `MetadataService`, `MarketService` | - |
-| **直接导入 Sources** | `from ditto_datahub.sources.*` | - |
-| **直接导入 Stores** | - | `from ditto_datahub.stores.*` |
+| **直接导入 Sources** | `from ditto_data.sources.*` | - |
+| **直接导入 Stores** | - | `from ditto_data.stores.*` |
 
 ```python
 # ✅ 正确：通过 DI 容器注入 Service
-from ditto_datahub.services import MetadataService
+from ditto_data.services import MetadataService
 service: MetadataService = container.get(MetadataService)
 
 # ✅ 正确：通过 Service 获取数据
 bars = service.get_bars(query)
 
 # ❌ 错误：直接访问 Store
-from ditto_datahub.stores import BarsReader  # ❌
+from ditto_data.stores import BarsReader  # ❌
 reader = BarsReader(...)  # ❌
 ```
 

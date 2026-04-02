@@ -90,7 +90,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ditto_datahub.stores.metadata.instrument.instrument_reader import (
+    from ditto_data.stores.metadata.instrument.instrument_reader import (
         InstrumentReader,
     )
 
@@ -228,20 +228,20 @@ git commit -m "feat(port): add ticker resolver with AmbiguousTickerError"
 ### Task 2.2: 扩展 StockTushareAdapter 支持按股票查询
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock.py`
-- Test: `packages/datahub/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/adapters/stock.py`
+- Test: `packages/data/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py`
 
 **Step 1: 编写失败测试 - 按股票查询 stock_daily**
 
 ```python
-# packages/datahub/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py
+# packages/data/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py
 import pytest
 from unittest.mock import MagicMock, patch
 
 
 def test_fetch_stock_daily_by_ticker_uses_ts_code():
     """按股票查询应使用 ts_code 参数."""
-    from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
+    from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
 
     mock_client = MagicMock()
     mock_client.query.return_value = pl.DataFrame({
@@ -277,7 +277,7 @@ def test_fetch_stock_daily_by_ticker_uses_ts_code():
 
 def test_fetch_stock_daily_mutual_exclusive_params():
     """trade_date 和 source_ticker 互斥."""
-    from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
+    from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
 
     mock_client = MagicMock()
     adapter = StockTushareAdapter(_client=mock_client)
@@ -291,13 +291,13 @@ def test_fetch_stock_daily_mutual_exclusive_params():
 
 **Step 2: 运行测试验证失败**
 
-Run: `pixi run -e dev test packages/datahub/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py`
+Run: `pixi run -e dev test packages/data/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py`
 Expected: FAIL - AttributeError
 
 **Step 3: 实现按股票查询方法**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock.py
+# packages/data/src/ditto_data/sources/tushare/adapters/stock.py
 # 在 StockTushareAdapter 类中添加:
 
 def fetch_stock_daily_by_ticker(
@@ -348,14 +348,14 @@ def fetch_stock_daily_by_ticker(
 
 **Step 4: 运行测试验证通过**
 
-Run: `pixi run -e dev test packages/datahub/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py`
+Run: `pixi run -e dev test packages/data/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock.py
-git add packages/datahub/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py
+git add packages/data/src/ditto_data/sources/tushare/adapters/stock.py
+git add packages/data/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py
 git commit -m "feat(datahub): add fetch_stock_daily_by_ticker to StockTushareAdapter"
 ```
 
@@ -364,12 +364,12 @@ git commit -m "feat(datahub): add fetch_stock_daily_by_ticker to StockTushareAda
 ### Task 2.3: 扩展 TushareSource 门面类
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/tushare_source.py`
 
 **Step 1: 添加按股票查询的委托方法**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py
+# packages/data/src/ditto_data/sources/tushare/tushare_source.py
 # 添加以下方法:
 
 def fetch_stock_daily_by_ticker(
@@ -407,7 +407,7 @@ def fetch_stock_daily_by_ticker(
 **Step 3: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py
+git add packages/data/src/ditto_data/sources/tushare/tushare_source.py
 git commit -m "feat(datahub): add ticker-based fetch methods to TushareSource"
 ```
 
@@ -652,7 +652,7 @@ from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from fastapi import APIRouter, Query
 
-from ditto_datahub.sources.base import DataSource
+from ditto_data.sources.base import DataSource
 from ditto_port.models.common import APIResponse
 
 router = APIRouter(prefix="/source", tags=["source"])
@@ -764,7 +764,7 @@ from datetime import date
 
 from prefect import flow, task
 
-from ditto_datahub.models import Dataset
+from ditto_data.models import Dataset
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 from ditto_port.services.ingestion.ticker_resolver import TickerIngestParams
 
@@ -883,7 +883,7 @@ git commit -m "feat(port): add Prefect flows for ticker backfill"
 ### Task 7.2: 集成测试 - Source 按股票查询
 
 **Files:**
-- Create: `packages/datahub/tests/integration/sources/test_tushare_ticker_integration.py`
+- Create: `packages/data/tests/integration/sources/test_tushare_ticker_integration.py`
 
 **测试用例:**
 - `test_fetch_stock_daily_by_ticker_returns_data`

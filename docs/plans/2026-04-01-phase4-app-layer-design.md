@@ -121,7 +121,7 @@ interfaces (apps/) → app (packages/) → data, engine, analytics, kernel, infr
 | `ditto_kernel` | Protocol 类型（Clock, DataProvider, EventBus） | 仅类型引用 |
 | `ditto_engine` | BacktestEngine, FactorEvaluator, ResearchDataset | 实例化 + 调用 |
 | `ditto_analytics` | CompileCache, ResearchModels | 实例化 + 调用 |
-| `ditto_datahub` | Services（MetadataService, MarketService, ...） | 实例化 + 调用 |
+| `ditto_data` | Services（MetadataService, MarketService, ...） | 实例化 + 调用 |
 | `ditto_infra` | logger, Settings | 仅工具 |
 | `ditto_data` | QualityService, Errors | 实例化 + 调用 |
 
@@ -276,7 +276,7 @@ class IngestionBundle:
 
 ```ini
 # root_modules 新增 ditto_app
-root_modules = ditto_infra ditto_kernel ditto_datahub ditto_data ditto_analytics ditto_engine ditto_port ditto_app
+root_modules = ditto_infra ditto_kernel ditto_data ditto_data ditto_analytics ditto_engine ditto_port ditto_app
 
 # R8: app 内部互斥
 [importlinter:contract:app-query-isolation]
@@ -309,7 +309,7 @@ forbidden_modules = ditto_port
 
 ```ini
 # root_modules: ditto_port → ditto_interfaces
-root_modules = ditto_infra ditto_kernel ditto_datahub ditto_data ditto_analytics ditto_engine ditto_interfaces ditto_app
+root_modules = ditto_infra ditto_kernel ditto_data ditto_data ditto_analytics ditto_engine ditto_interfaces ditto_app
 
 # 更新所有 ditto_port 引用为 ditto_interfaces
 [importlinter:contract:app-no-port-import]
@@ -327,7 +327,7 @@ layers = ditto_interfaces
   ditto_app
   ditto_engine
   ditto_analytics
-  ditto_datahub
+  ditto_data
   ditto_data
   ditto_kernel
   ditto_infra

@@ -513,7 +513,7 @@ def data_store_settings(self, config_loader: ConfigLoader) -> DataStoreSettings:
 
 **Step 2: 修改 DataStoreSettings 支持可选的 logs_path**
 
-在 `packages/datahub/src/ditto_datahub/config/data_store.py` 中添加 `logs_path` 字段：
+在 `packages/data/src/ditto_data/config/data_store.py` 中添加 `logs_path` 字段：
 
 ```python
 class DataStoreSettings(BaseModel):
@@ -535,7 +535,7 @@ class DataStoreSettings(BaseModel):
 **Step 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/config/data_store.py
+git add packages/data/src/ditto_data/config/data_store.py
 git add apps/port/src/ditto_port/registry/infra/config.py
 git commit -m "feat: 支持 LOG_DIR 环境变量覆盖日志路径"
 ```
@@ -736,7 +736,7 @@ docker compose logs -f
 | `deploy/docker/.env.example` | 创建 | 环境变量模板 |
 | `deploy/docker/README.md` | 创建 | 部署说明 |
 | `apps/port/src/ditto_port/registry/infra/config.py` | 修改 | 支持 LOG_DIR |
-| `packages/datahub/src/ditto_datahub/config/data_store.py` | 修改 | 支持 logs_path 覆盖 |
+| `packages/data/src/ditto_data/config/data_store.py` | 修改 | 支持 logs_path 覆盖 |
 | `deploy/observability/docker-compose.yml` | 修改 | Vector 日志挂载 |
 | `deploy/observability/vector.toml` | 修改 | 分离日志源 |
 | `.gitignore` | 修改 | 忽略 .env.local |

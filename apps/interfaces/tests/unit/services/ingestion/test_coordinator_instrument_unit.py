@@ -6,8 +6,11 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_app.process.ingestion import IngestionCoordinator
-from ditto_data.models.ingestion import InstrumentIngestParams
-from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
+from ditto_data.models.ingestion import (
+    IngestionLog,
+    IngestionStatus,
+    InstrumentIngestParams,
+)
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing
 from ditto_infra.foundation.observability.config import ObservabilityConfig

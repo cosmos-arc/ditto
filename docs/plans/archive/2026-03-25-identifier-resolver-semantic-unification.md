@@ -13,8 +13,8 @@
 ## Task 1: 改造核心 Resolver 语义
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/metadata/instrument.py:598-659`
-- Test: `packages/datahub/tests/unit/services/test_metadata_service_identifier_resolution_unit.py`
+- Modify: `packages/data/src/ditto_data/services/metadata/instrument.py:598-659`
+- Test: `packages/data/tests/unit/services/test_metadata_service_identifier_resolution_unit.py`
 
 ### Step 1: 更新测试 — 写 failing tests
 
@@ -141,12 +141,12 @@ def test_priority_instrument_id_over_ticker(
 
 ### Step 2: 运行测试确认失败
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/services/test_metadata_service_identifier_resolution_unit.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/services/test_metadata_service_identifier_resolution_unit.py -v`
 Expected: FAIL — passthrough test fails (instrument_id path still returns directly without querying)
 
 ### Step 3: 实现核心改动
 
-修改 `packages/datahub/src/ditto_datahub/services/metadata/instrument.py` 的 `resolve_instrument_identifier()` 方法：
+修改 `packages/data/src/ditto_data/services/metadata/instrument.py` 的 `resolve_instrument_identifier()` 方法：
 
 ```python
 @traced("metadata.identity.resolve_instrument_identifier")
@@ -223,14 +223,14 @@ def resolve_instrument_identifier(
 
 ### Step 4: 运行测试确认通过
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/services/test_metadata_service_identifier_resolution_unit.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/services/test_metadata_service_identifier_resolution_unit.py -v`
 Expected: PASS
 
 ### Step 5: Commit
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/metadata/instrument.py \
-        packages/datahub/tests/unit/services/test_metadata_service_identifier_resolution_unit.py
+git add packages/data/src/ditto_data/services/metadata/instrument.py \
+        packages/data/tests/unit/services/test_metadata_service_identifier_resolution_unit.py
 git commit -m "refactor: resolve_instrument_identifier 查不到返回 None，移除 IdentifierNotFoundError"
 ```
 
@@ -239,7 +239,7 @@ git commit -m "refactor: resolve_instrument_identifier 查不到返回 None，�
 ## Task 2: 更新 MetadataService Facade 返回类型
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/metadata_service.py:410-428`
+- Modify: `packages/data/src/ditto_data/services/metadata_service.py:410-428`
 
 ### Step 1: 更新 facade 返回类型
 
@@ -277,7 +277,7 @@ Expected: 此处应有 type errors（调用方尚未适配），这些 errors �
 ### Step 3: Commit
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/metadata_service.py
+git add packages/data/src/ditto_data/services/metadata_service.py
 git commit -m "refactor: MetadataService.resolve_instrument_identifier 返回 InstrumentId | None"
 ```
 
@@ -524,8 +524,8 @@ from typing import Any
 
 import orjson
 import typer
-from ditto_datahub.services.fundamental_service import FundamentalService
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.metadata_service import MetadataService
 from rich.console import Console
 from rich.table import Table
 
@@ -826,7 +826,7 @@ Expected: ALL PASS (lint + fmt + type + test --fast)
 
 ### Step 2: 运行受影响的单元测试
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/services/test_metadata_service_identifier_resolution_unit.py apps/port/tests/unit/api/routes/test_capital_identifier_query_unit.py apps/port/tests/unit/api/routes/test_fundamental_identifier_query_unit.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/services/test_metadata_service_identifier_resolution_unit.py apps/port/tests/unit/api/routes/test_capital_identifier_query_unit.py apps/port/tests/unit/api/routes/test_fundamental_identifier_query_unit.py -v`
 Expected: ALL PASS
 
 ### Step 3: 类型检查

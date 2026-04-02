@@ -102,7 +102,7 @@ mock_datahub_session.reset_mock()  # ✅ 每个 function 级别测试都会重�
 
 ### 2.3 DataHub 层分析
 
-**DataHub 层 fixtures** ([packages/datahub/tests/unit/conftest.py](d:\code\quant\ditto\packages\datahub\tests\unit\conftest.py)):
+**DataHub 层 fixtures** ([packages/data/tests/unit/conftest.py](d:\code\quant\ditto\packages\datahub\tests\unit\conftest.py)):
 
 ```python
 @pytest.fixture
@@ -199,14 +199,14 @@ class DatabaseManager:
 
 ```bash
 # 1. DataHub 单元测试：并行（已验证安全）
-pytest packages/datahub/tests/unit/ -n auto
+pytest packages/data/tests/unit/ -n auto
 
 # 2. Port 单元测试：有限并行（需验证）
 pytest apps/port/tests/unit/ -n 2
 
 # 3. 集成测试：串行（有 session fixtures）
 pytest apps/port/tests/integration/ -n 0
-pytest packages/datahub/tests/integration/ -n 0
+pytest packages/data/tests/integration/ -n 0
 
 # 4. E2E/外部 API 测试：串行（慢速测试）
 pytest -m "e2e or external" -n 0
@@ -232,7 +232,7 @@ addopts = [
 
 ```toml
 # DataHub 单元测试：并行
-test-unit-datahub = "pytest packages/datahub/tests/unit/ -n auto -v"
+test-unit-datahub = "pytest packages/data/tests/unit/ -n auto -v"
 
 # Port 单元测试：有限并行（需验证）
 test-unit-port = "pytest apps/port/tests/unit/ -n 2 -v"
@@ -244,7 +244,7 @@ test-integration = "pytest -m integration -n 0 -v"
 test-fast = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q --tb=no -x"
 
 # 完整测试：分层执行
-test-all = "pytest packages/datahub/tests/unit/ -n auto && pytest apps/port/tests/unit/ -n 2 && pytest -m integration -n 0"
+test-all = "pytest packages/data/tests/unit/ -n auto && pytest apps/port/tests/unit/ -n 2 && pytest -m integration -n 0"
 ```
 
 #### 4.3.2 CI/CD 配置调整
@@ -254,7 +254,7 @@ test-all = "pytest packages/datahub/tests/unit/ -n auto && pytest apps/port/test
 ```yaml
 # 单元测试：分层并行
 - name: Run DataHub unit tests (parallel)
-  run: pixi run -e dev pytest packages/datahub/tests/unit/ -n auto --cov=packages --cov-report=xml:coverage-datahub.xml
+  run: pixi run -e dev pytest packages/data/tests/unit/ -n auto --cov=packages --cov-report=xml:coverage-datahub.xml
 
 - name: Run Port unit tests (limited parallel)
   run: pixi run -e dev pytest apps/port/tests/unit/ -n 2 --cov=apps --cov-report=xml:coverage-port.xml
@@ -266,7 +266,7 @@ test-all = "pytest packages/datahub/tests/unit/ -n auto && pytest apps/port/test
 
 ```bash
 # 只对 DataHub 层启用并行（已验证安全）
-pytest packages/datahub/tests/unit/ -n auto
+pytest packages/data/tests/unit/ -n auto
 
 # Port 层全部串行
 pytest apps/port/tests/ -n 0
@@ -453,17 +453,17 @@ def mock_datahub() -> MagicMock:
 
 ```bash
 # 1. 验证单个测试文件
-pytest packages/datahub/tests/unit/test_calendar_store_unit.py -n 4 -v
+pytest packages/data/tests/unit/test_calendar_store_unit.py -n 4 -v
 
 # 2. 验证整个单元测试套件
-pytest packages/datahub/tests/unit/ apps/port/tests/unit/ -n auto -v
+pytest packages/data/tests/unit/ apps/port/tests/unit/ -n auto -v
 
 # 3. 验证集成测试（如果重构了 session fixtures）
 pytest -m integration -n 4 -v
 
 # 4. 运行 10 次确保稳定性
 for i in {1..10}; do
-  pytest packages/datahub/tests/unit/ apps/port/tests/unit/ -n auto
+  pytest packages/data/tests/unit/ apps/port/tests/unit/ -n auto
 done
 ```
 
@@ -526,7 +526,7 @@ done
 # 1. 验证 DataHub 单元测试并行安全性（运行 10 次）
 for i in {1..10}; do
   echo "=== Run $i ==="
-  pixi run -e dev pytest packages/datahub/tests/unit/ -n auto -v
+  pixi run -e dev pytest packages/data/tests/unit/ -n auto -v
 done
 
 # 2. 验证 Port 单元测试有限并行安全性
@@ -536,11 +536,11 @@ for i in {1..5}; do
 done
 
 # 3. 检测 flaky 测试
-pixi run -e dev pytest packages/datahub/tests/unit/ -n auto --repeat=10
+pixi run -e dev pytest packages/data/tests/unit/ -n auto --repeat=10
 
 # 4. 性能基准测试
-time pixi run -e dev pytest packages/datahub/tests/unit/ -n auto -v
-time pixi run -e dev pytest packages/datahub/tests/unit/ -n 0 -v
+time pixi run -e dev pytest packages/data/tests/unit/ -n auto -v
+time pixi run -e dev pytest packages/data/tests/unit/ -n 0 -v
 ```
 
 ### 6.2 验证检查点

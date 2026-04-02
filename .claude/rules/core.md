@@ -78,7 +78,7 @@ MAX_DRAWDOWN = 0.20          # UPPER_SNAKE
 
 ### Service 层查询方法命名规范
 
-> **适用范围**：本规范仅适用于 `packages/datahub/src/ditto_datahub/services/` 下的存储服务类。
+> **适用范围**：本规范仅适用于 `packages/datahub/src/ditto_data/services/` 下的存储服务类。
 
 | 前缀/方法 | 语义 | 返回 | 参数 | 数据不存在时 | 示例 |
 |-----------|------|------|------|-------------|------|
@@ -360,10 +360,10 @@ from ditto_infra.config import get_settings  # 应为 ditto_infra.foundation.con
 
 ```python
 # ✅ 正确
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 # ❌ 错误
-from ditto_datahub.stores.bars_store import BarsStore
+from ditto_data.stores.bars_store import BarsStore
 ```
 
 ### Server 层导入
@@ -481,7 +481,7 @@ tar -tzf dist/*.whl | grep py.typed
 | 包 | py.typed 状态 | 路径 |
 |---|--------------|------|
 | ditto_engine | ✅ | `packages/core/src/ditto_engine/py.typed` |
-| ditto_datahub | ✅ | `packages/datahub/src/ditto_datahub/py.typed` |
+| ditto_data | ✅ | `packages/datahub/src/ditto_data/py.typed` |
 | ditto_infra | ✅ | `packages/infra/src/ditto_infra/py.typed` |
 | ditto_port | ✅ | `apps/port/src/ditto_port/py.typed` |
 
@@ -555,21 +555,21 @@ Server Flow → Server Service → DataHub Service → DataHub Store/Runtime →
 
 ```python
 # ❌ Server 层禁止直接导入 Store
-from ditto_datahub.stores.security_store import SecurityStore
-from ditto_datahub.stores.bars_store import BarsStore
+from ditto_data.stores.security_store import SecurityStore
+from ditto_data.stores.bars_store import BarsStore
 
 # ❌ Server 层禁止直接导入 Runtime
-from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
+from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
+from ditto_data.runtime.sqlite_pool import SQLitePool
 
 # ✅ Server 层应该使用 Service
-from ditto_datahub import DataHub
-from ditto_datahub.domains.market.market_service import MarketService
-from ditto_datahub.domains.metadata.metadata_service import MetadataService
+from ditto_data import DataHub
+from ditto_data.domains.market.market_service import MarketService
+from ditto_data.domains.metadata.metadata_service import MetadataService
 
 # ✅ 仅 registry 模块允许导入 Store/Source 做 DI 装配
-from ditto_datahub.sources.tushare import TushareSource
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.sources.tushare import TushareSource
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 # ✅ DataHub 内部可以导入下层
 # packages/datahub 内的 Store 可以导入 Runtime
@@ -594,8 +594,8 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 ```bash
 # 检查 MetadataService 是否已有相关方法
-grep -r "def.*register" packages/datahub/src/ditto_datahub/domains/metadata/
-grep -r "def.*resolve" packages/datahub/src/ditto_datahub/domains/metadata/
+grep -r "def.*register" packages/datahub/src/ditto_data/domains/metadata/
+grep -r "def.*resolve" packages/datahub/src/ditto_data/domains/metadata/
 ```
 
 **禁止重复实现：**

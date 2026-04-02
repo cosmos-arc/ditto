@@ -151,7 +151,7 @@ Orchestrator 持有 Brokerage，每日生成 AccountView 注入各 Stage。
 **现状**: 标为"中风险 + 纯机械操作 + 1 PR"
 
 **实际影响范围**:
-- `ditto_core` 被 `ditto_port`、`ditto_datahub` 广泛引用
+- `ditto_core` 被 `ditto_port`、`ditto_data` 广泛引用
 - 改名 = 全库 import 路径变更
 - 改名后 quality → datahub、expression → analytics 还要迁走 = **改两次名**
 

@@ -7,8 +7,8 @@ from datetime import date, timedelta
 import numpy as np
 import polars as pl
 import pytest
-from ditto_engine.engine.evaluation.metrics import performance_attribution
-from ditto_engine.engine.evaluation.report import PerformanceAttributionResult
+from ditto_analytics.evaluation.metrics import performance_attribution
+from ditto_analytics.evaluation.report import PerformanceAttributionResult
 
 # ---------------------------------------------------------------------------
 # Test data factories

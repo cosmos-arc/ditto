@@ -5,30 +5,30 @@ from __future__ import annotations
 from typing import Any
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.sources import ExchangeTransformers
-from ditto_datahub.stores.capital.index_composition import IndexCompositionReader
-from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
-from ditto_datahub.stores.metadata.industry import (
+from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.sources import ExchangeTransformers
+from ditto_data.stores.capital.index_composition import IndexCompositionReader
+from ditto_data.stores.metadata.calendar import CalendarReader, CalendarWriter
+from ditto_data.stores.metadata.industry import (
     IndustryMappingReader,
     IndustryMappingWriter,
     IndustryReader,
     IndustryWriter,
 )
-from ditto_datahub.stores.metadata.instrument import (
+from ditto_data.stores.metadata.instrument import (
     InstrumentReader,
     InstrumentWriter,
     NameHistoryReader,
     NameHistoryWriter,
 )
-from ditto_datahub.stores.metadata.universe import (
+from ditto_data.stores.metadata.universe import (
     RebalanceReader,
     RebalanceWriter,
     UniverseReader,
     UniverseWriter,
 )
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 from ditto_infra.foundation.cache import DataCache
 
 __all__ = ["MetadataProvider"]

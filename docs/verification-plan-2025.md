@@ -1914,7 +1914,7 @@ echo "=== API 验证完成 ==="
 ```bash
 # 验证 FRED 数据源
 pixi run -e dev python -c "
-from ditto_datahub.sources.fred import FredSource, list_fred_indicators
+from ditto_data.sources.fred import FredSource, list_fred_indicators
 import keyring
 
 api_key = keyring.get_password('fred', 'api_key')

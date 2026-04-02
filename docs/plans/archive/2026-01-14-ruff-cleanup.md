@@ -133,7 +133,7 @@
 ```toml
 [tool.ruff.lint.per-file-ignores]
 # 延迟初始化模式 - cached_property 避免启动时重初始化
-"packages/datahub/src/ditto_datahub/hub.py" = ["PLC0415"]
+"packages/data/src/ditto_data/hub.py" = ["PLC0415"]
 "packages/foundation/src/ditto_foundation/config/settings.py" = ["PLC0415", "S104"]
 
 # 循环依赖 - port jobs 与 services 之间的架构问题（待重构）
@@ -141,8 +141,8 @@
 "apps/port/src/ditto_port/services/**/*.py" = ["PLC0415"]
 
 # 类型收窄 - assert 用于类型收窄（Type narrowing）
-"packages/datahub/src/ditto_datahub/runtime/freeze_manager.py" = ["S101"]
-"packages/datahub/src/ditto_datahub/sources/tushare/client.py" = ["S101"]
+"packages/data/src/ditto_data/runtime/freeze_manager.py" = ["S101"]
+"packages/data/src/ditto_data/sources/tushare/client.py" = ["S101"]
 ```
 
 **结果**: 132 处 PLC0415 → 0
@@ -188,17 +188,17 @@ $ pixi run -e dev pyright
 
 **代码修改**:
 - `apps/port/src/ditto_port/jobs/flows/deploy.py` - 移动 sys 导入
-- `packages/datahub/src/ditto_datahub/sources/tushare/rate_limiter.py` - 移动 time 导入
-- `packages/datahub/src/ditto_datahub/stores/quarantine_store.py` - 移动 json 导入
-- `packages/datahub/src/ditto_datahub/repositories/bars.py` - 添加 noqa 注释
-- `packages/datahub/src/ditto_datahub/dq/checkers/technical.py` - noqa: S608
-- `packages/datahub/src/ditto_datahub/dq/models.py` - noqa: S112
-- `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py` - 移动 datetime 导入
-- `packages/datahub/src/ditto_datahub/sources/tushare/client.py` - noqa: PLC0415
+- `packages/data/src/ditto_data/sources/tushare/rate_limiter.py` - 移动 time 导入
+- `packages/data/src/ditto_data/stores/quarantine_store.py` - 移动 json 导入
+- `packages/data/src/ditto_data/repositories/bars.py` - 添加 noqa 注释
+- `packages/data/src/ditto_data/dq/checkers/technical.py` - noqa: S608
+- `packages/data/src/ditto_data/dq/models.py` - noqa: S112
+- `packages/data/src/ditto_data/runtime/freeze_manager.py` - 移动 datetime 导入
+- `packages/data/src/ditto_data/sources/tushare/client.py` - noqa: PLC0415
 - `packages/foundation/src/ditto_foundation/config/settings.py` - noqa: PLC0415
 - `packages/foundation/src/ditto_foundation/observability/logging.py` - noqa: PLC0415
-- `packages/datahub/src/ditto_datahub/types.py` - E501 行长度修复
-- `packages/datahub/src/ditto_datahub/stores/pipeline_store.py` - noqa: C901
+- `packages/data/src/ditto_data/types.py` - E501 行长度修复
+- `packages/data/src/ditto_data/stores/pipeline_store.py` - noqa: C901
 
 ---
 

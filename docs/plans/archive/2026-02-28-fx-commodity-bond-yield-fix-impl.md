@@ -13,17 +13,17 @@
 ## Task 1: 创建 FX Store 层
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/stores/market/fx/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/fx/bars/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/fx/bars/bars_reader.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/fx/bars/bars_writer.py`
-- Create: `packages/datahub/tests/unit/stores/market/fx/test_bars_reader.py`
+- Create: `packages/data/src/ditto_data/stores/market/fx/__init__.py`
+- Create: `packages/data/src/ditto_data/stores/market/fx/bars/__init__.py`
+- Create: `packages/data/src/ditto_data/stores/market/fx/bars/bars_reader.py`
+- Create: `packages/data/src/ditto_data/stores/market/fx/bars/bars_writer.py`
+- Create: `packages/data/tests/unit/stores/market/fx/test_bars_reader.py`
 
 **Step 1: Create directory structure**
 
 ```bash
-mkdir -p packages/datahub/src/ditto_datahub/stores/market/fx/bars
-mkdir -p packages/datahub/tests/unit/stores/market/fx
+mkdir -p packages/data/src/ditto_data/stores/market/fx/bars
+mkdir -p packages/data/tests/unit/stores/market/fx
 ```
 
 **Step 2: Write fx/__init__.py**
@@ -39,8 +39,8 @@ __all__ = []
 ```python
 """FX bars data store."""
 
-from ditto_datahub.stores.market.fx.bars.bars_reader import FxBarsReader
-from ditto_datahub.stores.market.fx.bars.bars_writer import FxBarsWriter
+from ditto_data.stores.market.fx.bars.bars_reader import FxBarsReader
+from ditto_data.stores.market.fx.bars.bars_writer import FxBarsWriter
 
 __all__ = ["FxBarsReader", "FxBarsWriter"]
 ```
@@ -61,7 +61,7 @@ from pathlib import Path
 
 import polars as pl
 
-from ditto_datahub.stores.base import ParquetStore, YearlyPartition
+from ditto_data.stores.base import ParquetStore, YearlyPartition
 
 
 class FxBarsReader:
@@ -183,9 +183,9 @@ from pathlib import Path
 
 import polars as pl
 
-from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.storage import WriteStoreResult
-from ditto_datahub.stores.base import ParquetStore, YearlyPartition
+from ditto_data.models import OnDuplicate
+from ditto_data.models.storage import WriteStoreResult
+from ditto_data.stores.base import ParquetStore, YearlyPartition
 
 
 class FxBarsWriter:
@@ -286,7 +286,7 @@ class FxBarsWriter:
 **Step 6: Write failing test for FxBarsReader**
 
 ```python
-# packages/datahub/tests/unit/stores/market/fx/test_bars_reader.py
+# packages/data/tests/unit/stores/market/fx/test_bars_reader.py
 """Unit tests for FX bars reader."""
 
 from pathlib import Path
@@ -294,7 +294,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
+from ditto_data.stores.market.fx.bars import FxBarsReader, FxBarsWriter
 
 
 @pytest.fixture
@@ -349,15 +349,15 @@ class TestFxBarsWriter:
 
 **Step 7: Run test to verify it passes**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/stores/market/fx/test_bars_reader.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/stores/market/fx/test_bars_reader.py -v`
 
 Expected: All tests pass
 
 **Step 8: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/market/fx/
-git add packages/datahub/tests/unit/stores/market/fx/
+git add packages/data/src/ditto_data/stores/market/fx/
+git add packages/data/tests/unit/stores/market/fx/
 git commit -m "feat(datahub): add FxBarsReader/Writer for FX daily bars storage"
 ```
 
@@ -366,17 +366,17 @@ git commit -m "feat(datahub): add FxBarsReader/Writer for FX daily bars storage"
 ## Task 2: 创建 Commodity Store 层
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/stores/market/commodity/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/commodity/bars/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/commodity/bars/bars_reader.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/commodity/bars/bars_writer.py`
-- Create: `packages/datahub/tests/unit/stores/market/commodity/test_bars_reader.py`
+- Create: `packages/data/src/ditto_data/stores/market/commodity/__init__.py`
+- Create: `packages/data/src/ditto_data/stores/market/commodity/bars/__init__.py`
+- Create: `packages/data/src/ditto_data/stores/market/commodity/bars/bars_reader.py`
+- Create: `packages/data/src/ditto_data/stores/market/commodity/bars/bars_writer.py`
+- Create: `packages/data/tests/unit/stores/market/commodity/test_bars_reader.py`
 
 **Step 1: Create directory structure**
 
 ```bash
-mkdir -p packages/datahub/src/ditto_datahub/stores/market/commodity/bars
-mkdir -p packages/datahub/tests/unit/stores/market/commodity
+mkdir -p packages/data/src/ditto_data/stores/market/commodity/bars
+mkdir -p packages/data/tests/unit/stores/market/commodity
 ```
 
 **Step 2: Write commodity/__init__.py**
@@ -392,10 +392,10 @@ __all__ = []
 ```python
 """Commodity Bars data store."""
 
-from ditto_datahub.stores.market.commodity.bars.bars_reader import (
+from ditto_data.stores.market.commodity.bars.bars_reader import (
     CommodityBarsReader,
 )
-from ditto_datahub.stores.market.commodity.bars.bars_writer import (
+from ditto_data.stores.market.commodity.bars.bars_writer import (
     CommodityBarsWriter,
 )
 
@@ -418,7 +418,7 @@ from pathlib import Path
 
 import polars as pl
 
-from ditto_datahub.stores.base import ParquetStore, YearlyPartition
+from ditto_data.stores.base import ParquetStore, YearlyPartition
 
 
 class CommodityBarsReader:
@@ -498,9 +498,9 @@ from pathlib import Path
 
 import polars as pl
 
-from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.storage import WriteStoreResult
-from ditto_datahub.stores.base import ParquetStore, YearlyPartition
+from ditto_data.models import OnDuplicate
+from ditto_data.models.storage import WriteStoreResult
+from ditto_data.stores.base import ParquetStore, YearlyPartition
 
 
 class CommodityBarsWriter:
@@ -551,7 +551,7 @@ class CommodityBarsWriter:
 **Step 6: Write test for CommodityBarsReader**
 
 ```python
-# packages/datahub/tests/unit/stores/market/commodity/test_bars_reader.py
+# packages/data/tests/unit/stores/market/commodity/test_bars_reader.py
 """Unit tests for Commodity bars reader."""
 
 from pathlib import Path
@@ -559,7 +559,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from ditto_datahub.stores.market.commodity.bars import (
+from ditto_data.stores.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,
 )
@@ -610,13 +610,13 @@ class TestCommodityBarsWriter:
 
 **Step 7: Run test**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/stores/market/commodity/test_bars_reader.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/stores/market/commodity/test_bars_reader.py -v`
 
 **Step 8: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/market/commodity/
-git add packages/datahub/tests/unit/stores/market/commodity/
+git add packages/data/src/ditto_data/stores/market/commodity/
+git add packages/data/tests/unit/stores/market/commodity/
 git commit -m "feat(datahub): add CommodityBarsReader/Writer for commodity daily bars storage"
 ```
 
@@ -625,15 +625,15 @@ git commit -m "feat(datahub): add CommodityBarsReader/Writer for commodity daily
 ## Task 3: 扩展 MarketService 支持 FX/Commodity
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/market_service.py`
+- Modify: `packages/data/src/ditto_data/services/market_service.py`
 
 **Step 1: Add FX/Commodity reader/writer imports**
 
 在文件顶部导入区域添加：
 
 ```python
-from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
-from ditto_datahub.stores.market.commodity.bars import (
+from ditto_data.stores.market.fx.bars import FxBarsReader, FxBarsWriter
+from ditto_data.stores.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,
 )
@@ -737,12 +737,12 @@ asset_class: Literal["stock", "etf", "index", "fx", "commodity"] | None = None
 
 **Step 7: Run type check**
 
-Run: `pixi run -e dev type packages/datahub/src/ditto_datahub/services/market_service.py`
+Run: `pixi run -e dev type packages/data/src/ditto_data/services/market_service.py`
 
 **Step 8: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/services/market_service.py
+git add packages/data/src/ditto_data/services/market_service.py
 git commit -m "feat(datahub): extend MarketService to support FX/Commodity asset classes"
 ```
 
@@ -758,11 +758,11 @@ git commit -m "feat(datahub): extend MarketService to support FX/Commodity asset
 在文件顶部添加导入（约第 15-22 行）：
 
 ```python
-from ditto_datahub.sources.fred.adapters.commodity import (
+from ditto_data.sources.fred.adapters.commodity import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
     VIX_CODE_TO_INSTRUMENT_ID,
 )
-from ditto_datahub.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
+from ditto_data.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
 ```
 
 **Step 2: Add _write_fx_bars method**
@@ -842,19 +842,19 @@ git commit -m "feat(port): add FX/Commodity daily bars write handlers to data_wr
 ## Task 5: 修复国债收益率异常值处理
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/adapters/bond_yield.py`
-- Create: `packages/datahub/tests/unit/sources/tushare/adapters/test_bond_yield_error_handling.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/adapters/bond_yield.py`
+- Create: `packages/data/tests/unit/sources/tushare/adapters/test_bond_yield_error_handling.py`
 
 **Step 1: Write failing test for error handling**
 
 ```python
-# packages/datahub/tests/unit/sources/tushare/adapters/test_bond_yield_error_handling.py
+# packages/data/tests/unit/sources/tushare/adapters/test_bond_yield_error_handling.py
 """Tests for bond yield adapter error handling."""
 
 import polars as pl
 import pytest
 
-from ditto_datahub.sources.tushare.adapters.bond_yield import BondYieldTushareAdapter
+from ditto_data.sources.tushare.adapters.bond_yield import BondYieldTushareAdapter
 
 
 class TestBondYieldErrorHandling:
@@ -872,7 +872,7 @@ class TestBondYieldErrorHandling:
             "yield": 2.5,
         }
 
-        from ditto_datahub.sources.tushare.adapters.bond_yield import CN_BOND_YIELD_INDICATORS
+        from ditto_data.sources.tushare.adapters.bond_yield import CN_BOND_YIELD_INDICATORS
 
         term_to_indicator = {
             1.0: ("CN_BOND_YIELD_1Y", CN_BOND_YIELD_INDICATORS["CN_BOND_YIELD_1Y"]),
@@ -892,7 +892,7 @@ class TestBondYieldErrorHandling:
             "yield": "--",  # Invalid
         }
 
-        from ditto_datahub.sources.tushare.adapters.bond_yield import CN_BOND_YIELD_INDICATORS
+        from ditto_data.sources.tushare.adapters.bond_yield import CN_BOND_YIELD_INDICATORS
 
         term_to_indicator = {
             1.0: ("CN_BOND_YIELD_1Y", CN_BOND_YIELD_INDICATORS["CN_BOND_YIELD_1Y"]),
@@ -912,7 +912,7 @@ class TestBondYieldErrorHandling:
             "yield": 2.5,
         }
 
-        from ditto_datahub.sources.tushare.adapters.bond_yield import CN_BOND_YIELD_INDICATORS
+        from ditto_data.sources.tushare.adapters.bond_yield import CN_BOND_YIELD_INDICATORS
 
         term_to_indicator = {
             1.0: ("CN_BOND_YIELD_1Y", CN_BOND_YIELD_INDICATORS["CN_BOND_YIELD_1Y"]),
@@ -926,7 +926,7 @@ class TestBondYieldErrorHandling:
 
 **Step 2: Run test to verify it fails**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/adapters/test_bond_yield_error_handling.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/sources/tushare/adapters/test_bond_yield_error_handling.py -v`
 
 Expected: Tests FAIL because current code returns 0.0 for invalid values
 
@@ -988,15 +988,15 @@ Expected: Tests FAIL because current code returns 0.0 for invalid values
 
 **Step 4: Run test to verify it passes**
 
-Run: `pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/adapters/test_bond_yield_error_handling.py -v`
+Run: `pixi run -e dev pytest packages/data/tests/unit/sources/tushare/adapters/test_bond_yield_error_handling.py -v`
 
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/adapters/bond_yield.py
-git add packages/datahub/tests/unit/sources/tushare/adapters/test_bond_yield_error_handling.py
+git add packages/data/src/ditto_data/sources/tushare/adapters/bond_yield.py
+git add packages/data/tests/unit/sources/tushare/adapters/test_bond_yield_error_handling.py
 git commit -m "fix(datahub): skip invalid bond yield data instead of defaulting to 0.0"
 ```
 
@@ -1095,8 +1095,8 @@ from typing import Annotated
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Query
 
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
+from ditto_data.services.market_service import MarketService
+from ditto_data.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
 from ditto_port.models.common import APIResponse
 from ditto_port.models.fx import FxBar, FxQuery
 
@@ -1175,8 +1175,8 @@ from typing import Annotated
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter
 
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.sources.fred.adapters.commodity import (
+from ditto_data.services.market_service import MarketService
+from ditto_data.sources.fred.adapters.commodity import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
     VIX_CODE_TO_INSTRUMENT_ID,
 )

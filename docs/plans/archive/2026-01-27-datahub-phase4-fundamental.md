@@ -30,7 +30,7 @@
 ## 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/domains/fundamental/
+packages/data/src/ditto_data/domains/fundamental/
 ├── __init__.py
 ├── financial/
 │   ├── balance_sheet_store.py

@@ -13,15 +13,15 @@ from ditto_app.process.strategy import (
     BacktestServiceConfig,
     MarketServiceDataFeed,
 )
-from ditto_datahub.models.strategy import StrategySpecRecord
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_engine.backtest.risk.pre_trade import CompositePreTradeCheck
+from ditto_data.models.strategy import StrategySpecRecord
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_engine.alpha.pipeline import StrategyPipeline
+from ditto_engine.alpha.specs import StrategySpec
 from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
 from ditto_engine.execution.reality import SimpleFeeModel
-from ditto_engine.strategy.pipeline import StrategyPipeline
-from ditto_engine.strategy.specs import StrategySpec
+from ditto_engine.risk.pre_trade import CompositePreTradeCheck
 
 
 def _make_strategy_spec() -> StrategySpec:

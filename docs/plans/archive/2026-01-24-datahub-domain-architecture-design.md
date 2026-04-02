@@ -37,7 +37,7 @@
 ### 2.1 域划分
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── domains/
 │   ├── market/          # Market 域：市场原始数据
 │   ├── metadata/        # Metadata 域：元数据（原 reference）
@@ -127,7 +127,7 @@ packages/datahub/src/ditto_datahub/
 ## 三、详细目录结构
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── domains/
 │   ├── market/
 │   │   ├── stock/
@@ -310,17 +310,17 @@ import polars as pl
 from ditto_foundation import traced, logger
 
 # Store 层
-from ditto_datahub.domains.market.stock.bars.bars_store import BarsStore
-from ditto_datahub.domains.market.stock.status.status_store import StatusStore
-from ditto_datahub.domains.market.stock.fundamental.financial_store import FinancialStore
-from ditto_datahub.domains.market.etf.bars.bars_store import EtfBarsStore
-from ditto_datahub.domains.market.index.bars.bars_store import IndexBarsStore
+from ditto_data.domains.market.stock.bars.bars_store import BarsStore
+from ditto_data.domains.market.stock.status.status_store import StatusStore
+from ditto_data.domains.market.stock.fundamental.financial_store import FinancialStore
+from ditto_data.domains.market.etf.bars.bars_store import EtfBarsStore
+from ditto_data.domains.market.index.bars.bars_store import IndexBarsStore
 
 # 子域能力模块
-from ditto_datahub.domains.market.stock.adj_factor import AdjFactorCalculator
+from ditto_data.domains.market.stock.adj_factor import AdjFactorCalculator
 
 # 同层依赖
-from ditto_datahub.domains.metadata.metadata_query_service import MetadataQueryService
+from ditto_data.domains.metadata.metadata_query_service import MetadataQueryService
 
 
 class MarketQueryService:
@@ -485,10 +485,10 @@ import polars as pl
 from ditto_foundation import traced
 
 # Store 层
-from ditto_datahub.domains.metadata.security.security_store import SecurityStore
-from ditto_datahub.domains.metadata.calendar.calendar_store import CalendarStore
-from ditto_datahub.domains.metadata.industry.industry_store import IndustryStore
-from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
+from ditto_data.domains.metadata.security.security_store import SecurityStore
+from ditto_data.domains.metadata.calendar.calendar_store import CalendarStore
+from ditto_data.domains.metadata.industry.industry_store import IndustryStore
+from ditto_data.domains.metadata.identity.identity_store import IdentityStore
 
 
 class MetadataQueryService:
@@ -596,16 +596,16 @@ import polars as pl
 from ditto_foundation import traced, logger
 
 # Store 层
-from ditto_datahub.domains.features.technical.price.price_features_store import PriceFeaturesStore
-from ditto_datahub.domains.features.technical.volume.volume_features_store import VolumeFeaturesStore
+from ditto_data.domains.features.technical.price.price_features_store import PriceFeaturesStore
+from ditto_data.domains.features.technical.volume.volume_features_store import VolumeFeaturesStore
 
 # 子域能力模块
-from ditto_datahub.domains.features.technical.price.ma_feature import MaFeatureCalculator
-from ditto_datahub.domains.features.technical.price.rsi_feature import RsiFeatureCalculator
+from ditto_data.domains.features.technical.price.ma_feature import MaFeatureCalculator
+from ditto_data.domains.features.technical.price.rsi_feature import RsiFeatureCalculator
 
 # 同层依赖
-from ditto_datahub.domains.market.market_query_service import MarketQueryService
-from ditto_datahub.domains.metadata.metadata_query_service import MetadataQueryService
+from ditto_data.domains.market.market_query_service import MarketQueryService
+from ditto_data.domains.metadata.metadata_query_service import MetadataQueryService
 
 
 class FeaturesQueryService:
@@ -773,17 +773,17 @@ import polars as pl
 from ditto_foundation import traced, logger
 
 # Store 层
-from ditto_datahub.domains.factors.style.value.value_factor_store import ValueFactorStore
-from ditto_datahub.domains.factors.style.momentum.momentum_factor_store import MomentumFactorStore
-from ditto_datahub.domains.factors.industry.industry_factor_store import IndustryFactorStore
+from ditto_data.domains.factors.style.value.value_factor_store import ValueFactorStore
+from ditto_data.domains.factors.style.momentum.momentum_factor_store import MomentumFactorStore
+from ditto_data.domains.factors.industry.industry_factor_store import IndustryFactorStore
 
 # 子域能力模块
-from ditto_datahub.domains.factors.style.value.value_pe_factor import ValuePeFactorCalculator
-from ditto_datahub.domains.factors.style.momentum.momentum_12m_factor import Momentum12mFactorCalculator
+from ditto_data.domains.factors.style.value.value_pe_factor import ValuePeFactorCalculator
+from ditto_data.domains.factors.style.momentum.momentum_12m_factor import Momentum12mFactorCalculator
 
 # 同层依赖
-from ditto_datahub.domains.features.features_query_service import FeaturesQueryService
-from ditto_datahub.domains.metadata.metadata_query_service import MetadataQueryService
+from ditto_data.domains.features.features_query_service import FeaturesQueryService
+from ditto_data.domains.metadata.metadata_query_service import MetadataQueryService
 
 
 class FactorsQueryService:
@@ -1266,7 +1266,7 @@ from pathlib import Path
 from typing import date
 import polars as pl
 
-from ditto_datahub.stores.base_store import BaseStore
+from ditto_data.stores.base_store import BaseStore
 
 
 class BarsStore(BaseStore):
@@ -1658,10 +1658,10 @@ import polars as pl
 from ditto_foundation import traced, logger
 
 # 域级服务（无同层依赖）
-from ditto_datahub.domains.market.market_query_service import MarketQueryService
-from ditto_datahub.domains.metadata.metadata_query_service import MetadataQueryService
-from ditto_datahub.domains.features.features_query_service import FeaturesQueryService
-from ditto_datahub.domains.factors.factors_query_service import FactorsQueryService
+from ditto_data.domains.market.market_query_service import MarketQueryService
+from ditto_data.domains.metadata.metadata_query_service import MetadataQueryService
+from ditto_data.domains.features.features_query_service import FeaturesQueryService
+from ditto_data.domains.factors.factors_query_service import FactorsQueryService
 
 
 class DataService:

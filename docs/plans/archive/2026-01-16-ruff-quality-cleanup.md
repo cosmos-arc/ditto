@@ -40,9 +40,9 @@
 **原因**: `PipelineStore` 是早期设计中的遗留代码，实际实现时采用了简化的 `IngestionLogStore`。类似于 `IngestionCursorStore` 的处理方式，已彻底移除。
 
 **删除内容**:
-- `packages/datahub/src/ditto_datahub/stores/pipeline_store.py`
-- `packages/datahub/tests/unit/stores/test_pipeline_store_unit.py`
-- `packages/datahub/tests/integration/stores/test_pipeline_store_integration.py`
+- `packages/data/src/ditto_data/stores/pipeline_store.py`
+- `packages/data/tests/unit/stores/test_pipeline_store_unit.py`
+- `packages/data/tests/integration/stores/test_pipeline_store_integration.py`
 - `schema.sql` 中的 `pipeline_run` 和 `dq_issue` 表定义
 - `hub.py` 中的 `pipeline_store` 属性
 
@@ -218,7 +218,7 @@ pixi run -e dev test apps/port/tests -m integration
 
 **状态**: 已完成（2026-01-17）
 
-**文件**: `packages/datahub/src/ditto_datahub/dq/models.py`
+**文件**: `packages/data/src/ditto_data/dq/models.py`
 
 **问题**: 第 250 行: 静默 continue，吞噬所有异常 (S112)
 
@@ -239,7 +239,7 @@ except yaml.YAMLError as e:
 
 **验证步骤**: ✅ 已完成
 ```bash
-pixi run -e dev test packages/datahub/tests/unit/dq/test_models_unit.py
+pixi run -e dev test packages/data/tests/unit/dq/test_models_unit.py
 # 15 passed
 ```
 
@@ -259,7 +259,7 @@ pixi run -e dev test packages/datahub/tests/unit/dq/test_models_unit.py
 
 **状态**: 已完成（2026-01-17）
 
-**文件**: `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
+**文件**: `packages/data/src/ditto_data/runtime/freeze_manager.py`
 
 **问题**: 第 390、399 行使用 assert 进行类型收窄
 
@@ -279,7 +279,7 @@ pixi run -e dev test packages/datahub/tests/unit/dq/test_models_unit.py
 
 **状态**: 已完成（2026-01-17）
 
-**文件**: `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
+**文件**: `packages/data/src/ditto_data/sources/tushare/client.py`
 
 **问题**: 第 72、89 行使用 assert 确保类型
 
@@ -298,7 +298,7 @@ pixi run -e dev test packages/datahub/tests/unit/dq/test_models_unit.py
 
 **状态**: 已完成（2026-01-17）
 
-**文件**: `packages/datahub/src/ditto_datahub/stores/ingestion_log.py`
+**文件**: `packages/data/src/ditto_data/stores/ingestion_log.py`
 
 **问题**: 第 148 行使用 assert 验证 UPSERT 返回值
 
@@ -319,7 +319,7 @@ if row is None:
 
 **状态**: 已完成（2026-01-17）
 
-**文件**: `packages/datahub/src/ditto_datahub/runtime/sql_engine.py`
+**文件**: `packages/data/src/ditto_data/runtime/sql_engine.py`
 
 **问题**: 第 245 行使用 MD5 生成缓存键
 
@@ -368,16 +368,16 @@ host: str = Field(
 ## 关键文件清单
 
 ### 修改文件
-1. ~~`packages/datahub/src/ditto_datahub/stores/pipeline_store.py`~~ ✅ 已删除
-2. `packages/datahub/src/ditto_datahub/repositories/security.py`
-3. `packages/datahub/src/ditto_datahub/stores/security_store.py`
+1. ~~`packages/data/src/ditto_data/stores/pipeline_store.py`~~ ✅ 已删除
+2. `packages/data/src/ditto_data/repositories/security.py`
+3. `packages/data/src/ditto_data/stores/security_store.py`
 4. `packages/foundation/src/ditto_foundation/config/paths.py` ✅ 已完成
 5. `apps/port/src/ditto_port/services/ingestion/coordinator.py`
-6. `packages/datahub/src/ditto_datahub/dq/models.py`
-7. `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
-8. `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
-9. `packages/datahub/src/ditto_datahub/stores/ingestion_log.py`
-10. `packages/datahub/src/ditto_datahub/runtime/sql_engine.py`
+6. `packages/data/src/ditto_data/dq/models.py`
+7. `packages/data/src/ditto_data/runtime/freeze_manager.py`
+8. `packages/data/src/ditto_data/sources/tushare/client.py`
+9. `packages/data/src/ditto_data/stores/ingestion_log.py`
+10. `packages/data/src/ditto_data/runtime/sql_engine.py`
 11. `packages/foundation/src/ditto_foundation/config/settings.py`
 
 ### 新增配置类

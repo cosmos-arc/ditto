@@ -25,17 +25,22 @@ from typing import Protocol, runtime_checkable
 
 import orjson
 import polars as pl
-from ditto_datahub.models.strategy import ArtifactKind, StrategyArtifactRecord
-from ditto_datahub.models.strategy_audit import (
+from ditto_data.models.strategy import ArtifactKind, StrategyArtifactRecord
+from ditto_data.models.strategy_audit import (
     PreTradeDecisionPayload,
     RiskScanPayload,
 )
-from ditto_datahub.services.audit import ExecutionAuditService
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.strategy.strategy_artifact_service import (
+from ditto_data.services.audit import ExecutionAuditService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
+from ditto_engine.alpha.context import StrategyContext
+from ditto_engine.alpha.models import TargetPortfolio
+from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_engine.alpha.specs import StrategySpec
+from ditto_engine.alpha.validation import validate_spec_params
 from ditto_engine.backtest.audit import ExecutionAuditCollector
 from ditto_engine.backtest.data_feed import DataFeed, Slice
 from ditto_engine.backtest.engine import (
@@ -45,8 +50,6 @@ from ditto_engine.backtest.engine import (
     EngineOptions,
 )
 from ditto_engine.backtest.manifest import RunManifest, serialize_manifest
-from ditto_engine.backtest.risk.post_trade import PostTradeRiskGuard
-from ditto_engine.backtest.risk.pre_trade import CompositePreTradeCheck
 from ditto_engine.backtest.serialization import serialize
 from ditto_engine.backtest.statistics import (
     BacktestReport,
@@ -59,11 +62,8 @@ from ditto_engine.execution.planner import ExecutionPlanner
 from ditto_engine.execution.reality import FeeModel
 from ditto_engine.execution.reality.market import MarketSnapshot
 from ditto_engine.execution.rules import InstrumentRuleProvider
-from ditto_engine.strategy.context import StrategyContext
-from ditto_engine.strategy.models import TargetPortfolio
-from ditto_engine.strategy.pipeline import StrategyInputBundle, StrategyPipeline
-from ditto_engine.strategy.specs import StrategySpec
-from ditto_engine.strategy.validation import validate_spec_params
+from ditto_engine.risk.post_trade import PostTradeRiskGuard
+from ditto_engine.risk.pre_trade import CompositePreTradeCheck
 from ditto_infra.foundation.util.io import atomic_bytes_write
 from ditto_kernel.enums import AssetClass
 from ditto_kernel.identity import InstrumentId

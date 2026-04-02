@@ -58,8 +58,8 @@ ditto_interfaces/
 | **App 层服务** | `from ditto_app.process.*` | - |
 | **App 层查询** | `from ditto_app.query.*` | - |
 | **App 层配置** | `from ditto_app.config` | - |
-| **DataHub Service** | `from ditto_datahub.services.*` | - |
-| **DataHub Sources** | `from ditto_datahub.sources.*` | - |
+| **DataHub Service** | `from ditto_data.services.*` | - |
+| **DataHub Sources** | `from ditto_data.sources.*` | - |
 | **DataHub Stores** | registry 内仅限 DI 注册 | 非 registry 代码 |
 
 ### 业务逻辑去向
@@ -111,7 +111,7 @@ ditto_interfaces/
 ## 数据摄入
 
 Interfaces 层通过 CLI/Jobs 编排数据摄取流程，业务逻辑在 `ditto_app.process.ingestion` 中。
-具体 T0/T1/T2/T3 分层规则和游标管理详见 [DataHub 层规范](../../packages/datahub/CLAUDE.md)。
+具体 T0/T1/T2/T3 分层规则和游标管理详见 [DataHub 层规范](../../packages/data/CLAUDE.md)。
 
 ## CLI 规范
 

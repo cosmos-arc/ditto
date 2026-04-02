@@ -6,8 +6,8 @@ from typing import Annotated
 import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_datahub.models import FX_CODE_TO_INSTRUMENT_ID
-from ditto_datahub.services.market_service import MarketService
+from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID
+from ditto_data.services.market_service import MarketService
 from fastapi import APIRouter, HTTPException
 
 from ditto_interfaces.models.common import APIResponse

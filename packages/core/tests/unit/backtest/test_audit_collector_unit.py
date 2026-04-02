@@ -12,7 +12,6 @@ from ditto_engine.accounting.order_book import (
     OrderSide,
 )
 from ditto_engine.accounting.position import Position
-from ditto_engine.backtest.risk.post_trade import RiskActionType, RiskSeverity
 from ditto_engine.backtest.statistics import (
     AggregatedTradeStatistics,
     AlphaStatistics,
@@ -29,6 +28,7 @@ from ditto_engine.backtest.statistics import (
     compute_trade_statistics,
 )
 from ditto_engine.execution.trade_builder import TradeRecord
+from ditto_engine.risk.post_trade import RiskActionType, RiskSeverity
 
 # ---------------------------------------------------------------------------
 # Helpers

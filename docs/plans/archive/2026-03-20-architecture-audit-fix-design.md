@@ -46,8 +46,8 @@
 
 | 文件 | 变更 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/sources/tdx/reader.py` | dict key/schema/docstring: `"vol"` → `"volume"` |
-| `packages/datahub/src/ditto_datahub/sources/tdx/source.py` | docstring: `"vol"` → `"volume"` |
+| `packages/data/src/ditto_data/sources/tdx/reader.py` | dict key/schema/docstring: `"vol"` → `"volume"` |
+| `packages/data/src/ditto_data/sources/tdx/source.py` | docstring: `"vol"` → `"volume"` |
 | `packages/core/src/ditto_core/quality/checkers/cross_source.py` | default rules key: `"vol"` → `"volume"` |
 | `packages/core/src/ditto_core/quality/spec.py` | 注释示例: `"vol"` → `"volume"` |
 | `apps/port/src/ditto_port/models/config.py` | ETF_DAILY/INDEX_DAILY/STOCK_DAILY critical_fields: `"vol"` → `"volume"` |
@@ -56,11 +56,11 @@
 - `packages/core/tests/unit/quality/test_cross_source_checker.py`
 - `apps/port/tests/unit/services/ingestion/quality/conftest.py`
 - `apps/port/tests/unit/services/ingestion/test_datasets_unit.py`
-- `packages/datahub/tests/unit/sources/tdx/test_reader_unit.py`
-- `packages/datahub/tests/unit/sources/tdx/test_source_unit.py`
-- `packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py`
-- `packages/datahub/tests/unit/sources/tushare/test_source_unit.py`
-- `packages/datahub/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py`
+- `packages/data/tests/unit/sources/tdx/test_reader_unit.py`
+- `packages/data/tests/unit/sources/tdx/test_source_unit.py`
+- `packages/data/tests/unit/sources/tushare/test_transformer_unit.py`
+- `packages/data/tests/unit/sources/tushare/test_source_unit.py`
+- `packages/data/tests/unit/sources/tushare/adapters/test_stock_adapter_unit.py`
 
 **不动的文件**: Tushare adapter 中的 API 请求字段 `"vol"` 是 Tushare 的原始字段名，不需要改。`common.py` 的 `rename={"vol": "volume"}` 保持不变（Tushare 数据源仍需此映射）。
 
@@ -72,7 +72,7 @@
 
 ### P1-1: [ARCH-001] 异常类下移 — 消除 core → datahub 反向依赖 ✅
 
-**根因**: `DerivedNotImplementedError`、`DerivedValidationError`、`DerivedNotFoundError` 及其基类 `DerivedError` 全部定义在 `ditto_datahub.errors`，但被 `ditto_core.engine` 运行时导入。
+**根因**: `DerivedNotImplementedError`、`DerivedValidationError`、`DerivedNotFoundError` 及其基类 `DerivedError` 全部定义在 `ditto_data.errors`，但被 `ditto_core.engine` 运行时导入。
 
 **方案**: 将整个 `Derived*` 异常族下移到 `ditto_core.engine.errors`，因为 "Derived"（因子衍生）是 core 引擎层的核心概念。
 
@@ -91,9 +91,9 @@
 **变更步骤**:
 
 1. **创建** `packages/core/src/ditto_core/engine/errors.py`，将 `DerivedError` 及其 6 个子类完整复制过去
-2. **修改** `packages/datahub/src/ditto_datahub/errors.py` — 将 `Derived*` 类改为从 core re-export：
+2. **修改** `packages/data/src/ditto_data/errors.py` — 将 `Derived*` 类改为从 core re-export：
    ```python
-   # ditto_datahub/errors.py — 保持向后兼容
+   # ditto_data/errors.py — 保持向后兼容
    from ditto_core.engine.errors import (  # noqa: F401
        DerivedError,
        DerivedNotFoundError,
@@ -105,10 +105,10 @@
    )
    ```
 3. **修改** core 的导入：
-   - `core/engine/research.py`: `from ditto_datahub.errors import ...` → `from ditto_core.engine.errors import ...`
+   - `core/engine/research.py`: `from ditto_data.errors import ...` → `from ditto_core.engine.errors import ...`
    - `core/engine/specs.py`: 同上
 4. **不修改** datahub 和 port 的导入（它们通过 re-export 兼容路径继续工作）
-5. **后续可选**: 逐步将 datahub/port 的直接导入从 `ditto_datahub.errors` 改为 `ditto_core.engine.errors`，最终移除 datahub 的 re-export
+5. **后续可选**: 逐步将 datahub/port 的直接导入从 `ditto_data.errors` 改为 `ditto_core.engine.errors`，最终移除 datahub 的 re-export
 
 **向后兼容**: datahub re-export 保证零破坏性，port 和 datahub 的现有代码无需立即修改。
 
@@ -126,7 +126,7 @@
 
 **具体做法**:
 
-1. **在 datahub 定义 Protocol**（`packages/datahub/src/ditto_datahub/services/derived/persistence_protocols.py`）:
+1. **在 datahub 定义 Protocol**（`packages/data/src/ditto_data/services/derived/persistence_protocols.py`）:
    ```python
    from typing import Protocol
    from dataclasses import dataclass
@@ -250,21 +250,21 @@ Port 层的 DI 容器（`registry/datahub/metadata.py`）逐步将子 Service �
 
 **方案**: 在 DataHub Service 层暴露所需的抽象。
 
-1. **FreeManager**: 在 `ditto_datahub.services` 中暴露。创建 `FreezeService` 或将 `FreezeManager` 从 `runtime` 提升到 `services` 层。
+1. **FreeManager**: 在 `ditto_data.services` 中暴露。创建 `FreezeService` 或将 `FreezeManager` 从 `runtime` 提升到 `services` 层。
    - 如果 `FreezeManager` 本身就是 Service 性质（有状态管理），直接移动到 services 包
    - 如果它是纯基础设施组件，在 services 层提供 facade 方法
 
-2. **DataSource**: `coordinator.py` 和 `list_date_inference.py` 使用 `DataSource` Protocol。将其从 `sources.base` 移到 `ditto_datahub.services.ports`（port 接口定义层），与 `MarketReadPorts` 等并列。
+2. **DataSource**: `coordinator.py` 和 `list_date_inference.py` 使用 `DataSource` Protocol。将其从 `sources.base` 移到 `ditto_data.services.ports`（port 接口定义层），与 `MarketReadPorts` 等并列。
 
-3. **ExchangeTransformers**: 在 `ditto_datahub.services.source_service` 中提供 `get_exchange_transformers()` 方法，context 模块通过 Service 访问。
+3. **ExchangeTransformers**: 在 `ditto_data.services.source_service` 中提供 `get_exchange_transformers()` 方法，context 模块通过 Service 访问。
 
-**验证**: 确认 `apps/port/src/ditto_port/services/` 和 `apps/port/src/ditto_port/registry/contexts/` 无 `from ditto_datahub.runtime` 或 `from ditto_datahub.sources` 直接导入。
+**验证**: 确认 `apps/port/src/ditto_port/services/` 和 `apps/port/src/ditto_port/registry/contexts/` 无 `from ditto_data.runtime` 或 `from ditto_data.sources` 直接导入。
 
 ---
 
 ### P1-6: [ARCH-004] datahub 测试导入 port 层类 ✅（先前提交已完成）
 
-**文件**: `packages/datahub/tests/unit/services/test_derived_materialization_orchestrator_unit.py:48-54`
+**文件**: `packages/data/tests/unit/services/test_derived_materialization_orchestrator_unit.py:48-54`
 
 导入了 `DerivedMaterializationOrchestrator`、`InMemoryDerivedInputProvider`、`RuntimeDerivedInputProvider`、`SQLiteCompileCache`。
 
@@ -345,7 +345,7 @@ Port 层的 DI 容器（`registry/datahub/metadata.py`）逐步将子 Service �
        def delete(self, key: str) -> None: ...
    ```
 
-2. 将 `SQLiteCompileCache` 实现移到 `ditto_datahub.stores.runtime` 或 `ditto_infra.foundation`
+2. 将 `SQLiteCompileCache` 实现移到 `ditto_data.stores.runtime` 或 `ditto_infra.foundation`
 
 3. Core 层只依赖 Protocol，不依赖具体实现
 
@@ -378,9 +378,9 @@ class BaseWriter(ABC):
 
 ### P2-6: [ENG-006] models 包分域子包化
 
-**现状**: `ditto_datahub.models` 导出 85 个符号，`ditto_core.engine` 导出 43 个符号。
+**现状**: `ditto_data.models` 导出 85 个符号，`ditto_core.engine` 导出 43 个符号。
 
-**方案**: 逐步从 `from ditto_datahub.models import X` 迁移为 `from ditto_datahub.models.market import X`。保持 `__init__.py` 的 re-export 一段时间以向后兼容，然后在后续版本中移除。
+**方案**: 逐步从 `from ditto_data.models import X` 迁移为 `from ditto_data.models.market import X`。保持 `__init__.py` 的 re-export 一段时间以向后兼容，然后在后续版本中移除。
 
 **不在此阶段实施**: 成本高但收益低，可作为技术债务的长期清理项。
 
@@ -437,9 +437,9 @@ pixi run -e dev test --unit        # 完整单元测试
 pixi run -e dev arch-check         # 边界检查（如果可用）
 
 # 检查反向依赖是否已消除
-grep -r "from ditto_datahub" packages/core/src/ | grep -v README
-grep -r "from ditto_core" packages/datahub/src/ | grep -v README
-grep -r "from ditto_port" packages/datahub/tests/
+grep -r "from ditto_data" packages/core/src/ | grep -v README
+grep -r "from ditto_core" packages/data/src/ | grep -v README
+grep -r "from ditto_port" packages/data/tests/
 
 # 检查 TYPE_CHECKING 是否已清理
 grep -r "TYPE_CHECKING" packages/*/src apps/*/src | grep -v "__pycache__"

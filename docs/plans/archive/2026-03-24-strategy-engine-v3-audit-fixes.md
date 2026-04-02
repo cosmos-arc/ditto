@@ -354,10 +354,10 @@ def test_expired_signals_filtered(self):
 ---
 
 - [x] **T-5: ArtifactKind 枚举** `[S]` ✅
-  - 验收: `ArtifactKind` StrEnum 定义在 `packages/datahub/src/ditto_datahub/models/strategy.py`；`StrategyArtifactRecord.artifact_type` 类型从 `str` 改为 `ArtifactKind`
+  - 验收: `ArtifactKind` StrEnum 定义在 `packages/data/src/ditto_data/models/strategy.py`；`StrategyArtifactRecord.artifact_type` 类型从 `str` 改为 `ArtifactKind`
   - 文件:
-    - `packages/datahub/src/ditto_datahub/models/strategy.py`（新增枚举，更新字段类型）
-    - `packages/datahub/tests/unit/services/test_strategy_artifact_service_unit.py`（更新测试）
+    - `packages/data/src/ditto_data/models/strategy.py`（新增枚举，更新字段类型）
+    - `packages/data/tests/unit/services/test_strategy_artifact_service_unit.py`（更新测试）
   - 测试: 单元测试
 
 **T-5 详细步骤：**

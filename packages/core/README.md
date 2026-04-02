@@ -247,7 +247,7 @@ print(f"Max DD: {report.alpha.max_drawdown:.2%}")
 
 ```python
 # ✅ 正确：使用 PIT 过滤
-from ditto_datahub.stores.market import MarketBarsQuery
+from ditto_data.stores.market import MarketBarsQuery
 
 df = hub.market.query(
     MarketBarsQuery(

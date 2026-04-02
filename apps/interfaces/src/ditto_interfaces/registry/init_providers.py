@@ -44,7 +44,7 @@ class MetadataDbInitProvider(ConfigInitProvider):
             db_path.parent.mkdir(parents=True, exist_ok=True)
 
             # 获取 schema.sql 路径
-            schema_traversable = files("ditto_datahub.scripts") / "schema.sql"
+            schema_traversable = files("ditto_data.scripts") / "schema.sql"
             schema_path = Path(str(schema_traversable))
 
             pool = SQLitePool(str(db_path), schema_path=schema_path)

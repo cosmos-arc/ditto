@@ -17,7 +17,7 @@
 | A.6: SqlEngine 慢查询指标重复记录修复 | ✅ 完成 | 2025-12-29 |
 | A.7: pixi.toml server 命令修复 | ✅ 完成 | 2025-12-29 |
 | A.8: PitHelper.add_pit_join() 支持 effective_from | ✅ 完成 | 2025-12-29 |
-| A.9: 创建 packages/datahub/README.md | ✅ 完成 | 2025-12-29 |
+| A.9: 创建 packages/data/README.md | ✅ 完成 | 2025-12-29 |
 | B.1: BarsRepository 复权计算 PIT 安全隐患 | ✅ 完成 | 2025-12-29 |
 | B.2: BarsStore Last-Write-Wins 数据覆盖风险 | ✅ 完成 | 2025-12-29 |
 | B.1.1: 统一 asof/pit_asof 语义（删除 pit_asof） | ✅ 完成 | 2025-12-29 |
@@ -59,7 +59,7 @@
 **优先级**: P0 - 必须修复
 **复杂度**: M
 **预估工时**: 2-3h
-**相关文件**: `packages/datahub/src/ditto_datahub/runtime/pit_helper.py`
+**相关文件**: `packages/data/src/ditto_data/runtime/pit_helper.py`
 
 **问题位置**:
 - Line 55: `f"{query} AND {date_column} <= '{knowledge_date}'"`
@@ -91,7 +91,7 @@ def add_pit_filter(..., knowledge_date: str):
 **优先级**: P0 - 必须修复
 **复杂度**: M
 **预估工时**: 2-3h
-**相关文件**: `packages/datahub/src/ditto_datahub/runtime/pit_helper.py`
+**相关文件**: `packages/data/src/ditto_data/runtime/pit_helper.py`
 
 **问题**: 直接拼接 WHERE/AND，遇到 ORDER BY/LIMIT 会生成非法SQL
 
@@ -126,7 +126,7 @@ def add_pit_filter(query: str, knowledge_date: str, date_column: str = "knowledg
 **优先级**: P0 - 必须修复
 **复杂度**: S
 **预估工时**: 1-2h
-**相关文件**: `packages/datahub/src/ditto_datahub/stores/security_store.py`
+**相关文件**: `packages/data/src/ditto_data/stores/security_store.py`
 
 **问题**: `register()` 新增标的后，负缓存(-1)未失效
 
@@ -153,7 +153,7 @@ def register(self, sid: int, source: str, src_code: str, ...):
 **优先级**: P1
 **复杂度**: M
 **预估工时**: 2-3h
-**相关文件**: `packages/datahub/src/ditto_datahub/runtime/cache.py`
+**相关文件**: `packages/data/src/ditto_data/runtime/cache.py`
 
 **问题**: `enable_metrics=True` 时返回全0
 
@@ -181,7 +181,7 @@ def get(self, key: str, default: Any = None) -> Any:
 **优先级**: P1
 **复杂度**: S
 **预估工时**: 1h
-**相关文件**: `packages/datahub/src/ditto_datahub/stores/calendar_store.py`
+**相关文件**: `packages/data/src/ditto_data/stores/calendar_store.py`
 
 **问题**: 返回内部 list 引用，调用方修改会污染缓存
 
@@ -202,7 +202,7 @@ def get_range(self, start: str, end: str) -> list[str]:
 **优先级**: P1
 **复杂度**: S
 **预估工时**: 0.5-1h
-**相关文件**: `packages/datahub/src/ditto_datahub/runtime/sql_engine.py`
+**相关文件**: `packages/data/src/ditto_data/runtime/sql_engine.py`
 
 **问题**: duration 指标被记录两次（line 273, 351）
 
@@ -238,7 +238,7 @@ server-prod = "granian apps.port.src.ditto_port.main:app --interface asgi --host
 **优先级**: P2
 **复杂度**: S
 **预估工时**: 1h
-**相关文件**: `packages/datahub/src/ditto_datahub/runtime/pit_helper.py`
+**相关文件**: `packages/data/src/ditto_data/runtime/pit_helper.py`
 
 **修复**: 添加 `date_column` 参数（默认 "trade_date"）
 
@@ -249,14 +249,14 @@ server-prod = "granian apps.port.src.ditto_port.main:app --interface asgi --host
 
 ---
 
-#### Task A.9: 创建 packages/datahub/README.md
+#### Task A.9: 创建 packages/data/README.md
 **优先级**: P2
 **复杂度**: M
 **预估工时**: 2-3h
-**相关文件**: `packages/datahub/README.md` (新建)
+**相关文件**: `packages/data/README.md` (新建)
 
 **验收标准**:
-- [x] 创建 packages/datahub/README.md
+- [x] 创建 packages/data/README.md
 - [x] 包含架构说明、快速开始、PIT 安全规则
 - [x] 包含代码示例和数据目录结构
 
@@ -270,7 +270,7 @@ server-prod = "granian apps.port.src.ditto_port.main:app --interface asgi --host
 **优先级**: P0 - 致命
 **复杂度**: L
 **预估工时**: 8-12h
-**相关文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py:517`
+**相关文件**: `packages/data/src/ditto_data/repositories/bars.py:517`
 
 **问题**:
 ```python
@@ -294,7 +294,7 @@ baseline_df = adj_df.filter(pl.col("knowledge_date") <= asof_date)
 **优先级**: P0 - 高风险
 **复杂度**: L
 **预估工时**: 6-8h
-**相关文件**: `packages/datahub/src/ditto_datahub/stores/bars_store.py`
+**相关文件**: `packages/data/src/ditto_data/stores/bars_store.py`
 
 **问题**: `unique(subset=["sid", "trade_date"], keep="last")` 导致高质量数据被低质量爬虫数据覆盖
 
@@ -307,10 +307,10 @@ baseline_df = adj_df.filter(pl.col("knowledge_date") <= asof_date)
 **复杂度**: L
 **预估工时**: 4-6h
 **相关文件**:
-- `packages/datahub/src/ditto_datahub/meta/schemas.py`
-- `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
-- `packages/datahub/src/ditto_datahub/stores/stock_status_store.py` (新建)
-- `packages/datahub/src/ditto_datahub/repositories/bars.py`
+- `packages/data/src/ditto_data/meta/schemas.py`
+- `packages/data/src/ditto_data/sources/tushare/source.py`
+- `packages/data/src/ditto_data/stores/stock_status_store.py` (新建)
+- `packages/data/src/ditto_data/repositories/bars.py`
 
 **问题**: 缺少 `up_limit/down_limit` 和 `trade_status`，无法模拟一字板买不进、停牌卖不出
 
@@ -408,7 +408,7 @@ bars = hub.bars.get(
 **优先级**: P1
 **复杂度**: S
 **预估工时**: 0h
-**相关文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+**相关文件**: `packages/data/src/ditto_data/repositories/bars.py`
 
 **说明**: Tushare `daily` 接口返回的 `pre_close` 已经是除权参考价，**不需要进行复权处理**。
 
@@ -418,7 +418,7 @@ bars = hub.bars.get(
 
 **文档更新**（已完成）:
 - ✅ 在 `_apply_qfq_adj` 和 `_apply_hfq_adj` 方法中添加了注释说明
-- ✅ 在 `packages/datahub/README.md` 中添加了"复权数据说明"章节
+- ✅ 在 `packages/data/README.md` 中添加了"复权数据说明"章节
 
 **验证标准**: ✅ 当前实现正确，无需修改
 
@@ -521,17 +521,17 @@ Phase 1-2-3 (Part A):
 ## Critical Files
 
 ### Part A - 必须修改
-1. `packages/datahub/src/ditto_datahub/runtime/pit_helper.py` - A.1, A.2, A.8
-2. `packages/datahub/src/ditto_datahub/stores/security_store.py` - A.3
-3. `packages/datahub/src/ditto_datahub/runtime/cache.py` - A.4
-4. `packages/datahub/src/ditto_datahub/stores/calendar_store.py` - A.5
-5. `packages/datahub/src/ditto_datahub/runtime/sql_engine.py` - A.6
+1. `packages/data/src/ditto_data/runtime/pit_helper.py` - A.1, A.2, A.8
+2. `packages/data/src/ditto_data/stores/security_store.py` - A.3
+3. `packages/data/src/ditto_data/runtime/cache.py` - A.4
+4. `packages/data/src/ditto_data/stores/calendar_store.py` - A.5
+5. `packages/data/src/ditto_data/runtime/sql_engine.py` - A.6
 6. `pixi.toml` - A.7
-7. `packages/datahub/README.md` - A.9 (新建)
+7. `packages/data/README.md` - A.9 (新建)
 
 ### Part B - 需要修复
-1. `packages/datahub/src/ditto_datahub/repositories/bars.py` - B.1, B.6
-2. `packages/datahub/src/ditto_datahub/stores/bars_store.py` - B.2
-3. `packages/datahub/src/ditto_datahub/sources/tushare/source.py` - B.3
-4. `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` - B.4
-5. `packages/datahub/src/ditto_datahub/types.py` - B.5, C.1
+1. `packages/data/src/ditto_data/repositories/bars.py` - B.1, B.6
+2. `packages/data/src/ditto_data/stores/bars_store.py` - B.2
+3. `packages/data/src/ditto_data/sources/tushare/source.py` - B.3
+4. `packages/data/src/ditto_data/stores/adj_factor_store.py` - B.4
+5. `packages/data/src/ditto_data/types.py` - B.5, C.1

@@ -20,8 +20,8 @@ from typing import ClassVar
 import polars as pl
 import pytest
 from ditto_data.quality import GoldenDatasetSpec
-from ditto_datahub.sources import TushareSource
-from ditto_datahub.sources.tdx import TdxSource
+from ditto_data.sources import TushareSource
+from ditto_data.sources.tdx import TdxSource
 
 
 @pytest.mark.e2e

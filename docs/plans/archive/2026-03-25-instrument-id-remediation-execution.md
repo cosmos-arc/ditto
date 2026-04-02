@@ -97,9 +97,9 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
 **依赖**：Task 0
 
 **文件**：
-- Modify: `packages/datahub/src/ditto_datahub/services/metadata/instrument.py`
-- Modify: `packages/datahub/src/ditto_datahub/services/metadata_service.py`
-- Create: `packages/datahub/tests/unit/services/test_metadata_service_identifier_resolution_unit.py`
+- Modify: `packages/data/src/ditto_data/services/metadata/instrument.py`
+- Modify: `packages/data/src/ditto_data/services/metadata_service.py`
+- Create: `packages/data/tests/unit/services/test_metadata_service_identifier_resolution_unit.py`
 
 **实现要点**：
 
@@ -144,7 +144,7 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
 **Commit**: `refactor(metadata): add canonical instrument identifier resolver`
 
 **验收**：
-- `pixi run -e dev pytest packages/datahub/tests/unit/services/test_metadata_service_identifier_resolution_unit.py -v` 通过
+- `pixi run -e dev pytest packages/data/tests/unit/services/test_metadata_service_identifier_resolution_unit.py -v` 通过
 - `pixi run -e dev check` 通过
 
 ---
@@ -156,15 +156,15 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
 **依赖**：Task 1
 
 **文件**：
-- Modify: `packages/datahub/src/ditto_datahub/services/capital_service.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/capital/margin/margin_trading_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/capital/pledge/pledge_ratio_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/capital/valuation/valuation_metrics_reader.py`
+- Modify: `packages/data/src/ditto_data/services/capital_service.py`
+- Modify: `packages/data/src/ditto_data/stores/capital/margin/margin_trading_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/capital/pledge/pledge_ratio_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/capital/valuation/valuation_metrics_reader.py`
 - Modify: `apps/port/src/ditto_port/api/routes/capital.py`
 - Modify: `apps/port/src/ditto_port/cli/commands/query/capital.py`
 - Modify: `apps/port/src/ditto_port/models/capital.py`
 - Create: `apps/port/tests/unit/api/routes/test_capital_identifier_query_unit.py`
-- Create: `packages/datahub/tests/unit/services/test_capital_service_identifier_unit.py`
+- Create: `packages/data/tests/unit/services/test_capital_service_identifier_unit.py`
 
 **实现要点**：
 
@@ -207,7 +207,7 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
 **Commit**: `refactor(capital): unify query path on canonical instrument id`
 
 **验收**：
-- `pixi run -e dev pytest apps/port/tests/unit/api/routes/test_capital_identifier_query_unit.py packages/datahub/tests/unit/services/test_capital_service_identifier_unit.py packages/datahub/tests/unit/stores/capital -v` 通过
+- `pixi run -e dev pytest apps/port/tests/unit/api/routes/test_capital_identifier_query_unit.py packages/data/tests/unit/services/test_capital_service_identifier_unit.py packages/data/tests/unit/stores/capital -v` 通过
 - `pixi run -e dev check` 通过
 
 ---
@@ -219,19 +219,19 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
 **依赖**：Task 1
 
 **文件**：
-- Modify: `packages/datahub/src/ditto_datahub/services/fundamental_service.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/corporate/dividend_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/corporate/corporate_actions_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/forecast/express_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/forecast/forecast_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/financial/balance_sheet_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/financial/cash_flow_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/financial/income_statement_reader.py`
+- Modify: `packages/data/src/ditto_data/services/fundamental_service.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/corporate/dividend_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/corporate/corporate_actions_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/forecast/express_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/forecast/forecast_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/financial/balance_sheet_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/financial/cash_flow_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/financial/income_statement_reader.py`
 - Modify: `apps/port/src/ditto_port/api/routes/fundamental.py`
 - Modify: `apps/port/src/ditto_port/cli/commands/query/fundamental.py`
 - Modify: `apps/port/src/ditto_port/models/fundamental.py`
 - Create: `apps/port/tests/unit/api/routes/test_fundamental_identifier_query_unit.py`
-- Create: `packages/datahub/tests/unit/services/test_fundamental_service_identifier_unit.py`
+- Create: `packages/data/tests/unit/services/test_fundamental_service_identifier_unit.py`
 
 **实现要点**：
 
@@ -249,7 +249,7 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
 **Commit**: `refactor(fundamental): unify query path on canonical instrument id`
 
 **验收**：
-- `pixi run -e dev pytest apps/port/tests/unit/api/routes/test_fundamental_identifier_query_unit.py packages/datahub/tests/unit/services/test_fundamental_service_identifier_unit.py packages/datahub/tests/unit/stores/fundamental -v` 通过
+- `pixi run -e dev pytest apps/port/tests/unit/api/routes/test_fundamental_identifier_query_unit.py packages/data/tests/unit/services/test_fundamental_service_identifier_unit.py packages/data/tests/unit/stores/fundamental -v` 通过
 - `pixi run -e dev check` 通过
 
 ---
@@ -263,13 +263,13 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
 **文件**：
 - Modify: `packages/core/src/ditto_core/backtest/risk/post_trade.py` — 删除 `PORTFOLIO_WIDE_ID`
 - Modify: `packages/core/src/ditto_core/backtest/audit/records.py` — `RiskScanRecord` / `PreTradeDecisionRecord` 增加 scope
-- Modify: `packages/datahub/src/ditto_datahub/models/strategy_audit.py` — DTO 增加 scope，`instrument_id` 改为 `int | None`
-- Modify: `packages/datahub/src/ditto_datahub/services/audit/execution_audit_service.py` — SQL schema + 读写逻辑适配
-- Modify: `packages/datahub/src/ditto_datahub/scripts/schema.sql` — 审计表增加 `instrument_scope` 列
+- Modify: `packages/data/src/ditto_data/models/strategy_audit.py` — DTO 增加 scope，`instrument_id` 改为 `int | None`
+- Modify: `packages/data/src/ditto_data/services/audit/execution_audit_service.py` — SQL schema + 读写逻辑适配
+- Modify: `packages/data/src/ditto_data/scripts/schema.sql` — 审计表增加 `instrument_scope` 列
 - Modify: `apps/port/src/ditto_port/services/strategy/backtest_service.py` — 持久化适配
 - Modify: `packages/core/tests/unit/backtest/test_post_trade_unit.py`
 - Modify: `packages/core/tests/unit/backtest/test_audit_collector_unit.py`
-- Modify: `packages/datahub/tests/unit/services/test_execution_audit_service_unit.py`
+- Modify: `packages/data/tests/unit/services/test_execution_audit_service_unit.py`
 - Modify: `apps/port/tests/unit/services/strategy/test_backtest_service_unit.py`
 
 **实现要点**：
@@ -304,7 +304,7 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
    - 按 `scope` 和 `instrument_id` 分别写入对应列
    - 读取时组装为 Core `RiskScanRecord`
 
-4. **`scope` 类型定义位置**：`Literal["instrument", "portfolio"]` 定义在 `ditto_datahub.models.strategy_audit`，Core 通过 `typing` import
+4. **`scope` 类型定义位置**：`Literal["instrument", "portfolio"]` 定义在 `ditto_data.models.strategy_audit`，Core 通过 `typing` import
 
 **测试**：
 - Core: portfolio-wide 风控记录 `instrument_id=None, scope="portfolio"`
@@ -316,7 +316,7 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
 **Commit**: `refactor(audit): make instrument scope explicit — eliminate PORTFOLIO_WIDE_ID sentinel`
 
 **验收**：
-- `pixi run -e dev pytest packages/core/tests/unit/backtest/ packages/datahub/tests/unit/services/test_execution_audit_service_unit.py apps/port/tests/unit/services/strategy/test_backtest_service_unit.py -v` 通过
+- `pixi run -e dev pytest packages/core/tests/unit/backtest/ packages/data/tests/unit/services/test_execution_audit_service_unit.py apps/port/tests/unit/services/strategy/test_backtest_service_unit.py -v` 通过
 - `pixi run -e dev pytest packages/core/tests/integration/backtest/test_risk_integration.py -v` 通过
 - `pixi run -e dev check` 通过
 - grep 确认 Core 层无 `PORTFOLIO_WIDE_ID` 残留
@@ -334,7 +334,7 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
 - Modify: `docs/plans/2026-03-25-instrument-id-unification-v2-implementation-plan.md` — 加 superseded 备注
 - Modify: `docs/plans/2026-03-25-repo-wide-instrument-id-remediation-plan.md` — 加 superseded 备注
 - Modify: `packages/core/src/ditto_core/strategy/pipeline.py` — `DecisionFrame` 文档中 `instrument_id: str` 改为 `InstrumentId`
-- Create: `packages/datahub/tests/unit/test_instrument_id_type_guard.py` — grep guard 测试
+- Create: `packages/data/tests/unit/test_instrument_id_type_guard.py` — grep guard 测试
 
 **实现要点**：
 
@@ -347,8 +347,8 @@ Core/DataHub/Port 策略/回测主链已完成 `InstrumentId` 统一（v1/v2 计
 
    EXCLUDED_PATTERNS = ["source_ticker", "# type: ignore", "TYPE_CHECKING"]
    SCANNED_DIRS = [
-       "packages/datahub/src/ditto_datahub/services/",
-       "packages/datahub/src/ditto_datahub/models/",
+       "packages/data/src/ditto_data/services/",
+       "packages/data/src/ditto_data/models/",
        "apps/port/src/ditto_port/services/",
        "apps/port/src/ditto_port/api/",
        "apps/port/src/ditto_port/models/",
@@ -398,7 +398,7 @@ Task 2 / Task 3 / Task 4 可并行（Task 2、3 依赖 Task 1，Task 4 仅依赖
 
 ## 验收标准
 
-- [x] `packages/datahub/src` 和 `apps/port/src` 中不再存在 query/service/api/model 级 `instrument_id: str`
+- [x] `packages/data/src` 和 `apps/port/src` 中不再存在 query/service/api/model 级 `instrument_id: str`
 - [x] Capital / Fundamental API 与 CLI 支持 `instrument_id` / `standard_ticker` / `ticker` 三种输入
 - [x] DataHub Capital / Fundamental readers 与 services 统一使用 `int instrument_id`
 - [x] Audit 层不再用字符串 `instrument_id` 混合表示真实主键与组合级 sentinel

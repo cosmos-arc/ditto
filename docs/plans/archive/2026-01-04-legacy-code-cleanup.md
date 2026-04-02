@@ -22,13 +22,13 @@
 
 | 文件 | 操作 | 说明 |
 |------|------|------|
-| `packages/datahub/src/ditto_datahub/runtime/dq_checker.py` | **删除** | 158行，已被 DQEngine 替代 |
-| `packages/datahub/tests/unit/runtime/test_dq_checker.py` | **删除** | 243行测试，DQChecker 已废弃 |
-| `packages/datahub/tests/unit/repositories/test_bars_dq_migration.py` | **删除** | 迁移测试已完成 |
+| `packages/data/src/ditto_data/runtime/dq_checker.py` | **删除** | 158行，已被 DQEngine 替代 |
+| `packages/data/tests/unit/runtime/test_dq_checker.py` | **删除** | 243行测试，DQChecker 已废弃 |
+| `packages/data/tests/unit/repositories/test_bars_dq_migration.py` | **删除** | 迁移测试已完成 |
 
 ### 1.2 清理 types.py
 
-**文件：** `packages/datahub/src/ditto_datahub/types.py`
+**文件：** `packages/data/src/ditto_data/types.py`
 
 ```python
 # 删除第 47-56 行
@@ -40,20 +40,20 @@ class DQResult:
 
 ### 1.3 清理 hub.py
 
-**文件：** `packages/datahub/src/ditto_datahub/hub.py`
+**文件：** `packages/data/src/ditto_data/hub.py`
 
 ```python
 # 删除第 109-114 行
 @cached_property
 def dq_checker(self) -> DQChecker:
     """Data quality checker (deprecated: use dq_engine)."""
-    from ditto_datahub.runtime.dq_checker import DQChecker
+    from ditto_data.runtime.dq_checker import DQChecker
     return DQChecker()
 ```
 
 ### 1.4 清理 runtime/__init__.py
 
-**文件：** `packages/datahub/src/ditto_datahub/runtime/__init__.py`
+**文件：** `packages/data/src/ditto_data/runtime/__init__.py`
 
 ```python
 # 删除第 4 行的导入
@@ -68,7 +68,7 @@ from .dq_checker import DQChecker
 
 | 文件 | 检查项 |
 |------|--------|
-| `packages/datahub/tests/unit/repositories/test_bars.py` | 移除 DQChecker 相关导入/断言 |
+| `packages/data/tests/unit/repositories/test_bars.py` | 移除 DQChecker 相关导入/断言 |
 
 ---
 
@@ -148,7 +148,7 @@ def __init__(self, **kwargs: Any) -> None:
 
 ### 3.1 删除 MD5 计算方法
 
-**文件：** `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
+**文件：** `packages/data/src/ditto_data/runtime/freeze_manager.py`
 
 **删除第 413-428 行：**
 ```python
@@ -159,7 +159,7 @@ def _compute_md5_checksum(self, file_path: Path) -> str:
 
 ### 3.2 简化 _verify_files 方法
 
-**文件：** `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
+**文件：** `packages/data/src/ditto_data/runtime/freeze_manager.py`
 
 **简化第 362-394 行：**
 ```python
@@ -181,7 +181,7 @@ def _verify_files(self, manifest: FreezeManifest) -> list[str]:
 
 ### 3.3 简化 _load_manifest 方法
 
-**文件：** `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
+**文件：** `packages/data/src/ditto_data/runtime/freeze_manager.py`
 
 **简化第 451-478 行：**
 ```python
@@ -213,7 +213,7 @@ def _load_manifest(self, path: Path) -> FreezeManifest:
 
 ### 3.4 更新文档字符串
 
-**文件：** `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
+**文件：** `packages/data/src/ditto_data/runtime/freeze_manager.py`
 
 **更新第 19-24 行：**
 ```python
@@ -230,7 +230,7 @@ def _load_manifest(self, path: Path) -> FreezeManifest:
 
 ### 4.1 移除 TUSHARE_TOKEN 环境变量支持
 
-**文件：** `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
+**文件：** `packages/data/src/ditto_data/sources/tushare/client.py`
 
 **删除第 98-106 行：**
 ```python
@@ -253,9 +253,9 @@ if env_token := os.getenv("TUSHARE_TOKEN"):
 
 | 文件 | 检查项 |
 |------|--------|
-| `packages/datahub/tests/integration/sources/tushare/test_end_to_end.py` | 确认使用 keyring/secrets.toml |
-| `packages/datahub/tests/unit/sources/tushare/test_client.py` | 确认测试方式 |
-| `packages/datahub/tests/unit/sources/tushare/test_source.py` | 确认测试方式 |
+| `packages/data/tests/integration/sources/tushare/test_end_to_end.py` | 确认使用 keyring/secrets.toml |
+| `packages/data/tests/unit/sources/tushare/test_client.py` | 确认测试方式 |
+| `packages/data/tests/unit/sources/tushare/test_source.py` | 确认测试方式 |
 | `apps/server/tests/conftest.py` | 确认测试配置 |
 
 ---
@@ -269,10 +269,10 @@ if env_token := os.getenv("TUSHARE_TOKEN"):
 pixi run -e dev pytest
 
 # 特别关注 DQ 相关测试
-pixi run -e dev pytest packages/datahub/tests/unit/dq/
+pixi run -e dev pytest packages/data/tests/unit/dq/
 
 # 关注 FreezeManager 测试
-pixi run -e dev pytest packages/datahub/tests/unit/runtime/test_freeze_manager.py
+pixi run -e dev pytest packages/data/tests/unit/runtime/test_freeze_manager.py
 
 # 关注配置系统测试
 pixi run -e dev pytest packages/foundation/tests/unit/
@@ -307,6 +307,6 @@ pixi run -e dev mypy
 
 清理完成后，需要更新以下文档：
 
-1. `packages/datahub/README.md` - 移除 DQChecker 引用
+1. `packages/data/README.md` - 移除 DQChecker 引用
 2. `packages/foundation/README.md` - 更新配置说明
 3. 本计划文档 - 标记任务完成状态

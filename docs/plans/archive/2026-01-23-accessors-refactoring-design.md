@@ -99,7 +99,7 @@ DataHub (门面层)
 **DataHub 门面接口设计**:
 
 ```python
-# packages/datahub/src/ditto_datahub/hub.py
+# packages/data/src/ditto_data/hub.py
 
 class DataHub:
     """
@@ -410,7 +410,7 @@ def enrich_with_status(
 
 ```python
 # SecuritiesAccessor
-from ditto_datahub.accessors.internal.enrichment import enrich_with_sid
+from ditto_data.accessors.internal.enrichment import enrich_with_sid
 
 class SecuritiesAccessor:
     def enrich_dataframe_with_sid(self, df, source, asset_class, src_code_col="ts_code"):
@@ -509,7 +509,7 @@ def filter_by_knowledge_date(
 ### 3.1 新增文件
 
 ```
-packages/datahub/src/ditto_datahub/accessors/internal/
+packages/data/src/ditto_data/accessors/internal/
 ├── __init__.py              # 现有
 ├── adjustment.py            # 现有
 ├── enrichment.py            # 新增：数据增强纯函数
@@ -622,19 +622,19 @@ packages/datahub/src/ditto_datahub/accessors/internal/
 
 | 文件 | 用途 | 优先级 |
 |------|------|--------|
-| `packages/datahub/src/ditto_datahub/accessors/internal/enrichment.py` | 数据增强纯函数 | 高 |
-| `packages/datahub/src/ditto_datahub/accessors/internal/pit.py` | PIT 查询纯函数 | 中 |
+| `packages/data/src/ditto_data/accessors/internal/enrichment.py` | 数据增强纯函数 | 高 |
+| `packages/data/src/ditto_data/accessors/internal/pit.py` | PIT 查询纯函数 | 中 |
 
 ### 修改文件
 
 | 文件 | 修改内容 | 优先级 |
 |------|----------|--------|
-| `packages/datahub/src/ditto_datahub/hub.py` | 添加标识符转换门面方法 | 高 |
-| `packages/datahub/src/ditto_datahub/accessors/bars_accessor.py` | 简化接口（移除 src_codes/symbols） | 高 |
-| `packages/datahub/src/ditto_datahub/accessors/index_accessor.py` | 简化接口（移除 symbols） | 中 |
-| `packages/datahub/src/ditto_datahub/accessors/security_accessor.py` | 使用 enrichment 纯函数 | 中 |
-| `packages/datahub/src/ditto_datahub/stores/security_store.py` | 使用 enrichment 纯函数 | 中 |
-| `packages/datahub/src/ditto_datahub/accessors/internal/adjustment.py` | 使用 pit 纯函数 | 低 |
+| `packages/data/src/ditto_data/hub.py` | 添加标识符转换门面方法 | 高 |
+| `packages/data/src/ditto_data/accessors/bars_accessor.py` | 简化接口（移除 src_codes/symbols） | 高 |
+| `packages/data/src/ditto_data/accessors/index_accessor.py` | 简化接口（移除 symbols） | 中 |
+| `packages/data/src/ditto_data/accessors/security_accessor.py` | 使用 enrichment 纯函数 | 中 |
+| `packages/data/src/ditto_data/stores/security_store.py` | 使用 enrichment 纯函数 | 中 |
+| `packages/data/src/ditto_data/accessors/internal/adjustment.py` | 使用 pit 纯函数 | 低 |
 
 ---
 
@@ -662,6 +662,6 @@ packages/datahub/src/ditto_datahub/accessors/internal/
 
 ## 九、参考
 
-- 相关文件: `packages/datahub/src/ditto_datahub/accessors/`
+- 相关文件: `packages/data/src/ditto_data/accessors/`
 - 设计模式参考: `internal/adjustment.py`（纯函数模块）
 - 架构原则: 单一职责、门面模式、纯函数优先

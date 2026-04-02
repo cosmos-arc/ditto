@@ -1,6 +1,6 @@
 # DataHub 代码简化计划
 
-> **目标**: 系统性简化 packages/datahub 代码库，减少重复代码，提高可维护性
+> **目标**: 系统性简化 packages/data 代码库，减少重复代码，提高可维护性
 > **范围**: 全量代码库分析（不依赖最近提交历史）
 > **预期收益**: 减少 15-20% 代码（约 1200-1500 行）
 > **创建日期**: 2026-01-11
@@ -11,7 +11,7 @@
 
 ## 执行摘要
 
-基于对 **packages/datahub** 的全面分析（覆盖 13+ 核心文件，约 8000+ 行代码），识别出 **10 个主要简化机会**：
+基于对 **packages/data** 的全面分析（覆盖 13+ 核心文件，约 8000+ 行代码），识别出 **10 个主要简化机会**：
 
 | 优先级 | 项目 | 文件 | 预期减少 | 风险 |
 |--------|------|------|----------|------|
@@ -44,7 +44,7 @@
 
 **收益**: 减少 ~116 行重复代码
 
-**目标文件**: `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
+**目标文件**: `packages/data/src/ditto_data/sources/tushare/source.py`
 
 **问题**: 以下模式重复 8+ 次：
 - 空响应处理
@@ -75,10 +75,10 @@ return df
 
 **简化方案**:
 ```python
-# 创建新的工具类 ditto_datahub/sources/tushare/transformer.py
+# 创建新的工具类 ditto_data/sources/tushare/transformer.py
 
 from dataclasses import dataclass
-from ditto_datahub.types import Date
+from ditto_data.types import Date
 
 @dataclass(frozen=True)
 class ColumnMapping:
@@ -222,9 +222,9 @@ def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
 **收益**: 减少 ~95 行重复代码 (BarsStore: ~70 行, AdjFactorStore: ~25 行)
 
 **目标文件**:
-- `packages/datahub/src/ditto_datahub/stores/bars_store.py`
-- `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py`
-- `packages/datahub/src/ditto_datahub/stores/parquet_store_base.py`
+- `packages/data/src/ditto_data/stores/bars_store.py`
+- `packages/data/src/ditto_data/stores/adj_factor_store.py`
+- `packages/data/src/ditto_data/stores/parquet_store_base.py`
 
 **问题**: `write()` 方法在各个 Store 中有重复的模式（约 80-100 行重复代码）
 
@@ -233,7 +233,7 @@ def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
 ```python
 # 在 parquet_store_base.py 中添加统一的 write() 实现
 from typing import Protocol
-from ditto_datahub.types import Date
+from ditto_data.types import Date
 
 @dataclass
 class WriteResult:
@@ -316,7 +316,7 @@ class ParquetStoreBase(Generic[T]):
 
 ### 1.4 BarsRepository.get() 方法分解
 
-**目标文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+**目标文件**: `packages/data/src/ditto_data/repositories/bars.py`
 
 **问题**: `get()` 方法有 101 行，承担多个职责
 
@@ -431,7 +431,7 @@ class _ResolvedQuery:
 
 **收益**: 减少约 100 行代码，`fetch_stock_status()` 从 ~158 行减少到 ~58 行
 
-**目标文件**: `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
+**目标文件**: `packages/data/src/ditto_data/sources/tushare/source.py`
 
 **问题**: `fetch_stock_status()` 方法有 172 行，处理 3 个独立数据源
 
@@ -477,7 +477,7 @@ def _merge_status_data(
 
 **收益**: 减少约 45 行代码
 
-**目标文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+**目标文件**: `packages/data/src/ditto_data/repositories/bars.py`
 
 **问题**: 复杂的嵌套条件判断
 
@@ -517,7 +517,7 @@ def _detect_asset_class(self, sids: list[int]) -> str:
 
 **收益**: 支持任意大小的 SQL IN 查询，避免 SQLite 参数限制
 
-**目标文件**: `packages/datahub/src/ditto_datahub/stores/security_store.py`
+**目标文件**: `packages/data/src/ditto_data/stores/security_store.py`
 
 **问题**: 手动构建 IN 子句的逻辑分散
 
@@ -560,13 +560,13 @@ def _build_in_clause(
 
 ### 3.1 _collect_checksums() 方法分解
 
-**目标文件**: `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
+**目标文件**: `packages/data/src/ditto_data/runtime/freeze_manager.py`
 
 **问题**: 复杂的校验和收集逻辑
 
 ### 3.2 _apply_qfq_adj() 嵌套条件简化
 
-**目标文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+**目标文件**: `packages/data/src/ditto_data/repositories/bars.py`
 
 **问题**: 深层嵌套的条件判断
 
@@ -607,7 +607,7 @@ pixi run -e dev pytest -m unit
 # 每个阶段完成后
 pixi run -e dev pytest
 pixi run -e dev pre-commit-run
-pixi run -e dev pytest --cov=ditto_datahub --cov-report=term
+pixi run -e dev pytest --cov=ditto_data --cov-report=term
 ```
 
 ---
@@ -635,7 +635,7 @@ pixi run -e dev pytest --cov=ditto_datahub --cov-report=term
 ### 需要修改的文件
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── sources/
 │   └── tushare/
 │       ├── source.py          # 1.1, 1.2, 2.1
@@ -655,7 +655,7 @@ packages/datahub/src/ditto_datahub/
 
 ## 总结
 
-本计划通过系统性重构 packages/datahub 代码库，预期实现：
+本计划通过系统性重构 packages/data 代码库，预期实现：
 
 - ✅ 减少 15-20% 代码（约 1200-1500 行）
 - ✅ 降低代码重复率从 15-20% 到 < 5%

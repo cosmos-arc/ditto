@@ -90,7 +90,7 @@ MACRO_INDICATOR_SOURCE_SCHEMA = SourceSchema(
 ### 新增目录结构
 
 ```
-packages/datahub/src/ditto_datahub/sources/
+packages/data/src/ditto_data/sources/
 ├── fred/                           # 新增 FRED 数据源
 │   ├── __init__.py
 │   ├── client.py                   # FredClient: HTTP 请求封装
@@ -114,7 +114,7 @@ packages/datahub/src/ditto_datahub/sources/
 ### Phase 1：基础设施 - FRED 客户端 `[L]`
 
 - [ ] **Task 1.1**: 创建 FRED 数据源目录结构 `[S]`
-  - 验收: 目录 `packages/datahub/src/ditto_datahub/sources/fred/` 创建完成
+  - 验收: 目录 `packages/data/src/ditto_data/sources/fred/` 创建完成
   - 文件: `fred/__init__.py`
 
 - [ ] **Task 1.2**: 实现 FredClient `[M]`
@@ -181,7 +181,7 @@ packages/datahub/src/ditto_datahub/sources/
   - 验收:
     - config/development/data_source.env 添加 FRED_API_KEY
     - DataSourceSettings 支持 fred_api_key 字段
-  - 文件: `config/development/data_source.env`, `ditto_datahub/config.py`
+  - 文件: `config/development/data_source.env`, `ditto_data/config.py`
 
 - [ ] **Task 4.2**: 集成测试 `[M]`
   - 验收:

@@ -145,7 +145,7 @@ TDX_PATH=D:\new_tdx\vipdoc
 ### 2.3 DataStoreSettings
 
 ```python
-# packages/datahub/src/ditto_datahub/config/data_store.py
+# packages/data/src/ditto_data/config/data_store.py
 
 from pathlib import Path
 from pydantic_settings import BaseSettings
@@ -210,7 +210,7 @@ __all__ = ["DataStoreSettings"]
 ### 2.4 DataSourceSettings
 
 ```python
-# packages/datahub/src/ditto_datahub/config/data_source.py
+# packages/data/src/ditto_data/config/data_source.py
 
 from pydantic_settings import BaseSettings
 
@@ -261,7 +261,7 @@ __all__ = ["DataSourceSettings"]
 ### 3.1 接口定义
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/market/bars.py
+# packages/data/src/ditto_data/stores/market/bars.py
 # 或独立 contracts 包
 
 from abc import ABC, abstractmethod
@@ -318,14 +318,14 @@ class IBarsWriter(ABC):
 ### 3.2 Reader 实现
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/market/stock/bars_reader.py
+# packages/data/src/ditto_data/stores/market/stock/bars_reader.py
 
 from pathlib import Path
 import polars as pl
 
-from ditto_datahub.config import DataStoreSettings
-from ditto_datahub.stores.base import ParquetStore, YearlyPartition
-from ditto_datahub.stores.market.bars import IBarsReader
+from ditto_data.config import DataStoreSettings
+from ditto_data.stores.base import ParquetStore, YearlyPartition
+from ditto_data.stores.market.bars import IBarsReader
 
 
 class StockBarsReader(IBarsReader):
@@ -360,14 +360,14 @@ class StockBarsReader(IBarsReader):
 ### 3.3 Writer 实现
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/market/stock/bars_writer.py
+# packages/data/src/ditto_data/stores/market/stock/bars_writer.py
 
 from pathlib import Path
 import polars as pl
 
-from ditto_datahub.config import DataStoreSettings
-from ditto_datahub.stores.base import ParquetStore, YearlyPartition
-from ditto_datahub.stores.market.bars import IBarsWriter
+from ditto_data.config import DataStoreSettings
+from ditto_data.stores.base import ParquetStore, YearlyPartition
+from ditto_data.stores.market.bars import IBarsWriter
 
 
 class StockBarsWriter(IBarsWriter):
@@ -420,11 +420,11 @@ from datetime import date
 from typing import Literal
 import polars as pl
 
-from ditto_datahub.config import DataStoreSettings
-from ditto_datahub.stores.market.stock import StockBarsReader
-from ditto_datahub.stores.market.etf import EtfBarsReader
-from ditto_datahub.stores.market.index import IndexBarsReader
-from ditto_datahub.stores.metadata import InstrumentReader, StatusReader
+from ditto_data.config import DataStoreSettings
+from ditto_data.stores.market.stock import StockBarsReader
+from ditto_data.stores.market.etf import EtfBarsReader
+from ditto_data.stores.market.index import IndexBarsReader
+from ditto_data.stores.metadata import InstrumentReader, StatusReader
 from ditto_core.market.adjustment import AdjustmentEngine  # Domain!
 
 
@@ -549,10 +549,10 @@ from datetime import date
 from typing import Literal
 import polars as pl
 
-from ditto_datahub.config import DataStoreSettings
-from ditto_datahub.stores.market.stock import StockBarsWriter
-from ditto_datahub.stores.market.etf import EtfBarsWriter
-from ditto_datahub.stores.metadata import InstrumentWriter
+from ditto_data.config import DataStoreSettings
+from ditto_data.stores.market.stock import StockBarsWriter
+from ditto_data.stores.market.etf import EtfBarsWriter
+from ditto_data.stores.metadata import InstrumentWriter
 from ditto_core.quality import QualityEngine
 
 
@@ -716,10 +716,10 @@ class AdjustmentEngine:
 # apps/port/src/ditto_port/container.py
 
 from dishka import Container, make_container, Provider, from_provider
-from ditto_datahub.config import DataStoreSettings, DataSourceSettings
-from ditto_datahub.stores.market.stock import StockBarsReader, StockBarsWriter
-from ditto_datahub.stores.market.etf import EtfBarsReader, EtfBarsWriter
-from ditto_datahub.stores.metadata import InstrumentReader, InstrumentWriter
+from ditto_data.config import DataStoreSettings, DataSourceSettings
+from ditto_data.stores.market.stock import StockBarsReader, StockBarsWriter
+from ditto_data.stores.market.etf import EtfBarsReader, EtfBarsWriter
+from ditto_data.stores.metadata import InstrumentReader, InstrumentWriter
 from ditto_core.market.adjustment import AdjustmentEngine
 from ditto_port.services.data import DataQueryService, DataWriteService
 
@@ -804,7 +804,7 @@ ditto/
 │   │           └── adjustment.py       # AdjustmentEngine ✅
 │   │
 │   ├── datahub/                        # DataHub Layer（无 Facade）
-│   │   └── src/ditto_datahub/
+│   │   └── src/ditto_data/
 │   │       ├── config/                 # 配置
 │   │       │   ├── __init__.py
 │   │       │   ├── data_store.py       # DataStoreSettings ✅

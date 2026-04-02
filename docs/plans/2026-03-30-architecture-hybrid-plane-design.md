@@ -534,7 +534,7 @@ builders -X-> query / write         # builders 只接收已获取数据并组装
 **各包暴露 Provider（组件自治） + app 做唯一组装入口**：
 
 ```text
-packages/data/src/ditto_datahub/di.py       → get_providers() → tuple[Provider, ...]
+packages/data/src/ditto_data/di.py       → get_providers() → tuple[Provider, ...]
 packages/engine/src/ditto_engine/di.py      → get_providers() → tuple[Provider, ...]
 packages/analytics/src/ditto_analytics/di.py → get_providers() → tuple[Provider, ...]
 
@@ -547,7 +547,7 @@ apps/app/src/ditto_app/registry/
 def make_app_container() -> Container:
     return make_container(
         *get_infra_providers(),
-        *ditto_datahub.di.get_providers(),
+        *ditto_data.di.get_providers(),
         *ditto_engine.di.get_providers(),
         *ditto_analytics.di.get_providers(),
         *get_app_providers(),

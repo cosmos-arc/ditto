@@ -25,7 +25,7 @@
 **目标**：统一 22 个 Writer 的事务/日志/指标处理
 
 **方案**：
-- 新增 `packages/datahub/src/ditto_datahub/stores/base/transactional.py`
+- 新增 `packages/data/src/ditto_data/stores/base/transactional.py`
 - 提供 `transaction_scope` 上下文管理器
 - 22 个 Writer 一次性替换，无需兼容层
 

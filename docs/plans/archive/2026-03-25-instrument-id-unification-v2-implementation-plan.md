@@ -355,12 +355,12 @@ pixi run -e dev arch-check
 
 | 文件 | 变更 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_reader.py` | `_CREATE_TABLE` schema：`instrument_id TEXT → INTEGER`；`TradingRuleRecord.instrument_id: InstrumentId`；内部 dict key；PIT query 参数 |
-| `packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_writer.py` | `_CREATE_TABLE` schema：`instrument_id TEXT → INTEGER`；写入方法参数类型 |
-| `packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_reader.py` | 同上 |
-| `packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_writer.py` | 同上 |
-| `packages/datahub/src/ditto_datahub/services/strategy/instrument_rule_provider.py` | `DefinitionRecord.instrument_id: InstrumentId`；`get_definition()` / `get_rules()` 方法签名 |
-| `packages/datahub/src/ditto_datahub/services/audit/execution_audit_service.py` | 审计表 `instrument_id TEXT → INTEGER`（如需） |
+| `packages/data/src/ditto_data/stores/metadata/trading_rule_reader.py` | `_CREATE_TABLE` schema：`instrument_id TEXT → INTEGER`；`TradingRuleRecord.instrument_id: InstrumentId`；内部 dict key；PIT query 参数 |
+| `packages/data/src/ditto_data/stores/metadata/trading_rule_writer.py` | `_CREATE_TABLE` schema：`instrument_id TEXT → INTEGER`；写入方法参数类型 |
+| `packages/data/src/ditto_data/stores/metadata/fee_schedule_reader.py` | 同上 |
+| `packages/data/src/ditto_data/stores/metadata/fee_schedule_writer.py` | 同上 |
+| `packages/data/src/ditto_data/services/strategy/instrument_rule_provider.py` | `DefinitionRecord.instrument_id: InstrumentId`；`get_definition()` / `get_rules()` 方法签名 |
+| `packages/data/src/ditto_data/services/audit/execution_audit_service.py` | 审计表 `instrument_id TEXT → INTEGER`（如需） |
 | 对应测试文件 | fixture 更新 |
 
 **注意**：`trading_rule` 和 `fee_schedule` 表定义在各自的 reader/writer 文件的 `_CREATE_TABLE` 常量中，不在 `schema.sql`。无需修改 `schema.sql`。

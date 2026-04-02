@@ -42,7 +42,7 @@
 ### Phase 1: 消除硬编码 sleep ✅
 
 **完成内容**:
-1. ✅ 添加 `fake_time` fixture 到 `packages/datahub/tests/conftest.py` 和 `apps/server/tests/conftest.py`
+1. ✅ 添加 `fake_time` fixture 到 `packages/data/tests/conftest.py` 和 `apps/server/tests/conftest.py`
 2. ✅ 重构缓存测试 (`test_cache_ttl.py`, `test_cache.py`) 使用 `time_machine`
 3. ✅ 标记 E2E 测试为 `@pytest.mark.external`
 
@@ -93,13 +93,13 @@
 
 **新增文件**:
 - `packages/foundation/tests/unit/util/test_dates_property.py`
-- `packages/datahub/tests/unit/dq/checkers/test_statistical_property.py`
-- `packages/datahub/tests/unit/runtime/test_pit_helper_property.py`
+- `packages/data/tests/unit/dq/checkers/test_statistical_property.py`
+- `packages/data/tests/unit/runtime/test_pit_helper_property.py`
 
 ### Phase 5: 内存数据库单元测试迁移 ✅
 
 **完成内容**:
-1. ✅ 创建 `packages/datahub/tests/unit/conftest.py` (内存数据库 fixtures)
+1. ✅ 创建 `packages/data/tests/unit/conftest.py` (内存数据库 fixtures)
 2. ✅ 迁移 SQLite 内存数据库测试 (4 个文件)
 3. ✅ 迁移 Parquet Store 测试 (3 个文件)
 4. ✅ 改造临时文件测试 (2 个文件)
@@ -138,7 +138,7 @@
 #### 1.1 添加 `fake_time` fixture
 
 **文件**:
-- `packages/datahub/tests/conftest.py`
+- `packages/data/tests/conftest.py`
 - `apps/server/tests/conftest.py`
 
 ```python
@@ -162,11 +162,11 @@ def fake_time(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
 #### 1.2 重构缓存测试
 
 **文件**:
-- `packages/datahub/tests/unit/runtime/test_cache_ttl.py`
+- `packages/data/tests/unit/runtime/test_cache_ttl.py`
   - 第 16 行: `time.sleep(3)` → 使用 `fake_time`
   - 第 50 行: `time.sleep(3)` → 使用 `fake_time`
   - 第 76 行: `time.sleep(3)` → 使用 `fake_time`
-- `packages/datahub/tests/unit/runtime/test_cache.py`
+- `packages/data/tests/unit/runtime/test_cache.py`
   - 第 129 行: `time.sleep(1.2)` → 使用 `fake_time`
 
 **修改示例**:
@@ -223,7 +223,7 @@ def test_metrics_export(self, victoria_metrics_endpoint: str, http_client: httpx
 
 #### 验证命令
 ```bash
-pytest packages/datahub/tests/unit/runtime/test_cache*.py -v
+pytest packages/data/tests/unit/runtime/test_cache*.py -v
 pytest tests/integration/test_observability_e2e.py -v
 grep -r "time\.sleep" packages/*/tests apps/*/tests tests/  # 应无结果（除注释）
 ```
@@ -236,7 +236,7 @@ grep -r "time\.sleep" packages/*/tests apps/*/tests tests/  # 应无结果（除
 
 #### 2.1 修复 `test_source.py`
 
-**文件**: `packages/datahub/tests/unit/sources/tushare/test_source.py`
+**文件**: `packages/data/tests/unit/sources/tushare/test_source.py`
 
 **修改**:
 ```python
@@ -244,7 +244,7 @@ grep -r "time\.sleep" packages/*/tests apps/*/tests tests/  # 应无结果（除
 from unittest import mock
 
 # Before (第 34 行)
-with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
+with mock.patch("ditto_data.sources.tushare.client.pro_api") as mock_api:
 
 # After
 def test_fetch_calendar_returns_dataframe(
@@ -253,7 +253,7 @@ def test_fetch_calendar_returns_dataframe(
     mocker: pytest.MockFixture,  # 新增
 ) -> None:
     # ...
-    mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+    mock_api = mocker.patch("ditto_data.sources.tushare.client.pro_api")
     mock_api.return_value.query.return_value = mock_response
 ```
 
@@ -262,13 +262,13 @@ def test_fetch_calendar_returns_dataframe(
 #### 2.2 修复其他文件
 
 **文件**:
-- `packages/datahub/tests/integration/stores/test_pipeline_store.py` (约第 112 行)
-- `packages/datahub/tests/unit/sources/tushare/test_client.py` (待确认)
+- `packages/data/tests/integration/stores/test_pipeline_store.py` (约第 112 行)
+- `packages/data/tests/unit/sources/tushare/test_client.py` (待确认)
 
 #### 验证命令
 ```bash
-pytest packages/datahub/tests/unit/sources/tushare/ -v
-pytest packages/datahub/tests/integration/stores/test_pipeline_store.py -v
+pytest packages/data/tests/unit/sources/tushare/ -v
+pytest packages/data/tests/integration/stores/test_pipeline_store.py -v
 grep -r "from unittest import mock\|import mock" packages/*/tests  # 应无结果
 ```
 
@@ -282,8 +282,8 @@ grep -r "from unittest import mock\|import mock" packages/*/tests  # 应无结�
 
 | 文件 | 测试数量估算 |
 |------|-------------|
-| `packages/datahub/tests/unit/runtime/test_pit_helper.py` | ~36 个 |
-| `packages/datahub/tests/unit/repositories/test_bars.py` | ~5 个 (knowledge_date 相关) |
+| `packages/data/tests/unit/runtime/test_pit_helper.py` | ~36 个 |
+| `packages/data/tests/unit/repositories/test_bars.py` | ~5 个 (knowledge_date 相关) |
 | `packages/foundation/tests/unit/util/test_dates.py` | ~2 个 |
 
 #### 3.2 标记示例
@@ -333,7 +333,7 @@ class TestNormalizeDateProperties:
 
 #### 4.2 DQ Statistical Checker Property Tests
 
-**新文件**: `packages/datahub/tests/unit/dq/checkers/test_statistical_property.py`
+**新文件**: `packages/data/tests/unit/dq/checkers/test_statistical_property.py`
 
 ```python
 from hypothesis import given, strategies as st
@@ -368,7 +368,7 @@ class TestZScoreProperties:
 
 #### 4.3 PIT Helper Property Tests
 
-**新文件**: `packages/datahub/tests/unit/runtime/test_pit_helper_property.py`
+**新文件**: `packages/data/tests/unit/runtime/test_pit_helper_property.py`
 
 ```python
 from hypothesis import given, strategies as st
@@ -411,7 +411,7 @@ class TestAsOfJoinProperties:
 #### 验证命令
 ```bash
 pytest packages/foundation/tests/unit/util/test_dates_property.py -v
-pytest packages/datahub/tests/unit/dq/checkers/test_*_property.py -v
+pytest packages/data/tests/unit/dq/checkers/test_*_property.py -v
 pytest packages/ -m "not slow" --hypothesis-seed=0
 ```
 
@@ -428,7 +428,7 @@ pytest packages/ -m "not slow" --hypothesis-seed=0
 
 #### 5.1 创建内存数据库 Fixtures
 
-**新文件**: `packages/datahub/tests/unit/conftest.py`
+**新文件**: `packages/data/tests/unit/conftest.py`
 
 ```python
 """Pytest configuration for unit tests.
@@ -439,8 +439,8 @@ pytest packages/ -m "not slow" --hypothesis-seed=0
 from typing import Generator
 
 import pytest
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.runtime.sqlite_pool import SQLitePool
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 @pytest.fixture(scope="function")
@@ -523,7 +523,7 @@ def db_client(sqlite_client: SQLiteClient) -> SQLiteClient:
 
 **注意**: DuckDB 默认支持内存模式，使用 `duckdb.connect(":memory:")`
 
-**新增 fixture** (在 `packages/datahub/tests/unit/conftest.py`):
+**新增 fixture** (在 `packages/data/tests/unit/conftest.py`):
 
 ```python
 import duckdb
@@ -565,12 +565,12 @@ def duckdb_memory_with_tables(duckdb_memory: duckdb.DuckDBPyConnection) -> duckd
 
 ```bash
 # 迁移后验证
-pytest packages/datahub/tests/unit/stores/test_calendar_store.py -v
-pytest packages/datahub/tests/unit/stores/test_security_store.py -v
-pytest packages/datahub/tests/unit/stores/test_bars_store.py -v
-pytest packages/datahub/tests/unit/stores/test_adj_factor_store.py -v
-pytest packages/datahub/tests/unit/ -v
-pytest packages/datahub/tests/integration/ -v
+pytest packages/data/tests/unit/stores/test_calendar_store.py -v
+pytest packages/data/tests/unit/stores/test_security_store.py -v
+pytest packages/data/tests/unit/stores/test_bars_store.py -v
+pytest packages/data/tests/unit/stores/test_adj_factor_store.py -v
+pytest packages/data/tests/unit/ -v
+pytest packages/data/tests/integration/ -v
 ```
 
 ---
@@ -592,42 +592,42 @@ pytest packages/datahub/tests/integration/ -v
 
 ### Phase 1-4: 必须修改的文件
 
-1. `packages/datahub/tests/conftest.py` - 添加 `fake_time` fixture
+1. `packages/data/tests/conftest.py` - 添加 `fake_time` fixture
 2. `apps/server/tests/conftest.py` - 添加 `fake_time` fixture
-3. `packages/datahub/tests/unit/runtime/test_cache_ttl.py` - 消除 sleep
-4. `packages/datahub/tests/unit/runtime/test_cache.py` - 消除 sleep
+3. `packages/data/tests/unit/runtime/test_cache_ttl.py` - 消除 sleep
+4. `packages/data/tests/unit/runtime/test_cache.py` - 消除 sleep
 5. `tests/integration/test_observability_e2e.py` - 消除 sleep 或标记 external
-6. `packages/datahub/tests/unit/sources/tushare/test_source.py` - 统一 mock
-7. `packages/datahub/tests/integration/stores/test_pipeline_store.py` - 统一 mock
-8. `packages/datahub/tests/unit/runtime/test_pit_helper.py` - 添加 PIT 标记
+6. `packages/data/tests/unit/sources/tushare/test_source.py` - 统一 mock
+7. `packages/data/tests/integration/stores/test_pipeline_store.py` - 统一 mock
+8. `packages/data/tests/unit/runtime/test_pit_helper.py` - 添加 PIT 标记
 
 ### Phase 4: 需要创建的新文件
 
 9. `packages/foundation/tests/unit/util/test_dates_property.py`
-10. `packages/datahub/tests/unit/dq/checkers/test_statistical_property.py`
-11. `packages/datahub/tests/unit/runtime/test_pit_helper_property.py`
+10. `packages/data/tests/unit/dq/checkers/test_statistical_property.py`
+11. `packages/data/tests/unit/runtime/test_pit_helper_property.py`
 
 ### Phase 5: 内存数据库单元测试迁移
 
 **需要创建的新文件**：
-12. `packages/datahub/tests/unit/conftest.py` - 内存数据库 fixtures (SQLite + DuckDB)
+12. `packages/data/tests/unit/conftest.py` - 内存数据库 fixtures (SQLite + DuckDB)
 
 **需要迁移的文件**（从 integration/ 到 unit/）：
 
 **SQLite 内存数据库测试**：
-13. `packages/datahub/tests/integration/stores/test_calendar_store.py` → `unit/stores/`
-14. `packages/datahub/tests/integration/stores/test_security_store.py` → `unit/stores/`
-15. `packages/datahub/tests/integration/stores/test_universe_store.py` → `unit/stores/`
-16. `packages/datahub/tests/integration/stores/test_index_weight_store.py` → `unit/stores/`
+13. `packages/data/tests/integration/stores/test_calendar_store.py` → `unit/stores/`
+14. `packages/data/tests/integration/stores/test_security_store.py` → `unit/stores/`
+15. `packages/data/tests/integration/stores/test_universe_store.py` → `unit/stores/`
+16. `packages/data/tests/integration/stores/test_index_weight_store.py` → `unit/stores/`
 
 **Parquet Store 测试**（使用 tmp_path，测试业务逻辑）：
-17. `packages/datahub/tests/integration/stores/test_bars_store.py` → `unit/stores/`
-18. `packages/datahub/tests/integration/stores/test_adj_factor_store.py` → `unit/stores/`
-19. `packages/datahub/tests/integration/stores/test_stock_status_store.py` → `unit/stores/`
+17. `packages/data/tests/integration/stores/test_bars_store.py` → `unit/stores/`
+18. `packages/data/tests/integration/stores/test_adj_factor_store.py` → `unit/stores/`
+19. `packages/data/tests/integration/stores/test_stock_status_store.py` → `unit/stores/`
 
 **需要改造的文件**：
-20. `packages/datahub/tests/integration/stores/test_quarantine_store.py` - 改用 `:memory:`
-21. `packages/datahub/tests/integration/stores/test_ingestion_metadata_store.py` - 改用 `:memory:`
+20. `packages/data/tests/integration/stores/test_quarantine_store.py` - 改用 `:memory:`
+21. `packages/data/tests/integration/stores/test_ingestion_metadata_store.py` - 改用 `:memory:`
 
 ---
 

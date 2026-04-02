@@ -7,12 +7,12 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_analytics.evaluation.report import (
+    FactorEvaluationReport,
+)
 from ditto_app.query.evaluation import (
     EvaluationOptions,
     FactorEvaluationFacade,
-)
-from ditto_engine.engine.evaluation.report import (
-    FactorEvaluationReport,
 )
 
 _DATES = [date(2024, 1, 2), date(2024, 1, 3)]

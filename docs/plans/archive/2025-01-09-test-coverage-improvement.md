@@ -41,9 +41,9 @@
 
 | 模块 | 路径 | 当前覆盖率 | 问题 |
 |------|------|-----------|------|
-| dq/checkers/business | `packages/datahub/src/ditto_datahub/dq/checkers/business.py` | 15% | 边界测试不足 |
-| dq/checkers/statistical | `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py` | 10% | 分支覆盖不足 |
-| stores/ingestion_cursor | `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py` | 30% | 异常路径未测 |
+| dq/checkers/business | `packages/data/src/ditto_data/dq/checkers/business.py` | 15% | 边界测试不足 |
+| dq/checkers/statistical | `packages/data/src/ditto_data/dq/checkers/statistical.py` | 10% | 分支覆盖不足 |
+| stores/ingestion_cursor | `packages/data/src/ditto_data/stores/ingestion_cursor.py` | 30% | 异常路径未测 |
 | ingestion/services/coordinator | `apps/server/src/ditto_port/ingestion/services/coordinator.py` | 27% | Mock 覆盖不足 |
 
 ---
@@ -86,10 +86,10 @@ graph TD
 
 | 模块 | 路径 | 原始 | 目标 | 实际 | 状态 |
 |------|------|------|------|------|------|
-| ParquetStoreBase | `packages/datahub/src/ditto_datahub/stores/parquet_store_base.py` | ~60% | 85% | **93.68%** | ✅ 完成 |
-| SQLiteClient | `packages/datahub/src/ditto_datahub/stores/sqlite_client.py` | ~30% | 85% | **100%** | ✅ 完成 |
-| Cache | `packages/datahub/src/ditto_datahub/runtime/cache.py` | ~40% | 85% | **100%** | ✅ 完成 |
-| PitHelper | `packages/datahub/src/ditto_datahub/runtime/pit_helper.py` | ~50% | 85% | **100%** | ✅ 完成 |
+| ParquetStoreBase | `packages/data/src/ditto_data/stores/parquet_store_base.py` | ~60% | 85% | **93.68%** | ✅ 完成 |
+| SQLiteClient | `packages/data/src/ditto_data/stores/sqlite_client.py` | ~30% | 85% | **100%** | ✅ 完成 |
+| Cache | `packages/data/src/ditto_data/runtime/cache.py` | ~40% | 85% | **100%** | ✅ 完成 |
+| PitHelper | `packages/data/src/ditto_data/runtime/pit_helper.py` | ~50% | 85% | **100%** | ✅ 完成 |
 
 **完成日期**: 2025-01-09
 **新增测试**: 59个（33+10+4+12）
@@ -99,12 +99,12 @@ graph TD
 
 | 模块 | 路径 | 原始 | 目标 | 实际 | 状态 |
 |------|------|------|------|------|------|
-| BarsStore | `packages/datahub/src/ditto_datahub/stores/bars_store.py` | 60% | 85% | **97.74%** | ✅ 完成 |
-| IngestionCursor | `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py` | 30% | 85% | **100%** | ✅ 完成 |
-| AdjFactorStore | `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` | 40% | 85% | **96.04%** | ✅ 完成 |
-| PipelineStore | `packages/datahub/src/ditto_datahub/stores/pipeline_store.py` | ~30% | 80% | **93.06%** | ✅ 完成 |
-| QuarantineStore | `packages/datahub/src/ditto_datahub/stores/quarantine_store.py` | ~25% | 80% | **92.96%** | ✅ 完成 |
-| IngestionLogStore | `packages/datahub/src/ditto_datahub/stores/ingestion_log.py` | ~30% | 80% | **100%** | ✅ 完成 |
+| BarsStore | `packages/data/src/ditto_data/stores/bars_store.py` | 60% | 85% | **97.74%** | ✅ 完成 |
+| IngestionCursor | `packages/data/src/ditto_data/stores/ingestion_cursor.py` | 30% | 85% | **100%** | ✅ 完成 |
+| AdjFactorStore | `packages/data/src/ditto_data/stores/adj_factor_store.py` | 40% | 85% | **96.04%** | ✅ 完成 |
+| PipelineStore | `packages/data/src/ditto_data/stores/pipeline_store.py` | ~30% | 80% | **93.06%** | ✅ 完成 |
+| QuarantineStore | `packages/data/src/ditto_data/stores/quarantine_store.py` | ~25% | 80% | **92.96%** | ✅ 完成 |
+| IngestionLogStore | `packages/data/src/ditto_data/stores/ingestion_log.py` | ~30% | 80% | **100%** | ✅ 完成 |
 
 **完成日期**: 2025-01-09
 **新增测试**: 92个（BarsStore: 7个, AdjFactorStore: 13个, PipelineStore: 28个, QuarantineStore: 20个, IngestionLogStore: 22个, 其他2个）
@@ -113,10 +113,10 @@ graph TD
 
 | 模块 | 路径 | 原始 | 目标 | 实际 | 状态 |
 |------|------|------|------|------|------|
-| BusinessChecker | `packages/datahub/src/ditto_datahub/dq/checkers/business.py` | 15% | 85% | **85%** | ✅ 完成 |
-| StatisticalChecker | `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py` | 10% | 85% | **85%** | ✅ 完成 |
-| TechnicalChecker | `packages/datahub/src/ditto_datahub/dq/checkers/technical.py` | 20% | 80% | **80%** | ✅ 完成 |
-| DQEngine | `packages/datahub/src/ditto_datahub/dq/engine.py` | 30% | 85% | **85%** | ✅ 完成 |
+| BusinessChecker | `packages/data/src/ditto_data/dq/checkers/business.py` | 15% | 85% | **85%** | ✅ 完成 |
+| StatisticalChecker | `packages/data/src/ditto_data/dq/checkers/statistical.py` | 10% | 85% | **85%** | ✅ 完成 |
+| TechnicalChecker | `packages/data/src/ditto_data/dq/checkers/technical.py` | 20% | 80% | **80%** | ✅ 完成 |
+| DQEngine | `packages/data/src/ditto_data/dq/engine.py` | 30% | 85% | **85%** | ✅ 完成 |
 
 **完成日期**: 2025-01-09
 **新增测试**: 45个（BusinessChecker: 13个, StatisticalChecker: 10个, TechnicalChecker: 12个, DQEngine: 10个）
@@ -196,7 +196,7 @@ pixi run -e dev pytest --cov-report=term-missing --cov=模块路径 tests/...
 
 **分支覆盖示例**：
 ```python
-# packages/datahub/tests/unit/stores/test_bars_store.py
+# packages/data/tests/unit/stores/test_bars_store.py
 
 @pytest.mark.parametrize("on_duplicate,expected_close", [
     (OnDuplicate.ERROR, "raises"),
@@ -291,10 +291,10 @@ def test_write_read_roundtrip(df):
 #### 步骤 4: 验证覆盖率（30 分钟）
 ```bash
 # 运行覆盖率检查
-pixi run -e dev pytest --cov-report=term-missing --cov=ditto_datahub.stores.bars_store
+pixi run -e dev pytest --cov-report=term-missing --cov=ditto_data.stores.bars_store
 
 # 验证达标
-pytest --cov=ditto_datahub.stores.bars_store --cov-fail-under=85 --cov-branch
+pytest --cov=ditto_data.stores.bars_store --cov-fail-under=85 --cov-branch
 ```
 
 ---
@@ -487,13 +487,13 @@ pixi run -e dev pre-commit-run
 ### 每日检查
 ```bash
 # 运行覆盖率
-pixi run -e dev pytest --cov-report=term-missing --cov=ditto_datahub --cov=ditto_port
+pixi run -e dev pytest --cov-report=term-missing --cov=ditto_data --cov=ditto_port
 
 # 只运行失败的测试
 pytest --lf
 
 # 运行特定模块
-pytest packages/datahub/tests/unit/stores/test_bars_store.py -v
+pytest packages/data/tests/unit/stores/test_bars_store.py -v
 ```
 
 ### 最终验收
@@ -510,14 +510,14 @@ pytest --cov-branch
 ## 关键文件
 
 ### 需要补充测试的文件
-- `packages/datahub/tests/unit/stores/test_bars_store.py`
-- `packages/datahub/tests/unit/dq/checkers/test_business.py`
-- `packages/datahub/tests/unit/dq/checkers/test_statistical.py`
+- `packages/data/tests/unit/stores/test_bars_store.py`
+- `packages/data/tests/unit/dq/checkers/test_business.py`
+- `packages/data/tests/unit/dq/checkers/test_statistical.py`
 - `apps/server/tests/unit/ingestion/test_coordinator.py`
 
 ### 参考文件
 - `.claude/rules/python-test.md` - 测试规范
-- `packages/datahub/tests/conftest.py` - 测试 fixtures
+- `packages/data/tests/conftest.py` - 测试 fixtures
 
 ---
 
@@ -573,9 +573,9 @@ pytest --cov-branch
 - ✅ IngestionLogStore: 100% (新增22个测试)
 
 **新增测试文件**:
-- `packages/datahub/tests/unit/stores/test_pipeline_store.py` (28个测试)
-- `packages/datahub/tests/unit/stores/test_quarantine_store.py` (20个测试)
-- `packages/datahub/tests/unit/stores/test_ingestion_log_store.py` (22个测试)
+- `packages/data/tests/unit/stores/test_pipeline_store.py` (28个测试)
+- `packages/data/tests/unit/stores/test_quarantine_store.py` (20个测试)
+- `packages/data/tests/unit/stores/test_ingestion_log_store.py` (22个测试)
 
 **代码质量**:
 - ✅ pre-commit 全部通过

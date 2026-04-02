@@ -19,7 +19,7 @@ from ditto_app.process.materialization import (
     InputContext,
     UnavailableDerivedInputProvider,
 )
-from ditto_engine.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
 # Helpers

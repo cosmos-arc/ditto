@@ -121,7 +121,7 @@ from datetime import date
 
 import polars as pl
 from ditto_infra import traced
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class XXXReader:
@@ -150,7 +150,7 @@ from __future__ import annotations
 
 import polars as pl
 from ditto_infra import M, logger, traced
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class XXXWriter:

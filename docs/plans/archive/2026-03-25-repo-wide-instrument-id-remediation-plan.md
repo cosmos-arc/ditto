@@ -30,8 +30,8 @@
 ### 参考实现（应复用，不要另起一套）
 
 - `apps/port/src/ditto_port/api/routes/source.py`
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py`
-- `packages/datahub/src/ditto_datahub/services/metadata/instrument.py`
+- `packages/data/src/ditto_data/services/metadata_service.py`
+- `packages/data/src/ditto_data/services/metadata/instrument.py`
 
 这些文件已经定义了比较清晰的“多标识符输入 -> 规范解析”模式，应作为全仓 query 边界整改的唯一模板。
 
@@ -67,9 +67,9 @@
 ### Task 1: 收口共享标识符解析契约
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/metadata/instrument.py`
-- Modify: `packages/datahub/src/ditto_datahub/services/metadata_service.py`
-- Create: `packages/datahub/tests/unit/services/test_metadata_service_identifier_resolution_unit.py`
+- Modify: `packages/data/src/ditto_data/services/metadata/instrument.py`
+- Modify: `packages/data/src/ditto_data/services/metadata_service.py`
+- Create: `packages/data/tests/unit/services/test_metadata_service_identifier_resolution_unit.py`
 
 **目标**
 
@@ -101,7 +101,7 @@
 
 **Run**
 
-`pixi run -e dev pytest packages/datahub/tests/unit/services/test_metadata_service_identifier_resolution_unit.py --no-cov -q`
+`pixi run -e dev pytest packages/data/tests/unit/services/test_metadata_service_identifier_resolution_unit.py --no-cov -q`
 
 **Commit**
 
@@ -112,15 +112,15 @@
 ### Task 2: 迁移 Capital 查询链路到 canonical InstrumentId
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/capital_service.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/capital/margin/margin_trading_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/capital/pledge/pledge_ratio_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/capital/valuation/valuation_metrics_reader.py`
+- Modify: `packages/data/src/ditto_data/services/capital_service.py`
+- Modify: `packages/data/src/ditto_data/stores/capital/margin/margin_trading_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/capital/pledge/pledge_ratio_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/capital/valuation/valuation_metrics_reader.py`
 - Modify: `apps/port/src/ditto_port/api/routes/capital.py`
 - Modify: `apps/port/src/ditto_port/cli/commands/query/capital.py`
 - Modify: `apps/port/src/ditto_port/models/capital.py`
 - Create: `apps/port/tests/unit/api/routes/test_capital_identifier_query_unit.py`
-- Create: `packages/datahub/tests/unit/services/test_capital_service_identifier_unit.py`
+- Create: `packages/data/tests/unit/services/test_capital_service_identifier_unit.py`
 
 **目标**
 
@@ -149,7 +149,7 @@ Port 层先解析成 canonical `InstrumentId`，DataHub 内部只接收 `Instrum
 
 **Run**
 
-`pixi run -e dev pytest apps/port/tests/unit/api/routes/test_capital_identifier_query_unit.py packages/datahub/tests/unit/services/test_capital_service_identifier_unit.py packages/datahub/tests/unit/stores/capital --no-cov -q`
+`pixi run -e dev pytest apps/port/tests/unit/api/routes/test_capital_identifier_query_unit.py packages/data/tests/unit/services/test_capital_service_identifier_unit.py packages/data/tests/unit/stores/capital --no-cov -q`
 
 **Commit**
 
@@ -160,19 +160,19 @@ Port 层先解析成 canonical `InstrumentId`，DataHub 内部只接收 `Instrum
 ### Task 3: 迁移 Fundamental 查询链路到 canonical InstrumentId
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/services/fundamental_service.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/corporate/dividend_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/corporate/corporate_actions_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/forecast/express_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/forecast/forecast_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/financial/balance_sheet_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/financial/cash_flow_reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/fundamental/financial/income_statement_reader.py`
+- Modify: `packages/data/src/ditto_data/services/fundamental_service.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/corporate/dividend_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/corporate/corporate_actions_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/forecast/express_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/forecast/forecast_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/financial/balance_sheet_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/financial/cash_flow_reader.py`
+- Modify: `packages/data/src/ditto_data/stores/fundamental/financial/income_statement_reader.py`
 - Modify: `apps/port/src/ditto_port/api/routes/fundamental.py`
 - Modify: `apps/port/src/ditto_port/cli/commands/query/fundamental.py`
 - Modify: `apps/port/src/ditto_port/models/fundamental.py`
 - Create: `apps/port/tests/unit/api/routes/test_fundamental_identifier_query_unit.py`
-- Create: `packages/datahub/tests/unit/services/test_fundamental_service_identifier_unit.py`
+- Create: `packages/data/tests/unit/services/test_fundamental_service_identifier_unit.py`
 
 **目标**
 
@@ -196,7 +196,7 @@ Port 层先解析成 canonical `InstrumentId`，DataHub 内部只接收 `Instrum
 
 **Run**
 
-`pixi run -e dev pytest apps/port/tests/unit/api/routes/test_fundamental_identifier_query_unit.py packages/datahub/tests/unit/services/test_fundamental_service_identifier_unit.py packages/datahub/tests/unit/stores/fundamental --no-cov -q`
+`pixi run -e dev pytest apps/port/tests/unit/api/routes/test_fundamental_identifier_query_unit.py packages/data/tests/unit/services/test_fundamental_service_identifier_unit.py packages/data/tests/unit/stores/fundamental --no-cov -q`
 
 **Commit**
 
@@ -207,11 +207,11 @@ Port 层先解析成 canonical `InstrumentId`，DataHub 内部只接收 `Instrum
 ### Task 4: 清理 Audit / Control Plane 的字符串 instrument_id 语义
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/models/strategy_audit.py`
-- Modify: `packages/datahub/src/ditto_datahub/services/audit/execution_audit_service.py`
-- Modify: `packages/datahub/src/ditto_datahub/scripts/schema.sql`
+- Modify: `packages/data/src/ditto_data/models/strategy_audit.py`
+- Modify: `packages/data/src/ditto_data/services/audit/execution_audit_service.py`
+- Modify: `packages/data/src/ditto_data/scripts/schema.sql`
 - Modify: `apps/port/src/ditto_port/services/strategy/backtest_service.py`
-- Modify: `packages/datahub/tests/unit/services/test_execution_audit_service_unit.py`
+- Modify: `packages/data/tests/unit/services/test_execution_audit_service_unit.py`
 - Modify: `apps/port/tests/unit/services/strategy/test_backtest_service_unit.py`
 
 **目标**
@@ -237,7 +237,7 @@ Port 层先解析成 canonical `InstrumentId`，DataHub 内部只接收 `Instrum
 
 **Run**
 
-`pixi run -e dev pytest packages/datahub/tests/unit/services/test_execution_audit_service_unit.py apps/port/tests/unit/services/strategy/test_backtest_service_unit.py --no-cov -q`
+`pixi run -e dev pytest packages/data/tests/unit/services/test_execution_audit_service_unit.py apps/port/tests/unit/services/strategy/test_backtest_service_unit.py --no-cov -q`
 
 **Commit**
 
@@ -263,7 +263,7 @@ Port 层先解析成 canonical `InstrumentId`，DataHub 内部只接收 `Instrum
 **Implementation Notes**
 
 - archive 文档只加 superseded/历史说明，不做逐段重写
-- 新增 repo-level grep test 或 lint guard，至少约束 `packages/datahub/src` 与 `apps/port/src` 中 query/service/api/model 不再出现新的 `instrument_id: str`
+- 新增 repo-level grep test 或 lint guard，至少约束 `packages/data/src` 与 `apps/port/src` 中 query/service/api/model 不再出现新的 `instrument_id: str`
 - 保留 `source_ticker` 的 ingestion/source 边界用法，不纳入误报
 
 **Tests / Verification**
@@ -294,7 +294,7 @@ Port 层先解析成 canonical `InstrumentId`，DataHub 内部只接收 `Instrum
 
 ## Acceptance Criteria
 
-- `packages/datahub/src` 和 `apps/port/src` 中不再存在新的 query/service/api/model 级 `instrument_id: str` 用法，audit DTO 除外；audit 完成后也应清零
+- `packages/data/src` 和 `apps/port/src` 中不再存在新的 query/service/api/model 级 `instrument_id: str` 用法，audit DTO 除外；audit 完成后也应清零
 - Capital / Fundamental API 与 CLI 支持 `instrument_id` / `standard_ticker` / `ticker` 三种输入
 - DataHub Capital / Fundamental readers 与 services 统一使用 `int instrument_id`
 - Audit 层不再用字符串 `instrument_id` 混合表示真实主键与组合级 sentinel
