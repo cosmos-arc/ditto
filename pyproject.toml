@@ -106,7 +106,7 @@ unfixable = []
 "packages/datahub/src/ditto_datahub/domains/features/technical/indicator_metadata_store.py" = ["S608"]
 "packages/datahub/src/ditto_datahub/domains/factors/factor_metadata_store.py" = ["S608"]
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
-"apps/port/src/ditto_port/services/derived/research.py" = ["S608"]
+"apps/interfaces/src/ditto_interfaces/services/derived/research.py" = ["S608"]
 # EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
 "packages/core/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
@@ -245,7 +245,7 @@ ignore = [
 # 关键：核心目录提升到 strict 模式
 # 这些是最值钱的代码，值得最严格的检查
 # ═══════════════════════════════════════════════════════════════════
-strict = ["packages/**/src", "apps/port/**/src"]
+strict = ["packages/**/src", "apps/interfaces/**/src"]
 
 # ═══════════════════════════════════════════════════════════════════
 # 规则微调：让 Ruff 管风格，Pyright 专注类型
@@ -280,7 +280,7 @@ extraPaths = [
     "packages/datahub/src",
     "packages/data/src",
     "packages/analytics/src",
-    "apps/port/src",
+    "apps/interfaces/src",
 ]
 
 # ===================================================================
@@ -299,7 +299,7 @@ pythonpath = [
     "packages/datahub/src",
     "packages/data/src",
     "packages/analytics/src",
-    "apps/port/src",
+    "apps/interfaces/src",
 ]
 
 filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]

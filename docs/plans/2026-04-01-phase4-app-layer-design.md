@@ -21,12 +21,15 @@ depth: deep
 
 | Unit | 状态 | 验证 |
 |------|------|------|
-| 4a-1 | ⏳ 待实施 | 创建 app 包 + 迁移 Query 服务 |
-| 4a-2 | ⏳ 待实施 | 迁移 Process 服务 + Builders |
+| 4a-1 | ✅ 完成 | 创建 app 包 + 迁移 Query 服务 (PR1) |
+| 4a-2 | ✅ 完成 | 迁移 Process 服务 + Builders + Ingestion + Quality (PR2 + PR-B) |
 | 4b | ⏳ 待实施 | DI 容器重构（AppProvider） |
-| 4c | ⏳ 待实施 | R8 互斥规则（importlinter） |
+| 4c | ✅ 完成 | R8 互斥规则（importlinter）— 随 PR2 落地 |
 | 4d | ⏳ 待实施 | port → interfaces 重命名 |
 | 4e | ⏳ 待实施 | 旧路径清理 + importlinter 全量 |
+
+> **修订计划**：见 [phase4-remaining-implementation-plan.md](2026-04-01-phase4-remaining-implementation-plan.md)
+> 新增 PR-A（模型/错误提取前置）+ PR-B（ingestion 补完迁移），调整 PR-C~E
 
 ---
 

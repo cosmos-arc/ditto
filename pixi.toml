@@ -58,7 +58,7 @@ ditto-infra = { path = "packages/infra", editable = true }
 ditto-kernel = { path = "packages/kernel", editable = true }
 ditto-analytics = { path = "packages/analytics", editable = true }
 ditto-datahub = { path = "packages/datahub", editable = true }
-ditto-port = { path = "apps/port", editable = true }
+ditto-interfaces = { path = "apps/interfaces", editable = true }
 
 # 性能优化库
 cachebox = ">=5.0,<6"

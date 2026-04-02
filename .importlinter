@@ -16,7 +16,7 @@ root_packages =
     ditto_analytics
     ditto_engine
     ditto_app
-    ditto_port
+    ditto_interfaces
 
 # 不包含外部包
 include_external_packages = false
@@ -33,7 +33,7 @@ type = layers
 # 从高层到低层：Port → App → Engine → DataHub → Infra
 # Kernel 在最底层，但 layers 检查不包含它（Kernel 无业务依赖，被所有层依赖）
 layers =
-    ditto_port
+    ditto_interfaces
     ditto_app
     ditto_engine
     ditto_datahub
@@ -50,7 +50,7 @@ source_modules =
 forbidden_modules =
     ditto_engine.**
     ditto_datahub.**
-    ditto_port.**
+    ditto_interfaces.**
     ditto_app.**
     ditto_infra.**
     ditto_data.**
@@ -67,7 +67,7 @@ source_modules =
 forbidden_modules =
     ditto_datahub.**
     ditto_engine.**
-    ditto_port.**
+    ditto_interfaces.**
     ditto_kernel.**
     ditto_data.**
     ditto_analytics.**
@@ -83,7 +83,7 @@ source_modules =
     ditto_data.**
 forbidden_modules =
     ditto_engine.**
-    ditto_port.**
+    ditto_interfaces.**
     ditto_app.**
 unmatched_ignore_imports_alerting = none
 
@@ -107,7 +107,7 @@ type = forbidden
 source_modules =
     ditto_analytics.**
 forbidden_modules =
-    ditto_port.**
+    ditto_interfaces.**
 unmatched_ignore_imports_alerting = none
 
 # ═══════════════════════════════════════════════════════════════════
@@ -120,7 +120,7 @@ source_modules =
     ditto_datahub.**
 forbidden_modules =
     ditto_engine.**
-    ditto_port.**
+    ditto_interfaces.**
     ditto_app.**
 
 # ═══════════════════════════════════════════════════════════════════
@@ -160,14 +160,14 @@ unmatched_ignore_imports_alerting = none
 name = Port must not directly depend on DataHub stores/runtime
 type = forbidden
 source_modules =
-    ditto_port.**
+    ditto_interfaces.**
 forbidden_modules =
     ditto_datahub.stores.**
     ditto_datahub.runtime.**
 # 忽略 registry 模块的导入
 ignore_imports =
-    ditto_port.registry.** -> ditto_datahub.stores.**
-    ditto_port.registry.** -> ditto_datahub.runtime.**
+    ditto_interfaces.registry.** -> ditto_datahub.stores.**
+    ditto_interfaces.registry.** -> ditto_datahub.runtime.**
 # 只检查直接导入，允许通过 hub 的间接使用
 allow_indirect_imports = true
 unmatched_ignore_imports_alerting = none
@@ -181,7 +181,7 @@ type = forbidden
 source_modules =
     ditto_app.**
 forbidden_modules =
-    ditto_port.**
+    ditto_interfaces.**
 
 # ═══════════════════════════════════════════════════════════════════
 # R8 — App 内部互斥规则（Use Case 间职责隔离）
@@ -271,5 +271,5 @@ ancestors =
     ditto_analytics
     ditto_engine
     ditto_app
-    ditto_port
+    ditto_interfaces
 depth = 10

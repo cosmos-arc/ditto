@@ -1,7 +1,7 @@
 """
 策略服务工厂与运行时装配 — Builders 模块.
 
-合并自 ditto_port.services.strategy 中的:
+合并自 ditto_interfaces.services.strategy 中的:
   - factory.py
   - runtime_builder.py
   - backtest_runtime_builder.py

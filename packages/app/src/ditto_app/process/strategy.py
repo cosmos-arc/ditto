@@ -1,7 +1,7 @@
 """
 策略运行编排服务 — Process 模块.
 
-合并自 ditto_port.services.strategy 中的:
+合并自 ditto_interfaces.services.strategy 中的:
   - facade.py
   - backtest_service.py
   - strategy_run_service.py

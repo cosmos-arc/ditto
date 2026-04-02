@@ -22,7 +22,7 @@ from loguru import logger
 type TemporalValue = date | datetime
 
 # ---------------------------------------------------------------------------
-# Request / Response models (formerly ditto_port.models.derived)
+# Request / Response models (formerly ditto_interfaces.models.derived)
 # ---------------------------------------------------------------------------
 
 __all__ = [
