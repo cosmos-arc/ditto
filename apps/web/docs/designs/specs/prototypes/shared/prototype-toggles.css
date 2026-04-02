@@ -1,16 +1,21 @@
 /* ─────────────────────────────────────────────
- * Ditto Prototype — State Toggle System
- * Pure CSS interactive states for prototypes.
+ * Ditto Prototype — Three-Zone Architecture
+ * Pure CSS zone navigation + gallery grid.
  * Loaded after all token & layout layers.
  * ─────────────────────────────────────────────
  *
- * Three toggle mechanisms:
- *   1. Tab panels    — input[type="radio"] + :has()
- *   2. Modal/Drawer  — input[type="checkbox"] + :has()
- *   3. State variants — <details> element
+ * Architecture:
+ *   Zone 1: Default View     — 纯净默认状态
+ *   Zone 2: States Gallery   — 状态变体画廊
+ *   Zone 3: Overlays Gallery — 弹层设计画廊
  *
- * No JavaScript required. All states live in the
- * DOM for review and accessibility.
+ * Mechanisms:
+ *   1. Zone switching   — input[type="radio"] + :has()
+ *   2. Tab panels       — input[type="radio"] + :has()
+ *   3. Gallery grid     — CSS Grid layout
+ *   4. State patterns   — skeleton / empty / error
+ *
+ * No JavaScript required.
  * ───────────────────────────────────────────── */
 
 /* ── 0. Shared Utilities ── */
@@ -27,7 +32,189 @@
   border:  0;
 }
 
-/* ── 1. Tab Panel System ──────────────────────
+/* ── 1. View-Level Zone Navigation ─────────────
+ *
+ * HTML pattern:
+ *   <input type="radio" id="view-default"
+ *          name="proto-view" checked class="sr-only">
+ *   <input type="radio" id="view-states"
+ *          name="proto-view" class="sr-only">
+ *   <input type="radio" id="view-overlays"
+ *          name="proto-view" class="sr-only">
+ *
+ *   <nav class="proto-nav">
+ *     <label for="view-default" class="proto-nav__tab">主视图</label>
+ *     <label for="view-states" class="proto-nav__tab">状态画廊</label>
+ *     <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+ *   </nav>
+ *
+ *   <section id="default-view" class="proto-section">...</section>
+ *   <section id="states-gallery" class="proto-section">...</section>
+ *   <section id="overlays-gallery" class="proto-section">...</section>
+ *
+ * Convention: radio id = label for = section id prefix
+ * Zone switching is global — one zone visible at a time.
+ */
+
+.proto-section {
+  display: none;
+}
+
+:root:has(#view-default:checked)  #default-view { display: block; }
+:root:has(#view-states:checked)   #states-gallery { display: block; }
+:root:has(#view-overlays:checked) #overlays-gallery { display: block; }
+
+/* ── 2. Proto Nav Bar ──────────────────────────
+ *
+ * Sticky navigation bar for switching between zones.
+ * Positioned below the shell header.
+ */
+
+.proto-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 2px);
+  padding: var(--space-4, 6px) var(--space-8, 12px);
+  background: var(--surface-secondary, #141414);
+  border-bottom: 1px solid var(--border-subtle, #1e1e1e);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.proto-nav__tab {
+  padding: var(--space-4, 6px) var(--space-12, 16px);
+  font-size: var(--font-size-12, 12px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--text-tertiary, #666);
+  border-radius: var(--radius-6, 6px);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.proto-nav__tab:hover {
+  color: var(--text-secondary, #aaa);
+  background: var(--surface-tertiary, #1a1a1a);
+}
+
+/* Active tab states */
+:root:has(#view-default:checked)  [for="view-default"],
+:root:has(#view-states:checked)   [for="view-states"],
+:root:has(#view-overlays:checked) [for="view-overlays"] {
+  color: var(--text-primary, #e5e5e5);
+  background: var(--surface-app, #0a0a0a);
+}
+
+/* ── 3. Gallery Grid System ────────────────────
+ *
+ * Zone 2 & 3 shared layout:
+ *   .gallery-header   — section title + summary
+ *   .gallery-grid     — responsive card grid
+ *   .gallery-group    — component-level grouping
+ *   .gallery-cards    — card grid within a group
+ *   .gallery-card     — individual state/overlay card
+ */
+
+.gallery-header {
+  padding: var(--space-10, 16px) var(--space-16, 24px);
+  border-bottom: 1px solid var(--border-subtle, #1e1e1e);
+}
+
+.gallery-header h2 {
+  font-size: var(--font-size-16, 16px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--text-primary, #e5e5e5);
+  margin: 0;
+}
+
+.gallery-summary {
+  font-size: var(--font-size-12, 12px);
+  color: var(--text-tertiary, #666);
+  margin-top: var(--space-2, 2px);
+}
+
+/* Grid layout */
+.gallery-grid {
+  display: grid;
+  gap: var(--space-6, 8px);
+  padding: var(--space-8, 12px);
+}
+
+/* Component grouping */
+.gallery-group {
+  border: 1px solid var(--border-subtle, #1e1e1e);
+  border-radius: var(--radius-8, 8px);
+  overflow: hidden;
+}
+
+.gallery-group__title {
+  padding: var(--space-4, 6px) var(--space-10, 16px);
+  font-size: var(--font-size-12, 12px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--text-secondary, #aaa);
+  border-bottom: 1px solid var(--border-subtle, #1e1e1e);
+  background: var(--surface-secondary, #141414);
+}
+
+/* Card grid within group */
+.gallery-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-6, 8px);
+  padding: var(--space-6, 8px);
+}
+
+/* Individual card */
+.gallery-card {
+  border: 1px solid var(--border-subtle, #1e1e1e);
+  border-radius: var(--radius-6, 6px);
+  overflow: hidden;
+}
+
+.gallery-card__label {
+  display: block;
+  padding: var(--space-3, 4px) var(--space-6, 8px);
+  font-size: var(--font-size-10, 10px);
+  font-weight: var(--font-weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary, #666);
+  border-bottom: 1px solid var(--border-subtle, #1e1e1e);
+  background: var(--surface-muted, #111);
+}
+
+.gallery-card__preview {
+  padding: var(--space-6, 8px);
+  min-height: 120px;
+  background: var(--surface-app, #0a0a0a);
+}
+
+/* Overlay-specific card variants */
+.gallery-card__trigger {
+  display: block;
+  padding: var(--space-1, 1px) var(--space-6, 8px);
+  font-size: var(--font-size-10, 10px);
+  color: var(--text-quaternary, #444);
+  font-style: italic;
+  border-bottom: 1px solid var(--border-subtle, #1e1e1e);
+}
+
+.gallery-card__preview--overlay {
+  min-height: 200px;
+  position: relative;
+  background: var(--surface-overlay, #0e0e0e);
+}
+
+/* Overlay gallery — wider cards */
+.gallery-grid--overlays .gallery-cards {
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+/* ── 4. Tab Panel System ───────────────────────
+ *
+ * Used within default-view for page-level tabs.
+ * HTML pattern unchanged from v1.
  *
  * HTML pattern:
  *   <div class="tab-group" data-tab-group="hub">
@@ -36,18 +223,9 @@
  *     <label for="hub-overview" class="hub-tab" role="tab">
  *       概览
  *     </label>
- *     <input type="radio" name="hub" id="hub-quote"
- *            class="tab-radio sr-only">
- *     <label for="hub-quote" class="hub-tab" role="tab">
- *       行情
- *     </label>
- *
  *     <div class="tab-panels">
  *       <div class="tab-panel" data-panel="hub-overview">
  *         ... overview content ...
- *       </div>
- *       <div class="tab-panel" data-panel="hub-quote">
- *         ... quote content ...
  *       </div>
  *     </div>
  *   </div>
@@ -55,9 +233,6 @@
  * CSS activation rule (add per-page in <style>):
  *   .tab-group:has(#hub-overview:checked)
  *     [data-panel="hub-overview"] { display: block; }
- *
- * Convention: radio id = label for = data-panel value
- * All three must match for the toggle to work.
  */
 
 .tab-group {
@@ -76,69 +251,18 @@
   display: none;
 }
 
-/* ── 2. Overlay System (Modal / Sheet / Drawer) ─
+/* ── 5. Overlay Visual Styles ──────────────────
  *
- * HTML pattern — checkbox can be placed anywhere,
- * overlay content can be placed anywhere:
+ * Used inside gallery-card__preview--overlay
+ * to render overlay components directly.
  *
- *   <!-- Trigger (inline in page) -->
- *   <input type="checkbox" id="overlay-watchlist"
- *          class="overlay-radio sr-only">
- *   <label for="overlay-watchlist" class="btn">
- *     + 加入观察列表
- *   </label>
- *
- *   <!-- Overlay (at end of body, inside .overlays) -->
- *   <div class="overlays">
- *     <div class="overlay-backdrop"
- *          data-overlay="overlay-watchlist">
- *       <label class="overlay-dismiss"
- *              for="overlay-watchlist"
- *              aria-label="关闭"></label>
- *       <div class="overlay-sheet" role="dialog"
- *            aria-label="加入观察列表">
- *         ... sheet content ...
- *       </div>
- *     </div>
- *   </div>
- *
- * CSS activation rule (add per-page in <style>):
- *   :root:has(#overlay-watchlist:checked)
- *     [data-overlay="overlay-watchlist"] { display: flex; }
- *
- * Close overlay: clicking the backdrop label toggles
- * the checkbox off.
+ * Note: Overlays are no longer toggled via
+ * checkbox + :has() — they render directly
+ * inside gallery cards.
  */
 
-.overlays {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  pointer-events: none;
-}
-
-.overlay-radio {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-  width: 0;
-  height: 0;
-}
-
-.overlay-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  pointer-events: auto;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  align-items: center;
-  justify-content: center;
-}
-
-/* Sheet — centered modal, max 480px wide */
-.overlay-backdrop .overlay-sheet {
+/* Sheet — centered modal */
+.overlay-sheet {
   background: var(--surface-elevated, #1e1e1e);
   border: 1px solid var(--border-subtle, #2a2a2a);
   border-radius: var(--panel-radius, 8px);
@@ -151,103 +275,36 @@
   max-height: 80vh;
   overflow-y: auto;
   position: relative;
-  z-index: 1;
 }
 
-/* Drawer — right-aligned slide-over, 380px wide */
-.overlay-backdrop .overlay-drawer {
+/* Drawer — right-aligned slide-over */
+.overlay-drawer {
   background: var(--surface-elevated, #1e1e1e);
   border: 1px solid var(--border-subtle, #2a2a2a);
   border-radius: var(--panel-radius, 8px) 0 0 var(--panel-radius, 8px);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
   padding: var(--space-16, 24px);
   width: 380px;
-  height: 100vh;
+  max-height: 100%;
   overflow-y: auto;
-  position: absolute;
-  right: 0;
-  top: 0;
-  z-index: 1;
+  position: relative;
 }
 
-/* Click backdrop to close */
-.overlay-dismiss {
-  position: absolute;
-  inset: 0;
-  cursor: pointer;
-  z-index: 0;
+/* Contained overlay preview in gallery */
+.gallery-card__preview--overlay .overlay-sheet,
+.gallery-card__preview--overlay .overlay-drawer {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: none;
 }
 
-/* ── 3. State Variant System ───────────────────
+/* ── 6. State Content Patterns ─────────────────
  *
- * Uses native <details>/<summary> for expandable
- * state previews. Each variant is a collapsible
- * section showing how a component looks in a
- * specific state (empty / loading / error).
- *
- * HTML pattern:
- *   <details class="state-variant">
- *     <summary class="state-variant-label">
- *       Empty State
- *     </summary>
- *     <div class="state-variant-content"
- *          data-state="empty">
- *       ... empty state mockup ...
- *     </div>
- *   </details>
- *
- * No activation CSS needed — <details> is natively
- * interactive. Styling below makes it blend with
- * the prototype visual language.
+ * Reusable content patterns for gallery cards.
+ * These are NOT wrapped in <details> anymore —
+ * they render directly inside .gallery-card__preview.
  */
-
-.state-variant {
-  border: 1px dashed var(--border-default, #333);
-  border-radius: var(--radius-6, 6px);
-  margin: var(--space-8, 12px) 0;
-  overflow: hidden;
-}
-
-.state-variant-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4, 6px);
-  padding: var(--space-6, 8px) var(--space-10, 16px);
-  font-size: var(--font-size-11, 11px);
-  font-weight: var(--font-weight-medium, 500);
-  color: var(--text-tertiary, #888);
-  background: var(--surface-muted, #141414);
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.state-variant-label::-webkit-details-marker {
-  display: none;
-}
-
-.state-variant-label::before {
-  content: "▶";
-  font-size: 8px;
-  transition: transform 0.15s ease;
-}
-
-.state-variant[open] > .state-variant-label::before {
-  transform: rotate(90deg);
-}
-
-.state-variant[open] > .state-variant-label {
-  color: var(--text-secondary, #aaa);
-  border-bottom: 1px solid var(--border-subtle, #2a2a2a);
-}
-
-.state-variant-content {
-  padding: var(--space-12, 16px);
-  min-height: 120px;
-  background: var(--surface-app, #0a0a0a);
-}
-
-/* ── 4. State Variant Content Patterns ──────── */
 
 /* Empty state */
 .state-empty {

@@ -1145,11 +1145,6 @@
     .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
     .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
     .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
-
-    /* State variant containers inherit page style */
-    .state-variant .state-variant-content {
-      background: var(--surface-app);
-    }
   </style>
 </head>
 <body>
@@ -1163,6 +1158,20 @@
       </linearGradient>
     </defs>
   </svg>
+
+  <!-- ═══ View-Level Zone Navigation ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+
+  <nav class="proto-nav">
+    <label for="view-default" class="proto-nav__tab">主视图</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <!-- ═══ Zone 1: Default View ═══ -->
+  <section id="default-view" class="proto-section">
   <div class="style-label">Graphite Studio — Research Workspace · Compact · A股</div>
 
   <div class="shell-analytical">
@@ -1219,13 +1228,9 @@
             <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
           </div>
         </div>
-        <!-- Overlay triggers: New Backtest / New Strategy / New Experiment -->
-        <input type="checkbox" id="overlay-new-backtest" class="overlay-radio sr-only">
         <label for="overlay-new-backtest" class="header-btn header-btn-primary" style="cursor:pointer">新建回测</label>
-        <input type="checkbox" id="overlay-new-strategy" class="overlay-radio sr-only">
-        <label for="overlay-new-strategy" class="header-btn header-btn-secondary" style="cursor:pointer">新建策略</label>
-        <input type="checkbox" id="overlay-new-experiment" class="overlay-radio sr-only">
-        <label for="overlay-new-experiment" class="header-btn header-btn-secondary" style="cursor:pointer">新建实验</label>
+        <button class="header-btn header-btn-secondary">新建策略</button>
+        <button class="header-btn header-btn-secondary">新建实验</button>
         <span class="header-btn header-btn-ghost">进入因子分析</span>
         <div class="header-action-btn" title="Notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
@@ -1276,39 +1281,6 @@
     </div>
 
     <!-- State Variants: Pulse Strip -->
-    <details class="state-variant">
-      <summary class="state-variant-label">Empty State</summary>
-      <div class="state-variant-content" data-state="empty">
-        <div class="state-empty">
-          <div class="state-empty-icon">📡</div>
-          <div class="state-empty-title">暂无因子监控数据</div>
-          <div class="state-empty-desc">连接数据源后展示活跃因子、退化与异常指标</div>
-          <button class="state-empty-cta">连接数据源</button>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Loading State</summary>
-      <div class="state-variant-content" data-state="loading">
-        <div class="state-loading">
-          <div class="skeleton skeleton-text"></div>
-          <div class="skeleton skeleton-text"></div>
-          <div class="skeleton skeleton-text"></div>
-          <div class="skeleton skeleton-text"></div>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Error State</summary>
-      <div class="state-variant-content" data-state="failed">
-        <div class="state-error">
-          <div class="state-error-icon">!</div>
-          <div class="state-error-title">因子监控加载失败</div>
-          <div class="state-error-desc">无法获取因子监控数据，请检查网络连接或稍后重试</div>
-          <button class="state-error-retry">重试</button>
-        </div>
-      </div>
-    </details>
 
     <!-- ═══ Main Content — Factor Monitor Table ═══ -->
     <div class="main-content">
@@ -1513,46 +1485,6 @@
     </div>
 
     <!-- State Variants: Factor Monitor Table -->
-    <details class="state-variant">
-      <summary class="state-variant-label">Empty State</summary>
-      <div class="state-variant-content" data-state="empty">
-        <div class="state-empty">
-          <div class="state-empty-icon">🔬</div>
-          <div class="state-empty-title">暂无因子数据</div>
-          <div class="state-empty-desc">创建第一个因子后，监控面板将在此展示 IC/IR/Sharpe 等关键指标</div>
-          <label for="overlay-new-strategy" class="state-empty-cta" style="cursor:pointer">新建因子</label>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Loading State</summary>
-      <div class="state-variant-content" data-state="loading">
-        <div class="state-loading">
-          <div class="skeleton skeleton-heading"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Error State</summary>
-      <div class="state-variant-content" data-state="failed">
-        <div class="state-error">
-          <div class="state-error-icon">!</div>
-          <div class="state-error-title">因子数据加载失败</div>
-          <div class="state-error-desc">无法获取因子引擎数据，请检查 Factor Engine 状态或稍后重试</div>
-          <button class="state-error-retry">重试</button>
-        </div>
-      </div>
-    </details>
 
     <!-- ═══ Activity Stack (300px right) ═══ -->
     <div class="activity-stack">
@@ -1662,74 +1594,8 @@
     </div>
 
     <!-- State Variants: Recent Runs -->
-    <details class="state-variant">
-      <summary class="state-variant-label">Empty State</summary>
-      <div class="state-variant-content" data-state="empty">
-        <div class="state-empty">
-          <div class="state-empty-icon">📋</div>
-          <div class="state-empty-title">暂无运行记录</div>
-          <div class="state-empty-desc">创建回测或实验后，运行记录将在此展示</div>
-          <label for="overlay-new-backtest" class="state-empty-cta" style="cursor:pointer">新建回测</label>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Loading State</summary>
-      <div class="state-variant-content" data-state="loading">
-        <div class="state-loading">
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Error State</summary>
-      <div class="state-variant-content" data-state="failed">
-        <div class="state-error">
-          <div class="state-error-icon">!</div>
-          <div class="state-error-title">运行记录加载失败</div>
-          <div class="state-error-desc">无法获取 Job Service 数据，请检查服务状态或稍后重试</div>
-          <button class="state-error-retry">重试</button>
-        </div>
-      </div>
-    </details>
 
     <!-- State Variants: Experiments / Review Queue -->
-    <details class="state-variant">
-      <summary class="state-variant-label">Empty State</summary>
-      <div class="state-variant-content" data-state="empty">
-        <div class="state-empty">
-          <div class="state-empty-icon">🧪</div>
-          <div class="state-empty-title">暂无实验或审核</div>
-          <div class="state-empty-desc">创建实验或提交因子验证后，审核队列将在此展示</div>
-          <label for="overlay-new-experiment" class="state-empty-cta" style="cursor:pointer">新建实验</label>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Loading State</summary>
-      <div class="state-variant-content" data-state="loading">
-        <div class="state-loading">
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-          <div class="skeleton skeleton-row"></div>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Error State</summary>
-      <div class="state-variant-content" data-state="failed">
-        <div class="state-error">
-          <div class="state-error-icon">!</div>
-          <div class="state-error-title">审核队列加载失败</div>
-          <div class="state-error-desc">无法获取 Review Service 数据，请稍后重试</div>
-          <button class="state-error-retry">重试</button>
-        </div>
-      </div>
-    </details>
 
     <!-- ═══ Analysis Band (220px bottom) ═══ -->
     <div class="analysis-band">
@@ -1825,82 +1691,10 @@
     </div>
 
     <!-- State Variants: Analysis Band — IC 趋势 -->
-    <details class="state-variant">
-      <summary class="state-variant-label">Empty State</summary>
-      <div class="state-variant-content" data-state="empty">
-        <div class="state-empty">
-          <div class="state-empty-icon">📈</div>
-          <div class="state-empty-title">暂无 IC 数据</div>
-          <div class="state-empty-desc">运行回测后，IC 趋势图将在此展示因子预测力变化</div>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Loading State</summary>
-      <div class="state-variant-content" data-state="loading">
-        <div class="state-loading">
-          <div class="skeleton skeleton-heading"></div>
-          <div class="skeleton skeleton-chart"></div>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Error State</summary>
-      <div class="state-variant-content" data-state="failed">
-        <div class="state-error">
-          <div class="state-error-icon">!</div>
-          <div class="state-error-title">图表加载失败</div>
-          <div class="state-error-desc">无法获取 IC 时间序列数据，请检查 Factor Engine 状态</div>
-          <button class="state-error-retry">重试</button>
-        </div>
-      </div>
-    </details>
 
     <!-- State Variants: Analysis Band — 相关性 -->
-    <details class="state-variant">
-      <summary class="state-variant-label">Empty State</summary>
-      <div class="state-variant-content" data-state="empty">
-        <div class="state-empty">
-          <div class="state-empty-icon">🗺</div>
-          <div class="state-empty-title">暂无相关性数据</div>
-          <div class="state-empty-desc">至少需要 2 个活跃因子后才能计算相关性矩阵</div>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Loading State</summary>
-      <div class="state-variant-content" data-state="loading">
-        <div class="state-loading">
-          <div class="skeleton skeleton-heading"></div>
-          <div class="skeleton skeleton-chart"></div>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Error State</summary>
-      <div class="state-variant-content" data-state="failed">
-        <div class="state-error">
-          <div class="state-error-icon">!</div>
-          <div class="state-error-title">相关性矩阵加载失败</div>
-          <div class="state-error-desc">无法获取 Correlation Service 数据，请稍后重试</div>
-          <button class="state-error-retry">重试</button>
-        </div>
-      </div>
-    </details>
 
   </div>
-
-  <!-- ═══ Overlay Containers ═══ -->
-  <div class="overlays">
-
-    <!-- Overlay A: New Backtest (Modal 居中弹窗) -->
-    <div class="overlay-backdrop" data-overlay="overlay-new-backtest">
-      <label class="overlay-dismiss" for="overlay-new-backtest" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="新建回测">
-        <div class="overlay-header">
-          <span class="overlay-title">新建回测</span>
-          <label for="overlay-new-backtest" class="overlay-close" aria-label="关闭">✕</label>
-        </div>
         <div class="overlay-body">
           <h4>回测配置</h4>
           <div class="overlay-field">
@@ -2145,6 +1939,492 @@
     </div>
 
   </div>
+  </section>
+
+
+  <!-- ═══ Zone 2: States Gallery ═══ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-header">
+      <h2>状态覆盖画廊</h2>
+      <p class="gallery-summary">1 组件 · 18 状态覆盖</p>
+    </div>
+    <div class="gallery-grid">
+      <div class="gallery-group" data-component="unknown">
+        <h3 class="gallery-group__title">unknown</h3>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <span class="gallery-card__label">Empty State</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+          <div class="state-empty-icon">📡</div>
+          <div class="state-empty-title">暂无因子监控数据</div>
+          <div class="state-empty-desc">连接数据源后展示活跃因子、退化与异常指标</div>
+          <button class="state-empty-cta">连接数据源</button>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Loading State</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Error State</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">因子监控加载失败</div>
+          <div class="state-error-desc">无法获取因子监控数据，请检查网络连接或稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Empty State</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+          <div class="state-empty-icon">🔬</div>
+          <div class="state-empty-title">暂无因子数据</div>
+          <div class="state-empty-desc">创建第一个因子后，监控面板将在此展示 IC/IR/Sharpe 等关键指标</div>
+          <label for="overlay-new-strategy" class="state-empty-cta" style="cursor:pointer">新建因子</label>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Loading State</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+          <div class="skeleton skeleton-heading"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Error State</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">因子数据加载失败</div>
+          <div class="state-error-desc">无法获取因子引擎数据，请检查 Factor Engine 状态或稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Empty State</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+          <div class="state-empty-icon">📋</div>
+          <div class="state-empty-title">暂无运行记录</div>
+          <div class="state-empty-desc">创建回测或实验后，运行记录将在此展示</div>
+          <label for="overlay-new-backtest" class="state-empty-cta" style="cursor:pointer">新建回测</label>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Loading State</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Error State</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">运行记录加载失败</div>
+          <div class="state-error-desc">无法获取 Job Service 数据，请检查服务状态或稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Empty State</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+          <div class="state-empty-icon">🧪</div>
+          <div class="state-empty-title">暂无实验或审核</div>
+          <div class="state-empty-desc">创建实验或提交因子验证后，审核队列将在此展示</div>
+          <label for="overlay-new-experiment" class="state-empty-cta" style="cursor:pointer">新建实验</label>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Loading State</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Error State</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">审核队列加载失败</div>
+          <div class="state-error-desc">无法获取 Review Service 数据，请稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Empty State</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+          <div class="state-empty-icon">📈</div>
+          <div class="state-empty-title">暂无 IC 数据</div>
+          <div class="state-empty-desc">运行回测后，IC 趋势图将在此展示因子预测力变化</div>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Loading State</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+          <div class="skeleton skeleton-heading"></div>
+          <div class="skeleton skeleton-chart"></div>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Error State</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">图表加载失败</div>
+          <div class="state-error-desc">无法获取 IC 时间序列数据，请检查 Factor Engine 状态</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Empty State</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+          <div class="state-empty-icon">🗺</div>
+          <div class="state-empty-title">暂无相关性数据</div>
+          <div class="state-empty-desc">至少需要 2 个活跃因子后才能计算相关性矩阵</div>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Loading State</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+          <div class="skeleton skeleton-heading"></div>
+          <div class="skeleton skeleton-chart"></div>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Error State</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">相关性矩阵加载失败</div>
+          <div class="state-error-desc">无法获取 Correlation Service 数据，请稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Zone 3: Overlays Gallery ═══ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-header">
+      <h2>弹层设计画廊</h2>
+      <p class="gallery-summary">5 个弹层</p>
+    </div>
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-cards">
+        <div class="gallery-card gallery-card--overlay">
+          <span class="gallery-card__label">Modal: New Backtest / New Strategy / New Experiment -->
+        <input type="checkbox" id="overlay-new-backtest" class="overlay-radio sr-only">
+        <label for="overlay-new-backtest" class="header-btn header-btn-primary" style="cursor:pointer">新建回测</label>
+        <input type="checkbox" id="overlay-new-strategy" class="overlay-radio sr-only">
+        <label for="overlay-new-strategy" class="header-btn header-btn-secondary" style="cursor:pointer">新建策略</label>
+        <input type="checkbox" id="overlay-new-experiment" class="overlay-radio sr-only">
+        <label for="overlay-new-experiment" class="header-btn header-btn-secondary" style="cursor:pointer">新建实验</label>
+        <span class="header-btn header-btn-ghost">进入因子分析</span>
+        <div class="header-action-btn" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </div>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ═══ Scope Strip</span>
+          <div class="gallery-card__preview gallery-card__preview--overlay">
+            <div class="overlay-sheet" role="dialog" aria-label="新建回测">
+        <div class="overlay-header">
+          <span class="overlay-title">新建回测</span>
+          <label for="overlay-new-backtest" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>回测配置</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">回测名称</span>
+            <span class="overlay-field-value" style="color:var(--text-tertiary)">输入回测名称…</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">策略 / 因子</span>
+            <span class="overlay-field-value" style="color:var(--text-tertiary)">选择策略或因子</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">Universe</span>
+            <span class="overlay-field-value">沪深300</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">时间范围</span>
+            <span class="overlay-field-value">2024-01-01 ~ 2026-03-31</span>
+          </div>
+
+          <h4>参数配置</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">调仓频率</span>
+            <span class="overlay-field-value">月度</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">分组数</span>
+            <span class="overlay-field-value">5</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">IC 衰减窗口</span>
+            <span class="overlay-field-value">20 日</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-new-backtest" class="overlay-btn overlay-btn-primary" style="cursor:pointer">提交回测</label>
+            <label for="overlay-new-backtest" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+          </div>
+          </div>
+        </div>
+        <div class="gallery-card gallery-card--overlay">
+          <span class="gallery-card__label">Modal: New Strategy</span>
+          <div class="gallery-card__preview gallery-card__preview--overlay">
+            <div class="overlay-sheet" role="dialog" aria-label="新建策略">
+        <div class="overlay-header">
+          <span class="overlay-title">新建策略</span>
+          <label for="overlay-new-strategy" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>策略配置</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">策略名称</span>
+            <span class="overlay-field-value" style="color:var(--text-tertiary)">输入策略名称…</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">策略类型</span>
+            <span class="overlay-field-value" style="color:var(--text-tertiary)">选择类型</span>
+          </div>
+
+          <h4>因子配置</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">主因子</span>
+            <span class="overlay-field-value">动量12M</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">辅助因子</span>
+            <span class="overlay-field-value">价值PE, 低波动</span>
+          </div>
+
+          <h4>参数设置</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">换仓频率</span>
+            <span class="overlay-field-value">周度</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">最大持仓</span>
+            <span class="overlay-field-value">50</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-new-strategy" class="overlay-btn overlay-btn-primary" style="cursor:pointer">保存策略</label>
+            <label for="overlay-new-strategy" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+          </div>
+          </div>
+        </div>
+        <div class="gallery-card gallery-card--overlay">
+          <span class="gallery-card__label">Modal: New Experiment</span>
+          <div class="gallery-card__preview gallery-card__preview--overlay">
+            <div class="overlay-sheet" role="dialog" aria-label="新建实验">
+        <div class="overlay-header">
+          <span class="overlay-title">新建实验</span>
+          <label for="overlay-new-experiment" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>实验配置</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">实验名称</span>
+            <span class="overlay-field-value" style="color:var(--text-tertiary)">输入实验名称…</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">假设描述</span>
+            <span class="overlay-field-value" style="color:var(--text-tertiary)">描述实验假设…</span>
+          </div>
+
+          <h4>关联因子</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">目标因子</span>
+            <span class="overlay-field-value" style="color:var(--text-tertiary)">选择因子</span>
+          </div>
+
+          <h4>对照组设置</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">对照组 A</span>
+            <span class="overlay-field-value">基准参数组</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">对照组 B</span>
+            <span class="overlay-field-value">优化参数组</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-new-experiment" class="overlay-btn overlay-btn-primary" style="cursor:pointer">创建实验</label>
+            <label for="overlay-new-experiment" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+          </div>
+          </div>
+        </div>
+        <div class="gallery-card gallery-card--overlay">
+          <span class="gallery-card__label">Drawer: Run Detail</span>
+          <div class="gallery-card__preview gallery-card__preview--overlay">
+            <div class="overlay-drawer" role="dialog" aria-label="运行详情">
+        <div class="overlay-header">
+          <span class="overlay-title">运行详情</span>
+          <label for="overlay-run-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>运行概况</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">运行名称</span>
+            <span class="overlay-field-value">价值因子 Q1 回测</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">类型</span>
+            <span class="overlay-field-value">回测</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">状态</span>
+            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">已完成</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">开始时间</span>
+            <span class="overlay-field-value">2026-04-02 13:15</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">结束时间</span>
+            <span class="overlay-field-value">2026-04-02 13:28</span>
+          </div>
+
+          <h4>关键指标</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">Sharpe Ratio</span>
+            <span class="overlay-field-value" style="color:var(--brand-accent)">1.42</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">最大回撤</span>
+            <span class="overlay-field-value" style="color:var(--system-degraded-fg)">-8.3%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">总交易笔数</span>
+            <span class="overlay-field-value">1,247</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">年化收益</span>
+            <span class="overlay-field-value">+18.6%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">胜率</span>
+            <span class="overlay-field-value">56.2%</span>
+          </div>
+
+          <h4>日志</h4>
+          <div style="background:var(--surface-muted);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-numeric);font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.6;">
+            [13:15:01] 回测任务启动<br>
+            [13:15:03] 加载因子数据…<br>
+            [13:18:22] 因子数据加载完成<br>
+            [13:18:23] 开始模拟交易…<br>
+            [13:27:45] 模拟交易完成<br>
+            [13:28:01] 生成报告…
+          </div>
+
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-primary">重新运行</button>
+            <button class="overlay-btn overlay-btn-secondary">导出报告</button>
+          </div>
+          </div>
+        </div>
+        <div class="gallery-card gallery-card--overlay">
+          <span class="gallery-card__label">Modal: Review Action</span>
+          <div class="gallery-card__preview gallery-card__preview--overlay">
+            <div class="overlay-sheet" role="dialog" aria-label="审核操作">
+        <div class="overlay-header">
+          <span class="overlay-title">审核操作</span>
+          <label for="overlay-review-action" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>审核内容摘要</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">审核项</span>
+            <span class="overlay-field-value">行业轮动参数优化</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">提交人</span>
+            <span class="overlay-field-value">系统（自动）</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">提交时间</span>
+            <span class="overlay-field-value">2026-04-02 11:30</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">变更摘要</span>
+            <span class="overlay-field-value">新参数组 Sharpe 提升 0.15</span>
+          </div>
+
+          <h4>审核意见</h4>
+          <div style="border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8);min-height:60px;color:var(--text-tertiary);font-size:var(--font-size-12);margin-bottom:var(--space-8);">
+            输入审核意见…
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-review-action" class="overlay-btn overlay-btn-primary" style="cursor:pointer">通过</label>
+            <label for="overlay-review-action" class="overlay-btn overlay-btn-danger" style="cursor:pointer">驳回</label>
+            <label for="overlay-review-action" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+          </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <script src="shared/theme-switcher.js"></script>
 </body>
 </html>

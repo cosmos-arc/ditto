@@ -50,7 +50,7 @@
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
 
-  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
+  <!-- State Toggle System (pure CSS: zone nav + tab panels + gallery grid) -->
   <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
@@ -1169,11 +1169,6 @@
     .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
     .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
 
-    /* State variant containers inherit page style */
-    .state-variant .state-variant-content {
-      background: var(--surface-app);
-    }
-
     /* Stale state — yellow border + warning text */
     .state-stale {
       display: flex;
@@ -1415,6 +1410,20 @@
   </svg>
   <a class="skip-link" href="#main-content">跳到主内容</a>
 
+
+  <!-- ═══ View-Level Zone Navigation ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+
+  <nav class="proto-nav">
+    <label for="view-default" class="proto-nav__tab">主视图</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <!-- ═══ Zone 1: Default View ═══ -->
+  <section id="default-view" class="proto-section">
   <div class="style-label">Graphite Studio — Trading Overview · Compact · A股</div>
 
   <div class="shell-analytical trading-variant">
@@ -1503,8 +1512,7 @@
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12M9 4v12"/></svg>
           涨跌停
         </label>
-        <input type="checkbox" id="overlay-pause-trading" class="overlay-radio sr-only">
-        <label for="overlay-pause-trading" class="btn-danger-sm" aria-label="暂停交易">暂停交易</label>
+        <button class="btn-danger-sm">暂停交易</button>
         <button class="header-action-btn" title="Notifications" aria-label="通知">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
@@ -1548,40 +1556,6 @@
     </div>
 
     <!-- State Variants: Session Strip -->
-    <details class="state-variant">
-      <summary class="state-variant-label">Session Strip · Loading</summary>
-      <div class="state-variant-content" data-state="loading">
-        <div class="state-loading">
-          <div style="display:flex;gap:var(--space-8);align-items:center;">
-            <div class="skeleton skeleton-badge"></div>
-            <div class="skeleton skeleton-text-sm" style="width:80px;"></div>
-            <div class="skeleton skeleton-text-sm" style="width:100px;"></div>
-            <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
-            <div class="skeleton skeleton-text-sm" style="width:80px;"></div>
-          </div>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Session Strip · Failed</summary>
-      <div class="state-variant-content" data-state="failed">
-        <div class="state-error">
-          <div class="state-error-icon">!</div>
-          <div class="state-error-title">交易数据连接失败</div>
-          <div class="state-error-desc">无法获取实时交易数据与券商连接状态，请检查网络或重新连接</div>
-          <button class="state-error-retry">重试</button>
-        </div>
-      </div>
-    </details>
-    <details class="state-variant">
-      <summary class="state-variant-label">Session Strip · Stale</summary>
-      <div class="state-variant-content" data-state="stale">
-        <div class="state-stale">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
-          数据延迟 — Session Strip 指标可能不是最新，上次更新 45 秒前
-        </div>
-      </div>
-    </details>
 
     <!-- ═══ Decision Banner ═══ -->
     <div class="trading-banner">
@@ -1673,50 +1647,6 @@
         </div>
 
         <!-- State Variants: Equity/PnL -->
-        <details class="state-variant">
-          <summary class="state-variant-label">Equity/PnL · Loading</summary>
-          <div class="state-variant-content" data-state="loading">
-            <div class="state-loading">
-              <div class="skeleton skeleton-heading"></div>
-              <div style="display:flex;gap:var(--space-16);">
-                <div class="skeleton skeleton-text-sm" style="width:100px;"></div>
-                <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
-                <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
-              </div>
-              <div class="skeleton skeleton-chart"></div>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Equity/PnL · Empty</summary>
-          <div class="state-variant-content" data-state="empty">
-            <div class="state-empty">
-              <div class="state-empty-icon">📈</div>
-              <div class="state-empty-title">交易时段内无持仓</div>
-              <div class="state-empty-desc">当前账户无持仓记录，盈亏曲线将在有持仓后展示</div>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Equity/PnL · Failed</summary>
-          <div class="state-variant-content" data-state="failed">
-            <div class="state-error">
-              <div class="state-error-icon">!</div>
-              <div class="state-error-title">盈亏数据加载失败</div>
-              <div class="state-error-desc">无法获取权益与盈亏数据，请检查券商连接状态</div>
-              <button class="state-error-retry">重试</button>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Equity/PnL · Stale</summary>
-          <div class="state-variant-content" data-state="stale">
-            <div class="state-stale">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
-              数据延迟 — 权益数据可能不是最新，上次更新 30 秒前
-            </div>
-          </div>
-        </details>
 
         <!-- Panel 2: 持仓汇总 (~38%) -->
         <div class="panel panel-positions">
@@ -1820,105 +1750,6 @@
         </div>
 
         <!-- State Variants: Positions Summary -->
-        <details class="state-variant">
-          <summary class="state-variant-label">Positions · Loading</summary>
-          <div class="state-variant-content" data-state="loading">
-            <div class="state-loading">
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Positions · Empty</summary>
-          <div class="state-variant-content" data-state="empty">
-            <div class="state-empty">
-              <div class="state-empty-icon">📊</div>
-              <div class="state-empty-title">当前无持仓</div>
-              <div class="state-empty-desc">账户暂无持仓记录，买入后持仓将在此处展示</div>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Positions · Failed</summary>
-          <div class="state-variant-content" data-state="failed">
-            <div class="state-error">
-              <div class="state-error-icon">!</div>
-              <div class="state-error-title">持仓数据加载失败</div>
-              <div class="state-error-desc">无法获取持仓信息，请检查券商连接状态后重试</div>
-              <button class="state-error-retry">重试</button>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Positions · Stale</summary>
-          <div class="state-variant-content" data-state="stale">
-            <div class="state-stale">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
-              数据延迟 — 持仓数据可能不是最新，上次更新 20 秒前
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Positions · Selected</summary>
-          <div class="state-variant-content" data-state="selected">
-            <table class="data-table">
-              <thead>
-                <tr><th>代码</th><th>名称</th><th class="right">数量</th><th class="right">盈亏%</th></tr>
-              </thead>
-              <tbody>
-                <tr class="row selected">
-                  <td class="cell-ticker">600519</td>
-                  <td class="cell-name">贵州茅台</td>
-                  <td class="numeric right">200</td>
-                  <td class="numeric right cell-change-up">+3.98%</td>
-                </tr>
-                <tr class="row">
-                  <td class="cell-ticker">300750</td>
-                  <td class="cell-name">宁德时代</td>
-                  <td class="numeric right">500</td>
-                  <td class="numeric right cell-change-up">+1.40%</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Positions · Bulk Select</summary>
-          <div class="state-variant-content" data-state="bulk">
-            <table class="data-table">
-              <thead>
-                <tr><th>代码</th><th>名称</th><th class="right">数量</th><th class="right">盈亏%</th></tr>
-              </thead>
-              <tbody>
-                <tr class="row selected">
-                  <td class="cell-ticker">000333</td>
-                  <td class="cell-name">美的集团</td>
-                  <td class="numeric right">600</td>
-                  <td class="numeric right cell-change-down">-2.21%</td>
-                </tr>
-                <tr class="row selected">
-                  <td class="cell-ticker">002475</td>
-                  <td class="cell-name">立讯精密</td>
-                  <td class="numeric right">400</td>
-                  <td class="numeric right cell-change-down">-6.32%</td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="bulk-action-bar">
-              <span>已选择 2 只标的</span>
-              <div style="flex:1;"></div>
-              <button class="bulk-action-btn">批量调整</button>
-              <button class="bulk-action-btn danger">批量平仓</button>
-            </div>
-          </div>
-        </details>
 
         <!-- Panel 3: 订单状态 (~27%) -->
         <div class="panel panel-orders">
@@ -1978,39 +1809,6 @@
         </div>
 
         <!-- State Variants: Order Status -->
-        <details class="state-variant">
-          <summary class="state-variant-label">Order Status · Loading</summary>
-          <div class="state-variant-content" data-state="loading">
-            <div class="state-loading">
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Order Status · Empty</summary>
-          <div class="state-variant-content" data-state="empty">
-            <div class="state-empty">
-              <div class="state-empty-icon">📋</div>
-              <div class="state-empty-title">今日无订单</div>
-              <div class="state-empty-desc">当前交易日尚未提交任何订单</div>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Order Status · Failed</summary>
-          <div class="state-variant-content" data-state="failed">
-            <div class="state-error">
-              <div class="state-error-icon">!</div>
-              <div class="state-error-title">订单数据加载失败</div>
-              <div class="state-error-desc">无法获取订单状态信息，请检查券商连接</div>
-              <button class="state-error-retry">重试</button>
-            </div>
-          </div>
-        </details>
 
       </div>
       </div><!-- /tab-panel trading-mode -->
@@ -2107,38 +1905,6 @@
           </div>
 
           <!-- State Variants: Daily Attribution (Review) -->
-          <details class="state-variant">
-            <summary class="state-variant-label">当日归因 · Loading</summary>
-            <div class="state-variant-content" data-state="loading">
-              <div class="state-loading">
-                <div class="skeleton skeleton-heading"></div>
-                <div class="skeleton skeleton-row"></div>
-                <div class="skeleton skeleton-row"></div>
-                <div class="skeleton skeleton-row"></div>
-              </div>
-            </div>
-          </details>
-          <details class="state-variant">
-            <summary class="state-variant-label">当日归因 · Empty</summary>
-            <div class="state-variant-content" data-state="empty">
-              <div class="state-empty">
-                <div class="state-empty-icon">📊</div>
-                <div class="state-empty-title">今日无归因数据</div>
-                <div class="state-empty-desc">当日未产生交易盈亏，归因分析将在有成交后生成</div>
-              </div>
-            </div>
-          </details>
-          <details class="state-variant">
-            <summary class="state-variant-label">当日归因 · Failed</summary>
-            <div class="state-variant-content" data-state="failed">
-              <div class="state-error">
-                <div class="state-error-icon">!</div>
-                <div class="state-error-title">归因数据加载失败</div>
-                <div class="state-error-desc">无法获取当日归因分析数据，请检查归因引擎状态</div>
-                <button class="state-error-retry">重试</button>
-              </div>
-            </div>
-          </details>
 
           <!-- Review: 持仓健康检查 -->
           <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column;">
@@ -2166,39 +1932,6 @@
           </div>
 
           <!-- State Variants: 持仓健康检查 (Review) -->
-          <details class="state-variant">
-            <summary class="state-variant-label">Position Health · Loading</summary>
-            <div class="state-variant-content" data-state="loading">
-              <div class="state-loading">
-                <div class="skeleton skeleton-row"></div>
-                <div class="skeleton skeleton-row"></div>
-                <div class="skeleton skeleton-row"></div>
-                <div class="skeleton skeleton-row"></div>
-                <div class="skeleton skeleton-row"></div>
-              </div>
-            </div>
-          </details>
-          <details class="state-variant">
-            <summary class="state-variant-label">Position Health · Empty</summary>
-            <div class="state-variant-content" data-state="empty">
-              <div class="state-empty">
-                <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
-                <div class="state-empty-title">所有持仓状态正常</div>
-                <div class="state-empty-desc">无涨跌停风险持仓、无异常波动、无偏离成本预警</div>
-              </div>
-            </div>
-          </details>
-          <details class="state-variant">
-            <summary class="state-variant-label">Position Health · Failed</summary>
-            <div class="state-variant-content" data-state="failed">
-              <div class="state-error">
-                <div class="state-error-icon">!</div>
-                <div class="state-error-title">持仓健康检查加载失败</div>
-                <div class="state-error-desc">无法获取持仓风险数据，请检查风险引擎连接</div>
-                <button class="state-error-retry">重试</button>
-              </div>
-            </div>
-          </details>
 
           <!-- Review: 明日策略预演 -->
           <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column;">
@@ -2264,8 +1997,7 @@
                   <div class="risk-progress-fill critical" style="width: 68.2%;"></div>
                 </div>
               </div>
-              <input type="checkbox" id="overlay-risk-alert-detail" class="overlay-radio sr-only">
-              <label for="overlay-risk-alert-detail" class="panel-action" style="cursor:pointer;flex-shrink:0;align-self:center;" title="查看详情">详情</label>
+              <button class="panel-action">详情</button>
             </div>
             <div class="risk-item">
               <div class="risk-item-dot warning"></div>
@@ -2301,78 +2033,6 @@
         </div>
 
         <!-- State Variants: Risk/Alerts -->
-        <details class="state-variant">
-          <summary class="state-variant-label">Risk/Alerts · Loading</summary>
-          <div class="state-variant-content" data-state="loading">
-            <div class="state-loading">
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Risk/Alerts · Empty</summary>
-          <div class="state-variant-content" data-state="empty">
-            <div class="state-empty">
-              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
-              <div class="state-empty-title">当前无风险预警</div>
-              <div class="state-empty-desc">所有风控指标在正常范围内，暂无预警信息</div>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Risk/Alerts · Failed</summary>
-          <div class="state-variant-content" data-state="failed">
-            <div class="state-error">
-              <div class="state-error-icon">!</div>
-              <div class="state-error-title">风控数据加载失败</div>
-              <div class="state-error-desc">无法获取风控预警数据，请检查风险引擎连接</div>
-              <button class="state-error-retry">重试</button>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Risk/Alerts · Stale</summary>
-          <div class="state-variant-content" data-state="stale">
-            <div class="state-stale" style="border-color:var(--risk-critical-fg);background:color-mix(in oklch, var(--risk-critical-fg) 6%, transparent);color:var(--risk-critical-fg);">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
-              预警数据可能过期 — 上次更新 60 秒前
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Risk/Alerts · Selected</summary>
-          <div class="state-variant-content" data-state="selected">
-            <div style="display:flex;flex-direction:column;">
-              <div class="risk-item critical-alert selected">
-                <div class="risk-item-dot critical"></div>
-                <div class="risk-item-body">
-                  <div class="risk-item-row">
-                    <span class="risk-item-label">行业集中度</span>
-                    <span class="risk-item-value critical">科技 37.2% <span class="risk-item-annotation">超限 +2.2%</span></span>
-                  </div>
-                  <div class="risk-progress">
-                    <div class="risk-progress-fill critical" style="width: 68.2%;"></div>
-                  </div>
-                </div>
-              </div>
-              <div class="risk-item">
-                <div class="risk-item-dot warning"></div>
-                <div class="risk-item-body">
-                  <div class="risk-item-row">
-                    <span class="risk-item-label">风险预算</span>
-                    <span class="risk-item-value warning">68.2%</span>
-                  </div>
-                  <div class="risk-progress">
-                    <div class="risk-progress-fill warning" style="width: 68.2%;"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </details>
 
         <!-- Section 2: 信号队列 -->
         <div class="context-section">
@@ -2440,74 +2100,6 @@
         </div>
 
         <!-- State Variants: Signal Queue -->
-        <details class="state-variant">
-          <summary class="state-variant-label">Signal Queue · Loading</summary>
-          <div class="state-variant-content" data-state="loading">
-            <div class="state-loading">
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-              <div class="skeleton skeleton-row"></div>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Signal Queue · Empty</summary>
-          <div class="state-variant-content" data-state="empty">
-            <div class="state-empty">
-              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
-              <div class="state-empty-title">暂无待处理信号</div>
-              <div class="state-empty-desc">所有信号已处理完毕，信号队列将在新信号产生时更新</div>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Signal Queue · Failed</summary>
-          <div class="state-variant-content" data-state="failed">
-            <div class="state-error">
-              <div class="state-error-icon">!</div>
-              <div class="state-error-title">信号引擎连接失败</div>
-              <div class="state-error-desc">无法获取信号队列数据，请检查策略引擎连接</div>
-              <button class="state-error-retry">重试</button>
-            </div>
-          </div>
-        </details>
-        <details class="state-variant">
-          <summary class="state-variant-label">Signal Queue · Selected</summary>
-          <div class="state-variant-content" data-state="selected">
-            <div style="display:flex;flex-direction:column;">
-              <div class="signal-queue-item selected" role="button" tabindex="0">
-                <div class="signal-queue-bar p1"></div>
-                <div class="signal-queue-body">
-                  <div class="signal-queue-header">
-                    <span class="signal-queue-title">贵州茅台</span>
-                    <span class="signal-queue-direction sell">卖出信号</span>
-                  </div>
-                  <span class="signal-queue-reason">RSI背离+放量, Alpha v3</span>
-                  <div class="signal-queue-footer">
-                    <span class="signal-queue-meta">3分钟前</span>
-                    <span class="signal-queue-confidence high">置信度 87%</span>
-                  </div>
-                </div>
-              </div>
-              <div class="signal-queue-item" role="button" tabindex="0">
-                <div class="signal-queue-bar p2"></div>
-                <div class="signal-queue-body">
-                  <div class="signal-queue-header">
-                    <span class="signal-queue-title">宁德时代</span>
-                    <span class="signal-queue-direction buy">买入信号</span>
-                  </div>
-                  <span class="signal-queue-reason">均值回归 v2</span>
-                  <div class="signal-queue-footer">
-                    <span class="signal-queue-meta">12分钟前</span>
-                    <span class="signal-queue-confidence medium">置信度 72%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </details>
 
         <!-- Section 3: 今日成交 -->
         <div class="context-section">
@@ -2546,18 +2138,6 @@
     </div>
 
   </div>
-
-  <!-- ═══ Overlay Containers ═══ -->
-  <div class="overlays">
-
-    <!-- Overlay A: 暂停交易确认 (Modal 破坏性操作) -->
-    <div class="overlay-backdrop" data-overlay="overlay-pause-trading">
-      <label class="overlay-dismiss" for="overlay-pause-trading" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="暂停交易确认">
-        <div class="overlay-header">
-          <span class="overlay-title" style="color:var(--risk-critical-fg);">确认暂停交易</span>
-          <label for="overlay-pause-trading" class="overlay-close" aria-label="关闭">✕</label>
-        </div>
         <div class="overlay-body">
           <div style="display:flex;align-items:flex-start;gap:var(--space-10);padding:var(--space-8) 0;">
             <div style="width:32px;height:32px;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--risk-critical-fg);font-size:16px;font-weight:var(--font-weight-semibold);">!</div>
@@ -2735,6 +2315,614 @@
     <span class="status-spacer"></span>
     <span class="status-kbd">⌘K</span> 搜索
   </div>
+
+  </section>
+
+
+  <!-- ═══ Zone 2: States Gallery ═══ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-header">
+      <h2>状态覆盖画廊</h2>
+      <p class="gallery-summary">1 组件 · 31 状态覆盖</p>
+    </div>
+    <div class="gallery-grid">
+      <div class="gallery-group" data-component="Decision Banner">
+        <h3 class="gallery-group__title">Decision Banner</h3>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <span class="gallery-card__label">Session Strip · Loading</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+          <div style="display:flex;gap:var(--space-8);align-items:center;">
+            <div class="skeleton skeleton-badge"></div>
+            <div class="skeleton skeleton-text-sm" style="width:80px;"></div>
+            <div class="skeleton skeleton-text-sm" style="width:100px;"></div>
+            <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
+            <div class="skeleton skeleton-text-sm" style="width:80px;"></div>
+          </div>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Session Strip · Failed</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">交易数据连接失败</div>
+          <div class="state-error-desc">无法获取实时交易数据与券商连接状态，请检查网络或重新连接</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Session Strip · Stale</span>
+            <div class="gallery-card__preview">
+              <div class="state-stale">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          数据延迟 — Session Strip 指标可能不是最新，上次更新 45 秒前
+        </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Equity/PnL · Loading</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+              <div class="skeleton skeleton-heading"></div>
+              <div style="display:flex;gap:var(--space-16);">
+                <div class="skeleton skeleton-text-sm" style="width:100px;"></div>
+                <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
+                <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
+              </div>
+              <div class="skeleton skeleton-chart"></div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Equity/PnL · Empty</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+              <div class="state-empty-icon">📈</div>
+              <div class="state-empty-title">交易时段内无持仓</div>
+              <div class="state-empty-desc">当前账户无持仓记录，盈亏曲线将在有持仓后展示</div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Equity/PnL · Failed</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">盈亏数据加载失败</div>
+              <div class="state-error-desc">无法获取权益与盈亏数据，请检查券商连接状态</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Equity/PnL · Stale</span>
+            <div class="gallery-card__preview">
+              <div class="state-stale">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+              数据延迟 — 权益数据可能不是最新，上次更新 30 秒前
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Positions · Loading</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Positions · Empty</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+              <div class="state-empty-icon">📊</div>
+              <div class="state-empty-title">当前无持仓</div>
+              <div class="state-empty-desc">账户暂无持仓记录，买入后持仓将在此处展示</div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Positions · Failed</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">持仓数据加载失败</div>
+              <div class="state-error-desc">无法获取持仓信息，请检查券商连接状态后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Positions · Stale</span>
+            <div class="gallery-card__preview">
+              <div class="state-stale">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+              数据延迟 — 持仓数据可能不是最新，上次更新 20 秒前
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Positions · Selected</span>
+            <div class="gallery-card__preview">
+              <table class="data-table">
+              <thead>
+                <tr><th>代码</th><th>名称</th><th class="right">数量</th><th class="right">盈亏%</th></tr>
+              </thead>
+              <tbody>
+                <tr class="row selected">
+                  <td class="cell-ticker">600519</td>
+                  <td class="cell-name">贵州茅台</td>
+                  <td class="numeric right">200</td>
+                  <td class="numeric right cell-change-up">+3.98%</td>
+                </tr>
+                <tr class="row">
+                  <td class="cell-ticker">300750</td>
+                  <td class="cell-name">宁德时代</td>
+                  <td class="numeric right">500</td>
+                  <td class="numeric right cell-change-up">+1.40%</td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Positions · Bulk Select</span>
+            <div class="gallery-card__preview">
+              <table class="data-table">
+              <thead>
+                <tr><th>代码</th><th>名称</th><th class="right">数量</th><th class="right">盈亏%</th></tr>
+              </thead>
+              <tbody>
+                <tr class="row selected">
+                  <td class="cell-ticker">000333</td>
+                  <td class="cell-name">美的集团</td>
+                  <td class="numeric right">600</td>
+                  <td class="numeric right cell-change-down">-2.21%</td>
+                </tr>
+                <tr class="row selected">
+                  <td class="cell-ticker">002475</td>
+                  <td class="cell-name">立讯精密</td>
+                  <td class="numeric right">400</td>
+                  <td class="numeric right cell-change-down">-6.32%</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="bulk-action-bar">
+              <span>已选择 2 只标的</span>
+              <div style="flex:1;"></div>
+              <button class="bulk-action-btn">批量调整</button>
+              <button class="bulk-action-btn danger">批量平仓</button>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Order Status · Loading</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Order Status · Empty</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+              <div class="state-empty-icon">📋</div>
+              <div class="state-empty-title">今日无订单</div>
+              <div class="state-empty-desc">当前交易日尚未提交任何订单</div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Order Status · Failed</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">订单数据加载失败</div>
+              <div class="state-error-desc">无法获取订单状态信息，请检查券商连接</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">当日归因 · Loading</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+                <div class="skeleton skeleton-heading"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">当日归因 · Empty</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+                <div class="state-empty-icon">📊</div>
+                <div class="state-empty-title">今日无归因数据</div>
+                <div class="state-empty-desc">当日未产生交易盈亏，归因分析将在有成交后生成</div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">当日归因 · Failed</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">归因数据加载失败</div>
+                <div class="state-error-desc">无法获取当日归因分析数据，请检查归因引擎状态</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Position Health · Loading</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Position Health · Empty</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+                <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+                <div class="state-empty-title">所有持仓状态正常</div>
+                <div class="state-empty-desc">无涨跌停风险持仓、无异常波动、无偏离成本预警</div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Position Health · Failed</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">持仓健康检查加载失败</div>
+                <div class="state-error-desc">无法获取持仓风险数据，请检查风险引擎连接</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Risk/Alerts · Loading</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Risk/Alerts · Empty</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-title">当前无风险预警</div>
+              <div class="state-empty-desc">所有风控指标在正常范围内，暂无预警信息</div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Risk/Alerts · Failed</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">风控数据加载失败</div>
+              <div class="state-error-desc">无法获取风控预警数据，请检查风险引擎连接</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Risk/Alerts · Stale</span>
+            <div class="gallery-card__preview">
+              <div class="state-stale" style="border-color:var(--risk-critical-fg);background:color-mix(in oklch, var(--risk-critical-fg) 6%, transparent);color:var(--risk-critical-fg);">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+              预警数据可能过期 — 上次更新 60 秒前
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Risk/Alerts · Selected</span>
+            <div class="gallery-card__preview">
+              <div style="display:flex;flex-direction:column;">
+              <div class="risk-item critical-alert selected">
+                <div class="risk-item-dot critical"></div>
+                <div class="risk-item-body">
+                  <div class="risk-item-row">
+                    <span class="risk-item-label">行业集中度</span>
+                    <span class="risk-item-value critical">科技 37.2% <span class="risk-item-annotation">超限 +2.2%</span></span>
+                  </div>
+                  <div class="risk-progress">
+                    <div class="risk-progress-fill critical" style="width: 68.2%;"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="risk-item">
+                <div class="risk-item-dot warning"></div>
+                <div class="risk-item-body">
+                  <div class="risk-item-row">
+                    <span class="risk-item-label">风险预算</span>
+                    <span class="risk-item-value warning">68.2%</span>
+                  </div>
+                  <div class="risk-progress">
+                    <div class="risk-progress-fill warning" style="width: 68.2%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Signal Queue · Loading</span>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Signal Queue · Empty</span>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-title">暂无待处理信号</div>
+              <div class="state-empty-desc">所有信号已处理完毕，信号队列将在新信号产生时更新</div>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Signal Queue · Failed</span>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">信号引擎连接失败</div>
+              <div class="state-error-desc">无法获取信号队列数据，请检查策略引擎连接</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <span class="gallery-card__label">Signal Queue · Selected</span>
+            <div class="gallery-card__preview">
+              <div style="display:flex;flex-direction:column;">
+              <div class="signal-queue-item selected" role="button" tabindex="0">
+                <div class="signal-queue-bar p1"></div>
+                <div class="signal-queue-body">
+                  <div class="signal-queue-header">
+                    <span class="signal-queue-title">贵州茅台</span>
+                    <span class="signal-queue-direction sell">卖出信号</span>
+                  </div>
+                  <span class="signal-queue-reason">RSI背离+放量, Alpha v3</span>
+                  <div class="signal-queue-footer">
+                    <span class="signal-queue-meta">3分钟前</span>
+                    <span class="signal-queue-confidence high">置信度 87%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="signal-queue-item" role="button" tabindex="0">
+                <div class="signal-queue-bar p2"></div>
+                <div class="signal-queue-body">
+                  <div class="signal-queue-header">
+                    <span class="signal-queue-title">宁德时代</span>
+                    <span class="signal-queue-direction buy">买入信号</span>
+                  </div>
+                  <span class="signal-queue-reason">均值回归 v2</span>
+                  <div class="signal-queue-footer">
+                    <span class="signal-queue-meta">12分钟前</span>
+                    <span class="signal-queue-confidence medium">置信度 72%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Zone 3: Overlays Gallery ═══ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-header">
+      <h2>弹层设计画廊</h2>
+      <p class="gallery-summary">4 个弹层</p>
+    </div>
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-cards">
+        <div class="gallery-card gallery-card--overlay">
+          <span class="gallery-card__label">Modal: 暂停交易确认</span>
+          <div class="gallery-card__preview gallery-card__preview--overlay">
+            <div class="overlay-sheet" role="dialog" aria-label="暂停交易确认">
+        <div class="overlay-header">
+          <span class="overlay-title" style="color:var(--risk-critical-fg);">确认暂停交易</span>
+          <label for="overlay-pause-trading" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <div style="display:flex;align-items:flex-start;gap:var(--space-10);padding:var(--space-8) 0;">
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--risk-critical-fg);font-size:16px;font-weight:var(--font-weight-semibold);">!</div>
+            <div>
+              <p style="margin:0 0 var(--space-6);color:var(--text-primary);font-size:var(--font-size-13);font-weight:var(--font-weight-medium);">暂停后所有新订单将被拦截</p>
+              <p style="margin:0;color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
+            </div>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-danger" style="cursor:pointer;border-color:var(--risk-critical-fg);color:var(--risk-critical-fg);">确认暂停</label>
+          </div>
+          </div>
+        </div>
+        <div class="gallery-card gallery-card--overlay">
+          <span class="gallery-card__label">Modal: 持仓详情</span>
+          <div class="gallery-card__preview gallery-card__preview--overlay">
+            <div class="overlay-sheet" role="dialog" aria-label="持仓详情">
+        <div class="overlay-header">
+          <span class="overlay-title">持仓详情 — 贵州茅台 (600519)</span>
+          <label for="overlay-position-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>标的信息</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">代码</span>
+            <span class="overlay-field-value">600519</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">名称</span>
+            <span class="overlay-field-value">贵州茅台</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">现价</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">¥1,856.00</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">涨跌幅</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">+3.98%</span>
+          </div>
+
+          <h4>持仓信息</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">持有数量</span>
+            <span class="overlay-field-value">200 股</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">成本价</span>
+            <span class="overlay-field-value">¥1,785.00</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">市值</span>
+            <span class="overlay-field-value">¥371,200.00</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">浮动盈亏</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">+¥14,200.00 (+3.98%)</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">T+1 状态</span>
+            <span class="overlay-field-value">全部可卖</span>
+          </div>
+
+          <h4>当日成交记录</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">14:30</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">买入 100股 @ ¥1,850.00</span>
+          </div>
+
+          <h4>关联信号</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">卖出信号</span>
+            <span class="overlay-field-value" style="color:var(--market-down-fg)">Alpha v3 · RSI背离+放量 · 置信度 87%</span>
+          </div>
+          </div>
+        </div>
+        <div class="gallery-card gallery-card--overlay">
+          <span class="gallery-card__label">Drawer: 风控预警详情</span>
+          <div class="gallery-card__preview gallery-card__preview--overlay">
+            <div class="overlay-drawer" role="dialog" aria-label="风控预警详情">
+        <div class="overlay-header">
+          <span class="overlay-title">风控预警详情</span>
+          <label for="overlay-risk-alert-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>预警概要</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">类型</span>
+            <span class="overlay-field-value">行业集中度超限</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">级别</span>
+            <span class="overlay-field-value" style="color:var(--risk-critical-fg)">严重</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">触发时间</span>
+            <span class="overlay-field-value">14:20:33</span>
+          </div>
+
+          <h4>详细描述</h4>
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            科技板块持仓集中度达到 37.2%，超过规则上限 35%。当前科技板块持仓包括：宁德时代、比亚迪、立讯精密、中芯国际。建议适度减配至 33% 以下，降低单一板块风险敞口。
+          </p>
+
+          <h4>影响范围</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">受影响持仓</span>
+            <span class="overlay-field-value">4 只标的</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">涉及市值</span>
+            <span class="overlay-field-value">¥9,453,000</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">占总权益</span>
+            <span class="overlay-field-value" style="color:var(--risk-critical-fg)">37.2%</span>
+          </div>
+
+          <h4>建议操作</h4>
+          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            1. 优先减持立讯精密（亏损 -6.32%，动量反转信号明确）<br>
+            2. 评估宁德时代仓位，当前盈利 +1.40% 可适度止盈<br>
+            3. 将科技板块集中度降至 33% 以下
+          </p>
+        </div>
+          </div>
+        </div>
+        <div class="gallery-card gallery-card--overlay">
+          <span class="gallery-card__label">Modal: 涨跌停标的状态概览</span>
+          <div class="gallery-card__preview gallery-card__preview--overlay">
+            <div class="overlay-sheet" role="dialog" aria-label="涨跌停标的状态概览">
+        <div class="overlay-header">
+          <span class="overlay-title">涨跌停标的状态概览</span>
+          <label for="overlay-limit-status" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h4>接近涨停</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">中芯国际 (688981)</span>
+            <span class="overlay-field-value" style="color:var(--market-up-fg)">¥51.00 (+6.25%) · 距涨停 3.75%</span>
+          </div>
+
+          <h4>接近跌停</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">立讯精密 (002475)</span>
+            <span class="overlay-field-value" style="color:var(--market-down-fg)">¥35.60 (-6.32%) · 距跌停 3.68%</span>
+          </div>
+
+          <h4>今日已涨停</h4>
+          <div style="padding:var(--space-6) 0;color:var(--text-tertiary);font-size:var(--font-size-12);">暂无标的触及涨停</div>
+
+          <h4>今日已跌停</h4>
+          <div style="padding:var(--space-6) 0;color:var(--text-tertiary);font-size:var(--font-size-12);">暂无标的触及跌停</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <script src="shared/theme-switcher.js"></script>
 </body>
