@@ -66,8 +66,21 @@
 | Gallery card label 匹配 Index | ✅/⚠️/❌ | {label 不匹配的卡片} |
 | 推理内容标注 [⚠️ 待 PM 定义] | ✅/⚠️ | {需确认的内容列表} |
 | Zone 切换可交互（radio 导航） | ✅/⚠️/❌ | {无法切换 zone} |
+| HTML 结构完整性（section 平衡） | ✅/⚠️/❌ | {section 开/关标签不匹配} |
+| 无 HTML 实体转义（`&lt;` 等） | ✅/⚠️/❌ | {转义位置} |
+| Overlay trigger 在 section 外（body 层级） | ✅/⚠️/❌ | {被 section 包裹的 trigger} |
 
 **状态覆盖率**: {已渲染 gallery-card 数}/{Index 声明总数} = {百分比}%
+
+> **HTML 结构验证规则**（防止 BeautifulSoup/lxml 序列化损坏和批量迁移丢失）:
+> - `&lt;` `&gt;` `&amp;` 等实体不应出现在标签位置（仅内容文本中合法）
+> - `<section>` 开/关标签数量必须匹配
+> - `<input class="overlay-radio">` 必须在所有 `<section>` 外（body 直系子元素）
+> - `class="overlay-backdrop"` 必须在 `id="overlays-gallery"` section 内
+> - `.gallery-grid` 直接子元素只能是 `.gallery-group` 或 `.gallery-card`（禁止 `.main-content` / `.activity-stack` 等非 gallery 元素嵌套）
+> - `overlays-gallery` 中每个 `.gallery-card` 必须含可渲染弹层内容（`.overlay-sheet` / `.overlay-drawer` / `.toast-card`），不允许空预览区或纯占位文本
+> - 迁移场景：迁移前 state-variant/overlay 总数 vs 迁移后 gallery-card 总数，不允许减少
+> - 批量 HTML 变更后必须运行结构验证脚本（用 DOM 解析器，禁止正则）
 
 **角色专项状态检查**（各角色按自身关注点补充）:
 - **[角色名]**: {本角色关注的状态问题，如 UX 关注 empty state 的 CTA 是否合理、IA 关注 gallery 中组件分组逻辑是否正确等}

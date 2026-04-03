@@ -31,6 +31,9 @@
 **三区审查指引：**
 - **主要评估**: default-view 视觉品质（Token 一致性、层次、色彩、排版）
 - **辅助评估**: states-gallery 中 gallery-card 样式一致性
+- **overlay 完整性检查**: overlays-gallery 中每个 gallery-card 必须含可渲染的弹层 HTML
+  （.overlay-sheet / .overlay-drawer / toast 等真实组件），不允许只有 label 和空预览区或纯占位文本。发现空预览卡片标记为 P0。
+- **结构检查**: 页面加载后验证三区导航可切换，无白屏/布局崩溃。如发现结构异常（overlay 不弹出、section 内容不显示），优先检查 HTML 结构完整性（section 平衡、实体转义、gallery-grid 直接子元素层级）
 
 ---
 
@@ -70,6 +73,8 @@
 **三区审查指引：**
 - **主要评估**: default-view 交互流程
 - **辅助评估**: overlays-gallery 弹层可用性（CTA、关闭路径、错误恢复）
+- **结构检查**: 验证 default-view 中 label→overlay 触发链完整（label for="overlay-xxx" → body 层 checkbox → overlay-backdrop 可见）。如 overlay 无法弹出，检查 checkbox 是否在 section 内被隐藏
+- **backdrop 隐藏验证**: default-view 中所有 `.overlay-backdrop` 的 computed display 必须为 none。如果可见，检查页面 `<style>` 是否覆盖了 prototype-toggles.css 的 `.overlay-backdrop { display: none }` 规则。backdrop 默认可见标记为 P0。
 
 ---
 

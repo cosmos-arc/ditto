@@ -60,9 +60,68 @@
   display: none;
 }
 
-:root:has(#view-default:checked)  #default-view { display: block; }
-:root:has(#view-states:checked)   #states-gallery { display: block; }
-:root:has(#view-overlays:checked) #overlays-gallery { display: block; }
+/* Default view: flex column, constrained height */
+:root:has(#view-default:checked) #default-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 35px);
+  overflow: hidden;
+}
+
+/* Gallery views: auto height, scrollable */
+:root:has(#view-states:checked)   #states-gallery,
+:root:has(#view-overlays:checked) #overlays-gallery {
+  display: block;
+  overflow-y: auto;
+}
+
+/* Override layout-base.css body { height:100%; overflow:hidden } for gallery scroll */
+:root:has(#view-states:checked) body,
+:root:has(#view-overlays:checked) body {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow-y: auto !important;
+}
+
+/* When gallery views are active, hide body-level shell/status/overlays
+   that sit outside #default-view due to HTML structure.
+   Matches: .shell-xxx, .xxx-shell, .ai-shell, .intel-shell, etc. */
+:root:has(#view-states:checked) body > :not(.proto-nav):not(.proto-section):not(.sr-only):not(link):not(style):not(script):not(meta),
+:root:has(#view-overlays:checked) body > :not(.proto-nav):not(.proto-section):not(.sr-only):not(link):not(style):not(script):not(meta) {
+  display: none !important;
+}
+
+/* Style label takes natural height */
+.proto-section > .style-label {
+  flex-shrink: 0;
+}
+
+/* Only the shell element in default-view fills remaining space */
+#default-view > [class*="shell-"],
+#default-view > .intel-shell,
+#default-view > .risk-shell,
+#root:has(#view-default:checked) #risk-shell {
+  flex: 1;
+  min-height: 0;
+  height: auto !important;
+}
+
+/* Overlays/status-bar must not consume flex space */
+#default-view > .overlays,
+#default-view > .status-bar {
+  flex: 0 0 auto !important;
+  height: 0 !important;
+  overflow: visible !important;
+}
+
+/* Status bar: keep visible at bottom via absolute positioning */
+#default-view > .status-bar {
+  position: sticky;
+  bottom: 0;
+  height: 24px !important;
+  flex-shrink: 0;
+  overflow: visible !important;
+}
 
 /* ── 2. Proto Nav Bar ──────────────────────────
  *
@@ -143,26 +202,28 @@
 
 /* Component grouping */
 .gallery-group {
-  border: 1px solid var(--border-subtle, #1e1e1e);
+  border: 1px solid var(--border-default, #2a2a2a);
   border-radius: var(--radius-8, 8px);
   overflow: hidden;
 }
 
-.gallery-group__title {
-  padding: var(--space-4, 6px) var(--space-10, 16px);
+.gallery-group__label {
+  padding: var(--space-6, 8px) var(--space-10, 16px);
   font-size: var(--font-size-12, 12px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--text-secondary, #aaa);
-  border-bottom: 1px solid var(--border-subtle, #1e1e1e);
-  background: var(--surface-secondary, #141414);
+  color: var(--text-primary, #e5e5e5);
+  border-bottom: 1px solid var(--border-default, #2a2a2a);
+  background: var(--surface-elevated, #1a1a1a);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* Card grid within group */
 .gallery-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-6, 8px);
-  padding: var(--space-6, 8px);
+  gap: var(--space-8, 12px);
+  padding: var(--space-8, 12px);
 }
 
 /* Individual card */
@@ -170,6 +231,7 @@
   border: 1px solid var(--border-subtle, #1e1e1e);
   border-radius: var(--radius-6, 6px);
   overflow: hidden;
+  background: var(--surface-secondary, #141414);
 }
 
 .gallery-card__label {
@@ -179,8 +241,8 @@
   font-weight: var(--font-weight-semibold, 600);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-tertiary, #666);
-  border-bottom: 1px solid var(--border-subtle, #1e1e1e);
+  color: var(--text-secondary, #aaa);
+  border-bottom: 1px solid var(--border-default, #2a2a2a);
   background: var(--surface-muted, #111);
 }
 
@@ -260,6 +322,39 @@
  * checkbox + :has() — they render directly
  * inside gallery cards.
  */
+
+/* ═══ Overlay Backdrop — default hidden ═══
+ *
+ * Overlay containers are hidden by default.
+ * Each page activates them via :root:has() rules:
+ *   :root:has(#overlay-xxx:checked) [data-overlay="overlay-xxx"] { display: flex; }
+ *
+ * Inside overlays-gallery, gallery cards may render
+ * overlay components directly without toggle.
+ */
+.overlay-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-backdrop .overlay-dismiss {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+.overlay-close {
+  cursor: pointer;
+  font-size: var(--font-size-14, 14px);
+  color: var(--text-tertiary, #888);
+  background: none;
+  border: none;
+}
 
 /* Sheet — centered modal */
 .overlay-sheet {

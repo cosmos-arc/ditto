@@ -788,9 +788,103 @@ Platform overview、Accounts [Shell 扩展]、Brokers、Data providers、Data qu
 
 ---
 
-## 10. 按 sitemap 的 Shell 映射表
+## 10. 视窗与面板空间管理
 
-### 10.1 Home
+### 10.1 视窗锁定原则
+
+Ditto 所有一级工作区采用**单视窗锁定**布局：
+
+```
+body { height: 100%; overflow: hidden }
+.shell-xxx { height: 100vh; overflow: hidden }
+```
+
+**理由：**
+
+- 与 Bloomberg Terminal / Wind / TradingView 等专业量化平台一致
+- Rail、Header、Status Bar 始终可见，不随内容滚动
+- 用户形成空间记忆，知道信息在哪
+- 多面板并行可见（主区 + sidebar + detail），适合长时间盯盘/研究
+
+**反模式：**
+
+- 页面级滚动（body scroll）— 会让导航和辅助面板消失
+- 所有面板平铺不折叠 — 信息密度过高时导致拥挤
+
+### 10.2 面板内滚动 vs 折叠
+
+单视窗锁定下，面板内容超出时采用**内部滚动**（`overflow-y: auto`）。
+但内部滚动不应是唯一手段。推荐三层策略：
+
+| 层级 | 策略 | 适用场景 |
+|------|------|---------|
+| L1 常驻 | 固定可见，不滚动 | 快捷操作栏、标的名称、选中状态 |
+| L2 核心上下文 | 默认展开，可折叠 | 信号、评分、备注 — 与当前任务相关的信息 |
+| L3 补充信息 | 默认折叠，可展开 | 筛选预设、关联研究、历史记录 — 低频信息 |
+
+### 10.3 折叠式 Section 规范
+
+**交互模式：** 点击 section header 折叠/展开 body 内容。
+
+**视觉规格：**
+
+- Header：12px semibold，`text-transform: uppercase`，带折叠指示器（▶ / ▼）
+- 展开：body 正常显示
+- 折叠：body 隐藏，header 保留 + 右侧显示计数 badge
+- 过渡：`max-height` transition 或 `display: none`（原型阶段用 `<details>/<summary>`）
+
+**默认展开/折叠规则：**
+
+| 优先级 | 默认状态 | 判断依据 |
+|--------|---------|---------|
+| 高频核心 | 展开 | 当前任务必需的信息（信号、评分、备注） |
+| 低频补充 | 折叠 | 偶尔查看的信息（预设、研究、历史） |
+| 空状态 | 折叠 | 无内容时折叠以节省空间 |
+
+**实现方式（纯 CSS）：**
+
+原型阶段使用 `<details open>` / `<details>`（无 `open`）实现，无需 JavaScript。
+生产阶段可升级为 checkbox + `:has()` 模式以支持上下文联动。
+
+### 10.4 面板空间预算
+
+1080px viewport 下的典型预算分配：
+
+```
+Viewport:          1080px
+  Header:          -60px
+  Toolbar/Strip:   -35px
+  Status Bar:      -24px
+  ─────────────────────
+  Available:       ~961px
+
+  Sidebar (320px):
+    L1 Sticky:      48px
+    L2 Expanded:   ~300px (1-2 sections)
+    L3 Collapsed:   32px × N (headers only)
+    ─────────────────────
+    Total visible: ~380-480px ← 无需滚动
+```
+
+### 10.5 上下文感知联动（Hub 专属）
+
+Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可随 tab 切换联动：
+
+| 当前 Tab | 信号 | 研究 | 备注 |
+|----------|------|------|------|
+| 概览 | 展开 | 展开 | 展开 |
+| 图表 | 折叠 | 折叠 | 展开 |
+| 资金流 | 展开 | 折叠 | 展开 |
+| 基本面 | 折叠 | 展开 | 展开 |
+| 新闻 | 展开 | 展开 | 展开 |
+
+实现思路：tab radio 的 `:has()` + sidebar section checkbox 联动。
+
+---
+
+## 12. 前端实现建议
+
+### 11.1 Home
 
 | 路径 | Shell |
 |------|-------|

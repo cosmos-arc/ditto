@@ -42,13 +42,14 @@
   <link rel="stylesheet" href="shared/tokens-density.css">
   <link rel="stylesheet" href="shared/tokens-component.css">
   <link rel="stylesheet" href="shared/tokens-data-viz.css">
+  <link rel="stylesheet" href="shared/tokens-shell.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
 
-  <!-- State Toggle System (pure CSS: zone nav + tab panels + gallery grid) -->
+  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
   <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
@@ -229,6 +230,11 @@
       gap: var(--density-gutter);
       height: 100%;
       min-height: 0;
+    }
+
+    /* Reset inherited grid-area from shared layout-base.css */
+    .risk-main-layout .activity-stack {
+      grid-area: auto;
     }
 
     /* ── Main area: chart panels ── */
@@ -694,14 +700,14 @@
     /* ══════════════════════════════════════════════
      * Tab Activation Rules (prototype-toggles.css)
      * ══════════════════════════════════════════════ */
-    .tab-group:has(#risk-summary:checked) [data-panel="risk-summary"] { display: block; }
-    .tab-group:has(#risk-stress:checked) [data-panel="risk-stress"] { display: block; }
-    .tab-group:has(#risk-incidents:checked) [data-panel="risk-incidents"] { display: block; }
+    .shell-analytical:has(#risk-summary:checked) [data-panel="risk-summary"] { display: block; }
+    .shell-analytical:has(#risk-stress:checked) [data-panel="risk-stress"] { display: block; }
+    .shell-analytical:has(#risk-incidents:checked) [data-panel="risk-incidents"] { display: block; }
 
     /* Tab label active styling via :has() */
-    .tab-group:has(#risk-summary:checked) label[for="risk-summary"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
-    .tab-group:has(#risk-stress:checked) label[for="risk-stress"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
-    .tab-group:has(#risk-incidents:checked) label[for="risk-incidents"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+    .shell-analytical:has(#risk-summary:checked) label[for="risk-summary"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+    .shell-analytical:has(#risk-stress:checked) label[for="risk-stress"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+    .shell-analytical:has(#risk-incidents:checked) label[for="risk-incidents"] { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
 
     /* Tab label base styling */
     .risk-tab {
@@ -715,7 +721,7 @@
                   border-color var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
       display: inline-flex;
-      align-items: baseline;
+      align-items: center;
       gap: var(--space-6);
     }
     .risk-tab:hover {
@@ -772,6 +778,11 @@
     .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
     .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
 
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
     /* Tab bar container */
     .risk-tab-bar {
       display: flex;
@@ -781,23 +792,33 @@
       background: var(--surface-strip);
       gap: var(--space-4);
     }
+
+    /* Override shared grid for risk-center tabs + panels layout */
+    .shell-analytical {
+      grid-template-rows: 64px auto auto 1fr;
+      grid-template-areas:
+        "rail header   header"
+        "rail strip    strip"
+        "rail tabs     tabs"
+        "rail panels   panels";
+    }
+    .shell-analytical .risk-tab-bar { grid-area: tabs; }
+    .shell-analytical .tab-panels { grid-area: panels; min-height: 0; overflow: hidden; }
   </style>
 </head>
 <body>
-
-  <!-- ═══ View-Level Zone Navigation ═══ -->
+  <!-- ═══ Zone Navigation Radios ═══ -->
   <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
   <input type="radio" id="view-states" name="proto-view" class="sr-only">
   <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
-
-  <nav class="proto-nav">
-    <label for="view-default" class="proto-nav__tab">主视图</label>
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
     <label for="view-states" class="proto-nav__tab">状态画廊</label>
     <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
   </nav>
 
-  <!-- ═══ Zone 1: Default View ═══ -->
   <section id="default-view" class="proto-section">
+
   <div class="style-label">Graphite Studio — Risk Center · Compact · A股</div>
 
   <div class="shell-analytical">
@@ -1226,7 +1247,8 @@
             <span style="font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">压力测试</span>
             <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">选择场景并运行</span>
             <div style="flex:1"></div>
-            <button class="btn-cta-sm">运行压力测试</button>
+            
+            <label for="overlay-stress-config" class="btn-cta-sm" style="cursor:pointer">运行压力测试</label>
           </div>
         </div>
 
@@ -1336,7 +1358,8 @@
                 <div class="incident-title">最大回撤接近阈值</div>
                 <div class="incident-detail">当前回撤 3.45%，距阈值 5% 仅剩 1.55 个百分点。建议关注持仓结构。</div>
                 <div style="margin-top: var(--space-4); display: flex; gap: var(--space-6);">
-                  <button class="panel-action">查看详情</button>
+                  
+                  <label for="overlay-breach-detail" class="panel-action" style="cursor:pointer; font-size: var(--font-size-10);">查看详情</label>
                 </div>
               </div>
               <span class="incident-status monitoring">监控中</span>
@@ -1452,6 +1475,18 @@
     <span class="status-kbd">⌘K</span>
     <span>搜索</span>
   </div>
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay A: Stress Test Config (Sheet 居中) -->
+    <div class="overlay-backdrop" data-overlay="overlay-stress-config">
+      <label class="overlay-dismiss" for="overlay-stress-config" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="压力测试配置">
+        <div class="overlay-header">
+          <span class="overlay-title">压力测试配置</span>
+          <label for="overlay-stress-config" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
         <div class="overlay-body">
           <h4>场景选择</h4>
           <div style="display:flex;flex-direction:column;gap:var(--space-6);">
@@ -1533,7 +1568,8 @@
           </div>
 
           <div class="overlay-actions">
-            <button class="overlay-btn overlay-btn-secondary">调整规则</button>
+            
+            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">调整规则</label>
             <button class="overlay-btn overlay-btn-primary">查看持仓</button>
           </div>
         </div>
@@ -1581,348 +1617,383 @@
 
   </div>
 
-  <!-- ═══ State Variant Blocks ═══ -->
-  <!-- Placed after main shell, before script -->
-
-  <!-- State Variants: Risk Strip -->
-  <div style="padding: var(--space-8) var(--density-gutter);">
-  </div>
-
-  <!-- State Variants: Main Risk Charts -->
-  <div style="padding: var(--space-8) var(--density-gutter);">
-  </div>
-
-  <!-- State Variants: Active Breaches -->
-  <div style="padding: var(--space-8) var(--density-gutter);">
-  </div>
-
-  <!-- State Variants: Stress Test Summary -->
-  <div style="padding: var(--space-8) var(--density-gutter);">
-  </div>
-
-  <!-- State Variants: Incident Timeline -->
-  <div style="padding: var(--space-8) var(--density-gutter);">
-  </div>
+  <script src="shared/theme-switcher.js"></script>
 
   </section>
 
-
-  <!-- ═══ Zone 2: States Gallery ═══ -->
-  <section id="states-gallery" class="proto-section">
-    <div class="gallery-header">
-      <h2>状态覆盖画廊</h2>
-      <p class="gallery-summary">1 组件 · 15 状态覆盖</p>
-    </div>
-    <div class="gallery-grid">
-      <div class="gallery-group" data-component="unknown">
-        <h3 class="gallery-group__title">unknown</h3>
-        <div class="gallery-cards">
-          <div class="gallery-card">
-            <span class="gallery-card__label">Risk Strip — Empty State</span>
-            <div class="gallery-card__preview">
-              <div class="state-empty">
+<section id="states-gallery" class="proto-section">
+      <div class="gallery-grid">
+        <div class="gallery-group" data-component="Risk Strip">
+          <div class="gallery-group__label">Risk Strip</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Risk Strip — Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
           <div class="state-empty-icon">📊</div>
           <div class="state-empty-title">暂无风控数据</div>
           <div class="state-empty-desc">请先配置组合或选择风控场景，此处将展示 VaR、回撤、Beta 等核心指标</div>
           <button class="state-empty-cta">配置组合</button>
         </div>
-            </div>
-          </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Risk Strip — Loading State</span>
-            <div class="gallery-card__preview">
-              <div class="state-loading" style="flex-direction:row;gap:var(--space-12);">
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Risk Strip — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading" style="flex-direction:row;gap:var(--space-12);">
           <div class="skeleton skeleton-badge"></div>
           <div class="skeleton skeleton-badge"></div>
           <div class="skeleton skeleton-badge"></div>
           <div class="skeleton skeleton-badge"></div>
           <div class="skeleton skeleton-badge"></div>
         </div>
-            </div>
-          </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Risk Strip — Error State</span>
-            <div class="gallery-card__preview">
-              <div class="state-error">
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Risk Strip — Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
           <div class="state-error-icon">!</div>
           <div class="state-error-title">风险数据加载失败</div>
           <div class="state-error-desc">无法获取风控指标数据，请检查 Risk Engine 连接状态</div>
           <button class="state-error-retry">重试</button>
         </div>
-            </div>
+      </div>
+      </div>
+    </div>
           </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Risk Charts — Empty State</span>
-            <div class="gallery-card__preview">
-              <div class="state-empty">
+        </div>
+
+        <div class="gallery-group" data-component="Risk Charts">
+          <div class="gallery-group__label">Risk Charts</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Risk Charts — Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
           <div class="state-empty-icon">📈</div>
           <div class="state-empty-title">暂无风险图表</div>
           <div class="state-empty-desc">请先配置组合持仓，此处将展示 VaR 趋势、回撤曲线和敞口分布</div>
           <button class="state-empty-cta">导入持仓</button>
         </div>
-            </div>
-          </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Risk Charts — Loading State</span>
-            <div class="gallery-card__preview">
-              <div class="state-loading">
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Risk Charts — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
           <div class="skeleton skeleton-chart"></div>
         </div>
-            </div>
-          </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Risk Charts — Error State</span>
-            <div class="gallery-card__preview">
-              <div class="state-error">
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Risk Charts — Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
           <div class="state-error-icon">!</div>
           <div class="state-error-title">图表渲染失败</div>
           <div class="state-error-desc">风控图表加载异常，可能是 Risk Engine 服务不可用</div>
           <button class="state-error-retry">重试</button>
         </div>
-            </div>
+      </div>
+      </div>
+    </div>
           </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Active Breaches — Empty State</span>
-            <div class="gallery-card__preview">
-              <div class="state-empty">
+        </div>
+
+        <div class="gallery-group" data-component="Active Breaches">
+          <div class="gallery-group__label">Active Breaches</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Active Breaches — Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
           <div class="state-empty-icon" style="color:var(--risk-low-fg)">✓</div>
           <div class="state-empty-title">当前无违规项</div>
           <div class="state-empty-desc">所有指标在安全范围内，无风控触及或接近限制</div>
         </div>
-            </div>
-          </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Active Breaches — Loading State</span>
-            <div class="gallery-card__preview">
-              <div class="state-loading">
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Active Breaches — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
           <div class="skeleton skeleton-row"></div>
           <div class="skeleton skeleton-row"></div>
           <div class="skeleton skeleton-row"></div>
         </div>
-            </div>
-          </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Active Breaches — Error State</span>
-            <div class="gallery-card__preview">
-              <div class="state-error">
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Active Breaches — Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
           <div class="state-error-icon">!</div>
           <div class="state-error-title">违规数据加载失败</div>
           <div class="state-error-desc">无法获取违规记录，请稍后重试</div>
           <button class="state-error-retry">重试</button>
         </div>
-            </div>
+      </div>
+      </div>
+    </div>
           </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Stress Test — Empty State</span>
-            <div class="gallery-card__preview">
-              <div class="state-empty">
+        </div>
+
+        <div class="gallery-group" data-component="Stress Test">
+          <div class="gallery-group__label">Stress Test</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stress Test — Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
           <div class="state-empty-icon">🧪</div>
           <div class="state-empty-title">暂无压力测试记录</div>
           <div class="state-empty-desc">点击运行压力测试，模拟极端市场场景对组合的冲击</div>
           <label for="overlay-stress-config" class="state-empty-cta" style="cursor:pointer">运行测试</label>
         </div>
-            </div>
-          </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Stress Test — Loading State</span>
-            <div class="gallery-card__preview">
-              <div class="state-loading">
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stress Test — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
           <div class="skeleton skeleton-row"></div>
           <div class="skeleton skeleton-row"></div>
           <div class="skeleton skeleton-row"></div>
         </div>
-            </div>
-          </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Stress Test — Error State</span>
-            <div class="gallery-card__preview">
-              <div class="state-error">
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stress Test — Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
           <div class="state-error-icon">!</div>
           <div class="state-error-title">计算引擎异常</div>
           <div class="state-error-desc">压力测试引擎服务不可用，无法完成计算</div>
           <button class="state-error-retry">重试</button>
         </div>
-            </div>
+      </div>
+      </div>
+    </div>
           </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Incident Timeline — Empty State</span>
-            <div class="gallery-card__preview">
-              <div class="state-empty">
+        </div>
+
+        <div class="gallery-group" data-component="Incident Timeline">
+          <div class="gallery-group__label">Incident Timeline</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Incident Timeline — Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
           <div class="state-empty-icon">📋</div>
           <div class="state-empty-title">暂无事件记录</div>
           <div class="state-empty-desc">风控事件将在此处按时间线展示，包括触及、预警和处理记录</div>
         </div>
-            </div>
-          </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Incident Timeline — Loading State</span>
-            <div class="gallery-card__preview">
-              <div class="state-loading">
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Incident Timeline — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
           <div class="skeleton skeleton-row"></div>
           <div class="skeleton skeleton-row"></div>
           <div class="skeleton skeleton-row"></div>
           <div class="skeleton skeleton-row"></div>
         </div>
-            </div>
-          </div>
-          <div class="gallery-card">
-            <span class="gallery-card__label">Incident Timeline — Error State</span>
-            <div class="gallery-card__preview">
-              <div class="state-error">
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Incident Timeline — Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
           <div class="state-error-icon">!</div>
           <div class="state-error-title">事件加载失败</div>
           <div class="state-error-desc">无法获取风控事件数据，请稍后重试</div>
           <button class="state-error-retry">重试</button>
         </div>
+      </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<section id="overlays-gallery" class="proto-section">
+      <div class="gallery-grid gallery-grid--overlays">
+        <div class="gallery-group" data-component="overlays">
+          <div class="gallery-group__label">弹层设计</div>
+          <div class="gallery-cards">
+
+    <div class="gallery-card">
+      <div class="gallery-card__label">压力测试配置 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-sheet" role="dialog" aria-label="压力测试配置">
+          <div class="overlay-header">
+            <span class="overlay-title">压力测试配置</span>
+          </div>
+          <div class="overlay-body">
+            <h4>场景选择</h4>
+            <div style="display:flex;flex-direction:column;gap:var(--space-6);">
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+                <input type="radio" name="stress-scenario" checked style="accent-color:var(--brand-accent)"> 极端下跌 -15%（预设）
+              </label>
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+                <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 利率上行 +100bp（预设）
+              </label>
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+                <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 流动性危机（预设）
+              </label>
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+                <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 自定义场景
+              </label>
+            </div>
+
+            <h4>参数配置</h4>
+            <div class="overlay-field">
+              <span class="overlay-field-label">冲击幅度</span>
+              <span class="overlay-field-value">-15%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">持续时间</span>
+              <span class="overlay-field-value">1 个交易日</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">标的范围</span>
+              <span class="overlay-field-value">全部持仓</span>
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-primary">确认运行</button>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- ═══ Zone 3: Overlays Gallery ═══ -->
-  <section id="overlays-gallery" class="proto-section">
-    <div class="gallery-header">
-      <h2>弹层设计画廊</h2>
-      <p class="gallery-summary">3 个弹层</p>
-    </div>
-    <div class="gallery-grid gallery-grid--overlays">
-      <div class="gallery-cards">
-        <div class="gallery-card gallery-card--overlay">
-          <span class="gallery-card__label">Modal: Stress Test Config</span>
-          <div class="gallery-card__preview gallery-card__preview--overlay">
-            <div class="overlay-sheet" role="dialog" aria-label="压力测试配置">
-        <div class="overlay-header">
-          <span class="overlay-title">压力测试配置</span>
-          <label for="overlay-stress-config" class="overlay-close" aria-label="关闭">✕</label>
-        </div>
-        <div class="overlay-body">
-          <h4>场景选择</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-6);">
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="stress-scenario" checked style="accent-color:var(--brand-accent)"> 极端下跌 -15%（预设）
-            </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 利率上行 +100bp（预设）
-            </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 流动性危机（预设）
-            </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 自定义场景
-            </label>
+    <div class="gallery-card">
+      <div class="gallery-card__label">违规详情 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-drawer" role="dialog" aria-label="违规详情">
+          <div class="overlay-header">
+            <span class="overlay-title">违规详情</span>
           </div>
+          <div class="overlay-body">
+            <h4>规则名称</h4>
+            <div class="overlay-field">
+              <span class="overlay-field-label">规则</span>
+              <span class="overlay-field-value">最大回撤</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">当前值</span>
+              <span class="overlay-field-value" style="color:var(--risk-near-limit-fg)">3.45%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">阈值</span>
+              <span class="overlay-field-value">5.00%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">偏离度</span>
+              <span class="overlay-field-value">-1.55pp</span>
+            </div>
 
-          <h4>参数配置</h4>
-          <div class="overlay-field">
-            <span class="overlay-field-label">冲击幅度</span>
-            <span class="overlay-field-value">-15%</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">持续时间</span>
-            <span class="overlay-field-value">1 个交易日</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">标的范围</span>
-            <span class="overlay-field-value">全部持仓</span>
-          </div>
+            <h4>涉及持仓</h4>
+            <div class="overlay-field">
+              <span class="overlay-field-label">贵州茅台（600519）</span>
+              <span class="overlay-field-value" style="color:var(--market-down-fg)">-2.1%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">宁德时代（300750）</span>
+              <span class="overlay-field-value" style="color:var(--market-down-fg)">-3.8%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">比亚迪（002594）</span>
+              <span class="overlay-field-value" style="color:var(--market-down-fg)">-1.5%</span>
+            </div>
 
-          <div class="overlay-actions">
-            <label for="overlay-stress-config" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-stress-config" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认运行</label>
-          </div>
-          </div>
-        </div>
-        <div class="gallery-card gallery-card--overlay">
-          <span class="gallery-card__label">Drawer: Breach Detail</span>
-          <div class="gallery-card__preview gallery-card__preview--overlay">
-            <div class="overlay-drawer" role="dialog" aria-label="违规详情">
-        <div class="overlay-header">
-          <span class="overlay-title">违规详情</span>
-          <label for="overlay-breach-detail" class="overlay-close" aria-label="关闭">✕</label>
-        </div>
-        <div class="overlay-body">
-          <h4>规则名称</h4>
-          <div class="overlay-field">
-            <span class="overlay-field-label">规则</span>
-            <span class="overlay-field-value">最大回撤</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">当前值</span>
-            <span class="overlay-field-value" style="color:var(--risk-near-limit-fg)">3.45%</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">阈值</span>
-            <span class="overlay-field-value">5.00%</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">偏离度</span>
-            <span class="overlay-field-value">-1.55pp</span>
-          </div>
-
-          <h4>涉及持仓</h4>
-          <div class="overlay-field">
-            <span class="overlay-field-label">贵州茅台（600519）</span>
-            <span class="overlay-field-value" style="color:var(--market-down-fg)">-2.1%</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">宁德时代（300750）</span>
-            <span class="overlay-field-value" style="color:var(--market-down-fg)">-3.8%</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">比亚迪（002594）</span>
-            <span class="overlay-field-value" style="color:var(--market-down-fg)">-1.5%</span>
-          </div>
-
-          <div class="overlay-actions">
-            <input type="checkbox" id="overlay-rule-editor" class="overlay-radio sr-only">
-            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">调整规则</label>
-            <button class="overlay-btn overlay-btn-primary">查看持仓</button>
-          </div>
-          </div>
-        </div>
-        <div class="gallery-card gallery-card--overlay">
-          <span class="gallery-card__label">Modal: Rule Editor</span>
-          <div class="gallery-card__preview gallery-card__preview--overlay">
-            <div class="overlay-sheet" role="dialog" aria-label="规则编辑">
-        <div class="overlay-header">
-          <span class="overlay-title">调整风控规则</span>
-          <label for="overlay-rule-editor" class="overlay-close" aria-label="关闭">✕</label>
-        </div>
-        <div class="overlay-body">
-          <h4>规则参数</h4>
-          <div class="overlay-field">
-            <span class="overlay-field-label">规则名称</span>
-            <span class="overlay-field-value">最大回撤</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">当前阈值</span>
-            <span class="overlay-field-value">5.00%</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">新阈值</span>
-            <span class="overlay-field-value">6.00%</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">触发条件</span>
-            <span class="overlay-field-value">触及阈值时告警</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">通知方式</span>
-            <span class="overlay-field-value">站内 + 邮件</span>
-          </div>
-
-          <div class="overlay-actions">
-            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-primary" style="cursor:pointer">保存</label>
-          </div>
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">调整规则</button>
+              <button class="overlay-btn overlay-btn-primary">查看持仓</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
 
-  <script src="shared/theme-switcher.js"></script>
+    <div class="gallery-card">
+      <div class="gallery-card__label">调整风控规则 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-sheet" role="dialog" aria-label="规则编辑">
+          <div class="overlay-header">
+            <span class="overlay-title">调整风控规则</span>
+          </div>
+          <div class="overlay-body">
+            <h4>规则参数</h4>
+            <div class="overlay-field">
+              <span class="overlay-field-label">规则名称</span>
+              <span class="overlay-field-value">最大回撤</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">当前阈值</span>
+              <span class="overlay-field-value">5.00%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">新阈值</span>
+              <span class="overlay-field-value">6.00%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">触发条件</span>
+              <span class="overlay-field-value">触及阈值时告警</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">通知方式</span>
+              <span class="overlay-field-value">站内 + 邮件</span>
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-primary">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-stress-config" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-breach-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-rule-editor" class="overlay-radio sr-only">
 </body>
 </html>

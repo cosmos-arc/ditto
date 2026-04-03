@@ -16,6 +16,21 @@
 > **三区架构适配**: 原型采用三区 Hash 导航（default-view / states-gallery / overlays-gallery）。
 > State Coverage 检查不再依赖 `<details>` 展开检测，改为检查 `states-gallery` 中 `.gallery-card` 的数量和 label 是否匹配 State Coverage Index。
 > REFLECT 阶段评估状态覆盖时，以 gallery card 覆盖率而非 `<details>` 展开数为依据。
+>
+> **批量操作安全规则**: 涉及 HTML 原型的批量操作（迁移/重构/审计），必须用 DOM 解析器（如 BeautifulSoup），禁止使用正则表达式。禁止用字符串拼接/正则做结构性变更。audit 必须验证元素在正确的父容器内（用 CSS 选择器或不能只检查数量。
+> 根因事故: 正则把 `<input>` 转义为 `&lt;input&gt;`，overlay-backdrop 被包进 `display: none` 的 section 内。
+>
+> **批量迁移完整性规则**: 涉及三区架构迁移（从 `<details>` 到 gallery-card），迁移前必须：
+> 1. 统计迁移前 `<details class="state-variant">` 总数（N_before）
+> 2. 迁移后统计 `states-gallery .gallery-card` 总数（N_after）
+> 3. N_after >= N_before，否则阻断并报告缺失的变体
+> 4. 同理对 overlay：迁移前 `.overlay-backdrop` 总数 vs 迁移后 `overlays-gallery .gallery-card` 总数
+> 5. 每页迁移后立即验证 section 平衡（open == close），不等全部完成
+> 根因事故: 16fe443 批量迁移 16 页面时，4 页面 state-variant 被删除但未迁移到 gallery（93 个状态变体丢失），3 页面 section 未关闭。
+
+---
+
+## 参数
 
 ---
 

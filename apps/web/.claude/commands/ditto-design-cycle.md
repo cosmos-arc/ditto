@@ -396,6 +396,24 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │          gallery grid 样式                               │
 │                                                         │
 │   7. 写入目标文件                                        │
+│   7a. [关键] 三区结构验证（CREATE 后必须执行 — 9 项）      │
+│      ├─ 检查 1: section 标签平衡（open == close）          │
+│      ├─ 检查 2: 无 HTML 实体转义（`&lt;` 不在标签位置）   │
+│      ├─ 检查 3: overlay trigger 在 section 外（body 直系） │
+│      ├─ 检查 4: overlay-backdrop 在 overlays-gallery 内    │
+│      ├─ 检查 5: .gallery-grid 直接子元素只能是             │
+│      │   .gallery-group 或 .gallery-card                  │
+│      │   （禁止 main-content / activity-stack 等非 gallery │
+│      │    元素嵌套在 gallery-grid 内）                     │
+│      ├─ 检查 6: overlays-gallery 每个 card 含可渲染弹层    │
+│      │   HTML（.overlay-sheet / .overlay-drawer 等），     │
+│      │   不允许空预览区或纯占位文本                        │
+│      ├─ 检查 7: states-gallery card 数量 ≥                 │
+│      │   迁移前 state-variant 总数（迁移场景）             │
+│      ├─ 检查 8: .overlay-backdrop computed display         │
+│      │   必须为 none（页面样式不得覆盖隐藏规则）           │
+│      └─ 检查 9: 全部用 DOM 解析器 / evaluate_script       │
+│          （禁止正则做 HTML 结构验证）                      │
 │   8. git add → commit → tag review/<task>/round-0        │
 │                                                         │
 │   ── --create-all 批量创建（Phase 0.5 循环变体）──       │
@@ -415,12 +433,37 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      ├─ 传入蓝图模块清单 + 产品规格 + 品牌 DNA           │
 │      ├─ 执行步骤 6a 全状态生成（tab/overlay/state）      │
 │      │   （详见上方 Phase 0.5 步骤 6a）                   │
-│      └─ 写入目标文件 → 更新 manifest pages[]             │
-│   5. 全部完成后：                                        │
+│      ├─ 写入目标文件 → 更新 manifest pages[]             │
+│      └─ [门禁] 每页创建后立即执行步骤 7a（9 项检查）     │
+│          ├─ 全部通过 → 继续下一页                        │
+│          └─ 任一失败 → 阻断：记录失败页 + 失败项         │
+│              → 修复后重新验证该页 → 通过后继续           │
+│              → 3 次修复仍失败 → 暂停，输出诊断报告       │
+│   5. [门禁] 批量后检查（所有页面创建完成后）：           │
+│      ├─ A. 状态覆盖完整性审计：                          │
+│      │   ├─ 每页 overlays-gallery 中 gallery-card 数量   │
+│      │   │   vs 蓝图 overlay 注册表数量                   │
+│      │   └─ states-gallery card 数量 vs 迁移前数量       │
+│      ├─ B. CSS Token 存在性检查：                        │
+│      │   ├─ 用 evaluate_script 收集页面 var(--xxx) 引用  │
+│      │   └─ 对比 tokens-base.css 已定义变量              │
+│      │       未定义 token → P0 阻断项                    │
+│      ├─ C. 浏览器抽检（3-5 页：首 + 尾 + 随机中间页）：  │
+│      │   ├─ navigate → 截图 default-view                │
+│      │   ├─ 切 states-gallery → 截图                    │
+│      │   └─ 切 overlays-gallery → 截图                  │
+│      │   确认三区可切换、无白屏、无布局崩溃               │
+│      └─ D. 阻断判定：                                   │
+│          ├─ 0 阻断项 → 进入步骤 6                       │
+│          └─ 有阻断 → 逐项修复 → 重跑 B+C               │
+│              → 3 次仍存在 → 暂停，要求人工介入           │
+│   6. 全部通过后：                                        │
 │      ├─ manifest.status = "in-progress"                  │
 │      ├─ git add → commit → tag edition/v1/created        │
-│      └─ 输出创建摘要（页面数、anchor 链路、跳过列表）     │
-│   不做审查——批量创建阶段只产出初始原型                    │
+│      └─ 输出创建摘要（页面数、anchor 链路、跳过列表、   │
+│         批量后检查结果摘要）                              │
+│   不做六角色审查——批量创建阶段只产出初始原型，            │
+│   但必须通过步骤 4 per-page gate 和步骤 5 批量后检查。   │
 ├─────────────────────────────────────────────────────────┤
 │ Phase 1: BASELINE（基线采集 + 跨页视觉指纹）        [sonnet] │
 │                                                         │
@@ -657,6 +700,10 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │                                                         │
 │   1. Chrome MCP: lighthouse_audit（质量评分）    [sonnet] │
 │   2. Chrome MCP: evaluate_script（最终 Token 审计）[sonnet]│
+│   2a. [门禁] 三区结构完整性验证（复用步骤 7a 的 9 项检查）│
+│       ├─ section 平衡 / grid 直接子元素 / overlay 完整性  │
+│       ├─ state-variant 覆盖率对比蓝图                    │
+│       └─ 任一检查失败 → P0 级阻断，不进入 AD 气质评分    │
 │   3. [多视口] VP-STANDARD 完整性验证              [sonnet] │
 │      ├─ 内容无截断，底部元素完全可见                     │
 │      └─ sticky 元素（rail/header/context-bar）正常工作    │

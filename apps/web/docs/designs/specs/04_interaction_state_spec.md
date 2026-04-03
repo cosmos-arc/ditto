@@ -402,3 +402,57 @@ Selected 是 Ditto 最重要的交互状态之一。
 | compare | 对比 bar | — | — | — |
 
 > 此表为映射规则的模式总结，实际每个页面的 Component × State Matrix 见 [02 核心页面蓝图](./02_core_page_blueprints.md)。
+
+---
+
+## 14. 折叠面板交互规范
+
+### 14.1 适用场景
+
+Ditto 采用单视窗锁定布局（`body { overflow: hidden }`），面板内信息密度高时需通过折叠管理可见空间。
+
+适用于所有含多 section 的右侧面板/侧栏：
+- Catalog Detail（Screener）
+- Hub Sidebar（Instrument Hub）
+- Ops Detail（Platform）
+- Activity Stack（Trading Overview, Cross-Market）
+
+### 14.2 折叠状态定义
+
+| 状态 | 视觉 | 可见内容 |
+|------|------|---------|
+| **expanded** | 标题 + 完整内容 | 全部子元素 |
+| **collapsed** | 标题 + 计数 badge | 仅 header 行 |
+
+### 14.3 交互规则
+
+- **触发**: 点击 section header 任意位置
+- **指示器**: header 左侧 `▶`（collapsed）/ `▼`（expanded），8px，0.15s rotation transition
+- **计数 badge**: collapsed 时在 header 右侧显示内容计数（如 `3`、`5 条`）
+- **动画**: body 区域 `max-height` transition 或 `display: none`（原型用 `<details>/<summary>`）
+
+### 14.4 默认展开/折叠规则
+
+| 优先级 | 默认状态 | 判断依据 |
+|--------|---------|---------|
+| 高频核心 | **展开** | 当前任务必需的信息（信号、评分、备注） |
+| 低频补充 | **折叠** | 偶尔查看的信息（筛选预设、关联研究、历史） |
+| 空状态 | **折叠** | 无内容时折叠以节省空间 |
+
+### 14.5 空间预算约束
+
+1080px viewport 下的目标：
+- 面板总可见内容 ≤ 500px（含 sticky 顶栏）
+- 核心任务信息在不滚动情况下可见 ≥ 80%
+- 低频信息通过 1 次点击可达
+
+### 14.6 上下文感知联动
+
+Object Hub 的 sidebar section 可根据当前 tab 联动展开/折叠：
+
+- 与当前 tab 内容相关的 section → 自动展开
+- 不相关的 section → 自动折叠
+- 用户手动操作优先（如果用户手动展开过，tab 切换时不自动折叠）
+
+> 原型阶段：使用 CSS `:has()` + checkbox 实现基础联动。
+> 生产阶段：通过前端框架状态管理实现完整的用户偏好持久化。

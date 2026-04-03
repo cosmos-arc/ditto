@@ -64,7 +64,7 @@
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
 
-  <!-- State Toggle System (pure CSS: zone nav + tab panels + gallery grid) -->
+  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
   <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
@@ -1119,18 +1119,27 @@
       color: var(--text-secondary);
     }
 
-    .bottom-tab.active {
-      color: var(--text-primary);
-      border-bottom-color: var(--brand-accent);
-    }
-
     .bottom-content {
-      display: flex;
+      display: none;
       align-items: flex-start;
       padding: var(--space-8) var(--space-16);
       gap: var(--space-16);
       overflow-y: auto;
       max-height: var(--timeline-bottom-max-h);
+    }
+
+    /* Bottom tab activation — :has() radio pattern */
+    .hub-bottom:has(#bottom-tab-events:checked) [data-panel="bottom-events"],
+    .hub-bottom:has(#bottom-tab-filings:checked) [data-panel="bottom-filings"],
+    .hub-bottom:has(#bottom-tab-research:checked) [data-panel="bottom-research"] {
+      display: flex;
+    }
+
+    .hub-bottom:has(#bottom-tab-events:checked) [for="bottom-tab-events"],
+    .hub-bottom:has(#bottom-tab-filings:checked) [for="bottom-tab-filings"],
+    .hub-bottom:has(#bottom-tab-research:checked) [for="bottom-tab-research"] {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
     }
 
     /* ── Timeline ── */
@@ -1444,6 +1453,11 @@
       background: var(--brand-accent-subtle);
     }
 
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
     /* ── Stale indicator badge ── */
     .stale-badge {
       display: inline-flex;
@@ -1648,22 +1662,20 @@
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
     </defs>
   </svg>
-
-  <a class="skip-link" href="#main-content">跳到主内容</a>
-
-  <!-- ═══ View-Level Zone Navigation ═══ -->
+  <!-- ═══ Zone Navigation Radios ═══ -->
   <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
   <input type="radio" id="view-states" name="proto-view" class="sr-only">
   <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
-
-  <nav class="proto-nav">
-    <label for="view-default" class="proto-nav__tab">主视图</label>
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
     <label for="view-states" class="proto-nav__tab">状态画廊</label>
     <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
   </nav>
 
-  <!-- ═══ Zone 1: Default View ═══ -->
   <section id="default-view" class="proto-section">
+
+
+  <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Instrument Hub · Compact · A股</div>
 
   <div class="shell-hub">
@@ -1785,6 +1797,9 @@
 
     <!-- ── State Variants: 1. Object Header ── -->
     <div style="grid-area:header;overflow:visible;display:flex;flex-direction:column">
+    
+    
+    
     </div>
 
     <!-- ══════════════════════════════════════════════
@@ -1820,6 +1835,8 @@
 
     <!-- ── State Variants: 2. Meta Strip ── -->
     <div style="grid-area:meta;overflow:visible;display:flex;flex-direction:column">
+    
+    
     </div>
 
     <!-- ══════════════════════════════════════════════
@@ -1890,6 +1907,9 @@
         </div>
 
         <!-- ── State Variants: 3. Metrics Cards ── -->
+        
+        
+        
 
         <!-- Industry Rank (overview section) -->
         <div class="panel" style="flex-shrink:0">
@@ -1904,6 +1924,9 @@
         </div>
 
         <!-- ── State Variants: 4. Industry Rank ── -->
+        
+        
+        
 
         <!-- Price Chart -->
         <div class="chart-panel panel">
@@ -1966,8 +1989,14 @@
         </div>
 
         <!-- ── State Variants: 5. Chart Panel ── -->
+        
+        
+        
 
         <!-- ── State Variants: 6. Flow Panel ── -->
+        
+        
+        
 
       </div><!-- /hub-object-view -->
       </div><!-- /tab-panel hub-overview -->
@@ -2153,6 +2182,9 @@
       </div>
 
       <!-- ── State Variants: 7. Fundamentals Table ── -->
+      
+      
+      
 
       </div><!-- /tab-panel hub-fundamentals -->
 
@@ -2201,6 +2233,9 @@
       </div>
 
       <!-- ── State Variants: 8. Corporate Timeline ── -->
+      
+      
+      
 
       </div><!-- /tab-panel hub-corporate -->
 
@@ -2253,6 +2288,9 @@
       </div>
 
       <!-- ── State Variants: 9. News Feed ── -->
+      
+      
+      
 
       </div><!-- /tab-panel hub-news -->
       <div class="tab-panel" data-panel="hub-network">
@@ -2306,6 +2344,9 @@
       </div>
 
       <!-- ── State Variants: 10. Network Graph ── -->
+      
+      
+      
 
       </div><!-- /tab-panel hub-network -->
 
@@ -2359,6 +2400,9 @@
       </div>
 
       <!-- ── State Variants: 11. Announcements List ── -->
+      
+      
+      
 
       </div><!-- /tab-panel hub-announcements -->
 
@@ -2445,6 +2489,9 @@
       </aside>
 
       <!-- ── State Variants: 12. Sidebar (Related/Signals/Notes) ── -->
+      
+      
+      
 
     </main>
 
@@ -2452,12 +2499,15 @@
          Bottom Area — Timeline
          ══════════════════════════════════════════════ -->
     <footer class="hub-bottom" aria-label="时间线">
+      <input type="radio" id="bottom-tab-events" name="bottom-tab" checked class="sr-only">
+      <input type="radio" id="bottom-tab-filings" name="bottom-tab" class="sr-only">
+      <input type="radio" id="bottom-tab-research" name="bottom-tab" class="sr-only">
       <div class="bottom-tabs" role="tablist">
-        <div class="bottom-tab active" role="tab" aria-selected="true" tabindex="0">最近事件</div>
-        <div class="bottom-tab" role="tab" aria-selected="false" tabindex="0">公告</div>
-        <div class="bottom-tab" role="tab" aria-selected="false" tabindex="0">关联研究</div>
+        <label for="bottom-tab-events" class="bottom-tab" role="tab">最近事件</label>
+        <label for="bottom-tab-filings" class="bottom-tab" role="tab">公告</label>
+        <label for="bottom-tab-research" class="bottom-tab" role="tab">关联研究</label>
       </div>
-      <div class="bottom-content" role="tabpanel">
+      <div class="bottom-content" data-panel="bottom-events" role="tabpanel">
         <div class="timeline-list">
           <div class="timeline-item">
             <div class="timeline-marker event" aria-hidden="true"></div>
@@ -2493,9 +2543,68 @@
           </div>
         </div>
       </div>
+      <div class="bottom-content" data-panel="bottom-filings" role="tabpanel">
+        <div class="timeline-list">
+          <div class="timeline-item">
+            <div class="timeline-marker filing" aria-hidden="true"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">2025年度利润分配预案公告</div>
+              <div class="timeline-desc">拟每10股派发现金红利275.28元（含税），共计分配利润346.12亿元</div>
+              <span class="timeline-time">2026-03-26</span>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker filing" aria-hidden="true"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">关于投资建设产能扩建项目的公告</div>
+              <div class="timeline-desc">计划投资约41.5亿元建设系列酒生产基地，预计2028年投产</div>
+              <span class="timeline-time">2026-03-18</span>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker filing" aria-hidden="true"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">独立董事关于关联交易的事前认可意见</div>
+              <div class="timeline-desc">同意将《关于向关联方采购原材料的议案》提交董事会审议</div>
+              <span class="timeline-time">2026-03-10</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-content" data-panel="bottom-research" role="tabpanel">
+        <div class="timeline-list">
+          <div class="timeline-item">
+            <div class="timeline-marker event" aria-hidden="true"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">中金公司 — 深度报告：品牌护城河稳固</div>
+              <div class="timeline-desc">维持「推荐」评级，目标价2,150元。直销占比提升至45%，终端价盘稳固</div>
+              <span class="timeline-time">2026-03-27</span>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker event" aria-hidden="true"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">招商证券 — 年报点评：业绩超预期</div>
+              <div class="timeline-desc">上调2026年EPS预测至76.2元，对应PE约21x，估值处于历史中枢下方</div>
+              <span class="timeline-time">2026-03-26</span>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker event" aria-hidden="true"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">高盛 — Asia Pacific Consumer Research</div>
+              <div class="timeline-desc">Premium liquor sector outlook: 次高端扩容加速，龙头份额集中度提升</div>
+              <span class="timeline-time">2026-03-22</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </footer>
 
     <!-- ── State Variants: 13. Timeline / Filings ── -->
+    
+    
+    
 
     </div><!-- /tab-group -->
   </div><!-- /shell-hub -->
@@ -2504,12 +2613,23 @@
        Overlay Triggers (checkbox inputs)
        Must be in DOM for :root:has() activation
        ══════════════════════════════════════════════ -->
-  <input type="checkbox" id="overlay-chart-toolbar" class="overlay-radio sr-only">
-  <input type="checkbox" id="overlay-news-detail" class="overlay-radio sr-only">
-  <input type="checkbox" id="overlay-announcement-detail" class="overlay-radio sr-only">
-  <input type="checkbox" id="overlay-add-watchlist" class="overlay-radio sr-only">
-  <input type="checkbox" id="overlay-send-research" class="overlay-radio sr-only">
-  <input type="checkbox" id="overlay-halt-detail" class="overlay-radio sr-only">
+  
+  
+  
+  
+  
+  
+
+  <!-- ══════════════════════════════════════════════
+       Overlay Containers
+       ══════════════════════════════════════════════ -->
+  <div class="overlays">
+
+    <!-- Overlay 1: Chart Tools (Floating Toolbar) -->
+    <div data-overlay="overlay-chart-toolbar">
+      <div class="toolbar-btn active" title="选择" tabindex="0">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2l12 8-12 8V2z"/></svg>
+      </div>
       <div class="toolbar-btn" title="趋势线" tabindex="0">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17L17 3"/></svg>
       </div>
@@ -2870,5 +2990,690 @@
     ro.observe(container);
   })();
   </script>
+
+  </section>
+
+<section id="states-gallery" class="proto-section">
+      <div class="gallery-grid">
+        <div class="gallery-group" data-component="other">
+          <div class="gallery-group__label">other</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Object Header · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-heading" style="width:120px"></div>
+          <div class="skeleton skeleton-text" style="width:200px"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Object Header · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📋</div>
+          <div class="state-empty-title">标的信息不可用</div>
+          <div class="state-empty-desc">该标的的基础信息暂时无法加载，请稍后重试</div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Object Header · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">标的加载失败</div>
+          <div class="state-error-desc">无法获取 600519.SH 的基础信息，请检查数据源连接</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Meta Strip · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading" style="flex-direction:row;gap:var(--space-12)">
+          <div class="skeleton skeleton-text" style="width:60px"></div>
+          <div class="skeleton skeleton-text" style="width:80px"></div>
+          <div class="skeleton skeleton-text" style="width:70px"></div>
+          <div class="skeleton skeleton-text" style="width:90px"></div>
+          <div class="skeleton skeleton-text" style="width:50px"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Meta Strip · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error" style="flex-direction:row;gap:var(--space-8)">
+          <div class="state-error-icon" style="width:24px;height:24px;font-size:12px">!</div>
+          <div class="state-error-title">元数据加载失败</div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">指标卡片 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading" style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-12)">
+              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">指标卡片 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">📊</div>
+              <div class="state-empty-title">暂无基本面数据</div>
+              <div class="state-empty-desc">该标的暂未收录基本面指标数据</div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">指标卡片 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">数据加载失败</div>
+              <div class="state-error-desc">关键指标数据获取失败，请检查数据源或稍后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">行业排名 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">行业排名 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">🏆</div>
+              <div class="state-empty-title">暂无排名数据</div>
+              <div class="state-empty-desc">该行业分类下暂无排名信息</div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">行业排名 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">排名数据加载失败</div>
+              <div class="state-error-desc">无法获取行业排名信息</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">行情图表 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-chart"></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">行情图表 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">📈</div>
+              <div class="state-empty-title">暂无行情数据</div>
+              <div class="state-empty-desc">该标的暂未收录历史行情数据</div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">行情图表 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">行情数据加载失败</div>
+              <div class="state-error-desc">无法获取K线数据，请检查数据源连接</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">资金流向 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-chart" style="height:80px"></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">资金流向 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">💹</div>
+              <div class="state-empty-title">暂无资金数据</div>
+              <div class="state-empty-desc">该标的暂无资金流向数据</div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">资金流向 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">数据加载失败</div>
+              <div class="state-error-desc">资金流向数据获取失败，请稍后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">财务表 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">财务表 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📋</div>
+            <div class="state-empty-title">暂无财务数据</div>
+            <div class="state-empty-desc">该标的暂未收录财务报表数据</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">财务表 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">财务数据加载失败</div>
+            <div class="state-error-desc">无法获取财务报表数据，请检查数据源连接</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">公司行动 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">公司行动 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📅</div>
+            <div class="state-empty-title">近30天无公司行动</div>
+            <div class="state-empty-desc">该标的近期无分红、解禁、变更等公司行动</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">公司行动 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">加载失败</div>
+            <div class="state-error-desc">公司行动数据获取失败，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">新闻流 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">新闻流 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📰</div>
+            <div class="state-empty-title">暂无相关新闻</div>
+            <div class="state-empty-desc">该标的近期无相关新闻报道</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">新闻流 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">新闻加载失败</div>
+            <div class="state-error-desc">无法获取相关新闻，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">关联网络 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-chart" style="height:200px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">关联网络 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">🔗</div>
+            <div class="state-empty-title">暂无关联标的</div>
+            <div class="state-empty-desc">该标的暂无关联网络数据</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">关联网络 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">关联数据加载失败</div>
+            <div class="state-error-desc">无法获取关联标的网络数据</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">公告列表 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">公告列表 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📑</div>
+            <div class="state-empty-title">暂无公告</div>
+            <div class="state-empty-desc">该标的暂无相关公告信息</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">公告列表 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">公告加载失败</div>
+            <div class="state-error-desc">无法获取公告列表，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">侧边栏 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+          <div class="state-loading">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">侧边栏 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+          <div class="state-empty">
+            <div class="state-empty-icon">📋</div>
+            <div class="state-empty-title">暂无关联内容</div>
+            <div class="state-empty-desc">暂无信号、研究或备注</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">侧边栏 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+          <div class="state-error">
+            <div class="state-error-icon">!</div>
+            <div class="state-error-title">加载失败</div>
+            <div class="state-error-desc">关联数据获取失败，请稍后重试</div>
+            <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">时间线 · Loading</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">时间线 · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📋</div>
+          <div class="state-empty-title">暂无记录</div>
+          <div class="state-empty-desc">该标的暂无历史事件或公告记录</div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">时间线 · Error</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">加载失败</div>
+          <div class="state-error-desc">时间线数据获取失败，请稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<section id="overlays-gallery" class="proto-section">
+      <div class="gallery-grid gallery-grid--overlays">
+        <div class="gallery-group" data-component="overlays">
+          <div class="gallery-group__label">弹层设计</div>
+          <div class="gallery-cards">
+
+    <div class="gallery-card">
+      <div class="gallery-card__label">新闻详情 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-drawer" role="dialog" aria-label="新闻详情">
+          <div class="overlay-header">
+            <span class="overlay-title">新闻详情</span>
+          </div>
+          <div class="overlay-body">
+            <h4>贵州茅台2025年年报：净利润862亿超预期，直销渠道占比提升至45%</h4>
+            <div class="overlay-field">
+              <span class="overlay-field-label">来源</span>
+              <span class="overlay-field-value">财联社</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">时间</span>
+              <span class="overlay-field-value">2026-04-02 10:32</span>
+            </div>
+            <div style="margin-top:var(--space-10)">
+              <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0">贵州茅台(600519.SH)发布2025年年度报告，全年实现营业总收入1,562亿元，同比增长16.2%；归属于母公司所有者的净利润862亿元，同比增长19.8%，超出市场预期。其中直销渠道收入占比提升至45%，i茅台平台贡献显著增量。公司拟每10股派发现金红利275.28元，分红率51.9%。</p>
+            </div>
+            <h4>AI 摘要</h4>
+            <div style="background:var(--brand-accent-subtle);border:1px solid color-mix(in oklch, var(--brand-accent) 20%, transparent);border-radius:var(--radius-4);padding:var(--space-8)">
+              <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0">年报整体超预期：净利润+19.8%超市场一致预期2.3pp，直销占比持续提升是核心亮点。分红率维持50%+，股息率1.48%具备防御价值。关注点：系列酒增速放缓及渠道库存变化。</p>
+            </div>
+            <h4>关联标的</h4>
+            <div style="display:flex;gap:var(--space-6);flex-wrap:wrap">
+              <span class="meta-tag">五粮液</span>
+              <span class="meta-tag">泸州老窖</span>
+              <span class="meta-tag brand">白酒ETF</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card">
+      <div class="gallery-card__label">公告详情 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-drawer" role="dialog" aria-label="公告详情">
+          <div class="overlay-header">
+            <span class="overlay-title">公告详情</span>
+          </div>
+          <div class="overlay-body">
+            <h4>2025年年度报告</h4>
+            <div class="overlay-field">
+              <span class="overlay-field-label">公告日期</span>
+              <span class="overlay-field-value">2026-03-25</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">公告类型</span>
+              <span class="overlay-field-value"><span class="announce-tag annual" style="display:inline">年报</span></span>
+            </div>
+            <div style="margin-top:var(--space-10)">
+              <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0">报告期内，公司实现营业总收入1,562.34亿元，同比增长16.23%；实现归属于母公司所有者的净利润862.28亿元，同比增长19.82%。截至2025年末，公司总资产2,856.12亿元，归属于母公司股东的权益2,387.54亿元。公司拟向全体股东每10股派发现金红利275.28元（含税）。</p>
+            </div>
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">下载 PDF</button>
+              <button class="overlay-btn overlay-btn-primary">查看原文</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card">
+      <div class="gallery-card__label">加入观察/标的池 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-sheet" role="dialog" aria-label="加入观察/标的池">
+          <div class="overlay-header">
+            <span class="overlay-title">加入观察 / 标的池</span>
+          </div>
+          <div class="overlay-body">
+            <h4>已有列表</h4>
+            <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+                <input type="checkbox" style="accent-color:var(--brand-accent)"> 核心池 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">12只</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 观察池 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">28只</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+                <input type="checkbox" style="accent-color:var(--brand-accent)"> 消费龙头 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">8只</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+                <input type="checkbox" style="accent-color:var(--brand-accent)"> 白酒专题 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">5只</span>
+              </label>
+            </div>
+            <h4>新建列表</h4>
+            <div style="display:flex;gap:var(--space-6)">
+              <input type="text" placeholder="输入列表名称..." style="flex:1;background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-primary);font-family:var(--font-family-ui)">
+              <button class="btn" style="flex-shrink:0">新建</button>
+            </div>
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-primary">确认加入</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card">
+      <div class="gallery-card__label">发送到研究 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-sheet" role="dialog" aria-label="发送到研究">
+          <div class="overlay-header">
+            <span class="overlay-title">发送到研究</span>
+          </div>
+          <div class="overlay-body">
+            <h4>选择目标</h4>
+            <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
+                <input type="radio" name="research-target" checked style="accent-color:var(--brand-accent)">
+                <div><div style="font-weight:var(--font-weight-medium)">回测验证</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">将该标的加入回测策略</div></div>
+              </label>
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
+                <input type="radio" name="research-target" style="accent-color:var(--brand-accent)">
+                <div><div style="font-weight:var(--font-weight-medium)">策略跟踪</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">纳入现有策略持续跟踪</div></div>
+              </label>
+              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
+                <input type="radio" name="research-target" style="accent-color:var(--brand-accent)">
+                <div><div style="font-weight:var(--font-weight-medium)">AI 实验</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">加入 AI 研究实验队列</div></div>
+              </label>
+            </div>
+            <h4>附注</h4>
+            <textarea placeholder="添加备注..." style="width:100%;background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8);font-size:var(--font-size-12);color:var(--text-primary);font-family:var(--font-family-ui);min-height:60px;resize:vertical"></textarea>
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-primary">发送</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card">
+      <div class="gallery-card__label">停牌详情 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-sheet" role="dialog" aria-label="停牌详情">
+          <div class="overlay-header">
+            <span class="overlay-title">停牌详情</span>
+          </div>
+          <div class="overlay-body">
+            <h4>停牌信息</h4>
+            <div class="overlay-field">
+              <span class="overlay-field-label">标的</span>
+              <span class="overlay-field-value">贵州茅台（600519.SH）</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">停牌原因</span>
+              <span class="overlay-field-value" style="color:var(--system-degraded-fg)">重大事项公告</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">停牌日期</span>
+              <span class="overlay-field-value">2026-04-01</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">预计复牌</span>
+              <span class="overlay-field-value">2026-04-03</span>
+            </div>
+            <h4>历史停牌记录</h4>
+            <div class="overlay-field">
+              <span class="overlay-field-label">2025-09-15</span>
+              <span class="overlay-field-value">临时停牌（1天）</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">2024-06-20</span>
+              <span class="overlay-field-value">股东大会（1天）</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">2023-03-28</span>
+              <span class="overlay-field-value">年报披露（半天）</span>
+            </div>
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-primary">关闭</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-chart-toolbar" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-news-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-announcement-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-add-watchlist" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-send-research" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-halt-detail" class="overlay-radio sr-only">
 </body>
 </html>
