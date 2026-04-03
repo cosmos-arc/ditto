@@ -36,7 +36,7 @@ DataHub Store 层采用 CQRS 模式，将读写操作分离：
 | 访问类型 | ✅ 允许 | ❌ 禁止 | 说明 |
 |---------|--------|--------|------|
 | **通过 Domain Service** | `MetadataService`, `MarketService` 等 | - | **推荐方式**，通过 DI 容器注入 |
-| **直接导入** | `from ditto_data.sources.*` | `from ditto_data.stores.*` | Sources 可直接访问，Stores 禁止 |
+| **直接导入** | `from ditto_data.sources.*` | `from ditto_data.storage.*` | Sources 可直接访问，Storage 禁止 |
 | **Reader/Writer** | - | 直接实例化 | **禁止**直接访问 Reader/Writer 层 |
 
 ### 正确示例
@@ -60,7 +60,7 @@ provider = sources.get("tushare")
 df = provider.fetch_stock_daily("2024-01-02")
 
 # ❌ 禁止：直接访问 Reader/Writer（即使技术上可行）
-from ditto_data.stores.metadata import InstrumentReader  # ❌
+from ditto_data.storage.metadata import InstrumentReader  # ❌
 reader = InstrumentReader(...)  # ❌
 ```
 

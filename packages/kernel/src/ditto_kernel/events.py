@@ -23,7 +23,7 @@ __all__ = ["DomainEvent", "EventBus", "SimpleEventBus"]
 EventHandler = Callable[["DomainEvent"], None]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class DomainEvent:
     """
     领域事件.

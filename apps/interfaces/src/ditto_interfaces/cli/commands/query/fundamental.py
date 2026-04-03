@@ -7,8 +7,8 @@ from typing import Any
 
 import orjson
 import typer
-from ditto_data.services.fundamental_service import FundamentalService
-from ditto_data.services.metadata_service import MetadataService
+from ditto_app.query.fundamental import FundamentalQueryFacade
+from ditto_app.query.metadata import MetadataQueryFacade
 from rich.console import Console
 from rich.table import Table
 
@@ -19,7 +19,6 @@ from ditto_interfaces.models.fundamental import (
     to_dividend_list,
     to_financial_list,
 )
-from ditto_interfaces.models.identifier import resolve_instrument_identifier
 
 _TABLE_DISPLAY_LIMIT = 20
 
@@ -28,16 +27,19 @@ console = Console()
 
 
 @contextmanager
-def _get_services() -> Generator[
-    tuple[FundamentalService, MetadataService], None, None
+def _get_facades() -> Generator[
+    tuple[FundamentalQueryFacade, MetadataQueryFacade], None, None
 ]:
-    """获取 FundamentalService 和 MetadataService 实例."""
+    """获取 FundamentalQueryFacade 和 MetadataQueryFacade 实例."""
     with create_cli_host() as bundle:
-        yield bundle.fundamental_service, bundle.metadata_service
+        yield (
+            FundamentalQueryFacade(fundamental_service=bundle.fundamental_service),
+            MetadataQueryFacade(metadata_service=bundle.metadata_service),
+        )
 
 
 def _resolve_identifier(
-    metadata_service: MetadataService,
+    metadata_facade: MetadataQueryFacade,
     *,
     instrument_id: int | None,
     ticker: str | None,
@@ -47,7 +49,7 @@ def _resolve_identifier(
     """
     解析标识符为 canonical instrument_id.
 
-    至少提供一个标识符，委托给共享的 resolve_instrument_identifier。
+    至少提供一个标识符，委托给 MetadataQueryFacade.resolve_instrument_identifier。
 
     Returns:
         解析后的 canonical instrument_id (int)，查不到返回 None.
@@ -57,8 +59,7 @@ def _resolve_identifier(
         typer.echo("错误: 必须提供 --instrument-id、--ticker 或 --standard-ticker 之一")
         raise typer.Exit(code=1)
 
-    return resolve_instrument_identifier(
-        metadata_service,
+    return metadata_facade.resolve_instrument_identifier(
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
@@ -141,9 +142,9 @@ def get_financials(
     financial_type = type_map[report_type]
     as_of = _parse_date(as_of_date).date()
 
-    with _get_services() as (service, metadata_service):
+    with _get_facades() as (facade, metadata_facade):
         resolved_id = _resolve_identifier(
-            metadata_service,
+            metadata_facade,
             instrument_id=instrument_id,
             ticker=ticker,
             standard_ticker=standard_ticker,
@@ -155,11 +156,11 @@ def get_financials(
 
         df = None
         if financial_type == FinancialType.BALANCE_SHEET:
-            df = service.get_balance_sheet(resolved_id, as_of)
+            df = facade.get_balance_sheet(resolved_id, as_of)
         elif financial_type == FinancialType.INCOME_STATEMENT:
-            df = service.get_income_statement(resolved_id, as_of)
+            df = facade.get_income_statement(resolved_id, as_of)
         elif financial_type == FinancialType.CASH_FLOW:
-            df = service.get_cash_flow(resolved_id, as_of)
+            df = facade.get_cash_flow(resolved_id, as_of)
 
         if df is None or df.is_empty():
             typer.echo("未找到财务数据")
@@ -209,9 +210,9 @@ def get_dividend(
 
     """
     as_of = _parse_date(as_of_date).date()
-    with _get_services() as (service, metadata_service):
+    with _get_facades() as (facade, metadata_facade):
         resolved_id = _resolve_identifier(
-            metadata_service,
+            metadata_facade,
             instrument_id=instrument_id,
             ticker=ticker,
             standard_ticker=standard_ticker,
@@ -221,7 +222,7 @@ def get_dividend(
             typer.echo("未找到匹配的标的")
             return
 
-        df = service.get_dividend(resolved_id, as_of)
+        df = facade.get_dividend(resolved_id, as_of)
 
         if df is None or df.is_empty():
             typer.echo("未找到分红数据")
@@ -275,9 +276,9 @@ def list_corporate_actions(
     start = _parse_date(start_date).date()
     end = _parse_date(end_date).date()
 
-    with _get_services() as (service, metadata_service):
+    with _get_facades() as (facade, metadata_facade):
         resolved_id = _resolve_identifier(
-            metadata_service,
+            metadata_facade,
             instrument_id=instrument_id,
             ticker=ticker,
             standard_ticker=standard_ticker,
@@ -286,7 +287,7 @@ def list_corporate_actions(
             typer.echo("未找到匹配的标的")
             return
 
-        df = service.list_corporate_actions(resolved_id, start, end)
+        df = facade.list_corporate_actions(resolved_id, start, end)
 
         if df.is_empty():
             typer.echo("未找到公司行动数据")

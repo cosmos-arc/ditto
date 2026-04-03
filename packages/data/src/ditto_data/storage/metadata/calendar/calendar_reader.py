@@ -1,0 +1,553 @@
+"""
+Calendar reader for CQRS pattern.
+
+Provides read-only access to trading calendar data with in-memory cache optimization.
+Following design document at docs/plans/2026-02-09-datahub-metadata-cqrs-design.md
+"""
+
+from __future__ import annotations
+
+import bisect
+import threading
+from typing import Any, Literal
+
+import polars as pl
+from ditto_infra.foundation import logger, span, traced
+from ditto_infra.foundation.cache import DataCache
+
+from ditto_data.errors import TradingDateNotFoundError
+from ditto_data.models.metadata import CalendarDay
+from ditto_data.storage.sqlite_client import SQLiteClient
+
+
+class CalendarReader:
+    """
+    Trading calendar reader with in-memory cache.
+
+    All calendar data is loaded into memory on initialization for O(1)
+    or O(log n) query performance. Thread-safe reload using atomic
+    instance replacement.
+
+    Attributes:
+        _client: SQLite client for database operations.
+        _data_cache: Optional DataCache for range query caching.
+        _lock: Thread safety lock for reload operations.
+        _cache: In-memory cache of CalendarDay objects.
+        _all_days: Sorted list of all calendar dates.
+        _trading_days: Sorted list of trading days.
+        _week_ends: Sorted list of week-end trading days.
+        _month_ends: Sorted list of month-end trading days.
+        _quarter_ends: Sorted list of quarter-end trading days.
+
+    """
+
+    def __init__(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[list[str]] | None = None,
+    ) -> None:
+        """
+        Initialize CalendarReader.
+
+        Args:
+            sqlite_client: SQLite client for database operations.
+            data_cache: Optional DataCache for range query caching.
+
+        """
+        self._client = sqlite_client
+        self._data_cache = data_cache
+
+        # Thread safety: lock for reload operations
+        self._lock = threading.RLock()
+
+        # In-memory cache (will be replaced atomically during reload)
+        self._cache: dict[str, CalendarDay] = {}
+        self._all_days: list[str] = []
+        self._trading_days: list[str] = []
+        self._week_ends: list[str] = []
+        self._month_ends: list[str] = []
+        self._quarter_ends: list[str] = []
+
+        self._load_cache()
+
+    def _load_cache(self) -> None:
+        """Load all calendar data into memory (initial load)."""
+        with span("calendar.load") as s:
+            logger.info(
+                "Loading calendar data into cache",
+                event="calendar_load_start",
+            )
+
+        # Build cache data
+        cache, all_days, trading_days, week_ends, month_ends, quarter_ends = (
+            self._build_cache_data()
+        )
+
+        # Update public references (initial load, no concurrent readers yet)
+        self._cache = cache
+        self._all_days = all_days
+        self._trading_days = trading_days
+        self._week_ends = week_ends
+        self._month_ends = month_ends
+        self._quarter_ends = quarter_ends
+
+        # Set span attributes
+        s.set_attribute("total_days", len(self._all_days))
+        s.set_attribute("trading_days", len(self._trading_days))
+
+        logger.info(
+            "Calendar cache loaded successfully",
+            event="calendar_load_complete",
+            total_days=len(self._all_days),
+            trading_days=len(self._trading_days),
+            week_ends=len(self._week_ends),
+            month_ends=len(self._month_ends),
+            quarter_ends=len(self._quarter_ends),
+        )
+
+    def _build_cache_data(
+        self,
+    ) -> tuple[
+        dict[str, CalendarDay],
+        list[str],
+        list[str],
+        list[str],
+        list[str],
+        list[str],
+    ]:
+        """
+        Build cache data from database (pure function, no state modification).
+
+        Returns:
+            Tuple of (cache, all_days, trading_days, week_ends,
+            month_ends, quarter_ends)
+
+        """
+        sql = "SELECT * FROM trading_calendar ORDER BY trade_date"
+        rows = self._client.fetchall(sql)
+
+        cache: dict[str, CalendarDay] = {}
+        all_days: list[str] = []
+        trading_days: list[str] = []
+        week_ends: list[str] = []
+        month_ends: list[str] = []
+        quarter_ends: list[str] = []
+
+        for r in rows:
+            date_str = r["trade_date"]
+            day = CalendarDay(
+                trade_date=date_str,
+                is_open=bool(r["is_open"]),
+                exchange=r.get("exchange", "SSE"),
+                prev_trade_date=r["prev_trade_date"],
+                next_trade_date=r["next_trade_date"],
+                week_of_year=r["week_of_year"],
+                month=r["month"],
+                quarter=r["quarter"],
+                year=r["year"],
+                is_week_end=bool(r["is_week_end"]),
+                is_month_end=bool(r["is_month_end"]),
+                is_quarter_end=bool(r["is_quarter_end"]),
+                is_half_day=bool(r["is_half_day"]),
+                is_special=bool(r.get("is_special", False)),
+            )
+
+            cache[date_str] = day
+            all_days.append(date_str)
+
+            if day.is_open:
+                trading_days.append(date_str)
+
+                if day.is_week_end:
+                    week_ends.append(date_str)
+                if day.is_month_end:
+                    month_ends.append(date_str)
+                if day.is_quarter_end:
+                    quarter_ends.append(date_str)
+
+        return cache, all_days, trading_days, week_ends, month_ends, quarter_ends
+
+    @traced("data.calendar.reload")
+    def reload(self) -> None:
+        """
+        Reload cache (thread-safe using direct instance replacement).
+
+        This method is thread-safe and can be called concurrently with read operations.
+        Readers will continue to see the old cache until the new one is fully built,
+        at which point an atomic replacement occurs (Python assignment is atomic).
+
+        """
+        logger.debug(
+            "Reloading calendar cache",
+            event="calendar_reload_start",
+        )
+
+        with self._lock:
+            # Build new cache data (creates new instances, doesn't affect current reads)
+            cache, all_days, trading_days, week_ends, month_ends, quarter_ends = (
+                self._build_cache_data()
+            )
+
+            # Invalidate DataCache calendar-related cache
+            if self._data_cache:
+                self._data_cache.invalidate_pattern("trading_days:*")
+
+            # Atomic replacement of all references (Python assignment is atomic)
+            self._cache = cache
+            self._all_days = all_days
+            self._trading_days = trading_days
+            self._week_ends = week_ends
+            self._month_ends = month_ends
+            self._quarter_ends = quarter_ends
+
+        logger.debug(
+            "Calendar cache reloaded successfully",
+            event="calendar_reload_complete",
+            total_days=len(self._all_days),
+            trading_days=len(self._trading_days),
+        )
+
+    # ============ Basic queries (O(1)) ============
+
+    @traced("data.calendar.is_trading_day")
+    def is_trading_day(self, date: str) -> bool:
+        """
+        Check if date is a trading day.
+
+        Args:
+            date: Date string (YYYY-MM-DD).
+
+        Returns:
+            True if trading day.
+
+        """
+        day = self._cache.get(date)
+        return day.is_open if day else False
+
+    @traced("data.calendar.get")
+    def get(self, date: str) -> CalendarDay | None:
+        """
+        Get calendar data for a single day.
+
+        Args:
+            date: Date string (YYYY-MM-DD).
+
+        Returns:
+            CalendarDay or None if not found.
+
+        """
+        return self._cache.get(date)
+
+    @traced("data.calendar.get_prev")
+    def get_prev(self, date: str) -> str | None:
+        """
+        Get previous trading day (O(1)).
+
+        Args:
+            date: Date string (YYYY-MM-DD).
+
+        Returns:
+            Previous trading date or None.
+
+        """
+        day = self._cache.get(date)
+        if day:
+            return day.prev_trade_date
+        return None
+
+    @traced("data.calendar.get_next")
+    def get_next(self, date: str) -> str | None:
+        """
+        Get next trading day (O(1)).
+
+        Args:
+            date: Date string (YYYY-MM-DD).
+
+        Returns:
+            Next trading date or None.
+
+        """
+        day = self._cache.get(date)
+        if day:
+            return day.next_trade_date
+        return None
+
+    # ============ Offset queries (O(log n)) ============
+
+    @traced("data.calendar.offset")
+    def offset(self, date: str, n: int) -> str | None:
+        """
+        Offset by n trading days.
+
+        Args:
+            date: Start date.
+            n: Offset (positive for forward, negative for backward).
+
+        Returns:
+            Target trading date, or None if out of range.
+
+        """
+        if not self._trading_days:
+            return None
+
+        # Find position in trading days list
+        idx = bisect.bisect_left(self._trading_days, date)
+
+        if n == 0:
+            # Return current day if trading day, else None
+            if idx < len(self._trading_days) and self._trading_days[idx] == date:
+                return date
+            return None
+
+        if n > 0:
+            # Forward offset
+            if idx < len(self._trading_days) and self._trading_days[idx] == date:
+                target_idx = idx + n
+            else:
+                target_idx = idx + n - 1  # Next trading day counts as 1st
+        # Backward offset
+        elif idx < len(self._trading_days) and self._trading_days[idx] == date:
+            target_idx = idx + n  # n is negative
+        else:
+            target_idx = idx + n  # idx already points to "next"
+
+        if 0 <= target_idx < len(self._trading_days):
+            return self._trading_days[target_idx]
+        return None
+
+    @traced("data.calendar.offset_safe")
+    def offset_safe(self, date: str, n: int) -> str:
+        """
+        Offset by n trading days (raises exception if out of range).
+
+        Args:
+            date: Start date.
+            n: Offset (positive for forward, negative for backward).
+
+        Returns:
+            Target trading date.
+
+        Raises:
+            TradingDateNotFoundError: If offset goes out of range.
+
+        """
+        result = self.offset(date, n)
+        if result is None:
+            raise TradingDateNotFoundError(
+                f"Cannot offset {n} trading days from {date}",
+                date=date,
+                direction="next" if n > 0 else "prev",
+            )
+        return result
+
+    # ============ Range queries (O(log n)) ============
+
+    @traced("data.calendar.get_range")
+    def get_range(self, start: str, end: str) -> list[str]:
+        """
+        Get trading days in date range.
+
+        Args:
+            start: Start date (inclusive).
+            end: End date (inclusive).
+
+        Returns:
+            List of trading dates (always a copy).
+
+        """
+        if not self._trading_days:
+            return []
+
+        # 尝试从 DataCache 获取
+        if self._data_cache:
+            cache_key = f"trading_days:{start}:{end}"
+            cached = self._data_cache.get(cache_key)
+            if cached is not None:
+                # 返回副本以防止缓存污染
+                return cached.copy()
+
+        # 从内存缓存计算
+        start_idx = bisect.bisect_left(self._trading_days, start)
+        end_idx = bisect.bisect_right(self._trading_days, end)
+        result = self._trading_days[start_idx:end_idx]
+
+        # 缓存结果（缓存原始列表）
+        if self._data_cache:
+            cache_key = f"trading_days:{start}:{end}"
+            self._data_cache.set(cache_key, result)
+
+        # 返回副本以防止调用方修改内部列表
+        return result.copy()
+
+    @traced("data.calendar.get_range_df")
+    def get_range_df(
+        self,
+        start: str,
+        end: str,
+        only_open: bool = True,
+    ) -> pl.DataFrame:
+        """
+        Get calendar DataFrame for date range.
+
+        Args:
+            start: Start date (inclusive).
+            end: End date (inclusive).
+            only_open: Only return trading days.
+
+        Returns:
+            DataFrame with calendar data.
+
+        """
+        dates = (
+            self.get_range(start, end) if only_open else self._get_all_range(start, end)
+        )
+
+        if not dates:
+            return pl.DataFrame()
+
+        records: list[dict[str, Any]] = []
+        for date in dates:
+            day = self._cache.get(date)
+            if day:
+                records.append(
+                    {
+                        "trade_date": day.trade_date,
+                        "is_open": day.is_open,
+                        "exchange": day.exchange,
+                        "prev_trade_date": day.prev_trade_date,
+                        "next_trade_date": day.next_trade_date,
+                        "is_week_end": day.is_week_end,
+                        "is_month_end": day.is_month_end,
+                        "is_quarter_end": day.is_quarter_end,
+                        "is_half_day": day.is_half_day,
+                        "is_special": day.is_special,
+                    }
+                )
+
+        return pl.DataFrame(records)
+
+    def _get_all_range(self, start: str, end: str) -> list[str]:
+        """Get all dates in range (including non-trading days)."""
+        if not self._all_days:
+            return []
+
+        start_idx = bisect.bisect_left(self._all_days, start)
+        end_idx = bisect.bisect_right(self._all_days, end)
+
+        return self._all_days[start_idx:end_idx]
+
+    @traced("data.calendar.count_trading_days")
+    def count_trading_days(self, start: str, end: str) -> int:
+        """
+        Count trading days in range.
+
+        Args:
+            start: Start date (inclusive).
+            end: End date (inclusive).
+
+        Returns:
+            Number of trading days.
+
+        """
+        return len(self.get_range(start, end))
+
+    # ============ Period end queries (O(log n)) ============
+
+    @traced("data.calendar.get_period_ends")
+    def get_period_ends(
+        self,
+        start: str,
+        end: str,
+        period: Literal["week", "month", "quarter"],
+    ) -> list[str]:
+        """
+        Get period-end trading days.
+
+        Args:
+            start: Start date (inclusive).
+            end: End date (inclusive).
+            period: Period type ("week" | "month" | "quarter").
+
+        Returns:
+            List of period-end dates.
+
+        """
+        period_list = {
+            "week": self._week_ends,
+            "month": self._month_ends,
+            "quarter": self._quarter_ends,
+        }.get(period, [])
+
+        if not period_list:
+            return []
+
+        start_idx = bisect.bisect_left(period_list, start)
+        end_idx = bisect.bisect_right(period_list, end)
+
+        return period_list[start_idx:end_idx]
+
+    @traced("data.calendar.get_month_ends")
+    def get_month_ends(self, start: str, end: str) -> list[str]:
+        """Get month-end trading days."""
+        return self.get_period_ends(start, end, "month")
+
+    @traced("data.calendar.get_quarter_ends")
+    def get_quarter_ends(self, start: str, end: str) -> list[str]:
+        """Get quarter-end trading days."""
+        return self.get_period_ends(start, end, "quarter")
+
+    # ============ Boundary queries ============
+
+    @traced("data.calendar.get_first_trading_day")
+    def get_first_trading_day(self) -> str | None:
+        """Get earliest trading day."""
+        return self._trading_days[0] if self._trading_days else None
+
+    @traced("data.calendar.get_last_trading_day")
+    def get_last_trading_day(self) -> str | None:
+        """Get latest trading day."""
+        return self._trading_days[-1] if self._trading_days else None
+
+    @traced("data.calendar.get_latest_before")
+    def get_latest_before(self, date: str) -> str | None:
+        """
+        Get latest trading day on or before date.
+
+        Args:
+            date: Reference date.
+
+        Returns:
+            Latest trading day on or before date, or None.
+
+        """
+        if not self._trading_days:
+            return None
+
+        # bisect_right returns insertion point after any existing entries
+        # For "on or before", we want elements <= date
+        idx = bisect.bisect_right(self._trading_days, date)
+        if idx > 0:
+            return self._trading_days[idx - 1]
+        return None
+
+    @traced("data.calendar.get_earliest_after")
+    def get_earliest_after(self, date: str) -> str | None:
+        """
+        Get earliest trading day on or after date.
+
+        Args:
+            date: Reference date.
+
+        Returns:
+            Earliest trading day on or after date, or None.
+
+        """
+        if not self._trading_days:
+            return None
+
+        # bisect_left returns insertion point to maintain sorted order
+        # For "on or after", we want elements >= date
+        idx = bisect.bisect_left(self._trading_days, date)
+        if idx < len(self._trading_days):
+            return self._trading_days[idx]
+        return None

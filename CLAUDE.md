@@ -71,7 +71,7 @@
 允许的跨层依赖:
   - interfaces 可以直接依赖 data.models/services/sources
   - interfaces 可以直接依赖 infra.foundation
-  - interfaces 禁止直接依赖 data.stores/runtime（仅 registry 例外）
+  - interfaces 禁止直接依赖 data.storage/runtime（仅 registry 例外）
 
 详细约束见 .importlinter 配置
 ```
@@ -84,9 +84,9 @@
 - Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
 - Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
 - Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
-- Engine → [packages/core/CLAUDE.md](packages/core/CLAUDE.md)
+- Engine → [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md)
 - Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
-- Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md)
+- App → [packages/app/CLAUDE.md](packages/app/CLAUDE.md)
 - Interfaces → [apps/interfaces/CLAUDE.md](apps/interfaces/CLAUDE.md)
 
 ### 允许的依赖（严格限制）
@@ -244,12 +244,11 @@ ditto/
 │   ├── infra/        # 基础设施
 │   ├── kernel/       # 共享内核（零业务行为类型）
 │   ├── data/          # 数据访问层
-│   ├── data/          # 数据质量 + 错误定义
-│   ├── analytics/     # 表达式编译 + 物化
-│   ├── app/           # 应用编排层（CQRS: query/process/builders）
-│   └── core/          # 核心引擎（ditto_engine，物理目录: core）
+│   ├── analytics/     # 表达式编译 + 物化 + 因子 + 研究
+│   ├── app/           # 应用编排层（CQRS: query/process/command/builders）
+│   └── engine/        # 核心引擎（alpha/portfolio/execution/accounting/backtest/orchestrator）
 ├── apps/              # 应用
-│   ├── interfaces/    # Server 应用（API/CLI/Jobs）
+│   ├── interfaces/    # Server 应用（API/CLI/Jobs + DI Composition Root）
 │   └── web/           # Web 应用
 ├── config/            # 环境配置（按环境分组）
 │   ├── development/

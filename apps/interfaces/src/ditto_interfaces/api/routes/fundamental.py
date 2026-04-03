@@ -6,9 +6,9 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_data.errors import AmbiguousTickerError, NoIdentifierProvidedError
-from ditto_data.services.fundamental_service import FundamentalService
-from ditto_data.services.metadata_service import MetadataService
+from ditto_app.query.fundamental import FundamentalQueryFacade
+from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_app.types import AmbiguousTickerError, NoIdentifierProvidedError
 from ditto_infra.foundation import logger
 from fastapi import APIRouter, HTTPException, Query
 
@@ -22,13 +22,12 @@ from ditto_interfaces.models.fundamental import (
     to_dividend_list,
     to_financial_list,
 )
-from ditto_interfaces.models.identifier import resolve_instrument_identifier
 
 router = APIRouter(prefix="/fundamental", tags=["fundamental"])
 
 
 def _resolve_identifier(
-    metadata_service: MetadataService,
+    metadata_facade: MetadataQueryFacade,
     *,
     instrument_id: int | None,
     standard_ticker: str | None,
@@ -39,7 +38,7 @@ def _resolve_identifier(
     解析标识符为 canonical instrument_id.
 
     至少提供一个标识符（instrument_id / standard_ticker / ticker），
-    委托给共享的 resolve_instrument_identifier 进行统一解析。
+    委托给 MetadataQueryFacade.resolve_instrument_identifier 进行统一解析。
 
     Returns:
         解析后的 canonical instrument_id (int)，查不到返回 None.
@@ -55,8 +54,7 @@ def _resolve_identifier(
         )
 
     try:
-        return resolve_instrument_identifier(
-            metadata_service,
+        return metadata_facade.resolve_instrument_identifier(
             instrument_id=instrument_id,
             standard_ticker=standard_ticker,
             ticker=ticker,
@@ -77,8 +75,8 @@ def _resolve_identifier(
 @inject
 async def get_financials(
     report_type: FinancialType,
-    service: Annotated[FundamentalService, FromComponent()],
-    metadata_service: Annotated[MetadataService, FromComponent()],
+    fundamental_facade: Annotated[FundamentalQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
     instrument_id: int | None = Query(None, description="Canonical 标的 ID"),
     ticker: str | None = Query(None, description="裸代码, 如 000001"),
     standard_ticker: str | None = Query(None, description="标准代码, 如 000001.XSHE"),
@@ -94,7 +92,7 @@ async def get_financials(
 
     """
     resolved_id = _resolve_identifier(
-        metadata_service,
+        metadata_facade,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
@@ -108,19 +106,19 @@ async def get_financials(
     df = None
     if report_type == FinancialType.BALANCE_SHEET:
         df = await asyncio.to_thread(
-            service.get_balance_sheet,
+            fundamental_facade.get_balance_sheet,
             resolved_id,
             as_of_date,
         )
     elif report_type == FinancialType.INCOME_STATEMENT:
         df = await asyncio.to_thread(
-            service.get_income_statement,
+            fundamental_facade.get_income_statement,
             resolved_id,
             as_of_date,
         )
     elif report_type == FinancialType.CASH_FLOW:
         df = await asyncio.to_thread(
-            service.get_cash_flow,
+            fundamental_facade.get_cash_flow,
             resolved_id,
             as_of_date,
         )
@@ -137,8 +135,8 @@ async def get_financials(
 @router.get("/dividend", response_model=APIResponse[list[Dividend]])
 @inject
 async def get_dividend(
-    service: Annotated[FundamentalService, FromComponent()],
-    metadata_service: Annotated[MetadataService, FromComponent()],
+    fundamental_facade: Annotated[FundamentalQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
     instrument_id: int | None = Query(None, description="Canonical 标的 ID"),
     ticker: str | None = Query(None, description="裸代码, 如 000001"),
     standard_ticker: str | None = Query(None, description="标准代码, 如 000001.XSHE"),
@@ -154,7 +152,7 @@ async def get_dividend(
 
     """
     resolved_id = _resolve_identifier(
-        metadata_service,
+        metadata_facade,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
@@ -164,8 +162,12 @@ async def get_dividend(
     if resolved_id is None:
         return APIResponse(data=[])
 
-    # 调用 service（在线程池中执行，避免阻塞事件循环）
-    df = await asyncio.to_thread(service.get_dividend, resolved_id, as_of_date)
+    # 调用 facade（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(
+        fundamental_facade.get_dividend,
+        resolved_id,
+        as_of_date,
+    )
 
     if df is None or df.is_empty():
         return APIResponse(data=[])
@@ -179,8 +181,8 @@ async def get_dividend(
 @router.get("/corporate-actions", response_model=APIResponse[list[CorporateAction]])
 @inject
 async def list_corporate_actions(
-    service: Annotated[FundamentalService, FromComponent()],
-    metadata_service: Annotated[MetadataService, FromComponent()],
+    fundamental_facade: Annotated[FundamentalQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
     instrument_id: int | None = Query(None, description="Canonical 标的 ID"),
     ticker: str | None = Query(None, description="裸代码, 如 000001"),
     standard_ticker: str | None = Query(None, description="标准代码, 如 000001.XSHE"),
@@ -210,7 +212,7 @@ async def list_corporate_actions(
         )
 
     resolved_id = _resolve_identifier(
-        metadata_service,
+        metadata_facade,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
@@ -219,9 +221,9 @@ async def list_corporate_actions(
     if resolved_id is None:
         return APIResponse(data=[])
 
-    # 调用 service（在线程池中执行，避免阻塞事件循环）
+    # 调用 facade（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(
-        service.list_corporate_actions,
+        fundamental_facade.list_corporate_actions,
         resolved_id,
         start_date,
         end_date,

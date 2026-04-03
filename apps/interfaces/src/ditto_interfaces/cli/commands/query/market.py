@@ -7,11 +7,7 @@ from typing import Any
 
 import orjson
 import typer
-from ditto_data.services.market_service import (
-    AdjType,
-    MarketBarsQuery,
-    MarketService,
-)
+from ditto_app.query.market import MarketQueryFacade
 from rich.console import Console
 from rich.table import Table
 
@@ -25,10 +21,10 @@ console = Console()
 
 
 @contextmanager
-def _get_market_service() -> Generator[MarketService, None, None]:
-    """获取 MarketService 实例."""
+def _get_market_facade() -> Generator[MarketQueryFacade, None, None]:
+    """获取 MarketQueryFacade 实例."""
     with create_cli_host() as bundle:
-        yield bundle.market_service
+        yield MarketQueryFacade(market_service=bundle.market_service)
 
 
 def _output_json(items: list[Any]) -> None:
@@ -84,15 +80,13 @@ def query_bars(
     """
     _validate_date_range(start_date, end_date)
 
-    with _get_market_service() as service:
-        query = MarketBarsQuery(
+    with _get_market_facade() as facade:
+        df = facade.find_bars(
             instrument_ids=[instrument_id],
-            start=str(start_date),
-            end=str(end_date),
-            adj=AdjType.from_string(adjustment),
+            start=start_date,
+            end=end_date,
+            adj=adjustment,
         )
-
-        df = service.find_bars(query)
 
         if df.is_empty():
             typer.echo("未找到匹配的 K 线数据")
@@ -139,8 +133,8 @@ def get_constituents(
         ditto query market constituents 1 --date 2024-12-31
 
     """
-    with _get_market_service() as service:
-        df = service.get_constituents(index_id, as_of_date)
+    with _get_market_facade() as facade:
+        df = facade.get_constituents(index_id, as_of_date)
 
         if df.is_empty():
             typer.echo("未找到成分股数据")

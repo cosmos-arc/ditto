@@ -51,8 +51,8 @@ class TestL3BatchServiceContract:
         """check_dataset 返回必须包含 issues 字段."""
         service = L3BatchService(
             engine=mock_engine,
-            market_service=mock_market_service,
-            metadata_service=mock_metadata_service,
+            market_facade=mock_market_service,
+            metadata_facade=mock_metadata_service,
         )
 
         result = service.check_dataset(
@@ -87,8 +87,8 @@ class TestL3BatchServiceContract:
 
         service = L3BatchService(
             engine=mock_engine,
-            market_service=mock_market_service,
-            metadata_service=mock_metadata_service,
+            market_facade=mock_market_service,
+            metadata_facade=mock_metadata_service,
         )
 
         # Act

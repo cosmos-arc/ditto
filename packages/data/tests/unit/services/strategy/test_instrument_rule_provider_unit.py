@@ -9,11 +9,11 @@ from ditto_data.services.strategy.instrument_rule_provider import (
     DefinitionRecord,
     InstrumentRuleProvider,
 )
-from ditto_data.stores.metadata.fee_schedule_reader import (
+from ditto_data.storage.metadata.fee_schedule_reader import (
     FeeScheduleReader,
     FeeScheduleRecord,
 )
-from ditto_data.stores.metadata.trading_rule_reader import (
+from ditto_data.storage.metadata.trading_rule_reader import (
     TradingRuleReader,
     TradingRuleRecord,
 )

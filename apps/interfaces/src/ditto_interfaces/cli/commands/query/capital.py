@@ -7,8 +7,8 @@ from typing import Any
 
 import orjson
 import typer
-from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.metadata_service import MetadataService
+from ditto_app.query.capital import CapitalQueryFacade
+from ditto_app.query.metadata import MetadataQueryFacade
 from rich.console import Console
 from rich.table import Table
 
@@ -17,7 +17,6 @@ from ditto_interfaces.models.capital import (
     to_margin_list,
     to_valuation_list,
 )
-from ditto_interfaces.models.identifier import resolve_instrument_identifier
 
 _TABLE_DISPLAY_LIMIT = 20
 
@@ -26,14 +25,19 @@ console = Console()
 
 
 @contextmanager
-def _get_services() -> Generator[tuple[CapitalService, MetadataService], None, None]:
-    """获取 CapitalService 和 MetadataService 实例."""
+def _get_facades() -> Generator[
+    tuple[CapitalQueryFacade, MetadataQueryFacade], None, None
+]:
+    """获取 CapitalQueryFacade 和 MetadataQueryFacade 实例."""
     with create_cli_host() as bundle:
-        yield bundle.capital_service, bundle.metadata_service
+        yield (
+            CapitalQueryFacade(capital_service=bundle.capital_service),
+            MetadataQueryFacade(metadata_service=bundle.metadata_service),
+        )
 
 
 def _resolve_identifier(
-    metadata_service: MetadataService,
+    metadata_facade: MetadataQueryFacade,
     *,
     instrument_id: int | None,
     ticker: str | None,
@@ -43,7 +47,7 @@ def _resolve_identifier(
     """
     解析标识符为 canonical instrument_id.
 
-    至少提供一个标识符，委托给共享的 resolve_instrument_identifier。
+    至少提供一个标识符，委托给 MetadataQueryFacade.resolve_instrument_identifier。
 
     Returns:
         解析后的 canonical instrument_id (int)，查不到返回 None.
@@ -53,8 +57,7 @@ def _resolve_identifier(
         typer.echo("错误: 必须提供 --instrument-id、--ticker 或 --standard-ticker 之一")
         raise typer.Exit(code=1)
 
-    return resolve_instrument_identifier(
-        metadata_service,
+    return metadata_facade.resolve_instrument_identifier(
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
@@ -100,9 +103,9 @@ def get_margin(
 
     """
     as_of = _parse_date(as_of_date).date()
-    with _get_services() as (service, metadata_service):
+    with _get_facades() as (facade, metadata_facade):
         resolved_id = _resolve_identifier(
-            metadata_service,
+            metadata_facade,
             instrument_id=instrument_id,
             ticker=ticker,
             standard_ticker=standard_ticker,
@@ -111,7 +114,7 @@ def get_margin(
         if resolved_id is None:
             typer.echo("未找到匹配的标的")
             return
-        df = service.get_margin_trading(resolved_id, as_of)
+        df = facade.get_margin_trading(resolved_id, as_of)
 
         if df.is_empty():
             typer.echo("未找到融资融券数据")
@@ -171,9 +174,9 @@ def get_valuation(
 
     """
     as_of = _parse_date(as_of_date).date()
-    with _get_services() as (service, metadata_service):
+    with _get_facades() as (facade, metadata_facade):
         resolved_id = _resolve_identifier(
-            metadata_service,
+            metadata_facade,
             instrument_id=instrument_id,
             ticker=ticker,
             standard_ticker=standard_ticker,
@@ -182,7 +185,7 @@ def get_valuation(
         if resolved_id is None:
             typer.echo("未找到匹配的标的")
             return
-        df = service.get_valuation_metrics(resolved_id, as_of)
+        df = facade.get_valuation_metrics(resolved_id, as_of)
 
         if df.is_empty():
             typer.echo("未找到估值指标数据")

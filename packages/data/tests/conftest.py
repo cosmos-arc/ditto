@@ -7,7 +7,7 @@ from typing import Any
 
 import polars as pl
 import pytest
-from ditto_data.stores.sqlite_client import SQLiteClient
+from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool, init
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability.config import ObservabilityConfig

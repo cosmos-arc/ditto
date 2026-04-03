@@ -3,9 +3,7 @@
 from typing import Any
 
 from ditto_app.process.quality import L3BatchService
-from ditto_data.models import Dataset
-from ditto_data.quality.spec import DQIssue
-from ditto_data.services.market_service import MarketBarsQuery
+from ditto_app.types import Dataset, DQIssue
 from ditto_infra.foundation import Metrics, logger
 from prefect import task
 
@@ -76,8 +74,8 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
         # 初始化 L3 Batch Service
         l3_service = L3BatchService(
             engine=engine,
-            market_service=market_service,
-            metadata_service=metadata_service,
+            market_facade=market_service,
+            metadata_facade=metadata_service,
         )
 
         all_issues: list[DQIssue] = []
@@ -227,13 +225,12 @@ def dq_completeness_check(
         _metadata_service,
         market_service,
     ):
-        # 读取实际数据
-        query = MarketBarsQuery(
+        # 读取实际数据（market_service 是 MarketQueryFacade）
+        df = market_service.find_bars(
             start=trade_date,
             end=trade_date,
             market_wide=market_wide,
         )
-        df = market_service.find_bars(query)
 
         actual_sids = (
             df["instrument_id"].unique().to_list() if not df.is_empty() else []

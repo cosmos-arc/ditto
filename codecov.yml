@@ -20,14 +20,9 @@ coverage:
   flags:
     core-strategy:
       paths:
-        - packages/core/src/ditto_engine/strategy/
-        - packages/core/src/ditto_engine/portfolio/
+        - packages/engine/src/ditto_engine/alpha/
+        - packages/engine/src/ditto_engine/portfolio/
       target: 90%
-
-    core-engine:
-      paths:
-        - packages/core/src/ditto_engine/engine/
-      target: 85%
 
     datahub:
       paths:

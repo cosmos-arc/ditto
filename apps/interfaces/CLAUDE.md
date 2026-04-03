@@ -39,15 +39,17 @@ ditto_interfaces/
 │  Interfaces 可依赖                  │
 │  interfaces → app ✅               │
 │  interfaces → engine ✅            │
-│  interfaces → datahub ✅           │
+│  interfaces → data ✅              │
+│  interfaces → analytics ✅         │
 │  interfaces → infra ✅             │
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
 │  Interfaces 禁止被依赖              │
 │  app → interfaces ❌               │
-│  core → interfaces ❌              │
-│  datahub → interfaces ❌           │
+│  engine → interfaces ❌            │
+│  data → interfaces ❌              │
+│  analytics → interfaces ❌         │
 └─────────────────────────────────────┘
 ```
 
@@ -111,7 +113,7 @@ ditto_interfaces/
 ## 数据摄入
 
 Interfaces 层通过 CLI/Jobs 编排数据摄取流程，业务逻辑在 `ditto_app.process.ingestion` 中。
-具体 T0/T1/T2/T3 分层规则和游标管理详见 [DataHub 层规范](../../packages/data/CLAUDE.md)。
+具体 T0/T1/T2/T3 分层规则和游标管理详见 [Data 层规范](../../packages/data/CLAUDE.md)。
 
 ## CLI 规范
 

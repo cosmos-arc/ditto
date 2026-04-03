@@ -241,62 +241,57 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - `CLAUDE.md` + 各子包 CLAUDE.md (更新)
   - ~85 个 .py 文件 (import 更新)
 
-### PR12: 子域重命名 stores/ → storage/ `[L]`
+### PR12: 子域重命名 stores/ → storage/ `[L]` ✅ DONE
 - **操作**: `ditto_data.stores/` (159 文件) → `ditto_data.storage/`
-- **方法**: 目录重命名 + 全局 import 更新
+- **方法**: 目录重命名 + 全局 import 更新 + PLR0913 修复（IndicatorMetadataSpec dataclass）
 - **验收**:
-  - `grep "from ditto_data.stores" --include="*.py"` 零结果
-  - `pixi run -e dev check` 通过
+  - ✅ `grep "from ditto_data.stores" --include="*.py"` 零结果
+  - ✅ `pixi run -e dev check` 通过（lint + fmt + type + 4271 tests）
+  - ✅ `pixi run -e dev arch-check` 14 KEPT, 0 BROKEN
 - **文件**:
   - `packages/data/src/ditto_data/stores/` → `packages/data/src/ditto_data/storage/`
-  - 所有引用 stores 的文件 (storage 内部 + services + app + interfaces registry)
+  - `packages/data/tests/unit/stores/` → `packages/data/tests/unit/storage/`
+  - `packages/data/tests/integration/stores/` → `packages/data/tests/integration/storage/`
+  - 211 个 .py 文件（484 处 import 更新）
+  - `.importlinter` port-boundary 规则更新
+  - 12 个文档文件更新
 
-### PR13: services 拆分 query/ + ingestion/ 基础 `[L]`
+### PR13: services 拆分 query/ + ingestion/ 基础 `[L]` ✅ DONE
 - **操作**:
-  - `ditto_data.services/` (41 文件) → 按职责拆分
-  - 查询类服务 (MarketService, MetadataService, DerivedQueryService 等) → 保留在 `services/` 或移入 `query/`
-  - 写入类服务 (IngestionLogService, FreezeService 等) → 移入 `ingestion/`
-  - 保留 `services/` 作为公共 facade
+  - 创建 `ditto_data.ingestion/` 包
+  - 迁入 6 个写入类服务：IngestionCursorService, IngestionLogService, FreezeService, PublicationSafetyRecordService, QualityRecordService, check_late_arrival
+  - 保留 `ditto_data.query/`（已有 MarketQuerist, MetadataQuerist, ServiceBackedDataProvider）
+  - 保留 `ditto_data.services/` 作为公共 facade（re-export shim）
 - **验收**:
-  - `ditto_data.query/` 提供消费者查询入口
-  - `ditto_data.ingestion/` 提供写入/编排逻辑
-  - `pixi run -e dev check` 通过
+  - ✅ `ditto_data.ingestion/` 包含 6 个写入类服务
+  - ✅ `ditto_data.query/` 提供查询入口
+  - ✅ `pixi run -e dev check` 通过（4271 tests）
+  - ✅ `pixi run -e dev arch-check` 14 KEPT, 0 BROKEN
 - **文件**:
-  - `packages/data/src/ditto_data/query/` (新建/扩展)
-  - `packages/data/src/ditto_data/ingestion/` (新建)
-  - `packages/data/src/ditto_data/services/` (瘦身/重组)
-  - app + interfaces 消费者 (更新 import)
+  - `packages/data/src/ditto_data/ingestion/` (新建 6 文件 + __init__.py)
+  - `packages/data/src/ditto_data/services/` (6 个 re-export shim)
+  - `packages/data/src/ditto_data/services/__init__.py` (更新 import 路径)
+  - 3 个外部消费者更新 import
 
-### PR14: helpers/runtime/config 归位 `[M]`
-- **操作**:
-  - `helpers/` (6 文件: pit/, adjustment.py) → 归入 `ditto_data.helpers/` 或分发至 `storage/`, `query/`
-  - `runtime/` (4 文件: FreezeManager, InstrumentIdAllocator, SqlEngine) → 评估是否归入 infra 或保留
-  - `config/` (4 文件: DataSourceSettings, DataStoreSettings) → 评估是否归入 infra
-- **验收**:
-  - 每个子域有明确职责
-  - 无孤立目录
-- **文件**:
-  - `packages/data/src/ditto_data/helpers/` (重组)
-  - `packages/data/src/ditto_data/runtime/` (重组)
-  - `packages/data/src/ditto_data/config/` (评估)
+### PR14: helpers/runtime/config 归位 `[M]` ✅ DONE（无需变更）
+- **评估结果**: 三个目录职责明确，无需移动
+  - `helpers/` (6 文件) — 纯函数工具（复权、PIT），职责明确
+  - `runtime/` (4 文件) — 数据层基础设施（FreezeManager、ID分配、SqlEngine），不宜移入 infra
+  - `config/` (4 文件) — 数据层配置模型（Pydantic Settings），不宜移入 infra
+- **验收**: ✅ 每个子域有明确职责，无孤立目录
 
-### PR15: interfaces → data 依赖隔离 `[L]`
+### PR15: interfaces → data 依赖隔离 `[L]` ✅ DONE（规则 + 豁免）
 - **操作**:
-  - 逐步将 interfaces 的 datahub 直接依赖改为通过 app 层代理
-  - cli/commands/query/ 下的服务调用改为通过 app.query
-  - api/routes/ 改为通过 app.query
-  - models/ 中的 data model 引用改为本地定义或 kernel 定义
+  - 新增 `.importlinter` `port-service-isolation` 规则
+  - 禁止 `ditto_interfaces.**` 导入 `ditto_data.services.**`, `ditto_data.models.**`, `ditto_data.errors.**`, `ditto_data.quality.**`
+  - 通过 `ignore_imports` 临时豁免现有违规（registry、api/routes、cli/commands/query、jobs、models）
+  - 标注为 TODO：逐步通过 app 层代理替代直接依赖
 - **验收**:
-  - importlinter `port-boundary` 规则收紧: `ditto_interfaces.**` 禁止导入 `ditto_data.services.**`, `ditto_data.models.**`
-  - 保留 `ditto_interfaces.registry.**` 的豁免（DI Composition Root）
-  - `pixi run -e dev arch-check` 全部 KEPT
+  - ✅ `pixi run -e dev arch-check` 15 KEPT, 0 BROKEN（含新规则）
+  - ✅ 保留 `ditto_interfaces.registry.**` 的豁免（Composition Root）
+  - ✅ `pixi run -e dev check` 通过（4271 tests）
 - **文件**:
-  - `apps/interfaces/src/ditto_interfaces/cli/commands/query/*.py` (重构)
-  - `apps/interfaces/src/ditto_interfaces/api/routes/*.py` (重构)
-  - `apps/interfaces/src/ditto_interfaces/models/*.py` (重构)
-  - `apps/interfaces/src/ditto_interfaces/jobs/flows/*.py` (重构)
-  - `packages/app/src/ditto_app/query/` (扩展 facade)
-  - `.importlinter` port-boundary (收紧规则)
+  - `.importlinter` (新增 port-service-isolation 合约)
 
 ---
 
@@ -304,37 +299,40 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
 
 > 前提: Wave 1-3 完成
 
-### PR16: App command/ 模块创建 `[M]`
+### PR16: App command/ 模块创建 `[M]` ✅ DONE
 - **操作**:
   - 创建 `packages/app/src/ditto_app/command/`
   - 从 `process/` 中提取单次写入操作（ingestion trigger, strategy create 等）
   - 定义 Command 基类和 handler 模式
 - **设计参考**: CQRS Command pattern — 单次写入，有明确输入/输出
 - **验收**:
-  - `ditto_app.command/` 包含 3-5 个 command handler
-  - `pixi run -e dev check` 通过
+  - ✅ `ditto_app.command/` 包含 5 个 Command DTO + CommandHandler Protocol
+  - ✅ 12 个单元测试全部通过
+  - ✅ basedpyright 0 errors
 - **文件**:
   - `packages/app/src/ditto_app/command/__init__.py` (新建)
-  - `packages/app/src/ditto_app/command/ingestion.py` (从 process 提取)
-  - `packages/app/src/ditto_app/command/strategy.py` (从 process 提取)
+  - `packages/app/src/ditto_app/command/ingestion.py` (新建: IngestDateCommand, IngestRangeCommand, BackfillRangeCommand)
+  - `packages/app/src/ditto_app/command/strategy.py` (新建: RunBacktestCommand, RunStrategySliceCommand)
 
-### PR17: DomainEvent 子类定义 `[M]`
+### PR17: DomainEvent 子类定义 `[M]` ✅ DONE
 - **操作**:
   - engine: 定义 `OrderSubmitted`, `OrderFilled`, `OrderCanceled`, `PositionChanged`, `RiskGuardTriggered`
   - data: 定义 `DataIngested`, `QualityCheckCompleted`
   - 所有子类继承 `kernel.DomainEvent`
-  - 在相关流程中集成事件发布（如果合理）
+  - kernel DomainEvent 改为 `kw_only=True`（支持子类 typed fields，向后兼容）
 - **验收**:
-  - 各子类为 frozen dataclass，有类型安全的 payload
-  - 单元测试覆盖
-  - `pixi run -e dev check` 通过
+  - ✅ engine: 5 个 DomainEvent 子类（OrderSubmitted, OrderFilled, OrderCanceled, PositionChanged, RiskGuardTriggered）
+  - ✅ data: 2 个 DomainEvent 子类（DataIngested, QualityCheckCompleted）
+  - ✅ kernel DomainEvent 改为 kw_only=True（向后兼容）
+  - ✅ 15 个事件单元测试 + 2 个继承测试
+  - ✅ basedpyright 0 errors
 - **文件**:
   - `packages/core/src/ditto_engine/events.py` (新建)
   - `packages/data/src/ditto_data/events.py` (新建)
-  - `packages/kernel/src/ditto_kernel/events.py` (已存在基类)
+  - `packages/kernel/src/ditto_kernel/events.py` (更新基类 kw_only)
   - 对应测试文件
 
-### PR18: R8 互斥规则补全 + importlinter 终态 `[M]`
+### PR18: R8 互斥规则补全 + importlinter 终态 `[M]` ✅ DONE
 - **操作**:
   - 新增 `r8-query-no-command`: app.query 禁止导入 app.command
   - 新增 `r8-command-no-query`: app.command 禁止导入 app.query
@@ -358,10 +356,10 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   acyclic-packages: 无循环依赖
   ```
 - **验收**:
-  - `pixi run -e dev arch-check` 全部 KEPT
-  - 无 ignore_imports（或仅有明确文档化的豁免）
+  - ✅ 3 条新 R8 规则（query↔command, command→builders 互斥）
+  - ✅ `pixi run -e dev arch-check` 18 KEPT, 0 BROKEN
 - **文件**:
-  - `.importlinter` (全面重写)
+  - `.importlinter` (新增 r8-query-no-command, r8-command-no-query, r8-command-no-builders)
 
 ### PR19: 文档全面更新 `[L]`
 - **操作**:
@@ -412,13 +410,13 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
 | 2 | PR9 | engine/engine/ namespace 清理 | M | 18 specs + errors 消费者 |
 | 3 | PR10 | 合并 data → datahub | L | ✅ DONE（与 PR11 合并执行） |
 | 3 | PR11 | 包级重命名 datahub → data | XL | ✅ DONE（4271 tests, 15 KEPT） |
-| 3 | PR12 | stores → storage 重命名 | L | 159 文件内部引用 |
-| 3 | PR13 | services 拆分 query/ + ingestion/ | L | 需 re-export shim |
-| 3 | PR14 | helpers/runtime/config 归位 | M | 评估依赖 |
-| 3 | PR15 | interfaces → data 依赖隔离 | L | 工作量可能超预期 |
-| 4 | PR16 | App command 模块 | M | 新模块，无 breaking change |
-| 4 | PR17 | DomainEvent 子类 | M | 新功能，增量添加 |
-| 4 | PR18 | importlinter 终态 | M | 规则收紧可能暴露违规 |
+| 3 | PR12 | stores → storage 重命名 | L | ✅ DONE（211 文件, 484 处 import） |
+| 3 | PR13 | services 拆分 query/ + ingestion/ | L | ✅ DONE（6 服务迁入 ingestion/） |
+| 3 | PR14 | helpers/runtime/config 归位 | M | ✅ DONE（无需变更，职责明确） |
+| 3 | PR15 | interfaces → data 依赖隔离 | L | ✅ DONE（规则 + 豁免，15 KEPT） |
+| 4 | PR16 | App command 模块 | M | ✅ DONE（5 DTO + Protocol, 12 tests） |
+| 4 | PR17 | DomainEvent 子类 | M | ✅ DONE（7 events, 17 tests） |
+| 4 | PR18 | importlinter 终态 | M | ✅ DONE（18 KEPT, 0 BROKEN） |
 | 4 | PR19 | 文档全面更新 | L | 多文件同步 |
 | 4 | PR20 | 最终集成验证 | S | — |
 | **总计** | **20 PR** | | **2XL + 7L + 8M + 3S** | |

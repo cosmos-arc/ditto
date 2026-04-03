@@ -5,8 +5,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_data.models import MacroCategory
-from ditto_data.services.macro_service import MacroQuery, MacroService
+from ditto_app.query.macro import MacroQueryFacade
 from fastapi import APIRouter, Query
 
 from ditto_interfaces.models.common import APIResponse
@@ -23,7 +22,7 @@ router = APIRouter(prefix="/macro", tags=["macro"])
 @inject
 async def post_indicators(
     query: IndicatorQuery,
-    service: Annotated[MacroService, FromComponent()],
+    facade: Annotated[MacroQueryFacade, FromComponent()],
 ) -> APIResponse[list[Indicator]]:
     """
     查询宏观指标数据.
@@ -35,26 +34,25 @@ async def post_indicators(
             - end_date: 结束日期 (可选)
             - category: 类别过滤 (economic/interest_rate/exchange_rate/money_supply)
             - frequency: 频率过滤 (daily/monthly/quarterly)
-        service: MacroService 依赖注入
+        facade: MacroQueryFacade 依赖注入
 
     Returns:
         APIResponse 包含宏观指标数据列表
 
     """
-    # 构建查询对象
+    # 构建查询参数
     start_str = query.start_date.isoformat() if query.start_date else None
     end_str = query.end_date.isoformat() if query.end_date else None
 
-    service_query = MacroQuery(
+    # 调用 facade（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(
+        facade.find_indicators,
         indicators=query.indicators,
         start=start_str,
         end=end_str,
         category=query.category,
         frequency=query.frequency,
     )
-
-    # 调用 service（在线程池中执行，避免阻塞事件循环）
-    df = await asyncio.to_thread(service.find_indicators, service_query)
 
     # 转换为模型列表
     indicators = to_indicator_list(df)
@@ -65,16 +63,16 @@ async def post_indicators(
 @router.get("/indicators/metadata", response_model=APIResponse[list[Indicator]])
 @inject
 async def get_indicators_metadata(
-    service: Annotated[MacroService, FromComponent()],
+    facade: Annotated[MacroQueryFacade, FromComponent()],
     start: Annotated[str, Query(description="开始日期 (YYYY-MM-DD)")],
     end: Annotated[str, Query(description="结束日期 (YYYY-MM-DD)")],
-    category: Annotated[MacroCategory | None, Query(description="类别过滤")] = None,
+    category: Annotated[str | None, Query(description="类别过滤")] = None,
 ) -> APIResponse[list[Indicator]]:
     """
     获取指标元数据列表.
 
     Args:
-        service: MacroService 依赖注入
+        facade: MacroQueryFacade 依赖注入
         start: 开始日期 (YYYY-MM-DD)
         end: 结束日期 (YYYY-MM-DD)
         category: 类别过滤 (可选)
@@ -83,9 +81,9 @@ async def get_indicators_metadata(
         APIResponse 包含宏观指标数据列表
 
     """
-    # 调用 service（在线程池中执行，避免阻塞事件循环）
+    # 调用 facade（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(
-        service.list_indicators,
+        facade.list_indicators,
         start=start,
         end=end,
         category=category,

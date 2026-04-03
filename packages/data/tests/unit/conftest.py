@@ -9,7 +9,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from ditto_data.stores.sqlite_client import SQLiteClient
+from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
 
 

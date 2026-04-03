@@ -9,76 +9,76 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_data.stores.capital.index_composition.index_composition_reader import (
+from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
-from ditto_data.stores.capital.index_composition.index_composition_writer import (
+from ditto_data.storage.capital.index_composition.index_composition_writer import (
     IndexCompositionWriter,
 )
-from ditto_data.stores.capital.margin.margin_trading_reader import (
+from ditto_data.storage.capital.margin.margin_trading_reader import (
     MarginTradingReader,
 )
-from ditto_data.stores.capital.margin.margin_trading_writer import (
+from ditto_data.storage.capital.margin.margin_trading_writer import (
     MarginTradingWriter,
 )
-from ditto_data.stores.capital.pledge.pledge_ratio_reader import PledgeRatioReader
-from ditto_data.stores.capital.pledge.pledge_ratio_writer import PledgeRatioWriter
-from ditto_data.stores.capital.valuation.valuation_metrics_reader import (
+from ditto_data.storage.capital.pledge.pledge_ratio_reader import PledgeRatioReader
+from ditto_data.storage.capital.pledge.pledge_ratio_writer import PledgeRatioWriter
+from ditto_data.storage.capital.valuation.valuation_metrics_reader import (
     ValuationMetricsReader,
 )
-from ditto_data.stores.capital.valuation.valuation_metrics_writer import (
+from ditto_data.storage.capital.valuation.valuation_metrics_writer import (
     ValuationMetricsWriter,
 )
-from ditto_data.stores.fundamental.corporate.corporate_actions_reader import (
+from ditto_data.storage.fundamental.corporate.corporate_actions_reader import (
     CorporateActionsReader,
 )
-from ditto_data.stores.fundamental.corporate.corporate_actions_writer import (
+from ditto_data.storage.fundamental.corporate.corporate_actions_writer import (
     CorporateActionsWriter,
 )
-from ditto_data.stores.fundamental.corporate.dividend_reader import DividendReader
-from ditto_data.stores.fundamental.corporate.dividend_writer import DividendWriter
-from ditto_data.stores.fundamental.financial.balance_sheet_reader import (
+from ditto_data.storage.fundamental.corporate.dividend_reader import DividendReader
+from ditto_data.storage.fundamental.corporate.dividend_writer import DividendWriter
+from ditto_data.storage.fundamental.financial.balance_sheet_reader import (
     BalanceSheetReader,
 )
-from ditto_data.stores.fundamental.financial.balance_sheet_writer import (
+from ditto_data.storage.fundamental.financial.balance_sheet_writer import (
     BalanceSheetWriter,
 )
-from ditto_data.stores.fundamental.financial.cash_flow_reader import CashFlowReader
-from ditto_data.stores.fundamental.financial.cash_flow_writer import CashFlowWriter
-from ditto_data.stores.fundamental.financial.income_statement_reader import (
+from ditto_data.storage.fundamental.financial.cash_flow_reader import CashFlowReader
+from ditto_data.storage.fundamental.financial.cash_flow_writer import CashFlowWriter
+from ditto_data.storage.fundamental.financial.income_statement_reader import (
     IncomeStatementReader,
 )
-from ditto_data.stores.fundamental.financial.income_statement_writer import (
+from ditto_data.storage.fundamental.financial.income_statement_writer import (
     IncomeStatementWriter,
 )
-from ditto_data.stores.fundamental.forecast.express_reader import ExpressReader
-from ditto_data.stores.fundamental.forecast.express_writer import ExpressWriter
-from ditto_data.stores.fundamental.forecast.forecast_reader import ForecastReader
-from ditto_data.stores.fundamental.forecast.forecast_writer import ForecastWriter
-from ditto_data.stores.market.commodity.bars import (
+from ditto_data.storage.fundamental.forecast.express_reader import ExpressReader
+from ditto_data.storage.fundamental.forecast.express_writer import ExpressWriter
+from ditto_data.storage.fundamental.forecast.forecast_reader import ForecastReader
+from ditto_data.storage.fundamental.forecast.forecast_writer import ForecastWriter
+from ditto_data.storage.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,
 )
-from ditto_data.stores.market.etf.adj import EtfAdjFactorReader, EtfAdjFactorWriter
-from ditto_data.stores.market.etf.bars import EtfBarsReader, EtfBarsWriter
-from ditto_data.stores.market.etf.nav import EtfNavReader, EtfNavWriter
-from ditto_data.stores.market.etf.status import EtfStatusReader, EtfStatusWriter
-from ditto_data.stores.market.fx.bars import FxBarsReader, FxBarsWriter
-from ditto_data.stores.market.index.bars import IndexBarsReader, IndexBarsWriter
-from ditto_data.stores.market.index.constituent import (
+from ditto_data.storage.market.etf.adj import EtfAdjFactorReader, EtfAdjFactorWriter
+from ditto_data.storage.market.etf.bars import EtfBarsReader, EtfBarsWriter
+from ditto_data.storage.market.etf.nav import EtfNavReader, EtfNavWriter
+from ditto_data.storage.market.etf.status import EtfStatusReader, EtfStatusWriter
+from ditto_data.storage.market.fx.bars import FxBarsReader, FxBarsWriter
+from ditto_data.storage.market.index.bars import IndexBarsReader, IndexBarsWriter
+from ditto_data.storage.market.index.constituent import (
     IndexConstituentReader,
     IndexConstituentWriter,
 )
-from ditto_data.stores.market.stock.adj import (
+from ditto_data.storage.market.stock.adj import (
     StockAdjFactorReader,
     StockAdjFactorWriter,
 )
-from ditto_data.stores.market.stock.bars import StockBarsReader, StockBarsWriter
-from ditto_data.stores.market.stock.status import (
+from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_data.storage.market.stock.status import (
     StockStatusReader,
     StockStatusWriter,
 )
-from ditto_data.stores.metadata.instrument import InstrumentReader
+from ditto_data.storage.metadata.instrument import InstrumentReader
 
 
 @dataclass

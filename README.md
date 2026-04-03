@@ -265,7 +265,7 @@ ditto/
 - [设计文档](docs/design/README.md) — 系统架构设计
 - [Sprint 规划](docs/sprints/README.md) — 迭代计划
 - [ADR](docs/adr/README.md) — 架构决策记录
-- [packages/core/CLAUDE.md](packages/core/CLAUDE.md) — Core 层规范
+- [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md) — Engine 层规范
 - [packages/datahub/CLAUDE.md](packages/datahub/CLAUDE.md) — DataHub 层规范
 - [apps/port/CLAUDE.md](apps/port/CLAUDE.md) — Port 层规范
 - [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md) — Infra 层规范

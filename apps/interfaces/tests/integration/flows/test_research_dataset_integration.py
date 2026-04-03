@@ -22,20 +22,20 @@ from ditto_app.process.materialization import (
     InvalidationCascadeOrchestrator,
 )
 from ditto_app.query.research import ResearchDatasetFacade
-from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
-from ditto_data.services import DerivedCatalogService, ResearchCatalogService
-from ditto_data.sources import ExchangeTransformers
-from ditto_data.sources.source import DataSources
-from ditto_data.stores.sqlite_client import SQLiteClient
-from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
-from ditto_interfaces.jobs.flows.research import research_dataset_build_flow
-from ditto_interfaces.registry import ConfigProvider
-from ditto_interfaces.registry.contexts.bundle import MaterializationBundle
-from ditto_interfaces.registry.datahub import (
+from ditto_data.di import (
     DerivedProvider,
     MetadataProvider,
     RuntimeProvider,
 )
+from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
+from ditto_data.services import DerivedCatalogService, ResearchCatalogService
+from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.source import DataSources
+from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_interfaces.jobs.flows.research import research_dataset_build_flow
+from ditto_interfaces.registry import ConfigProvider
+from ditto_interfaces.registry.contexts.bundle import MaterializationBundle
 
 pytestmark = pytest.mark.serial
 

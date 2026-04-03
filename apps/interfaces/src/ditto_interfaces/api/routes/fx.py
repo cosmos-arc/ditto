@@ -1,4 +1,4 @@
-"""FX (外汇) 娡 API 路由."""
+"""FX (外汇) 模 API 路由."""
 
 import asyncio
 from typing import Annotated
@@ -6,8 +6,7 @@ from typing import Annotated
 import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID
-from ditto_data.services.market_service import MarketService
+from ditto_app.query.fx import FXQueryFacade
 from fastapi import APIRouter, HTTPException
 
 from ditto_interfaces.models.common import APIResponse
@@ -15,15 +14,12 @@ from ditto_interfaces.models.fx import FxBar, FxQuery, to_fx_bar_list
 
 router = APIRouter(prefix="/fx", tags=["fx"])
 
-# 反向映射：instrument_id -> currency_pair (e.g., 4000001 -> "USDCNH.FXCM")
-_INSTRUMENT_ID_TO_CURRENCY_PAIR = {v: k for k, v in FX_CODE_TO_INSTRUMENT_ID.items()}
-
 
 @router.post("/bars", response_model=APIResponse[list[FxBar]])
 @inject
 async def post_bars(
     query: FxQuery,
-    market_service: Annotated[MarketService, FromComponent()],
+    facade: Annotated[FXQueryFacade, FromComponent()],
 ) -> APIResponse[list[FxBar]]:
     """
     查询外汇 K 线数据.
@@ -34,14 +30,14 @@ async def post_bars(
             - start_date: 开始日期 (可选)
             - end_date: 结束日期 (可选)
             - limit: 返回数量限制 (默认 1000, 范围 1-10000)
-        market_service: MarketService 依赖注入
+        facade: FXQueryFacade 依赖注入
 
     Returns:
         APIResponse 包含外汇 K 线数据列表
 
     """
     # P1-1: 严格校验非法参数
-    valid_pairs = set(FX_CODE_TO_INSTRUMENT_ID.keys())
+    valid_pairs = facade.get_valid_pairs()
     if query.currency_pairs:
         invalid_pairs = [p for p in query.currency_pairs if p not in valid_pairs]
         if invalid_pairs:
@@ -55,10 +51,10 @@ async def post_bars(
             )
 
         instrument_ids = [
-            FX_CODE_TO_INSTRUMENT_ID[pair] for pair in query.currency_pairs
+            facade.pair_to_instrument_id(pair) for pair in query.currency_pairs
         ]
     else:
-        instrument_ids = list(FX_CODE_TO_INSTRUMENT_ID.values())
+        instrument_ids = facade.get_all_instrument_ids()
 
     # P1-2: limit 下推到在 DataFrame 层应用
     # 构建查询参数
@@ -68,12 +64,11 @@ async def post_bars(
 
     # 查询数据（在线程池中执行，避免阻塞事件循环)
     df = await asyncio.to_thread(
-        market_service.list_bars,
+        facade.list_bars,
         instrument_ids=instrument_ids,
         start=start_str,
         end=end_str,
-        asset_class="fx",
-        limit=limit_param,  # 传递 limit 参数
+        limit=limit_param,
     )
 
     # 如果 DataFrame 为空,直接返回空列表
@@ -82,10 +77,12 @@ async def post_bars(
 
     # P2-1: 移除 trade_date_utc 的 dt.date() 截断,直接保留原始值
     # 添加 currency_pair 列（从 instrument_id 映射）
+    id_to_pair_map = {
+        iid: facade.instrument_id_to_pair(iid) or ""
+        for iid in df["instrument_id"].unique().to_list()
+    }
     df = df.with_columns(
-        pl.col("instrument_id")
-        .replace(_INSTRUMENT_ID_TO_CURRENCY_PAIR)
-        .alias("currency_pair")
+        pl.col("instrument_id").replace(id_to_pair_map).alias("currency_pair")
     )
 
     # 选择并重命名列以匹配模型（移除 dt.date() 截断)

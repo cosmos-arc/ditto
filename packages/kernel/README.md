@@ -15,7 +15,7 @@
 │         apps/port                  │
 │     (Application Layer)             │
 ├─────────────────────────────────────┤
-│      packages/core                 │
+│      packages/engine               │
 │     (Domain Layer)                  │
 ├─────────────────────────────────────┤
 │      packages/datahub              │

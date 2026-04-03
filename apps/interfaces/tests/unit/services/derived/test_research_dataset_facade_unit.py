@@ -18,20 +18,22 @@ from ditto_analytics.models.research import (
 )
 from ditto_analytics.research.domain import DatasetSnapshot, KnownAtPolicy
 from ditto_app.query.research import ResearchDatasetFacade
-from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
-from ditto_data.services import DerivedCatalogService, ResearchCatalogService
-from ditto_data.sources import ExchangeTransformers
-from ditto_data.sources.source import DataSources
-from ditto_data.stores.sqlite_client import SQLiteClient
-from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
-from ditto_interfaces.registry import ConfigProvider
-from ditto_interfaces.registry.datahub import (
+from ditto_data.di import (
     CapitalProvider,
     DerivedProvider,
+    FundamentalProvider,
+    MacroProvider,
     MarketProvider,
     MetadataProvider,
     RuntimeProvider,
 )
+from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
+from ditto_data.services import DerivedCatalogService, ResearchCatalogService
+from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.source import DataSources
+from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_interfaces.registry import ConfigProvider
 
 # CapitalProvider is used in _make_container to satisfy MetadataService deps
 
@@ -67,6 +69,8 @@ def _make_container(*, monkeypatch, tmp_path: Path):
         MarketProvider(),
         CapitalProvider(),
         DerivedProvider(),
+        FundamentalProvider(),
+        MacroProvider(),
         AppQueryProvider(),
     )
 

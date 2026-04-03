@@ -234,7 +234,7 @@ params: list[str | int | bool | None]
 #### SecurityStore
 **旧导入:**
 ```python
-from ditto_data.stores import SecurityStore
+from ditto_data.storage import SecurityStore
 ```
 
 **新导入:**
@@ -245,7 +245,7 @@ from ditto_data.domains.metadata.security import SecurityStore
 #### CalendarStore
 **旧导入:**
 ```python
-from ditto_data.stores import CalendarStore
+from ditto_data.storage import CalendarStore
 ```
 
 **新导入:**

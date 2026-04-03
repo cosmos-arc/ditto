@@ -34,11 +34,11 @@ from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotSer
 from ditto_data.services.publication_safety_record_service import (
     PublicationSafetyRuntimeStores,
 )
-from ditto_data.stores.runtime.derived_sqlite import (
+from ditto_data.storage.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_data.stores.runtime.publication_safety import (
+from ditto_data.storage.runtime.publication_safety import (
     CertificationReader,
     CertificationWriter,
     ManifestReader,
@@ -48,11 +48,11 @@ from ditto_data.stores.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
 )
-from ditto_data.stores.runtime.publication_shadow_sqlite import (
+from ditto_data.storage.runtime.publication_shadow_sqlite import (
     SQLiteDerivedShadowSlotReader,
     SQLiteDerivedShadowSlotWriter,
 )
-from ditto_data.stores.sqlite_client import SQLiteClient
+from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_infra.foundation import SQLitePool
 

@@ -36,11 +36,11 @@ from ditto_data.services.derived_catalog_service import DerivedCatalogService
 from ditto_data.services.publication_safety_record_service import (
     PublicationSafetyRuntimeStores,
 )
-from ditto_data.stores.runtime.derived_sqlite import (
+from ditto_data.storage.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_data.stores.runtime.publication_safety import (
+from ditto_data.storage.runtime.publication_safety import (
     CertificationReader,
     CertificationWriter,
     ManifestReader,

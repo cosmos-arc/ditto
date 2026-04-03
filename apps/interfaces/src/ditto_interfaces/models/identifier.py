@@ -1,12 +1,14 @@
 """共享标识符解析工具。"""
 
-from ditto_data.services.metadata_service import MetadataService
+from __future__ import annotations
+
+from ditto_app.query.metadata import MetadataQueryFacade
 
 __all__ = ["resolve_instrument_identifier"]
 
 
 def resolve_instrument_identifier(
-    metadata_service: MetadataService,
+    metadata_facade: MetadataQueryFacade,
     *,
     instrument_id: int | None,
     standard_ticker: str | None,
@@ -25,7 +27,7 @@ def resolve_instrument_identifier(
         解析后的 canonical instrument_id (int)，查不到返回 None.
 
     """
-    return metadata_service.resolve_instrument_identifier(
+    return metadata_facade.resolve_instrument_identifier(
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,

@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_container, provide
+from ditto_data.di import RuntimeProvider
 from ditto_data.models.strategy import (
     ArtifactKind,
     StrategyArtifactRecord,
@@ -20,7 +21,6 @@ from ditto_data.services.strategy.strategy_catalog_service import (
 )
 from ditto_data.services.strategy.strategy_run_service import StrategyRunService
 from ditto_data.sources.source import DataSources
-from ditto_interfaces.registry.datahub import RuntimeProvider
 from ditto_interfaces.registry.infra import ConfigProvider
 
 

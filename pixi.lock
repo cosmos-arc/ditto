@@ -358,8 +358,8 @@ environments:
       - pypi: ./apps/interfaces
       - pypi: ./packages/analytics
       - pypi: ./packages/app
-      - pypi: ./packages/core
       - pypi: ./packages/data
+      - pypi: ./packages/engine
       - pypi: ./packages/infra
       - pypi: ./packages/kernel
       win-64:
@@ -661,8 +661,8 @@ environments:
       - pypi: ./apps/interfaces
       - pypi: ./packages/analytics
       - pypi: ./packages/app
-      - pypi: ./packages/core
       - pypi: ./packages/data
+      - pypi: ./packages/engine
       - pypi: ./packages/infra
       - pypi: ./packages/kernel
   dev:
@@ -1121,8 +1121,8 @@ environments:
       - pypi: ./apps/interfaces
       - pypi: ./packages/analytics
       - pypi: ./packages/app
-      - pypi: ./packages/core
       - pypi: ./packages/data
+      - pypi: ./packages/engine
       - pypi: ./packages/infra
       - pypi: ./packages/kernel
       win-64:
@@ -1522,8 +1522,8 @@ environments:
       - pypi: ./apps/interfaces
       - pypi: ./packages/analytics
       - pypi: ./packages/app
-      - pypi: ./packages/core
       - pypi: ./packages/data
+      - pypi: ./packages/engine
       - pypi: ./packages/infra
       - pypi: ./packages/kernel
 packages:
@@ -2849,12 +2849,13 @@ packages:
 - pypi: ./packages/data
   name: ditto-data
   version: 0.1.0
-  sha256: 6bd842d7b02f80ab930cf89fd376088b3c5bbb7f9fc459cc0c6ba64e9b17afee
+  sha256: 45044cd94a0d0103f9cc4600d09246760966907e2a88bdbf197639543614fdb9
   requires_dist:
   - ditto-kernel
   - ditto-analytics
+  - ditto-infra
   requires_python: '>=3.13'
-- pypi: ./packages/core
+- pypi: ./packages/engine
   name: ditto-engine
   version: 0.1.0
   sha256: 3156583103691c4e7f44a38f191e20e2b7855b6f18a74aa7b6013f988b977a56

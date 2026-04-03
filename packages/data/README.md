@@ -167,7 +167,7 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 
 #### Metadata 域
 
-- `stores/metadata/`: Metadata 域
+- `storage/metadata/`: Metadata 域
   - `instrument/`: 标的主数据
     - `instrument_reader.py`: InstrumentReader（标的查询）
     - `instrument_writer.py`: InstrumentWriter（标的写入）
@@ -189,7 +189,7 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 
 #### Market 域
 
-- `stores/market/`: Market 域
+- `storage/market/`: Market 域
   - `stock/`: 股票行情数据
     - `bars/bars_reader.py`: StockBarsReader（股票 K线查询）
     - `bars/bars_writer.py`: StockBarsWriter（股票 K线写入）
@@ -215,7 +215,7 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 
 #### Fundamental 域
 
-- `stores/fundamental/`: Fundamental 域（企业基本面数据）
+- `storage/fundamental/`: Fundamental 域（企业基本面数据）
   - `financial/`: 财务报表数据子域
     - `balance_sheet_reader.py`: BalanceSheetReader（资产负债表查询，支持 PIT）
     - `balance_sheet_writer.py`: BalanceSheetWriter（资产负债表写入）
@@ -256,7 +256,7 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 
 #### Capital 域
 
-- `stores/capital/`: Capital 域（资金与资本市场数据）
+- `storage/capital/`: Capital 域（资金与资本市场数据）
   - `margin/`: 融资融券数据子域
     - `margin_trading_reader.py`: MarginTradingReader（融资融券查询，支持 PIT）
     - `margin_trading_writer.py`: MarginTradingWriter（融资融券写入）
@@ -297,7 +297,7 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 
 #### Macro 域
 
-- `stores/macro/`: Macro 域（宏观经济指标数据）
+- `storage/macro/`: Macro 域（宏观经济指标数据）
   - `indicator/`: 宏观指标子域
     - `indicator_reader.py`: IndicatorReader（宏观指标查询，支持 PIT）
     - `indicator_writer.py`: IndicatorWriter（宏观指标写入）
@@ -360,7 +360,7 @@ data = service.query(query)
 
 #### Features 域
 
-- `stores/features/`: Features 域（技术指标与衍生特征域）
+- `storage/features/`: Features 域（技术指标与衍生特征域）
   - `technical/`: 技术指标子域
     - `technical_indicator_reader.py`: TechnicalIndicatorReader（技术指标查询）
     - `technical_indicator_writer.py`: TechnicalIndicatorWriter（技术指标写入）
@@ -403,7 +403,7 @@ data = service.query(query)
 
 #### Factors 域
 
-- `stores/factors/`: Factors 域（因子信号域）
+- `storage/factors/`: Factors 域（因子信号域）
   - `factor_reader.py`: FactorReader（因子信号查询，支持 PIT）
   - `factor_writer.py`: FactorWriter（因子信号写入）
   - `factor_metadata_reader.py`: FactorMetadataReader（因子元数据查询）
@@ -543,7 +543,7 @@ result = service.get_valuation_metrics(
 
 ```python
 from ditto_data.config import DataRootConfig
-from ditto_data.stores.base import ParquetStore, SQLiteStore
+from ditto_data.storage.base import ParquetStore, SQLiteStore
 import polars as pl
 
 # 初始化配置

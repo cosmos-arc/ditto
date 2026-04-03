@@ -3,13 +3,11 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
-from enum import Enum
 from typing import Any
 
 import orjson
 import typer
-from ditto_data.models import MacroCategory, MacroFrequency
-from ditto_data.services.macro_service import MacroQuery, MacroService
+from ditto_app.query.macro import MacroQueryFacade
 from rich.console import Console
 from rich.table import Table
 
@@ -18,15 +16,19 @@ from ditto_interfaces.models.macro import to_indicator_list
 
 _TABLE_DISPLAY_LIMIT = 20
 
+# 支持的枚举值（字符串）
+_VALID_CATEGORIES = ("economic", "interest_rate", "exchange_rate", "money_supply")
+_VALID_FREQUENCIES = ("daily", "monthly", "quarterly")
+
 app = typer.Typer(help="宏观数据查询")
 console = Console()
 
 
 @contextmanager
-def _get_macro_service() -> Generator[MacroService, None, None]:
-    """获取 MacroService 实例."""
+def _get_macro_facade() -> Generator[MacroQueryFacade, None, None]:
+    """获取 MacroQueryFacade 实例."""
     with create_cli_host() as bundle:
-        yield bundle.macro_service
+        yield MacroQueryFacade(macro_service=bundle.macro_service)
 
 
 def _output_json(items: list[Any]) -> None:
@@ -63,16 +65,15 @@ def _validate_date_range(start_date: str | None, end_date: str | None) -> None:
             raise typer.Exit(1)
 
 
-def _validate_enum[E: Enum](
+def _validate_value(
     value: str | None,
-    enum_class: type[E],
+    valid_values: tuple[str, ...],
     field_name: str,
-) -> E | None:
-    """验证枚举值并返回枚举实例."""
+) -> str | None:
+    """验证字符串值是否在可选范围内."""
     if value is None:
         return None
 
-    valid_values = [e.value for e in enum_class]
     if value not in valid_values:
         typer.secho(
             f"错误: 无效的{field_name} '{value}', 可选: {', '.join(valid_values)}",
@@ -80,7 +81,7 @@ def _validate_enum[E: Enum](
         )
         raise typer.Exit(1)
 
-    return enum_class(value)
+    return value
 
 
 @app.command("indicators")
@@ -107,18 +108,16 @@ def query_indicators(
 
     """
     _validate_date_range(start_date, end_date)
-    cat_value = _validate_enum(category, MacroCategory, "类别")
-    freq_value = _validate_enum(frequency, MacroFrequency, "频率")
+    cat_value = _validate_value(category, _VALID_CATEGORIES, "类别")
+    freq_value = _validate_value(frequency, _VALID_FREQUENCIES, "频率")
 
-    with _get_macro_service() as service:
-        query = MacroQuery(
+    with _get_macro_facade() as facade:
+        df = facade.find_indicators(
             start=start_date,
             end=end_date,
             category=cat_value,
             frequency=freq_value,
         )
-
-        df = service.find_indicators(query)
 
         if df.is_empty():
             typer.echo("未找到宏观指标数据")
@@ -166,14 +165,12 @@ def list_metadata(
         ditto query macro metadata -c economic
 
     """
-    cat_value = _validate_enum(category, MacroCategory, "类别")
+    cat_value = _validate_value(category, _VALID_CATEGORIES, "类别")
 
-    with _get_macro_service() as service:
-        query = MacroQuery(
+    with _get_macro_facade() as facade:
+        df = facade.find_indicators(
             category=cat_value,
         )
-
-        df = service.find_indicators(query)
 
         if df.is_empty():
             typer.echo("未找到宏观指标元数据")

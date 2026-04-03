@@ -21,6 +21,7 @@ from ditto_app.process.strategy import (
     StrategyRunService,
     StrategyRunServiceConfig,
 )
+from ditto_data.di import RuntimeProvider
 from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.services.audit import ExecutionAuditService
 from ditto_data.services.market_service import MarketService
@@ -42,7 +43,6 @@ from ditto_engine.execution.brokerage import Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner
 from ditto_engine.risk.pre_trade import CompositePreTradeCheck
 from ditto_interfaces.registry import ConfigProvider
-from ditto_interfaces.registry.datahub import RuntimeProvider
 
 
 def _sources_provider() -> Provider:
@@ -73,7 +73,7 @@ def _strategy_runtime_deps_provider() -> Provider:
 
 def _make_test_container() -> Container:
     from ditto_app.providers import AppBuilderFactory
-    from ditto_interfaces.registry.core import QualityProvider
+    from ditto_data.di import QualityProvider
 
     return make_container(
         ConfigProvider(),

@@ -198,7 +198,7 @@ class TestSchemaEvolution:
 def _make_catalog_service(sqlite_client):
     """Create a real DerivedCatalogService backed by in-memory SQLite."""
     from ditto_data.services.derived_catalog_service import DerivedCatalogService
-    from ditto_data.stores.runtime.derived_sqlite import (
+    from ditto_data.storage.runtime.derived_sqlite import (
         SQLiteDerivedCatalogReader,
         SQLiteDerivedCatalogWriter,
     )

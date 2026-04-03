@@ -108,9 +108,9 @@ unfixable = []
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
 "apps/interfaces/src/ditto_interfaces/services/derived/research.py" = ["S608"]
 # EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
-"packages/core/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
+"packages/engine/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
-"packages/core/src/ditto_engine/portfolio/report_views.py" = ["D102"]
+"packages/engine/src/ditto_engine/portfolio/report_views.py" = ["D102"]
 
 # 测试文件 - 最宽松
 "tests/**/*.py" = [
@@ -274,7 +274,7 @@ reportImplicitStringConcatenation = "error"
 
 # 告诉 Pyright 源码根目录（解决 import 路径问题）
 extraPaths = [
-    "packages/core/src",
+    "packages/engine/src",
     "packages/infra/src",
     "packages/kernel/src",
     "packages/data/src",
@@ -293,7 +293,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 pythonpath = [
-    "packages/core/src",
+    "packages/engine/src",
     "packages/infra/src",
     "packages/kernel/src",
     "packages/data/src",
@@ -374,7 +374,7 @@ name = "cz_conventional_commits"
 version = "0.1.0"
 tag_format = "v$version"
 version_files = [
-    "packages/core/src/ditto_engine/__init__.py:__version__",
+    "packages/engine/src/ditto_engine/__init__.py:__version__",
     "packages/infra/src/ditto_infra/__init__.py:__version__",
     "packages/kernel/src/ditto_kernel/__init__.py:__version__",
     "packages/data/src/ditto_data/__init__.py:__version__",

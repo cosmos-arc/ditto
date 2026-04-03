@@ -10,7 +10,7 @@
 """
 
 from ditto_app.process.ingestion import BackfillManager
-from ditto_data.models.ingestion import InstrumentIngestParams
+from ditto_app.types import InstrumentIngestParams
 from prefect import flow
 from pydantic import BaseModel
 

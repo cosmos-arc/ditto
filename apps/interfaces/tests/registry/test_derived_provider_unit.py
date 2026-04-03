@@ -10,19 +10,21 @@ from ditto_app.process.materialization import (
     DerivedPublicationFacade,
 )
 from ditto_app.query.derived import DerivedQueryFacade
+from ditto_data.di import (
+    CapitalProvider,
+    DerivedProvider,
+    FundamentalProvider,
+    MacroProvider,
+    MarketProvider,
+    MetadataProvider,
+    QualityProvider,
+    RuntimeProvider,
+    get_data_providers,
+)
 from ditto_data.services import DerivedQueryService
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_interfaces.registry import ConfigProvider
-from ditto_interfaces.registry.core import QualityProvider
-from ditto_interfaces.registry.datahub import (
-    CapitalProvider,
-    DerivedProvider,
-    MarketProvider,
-    MetadataProvider,
-    RuntimeProvider,
-    get_datahub_providers,
-)
 
 
 def _sources_provider() -> Provider:
@@ -55,6 +57,8 @@ def _make_full_container():
         MetadataProvider(),
         MarketProvider(),
         CapitalProvider(),
+        FundamentalProvider(),
+        MacroProvider(),
         DerivedProvider(),
         *get_app_providers(),
     )
@@ -88,15 +92,13 @@ class TestDerivedProvider:
 
     def test_registry_exports_derived_provider(self) -> None:
         """Registry exports should keep DerivedProvider."""
+        import ditto_data.di as data_di
         import ditto_interfaces.registry as root_registry
-        import ditto_interfaces.registry.datahub as datahub_registry
 
-        provider_names = [
-            type(provider).__name__ for provider in get_datahub_providers()
-        ]
+        provider_names = [type(provider).__name__ for provider in get_data_providers()]
 
         assert "DerivedProvider" in provider_names
-        assert "DerivedProvider" in datahub_registry.__all__
+        assert "DerivedProvider" in data_di.__all__
         assert "DerivedProvider" in root_registry.__all__
 
     def test_derived_provider_only_has_datahub_methods(self) -> None:

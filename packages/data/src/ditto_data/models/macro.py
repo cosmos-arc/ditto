@@ -1,6 +1,23 @@
-"""宏观指标枚举定义。"""
+"""宏观指标枚举与模型定义。"""
 
+from __future__ import annotations
+
+from dataclasses import dataclass
 from enum import StrEnum
+
+
+@dataclass(frozen=True)
+class IndicatorMetadataSpec:
+    """宏观指标元数据写入规格。"""
+
+    code: str
+    name: str
+    category: MacroCategory
+    frequency: MacroFrequency
+    need_pit: bool
+    source: str | None = None
+    unit: str | None = None
+    description: str | None = None
 
 
 class MacroCategory(StrEnum):
@@ -41,4 +58,4 @@ class MacroFrequency(StrEnum):
     QUARTERLY = "quarterly"
 
 
-__all__ = ["MacroCategory", "MacroFrequency"]
+__all__ = ["IndicatorMetadataSpec", "MacroCategory", "MacroFrequency"]

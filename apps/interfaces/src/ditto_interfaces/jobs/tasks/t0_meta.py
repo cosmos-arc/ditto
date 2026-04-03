@@ -8,7 +8,7 @@ T0 元数据摄取任务工厂.
 from typing import Any
 
 from ditto_app.config import INGESTION_SPECS
-from ditto_data.models import Dataset
+from ditto_app.types import Dataset
 from prefect import task
 
 from ditto_interfaces.registry import create_ingestion_bundle

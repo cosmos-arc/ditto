@@ -31,13 +31,13 @@ class TestQualityProviderUsesCorrectPath:
         """QualityProvider 应该导入 get_default_dq_rules_dir。"""
         import ast
 
-        from ditto_interfaces.registry.core.quality import QualityProvider
+        from ditto_data.di.quality import QualityProvider
 
         # 读取源文件
         source_file = Path(QualityProvider.__module__.replace(".", "/") + ".py")
         if not source_file.exists():
             # 使用 __file__ 属性找到源文件
-            import ditto_interfaces.registry.core.quality as mod
+            import ditto_data.di.quality as mod
 
             source_file = Path(mod.__file__)
 

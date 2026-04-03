@@ -78,7 +78,7 @@ MAX_DRAWDOWN = 0.20          # UPPER_SNAKE
 
 ### Service 层查询方法命名规范
 
-> **适用范围**：本规范仅适用于 `packages/datahub/src/ditto_data/services/` 下的存储服务类。
+> **适用范围**：本规范仅适用于 `packages/data/src/ditto_data/services/` 下的存储服务类。
 
 | 前缀/方法 | 语义 | 返回 | 参数 | 数据不存在时 | 示例 |
 |-----------|------|------|------|-------------|------|
@@ -363,7 +363,7 @@ from ditto_infra.config import get_settings  # 应为 ditto_infra.foundation.con
 from ditto_data import DataHub
 
 # ❌ 错误
-from ditto_data.stores.bars_store import BarsStore
+from ditto_data.storage.bars_store import BarsStore
 ```
 
 ### Server 层导入
@@ -480,10 +480,13 @@ tar -tzf dist/*.whl | grep py.typed
 
 | 包 | py.typed 状态 | 路径 |
 |---|--------------|------|
-| ditto_engine | ✅ | `packages/core/src/ditto_engine/py.typed` |
-| ditto_data | ✅ | `packages/datahub/src/ditto_data/py.typed` |
+| ditto_engine | ✅ | `packages/engine/src/ditto_engine/py.typed` |
+| ditto_data | ✅ | `packages/data/src/ditto_data/py.typed` |
 | ditto_infra | ✅ | `packages/infra/src/ditto_infra/py.typed` |
-| ditto_port | ✅ | `apps/port/src/ditto_port/py.typed` |
+| ditto_kernel | ✅ | `packages/kernel/src/ditto_kernel/py.typed` |
+| ditto_analytics | ✅ | `packages/analytics/src/ditto_analytics/py.typed` |
+| ditto_app | ✅ | `packages/app/src/ditto_app/py.typed` |
+| ditto_interfaces | ✅ | `apps/interfaces/src/ditto_interfaces/py.typed` |
 
 ---
 
@@ -528,25 +531,25 @@ tar -tzf dist/*.whl | grep py.typed
 
 | 层级 | 职责 | 典型组件 | 禁止 |
 |------|------|----------|------|
-| **DataHub Store** | 数据持久化、基础查询 | SecurityStore, BarsStore | 包含业务逻辑 |
-| **DataHub Service** | 领域封装、查询/写入契约 | MarketService, MetadataService | 直接暴露存储实现细节 |
-| **DataHub Runtime** | 基础设施（连接池、锁、分配器） | SQLitePool, FileLockManager, InstrumentIdAllocator | 包含业务逻辑 |
-| **DataHub Source/Adapter** | 外部数据源适配与字段规范化 | TushareSource, CapitalAdapter | 包含业务编排逻辑 |
-| **Server Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
-| **Server Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
+| **Data Store** | 数据持久化、基础查询 | SecurityStore, BarsStore | 包含业务逻辑 |
+| **Data Service** | 领域封装、查询/写入契约 | MarketService, MetadataService | 直接暴露存储实现细节 |
+| **Data Runtime** | 基础设施（连接池、锁、分配器) | SQLitePool, FileLockManager, InstrumentIdAllocator | 包含业务逻辑 |
+| **Data Source/Adapter** | 外部数据源适配与字段规范化 | TushareSource, CapitalAdapter | 包含业务编排逻辑 |
+| **Interfaces Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
+ | **Interfaces Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
 
 ### 依赖方向规则
 
 **允许的单向依赖：**
 ```
-Server Flow → Server Service → DataHub Service → DataHub Store/Runtime → Foundation
+Interfaces Flow → Interfaces Service → App Service → Data Service → Data Store/Runtime → Infra
 ```
 
 **禁止的依赖模式：**
-- ❌ Server → DataHub Store (跨层访问)
-- ❌ Server → DataHub Runtime (跨层访问)
-- ❌ Server 非 registry 模块 → DataHub Source (跨层访问)
-- ❌ DataHub → Server (反向依赖)
+- ❌ Interfaces → Data Store (跨层访问)
+- ❌ Interfaces → Data Runtime (跨层访问)
+- ❌ Interfaces 非 registry 模块 → Data Source(跨层访问)
+- ❌ Data → Interfaces (反向依赖)
 - ❌ 同层组件间的循环依赖
 
 ### 跨层检测规则
@@ -555,25 +558,23 @@ Server Flow → Server Service → DataHub Service → DataHub Store/Runtime →
 
 ```python
 # ❌ Server 层禁止直接导入 Store
-from ditto_data.stores.security_store import SecurityStore
-from ditto_data.stores.bars_store import BarsStore
+from ditto_data.storage.security_store import SecurityStore
+from ditto_data.storage.bars_store import BarsStore
 
 # ❌ Server 层禁止直接导入 Runtime
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.runtime.sqlite_pool import SQLitePool
 
-# ✅ Server 层应该使用 Service
-from ditto_data import DataHub
+# ✅ Interfaces 层应该使用 Service（通过 DI 获取）from ditto_data import DataHub
 from ditto_data.domains.market.market_service import MarketService
 from ditto_data.domains.metadata.metadata_service import MetadataService
 
 # ✅ 仅 registry 模块允许导入 Store/Source 做 DI 装配
 from ditto_data.sources.tushare import TushareSource
-from ditto_data.stores.sqlite_client import SQLiteClient
+from ditto_data.storage.sqlite_client import SQLiteClient
 
 # ✅ DataHub 内部可以导入下层
-# packages/datahub 内的 Store 可以导入 Runtime
-```
+# packages/data 内的 Store 可以导入 Runtime```
 
 **职责识别检查：**
 
@@ -590,12 +591,9 @@ from ditto_data.stores.sqlite_client import SQLiteClient
 
 ### 代码重复检测
 
-在实现新功能前，必须检查 DataHub Service 是否已有类似实现：
-
-```bash
+在实现新功能前，必须检查 Data Service 是否已有类似实现"```bash
 # 检查 MetadataService 是否已有相关方法
-grep -r "def.*register" packages/datahub/src/ditto_data/domains/metadata/
-grep -r "def.*resolve" packages/datahub/src/ditto_data/domains/metadata/
+grep -r "def.*register" packages/data/src/ditto_data/domains/metadata/
 ```
 
 **禁止重复实现：**

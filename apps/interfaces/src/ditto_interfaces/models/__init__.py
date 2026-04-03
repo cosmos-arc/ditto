@@ -21,9 +21,9 @@ from ditto_app.query.derived import (
     SeriesDerivedRequest,
     SourceCompareRequest,
 )
-from ditto_data.models import Dataset
-from ditto_data.models.ingestion import (
+from ditto_app.types import (
     BackfillResult,
+    Dataset,
     IngestionResult,
     InstrumentIngestParams,
     ResultCounts,

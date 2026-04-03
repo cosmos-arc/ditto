@@ -10,7 +10,7 @@ import pytest
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.tushare.transformer import TushareExchangeTransformer
-from ditto_data.stores.metadata.universe.universe_writer import UniverseWriter
+from ditto_data.storage.metadata.universe.universe_writer import UniverseWriter
 
 
 @pytest.fixture
@@ -150,7 +150,7 @@ class TestFindSecuritiesMinListDays:
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
         """min_list_days + asof 同时提供时应透传给 reader."""
-        from ditto_data.stores.metadata.instrument import SecurityQuery
+        from ditto_data.storage.metadata.instrument import SecurityQuery
 
         mock_dependencies[
             "instrument_reader"
@@ -176,7 +176,7 @@ class TestFindSecuritiesMinListDays:
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
         """无 asof 时 min_list_days 仍然透传，但 reader 侧不应用过滤."""
-        from ditto_data.stores.metadata.instrument import SecurityQuery
+        from ditto_data.storage.metadata.instrument import SecurityQuery
 
         mock_dependencies[
             "instrument_reader"
@@ -199,7 +199,7 @@ class TestFindSecuritiesMinListDays:
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
         """默认不传 min_list_days."""
-        from ditto_data.stores.metadata.instrument import SecurityQuery
+        from ditto_data.storage.metadata.instrument import SecurityQuery
 
         mock_dependencies[
             "instrument_reader"

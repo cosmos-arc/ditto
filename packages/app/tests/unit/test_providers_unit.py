@@ -26,18 +26,20 @@ from ditto_app.providers import (
     get_app_providers,
 )
 from ditto_app.query.derived import DerivedQueryFacade, StaticRuntimeModeResolver
+from ditto_data.di import (
+    CapitalProvider,
+    DerivedProvider,
+    FundamentalProvider,
+    MacroProvider,
+    MarketProvider,
+    MetadataProvider,
+    QualityProvider,
+    RuntimeProvider,
+)
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
-from ditto_interfaces.registry.core import QualityProvider
-from ditto_interfaces.registry.datahub import (
-    CapitalProvider,
-    DerivedProvider,
-    MarketProvider,
-    MetadataProvider,
-    RuntimeProvider,
-)
 from ditto_interfaces.registry.infra import ConfigProvider
 
 # ---------------------------------------------------------------------------
@@ -160,6 +162,8 @@ class TestAppProviderIntegration:
             MetadataProvider(),
             MarketProvider(),
             CapitalProvider(),
+            FundamentalProvider(),
+            MacroProvider(),
             DerivedProvider(),
             *get_app_providers(),
             _runtime_deps_provider(),

@@ -59,7 +59,7 @@ ditto_port/
 |---------|--------|--------|
 | **通过 Domain Service** | `MetadataService`, `MarketService` | - |
 | **直接导入 Sources** | `from ditto_data.sources.*` | - |
-| **直接导入 Stores** | - | `from ditto_data.stores.*` |
+| **直接导入 Storage** | - | `from ditto_data.storage.*` |
 
 ```python
 # ✅ 正确：通过 DI 容器注入 Service
@@ -70,7 +70,7 @@ service: MetadataService = container.get(MetadataService)
 bars = service.get_bars(query)
 
 # ❌ 错误：直接访问 Store
-from ditto_data.stores import BarsReader  # ❌
+from ditto_data.storage import BarsReader  # ❌
 reader = BarsReader(...)  # ❌
 ```
 

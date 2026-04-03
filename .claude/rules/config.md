@@ -105,8 +105,8 @@ config/
 |------|------|------|
 | `get_environment()` | 获取运行时环境 | `infra/foundation/config/environment.py` |
 | `ConfigLoader` | 定位配置文件路径 | `infra/foundation/config/loader.py` |
-| `load_env_file()` | 加载 .env 文件 | `port/config/loader.py` |
-| `ConfigProvider` | DI 装配 | `port/registry/infra/config.py` |
+| `load_env_file()` | 加载 .env 文件 | `interfaces/config/loader.py` |
+| `ConfigProvider` | DI 装配 | `interfaces/registry/infra/config.py` |
 
 ### 配置加载位置约束
 
@@ -114,7 +114,7 @@ config/
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  apps/port/registry/infra/config.py（唯一加载点）          │
+│  apps/interfaces/registry/infra/config.py（唯一加载点）          │
 │                                                            │
 │  @provide                                                  │
 │  def settings(self, loader: ConfigLoader) -> Settings:    │
@@ -125,7 +125,7 @@ config/
           │ DI 注入
           ▼
 ┌────────────────────────────────────────────────────────────┐
-│  packages/datahub/   packages/core/   packages/infra/      │
+│  packages/data/   packages/engine/   packages/infra/      │
 │  （通过构造函数/方法参数获取配置，禁止自己加载）           │
 └────────────────────────────────────────────────────────────┘
 ```

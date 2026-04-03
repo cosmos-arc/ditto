@@ -11,10 +11,11 @@ import polars.exceptions as pl_exceptions
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.spec import DQResult
-from ditto_data.services.market_service import MarketBarsQuery, MarketService
-from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.quality_record_service import QualityRecordService
 from loguru import logger
+
+from ditto_app.query.market import MarketQueryFacade
+from ditto_app.query.metadata import MetadataQueryFacade
 
 # ---------------------------------------------------------------------------
 # 领域模型
@@ -209,27 +210,30 @@ class L3BatchService:
     L3 batch check service.
 
     Application Layer: Orchestrates L3 statistical anomaly checks.
-    Fetches historical data from DataHub and injects into Core Engine.
+    Fetches historical data via facade and injects into Core Engine.
+
+    Accepts either raw services (for backward compat within ditto_app)
+    or facades (for callers from ditto_interfaces).
     """
 
     def __init__(
         self,
         engine: QualityEngine,
-        market_service: MarketService,
-        metadata_service: MetadataService,
+        market_facade: MarketQueryFacade,
+        metadata_facade: MetadataQueryFacade,
     ) -> None:
         """
         Initialize L3 batch service.
 
         Args:
             engine: Quality engine instance
-            market_service: MarketService instance for data access
-            metadata_service: MetadataService instance for data access
+            market_facade: MarketQueryFacade for data access
+            metadata_facade: MetadataQueryFacade for data access
 
         """
         self._engine = engine
-        self._market_service = market_service
-        self._metadata_service = metadata_service
+        self._market_facade = market_facade
+        self._metadata_facade = metadata_facade
 
     def check_dataset(
         self,
@@ -344,7 +348,7 @@ class L3BatchService:
         market_wide: bool = False,
     ) -> tuple[pl.DataFrame, pl.DataFrame]:
         """
-        Fetch historical and current data from DataHub.
+        Fetch historical and current data via MarketQueryFacade.
 
         Args:
             trade_date: Trade date (YYYY-MM-DD)
@@ -361,31 +365,29 @@ class L3BatchService:
         start_dt = trade_dt - timedelta(days=window * 2)
         start_date = start_dt.strftime("%Y-%m-%d")
 
-        # Fetch historical data using MarketService
-        historical_query = MarketBarsQuery(
+        # Fetch historical data
+        historical = self._market_facade.find_bars(
             instrument_ids=None,
             start=start_date,
             end=trade_date,
-            asset_class=asset_class,
             market_wide=market_wide,
+            asset_class=asset_class,
         )
-        historical = self._market_service.find_bars(historical_query)
 
-        # Fetch current data using MarketService
-        current_query = MarketBarsQuery(
+        # Fetch current data
+        current = self._market_facade.find_bars(
             instrument_ids=None,
             start=trade_date,
             end=trade_date,
-            asset_class=asset_class,
             market_wide=market_wide,
+            asset_class=asset_class,
         )
-        current = self._market_service.find_bars(current_query)
 
         return historical, current
 
     def _fetch_calendar(self, trade_date: str, lookback_days: int = 10) -> pl.DataFrame:
         """
-        Fetch trading calendar from DataHub.
+        Fetch trading calendar via MetadataQueryFacade.
 
         Args:
             trade_date: Trade date (YYYY-MM-DD)
@@ -400,7 +402,7 @@ class L3BatchService:
         start_dt = trade_dt - timedelta(days=lookback_days * 2)
         start_date = start_dt.strftime("%Y-%m-%d")
 
-        return self._metadata_service.list_calendar_range(
+        return self._metadata_facade.list_calendar_range(
             start=start_date,
             end=trade_date,
             only_open=True,

@@ -34,7 +34,7 @@
 
 ```
 src/ditto_data/
-├── stores/            # 数据存储访问
+├── storage/           # 数据存储访问
 │   ├── calendar_store.py    # 交易日历
 │   ├── instrument_store.py  # 证券信息
 │   ├── bars_store.py        # K线数据
@@ -63,7 +63,7 @@ src/ditto_data/
 
 ## 四、关键模块说明
 
-### stores/ - 数据存储层
+### storage/ - 数据存储层
 - `BarsStore`: K线数据 Parquet 年分区存储
 - `AdjFactorStore`: 复权因子 Parquet 年分区存储
 - `CalendarStore`: 交易日历 SQLite 存储
@@ -131,7 +131,7 @@ logger.info(
 ```python
 from pathlib import Path
 from ditto_data import DataHub
-from ditto_data.stores import BarsStore, CalendarStore
+from ditto_data.storage import BarsStore, CalendarStore
 from ditto_data.runtime import InstrumentIdAllocator
 
 # Instrument ID 分配

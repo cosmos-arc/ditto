@@ -21,11 +21,11 @@ from ditto_data.services.market_service import (
     MarketBarsQuery,
     MarketService,
 )
-from ditto_data.stores.market.stock.adj import (
+from ditto_data.storage.market.stock.adj import (
     StockAdjFactorReader,
     StockAdjFactorWriter,
 )
-from ditto_data.stores.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
 from ditto_infra.foundation.concurrency import FileLockManager
 
 # ==============================================================================

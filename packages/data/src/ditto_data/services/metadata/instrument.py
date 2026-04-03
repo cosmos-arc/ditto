@@ -25,13 +25,13 @@ from ditto_data.models.metadata import (
 )
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.sources import ExchangeTransformers
-from ditto_data.stores.metadata.industry import (
+from ditto_data.storage.metadata.industry import (
     IndustryMappingReader,
     IndustryMappingWriter,
     IndustryReader,
     IndustryWriter,
 )
-from ditto_data.stores.metadata.instrument import (
+from ditto_data.storage.metadata.instrument import (
     InstrumentReader,
     InstrumentWriter,
     NameHistoryReader,

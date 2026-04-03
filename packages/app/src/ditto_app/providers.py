@@ -28,13 +28,17 @@ from ditto_data.services import (
     ResearchCatalogService,
 )
 from ditto_data.services.audit import ExecutionAuditService
+from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )
+from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.hot_layer import UnavailableHotLayerReader
+from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.research_artifact_service import ResearchArtifactService
+from ditto_data.services.source_service import SourceService
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -70,11 +74,20 @@ from ditto_app.process.strategy import StrategyFacade
 # ---------------------------------------------------------------------------
 # App Query 层
 # ---------------------------------------------------------------------------
+from ditto_app.query.capital import CapitalQueryFacade
+from ditto_app.query.commodity import CommodityQueryFacade
 from ditto_app.query.derived import (
     DerivedQueryFacade,
     StaticRuntimeModeResolver,
 )
+from ditto_app.query.forward_return_service import ForwardReturnService
+from ditto_app.query.fundamental import FundamentalQueryFacade
+from ditto_app.query.fx import FXQueryFacade
+from ditto_app.query.macro import MacroQueryFacade
+from ditto_app.query.market import MarketQueryFacade
+from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_app.query.research import ResearchDatasetFacade
+from ditto_app.query.source import SourceQueryFacade
 
 __all__ = [
     "AppBuilderFactory",
@@ -100,6 +113,14 @@ class AppQueryProvider(Provider):
         return StaticRuntimeModeResolver()
 
     @provide
+    def forward_return_service(
+        self,
+        market_service: MarketService,
+    ) -> ForwardReturnService:
+        """Forward return computation service."""
+        return ForwardReturnService(market_service=market_service)
+
+    @provide
     def derived_query_facade(
         self,
         derived_query_service: DerivedQueryService,
@@ -110,6 +131,26 @@ class AppQueryProvider(Provider):
             service=derived_query_service,
             mode_resolver=runtime_mode_resolver,
             hot_layer=UnavailableHotLayerReader(),
+        )
+
+    @provide
+    def market_query_facade(
+        self,
+        market_service: MarketService,
+    ) -> MarketQueryFacade:
+        """Market data query facade — hides internal query types."""
+        return MarketQueryFacade(market_service=market_service)
+
+    @provide
+    def source_query_facade(
+        self,
+        source_service: SourceService,
+        metadata_service: MetadataService,
+    ) -> SourceQueryFacade:
+        """Source data query facade — hides Dataset enum and service wiring."""
+        return SourceQueryFacade(
+            source_service=source_service,
+            metadata_service=metadata_service,
         )
 
     @provide
@@ -131,6 +172,54 @@ class AppQueryProvider(Provider):
             ),
             research_artifact_service=research_artifact_service,
         )
+
+    @provide
+    def metadata_query_facade(
+        self,
+        metadata_service: MetadataService,
+    ) -> MetadataQueryFacade:
+        """Metadata query facade — hides SecurityQuery and internal types."""
+        return MetadataQueryFacade(metadata_service=metadata_service)
+
+    @provide
+    def capital_query_facade(
+        self,
+        capital_service: CapitalService,
+    ) -> CapitalQueryFacade:
+        """Capital query facade — hides CQRS port types."""
+        return CapitalQueryFacade(capital_service=capital_service)
+
+    @provide
+    def fundamental_query_facade(
+        self,
+        fundamental_service: FundamentalService,
+    ) -> FundamentalQueryFacade:
+        """Fundamental query facade — hides CQRS port types."""
+        return FundamentalQueryFacade(fundamental_service=fundamental_service)
+
+    @provide
+    def macro_query_facade(
+        self,
+        macro_service: MacroService,
+    ) -> MacroQueryFacade:
+        """Macro query facade — hides MacroQuery and enum types."""
+        return MacroQueryFacade(macro_service=macro_service)
+
+    @provide
+    def fx_query_facade(
+        self,
+        market_service: MarketService,
+    ) -> FXQueryFacade:
+        """FX query facade — hides FX code mapping and asset class."""
+        return FXQueryFacade(market_service=market_service)
+
+    @provide
+    def commodity_query_facade(
+        self,
+        market_service: MarketService,
+    ) -> CommodityQueryFacade:
+        """Commodity query facade — hides Commodity/VIX mapping and asset class."""
+        return CommodityQueryFacade(market_service=market_service)
 
 
 # ---------------------------------------------------------------------------

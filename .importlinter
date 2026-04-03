@@ -97,7 +97,7 @@ forbidden_modules =
 ignore_imports =
     # Analytics 引用 data.errors 是合法的：DerivedNotImplementedError 等类型供编译/验证使用
     ditto_analytics.** -> ditto_data.errors
-unmatched_ignore_imports_alerting = none
+unmatched_ignore_imports_alerting = warn
 
 [importlinter:contract:analytics-must-not-depend-on-port]
 name = Analytics must not depend on Port
@@ -106,7 +106,6 @@ source_modules =
     ditto_analytics.**
 forbidden_modules =
     ditto_interfaces.**
-unmatched_ignore_imports_alerting = none
 
 # ═══════════════════════════════════════════════════════════════════
 # Engine ↔ Data 边界：双向禁止互相依赖
@@ -125,9 +124,7 @@ ignore_imports =
     ditto_engine.** -> ditto_data.errors
     # DataProvider Protocol 位置（Phase 5 从 kernel 移入 ditto_data，需 polars 返回类型）
     ditto_engine.** -> ditto_data.provider
-    # Engine shim → analytics: analytics 内部导入 data.errors 是合法的传递路径
-    ditto_engine.engine.research -> ditto_analytics.research.domain
-unmatched_ignore_imports_alerting = none
+unmatched_ignore_imports_alerting = warn
 
 [importlinter:contract:data-no-engine-dependency]
 name = Data must not depend on Engine
@@ -136,28 +133,40 @@ source_modules =
     ditto_data.**
 forbidden_modules =
     ditto_engine.**
-ignore_imports =
-    ditto_data.** -> ditto_kernel.*
-unmatched_ignore_imports_alerting = none
 
 # ═══════════════════════════════════════════════════════════════════
 # Port 层边界：禁止直接依赖 Data 存储/运行时实现
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:port-boundary]
-name = Port must not directly depend on Data stores/runtime
+name = Port must not directly depend on Data storage/runtime
 type = forbidden
 source_modules =
     ditto_interfaces.**
 forbidden_modules =
-    ditto_data.stores.**
+    ditto_data.storage.**
     ditto_data.runtime.**
-# 忽略 registry 模块的导入（Composition Root 模式：registry 负责组装存储实现）
-ignore_imports =
-    ditto_interfaces.registry.** -> ditto_data.stores.**
-    ditto_interfaces.registry.** -> ditto_data.runtime.**
 # 只检查直接导入，允许通过 hub 的间接使用
 allow_indirect_imports = true
-unmatched_ignore_imports_alerting = none
+
+# ═══════════════════════════════════════════════════════════════════
+# Port 层边界：禁止直接依赖 Data 服务/模型（逐步收紧）
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:port-service-isolation]
+name = Port must not directly depend on Data services/models (tightening)
+type = forbidden
+source_modules =
+    ditto_interfaces.**
+forbidden_modules =
+    ditto_data.services.**
+    ditto_data.models.**
+    ditto_data.errors.**
+    ditto_data.quality.**
+# Registry 豁免（Composition Root）
+ignore_imports =
+    ditto_interfaces.registry.** -> ditto_data.services.**
+    ditto_interfaces.registry.** -> ditto_data.quality.**
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
 # App 层边界：禁止依赖 Port 层
@@ -174,12 +183,12 @@ forbidden_modules =
 # R8 — App 内部互斥规则（Use Case 间职责隔离）
 # ═══════════════════════════════════════════════════════════════════
 # 矩阵：
-#   app.query     -X-> app.process, app.builders  (只读)
-#   app.process   ->  app.query                   (允许协调)
-#   app.builders  -X-> app.query                  (只装配)
+#   app.query     -X-> app.process, app.builders, app.command  (只读)
+#   app.process   ->  app.query                                (允许协调)
+#   app.builders  -X-> app.query                               (只装配)
+#   app.command   -X-> app.query, app.builders                 (纯写入)
 #   process <-> builders 允许双向
-#
-# 注：app.command 模块尚未创建，相关 R8 规则在模块创建时补充
+#   command -> process 允许（委托执行）
 # ═══════════════════════════════════════════════════════════════════
 
 [importlinter:contract:r8-query-no-process]
@@ -189,7 +198,6 @@ source_modules =
     ditto_app.query.**
 forbidden_modules =
     ditto_app.process.**
-unmatched_ignore_imports_alerting = none
 
 [importlinter:contract:r8-query-no-builders]
 name = R8: app.query must not import app.builders
@@ -198,7 +206,6 @@ source_modules =
     ditto_app.query.**
 forbidden_modules =
     ditto_app.builders.**
-unmatched_ignore_imports_alerting = none
 
 [importlinter:contract:r8-builders-no-query]
 name = R8: app.builders must not import app.query
@@ -207,7 +214,30 @@ source_modules =
     ditto_app.builders.**
 forbidden_modules =
     ditto_app.query.**
-unmatched_ignore_imports_alerting = none
+
+[importlinter:contract:r8-query-no-command]
+name = R8: app.query must not import app.command
+type = forbidden
+source_modules =
+    ditto_app.query.**
+forbidden_modules =
+    ditto_app.command.**
+
+[importlinter:contract:r8-command-no-query]
+name = R8: app.command must not import app.query
+type = forbidden
+source_modules =
+    ditto_app.command.**
+forbidden_modules =
+    ditto_app.query.**
+
+[importlinter:contract:r8-command-no-builders]
+name = R8: app.command must not import app.builders
+type = forbidden
+source_modules =
+    ditto_app.command.**
+forbidden_modules =
+    ditto_app.builders.**
 
 # ═══════════════════════════════════════════════════════════════════
 # 循环依赖检测

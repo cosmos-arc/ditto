@@ -19,12 +19,12 @@ from ditto_infra.foundation import Metrics, logger, traced
 from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
+from ditto_data.ingestion.late_arrival import check_late_arrival
 from ditto_data.models import InstrumentIdRange, OnDuplicate
 from ditto_data.models.ingestion import (
     DataLateArrivalPolicy,
     LateArrivalCheckResult,
 )
-from ditto_data.services.late_arrival import check_late_arrival
 from ditto_data.services.ports import MarketReadPorts, MarketWritePorts
 
 

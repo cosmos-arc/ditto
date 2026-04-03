@@ -25,6 +25,14 @@ Services module - 域服务统一入口.
 """
 
 # Capital 域服务
+# Freeze 版本管理服务（ingestion 包）
+from ditto_data.ingestion.freeze_service import FreezeService
+from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
+from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+)
+from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.services.capital_service import CapitalService
 
 # Runtime 服务
@@ -41,9 +49,6 @@ from ditto_data.services.derived_shadow_slot_service import (
     DerivedShadowSlotService,
 )
 
-# Freeze 版本管理服务
-from ditto_data.services.freeze_service import FreezeService
-
 # Fundamental 域服务
 from ditto_data.services.fundamental_service import FundamentalService
 
@@ -56,8 +61,6 @@ from ditto_data.services.hot_layer import (
     UnavailableHotLayerWriter,
     UnavailableStateStore,
 )
-from ditto_data.services.ingestion_cursor_service import IngestionCursorService
-from ditto_data.services.ingestion_log_service import IngestionLogService
 
 # Macro 域服务
 from ditto_data.services.macro_service import MacroService
@@ -78,10 +81,6 @@ from ditto_data.services.ports import (
     MarketReadPorts,
     MarketWritePorts,
 )
-from ditto_data.services.publication_safety_record_service import (
-    PublicationSafetyRecordService,
-)
-from ditto_data.services.quality_record_service import QualityRecordService
 from ditto_data.services.research_catalog_service import ResearchCatalogService
 
 # Source 服务

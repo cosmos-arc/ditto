@@ -10,7 +10,8 @@ from ditto_analytics.evaluation.evaluator import (
 )
 from ditto_analytics.evaluation.report import FactorEvaluationReport
 from ditto_data.services.derived import DerivedArtifactReader
-from ditto_data.services.forward_return_service import ForwardReturnService
+
+from ditto_app.query.forward_return_service import ForwardReturnService
 
 __all__ = ["EvaluationOptions", "FactorEvaluationFacade"]
 

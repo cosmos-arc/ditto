@@ -7,9 +7,7 @@ from typing import Annotated, Any
 import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_data.models import Dataset
-from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.source_service import SourceService
+from ditto_app.query.source import SourceQueryFacade
 from ditto_infra.foundation import logger
 from fastapi import APIRouter, HTTPException, Path, Query
 
@@ -37,8 +35,7 @@ class SourceDataResponse(APIResponse[list[dict[str, Any]]]):
 @inject
 async def get_source_data(  # noqa: PLR0913
     # 依赖注入
-    source_service: Annotated[SourceService, FromComponent()],
-    metadata_service: Annotated[MetadataService, FromComponent()],
+    facade: Annotated[SourceQueryFacade, FromComponent()],
     # 路径参数
     source: str = Path(..., description="数据源名称 (如 tushare)"),
     dataset: str = Path(..., description="数据集名称 (如 stock_daily)"),
@@ -90,13 +87,10 @@ async def get_source_data(  # noqa: PLR0913
 
     # 从数据集推断资产类型
     try:
-        dataset_enum = Dataset(dataset)
+        asset_class = facade.get_dataset_asset_class(dataset)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=400, detail=f"不支持的数据集: {dataset}"
-        ) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    asset_class = dataset_enum.asset_class
     if asset_class is None:
         raise HTTPException(
             status_code=400, detail=f"数据集 {dataset} 不支持按标的查询"
@@ -104,7 +98,7 @@ async def get_source_data(  # noqa: PLR0913
 
     # 解析标识符为 source_ticker
     try:
-        resolved_source_ticker = metadata_service.resolve_source_ticker(
+        resolved_source_ticker = facade.resolve_source_ticker(
             ticker=ticker,
             standard_ticker=standard_ticker,
             instrument_id=instrument_id,
@@ -122,7 +116,7 @@ async def get_source_data(  # noqa: PLR0913
 
     # 获取数据源
     try:
-        data_source = _get_data_source(source_service, source)
+        data_source = _get_data_source(facade, source)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -156,10 +150,10 @@ async def get_source_data(  # noqa: PLR0913
     )
 
 
-def _get_data_source(source_service: SourceService, source: str) -> Any:
+def _get_data_source(facade: SourceQueryFacade, source: str) -> Any:
     """获取指定数据源."""
     if source == "tushare":
-        return source_service.tushare
+        return facade.tushare
     # 后续扩展其他数据源
     raise ValueError(f"不支持的数据源: {source}")
 

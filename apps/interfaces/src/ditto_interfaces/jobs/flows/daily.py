@@ -23,7 +23,7 @@ from ditto_app.config import (
     get_parallel_datasets,
 )
 from ditto_app.process.ingestion import count_results
-from ditto_data.models import Dataset
+from ditto_app.types import Dataset
 from prefect import flow, task
 
 from ditto_interfaces.jobs.tasks import (

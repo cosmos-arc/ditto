@@ -12,7 +12,7 @@ CLI 本地执行器.
 from typing import Any
 
 from ditto_app.process.ingestion import BackfillManager, IngestionCoordinator
-from ditto_data.models.ingestion import InstrumentIngestParams
+from ditto_app.types import InstrumentIngestParams
 
 
 class CLIExecutor:

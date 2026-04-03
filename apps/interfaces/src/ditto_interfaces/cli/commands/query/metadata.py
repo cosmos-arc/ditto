@@ -7,8 +7,7 @@ from typing import Any
 import orjson
 import polars as pl
 import typer
-from ditto_data.services.metadata import SecurityQuery
-from ditto_data.services.metadata_service import MetadataService
+from ditto_app.query.metadata import MetadataQueryFacade
 from rich.console import Console
 from rich.table import Table
 
@@ -22,10 +21,10 @@ console = Console()
 
 
 @contextmanager
-def _get_metadata_service() -> Generator[MetadataService, None, None]:
-    """获取 MetadataService 实例."""
+def _get_metadata_facade() -> Generator[MetadataQueryFacade, None, None]:
+    """获取 MetadataQueryFacade 实例."""
     with create_cli_host() as bundle:
-        yield bundle.metadata_service
+        yield MetadataQueryFacade(metadata_service=bundle.metadata_service)
 
 
 def _output_json(items: list[Any]) -> None:
@@ -63,16 +62,14 @@ def query_instruments(
         ditto query metadata instruments -a etf
 
     """
-    with _get_metadata_service() as service:
+    with _get_metadata_facade() as facade:
         source_tickers = [source_ticker] if source_ticker else None
 
-        df = service.find_securities(
-            SecurityQuery(
-                source_tickers=source_tickers,
-                asset_class=asset_class,
-                exchange=exchange,
-                is_active=is_active,
-            ),
+        df = facade.find_securities(
+            source_tickers=source_tickers,
+            asset_class=asset_class,
+            exchange=exchange,
+            is_active=is_active,
         )
 
         if df.is_empty():
@@ -117,8 +114,8 @@ def get_instrument(
         ditto query metadata instrument 1
 
     """
-    with _get_metadata_service() as service:
-        result = service.get_instrument(instrument_id)
+    with _get_metadata_facade() as facade:
+        result = facade.get_instrument(instrument_id)
 
         if result is None:
             typer.secho(f"未找到标的 ID: {instrument_id}", fg=typer.colors.RED)

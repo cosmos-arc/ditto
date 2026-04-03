@@ -859,7 +859,7 @@ condition = """
 |---------|--------|--------|------|
 | **通过 Service** | `MetadataService`, `MarketService` 等 | - | **推荐方式**，通过 DI 容器注入 |
 | **直接导入 Sources** | `from ditto_data.sources.*` | - | Sources 可直接访问 |
-| **直接访问 Reader/Writer** | - | `from ditto_data.stores.*` | **禁止**直接访问 |
+| **直接访问 Reader/Writer** | - | `from ditto_data.storage.*` | **禁止**直接访问 |
 
 ### 10.2 正确示例
 
@@ -878,7 +878,7 @@ trading_days = metadata_service.get_trading_days("2024-01-01", "2024-01-31")
 bars = market_service.query(query)
 
 # ❌ 禁止：直接访问 Reader/Writer
-from ditto_data.stores.metadata import InstrumentReader  # ❌
+from ditto_data.storage.metadata import InstrumentReader  # ❌
 reader = InstrumentReader(...)  # ❌
 ```
 
@@ -940,7 +940,7 @@ reader = InstrumentReader(...)  # ❌
 
 | 功能 | 路径 |
 |------|------|
-| Store Schema | `packages/data/src/ditto_data/stores/schemas/` |
+| Store Schema | `packages/data/src/ditto_data/storage/schemas/` |
 | 数据模型 | `packages/data/src/ditto_data/models/` |
 | Tushare 适配器 | `packages/data/src/ditto_data/sources/tushare/adapters/` |
 | 列映射定义 | `packages/data/src/ditto_data/sources/tushare/processors/mappings/` |

@@ -109,13 +109,13 @@
 
 **Files**
 
-- Create: `packages/data/src/ditto_data/stores/market/stock/bars_minute/__init__.py`
-- Create: `packages/data/src/ditto_data/stores/market/stock/bars_minute/bars_reader.py`
-- Create: `packages/data/src/ditto_data/stores/market/stock/bars_minute/bars_writer.py`
+- Create: `packages/data/src/ditto_data/storage/market/stock/bars_minute/__init__.py`
+- Create: `packages/data/src/ditto_data/storage/market/stock/bars_minute/bars_reader.py`
+- Create: `packages/data/src/ditto_data/storage/market/stock/bars_minute/bars_writer.py`
 - Modify: `packages/data/src/ditto_data/config/data_store.py`
 - Modify: `packages/infra/src/ditto_infra/foundation/config/providers/data_root.py`
 - Modify: `apps/port/src/ditto_port/registry/datahub/market.py`
-- Test: `packages/data/tests/unit/stores/market/stock/bars_minute/test_bars_minute_store_unit.py`
+- Test: `packages/data/tests/unit/storage/market/stock/bars_minute/test_bars_minute_store_unit.py`
 
 **实现要点**
 
@@ -128,7 +128,7 @@
 
 **验证**
 
-- `pixi run -e dev pytest packages/data/tests/unit/stores/market/stock/bars_minute/test_bars_minute_store_unit.py -v`
+- `pixi run -e dev pytest packages/data/tests/unit/storage/market/stock/bars_minute/test_bars_minute_store_unit.py -v`
 
 **建议提交**
 

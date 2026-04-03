@@ -6,11 +6,7 @@ from typing import Annotated
 import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_data.models import (
-    COMMODITY_CODE_TO_INSTRUMENT_ID,
-    VIX_CODE_TO_INSTRUMENT_ID,
-)
-from ditto_data.services.market_service import MarketService
+from ditto_app.query.commodity import CommodityQueryFacade
 from fastapi import APIRouter, HTTPException
 
 from ditto_interfaces.models.commodity import (
@@ -22,21 +18,12 @@ from ditto_interfaces.models.common import APIResponse
 
 router = APIRouter(prefix="/commodity", tags=["commodity"])
 
-# 合并 commodity 和 VIX 的映射
-_ALL_COMMODITY_MAPPINGS = {
-    **COMMODITY_CODE_TO_INSTRUMENT_ID,
-    **VIX_CODE_TO_INSTRUMENT_ID,
-}
-
-# 反向映射：instrument_id -> commodity_code
-_INSTRUMENT_ID_TO_COMMODITY_CODE = {v: k for k, v in _ALL_COMMODITY_MAPPINGS.items()}
-
 
 @router.post("/bars", response_model=APIResponse[list[CommodityBar]])
 @inject
 async def post_bars(
     query: CommodityQuery,
-    market_service: Annotated[MarketService, FromComponent()],
+    facade: Annotated[CommodityQueryFacade, FromComponent()],
 ) -> APIResponse[list[CommodityBar]]:
     """
     查询商品 K 线数据.
@@ -47,14 +34,14 @@ async def post_bars(
             - start_date: 开始日期 (可选)
             - end_date: 结束日期 (可选)
             - limit: 返回数量限制 (默认 1000, 范围 1-10000)
-        market_service: MarketService 依赖注入
+        facade: CommodityQueryFacade 依赖注入
 
     Returns:
         APIResponse 包含商品 K 线数据列表
 
     """
     # P1-1: 严格校验非法参数
-    valid_codes = set(_ALL_COMMODITY_MAPPINGS.keys())
+    valid_codes = facade.get_valid_codes()
     if query.commodity_codes:
         invalid_codes = [c for c in query.commodity_codes if c not in valid_codes]
         if invalid_codes:
@@ -68,10 +55,10 @@ async def post_bars(
             )
 
         instrument_ids = [
-            _ALL_COMMODITY_MAPPINGS[code] for code in query.commodity_codes
+            facade.code_to_instrument_id(code) for code in query.commodity_codes
         ]
     else:
-        instrument_ids = list(_ALL_COMMODITY_MAPPINGS.values())
+        instrument_ids = facade.get_all_instrument_ids()
 
     # P1-2: limit 下推到在 DataFrame 层应用
     # 构建查询参数
@@ -81,12 +68,11 @@ async def post_bars(
 
     # 查询数据（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(
-        market_service.list_bars,
+        facade.list_bars,
         instrument_ids=instrument_ids,
         start=start_str,
         end=end_str,
-        asset_class="commodity",
-        limit=limit_param,  # 传递 limit 参数
+        limit=limit_param,
     )
 
     # 如果 DataFrame 为空,直接返回空列表
@@ -95,10 +81,12 @@ async def post_bars(
 
     # P2-1: 移除 trade_date_utc 的 dt.date() 截断,直接保留原始值
     # 添加 commodity_code 列（从 instrument_id 映射）
+    id_to_code_map = {
+        iid: facade.instrument_id_to_code(iid) or ""
+        for iid in df["instrument_id"].unique().to_list()
+    }
     df = df.with_columns(
-        pl.col("instrument_id")
-        .replace(_INSTRUMENT_ID_TO_COMMODITY_CODE)
-        .alias("commodity_code")
+        pl.col("instrument_id").replace(id_to_code_map).alias("commodity_code")
     )
 
     # 选择并重命名列以匹配模型（移除 dt.date() 截断)

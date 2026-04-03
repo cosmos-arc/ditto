@@ -6,9 +6,9 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_data.errors import AmbiguousTickerError, NoIdentifierProvidedError
-from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.metadata_service import MetadataService
+from ditto_app.query.capital import CapitalQueryFacade
+from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_app.types import AmbiguousTickerError, NoIdentifierProvidedError
 from ditto_infra.foundation import logger
 from fastapi import APIRouter, HTTPException, Query
 
@@ -19,13 +19,12 @@ from ditto_interfaces.models.capital import (
     to_valuation_list,
 )
 from ditto_interfaces.models.common import APIResponse
-from ditto_interfaces.models.identifier import resolve_instrument_identifier
 
 router = APIRouter(prefix="/capital", tags=["capital"])
 
 
 def _resolve_identifier(
-    metadata_service: MetadataService,
+    metadata_facade: MetadataQueryFacade,
     *,
     instrument_id: int | None,
     standard_ticker: str | None,
@@ -36,7 +35,7 @@ def _resolve_identifier(
     解析标识符为 canonical instrument_id.
 
     至少提供一个标识符（instrument_id / standard_ticker / ticker），
-    委托给共享的 resolve_instrument_identifier 进行统一解析。
+    委托给 MetadataQueryFacade.resolve_instrument_identifier 进行统一解析。
 
     Returns:
         解析后的 canonical instrument_id (int)，查不到返回 None.
@@ -52,8 +51,7 @@ def _resolve_identifier(
         )
 
     try:
-        return resolve_instrument_identifier(
-            metadata_service,
+        return metadata_facade.resolve_instrument_identifier(
             instrument_id=instrument_id,
             standard_ticker=standard_ticker,
             ticker=ticker,
@@ -73,8 +71,8 @@ def _resolve_identifier(
 @router.get("/margin", response_model=APIResponse[list[Margin]])
 @inject
 async def get_margin(
-    service: Annotated[CapitalService, FromComponent()],
-    metadata_service: Annotated[MetadataService, FromComponent()],
+    capital_facade: Annotated[CapitalQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
     instrument_id: int | None = Query(None, description="Canonical 标的 ID"),
     ticker: str | None = Query(None, description="裸代码, 如 000001"),
     standard_ticker: str | None = Query(None, description="标准代码, 如 000001.XSHE"),
@@ -90,7 +88,7 @@ async def get_margin(
 
     """
     resolved_id = _resolve_identifier(
-        metadata_service,
+        metadata_facade,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
@@ -100,8 +98,12 @@ async def get_margin(
     if resolved_id is None:
         return APIResponse(data=[])
 
-    # 调用 service（在线程池中执行，避免阻塞事件循环）
-    df = await asyncio.to_thread(service.get_margin_trading, resolved_id, as_of_date)
+    # 调用 facade（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(
+        capital_facade.get_margin_trading,
+        resolved_id,
+        as_of_date,
+    )
 
     # 转换为模型列表
     margins = to_margin_list(df)
@@ -112,8 +114,8 @@ async def get_margin(
 @router.get("/valuation", response_model=APIResponse[list[Valuation]])
 @inject
 async def get_valuation(
-    service: Annotated[CapitalService, FromComponent()],
-    metadata_service: Annotated[MetadataService, FromComponent()],
+    capital_facade: Annotated[CapitalQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
     instrument_id: int | None = Query(None, description="Canonical 标的 ID"),
     ticker: str | None = Query(None, description="裸代码, 如 000001"),
     standard_ticker: str | None = Query(None, description="标准代码, 如 000001.XSHE"),
@@ -129,7 +131,7 @@ async def get_valuation(
 
     """
     resolved_id = _resolve_identifier(
-        metadata_service,
+        metadata_facade,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
@@ -139,8 +141,12 @@ async def get_valuation(
     if resolved_id is None:
         return APIResponse(data=[])
 
-    # 调用 service（在线程池中执行，避免阻塞事件循环）
-    df = await asyncio.to_thread(service.get_valuation_metrics, resolved_id, as_of_date)
+    # 调用 facade（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(
+        capital_facade.get_valuation_metrics,
+        resolved_id,
+        as_of_date,
+    )
 
     # 转换为模型列表
     valuations = to_valuation_list(df)

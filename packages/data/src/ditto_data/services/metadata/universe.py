@@ -12,9 +12,9 @@ from typing import Any
 import polars as pl
 from ditto_infra.foundation import traced
 
-from ditto_data.stores.capital.index_composition import IndexCompositionReader
-from ditto_data.stores.metadata.instrument import InstrumentReader, SecurityQuery
-from ditto_data.stores.metadata.universe import (
+from ditto_data.storage.capital.index_composition import IndexCompositionReader
+from ditto_data.storage.metadata.instrument import InstrumentReader, SecurityQuery
+from ditto_data.storage.metadata.universe import (
     UniverseReader,
     UniverseWriter,
 )

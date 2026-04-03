@@ -9,13 +9,13 @@ from typing import Any, ClassVar
 import polars as pl
 from ditto_infra.foundation import logger, traced
 
-from ditto_data.models.macro import MacroCategory, MacroFrequency
-from ditto_data.stores.macro.indicator.indicator_reader import IndicatorReader
-from ditto_data.stores.macro.indicator.indicator_writer import IndicatorWriter
-from ditto_data.stores.macro.indicator.metadata_reader import (
+from ditto_data.models.macro import IndicatorMetadataSpec, MacroCategory, MacroFrequency
+from ditto_data.storage.macro.indicator.indicator_reader import IndicatorReader
+from ditto_data.storage.macro.indicator.indicator_writer import IndicatorWriter
+from ditto_data.storage.macro.indicator.metadata_reader import (
     IndicatorMetadataReader,
 )
-from ditto_data.stores.macro.indicator.metadata_writer import (
+from ditto_data.storage.macro.indicator.metadata_writer import (
     IndicatorMetadataWriter,
 )
 
@@ -253,14 +253,16 @@ class MacroService:
         mapping: dict[str, int] = {}
         for code, row in metadata_by_code.items():
             mapping[code] = self._metadata_writer.upsert(
-                code=code,
-                name=str(row["indicator_name"]),
-                category=MacroCategory(str(row["category"])),
-                frequency=MacroFrequency(str(row["frequency"])),
-                need_pit=bool(row["need_pit"]),
-                source=self._as_optional_text(row.get("source")),
-                unit=self._as_optional_text(row.get("unit")),
-                description=self._as_optional_text(row.get("description")),
+                IndicatorMetadataSpec(
+                    code=code,
+                    name=str(row["indicator_name"]),
+                    category=MacroCategory(str(row["category"])),
+                    frequency=MacroFrequency(str(row["frequency"])),
+                    need_pit=bool(row["need_pit"]),
+                    source=self._as_optional_text(row.get("source")),
+                    unit=self._as_optional_text(row.get("unit")),
+                    description=self._as_optional_text(row.get("description")),
+                )
             )
         return mapping
 

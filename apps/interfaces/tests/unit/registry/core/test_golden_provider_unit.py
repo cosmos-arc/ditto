@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from ditto_interfaces.registry.core.golden import GoldenDatasetProvider
+from ditto_data.di.golden import GoldenDatasetProvider
 
 
 @pytest.mark.unit

@@ -1,8 +1,8 @@
 """测试 QualityProvider."""
 
 from dishka import make_container
+from ditto_data.di import QualityProvider
 from ditto_data.quality import QualityEngine
-from ditto_interfaces.registry.core import QualityProvider
 from ditto_interfaces.registry.infra import ConfigProvider
 
 

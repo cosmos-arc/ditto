@@ -4,6 +4,7 @@
 # Port 层现在直接注入 Domain Services
 
 # 导出 Data Provider Protocol（从 ditto-data 合并）
+from ditto_data.events import DataIngested, QualityCheckCompleted
 from ditto_data.provider import BarQuery, DataProvider, InstrumentQuery
 
 # 导出 Domain Services（供 Port 层使用）
@@ -17,6 +18,7 @@ from ditto_data.services.metadata_service import MetadataService
 __all__ = [
     "BarQuery",
     "CapitalService",
+    "DataIngested",
     "DataProvider",
     "DerivedQueryService",
     "FundamentalService",
@@ -24,4 +26,5 @@ __all__ = [
     "MacroService",
     "MarketService",
     "MetadataService",
+    "QualityCheckCompleted",
 ]

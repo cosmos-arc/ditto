@@ -31,7 +31,7 @@ from ditto_data.services.derived import (
     empty_series_result,
 )
 from ditto_data.services.derived_catalog_service import DerivedCatalogService
-from ditto_data.stores.runtime.derived_sqlite import (
+from ditto_data.storage.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )

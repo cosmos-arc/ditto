@@ -53,7 +53,7 @@ matplotlib = ">=3.9,<4"
 # 本地包（editable 安装）
 ditto-app = { path = "packages/app", editable = true }
 ditto-data = { path = "packages/data", editable = true }
-ditto-engine = { path = "packages/core", editable = true }
+ditto-engine = { path = "packages/engine", editable = true }
 ditto-infra = { path = "packages/infra", editable = true }
 ditto-kernel = { path = "packages/kernel", editable = true }
 ditto-analytics = { path = "packages/analytics", editable = true }

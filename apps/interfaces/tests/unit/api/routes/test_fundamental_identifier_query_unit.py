@@ -11,9 +11,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.errors import (
-    AmbiguousTickerError,
-)
+from ditto_app.types import AmbiguousTickerError
 from ditto_interfaces.api.routes.fundamental import _resolve_identifier
 from ditto_interfaces.models.common import APIResponse
 from ditto_interfaces.models.fundamental import (
@@ -81,8 +79,6 @@ class TestResolveIdentifier:
             instrument_id=1_000_001,
             standard_ticker=None,
             ticker=None,
-            source="tushare",
-            asset_class="stock",
             asof=None,
         )
 

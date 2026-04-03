@@ -12,7 +12,7 @@ from ditto_data.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
-from ditto_data.stores.runtime.derived_artifact_writer import (
+from ditto_data.storage.runtime.derived_artifact_writer import (
     ArtifactMetadataParams,
     DerivedArtifactWriter,
 )

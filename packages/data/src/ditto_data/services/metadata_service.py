@@ -25,22 +25,22 @@ from ditto_data.services.metadata.calendar import (
 from ditto_data.services.metadata.instrument import InstrumentService
 from ditto_data.services.metadata.universe import UniverseService
 from ditto_data.sources import ExchangeTransformers
-from ditto_data.stores.capital.index_composition import IndexCompositionReader
-from ditto_data.stores.metadata.calendar import CalendarReader, CalendarWriter
-from ditto_data.stores.metadata.industry import (
+from ditto_data.storage.capital.index_composition import IndexCompositionReader
+from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
+from ditto_data.storage.metadata.industry import (
     IndustryMappingReader,
     IndustryMappingWriter,
     IndustryReader,
     IndustryWriter,
 )
-from ditto_data.stores.metadata.instrument import (
+from ditto_data.storage.metadata.instrument import (
     InstrumentReader,
     InstrumentWriter,
     NameHistoryReader,
     NameHistoryWriter,
     SecurityQuery,
 )
-from ditto_data.stores.metadata.universe import (
+from ditto_data.storage.metadata.universe import (
     UniverseReader,
     UniverseWriter,
 )

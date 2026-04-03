@@ -46,7 +46,7 @@
 ditto/
 ├── packages/infra/         # 基础设施层（配置、日志、路径、Runtime）
 ├── packages/data/       # 数据访问层（存储、数据源）
-├── packages/core/          # 核心引擎层（DQ、业务逻辑）
+├── packages/engine/          # 核心引擎层（DQ、业务逻辑）
 └── apps/port/              # 应用层（API、CLI、Flows）
 ```
 
@@ -157,7 +157,7 @@ config/
 | `DataRootConfig` | 字段名（大小写不敏感） | `data_store.env` | [data_root.py:10-170](../packages/data/src/ditto_data/config/data_root.py) |
 | `DatabaseSettings` | 字段名（大小写不敏感） | `database.env` | [database.py:10-31](../packages/data/src/ditto_data/config/database.py) |
 | `DataSourceSettings` | 字段名（大小写不敏感） | `data_source.env` | [data_source.py:7-34](../packages/data/src/ditto_data/config/data_source.py) |
-| `DQSettings` | 字段名（大小写不敏感） | `dq.env` | [config.py:9-100](../packages/core/src/ditto_engine/quality/config.py) |
+| `DQSettings` | 字段名（大小写不敏感） | `dq.env` | [config.py:9-100](../packages/engine/src/ditto_engine/quality/config.py) |
 | `NotificationSettings` | 字段名（大小写不敏感） | `notification.env` | [config.py:1-45](../packages/infra/src/ditto_infra/foundation/notification/config.py) |
 | `FileStorageSettings` | 由 `DataRootConfig` 派生 | `data_store.env` | [storage.py:1-26](../packages/data/src/ditto_data/config/storage.py) |
 

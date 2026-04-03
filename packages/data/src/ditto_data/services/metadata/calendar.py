@@ -12,7 +12,7 @@ from typing import Any
 import polars as pl
 from ditto_infra.foundation import traced
 
-from ditto_data.stores.metadata.calendar import CalendarReader, CalendarWriter
+from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
 
 
 def compute_calendar_enrichment(days: list[dict[str, Any]]) -> list[dict[str, Any]]:

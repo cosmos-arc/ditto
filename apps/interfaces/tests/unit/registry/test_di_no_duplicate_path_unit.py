@@ -9,7 +9,7 @@ class TestDINoDuplicatePathProvider:
 
     def _get_source_file(self) -> Path:
         """获取 runtime.py 源文件路径。"""
-        import ditto_interfaces.registry.datahub.runtime as mod
+        import ditto_data.di.runtime as mod
 
         return Path(mod.__file__)
 

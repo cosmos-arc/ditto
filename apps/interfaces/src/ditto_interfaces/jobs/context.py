@@ -12,9 +12,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from ditto_data.quality import QualityEngine
-from ditto_data.services.market_service import MarketService
-from ditto_data.services.metadata_service import MetadataService
+from ditto_app.query.market import MarketQueryFacade
+from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_app.types import QualityEngine
 
 from ditto_interfaces.registry.container import make_app_container
 
@@ -42,19 +42,19 @@ def create_prefect_host() -> Iterator[Any]:
 
 @contextmanager
 def create_dq_and_metadata_context() -> Iterator[
-    tuple[QualityEngine, MetadataService, MarketService]
+    tuple[QualityEngine, MetadataQueryFacade, MarketQueryFacade]
 ]:
     """
-    创建 DQ、MetadataService 和 MarketService 上下文，使用 dishka 容器管理依赖.
+    创建 DQ、MetadataQueryFacade 和 MarketQueryFacade 上下文，使用 dishka 容器管理依赖.
 
-    用于同时需要 QualityEngine、MetadataService 和 MarketService 的场景。
+    用于同时需要 QualityEngine、MetadataQueryFacade 和 MarketQueryFacade 的场景。
 
     Yields:
-        tuple: (QualityEngine, MetadataService, MarketService) - 容器管理的实例
+        tuple: (QualityEngine, MetadataQueryFacade, MarketQueryFacade) - 容器管理的实例
 
     Example:
         with create_dq_and_metadata_context() as (  # noqa: E501
-            engine, metadata_service, market_service
+            engine, metadata_facade, market_facade
         ):
             result = engine.check(...)
 
@@ -62,6 +62,6 @@ def create_dq_and_metadata_context() -> Iterator[
     with create_prefect_host() as container:
         yield (
             container.get(QualityEngine),
-            container.get(MetadataService),
-            container.get(MarketService),
+            container.get(MetadataQueryFacade),
+            container.get(MarketQueryFacade),
         )

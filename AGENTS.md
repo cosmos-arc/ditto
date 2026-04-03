@@ -64,12 +64,14 @@
 ### 架构原则
 ```
 依赖层级（从高到低）:
-  ditto_port → ditto_core → ditto_data → ditto_infra
+  ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_infra
+  ditto_interfaces → ditto_analytics → ditto_engine → ditto_kernel
+  ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
 
 允许的跨层依赖:
-  - port 可以直接依赖 datahub.models/services/sources
-  - port 可以直接依赖 infra.foundation
-  - port 禁止直接依赖 datahub.stores/runtime（仅 registry 例外）
+  - interfaces 可以直接依赖 data.models/services/sources
+  - interfaces 可以直接依赖 infra.foundation
+  - interfaces 禁止直接依赖 data.storage/runtime（仅 registry 例外）
 
 详细约束见 .importlinter 配置
 ```
@@ -80,9 +82,12 @@
 
 详细分层规范：
 - Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
-- DataHub → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
-- Core → [packages/core/CLAUDE.md](packages/core/CLAUDE.md)
-- Port → [apps/port/CLAUDE.md](apps/port/CLAUDE.md)
+- Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
+- Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
+- Engine → [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md)
+- Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
+- Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md)
+- Interfaces → [apps/interfaces/CLAUDE.md](apps/interfaces/CLAUDE.md)
 
 ### 允许的依赖（严格限制）
 
@@ -237,10 +242,13 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 ditto/
 ├── packages/           # 核心包
 │   ├── infra/        # 基础设施
-│   ├── datahub/       # 数据访问层
-│   └── core/          # 核心引擎
+│   ├── kernel/       # 共享内核（零业务行为类型）
+│   ├── data/          # 数据访问层
+│   ├── analytics/     # 表达式编译 + 物化 + 因子 + 研究
+│   ├── app/           # 应用编排层（CQRS: query/process/command/builders）
+│   └── engine/        # 核心引擎（alpha/portfolio/execution/accounting/backtest/orchestrator）
 ├── apps/              # 应用
-│   ├── port/          # Server 应用
+│   ├── interfaces/    # Server 应用（API/CLI/Jobs + DI Composition Root）
 │   └── web/           # Web 应用
 ├── config/            # 环境配置（按环境分组）
 │   ├── development/

@@ -18,6 +18,11 @@ from ditto_app.process.materialization import (
     InvalidationCascadeOrchestrator,
 )
 from ditto_app.query.research import ResearchDatasetFacade
+from ditto_data.di import (
+    DerivedProvider,
+    MetadataProvider,
+    RuntimeProvider,
+)
 from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_data.services import (
     DerivedCatalogService,
@@ -33,11 +38,6 @@ from ditto_interfaces.jobs.flows.materialization import (
 )
 from ditto_interfaces.registry import ConfigProvider
 from ditto_interfaces.registry.contexts.bundle import MaterializationBundle
-from ditto_interfaces.registry.datahub import (
-    DerivedProvider,
-    MetadataProvider,
-    RuntimeProvider,
-)
 
 pytestmark = pytest.mark.serial
 
