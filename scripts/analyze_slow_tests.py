@@ -63,7 +63,7 @@ def analyze_slow_tests() -> None:
     # 分析单元测试
     print("[*] 分析单元测试...")
     unit_durations = {}
-    for package in ["core", "datahub", "foundation"]:
+    for package in ["core", "data", "foundation"]:
         path = f"packages/{package}/tests/unit"
         unit_durations.update(get_durations(path, count=50))
 
@@ -76,7 +76,7 @@ def analyze_slow_tests() -> None:
     # 分析集成测试
     print("[*] 分析集成测试...")
     integration_durations = {}
-    for package in ["core", "datahub", "foundation"]:
+    for package in ["core", "data", "foundation"]:
         path = f"packages/{package}/tests/integration"
         integration_durations.update(get_durations(path, count=50))
 

@@ -18,7 +18,7 @@
 │      packages/engine               │
 │     (Domain Layer)                  │
 ├─────────────────────────────────────┤
-│      packages/datahub              │
+│      packages/data                   │
 │     (Data Service Layer)            │
 ├─────────────────────────────────────┤
 │      packages/infra                │
@@ -95,7 +95,7 @@ pixi run -e dev pytest packages/kernel/tests/
 ### v0.1.0 (2026-03-25)
 
 - 创建 `ditto_kernel` 共享内核包
-- 从 DataHub 迁入 `AssetClass`、`Exchange`、`OrderSide`、`RunStatus`
+- 从 Data 迁入 `AssetClass`、`Exchange`、`OrderSide`、`RunStatus`
 - 新建 `InstrumentId` NewType（预留）
 - Core `OrderDirection` 统一为 kernel `OrderSide`
 - Port `AssetClass` 删除重复定义，改为从 kernel 导入

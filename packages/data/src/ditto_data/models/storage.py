@@ -1,4 +1,4 @@
-"""Storage models for DataHub."""
+"""Storage models for Data."""
 
 from dataclasses import dataclass, field
 

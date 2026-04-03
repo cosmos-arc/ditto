@@ -22,7 +22,7 @@ class TestSqlEngineInjection:
         db_path = self.data_root / "meta" / "hub.sqlite"
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Get schema path (from tests/integration/runtime/ to datahub/src)
+        # Get schema path (from tests/integration/runtime/ to data/src)
         schema_path = (
             Path(__file__).parent.parent.parent.parent
             / "src"

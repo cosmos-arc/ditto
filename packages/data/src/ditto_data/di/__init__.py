@@ -52,7 +52,7 @@ def get_data_providers() -> list[Provider]:
     """
     返回 Data 层的所有 Provider.
 
-    包含原 datahub 层（8 个 Provider）和原 core 层（2 个 Provider），
+    包含原 data 层（8 个 Provider）和原 core 层（2 个 Provider），
     统一由 Data 包管理 DI 注册。
     """
     return [

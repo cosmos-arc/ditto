@@ -131,6 +131,7 @@ ditto_engine/
 ┌─────────────────────────────────────┐
 │  Engine 禁止依赖                      │
 │  engine → data (beyond errors/provider) ❌│
+│  engine → analytics ❌                │
 │  engine → infra ❌                    │
 │  engine → interfaces ❌               │
 │  engine → app ❌                      │

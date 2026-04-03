@@ -1,7 +1,7 @@
 """
-DataHub 本地审计 DTO — 与 Core 记录解耦.
+Data 本地审计 DTO — 与 Core 记录解耦.
 
-DataHub 层持久化审计日志所需的本地数据传输对象。
+Data 层持久化审计日志所需的本地数据传输对象。
 字段与 Core 的 RiskScanRecord / PreTradeDecisionRecord 对齐，
 但不反向依赖 Core 包，枚举值用 str 表示。
 """
@@ -24,7 +24,7 @@ class AuditRecordType(StrEnum):
 @dataclass(frozen=True)
 class RiskScanPayload:
     """
-    PostTrade 风控扫描记录 — DataHub 本地 DTO.
+    PostTrade 风控扫描记录 — Data 本地 DTO.
 
     Attributes:
         trade_date: 交易日期 (YYYY-MM-DD)
@@ -53,7 +53,7 @@ class RiskScanPayload:
 @dataclass(frozen=True)
 class PreTradeDecisionPayload:
     """
-    PreTrade 订单校验决策记录 — DataHub 本地 DTO.
+    PreTrade 订单校验决策记录 — Data 本地 DTO.
 
     Attributes:
         trade_date: 交易日期 (YYYY-MM-DD)

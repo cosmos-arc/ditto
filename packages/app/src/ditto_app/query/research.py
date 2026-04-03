@@ -32,7 +32,7 @@ from ditto_data.services import DerivedArtifactReader, ResearchCatalogService
 from ditto_data.services.derived import VersionResolutionStrategy
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.research_artifact_service import ResearchArtifactService
-from ditto_engine.specs import CalendarId, GrainId
+from ditto_kernel.specs import CalendarId, GrainId
 
 from ditto_app.query._utils import now_iso
 

@@ -96,18 +96,15 @@ stock_daily = source.fetch_stock_daily("2024-01-02")
 adj_factor = source.fetch_adj_factor("2024-01-02")
 ```
 
-### 5.2 通过 DataHub 访问（DataHub 内部或 Port registry 装配）
+### 5.2 通过 Service 访问（Application 层注入）
 
 ```python
-from ditto_data import DataHub
+from ditto_data.services import MetadataService
 
-hub = DataHub(data_root="data")
+service: MetadataService = container.get(MetadataService)
 
-# 通过 DataSources 访问
-etf_basic = hub.sources.tushare.fetch_etf_basic()
-
-# 或使用工厂函数
-source = hub.sources.get("tushare")
+# 通过 Sources 访问
+etf_basic = source.fetch_etf_basic()
 stock_daily = source.fetch_stock_daily("2024-01-02")
 ```
 
@@ -133,13 +130,13 @@ TUSHARE_TOKEN=YOUR_TOKEN
 
 ```bash
 # 运行所有测试
-pytest packages/datahub/tests/unit/sources/
+pytest packages/data/tests/unit/sources/
 
 # 运行 TushareSource 测试
-pytest packages/datahub/tests/unit/sources/tushare/test_source.py -v
+pytest packages/data/tests/unit/sources/tushare/test_source.py -v
 
 # 查看覆盖率
-pytest --cov=packages/datahub/src/ditto_data/sources/tushare/source.py
+pytest --cov=packages/data/src/ditto_data/sources/tushare/source.py
 ```
 
 **测试覆盖**:

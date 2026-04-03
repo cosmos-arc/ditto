@@ -1,4 +1,4 @@
-"""Pytest configuration for datahub tests."""
+"""Pytest configuration for Data tests."""
 
 from collections.abc import Generator
 from datetime import date

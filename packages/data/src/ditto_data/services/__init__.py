@@ -6,7 +6,7 @@ Services module - 域服务统一入口.
 架构原则:
 - Service 封装业务逻辑，组合 Store 操作
 - Port 层只依赖 Service，不直接访问 Store
-- Core 层仅使用 DataHub 模型定义，不依赖 Service
+- Core 层仅使用 Data 模型定义，不依赖 Service
 
 域服务列表:
 - MarketService: 市场行情数据查询（K线、复权、状态）

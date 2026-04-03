@@ -1,6 +1,6 @@
 ---
 paths:
-  - packages/datahub/**/*.py
+  - packages/data/**/*.py
 ---
 
 # PIT (Point-in-Time) 安全规范

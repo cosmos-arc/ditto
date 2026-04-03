@@ -1,4 +1,4 @@
-"""DataHub utility modules."""
+"""Data utility modules."""
 
 from ditto_data.utils.timezone_utils import (
     MARKET_TIMEZONE_MAP,

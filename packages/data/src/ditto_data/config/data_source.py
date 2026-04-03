@@ -1,4 +1,4 @@
-"""DataHub 数据源配置."""
+"""Data 数据源配置."""
 
 from pydantic import BaseModel, ConfigDict, Field
 

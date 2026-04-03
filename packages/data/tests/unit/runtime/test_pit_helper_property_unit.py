@@ -1,5 +1,5 @@
 """
-Property-based tests for PIT Helper in ditto-datahub.
+Property-based tests for PIT Helper in ditto-data.
 
 Uses Hypothesis to verify PIT query generation invariants.
 """

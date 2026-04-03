@@ -160,7 +160,7 @@ class InstrumentRuleProvider(Protocol):
     三层规则查询 Protocol — Core 层接口，无 I/O。
 
     Core 层定义 Protocol + InMemoryRuleProvider 内存实现，
-    DataHub 层实现 PIT 版本（InstrumentRuleProvider → Record 转换）。
+    Data 层实现 PIT 版本（InstrumentRuleProvider → Record 转换）。
 
     """
 

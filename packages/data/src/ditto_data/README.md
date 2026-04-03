@@ -1,4 +1,4 @@
-# ditto-datahub
+# ditto-data
 
 **版本**: v0.5.0
 **最后更新**: 2026-01-23
@@ -18,17 +18,17 @@
 ┌─────────────────────────────────────┐
 │         ditto-core                  │
 ├─────────────────────────────────────┤
-│        ditto-datahub                │  ← 当前层
+│        ditto-data                   │  ← 当前层
 │  ┌──────────┐  ┌──────────┐         │
 │  │ Stores   │  │ Runtime  │         │
 │  │          │  │ Meta     │         │
 │  └──────────┘  └──────────┘         │
 ├─────────────────────────────────────┤
-│      ditto-foundation               │
+│      ditto-infra                    │
 └─────────────────────────────────────┘
 ```
 
-**依赖方向**: 仅依赖 `ditto-foundation`
+**依赖方向**: 仅依赖 `ditto-infra`
 
 ## 三、目录结构
 
@@ -130,8 +130,8 @@ logger.info(
 
 ```python
 from pathlib import Path
-from ditto_data import DataHub
-from ditto_data.storage import BarsStore, CalendarStore
+from ditto_data.config import DataRootConfig
+from ditto_data.storage.base import ParquetStore, SQLiteStore
 from ditto_data.runtime import InstrumentIdAllocator
 
 # Instrument ID 分配

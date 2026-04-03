@@ -28,10 +28,8 @@ settings = DataSourceSettings(tushare_token="your_token_here")
 ### 2. 基本使用
 
 ```python
-from ditto_data import DataHub
-
-# 初始化 DataHub
-hub = DataHub(data_root="data")
+from ditto_data import Data
+hub = Data(data_root="data")
 
 # 获取 Tushare 数据源
 source = hub.sources.get("tushare")
@@ -210,17 +208,17 @@ except SourceFetchError:
 
 ```bash
 # 运行所有单元测试
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/
 
 # 查看覆盖率
-pixi run -e dev pytest --cov packages/datahub/src/ditto_data/sources/tushare/
+pixi run -e dev pytest --cov packages/data/src/ditto_data/sources/tushare/
 ```
 
 ### 集成测试（需要真实 Token）
 
 ```bash
 # 运行端到端测试（需要 TUSHARE_TOKEN）
-pixi run -e dev pytest packages/datahub/tests/integration/sources/tushare/test_end_to_end.py -m external
+pixi run -e dev pytest packages/data/tests/integration/sources/tushare/test_end_to_end.py -m external
 ```
 
 ---
@@ -310,10 +308,10 @@ source.py 转换逻辑  列重命名、类型转换、过滤
 
 ### Q4: 如何切换到其他数据源？
 
-DataHub 支持多数据源，初始化时指定：
+Data 支持多数据源，初始化时指定：
 
 ```python
-source = hub.sources.get("akshare")  # 切换到 Akshare
+source = data.sources.get("akshare")  # 切换到 Akshare
 ```
 
 ---

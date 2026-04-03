@@ -1,4 +1,4 @@
-# ditto-datahub
+# ditto-data
 
 **版本**: v0.18.0
 **最后更新**: 2026-03-24
@@ -20,7 +20,7 @@ Ditto 量化系统的数据层，统一管理数据获取、存储、查询和 P
 
 ## 架构
 
-DataHub 采用分层架构，Store 层实现 CQRS 模式（Reader/Writer 分离）：
+Data 采用分层架构，Store 层实现 CQRS 模式（Reader/Writer 分离）：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -163,7 +163,7 @@ store = BarsStore(config.data_root)
 
 ### 域级组织
 
-DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
+Data 采用域驱动设计（DDD），按业务域组织代码结构：
 
 #### Metadata 域
 
@@ -698,7 +698,7 @@ bars = market_service.query(query)
 
 #### 统一接口约定
 
-Port 层通过 Domain Services 访问 DataHub 数据，所有 Services 都通过 DI 容器注入：
+Port 层通过 Domain Services 访问 Data 数据，所有 Services 都通过 DI 容器注入：
 
 ```python
 from dishka import Container
@@ -738,7 +738,7 @@ bars = market_service.query(
 
 ### 数据质量检查
 
-DataHub 提供三级数据质量检查机制：
+Data 提供三级数据质量检查机制：
 
 **L1 技术检查**: 非空、唯一、类型、外键、必需列
 **L2 业务检查**: 正值、表达式、范围、非零成交量
@@ -747,7 +747,7 @@ DataHub 提供三级数据质量检查机制：
 ```python
 from ditto_engine.quality import QualityEngine
 
-# QualityEngine 由容器注入（DataHub 本身不持有 dq_checker）
+# QualityEngine 由容器注入（Data 本身不持有 dq_checker）
 engine: QualityEngine = container.get(QualityEngine)
 
 # 运行 DQ 检查
@@ -853,7 +853,7 @@ bars/
 - 21 个新测试（catalog 10 + artifact 11），全部通过
 
 ### v0.16.0 (2026-03-21)
-**新增** — Phase 0 Part 4: DataHub 层策略规则支持
+**新增** — Phase 0 Part 4: Data 层策略规则支持
 - `TradingRuleReader` / `TradingRuleWriter`: PIT 版本化交易规则存储 (V1 内存实现)
 - `FeeScheduleReader` / `FeeScheduleWriter`: PIT 版本化费率表存储 (V1 内存实现)
 - `_pit_base.py`: 泛型 PIT 基类 (`PITRecordReader[RecordT]`, `PITRecordWriter[RecordT]`, `PITRecord` Protocol)
@@ -861,12 +861,12 @@ bars/
 - 26 个单元测试覆盖边界条件（effective_from/effective_to、版本选择、空值处理）
 
 **设计决策**
-- DataHub 层不依赖 Core 层，返回 Records 由调用方转换为 Core 模型
+- Data 层不依赖 Core 层，返回 Records 由调用方转换为 Core 模型
 
 ### v0.15.0 (2026-02-10)
 **破坏性重构**
-- 移除 DataHub Facade：Port 层直接注入 Domain Services
-  - 不再通过 `DataHub` 门面类访问数据
+- 移除 Data Facade：Port 层直接注入 Domain Services
+  - 不再通过 `Data` 门面类访问数据
   - Port 层通过 DI 容器直接注入 `MetadataService`、`MarketService` 等 Domain Services
   - Service 层保持不变，继续提供统一的域级 API
 - CQRS 架构实现：Store 层拆分为 Reader/Writer 模式
@@ -887,7 +887,7 @@ bars/
 
 **文档**
 - 更新 README.md 反映 CQRS 架构
-- 更新架构图，移除 DataHub Facade
+- 更新架构图，移除 Data Facade
 - 更新所有使用示例为 Service 直接访问模式
 
 **测试**
@@ -909,8 +909,8 @@ bars/
 - `helpers/pit.py`：PIT 查询辅助函数
 
 **改进**
-- 更新 `stores/README.md`：明确 stores/ 作为基础设施的定位
-- 更新 `packages/datahub/README.md`：架构图和层级说明
+- 更新 `storage/README.md`：明确 stores/ 作为基础设施的定位
+- 更新 `packages/data/README.md`：架构图和层级说明
 - 架构一致性：业务逻辑统一在 Domain Service 层
 
 **文档**
@@ -918,10 +918,10 @@ bars/
 
 ### v0.13.0 (2026-02-02)
 **重构**
-- 架构清理：移除 DataHub 层的业务编排组件
-  - 删除 `IngestionCoordinator`（业务编排应在 Port 层，而非 DataHub 层）
+- 架构清理：移除 Data 层的业务编排组件
+  - 删除 `IngestionCoordinator`（业务编排应在 Port 层，而非 Data 层）
   - 保留 `IngestionDataWriter` 作为通用写入工具类
-  - DataHub 职责明确：只负责底层读写，不负责业务编排
+  - Data 职责明确：只负责底层读写，不负责业务编排
 
 **新增**
 - Market 域 SourceSchema 定义：`sources/schemas/market_schemas.py`
@@ -983,8 +983,8 @@ bars/
 
 **集成**
 - DataRootConfig：添加新域路径配置
-- DataHub：注册三个新域服务（`hub.macro`, `hub.features`, `hub.factors`）
-- 依赖注入：`apps/port/src/ditto_port/registry/datahub.py`
+- Data：注册三个新域服务（`hub.macro`, `hub.features`, `hub.factors`）
+- 依赖注入：`apps/interfaces/src/ditto_interfaces/registry/data.py`
 
 **改进**
 - 架构一致性：三域统一使用 Service + Store + MetadataStore 模式
@@ -1148,7 +1148,7 @@ bars/
 - StockAdjFactorStore 迁移到 `domains/market/stock/adj/`
 - 新增 ETF 相关 Store（EtfBarsStore、EtfStatusStore、EtfNavStore、EtfAdjFactorStore）
 - 新增指数相关 Store（IndexBarsStore、IndexConstituentStore）
-- DataHub 集成 MarketService，提供 `hub.market` 统一查询接口
+- Data 集成 MarketService，提供 `hub.market` 统一查询接口
 
 **改进**
 - 域驱动设计（DDD）：Market 域完整实现
@@ -1174,7 +1174,7 @@ bars/
 - CalendarStore 迁移到 `domains/metadata/calendar/`
 - IndustryBasicStore、IndustryMappingStore 新增
 - IdentityStore 新增（支持 PIT 标识符映射）
-- DataHub 集成 MetadataService，提供 `hub.metadata` 统一查询接口
+- Data 集成 MetadataService，提供 `hub.metadata` 统一查询接口
 
 **改进**
 - 接口收敛：统一由 `MetadataService` 提供元数据查询能力
@@ -1206,7 +1206,7 @@ bars/
 ### v0.4.0 (2025-12-27)
 **新增**
 - Sprint 1 P0 任务全部完成
-- DataHub Facade 实现
+- Data Facade 实现
 - SqlEngine 实现
 
 ### v0.1.0 (2025-12-08)

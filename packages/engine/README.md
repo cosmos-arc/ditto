@@ -51,7 +51,7 @@
 │  │Checkers  │                      │
 │  └──────────┘                      │
 ├─────────────────────────────────────┤
-│        ditto-datahub                │
+│        ditto-data                   │
 │     (数据访问层)                      │
 ├─────────────────────────────────────┤
 │        ditto-infra                  │
@@ -59,7 +59,7 @@
 └─────────────────────────────────────┘
 ```
 
-**依赖方向**: 仅依赖 `ditto-datahub` 和 `ditto-infra`
+**依赖方向**: 仅依赖 `ditto-data` 和 `ditto-infra`
 
 ## 核心模块
 
@@ -363,7 +363,7 @@ result = pipeline.run(bundle)
 - `execution/orders.py`: Order 类型从 accounting 重导出到 execution
 - `accounting/account.py`: Account._cash 私有化（property 访问器）
 - `accounting/order_book.py`: OrderBook / OrderBookReadOnly 非 frozen 说明注释
-- **DataHub 控制面**: StrategyCatalogService（Spec CRUD + 发布治理）、StrategyArtifactService（产物生命周期管理）
+- **Data 控制面**: StrategyCatalogService（Spec CRUD + 发布治理）、StrategyArtifactService（产物生命周期管理）
 - 62 个新测试（regime 24 + validation 17 + models 6 + catalog 10 + artifact 11），3849 个测试全部通过，84.82% 覆盖率
 
 ### v0.7.0 (2026-03-22)

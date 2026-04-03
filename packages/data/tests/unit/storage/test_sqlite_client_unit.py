@@ -20,7 +20,7 @@ def sqlite_pool(db_path: Path) -> SQLitePool:
     # Get schema path - use relative path from test file
     # Test file: packages/data/tests/unit/stores/test_sqlite_client_unit.py
     # Schema file: packages/data/src/ditto_data/scripts/schema.sql
-    # 4 parents up: stores -> unit -> tests -> datahub
+    # 4 parents up: stores -> unit -> tests -> data
     schema_path = (
         Path(__file__).parent.parent.parent.parent
         / "src"

@@ -1,22 +1,22 @@
-# Port 层架构规范
+# Interfaces 层架构规范
 
 ## 定位
 
-Port 层是 **Application Layer（应用层）**，负责：
-- 用例编排和事务边界
-- FastAPI HTTP API
-- Prefect 任务调度
+Interfaces 层是 **Application Boundary Layer（应用边界层）**，负责：
+- HTTP API（FastAPI）
 - CLI 命令入口
+- Prefect 任务调度（Flow/Task）
+- DI 容器组装（Composition Root）
 
 **核心原则**：
-- 协调 Core 和 DataHub，不包含核心业务逻辑
+- 纯编排层，不包含业务逻辑
 - 通过 DI 容器获取依赖
-- 统一的错误处理和日志记录
+- 业务逻辑已迁入 `ditto_app` 包
 
 ## 模块结构
 
 ```
-ditto_port/
+ditto_interfaces/
 ├── api/               # API 路由
 ├── cli/               # CLI 命令
 │   ├── commands/      # 命令实现
@@ -27,12 +27,8 @@ ditto_port/
 ├── jobs/              # Prefect 任务
 │   ├── flows/         # Flow 定义
 │   └── tasks/         # Task 实现
-├── models/            # 数据模型
-├── registry/          # DI 容器（Dishka）
-├── services/          # 应用服务
-│   ├── ingestion/     # 数据摄取（Coordinator / Backfill / DataWriter / Quality）
-│   ├── strategy/      # 策略运行（BacktestService / StrategyRunService / InputAssembler / ArtifactWriter）
-│   └── derived/       # 衍生数据（MaterializationOrchestrator / QueryFacade / EvaluationFacade）
+├── models/            # API 数据模型（Pydantic）
+├── registry/          # DI 容器（Dishka Composition Root）
 └── main.py            # 启动入口
 ```
 
@@ -40,16 +36,20 @@ ditto_port/
 
 ```
 ┌─────────────────────────────────────┐
-│  Port 可依赖                        │
-│  port → core ✅                     │
-│  port → datahub ✅                  │
-│  port → infra ✅                    │
+│  Interfaces 可依赖                  │
+│  interfaces → app ✅               │
+│  interfaces → engine ✅            │
+│  interfaces → data ✅              │
+│  interfaces → analytics ✅         │
+│  interfaces → infra ✅             │
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
-│  Port 禁止被依赖                    │
-│  core → port ❌                     │
-│  datahub → port ❌                  │
+│  Interfaces 禁止被依赖              │
+│  app → interfaces ❌               │
+│  engine → interfaces ❌            │
+│  data → interfaces ❌              │
+│  analytics → interfaces ❌         │
 └─────────────────────────────────────┘
 ```
 
@@ -57,22 +57,28 @@ ditto_port/
 
 | 访问类型 | ✅ 允许 | ❌ 禁止 |
 |---------|--------|--------|
-| **通过 Domain Service** | `MetadataService`, `MarketService` | - |
-| **直接导入 Sources** | `from ditto_data.sources.*` | - |
-| **直接导入 Storage** | - | `from ditto_data.storage.*` |
+| **App 层服务** | `from ditto_app.process.*` | - |
+| **App 层查询** | `from ditto_app.query.*` | - |
+| **App 层配置** | `from ditto_app.config` | - |
+| **Data Service** | `from ditto_data.services.*` | - |
+| **Data Sources** | `from ditto_data.sources.*` | - |
+| **Data Stores** | registry 内仅限 DI 注册 | 非 registry 代码 |
 
-```python
-# ✅ 正确：通过 DI 容器注入 Service
-from ditto_data.services import MetadataService
-service: MetadataService = container.get(MetadataService)
+### 业务逻辑去向
 
-# ✅ 正确：通过 Service 获取数据
-bars = service.get_bars(query)
+业务逻辑已迁移到 `ditto_app` 包中：
 
-# ❌ 错误：直接访问 Store
-from ditto_data.storage import BarsReader  # ❌
-reader = BarsReader(...)  # ❌
-```
+| 原位置 | 新位置 | 内容 |
+|--------|--------|------|
+| `services/ingestion/` | `ditto_app.process.ingestion` | 数据摄取服务 |
+| `services/ingestion/quality/` | `ditto_app.process.quality` | 质量校验服务 |
+| `services/strategy/` | `ditto_app.process.strategy` | 策略运行服务 |
+| `services/strategy/*.builder` | `ditto_app.builders.strategy` | 策略构建器 |
+| `services/derived/materialization*` | `ditto_app.process.materialization` | 衍生物化服务 |
+| `services/derived/query_facade*` | `ditto_app.query.derived` | 衍生查询服务 |
+| `services/derived/research*` | `ditto_app.query.research` | 研究数据集服务 |
+| `models/config` | `ditto_app.config` | 数据集配置 |
+| `models/ingestion` | `ditto_data.models.ingestion` | 摄取结果类型 |
 
 ## FastAPI 规范
 
@@ -81,7 +87,7 @@ reader = BarsReader(...)  # ❌
 | 路由函数必须类型注解 | 100% 覆盖 |
 | 请求/响应用 Pydantic | 类型安全 |
 | 异步优先 | `async def` |
-| 错误用自定义异常 | `DataHubError` 等 |
+| 错误用自定义异常 | `DittoPortError` 等 |
 
 | 禁止 | 替代 |
 |------|------|
@@ -100,13 +106,14 @@ reader = BarsReader(...)  # ❌
 
 | 禁止 | 替代 |
 |------|------|
-| 在 Flow 中写业务逻辑 | 抽取到 Task 或 Core |
+| 在 Flow 中写业务逻辑 | 抽取到 Task 或 `ditto_app` |
 | 隐式依赖 | 显式 `wait_for` |
 | 无限重试 | `max_attempts=3` |
 
 ## 数据摄入
 
-Port 层通过 `services/ingestion/` 编排数据摄取流程，具体 T0/T1/T2/T3 分层规则和游标管理详见 [DataHub 层规范](../../packages/datahub/CLAUDE.md)。
+Interfaces 层通过 CLI/Jobs 编排数据摄取流程，业务逻辑在 `ditto_app.process.ingestion` 中。
+具体 T0/T1/T2/T3 分层规则和游标管理详见 [Data 层规范](../../packages/data/CLAUDE.md)。
 
 ## CLI 规范
 
@@ -147,8 +154,8 @@ def daily(date: str):
 ### 测试文件位置
 
 ```
-apps/port/
-├── src/ditto_port/
+apps/interfaces/
+├── src/ditto_interfaces/
 └── tests/
     ├── unit/           # 单元测试
     └── integration/    # 集成测试
@@ -165,23 +172,23 @@ pixi run -e dev test --integration # 只运行集成测试
 ## 判断决策树
 
 ```
-问题：这个组件应该放在 Port 层吗？
+问题：这个组件应该放在 Interfaces 层吗？
 
 1. 是否是 HTTP API？
-   YES → Port 层 ✅
+   YES → Interfaces 层 ✅
 
 2. 是否是 CLI 命令？
-   YES → Port 层 ✅
+   YES → Interfaces 层 ✅
 
 3. 是否是 Prefect Flow/Task？
-   YES → Port 层 ✅
+   YES → Interfaces 层 ✅
 
 4. 是否是流程编排（协调多个服务）？
-   YES → Port 层 ✅
+   YES → Interfaces 层 ✅
 
-5. 是否是核心业务逻辑？
-   YES → Core 层 ❌
+5. 是否是业务逻辑（数据处理、策略计算）？
+   YES → App 层 (ditto_app) ❌
 
-6. 是否是数据存储？
-   YES → DataHub 层 ❌
+6. 是否是 DI 注册（Composition Root）？
+   YES → Interfaces 层 (registry/) ✅
 ```

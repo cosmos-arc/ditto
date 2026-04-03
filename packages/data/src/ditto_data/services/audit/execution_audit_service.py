@@ -5,7 +5,7 @@ ExecutionAuditService — SQLite 审计日志持久化.
 SQLite 的 execution_audit 表，并提供按 run_id / record_type / date_range
 的查询接口。
 
-注意：本服务使用 DataHub 本地 DTO (strategy_audit)，不依赖 Core 包。
+注意：本服务使用 Data 本地 DTO (strategy_audit)，不依赖 Core 包。
 """
 
 from __future__ import annotations

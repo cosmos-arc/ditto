@@ -1,4 +1,4 @@
-"""ConfigProvider DataHub 配置测试."""
+"""ConfigProvider Data 配置测试."""
 
 from dishka import make_container
 from ditto_data.config import (
@@ -9,8 +9,8 @@ from ditto_data.config.data_store import DataStoreSettings
 from ditto_interfaces.registry.infra import ConfigProvider
 
 
-class TestConfigProviderDataHub:
-    """ConfigProvider DataHub 配置测试类."""
+class TestConfigProviderData:
+    """ConfigProvider Data 配置测试类."""
 
     def test_data_store_settings_provider(self, monkeypatch):
         """测试 data_store_settings provider."""
@@ -73,8 +73,8 @@ class TestConfigProviderDataHub:
         # 清理
         container.close()
 
-    def test_all_datahub_settings_together(self, monkeypatch):
-        """测试所有 DataHub 配置一起获取."""
+    def test_all_data_settings_together(self, monkeypatch):
+        """测试所有 Data 配置一起获取."""
         # 设置环境
         monkeypatch.setenv("ENVIRONMENT", "testing")
 

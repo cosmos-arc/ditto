@@ -27,13 +27,13 @@ from ditto_data.services.audit import ExecutionAuditService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.strategy.strategy_artifact_service import (
-    StrategyArtifactService as DataHubStrategyArtifactService,
+    StrategyArtifactService,
 )
 from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from ditto_data.services.strategy.strategy_run_service import (
-    StrategyRunService as DataHubStrategyRunService,
+    StrategyRunService as DataStrategyRunService,
 )
 from ditto_data.sources.source import DataSources
 from ditto_engine.alpha.pipeline import StrategyPipeline
@@ -183,8 +183,8 @@ class TestAppBuilderFactory:
         assert isinstance(factory, StrategyServiceFactory)
         assert isinstance(backtest_runtime_builder, BacktestRuntimeBuilder)
         assert isinstance(run_service, StrategyRunService)
-        assert isinstance(run_service._artifact_service, DataHubStrategyArtifactService)
-        assert isinstance(run_service._run_service, DataHubStrategyRunService)
+        assert isinstance(run_service._artifact_service, StrategyArtifactService)
+        assert isinstance(run_service._run_service, DataStrategyRunService)
         assert isinstance(run_service._assembler, StrategyInputAssembler)
         assert run_service._assembler.strategy_id == "momentum-etf"
 
@@ -195,11 +195,11 @@ class TestAppBuilderFactory:
         )
         assert isinstance(
             backtest_service._options.artifact_service,
-            DataHubStrategyArtifactService,
+            StrategyArtifactService,
         )
         assert isinstance(
             backtest_service._options.run_service,
-            DataHubStrategyRunService,
+            DataStrategyRunService,
         )
         container.close()
 

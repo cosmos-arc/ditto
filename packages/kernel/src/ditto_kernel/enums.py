@@ -55,7 +55,7 @@ class OrderSide(StrEnum):
     """
     订单方向枚举.
 
-    统一 DataHub `OrderSide` 和 Core `OrderDirection` 为单一名称。
+    统一 Data `OrderSide` 和 Core `OrderDirection` 为单一名称。
     """
 
     BUY = "buy"

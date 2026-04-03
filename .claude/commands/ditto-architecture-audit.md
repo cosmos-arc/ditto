@@ -8,7 +8,7 @@ implementation: .claude/commands/architecture-audit.py
 
 ## 审计范围
 
-- `packages/` - foundation、datahub、core
+- `packages/` - infra、kernel、data、analytics、engine、app
 - `apps/` - port、web
 - `tests/` - 单元测试、集成测试、fixtures
 
@@ -43,7 +43,7 @@ pixi run -e dev test --integration
 - ❌ port → Store（应通过 Repository）
 - ❌ port → Source（应通过 Repository/Service）
 - ✅ port → foundation（**允许**，横切层）
-- ✅ port → datahub → foundation（正常依赖链）
+- ✅ interfaces → data → infra（正常依赖链）
 
 **工程实践检查**：
 - 使用 `Grep` 识别类规模（>300行）、方法数量（>15个）
@@ -266,7 +266,7 @@ class SQLBarLoader: ...  # Port 层不应知道 SQL
 class ParquetDataWriter: ...  # 应为 BarDataWriter
 
 # ✅ 使用业务术语
-class BarDataLoader: ...  # 内部实现由 DataHub 层处理
+class BarDataLoader: ...  # 内部实现由 Data 层处理
 class BarDataWriter: ...
 ```
 

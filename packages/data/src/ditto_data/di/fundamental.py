@@ -1,4 +1,4 @@
-"""DataHub 层 - Fundamental Domain Provider。"""
+"""Data 层 - Fundamental Domain Provider。"""
 
 from __future__ import annotations
 

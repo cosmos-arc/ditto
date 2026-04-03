@@ -229,8 +229,8 @@ def obs_assertions() -> None:
 
 
 @pytest.fixture
-def mock_datahub() -> MagicMock:
-    """每个测试独立的 Mock Services (替代旧的 DataHub).
+def mock_data() -> MagicMock:
+    """每个测试独立的 Mock Services (替代旧的 Data 层).
 
     使用 function 作用域确保测试隔离，支持并行测试。
 
@@ -254,27 +254,27 @@ def mock_datahub() -> MagicMock:
 
 
 @pytest.fixture
-def patch_datahub(mock_datahub: MagicMock) -> MagicMock:
+def patch_data(mock_data: MagicMock) -> MagicMock:
     """返回 Mock Services 对象（不进行全局 patch）.
 
-    注意：此 fixture 不再全局 patch DataHub 类，
+    注意：此 fixture 不再全局 patch Data 类，
     因为会与 dishka 依赖注入容器冲突。
 
     集成测试应使用真实的 Services（通过 create_ingestion_bundle），
     单元测试可自行 mock 需要的组件。
 
     使用方式（单元测试）：
-        def test_something(patch_datahub):
+        def test_something(patch_data):
             # 使用 mock 对象进行测试
-            assert patch_datahub.metadata_service.is_trading_day() is True
+            assert patch_data.metadata_service.is_trading_day() is True
 
     Args:
-        mock_datahub: 独立的 Mock Services 对象
+        mock_data: 独立的 Mock Services 对象
 
     Returns:
-        MagicMock: mock_datahub 对象
+        MagicMock: mock_data 对象
     """
-    return mock_datahub
+    return mock_data
 
 
 # =============================================================================

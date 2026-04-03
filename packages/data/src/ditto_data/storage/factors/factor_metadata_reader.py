@@ -2,7 +2,7 @@
 FactorMetadata reader for CQRS pattern.
 
 Provides read-only access to factor metadata.
-Following design document at docs/plans/2026-02-09-datahub-cqrs-refactor.md
+Following design document at docs/plans/2026-02-09-data-cqrs-refactor.md
 """
 
 from __future__ import annotations

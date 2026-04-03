@@ -1,4 +1,4 @@
-"""DataHub 文件存储配置。"""
+"""Data 文件存储配置。"""
 
 from pathlib import Path
 

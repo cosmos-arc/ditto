@@ -19,7 +19,7 @@ from ditto_data.models.publication_safety import (
 from ditto_data.storage.runtime.derived_artifact_writer import (
     ArtifactMetadataParams,
 )
-from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 _TIME_KEY = "trade_date"
 

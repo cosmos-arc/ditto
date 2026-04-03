@@ -77,7 +77,7 @@ class TestCreateIngestTask:
         assert result["row_count"] == 100
 
     def test_task_closes_hub(self, mocker):
-        """Test that task properly closes DataHub."""
+        """Test that task properly closes Data layer."""
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 

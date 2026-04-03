@@ -169,14 +169,14 @@ git commit -m "refactor: rename cache to caching
 ```python
 # ✅ 单元测试：所有依赖都是 Mock
 
-def test_datahub_is_trading_day_delegates_correctly(mocker):
-    """测试 DataHub 委托逻辑，不关心 Calendar 如何实现"""
+def test_data_is_trading_day_delegates_correctly(mocker):
+    """测试 Data 委托逻辑，不关心 Calendar 如何实现"""
     # Mock 所有依赖
     mock_calendar = mocker.Mock()
     mock_calendar.is_trading_day.return_value = True
 
     # 直接创建被测对象
-    hub = DataHub(
+    hub = Data(
         data_root=Path("/tmp"),
         calendar=mock_calendar,
         # ... 其他 Mock 依赖
@@ -279,7 +279,7 @@ def test_tushare_client_can_parse_api_response(respx_mock):
 |------|-----------------|----------------|
 | **DAO** | `mocker.Mock()` | 真实数据库 + 真实 SQL |
 | **HTTP Client** | `respx.mock()` | 真实 Client + Mock 响应 |
-| **DataHub** | Mock 所有 Accessor | （不测，中间层无接缝） |
+| **Data** | Mock 所有 Accessor | （不测，中间层无接缝） |
 
 ### 常见误区
 
@@ -781,7 +781,7 @@ def test_partitioned_write(store, sample_quotes):
 **实现原理**：
 - 使用 `pytest_collection_modifyitems` hook 在测试收集时自动标记
 - 配置文件位置：
-  - DataHub: `packages/data/tests/conftest.py`
+  - Data: `packages/data/tests/conftest.py`
   - Infra: `packages/infra/tests/unit/conftest.py`
 
 **手动标记需求**：
@@ -806,12 +806,12 @@ def test_partitioned_write(store, sample_quotes):
 ```python
 # 单元测试 - 完全 Mock
 @pytest.mark.unit
-def test_datahub_delegates_to_calendar(mocker):
-    """测试 DataHub 的委托逻辑"""
+def test_data_delegates_to_calendar(mocker):
+    """测试 Data 的委托逻辑"""
     mock_calendar = mocker.Mock()
     mock_calendar.is_trading_day.return_value = True
 
-    hub = DataHub(calendar=mock_calendar, ...)
+    hub = Data(calendar=mock_calendar, ...)
     result = hub.is_trading_day("2024-01-02")
 
     mock_calendar.is_trading_day.assert_called_once_with("2024-01-02")
@@ -1016,7 +1016,7 @@ def check_structure(src_path, test_path, name):
 
 all_ok = True
 all_ok &= check_structure('packages/infra/src', 'packages/infra/tests/unit', 'Infra')
-all_ok &= check_structure('packages/data/src', 'packages/data/tests/unit', 'DataHub')
+all_ok &= check_structure('packages/data/src', 'packages/data/tests/unit', 'Data')
 all_ok &= check_structure('apps/port/src', 'apps/port/tests/unit', 'Port')
 
 if all_ok:

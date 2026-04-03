@@ -13,7 +13,7 @@ class FreezeService:
     Data versioning service wrapping FreezeManager.
 
     Provides a service-layer interface for freeze operations,
-    keeping runtime details encapsulated within DataHub.
+    keeping runtime details encapsulated within Data layer.
     """
 
     def __init__(self, freeze_manager: FreezeManager) -> None:

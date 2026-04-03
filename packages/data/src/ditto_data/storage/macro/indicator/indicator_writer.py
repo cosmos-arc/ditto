@@ -2,7 +2,7 @@
 Indicator writer for CQRS pattern.
 
 Provides write access to macro indicator data with PIT support.
-Following design document at docs/plans/2026-02-09-datahub-cqrs-refactor.md
+Following design document at docs/plans/2026-02-09-data-cqrs-refactor.md
 """
 
 from __future__ import annotations

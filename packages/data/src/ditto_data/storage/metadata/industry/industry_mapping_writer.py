@@ -2,7 +2,7 @@
 Industry mapping writer for CQRS pattern.
 
 Provides write access to stock-industry mapping with cache invalidation.
-Following design document at docs/plans/2026-02-09-datahub-metadata-cqrs-design.md
+Following design document at docs/plans/2026-02-09-data-metadata-cqrs-design.md
 """
 
 from __future__ import annotations

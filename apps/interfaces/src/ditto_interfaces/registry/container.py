@@ -19,7 +19,7 @@ def _get_base_providers() -> tuple[Provider, ...]:
     """获取所有 Provider（按层级组装）."""
     return (
         *get_infra_providers(),  # Infrastructure 层
-        *get_data_providers(),  # Data 层（含原 Core + DataHub）
+        *get_data_providers(),  # Data 层（含原 Core + Data DQ）
         *get_app_providers(),  # App 层
     )
 

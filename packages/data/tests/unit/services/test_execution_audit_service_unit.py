@@ -1,6 +1,6 @@
 """Tests for ExecutionAuditService — SQLite audit log persistence.
 
-使用 DataHub 本地 DTO (RiskScanPayload / PreTradeDecisionPayload)，
+使用 Data 本地 DTO (RiskScanPayload / PreTradeDecisionPayload)，
 不再依赖 Core 审计记录类型。
 """
 

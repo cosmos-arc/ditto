@@ -126,7 +126,7 @@ def app_ctx() -> MagicMock:
 
     mock = MagicMock()
 
-    # DataHub mock
+    # Data mock
     mock.hub.calendar_store.is_trading_day.return_value = True
     mock.hub.calendar_store.get_range.return_value = ["2024-01-02", "2024-01-03"]
     mock.hub.ingestion_log_store.list_ingested_dates.return_value = []

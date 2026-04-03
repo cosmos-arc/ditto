@@ -9,7 +9,7 @@ import polars as pl
 
 
 class DataSourceError(Exception):
-    """DataHub data source base exception."""
+    """Data data source base exception."""
 
     def __init__(
         self,

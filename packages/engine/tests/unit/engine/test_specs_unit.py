@@ -3,7 +3,7 @@
 from typing import get_args
 
 import pytest
-from ditto_engine.specs import (
+from ditto_kernel.specs import (
     CalendarId,
     DerivedRole,
     DerivedSpec,

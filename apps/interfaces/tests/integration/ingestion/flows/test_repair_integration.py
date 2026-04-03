@@ -26,12 +26,12 @@ class TestRetryFailedFlow:
         """
         Test that flow retries failed tasks.
 
-        注意: 此测试使用真实的 DataHub 和数据，
+        注意: 此测试使用真实的 Data 层和数据，
         需要数据库中有失败记录才能正确执行。
         """
         from ditto_interfaces.jobs.flows.repair import retry_failed_flow
 
-        # 使用真实的 DataHub，不再使用 mock
+        # 使用真实的 Data 层，不再使用 mock
         result = retry_failed_flow(
             dataset="stock_daily",
             max_attempts=3,
@@ -46,11 +46,11 @@ class TestRetryFailedFlow:
         """
         Test that flow respects limit parameter.
 
-        注意: 此测试使用真实的 DataHub 和数据。
+        注意: 此测试使用真实的 Data 层和数据。
         """
         from ditto_interfaces.jobs.flows.repair import retry_failed_flow
 
-        # 使用真实的 DataHub，不再使用 mock
+        # 使用真实的 Data 层，不再使用 mock
         result = retry_failed_flow(
             dataset="stock_daily",
             max_attempts=3,
@@ -64,11 +64,11 @@ class TestRetryFailedFlow:
         """
         Test that flow handles case with no failed tasks.
 
-        注意: 此测试使用真实的 DataHub 和数据。
+        注意: 此测试使用真实的 Data 层和数据。
         """
         from ditto_interfaces.jobs.flows.repair import retry_failed_flow
 
-        # 使用真实的 DataHub，不再使用 mock
+        # 使用真实的 Data 层，不再使用 mock
         result = retry_failed_flow(
             dataset="stock_daily",
             max_attempts=3,
@@ -83,7 +83,7 @@ class TestRetryFailedFlow:
         """
         Test that flow uses force=True when retrying.
 
-        注意: 此测试使用真实的 DataHub 和数据。
+        注意: 此测试使用真实的 Data 层和数据。
         """
         from ditto_interfaces.jobs.flows.repair import retry_failed_flow
 
@@ -96,9 +96,9 @@ class TestRetryFailedFlow:
         # Should complete successfully
         assert "dataset" in result
 
-    # Note: DataHub resource lifecycle is managed by the dependency injection container.
+    # Note: Data resource lifecycle is managed by the dependency injection container.
     # The test_flow_closes_hub test is no longer applicable -
-    # DataHub does not have close() method.
+    # Data does not have close() method.
 
 
 @pytest.mark.integration
@@ -110,7 +110,7 @@ class TestRepairHolesFlow:
         """
         Test that flow can detect and repair data holes.
 
-        注意: 此测试使用真实的 DataHub 和数据。
+        注意: 此测试使用真实的 Data 层和数据。
         """
         from ditto_interfaces.jobs.flows.repair import repair_holes_flow
 
@@ -126,7 +126,7 @@ class TestRepairHolesFlow:
         """
         Test that flow handles case with no holes.
 
-        注意: 此测试使用真实的 DataHub 和数据。
+        注意: 此测试使用真实的 Data 层和数据。
         """
         from ditto_interfaces.jobs.flows.repair import repair_holes_flow
 
@@ -147,7 +147,7 @@ class TestDailyRepairFlow:
         """
         Test that flow runs both retry and hole detection.
 
-        注意: 此测试使用真实的 DataHub 和数据。
+        注意: 此测试使用真实的 Data 层和数据。
         """
         from ditto_interfaces.jobs.flows.repair import daily_repair_flow
 
@@ -161,7 +161,7 @@ class TestDailyRepairFlow:
         """
         Test that flow aggregates retry and holes results.
 
-        注意: 此测试使用真实的 DataHub 和数据。
+        注意: 此测试使用真实的 Data 层和数据。
         """
         from ditto_interfaces.jobs.flows.repair import daily_repair_flow
 

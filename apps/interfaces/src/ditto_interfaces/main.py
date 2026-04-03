@@ -103,7 +103,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     容器负责：
     - Observability 初始化/关闭
     - SQLitePool 创建/关闭
-    - DataHub 创建
+    - Data 初始化
 
     注意：dishka 中间件在应用创建后立即设置，而不是在 lifespan 中。
     """

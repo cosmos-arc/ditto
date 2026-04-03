@@ -1,4 +1,4 @@
-"""DataHub 配置模块."""
+"""Data 配置模块."""
 
 from ditto_data.config.data_source import DataSourceSettings
 from ditto_data.config.data_store import DataStoreSettings, SqlEngineConfig

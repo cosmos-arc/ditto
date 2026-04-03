@@ -27,7 +27,7 @@
 │  │Portfolio │                       │
 │  └──────────┘                       │
 ├─────────────────────────────────────┤
-│        ditto-datahub                │
+│        ditto-data                   │
 │     (数据访问层)                      │
 ├─────────────────────────────────────┤
 │        ditto-infra                  │
@@ -35,7 +35,7 @@
 └─────────────────────────────────────┘
 ```
 
-**依赖方向**: 仅依赖 `ditto-datahub` 和 `ditto-infra`
+**依赖方向**: 仅依赖 `ditto-data` 和 `ditto-infra`
 
 ## 三、目录结构
 
@@ -81,7 +81,7 @@ src/ditto_engine/
 | `DQReportGenerator` | DQ 报告生成器（Markdown/HTML） |
 
 **架构特点**：
-- 纯函数式业务逻辑，零依赖 DataHub
+- 纯函数式业务逻辑，零依赖 Data 层
 - 所有数据通过参数注入（由 Application Layer 提供）
 - 支持多级 DQ 检查（L1 阻断、L2 警告、L3 告警）
 
@@ -153,12 +153,12 @@ from pathlib import Path
 from ditto_engine.quality import QualityEngine
 from ditto_engine.engine import RegimeEngine, FactorEngine
 from ditto_engine.portfolio import PortfolioManager
-from ditto_data import DataHub
+from ditto_data import Data
 from ditto_data.storage.market import MarketBarsQuery
 import polars as pl
 
 # 初始化
-hub: DataHub = container.get(DataHub)
+hub: Data = container.get(Data)
 
 # === 数据质量检查 ===
 # L1/L2 检查（写入时）

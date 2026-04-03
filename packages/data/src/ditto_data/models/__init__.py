@@ -1,6 +1,6 @@
-"""DataHub models for data transfer objects."""
+"""Data models for data transfer objects."""
 
-# DataHub 层自己的 models
+# Data 层自己的 models
 from ditto_analytics.models.factors import (
     FACTOR_CLASS_FUNDAMENTAL,
     FACTOR_CLASS_MACRO,

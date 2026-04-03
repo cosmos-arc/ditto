@@ -1,1 +1,1 @@
-"""DataHub config 测试."""
+"""Data config 测试."""

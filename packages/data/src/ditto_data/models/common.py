@@ -1,4 +1,4 @@
-"""Common enumerations and data structures for DataHub."""
+"""Common enumerations and data structures for Data."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""DataHub 层 - Derived Query/Cache 基础设施 Provider."""
+"""Data 层 - Derived Query/Cache 基础设施 Provider."""
 
 from pathlib import Path
 
@@ -19,9 +19,9 @@ __all__ = ["DerivedProvider"]
 
 class DerivedProvider(Provider):
     """
-    DataHub 层 Derived 基础设施 Provider.
+    Data 层 Derived 基础设施 Provider.
 
-    仅注册 DataHub 层服务，App 层服务（Facade/Orchestrator）
+    仅注册 Data 层服务，App 层服务（Facade/Orchestrator）
     已迁入 ditto_app.providers。
     """
 

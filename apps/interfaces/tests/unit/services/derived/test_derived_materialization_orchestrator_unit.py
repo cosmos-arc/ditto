@@ -50,7 +50,7 @@ from ditto_data.storage.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
 )
-from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _spec(profile: MaterializationProfile) -> DerivedSpec:

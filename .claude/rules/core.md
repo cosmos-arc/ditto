@@ -246,8 +246,8 @@ class DQSpec(BaseModel):
 
 | ✅ 正确 | ❌ 错误 |
 |---------|---------|
-| `raise DataHubError("msg")` | `raise Exception("msg")` |
-| `except DataHubError as e` | `except Exception` |
+| `raise DataError("msg")` | `raise Exception("msg")` |
+| `except DataError as e` | `except Exception` |
 | `except SpecificError` | 捕获所有 Exception |
 
 ### 异常处理策略
@@ -256,7 +256,7 @@ class DQSpec(BaseModel):
 
 | 层级 | 处理策略 | 示例 |
 |------|----------|------|
-| **Foundation/DataHub** | 直接抛出原生异常或领域异常 | `raise SourceFetchError(...)` |
+| **Data** | 直接抛出原生异常或领域异常 | `raise SourceFetchError(...)` |
 | **Application** | 统一捕获 + 日志 + 业务响应 | `except Exception: logger.exception(...); return IngestionResult.failed(...)` |
 | **Interface** | 统一异常处理器 + 用户友好响应 | FastAPI middleware |
 
@@ -324,12 +324,12 @@ except Exception as e:
 **异常层次结构**：
 ```python
 # 基础异常
-class DataHubError(Exception):
+class DataError(Exception):
     def __init__(self, message: str, details: dict[str, object] | None = None):
         self.details = details or {}
 
 # 领域异常
-class DataSourceError(DataHubError): ...
+class DataSourceError(DataError): ...
 class SourceFetchError(DataSourceError): ...
 class SourceAuthenticationError(DataSourceError): ...
 ```
@@ -356,11 +356,11 @@ from ditto_infra.config import get_settings  # 应为 ditto_infra.foundation.con
 使用 open() 写文件
 ```
 
-### DataHub 层导入
+### Data 层导入
 
 ```python
 # ✅ 正确
-from ditto_data import DataHub
+from ditto_data import Data
 
 # ❌ 错误
 from ditto_data.storage.bars_store import BarsStore
@@ -565,7 +565,8 @@ from ditto_data.storage.bars_store import BarsStore
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.runtime.sqlite_pool import SQLitePool
 
-# ✅ Interfaces 层应该使用 Service（通过 DI 获取）from ditto_data import DataHub
+# ✅ Interfaces 层应该使用 Service（通过 DI 获取）
+from ditto_data import Data
 from ditto_data.domains.market.market_service import MarketService
 from ditto_data.domains.metadata.metadata_service import MetadataService
 
@@ -573,7 +574,7 @@ from ditto_data.domains.metadata.metadata_service import MetadataService
 from ditto_data.sources.tushare import TushareSource
 from ditto_data.storage.sqlite_client import SQLiteClient
 
-# ✅ DataHub 内部可以导入下层
+# ✅ Data 内部可以导入下层
 # packages/data 内的 Store 可以导入 Runtime```
 
 **职责识别检查：**
@@ -582,10 +583,10 @@ from ditto_data.storage.sqlite_client import SQLiteClient
 
 | 问题 | 回答 Yes → 归属 | 回答 No → 归属 |
 |------|-----------------|----------------|
-| 是否直接访问存储文件/数据库？ | DataHub Store | 使用 DataHub Service |
-| 是否需要分配/管理唯一标识符（如 instrument_id）？ | DataHub Service | 不应在此层 |
-| 是否包含数据映射/转换逻辑（如 source_ticker → instrument_id）？ | DataHub Service | 不应在此层 |
-| 是否依赖外部数据源（API/爬虫）？ | DataHub Source/Adapter | 不应在此层 |
+| 是否直接访问存储文件/数据库？ | Data Store | 使用 Data Service |
+| 是否需要分配/管理唯一标识符（如 instrument_id）？ | Data Service | 不应在此层 |
+| 是否包含数据映射/转换逻辑（如 source_ticker → instrument_id）？ | Data Service | 不应在此层 |
+| 是否依赖外部数据源（API/爬虫）？ | Data Source/Adapter | 不应在此层 |
 | 是否是流程编排/任务协调？ | Server Service | 不应在此层 |
 | 是否是应用层用例组合？ | Server Flow | 不应在此层 |
 

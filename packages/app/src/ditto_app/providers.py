@@ -14,7 +14,7 @@ from pathlib import Path
 from dishka import Provider, Scope, provide
 
 # ---------------------------------------------------------------------------
-# DataHub 层依赖（由更底层的 Provider 注册，此处仅声明类型）
+# Data 层依赖（由更底层的 Provider 注册，此处仅声明类型）
 # ---------------------------------------------------------------------------
 from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_data.config.data_store import DataStoreSettings

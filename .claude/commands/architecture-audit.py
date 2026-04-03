@@ -263,7 +263,7 @@ class ArchitectureAuditor:
         for module in port_modules:
             for dep in self.import_graph.get(module, set()):
                 # 检查是否依赖了 stores（禁止）
-                if dep.startswith("packages.datahub.stores."):
+                if dep.startswith("packages.data.stores."):
                     self.findings.append(
                         {
                             "id": "ARCH-001",
@@ -682,7 +682,7 @@ pixi run -e dev lint
         for module, deps in self.import_graph.items():
             if module.startswith("apps.port."):
                 layers["apps/port"].add(module)
-            elif module.startswith("packages.datahub."):
+            elif module.startswith("packages.data."):
                 layers["packages/data"].add(module)
             elif module.startswith("packages.foundation."):
                 layers["packages/foundation"].add(module)
@@ -709,28 +709,28 @@ pixi run -e dev lint
         # 检测依赖方向
         diagram += "### 依赖方向分析\n\n"
 
-        port_deps_datahub = False
-        datahub_deps_foundation = False
+        port_deps_data = False
+        data_deps_foundation = False
         port_deps_foundation = False
 
         for module in self.import_graph:
             if module.startswith("apps.port."):
                 for dep in self.import_graph[module]:
-                    if dep.startswith("packages.datahub."):
-                        port_deps_datahub = True
+                    if dep.startswith("packages.data."):
+                        port_deps_data = True
                     elif dep.startswith("packages.foundation."):
                         port_deps_foundation = True
-            elif module.startswith("packages.datahub."):
+            elif module.startswith("packages.data."):
                 for dep in self.import_graph[module]:
                     if dep.startswith("packages.foundation."):
-                        datahub_deps_foundation = True
+                        data_deps_foundation = True
 
         diagram += "| 依赖方向 | 状态 | 说明 |\n"
         diagram += "|---------|------|------|\n"
-        diagram += f"| Port → DataHub | ✅ {'符合' if port_deps_datahub else '无依赖'} | 应用层依赖数据访问层 |\n"
+        diagram += f"| Port → Data | ✅ {'符合' if port_deps_data else '无依赖'} | 应用层依赖数据访问层 |\n"
         diagram += f"| Port → Foundation | ✅ {'符合' if port_deps_foundation else '无依赖'} | 应用层依赖基础设施 |\n"
-        diagram += f"| DataHub → Foundation | ✅ {'符合' if datahub_deps_foundation else '无依赖'} | 数据访问层依赖基础设施 |\n"
-        diagram += "| DataHub → Port | ❌ 禁止 | 反向依赖（架构违规）|\n"
+        diagram += f"| Data → Foundation | ✅ {'符合' if data_deps_foundation else '无依赖'} | 数据访问层依赖基础设施 |\n"
+        diagram += "| Data → Port | ❌ 禁止 | 反向依赖（架构违规）|\n"
         diagram += "| Foundation → Others | ❌ 禁止 | 基础设施不应依赖上层 |\n"
 
         return diagram

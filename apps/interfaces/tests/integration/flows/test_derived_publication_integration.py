@@ -41,7 +41,6 @@ from ditto_data.services import (
 )
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
-from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_interfaces.jobs.flows.materialization import (
     certify_publication_flow,
     promote_publication_flow,
@@ -49,6 +48,7 @@ from ditto_interfaces.jobs.flows.materialization import (
 )
 from ditto_interfaces.registry import ConfigProvider
 from ditto_interfaces.registry.contexts.bundle import MaterializationBundle
+from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 pytestmark = pytest.mark.serial
 

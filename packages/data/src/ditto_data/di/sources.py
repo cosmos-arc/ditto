@@ -1,4 +1,4 @@
-"""DataHub 层 - 数据源 Provider。"""
+"""Data 层 - 数据源 Provider。"""
 
 from collections.abc import Iterator
 

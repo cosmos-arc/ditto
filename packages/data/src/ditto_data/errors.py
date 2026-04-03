@@ -1,13 +1,13 @@
 """
-DataHub exception classes.
+Data layer exception classes.
 
 Following design document at docs/design/02_data_design.md
 """
 
 
 # ---------------------------------------------------------------------------
-# Derived* error hierarchy — canonical definition (DataHub owns these
-# because DataHub services raise them without depending on Core).
+# Derived* error hierarchy — canonical definition (Data layer owns these
+# because Data services raise them without depending on Core).
 # Core re-exports from here via ditto_engine.errors.
 # ---------------------------------------------------------------------------
 
@@ -112,12 +112,12 @@ class DerivedValidationError(DerivedError):
             )
 
 
-class DataHubError(Exception):
-    """DataHub base exception."""
+class DataError(Exception):
+    """Data base exception."""
 
     def __init__(self, message: str, details: dict[str, object] | None = None) -> None:
         """
-        Initialize DataHub error.
+        Initialize Data error.
 
         Args:
             message: Error message.
@@ -128,13 +128,13 @@ class DataHubError(Exception):
         self.details = details or {}
 
 
-class CalendarError(DataHubError):
+class CalendarError(DataError):
     """Calendar-related error base class."""
 
     pass
 
 
-class IdentifierError(DataHubError):
+class IdentifierError(DataError):
     """Identifier-related error base class."""
 
     pass
@@ -273,13 +273,13 @@ class TradingDateNotFoundError(CalendarError):
         super().__init__(message, details if details else None)
 
 
-class ValidationError(DataHubError):
+class ValidationError(DataError):
     """DataFrame schema validation failed."""
 
     pass
 
 
-class DatasetNotFoundError(DataHubError):
+class DatasetNotFoundError(DataError):
     """Dataset directory or files do not exist."""
 
     def __init__(
@@ -301,7 +301,7 @@ class DatasetNotFoundError(DataHubError):
         super().__init__(message, details if details else None)
 
 
-class PartitionNotFoundError(DataHubError):
+class PartitionNotFoundError(DataError):
     """Year partition file does not exist."""
 
     def __init__(
@@ -338,12 +338,12 @@ class SchemaValidationError(ValidationError):
 # ---------------------------------------------------------------------------
 #
 # These errors were originally defined in ditto_interfaces.errors (inheriting from
-# DittoPortError).  They are re-homed here under DataHubError so that the app
+# DittoPortError).  They are re-homed here under DataError so that the app
 # layer can reference them without depending on port/interfaces.
 # The constructor API is fully compatible with the port-side originals.
 
 
-class DataSourceError(DataHubError):
+class DataSourceError(DataError):
     """
     数据源错误基类。
 
@@ -509,7 +509,7 @@ class SourceFetchError(DataSourceError):
         self.__cause__ = cause
 
 
-class PersistenceError(DataHubError):
+class PersistenceError(DataError):
     """
     持久化错误基类。
 
@@ -627,7 +627,7 @@ __all__ = [
     "AmbiguousTickerError",
     "AuthError",
     "CalendarError",
-    "DataHubError",
+    "DataError",
     "DataSourceError",
     "DataValidationError",
     "DatasetNotFoundError",

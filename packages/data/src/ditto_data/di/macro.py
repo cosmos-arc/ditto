@@ -1,4 +1,4 @@
-"""DataHub 层 - Macro Domain Provider。"""
+"""Data 层 - Macro Domain Provider。"""
 
 from dishka import Provider, Scope, provide
 

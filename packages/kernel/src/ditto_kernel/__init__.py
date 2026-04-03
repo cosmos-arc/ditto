@@ -12,7 +12,7 @@ Ditto 共享内核 — 跨层领域原语 + Protocol 抽象 + 薄实现.
 __version__ = "0.2.0"
 
 from ditto_kernel.clock import Clock, RealtimeClock, SimulatedClock
-from ditto_kernel.enums import AssetClass, Exchange, OrderSide, RunStatus
+from ditto_kernel.enums import AssetClass, Exchange, OrderSide, RiskScope, RunStatus
 from ditto_kernel.events import DomainEvent, EventBus, SimpleEventBus
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.specs import (
@@ -44,6 +44,7 @@ __all__ = [
     "MaterializationProfile",
     "OrderSide",
     "RealtimeClock",
+    "RiskScope",
     "RunStatus",
     "SimpleEventBus",
     "SimulatedClock",

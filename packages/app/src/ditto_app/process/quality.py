@@ -263,7 +263,7 @@ class L3BatchService:
         )
 
         try:
-            # Get historical and current data from DataHub
+            # Get historical and current data from Data layer
             historical, current = self._fetch_data(
                 trade_date=trade_date,
                 asset_class=asset_class,

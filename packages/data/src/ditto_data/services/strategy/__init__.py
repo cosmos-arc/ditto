@@ -1,4 +1,4 @@
-"""Strategy DataHub services."""
+"""Strategy Data services."""
 
 from ditto_data.services.strategy.instrument_rule_provider import (
     InstrumentRuleProvider,

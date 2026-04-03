@@ -60,9 +60,9 @@ ditto_interfaces/
 | **App 层服务** | `from ditto_app.process.*` | - |
 | **App 层查询** | `from ditto_app.query.*` | - |
 | **App 层配置** | `from ditto_app.config` | - |
-| **DataHub Service** | `from ditto_data.services.*` | - |
-| **DataHub Sources** | `from ditto_data.sources.*` | - |
-| **DataHub Stores** | registry 内仅限 DI 注册 | 非 registry 代码 |
+| **Data Service** | `from ditto_data.services.*` | - |
+| **Data Sources** | `from ditto_data.sources.*` | - |
+| **Data Stores** | registry 内仅限 DI 注册 | 非 registry 代码 |
 
 ### 业务逻辑去向
 

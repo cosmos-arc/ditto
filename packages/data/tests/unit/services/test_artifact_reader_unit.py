@@ -21,7 +21,7 @@ from ditto_data.storage.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _catalog_service(sqlite_client) -> DerivedCatalogService:

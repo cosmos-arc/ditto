@@ -1,4 +1,4 @@
-# DataHub 架构规范
+# Data 架构规范
 
 ## 分层职责
 
@@ -12,7 +12,7 @@
 
 ## CQRS 模式（Command Query Responsibility Segregation）
 
-DataHub Store 层采用 CQRS 模式，将读写操作分离：
+Data Store 层采用 CQRS 模式，将读写操作分离：
 
 ### Reader 组件
 - **职责**：数据查询（read/count/get_*）
@@ -31,7 +31,7 @@ DataHub Store 层采用 CQRS 模式，将读写操作分离：
 
 ## 层级访问规则（2026-02-10 更新）
 
-### Port 层访问规则
+### Interfaces 层访问规则
 
 | 访问类型 | ✅ 允许 | ❌ 禁止 | 说明 |
 |---------|--------|--------|------|
@@ -65,7 +65,7 @@ reader = InstrumentReader(...)  # ❌
 ```
 
 **原则**：
-- Sources 层（数据获取）可由 Port 层直接访问
+- Sources 层（数据获取）可由 Interfaces 层直接访问
 - Reader/Writer 层（数据存储）必须通过 Service 间接访问
 
 ## 数据质量（DQ）规范
@@ -78,7 +78,7 @@ reader = InstrumentReader(...)  # ❌
 
 | 配置文件位置 | 修改后必更新 |
 |-------------|-------------|
-| `packages/datahub/config/dq/*.yaml` | `docs/design/09_data_quality_design.md` |
+| `packages/data/config/dq/*.yaml` | `docs/design/09_data_quality_design.md` |
 
 ## 数据摄入 T0/T1/T2/T3
 
@@ -105,4 +105,4 @@ reader = InstrumentReader(...)  # ❌
 | 硬编码数据路径 | 使用 get_paths() |
 | Parquet 写入不加锁 | FileLock (超时 30s) |
 | 冻结数据无保护 | FreezeManager.acquirefreeze() |
-| Port 层直接访问 Reader/Writer | 通过 Service 间接访问 |
+| Interfaces 层直接访问 Reader/Writer | 通过 Service 间接访问 |

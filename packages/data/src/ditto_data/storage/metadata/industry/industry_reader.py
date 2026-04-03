@@ -2,7 +2,7 @@
 Industry reader for CQRS pattern.
 
 Provides read-only access to industry master data.
-Following design document at docs/plans/2026-02-09-datahub-metadata-cqrs-design.md
+Following design document at docs/plans/2026-02-09-data-metadata-cqrs-design.md
 """
 
 from __future__ import annotations

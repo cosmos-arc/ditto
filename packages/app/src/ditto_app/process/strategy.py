@@ -331,7 +331,7 @@ class StrategyInputAssembler:
 
 
 # ===========================================================================
-# market_data_feed.py — 基于 DataHub Metadata/MarketService 的 DataFeed 适配器
+# market_data_feed.py — 基于 Data Metadata/MarketService 的 DataFeed 适配器
 # ===========================================================================
 
 
@@ -348,7 +348,7 @@ class MarketServiceDataFeedConfig:
 
 
 class MarketServiceDataFeed:
-    """将 DataHub 市场数据服务适配为 Core ``DataFeed``。"""
+    """将 Data 市场数据服务适配为 Core ``DataFeed``。"""
 
     def __init__(
         self,
@@ -836,7 +836,7 @@ class BacktestService:
         """
         持久化审计日志到 ExecutionAuditService。
 
-        Port 层负责将 Core record 转换为 DataHub 本地 DTO。
+        Port 层负责将 Core record 转换为 Data 本地 DTO。
         """
         if self._options.audit_service is None:
             return

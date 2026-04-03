@@ -4,7 +4,7 @@ CLI 本地执行器.
 封装 IngestionCoordinator 和 BackfillManager，为 CLI 命令提供统一执行接口。
 
 重构后（ARCH-004）：
-- CLIExecutor 不再直接依赖 DataHub 服务
+- CLIExecutor 不再直接依赖 Data 服务
 - 只接收已组装好的 coordinator + backfill_manager
 - 所有依赖组装由 create_cli_executor 上下文管理器处理
 """

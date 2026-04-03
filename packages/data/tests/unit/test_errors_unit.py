@@ -1,8 +1,8 @@
-"""Tests for DataHub error types."""
+"""Tests for Data error types."""
 
 from ditto_data.errors import (
     CalendarError,
-    DataHubError,
+    DataError,
     DatasetNotFoundError,
     IdentifierError,
     InstrumentIdNotFoundError,
@@ -15,10 +15,10 @@ from ditto_data.errors import (
 class TestValidationError:
     """Tests for ValidationError."""
 
-    def test_validation_error_is_datahub_error(self) -> None:
-        """Test ValidationError inherits from DataHubError."""
+    def test_validation_error_is_data_error(self) -> None:
+        """Test ValidationError inherits from DataError."""
         error = ValidationError("Test error")
-        assert isinstance(error, DataHubError)
+        assert isinstance(error, DataError)
         assert str(error) == "Test error"
 
     def test_validation_error_with_details(self) -> None:
@@ -33,10 +33,10 @@ class TestValidationError:
 class TestDatasetNotFoundError:
     """Tests for DatasetNotFoundError."""
 
-    def test_dataset_not_found_error_is_datahub_error(self) -> None:
-        """Test DatasetNotFoundError inherits from DataHubError."""
+    def test_dataset_not_found_error_is_data_error(self) -> None:
+        """Test DatasetNotFoundError inherits from DataError."""
         error = DatasetNotFoundError("Dataset not found")
-        assert isinstance(error, DataHubError)
+        assert isinstance(error, DataError)
 
     def test_dataset_not_found_error_with_dataset(self) -> None:
         """Test DatasetNotFoundError stores dataset name."""
@@ -47,10 +47,10 @@ class TestDatasetNotFoundError:
 class TestPartitionNotFoundError:
     """Tests for PartitionNotFoundError."""
 
-    def test_partition_not_found_error_is_datahub_error(self) -> None:
-        """Test PartitionNotFoundError inherits from DataHubError."""
+    def test_partition_not_found_error_is_data_error(self) -> None:
+        """Test PartitionNotFoundError inherits from DataError."""
         error = PartitionNotFoundError("Partition not found")
-        assert isinstance(error, DataHubError)
+        assert isinstance(error, DataError)
 
     def test_partition_not_found_error_with_details(self) -> None:
         """Test PartitionNotFoundError stores details."""
@@ -66,10 +66,10 @@ class TestPartitionNotFoundError:
 class TestCalendarError:
     """Tests for CalendarError."""
 
-    def test_calendar_error_is_datahub_error(self) -> None:
-        """Test CalendarError inherits from DataHubError."""
+    def test_calendar_error_is_data_error(self) -> None:
+        """Test CalendarError inherits from DataError."""
         error = CalendarError("Calendar error")
-        assert isinstance(error, DataHubError)
+        assert isinstance(error, DataError)
         assert str(error) == "Calendar error"
 
     def test_calendar_error_with_details(self) -> None:
@@ -84,10 +84,10 @@ class TestCalendarError:
 class TestIdentifierError:
     """Tests for IdentifierError."""
 
-    def test_identifier_error_is_datahub_error(self) -> None:
-        """Test IdentifierError inherits from DataHubError."""
+    def test_identifier_error_is_data_error(self) -> None:
+        """Test IdentifierError inherits from DataError."""
         error = IdentifierError("Identifier error")
-        assert isinstance(error, DataHubError)
+        assert isinstance(error, DataError)
         assert str(error) == "Identifier error"
 
     def test_identifier_error_with_details(self) -> None:
@@ -106,7 +106,7 @@ class TestSidNotFoundError:
         """Test InstrumentIdNotFoundError inherits from IdentifierError."""
         error = InstrumentIdNotFoundError()
         assert isinstance(error, IdentifierError)
-        assert isinstance(error, DataHubError)
+        assert isinstance(error, DataError)
 
     def test_sid_not_found_error_default_message(self) -> None:
         """Test InstrumentIdNotFoundError has default message."""
@@ -162,7 +162,7 @@ class TestTradingDateNotFoundError:
         """Test TradingDateNotFoundError inherits from CalendarError."""
         error = TradingDateNotFoundError()
         assert isinstance(error, CalendarError)
-        assert isinstance(error, DataHubError)
+        assert isinstance(error, DataError)
 
     def test_trading_date_not_found_error_default_message(self) -> None:
         """Test TradingDateNotFoundError has default message."""

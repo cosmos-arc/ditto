@@ -73,7 +73,7 @@ from ditto_data.services.derived.artifact_persistence_service import (
 )
 from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotService
 from ditto_data.services.market_service import MarketService
-from ditto_engine.specs import (
+from ditto_kernel.specs import (
     CalendarId,
     DerivedRole,
     DerivedSpec,

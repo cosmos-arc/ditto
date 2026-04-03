@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from ditto_data.errors import (
     AuthError,
-    DataHubError,
+    DataError,
     DataSourceError,
     DataValidationError,
     NetworkError,
@@ -23,7 +23,7 @@ from ditto_data.errors import (
 class TestDataSourceError:
     def test_inherits_data_hub_error(self) -> None:
         err = DataSourceError(message="test", source="tushare")
-        assert isinstance(err, DataHubError)
+        assert isinstance(err, DataError)
 
     def test_stores_source(self) -> None:
         err = DataSourceError(message="test", source="tushare")
@@ -188,7 +188,7 @@ class TestSourceFetchError:
 class TestPersistenceError:
     def test_inherits_data_hub_error(self) -> None:
         err = PersistenceError(message="write failed")
-        assert isinstance(err, DataHubError)
+        assert isinstance(err, DataError)
 
     def test_dataset_stored(self) -> None:
         err = PersistenceError(message="write failed", dataset="ETF_DAILY")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -10,7 +11,6 @@ from ditto_data.errors import (
     DerivedNotImplementedError,
     DerivedValidationError,
 )
-from ditto_infra.foundation import logger
 from ditto_kernel.specs import CalendarId, GrainId
 
 __all__ = [
@@ -209,13 +209,12 @@ def _apply_late_arrival_policy(
         return frame.filter(~late_flags)
 
     if policy == LateArrivalPolicy.SHIFT_TO_NEXT_SNAPSHOT:
-        logger.warning(
+        warnings.warn(
             (
                 "Late arrival detected but SHIFT policy is not "
                 "implemented in v1, returning frame unchanged"
             ),
-            event="research_late_arrival_shift_not_implemented",
-            late_count=int(late_flags.sum()),
+            stacklevel=2,
         )
         return frame
 

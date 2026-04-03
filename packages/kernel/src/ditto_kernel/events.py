@@ -2,7 +2,7 @@
 DomainEvent + EventBus Protocol + SimpleEventBus.
 
 满足 kernel Protocol/薄实现准入标准：
-1. 预期跨层使用：core + datahub + port
+1. 预期跨层使用：core + data + port
 2. 零业务逻辑：纯事件分发
 3. 无外部依赖：仅标准库
 4. SimpleEventBus 实现体 < 30 行

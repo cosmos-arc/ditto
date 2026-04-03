@@ -1,4 +1,4 @@
-"""Tests for DataHub common models."""
+"""Tests for Data common models."""
 
 import pytest
 from ditto_data.models import Dataset, Domain

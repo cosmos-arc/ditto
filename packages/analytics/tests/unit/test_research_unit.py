@@ -16,7 +16,7 @@ from ditto_analytics.research.domain import (
     _apply_late_arrival_policy,
     _detect_late_arrivals,
 )
-from ditto_engine.errors import DerivedNotImplementedError
+from ditto_data.errors import DerivedNotImplementedError
 
 
 class TestSpineSpec:

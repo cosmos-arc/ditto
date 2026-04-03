@@ -110,18 +110,16 @@ forbidden_modules =
 # ═══════════════════════════════════════════════════════════════════
 # Engine ↔ Data 边界：双向禁止互相依赖
 # 两者均可依赖 ditto_kernel
-# Engine 保留对 ditto_data.errors + ditto_data.provider 的 re-export 依赖
+# Engine 仅保留 DataProvider Protocol 依赖
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:engine-no-data-dependency]
-name = Engine must not depend on Data (except errors/provider)
+name = Engine must not depend on Data (except provider)
 type = forbidden
 source_modules =
     ditto_engine.**
 forbidden_modules =
     ditto_data.**
 ignore_imports =
-    # re-export anti-corruption layer: Engine 重新导出错误类型供上层消费
-    ditto_engine.** -> ditto_data.errors
     # DataProvider Protocol 位置（Phase 5 从 kernel 移入 ditto_data，需 polars 返回类型）
     ditto_engine.** -> ditto_data.provider
 unmatched_ignore_imports_alerting = warn
@@ -133,6 +131,17 @@ source_modules =
     ditto_data.**
 forbidden_modules =
     ditto_engine.**
+
+# ═══════════════════════════════════════════════════════════════════
+# Engine 与 Analytics 互相隔离：平行平面，互不依赖
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:engine-no-analytics-dependency]
+name = Engine must not depend on Analytics
+type = forbidden
+source_modules =
+    ditto_engine.**
+forbidden_modules =
+    ditto_analytics.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Port 层边界：禁止直接依赖 Data 存储/运行时实现
@@ -238,6 +247,35 @@ source_modules =
     ditto_app.command.**
 forbidden_modules =
     ditto_app.builders.**
+
+# ═══════════════════════════════════════════════════════════════════
+# Data 内部边界：storage 与 sources/models 的隔离
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:data-storage-no-model-import]
+name = Data storage must not import data models directly
+type = forbidden
+source_modules =
+    ditto_data.storage.**
+forbidden_modules =
+    ditto_data.models.**
+ignore_imports =
+    ditto_data.storage.** -> ditto_data.models
+    ditto_data.storage.** -> ditto_data.models.common
+    ditto_data.storage.** -> ditto_data.models.storage
+    ditto_data.storage.** -> ditto_data.models.metadata
+    ditto_data.storage.** -> ditto_data.models.macro
+    ditto_data.storage.** -> ditto_data.models.strategy
+    ditto_data.storage.** -> ditto_data.models.strategy_run
+unmatched_ignore_imports_alerting = warn
+
+[importlinter:contract:data-sources-no-storage-import]
+name = Data sources must not import data storage
+type = forbidden
+source_modules =
+    ditto_data.sources.**
+forbidden_modules =
+    ditto_data.storage.**
+unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
 # 循环依赖检测

@@ -60,10 +60,10 @@ ditto_kernel/
 | 类型 | 模块 | 格式 | 消费者 |
 |------|------|------|--------|
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
-| `AssetClass` | enums.py | `StrEnum`（6 成员） | DataHub, Port |
-| `Exchange` | enums.py | `StrEnum`（XSHE/XSHG/XBSE） | DataHub |
-| `OrderSide` | enums.py | `StrEnum`（BUY/SELL） | DataHub, Core |
-| `RunStatus` | enums.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | DataHub |
+| `AssetClass` | enums.py | `StrEnum`（6 成员） | Data, Interfaces |
+| `Exchange` | enums.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
+| `OrderSide` | enums.py | `StrEnum`（BUY/SELL） | Data, Engine |
+| `RunStatus` | enums.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | Data |
 | `DerivedRole` | specs.py | `StrEnum`（FACTOR/FEATURE/COMPOSITE） | Analytics, Engine |
 | `DerivedSpec` | specs.py | frozen dataclass | Analytics, Engine |
 | `MaterializationProfile` | specs.py | `StrEnum`（SERIES/STATE） | Analytics, Engine |
@@ -92,16 +92,20 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 ```
 ┌─────────────────────────────────────────────┐
 │  所有业务包都可以依赖 Kernel                  │
-│  port → kernel ✅                            │
-│  core → kernel ✅                            │
-│  datahub → kernel ✅                         │
+│  interfaces → kernel ✅                     │
+│  app → kernel ✅                            │
+│  engine → kernel ✅                         │
+│  analytics → kernel ✅                      │
+│  data → kernel ✅                           │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
 │  Kernel 禁止依赖其他层                       │
-│  kernel → port ❌                           │
-│  kernel → datahub ❌                        │
-│  kernel → core ❌                           │
+│  kernel → interfaces ❌                     │
+│  kernel → app ❌                            │
+│  kernel → engine ❌                         │
+│  kernel → analytics ❌                      │
+│  kernel → data ❌                           │
 │  kernel → infra ❌                          │
 └─────────────────────────────────────────────┘
 ```

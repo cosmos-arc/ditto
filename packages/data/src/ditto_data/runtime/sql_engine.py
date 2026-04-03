@@ -1,4 +1,4 @@
-"""SqlEngine - DuckDB SQL engine for DataHub."""
+"""SqlEngine - DuckDB SQL engine for Data."""
 
 from __future__ import annotations
 

@@ -46,7 +46,7 @@ def _sources_provider() -> Provider:
 
 
 def _make_full_container():
-    """构建包含 DataHub + App 层 Provider 的完整容器。"""
+    """构建包含 Data + App 层 Provider 的完整容器。"""
     from ditto_app.providers import get_app_providers
 
     return make_container(
@@ -65,14 +65,14 @@ def _make_full_container():
 
 
 class TestDerivedProvider:
-    """Tests for slimmed DerivedProvider (仅 DataHub 层服务)."""
+    """Tests for slimmed DerivedProvider (仅 Data 层服务)."""
 
     def test_provider_builds_query_service(
         self,
         monkeypatch,
         tmp_path,
     ) -> None:
-        """DerivedProvider should wire the DataHub DerivedQueryService."""
+        """DerivedProvider should wire the Data DerivedQueryService."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
         container = make_container(
@@ -101,8 +101,8 @@ class TestDerivedProvider:
         assert "DerivedProvider" in data_di.__all__
         assert "DerivedProvider" in root_registry.__all__
 
-    def test_derived_provider_only_has_datahub_methods(self) -> None:
-        """DerivedProvider 应仅包含 DataHub 层方法。"""
+    def test_derived_provider_only_has_data_methods(self) -> None:
+        """DerivedProvider 应仅包含 Data 层方法。"""
         from dishka import Provider as BaseProvider
 
         provider = DerivedProvider()
@@ -114,7 +114,7 @@ class TestDerivedProvider:
             if not name.startswith("_") and callable(getattr(provider, name))
         }
         provide_methods = all_methods - base_methods
-        # 应仅包含 3 个 DataHub 层方法
+        # 应仅包含 3 个 Data 层方法
         expected = {
             "research_artifact_service",
             "derived_query_service",

@@ -67,7 +67,7 @@ class IngestionConfig(BaseModel):
 
     data_root: Path = Field(
         default=Path("data"),
-        description="Root directory for DataHub storage.",
+        description="Root directory for Data storage.",
     )
     default_source: str = "tushare"
     auto_register_securities: bool = True

@@ -4,7 +4,7 @@ InstrumentRuleProvider -- 三层规则组装层 (R6).
 从 PIT Store 查询 TradingRuleRecord / FeeScheduleRecord / DefinitionRecord，
 由调用方完成 Record → Core 模型的转换。
 
-V1: 内存实现，Phase 2+ 接入真实 DataHub 存储后替换。
+V1: 内存实现，Phase 2+ 接入真实 Data 存储后替换。
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ __all__ = ["DefinitionRecord", "InstrumentRuleProvider"]
 @dataclass(frozen=True)
 class DefinitionRecord:
     """
-    标的静态定义（DataHub Record，由调用方转换为 Core InstrumentDefinition）.
+    标的静态定义（Data Record，由调用方转换为 Core InstrumentDefinition）.
 
     Attributes:
         instrument_id: 标的 ID.
@@ -64,7 +64,7 @@ class InstrumentRuleProvider:
     """
     三层规则查询（返回 Record，由调用方转换为 Core 模型）。
 
-    V1: 内存实现。Phase 2+ 从 DataHub metadata service 读取。
+    V1: 内存实现。Phase 2+ 从 Data metadata service 读取。
 
     Attributes:
         _definitions: instrument_id -> dict 映射（V1 内存）。

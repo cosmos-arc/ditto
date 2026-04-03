@@ -21,9 +21,9 @@ def create_ingest_task(dataset: Dataset) -> Any:
 
     根据给定的数据集创建一个 Prefect Task，该任务：
     1. 从 INGESTION_SPECS 读取配置（重试次数、超时等）
-    2. 创建 DataHub 实例
+    2. 创建 Data 实例
     3. 调用 IngestionCoordinator 执行摄取
-    4. 确保 DataHub 正确关闭
+    4. 确保 Data 正确关闭
 
     Args:
         dataset: 数据集枚举值

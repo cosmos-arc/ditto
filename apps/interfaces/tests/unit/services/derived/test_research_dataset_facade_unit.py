@@ -32,8 +32,8 @@ from ditto_data.services import DerivedCatalogService, ResearchCatalogService
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_interfaces.registry import ConfigProvider
+from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 # CapitalProvider is used in _make_container to satisfy MetadataService deps
 

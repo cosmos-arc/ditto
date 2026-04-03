@@ -6,7 +6,7 @@
 
 ## 概要
 
-Ditto 应用层（Application Layer），基于 FastAPI 的后端服务。负责用例编排、HTTP API、Prefect 任务调度和 CLI 命令入口，协调 Core 和 DataHub 层完成数据摄取、策略运行和衍生数据计算等业务流程。
+Ditto 应用层（Application Layer），基于 FastAPI 的后端服务。负责用例编排、HTTP API、Prefect 任务调度和 CLI 命令入口，协调 Core 和 Data 层完成数据摄取、策略运行和衍生数据计算等业务流程。
 
 ## 核心功能
 
@@ -42,12 +42,12 @@ Ditto 应用层（Application Layer），基于 FastAPI 的后端服务。负责
 ┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐
 │ jobs/        │ │ cli/             │ │ registry/        │
 │ Prefect Flows│ │ Typer commands   │ │ Dishka DI       │
-│ Tasks        │ │ init/ingest/     │ │ core/datahub/   │
+│ Tasks        │ │ init/ingest/     │ │ core/data/     │
 │              │ │ backfill/query   │ │ infra/contexts/ │
 └──────────────┘ └──────────────────┘ └──────────────────┘
                           △
 ┌─────────────────────────────────────────────────────────────┐
-│                      Core + DataHub                         │
+│                      Core + Data                           │
 │  EngineLoop / StrategyPipeline / MarketService / ...         │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -86,7 +86,7 @@ apps/port/src/ditto_port/
 │   └── ingestion.py          # IngestionResult, ResultCounts, BackfillResult
 ├── registry/                 # DI 容器（Dishka）
 │   ├── core/                 # Core 层 Provider（golden dataset, quality engine）
-│   ├── datahub/              # DataHub 层 Provider（stores, sources）
+│   ├── data/                 # Data 层 Provider（stores, sources）
 │   ├── infra/                # Infra 层 Provider（config, observability）
 │   └── contexts/             # 请求上下文
 ├── services/                 # 应用服务
@@ -129,7 +129,7 @@ apps/port/src/ditto_port/
 |------|------|
 | `BacktestService` | 回测编排（组装 bundle → EngineLoop → 审计收集 → 序列化报告） |
 | `StrategyRunService` | 策略运行记录管理（create / running / completed / failed） |
-| `StrategyInputAssembler` | 从 DataHub 组装 StrategyInputBundle |
+| `StrategyInputAssembler` | 从 Data 层组装 StrategyInputBundle |
 | `ArtifactWriter` | 策略产物持久化（BacktestReport → SQLite） |
 
 ## 衍生数据服务
@@ -229,7 +229,7 @@ token = "YOUR_TOKEN"
 - `services/strategy/`: BacktestService、StrategyRunService、StrategyInputAssembler、ArtifactWriter
 - `services/derived/`: MaterializationOrchestrator、QueryFacade、CascadeProtocol、EvaluationFacade
 - `cli/`: Typer-based CLI 命令（ditto init/ingest/backfill/query/version）
-- `registry/`: Dishka DI 容器（core/datahub/infra/contexts）
+- `registry/`: Dishka DI 容器（core/data/infra/contexts）
 
 **改进**
 - README 文档全面更新，反映当前代码库实际状态

@@ -3,7 +3,7 @@ Index daily bars reader.
 
 Provides read-only access to index daily bars data stored in Parquet files
 with year partitioning. Following design document at
-docs/plans/2026-02-09-datahub-cqrs-refactor.md.
+docs/plans/2026-02-09-data-cqrs-refactor.md.
 """
 
 from __future__ import annotations

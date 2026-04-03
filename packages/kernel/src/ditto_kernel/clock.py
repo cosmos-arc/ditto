@@ -2,7 +2,7 @@
 Clock Protocol + 薄实现.
 
 满足 kernel Protocol/薄实现准入标准：
-1. 预期跨层使用: core + datahub + port
+1. 预期跨层使用: core + data + port
 2. 零业务逻辑: 纯时间抽象
 3. 无外部依赖: 仅 datetime 标准库
 4. 实现体 < 30 行

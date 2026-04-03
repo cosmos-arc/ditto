@@ -2,7 +2,7 @@
 TechnicalIndicator writer for CQRS pattern.
 
 Provides write access to technical indicator data.
-Following design document at docs/plans/2026-02-09-datahub-cqrs-refactor.md
+Following design document at docs/plans/2026-02-09-data-cqrs-refactor.md
 """
 
 from __future__ import annotations

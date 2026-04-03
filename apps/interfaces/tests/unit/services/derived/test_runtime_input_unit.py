@@ -17,7 +17,7 @@ from ditto_app.process.materialization import (
     _resolve_etf_dependency,
     _resolve_market_dependency,
 )
-from ditto_engine.specs import (
+from ditto_kernel.specs import (
     DerivedRole,
     DerivedSpec,
     ExecutionPolicy,

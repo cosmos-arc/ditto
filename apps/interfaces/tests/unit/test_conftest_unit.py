@@ -244,99 +244,97 @@ class TestDatabaseManager:
 
 
 @pytest.mark.unit
-class TestMockDatahubFixture:
-    """测试 mock_datahub fixture."""
+class TestMockDataFixture:
+    """测试 mock_data fixture."""
 
-    def test_mock_datahub_exists(self, mock_datahub: Mock):
-        """测试 mock_datahub fixture 存在并可正常工作."""
+    def test_mock_data_exists(self, mock_data: Mock):
+        """测试 mock_data fixture 存在并可正常工作."""
         # 验证 fixture 返回的是 Mock 对象
-        assert mock_datahub is not None
-        assert isinstance(mock_datahub, Mock)
+        assert mock_data is not None
+        assert isinstance(mock_data, Mock)
 
-    def test_mock_datahub_metadata_service_mock(self, mock_datahub: Mock):
+    def test_mock_data_metadata_service_mock(self, mock_data: Mock):
         """测试 metadata_service mock 配置."""
         # 验证 metadata_service.is_trading_day 返回 True
-        assert mock_datahub.metadata_service.is_trading_day() is True
+        assert mock_data.metadata_service.is_trading_day() is True
 
         # 验证 metadata_service.resolve_instrument_id 返回正确 ID
-        assert mock_datahub.metadata_service.resolve_instrument_id() == 1
+        assert mock_data.metadata_service.resolve_instrument_id() == 1
 
-    def test_mock_datahub_market_service_mock(self, mock_datahub: Mock):
+    def test_mock_data_market_service_mock(self, mock_data: Mock):
         """测试 market_service mock 配置."""
         # 验证 market_service.query 返回空 DataFrame
         import polars as pl
 
-        result = mock_datahub.market_service.query()
+        result = mock_data.market_service.query()
         assert isinstance(result, pl.DataFrame)
         assert result.height == 0  # 空表
 
-    def test_mock_datahub_ingestion_log_mock(self, mock_datahub: Mock):
+    def test_mock_data_ingestion_log_mock(self, mock_data: Mock):
         """测试 ingestion_log mock 配置."""
         # 验证 ingestion_log.list_failed_dates 返回空列表
-        assert mock_datahub.ingestion_log_store.list_failed_dates() == []
+        assert mock_data.ingestion_log_store.list_failed_dates() == []
 
         # 验证 ingestion_log.list_ingested_dates 返回空列表
-        assert mock_datahub.ingestion_log_store.list_ingested_dates() == []
+        assert mock_data.ingestion_log_store.list_ingested_dates() == []
 
-    def test_mock_datahub_is_function_scoped(self, mock_datahub: Mock):
+    def test_mock_data_is_function_scoped(self, mock_data: Mock):
         """测试 fixture 是 function 级别的（通过验证可以多次调用）."""
         # 多次调用同一个 mock 方法，应该返回相同的结果
-        result1 = mock_datahub.metadata_service.is_trading_day()
-        result2 = mock_datahub.metadata_service.is_trading_day()
+        result1 = mock_data.metadata_service.is_trading_day()
+        result2 = mock_data.metadata_service.is_trading_day()
         assert result1 is result2 is True
 
 
 @pytest.mark.unit
-class TestPatchDatahubFixture:
-    """测试 patch_datahub fixture."""
+class TestPatchDataFixture:
+    """测试 patch_data fixture."""
 
-    def test_patch_datahub_fixture_exists(self, patch_datahub: Mock) -> None:
-        """验证 patch_datahub fixture 存在并返回 Mock."""
+    def test_patch_data_fixture_exists(self, patch_data: Mock) -> None:
+        """验证 patch_data fixture 存在并返回 Mock."""
         # 验证返回的是 Mock
-        assert patch_datahub is not None
-        assert isinstance(patch_datahub, Mock)
+        assert patch_data is not None
+        assert isinstance(patch_data, Mock)
 
-    def test_patch_datahub_has_default_mock_behavior(
-        self, patch_datahub: Mock, mock_datahub: Mock
+    def test_patch_data_has_default_mock_behavior(
+        self, patch_data: Mock, mock_data: Mock
     ) -> None:
-        """验证 patch_datahub 具有默认的 mock 行为."""
-        # patch_datahub 返回的是 mock_datahub
+        """验证 patch_data 具有默认的 mock 行为."""
+        # patch_data 返回的是 mock_data
         # 所以行为应该一致
-        assert patch_datahub.metadata_service.is_trading_day() is True
+        assert patch_data.metadata_service.is_trading_day() is True
 
         # 验证 metadata_service 的默认返回值
-        assert patch_datahub.metadata_service.resolve_instrument_id() == 1
+        assert patch_data.metadata_service.resolve_instrument_id() == 1
 
         # 验证 ingestion_log 的默认返回值
-        assert patch_datahub.ingestion_log_store.list_failed_dates() == []
-        assert patch_datahub.ingestion_log_store.list_ingested_dates() == []
+        assert patch_data.ingestion_log_store.list_failed_dates() == []
+        assert patch_data.ingestion_log_store.list_ingested_dates() == []
 
-    def test_patch_datahub_can_modify_mock_behavior(self, patch_datahub: Mock) -> None:
-        """验证可以通过 patch_datahub 修改 mock 行为."""
+    def test_patch_data_can_modify_mock_behavior(self, patch_data: Mock) -> None:
+        """验证可以通过 patch_data 修改 mock 行为."""
         # 修改 metadata_service.is_trading_day 的返回值
-        patch_datahub.metadata_service.is_trading_day.return_value = False
+        patch_data.metadata_service.is_trading_day.return_value = False
 
         # 验证修改生效
-        assert patch_datahub.metadata_service.is_trading_day() is False
+        assert patch_data.metadata_service.is_trading_day() is False
 
-    def test_patch_datahub_returns_mock(
-        self, patch_datahub: Mock, mock_datahub: Mock
-    ) -> None:
+    def test_patch_data_returns_mock(self, patch_data: Mock, mock_data: Mock) -> None:
         """
-        验证 patch_datahub 返回 mock 对象（不进行全局 patch）.
+        验证 patch_data 返回 mock 对象（不进行全局 patch）.
 
-        注意：此 fixture 不再全局 patch DataHub 类，
+        注意：此 fixture 不再全局 patch Data 类，
         因为会与 dishka 依赖注入容器冲突。
         它只返回一个 mock 对象供单元测试使用。
         """
-        # patch_datahub 应该返回 mock_datahub
-        assert patch_datahub is mock_datahub
+        # patch_data 应该返回 mock_data
+        assert patch_data is mock_data
 
-        # patch_datahub 应该有默认的 mock 行为
-        assert patch_datahub.metadata_service.is_trading_day() is True
-        assert patch_datahub.ingestion_log_store.list_failed_dates() == []
+        # patch_data 应该有默认的 mock 行为
+        assert patch_data.metadata_service.is_trading_day() is True
+        assert patch_data.ingestion_log_store.list_failed_dates() == []
 
-        # DataHub 类不存在（已被删除），所以不需要测试创建 DataHub
+        # Data 类不存在（已被删除），所以不需要测试创建 Data
         # 如果尝试导入会失败
         with pytest.raises(ImportError):
             from ditto_data import DataHub  # noqa: F401

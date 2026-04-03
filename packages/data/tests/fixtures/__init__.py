@@ -1,1 +1,1 @@
-"""Pytest fixtures for DataHub tests."""
+"""Pytest fixtures for Data tests."""

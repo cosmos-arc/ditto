@@ -217,7 +217,7 @@ class StaticRuntimeModeResolver:
 
 
 def _temporal_to_iso(value: TemporalValue | None) -> str | None:
-    """Serialize date/datetime values for DataHub DTOs."""
+    """Serialize date/datetime values for Data DTOs."""
     if value is None:
         return None
     return value.isoformat()
