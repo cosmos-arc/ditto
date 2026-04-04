@@ -910,6 +910,56 @@ button {
   padding: 0 var(--space-12);
 }
 
+/* ── Collapsible Context Sections (<details>/<summary>) ── */
+
+/* Reset flex on details so it doesn't stretch */
+details.context-section {
+  flex: 0 0 auto;
+}
+
+details.context-section:last-child {
+  flex: 1 1 auto;
+}
+
+/* Header as summary */
+details.context-section > summary.context-section-header {
+  list-style: none;
+  cursor: pointer;
+}
+
+details.context-section > summary.context-section-header::-webkit-details-marker {
+  display: none;
+}
+
+details.context-section > summary.context-section-header::before {
+  content: '▶';
+  font-size: 8px;
+  color: var(--text-tertiary);
+  transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+  margin-right: var(--space-4);
+  display: inline-block;
+}
+
+details.context-section[open] > summary.context-section-header::before {
+  transform: rotate(90deg);
+}
+
+/* Collapsed count badge — visible only when collapsed */
+.collapse-count {
+  display: none;
+  font-family: var(--font-family-numeric);
+  font-size: var(--font-size-10);
+  color: var(--text-tertiary);
+}
+details.context-section:not([open]) .collapse-count {
+  display: inline;
+}
+
+/* Remove padding-bottom from body inside details */
+details.context-section > .context-section-body {
+  padding-bottom: var(--space-8);
+}
+
 /* Health preview in context rail */
 .health-preview {
   padding: 0 var(--space-12) var(--space-8);

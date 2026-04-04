@@ -892,6 +892,40 @@
       gap: var(--space-6);
     }
 
+    /* ── Collapsible Section (details/summary) ── */
+    details.context-section > summary.context-header {
+      list-style: none;
+      cursor: pointer;
+    }
+    details.context-section > summary.context-header::-webkit-details-marker {
+      display: none;
+    }
+    details.context-section > summary.context-header::before {
+      content: '▶';
+      font-size: 8px;
+      color: var(--text-tertiary);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+      margin-right: var(--space-4);
+      display: inline-block;
+    }
+    details.context-section[open] > summary.context-header::before {
+      transform: rotate(90deg);
+    }
+    .collapse-count {
+      display: none;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-left: var(--space-4);
+    }
+    details.context-section:not([open]) .collapse-count {
+      display: inline;
+    }
+    /* Hide the normal count badge when collapsed (use collapse-count instead) */
+    details.context-section:not([open]) .context-count {
+      display: none;
+    }
+
     /* ── Signal Item ── */
     .signal-item {
       display: flex;
@@ -2447,12 +2481,13 @@
           </div>
         </section>
 
-        <!-- Related Research -->
-        <section class="context-section" aria-label="关联研究">
-          <div class="context-header">
+        <!-- Related Research (默认折叠 — 低频补充) -->
+        <details class="context-section" aria-label="关联研究">
+          <summary class="context-header">
             <span class="context-title">关联研究</span>
+            <span class="collapse-count">2 条</span>
             <span class="context-count">2</span>
-          </div>
+          </summary>
           <div class="context-body">
             <div class="research-item" tabindex="0" role="button">
               <span class="research-title">贵州茅台2025年年报点评：Q4业绩稳健，直销占比持续提升</span>
@@ -2471,7 +2506,7 @@
               </div>
             </div>
           </div>
-        </section>
+        </details>
 
         <!-- Notes -->
         <section class="context-section" aria-label="备注">

@@ -1256,11 +1256,12 @@
         </div>
       </div>
 
-      <!-- Section 2: 筛选预设 -->
-      <div class="context-section">
-        <div class="context-section-header">
+      <!-- Section 2: 筛选预设 (默认折叠 — 低频) -->
+      <details class="context-section">
+        <summary class="context-section-header">
           <span class="context-section-title">筛选预设</span>
-        </div>
+          <span class="collapse-count">3 预设</span>
+        </summary>
         <div class="context-section-body">
           <!-- Preset 1 -->
           <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：高ROE低估值">
@@ -1281,7 +1282,7 @@
             <div class="preset-card-match">匹配 18 只</div>
           </div>
         </div>
-      </div>
+      </details>
 
       <!-- Section 3: 多维评分 -->
       <div class="context-section">
@@ -1364,12 +1365,13 @@
         </div>
       </div>
 
-      <!-- Section 4: 对比篮 -->
-      <div class="context-section">
-        <div class="context-section-header">
+      <!-- Section 4: 对比篮 (默认展开 — 高频) -->
+      <details open class="context-section">
+        <summary class="context-section-header">
           <span class="context-section-title">对比篮</span>
+          <span class="collapse-count">3 只</span>
           <span class="context-section-action">已选 3 只</span>
-        </div>
+        </summary>
         <div class="context-section-body">
           <div class="compare-item">
             <div class="compare-item-info">
@@ -1409,7 +1411,7 @@
           </div>
           <label for="overlay-compare" class="btn btn-primary compare-cta" style="cursor:pointer">开始对比 &rarr;</label>
         </div>
-      </div>
+      </details>
     </div>
 
     <!-- State Variants: Compare Cart -->
