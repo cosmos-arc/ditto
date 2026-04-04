@@ -61,7 +61,7 @@ from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 def sqlite_client(tmp_path: Path):
     """Provide a schema-initialized SQLite client for publication facade tests."""
     schema_path = (
-        Path(__file__).resolve().parents[6]
+        Path(__file__).resolve().parents[5]
         / "packages"
         / "data"
         / "src"

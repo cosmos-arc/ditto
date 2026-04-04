@@ -64,6 +64,28 @@ ditto_interfaces/
 | **Data Sources** | `from ditto_data.sources.*` | - |
 | **Data Stores** | registry 内仅限 DI 注册 | 非 registry 代码 |
 
+### Registry 豁免边界
+
+`registry/**` 是 Composition Root，允许直接导入 Data 层 services/quality/config 以完成 DI 装配。
+**这是永久豁免**，不再为"形式上 100% 纯净"增加无价值包装层。
+
+豁免范围（importlinter `port-service-isolation` 合约已显式配置）：
+
+| 文件 | 依赖 | 用途 |
+|------|------|------|
+| `registry/container.py` | `ditto_data.di` | DI 容器组装 |
+| `registry/contexts/ingestion.py` | 6 个 Data services | 构建 IngestionBundle |
+| `registry/contexts/bundle.py` | `ditto_data.sources` | ExchangeTransformers |
+| `registry/infra/config.py` | `ditto_data.config`, `quality.config` | 环境配置加载 |
+
+**非 registry 代码禁止直接访问 Data services/models**。
+| **App 层服务** | `from ditto_app.process.*` | - |
+| **App 层查询** | `from ditto_app.query.*` | - |
+| **App 层配置** | `from ditto_app.config` | - |
+| **Data Service** | `from ditto_data.services.*` | - |
+| **Data Sources** | `from ditto_data.sources.*` | - |
+| **Data Stores** | registry 内仅限 DI 注册 | 非 registry 代码 |
+
 ### 业务逻辑去向
 
 业务逻辑已迁移到 `ditto_app` 包中：
@@ -154,7 +176,7 @@ def daily(date: str):
 ### 测试文件位置
 
 ```
-apps/interfaces/
+interfaces/
 ├── src/ditto_interfaces/
 └── tests/
     ├── unit/           # 单元测试

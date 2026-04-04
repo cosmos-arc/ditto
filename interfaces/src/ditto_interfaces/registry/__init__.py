@@ -1,7 +1,7 @@
 """
 依赖注入注册表.
 
-Composition Root 模式：所有依赖在应用入口点（apps/interfaces/）组装。
+Composition Root 模式：所有依赖在应用入口点（interfaces/）组装。
 DI Provider 已下沉至各业务包：
 - ditto_data.di: Data 层 Provider（原 Data + Core DQ）
 - ditto_app.providers: App 层 Provider

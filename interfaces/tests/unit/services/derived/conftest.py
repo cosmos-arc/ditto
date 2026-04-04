@@ -15,7 +15,7 @@ def sqlite_memory_pool() -> Generator[SQLitePool, None, None]:
     每个测试函数使用独立的内存数据库，测试结束后自动清理。
     """
     schema_path = (
-        Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent
+        Path(__file__).resolve().parent.parent.parent.parent.parent.parent
         / "packages"
         / "data"
         / "src"

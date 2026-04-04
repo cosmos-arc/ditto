@@ -57,7 +57,7 @@ ditto-engine = { path = "packages/engine", editable = true }
 ditto-infra = { path = "packages/infra", editable = true }
 ditto-kernel = { path = "packages/kernel", editable = true }
 ditto-analytics = { path = "packages/analytics", editable = true }
-ditto-interfaces = { path = "apps/interfaces", editable = true }
+ditto-interfaces = { path = "interfaces", editable = true }
 
 # 性能优化库
 cachebox = ">=5.0,<6"
@@ -203,10 +203,10 @@ ci = { depends-on = [
 # 辅助命令
 # ──────────────────────────────────────────────────────────
 # Dev：开发服务（热重载）
-dev = "granian apps.interfaces.src.ditto_interfaces.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
+dev = "granian ditto_interfaces.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
 
 # Server：生产服务
-server = "granian apps.interfaces.src.ditto_interfaces.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
+server = "granian ditto_interfaces.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
 
 # Clean：清理缓存
 clean = """

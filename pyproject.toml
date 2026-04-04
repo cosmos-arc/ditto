@@ -13,7 +13,7 @@ line-length = 88
 target-version = "py312"
 
 # 指定 Ruff 需要检查的源代码和测试目录。
-src = ["packages", "apps", "scripts", "tests"]
+src = ["packages", "interfaces", "scripts"]
 
 # 全局排除不需要检查的文件和目录。
 exclude = [
@@ -106,28 +106,13 @@ unfixable = []
 "packages/data/src/ditto_data/domains/features/technical/indicator_metadata_store.py" = ["S608"]
 "packages/data/src/ditto_data/domains/factors/factor_metadata_store.py" = ["S608"]
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
-"apps/interfaces/src/ditto_interfaces/services/derived/research.py" = ["S608"]
+"interfaces/src/ditto_interfaces/services/derived/research.py" = ["S608"]
 # EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
 "packages/engine/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
 "packages/engine/src/ditto_engine/portfolio/report_views.py" = ["D102"]
 
-# 测试文件 - 最宽松
-"tests/**/*.py" = [
-    "PLR2004",
-    "PLR0913",
-    "S101",
-    "S106",
-    "S311",
-    "S608",
-    "ANN",
-    "D",
-    "PLC0415",
-    "C901",
-    "S105",
-    "S108",
-    "S110",
-]
+# 测试文件 - 最宽松（所有 tests/ 目录通用）
 "**/tests/**/*.py" = [
     "PLR2004",
     "PLR0913",
@@ -147,7 +132,7 @@ unfixable = []
 
 # 脚本文件
 "scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN"]
-"tests/scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN", "RUF001", "PLR0912", "PLR0915", "E501"]
+"interfaces/tests/scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN", "RUF001", "PLR0912", "PLR0915", "E501"]
 "**/cli.py" = ["T201"]
 "**/cli/*.py" = ["T201"]
 "**/main.py" = ["T201"]
@@ -164,7 +149,7 @@ unfixable = []
 "packages/data/src/ditto_data/sources/tushare/adapters/fundamental.py" = ["RUF001"]
 
 # E2E 测试
-"tests/e2e/*.py" = ["S101", "PLR2004", "D", "ANN", "E501"]
+"interfaces/tests/e2e/*.py" = ["S101", "PLR2004", "D", "ANN", "E501"]
 
 # --- Ruff Formatter (格式化器) 配置 ---
 [tool.ruff.format]
@@ -209,7 +194,7 @@ stubPath = "typings"
 typeCheckingMode = "standard"
 
 # 源码目录
-include = ["packages/**/src", "apps/**/src"]
+include = ["packages/**/src", "interfaces/**/src"]
 
 # 排除目录（tests 用独立配置）
 exclude = [
@@ -229,7 +214,7 @@ ignore = [
     "tests/**",
     "**/tests/**",
     "packages/*/tests/**",
-    "apps/*/tests/**",
+    "interfaces/tests/**",
     # StockAdjFactorStore and ETF stores intentionally change API to remove dataset parameter
     # This is a domain-specific specialization that hardcodes the dataset name
     "packages/data/src/ditto_data/domains/market/stock/adj/adj_factor_store.py",
@@ -245,7 +230,7 @@ ignore = [
 # 关键：核心目录提升到 strict 模式
 # 这些是最值钱的代码，值得最严格的检查
 # ═══════════════════════════════════════════════════════════════════
-strict = ["packages/**/src", "apps/interfaces/**/src"]
+strict = ["packages/**/src", "interfaces/**/src"]
 
 # ═══════════════════════════════════════════════════════════════════
 # 规则微调：让 Ruff 管风格，Pyright 专注类型
@@ -280,7 +265,7 @@ extraPaths = [
     "packages/data/src",
     "packages/data/src",
     "packages/analytics/src",
-    "apps/interfaces/src",
+    "interfaces/src",
 ]
 
 # ===================================================================
@@ -288,7 +273,7 @@ extraPaths = [
 # ===================================================================
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["packages/*/tests", "apps/*/tests"]
+testpaths = ["packages/*/tests", "interfaces/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -299,7 +284,7 @@ pythonpath = [
     "packages/data/src",
     "packages/data/src",
     "packages/analytics/src",
-    "apps/interfaces/src",
+    "interfaces/src",
 ]
 
 filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
@@ -326,7 +311,7 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "--cov=packages",
-    "--cov=apps",
+    "--cov=interfaces",
     "--cov-report=html:htmlcov",
     "--cov-report=term-missing",
     "--cov-report=xml",
@@ -340,7 +325,7 @@ addopts = [
 # ===================================================================
 [tool.coverage.run]
 branch = true
-source = ["packages", "apps"]
+source = ["packages", "interfaces"]
 
 [tool.coverage.report]
 precision = 2

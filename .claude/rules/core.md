@@ -486,7 +486,7 @@ tar -tzf dist/*.whl | grep py.typed
 | ditto_kernel | ✅ | `packages/kernel/src/ditto_kernel/py.typed` |
 | ditto_analytics | ✅ | `packages/analytics/src/ditto_analytics/py.typed` |
 | ditto_app | ✅ | `packages/app/src/ditto_app/py.typed` |
-| ditto_interfaces | ✅ | `apps/interfaces/src/ditto_interfaces/py.typed` |
+| ditto_interfaces | ✅ | `interfaces/src/ditto_interfaces/py.typed` |
 
 ---
 

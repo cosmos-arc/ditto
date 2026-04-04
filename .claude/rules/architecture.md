@@ -11,7 +11,7 @@ paths:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                       apps/interfaces (应用边界层)                  │
+│                       interfaces (应用边界层)                       │
 │                              │                                  │
 │                              ├──→ packages/app (应用编排层)          │
 │                              │         │                        │
@@ -59,7 +59,7 @@ paths:
 - Analytics → [packages/analytics/CLAUDE.md](../../packages/analytics/CLAUDE.md)
 （新建）
 - App → [packages/app/CLAUDE.md](../../packages/app/CLAUDE.md)（新建）
-- Interfaces → [apps/interfaces/CLAUDE.md](../../apps/interfaces/CLAUDE.md)
+- Interfaces → [interfaces/CLAUDE.md](../../interfaces/CLAUDE.md)
 
  | [architecture.md](../../.claude/rules/architecture.md) | [config.md](../../.claude/rules/config.md) | [core.md](../../.claude/rules/core.md)
 

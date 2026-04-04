@@ -87,7 +87,7 @@
 - Engine → [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md)
 - Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
 - App → [packages/app/CLAUDE.md](packages/app/CLAUDE.md)
-- Interfaces → [apps/interfaces/CLAUDE.md](apps/interfaces/CLAUDE.md)
+- Interfaces → [interfaces/CLAUDE.md](interfaces/CLAUDE.md)
 
 ### 允许的依赖（严格限制）
 

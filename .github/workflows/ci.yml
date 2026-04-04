@@ -31,7 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       python: ${{ steps.filter.outputs.python }}
-      frontend: ${{ steps.filter.outputs.frontend }}
       infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v4
@@ -42,16 +41,11 @@ jobs:
           filters: |
             python:
               - 'packages/**/*.py'
-              - 'apps/interfaces/**/*.py'
-              - 'tests/**/*.py'
+              - 'interfaces/**/*.py'
               - 'scripts/**/*.py'
               - 'pyproject.toml'
               - 'pixi.toml'
               - 'pixi.lock'
-            frontend:
-              - 'apps/web/**'
-              - 'pnpm-lock.yaml'
-              - 'package.json'
             infra:
               - '.github/**'
               - 'deploy/**'
@@ -163,7 +157,7 @@ jobs:
             --durations=10
 
           # Port 单元测试：有限并行（需验证）
-          pixi run -e dev pytest apps/interfaces/tests/unit/ \
+          pixi run -e dev pytest interfaces/tests/unit/ \
             -m "not integration and not slow" \
             -n 2 \
             --cov=apps \
@@ -222,42 +216,6 @@ jobs:
           name: dist
           path: dist/
           retention-days: 7
-
-  # ============================================================
-  # 预留：前端检查
-  # ============================================================
-  frontend-check:
-    name: Frontend Checks
-    needs: changes
-    if: ${{ needs.changes.outputs.frontend == 'true' }}
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/web
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: "apps/web/pnpm-lock.yaml"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Type check
-        run: pnpm type-check
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Build
-        run: pnpm build
 
   # ============================================================
   # 最终状态汇总（用于 Branch Protection）

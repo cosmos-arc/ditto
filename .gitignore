@@ -65,6 +65,17 @@ coverage.xml
 # ===================================================================
 #                    数据文件（混合策略）
 # ===================================================================
+
+# 包内数据目录
+packages/*/data/
+
+# SQLite 数据库
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+
+# Pixi 锁文件备份
+pixi.lock.backup
 /data
 /datasets/
 /models/

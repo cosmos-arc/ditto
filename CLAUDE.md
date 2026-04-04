@@ -87,7 +87,7 @@
 - Engine → [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md)
 - Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
 - App → [packages/app/CLAUDE.md](packages/app/CLAUDE.md)
-- Interfaces → [apps/interfaces/CLAUDE.md](apps/interfaces/CLAUDE.md)
+- Interfaces → [interfaces/CLAUDE.md](interfaces/CLAUDE.md)
 
 ### 允许的依赖（严格限制）
 
@@ -247,8 +247,7 @@ ditto/
 │   ├── analytics/     # 表达式编译 + 物化 + 因子 + 研究
 │   ├── app/           # 应用编排层（CQRS: query/process/command/builders）
 │   └── engine/        # 核心引擎（alpha/portfolio/execution/accounting/backtest/orchestrator）
-├── apps/              # 应用
-│   └── interfaces/    # Server 应用（API/CLI/Jobs + DI Composition Root）
+├── interfaces/            # 唯一应用入口（API/CLI/Jobs + DI Composition Root）
 ├── config/            # 环境配置（按环境分组）
 │   ├── development/
 │   ├── testing/

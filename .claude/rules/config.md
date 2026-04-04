@@ -114,7 +114,7 @@ config/
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  apps/interfaces/registry/infra/config.py（唯一加载点）          │
+│  interfaces/registry/infra/config.py（唯一加载点）              │
 │                                                            │
 │  @provide                                                  │
 │  def settings(self, loader: ConfigLoader) -> Settings:    │

@@ -984,7 +984,7 @@ bars/
 **集成**
 - DataRootConfig：添加新域路径配置
 - Data：注册三个新域服务（`hub.macro`, `hub.features`, `hub.factors`）
-- 依赖注入：`apps/interfaces/src/ditto_interfaces/registry/data.py`
+- 依赖注入：`interfaces/src/ditto_interfaces/registry/data.py`
 
 **改进**
 - 架构一致性：三域统一使用 Service + Store + MetadataStore 模式

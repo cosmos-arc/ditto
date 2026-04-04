@@ -78,7 +78,7 @@ reader = InstrumentReader(...)  # ❌
 
 | 配置文件位置 | 修改后必更新 |
 |-------------|-------------|
-| `packages/data/config/dq/*.yaml` | `docs/design/09_data_quality_design.md` |
+| `config/default/dq_rules/*.yaml` | `docs/design/09_data_quality_design.md` |
 
 ## 数据摄入 T0/T1/T2/T3
 

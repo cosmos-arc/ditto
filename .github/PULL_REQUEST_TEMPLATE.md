@@ -19,7 +19,7 @@
 - [ ] `packages/datahub` - 数据存储层
 - [ ] `packages/infra` - 基础设施
 - [ ] `packages/app` - 应用编排层
-- [ ] `apps/interfaces` - Server 应用（API/CLI/Jobs）
+- [ ] `interfaces` - Server 应用（API/CLI/Jobs）
 - [ ] 其他:
 
 ## Definition of Done
