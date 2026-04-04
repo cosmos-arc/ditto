@@ -48,6 +48,7 @@ from ditto_data.services.strategy.strategy_catalog_service import (
 from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunService as StrategyRunLifecycleService,
 )
+from ditto_data.storage.sqlite_client import SQLiteClient
 
 # ---------------------------------------------------------------------------
 # App Builder 层
@@ -231,6 +232,14 @@ class AppProcessProvider(Provider):
     """App Process 层 DI Provider — 编排/物化/质量服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def compile_cache_service(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteCompileCache:
+        """SQLite-backed compile cache service."""
+        return SQLiteCompileCache(sqlite_client)
 
     @provide
     def derived_input_provider(

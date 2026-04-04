@@ -2,6 +2,13 @@
 name = "ditto-app"
 requires-python = ">= 3.13"
 version = "0.1.0"
+dependencies = [
+    "ditto-kernel",
+    "ditto-data",
+    "ditto-engine",
+    "ditto-analytics",
+    "ditto-infra",
+]
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

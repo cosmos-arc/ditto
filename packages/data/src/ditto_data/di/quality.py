@@ -1,4 +1,4 @@
-"""Core 层组件注册 - DQ 质量引擎。"""
+"""Engine 层组件注册 - DQ 质量引擎。"""
 
 from collections.abc import Iterator
 from pathlib import Path
@@ -17,9 +17,9 @@ __all__ = ["QualityProvider"]
 
 class QualityProvider(Provider):
     """
-    Core 层 DQ 组件 Provider.
+    Engine 层 DQ 组件 Provider.
 
-    仅注册 Core 层服务（DQSpec、QualityEngine），
+    仅注册 Engine 层服务（DQSpec、QualityEngine），
     App 层 QualityService 已迁入 ditto_app.providers。
     """
 

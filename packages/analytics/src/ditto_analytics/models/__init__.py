@@ -1,5 +1,12 @@
 """Analytics domain models."""
 
+from ditto_kernel.research import (
+    ResearchDatasetSnapshotRecord,
+    ResearchDatasetSpecRecord,
+    ResearchSpineSnapshotRecord,
+    ResearchSpineSpecRecord,
+)
+
 from ditto_analytics.models.factors import (
     FACTOR_CLASS_FUNDAMENTAL,
     FACTOR_CLASS_MACRO,
@@ -21,12 +28,6 @@ from ditto_analytics.models.features import (
     INDICATOR_TYPE_VOLUME,
     IndicatorMetadata,
     IndicatorType,
-)
-from ditto_analytics.models.research import (
-    ResearchDatasetSnapshotRecord,
-    ResearchDatasetSpecRecord,
-    ResearchSpineSnapshotRecord,
-    ResearchSpineSpecRecord,
 )
 
 __all__ = [

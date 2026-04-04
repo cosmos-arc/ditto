@@ -127,7 +127,7 @@ class DataLateArrivalPolicy(StrEnum):
     数据摄入层延迟到达策略.
 
     控制写入层对 knowledge_date 晚于 trade_date 的数据的处理行为。
-    与 Core 层 ``LateArrivalPolicy``（研究快照级别）不同，此枚举面向
+    与 Engine 层 ``LateArrivalPolicy``（研究快照级别）不同，此枚举面向
     数据摄入层，语义为写入时的实时决策。
 
     Attributes:

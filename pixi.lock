@@ -2851,7 +2851,13 @@ packages:
 - pypi: ./packages/app
   name: ditto-app
   version: 0.1.0
-  sha256: 6ff3eb865857dd9bd2870b03f5b7adfdb09e92d9d2d92714edbd0e9522f5e4c6
+  sha256: 9a902a34060a72331bd98862d1d866e95e9ebf0f5db96067d635c6a345733f1d
+  requires_dist:
+  - ditto-kernel
+  - ditto-data
+  - ditto-engine
+  - ditto-analytics
+  - ditto-infra
   requires_python: '>=3.13'
 - pypi: ./packages/data
   name: ditto-data

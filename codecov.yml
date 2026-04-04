@@ -24,9 +24,9 @@ coverage:
         - packages/engine/src/ditto_engine/portfolio/
       target: 90%
 
-    datahub:
+    data:
       paths:
-        - packages/datahub/src/
+        - packages/data/src/
       target: 85%
 
     infra:

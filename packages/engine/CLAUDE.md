@@ -13,13 +13,14 @@ Engine 层是 **Domain Layer（领域层）**，包含量化系统的核心业�
 
 ```
 ditto_engine/
-├── engine/            # 核心引擎（specs、评估指标、publication_safety、research）
 ├── accounting/        # 共享账户契约层（Account / CashBook / OrderBook / Position）
 ├── execution/         # 执行层（Planner / Brokerage / TradeBuilder / Reality Model）
 ├── alpha/             # Alpha 决策层（StrategySpec / Pipeline / 内置 Stages / 策略模板）
 ├── backtest/          # 回测引擎（EngineLoop / BacktestTradingOrchestrator / Manifest / Statistics / Audit）
 ├── portfolio/         # 组合构建（WeightAllocator / ConstraintChecker / compare_reports）
-└── orchestrator/      # 交易编排抽象（TradingOrchestrator Protocol / Stage 合约 / 别名）
+├── orchestrator/      # 交易编排抽象（TradingOrchestrator Protocol / Stage 合约 / 别名）
+├── risk/              # 风险管理（PreTrade 检查 / PostTrade Guard / 风险模型）
+└── events.py          # 领域事件定义
 ```
 
 ## 子领域规范
@@ -85,7 +86,7 @@ ditto_engine/
 
 ### Backtest（回测引擎）
 
-**职责**：EngineLoop / EngineConfig / ProviderBackedDataFeed / BacktestReport / RunManifest / PreTrade / PostTrade / Statistics / Audit / Serialization
+**职责**：EngineLoop / EngineConfig/ ProviderBackedDataFeed / BacktestReport / RunManifest / PreTrade/ PostTrade/ Statistics / Audit
 
 **关键点**：
 - EngineLoop 日历步进回测主循环，逐日推进
@@ -96,7 +97,6 @@ ditto_engine/
 - BacktestReport 包含 NAV / 收益 / 回撤 / Sharpe / Calmar / CVaR 等指标
 - RunManifest 记录运行清单（规则引用、输入引用、配置哈希）
 - ExecutionAuditCollector 收集账户快照/成交/风控审计
-- BacktestReportSerializer 支持 SQLite 存储
 - 详见 v3 设计文档 §7, §8
 
 ### Orchestrator（交易编排抽象）
@@ -180,9 +180,9 @@ packages/engine/
     ├── unit/
     │   ├── accounting/
     │   ├── backtest/
-    │   ├── engine/
     │   ├── execution/
     │   ├── portfolio/
+    │   ├── risk/
     │   └── strategy/  # 对应 src/ditto_engine/alpha/
     └── integration/
 ```

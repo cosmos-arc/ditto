@@ -1,7 +1,7 @@
 """
 跨源对比检查器 - L3 统计检查.
 
-Core 层：纯业务逻辑，无数据访问依赖。
+Engine 层：纯业务逻辑，无数据访问依赖。
 接收两个 DataFrame 进行对比，不关心数据从哪来。
 """
 
@@ -23,7 +23,7 @@ class CrossSourceChecker:
     """
     跨源对比检查器.
 
-    Core 层：纯函数式，接收两个 DataFrame 进行对比。
+    Engine 层：纯函数式，接收两个 DataFrame 进行对比。
     """
 
     def __init__(

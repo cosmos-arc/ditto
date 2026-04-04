@@ -210,6 +210,22 @@ forbidden_modules =
 
 ---
 
+## 完成状态
+
+**全部完成** (2026-04-05)
+
+- [x] Phase A: Task 1, 2, 5, 7
+- [x] Phase B: Task 4a, 4b, 4c
+- [x] Phase C: Task 3, 4d, 6
+- [x] 最终验证: lint ✅ type ✅ test (4358 passed) ✅ arch-check (22/22) ✅
+
+**注意事项**:
+- Task 5: `post_trade.py` 的 `Slice` 导入保留 TYPE_CHECKING（移除会导致 engine 内部循环依赖 risk→backtest）
+- Task 6: `_TestConfigProvider` 需提供 `DataCache[Any]`（非 `DataCache[object]`）以匹配 dishka 泛型解析
+- Task 4d: importlinter 新增 `ditto_analytics.**` 到 data-boundary forbidden_modules
+
+---
+
 ## 执行顺序
 
 ```

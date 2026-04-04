@@ -79,12 +79,6 @@ ditto_interfaces/
 | `registry/infra/config.py` | `ditto_data.config`, `quality.config` | 环境配置加载 |
 
 **非 registry 代码禁止直接访问 Data services/models**。
-| **App 层服务** | `from ditto_app.process.*` | - |
-| **App 层查询** | `from ditto_app.query.*` | - |
-| **App 层配置** | `from ditto_app.config` | - |
-| **Data Service** | `from ditto_data.services.*` | - |
-| **Data Sources** | `from ditto_data.sources.*` | - |
-| **Data Stores** | registry 内仅限 DI 注册 | 非 registry 代码 |
 
 ### 业务逻辑去向
 

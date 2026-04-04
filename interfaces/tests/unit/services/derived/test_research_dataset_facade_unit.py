@@ -12,10 +12,6 @@ import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_analytics.materialization.models import DerivedVersionStatus
-from ditto_analytics.models.research import (
-    ResearchDatasetSpecRecord,
-    ResearchSpineSpecRecord,
-)
 from ditto_analytics.research.domain import DatasetSnapshot, KnownAtPolicy
 from ditto_app.query.research import ResearchDatasetFacade
 from ditto_data.di import (
@@ -33,6 +29,10 @@ from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_interfaces.registry import ConfigProvider
+from ditto_kernel.research import (
+    ResearchDatasetSpecRecord,
+    ResearchSpineSpecRecord,
+)
 from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 # CapitalProvider is used in _make_container to satisfy MetadataService deps

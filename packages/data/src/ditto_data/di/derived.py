@@ -1,9 +1,8 @@
-"""Data 层 - Derived Query/Cache 基础设施 Provider."""
+"""Data 层 - Derived Query 基础设施 Provider."""
 
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_analytics.compile_cache import SQLiteCompileCache
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services import (
@@ -12,7 +11,6 @@ from ditto_data.services import (
     DerivedQueryService,
 )
 from ditto_data.services.research_artifact_service import ResearchArtifactService
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 __all__ = ["DerivedProvider"]
 
@@ -49,11 +47,3 @@ class DerivedProvider(Provider):
                 artifact_root=Path(settings.data_root),
             ),
         )
-
-    @provide
-    def compile_cache_service(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> SQLiteCompileCache:
-        """SQLite-backed compile cache service."""
-        return SQLiteCompileCache(sqlite_client)

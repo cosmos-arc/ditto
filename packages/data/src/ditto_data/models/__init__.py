@@ -1,28 +1,6 @@
 """Data models for data transfer objects."""
 
 # Data 层自己的 models
-from ditto_analytics.models.factors import (
-    FACTOR_CLASS_FUNDAMENTAL,
-    FACTOR_CLASS_MACRO,
-    FACTOR_CLASS_STATISTICAL,
-    FACTOR_CLASS_TECHNICAL,
-    FACTOR_FAMILY_MOMENTUM,
-    FACTOR_FAMILY_QUALITY,
-    FACTOR_FAMILY_SIZE,
-    FACTOR_FAMILY_VALUE,
-    FACTOR_FAMILY_VOLATILITY,
-    FactorClass,
-    FactorFamily,
-    FactorMetadata,
-)
-from ditto_analytics.models.features import (
-    INDICATOR_TYPE_MOMENTUM,
-    INDICATOR_TYPE_TREND,
-    INDICATOR_TYPE_VOLATILITY,
-    INDICATOR_TYPE_VOLUME,
-    IndicatorMetadata,
-    IndicatorType,
-)
 from ditto_kernel.enums import AssetClass, Exchange, OrderSide, RunStatus
 
 from ditto_data.models.common import (
@@ -111,20 +89,7 @@ __all__ = [
     "BAR_ENRICHED_SCHEMA",
     "BAR_SCHEMA",
     "COMMODITY_CODE_TO_INSTRUMENT_ID",
-    "FACTOR_CLASS_FUNDAMENTAL",
-    "FACTOR_CLASS_MACRO",
-    "FACTOR_CLASS_STATISTICAL",
-    "FACTOR_CLASS_TECHNICAL",
-    "FACTOR_FAMILY_MOMENTUM",
-    "FACTOR_FAMILY_QUALITY",
-    "FACTOR_FAMILY_SIZE",
-    "FACTOR_FAMILY_VALUE",
-    "FACTOR_FAMILY_VOLATILITY",
     "FX_CODE_TO_INSTRUMENT_ID",
-    "INDICATOR_TYPE_MOMENTUM",
-    "INDICATOR_TYPE_TREND",
-    "INDICATOR_TYPE_VOLATILITY",
-    "INDICATOR_TYPE_VOLUME",
     "METAL_CODE_ALIASES",
     "QUOTE_SCHEMA",
     "VIX_CODE_TO_INSTRUMENT_ID",
@@ -155,13 +120,8 @@ __all__ = [
     "Domain",
     "ETFExtension",
     "Exchange",
-    "FactorClass",
-    "FactorFamily",
-    "FactorMetadata",
     "FreezeManifest",
     "IndexExtension",
-    "IndicatorMetadata",
-    "IndicatorType",
     "IndustryBasic",
     "IndustryMapping",
     "IngestionCursor",

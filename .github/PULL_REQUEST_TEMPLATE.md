@@ -16,7 +16,7 @@
 ## 影响范围
 
 - [ ] `packages/engine` - 核心业务逻辑
-- [ ] `packages/datahub` - 数据存储层
+- [ ] `packages/data` - 数据存储层
 - [ ] `packages/infra` - 基础设施
 - [ ] `packages/app` - 应用编排层
 - [ ] `interfaces` - Server 应用（API/CLI/Jobs）

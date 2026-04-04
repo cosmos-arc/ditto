@@ -1,4 +1,4 @@
-"""Core 层组件注册 - 黄金数据集配置。"""
+"""Engine 层组件注册 - 黄金数据集配置。"""
 
 from pathlib import Path
 

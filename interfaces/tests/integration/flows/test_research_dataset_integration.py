@@ -13,10 +13,6 @@ import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_analytics.materialization.models import DerivedVersionStatus
-from ditto_analytics.models.research import (
-    ResearchDatasetSpecRecord,
-    ResearchSpineSpecRecord,
-)
 from ditto_app.process.materialization import (
     DerivedPublicationFacade,
     InvalidationCascadeOrchestrator,
@@ -35,6 +31,10 @@ from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_interfaces.jobs.flows.research import research_dataset_build_flow
 from ditto_interfaces.registry import ConfigProvider
 from ditto_interfaces.registry.contexts.bundle import MaterializationBundle
+from ditto_kernel.research import (
+    ResearchDatasetSpecRecord,
+    ResearchSpineSpecRecord,
+)
 from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 pytestmark = pytest.mark.serial

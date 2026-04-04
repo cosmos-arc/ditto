@@ -52,7 +52,8 @@ ditto_kernel/
 ├── enums.py           # 共享枚举类型（StrEnum）
 ├── clock.py           # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
 ├── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
-└── specs.py           # 衍生规格数据类（DerivedSpec / DerivedRole / TimeSpec 等，Phase 5 从 Engine 迁入）
+├── specs.py           # 衍生规格数据类（DerivedSpec / DerivedRole / TimeSpec 等，Phase 5 从 Engine 迁入）
+└── research.py        # 研究数据集记录类型（frozen dataclass × 4）
 ```
 
 ## 当前类型清单
@@ -71,6 +72,10 @@ ditto_kernel/
 | `ExecutionPolicy` | specs.py | frozen dataclass（含默认值） | Analytics, Engine |
 | `CalendarId` | specs.py | `Literal["cn_stock"]` | Analytics |
 | `GrainId` | specs.py | `Literal["1d", "1m"]` | Analytics |
+| `ResearchSpineSpecRecord` | research.py | frozen dataclass | Data, App |
+| `ResearchDatasetSpecRecord` | research.py | frozen dataclass | Data, App |
+| `ResearchSpineSnapshotRecord` | research.py | frozen dataclass | Data, App |
+| `ResearchDatasetSnapshotRecord` | research.py | frozen dataclass | Data, App |
 
 ## 导入规范
 

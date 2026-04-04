@@ -17,7 +17,7 @@ class ComparisonReader:
     路径：data_root/quarantine/quality_comparison/
     保留：30 天自动清理
 
-    职责：只读取 DataFrame，不依赖 Core 层类型
+    职责：只读取 DataFrame，不依赖 Engine 层类型
     """
 
     def __init__(

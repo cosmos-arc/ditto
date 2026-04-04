@@ -50,7 +50,6 @@ from ditto_engine.backtest.engine import (
     EngineOptions,
 )
 from ditto_engine.backtest.manifest import RunManifest, serialize_manifest
-from ditto_engine.backtest.serialization import serialize
 from ditto_engine.backtest.statistics import (
     BacktestReport,
     PreTradeDecisionRecord,
@@ -64,9 +63,11 @@ from ditto_engine.execution.reality.market import MarketSnapshot
 from ditto_engine.execution.rules import InstrumentRuleProvider
 from ditto_engine.risk.post_trade import PostTradeRiskGuard
 from ditto_engine.risk.pre_trade import CompositePreTradeCheck
-from ditto_infra.foundation.util.io import atomic_bytes_write
+from ditto_infra.foundation.util.io import atomic_bytes_write, atomic_write
 from ditto_kernel.enums import AssetClass
 from ditto_kernel.identity import InstrumentId
+
+from ditto_app.process.backtest_serialization import serialize_report
 
 __all__ = [
     "BacktestService",
@@ -164,7 +165,14 @@ def write_backtest_artifacts(
     if output_dir is None:
         output_dir = Path(tempfile.gettempdir()) / "ditto" / report.run_id
 
-    serialize(report, output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 序列化报告（纯计算在 Engine）+ 文件写入（App 层职责）
+    json_bytes, parquet_tables = serialize_report(report)
+    atomic_bytes_write(json_bytes, output_dir / "backtest_report.json")
+    for name, df in parquet_tables.items():
+        atomic_write(df, output_dir / f"{name}.parquet")
+
     _write_audit_json(
         output_dir / "risk_log.json",
         report.risk_log,

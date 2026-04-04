@@ -1,7 +1,7 @@
-"""Tests for App 层 DI Provider 结构和容器集成。"""
+"""Tests for App 层 DI Provider 结构和容器集成."""
 
-from __future__ import annotations
-
+from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -26,6 +26,7 @@ from ditto_app.providers import (
     get_app_providers,
 )
 from ditto_app.query.derived import DerivedQueryFacade, StaticRuntimeModeResolver
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.di import (
     CapitalProvider,
     DerivedProvider,
@@ -40,11 +41,42 @@ from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
-from ditto_interfaces.registry.infra import ConfigProvider
+from ditto_infra.foundation.cache import DataCache
+from ditto_infra.foundation.config.environment import Environment
 
 # ---------------------------------------------------------------------------
-# Test fixtures: 辅助 Provider
+# Test fixtures: 辅助 Provider（替代 Interfaces 层 ConfigProvider）
 # ---------------------------------------------------------------------------
+
+
+class _TestConfigProvider(Provider):
+    """测试用最小配置 Provider — 替代 ditto_interfaces.registry.infra.ConfigProvider."""
+
+    scope = Scope.APP
+
+    def __init__(self, data_root: Path) -> None:
+        super().__init__()
+        self._data_root = data_root
+
+    @provide
+    def environment(self) -> Environment:
+        """提供测试环境枚举。"""
+        return Environment.TESTING
+
+    @provide
+    def data_store_settings(self) -> DataStoreSettings:
+        """提供测试用数据存储配置."""
+        return DataStoreSettings(data_root=self._data_root)
+
+    @provide
+    def data_root(self) -> Path:
+        """提供数据根目录路径."""
+        return self._data_root
+
+    @provide
+    def data_cache(self) -> DataCache[Any]:  # type: ignore[misc]
+        """提供测试用内存缓存."""
+        return DataCache(ttl_seconds=300, max_size=100)
 
 
 def _sources_provider() -> Provider:
@@ -81,16 +113,15 @@ def _runtime_deps_provider() -> Provider:
 
 
 # ---------------------------------------------------------------------------
-# 结构测试：验证 Provider 类拥有正确的 provide 方法
+# 结构测试:验证 Provider 类拥有正确的 provide 方法
 # ---------------------------------------------------------------------------
 
 
 class TestAppProviderStructure:
-    """验证 App 层 Provider 结构。"""
+    """验证 App 层 Provider 结构."""
 
     def test_get_app_providers_returns_three_providers(self) -> None:
-        """get_app_providers() 应返回 3 个 Provider 实例。"""
-
+        """get_app_providers() 应返回 3 个 Provider 实例."""
         providers = get_app_providers()
         assert len(providers) == 3
         names = [type(p).__name__ for p in providers]
@@ -99,8 +130,7 @@ class TestAppProviderStructure:
         assert "AppBuilderFactory" in names
 
     def test_app_query_provider_methods(self) -> None:
-        """AppQueryProvider 应包含 3 个 provide 方法。"""
-
+        """AppQueryProvider 应包含 3 个 provide 方法."""
         provider = AppQueryProvider()
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
@@ -111,11 +141,11 @@ class TestAppProviderStructure:
         assert expected.issubset(method_names)
 
     def test_app_process_provider_methods(self) -> None:
-        """AppProcessProvider 应包含 5 个 provide 方法。"""
-
+        """AppProcessProvider 应包含 5 个 provide 方法."""
         provider = AppProcessProvider()
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
+            "compile_cache_service",
             "derived_input_provider",
             "derived_materialization_orchestrator",
             "derived_invalidation_orchestrator",
@@ -125,8 +155,7 @@ class TestAppProviderStructure:
         assert expected.issubset(method_names)
 
     def test_app_builder_factory_methods(self) -> None:
-        """AppBuilderFactory 应包含 5 个 provide 方法。"""
-
+        """AppBuilderFactory 应包含 5 个 provide 方法."""
         provider = AppBuilderFactory()
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
@@ -140,22 +169,21 @@ class TestAppProviderStructure:
 
 
 # ---------------------------------------------------------------------------
-# 集成测试：验证 App Provider 可以在完整容器中正确解析服务
+# 集成测试:验证 App Provider 可以在完整容器中正确解析服务
 # ---------------------------------------------------------------------------
 
 
 class TestAppProviderIntegration:
-    """验证 App 层 Provider 与完整容器的集成。"""
+    """验证 App 层 Provider 与完整容器的集成."""
 
     @pytest.fixture
     def app_container(self, monkeypatch, tmp_path):
-        """构建包含所有层级的完整测试容器。"""
-
+        """构建包含所有层级的完整测试容器."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
 
         container = make_container(
-            ConfigProvider(),
+            _TestConfigProvider(tmp_path),
             QualityProvider(),
             _sources_provider(),
             RuntimeProvider(),
@@ -172,7 +200,7 @@ class TestAppProviderIntegration:
         container.close()
 
     def test_query_services_resolved(self, app_container) -> None:
-        """AppQueryProvider 的服务应可从容器解析。"""
+        """AppQueryProvider 的服务应可从容器解析."""
         assert isinstance(
             app_container.get(StaticRuntimeModeResolver),
             StaticRuntimeModeResolver,
@@ -180,7 +208,7 @@ class TestAppProviderIntegration:
         assert isinstance(app_container.get(DerivedQueryFacade), DerivedQueryFacade)
 
     def test_process_services_resolved(self, app_container) -> None:
-        """AppProcessProvider 的服务应可从容器解析。"""
+        """AppProcessProvider 的服务应可从容器解析."""
         assert isinstance(
             app_container.get(DerivedMaterializationOrchestrator),
             DerivedMaterializationOrchestrator,
@@ -196,7 +224,7 @@ class TestAppProviderIntegration:
         assert isinstance(app_container.get(QualityService), QualityService)
 
     def test_builder_services_resolved(self, app_container) -> None:
-        """AppBuilderFactory 的服务应可从容器解析。"""
+        """AppBuilderFactory 的服务应可从容器解析."""
         assert isinstance(
             app_container.get(StrategyRuntimeBuilder),
             StrategyRuntimeBuilder,

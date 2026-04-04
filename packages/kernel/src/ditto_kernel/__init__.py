@@ -15,6 +15,12 @@ from ditto_kernel.clock import Clock, RealtimeClock, SimulatedClock
 from ditto_kernel.enums import AssetClass, Exchange, OrderSide, RiskScope, RunStatus
 from ditto_kernel.events import DomainEvent, EventBus, SimpleEventBus
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.research import (
+    ResearchDatasetSnapshotRecord,
+    ResearchDatasetSpecRecord,
+    ResearchSpineSnapshotRecord,
+    ResearchSpineSpecRecord,
+)
 from ditto_kernel.specs import (
     CALENDAR_TO_TIMEZONE,
     GRAIN_TO_TIME_KEYS,
@@ -44,6 +50,10 @@ __all__ = [
     "MaterializationProfile",
     "OrderSide",
     "RealtimeClock",
+    "ResearchDatasetSnapshotRecord",
+    "ResearchDatasetSpecRecord",
+    "ResearchSpineSnapshotRecord",
+    "ResearchSpineSpecRecord",
     "RiskScope",
     "RunStatus",
     "SimpleEventBus",

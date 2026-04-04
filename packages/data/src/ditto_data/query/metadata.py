@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import polars as pl
 
-if TYPE_CHECKING:
-    from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.metadata_service import MetadataService
 
 __all__ = ["MetadataQuerist"]
 

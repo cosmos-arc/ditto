@@ -861,7 +861,7 @@ bars/
 - 26 个单元测试覆盖边界条件（effective_from/effective_to、版本选择、空值处理）
 
 **设计决策**
-- Data 层不依赖 Core 层，返回 Records 由调用方转换为 Core 模型
+- Data 层不依赖 Engine 层，返回 Records 由调用方转换为 Engine 模型
 
 ### v0.15.0 (2026-02-10)
 **破坏性重构**

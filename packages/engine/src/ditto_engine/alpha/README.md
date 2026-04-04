@@ -48,7 +48,7 @@ alpha/
 - DecisionFrame 的 `instrument_id` 列为 int 类型
 - TargetPortfolio.positions 的 key 为 `InstrumentId`
 - SignalSnapshot.signals / RebalancePlan.target_weights 的 key 为 `InstrumentId`
-- Core 层不持有任何展示信息（ticker/symbol），展示映射由 Port 层负责
+- Engine 层不持有任何展示信息（ticker/symbol），展示映射由 Port 层负责
 
 ## 依赖
 

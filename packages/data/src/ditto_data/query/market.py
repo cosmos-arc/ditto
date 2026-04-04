@@ -2,14 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import polars as pl
 
-from ditto_data.services.market_service import AdjType, MarketBarsQuery
-
-if TYPE_CHECKING:
-    from ditto_data.services.market_service import MarketService
+from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
 
 __all__ = ["MarketQuerist"]
 

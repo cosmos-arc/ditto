@@ -476,7 +476,7 @@ class QualityReconciliationService:
     Port 层：编排协调
     - 获取多源数据
     - 应用黄金数据集过滤
-    - 调用 Core 层引擎进行对比
+    - 调用 Engine 层引擎进行对比
     - 转换 DQResult → DataFrame
     - 存储对比结果
     - 触发告警
@@ -598,7 +598,7 @@ class QualityReconciliationService:
                     skip_reason="no_secondary_data",
                 )
 
-            # 6. 调用 Core 层引擎进行对比
+            # 6. 调用 Engine 层引擎进行对比
             # 配置文件使用 key_columns: [ticker, trade_date]
             result = self._engine.check_cross_source(
                 primary=primary_df,

@@ -32,7 +32,7 @@ Task 8 (interfaces CLAUDE.md) → 无前置
 
 ### Batch 1: Critical（合并阻塞）
 
-- [ ] Task 1: 修复 pyproject.toml 路径配置 `[S]`
+- [x] Task 1: 修复 pyproject.toml 路径配置 `[S]` ✅
   - 验收: extraPaths/pythonpath 包含 `packages/app/src`；移除 `packages/data/src` 重复项
   - 文件: `pyproject.toml` (L261-288)
   - 变更:
@@ -40,7 +40,7 @@ Task 8 (interfaces CLAUDE.md) → 无前置
     2. pythonpath 添加 `"packages/app/src"`
     3. 移除两处重复的 `"packages/data/src"`
 
-- [ ] Task 2: 修复 CI 配置引用 `[M]`
+- [x] Task 2: 修复 CI 配置引用 `[M]` ✅
   - 验收: CI yml 所有路径引用与当前目录结构一致
   - 文件: `.github/workflows/ci.yml`
   - 变更:
@@ -49,7 +49,7 @@ Task 8 (interfaces CLAUDE.md) → 无前置
     3. L160: port 测试步骤保留 `interfaces/tests/unit/`
     4. L209-211: 构建步骤改为 `packages/infra`, `packages/engine`, `packages/data`, `packages/app`, `packages/analytics`, `packages/kernel`
 
-- [ ] Task 3: 更新 README.md `[M]`
+- [x] Task 3: 更新 README.md `[M]` ✅ (已无需修改，Phase 4 后已同步)
   - 验收: 架构图、项目结构、文档链接反映 Phase 4 后的实际布局
   - 文件: `README.md`
   - 变更:
@@ -60,12 +60,12 @@ Task 8 (interfaces CLAUDE.md) → 无前置
 
 ### Batch 2: Important（强烈建议）
 
-- [ ] Task 4: app pyproject.toml 添加 dependencies `[S]`
+- [x] Task 4: app pyproject.toml 添加 dependencies `[S]` ✅
   - 验收: packages/app/pyproject.toml 声明对 kernel/data/engine/analytics/infra 的依赖
   - 文件: `packages/app/pyproject.toml`
   - 变更: 添加 `dependencies = ["ditto-kernel", "ditto-data", "ditto-engine", "ditto-analytics", "ditto-infra"]`
 
-- [ ] Task 5: 提取 serialization.py 的 I/O 到 App 层 `[L]`
+- [x] Task 5: 提取 serialization.py 的 I/O 到 App 层 `[L]` ✅
   - 验收: engine/backtest/serialization.py 不再依赖 ditto_infra；App 层负责文件写入
   - 文件:
     - `packages/engine/src/ditto_engine/backtest/serialization.py` — 重构为纯序列化（返回 bytes + dict），移除 `atomic_bytes_write`/`atomic_write` 导入
@@ -77,13 +77,13 @@ Task 8 (interfaces CLAUDE.md) → 无前置
     3. 或更简单的方案：将 `serialize()` 整个函数移到 App 层（因为序列化+写入是一体的），engine 不再需要 serialization.py
   - 风险: **+1 级**（影响回测核心路径）
 
-- [ ] Task 6: 添加 engine → infra 禁止合约 `[S]`
+- [x] Task 6: 添加 engine → infra 禁止合约 `[S]` ✅
   - 验收: importlinter 新增 engine-no-infra-dependency 合约；`pixi run -e dev arch-check` 通过
   - 前置: Task 5（否则 serialization.py 的 infra 导入会被检测为违规）
   - 文件: `.importlinter`
   - 变更: 新增 forbidden 合约
 
-- [ ] Task 7: 修复 Engine CLAUDE.md 过时描述 `[S]`
+- [x] Task 7: 修复 Engine CLAUDE.md 过时描述 `[S]` ✅
   - 验收: 模块结构描述与实际目录一致
   - 文件: `packages/engine/CLAUDE.md`
   - 变更:
@@ -91,7 +91,7 @@ Task 8 (interfaces CLAUDE.md) → 无前置
     2. 新增 `risk/` 子目录描述
     3. 更新测试目录描述
 
-- [ ] Task 8: 修复 Interfaces CLAUDE.md 重复表格 `[S]`
+- [x] Task 8: 修复 Interfaces CLAUDE.md 重复表格 `[S]` ✅
   - 验收: 层级访问规则表格只出现一次
   - 文件: `interfaces/CLAUDE.md`
   - 变更: 删除 L82-88 的重复表格

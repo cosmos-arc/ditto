@@ -114,11 +114,10 @@ class TestDerivedProvider:
             if not name.startswith("_") and callable(getattr(provider, name))
         }
         provide_methods = all_methods - base_methods
-        # 应仅包含 3 个 Data 层方法
+        # 应仅包含 2 个 Data 层方法（compile_cache_service 已迁至 App 层）
         expected = {
             "research_artifact_service",
             "derived_query_service",
-            "compile_cache_service",
         }
         assert expected == provide_methods
 

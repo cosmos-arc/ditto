@@ -7,17 +7,12 @@ Facade 模式：组合 MarketService + MetadataService + DerivedQueryService，
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import polars as pl
 
 from ditto_data.provider import BarQuery, InstrumentQuery
-from ditto_data.services.market_service import AdjType, MarketBarsQuery
-
-if TYPE_CHECKING:
-    from ditto_data.services.derived.query_service import DerivedQueryService
-    from ditto_data.services.market_service import MarketService
-    from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.derived.query_service import DerivedQueryService
+from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
+from ditto_data.services.metadata_service import MetadataService
 
 __all__ = ["ServiceBackedDataProvider"]
 

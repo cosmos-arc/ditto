@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import orjson
+import polars as pl
 import pytest
 from ditto_app.process.strategy import (
     enrich_record_with_symbol,
@@ -87,6 +88,18 @@ class TestEnrichRecordWithSymbol:
 # write_backtest_artifacts
 # ---------------------------------------------------------------------------
 
+_FAKE_JSON_BYTES = orjson.dumps({"run_id": "test"})
+
+
+def _mock_serialize_report(
+    return_nav: bool = False,
+) -> tuple[bytes, dict[str, pl.DataFrame]]:
+    """构造 serialize_report 的 mock 返回值。"""
+    tables: dict[str, pl.DataFrame] = {}
+    if return_nav:
+        tables["nav"] = pl.DataFrame({"trade_date": ["2026-03-20"], "nav": [1.0]})
+    return _FAKE_JSON_BYTES, tables
+
 
 class TestWriteBacktestArtifacts:
     """测试 write_backtest_artifacts 函数。"""
@@ -105,107 +118,94 @@ class TestWriteBacktestArtifacts:
             engine_version="0.2.0",
         )
 
-    @patch("ditto_app.process.strategy.serialize")
+    @patch("ditto_app.process.strategy.serialize_report")
     def test_returns_backtest_report_path(
         self,
-        mock_serialize: MagicMock,
+        mock_serialize_report: MagicMock,
         tmp_path: Path,
     ) -> None:
         """返回 dict 至少包含 backtest_report 键。"""
         mock_report = MagicMock()
         mock_report.run_id = "run-001"
+        mock_serialize_report.return_value = _mock_serialize_report()
         out_dir = tmp_path / "run-001"
         out_dir.mkdir()
-        fake_json_path = out_dir / "backtest_report.json"
-        fake_json_path.touch()
-        mock_serialize.return_value = fake_json_path
 
         result = write_backtest_artifacts(mock_report, output_dir=out_dir)
 
         assert "backtest_report" in result
-        assert result["backtest_report"] == fake_json_path
+        assert result["backtest_report"].name == "backtest_report.json"
 
-    @patch("ditto_app.process.strategy.serialize")
-    def test_passes_output_dir_to_serialize(
+    @patch("ditto_app.process.strategy.serialize_report")
+    def test_creates_output_dir_when_specified(
         self,
-        mock_serialize: MagicMock,
+        mock_serialize_report: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """指定 output_dir 时，传递给 serialize。"""
+        """指定 output_dir 时，自动创建目录。"""
         mock_report = MagicMock()
         mock_report.run_id = "run-001"
-        output_dir = tmp_path / "custom"
-        output_dir.mkdir()
-        mock_serialize.return_value = output_dir / "backtest_report.json"
+        mock_serialize_report.return_value = _mock_serialize_report()
+        output_dir = tmp_path / "custom" / "nested"
 
         write_backtest_artifacts(mock_report, output_dir=output_dir)
 
-        call_args = mock_serialize.call_args
-        assert call_args[0][1] == output_dir
+        assert output_dir.exists()
+        assert (output_dir / "backtest_report.json").exists()
 
-    @patch("ditto_app.process.strategy.serialize")
+    @patch("ditto_app.process.strategy.serialize_report")
     def test_uses_temp_dir_when_no_output_dir(
         self,
-        mock_serialize: MagicMock,
+        mock_serialize_report: MagicMock,
         tmp_path: Path,
     ) -> None:
         """未指定 output_dir 时，使用默认临时目录。"""
         mock_report = MagicMock()
         mock_report.run_id = "run-xyz"
-        output_dir = tmp_path / "ditto" / "run-xyz"
-        output_dir.mkdir(parents=True)
-        mock_serialize.return_value = output_dir / "backtest_report.json"
+        mock_serialize_report.return_value = _mock_serialize_report()
 
-        # Patch tempfile.gettempdir to use tmp_path
         with patch("ditto_app.process.strategy.tempfile") as mock_tmp:
             mock_tmp.gettempdir.return_value = str(tmp_path)
             write_backtest_artifacts(mock_report)
 
-        call_args = mock_serialize.call_args
-        passed_dir = call_args[0][1]
-        assert "ditto" in str(passed_dir)
-        assert "run-xyz" in str(passed_dir)
+        output_dir = tmp_path / "ditto" / "run-xyz"
+        assert output_dir.exists()
 
-    @patch("ditto_app.process.strategy.serialize")
+    @patch("ditto_app.process.strategy.serialize_report")
     def test_propagates_serialize_error(
         self,
-        mock_serialize: MagicMock,
+        mock_serialize_report: MagicMock,
     ) -> None:
-        """serialize 异常时传播（不吞异常）。"""
+        """serialize_report 异常时传播（不吞异常）。"""
         mock_report = MagicMock()
         mock_report.run_id = "run-err"
-        mock_serialize.side_effect = OSError("disk full")
+        mock_serialize_report.side_effect = OSError("disk full")
 
         with pytest.raises(OSError, match="disk full"):
             write_backtest_artifacts(mock_report)
 
-    @patch("ditto_app.process.strategy.serialize")
-    def test_collects_additional_files(
+    @patch("ditto_app.process.strategy.serialize_report")
+    def test_collects_parquet_artifacts(
         self,
-        mock_serialize: MagicMock,
+        mock_serialize_report: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """serialize 写入的额外文件也包含在返回值中。"""
+        """serialize_report 返回的 parquet 表也写入磁盘。"""
         mock_report = MagicMock()
         mock_report.run_id = "run-extra"
+        mock_serialize_report.return_value = _mock_serialize_report(return_nav=True)
         out_dir = tmp_path / "run-extra"
-        out_dir.mkdir()
-        json_path = out_dir / "backtest_report.json"
-        json_path.touch()
-        # 模拟 serialize 还写了 nav.parquet
-        (out_dir / "nav.parquet").touch()
-        mock_serialize.return_value = json_path
 
         result = write_backtest_artifacts(mock_report, output_dir=out_dir)
 
         assert "backtest_report" in result
         assert "nav" in result
-        assert result["nav"] == out_dir / "nav.parquet"
+        assert result["nav"].name == "nav.parquet"
 
-    @patch("ditto_app.process.strategy.serialize")
+    @patch("ditto_app.process.strategy.serialize_report")
     def test_writes_manifest_json_with_artifact_refs(
         self,
-        mock_serialize: MagicMock,
+        mock_serialize_report: MagicMock,
         tmp_path: Path,
     ) -> None:
         """提供 manifest 时，写出 manifest.json 并回填 artifact 清单。"""
@@ -213,11 +213,8 @@ class TestWriteBacktestArtifacts:
         mock_report.run_id = "run-001"
         mock_report.risk_log = ()
         mock_report.pre_trade_log = ()
+        mock_serialize_report.return_value = _mock_serialize_report()
         out_dir = tmp_path / "run-001"
-        out_dir.mkdir()
-        json_path = out_dir / "backtest_report.json"
-        json_path.touch()
-        mock_serialize.return_value = json_path
 
         result = write_backtest_artifacts(
             mock_report,
@@ -230,20 +227,19 @@ class TestWriteBacktestArtifacts:
         parsed = orjson.loads(manifest_path.read_bytes())
         assert parsed["strategy_version"] == "2026.03"
         assert parsed["parameter_overrides"] == ["top_k=3"]
-        assert parsed["artifacts"] == ["backtest_report.json", "manifest.json"]
+        assert "manifest.json" in parsed["artifacts"]
 
-    @patch("ditto_app.process.strategy.serialize")
+    @patch("ditto_app.process.strategy.serialize_report")
     def test_display_map_injects_instrument_symbol_into_risk_log(
         self,
-        mock_serialize: MagicMock,
+        mock_serialize_report: MagicMock,
         tmp_path: Path,
     ) -> None:
         """display_map 注入 instrument_symbol 到 risk_log.json。"""
         mock_report = MagicMock()
         mock_report.run_id = "run-display"
+        mock_serialize_report.return_value = _mock_serialize_report()
         out_dir = tmp_path / "run-display"
-        out_dir.mkdir()
-        mock_serialize.return_value = out_dir / "backtest_report.json"
 
         risk_record = RiskScanRecord(
             trade_date="2026-03-24",
@@ -273,18 +269,17 @@ class TestWriteBacktestArtifacts:
         assert records[0]["instrument_id"] == 2_000_001
         assert records[0]["instrument_symbol"] == "510300.SH"
 
-    @patch("ditto_app.process.strategy.serialize")
+    @patch("ditto_app.process.strategy.serialize_report")
     def test_no_display_map_skips_instrument_symbol(
         self,
-        mock_serialize: MagicMock,
+        mock_serialize_report: MagicMock,
         tmp_path: Path,
     ) -> None:
         """不传 display_map 时，审计日志不含 instrument_symbol 字段。"""
         mock_report = MagicMock()
         mock_report.run_id = "run-nodisplay"
+        mock_serialize_report.return_value = _mock_serialize_report()
         out_dir = tmp_path / "run-nodisplay"
-        out_dir.mkdir()
-        mock_serialize.return_value = out_dir / "backtest_report.json"
 
         risk_record = RiskScanRecord(
             trade_date="2026-03-24",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ditto_analytics.models.research import (
+from ditto_kernel.research import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,

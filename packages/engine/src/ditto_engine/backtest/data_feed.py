@@ -10,16 +10,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import Any, Protocol
 
 import polars as pl
-from ditto_data.provider import BarQuery
+from ditto_data.provider import BarQuery, DataProvider
 from ditto_kernel.identity import InstrumentId
 
 from ditto_engine.execution.reality.market import MarketSnapshot
-
-if TYPE_CHECKING:
-    from ditto_data.provider import DataProvider
 
 __all__ = [
     "DataFeed",

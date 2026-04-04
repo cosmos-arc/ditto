@@ -263,8 +263,8 @@ extraPaths = [
     "packages/infra/src",
     "packages/kernel/src",
     "packages/data/src",
-    "packages/data/src",
     "packages/analytics/src",
+    "packages/app/src",
     "interfaces/src",
 ]
 
@@ -282,8 +282,8 @@ pythonpath = [
     "packages/infra/src",
     "packages/kernel/src",
     "packages/data/src",
-    "packages/data/src",
     "packages/analytics/src",
+    "packages/app/src",
     "interfaces/src",
 ]
 

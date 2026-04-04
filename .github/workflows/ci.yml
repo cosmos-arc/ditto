@@ -3,7 +3,7 @@
 #
 # 特点：
 # - 使用 Pixi 包管理器
-# - Monorepo 变更检测（packages/* + apps/*）
+# - Monorepo 变更检测（packages/* + interfaces/*）
 # - 分层测试策略（unit → integration）
 # - 前端工作流预留
 
@@ -145,8 +145,8 @@ jobs:
 
       - name: Run unit tests
         run: |
-          # DataHub 单元测试：并行（已验证安全）
-          pixi run -e dev pytest packages/datahub/tests/unit/ \
+          # 全包单元测试：并行
+          pixi run -e dev pytest packages/*/tests/unit/ \
             -n auto \
             --cov=packages \
             --cov-report=xml:coverage-unit.xml \
@@ -156,11 +156,11 @@ jobs:
             -v \
             --durations=10
 
-          # Port 单元测试：有限并行（需验证）
+          # Interfaces 单元测试：有限并行
           pixi run -e dev pytest interfaces/tests/unit/ \
             -m "not integration and not slow" \
             -n 2 \
-            --cov=apps \
+            --cov=packages --cov=interfaces \
             --cov-report=xml:coverage-unit.xml \
             --cov-report=term-missing \
             --cov-fail-under=80 \
@@ -206,9 +206,12 @@ jobs:
       # 验证各包可以正常构建
       - name: Build packages
         run: |
-          cd packages/foundation && pixi run python -m build --wheel --outdir ../../dist/
-          cd ../core && pixi run python -m build --wheel --outdir ../../dist/
-          cd ../datahub && pixi run python -m build --wheel --outdir ../../dist/
+          cd packages/infra && pixi run python -m build --wheel --outdir ../../dist/
+          cd ../kernel && pixi run python -m build --wheel --outdir ../../dist/
+          cd ../data && pixi run python -m build --wheel --outdir ../../dist/
+          cd ../analytics && pixi run python -m build --wheel --outdir ../../dist/
+          cd ../engine && pixi run python -m build --wheel --outdir ../../dist/
+          cd ../app && pixi run python -m build --wheel --outdir ../../dist/
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
