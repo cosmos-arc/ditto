@@ -418,6 +418,7 @@
   height: 40px;
   border-radius: 50%;
   background: var(--surface-muted, #141414);
+  border: 1px solid var(--brand-signature-muted, #8a7a50);
   display: flex;
   align-items: center;
   justify-content: center;

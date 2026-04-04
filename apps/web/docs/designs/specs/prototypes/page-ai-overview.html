@@ -54,7 +54,7 @@
       z-index: 999;
       font-family: var(--font-family-ui);
       font-size: 11px;
-      color: var(--text-tertiary);
+      color: var(--brand-signature-fg);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
       padding: 3px 8px;
@@ -68,8 +68,8 @@
     :root {
       --ai-accent:           var(--brand-500);
       --ai-accent-hover:     var(--brand-400);
-      --ai-accent-subtle:    oklch(0.6642 0.1605 263.63 / 0.10);
-      --ai-accent-strong:    oklch(0.6642 0.1605 263.63 / 0.18);
+      --ai-accent-subtle:    oklch(from var(--brand-accent) l c h / 0.10);
+      --ai-accent-strong:    oklch(from var(--brand-accent) l c h / 0.18);
 
       /* AI Pulse animation */
       --ai-pulse-duration:   2s;

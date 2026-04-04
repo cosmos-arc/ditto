@@ -5,16 +5,16 @@
 
 :root {
   /* ── Focus ── */
-  --interaction-focus-ring:    oklch(0.6642 0.1605 263.63 / 0.5);
-  --interaction-focus-border:  oklch(0.6642 0.1605 263.63);
+  --interaction-focus-ring:    oklch(from var(--brand-500) l c h / 0.50);
+  --interaction-focus-border:  oklch(from var(--brand-500) l c h / 0.70);
 
   /* ── Hover ── */
   --interaction-hover-subtle-bg:   oklch(1 0 0 / 0.04);
   --interaction-hover-strong-bg:   oklch(1 0 0 / 0.08);
 
   /* ── Selected ── */
-  --interaction-selected-bg:       oklch(0.6642 0.1605 263.63 / 0.12);
-  --interaction-selected-border:   oklch(0.6642 0.1605 263.63 / 0.3);
+  --interaction-selected-bg:       oklch(from var(--brand-500) l c h / 0.12);
+  --interaction-selected-border:   oklch(from var(--brand-500) l c h / 0.25);
   --interaction-selected-text:     var(--text-primary);
 
   /* ── Active / Press ── */

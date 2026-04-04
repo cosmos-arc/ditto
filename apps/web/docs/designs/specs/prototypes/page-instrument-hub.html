@@ -80,7 +80,7 @@
       z-index: 50;
       font-family: var(--font-family-ui);
       font-size: var(--font-size-12);
-      color: var(--text-tertiary);
+      color: var(--brand-signature-fg);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
       padding: var(--space-2) var(--space-6);
@@ -198,9 +198,9 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 15%, transparent) 80%,
+        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
         transparent 100%
       );
       pointer-events: none;
@@ -2905,11 +2905,11 @@
     const cs = getComputedStyle(document.documentElement);
     const tk = (v) => cs.getPropertyValue(v).trim();
     const tokens = {
-      surfaceApp:   tk('--surface-app')       || 'oklch(0.155 0.005 260)',
-      surfacePanel: tk('--surface-panel-base') || 'oklch(0.185 0.005 260)',
-      surfaceOverlay: tk('--surface-overlay')  || 'oklch(0.260 0.008 260)',
-      borderSubtle: tk('--border-subtle')      || 'oklch(0.220 0.005 260)',
-      textTertiary: tk('--text-tertiary')      || 'oklch(0.550 0.010 260)',
+      surfaceApp:   tk('--surface-app')       || 'oklch(0.166 0.010 253)',
+      surfacePanel: tk('--surface-panel-base') || 'oklch(0.184 0.011 253)',
+      surfaceOverlay: tk('--surface-overlay')  || 'oklch(0.255 0.006 253)',
+      borderSubtle: tk('--border-subtle')      || 'oklch(0.255 0.006 253)',
+      textTertiary: tk('--text-tertiary')      || 'oklch(0.555 0.007 253)',
       marketUp:     tk('--market-up-fg')       || 'oklch(0.670 0.170 20)',
       marketDown:   tk('--market-down-fg')     || 'oklch(0.680 0.120 175)',
       brandAccent:  tk('--brand-accent')       || 'oklch(0.700 0.165 255)',

@@ -5,29 +5,29 @@
  * ───────────────────────────────────────────── */
 
 :root {
-  /* ── Neutral Primitives (15 levels) ── */
-  --neutral-0:   oklch(0.1665 0.0124 254.17);
-  --neutral-25:  oklch(0.1844 0.0146 253.21);
-  --neutral-50:  oklch(0.1974 0.0169 252.56);
-  --neutral-75:  oklch(0.2146 0.0190 252.07);
-  --neutral-100: oklch(0.2396 0.0233 251.45);
-  --neutral-150: oklch(0.2601 0.0252 251.20);
-  --neutral-200: oklch(0.3025 0.0303 246.97);
-  --neutral-300: oklch(0.3418 0.0330 248.82);
-  --neutral-400: oklch(0.4193 0.0421 241.39);
-  --neutral-500: oklch(0.4942 0.0477 243.51);
-  --neutral-600: oklch(0.5937 0.0393 247.20);
-  --neutral-700: oklch(0.7074 0.0333 248.30);
-  --neutral-800: oklch(0.8143 0.0232 248.11);
-  --neutral-900: oklch(0.9205 0.0146 244.73);
-  --neutral-950: oklch(0.9777 0.0051 247.88);
+  /* ── Neutral Primitives (15 levels) — hue 253, reduced chroma ── */
+  --neutral-0:   oklch(0.166 0.010 253);
+  --neutral-25:  oklch(0.184 0.011 253);
+  --neutral-50:  oklch(0.198 0.012 253);
+  --neutral-75:  oklch(0.215 0.012 253);
+  --neutral-100: oklch(0.240 0.013 253);
+  --neutral-150: oklch(0.261 0.014 253);
+  --neutral-200: oklch(0.303 0.015 253);
+  --neutral-300: oklch(0.342 0.013 253);
+  --neutral-400: oklch(0.420 0.012 253);
+  --neutral-500: oklch(0.495 0.011 253);
+  --neutral-600: oklch(0.594 0.009 253);
+  --neutral-700: oklch(0.707 0.008 253);
+  --neutral-800: oklch(0.814 0.006 253);
+  --neutral-900: oklch(0.920 0.004 253);
+  --neutral-950: oklch(0.978 0.002 253);
 
-  /* ── Brand Primitives ── */
-  --brand-300: oklch(0.8194 0.0897 266.29);
-  --brand-400: oklch(0.7420 0.1322 264.83);
-  --brand-500: oklch(0.6642 0.1605 263.63);
-  --brand-600: oklch(0.5842 0.1443 262.74);
-  --brand-700: oklch(0.4767 0.1321 262.01);
+  /* ── Brand Primitives — hue 255-258 ── */
+  --brand-300: oklch(0.820 0.090 258);
+  --brand-400: oklch(0.760 0.130 257);
+  --brand-500: oklch(0.700 0.165 255);
+  --brand-600: oklch(0.620 0.150 255);
+  --brand-700: oklch(0.530 0.130 256);
 
   /* ── Functional Primitives ── */
   /* Green */
@@ -108,4 +108,31 @@
   --indicator-flat-sym:      '\2500';
   --indicator-critical-sym:  '\2715';
   --indicator-warn-sym:      '\26A0';
+}
+
+/* ── Light Mode Primitives ── */
+[data-theme="light"] {
+  /* ── Neutral Primitives (15 levels) — hue 253 ── */
+  --neutral-0:   oklch(0.988 0.001 253);
+  --neutral-25:  oklch(0.958 0.002 253);
+  --neutral-50:  oklch(0.944 0.002 253);
+  --neutral-75:  oklch(0.932 0.003 253);
+  --neutral-100: oklch(0.900 0.004 253);
+  --neutral-150: oklch(0.860 0.005 253);
+  --neutral-200: oklch(0.810 0.006 253);
+  --neutral-300: oklch(0.720 0.008 253);
+  --neutral-400: oklch(0.640 0.009 253);
+  --neutral-500: oklch(0.560 0.010 253);
+  --neutral-600: oklch(0.470 0.010 253);
+  --neutral-700: oklch(0.390 0.010 253);
+  --neutral-800: oklch(0.300 0.009 253);
+  --neutral-900: oklch(0.200 0.007 253);
+  --neutral-950: oklch(0.150 0.006 253);
+
+  /* ── Brand Primitives — hue 255-260 ── */
+  --brand-300: oklch(0.660 0.110 259);
+  --brand-400: oklch(0.610 0.145 258);
+  --brand-500: oklch(0.550 0.185 258);
+  --brand-600: oklch(0.490 0.175 259);
+  --brand-700: oklch(0.430 0.155 260);
 }

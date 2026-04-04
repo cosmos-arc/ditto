@@ -300,3 +300,51 @@ oklch(from var(--domain-bg-green) l c h / 0.20)
 ### 最终
 - 16 页面全量截图对比
 - 确认无残留旧 hue 值（grep 263.63 / 266.29 / 264.83 等）
+
+---
+
+## 宝Status: completed ─ 2026-04-04
+
+All 8 steps executed:
+- ✅ Step 0: Domain bg DRY refactor — 5 intermediate variables, 21 dark mode references replaced
+ agent-running-bg migrated to relative color
+ light mode agent-running-bg migrated to relative color
+  
+- ✅ Step 1: Neutral 15-level scale → hue 253, reduced chroma, Light mode 15-level neutral added
+  
+- ✅ Step 2: Brand 5-level scale → hue 255-258, Light mode 5-level brand added
+  
+- ✅ Step 3: Semantic tokens → surface/text/border/code/scrollbar all updated to V1 values. Surface uses var(--neutral-*) chain. Brand-accent-subtle uses relative color
+  
+- ✅ Step 4: Interaction tokens → all 4 hardcoded values replaced with oklch(from var(--brand-500)...)
+  
+- ✅ Step 5: Signature Brass tokens — 4 dark + 4 light mode tokens added
+  
+- ✅ Step 6: Hardcoded fixes — ai-overview (2 brand refs → relative color), cross-market (neutral hue 260→253). instrument-hub (JS fallbacks hue 260→253)
+  
+- ✅ Step 7: Brass touchpoints — shell header hairline (13 files). header title decorative line (3 files). empty state icon border (shared CSS). style label color (16 files)
+
+### Verification results
+- ✅ Grep for old brand primitives (263.63/264.83/266.29/262.74/262.01): 0 matches
+ all cleared
+- ✅ Grep for old neutral primitives: 0 matches — all cleared
+- ✅ Grep for old hue range 261-267 in shared CSS: 0 matches — all cleared
+- ✅ HTML files: all 16 files updated with brass touchpoints### 每个 Step 完成后
+- 浏览器打开 page-home.html（最简单）+ page-instrument-hub.html（最复杂）
+- 截图对比前后变化
+
+### 文本层级专项验证（Step 3 后）
+- 在 trading-overview / instrument-hub / ai-copilot 上验证 text-tertiary 是否过亮
+- 密集表格中 secondary / tertiary 区分度是否足够
+- 如区分度不足，考虑将 secondary 提到 L=0.700+ 以维持 0.145 间距
+
+### Theme toggle 验证
+- 每个 step 后切 dark/light 验证无断裂
+
+### Brass 共存验证（Step 7 后）
+- 确认 brass hairline 与 blue selected tab 同画面不冲突
+- 确认 brass 不进入任何语义状态位置
+
+### 最终
+- 16 页面全量截图对比
+- 确认无残留旧 hue 值（grep 263.63 / 266.29 / 264.83 等）
