@@ -1,0 +1,46 @@
+/* L7 Domain — 金融业务域语义色 (CN 默认：红涨绿跌) */
+@theme inline {
+  /* 市场 — CN 默认：红涨绿跌 */
+  --color-market-up:         oklch(65% 0.20 25);
+  --color-market-down:       oklch(70% 0.16 155);
+  --color-market-flat:       oklch(58% 0.012 254);
+  --color-market-limit-up:   oklch(70% 0.22 25);
+  --color-market-limit-down: oklch(55% 0.14 155);
+
+  /* 风控 */
+  --color-risk-critical: oklch(65% 0.20 25);
+  --color-risk-high:     oklch(70% 0.18 40);
+  --color-risk-warning:  oklch(75% 0.15 85);
+  --color-risk-moderate: oklch(75% 0.12 195);
+  --color-risk-normal:   oklch(70% 0.16 155);
+  --color-risk-info:     oklch(65% 0.15 255);
+
+  /* 交易 */
+  --color-execution-filled:    oklch(70% 0.16 155);
+  --color-execution-partial:   oklch(75% 0.15 85);
+  --color-execution-pending:   oklch(75% 0.12 195);
+  --color-execution-cancelled: oklch(58% 0.012 254);
+  --color-execution-rejected:  oklch(65% 0.20 25);
+
+  /* AI Agent */
+  --color-agent-running:  oklch(65% 0.15 255);
+  --color-agent-idle:     oklch(58% 0.012 254);
+  --color-agent-error:    oklch(65% 0.20 25);
+  --color-agent-success:  oklch(70% 0.16 155);
+  --color-agent-thinking: oklch(70% 0.12 195);
+
+  /* 系统状态 */
+  --color-system-healthy:  oklch(70% 0.16 155);
+  --color-system-degraded: oklch(75% 0.15 85);
+  --color-system-down:     oklch(65% 0.20 25);
+
+  /* 数据质量 */
+  --color-quality-good:    oklch(70% 0.16 155);
+  --color-quality-delayed: oklch(75% 0.15 85);
+  --color-quality-stale:   oklch(65% 0.20 25);
+
+  /* 信号 */
+  --color-signal-buy:  oklch(65% 0.20 25);
+  --color-signal-sell: oklch(70% 0.16 155);
+  --color-signal-hold: oklch(75% 0.15 85);
+}

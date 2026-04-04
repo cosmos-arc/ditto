@@ -1,0 +1,11 @@
+/* L3 Shell — 布局尺寸 */
+@theme inline {
+  --width-rail:           60px;
+  --width-rail-collapsed: 48px;
+  --width-sidebar:        280px;
+  --width-detail:         360px;
+  --height-header:        48px;
+  --height-bar:           36px;
+  --height-bar-sm:        28px;
+  --height-bar-lg:        42px;
+}

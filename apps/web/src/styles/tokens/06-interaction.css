@@ -1,0 +1,21 @@
+/* L6 Interaction — 交互反馈状态 */
+@theme inline {
+  /* Focus */
+  --color-focus-ring: oklch(60% 0.18 255);
+  --width-focus-ring: 2px;
+
+  /* Hover / Active / Selected */
+  --opacity-hover:    0.08;
+  --opacity-active:   0.12;
+  --opacity-selected: 0.16;
+
+  /* Toast / Banner */
+  --color-toast-info:    oklch(65% 0.15 255);
+  --color-toast-success: oklch(70% 0.16 155);
+  --color-toast-warning: oklch(75% 0.15 85);
+  --color-toast-error:   oklch(65% 0.20 25);
+
+  /* Progress */
+  --color-progress:  oklch(60% 0.18 255);
+  --height-progress: 2px;
+}

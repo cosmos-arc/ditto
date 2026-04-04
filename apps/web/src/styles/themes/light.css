@@ -1,0 +1,26 @@
+/* 亮色主题覆盖 */
+[data-theme="light"] {
+  /* 表面 */
+  --color-surface-0: oklch(99% 0.002 254);
+  --color-surface-1: oklch(97% 0.005 254);
+  --color-surface-2: oklch(93% 0.007 254);
+  --color-surface-3: oklch(90% 0.008 254);
+  --color-surface-4: oklch(86% 0.009 254);
+  --color-surface-5: oklch(80% 0.010 254);
+
+  /* 文本 */
+  --color-foreground:           oklch(14% 0.006 254);
+  --color-foreground-secondary: oklch(30% 0.010 254);
+  --color-foreground-tertiary:  oklch(46% 0.012 254);
+  --color-foreground-muted:     oklch(58% 0.012 254);
+  --color-foreground-disabled:  oklch(74% 0.011 254);
+
+  /* 边框 */
+  --color-border:        oklch(86% 0.009 254);
+  --color-border-subtle: oklch(90% 0.008 254);
+  --color-border-strong: oklch(74% 0.011 254);
+
+  /* 代码 */
+  --color-code-bg: oklch(95% 0.008 280);
+  --color-code-fg: oklch(20% 0.06 280);
+}

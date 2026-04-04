@@ -1,0 +1,24 @@
+/* L8 Density — 密度预设（不用 @theme inline，用 :root 属性选择器覆盖） */
+:root {
+  --row-height:     36px;
+  --cell-gap:       var(--spacing-2);
+  --cell-padding-y: var(--spacing-1);
+  --font-delta:     0;
+  --section-gap:    var(--spacing-4);
+  --list-gap:       var(--spacing-1);
+}
+
+[data-density="comfortable"] {
+  --row-height:     42px;
+  --cell-padding-y: var(--spacing-1-5);
+  --section-gap:    var(--spacing-6);
+  --list-gap:       var(--spacing-1-5);
+}
+
+[data-density="dense"] {
+  --row-height:     34px;
+  --cell-padding-y: var(--spacing-0-5);
+  --font-delta:     -1;
+  --section-gap:    var(--spacing-3);
+  --list-gap:       var(--spacing-0-5);
+}

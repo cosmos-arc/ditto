@@ -1,0 +1,7 @@
+/* 国际市场色覆盖（绿涨红跌） */
+[data-market-region="intl"] {
+  --color-market-up:         oklch(70% 0.16 155);
+  --color-market-down:       oklch(65% 0.20 25);
+  --color-market-limit-up:   oklch(55% 0.14 155);
+  --color-market-limit-down: oklch(70% 0.22 25);
+}

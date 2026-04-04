@@ -1,0 +1,33 @@
+/* L5 Component — 组件结构 token（尺寸、间距） */
+@theme inline {
+  /* Button */
+  --height-btn-sm:  28px;
+  --height-btn-md:  34px;
+  --height-btn-lg:  40px;
+  --radius-btn:     var(--radius-md);
+  --padding-btn-sm: 0 var(--spacing-2);
+  --padding-btn-md: 0 var(--spacing-3);
+  --padding-btn-lg: 0 var(--spacing-4);
+
+  /* Badge / Tag / Chip */
+  --height-badge:  20px;
+  --padding-badge: 0 var(--spacing-1-5);
+  --radius-badge:  var(--radius-full);
+
+  /* Card / Panel */
+  --radius-card:  var(--radius-lg);
+  --padding-card: var(--spacing-4);
+
+  /* Input / Select */
+  --height-input:  34px;
+  --radius-input:  var(--radius-md);
+  --padding-input: var(--spacing-0-5) var(--spacing-2);
+
+  /* Tab */
+  --height-tab: 36px;
+  --radius-tab: var(--radius-sm);
+
+  /* Checkbox */
+  --size-checkbox:   16px;
+  --radius-checkbox: var(--radius-sm);
+}

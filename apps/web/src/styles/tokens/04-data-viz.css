@@ -1,0 +1,39 @@
+/* L4 Data Viz — 数据可视化专用色 */
+@theme inline {
+  /* 数据新鲜度 */
+  --color-data-fresh:  oklch(97% 0.005 254);
+  --color-data-recent: oklch(97% 0.005 254 / 0.8);
+  --color-data-stale:  oklch(97% 0.005 254 / 0.5);
+
+  /* 图表系列色 */
+  --color-chart-1: oklch(65% 0.15 255);
+  --color-chart-2: oklch(70% 0.16 155);
+  --color-chart-3: oklch(75% 0.15 85);
+  --color-chart-4: oklch(60% 0.16 300);
+  --color-chart-5: oklch(70% 0.12 195);
+  --color-chart-6: oklch(80% 0.10 60);
+
+  /* 热力图 */
+  --color-heatmap-0: oklch(30% 0.04 254);
+  --color-heatmap-1: oklch(45% 0.08 255);
+  --color-heatmap-2: oklch(55% 0.12 255);
+  --color-heatmap-3: oklch(65% 0.16 255);
+  --color-heatmap-4: oklch(72% 0.18 255);
+
+  /* Sparkline */
+  --color-sparkline:          oklch(60% 0.18 255);
+  --color-sparkline-negative: oklch(65% 0.20 25);
+
+  /* 资产类别 — Paul Tol 色板 */
+  --color-asset-equity:     oklch(65% 0.15 30);
+  --color-asset-bond:       oklch(60% 0.12 255);
+  --color-asset-commodity:  oklch(70% 0.14 85);
+  --color-asset-fx:         oklch(65% 0.10 195);
+  --color-asset-crypto:     oklch(60% 0.16 300);
+  --color-asset-derivative: oklch(55% 0.08 150);
+
+  /* 状态 LED */
+  --color-led-active: oklch(70% 0.16 155);
+  --color-led-idle:   oklch(75% 0.15 85);
+  --color-led-error:  oklch(65% 0.20 25);
+}
