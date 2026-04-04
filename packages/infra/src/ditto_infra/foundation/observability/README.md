@@ -19,7 +19,7 @@
 基于 Loguru 的结构化日志，支持 JSON 格式输出和上下文注入。
 
 ```python
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 logger.info("Processing data", event="data_process", count=100)
 logger.error("Failed to connect", event="db_error", db="sqlite")
@@ -30,7 +30,7 @@ logger.error("Failed to connect", event="db_error", db="sqlite")
 基于 OpenTelemetry 的分布式追踪，支持 span 管理和 trace_id 生成。
 
 ```python
-from ditto_foundation import span, traced, get_trace_id
+from ditto_infra.foundation import span, traced, get_trace_id
 
 # 上下文管理器
 with span("data.load", source="tushare"):
@@ -52,7 +52,7 @@ span_id = get_span_id()
 基于 OpenTelemetry 的指标收集，提供预定义的业务指标。
 
 ```python
-from ditto_foundation import M
+from ditto_infra.foundation import M
 
 # Counter - 计数器
 M.data_records.add(100, {"source": "tushare", "table": "etf_daily"})
@@ -78,9 +78,9 @@ M.data_update_duration.record(1.5, {"source": "tushare"})
 ### 初始化与关闭
 
 ```python
-from ditto_foundation.config import Environment
-from ditto_foundation.observability import init, shutdown
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.config import Environment
+from ditto_infra.foundation.observability import init, shutdown
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 
 config = ObservabilityConfig(
     service_name="my_service",
@@ -98,7 +98,7 @@ shutdown()
 ### 日志 API
 
 ```python
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 logger.debug("Debug message", key=value)
 logger.info("Info message", event="event_name")
@@ -113,7 +113,7 @@ logger.bind(trace_id="xxx-xxx-xxx").info("Message with context")
 ### 追踪 API
 
 ```python
-from ditto_foundation import span, traced, get_trace_id, get_span_id
+from ditto_infra.foundation import span, traced, get_trace_id, get_span_id
 
 # Span 上下文管理器
 with span("operation_name", key1=value1):
@@ -134,7 +134,7 @@ span_id = get_span_id()    # 16位十六进制
 ### 指标 API
 
 ```python
-from ditto_foundation import M
+from ditto_infra.foundation import M
 
 # Counter (单调递增)
 M.data_records.add(delta, attributes)
@@ -151,7 +151,7 @@ M.data_update_duration.record(value, attributes)
 ### 测试辅助 API
 
 ```python
-from ditto_foundation import reset_for_testing, get_recorded_spans, get_recorded_metrics
+from ditto_infra.foundation import reset_for_testing, get_recorded_spans, get_recorded_metrics
 
 # 重置状态
 reset_for_testing()
@@ -266,9 +266,9 @@ buckets = [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0]
 
 ```python
 import pytest
-from ditto_foundation.config import Environment
-from ditto_foundation.observability import init, reset_for_testing
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.config import Environment
+from ditto_infra.foundation.observability import init, reset_for_testing
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 
 def test_my_function():
     reset_for_testing()
@@ -288,9 +288,9 @@ def test_my_function():
 ### 带 Span 验证的测试
 
 ```python
-from ditto_foundation.config import Environment
-from ditto_foundation.observability import init, span, get_recorded_spans, reset_for_testing
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.config import Environment
+from ditto_infra.foundation.observability import init, span, get_recorded_spans, reset_for_testing
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 
 def test_span_creation():
     reset_for_testing()
@@ -314,9 +314,9 @@ def test_span_creation():
 ### 带指标验证的测试
 
 ```python
-from ditto_foundation.config import Environment
-from ditto_foundation.observability import init, M, get_recorded_metrics, reset_for_testing
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.config import Environment
+from ditto_infra.foundation.observability import init, M, get_recorded_metrics, reset_for_testing
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 
 def test_metrics():
     reset_for_testing()
@@ -338,13 +338,13 @@ def test_metrics():
 
 ### 配置来源
 
-`ObservabilityConfig` 由应用层（Port）从 `config/{env}/observability.env` 加载并注入。基础层不读取环境变量。
+`ObservabilityConfig` 由应用层（Interfaces）从 `config/{env}/observability.env` 加载并注入。基础层不读取环境变量。
 
 ### 配置类
 
 ```python
-from ditto_foundation.config import Environment
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.config import Environment
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 
 config = ObservabilityConfig(
     service_name="my_service",

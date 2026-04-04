@@ -24,7 +24,7 @@ Data 采用分层架构，Store 层实现 CQRS 模式（Reader/Writer 分离）�
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Port Layer (apps/port)                │
+│                    Interfaces 层 (interfaces/)            │
 │                  通过 DI 容器注入 Domain Services        │
 └─────────────────────────────────────────────────────────┘
                     │
@@ -698,7 +698,7 @@ bars = market_service.query(query)
 
 #### 统一接口约定
 
-Port 层通过 Domain Services 访问 Data 数据，所有 Services 都通过 DI 容器注入：
+Interfaces 层通过 Domain Services 访问 Data 数据，所有 Services 都通过 DI 容器注入：
 
 ```python
 from dishka import Container
@@ -834,7 +834,7 @@ bars/
 - [PIT 安全指南](../../../../.claude/skills/pit-guide/SKILL.md)
 - [Polars 使用指南](../../../../.claude/skills/polars-guide/SKILL.md)
 - [数据设计文档](../../../../docs/design/02_data_design.md)
-- [Port 层重构计划](../../../../docs/plans/2026-02-02-port-layer-refactor.md)
+- [Interfaces 层重构计划](../../../../docs/plans/2026-02-02-port-layer-refactor.md)
 
 ## 变更记录
 
@@ -865,9 +865,9 @@ bars/
 
 ### v0.15.0 (2026-02-10)
 **破坏性重构**
-- 移除 Data Facade：Port 层直接注入 Domain Services
+- 移除 Data Facade：Interfaces 层直接注入 Domain Services
   - 不再通过 `Data` 门面类访问数据
-  - Port 层通过 DI 容器直接注入 `MetadataService`、`MarketService` 等 Domain Services
+  - Interfaces 层通过 DI 容器直接注入 `MetadataService`、`MarketService` 等 Domain Services
   - Service 层保持不变，继续提供统一的域级 API
 - CQRS 架构实现：Store 层拆分为 Reader/Writer 模式
   - 所有 `*_store.py` 拆分为 `*_reader.py` + `*_writer.py`
@@ -919,7 +919,7 @@ bars/
 ### v0.13.0 (2026-02-02)
 **重构**
 - 架构清理：移除 Data 层的业务编排组件
-  - 删除 `IngestionCoordinator`（业务编排应在 Port 层，而非 Data 层）
+  - 删除 `IngestionCoordinator`（业务编排应在 Interfaces 层，而非 Data 层）
   - 保留 `IngestionDataWriter` 作为通用写入工具类
   - Data 职责明确：只负责底层读写，不负责业务编排
 
@@ -945,7 +945,7 @@ bars/
 - 代码质量：ruff All checks passed
 
 **文档**
-- `docs/plans/2026-02-02-port-layer-refactor.md` - Port 层重构计划
+- `docs/plans/2026-02-02-port-layer-refactor.md` - Interfaces 层重构计划
 
 ### v0.12.0 (2026-02-02)
 **新增**

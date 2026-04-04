@@ -140,5 +140,4 @@ docker network inspect ditto-network
 
 ## 相关文档
 
-- [设计文档](../../docs/plans/2026-02-18-docker-deployment-design.md)
 - [Observability 部署](../observability/README.md)

@@ -1,4 +1,4 @@
-# 策略模块 (strategy/)
+# Alpha 决策模块 (alpha/)
 
 **版本**: v3.1
 **最后更新**: 2026-03-25
@@ -6,14 +6,14 @@
 
 ## 概要
 
-策略决策层，基于 Pipeline + Stage 架构提供可组合的策略信号生成能力。
+Alpha 决策层，基于 Pipeline + Stage 架构提供可组合的策略信号生成能力。
 当前已由 Port 层 `StrategyRuntimeBuilder / StrategySliceBuilder / StrategyFacade`
 接入 published catalog、单日 research/recommendation 和完整 backtest 编排链路。
 
 ## 架构
 
 ```
-strategy/
+alpha/
 ├── pipeline.py          # StrategyPipeline — Stage 编排器
 ├── spec.py              # StrategySpec — 策略完整语义契约
 ├── context.py           # StrategyContext — 策略运行时上下文
@@ -29,7 +29,10 @@ strategy/
 │   ├── risk_lock.py     # RiskLockFilterStage — 风控锁定
 │   └── regime.py        # RegimeStage — 市场状态
 └── templates/           # 策略模板
-    └── etf_rotation.py  # ETF 轮动模板
+    ├── etf_rotation.py          # ETF 轮动模板
+    ├── etf_trend_swing.py       # ETF 趋势摆动模板
+    ├── stock_sector_rotation.py # 股票行业轮动模板
+    └── stock_selection_trend.py # 股票选择趋势模板
 ```
 
 ## 核心概念
@@ -50,7 +53,7 @@ strategy/
 ## 依赖
 
 - 上游: `ditto_data` (数据访问)
-- 下游: 被 `ditto_engine.portfolio`、`ditto_engine.execution` 和 `ditto_port.services.strategy` 消费
+- 下游: 被 `ditto_engine.portfolio`、`ditto_engine.execution` 和 App 层消费
 
 ## Port 侧入口
 

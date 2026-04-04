@@ -1,33 +1,36 @@
 # runtime
 
-**版本**: v0.5.0
-**最后更新**: 2026-01-23
+**版本**: v0.6.0
+**最后更新**: 2026-04-04
 **状态**: ✅ 稳定
 
 ## 概要
 
-运行时支持组件 - 连接池、Instrument ID 分配、版本管理，提供数据存储所需的运行时基础设施。
+数据层领域特定运行时组件 — Instrument ID 分配、数据版本管理、SQL 引擎。
+
+> **注意**: 通用基础设施组件（SQLite 连接池 `SQLitePool`、文件锁 `FileLockManager`）已迁移至
+> `ditto_infra.foundation`（`db` 和 `concurrency` 子模块）。本模块仅保留数据层特有的运行时辅助组件。
 
 ## 核心功能
 
-提供数据存储所需的运行时基础设施，包括连接池管理、Instrument ID 标识分配、并发控制和数据版本管理。
+提供数据存储所需的领域特定运行时基础设施，包括 Instrument ID 标识分配和数据版本管理。
 
-## 二、包含文件
+## 包含文件
 
 | 文件 | 功能 |
 |------|------|
-| `sqlite_pool.py` | SQLite 连接池，线程安全的连接管理 |
 | `instrument_id_allocator.py` | Instrument ID 分配器，管理内部唯一 ID |
-| `file_lock.py` | 跨平台文件锁，防止并发写入冲突 |
 | `freeze_manager.py` | 轻量级数据版本管理 (SHA-256 checksum) |
 | `sql_engine.py` | SQL 引擎，提供跨数据库查询能力 |
 
-## 三、使用示例
+## 使用示例
 
 ```python
+from ditto_infra.foundation.db import SQLitePool  # 连接池来自 infra
 from ditto_data.runtime import InstrumentIdAllocator, FreezeManager
 
-# Instrument ID 分配
+# Instrument ID 分配（依赖 infra 层的 SQLitePool）
+sqlite_pool = SQLitePool(db_path="data/meta.db")
 allocator = InstrumentIdAllocator(sqlite_pool)
 etf_instrument_id = allocator.allocate("etf")
 print(f"Allocated instrument_id: {etf_instrument_id}")

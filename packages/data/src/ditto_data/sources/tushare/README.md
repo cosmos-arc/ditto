@@ -10,7 +10,7 @@
 
 ### 1. Token 配置
 
-Tushare Token 通过上层配置注入，推荐在 `config/{env}/data_source.env` 中配置，并由 Port 层加载后构造 `DataSourceSettings`。
+Tushare Token 通过上层配置注入，推荐在 `config/{env}/data_source.env` 中配置，并由 Interfaces 层加载后构造 `DataSourceSettings`。
 
 ```env
 # config/{env}/data_source.env
@@ -28,11 +28,15 @@ settings = DataSourceSettings(tushare_token="your_token_here")
 ### 2. 基本使用
 
 ```python
-from ditto_data import Data
-hub = Data(data_root="data")
+from ditto_data.config import DataSourceSettings
+from ditto_data.sources.tushare import TushareSource
 
-# 获取 Tushare 数据源
-source = hub.sources.get("tushare")
+# 通过 DI 注入的 Services 获取数据源（推荐）
+# source: TushareSource = container.get(TushareSource)
+
+# 或显式构造配置
+settings = DataSourceSettings(tushare_token="your_token_here")
+source = TushareSource(settings=settings)
 
 # 获取交易日历
 calendar = source.fetch_calendar("2024-01-01", "2024-01-31")
@@ -42,9 +46,6 @@ stocks = source.fetch_stock_basic()
 
 # 获取日线数据
 daily = source.fetch_stock_daily("2024-01-02")
-
-# 关闭连接
-hub.close()
 ```
 
 ---
@@ -308,10 +309,11 @@ source.py 转换逻辑  列重命名、类型转换、过滤
 
 ### Q4: 如何切换到其他数据源？
 
-Data 支持多数据源，初始化时指定：
+Ditto 支持多数据源，通过 DI 注入不同的 Source 实现：
 
 ```python
-source = data.sources.get("akshare")  # 切换到 Akshare
+# 通过 DI 容器获取不同的数据源
+source = container.get(AkShareSource)  # 切换到 Akshare
 ```
 
 ---

@@ -12,13 +12,12 @@
 
 ```
 plans/
-├── sprint-01/
-│   ├── task1-runtime-layer.md
-│   └── task2-store-layer.md
-├── sprint-02/
-│   └── ...
-└── sprint-03/
-    └── ...
+├── {date}-{name}.md          # 日期前缀的规划文件
+├── app/                       # App 层相关规划
+├── archive/                   # 已完成或废弃的归档计划
+├── improvements/              # 改进方案
+├── task-template.md           # 任务模板
+└── README.md                  # 本文件
 ```
 
 ## 何时需要 Plan 文件？

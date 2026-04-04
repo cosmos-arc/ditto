@@ -62,7 +62,7 @@ util/
 - 写入失败时自动回滚
 
 ```python
-from ditto_foundation.util import atomic_write
+from ditto_infra.foundation.util import atomic_write
 from pathlib import Path
 import polars as pl
 
@@ -85,7 +85,7 @@ atomic_write(df, Path("./data/bars/2024/202401.parquet"))
 - 返回 32 位十六进制字符串
 
 ```python
-from ditto_foundation.util import file_md5
+from ditto_infra.foundation.util import file_md5
 from pathlib import Path
 
 checksum = file_md5(Path("./data/bars/2024/202401.parquet"))
@@ -113,7 +113,7 @@ print(checksum)  # 输出: "3a7bd3e2360a..."
 - 自动验证字符串格式
 
 ```python
-from ditto_foundation.util import normalize_date, DateInput
+from ditto_infra.foundation.util import normalize_date, DateInput
 from datetime import date, datetime
 
 # 支持多种输入
@@ -138,7 +138,7 @@ result4 = normalize_date(None)              # None
 - **字段统一**：包含所有字段（包括 instrument_id、source）
 
 ```python
-from ditto_foundation.util import ChecksumCompute
+from ditto_infra.foundation.util import ChecksumCompute
 import polars as pl
 
 df = pl.DataFrame({
@@ -229,7 +229,7 @@ df.write_parquet(temp_path, compression="zstd")
 ### 6.1 数据写入与完整性校验
 
 ```python
-from ditto_foundation.util import atomic_write, file_md5
+from ditto_infra.foundation.util import atomic_write, file_md5
 from pathlib import Path
 import polars as pl
 
@@ -257,7 +257,7 @@ else:
 ### 6.2 变更检测
 
 ```python
-from ditto_foundation.util import file_md5, atomic_write
+from ditto_infra.foundation.util import file_md5, atomic_write
 from pathlib import Path
 import polars as pl
 
@@ -292,7 +292,7 @@ else:
 ### 6.3 缓存管理
 
 ```python
-from ditto_foundation.util import file_md5, atomic_write
+from ditto_infra.foundation.util import file_md5, atomic_write
 from pathlib import Path
 import polars as pl
 
@@ -329,7 +329,7 @@ class DataCache:
 ### 6.4 错误处理
 
 ```python
-from ditto_foundation.util import atomic_write, file_md5
+from ditto_infra.foundation.util import atomic_write, file_md5
 from pathlib import Path
 import polars as pl
 import errno

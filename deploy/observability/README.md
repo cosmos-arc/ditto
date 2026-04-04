@@ -45,19 +45,14 @@ This configuration is also used in GitHub Actions for integration tests.
 
 ### 1. Start Services
 
-```powershell
-# From project root
-.\scripts\observability\start.ps1
-
-# Or from this directory
-docker-compose up -d
+```bash
+# From this directory
+docker compose up -d
 ```
+
+> **Note**: PowerShell helper scripts (`start.ps1`, `health_check.ps1`, `stop.ps1`) are not yet implemented. Use `docker compose` commands directly.
 
 ### 2. Check Service Health
-
-```powershell
-.\scripts\observability\health_check.ps1
-```
 
 Expected output:
 ```
@@ -80,12 +75,9 @@ Grafana           Healthy   http://localhost:3000
 
 ### 4. Stop Services
 
-```powershell
-# From project root
-.\scripts\observability\stop.ps1
-
-# Or from this directory
-docker-compose down
+```bash
+# From this directory
+docker compose down
 ```
 
 ## Data Flow

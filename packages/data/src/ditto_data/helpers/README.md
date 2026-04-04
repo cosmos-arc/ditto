@@ -137,4 +137,5 @@ elif adj_type == AdjType.HFQ:
 ## 相关文档
 
 - [PIT 查询设计](../../../../../docs/design/07_pit_query_design.md)
-- [Market 域文档](../domains/market/README.md)
+- [Market 服务文档](../services/market_service.py)
+- [Storage 文档](../storage/market/)

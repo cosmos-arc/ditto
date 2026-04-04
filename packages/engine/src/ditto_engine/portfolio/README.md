@@ -14,8 +14,8 @@
 
 ```
 portfolio/
-├── allocator.py         # WeightAllocator Protocol + 内置实现
-│                        #   EqualWeightAllocator / ScoreWeightAllocator
+├── allocation.py        # WeightAllocator Protocol + 内置实现
+│                        #   EqualWeightAllocator / ScoreWeightAllocator / InverseVolAllocator
 ├── constraints.py       # ConstraintChecker + 内置约束
 │                        #   MaxWeight / MinWeight / MaxPositions
 ├── stages.py            # AllocationStage / ConstraintStage (DecisionStage 适配器)

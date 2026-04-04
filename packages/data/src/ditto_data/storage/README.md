@@ -1,83 +1,34 @@
 # storage
 
-**版本**: v0.5.0
-**最后更新**: 2026-02-06
-**状态**: ✅ 稳定
+数据存储层 — SQLite 与 Parquet 双存储，CQRS 读写分离，按业务领域组织。
 
-## 概要
-
-数据存储层 - SQLite 与 Parquet 双存储实现，提供统一的数据访问接口。
-
-## 核心功能
-
-提供 SQLite (事务型) 和 Parquet (年分区分析型) 两种存储的统一访问接口。
-
-## 包含文件
-
-| 文件 | 功能 |
-|------|------|
-| `sqlite_client.py` | SQLite 客户端封装，提供统一的 CRUD 接口 |
-| `base/` | 存储抽象基类 |
-| `parquet_store_base.py` | Parquet 年分区存储基类 |
-
-## 架构定位
-
-`storage/` 层作为基础设施，提供底层存储能力：
+## 目录结构
 
 ```
-┌─────────────────┐
-│   Application   │
-├─────────────────┤
-│   Domains       │  ← 业务域层 (Service + Store)
-├─────────────────┤
-│  Foundation     │  ← 基础设施 (SQLite, Parquet)
-└─────────────────┘
+storage/
+├── base/             # BaseReader/BaseWriter 抽象, ParquetStore, SQLiteStore
+├── metadata/         # 元数据域（instrument, identity, industry, calendar, universe）
+├── market/           # 行情域（stock/etf/index: bars, status, adj, nav, constituent）
+├── fundamental/      # 基本面域（financial, corporate, forecast）
+├── capital/          # 资本域（margin, pledge, valuation, futures, index_composition）
+├── macro/            # 宏观域（indicator, metadata）
+├── features/         # 特征域（技术指标）
+├── factors/          # 因子域（因子信号）
+├── runtime/          # 运行时 store
+├── schemas/          # Schema 定义
+└── sqlite_client.py  # SQLite 客户端
 ```
 
-### 层级职责
+## CQRS 模式
 
-| 层级 | 职责 | 示例 |
+每个 store 拆分为 `*_reader.py` 和 `*_writer.py`：
+
+| 组件 | 职责 | 方法 |
 |------|------|------|
-| Domains | 业务逻辑、领域模型 | MarketService, MetadataService |
-| Stores | 基础设施、通用存储 | SQLiteClient, ParquetStoreBase |
+| Reader | 查询（无副作用，可并发） | `read()`, `count()`, `get_*()` |
+| Writer | 写入/删除（需并发控制） | `write()`, `delete()` |
 
-## 迁移说明
+## 访问规则
 
-以下组件已从 `stores/` 迁移到 `domains/` 层：
-
-| 组件 | 迁移目标 | 原因 |
-|------|----------|------|
-| `UniverseStore` | `domains/metadata/universe/` | 业务域组件 |
-| `BarsStore` | `domains/market/bars/` | 业务域组件 |
-| `AdjFactorStore` | `domains/market/adj_factor/` | 业务域组件 |
-
-## 使用示例
-
-```python
-from pathlib import Path
-from ditto_data.storage import SQLiteClient
-
-# SQLite 客户端（基础设施）
-client = SQLiteClient(Path("data/ditto.db"))
-
-# Domains 层使用示例
-from ditto_data.storage.market import MarketBarsQuery, MarketService
-from ditto_data.storage.metadata import MetadataQuery, MetadataService
-
-metadata_service: MetadataService = ...
-market_service: MarketService = ...
-
-# 业务操作通过 Domain Service
-securities = metadata_service.query(
-    MetadataQuery(dataset="instrument", asset_class="stock")
-)
-bars = market_service.query(
-    MarketBarsQuery(instrument_ids=[1000001], start="2024-01-01")
-)
-```
-
-## 相关文档
-
-- [Helpers 纯函数工具](../helpers/README.md)
-- [Metadata 域文档](../domains/metadata/README.md)
-- [Market 域文档](../domains/market/README.md)
+- **interfaces 层**：通过 Domain Service 间接访问，禁止直接实例化 Reader/Writer
+- **Service 层**：组合 Reader + Writer 封装业务逻辑

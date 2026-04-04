@@ -18,7 +18,7 @@ Ditto 项目使用分层的 CI/CD 策略，将快速反馈的单元测试与耗�
 |------|----------|------|------|
 | `ci.yml` | PR 到 main, push 到 main | 单元测试 + 代码质量检查 | ~5 分钟 |
 | `ci-integration.yml` | 手动触发, 定时, CI 成功后 | 集成测试（含 observability 服务） | ~15 分钟 |
-| `deploy.yml` | CI 成功后, Release 发布 | 部署到 staging/production | ~10 分钟 |
+| `deploy.yml` | CI 成功后, Release 发布 | 部署到 staging/production | ~10 分钟 | **规划中 (planned)** |
 
 ---
 
@@ -86,7 +86,7 @@ pytest -m "integration" \
 
 ---
 
-## deploy.yml - 持续部署
+## deploy.yml - 持续部署（规划中，尚未实现）
 
 ### 部署流程
 
