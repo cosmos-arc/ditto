@@ -934,9 +934,11 @@ class DerivedPublicationFacade:
         *,
         derived_id: str,
         version: int,
-        stage: CertificationStage,
+        stage: str | CertificationStage,
     ) -> CertificationReport:
         """Run one certification gate for a candidate version."""
+        if not isinstance(stage, CertificationStage):
+            stage = CertificationStage(stage)
         spec_record = self._require_spec(derived_id, version)
         manifest_record = self._require_manifest(derived_id=derived_id, version=version)
         manifest = _hydrate_manifest(manifest_record)

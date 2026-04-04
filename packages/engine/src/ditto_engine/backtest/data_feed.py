@@ -3,7 +3,7 @@ DataFeed — 市场数据切片协议 + 数据容器.
 
 MarketSnapshot 从 execution/reality/market.py 导入.
 Slice 是某日所有标的的聚合视图, 由 DataFeed 提供.
-ProviderBackedDataFeed 通过 kernel.DataProvider Protocol 获取数据.
+ProviderBackedDataFeed 通过 DataProvider Protocol 获取数据.
 """
 
 from __future__ import annotations
@@ -111,13 +111,13 @@ def _row_to_snapshot(
 
 class ProviderBackedDataFeed:
     """
-    DataFeed backed by kernel.DataProvider Protocol.
+    DataFeed backed by DataProvider Protocol.
 
     通过 DataProvider.get_bars() 加载全量行情数据，
     通过 DataProvider.get_schedule() 获取交易日历。
     适用于 ServiceBackedDataProvider 等实现。
 
-    构造参数由 app 层（port/registry）注入。
+    构造参数由 app 层注入。
     """
 
     def __init__(

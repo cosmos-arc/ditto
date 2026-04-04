@@ -40,7 +40,7 @@ class OrderFilled(DomainEvent):
 
 @dataclass(frozen=True, kw_only=True)
 class OrderCanceled(DomainEvent):
-    """订单取消事件."""
+    """订单取消事件（预留 — 当前未在生产流程中发布）."""
 
     event_type: str = field(default="order_canceled", init=False)
     order_id: str
@@ -49,7 +49,7 @@ class OrderCanceled(DomainEvent):
 
 @dataclass(frozen=True, kw_only=True)
 class PositionChanged(DomainEvent):
-    """持仓变更事件."""
+    """持仓变更事件（预留 — 当前未在生产流程中发布）."""
 
     event_type: str = field(default="position_changed", init=False)
     instrument_id: int

@@ -1,4 +1,4 @@
-"""Port 应用测试辅助模块."""
+"""Interfaces 测试辅助模块."""
 
 from pathlib import Path
 from typing import cast

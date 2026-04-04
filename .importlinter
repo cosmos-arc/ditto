@@ -159,6 +159,10 @@ allow_indirect_imports = true
 
 # ═══════════════════════════════════════════════════════════════════
 # Port 层边界：禁止直接依赖 Data 服务/模型（逐步收紧）
+#
+# Composition Root 豁免：registry/** 是 DI 组装点，允许直接导入
+# Data services/quality 以完成 Provider 装配和 Context Bundle 构建。
+# 非registry代码必须通过 App 层或 DI 容器间接访问。
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:port-service-isolation]
 name = Port must not directly depend on Data services/models (tightening)
@@ -258,6 +262,8 @@ source_modules =
     ditto_data.storage.**
 forbidden_modules =
     ditto_data.models.**
+# CQRS Writer/Reader 需要模型类型定义（OnDuplicate, WriteStoreResult, Record 等）
+# 这是 storage 层与 model 层的自然耦合，全部均为合法的类型注解
 ignore_imports =
     ditto_data.storage.** -> ditto_data.models
     ditto_data.storage.** -> ditto_data.models.common

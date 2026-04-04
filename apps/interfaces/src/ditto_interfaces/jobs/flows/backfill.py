@@ -9,7 +9,6 @@
 - 支持按标的回填
 """
 
-from ditto_app.process.ingestion import BackfillManager
 from ditto_app.types import InstrumentIngestParams
 from prefect import flow
 from pydantic import BaseModel
@@ -66,15 +65,8 @@ def backfill_flow(config: BackfillFlowConfig) -> dict[str, object]:
     start_date = config.resume_from or config.start_date
 
     with create_ingestion_bundle(source=config.source) as bundle:
-        # 创建回补管理器
-        backfill_manager = BackfillManager(
-            coordinator=bundle.coordinator,
-            metadata_service=bundle.metadata_service,
-            ingestion_log_service=bundle.ingestion_log_service,
-        )
-
         # 执行回补
-        result = backfill_manager.backfill_range(
+        result = bundle.backfill_manager.backfill_range(
             dataset=config.dataset,
             start_date=start_date,
             end_date=config.end_date,
@@ -114,15 +106,8 @@ def backfill_missing_flow(
 
     """
     with create_ingestion_bundle(source=source) as bundle:
-        # 创建回补管理器
-        backfill_manager = BackfillManager(
-            coordinator=bundle.coordinator,
-            metadata_service=bundle.metadata_service,
-            ingestion_log_service=bundle.ingestion_log_service,
-        )
-
         # 执行回补
-        result = backfill_manager.backfill_missing(
+        result = bundle.backfill_manager.backfill_missing(
             dataset=dataset,
             parallel=parallel,
         )

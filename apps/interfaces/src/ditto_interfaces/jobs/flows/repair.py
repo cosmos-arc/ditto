@@ -9,7 +9,6 @@
 
 from typing import cast
 
-from ditto_app.process.ingestion import BackfillManager, RetryManager
 from prefect import flow
 
 from ditto_interfaces.registry import create_ingestion_bundle
@@ -36,15 +35,8 @@ def retry_failed_flow(
 
     """
     with create_ingestion_bundle(source=source) as bundle:
-        # 创建重试管理器
-        retry_manager = RetryManager(
-            coordinator=bundle.coordinator,
-            ingestion_log_service=bundle.ingestion_log_service,
-            source=source,
-        )
-
         # 执行重试
-        result = retry_manager.retry_failed(
+        result = bundle.retry_manager.retry_failed(
             dataset=dataset,
             max_attempts=max_attempts,
             limit=limit,
@@ -86,15 +78,8 @@ def repair_holes_flow(
 
     """
     with create_ingestion_bundle(source=source) as bundle:
-        # 创建回补管理器
-        backfill_manager = BackfillManager(
-            coordinator=bundle.coordinator,
-            metadata_service=bundle.metadata_service,
-            ingestion_log_service=bundle.ingestion_log_service,
-        )
-
         # 回补缺失数据
-        result = backfill_manager.backfill_missing(
+        result = bundle.backfill_manager.backfill_missing(
             dataset=dataset,
             parallel=parallel,
         )

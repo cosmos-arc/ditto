@@ -2,7 +2,7 @@
 DataProvider 实现 — ServiceBackedDataProvider.
 
 Facade 模式：组合 MarketService + MetadataService + DerivedQueryService，
-满足 kernel.DataProvider Protocol，为 core 层提供统一数据访问。
+满足 DataProvider Protocol，为 engine 层提供统一数据访问。
 """
 
 from __future__ import annotations

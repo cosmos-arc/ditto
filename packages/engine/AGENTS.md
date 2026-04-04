@@ -101,11 +101,10 @@ ditto_engine/
 
 ### Orchestrator（交易编排抽象）
 
-**职责**：TradingOrchestrator Protocol + Stage 数据合约 + Backtest 别名
+**职责**：TradingOrchestrator Protocol + Backtest 别名
 
 **关键点**：
 - TradingOrchestrator Protocol 定义 `run() -> EngineResult` 接口
-- AlphaOutput / PortfolioOutput frozen dataclass 包装 pl.DataFrame（列校验）
 - BacktestTradingOrchestrator 是 EngineLoop 的别名，满足 TradingOrchestrator Protocol
 - EventBus 可选注入到 EngineLoop，EventBus=None 时零副作用
 

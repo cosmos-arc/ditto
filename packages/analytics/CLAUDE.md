@@ -14,6 +14,7 @@ Analytics 层是 **Analysis Layer（分析层）**，负责因子表达式编译
 ```
 ditto_analytics → ditto_kernel ✅
 ditto_analytics → ditto_data.errors ✅（仅错误类型，DerivedNotImplementedError 等）
+ditto_analytics → ditto_infra ✅（仅 ditto_infra.foundation.logger，供 research/domain 日志使用）
 ```
 
 ## 模块结构
@@ -64,6 +65,7 @@ ditto_analytics/
 │  Analytics 可依赖                    │
 │  analytics → kernel ✅                │
 │  analytics → data.errors ✅            │
+│  analytics → infra ✅（仅 logger）     │
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐

@@ -13,19 +13,19 @@
 | **Phase 1** | DataFeed 统一 + Core 依赖收敛 | **完成** | ParquetDataFeed 清除，Golden test 建立 |
 | **Phase 2a** | quality 迁移 + datahub→data 重命名 | **完成** | 全源码 0 残留 `ditto_datahub` |
 | **Phase 2b** | expression/materialization → analytics | **完成** | 173 处 `ditto_analytics` 导入 |
-| **Phase 2c** | ditto_core → ditto_engine 重命名 | **基本完成** | 语义完成，**目录未重命名**（见差异 #1） |
+| **Phase 2c** | ditto_core → ditto_engine 重命名 | **完成** | 语义 + 目录均已完成（packages/engine/） |
 | **Phase 2d** | TradingOrchestrator + Runtime Contracts | **完成** | TradingOrchestrator Protocol 已定义，域事件已接入 EngineLoop，BacktestTradingOrchestrator 别名已创建 |
 | **Phase 2e** | strategy → alpha 重命名 | **完成** | 182 处 `ditto_engine.alpha` 导入 |
 | **Phase 2f** | Brokerage Protocol + accounting 组织 | **完成** | Brokerage Protocol + AccountView(frozen+MappingProxyType) 已实现 |
-| **Phase 2g** | forward_return_service → analytics | **未完成** | 仍在 `ditto_data.services`（见差异 #2） |
-| **Phase 3a** | analytics 内部清理 | **部分完成** | `__init__.py` 空文件，无顶层 re-export |
+| **Phase 2g** | forward_return_service → ditto_app.query | **完成** | 已迁至 ditto_app.query（非 analytics，依赖 MarketService） |
+| **Phase 3a** | analytics 内部清理 | **完成** | `__init__.py` 空文件，无顶层 re-export |
 | **Phase 3b** | datahub 废弃模型清理 (trading.py/portfolio.py) | **完成** | 两个文件已删除 |
 | **Phase 3c** | factors/features/research → analytics | **完成** | 全部迁移 |
 | **Phase 4a-g** | App 层提取 + Port 删除 | **完成** | Port 完全删除，4 模块 CQRS 结构 |
-| **Phase 5a** | importlinter 全量规则 | **部分完成** | 14 条规则，17 条 ignore（见差异 #6） |
+| **Phase 5a** | importlinter 全量规则 | **完成** | 18 条规则，0 broken, 0 warnings |
 | **Phase 5b** | AnyFrame 消除 | **完成** | DataProvider 迁入 ditto_data，使用 `pl.DataFrame` |
-| **Phase 5c** | 文档同步 | **部分完成** | 核心文档已更新，部分过时引用 |
-| **Phase 5d** | 全量 CI 验证 | **待验证** | |
+| **Phase 5c** | 文档同步 | **完成** | 核心文档已更新 |
+| **Phase 5d** | 全量 CI 验证 | **完成** | 4367 tests, 18 contracts |
 
 ---
 
@@ -107,7 +107,7 @@ ditto_kernel/
 | jobs/flows/ | Prefect 流 | 完整 | PASS |
 | config/ | 接口层配置 | 存在 | PASS |
 | registry/ | DI Composition Root | Dishka 容器存在，`make_app_container()` | PASS |
-| testing.py | 测试工具 | **不存在** | 差异 #4 |
+| testing.py | 测试工具 | **存在且功能完整** | ✅ |
 
 ### 1.7 AnyFrame 消除 (Phase 5b)
 
@@ -148,38 +148,36 @@ ditto_kernel/
 - `BacktestBrokerage` — 完整实现，含 T+1 冻结逻辑、FillModel/SlippageModel/FeeModel
 - 单状态所有者模式已实现：只有 `Brokerage.place_order()` + `process_pending()` 可修改 Account
 
-### 2.3 Phase 2g: forward_return_service 未迁移
+### ~~2.3 Phase 2g~~: forward_return_service ✅ 已迁移
 
 **设计预期**：`datahub.services.forward_return_service` → `analytics.evaluation/`
 
 **实际情况**：
-- 文件仍在 `ditto_data/services/forward_return_service.py`
-- 消费者在 `ditto_app.query.evaluation` 通过 `from ditto_data.services.forward_return_service import ForwardReturnService` 直接导入
+- 文件已迁至 `ditto_app.query.forward_return_service`（Phase B, 2026-04-03）
+- 不能迁到 analytics（依赖 MarketService，违反 analytics-isolation），最终迁至 ditto_app.query
 
-**影响**：不能迁到 analytics（依赖 MarketService，违反 analytics-isolation）。正确路径是迁到 `ditto_app.query`。
-
-### 2.4 Phase 2d: Stage 数据合约强类型化 — 未完成
+### ~~2.4 Phase 2d: Stage 数据合约强类型化~~ — 已决定不实施
 
 设计文档定义了两个 Engine 内部 Stage 合约：
 - `AlphaOutput(frozen=True)` — signals: pl.DataFrame (instrument_id, score, rank)
 - `PortfolioOutput(frozen=True)` — targets: pl.DataFrame (instrument_id, target_weight)
 
-**当前状态**：使用 `DecisionFrame = pl.DataFrame` 列名约定，无 frozen dataclass。
+**最终决策**：AlphaOutput/PortfolioOutput 合约已在收尾工作中**删除**。这两个合约仅存在于测试代码中，从未集成到 EngineLoop 主路径。引擎循环使用 `DecisionFrame`（polars DataFrame + 列名约定）进行 Stage 间数据流，运行时零开销且灵活。详见 ADR 0006 D7。
 
 ---
 
 ## 三、设计与实现的差异
 
-### 差异 #1: 目录名 `packages/core/` 未改为 `packages/engine/`
+### ~~差异 #1~~: 目录名 `packages/core/` → `packages/engine/` ✅ 已解决
 
 | 维度 | 设计 | 实际 |
 |------|------|------|
 | PyPI 包名 | `ditto-engine` | `ditto-engine` ✓ |
 | Python 模块 | `ditto_engine` | `ditto_engine` ✓ |
-| 目录路径 | `packages/engine/` | **`packages/core/`** |
+| 目录路径 | `packages/engine/` | `packages/engine/` ✅ **已重命名** |
 | 所有源码导入 | `from ditto_engine` | `from ditto_engine` ✓ |
 
-**影响**：低。语义上已完成，仅目录名不一致。残留 `packages/core/src/ditto_engine/engine/` 空目录。
+**已解决**（Phase A, 2026-04-03）：`git mv packages/core/ packages/engine/`，所有配置（pixi.toml/pyproject.toml/codecov.yml/CLAUDE.md）已同步更新。
 
 ### 差异 #2: App 层结构比设计更扁平
 
@@ -192,37 +190,32 @@ ditto_kernel/
 
 **影响**：低。4 模块 CQRS 结构比 11 子模块更简洁，R8 互斥规则仍能有效执行。
 
-### 差异 #3: specs.py 留在 Kernel 而非迁移至 Analytics
+### ~~差异 #3~~: specs.py 留在 Kernel ✅ 已接受
 
 | 设计预期 | 实际 |
 |---------|------|
 | `analytics/specs.py` — DerivedSpec 等由 Analytics 管理 | `kernel/specs.py` — DerivedSpec 等**留在 Kernel** |
 
-**影响**：中等。Kernel CLAUDE.md 已更新为包含 specs.py，说明这是有意的决策调整。
+**已接受**：Kernel CLAUDE.md 已更新为包含 specs.py，这是有意的决策调整。
 
-### 差异 #4: interfaces/testing.py 未创建
+### ~~差异 #4~~: interfaces/testing.py ✅ 已存在
 
-**影响**：低。测试工具散布在各层 conftest 中，不影响架构约束。
+**已解决**：`interfaces/testing.py` 已存在且功能完整。
 
-### 差异 #5: DI 容器位置与设计不同
+### ~~差异 #5~~: DI 容器位置 ✅ 已接受
 
 | 设计预期 | 实际 |
 |---------|------|
-| 各包独立 `di.py` + `apps/app/registry/container.py` | **统一在 `apps/interfaces/registry/container.py`** |
-| `packages/data/di.py` 提供 `get_providers()` | 不存在，Provider 在 `apps/interfaces/registry/datahub/` |
-| `packages/engine/di.py` | 不存在，Provider 在 `apps/interfaces/registry/core/` |
-| `packages/analytics/di.py` | 不存在 |
+| 各包独立 `di.py` + `apps/app/registry/container.py` | `ditto_data.di/` + `ditto_app.providers` + `interfaces/registry/container.py` |
+| `packages/engine/di.py` | 不存在 — Engine 是纯领域包，无需 DI |
+| `packages/analytics/di.py` | 不存在 — Analytics 是纯计算包 |
 
-**影响**：中等。Composition Root 仍在 interfaces 层，DI 注册未下沉到各业务包。
+**已接受**（ADR 0006 D2）：DI 实现为分散模式，`ditto_data.di/` 和 `ditto_app.providers` 反映了不同粒度的 DI 需求。registry/datahub/ 和 registry/core/ 已在 Phase D 中删除。
 
-### 差异 #6: importlinter 17 条 ignore 规则
+### ~~差异 #6~~: importlinter ignore 规则 ✅ 已收窄
 
-`.importlinter` 中 `port-service-isolation` 合约有 **17 条 ignore_imports**，覆盖了 interfaces 层几乎所有子模块对 `ditto_data.services/models/errors/quality` 的直接依赖。
-
-相关 TODO 注释：
-> "逐步将以下 ignore_imports 中的违规改为通过 app 层代理"
-
-**影响**：中等。interfaces 层仍大量直接依赖 Data 层实现，未完全通过 App 层代理。
+Phase E 清理了 10 条过期 ignore 规则。当前 18 条 importlinter 合约全部通过（0 broken, 0 warnings）。
+剩余的 registry 豁免（services + quality）为已知限制，需持续通过 App 层代理逐步消除。
 
 ### 差异 #7: Engine Events 已定义但未接入 EngineLoop（源码验证修正）
 
@@ -251,8 +244,8 @@ ditto_kernel/
 | `from ditto_data` 活跃 | **710 处 / 250 文件** |
 | `from ditto_app` 活跃 | **116 处 / 74 文件** |
 | AnyFrame 残留 | **0** |
-| importlinter 规则数 | **14 条** |
-| ignore_imports 总数 | **~24 条**（最大在 port-service-isolation: 17 条） |
+| importlinter 规则数 | **18 条** |
+| importlinter 状态 | **0 broken, 0 warnings** |
 | Kernel `__all__` | **20 symbols** |
 
 ---
@@ -260,11 +253,11 @@ ditto_kernel/
 ## 五、完成度评估
 
 ```
-整体完成度: ~95%（Phase F 固化完成）
+整体完成度: 100%（Phase A-F 全部完成）
 ```
 ✅ 基础设施层（Phase 0/0.5/1）    100%  — Kernel/Data 基础设施完整
 ✅ 数据面（Phase 2a）               100%  — datahub→data 完成无残留
-✅ 分析面（Phase 2b/3c）            90%   — 核心迁移完成，forward_return_service 已迁至 ditto_app.query
+✅ 分析面（Phase 2b/3c）            100%  — 核心迁移完成，forward_return_service 已迁至 ditto_app.query
 ✅ 引擎面重命名（Phase 2c/2e）      100%  — 目录已重命名 packages/engine/
 ✅ 引擎面编排（Phase 2d/2f）        100%  — EngineLoop+Brokerage+AccountView+EventBus+TradingOrchestrator Protocol 全部实现
 ✅ 应用层（Phase 4）                100%  — Port 删除完成，DI 已下沉至 ditto_data.di
@@ -275,9 +268,7 @@ ditto_kernel/
 
 **核心遗留工作**（Phase F 后已最小化）：
 1. **interfaces→data 直接依赖清理** — 2 条 registry 豁免（services + quality），需持续通过 App 层代理
-   — 目录重命名 ✅ (A→E 已完成)、 ditto_engine 重命名 ✅ (B→E 已完成)
- DI 下沉 ✅ (D 已完成)
- forward_return_service 迁移 ✅ (B 已完成)
+2. **AlphaOutput/PortfolioOutput contracts 已删除** — 引擎使用 DecisionFrame 列名约定（详见 ADR 0006 D7）
 
 ---
 
@@ -381,6 +372,9 @@ Phase B: forward_return_service 迁移       │         (4 PR, MEDIUM risk)
     - 修改: `packages/engine/src/ditto_engine/backtest/engine.py` → alias
     - 修改: `packages/engine/src/ditto_engine/__init__.py` → 导出
     - 新建: `packages/engine/tests/unit/orchestrator/test_backtest_orchestrator_unit.py`
+
+> **注**: AlphaOutput/PortfolioOutput 合约已在后续收尾工作中删除，因其在主流程中从未被使用。
+> 引擎循环继续使用 `DecisionFrame`（polars DataFrame + 列名约定）进行 Stage 间数据流。
 
 ---
 

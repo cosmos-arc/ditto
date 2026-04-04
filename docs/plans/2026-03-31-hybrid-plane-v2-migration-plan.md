@@ -4,7 +4,7 @@ plan_type: refactor
 status: completed
 origin: docs/brainstorms/2026-03-31-hybrid-plane-v2-refined-requirements.md
 depth: deep
-last_audit: 2026-03-31
+last_audit: 2026-04-04
 ---
 
 # refactor: Hybrid 平面架构 v2 迁移实施计划
@@ -15,7 +15,7 @@ last_audit: 2026-03-31
 
 ## 当前进度概览
 
-> **审计日期**：2026-04-01 | **分支**：`docs/archive-plans-and-architecture-design` | **check**：4218 tests ✅ | **arch-check**：11/11 KEPT ✅
+> **审计日期**：2026-04-04 | **分支**：`refactor/phase4-app-layer-extraction` | **check**：4367+ tests ✅ | **arch-check**：18/18 KEPT ✅
 
 | Phase | Unit | 状态 | 验证 |
 |-------|------|------|------|
@@ -232,8 +232,8 @@ class ServiceBackedDataProvider:
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| CREATE | [tests/integration/backtest/test_golden_baseline.py](../packages/core/tests/integration/backtest/test_golden_baseline.py) | 新建 golden test，捕获回测关键指标 |
-| EDIT | [conftest.py](../packages/core/tests/integration/backtest/conftest.py) | 复用现有 three_day_data_feed fixture（或新增 1 年 ETF fixture） |
+| CREATE | [tests/integration/backtest/test_golden_baseline.py](../packages/engine/tests/integration/backtest/test_golden_baseline.py) | 新建 golden test，捕获回测关键指标 |
+| EDIT | [conftest.py](../packages/engine/tests/integration/backtest/conftest.py) | 复用现有 three_day_data_feed fixture（或新增 1 年 ETF fixture） |
 
 **Golden test 设计**：
 
@@ -282,14 +282,14 @@ class ServiceBackedDataProvider:
 
 | 文件 | 使用方式 | 迁移策略 |
 |------|---------|---------|
-| [data_feed.py](../packages/core/src/ditto_core/backtest/data_feed.py) | 定义 + ParquetDataFeed + ProviderBackedDataFeed | 删除 ParquetDataFeed 类，保留 ProviderBackedDataFeed |
-| [backtest/__init__.py](../packages/core/src/ditto_core/backtest/__init__.py) | 导出 ParquetDataFeed | 从 `__all__` 移除 |
-| [conftest.py](../packages/core/tests/integration/strategy/conftest.py) | 1 个 fixture | 转换为使用 mock DataProvider 的 ProviderBackedDataFeed |
-| [conftest.py](../packages/core/tests/integration/backtest/conftest.py) | 6 个 fixture (three_day/five_day/limit_up/limit_down/st) | 同上 |
-| [test_backtest_invariants.py](../packages/core/tests/integration/backtest/test_backtest_invariants.py) | 5 处局部 import + 构造 | 使用 conftest 中转换后的 fixture |
-| [test_reproducibility.py](../packages/core/tests/integration/backtest/test_reproducibility.py) | 2 处 import + 构造 | 同上 |
-| [test_risk_integration.py](../packages/core/tests/integration/backtest/test_risk_integration.py) | 1 处 import + 构造 | 同上 |
-| [test_parquet_data_feed_unit.py](../packages/core/tests/unit/backtest/test_parquet_data_feed_unit.py) | 专用单元测试 | 删除或迁移为 ProviderBackedDataFeed 测试 |
+| [data_feed.py](../packages/engine/src/ditto_core/backtest/data_feed.py) | 定义 + ParquetDataFeed + ProviderBackedDataFeed | 删除 ParquetDataFeed 类，保留 ProviderBackedDataFeed |
+| [backtest/__init__.py](../packages/engine/src/ditto_core/backtest/__init__.py) | 导出 ParquetDataFeed | 从 `__all__` 移除 |
+| [conftest.py](../packages/engine/tests/integration/strategy/conftest.py) | 1 个 fixture | 转换为使用 mock DataProvider 的 ProviderBackedDataFeed |
+| [conftest.py](../packages/engine/tests/integration/backtest/conftest.py) | 6 个 fixture (three_day/five_day/limit_up/limit_down/st) | 同上 |
+| [test_backtest_invariants.py](../packages/engine/tests/integration/backtest/test_backtest_invariants.py) | 5 处局部 import + 构造 | 使用 conftest 中转换后的 fixture |
+| [test_reproducibility.py](../packages/engine/tests/integration/backtest/test_reproducibility.py) | 2 处 import + 构造 | 同上 |
+| [test_risk_integration.py](../packages/engine/tests/integration/backtest/test_risk_integration.py) | 1 处 import + 构造 | 同上 |
+| [test_parquet_data_feed_unit.py](../packages/engine/tests/unit/backtest/test_parquet_data_feed_unit.py) | 专用单元测试 | 删除或迁移为 ProviderBackedDataFeed 测试 |
 
 **迁移策略**：
 
@@ -347,13 +347,13 @@ class TestParquetProvider:
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| EDIT | [data_feed.py](../packages/core/src/ditto_core/backtest/data_feed.py) | 删除 ParquetDataFeed 类（约 90 行），更新模块 docstring |
-| EDIT | [backtest/__init__.py](../packages/core/src/ditto_core/backtest/__init__.py) | 从 `__all__` 移除 `"ParquetDataFeed"` |
-| EDIT | [conftest.py](../packages/core/tests/integration/strategy/conftest.py) | 新增 `TestParquetProvider`，转换 fixture |
-| EDIT | [conftest.py](../packages/core/tests/integration/backtest/conftest.py) | 同上，转换 6 个 fixture |
-| EDIT | [test_backtest_invariants.py](../packages/core/tests/integration/backtest/test_backtest_invariants.py) | 移除局部 `from ... import ParquetDataFeed`，使用 conftest fixture |
-| EDIT | [test_reproducibility.py](../packages/core/tests/integration/backtest/test_reproducibility.py) | 同上 |
-| DELETE | [test_parquet_data_feed_unit.py](../packages/core/tests/unit/backtest/test_parquet_data_feed_unit.py) | ParquetDataFeed 专用单元测试不再需要 |
+| EDIT | [data_feed.py](../packages/engine/src/ditto_core/backtest/data_feed.py) | 删除 ParquetDataFeed 类（约 90 行），更新模块 docstring |
+| EDIT | [backtest/__init__.py](../packages/engine/src/ditto_core/backtest/__init__.py) | 从 `__all__` 移除 `"ParquetDataFeed"` |
+| EDIT | [conftest.py](../packages/engine/tests/integration/strategy/conftest.py) | 新增 `TestParquetProvider`，转换 fixture |
+| EDIT | [conftest.py](../packages/engine/tests/integration/backtest/conftest.py) | 同上，转换 6 个 fixture |
+| EDIT | [test_backtest_invariants.py](../packages/engine/tests/integration/backtest/test_backtest_invariants.py) | 移除局部 `from ... import ParquetDataFeed`，使用 conftest fixture |
+| EDIT | [test_reproducibility.py](../packages/engine/tests/integration/backtest/test_reproducibility.py) | 同上 |
+| DELETE | [test_parquet_data_feed_unit.py](../packages/engine/tests/unit/backtest/test_parquet_data_feed_unit.py) | ParquetDataFeed 专用单元测试不再需要 |
 
 **测试场景**：
 
@@ -385,8 +385,10 @@ class TestParquetProvider:
 ## Phase 2-5 路线图
 
 > 以下为高层路线图，每个 Phase 的详细实施计划将在前一 Phase 完成后展开。
+>
+> **全部已完成**（2026-04-04 审计确认）：4367+ tests, 18 importlinter contracts (0 broken)。
 
-### Phase 2: Engine 平面成型（~8 PR）
+### Phase 2: Engine 平面成型（~8 PR）✅ 已完成
 
 **前置**：Phase 0.5 + Phase 1 完成
 
@@ -431,7 +433,7 @@ ignore_imports =
     # ... 逐步收窄 ignore_imports
 ```
 
-### Phase 3: Analytics 平面收尾 + datahub engine 域模块迁出（~5 PR）
+### Phase 3: Analytics 平面收尾 + datahub engine 域模块迁出（~5 PR）✅ 已完成
 
 **前置**：Phase 2 完成
 
@@ -443,7 +445,7 @@ ignore_imports =
 | 3d | derived 服务迁出（services/derived/ → app.materialization/） | datahub/services/derived/ ~10 文件 |
 | 3e | Phase 3 集成验证 + importlinter 更新 | .importlinter |
 
-### Phase 4: Application 层提炼（~7 PR）
+### Phase 4: Application 层提炼（~7 PR）✅ 已完成
 
 **前置**：Phase 3 完成
 
@@ -455,7 +457,7 @@ ignore_imports =
 | 4d | port → interfaces 迁移 |
 | 4e | 旧路径清理 + importlinter 全量 |
 
-### Phase 5: 固化（~4 PR）
+### Phase 5: 固化（~4 PR）✅ 已完成
 
 **前置**：Phase 4 完成
 
@@ -500,10 +502,17 @@ Phase 0.5 + Phase 1 完成后：
 - [x] `grep -rn "from ditto_kernel.pipeline\|from ditto_kernel import.*\(Pipeline\|Stage\|Context\)" packages/ apps/ --include="*.py"` 返回 0 ✅
 - [x] `grep -rn "BacktestProvider\|LiveProvider\|DataProviderAdapter" packages/ apps/ --include="*.py"` 返回 0 ✅
 - [x] `grep -rn "ParquetDataFeed" packages/ apps/ --include="*.py"` 返回 0 ✅
-- [x] `pixi run -e dev check` 全通过 ✅（4228 tests）
-- [x] `pixi run -e dev arch-check` 全部 contract 通过 ✅（当前 15/15 KEPT）
+- [x] `pixi run -e dev check` 全通过 ✅（4367+ tests）
+- [x] `pixi run -e dev arch-check` 全部 contract 通过 ✅（18/18 KEPT, 0 broken）
 - [x] golden test 基线建立并通过 ✅（3 日 + 5 日场景，硬编码断言）
 - [x] Kernel `__all__` 从 18 降至 16 个符号 ✅（移除 Context, Pipeline, Stage）
+
+**全量迁移最终状态**（2026-04-04 审计）：
+- 4367+ tests passed
+- 18 importlinter contracts (0 broken, 0 warnings)
+- `from ditto_datahub`: 0 | `from ditto_core`: 0 | `from ditto_port`: 0
+- `from ditto_engine`: 576+ 处 | `from ditto_analytics`: 173+ 处 | `from ditto_data`: 710+ 处
+- 目录已重命名 `packages/core/` → `packages/engine/`
 
 ---
 

@@ -1,8 +1,7 @@
 """
 DataProvider Protocol + 查询契约.
 
-从 ditto_kernel.provider 迁入（Phase 5 — AnyFrame 消除）。
-Kernel 零外部依赖约束禁止 import polars，因此 Protocol 定义迁入 ditto_data。
+Kernel 零外部依赖约束禁止 import polars，因此 Protocol 定义位于 ditto_data。
 """
 
 from __future__ import annotations

@@ -3,8 +3,13 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from ditto_app.process.ingestion import BackfillManager, create_coordinator
+from ditto_app.process.ingestion import (
+    BackfillManager,
+    RetryManager,
+    create_coordinator,
+)
 from ditto_app.process.quality import QualityService
+from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_data.services import (
     FreezeService,
     IngestionCursorService,
@@ -34,12 +39,12 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
         source: 数据源名称
 
     Yields:
-        IngestionBundle: 包含所有摄入服务、协调器和回补管理器
+        IngestionBundle: 包含协调器、管理器和查询 facade
 
     Example:
         with create_ingestion_bundle() as bundle:
             result = bundle.coordinator.ingest(...)
-            bundle.metadata_service.is_trading_day(...)
+            bundle.metadata_facade.is_trading_day(...)
 
     """
     container = make_app_container()
@@ -71,23 +76,26 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
             freeze_service=freeze_service,
             source_name=source,
         ) as coordinator:
-            # 创建回补管理器
+            # 创建管理器
             backfill_manager = BackfillManager(
                 coordinator=coordinator,
                 metadata_service=metadata_service,
                 ingestion_log_service=ingestion_log_service,
             )
-            yield IngestionBundle(
-                metadata_service=metadata_service,
-                market_service=market_service,
-                fundamental_service=fundamental_service,
-                capital_service=capital_service,
-                macro_service=macro_service,
-                source_service=source_service,
+            retry_manager = RetryManager(
+                coordinator=coordinator,
                 ingestion_log_service=ingestion_log_service,
-                exchange_transformers=exchange_transformers,
+                source=source,
+            )
+            # 创建查询 facade
+            metadata_facade = MetadataQueryFacade(metadata_service=metadata_service)
+
+            yield IngestionBundle(
                 coordinator=coordinator,
                 backfill_manager=backfill_manager,
+                retry_manager=retry_manager,
+                metadata_facade=metadata_facade,
+                exchange_transformers=exchange_transformers,
             )
     finally:
         container.close()

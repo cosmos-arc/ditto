@@ -1,5 +1,8 @@
 # Hybrid Plane V2 迁移收尾 — 实施计划 ✅ COMPLETED
 
+> **状态**: ✅ 已完成（2026-04-02）
+> 所有 3 个 PR 已执行完毕。本文档作为历史记录保留。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** 清理 Hybrid Plane V2 迁移遗留的 7 类问题（配置路径残留、re-export shim、文档不同步、R8 孤立规则、build 残留），实现源码级完全收敛。

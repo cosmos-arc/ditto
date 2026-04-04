@@ -5,7 +5,8 @@ Tests for create_ingestion_bundle context manager.
 """
 
 import pytest
-from ditto_data.services.metadata_service import MetadataService
+from ditto_app.process.ingestion import BackfillManager, RetryManager
+from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_interfaces.registry import IngestionBundle, create_ingestion_bundle
 
 # 标记为串行执行，避免并行测试时数据库文件冲突
@@ -27,8 +28,8 @@ class TestCreateIngestionBundle:
         with create_ingestion_bundle(source="tushare") as bundle:
             assert bundle is not None
             assert isinstance(bundle, IngestionBundle)
-            assert bundle.metadata_service is not None
-            assert isinstance(bundle.metadata_service, MetadataService)
+            assert bundle.metadata_facade is not None
+            assert isinstance(bundle.metadata_facade, MetadataQueryFacade)
             assert bundle.coordinator is not None
 
     def test_context_provides_coordinator(self):
@@ -50,29 +51,28 @@ class TestCreateIngestionBundle:
             assert hasattr(bundle.coordinator, "ingest_date")
             assert hasattr(bundle.coordinator, "ingest_range")
 
-    def test_bundle_contains_all_services(self):
-        """Test that bundle contains all expected services."""
+    def test_bundle_contains_all_managers_and_facades(self):
+        """Test that bundle contains all expected managers and facades."""
         with create_ingestion_bundle(source="tushare") as bundle:
-            # 验证所有服务都存在
-            assert bundle.metadata_service is not None
-            assert bundle.market_service is not None
-            assert bundle.fundamental_service is not None
-            assert bundle.capital_service is not None
-            assert bundle.macro_service is not None
-            assert bundle.source_service is not None
-            assert bundle.ingestion_log_service is not None
+            # 验证所有管理器和 facade 都存在
             assert bundle.coordinator is not None
+            assert bundle.backfill_manager is not None
+            assert isinstance(bundle.backfill_manager, BackfillManager)
+            assert bundle.retry_manager is not None
+            assert isinstance(bundle.retry_manager, RetryManager)
+            assert bundle.metadata_facade is not None
+            assert isinstance(bundle.metadata_facade, MetadataQueryFacade)
 
     def test_multiple_contexts_are_independent(self):
         """Test that multiple context instances are independent."""
         with create_ingestion_bundle(source="tushare") as bundle1:
-            assert bundle1.metadata_service is not None
-            metadata_service1_id = id(bundle1.metadata_service)
+            assert bundle1.coordinator is not None
+            coordinator1_id = id(bundle1.coordinator)
 
         # 第二个上下文应该创建新的容器
         with create_ingestion_bundle(source="tushare") as bundle2:
-            assert bundle2.metadata_service is not None
-            metadata_service2_id = id(bundle2.metadata_service)
+            assert bundle2.coordinator is not None
+            coordinator2_id = id(bundle2.coordinator)
 
-        # 两个 metadata_service 应该是不同的实例（不同的容器）
-        assert metadata_service1_id != metadata_service2_id
+        # 两个 coordinator 应该是不同的实例（不同的容器）
+        assert coordinator1_id != coordinator2_id

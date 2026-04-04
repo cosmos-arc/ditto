@@ -73,8 +73,8 @@ packages/
   analytics/         # 分析平面（expression + factors + evaluation + materialization + research）
 
 apps/
-  app/               # Use Case 编排（Query + Command + Process + registry）
-  interfaces/        # 适配器（HTTP + CLI + Prefect Jobs）
+  app/               # Use Case 编排（Query + Command + Process + builders）
+  interfaces/        # 适配器（API + CLI + Prefect Jobs）+ DI Composition Root
   web/               # Web 前端（保持不变）
 ```
 
@@ -90,7 +90,7 @@ kernel/
   enums.py          # 现有：AssetClass, Exchange, OrderSide, RunStatus, RiskScope
   identity.py       # 现有：InstrumentId 相关工具
   clock.py          # ✅ 已实现：Clock Protocol + SimulatedClock + RealtimeClock
-  provider.py       # ✅ 已实现：DataProvider Protocol + BarQuery + InstrumentQuery
+  provider.py       # ⚠️ DataProvider Protocol 已迁至 ditto_data.provider（因需要 polars 类型注解）
   events.py         # ✅ 已实现：DomainEvent + EventHandler + EventBus Protocol + SimpleEventBus
 ```
 
@@ -98,6 +98,11 @@ kernel/
 > Pipeline/Stage 是 Engine/Analytics 的内部编排模式，不是跨层抽象。
 > Kernel 只保留真正跨层共享的协议：Clock、DataProvider、EventBus。
 > 详见审查文档 Issue #1。
+>
+> **实现偏离**：`provider.py`（BarQuery/InstrumentQuery 等 dataclass）迁至 `ditto_data.provider`，
+> 因为这些值对象需要 polars 返回类型注解，而 Kernel 禁止 `import polars`。
+> `DataQueryProtocol` 作为纯 Protocol 接口留在 Engine 层。
+> `specs.py`（DerivedSpec, TimeSpec 等）最终留在 `ditto_kernel.specs`。
 
 **关键约束：kernel 零实现（除 SimulatedClock、RealtimeClock、SimpleEventBus 这些必要的薄实现）。**
 
@@ -349,14 +354,17 @@ for each trading_day:
 
 **Stage 间数据契约**（强类型，在 Engine 内部定义）：
 
-```python
-@dataclass(frozen=True)
-class AlphaOutput:
-    signals: pl.DataFrame        # instrument_id, score, rank
+> **实现偏离**：设计原计划使用 frozen dataclass（`AlphaOutput`/`PortfolioOutput`）。
+> 实际实现中这两个合约仅存在于测试代码，已被删除。
+> 引擎循环使用 `DecisionFrame`（polars DataFrame + 列名约定）进行 Stage 间数据流。
+> 详见 ADR 0006 D7。
 
-@dataclass(frozen=True)
-class PortfolioOutput:
-    targets: pl.DataFrame        # instrument_id, target_weight
+```python
+# v2 设计方案（已接受偏离）：
+# AlphaOutput / PortfolioOutput frozen dataclass 已删除
+# 实际使用 DecisionFrame 列约定：
+#   AlphaOutput 列: instrument_id, score, rank
+#   PortfolioOutput 列: instrument_id, target_weight
 ```
 
 策略 Stage 链（步骤 4）内部可以用 Engine 内部的 Pipeline 纯函数组合，
@@ -366,7 +374,7 @@ class PortfolioOutput:
 
 | 数据类型 | 获取方式 | 原因 |
 |---------|---------|------|
-| 策略信号 → 组合目标 | **显式输入**（AlphaOutput） | 自然流转 |
+| 策略信号 → 组合目标 | **显式输入**（DecisionFrame 列约定） | 自然流转 |
 | 市场行情 DataFrame | **DataProvider**（on-demand） | 数据量大，不复制 |
 | 标的基本信息 | **DataProvider** | 查询性质，按需获取 |
 | 交易规则/费率 | **DataProvider** | 查询性质 |
@@ -388,7 +396,7 @@ class PortfolioOutput:
 | `engine/materialization/` | `analytics.materialization/` | 移到 analytics 平面 | 2b |
 | `engine/research.py` | `analytics.research/` | 移到 analytics 平面 | 2b |
 | `engine/publication_safety.py` | `analytics.publication_safety/` | 提升为子包 | 2b |
-| `engine/specs.py` | `analytics/specs.py` | 移到 analytics 平面 | 2b |
+| `engine/specs.py` | `kernel/specs.py` | 移到 kernel 层（非 analytics） | 2b |
 | `engine/compile_cache.py` | `analytics/compile_cache.py` | 移到 analytics 顶层（基础设施） | 2b |
 | `engine/errors.py` | 删除 | 纯 re-export shim，指向 datahub.errors | 2b |
 
@@ -441,7 +449,7 @@ analytics/
   publication_safety/   # 发布安全控制
     (from core.engine.publication_safety.py，提升为子包)
   compile_cache.py      # 编译缓存基础设施（L1 LRU + L2 SQLite）
-  specs.py              # 衍生规格（DerivedSpec, TimeSpec, ExecutionPolicy）
+  # 注：specs.py 最终留在 ditto_kernel.specs，非 analytics
 ```
 
 ### 7.1 Analytics 设计约束
@@ -456,7 +464,7 @@ analytics/
 
 | 模块 | 来源 | 迁入原因 |
 |------|------|---------|
-| `forward_return_service.py` | `datahub.services.forward_return_service` | 计算逻辑（`close[t+T]/close[t]-1`），不是数据 CRUD |
+| `forward_return_service.py` | `data.services.forward_return_service` → **`ditto_app.query`** | 计算逻辑（`close[t+T]/close[t]-1`），但依赖 MarketService（违反 analytics-isolation），最终迁至 app 层 |
 
 ---
 
@@ -464,32 +472,22 @@ analytics/
 
 ```text
 app/
-  # ── Query（只读，薄 passthrough + DTO 转换）──
-  market/           # 行情查询（query_bars, query_instruments）
-  metadata/         # 元数据查询（query_calendar, query_universe）
-  sources/          # 数据源诊断（list_sources, preview_data, diagnostics）
-  analytics/        # 因子/评估查询（从 port/services/derived/ 的 facade 迁入）
+  # ── 实际结构：顶层扁平 CQRS（4 模块，非设计文档的 11 子模块）──
+  query/             # 只读查询（market + metadata + analytics + forward_return_service）
+  process/           # 长流程编排（ingestion + materialization + backtest）
+  command/           # 单次写入
+  builders/          # 纯装配（contract 组装，不查询不写入）
 
-  # ── Command（单次写）──
-  ingestion/        # 数据写入（write_batch）
-  strategy/         # 策略配置（save_strategy）
-
-  # ── Process（长流程，多步骤，可重试/补偿）──
-  backtest/         # 运行回测（从 port/services/strategy/ 迁入）
-  live/             # 运行实时/实盘会话
-  ingestion/        # 完整摄取流程（run_ingestion, backfill）
-  materialization/  # 因子物化（从 port/services/derived/ 的 orchestrator 迁入）
-
-  # ── 共享 ──
-  shared/           # DTO（use case request/response）、builders（纯装配）
-  registry/         # Dishka DI 容器（Composition Root）
+  # ── DI ──
+  providers.py       # get_app_providers() — app 层 DI 框架无关的 provider 工厂
+  # registry/ 在 interfaces 层（Composition Root），非 app 层
 ```
 
 ## 8b. Interfaces 层 — 适配器
 
 ```text
 interfaces/
-  http/             # FastAPI 适配器（从 port/api/routes/ 迁入）
+  api/              # FastAPI 适配器（从 port/api/routes/ 迁入；命名 api/ 非 http/）
     routes/         # 10 个路由模块（market, metadata, capital, ...）
     middleware.py    # 中间件
     errors.py        # 错误处理
@@ -499,7 +497,7 @@ interfaces/
     flows/          # 17 个 Prefect flows
     tasks/          # 3 个 task 工厂
   config/           # 接口层配置（从 port/config/ 迁入）
-  testing.py        # 测试工具
+  testing.py        # ✅ 测试工具（已存在且功能完整）
 ```
 
 ### 8.1 interfaces 永远只调 app
@@ -529,33 +527,42 @@ Process  ->  Query / Command        # Process 可以协调 Query 和 Command
 builders -X-> query / write         # builders 只接收已获取数据并组装 contract
 ```
 
-### 8.3 DI 容器 — Composition Root 模式
+### 8.3 DI 容器 — Composition Root 模式（实际在 interfaces 层）
 
-**各包暴露 Provider（组件自治） + app 做唯一组装入口**：
+**实际 DI 结构（2026-04-04 同步）**：
 
 ```text
-packages/data/src/ditto_data/di.py       → get_providers() → tuple[Provider, ...]
-packages/engine/src/ditto_engine/di.py      → get_providers() → tuple[Provider, ...]
-packages/analytics/src/ditto_analytics/di.py → get_providers() → tuple[Provider, ...]
+# 三层 Provider 聚合链：
+ditto_data.di (10 providers)     → get_data_providers()
+  ├── SourcesProvider, RuntimeProvider, MetadataProvider, MarketProvider
+  ├── FundamentalProvider, CapitalProvider, MacroProvider, DerivedProvider
+  └── GoldenDatasetProvider, QualityProvider
 
-apps/app/src/ditto_app/registry/
-  container.py  ← 唯一入口，调用各包 get_providers() 组装
+ditto_app.providers (3 providers) → get_app_providers()
+  ├── AppQueryProvider   — 只读查询服务
+  ├── AppProcessProvider — 编排/物化/质量服务
+  └── AppBuilderFactory  — 策略运行时装配
+
+ditto_interfaces.registry.container (Composition Root)
+  └── make_app_container() ← 唯一入口，组装 infra + data + app providers
 ```
 
 ```python
-# apps/app/src/ditto_app/registry/container.py
+# apps/interfaces/src/ditto_interfaces/registry/container.py
 def make_app_container() -> Container:
     return make_container(
-        *get_infra_providers(),
-        *ditto_data.di.get_providers(),
-        *ditto_engine.di.get_providers(),
-        *ditto_analytics.di.get_providers(),
-        *get_app_providers(),
+        *get_infra_providers(),       # Infrastructure 层
+        *get_data_providers(),        # Data 层（10 providers）
+        *get_app_providers(),         # App 层（3 providers）
     )
 ```
 
-**迁移节奏**：Phase 4 中逐步把 `port/registry/datahub/*` 推入各包的 `di.py`，
-最终 app 只调用各包的 `get_providers()`，不深入包内部。
+**设计偏离记录**：
+- `ditto_engine.di` 和 `ditto_analytics.di` **不存在且不计划创建**
+- Engine 是纯领域包，所有实例化由 `ditto_app.builders` 负责
+- Analytics 服务通过具体类型导入（如 `SQLiteCompileCache`）进入 App 层 Provider
+- 仅当 Engine/Analytics 未来出现独立 Provider 聚合需求时，才新增 `di.py`
+- 此偏离已记录在 ADR-0006 D2
 
 ---
 
@@ -683,7 +690,7 @@ app 层在运行时通过 DI 注入具体实现。
 | 2d | engine 内部新增 `orchestrator/`（context, stage, pipeline） | 低 | 从 kernel.pipeline 移入 + 强类型化 |
 | 2e | engine 内部子域重命名（strategy → alpha） | 低 | 内部重命名 |
 | 2f | 定义 Brokerage Protocol + 整理 accounting | 中 | Engine 内部 Protocol |
-| 2g | `datahub.forward_return_service` → `analytics` | 低 | 计算逻辑归位 |
+| 2g | `datahub.forward_return_service` → `ditto_app.query` | 低 | 计算逻辑归位（不能迁 analytics，依赖 MarketService） |
 
 **Phase 2b 细节**（analytics 包迁入清单）：
 
@@ -695,7 +702,7 @@ app 层在运行时通过 DI 注入具体实现。
 | `core.engine.materialization/` (4 files) | `analytics.materialization/` | 物化模型 |
 | `core.engine.research.py` | `analytics/research.py` | 研究模型 |
 | `core.engine.publication_safety.py` | `analytics/publication_safety/__init__.py` | 提升为子包 |
-| `core.engine.specs.py` | `analytics/specs.py` | 衍生规格 |
+| `core.engine.specs.py` | `kernel/specs.py`（非 analytics） | 衍生规格（最终留在 Kernel） |
 | `core.engine.compile_cache.py` | `analytics/compile_cache.py` | 顶层基础设施 |
 | `core.engine.errors.py` | 删除 | 纯 re-export shim |
 
@@ -750,13 +757,13 @@ app 层在运行时通过 DI 注入具体实现。
 | Phase | PR 数 | 风险等级 | 依赖 | 状态 |
 |-------|-------|---------|------|------|
 | Phase 0 | 3 | 低 | 无 | ✅ 已完成 |
-| Phase 0.5 | 3 | 低 | Phase 0 | 待开始 |
-| Phase 1 补完 | 2-3 | 低-中 | Phase 0 | ⚠️ 部分完成 |
-| Phase 2 | 8 | 中 | Phase 0.5, 1 | 待开始 |
-| Phase 3 | 3 | 低 | Phase 2 | 待开始 |
-| Phase 4 | 7 | 中-高 | Phase 2, 3 | 待开始 |
-| Phase 5 | 4 | 低 | Phase 4 | 待开始 |
-| **总计** | **~30-31 PR** | | | |
+| Phase 0.5 | 3 | 低 | Phase 0 | ✅ 已完成 |
+| Phase 1 补完 | 2-3 | 低-中 | Phase 0 | ✅ 已完成 |
+| Phase 2 | 8 | 中 | Phase 0.5, 1 | ✅ 已完成 |
+| Phase 3 | 3 | 低 | Phase 2 | ✅ 已完成 |
+| Phase 4 | 7 | 中-高 | Phase 2, 3 | ✅ 已完成 |
+| Phase 5 | 4 | 低 | Phase 4 | ✅ 已完成 |
+| **总计** | **~30-31 PR** | | | **全部完成** |
 
 ### 目标模块结构（最终态）
 
@@ -769,8 +776,8 @@ packages/
   analytics/         # 分析平面（expression + factors + evaluation + materialization + research）
 
 apps/
-  app/               # Use Case 编排（Query + Command + Process + registry）
-  interfaces/        # 适配器（HTTP + CLI + Prefect Jobs）
+  app/               # Use Case 编排（Query + Command + Process + builders）
+  interfaces/        # 适配器（API + CLI + Prefect Jobs）+ DI Composition Root
   web/               # Web 前端（保持不变）
 ```
 

@@ -9,9 +9,9 @@
 
 ## 背景
 
-Hybrid Plane v2 架构重构（Phase 0-5）已落地。实施过程中，6 处实现与原始设计文档存在偏离。这些偏离经评估后均为合理选择，现正式记录为已接受的架构决策。
+Hybrid Plane v2 架构重构（Phase 0-5）已落地。实施过程中，7 处实现与原始设计文档存在偏离。这些偏离经评估后均为合理选择，现正式记录为已接受的架构决策。
 
-另有 1 处未文档化的跨层依赖需补充记录。
+另有 1 处未文档化的跨层依赖需补充记录。Phase F 收尾工作中新增 1 处偏离（D7）。
 
 ---
 
@@ -65,6 +65,14 @@ Hybrid Plane v2 架构重构（Phase 0-5）已落地。实施过程中，6 处�
 
 **接受理由**：当前体量下，`shared/` 子目录只会包含 2-3 个文件，增加目录层级反而降低导航效率。Registry 本质是 DI Composition Root，按 DI 模式应放在应用边界层（Interfaces），而非编排层（App）。
 
+### D7: AlphaOutput/PortfolioOutput Stage 合约已删除
+
+| 维度 | 设计文档 | 实际实现 |
+|------|---------|---------|
+| Stage 间合约 | `AlphaOutput(frozen=True)` + `PortfolioOutput(frozen=True)` frozen dataclass | **已删除** — engine loop 使用 `DecisionFrame`（polars DataFrame + 列名约定） |
+
+**接受理由**：设计文档原计划用 frozen dataclass 正式化 Stage 边界数据契约（`AlphaOutput.signals` 含 instrument_id/score/rank，`PortfolioOutput.targets` 含 instrument_id/target_weight）。但这两个合约仅存在于测试代码中，从未集成到 EngineLoop 主路径。实际引擎循环通过 `DecisionFrame = pl.DataFrame` 的列名约定进行 Stage 间数据流，运行时零开销且灵活。决定：保留 DecisionFrame 列名约定作为 v2 方案，不引入 frozen dataclass 包装层。
+
 ---
 
 ## 未文档化的跨层依赖
@@ -92,6 +100,7 @@ from ditto_infra.foundation import logger
 | 39 处 "datahub" 注释残留 | 纯文档，触及文件时顺手改 |
 | DI 架构重构（`di.py` → `app registry`） | 已接受当前设计（D2），功能性正确 |
 | `query/contracts.py` 缺失 | 功能已在 `provider.py` 中，无需拆分 |
+| AlphaOutput/PortfolioOutput contracts | 已删除（D7），引擎使用 DecisionFrame 列名约定 |
 
 ---
 
@@ -101,5 +110,5 @@ from ditto_infra.foundation import logger
 
 ---
 
-**文档版本**: 1.0
-**最后更新**: 2026-04-03
+**文档版本**: 1.1
+**最后更新**: 2026-04-04

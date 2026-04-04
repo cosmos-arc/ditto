@@ -68,7 +68,7 @@ def check_trading_day(trade_date: str) -> bool:
 
     """
     with create_ingestion_bundle() as bundle:
-        return bundle.metadata_service.is_trading_day(trade_date)
+        return bundle.metadata_facade.is_trading_day(trade_date)
 
 
 @flow(name="daily-ingestion", description="每日增量数据摄取流程")

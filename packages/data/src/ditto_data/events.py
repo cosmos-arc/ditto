@@ -15,7 +15,7 @@ __all__ = [
 
 @dataclass(frozen=True, kw_only=True)
 class DataIngested(DomainEvent):
-    """数据入库完成事件."""
+    """数据入库完成事件（预留 — 当前未在 ingestion 流程中发布）."""
 
     event_type: str = field(default="data_ingested", init=False)
     dataset: str
@@ -26,7 +26,7 @@ class DataIngested(DomainEvent):
 
 @dataclass(frozen=True, kw_only=True)
 class QualityCheckCompleted(DomainEvent):
-    """质量检查完成事件."""
+    """质量检查完成事件（预留 — 当前未在 quality 流程中发布）."""
 
     event_type: str = field(default="quality_check_completed", init=False)
     dataset: str

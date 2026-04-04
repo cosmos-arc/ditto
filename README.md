@@ -6,7 +6,7 @@
 
 ## 概要
 
-Ditto 是一个面向 A 股市场的全栈量化投资平台，专注于 ETF 行业轮动策略，采用工业级标准开发，追求长期稳定 Alpha。对标 QuantConnect LEAN 架构，分 Core / DataHub / Infra 三层核心包 + Port 应用层。
+Ditto 是一个面向 A 股市场的全栈量化投资平台，专注于 ETF 行业轮动策略，采用工业级标准开发，追求长期稳定 Alpha。对标 QuantConnect LEAN 架构，分 Engine / Data / Analytics / App / Interfaces 多层架构 + Infra 基础设施层。
 
 ## 核心功能
 
@@ -160,7 +160,7 @@ ditto/
 │   │   │   ├── registry/      # Dishka DI 容器
 │   │   │   └── main.py        # 启动入口
 │   │   └── tests/             # 测试
-│   └── web/                   # Next.js 前端 (Phase 4+，待实现)
+│   └── (无前端仓库，Web 应用独立 repo)
 ├── packages/
 │   ├── core/                  # 核心业务逻辑（纯函数，无 I/O）
 │   │   ├── src/ditto_engine/

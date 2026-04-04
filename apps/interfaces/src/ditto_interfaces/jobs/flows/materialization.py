@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
-from ditto_analytics.publication_safety import CertificationStage
 from prefect import flow
 
 from ditto_interfaces.registry import create_materialization_bundle
@@ -147,7 +146,7 @@ def certify_publication_flow(
         result = bundle.publication_facade.certify(
             derived_id=derived_id,
             version=version,
-            stage=CertificationStage(stage),
+            stage=stage,
         )
     return {
         "results": _normalize_results((result,)),

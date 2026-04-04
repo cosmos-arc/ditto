@@ -184,12 +184,12 @@
 ### 策略 Pipeline
 
 ```python
-from ditto_engine.strategy import (
+from ditto_engine.alpha import (
     StrategySpec,
     StrategyPipeline,
     StrategyInputBundle,
 )
-from ditto_engine.strategy.templates import (
+from ditto_engine.alpha.templates import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
 )
@@ -292,7 +292,7 @@ df = (
 
 ```python
 # 列名约定: instrument_id (必须), signal_value, score, weight, reason_codes
-from ditto_engine.strategy import StrategyPipeline, StrategyInputBundle
+from ditto_engine.alpha import StrategyPipeline, StrategyInputBundle
 
 pipeline = StrategyPipeline(stages=[universe, signal, scoring, selection])
 result = pipeline.run(bundle)

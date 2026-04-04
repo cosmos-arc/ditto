@@ -20,7 +20,6 @@
 - [ ] `packages/infra` - 基础设施
 - [ ] `packages/app` - 应用编排层
 - [ ] `apps/interfaces` - Server 应用（API/CLI/Jobs）
-- [ ] `apps/web` - 前端应用
 - [ ] 其他:
 
 ## Definition of Done

@@ -248,8 +248,7 @@ ditto/
 │   ├── app/           # 应用编排层（CQRS: query/process/command/builders）
 │   └── engine/        # 核心引擎（alpha/portfolio/execution/accounting/backtest/orchestrator）
 ├── apps/              # 应用
-│   ├── interfaces/    # Server 应用（API/CLI/Jobs + DI Composition Root）
-│   └── web/           # Web 应用
+│   └── interfaces/    # Server 应用（API/CLI/Jobs + DI Composition Root）
 ├── config/            # 环境配置（按环境分组）
 │   ├── development/
 │   ├── testing/

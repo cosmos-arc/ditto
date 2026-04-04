@@ -2,21 +2,19 @@
 
 from dataclasses import dataclass
 
-from ditto_app.process.ingestion import BackfillManager, IngestionCoordinator
+from ditto_app.process.ingestion import (
+    BackfillManager,
+    IngestionCoordinator,
+    RetryManager,
+)
 from ditto_app.process.materialization import (
     DerivedMaterializationOrchestrator,
     DerivedPublicationFacade,
     InvalidationCascadeOrchestrator,
 )
 from ditto_app.process.strategy import StrategyFacade
+from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_app.query.research import ResearchDatasetFacade
-from ditto_data.services import IngestionLogService
-from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.fundamental_service import FundamentalService
-from ditto_data.services.macro_service import MacroService
-from ditto_data.services.market_service import MarketService
-from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.source_service import SourceService
 from ditto_data.sources import ExchangeTransformers
 
 
@@ -29,16 +27,11 @@ class IngestionBundle:
     解决 ARCH-003（组合逻辑分散）和 ARCH-004（重复容器）问题。
     """
 
-    metadata_service: MetadataService
-    market_service: MarketService
-    fundamental_service: FundamentalService
-    capital_service: CapitalService
-    macro_service: MacroService
-    source_service: SourceService
-    ingestion_log_service: IngestionLogService
-    exchange_transformers: ExchangeTransformers
     coordinator: IngestionCoordinator
     backfill_manager: BackfillManager
+    retry_manager: RetryManager
+    metadata_facade: MetadataQueryFacade
+    exchange_transformers: ExchangeTransformers
 
 
 @dataclass(frozen=True)
