@@ -14,6 +14,8 @@ from ditto_analytics.materialization.contracts import (
 from ditto_app.process.materialization import (
     InputContext,
     RuntimeDerivedInputProvider,
+)
+from ditto_app.process.materialization_orchestrator import (
     _resolve_etf_dependency,
     _resolve_market_dependency,
 )
