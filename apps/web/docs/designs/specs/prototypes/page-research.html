@@ -1138,7 +1138,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }
@@ -1161,6 +1161,113 @@
     /* State variant containers inherit page style */
     .state-variant .state-variant-content {
       background: var(--surface-app);
+    }
+
+    /* ── Analysis Notes panel (extracted from inline styles) ── */
+    .analysis-notes {
+      padding: var(--space-8);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+    .analysis-notes-item {
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .analysis-notes-item:last-child {
+      border-bottom: none;
+    }
+    .analysis-notes-title {
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+    .analysis-notes-body {
+      margin-top: var(--space-2);
+    }
+
+    /* ── Overlay log block (extracted from inline styles) ── */
+    .overlay-log {
+      background: var(--surface-muted);
+      border-radius: var(--radius-4);
+      padding: var(--space-8);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.6;
+    }
+
+    /* ── Overlay textarea placeholder (extracted from inline styles) ── */
+    .overlay-textarea-placeholder {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      padding: var(--space-8);
+      min-height: 60px;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── Overlay field value color variants (extracted from inline styles) ── */
+    .overlay-field-value.muted {
+      color: var(--text-tertiary);
+    }
+    .overlay-field-value.success {
+      color: var(--system-healthy-fg);
+    }
+    .overlay-field-value.brand {
+      color: var(--brand-accent);
+    }
+    .overlay-field-value.degraded {
+      color: var(--system-degraded-fg);
+    }
+
+    /* ── Inline action link (replaces inline style on labels) ── */
+    .inline-action-link {
+      cursor: pointer;
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .inline-action-link:hover {
+      color: var(--text-secondary);
+    }
+    .inline-action-link.tight {
+      white-space: nowrap;
+    }
+
+    /* ── Cursor pointer for overlay trigger labels ── */
+    .overlay-trigger {
+      cursor: pointer;
+    }
+
+    /* ── Chart grid position classes (replace inline top: N%) ── */
+    .chart-grid-line.pos-15 { top: 15%; }
+    .chart-grid-line.pos-35 { top: 35%; }
+    .chart-grid-line.pos-55 { top: 55%; }
+    .chart-grid-line.pos-75 { top: 75%; }
+    .chart-grid-label.pos-15 { top: 15%; }
+    .chart-grid-label.pos-35 { top: 35%; }
+    .chart-grid-label.pos-55 { top: 55%; }
+    .chart-grid-label.pos-75 { top: 75%; }
+    .chart-grid-label.pos-92 { top: 92%; }
+    .chart-zero-line.pos-92 { top: 92%; }
+
+    /* ── IC bar height variants (replace inline style="height:Npx") ── */
+    .ic-bar.h7  { height: 7px; }
+    .ic-bar.h8  { height: 8px; }
+    .ic-bar.h9  { height: 9px; }
+    .ic-bar.h10 { height: 10px; }
+    .ic-bar.h11 { height: 11px; }
+    .ic-bar.h12 { height: 12px; }
+    .ic-bar.h13 { height: 13px; }
+    .ic-bar.h14 { height: 14px; }
+    .ic-bar.h16 { height: 16px; }
+
+    /* ── Stale data coverage for factor notes ── */
+    .analysis-notes-item.stale .analysis-notes-title {
+      color: var(--data-state-stale-fg);
+    }
+    .analysis-notes-item.stale .analysis-notes-body {
+      color: var(--data-state-stale-fg);
     }
   </style>
 </head>
@@ -1245,11 +1352,11 @@
         </div>
         <!-- Overlay triggers: New Backtest / New Strategy / New Experiment -->
         
-        <label for="overlay-new-backtest" class="header-btn header-btn-primary" style="cursor:pointer">新建回测</label>
+        <label for="overlay-new-backtest" class="header-btn header-btn-primary overlay-trigger">新建回测</label>
         
-        <label for="overlay-new-strategy" class="header-btn header-btn-secondary" style="cursor:pointer">新建策略</label>
+        <label for="overlay-new-strategy" class="header-btn header-btn-secondary overlay-trigger">新建策略</label>
         
-        <label for="overlay-new-experiment" class="header-btn header-btn-secondary" style="cursor:pointer">新建实验</label>
+        <label for="overlay-new-experiment" class="header-btn header-btn-secondary overlay-trigger">新建实验</label>
         <span class="header-btn header-btn-ghost">进入因子分析</span>
         <div class="header-action-btn" title="Notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
@@ -1349,7 +1456,7 @@
               <tr class="row">
                 <td></td>
                 <td><span class="cell-ticker">动量12M</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-strong">0.041</span><span class="ic-bar bar-accent" style="height:14px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-strong">0.041</span><span class="ic-bar bar-accent h14"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-strong">0.82</span></td>
                 <td class="right"><span class="cell-numeric trend-up">1.42</span></td>
                 <td class="right"><span class="cell-numeric">15.2%</span></td>
@@ -1362,7 +1469,7 @@
               <tr class="row">
                 <td></td>
                 <td><span class="cell-ticker">价值PE</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-strong">0.038</span><span class="ic-bar bar-accent" style="height:13px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-strong">0.038</span><span class="ic-bar bar-accent h13"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-strong">0.75</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">1.28</span></td>
                 <td class="right"><span class="cell-numeric">8.4%</span></td>
@@ -1375,7 +1482,7 @@
               <tr class="row">
                 <td></td>
                 <td><span class="cell-ticker">低波动</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-normal">0.032</span><span class="ic-bar bar-muted" style="height:12px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-normal">0.032</span><span class="ic-bar bar-muted h12"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-normal">0.68</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">1.15</span></td>
                 <td class="right"><span class="cell-numeric">12.1%</span></td>
@@ -1388,7 +1495,7 @@
               <tr class="row">
                 <td></td>
                 <td><span class="cell-ticker">质量ROE</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-muted">0.029</span><span class="ic-bar bar-muted" style="height:11px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-muted">0.029</span><span class="ic-bar bar-muted h11"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-normal">0.61</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">1.02</span></td>
                 <td class="right"><span class="cell-numeric">6.8%</span></td>
@@ -1401,7 +1508,7 @@
               <tr class="row">
                 <td></td>
                 <td><span class="cell-ticker">规模</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-muted">0.025</span><span class="ic-bar bar-muted" style="height:9px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-muted">0.025</span><span class="ic-bar bar-muted h9"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-normal">0.55</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">0.92</span></td>
                 <td class="right"><span class="cell-numeric">5.2%</span></td>
@@ -1414,7 +1521,7 @@
               <tr class="row">
                 <td></td>
                 <td><span class="cell-ticker">成长（营收）</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-muted">0.022</span><span class="ic-bar bar-muted" style="height:8px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-muted">0.022</span><span class="ic-bar bar-muted h8"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-muted">0.48</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">0.85</span></td>
                 <td class="right"><span class="cell-numeric">18.6%</span></td>
@@ -1427,7 +1534,7 @@
               <tr class="row">
                 <td class="cell-status-bar brand"></td>
                 <td><span class="cell-ticker">北向持仓变化率</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-strong">0.055</span><span class="ic-bar bar-accent" style="height:16px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-strong">0.055</span><span class="ic-bar bar-accent h16"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-strong">0.92</span></td>
                 <td class="right"><span class="cell-numeric trend-up">1.58</span></td>
                 <td class="right"><span class="cell-numeric">22.3%</span></td>
@@ -1440,7 +1547,7 @@
               <tr class="row">
                 <td class="cell-status-bar degraded"></td>
                 <td><span class="cell-ticker">情绪Alpha</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-degraded">0.028</span><span class="ic-bar bar-muted" style="height:10px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-degraded">0.028</span><span class="ic-bar bar-muted h10"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-degraded">0.45</span></td>
                 <td class="right"><span class="cell-numeric trend-down">0.78</span></td>
                 <td class="right"><span class="cell-numeric">25.1%</span></td>
@@ -1452,7 +1559,7 @@
               <tr class="row">
                 <td></td>
                 <td><span class="cell-ticker">换手率动量</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-normal">0.033</span><span class="ic-bar bar-muted" style="height:12px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-normal">0.033</span><span class="ic-bar bar-muted h12"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-strong">0.71</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">1.22</span></td>
                 <td class="right"><span class="cell-numeric">32.8%</span></td>
@@ -1465,7 +1572,7 @@
               <tr class="row">
                 <td class="cell-status-bar degraded"></td>
                 <td><span class="cell-ticker">行业动量</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-degraded">0.019</span><span class="ic-bar bar-muted" style="height:7px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-degraded">0.019</span><span class="ic-bar bar-muted h7"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-degraded">0.38</span></td>
                 <td class="right"><span class="cell-numeric trend-down">0.72</span></td>
                 <td class="right"><span class="cell-numeric">14.6%</span></td>
@@ -1478,7 +1585,7 @@
               <tr class="row">
                 <td class="cell-status-bar down"></td>
                 <td><span class="cell-ticker">波动率偏斜</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-down">0.021</span><span class="ic-bar bar-muted" style="height:8px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-down">0.021</span><span class="ic-bar bar-muted h8"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-down">0.42</span></td>
                 <td class="right"><span class="cell-numeric trend-down">0.68</span></td>
                 <td class="right"><span class="cell-numeric">9.3%</span></td>
@@ -1491,7 +1598,7 @@
               <tr class="row">
                 <td></td>
                 <td><span class="cell-ticker">分析师预期变化</span></td>
-                <td class="right"><span class="cell-numeric cell-ic-dim">0.018</span><span class="ic-bar bar-muted" style="height:7px;"></span></td>
+                <td class="right"><span class="cell-numeric cell-ic-dim">0.018</span><span class="ic-bar bar-muted h7"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-dim">0.35</span></td>
                 <td class="right"><span class="cell-numeric trend-down">0.62</span></td>
                 <td class="right"><span class="cell-numeric">7.8%</span></td>
@@ -1530,7 +1637,7 @@
               <div class="run-item-detail">Sharpe 1.42, 最大回撤 -8.3%, 1,247 笔交易</div>
               <div class="run-item-footer">
                 <span class="run-item-status complete">完成</span>
-                <label for="overlay-run-detail" style="cursor:pointer;font-size:var(--font-size-12);color:var(--text-tertiary);transition:color var(--motion-duration-fast) var(--motion-easing-standard);">查看详情</label>
+                <label for="overlay-run-detail" class="inline-action-link">查看详情</label>
                 <span class="run-item-time">1小时前</span>
               </div>
             </div>
@@ -1596,7 +1703,7 @@
               <div class="queue-review-sub">新参数组 · 待人工复核</div>
             </div>
             <span class="queue-review-badge pending">待复核</span>
-            <label for="overlay-review-action" style="cursor:pointer;font-size:var(--font-size-12);color:var(--text-tertiary);white-space:nowrap;">审核</label>
+            <label for="overlay-review-action" class="inline-action-link tight">审核</label>
           </div>
           <!-- Review 2 -->
           <div class="queue-review-item">
@@ -1667,17 +1774,17 @@
           <div class="chart-placeholder-area"></div>
           <!-- Grid lines -->
           <div class="chart-grid">
-            <div class="chart-grid-line" style="top: 15%;"></div>
-            <span class="chart-grid-label" style="top: 15%;">0.05</span>
-            <div class="chart-grid-line" style="top: 35%;"></div>
-            <span class="chart-grid-label" style="top: 35%;">0.04</span>
-            <div class="chart-grid-line" style="top: 55%;"></div>
-            <span class="chart-grid-label" style="top: 55%;">0.03</span>
-            <div class="chart-grid-line" style="top: 75%;"></div>
-            <span class="chart-grid-label" style="top: 75%;">0.02</span>
+            <div class="chart-grid-line pos-15"></div>
+            <span class="chart-grid-label pos-15">0.05</span>
+            <div class="chart-grid-line pos-35"></div>
+            <span class="chart-grid-label pos-35">0.04</span>
+            <div class="chart-grid-line pos-55"></div>
+            <span class="chart-grid-label pos-55">0.03</span>
+            <div class="chart-grid-line pos-75"></div>
+            <span class="chart-grid-label pos-75">0.02</span>
             <!-- IC = 0 zero baseline -->
-            <div class="chart-zero-line" style="top: 92%;"></div>
-            <span class="chart-grid-label" style="top: 92%;">0</span>
+            <div class="chart-zero-line pos-92"></div>
+            <span class="chart-grid-label pos-92">0</span>
           </div>
           <!-- X-axis labels -->
           <div class="chart-x-labels">
@@ -1770,18 +1877,22 @@
             <span class="analysis-metric-value">2026-04-02</span>
           </div>
         </div>
-        <div style="padding:var(--space-8);color:var(--text-tertiary);font-size:var(--font-size-12);">
-          <div style="padding:var(--space-6) 0;border-bottom:1px solid var(--border-subtle);">
-            <div style="color:var(--text-secondary);font-weight:500;">动量因子 IC 持续下滑</div>
-            <div style="margin-top:var(--space-2);">近 5 日 IC 均值 0.018，低于阈值 0.02，建议关注衰减趋势</div>
+        <div class="analysis-notes">
+          <div class="analysis-notes-item">
+            <div class="analysis-notes-title">动量因子 IC 持续下滑</div>
+            <div class="analysis-notes-body">近 5 日 IC 均值 0.018，低于阈值 0.02，建议关注衰减趋势</div>
           </div>
-          <div style="padding:var(--space-6) 0;border-bottom:1px solid var(--border-subtle);">
-            <div style="color:var(--text-secondary);font-weight:500;">价值因子组新增北向持仓变化率</div>
-            <div style="margin-top:var(--space-2);">2026-03-28 加入测试池，初始 IC_IR 0.41，需持续观察</div>
+          <div class="analysis-notes-item">
+            <div class="analysis-notes-title">价值因子组新增北向持仓变化率</div>
+            <div class="analysis-notes-body">2026-03-28 加入测试池，初始 IC_IR 0.41，需持续观察</div>
           </div>
-          <div style="padding:var(--space-6) 0;">
-            <div style="color:var(--text-secondary);font-weight:500;">低波动因子近期表现稳定</div>
-            <div style="margin-top:var(--space-2);">连续 20 日 IC > 0.02，建议保持当前权重</div>
+          <div class="analysis-notes-item stale">
+            <div class="analysis-notes-title">分析师预期变化 — 数据源延迟</div>
+            <div class="analysis-notes-body">数据最后更新于 45 分钟前，IC/IR 指标可能未反映最新分析师修正</div>
+          </div>
+          <div class="analysis-notes-item">
+            <div class="analysis-notes-title">低波动因子近期表现稳定</div>
+            <div class="analysis-notes-body">连续 20 日 IC > 0.02，建议保持当前权重</div>
           </div>
         </div>
       </div>
@@ -1814,11 +1925,11 @@
           <h4>回测配置</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">回测名称</span>
-            <span class="overlay-field-value" style="color:var(--text-tertiary)">输入回测名称…</span>
+            <span class="overlay-field-value muted">输入回测名称…</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">策略 / 因子</span>
-            <span class="overlay-field-value" style="color:var(--text-tertiary)">选择策略或因子</span>
+            <span class="overlay-field-value muted">选择策略或因子</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">Universe</span>
@@ -1844,8 +1955,8 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-new-backtest" class="overlay-btn overlay-btn-primary" style="cursor:pointer">提交回测</label>
-            <label for="overlay-new-backtest" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-new-backtest" class="overlay-btn overlay-btn-primary overlay-trigger">提交回测</label>
+            <label for="overlay-new-backtest" class="overlay-btn overlay-btn-secondary overlay-trigger">取消</label>
           </div>
         </div>
       </div>
@@ -1863,11 +1974,11 @@
           <h4>策略配置</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">策略名称</span>
-            <span class="overlay-field-value" style="color:var(--text-tertiary)">输入策略名称…</span>
+            <span class="overlay-field-value muted">输入策略名称…</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">策略类型</span>
-            <span class="overlay-field-value" style="color:var(--text-tertiary)">选择类型</span>
+            <span class="overlay-field-value muted">选择类型</span>
           </div>
 
           <h4>因子配置</h4>
@@ -1891,8 +2002,8 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-new-strategy" class="overlay-btn overlay-btn-primary" style="cursor:pointer">保存策略</label>
-            <label for="overlay-new-strategy" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-new-strategy" class="overlay-btn overlay-btn-primary overlay-trigger">保存策略</label>
+            <label for="overlay-new-strategy" class="overlay-btn overlay-btn-secondary overlay-trigger">取消</label>
           </div>
         </div>
       </div>
@@ -1910,17 +2021,17 @@
           <h4>实验配置</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">实验名称</span>
-            <span class="overlay-field-value" style="color:var(--text-tertiary)">输入实验名称…</span>
+            <span class="overlay-field-value muted">输入实验名称…</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">假设描述</span>
-            <span class="overlay-field-value" style="color:var(--text-tertiary)">描述实验假设…</span>
+            <span class="overlay-field-value muted">描述实验假设…</span>
           </div>
 
           <h4>关联因子</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">目标因子</span>
-            <span class="overlay-field-value" style="color:var(--text-tertiary)">选择因子</span>
+            <span class="overlay-field-value muted">选择因子</span>
           </div>
 
           <h4>对照组设置</h4>
@@ -1934,8 +2045,8 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-new-experiment" class="overlay-btn overlay-btn-primary" style="cursor:pointer">创建实验</label>
-            <label for="overlay-new-experiment" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-new-experiment" class="overlay-btn overlay-btn-primary overlay-trigger">创建实验</label>
+            <label for="overlay-new-experiment" class="overlay-btn overlay-btn-secondary overlay-trigger">取消</label>
           </div>
         </div>
       </div>
@@ -1961,7 +2072,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">状态</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">已完成</span>
+            <span class="overlay-field-value success">已完成</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">开始时间</span>
@@ -1975,11 +2086,11 @@
           <h4>关键指标</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">Sharpe Ratio</span>
-            <span class="overlay-field-value" style="color:var(--brand-accent)">1.42</span>
+            <span class="overlay-field-value brand">1.42</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">最大回撤</span>
-            <span class="overlay-field-value" style="color:var(--system-degraded-fg)">-8.3%</span>
+            <span class="overlay-field-value degraded">-8.3%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">总交易笔数</span>
@@ -1995,7 +2106,7 @@
           </div>
 
           <h4>日志</h4>
-          <div style="background:var(--surface-muted);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-numeric);font-size:var(--font-size-12);color:var(--text-tertiary);line-height:1.6;">
+          <div class="overlay-log">
             [13:15:01] 回测任务启动<br>
             [13:15:03] 加载因子数据…<br>
             [13:18:22] 因子数据加载完成<br>
@@ -2040,14 +2151,14 @@
           </div>
 
           <h4>审核意见</h4>
-          <div style="border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8);min-height:60px;color:var(--text-tertiary);font-size:var(--font-size-12);margin-bottom:var(--space-8);">
+          <div class="overlay-textarea-placeholder">
             输入审核意见…
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-review-action" class="overlay-btn overlay-btn-primary" style="cursor:pointer">通过</label>
-            <label for="overlay-review-action" class="overlay-btn overlay-btn-danger" style="cursor:pointer">驳回</label>
-            <label for="overlay-review-action" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-review-action" class="overlay-btn overlay-btn-primary overlay-trigger">通过</label>
+            <label for="overlay-review-action" class="overlay-btn overlay-btn-danger overlay-trigger">驳回</label>
+            <label for="overlay-review-action" class="overlay-btn overlay-btn-secondary overlay-trigger">取消</label>
           </div>
         </div>
       </div>
@@ -2125,7 +2236,7 @@
           <div class="state-empty-icon">🔬</div>
           <div class="state-empty-title">暂无因子数据</div>
           <div class="state-empty-desc">创建第一个因子后，监控面板将在此展示 IC/IR/Sharpe 等关键指标</div>
-          <label for="overlay-new-strategy" class="state-empty-cta" style="cursor:pointer">新建因子</label>
+          <label for="overlay-new-strategy" class="state-empty-cta overlay-trigger">新建因子</label>
         </div>
       </div>
       </div>
@@ -2186,7 +2297,7 @@
           <div class="state-empty-icon">📋</div>
           <div class="state-empty-title">暂无运行记录</div>
           <div class="state-empty-desc">创建回测或实验后，运行记录将在此展示</div>
-          <label for="overlay-new-backtest" class="state-empty-cta" style="cursor:pointer">新建回测</label>
+          <label for="overlay-new-backtest" class="state-empty-cta overlay-trigger">新建回测</label>
         </div>
       </div>
       </div>
@@ -2241,7 +2352,7 @@
           <div class="state-empty-icon">🧪</div>
           <div class="state-empty-title">暂无实验或审核</div>
           <div class="state-empty-desc">创建实验或提交因子验证后，审核队列将在此展示</div>
-          <label for="overlay-new-experiment" class="state-empty-cta" style="cursor:pointer">新建实验</label>
+          <label for="overlay-new-experiment" class="state-empty-cta overlay-trigger">新建实验</label>
         </div>
       </div>
       </div>
@@ -2411,11 +2522,11 @@
             <h4>回测配置</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">回测名称</span>
-              <span class="overlay-field-value" style="color:var(--text-tertiary)">输入回测名称…</span>
+              <span class="overlay-field-value muted">输入回测名称…</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">策略 / 因子</span>
-              <span class="overlay-field-value" style="color:var(--text-tertiary)">选择策略或因子</span>
+              <span class="overlay-field-value muted">选择策略或因子</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">Universe</span>
@@ -2439,8 +2550,8 @@
               <span class="overlay-field-value">20 日</span>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-new-backtest" class="overlay-btn overlay-btn-primary" style="cursor:pointer">提交回测</label>
-              <label for="overlay-new-backtest" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+              <label for="overlay-new-backtest" class="overlay-btn overlay-btn-primary overlay-trigger">提交回测</label>
+              <label for="overlay-new-backtest" class="overlay-btn overlay-btn-secondary overlay-trigger">取消</label>
             </div>
           </div>
         </div>
@@ -2458,11 +2569,11 @@
             <h4>策略配置</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">策略名称</span>
-              <span class="overlay-field-value" style="color:var(--text-tertiary)">输入策略名称…</span>
+              <span class="overlay-field-value muted">输入策略名称…</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">策略类型</span>
-              <span class="overlay-field-value" style="color:var(--text-tertiary)">选择类型</span>
+              <span class="overlay-field-value muted">选择类型</span>
             </div>
             <h4>因子配置</h4>
             <div class="overlay-field">
@@ -2483,8 +2594,8 @@
               <span class="overlay-field-value">50</span>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-new-strategy" class="overlay-btn overlay-btn-primary" style="cursor:pointer">保存策略</label>
-              <label for="overlay-new-strategy" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+              <label for="overlay-new-strategy" class="overlay-btn overlay-btn-primary overlay-trigger">保存策略</label>
+              <label for="overlay-new-strategy" class="overlay-btn overlay-btn-secondary overlay-trigger">取消</label>
             </div>
           </div>
         </div>
@@ -2502,16 +2613,16 @@
             <h4>实验配置</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">实验名称</span>
-              <span class="overlay-field-value" style="color:var(--text-tertiary)">输入实验名称…</span>
+              <span class="overlay-field-value muted">输入实验名称…</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">假设描述</span>
-              <span class="overlay-field-value" style="color:var(--text-tertiary)">描述实验假设…</span>
+              <span class="overlay-field-value muted">描述实验假设…</span>
             </div>
             <h4>关联因子</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">目标因子</span>
-              <span class="overlay-field-value" style="color:var(--text-tertiary)">选择因子</span>
+              <span class="overlay-field-value muted">选择因子</span>
             </div>
             <h4>对照组设置</h4>
             <div class="overlay-field">
@@ -2523,8 +2634,8 @@
               <span class="overlay-field-value">优化参数组</span>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-new-experiment" class="overlay-btn overlay-btn-primary" style="cursor:pointer">创建实验</label>
-              <label for="overlay-new-experiment" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+              <label for="overlay-new-experiment" class="overlay-btn overlay-btn-primary overlay-trigger">创建实验</label>
+              <label for="overlay-new-experiment" class="overlay-btn overlay-btn-secondary overlay-trigger">取消</label>
             </div>
           </div>
         </div>
@@ -2550,7 +2661,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">状态</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">已完成</span>
+              <span class="overlay-field-value success">已完成</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">开始时间</span>
@@ -2563,11 +2674,11 @@
             <h4>关键指标</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">Sharpe Ratio</span>
-              <span class="overlay-field-value" style="color:var(--brand-accent)">1.42</span>
+              <span class="overlay-field-value brand">1.42</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">最大回撤</span>
-              <span class="overlay-field-value" style="color:var(--system-degraded-fg)">-8.3%</span>
+              <span class="overlay-field-value degraded">-8.3%</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">总交易笔数</span>
@@ -2582,7 +2693,7 @@
               <span class="overlay-field-value">56.2%</span>
             </div>
             <h4>日志</h4>
-            <div style="background:var(--surface-muted);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-numeric);font-size:var(--font-size-12);color:var(--text-tertiary);line-height:1.6;">
+            <div class="overlay-log">
               [13:15:01] 回测任务启动<br>
               [13:15:03] 加载因子数据…<br>
               [13:18:22] 因子数据加载完成<br>
@@ -2625,13 +2736,13 @@
               <span class="overlay-field-value">新参数组 Sharpe 提升 0.15</span>
             </div>
             <h4>审核意见</h4>
-            <div style="border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8);min-height:60px;color:var(--text-tertiary);font-size:var(--font-size-12);margin-bottom:var(--space-8);">
+            <div class="overlay-textarea-placeholder">
               输入审核意见…
             </div>
             <div class="overlay-actions">
-              <label for="overlay-review-action" class="overlay-btn overlay-btn-primary" style="cursor:pointer">通过</label>
-              <label for="overlay-review-action" class="overlay-btn overlay-btn-danger" style="cursor:pointer">驳回</label>
-              <label for="overlay-review-action" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+              <label for="overlay-review-action" class="overlay-btn overlay-btn-primary overlay-trigger">通过</label>
+              <label for="overlay-review-action" class="overlay-btn overlay-btn-danger overlay-trigger">驳回</label>
+              <label for="overlay-review-action" class="overlay-btn overlay-btn-secondary overlay-trigger">取消</label>
             </div>
           </div>
         </div>

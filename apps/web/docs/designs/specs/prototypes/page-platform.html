@@ -372,7 +372,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: color-mix(in oklch, white 3%, transparent);
+      background: var(--overlay-3);
       pointer-events: none;
     }
 
@@ -448,9 +448,9 @@
       transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
-    .quota-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, white)); }
-    .quota-bar-fill.warn     { background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 80%, white)); }
-    .quota-bar-fill.critical { background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, white)); }
+    .quota-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, oklch(1 0 0))); }
+    .quota-bar-fill.warn     { background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 80%, oklch(1 0 0))); }
+    .quota-bar-fill.critical { background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, oklch(1 0 0))); }
 
     /* ── Task Row ── */
     .task-item {
@@ -561,9 +561,9 @@
       transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
-    .resource-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, white)); }
-    .resource-bar-fill.warn     { background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 80%, white)); }
-    .resource-bar-fill.critical { background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, white)); }
+    .resource-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, oklch(1 0 0))); }
+    .resource-bar-fill.warn     { background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 80%, oklch(1 0 0))); }
+    .resource-bar-fill.critical { background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, oklch(1 0 0))); }
 
     /* ── Event Row ── */
     .event-item {
@@ -895,7 +895,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: color-mix(in oklch, white 3%, transparent);
+      background: var(--overlay-3);
       pointer-events: none;
     }
 
@@ -923,7 +923,7 @@
       color: var(--system-down-fg);
     }
     .quota-bar-fill.critical {
-      background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, white)) !important;
+      background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, oklch(1 0 0))) !important;
     }
 
     /* ══════════════════════════════════════════════
@@ -1150,7 +1150,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: color-mix(in oklch, white 2%, transparent);
+      background: var(--overlay-2);
       pointer-events: none;
     }
 
@@ -1244,7 +1244,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }
@@ -1283,9 +1283,9 @@
       border-color: var(--brand-accent);
     }
     .overlay-btn-danger {
-      background: rgba(239, 68, 68, 0.1);
-      color: #ef4444;
-      border-color: rgba(239, 68, 68, 0.3);
+      background: var(--system-down-bg);
+      color: var(--system-down-fg);
+      border-color: var(--border-error);
     }
 
     .state-variant .state-variant-content {

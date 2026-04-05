@@ -13,9 +13,10 @@
   - overlay-generate-pool (Modal: 生成标的池确认) [covered]
   - overlay-export (Sheet: 导出结果) [covered]
 
-  State Variants: 6 components × 3 states (empty/loading/error) + bulk
+  State Variants: 7 components × 3 states (empty/loading/error) + signal-pill stale + bulk
   - filters: default[covered] loading[n/a] empty[covered] failed[covered] stale[n/a] selected[covered] bulk[n/a]
   - results-table: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[covered]
+  - signal-pill: default[covered] stale[covered]
   - compare-cart: default[covered] loading[n/a] empty[covered] failed[n/a] stale[n/a] selected[n/a] bulk[covered]
   - compare-drawer: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[n/a]
   - scoring-presets: default[covered] loading[covered] empty[covered] failed[n/a] stale[n/a] selected[covered] bulk[n/a]
@@ -156,6 +157,42 @@
     .signal-pill.sell.s2 { background: color-mix(in oklch, var(--market-down-bg) 25%, transparent); }
     .signal-pill.sell.s1 { background: color-mix(in oklch, var(--market-down-bg) 18%, transparent); }
     .signal-pill.sell.s0 { background: color-mix(in oklch, var(--market-down-bg) 12%, transparent); }
+
+    /* ── Signal pill stale state — desaturated + stale dot indicator ── */
+    .signal-pill.stale {
+      opacity: 0.6;
+      filter: saturate(0.4);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard),
+                  filter var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .signal-pill.stale:hover {
+      opacity: 0.85;
+      filter: saturate(0.6);
+    }
+    .signal-pill.stale::after {
+      content: '';
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+      background: var(--system-stale-fg);
+      margin-left: var(--space-4);
+      flex-shrink: 0;
+    }
+
+    /* ── Sparkline stale state ── */
+    .sparkline-up.stale,
+    .sparkline-down.stale {
+      opacity: 0.35;
+      filter: saturate(0.3);
+    }
+
+    /* ── Risk dot stale state ── */
+    .risk-dot.stale {
+      opacity: 0.5;
+    }
+    .risk-dot.stale::before {
+      background: var(--text-disabled);
+    }
 
     /* ── Risk dot indicator ── */
     .risk-dot {
@@ -773,6 +810,8 @@
       .score-radar .radar-data-brand { transition: none !important; }
       .score-radar .radar-value { transition: none !important; }
       .score-radar .radar-label { transition: none !important; }
+      .signal-pill.stale { transition: none !important; }
+      .risk-dot.stale { transition: none !important; }
     }
 
     /* ══════════════════════════════════════════════
@@ -819,7 +858,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }
@@ -1202,7 +1241,7 @@
                 <td><span class="risk-dot medium">中</span></td>
                 <td><span class="sparkline-down"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polygon class="spark-area" points="1,4 4,5 7,6 10,5 13,7 16,7 19,8 19,10 1,10" fill="url(#sparkDown)"/><polyline points="1,4 4,5 7,6 10,5 13,7 16,7 19,8" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
-              <!-- 002049 紫光国微 -->
+              <!-- 002049 紫光国微 (stale signal — 信号超过 5 分钟未更新) -->
               <tr class="row">
                 <td class="cell-ticker numeric">002049</td>
                 <td>紫光国微</td>
@@ -1212,9 +1251,9 @@
                 <td class="right numeric cell-volume">8.9亿</td>
                 <td class="right numeric cell-volume">580亿</td>
                 <td><span class="cell-badge sector">科技</span></td>
-                <td><span class="signal-pill hold s0">持有 <span class="signal-strength">0.45</span></span></td>
-                <td><span class="risk-dot low">低</span></td>
-                <td><span class="sparkline-up"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polygon class="spark-area" points="1,7 4,6 7,7 10,6 13,5 16,4 19,3 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,7 4,6 7,7 10,6 13,5 16,4 19,3" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
+                <td><span class="signal-pill hold s0 stale">持有 <span class="signal-strength">0.45</span></span></td>
+                <td><span class="risk-dot low stale">低</span></td>
+                <td><span class="sparkline-up stale"><svg viewBox="0 0 20 10" preserveAspectRatio="none"><polygon class="spark-area" points="1,7 4,6 7,7 10,6 13,5 16,4 19,3 19,10 1,10" fill="url(#sparkUp)"/><polyline points="1,7 4,6 7,7 10,6 13,5 16,4 19,3" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg></span></td>
               </tr>
             </tbody>
           </table>
@@ -1807,6 +1846,32 @@
           <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
           <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">数据更新于 3 分钟前，可能不是最新状态</span>
         </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Signal Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div style="padding:var(--space-8);display:flex;gap:var(--space-12);flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:var(--space-4);align-items:flex-start;">
+            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">买入（过时）</span>
+            <span class="signal-pill buy s2 stale">买入 <span class="signal-strength">0.92</span></span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-4);align-items:flex-start;">
+            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">卖出（过时）</span>
+            <span class="signal-pill sell s1 stale">卖出 <span class="signal-strength">0.71</span></span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-4);align-items:flex-start;">
+            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">持有（过时）</span>
+            <span class="signal-pill hold stale">持有 <span class="signal-strength">0.45</span></span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-4);align-items:flex-start;">
+            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">风险（过时）</span>
+            <span class="risk-dot stale">低</span>
+          </div>
+        </div>
+        <div style="margin-top:var(--space-8);font-size:var(--font-size-10);color:var(--text-tertiary);">信号超过 5 分钟未更新 — 去饱和 + 橙色 stale dot</div>
       </div>
       </div>
     </div>

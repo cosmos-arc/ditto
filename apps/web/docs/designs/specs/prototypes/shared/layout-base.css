@@ -2771,7 +2771,7 @@ details.context-section > .context-section-body {
 .shell-ops {
   display: grid;
   grid-template-columns: var(--shell-rail-width) 1fr var(--shell-ops-detail-width);
-  grid-template-rows: 60px auto 1fr;
+  grid-template-rows: var(--shell-header-height) auto 1fr;
   grid-template-areas:
     "rail header header"
     "rail health health"
@@ -2787,7 +2787,7 @@ details.context-section > .context-section-body {
 
 .shell-ops .shell-header {
   grid-area: header;
-  height: 60px;
+  height: var(--shell-header-height);
 }
 
 .shell-ops .ops-health {

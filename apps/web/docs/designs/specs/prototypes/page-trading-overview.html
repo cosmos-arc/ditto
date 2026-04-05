@@ -77,7 +77,7 @@
       right: var(--space-6);
       z-index: 999;
       font-family: var(--font-family-ui);
-      font-size: 11px;
+      font-size: var(--font-size-12);
       color: var(--brand-signature-fg);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
@@ -220,7 +220,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: color-mix(in oklch, white 3%, transparent);
+      background: var(--overlay-3);
       pointer-events: none;
     }
 
@@ -300,6 +300,7 @@
       padding: var(--space-8) var(--space-12);
     }
     .trading-banner .decision-banner {
+      /* Trading context: tighter gap for analytical density — shared default is var(--space-16) */
       gap: var(--space-12);
     }
 
@@ -1151,7 +1152,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }
@@ -2190,7 +2191,7 @@
         </div>
         <div class="overlay-body">
           <div style="display:flex;align-items:flex-start;gap:var(--space-10);padding:var(--space-8) 0;">
-            <div style="width:32px;height:32px;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--risk-critical-fg);font-size:16px;font-weight:var(--font-weight-semibold);">!</div>
+            <div style="width:32px;height:32px;border-radius:50%;background:color-mix(in oklch, var(--risk-critical-fg) 10%, transparent);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--risk-critical-fg);font-size:var(--font-size-16);font-weight:var(--font-weight-semibold);">!</div>
             <div>
               <p style="margin:0 0 var(--space-6);color:var(--text-primary);font-size:var(--font-size-13);font-weight:var(--font-weight-medium);">暂停后所有新订单将被拦截</p>
               <p style="margin:0;color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
@@ -2873,7 +2874,7 @@
           </div>
           <div class="overlay-body">
             <div style="display:flex;align-items:flex-start;gap:var(--space-10);padding:var(--space-8) 0;">
-              <div style="width:32px;height:32px;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--risk-critical-fg);font-size:16px;font-weight:var(--font-weight-semibold);">!</div>
+              <div style="width:32px;height:32px;border-radius:50%;background:color-mix(in oklch, var(--risk-critical-fg) 10%, transparent);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--risk-critical-fg);font-size:var(--font-size-16);font-weight:var(--font-weight-semibold);">!</div>
               <div>
                 <p style="margin:0 0 var(--space-6);color:var(--text-primary);font-size:var(--font-size-13);font-weight:var(--font-weight-medium);">暂停后所有新订单将被拦截</p>
                 <p style="margin:0;color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
