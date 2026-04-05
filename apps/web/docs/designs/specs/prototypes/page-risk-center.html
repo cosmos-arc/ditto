@@ -775,7 +775,7 @@
 
     .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
     .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
-    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-primary { background: var(--brand-accent); color: var(--brand-accent-fg); border-color: var(--brand-accent); }
     .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
 
     /* State variant containers inherit page style */
@@ -795,7 +795,7 @@
 
     /* Override shared grid for risk-center tabs + panels layout */
     .shell-analytical {
-      grid-template-rows: 64px auto auto 1fr;
+      grid-template-rows: var(--shell-header-height) auto auto 1fr;
       grid-template-areas:
         "rail header   header"
         "rail strip    strip"

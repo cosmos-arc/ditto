@@ -102,7 +102,7 @@
     .shell-agent {
       display: grid;
       grid-template-columns: var(--shell-rail-width) 1fr 340px;
-      grid-template-rows: 60px auto 1fr;
+      grid-template-rows: var(--shell-header-height) auto 1fr;
       grid-template-areas:
         "rail header header"
         "rail tabs   tabs"
@@ -1144,7 +1144,7 @@
 
     .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
     .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
-    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-primary { background: var(--brand-accent); color: var(--brand-accent-fg); border-color: var(--brand-accent); }
     .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
     .overlay-btn-danger { background: transparent; color: var(--risk-high-fg, #ef4444); border-color: var(--risk-high-fg, #ef4444); }
 
@@ -2070,28 +2070,28 @@
               <input type="radio" name="plan-template" checked style="accent-color:var(--brand-accent)">
               <div>
                 <div style="font-weight:var(--font-weight-medium)">全链路研究流水线</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-11);margin-top:2px">因子挖掘 &#8594; 策略验证 &#8594; 风控校验</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">因子挖掘 &#8594; 策略验证 &#8594; 风控校验</div>
               </div>
             </label>
             <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
               <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
               <div>
                 <div style="font-weight:var(--font-weight-medium)">财报季解读流水线</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-11);margin-top:2px">财报提取 &#8594; 归因分析 &#8594; 持仓影响评估</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">财报提取 &#8594; 归因分析 &#8594; 持仓影响评估</div>
               </div>
             </label>
             <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
               <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
               <div>
                 <div style="font-weight:var(--font-weight-medium)">盘后复盘流水线</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-11);margin-top:2px">盈亏归因 &#8594; 异常检测 &#8594; 策略调整建议</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">盈亏归因 &#8594; 异常检测 &#8594; 策略调整建议</div>
               </div>
             </label>
             <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
               <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
               <div>
                 <div style="font-weight:var(--font-weight-medium)">自定义流水线</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-11);margin-top:2px">手动配置 Agent 链路（v1.5 支持）</div>
+                <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">手动配置 Agent 链路（v1.5 支持）</div>
               </div>
             </label>
           </div>
@@ -2189,7 +2189,7 @@
           </div>
 
           <h4>数据快照</h4>
-          <div style="background:var(--surface-strip);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-code);font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.6">
+          <div style="background:var(--surface-strip);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-code);font-size:var(--font-size-12);color:var(--text-tertiary);line-height:1.6">
             | code | date | MOM_5d | MOM_10d | MOM_20d | MOM_60d |<br>
             |------|------|--------|---------|---------|---------|<br>
             | 600519 | 2026-03-28 | +1.2% | +3.4% | +5.1% | +8.7% |<br>
@@ -2558,28 +2558,28 @@
                 <input type="radio" name="plan-template" checked style="accent-color:var(--brand-accent)">
                 <div>
                   <div style="font-weight:var(--font-weight-medium)">全链路研究流水线</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-11);margin-top:2px">因子挖掘 &#8594; 策略验证 &#8594; 风控校验</div>
+                  <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">因子挖掘 &#8594; 策略验证 &#8594; 风控校验</div>
                 </div>
               </label>
               <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
                 <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
                 <div>
                   <div style="font-weight:var(--font-weight-medium)">财报季解读流水线</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-11);margin-top:2px">财报提取 &#8594; 归因分析 &#8594; 持仓影响评估</div>
+                  <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">财报提取 &#8594; 归因分析 &#8594; 持仓影响评估</div>
                 </div>
               </label>
               <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
                 <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
                 <div>
                   <div style="font-weight:var(--font-weight-medium)">盘后复盘流水线</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-11);margin-top:2px">盈亏归因 &#8594; 异常检测 &#8594; 策略调整建议</div>
+                  <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">盈亏归因 &#8594; 异常检测 &#8594; 策略调整建议</div>
                 </div>
               </label>
               <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
                 <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
                 <div>
                   <div style="font-weight:var(--font-weight-medium)">自定义流水线</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-11);margin-top:2px">手动配置 Agent 链路（v1.5 支持）</div>
+                  <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">手动配置 Agent 链路（v1.5 支持）</div>
                 </div>
               </label>
             </div>
@@ -2677,7 +2677,7 @@
             </div>
 
             <h4>数据快照</h4>
-            <div style="background:var(--surface-strip);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-code);font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.6">
+            <div style="background:var(--surface-strip);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-code);font-size:var(--font-size-12);color:var(--text-tertiary);line-height:1.6">
               | code | date | MOM_5d | MOM_10d | MOM_20d | MOM_60d |<br>
               |------|------|--------|---------|---------|---------|<br>
               | 600519 | 2026-03-28 | +1.2% | +3.4% | +5.1% | +8.7% |<br>
@@ -2696,11 +2696,6 @@
   <!-- ═══ Overlay Trigger Checkboxes ═══ -->
   <input type="checkbox" id="overlay-plan-create" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-run-rerun" class="overlay-radio sr-only">
-  <input type="checkbox" id="overlay-approval-confirm" class="overlay-radio sr-only">
-  <input type="checkbox" id="overlay-approval-confirm" class="overlay-radio sr-only">
-  <input type="checkbox" id="overlay-run-rerun" class="overlay-radio sr-only">
-  <input type="checkbox" id="overlay-tool-trace" class="overlay-radio sr-only">
-  <input type="checkbox" id="overlay-plan-create" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-approval-confirm" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-tool-trace" class="overlay-radio sr-only">
 </body>

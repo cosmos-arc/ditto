@@ -279,7 +279,7 @@
      * Trading Variant: 4-row override (banner + no analysis band)
      * ══════════════════════════════════════════════ */
     .shell-analytical.trading-variant {
-      grid-template-rows: 64px auto auto 1fr;
+      grid-template-rows: var(--shell-header-height) auto auto 1fr;
       grid-template-areas:
         "rail header   header"
         "rail strip    strip"
@@ -1165,7 +1165,7 @@
 
     .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
     .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
-    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-primary { background: var(--brand-accent); color: var(--brand-accent-fg); border-color: var(--brand-accent); }
     .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
     .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
 
@@ -1871,7 +1871,7 @@
               </div>
             </div>
             <div class="panel-body">
-              <h4 style="font-size:var(--font-size-11);color:var(--text-tertiary);margin:0 0 var(--space-6);">行业贡献</h4>
+              <h4 style="font-size:var(--font-size-12);color:var(--text-tertiary);margin:0 0 var(--space-6);">行业贡献</h4>
               <div class="attribution-row">
                 <span class="attribution-label">科技</span>
                 <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:65%;"></div></div>
@@ -1888,7 +1888,7 @@
                 <span class="attribution-value up">+1,040</span>
               </div>
 
-              <h4 style="font-size:var(--font-size-11);color:var(--text-tertiary);margin:var(--space-10) 0 var(--space-6);">个股贡献</h4>
+              <h4 style="font-size:var(--font-size-12);color:var(--text-tertiary);margin:var(--space-10) 0 var(--space-6);">个股贡献</h4>
               <div class="attribution-row">
                 <span class="attribution-label">贵州茅台</span>
                 <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:45%;"></div></div>
@@ -1905,7 +1905,7 @@
                 <span class="attribution-value down">-1,200</span>
               </div>
 
-              <h4 style="font-size:var(--font-size-11);color:var(--text-tertiary);margin:var(--space-10) 0 var(--space-6);">因子贡献</h4>
+              <h4 style="font-size:var(--font-size-12);color:var(--text-tertiary);margin:var(--space-10) 0 var(--space-6);">因子贡献</h4>
               <div class="attribution-row">
                 <span class="attribution-label">动量</span>
                 <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:55%;"></div></div>

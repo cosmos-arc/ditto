@@ -49,6 +49,7 @@
   --brand-accent:              var(--brand-500);
   --brand-accent-hover:        var(--brand-400);
   --brand-accent-subtle:       oklch(from var(--brand-500) l c h / 0.10);
+  --brand-accent-fg:           oklch(0.99 0.002 253);
 
   /* ── Signature Brass - dark ── */
   --brand-signature-fg:        oklch(0.760 0.055 74);

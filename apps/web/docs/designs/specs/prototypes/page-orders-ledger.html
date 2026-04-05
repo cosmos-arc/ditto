@@ -118,7 +118,7 @@
     .shell-ledger {
       display: grid;
       grid-template-columns: var(--shell-rail-width) 1fr 340px;
-      grid-template-rows: 60px auto 1fr;
+      grid-template-rows: var(--shell-header-height) auto 1fr;
       grid-template-areas:
         "rail header  header"
         "rail strip  strip"
@@ -1240,7 +1240,7 @@
 
     .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
     .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
-    .overlay-btn-primary { background: var(--brand-accent); color: #fff; border-color: var(--brand-accent); }
+    .overlay-btn-primary { background: var(--brand-accent); color: var(--brand-accent-fg); border-color: var(--brand-accent); }
     .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
     .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
 
@@ -2119,7 +2119,7 @@
               <td class="numeric">3,000</td>
               <td class="numeric">15.60</td>
               <td><span class="order-status cancelled"><span class="status-dot-inline" aria-hidden="true"></span> 已撤单</span></td>
-              <td style="color:var(--text-tertiary);font-size:var(--font-size-11);">用户主动撤单</td>
+              <td style="color:var(--text-tertiary);font-size:var(--font-size-12);">用户主动撤单</td>
               <td class="cell-time">10:12:30</td>
             </tr>
           </tbody>
@@ -2424,7 +2424,7 @@
         <div class="state-error" style="padding:var(--space-8);">
           <div class="state-error-icon" style="width:24px;height:24px;font-size:12px;">!</div>
           <div class="state-error-title" style="font-size:var(--font-size-12);">筛选器加载失败</div>
-          <button class="state-error-retry" style="font-size:var(--font-size-11);">重试</button>
+          <button class="state-error-retry" style="font-size:var(--font-size-12);">重试</button>
         </div>
       </div>
       </div>
@@ -2595,8 +2595,8 @@
         <div class="state-error" style="padding:var(--space-8);">
           <div class="state-error-icon" style="width:24px;height:24px;font-size:12px;">!</div>
           <div class="state-error-title" style="font-size:var(--font-size-12);">批量操作失败</div>
-          <div class="state-error-desc" style="font-size:var(--font-size-11);">部分订单操作未成功执行</div>
-          <button class="state-error-retry" style="font-size:var(--font-size-11);">重试</button>
+          <div class="state-error-desc" style="font-size:var(--font-size-12);">部分订单操作未成功执行</div>
+          <button class="state-error-retry" style="font-size:var(--font-size-12);">重试</button>
         </div>
       </div>
       </div>
