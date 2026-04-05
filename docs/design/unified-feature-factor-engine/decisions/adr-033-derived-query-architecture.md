@@ -298,7 +298,7 @@ packages/data/src/ditto_data/
         queries.py              # DerivedSeriesQuery, etc.
         results.py              # CoverageInfo
 
-apps/port/src/ditto_port/
+apps/port/src/ditto_interfaces/
   facades/
     derived/
       __init__.py

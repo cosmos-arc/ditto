@@ -32,7 +32,7 @@
 ditto/
 ├─ apps/
 │  ├─ port/                          # 组合根 + 配置加载 + DI
-│  │  ├─ src/ditto_port/
+│  │  ├─ src/ditto_interfaces/
 │  │  │  ├─ bootstrap/               # 启动/关闭流程
 │  │  │  ├─ config/                  # 唯一配置入口
 │  │  │  ├─ cli/                     # CLI 入口

@@ -126,7 +126,7 @@ interfaces (apps/) → app (packages/) → data, engine, analytics, kernel, infr
 | `ditto_data` | QualityService, Errors | 实例化 + 调用 |
 
 **app 包禁止依赖**：
-- `ditto_port` / `ditto_interfaces` — 防止循环
+- `ditto_interfaces` / `ditto_interfaces` — 防止循环
 
 ---
 
@@ -140,7 +140,7 @@ interfaces (apps/) → app (packages/) → data, engine, analytics, kernel, infr
 | `evaluation.py` | `services/derived/evaluation_facade.py` | engine.FactorEvaluator, datahub.ForwardReturnService | 因子评估 |
 | `research.py` | `services/derived/research.py` | engine.ResearchDataset, datahub.ResearchCatalogService | 研究数据集快照 |
 
-**注意**：`query_facade.py` 依赖 `ditto_port.models.derived`（Pydantic 请求/响应模型）。这些模型是 port 层的 API contract，不应迁入 app。解决方案：
+**注意**：`query_facade.py` 依赖 `ditto_interfaces.models.derived`（Pydantic 请求/响应模型）。这些模型是 port 层的 API contract，不应迁入 app。解决方案：
 - **方案 A**：`derived.py` 不再直接返回 `DerivedLatestResult` 等类型，改为返回 data 层原生类型，由 interfaces 层做转换。
 - **方案 B**：将 Pydantic 模型也迁入 app 层，interfaces 层 re-export。
 - **决策**：采用 **方案 A**（最小变更）— `app/query/derived.py` 返回 data 层原生类型（`pl.DataFrame`），interfaces 的 API 路由层负责转换为 Pydantic 响应。需要评估影响范围。
@@ -155,7 +155,7 @@ interfaces (apps/) → app (packages/) → data, engine, analytics, kernel, infr
 
 **ingestion 的特殊性**：
 - `IngestionCoordinator` 不通过 DI 提供，而是通过 `create_coordinator()` 工厂函数创建（contextmanager）
-- 依赖 `ditto_port.errors` 和 `ditto_port.models` — 这些需要提取或解耦
+- 依赖 `ditto_interfaces.errors` 和 `ditto_interfaces.models` — 这些需要提取或解耦
 
 **materialization 的拆分**：
 - `query_facade.py` → `app/query/derived.py`（Query）
@@ -276,7 +276,7 @@ class IngestionBundle:
 
 ```ini
 # root_modules 新增 ditto_app
-root_modules = ditto_infra ditto_kernel ditto_data ditto_data ditto_analytics ditto_engine ditto_port ditto_app
+root_modules = ditto_infra ditto_kernel ditto_data ditto_data ditto_analytics ditto_engine ditto_interfaces ditto_app
 
 # R8: app 内部互斥
 [importlinter:contract:app-query-isolation]
@@ -302,16 +302,16 @@ forbidden_modules = ditto_app.query, ditto_app.command
 name = App must not import Port layer
 type = forbidden
 source_modules = ditto_app
-forbidden_modules = ditto_port
+forbidden_modules = ditto_interfaces
 ```
 
 ### Phase 4d 后更新
 
 ```ini
-# root_modules: ditto_port → ditto_interfaces
+# root_modules: ditto_interfaces → ditto_interfaces
 root_modules = ditto_infra ditto_kernel ditto_data ditto_data ditto_analytics ditto_engine ditto_interfaces ditto_app
 
-# 更新所有 ditto_port 引用为 ditto_interfaces
+# 更新所有 ditto_interfaces 引用为 ditto_interfaces
 [importlinter:contract:app-no-port-import]
 forbidden_modules = ditto_interfaces
 ```
@@ -344,7 +344,7 @@ layers = ditto_interfaces
 | K3 | `IngestionCoordinator` 依赖 `port.errors` / `port.models` | 中 | 中 | 将 port.errors 中的通用错误类型提取到 data 层或 kernel 层 |
 | K4 | `create_coordinator()` 工厂模式与 DI 不兼容 | 中 | 低 | Phase 4b 统一改为 DI Provider |
 | K5 | Bundle 模式变化影响 CLI/Prefect 调用方式 | 中 | 中 | 分批更新调用点，保持接口兼容 |
-| K6 | 测试文件引用 `ditto_port.services.*` | 高 | 低 | Strangler re-export shim 过渡 |
+| K6 | 测试文件引用 `ditto_interfaces.services.*` | 高 | 低 | Strangler re-export shim 过渡 |
 
 ---
 
@@ -370,7 +370,7 @@ layers = ditto_interfaces
 **验证**：
 - [ ] `pixi run -e dev check` 全通过
 - [ ] `pixi run -e dev arch-check` 全通过（含新规则）
-- [ ] `grep -rn "from ditto_port.services.derived.query_facade\|from ditto_port.services.derived.evaluation_facade\|from ditto_port.services.derived.research" packages/ apps/ --include="*.py"` 仅剩 re-export shim
+- [ ] `grep -rn "from ditto_interfaces.services.derived.query_facade\|from ditto_interfaces.services.derived.evaluation_facade\|from ditto_interfaces.services.derived.research" packages/ apps/ --include="*.py"` 仅剩 re-export shim
 
 ### PR 2 (4a-2 + 4c): 迁移 Process 服务 + Builders + R8 全量规则
 
@@ -390,7 +390,7 @@ layers = ditto_interfaces
 **验证**：
 - [ ] `pixi run -e dev check` 全通过
 - [ ] `pixi run -e dev arch-check` 全通过（含全部 R8 规则）
-- [ ] `grep -rn "from ditto_port.services" apps/ --include="*.py"` 仅剩 re-export shim + api/cli/jobs 调用点
+- [ ] `grep -rn "from ditto_interfaces.services" apps/ --include="*.py"` 仅剩 re-export shim + api/cli/jobs 调用点
 
 ### PR 3 (4b): DI 重构 — AppProvider 提取
 
@@ -408,7 +408,7 @@ layers = ditto_interfaces
 **验证**：
 - [ ] `pixi run -e dev check` 全通过
 - [ ] DI 解析无错误：FastAPI 启动 + CLI smoke test
-- [ ] `grep -rn "from ditto_port.services" apps/port/registry/ --include="*.py"` 返回 0（registry 不再引用 services）
+- [ ] `grep -rn "from ditto_interfaces.services" apps/port/registry/ --include="*.py"` 返回 0（registry 不再引用 services）
 
 ### PR 4 (4d): port → interfaces 重命名
 
@@ -417,14 +417,14 @@ layers = ditto_interfaces
 | 操作 | 文件 | 变更 |
 |------|------|------|
 | RENAME | `apps/port/` → `apps/interfaces/` | 目录重命名 |
-| EDIT | `apps/interfaces/pyproject.toml` | `ditto_port` → `ditto_interfaces` |
-| EDIT | 全库 `.py` 文件 | `ditto_port` → `ditto_interfaces` |
+| EDIT | `apps/interfaces/pyproject.toml` | `ditto_interfaces` → `ditto_interfaces` |
+| EDIT | 全库 `.py` 文件 | `ditto_interfaces` → `ditto_interfaces` |
 | EDIT | `.importlinter` | root_modules + contract 中包名更新 |
 | EDIT | `CLAUDE.md` | 文档更新 |
 
 **验证**：
 - [ ] `pixi run -e dev check` 全通过
-- [ ] `grep -rn "ditto_port" packages/ apps/ --include="*.py"` 返回 0
+- [ ] `grep -rn "ditto_interfaces" packages/ apps/ --include="*.py"` 返回 0
 
 ### PR 5 (4e): 清理 + importlinter 全量
 
@@ -440,7 +440,7 @@ layers = ditto_interfaces
 **验证**：
 - [ ] `pixi run -e dev ci` 全通过
 - [ ] `pixi run -e dev arch-check` 全部 contract 通过
-- [ ] `grep -rn "from ditto_port\|from ditto_interfaces.services" packages/ apps/ --include="*.py"` 返回 0
+- [ ] `grep -rn "from ditto_interfaces\|from ditto_interfaces.services" packages/ apps/ --include="*.py"` 返回 0
 - [ ] 文档反映最终架构
 
 ---

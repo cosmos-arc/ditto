@@ -98,12 +98,12 @@ class QualityService:
             context: Additional context (e.g., reference_values for FK checks)
 
         Returns:
-            Tuple of (cleaned_df, should_block):
-                - cleaned_df: DataFrame after quarantine (may be empty)
-                - should_block: Whether to block ingestion (True if L1 errors)
+            Tuple of (df, should_block):
+                - df: Original DataFrame (unchanged;
+                  quarantine copies bad rows to separate store)
+                - should_block: Whether to block ingestion (True if L1 errors found)
 
         """
-        # Run L1/L2 checks
         result = self._engine.check(
             df=df,
             dataset=dataset,
@@ -111,7 +111,15 @@ class QualityService:
             context=context,
         )
 
-        # Log results
+        self._log_check_result(result, dataset)
+
+        if result.issues:
+            self._quarantine_data(df, result, dataset)
+
+        return df, result.has_errors
+
+    def _log_check_result(self, result: DQResult, dataset: str) -> None:
+        """记录 DQ 检查结果."""
         if result.issues:
             logger.warning(
                 "DQ issues found during write",
@@ -128,20 +136,10 @@ class QualityService:
                 dataset=dataset,
             )
 
-        # Determine if we should block ingestion
-        # L1 errors cause blocking
-        should_block = result.has_errors
-
-        # If there are issues, quarantine the bad data
-        if result.issues:
-            self._quarantine_data(df, result, dataset)
-
-        return df, should_block
-
     def _quarantine_data(
         self,
         df: pl.DataFrame,
-        result: Any,  # DQResult
+        result: DQResult,
         dataset: str,
     ) -> None:
         """
@@ -164,40 +162,39 @@ class QualityService:
             )
             return
 
-        # Group issues by rule to avoid duplicate saves
         for issue in result.issues:
-            if issue.affected_rows == 0:
+            if issue.affected_rows == 0 or not issue.sample_data:
                 continue
+            self._save_quarantine_issue(dataset, issue)
 
-            # Extract sample data as DataFrame
-            if not issue.sample_data:
-                continue
-
-            try:
-                failed_df = pl.DataFrame(issue.sample_data)
-                self._quarantine_writer.save_failed_data(
-                    dataset=dataset,
-                    rule_id=issue.rule_name,
-                    severity=issue.severity.value,
-                    failed_data=failed_df,
-                    trade_date=None,  # Can be extracted from context if needed
-                )
-                logger.info(
-                    "Quarantined bad data",
-                    event="dq_quarantine",
-                    dataset=dataset,
-                    rule_id=issue.rule_name,
-                    severity=issue.severity.value,
-                    affected_rows=issue.affected_rows,
-                )
-            except Exception as e:
-                logger.error(
-                    "Failed to quarantine data",
-                    event="dq_quarantine_failed",
-                    dataset=dataset,
-                    rule_id=issue.rule_name,
-                    error=str(e),
-                )
+    def _save_quarantine_issue(self, dataset: str, issue: Any) -> None:
+        """保存单个 issue 的隔离数据."""
+        assert self._quarantine_writer is not None  # noqa: S101  # guarded by _quarantine_data
+        try:
+            failed_df = pl.DataFrame(issue.sample_data)
+            self._quarantine_writer.save_failed_data(
+                dataset=dataset,
+                rule_id=issue.rule_name,
+                severity=issue.severity.value,
+                failed_data=failed_df,
+                trade_date=None,
+            )
+            logger.info(
+                "Quarantined bad data",
+                event="dq_quarantine",
+                dataset=dataset,
+                rule_id=issue.rule_name,
+                severity=issue.severity.value,
+                affected_rows=issue.affected_rows,
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to quarantine data",
+                event="dq_quarantine_failed",
+                dataset=dataset,
+                rule_id=issue.rule_name,
+                error=str(e),
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -263,82 +260,97 @@ class L3BatchService:
         )
 
         try:
-            # Get historical and current data from Data layer
-            historical, current = self._fetch_data(
-                trade_date=trade_date,
-                asset_class=asset_class,
-                market_wide=market_wide,
+            historical, current, calendar = self._fetch_check_data(
+                trade_date,
+                asset_class,
+                market_wide,
             )
-
-            # Get calendar for completeness check
-            calendar = self._fetch_calendar(trade_date=trade_date)
-
-            # Execute L3 checks with injected data
             result = self._engine.check_statistical(
                 dataset=dataset,
                 current=current,
                 historical=historical,
                 calendar=calendar,
             )
+            return self._format_check_result(dataset, trade_date, result)
+        except (pl_exceptions.ComputeError, pl_exceptions.SchemaError, ValueError) as e:
+            return self._handle_check_error(dataset, trade_date, e, is_data_error=True)
+        except Exception as e:
+            return self._handle_check_error(dataset, trade_date, e, is_data_error=False)
 
-            # Log results
-            if result.issues:
-                logger.warning(
-                    "L3 issues found",
-                    event="l3_batch_issues",
-                    dataset=dataset,
-                    count=len(result.issues),
-                )
-            else:
-                logger.info(
-                    "L3 check passed",
-                    event="l3_batch_passed",
-                    dataset=dataset,
-                )
+    def _handle_check_error(
+        self,
+        dataset: str,
+        trade_date: str,
+        error: Exception,
+        *,
+        is_data_error: bool,
+    ) -> dict[str, Any]:
+        """统一处理 L3 检查异常，记录日志并返回错误结果."""
+        event_name = (
+            "l3_batch_check_data_processing_failed"
+            if is_data_error
+            else "l3_batch_check_unknown_error"
+        )
+        logger.exception(
+            event_name,
+            event="l3_batch_error",
+            dataset=dataset,
+            trade_date=trade_date,
+            error_type=type(error).__name__,
+        )
+        return {
+            "dataset": dataset,
+            "trade_date": trade_date,
+            "passed": False,
+            "error": f"{type(error).__name__}: {error!s}",
+        }
 
-            # Send alerts if needed
+    def _fetch_check_data(
+        self,
+        trade_date: str,
+        asset_class: Literal["stock", "etf", "index"] | None,
+        market_wide: bool,
+    ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+        """获取 L3 检查所需的历史、当前和日历数据."""
+        historical, current = self._fetch_data(
+            trade_date=trade_date,
+            asset_class=asset_class,
+            market_wide=market_wide,
+        )
+        calendar = self._fetch_calendar(trade_date=trade_date)
+        return historical, current, calendar
+
+    def _format_check_result(
+        self,
+        dataset: str,
+        trade_date: str,
+        result: DQResult,
+    ) -> dict[str, Any]:
+        """格式化 L3 检查结果."""
+        if result.issues:
+            logger.warning(
+                "L3 issues found",
+                event="l3_batch_issues",
+                dataset=dataset,
+                count=len(result.issues),
+            )
             if result.has_alerts:
                 self._send_alert(trade_date, dataset, result.issues)
-
-            return {
-                "dataset": dataset,
-                "trade_date": trade_date,
-                "passed": result.passed,
-                "issue_count": len(result.issues),
-                "alert_count": result.alert_count,
-                "issues": result.issues,
-            }
-
-        except (pl_exceptions.ComputeError, pl_exceptions.SchemaError, ValueError) as e:
-            # 数据处理相关异常
-            logger.exception(
-                "l3_batch_check_data_processing_failed",
-                event="l3_batch_error",
+        else:
+            logger.info(
+                "L3 check passed",
+                event="l3_batch_passed",
                 dataset=dataset,
-                trade_date=trade_date,
-                error_type=type(e).__name__,
             )
-            return {
-                "dataset": dataset,
-                "trade_date": trade_date,
-                "passed": False,
-                "error": f"{type(e).__name__}: {e!s}",
-            }
-        except Exception as e:
-            # 未知异常
-            logger.exception(
-                "l3_batch_check_unknown_error",
-                event="l3_batch_error",
-                dataset=dataset,
-                trade_date=trade_date,
-                error_type=type(e).__name__,
-            )
-            return {
-                "dataset": dataset,
-                "trade_date": trade_date,
-                "passed": False,
-                "error": f"{type(e).__name__}: {e!s}",
-            }
+
+        return {
+            "dataset": dataset,
+            "trade_date": trade_date,
+            "passed": result.passed,
+            "issue_count": len(result.issues),
+            "alert_count": result.alert_count,
+            "issues": result.issues,
+        }
 
     def _fetch_data(
         self,
@@ -489,7 +501,7 @@ class QualityReconciliationService:
 
     def __init__(
         self,
-        engine: Any,  # QualityEngine
+        engine: QualityEngine,
         tdx_source: TdxSourceProtocol,
         comparison_store: ComparisonStoreProtocol,
         instrument_store: InstrumentStoreProtocol,
@@ -547,109 +559,140 @@ class QualityReconciliationService:
         )
 
         try:
-            # 1. 验证输入
-            if "instrument_id" not in primary_df.columns:
-                raise ValueError("primary_df must contain 'instrument_id' column")
+            enriched = self._enrich_and_filter(primary_df, trade_date, dataset)
+            if isinstance(enriched, ReconciliationResult):
+                return enriched
 
-            # 2. 添加 ticker 列（instrument_id → ticker 转换）
-            primary_df = self._instrument_store.enrich_with_ticker(primary_df)
-
-            if "ticker" not in primary_df.columns:
-                raise ValueError("Failed to enrich primary_df with ticker")
-
-            # 3. 应用黄金数据集过滤
-            primary_df = self._apply_golden_dataset_filter(primary_df)
-
-            if primary_df.is_empty():
-                logger.info(
-                    "Golden dataset filter resulted in empty dataset",
-                    event="reconciliation_golden_empty",
-                    trade_date=trade_date,
-                    dataset=dataset,
-                )
-                return ReconciliationResult(
-                    trade_date=trade_date,
-                    dataset=dataset,
-                    passed=True,
-                    issue_count=0,
-                    skipped=True,
-                    skip_reason="golden_dataset_filter_empty",
-                )
-
-            # 4. 提取 ticker 列表
-            tickers = primary_df["ticker"].unique().to_list()
-
-            # 5. 获取辅助数据源（TDX）
-            # TdxSource 内部将 ticker 转换为 TDX 格式的 source_ticker
-            secondary_df = self._tdx_source.fetch_stock_daily_bars(tickers, trade_date)
-
-            if secondary_df.height == 0:
-                logger.warning(
-                    "No TDX data found for comparison",
-                    event="reconciliation_no_secondary",
-                    trade_date=trade_date,
-                )
-                return ReconciliationResult(
-                    trade_date=trade_date,
-                    dataset=dataset,
-                    passed=True,
-                    issue_count=0,
-                    skipped=True,
-                    skip_reason="no_secondary_data",
-                )
-
-            # 6. 调用 Engine 层引擎进行对比
-            # 配置文件使用 key_columns: [ticker, trade_date]
-            result = self._engine.check_cross_source(
-                primary=primary_df,
-                secondary=secondary_df,
-                dataset=dataset,
-            )
-
-            # 7. 转换 DQResult → DataFrame（Port 层职责）
-            comparison_df = self._convert_result_to_df(result, dataset)
-
-            # 8. 存储对比结果
-            if not comparison_df.is_empty():
-                self._comparison_store.write_comparison(
-                    trade_date, comparison_df, dataset
-                )
-
-            # 9. 判断是否需要告警
-            if result.issues:
-                await self._send_alerts(result, trade_date, dataset)
-
-            logger.info(
-                "Daily reconciliation complete",
-                event="reconciliation_complete",
-                trade_date=trade_date,
-                dataset=dataset,
-                passed=result.passed,
-                issue_count=len(result.issues),
-            )
-
-            return ReconciliationResult(
-                trade_date=trade_date,
-                dataset=dataset,
-                passed=result.passed,
-                issue_count=len(result.issues),
-            )
-
+            return await self._execute_comparison(enriched, trade_date, dataset)
         except Exception as e:
-            logger.exception(
-                "Reconciliation failed",
-                event="reconciliation_error",
+            return self._handle_reconciliation_error(trade_date, dataset, e)
+
+    def _handle_reconciliation_error(
+        self,
+        trade_date: str,
+        dataset: str,
+        error: Exception,
+    ) -> ReconciliationResult:
+        """统一处理对账异常，记录日志并返回错误结果."""
+        logger.exception(
+            "Reconciliation failed",
+            event="reconciliation_error",
+            trade_date=trade_date,
+            dataset=dataset,
+            error_type=type(error).__name__,
+        )
+        return ReconciliationResult(
+            trade_date=trade_date,
+            dataset=dataset,
+            passed=False,
+            issue_count=0,
+            error=f"{type(error).__name__}: {error!s}",
+        )
+
+    def _enrich_and_filter(
+        self,
+        primary_df: pl.DataFrame,
+        trade_date: str,
+        dataset: str,
+    ) -> pl.DataFrame | ReconciliationResult:
+        """添加 ticker 列并应用黄金数据集过滤。返回过滤后的 DataFrame 或跳过结果."""
+        if "instrument_id" not in primary_df.columns:
+            raise ValueError("primary_df must contain 'instrument_id' column")
+
+        primary_df = self._instrument_store.enrich_with_ticker(primary_df)
+
+        if "ticker" not in primary_df.columns:
+            raise ValueError("Failed to enrich primary_df with ticker")
+
+        primary_df = self._apply_golden_dataset_filter(primary_df)
+
+        if primary_df.is_empty():
+            logger.info(
+                "Golden dataset filter resulted in empty dataset",
+                event="reconciliation_golden_empty",
                 trade_date=trade_date,
                 dataset=dataset,
-                error_type=type(e).__name__,
             )
             return ReconciliationResult(
                 trade_date=trade_date,
                 dataset=dataset,
-                passed=False,
+                passed=True,
                 issue_count=0,
-                error=f"{type(e).__name__}: {e!s}",
+                skipped=True,
+                skip_reason="golden_dataset_filter_empty",
             )
+
+        return primary_df
+
+    async def _execute_comparison(
+        self,
+        primary_df: pl.DataFrame,
+        trade_date: str,
+        dataset: str,
+    ) -> ReconciliationResult:
+        """获取辅助数据源并执行对比."""
+        tickers = primary_df["ticker"].unique().to_list()
+
+        secondary_result = self._fetch_secondary(tickers, trade_date, dataset)
+        if isinstance(secondary_result, ReconciliationResult):
+            return secondary_result
+
+        # 配置文件使用 key_columns: [ticker, trade_date]
+        result = self._engine.check_cross_source(
+            primary=primary_df,
+            secondary=secondary_result,
+            dataset=dataset,
+        )
+
+        comparison_df = self._convert_result_to_df(result, dataset)
+        if not comparison_df.is_empty():
+            self._comparison_store.write_comparison(trade_date, comparison_df, dataset)
+
+        if result.issues:
+            await self._send_alerts(result, trade_date, dataset)
+
+        logger.info(
+            "Daily reconciliation complete",
+            event="reconciliation_complete",
+            trade_date=trade_date,
+            dataset=dataset,
+            passed=result.passed,
+            issue_count=len(result.issues),
+        )
+
+        return ReconciliationResult(
+            trade_date=trade_date,
+            dataset=dataset,
+            passed=result.passed,
+            issue_count=len(result.issues),
+        )
+
+    def _fetch_secondary(
+        self,
+        tickers: list[str],
+        trade_date: str,
+        dataset: str,
+    ) -> pl.DataFrame | ReconciliationResult:
+        """获取辅助数据源。返回 DataFrame 或跳过结果."""
+        # TdxSource 内部将 ticker 转换为 TDX 格式的 source_ticker
+        secondary_df = self._tdx_source.fetch_stock_daily_bars(tickers, trade_date)
+
+        if secondary_df.height == 0:
+            logger.warning(
+                "No TDX data found for comparison",
+                event="reconciliation_no_secondary",
+                trade_date=trade_date,
+            )
+            return ReconciliationResult(
+                trade_date=trade_date,
+                dataset=dataset,
+                passed=True,
+                issue_count=0,
+                skipped=True,
+                skip_reason="no_secondary_data",
+            )
+
+        return secondary_df
 
     def _apply_golden_dataset_filter(self, df: pl.DataFrame) -> pl.DataFrame:
         """

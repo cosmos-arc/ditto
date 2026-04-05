@@ -165,7 +165,7 @@ from ditto_analytics.models.research import (
 | `packages/data/src/ditto_data/stores/runtime/research_sqlite/reader.py` | store |
 | `packages/data/src/ditto_data/stores/runtime/research_sqlite/writer.py` | store |
 | `packages/data/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py` | test |
-| `apps/port/src/ditto_port/services/derived/research.py` | port service |
+| `apps/port/src/ditto_interfaces/services/derived/research.py` | port service |
 | `apps/port/tests/unit/services/derived/test_research_dataset_facade_unit.py` | port test |
 | `apps/port/tests/integration/flows/test_research_dataset_integration.py` | e2e test |
 
@@ -178,7 +178,7 @@ from ditto_analytics.models.research import (
 
 #### Step 5: 更新 .importlinter
 
-无需修改 — `datahub-boundary` 当前 forbidden `ditto_engine.**` 和 `ditto_port.**`，不包含 `ditto_analytics.**`。
+无需修改 — `datahub-boundary` 当前 forbidden `ditto_engine.**` 和 `ditto_interfaces.**`，不包含 `ditto_analytics.**`。
 `analytics-no-datahub-import` 仅约束 `analytics → datahub` 方向，不影响 `datahub → analytics`。
 
 #### Step 6: 更新 datahub README

@@ -11,9 +11,9 @@
 | **Phase 0** | Kernel 扩展 (Clock/DataProvider/EventBus) | **完成** | pipeline.py 已从 kernel 移除 |
 | **Phase 0.5** | Pipeline 移除 + Provider 合并 | **完成** | 3 PR 全部完成 |
 | **Phase 1** | DataFeed 统一 + Core 依赖收敛 | **完成** | ParquetDataFeed 清除，Golden test 建立 |
-| **Phase 2a** | quality 迁移 + datahub→data 重命名 | **完成** | 全源码 0 残留 `ditto_datahub` |
+| **Phase 2a** | quality 迁移 + datahub→data 重命名 | **完成** | 全源码 0 残留 `ditto_data` |
 | **Phase 2b** | expression/materialization → analytics | **完成** | 173 处 `ditto_analytics` 导入 |
-| **Phase 2c** | ditto_core → ditto_engine 重命名 | **完成** | 语义 + 目录均已完成（packages/engine/） |
+| **Phase 2c** | ditto_kernel → ditto_engine 重命名 | **完成** | 语义 + 目录均已完成（packages/engine/） |
 | **Phase 2d** | TradingOrchestrator + Runtime Contracts | **完成** | TradingOrchestrator Protocol 已定义，域事件已接入 EngineLoop，BacktestTradingOrchestrator 别名已创建 |
 | **Phase 2e** | strategy → alpha 重命名 | **完成** | 182 处 `ditto_engine.alpha` 导入 |
 | **Phase 2f** | Brokerage Protocol + accounting 组织 | **完成** | Brokerage Protocol + AccountView(frozen+MappingProxyType) 已实现 |
@@ -60,7 +60,7 @@ ditto_kernel/
 | ServiceBackedDataProvider | 替代 BacktestProvider/LiveProvider | `query/provider.py` 存在 | PASS |
 | BacktestProvider/LiveProvider | 0 残留 | 0 残留（仅文档引用） | PASS |
 | ParquetDataFeed | 0 残留 | 0 残留（仅文档引用） | PASS |
-| datahub→data 重命名 | 全源码无 ditto_datahub | pyproject: `ditto-data`，0 处 `from ditto_datahub` | PASS |
+| datahub→data 重命名 | 全源码无 ditto_data | pyproject: `ditto-data`，0 处 `from ditto_data` | PASS |
 | quality 模块 | 在 ditto_data.quality | `quality/` 完整存在 | PASS |
 | `ditto_data.query` 子模块 | contracts + provider | `query/` 含 market.py, metadata.py, provider.py | PASS |
 | `from ditto_data` 普及度 | 广泛 | **710 处 / 250 文件** | PASS |
@@ -69,10 +69,10 @@ ditto_kernel/
 
 | 检查项 | 预期 | 实际 | 结果 |
 |--------|------|------|------|
-| ditto_core→ditto_engine 重命名 | 全源码无 ditto_core | `from ditto_core`: **0 处**；`from ditto_engine`: **576 处** | PASS |
-| strategy→alpha 重命名 | 全源码无 ditto_core.strategy | `from ditto_engine.alpha`: **182 处 / 49 文件** | PASS |
+| ditto_kernel→ditto_engine 重命名 | 全源码无 ditto_kernel | `from ditto_kernel`: **0 处**；`from ditto_engine`: **576 处** | PASS |
+| strategy→alpha 重命名 | 全源码无 ditto_kernel.strategy | `from ditto_engine.alpha`: **182 处 / 49 文件** | PASS |
 | engine 子域结构 | alpha/portfolio/execution/accounting/backtest | 全部存在 | PASS |
-| quality 模块移出 | ditto_core.quality 不存在 | 0 处 `from ditto_core.quality` | PASS |
+| quality 模块移出 | ditto_kernel.quality 不存在 | 0 处 `from ditto_kernel.quality` | PASS |
 
 ### 1.4 Analytics 层 (Phase 2b)
 
@@ -94,7 +94,7 @@ ditto_kernel/
 |--------|------|------|------|
 | packages/app/ 存在 | Use Case 编排层 | 存在，`ditto-app` | PASS |
 | CQRS 四模块结构 | query/process/command/builders | 全部存在 | PASS |
-| apps/port/ 删除 | 不存在 | **已完全删除**，0 处 `from ditto_port` | PASS |
+| apps/port/ 删除 | 不存在 | **已完全删除**，0 处 `from ditto_interfaces` | PASS |
 | R8 互斥规则 | importlinter 6 条规则 | 6 条规则全部存在 | PASS |
 | `from ditto_app` 使用 | interfaces→app | **116 处 / 74 文件** | PASS |
 
@@ -236,9 +236,9 @@ Phase E 清理了 10 条过期 ignore 规则。当前 18 条 importlinter 合约
 
 | 指标 | 数值 |
 |------|------|
-| `from ditto_datahub` 残留 | **0** |
-| `from ditto_core` 残留 | **0** |
-| `from ditto_port` 残留 | **0** |
+| `from ditto_data` 残留 | **0** |
+| `from ditto_kernel` 残留 | **0** |
+| `from ditto_interfaces` 残留 | **0** |
 | `from ditto_engine` 活跃 | **576 处 / 133 文件** |
 | `from ditto_analytics` 活跃 | **173 处 / 71 文件** |
 | `from ditto_data` 活跃 | **710 处 / 250 文件** |

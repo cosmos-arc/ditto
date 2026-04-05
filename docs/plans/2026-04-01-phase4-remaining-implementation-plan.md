@@ -103,7 +103,7 @@ depth: deep
 | CREATE | `packages/data/src/ditto_data/models/__init__.py` | 包入口 + 聚合导出 |
 | CREATE | `packages/data/src/ditto_data/models/ingestion.py` | 5 个 frozen dataclass |
 
-**迁入类型**（全部从 `ditto_port/models/ingestion.py`）：
+**迁入类型**（全部从 `ditto_interfaces/models/ingestion.py`）：
 
 | 类型 | 字段数 | 说明 |
 |------|--------|------|
@@ -125,7 +125,7 @@ depth: deep
 |------|------|------|
 | CREATE | `packages/app/src/ditto_app/config.py` | 摄入配置类型 + 函数 |
 
-**迁入内容**（从 `ditto_port/models/config.py`）：
+**迁入内容**（从 `ditto_interfaces/models/config.py`）：
 
 | 符号 | 类型 | 说明 |
 |------|------|------|
@@ -153,17 +153,17 @@ depth: deep
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| EDIT | `apps/port/src/ditto_port/errors.py` | 全部 re-export from `ditto_data.errors` |
-| EDIT | `apps/port/src/ditto_port/models/ingestion.py` | 全部 re-export from `ditto_data.models.ingestion` |
-| EDIT | `apps/port/src/ditto_port/models/config.py` | 全部 re-export from `ditto_app.config` |
-| EDIT | `apps/port/src/ditto_port/models/__init__.py` | 保持不变（已通过子模块 re-export） |
+| EDIT | `apps/port/src/ditto_interfaces/errors.py` | 全部 re-export from `ditto_data.errors` |
+| EDIT | `apps/port/src/ditto_interfaces/models/ingestion.py` | 全部 re-export from `ditto_data.models.ingestion` |
+| EDIT | `apps/port/src/ditto_interfaces/models/config.py` | 全部 re-export from `ditto_app.config` |
+| EDIT | `apps/port/src/ditto_interfaces/models/__init__.py` | 保持不变（已通过子模块 re-export） |
 
-**注意**：`DittoPortError` 保留在 `ditto_port/errors.py`（API 层仍需要）。
+**注意**：`DittoPortError` 保留在 `ditto_interfaces/errors.py`（API 层仍需要）。
 
 **验收**：
-- [ ] `from ditto_port.errors import NetworkError` 仍可用
-- [ ] `from ditto_port.models.ingestion import IngestionResult` 仍可用
-- [ ] `from ditto_port.models.config import TaskTier` 仍可用
+- [ ] `from ditto_interfaces.errors import NetworkError` 仍可用
+- [ ] `from ditto_interfaces.models.ingestion import IngestionResult` 仍可用
+- [ ] `from ditto_interfaces.models.config import TaskTier` 仍可用
 
 #### A5: 更新 ingestion 服务 import `[M]`
 
@@ -171,17 +171,17 @@ depth: deep
 
 | 文件 | 变更 |
 |------|------|
-| `services/ingestion/coordinator.py` | `ditto_port.models` → `ditto_data.models.ingestion`；`ditto_port.errors` → `ditto_data.errors` |
-| `services/ingestion/backfill.py` | `ditto_port.models` → `ditto_data.models.ingestion` |
-| `services/ingestion/retry.py` | `ditto_port.models` → `ditto_data.models.ingestion` |
-| `services/ingestion/result_handler.py` | `ditto_port.models` → `ditto_data.models.ingestion` |
-| `services/ingestion/result_utils.py` | `ditto_port.models` → `ditto_data.models.ingestion` |
+| `services/ingestion/coordinator.py` | `ditto_interfaces.models` → `ditto_data.models.ingestion`；`ditto_interfaces.errors` → `ditto_data.errors` |
+| `services/ingestion/backfill.py` | `ditto_interfaces.models` → `ditto_data.models.ingestion` |
+| `services/ingestion/retry.py` | `ditto_interfaces.models` → `ditto_data.models.ingestion` |
+| `services/ingestion/result_handler.py` | `ditto_interfaces.models` → `ditto_data.models.ingestion` |
+| `services/ingestion/result_utils.py` | `ditto_interfaces.models` → `ditto_data.models.ingestion` |
 | `services/ingestion/errors.py` | 删除（已变为 ditto_data.errors 的一部分）或改为 re-export |
-| `services/ingestion/config/__init__.py` | `ditto_port.models` → `ditto_app.config` |
+| `services/ingestion/config/__init__.py` | `ditto_interfaces.models` → `ditto_app.config` |
 
 **验收**：
 - [ ] `pixi run -e dev type` 通过
-- [ ] ingestion 服务内部无 `from ditto_port.models.ingestion` 或 `from ditto_port.errors` 引用（shim 除外）
+- [ ] ingestion 服务内部无 `from ditto_interfaces.models.ingestion` 或 `from ditto_interfaces.errors` 引用（shim 除外）
 
 #### A6: 更新 tests import `[M]`
 
@@ -192,7 +192,7 @@ depth: deep
 - `tests/unit/cli/` — 1 个文件（`InstrumentIngestParams`）
 - `tests/unit/jobs/` — 若干文件
 
-**变更**：`from ditto_port.services.ingestion.xxx import IngestionResult` → `from ditto_data.models.ingestion import IngestionResult`
+**变更**：`from ditto_interfaces.services.ingestion.xxx import IngestionResult` → `from ditto_data.models.ingestion import IngestionResult`
 
 **验收**：
 - [ ] `pixi run -e dev test --unit` 通过
@@ -207,13 +207,13 @@ pixi run -e dev arch-check     # 全部 importlinter contract 通过
 **grep 验证**：
 ```bash
 # ingestion 内部代码不再直接引用 port.models.ingestion
-grep -rn "from ditto_port.models.ingestion\|from ditto_port.models import.*IngestionResult" \
-  apps/port/src/ditto_port/services/ingestion/ --include="*.py"
+grep -rn "from ditto_interfaces.models.ingestion\|from ditto_interfaces.models import.*IngestionResult" \
+  apps/port/src/ditto_interfaces/services/ingestion/ --include="*.py"
 # 应仅剩 shim 文件
 
 # ingestion 内部代码不再直接引用 port.errors
-grep -rn "from ditto_port.errors" \
-  apps/port/src/ditto_port/services/ingestion/ --include="*.py"
+grep -rn "from ditto_interfaces.errors" \
+  apps/port/src/ditto_interfaces/services/ingestion/ --include="*.py"
 # 应仅剩 shim 文件
 ```
 
@@ -299,14 +299,14 @@ grep -rn "from ditto_port.errors" \
 - `port/services/ingestion/quality/service.py` 等 — 改为 re-export shim 或直接删除
 
 **策略选择**：对于内部模块文件（如 `coordinator.py`），有两种方式：
-1. **每个文件改为 re-export shim** — 保持 `from ditto_port.services.ingestion.coordinator import X` 可用
+1. **每个文件改为 re-export shim** — 保持 `from ditto_interfaces.services.ingestion.coordinator import X` 可用
 2. **删除文件，仅保留 `__init__.py` shim** — 调用方改为包级 import
 
 **决策**：采用方式 2（删除内部文件），因为 PR-E 最终会清理所有 shim，提前减少维护负担。外部调用方统一改为包级 import。
 
 **验收**：
-- [ ] `from ditto_port.services.ingestion import IngestionCoordinator` 可用
-- [ ] `from ditto_port.services.ingestion.quality import QualityService` 可用
+- [ ] `from ditto_interfaces.services.ingestion import IngestionCoordinator` 可用
+- [ ] `from ditto_interfaces.services.ingestion.quality import QualityService` 可用
 
 #### B4: 更新外部引用 `[L]`
 
@@ -340,11 +340,11 @@ grep -rn "from ditto_port.errors" \
 - `tests/unit/jobs/` — 2 个文件
 
 **变更策略**：
-- `from ditto_port.services.ingestion.coordinator import X` → `from ditto_port.services.ingestion import X`（通过 shim）
+- `from ditto_interfaces.services.ingestion.coordinator import X` → `from ditto_interfaces.services.ingestion import X`（通过 shim）
 - 或直接引用 `ditto_app.process.ingestion`（测试可跨层引用）
-- `from ditto_port.services.ingestion.quality.service import QualityService` → `from ditto_port.services.ingestion.quality import QualityService`
+- `from ditto_interfaces.services.ingestion.quality.service import QualityService` → `from ditto_interfaces.services.ingestion.quality import QualityService`
 
-**建议**：测试统一使用 shim 路径（`ditto_port.services.*`），PR-E 清理后再统一改为 `ditto_app.*`。减少本 PR 变更量。
+**建议**：测试统一使用 shim 路径（`ditto_interfaces.services.*`），PR-E 清理后再统一改为 `ditto_app.*`。减少本 PR 变更量。
 
 **验收**：
 - [ ] `pixi run -e dev test` 通过
@@ -369,11 +369,11 @@ pixi run -e dev arch-check
 **grep 验证**：
 ```bash
 # ingestion 内部文件已删除（仅保留 __init__.py shim）
-ls apps/port/src/ditto_port/services/ingestion/*.py
+ls apps/port/src/ditto_interfaces/services/ingestion/*.py
 # 应仅剩 __init__.py
 
 # quality 内部文件已删除（仅保留 __init__.py shim）
-ls apps/port/src/ditto_port/services/ingestion/quality/*.py
+ls apps/port/src/ditto_interfaces/services/ingestion/quality/*.py
 # 应仅剩 __init__.py
 ```
 
@@ -443,7 +443,7 @@ def get_app_providers() -> list[Provider]:
 | 操作 | 文件 | 变更 |
 |------|------|------|
 | EDIT | `registry/datahub/derived.py` | 删除 7 个 app 层 provide 方法 |
-| EDIT | `registry/datahub/derived.py` | import 来源从 `ditto_port.services.derived` 改为 `ditto_app.*` |
+| EDIT | `registry/datahub/derived.py` | import 来源从 `ditto_interfaces.services.derived` 改为 `ditto_app.*` |
 
 **保留在 DerivedProvider 的方法**（3 个 datahub 层）：
 
@@ -455,7 +455,7 @@ def get_app_providers() -> list[Provider]:
 
 **验收**：
 - [ ] DerivedProvider 仅注册 3 个 datahub 层服务
-- [ ] `from ditto_port.services import derived` 在 registry 中无引用
+- [ ] `from ditto_interfaces.services import derived` 在 registry 中无引用
 
 #### C3: 删除 StrategyProvider `[S]`
 
@@ -501,7 +501,7 @@ def _get_base_providers() -> tuple[Provider, ...]:
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| EDIT | `registry/contexts/bundle.py` | import 来源从 `ditto_port.services.*` 改为 `ditto_app.*` |
+| EDIT | `registry/contexts/bundle.py` | import 来源从 `ditto_interfaces.services.*` 改为 `ditto_app.*` |
 | EDIT | `registry/contexts/ingestion.py` | 同上 |
 | EDIT | `registry/contexts/materialization.py` | 同上 |
 | EDIT | `registry/contexts/strategy.py` | 同上 |
@@ -538,7 +538,7 @@ class IngestionBundle:
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| EDIT | `registry/core/quality.py` | `QualityService` import 从 `ditto_port.services.ingestion.quality.service` 改为 `ditto_app.process.quality` |
+| EDIT | `registry/core/quality.py` | `QualityService` import 从 `ditto_interfaces.services.ingestion.quality.service` 改为 `ditto_app.process.quality` |
 
 **或**：将 `QualityService` 的 provide 从 `QualityProvider` 迁入 `AppProcessProvider`（C1），因为 QualityService 现在是 app 层服务。
 
@@ -568,8 +568,8 @@ pixi run -e dev arch-check
 
 **grep 验证**：
 ```bash
-# registry 不再引用 ditto_port.services
-grep -rn "from ditto_port.services" apps/port/src/ditto_port/registry/ --include="*.py"
+# registry 不再引用 ditto_interfaces.services
+grep -rn "from ditto_interfaces.services" apps/port/src/ditto_interfaces/registry/ --include="*.py"
 # 应返回 0 结果
 ```
 
@@ -589,15 +589,15 @@ git mv apps/port apps/interfaces
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| EDIT | `apps/interfaces/pyproject.toml` | `ditto_port` → `ditto_interfaces` |
-| EDIT | `apps/interfaces/src/ditto_port/` → `ditto_interfaces/` | 目录重命名 |
+| EDIT | `apps/interfaces/pyproject.toml` | `ditto_interfaces` → `ditto_interfaces` |
+| EDIT | `apps/interfaces/src/ditto_interfaces/` → `ditto_interfaces/` | 目录重命名 |
 | EDIT | `apps/interfaces/src/ditto_interfaces/__init__.py` | 包名更新 |
 
 #### D3: 全库引用更新 `[L]`
 
 ```bash
 # 批量替换
-find packages/ apps/ -name "*.py" -exec sed -i 's/ditto_port/ditto_interfaces/g' {} +
+find packages/ apps/ -name "*.py" -exec sed -i 's/ditto_interfaces/ditto_interfaces/g' {} +
 ```
 
 **影响的范围**：
@@ -607,18 +607,18 @@ find packages/ apps/ -name "*.py" -exec sed -i 's/ditto_port/ditto_interfaces/g'
 - `apps/interfaces/` — 自身内部引用
 - `apps/port/tests/` → `apps/interfaces/tests/`
 
-**注意**：需仔细处理 `ditto_port` → `ditto_interfaces` 的替换，避免误改 `ditto_data.models.port` 等无关字符串。建议使用精确的正则替换。
+**注意**：需仔细处理 `ditto_interfaces` → `ditto_interfaces` 的替换，避免误改 `ditto_data.models.port` 等无关字符串。建议使用精确的正则替换。
 
 **验收**：
-- [ ] `grep -rn "ditto_port" packages/ apps/ --include="*.py"` 返回 0
+- [ ] `grep -rn "ditto_interfaces" packages/ apps/ --include="*.py"` 返回 0
 - [ ] `pixi run -e dev type` 通过
 
 #### D4: 更新 importlinter `[S]`
 
 | 变更 | 说明 |
 |------|------|
-| `root_modules` | `ditto_port` → `ditto_interfaces` |
-| 所有 contract | `ditto_port` → `ditto_interfaces` |
+| `root_modules` | `ditto_interfaces` → `ditto_interfaces` |
+| 所有 contract | `ditto_interfaces` → `ditto_interfaces` |
 | R7: app-no-port-import | `forbidden_modules = ditto_interfaces` |
 | 新增 R6: interfaces 层级检查 | `layers = ditto_interfaces → ditto_app → ...` |
 
@@ -631,14 +631,14 @@ find packages/ apps/ -name "*.py" -exec sed -i 's/ditto_port/ditto_interfaces/g'
 |------|------|
 | `CLAUDE.md` | 架构图、依赖矩阵、命令示例中的 `port` → `interfaces` |
 | `apps/interfaces/CLAUDE.md` | 全面更新 |
-| 各包 `CLAUDE.md` | 引用 `ditto_port` 的地方更新 |
+| 各包 `CLAUDE.md` | 引用 `ditto_interfaces` 的地方更新 |
 
 #### D6: 最终验证 `[S]`
 
 ```bash
 pixi run -e dev check
 pixi run -e dev arch-check
-grep -rn "ditto_port" packages/ apps/ --include="*.py"
+grep -rn "ditto_interfaces" packages/ apps/ --include="*.py"
 # 应返回 0
 ```
 
@@ -711,7 +711,7 @@ pixi run -e dev arch-check
 
 ```bash
 # 无 port 旧引用
-grep -rn "ditto_port\|from ditto_interfaces.services" packages/ apps/ --include="*.py"
+grep -rn "ditto_interfaces\|from ditto_interfaces.services" packages/ apps/ --include="*.py"
 # 应返回 0
 
 # interfaces 不依赖 services（已清空）

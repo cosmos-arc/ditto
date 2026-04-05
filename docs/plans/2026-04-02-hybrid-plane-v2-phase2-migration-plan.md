@@ -216,20 +216,20 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - `pixi.toml` (移除 ditto-data 依赖)
   - `.importlinter` (移除 data-boundary, data 相关引用)
 
-### PR11: 包级重命名 ditto_datahub → ditto_data `[XL]` ✅ DONE
+### PR11: 包级重命名 ditto_data → ditto_data `[XL]` ✅ DONE
 - **操作**（与 PR10 合并执行）:
   1. 合并 data 内容到 datahub
   2. 删除旧 packages/data/
   3. 重命名 packages/datahub/ → packages/data/
   4. pyproject.toml: `name = "ditto-datahub"` → `name = "ditto-data"`
-  5. src 目录: `ditto_datahub/` → `ditto_data/`
-  6. 全局 import 更新: `ditto_datahub` → `ditto_data`（~250 文件）
+  5. src 目录: `ditto_data/` → `ditto_data/`
+  6. 全局 import 更新: `ditto_data` → `ditto_data`（~250 文件）
   7. pixi.toml 更新（移除 ditto-datahub 条目）
   8. .importlinter 重写（去重、去 "datahub" 命名）
   9. 所有 CLAUDE.md + docs 更新
 - **验收**:
-  - ✅ `grep "ditto_datahub" --include="*.py" -r` 零结果
-  - ✅ `grep "ditto_datahub" --include="*.toml" -r` 零结果
+  - ✅ `grep "ditto_data" --include="*.py" -r` 零结果
+  - ✅ `grep "ditto_data" --include="*.toml" -r` 零结果
   - ✅ `pixi run -e dev check` 通过（lint + fmt + type + 4271 tests）
   - ✅ `pixi run -e dev arch-check` 15 KEPT, 0 BROKEN
 - **文件**:
@@ -376,7 +376,7 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - `pixi run -e dev arch-check` 全部 KEPT（目标 15+ 条规则）
   - 分支覆盖率 ≥ 80%
   - `grep "ditto_data" --include="*.py" -r` 零结果
-  - `grep "ditto_core" --include="*.py" -r` 零结果
+  - `grep "ditto_kernel" --include="*.py" -r` 零结果
   - `grep "AnyFrame" --include="*.py" -r` 零结果
   - analytics 对 engine 零依赖（或仅有 specs 豁免）
   - engine 内部结构: alpha/, risk/, accounting/, backtest/, execution/, portfolio/（无 strategy/, 无 engine/engine/ 嵌套）

@@ -205,7 +205,7 @@ options:
 ### 5.2 数据模型
 
 ```python
-# packages/core/src/ditto_core/quality/golden.py
+# packages/core/src/ditto_kernel/quality/golden.py
 
 class GoldenDatasetOptions(BaseModel):
     """黄金数据集选项。"""

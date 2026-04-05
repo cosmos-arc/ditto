@@ -125,7 +125,7 @@
 apps/
   port/                      # 统一入口层（API/CLI/Jobs）
     src/
-      ditto_port/
+      ditto_interfaces/
         api/                 # HTTP API 入口
           routes/            # FastAPI 路由
         cli/                 # CLI 入口
@@ -162,7 +162,7 @@ apps/
 packages/
   core/                      # Domain Layer（业务逻辑、领域知识）
     src/
-      ditto_core/
+      ditto_kernel/
         quality/            # 数据质量子领域
           engine.py         # QualityEngine
           checkers/

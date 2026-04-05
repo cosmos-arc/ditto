@@ -343,17 +343,17 @@ restored: pl.Expr = pl.Expr.deserialize(payload)
 
 | 文件路径 | 用途 |
 |---------|------|
-| `packages/core/src/ditto_core/engine/cache/__init__.py` | 缓存模块入口 |
-| `packages/core/src/ditto_core/engine/cache/expression_cache.py` | Two-Tier 缓存实现 |
-| `packages/core/src/ditto_core/engine/cache/schema.py` | 缓存键模型定义 |
-| `packages/core/src/ditto_core/engine/cache/persistence.py` | SQLite 持久化层 |
+| `packages/core/src/ditto_kernel/engine/cache/__init__.py` | 缓存模块入口 |
+| `packages/core/src/ditto_kernel/engine/cache/expression_cache.py` | Two-Tier 缓存实现 |
+| `packages/core/src/ditto_kernel/engine/cache/schema.py` | 缓存键模型定义 |
+| `packages/core/src/ditto_kernel/engine/cache/persistence.py` | SQLite 持久化层 |
 
 ### 修改文件
 
 | 文件路径 | 修改内容 |
 |---------|---------|
-| `packages/core/src/ditto_core/engine/ops/registry.py` | 强制算子声明 version |
-| `packages/core/src/ditto_core/engine/publish/manifest.py` | 后续从编译运行时清单派生 compatibility manifest |
+| `packages/core/src/ditto_kernel/engine/ops/registry.py` | 强制算子声明 version |
+| `packages/core/src/ditto_kernel/engine/publish/manifest.py` | 后续从编译运行时清单派生 compatibility manifest |
 
 ---
 

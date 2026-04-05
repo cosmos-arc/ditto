@@ -57,7 +57,7 @@
 
 **当前问题**:
 - 标题为 "ditto-port" → 应为 "ditto-interfaces"
-- 目录结构显示 `apps/port/src/ditto_port/` → 应为 `interfaces/src/ditto_interfaces/`
+- 目录结构显示 `apps/port/src/ditto_interfaces/` → 应为 `interfaces/src/ditto_interfaces/`
 - 架构图和服务描述全基于旧路径
 - services 描述中业务逻辑已迁入 `ditto_app`
 

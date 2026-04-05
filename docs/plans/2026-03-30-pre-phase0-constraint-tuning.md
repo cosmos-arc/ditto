@@ -30,7 +30,7 @@ Phase 0（Kernel 扩展）计划向 Kernel 包新增 4 个模块（clock.py、pr
 
 ### 冲突 3：[中等] Core 依赖声明不一致
 
-- **architecture.md**：`ditto_core → ditto_kernel`（单依赖）
+- **architecture.md**：`ditto_kernel → ditto_kernel`（单依赖）
 - **core/CLAUDE.md**：`core → kernel, datahub, infra`（三依赖）
 - **Phase 1 目标**：Core 通过 DataProvider Protocol 消费数据，依赖收拢到 `core → kernel only`
 - **解决**：Phase 1 完成后统一为 `core → kernel only`
@@ -97,7 +97,7 @@ Phase 1 完成后（非 Phase 0 前置），更新 Core 依赖规则：
 
 ### 3.3 `.claude/rules/architecture.md` — 术语修正
 
-将所有 `Server` / `Server Service` / `Server Flow` 替换为 `Port` / `Port Service` / `Port Flow`，与实际包名 `ditto_port` 对齐。
+将所有 `Server` / `Server Service` / `Server Flow` 替换为 `Port` / `Port Service` / `Port Flow`，与实际包名 `ditto_interfaces` 对齐。
 
 ---
 

@@ -18,7 +18,7 @@ Hybrid Plane v2 架构重构已基本完成（Phase 0-5），但源码审计发�
 
 ### Task 1.1: 删除 `packages/core/` 鬼目录 + 清理关联配置 `[S]`
 
-**现状**：`packages/core/` 含 131 个 .pyc + stale egg-info，零 .py 源码，零 `ditto_core` import。
+**现状**：`packages/core/` 含 131 个 .pyc + stale egg-info，零 .py 源码，零 `ditto_kernel` import。
 
 - `rm -rf packages/core/`
 - 编辑 `pyright.tests.json`：移除 `extraPaths` 中的 3 个过期路径
@@ -29,11 +29,11 @@ Hybrid Plane v2 架构重构已基本完成（Phase 0-5），但源码审计发�
 
 **验收**：`pixi run -e dev lint && pixi run -e dev type` 通过；`ls packages/core` 报错
 
-### Task 1.2: 删除 stale `ditto_datahub.egg-info/` `[S]`
+### Task 1.2: 删除 stale `ditto_data.egg-info/` `[S]`
 
-- `rm -rf packages/data/src/ditto_datahub.egg-info/`
+- `rm -rf packages/data/src/ditto_data.egg-info/`
 
-**验收**：`ls packages/data/src/ditto_datahub.egg-info` 报错
+**验收**：`ls packages/data/src/ditto_data.egg-info` 报错
 
 ### Task 1.3: 删除 interfaces registry 中的鬼目录 `[S]`
 

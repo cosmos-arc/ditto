@@ -25,20 +25,20 @@
 
 | 应用 | 入口文件 | 用途 |
 |------|----------|------|
-| **API Server** | [main.py](../apps/port/src/ditto_port/main.py) | REST API 服务（FastAPI + Granian） |
-| **CLI** | [cli/main.py](../apps/port/src/ditto_port/cli/main.py) | 命令行工具 |
-| **Prefect Flows** | [jobs/flows/](../apps/port/src/ditto_port/jobs/flows/) | 数据摄取编排 |
+| **API Server** | [main.py](../apps/port/src/ditto_interfaces/main.py) | REST API 服务（FastAPI + Granian） |
+| **CLI** | [cli/main.py](../apps/port/src/ditto_interfaces/cli/main.py) | 命令行工具 |
+| **Prefect Flows** | [jobs/flows/](../apps/port/src/ditto_interfaces/jobs/flows/) | 数据摄取编排 |
 
 ### 1.2 Prefect Flows 列表
 
 | Flow | 文件 | 功能 |
 |------|------|------|
-| `daily_ingestion_flow` | [daily.py](../apps/port/src/ditto_port/jobs/flows/daily.py) | 每日增量摄取（T0→T1→T3） |
-| `backfill_flow` | [backfill.py](../apps/port/src/ditto_port/jobs/flows/backfill.py) | 全量数据回补 |
-| `backfill_missing_flow` | [backfill.py](../apps/port/src/ditto_port/jobs/flows/backfill.py) | 回补缺失数据 |
-| `daily_repair_flow` | [repair.py](../apps/port/src/ditto_port/jobs/flows/repair.py) | 每日修补流程 |
-| `repair_holes_flow` | [repair.py](../apps/port/src/ditto_port/jobs/flows/repair.py) | 修补数据空洞 |
-| `retry_failed_flow` | [repair.py](../apps/port/src/ditto_port/jobs/flows/repair.py) | 重试失败任务 |
+| `daily_ingestion_flow` | [daily.py](../apps/port/src/ditto_interfaces/jobs/flows/daily.py) | 每日增量摄取（T0→T1→T3） |
+| `backfill_flow` | [backfill.py](../apps/port/src/ditto_interfaces/jobs/flows/backfill.py) | 全量数据回补 |
+| `backfill_missing_flow` | [backfill.py](../apps/port/src/ditto_interfaces/jobs/flows/backfill.py) | 回补缺失数据 |
+| `daily_repair_flow` | [repair.py](../apps/port/src/ditto_interfaces/jobs/flows/repair.py) | 每日修补流程 |
+| `repair_holes_flow` | [repair.py](../apps/port/src/ditto_interfaces/jobs/flows/repair.py) | 修补数据空洞 |
+| `retry_failed_flow` | [repair.py](../apps/port/src/ditto_interfaces/jobs/flows/repair.py) | 重试失败任务 |
 
 ### 1.3 包结构
 
@@ -332,8 +332,8 @@ Token 仅来自 `data_source.env`，由应用层注入，不读取环境变量/K
 | **手动触发 Flow** | `prefect deployment run "daily-ingestion/daily-ingestion-scheduled"` |
 | **查看 Flow 日志** | `prefect flow-run logs <run-id>` |
 | **取消运行** | `prefect flow-run cancel <run-id>` |
-| **部署所有 Flows** | `python -m ditto_port.jobs.flows.deploy` |
-| **列出可用 Flows** | `python -m ditto_port.jobs.flows.deploy list` |
+| **部署所有 Flows** | `python -m ditto_interfaces.jobs.flows.deploy` |
+| **列出可用 Flows** | `python -m ditto_interfaces.jobs.flows.deploy list` |
 
 ### 7.5 配置文件管理
 

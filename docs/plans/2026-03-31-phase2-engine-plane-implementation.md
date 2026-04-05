@@ -9,7 +9,7 @@ last_audit: 2026-03-31
 
 # Phase 2: Engine 平面成型实施计划 (Units 2a + 2b + 2c)
 
-**目标**：将 Ditto 从 5 包分层架构迁移至 Hybrid 平面架构（新增 ditto_data + ditto_analytics，ditto_core 改名 ditto_engine）。
+**目标**：将 Ditto 从 5 包分层架构迁移至 Hybrid 平面架构（新增 ditto_data + ditto_analytics，ditto_kernel 改名 ditto_engine）。
 **前置**：Phase 0.5 + Phase 1 已完成（4228 tests ✅, 8/8 arch-check ✅）
 **验收**：每个 PR 后 `pixi run -e dev check` 全通过 + arch-check 全通过。
 
@@ -49,9 +49,9 @@ engine → datahub.errors（re-export chain: engine.errors → datahub.errors �
 
 #### Step 2: 复制 quality 模块到 ditto_data
 
-从 `packages/core/src/ditto_core/quality/` 复制 12 个文件到 `packages/data/src/ditto_data/quality/`。
+从 `packages/core/src/ditto_kernel/quality/` 复制 12 个文件到 `packages/data/src/ditto_data/quality/`。
 
-**内部 import 重写**（`ditto_core.quality` → `ditto_data.quality`）：
+**内部 import 重写**（`ditto_kernel.quality` → `ditto_data.quality`）：
 - `__init__.py` — 15 处 import
 - `spec.py` — 1 处（severity）
 - `engine.py` — 7 处
@@ -71,9 +71,9 @@ from ditto_data.errors import *  # noqa: F401,F403
 from ditto_data.errors import __all__  # noqa: F401
 ```
 
-#### Step 4: 转换 ditto_core.quality 为 re-export shim
+#### Step 4: 转换 ditto_kernel.quality 为 re-export shim
 
-`packages/core/src/ditto_core/quality/__init__.py` 改为 re-export ditto_data.quality 的所有符号。
+`packages/core/src/ditto_kernel/quality/__init__.py` 改为 re-export ditto_data.quality 的所有符号。
 删除 quality 子目录中所有非 `__init__.py` 文件。
 
 #### Step 5: 更新包配置
@@ -93,7 +93,7 @@ from ditto_data.errors import __all__  # noqa: F401
 - `root_packages` 添加 `ditto_data`
 - `acyclic-packages` ancestors 添加 `ditto_data`
 - 新增 `data-boundary` contract（data → engine/port forbidden）
-- 更新 `core-must-not-depend-on-datahub`：forbidden 添加 `ditto_data.**`，ignore 添加 `ditto_core.** -> ditto_data.quality` + `ditto_data.errors`
+- 更新 `core-must-not-depend-on-datahub`：forbidden 添加 `ditto_data.**`，ignore 添加 `ditto_kernel.** -> ditto_data.quality` + `ditto_data.errors`
 - 更新 `foundation-isolation`：forbidden 添加 `ditto_data.**`
 - `datahub-boundary`：无变化
 
@@ -107,16 +107,16 @@ from ditto_data.errors import __all__  # noqa: F401
 
 #### Step 1: 更新 Port 源码导入（10 文件）
 
-`ditto_core.quality` → `ditto_data.quality`：
-- `apps/port/src/ditto_port/registry/core/quality.py`
-- `apps/port/src/ditto_port/registry/core/golden.py`
-- `apps/port/src/ditto_port/registry/infra/config.py`
-- `apps/port/src/ditto_port/services/ingestion/quality/service.py`
-- `apps/port/src/ditto_port/services/ingestion/quality/l3_batch_service.py`
-- `apps/port/src/ditto_port/services/ingestion/quality/reconciliation_service.py`
-- `apps/port/src/ditto_port/jobs/tasks/dq_batch.py`
-- `apps/port/src/ditto_port/jobs/tasks/monitoring.py`
-- `apps/port/src/ditto_port/jobs/context.py`
+`ditto_kernel.quality` → `ditto_data.quality`：
+- `apps/port/src/ditto_interfaces/registry/core/quality.py`
+- `apps/port/src/ditto_interfaces/registry/core/golden.py`
+- `apps/port/src/ditto_interfaces/registry/infra/config.py`
+- `apps/port/src/ditto_interfaces/services/ingestion/quality/service.py`
+- `apps/port/src/ditto_interfaces/services/ingestion/quality/l3_batch_service.py`
+- `apps/port/src/ditto_interfaces/services/ingestion/quality/reconciliation_service.py`
+- `apps/port/src/ditto_interfaces/jobs/tasks/dq_batch.py`
+- `apps/port/src/ditto_interfaces/jobs/tasks/monitoring.py`
+- `apps/port/src/ditto_interfaces/jobs/context.py`
 
 #### Step 2: 更新 E2E 测试导入（7 文件）
 
@@ -125,7 +125,7 @@ from ditto_data.errors import __all__  # noqa: F401
 
 #### Step 3: 更新 Port 测试导入
 
-`apps/port/tests/` 下所有引用 `ditto_core.quality` 的测试文件（~8 文件）
+`apps/port/tests/` 下所有引用 `ditto_kernel.quality` 的测试文件（~8 文件）
 
 #### Step 4: 迁移 quality 测试文件
 
@@ -134,16 +134,16 @@ from ditto_data.errors import __all__  # noqa: F401
 
 #### Step 5: 更新 DataHub 测试导入
 
-`packages/data/tests/unit/models/test_common_unit.py`: `ditto_core.quality.severity` → `ditto_data.quality.severity`
+`packages/data/tests/unit/models/test_common_unit.py`: `ditto_kernel.quality.severity` → `ditto_data.quality.severity`
 
 #### Step 6: 清理
 
-- 删除 `packages/core/src/ditto_core/quality/` 整个目录
+- 删除 `packages/core/src/ditto_kernel/quality/` 整个目录
 - `packages/core/pyproject.toml` deps 移除 `ditto-data`
-- `.importlinter` `core-must-not-depend-on-datahub` 移除 `ditto_core.** -> ditto_data.quality` ignore
-- `pyproject.toml` per-file-ignores: `packages/core/src/ditto_core/quality/golden.py` → `packages/data/src/ditto_data/quality/golden.py`
+- `.importlinter` `core-must-not-depend-on-datahub` 移除 `ditto_kernel.** -> ditto_data.quality` ignore
+- `pyproject.toml` per-file-ignores: `packages/core/src/ditto_kernel/quality/golden.py` → `packages/data/src/ditto_data/quality/golden.py`
 
-**验证**：`pixi run -e dev check` + `grep -rn "ditto_core.quality" packages/ apps/ tests/ --include="*.py"` 返回 0
+**验证**：`pixi run -e dev check` + `grep -rn "ditto_kernel.quality" packages/ apps/ tests/ --include="*.py"` 返回 0
 
 ---
 
@@ -163,33 +163,33 @@ from ditto_data.errors import __all__  # noqa: F401
 #### Step 2: 迁移 expression/ （8 个文件 → `ditto_analytics/expression/`）
 
 **内部 import 重写**（仅改 analytics 内部互引）：
-- `analyzer.py`: `ditto_core.engine.expression.ast` → `ditto_analytics.expression.ast`；`ditto_core.engine.materialization.contracts` → `ditto_analytics.materialization.contracts`
-- `ast.py`: `ditto_core.engine.expression.diagnostics` → `ditto_analytics.expression.diagnostics`
-- `codegen.py`: expression 内部互引 → `ditto_analytics.expression.*`；`ditto_core.engine.specs` **保持不变**
-- `compiler.py`: expression/materialization 内部互引 → `ditto_analytics.*`；`ditto_core.engine.specs` **保持不变**
+- `analyzer.py`: `ditto_kernel.engine.expression.ast` → `ditto_analytics.expression.ast`；`ditto_kernel.engine.materialization.contracts` → `ditto_analytics.materialization.contracts`
+- `ast.py`: `ditto_kernel.engine.expression.diagnostics` → `ditto_analytics.expression.diagnostics`
+- `codegen.py`: expression 内部互引 → `ditto_analytics.expression.*`；`ditto_kernel.engine.specs` **保持不变**
+- `compiler.py`: expression/materialization 内部互引 → `ditto_analytics.*`；`ditto_kernel.engine.specs` **保持不变**
 - `lexer.py`, `parser.py`: expression 内部互引 → `ditto_analytics.expression.*`
 
-**关键**：所有 `from ditto_core.engine.specs import ...` 保持不变（analytics → engine 单向依赖）。
+**关键**：所有 `from ditto_kernel.engine.specs import ...` 保持不变（analytics → engine 单向依赖）。
 
 #### Step 3: 迁移 materialization/ （4 个文件 → `ditto_analytics/materialization/`）
 
-- `contracts.py`: `ditto_core.engine.materialization.models` → `ditto_analytics.materialization.models`；`ditto_core.engine.specs` **保持不变**
+- `contracts.py`: `ditto_kernel.engine.materialization.models` → `ditto_analytics.materialization.models`；`ditto_kernel.engine.specs` **保持不变**
 - `planner.py`: 同上模式
 - `models.py`: 无外部 ditto import
 - `__init__.py`: 内部互引 → `ditto_analytics.materialization.*`；specs **保持不变**
 
 #### Step 4: 迁移 compile_cache.py → `ditto_analytics/compile_cache.py`
 
-- `ditto_core.engine.expression` → `ditto_analytics.expression`
-- `ditto_core.engine.materialization` → `ditto_analytics.materialization`
-- `ditto_core.engine.specs` **保持不变**
+- `ditto_kernel.engine.expression` → `ditto_analytics.expression`
+- `ditto_kernel.engine.materialization` → `ditto_analytics.materialization`
+- `ditto_kernel.engine.specs` **保持不变**
 
 #### Step 5: 转换 engine 为 re-export shim
 
-- `packages/core/src/ditto_core/engine/expression/` → 仅保留 `__init__.py` re-export shim
-- `packages/core/src/ditto_core/engine/materialization/` → 仅保留 `__init__.py` re-export shim
-- `packages/core/src/ditto_core/engine/compile_cache.py` → re-export shim
-- `packages/core/src/ditto_core/engine/__init__.py` — analytics 相关 import 改为从 `ditto_analytics` re-export
+- `packages/core/src/ditto_kernel/engine/expression/` → 仅保留 `__init__.py` re-export shim
+- `packages/core/src/ditto_kernel/engine/materialization/` → 仅保留 `__init__.py` re-export shim
+- `packages/core/src/ditto_kernel/engine/compile_cache.py` → re-export shim
+- `packages/core/src/ditto_kernel/engine/__init__.py` — analytics 相关 import 改为从 `ditto_analytics` re-export
 
 #### Step 6: 更新包配置
 
@@ -221,26 +221,26 @@ from ditto_data.errors import __all__  # noqa: F401
 #### Step 1: 更新 Port 源码导入
 
 **需要改的 import（analytics 相关）**：
-- `apps/port/src/ditto_port/registry/datahub/derived.py`: `ditto_core.engine` → `ditto_analytics.compile_cache`
-- `apps/port/src/ditto_port/services/derived/__init__.py`: `ditto_core.engine` → `ditto_analytics`
-- `apps/port/src/ditto_port/services/derived/materialization_orchestrator.py`: materialization types → `ditto_analytics.materialization`
-- `apps/port/src/ditto_port/services/derived/cascade_protocol.py`: materialization → `ditto_analytics.materialization`
-- `apps/port/src/ditto_port/services/derived/publication.py`: `ditto_core.engine.materialization.models` → `ditto_analytics.materialization.models`
-- `apps/port/src/ditto_port/services/derived/manifest_builder.py`: materialization → `ditto_analytics.materialization`
-- `apps/port/src/ditto_port/services/derived/input_preparation.py`: materialization → `ditto_analytics.materialization`
+- `apps/port/src/ditto_interfaces/registry/datahub/derived.py`: `ditto_kernel.engine` → `ditto_analytics.compile_cache`
+- `apps/port/src/ditto_interfaces/services/derived/__init__.py`: `ditto_kernel.engine` → `ditto_analytics`
+- `apps/port/src/ditto_interfaces/services/derived/materialization_orchestrator.py`: materialization types → `ditto_analytics.materialization`
+- `apps/port/src/ditto_interfaces/services/derived/cascade_protocol.py`: materialization → `ditto_analytics.materialization`
+- `apps/port/src/ditto_interfaces/services/derived/publication.py`: `ditto_kernel.engine.materialization.models` → `ditto_analytics.materialization.models`
+- `apps/port/src/ditto_interfaces/services/derived/manifest_builder.py`: materialization → `ditto_analytics.materialization`
+- `apps/port/src/ditto_interfaces/services/derived/input_preparation.py`: materialization → `ditto_analytics.materialization`
 
 **保持不变的 import**（engine 保留模块）：
-- `ditto_core.engine.specs` — specs 留在 engine
-- `ditto_core.engine.publication_safety` — 不迁移
-- `ditto_core.engine.research` — 不迁移
-- `ditto_core.engine.errors` — 不迁移
+- `ditto_kernel.engine.specs` — specs 留在 engine
+- `ditto_kernel.engine.publication_safety` — 不迁移
+- `ditto_kernel.engine.research` — 不迁移
+- `ditto_kernel.engine.errors` — 不迁移
 
 #### Step 2: 更新 Port 测试导入（~14 文件）
 
-所有 `ditto_core.engine.materialization.*` → `ditto_analytics.materialization.*`
-所有 `ditto_core.engine.expression.*` → `ditto_analytics.expression.*`
-所有 `ditto_core.engine.compile_cache` → `ditto_analytics.compile_cache`
-**保持** `ditto_core.engine.specs` / `publication_safety` / `research` 不变
+所有 `ditto_kernel.engine.materialization.*` → `ditto_analytics.materialization.*`
+所有 `ditto_kernel.engine.expression.*` → `ditto_analytics.expression.*`
+所有 `ditto_kernel.engine.compile_cache` → `ditto_analytics.compile_cache`
+**保持** `ditto_kernel.engine.specs` / `publication_safety` / `research` 不变
 
 #### Step 3: 更新 DataHub 测试导入（6 文件）
 
@@ -263,33 +263,33 @@ from ditto_data.errors import __all__  # noqa: F401
 
 保留在 `packages/core/tests/unit/engine/`（测试 engine 内部模块）：
 - `test_specs_unit.py`
-- `test_factor_definitions.py` — 更新 import：`ditto_core.engine.expression.compiler` → `ditto_analytics.expression.compiler`
+- `test_factor_definitions.py` — 更新 import：`ditto_kernel.engine.expression.compiler` → `ditto_analytics.expression.compiler`
 
 #### Step 5: 清理 engine re-export shim
 
-- 删除 `packages/core/src/ditto_core/engine/expression/` 目录
-- 删除 `packages/core/src/ditto_core/engine/materialization/` 目录
-- 删除 `packages/core/src/ditto_core/engine/compile_cache.py`
+- 删除 `packages/core/src/ditto_kernel/engine/expression/` 目录
+- 删除 `packages/core/src/ditto_kernel/engine/materialization/` 目录
+- 删除 `packages/core/src/ditto_kernel/engine/compile_cache.py`
 - 从 `engine/__init__.py` 移除所有 analytics 相关 import 和 `__all__` 条目
 - `packages/core/pyproject.toml` deps 移除 `ditto-analytics`
 
 #### Step 6: 更新 .importlinter
 
-- 更新 `core-must-not-depend-on-datahub` ignore_imports — 移除 `ditto_core.** -> ditto_data.quality`（已在 2a-2 移除）
+- 更新 `core-must-not-depend-on-datahub` ignore_imports — 移除 `ditto_kernel.** -> ditto_data.quality`（已在 2a-2 移除）
 
 **验证**：
 - `pixi run -e dev check`
-- `grep -rn "ditto_core.engine.expression\|ditto_core.engine.materialization\|ditto_core.engine.compile_cache" packages/ apps/ tests/ --include="*.py"` 返回 0
+- `grep -rn "ditto_kernel.engine.expression\|ditto_kernel.engine.materialization\|ditto_kernel.engine.compile_cache" packages/ apps/ tests/ --include="*.py"` 返回 0
 
 ---
 
-### PR 2c-1: ditto_core → ditto_engine 机械改名
+### PR 2c-1: ditto_kernel → ditto_engine 机械改名
 
 **目标**：全库替换包名。
 
 #### Step 1: 重命名源码目录
 
-`packages/core/src/ditto_core/` → `packages/core/src/ditto_engine/`
+`packages/core/src/ditto_kernel/` → `packages/core/src/ditto_engine/`
 
 #### Step 2: 更新包声明
 
@@ -301,7 +301,7 @@ from ditto_data.errors import __all__  # noqa: F401
 
 #### Step 3: 全库 import 替换
 
-所有 `.py` 文件中 `ditto_core` → `ditto_engine`。
+所有 `.py` 文件中 `ditto_kernel` → `ditto_engine`。
 
 **预估影响范围**：
 - packages/core/src/ — ~50 处（模块内部互引）
@@ -314,13 +314,13 @@ from ditto_data.errors import __all__  # noqa: F401
 - packages/analytics/tests/ — ~5 处
 
 使用三遍方法确保完整性：
-1. 自动替换所有 `ditto_core` → `ditto_engine`
+1. 自动替换所有 `ditto_kernel` → `ditto_engine`
 2. `pixi run -e dev type` — basedpyright 报错定位遗漏
 3. `pixi run -e dev test` — 运行时 import 失败定位遗漏
 
 #### Step 4: 更新 .importlinter
 
-所有 `ditto_core` → `ditto_engine`：
+所有 `ditto_kernel` → `ditto_engine`：
 - root_packages, layered-architecture, kernel-isolation, foundation-isolation
 - datahub-boundary, core-must-not-depend-on-datahub（改名：engine-must-not...）, datahub-must-not-depend-on-core（改名：...-engine）
 - data-boundary, analytics contracts, acyclic-packages
@@ -329,10 +329,10 @@ from ditto_data.errors import __all__  # noqa: F401
 
 | 文件 | 变更 |
 |------|------|
-| `pyproject.toml` [commitizen] version_files | `ditto_core/__init__.py` → `ditto_engine/__init__.py` |
-| `pyproject.toml` [ruff] per-file-ignores | `ditto_core.` → `ditto_engine.` 路径 |
+| `pyproject.toml` [commitizen] version_files | `ditto_kernel/__init__.py` → `ditto_engine/__init__.py` |
+| `pyproject.toml` [ruff] per-file-ignores | `ditto_kernel.` → `ditto_engine.` 路径 |
 
-**验证**：`pixi run -e dev check` + `grep -rn "ditto_core" packages/ apps/ tests/ --include="*.py"` 返回 0
+**验证**：`pixi run -e dev check` + `grep -rn "ditto_kernel" packages/ apps/ tests/ --include="*.py"` 返回 0
 
 ---
 
@@ -343,14 +343,14 @@ from ditto_data.errors import __all__  # noqa: F401
 | 文件 | 变更 |
 |------|------|
 | `CLAUDE.md` | 架构图：添加 analytics/data 包，core→engine |
-| `packages/core/CLAUDE.md` | 模块结构移除 quality/，所有 ditto_core → ditto_engine |
+| `packages/core/CLAUDE.md` | 模块结构移除 quality/，所有 ditto_kernel → ditto_engine |
 | `packages/data/CLAUDE.md` | 更新 errors 引用路径 |
 | 新建 `packages/analytics/CLAUDE.md` | analytics 模块规范 |
 | 新建 `packages/data/CLAUDE.md` | data 模块规范 |
 
 #### Step 2: 更新 README / AGENTS.md
 
-`packages/core/README.md`, `packages/core/AGENTS.md` — ditto_core → ditto_engine
+`packages/core/README.md`, `packages/core/AGENTS.md` — ditto_kernel → ditto_engine
 
 #### Step 3: 最终验证
 
@@ -359,7 +359,7 @@ pixi run -e dev check
 pixi run -e dev test
 pixi run -e dev type --all
 pixi run -e dev arch-check
-grep -rn "ditto_core" packages/ apps/ tests/ --include="*.py"
+grep -rn "ditto_kernel" packages/ apps/ tests/ --include="*.py"
 ```
 
 ---
@@ -367,11 +367,11 @@ grep -rn "ditto_core" packages/ apps/ tests/ --include="*.py"
 ## .importlinter 最终状态
 
 ```ini
-root_packages = ditto_infra, ditto_data, ditto_engine, ditto_port, ditto_kernel, ditto_data, ditto_analytics
+root_packages = ditto_infra, ditto_data, ditto_engine, ditto_interfaces, ditto_kernel, ditto_data, ditto_analytics
 
 # 主分层：port → engine → datahub → infra
 # analytics 和 data 由独立 forbidden contract 管理
-layers = ditto_port, ditto_engine, ditto_data, ditto_infra
+layers = ditto_interfaces, ditto_engine, ditto_data, ditto_infra
 
 # engine 隔离
 engine-must-not-depend-on-datahub: engine → {datahub, data} forbidden (ignore: errors re-export)

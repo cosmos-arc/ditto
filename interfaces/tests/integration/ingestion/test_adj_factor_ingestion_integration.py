@@ -12,7 +12,10 @@ class TestAdjFactorIngestion:
 
     def test_ingest_adj_factor_uses_source_ticker_column(self, mocker):
         """Test that adj_factor ingestion uses source_ticker column for ID mapping."""
-        from ditto_app.process.ingestion import IngestionCoordinator
+        from ditto_app.process.ingestion import (
+            IngestionCoordinator,
+            IngestionCoordinatorConfig,
+        )
         from ditto_data.services import IngestionLogService
         from ditto_data.services.capital_service import CapitalService
         from ditto_data.services.fundamental_service import FundamentalService
@@ -43,9 +46,10 @@ class TestAdjFactorIngestion:
             fundamental_service=mock_fundamental_service,
             capital_service=mock_capital_service,
             macro_service=mock_macro_service,
-            ingestion_log_service=mock_ingestion_log_service,
             source=mock_source,
-            source_name="tushare",
+            config=IngestionCoordinatorConfig(
+                ingestion_log_service=mock_ingestion_log_service,
+            ),
         )
 
         # Mock _fetch_data to return data with source_ticker column
@@ -88,7 +92,10 @@ class TestAdjFactorIngestion:
 
     def test_ingest_fund_adj_uses_source_ticker_column(self, mocker):
         """Test that fund_adj ingestion uses source_ticker column for ID mapping."""
-        from ditto_app.process.ingestion import IngestionCoordinator
+        from ditto_app.process.ingestion import (
+            IngestionCoordinator,
+            IngestionCoordinatorConfig,
+        )
         from ditto_data.services import IngestionLogService
         from ditto_data.services.capital_service import CapitalService
         from ditto_data.services.fundamental_service import FundamentalService
@@ -119,9 +126,10 @@ class TestAdjFactorIngestion:
             fundamental_service=mock_fundamental_service,
             capital_service=mock_capital_service,
             macro_service=mock_macro_service,
-            ingestion_log_service=mock_ingestion_log_service,
             source=mock_source,
-            source_name="tushare",
+            config=IngestionCoordinatorConfig(
+                ingestion_log_service=mock_ingestion_log_service,
+            ),
         )
 
         # Mock _fetch_data to return data with source_ticker column

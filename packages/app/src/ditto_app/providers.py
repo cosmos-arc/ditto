@@ -25,6 +25,7 @@ from ditto_data.services import (
     DerivedQueryService,
     DerivedShadowSlotService,
     PublicationSafetyRecordService,
+    QualityRecordService,
     ResearchCatalogService,
 )
 from ditto_data.services.audit import ExecutionAuditService
@@ -310,9 +311,16 @@ class AppProcessProvider(Provider):
         )
 
     @provide
-    def quality_service(self, dq_engine: QualityEngine) -> QualityService:
+    def quality_service(
+        self,
+        dq_engine: QualityEngine,
+        quality_record_service: QualityRecordService,
+    ) -> QualityService:
         """写入时 DQ 质量服务."""
-        return QualityService(engine=dq_engine)
+        return QualityService(
+            engine=dq_engine,
+            quarantine_writer=quality_record_service,
+        )
 
 
 # ---------------------------------------------------------------------------

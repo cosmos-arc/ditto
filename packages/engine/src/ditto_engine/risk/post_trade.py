@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, Protocol
+from typing import Any, Protocol
 
 from ditto_kernel.enums import RiskScope
 from ditto_kernel.identity import InstrumentId
@@ -27,8 +27,17 @@ from ditto_kernel.identity import InstrumentId
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.risk._validation import validate_weight
 
-if TYPE_CHECKING:
-    from ditto_engine.backtest.data_feed import Slice
+
+class _SliceView(Protocol):
+    """
+    Minimal slice protocol for post-trade risk scanning.
+
+    Decouples risk from backtest — avoids circular risk → backtest import.
+    """
+
+    @property
+    def bars(self) -> dict[InstrumentId, Any]: ...
+
 
 __all__ = [
     "CompositePostTradeGuard",
@@ -112,7 +121,7 @@ class PostTradeRiskGuard(Protocol):
     def scan(
         self,
         account_view: AccountView,
-        slice_: Slice,
+        slice_: _SliceView,
     ) -> list[RiskAction]:
         """扫描当前组合状态，返回所有触发的风控行为。"""
         ...
@@ -154,7 +163,7 @@ class MaxDrawdownRule:
     def scan(
         self,
         account_view: AccountView,
-        slice_: Slice,
+        slice_: _SliceView,
     ) -> list[RiskAction]:
         """检测组合回撤是否超过阈值。"""
         nav = account_view.nav
@@ -229,7 +238,7 @@ class SingleLossLimitRule:
     def scan(
         self,
         account_view: AccountView,
-        slice_: Slice,
+        slice_: _SliceView,
     ) -> list[RiskAction]:
         """检测每个持仓标的的亏损是否超过阈值。"""
         actions: list[RiskAction] = []
@@ -288,7 +297,7 @@ class ConcentrationLimitRule:
     def scan(
         self,
         account_view: AccountView,
-        slice_: Slice,
+        slice_: _SliceView,
     ) -> list[RiskAction]:
         """检测每个持仓标的的权重是否超过上限。"""
         nav = account_view.nav
@@ -342,7 +351,7 @@ class MarketAnomalyRule:
     def scan(
         self,
         account_view: AccountView,
-        slice_: Slice,
+        slice_: _SliceView,
     ) -> list[RiskAction]:
         """检测所有标的中是否存在异常波动。"""
         actions: list[RiskAction] = []
@@ -395,7 +404,7 @@ class CompositePostTradeGuard:
     def scan(
         self,
         account_view: AccountView,
-        slice_: Slice,
+        slice_: _SliceView,
     ) -> list[RiskAction]:
         """依次执行每条规则，收集所有风控行为。"""
         actions: list[RiskAction] = []

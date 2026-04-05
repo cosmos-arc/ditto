@@ -14,7 +14,7 @@
 | 5 包核心包 (kernel/infra/data/engine/analytics/app) + 应用层 (interfaces) | ✅ | 全部落地 |
 | 分层架构 + CQRS + DI | ✅ | 工作正常 |
 | Import Linter 18 合约全通过 | ✅ | 0 broken, 0 warnings |
-| 零 `ditto_core`/`ditto_datahub`/`ditto_port` 残留 | ✅ | 完全清除 |
+| 零 `ditto_kernel`/`ditto_data`/`ditto_interfaces` 残留 | ✅ | 完全清除 |
 | 零 `AnyFrame` 残留 | ✅ | 完全消除 |
 
 ## 2. 已接受偏差（ADR-0006)
@@ -67,7 +67,7 @@ ditto_interfaces.registry.container (Composition Root)
 |------|------|------|
 | 预留事件接入 | 当 ingestion/quality 流程需要事件驱动时接入 | 否则保留 docstring 标注 |
 | Data 内部 storage/sources 边界 | 已由 importlinter 强制 | 当前无需额外措施 |
-| `ditto_core`/`ditto_datahub`/`ditto_port` 历史命名 | 已完全清除（源码 + 测试 + 文档） |
+| `ditto_kernel`/`ditto_data`/`ditto_interfaces` 历史命名 | 已完全清除（源码 + 测试 + 文档） |
 
 ## 关键指标
 

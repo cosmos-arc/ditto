@@ -29,7 +29,7 @@ last_audit: 2026-04-04
 | 2a-2 | 迁移 quality 消费者 + 清理 core quality | ✅ 完成 | 83 测试迁移到 ditto_data，core quality 目录删除 |
 | 2b-1 | 创建 ditto_analytics + 迁移 expression/materialization | ✅ 完成 | expression/ + materialization/ + compile_cache → ditto_analytics，re-export shim |
 | 2b-2 | 迁移 analytics 消费者 + 清理 engine re-export | ✅ 完成 | 所有消费者切换到 ditto_analytics，shim 删除 |
-| 2c-1 | ditto_core → ditto_engine 机械改名 | ✅ 完成 | 全库 0 ditto_core 残留，11/11 arch-check KEPT |
+| 2c-1 | ditto_kernel → ditto_engine 机械改名 | ✅ 完成 | 全库 0 ditto_kernel 残留，11/11 arch-check KEPT |
 | 2c-2 | 文档更新 + 最终验证 | ✅ 完成 | CLAUDE.md + core/CLAUDE.md 更新 |
 | 3a | 清理 deprecated 模型（trading.py + portfolio.py） | ✅ 完成 | 3 文件删除，__init__.py 清理，零残留 |
 | 3b | factors + features 迁入 ditto_analytics | ✅ 完成 | re-export shim 兼容层，消费者零改动 |
@@ -185,7 +185,7 @@ class ServiceBackedDataProvider:
 | 消费者 | 导入路径 | 影响评估 |
 |--------|---------|---------|
 | `ditto_data.query.__init__` | re-export | 低 — 仅更新导出名 |
-| `ditto_core.backtest.data_feed:200` | docstring 引用 | 低 — 仅更新注释 |
+| `ditto_kernel.backtest.data_feed:200` | docstring 引用 | 低 — 仅更新注释 |
 | `apps/port/` | 无导入 | 无影响 — grep 确认零引用 |
 
 **测试场景**：
@@ -282,8 +282,8 @@ class ServiceBackedDataProvider:
 
 | 文件 | 使用方式 | 迁移策略 |
 |------|---------|---------|
-| [data_feed.py](../packages/engine/src/ditto_core/backtest/data_feed.py) | 定义 + ParquetDataFeed + ProviderBackedDataFeed | 删除 ParquetDataFeed 类，保留 ProviderBackedDataFeed |
-| [backtest/__init__.py](../packages/engine/src/ditto_core/backtest/__init__.py) | 导出 ParquetDataFeed | 从 `__all__` 移除 |
+| [data_feed.py](../packages/engine/src/ditto_kernel/backtest/data_feed.py) | 定义 + ParquetDataFeed + ProviderBackedDataFeed | 删除 ParquetDataFeed 类，保留 ProviderBackedDataFeed |
+| [backtest/__init__.py](../packages/engine/src/ditto_kernel/backtest/__init__.py) | 导出 ParquetDataFeed | 从 `__all__` 移除 |
 | [conftest.py](../packages/engine/tests/integration/strategy/conftest.py) | 1 个 fixture | 转换为使用 mock DataProvider 的 ProviderBackedDataFeed |
 | [conftest.py](../packages/engine/tests/integration/backtest/conftest.py) | 6 个 fixture (three_day/five_day/limit_up/limit_down/st) | 同上 |
 | [test_backtest_invariants.py](../packages/engine/tests/integration/backtest/test_backtest_invariants.py) | 5 处局部 import + 构造 | 使用 conftest 中转换后的 fixture |
@@ -347,8 +347,8 @@ class TestParquetProvider:
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| EDIT | [data_feed.py](../packages/engine/src/ditto_core/backtest/data_feed.py) | 删除 ParquetDataFeed 类（约 90 行），更新模块 docstring |
-| EDIT | [backtest/__init__.py](../packages/engine/src/ditto_core/backtest/__init__.py) | 从 `__all__` 移除 `"ParquetDataFeed"` |
+| EDIT | [data_feed.py](../packages/engine/src/ditto_kernel/backtest/data_feed.py) | 删除 ParquetDataFeed 类（约 90 行），更新模块 docstring |
+| EDIT | [backtest/__init__.py](../packages/engine/src/ditto_kernel/backtest/__init__.py) | 从 `__all__` 移除 `"ParquetDataFeed"` |
 | EDIT | [conftest.py](../packages/engine/tests/integration/strategy/conftest.py) | 新增 `TestParquetProvider`，转换 fixture |
 | EDIT | [conftest.py](../packages/engine/tests/integration/backtest/conftest.py) | 同上，转换 6 个 fixture |
 | EDIT | [test_backtest_invariants.py](../packages/engine/tests/integration/backtest/test_backtest_invariants.py) | 移除局部 `from ... import ParquetDataFeed`，使用 conftest fixture |
@@ -396,7 +396,7 @@ class TestParquetProvider:
 |------|------|---------|------|
 | 2a | `quality/` 迁入 data.quality + datahub→data 重命名（Strangler 模式，re-export 兼容层） | 12 个 quality 文件 + pyproject.toml + ~30 处 storage→model import + .importlinter 更新 | Phase 1 |
 | 2b | `core/expression/` + `core/materialization/` + `compile_cache.py` 迁入 analytics | ~15 文件 + port consumers | 2a |
-| 2c | `ditto_core` 改名 `ditto_engine` | pyproject.toml + 全库 import 更新 | 2b |
+| 2c | `ditto_kernel` 改名 `ditto_engine` | pyproject.toml + 全库 import 更新 | 2b |
 | 2d | TradingOrchestrator 设计 + Runtime Contracts + EventBus 隔离 + Stage 契约强类型 | engine.orchestrator/ 新建 | 2c |
 
 **Phase 2 关键决策点**：
@@ -510,7 +510,7 @@ Phase 0.5 + Phase 1 完成后：
 **全量迁移最终状态**（2026-04-04 审计）：
 - 4367+ tests passed
 - 18 importlinter contracts (0 broken, 0 warnings)
-- `from ditto_datahub`: 0 | `from ditto_core`: 0 | `from ditto_port`: 0
+- `from ditto_data`: 0 | `from ditto_kernel`: 0 | `from ditto_interfaces`: 0
 - `from ditto_engine`: 576+ 处 | `from ditto_analytics`: 173+ 处 | `from ditto_data`: 710+ 处
 - 目录已重命名 `packages/core/` → `packages/engine/`
 

@@ -86,7 +86,7 @@ packages/
 - 只有 `application` 可以同时协调 `metadata / marketdata / decisioning / trading / analytics / sources`
 - `interfaces` 只做入口适配，不做业务编排
 
-这与当前仓库中 [input_assembler.py](../../apps/port/src/ditto_port/services/strategy/input_assembler.py) 和 [backtest_service.py](../../apps/port/src/ditto_port/services/strategy/backtest_service.py) 已经呈现出的收敛方向一致。
+这与当前仓库中 [input_assembler.py](../../apps/port/src/ditto_interfaces/services/strategy/input_assembler.py) 和 [backtest_service.py](../../apps/port/src/ditto_interfaces/services/strategy/backtest_service.py) 已经呈现出的收敛方向一致。
 
 ### 3.3 行为域只消费 prepared inputs
 
@@ -277,7 +277,7 @@ kernel -> none
 
 ### 6.2 Phase 1：从现有 `port` 中提炼 `application`
 
-现有 [apps/port/src/ditto_port/services](../../apps/port/src/ditto_port/services) 中已经存在大量 application 形态代码，应优先抽象为：
+现有 [apps/port/src/ditto_interfaces/services](../../apps/port/src/ditto_interfaces/services) 中已经存在大量 application 形态代码，应优先抽象为：
 
 - `application.strategy`
 - `application.ingestion`

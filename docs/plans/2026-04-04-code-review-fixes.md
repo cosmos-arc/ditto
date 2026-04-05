@@ -191,7 +191,7 @@ forbidden_modules =
 
 ### Task 7: 修复陈旧 "Core 层" docstring `[S]`
 
-**问题**: 16 处 "Core 层" 应为 "Engine 层"（ditto_core → ditto_engine 重命名遗留）
+**问题**: 16 处 "Core 层" 应为 "Engine 层"（ditto_kernel → ditto_engine 重命名遗留）
 
 **修改文件** (10 个):
 - `packages/engine/src/ditto_engine/execution/rules.py` (2 处)

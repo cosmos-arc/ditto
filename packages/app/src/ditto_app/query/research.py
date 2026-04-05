@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -40,6 +41,21 @@ __all__ = ["ResearchDatasetFacade"]
 
 _RESEARCH_BUILDER_VERSION = "unified-derived-research-v1"
 _BUILD_REPORT_FILENAME = "build_report.json"
+_VALID_TABLE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _sanitize_table_name(dataset_id: str) -> str:
+    """
+    Convert dataset_id to a safe SQLite table name.
+
+    Replaces ``-`` with ``_`` and validates the result matches
+    a legal SQL identifier pattern.  Raises ``ValueError`` for
+    identifiers that could enable SQL injection.
+    """
+    table_name = dataset_id.replace("-", "_")
+    if not _VALID_TABLE_NAME.match(table_name):
+        raise ValueError(f"Invalid dataset_id for table name: {dataset_id!r}")
+    return table_name
 
 
 @dataclass(frozen=True)
@@ -219,8 +235,8 @@ class ResearchDatasetFacade:
         path: Path,
     ) -> None:
         """将 DataFrame 导出为 SQLite 表."""
+        table_name = _sanitize_table_name(dataset_id)
         conn = sqlite3.connect(str(path))
-        table_name = dataset_id.replace("-", "_")
         records = df.to_dicts()
         if records:
             columns = list(records[0].keys())

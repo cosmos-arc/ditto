@@ -1,0 +1,348 @@
+"""Port 策略服务工厂 — 含 BacktestRuntimeBuilder 与 StrategyServiceFactory."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, replace
+
+from ditto_data.models.strategy import StrategySpecRecord
+from ditto_data.services.audit import ExecutionAuditService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.strategy.strategy_artifact_service import (
+    StrategyArtifactService,
+)
+from ditto_engine.accounting.account import Account
+from ditto_engine.accounting.cash import CashBook
+from ditto_engine.alpha.pipeline import StrategyPipeline
+from ditto_engine.alpha.specs import StrategySpec
+from ditto_engine.backtest.data_feed import DataFeed
+from ditto_engine.execution.brokerage import BacktestBrokerage, Brokerage
+from ditto_engine.execution.planner import ExecutionPlanner, SimpleExecutionPlanner
+from ditto_engine.execution.reality import BrokerageModel, FeeModel, SimpleFeeModel
+from ditto_engine.risk.pre_trade import (
+    BuyingPowerCheck,
+    CompositePreTradeCheck,
+    LotSizeCheck,
+)
+from ditto_kernel.identity import InstrumentId
+
+from ditto_app.builders.runtime_builder import StrategyRuntimeBuilder
+from ditto_app.process.strategy import (
+    BacktestService,
+    BacktestServiceConfig,
+    BacktestServiceOptions,
+    MarketServiceDataFeed,
+    MarketServiceDataFeedConfig,
+    RunLifecycleService,
+    StrategyInputAssembler,
+    StrategyRunService,
+    StrategyRunServiceConfig,
+)
+
+__all__ = [
+    "BacktestRuntimeBuilder",
+    "PublishedBacktestRuntime",
+    "StrategyServiceFactory",
+]
+
+
+# ===========================================================================
+# PublishedBacktestRuntime
+# ===========================================================================
+
+
+@dataclass(frozen=True)
+class PublishedBacktestRuntime:
+    """从 published strategy 派生出的完整回测运行时。"""
+
+    record: StrategySpecRecord
+    spec: StrategySpec
+    pipeline: StrategyPipeline
+    planner: SimpleExecutionPlanner
+    brokerage: BacktestBrokerage
+    pre_trade_check: CompositePreTradeCheck
+    data_feed: MarketServiceDataFeed
+    fee_model: FeeModel
+    config: BacktestServiceConfig
+
+
+# ===========================================================================
+# BacktestRuntimeBuilder
+# ===========================================================================
+
+
+class BacktestRuntimeBuilder:
+    """为 published strategy 组装最小可运行回测依赖。"""
+
+    def __init__(
+        self,
+        *,
+        strategy_runtime_builder: StrategyRuntimeBuilder,
+        metadata_service: MetadataService,
+        market_service: MarketService,
+    ) -> None:
+        self._strategy_runtime_builder = strategy_runtime_builder
+        self._metadata_service = metadata_service
+        self._market_service = market_service
+
+    def build_published_runtime(
+        self,
+        *,
+        config: BacktestServiceConfig,
+        version: int | None = None,
+        source: str = "tushare",
+    ) -> PublishedBacktestRuntime:
+        """从 published strategy catalog 构造回测运行时。"""
+        runtime = self._strategy_runtime_builder.build_published_runtime(
+            config.strategy_id,
+            version,
+        )
+        fee_model = SimpleFeeModel()
+        brokerage = BacktestBrokerage(
+            account=Account(
+                cash=CashBook(
+                    available=config.initial_cash,
+                    settled=config.initial_cash,
+                    frozen=0.0,
+                )
+            ),
+            model=BrokerageModel(fee_model=fee_model),
+        )
+        benchmark_id = self._resolve_benchmark(
+            config.benchmark_id,
+            runtime.spec.benchmark,
+            source,
+            config.start_date,
+        )
+        resolved_config = replace(
+            config,
+            strategy_version=str(runtime.record.version),
+            benchmark_id=benchmark_id,
+        )
+        return PublishedBacktestRuntime(
+            record=runtime.record,
+            spec=runtime.spec,
+            pipeline=runtime.pipeline,
+            planner=SimpleExecutionPlanner(),
+            brokerage=brokerage,
+            pre_trade_check=CompositePreTradeCheck(
+                checks=(LotSizeCheck(), BuyingPowerCheck()),
+            ),
+            data_feed=MarketServiceDataFeed(
+                metadata_service=self._metadata_service,
+                market_service=self._market_service,
+                config=MarketServiceDataFeedConfig(
+                    universe_id=runtime.spec.universe,
+                    asset_class=runtime.spec.asset_class,
+                    start_date=config.start_date,
+                    end_date=config.end_date,
+                    benchmark_id=resolved_config.benchmark_id,
+                    source=source,
+                ),
+            ),
+            fee_model=fee_model,
+            config=resolved_config,
+        )
+
+    def _resolve_benchmark(
+        self,
+        config_benchmark: InstrumentId | None,
+        spec_benchmark: str | None,
+        source: str,
+        as_of: str,
+    ) -> InstrumentId | None:
+        """解析 benchmark：优先使用 config 中的 InstrumentId，否则从 spec 解析。"""
+        if config_benchmark is not None:
+            return config_benchmark
+        if spec_benchmark is None:
+            return None
+        iid = self._metadata_service.resolve_instrument_id(
+            spec_benchmark,
+            source,
+            as_of,
+        )
+        return InstrumentId(iid) if iid is not None else None
+
+
+# ===========================================================================
+# StrategyServiceFactory
+# ===========================================================================
+
+
+class StrategyServiceFactory:
+    """为 Port 层策略服务预接控制面依赖的工厂。"""
+
+    def __init__(
+        self,
+        *,
+        audit_service: ExecutionAuditService,
+        artifact_service: StrategyArtifactService,
+        run_service: RunLifecycleService,
+        runtime_builder: StrategyRuntimeBuilder | None = None,
+        backtest_runtime_builder: BacktestRuntimeBuilder | None = None,
+    ) -> None:
+        self._audit_service = audit_service
+        self._artifact_service = artifact_service
+        self._run_service = run_service
+        self._runtime_builder = runtime_builder
+        self._backtest_runtime_builder = backtest_runtime_builder
+
+    def build_strategy_run_service(
+        self,
+        *,
+        config: StrategyRunServiceConfig,
+        pipeline: StrategyPipeline,
+        assembler: StrategyInputAssembler | None = None,
+    ) -> StrategyRunService:
+        """构造带控制面依赖的 StrategyRunService。"""
+        resolved_assembler = assembler or self._build_input_assembler(config)
+        return StrategyRunService(
+            config=config,
+            pipeline=pipeline,
+            assembler=resolved_assembler,
+            artifact_service=self._artifact_service,
+            run_service=self._run_service,
+        )
+
+    def build_strategy_run_service_from_catalog(
+        self,
+        *,
+        config: StrategyRunServiceConfig,
+        version: int | None = None,
+        assembler: StrategyInputAssembler | None = None,
+    ) -> StrategyRunService:
+        """从 published strategy catalog 直接构造 ``StrategyRunService``。"""
+        if self._runtime_builder is None:
+            msg = "StrategyRuntimeBuilder 未配置, 无法从 catalog 构造运行服务"
+            raise ValueError(msg)
+        resolved_version = version
+        if resolved_version is None:
+            resolved_version = self._parse_catalog_version(config.strategy_version)
+        runtime = self._runtime_builder.build_published_runtime(
+            config.strategy_id,
+            resolved_version,
+        )
+        resolved_config = replace(
+            config,
+            strategy_version=str(runtime.record.version),
+            spec=runtime.spec,
+        )
+        return self.build_strategy_run_service(
+            config=resolved_config,
+            pipeline=runtime.pipeline,
+            assembler=assembler,
+        )
+
+    def build_backtest_service(
+        self,
+        *,
+        config: BacktestServiceConfig,
+        pipeline: StrategyPipeline,
+        planner: ExecutionPlanner,
+        brokerage: Brokerage,
+        pre_trade_check: CompositePreTradeCheck,
+        data_feed: DataFeed,
+        options: BacktestServiceOptions | None = None,
+    ) -> BacktestService:
+        """构造带控制面依赖的 BacktestService。"""
+        resolved_options = self._build_backtest_options(options)
+        return BacktestService(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=resolved_options,
+        )
+
+    def build_backtest_service_from_catalog(
+        self,
+        *,
+        config: BacktestServiceConfig,
+        version: int | None = None,
+        options: BacktestServiceOptions | None = None,
+        source: str = "tushare",
+    ) -> BacktestService:
+        """从 published strategy catalog 直接构造 ``BacktestService``。"""
+        if self._backtest_runtime_builder is None:
+            msg = "BacktestRuntimeBuilder 未配置, 无法从 catalog 构造回测服务"
+            raise ValueError(msg)
+        resolved_version = version
+        if resolved_version is None:
+            resolved_version = self._parse_catalog_version(config.strategy_version)
+        runtime = self._backtest_runtime_builder.build_published_runtime(
+            config=config,
+            version=resolved_version,
+            source=source,
+        )
+        resolved_options = options or BacktestServiceOptions()
+        if resolved_options.fee_model is None:
+            resolved_options = replace(
+                resolved_options,
+                fee_model=runtime.fee_model,
+            )
+        if resolved_options.display_map is None:
+            resolved_options = replace(
+                resolved_options,
+                display_map=runtime.data_feed.display_map,
+            )
+        return self.build_backtest_service(
+            config=runtime.config,
+            pipeline=runtime.pipeline,
+            planner=runtime.planner,
+            brokerage=runtime.brokerage,
+            pre_trade_check=runtime.pre_trade_check,
+            data_feed=runtime.data_feed,
+            options=resolved_options,
+        )
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _build_input_assembler(
+        self,
+        config: StrategyRunServiceConfig,
+    ) -> StrategyInputAssembler:
+        """按运行配置创建默认输入组装器。"""
+        parameters: dict[str, object] | None = None
+        if config.spec is not None:
+            parameters = dict(config.spec.params)
+        return StrategyInputAssembler(
+            strategy_id=config.strategy_id,
+            run_id=config.run_id,
+            parameters=parameters,
+        )
+
+    def _build_backtest_options(
+        self,
+        options: BacktestServiceOptions | None,
+    ) -> BacktestServiceOptions:
+        """将容器内控制面服务并入 BacktestServiceOptions。"""
+        if options is None:
+            return BacktestServiceOptions(
+                audit_service=self._audit_service,
+                artifact_service=self._artifact_service,
+                run_service=self._run_service,
+            )
+        return BacktestServiceOptions(
+            fee_model=options.fee_model,
+            rule_provider=options.rule_provider,
+            post_trade_guard=options.post_trade_guard,
+            audit_service=options.audit_service or self._audit_service,
+            artifact_service=options.artifact_service or self._artifact_service,
+            artifact_dir=options.artifact_dir,
+            display_map=options.display_map,
+            run_service=options.run_service or self._run_service,
+        )
+
+    @staticmethod
+    def _parse_catalog_version(strategy_version: str) -> int | None:
+        """将 run lifecycle 中的版本字符串尽量解析成 catalog version。"""
+        if strategy_version == "":
+            return None
+        try:
+            return int(strategy_version)
+        except ValueError:
+            return None

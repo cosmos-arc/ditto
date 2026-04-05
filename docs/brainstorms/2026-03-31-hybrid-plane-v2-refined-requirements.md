@@ -338,8 +338,8 @@ builders -X-> query / write         # 只装配，不查询不写入
 | 验证项 | 方法 | 通过标准 |
 |--------|------|---------|
 | 子域迁出正确 | `pixi run -e dev check` | 每个 PR 都全通过 |
-| import 迁移完整 | `grep -r "ditto_core.engine" packages/ apps/` | 返回 0 结果（Phase 2b 完成后） |
-| 包名重命名正确 | `grep -r "ditto_core" packages/ apps/ --include="*.py"` | 返回 0 结果（Phase 2c 完成后） |
+| import 迁移完整 | `grep -r "ditto_kernel.engine" packages/ apps/` | 返回 0 结果（Phase 2b 完成后） |
+| 包名重命名正确 | `grep -r "ditto_kernel" packages/ apps/ --include="*.py"` | 返回 0 结果（Phase 2c 完成后） |
 | 功能完整 | 集成测试：回测 + 策略 + 因子计算 + 评估 | 全部通过 |
 | 类型安全 | `pixi run -e dev type --all` | 新的 engine.orchestrator 强类型 Stage 契约无 Any |
 | EventBus 隔离 | 单元测试：handler 异常不阻断后续 handler | SimpleEventBus handler try/except 隔离生效 |
@@ -365,7 +365,7 @@ builders -X-> query / write         # 只装配，不查询不写入
 |--------|------|---------|
 | DI 容器正确 | 启动应用 + 全部 HTTP 端点 smoke test | 无 DI 解析错误 |
 | 功能不变 | 全量 CLI 命令 + HTTP 端点 + Prefect Jobs | 与迁移前行为一致 |
-| 旧路径清理 | `grep -r "ditto_port" packages/ apps/ --include="*.py"` | 返回 0 结果 |
+| 旧路径清理 | `grep -r "ditto_interfaces" packages/ apps/ --include="*.py"` | 返回 0 结果 |
 
 ### Phase 5（固化，~4 PR）
 

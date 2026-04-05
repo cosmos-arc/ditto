@@ -19,11 +19,11 @@
 
 | # | 问题 | 严重度 | 根因 |
 |---|------|--------|------|
-| I1 | `pixi.toml` dev/server 命令引用 `ditto_port` 旧路径 | **高** — 阻断本地开发 | Phase 4d 重命名遗漏 |
+| I1 | `pixi.toml` dev/server 命令引用 `ditto_interfaces` 旧路径 | **高** — 阻断本地开发 | Phase 4d 重命名遗漏 |
 | I2 | `ci.yml` 变更检测 + 测试路径引用 `apps/port/` | **高** — 阻断 CI | Phase 4d 重命名遗漏 |
 | I3 | `e2e-validation.yml` 路径引用 `apps/port/` | **中** — 阻断 E2E 触发 | Phase 4d 重命名遗漏 |
 | I4 | `PULL_REQUEST_TEMPLATE.md` 影响范围引用 `apps/port` | **低** — 文档残留 | Phase 4d 重命名遗漏 |
-| I5 | `ditto_port.egg-info/` build 残留 | **低** — 不影响运行 | Phase 4d 目录重命名后未清理 |
+| I5 | `ditto_interfaces.egg-info/` build 残留 | **低** — 不影响运行 | Phase 4d 目录重命名后未清理 |
 | I6 | ~14 处消费端通过 re-export shim 间接引用 | **中** — Strangler 模式未收尾 | Phase 2/3 shim 未消费完 |
 | I7 | `ditto_data/models/__init__.py` 通过 shim 导入 factors/features | **中** | 同上 |
 | I8 | `CLAUDE.md` 架构图缺少 `packages/app/` | **低** — 文档不同步 | Phase 4 新增包未同步 |
@@ -34,7 +34,7 @@
 
 ## PR 1: 配置路径修正 `[M]`
 
-**目标**：修复所有 `ditto_port` / `apps/port` 旧路径引用，恢复本地开发和 CI 正常运行。
+**目标**：修复所有 `ditto_interfaces` / `apps/port` 旧路径引用，恢复本地开发和 CI 正常运行。
 
 ### Task 1: 修复 pixi.toml 入口点
 
@@ -43,7 +43,7 @@
 
 **Step 1: 更新 dev 和 server 命令**
 
-将第 207 行和第 210 行的 `apps.port.src.ditto_port.main:app` 替换为 `apps.interfaces.src.ditto_interfaces.main:app`。
+将第 207 行和第 210 行的 `apps.port.src.ditto_interfaces.main:app` 替换为 `apps.interfaces.src.ditto_interfaces.main:app`。
 
 **Step 2: 验证**
 
@@ -54,7 +54,7 @@ Expected: 命令不再报模块找不到错误
 
 ```bash
 git add pixi.toml
-git commit -m "fix: pixi.toml 入口点 ditto_port → ditto_interfaces"
+git commit -m "fix: pixi.toml 入口点 ditto_interfaces → ditto_interfaces"
 ```
 
 ---
@@ -117,15 +117,15 @@ git commit -m "fix: e2e + PR template 路径更新"
 
 ---
 
-### Task 4: 删除 ditto_port.egg-info
+### Task 4: 删除 ditto_interfaces.egg-info
 
 **Files:**
-- Delete: `apps/interfaces/src/ditto_port.egg-info/` (整个目录，5 个文件)
+- Delete: `apps/interfaces/src/ditto_interfaces.egg-info/` (整个目录，5 个文件)
 
 **Step 1: 确认目录内容**
 
 ```
-apps/interfaces/src/ditto_port.egg-info/
+apps/interfaces/src/ditto_interfaces.egg-info/
 ├── PKG-INFO
 ├── SOURCES.txt
 ├── dependency_links.txt
@@ -136,21 +136,21 @@ apps/interfaces/src/ditto_port.egg-info/
 **Step 2: 删除目录**
 
 ```bash
-rm -rf apps/interfaces/src/ditto_port.egg-info/
+rm -rf apps/interfaces/src/ditto_interfaces.egg-info/
 ```
 
 **Step 3: 验证**
 
 ```bash
-ls apps/interfaces/src/ditto_port.egg-info 2>&1
+ls apps/interfaces/src/ditto_interfaces.egg-info 2>&1
 # Expected: No such file or directory
 ```
 
 **Step 4: Commit**
 
 ```bash
-git add -u apps/interfaces/src/ditto_port.egg-info/
-git commit -m "chore: 删除 ditto_port.egg-info build 残留"
+git add -u apps/interfaces/src/ditto_interfaces.egg-info/
+git commit -m "chore: 删除 ditto_interfaces.egg-info build 残留"
 ```
 
 ---
@@ -534,12 +534,12 @@ Expected: 全部 contracts 通过（17 个）
 **Step 3: 全局残留验证**
 
 ```bash
-# 确认 Python 源码零 ditto_port 残留
-grep -rn "ditto_port" packages/ apps/ --include="*.py"
+# 确认 Python 源码零 ditto_interfaces 残留
+grep -rn "ditto_interfaces" packages/ apps/ --include="*.py"
 # Expected: 0 结果
 
-# 确认 Python 源码零 ditto_core 残留
-grep -rn "ditto_core" packages/ apps/ --include="*.py"
+# 确认 Python 源码零 ditto_kernel 残留
+grep -rn "ditto_kernel" packages/ apps/ --include="*.py"
 # Expected: 0 结果
 
 # 确认 shim 文件已删除
@@ -553,7 +553,7 @@ ls packages/data/src/ditto_data/models/features.py 2>&1
 # Expected: No such file or directory
 
 # 确认 egg-info 已删除
-ls apps/interfaces/src/ditto_port.egg-info 2>&1
+ls apps/interfaces/src/ditto_interfaces.egg-info 2>&1
 # Expected: No such file or directory
 ```
 
@@ -568,7 +568,7 @@ ls apps/interfaces/src/ditto_port.egg-info 2>&1
 | 1 | 修复 pixi.toml 入口点 | S | PR1 |
 | 2 | 修复 ci.yml 路径 | S | PR1 |
 | 3 | 修复 e2e-validation.yml + PR template | S | PR1 |
-| 4 | 删除 ditto_port.egg-info | S | PR1 |
+| 4 | 删除 ditto_interfaces.egg-info | S | PR1 |
 | 5 | PR 1 集成验证 | S | PR1 |
 | 6 | 迁移 engine 错误引用 | S | PR2 |
 | 7 | 迁移 app 错误引用 | S | PR2 |

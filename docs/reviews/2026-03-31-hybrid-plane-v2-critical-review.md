@@ -50,7 +50,7 @@
 **决定**: Pipeline 抽象从 Kernel 移出，归属到实际使用模块（engine/analytics），在那里可以直接用 `pl.DataFrame` 强类型。Kernel 只保留 Clock、DataProvider（Protocol 定义）、EventBus 这类真正跨层共享的抽象。Pipeline 作为引擎内部编排模式，无需跨层复用。
 
 **待办**:
-- [ ] 将 `pipeline.py`（Context、Stage、Pipeline）从 `ditto_kernel` 移至 `ditto_core`（或 Phase 2 后的 `ditto_engine`）
+- [ ] 将 `pipeline.py`（Context、Stage、Pipeline）从 `ditto_kernel` 移至 `ditto_kernel`（或 Phase 2 后的 `ditto_engine`）
 - [ ] Context/Stage/Pipeline 可以直接引用 `pl.DataFrame`
 - [ ] Stage 间数据契约（AlphaOutput、PortfolioOutput 等）用 frozen dataclass + pl.DataFrame 字段强类型化
 - [ ] Kernel public symbols 从 17 降至 14
@@ -151,7 +151,7 @@ Orchestrator 持有 Brokerage，每日生成 AccountView 注入各 Stage。
 **现状**: 标为"中风险 + 纯机械操作 + 1 PR"
 
 **实际影响范围**:
-- `ditto_core` 被 `ditto_port`、`ditto_data` 广泛引用
+- `ditto_kernel` 被 `ditto_interfaces`、`ditto_data` 广泛引用
 - 改名 = 全库 import 路径变更
 - 改名后 quality → datahub、expression → analytics 还要迁走 = **改两次名**
 

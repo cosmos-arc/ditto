@@ -121,7 +121,7 @@ packages/data/
     └── unit/stores/
         └── test_quarantine_store.py  # 隔离区测试
 
-apps/port/src/ditto_port/
+apps/port/src/ditto_interfaces/
 └── ingestion/
     └── tasks/
         └── dq_batch.py               # L3 批量检查任务
@@ -259,7 +259,7 @@ packages/data/src/ditto_data/
 └── stores/
     └── ingestion_metadata_store.py    # 摄取元数据存储
 
-apps/port/src/ditto_port/ingestion/
+apps/port/src/ditto_interfaces/ingestion/
 ├── flows/
 │   └── scheduled_ingest.py            # 定时摄取流程
 └── tasks/
@@ -332,7 +332,7 @@ packages/data/src/ditto_data/stores/
 packages/data/README.md              # DataHub 文档 (A.9)
 docs/plans/2025-12-29-pr19-review-fixes.md  # PR #19 修复计划
 
-apps/port/src/ditto_port/
+apps/port/src/ditto_interfaces/
 └── main.py                            # Granian + ORJSONResponse
 ```
 
@@ -396,7 +396,7 @@ apps/port/src/ditto_port/
 
 **新增文件结构**：
 ```
-apps/port/src/ditto_port/validation/
+apps/port/src/ditto_interfaces/validation/
 ├── __init__.py
 ├── golden_dataset.py                  # 黄金数据集管理
 ├── comparison.py                      # 数据比对引擎
@@ -592,9 +592,9 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/data/src/ditto_data/sources/base.py` | 增量接口 | ✅ Phase 3 |
 | `packages/data/src/ditto_data/sources/metadata.py` | 元数据源 | ✅ Phase 3 |
 | `packages/data/src/ditto_data/sources/tushare/source.py` | Tushare 增量 | ✅ Phase 3 |
-| `apps/port/src/ditto_port/ingestion/tasks/dq_batch.py` | L3 任务 | ✅ |
-| `apps/port/src/ditto_port/ingestion/tasks/monitoring.py` | 质量监控 | ✅ Phase 3 |
-| `apps/port/src/ditto_port/ingestion/flows/scheduled_ingest.py` | 定时摄取 | ✅ Phase 3 |
+| `apps/port/src/ditto_interfaces/ingestion/tasks/dq_batch.py` | L3 任务 | ✅ |
+| `apps/port/src/ditto_interfaces/ingestion/tasks/monitoring.py` | 质量监控 | ✅ Phase 3 |
+| `apps/port/src/ditto_interfaces/ingestion/flows/scheduled_ingest.py` | 定时摄取 | ✅ Phase 3 |
 | **测试文件** (22 个) | | |
 | `packages/data/tests/unit/dq/*.py` | DQ 测试 | ✅ |
 | `packages/data/tests/unit/stores/test_*.py` | Store 测试 | ✅ |
@@ -611,9 +611,9 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/data/tests/unit/runtime/test_cache.py` | 缓存测试 | ✅ Phase 4 |
 | `packages/data/tests/unit/runtime/test_pit_helper.py` | PIT 测试 | ✅ Phase 4 |
 | `packages/data/src/ditto_data/sources/failover.py` | 自动切换 | ❌ |
-| `apps/port/src/ditto_port/validation/golden_dataset.py` | 黄金数据集管理器 | ❌ |
-| `apps/port/src/ditto_port/validation/comparison.py` | 数据比对引擎 | ❌ |
-| `apps/port/src/ditto_port/validation/report.py` | 验证报告生成 | ❌ |
+| `apps/port/src/ditto_interfaces/validation/golden_dataset.py` | 黄金数据集管理器 | ❌ |
+| `apps/port/src/ditto_interfaces/validation/comparison.py` | 数据比对引擎 | ❌ |
+| `apps/port/src/ditto_interfaces/validation/report.py` | 验证报告生成 | ❌ |
 | `doc/validation/golden_dataset_baseline_v1.md` | 数据质量基线报告 | ❌ |
 
 ### 修改文件
@@ -627,7 +627,7 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/data/src/ditto_data/runtime/__init__.py` | 导出 DataCache, PitHelper | ✅ Phase 4 |
 | `packages/data/src/ditto_data/stores/calendar_store.py` | 集成 DataCache | ✅ Phase 4 |
 | `packages/data/src/ditto_data/stores/security_store.py` | 集成 DataCache，移除 @lru_cache | ✅ Phase 4 |
-| `apps/port/src/ditto_port/main.py` | Granian 服务器 + ORJSONResponse | ✅ Phase 4 |
+| `apps/port/src/ditto_interfaces/main.py` | Granian 服务器 + ORJSONResponse | ✅ Phase 4 |
 | `packages/data/src/ditto_data/accessors/bars.py` | 集成 DQEngine (Task 1.8) | 📝 Phase 3 |
 | `packages/data/src/ditto_data/sources/base.py` | 增量更新接口 | ❌ |
 | `packages/data/src/ditto_data/sources/tushare/source.py` | 增量适配 | ❌ |
@@ -636,8 +636,8 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/data/src/ditto_data/accessors/__init__.py` | 导出新 Accessor | ✅ |
 | `packages/data/src/ditto_data/hub.py` | freeze/universe/index 接口 | ✅ |
 | `packages/data/tests/unit/test_hub.py` | DataHub 集成测试 | ✅ |
-| `apps/port/src/ditto_port/ingestion/scheduler.py` | 定时调度 | ❌ |
-| `apps/port/src/ditto_port/api/ingestion.py` | API 触发 | ❌ |
+| `apps/port/src/ditto_interfaces/ingestion/scheduler.py` | 定时调度 | ❌ |
+| `apps/port/src/ditto_interfaces/api/ingestion.py` | API 触发 | ❌ |
 
 ---
 

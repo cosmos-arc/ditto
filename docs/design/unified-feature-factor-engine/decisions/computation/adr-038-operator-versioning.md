@@ -302,16 +302,16 @@ ON compiled_expression_operator(operator_name, operator_version);
 
 | 文件路径 | 用途 |
 |---------|------|
-| `packages/core/src/ditto_core/engine/ops/versioning.py` | 版本号校验与比较 |
-| `packages/core/src/ditto_core/engine/ops/changelog.py` | ChangeRecord 模型与存储 |
+| `packages/core/src/ditto_kernel/engine/ops/versioning.py` | 版本号校验与比较 |
+| `packages/core/src/ditto_kernel/engine/ops/changelog.py` | ChangeRecord 模型与存储 |
 
 ### 修改文件
 
 | 文件路径 | 修改内容 |
 |---------|---------|
-| `packages/core/src/ditto_core/engine/ops/registry.py` | 强制 `version` 声明，增加 `changelog` |
-| `packages/core/src/ditto_core/engine/specs.py` | 增加 `operator_versions` 字段 |
-| `packages/core/src/ditto_core/engine/expression/analyzer.py` | 产出 `operator_names` |
+| `packages/core/src/ditto_kernel/engine/ops/registry.py` | 强制 `version` 声明，增加 `changelog` |
+| `packages/core/src/ditto_kernel/engine/specs.py` | 增加 `operator_versions` 字段 |
+| `packages/core/src/ditto_kernel/engine/expression/analyzer.py` | 产出 `operator_names` |
 | `packages/data/src/ditto_data/stores/catalog/schema.py` | 增加 `derived_spec_operator` 表 |
 
 ---

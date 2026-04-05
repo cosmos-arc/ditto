@@ -126,21 +126,21 @@
 - 负责 facade、orchestration、flow、调度入口。
 - 不直接访问底层 store，不直接做文件 I/O。
 - 当前关键入口：
-  - `apps/port/src/ditto_port/services/derived/query_facade.py`
-  - `apps/port/src/ditto_port/services/derived/materialization_orchestrator.py`
-  - `apps/port/src/ditto_port/services/derived/publication.py`
-  - `apps/port/src/ditto_port/services/derived/research.py`
+  - `apps/port/src/ditto_interfaces/services/derived/query_facade.py`
+  - `apps/port/src/ditto_interfaces/services/derived/materialization_orchestrator.py`
+  - `apps/port/src/ditto_interfaces/services/derived/publication.py`
+  - `apps/port/src/ditto_interfaces/services/derived/research.py`
 
 #### Core
 
 - 负责语义模型、编译链路、执行规划、研究对象、发布安全领域模型。
 - 保持纯计算、纯规则、低 I/O。
 - 当前关键入口：
-  - `packages/core/src/ditto_core/engine/specs.py`
-  - `packages/core/src/ditto_core/engine/expression/*`
-  - `packages/core/src/ditto_core/engine/materialization/*`
-  - `packages/core/src/ditto_core/engine/research.py`
-  - `packages/core/src/ditto_core/engine/publication_safety.py`
+  - `packages/core/src/ditto_kernel/engine/specs.py`
+  - `packages/core/src/ditto_kernel/engine/expression/*`
+  - `packages/core/src/ditto_kernel/engine/materialization/*`
+  - `packages/core/src/ditto_kernel/engine/research.py`
+  - `packages/core/src/ditto_kernel/engine/publication_safety.py`
 
 #### DataHub
 

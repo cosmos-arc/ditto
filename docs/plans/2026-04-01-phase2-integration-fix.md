@@ -8,12 +8,12 @@
 
 ## 背景
 
-Phase 2a-2c 代码迁移已完成（ditto_data / ditto_analytics 创建、ditto_core → ditto_engine 改名），但集成层面存在阻塞问题：
+Phase 2a-2c 代码迁移已完成（ditto_data / ditto_analytics 创建、ditto_kernel → ditto_engine 改名），但集成层面存在阻塞问题：
 
 1. `ditto-data` 和 `ditto-analytics` 未注册到 `pixi.toml`，导致包不可导入
 2. `arch-check` 完全失败（`Could not find package 'ditto_data'`）
 3. 三个残留目录仍含陈旧 `__pycache__`（quality、expression、materialization）
-4. `ditto_core.egg-info` 未清理
+4. `ditto_kernel.egg-info` 未清理
 
 ## 技术方案
 
@@ -45,7 +45,7 @@ ditto-port → ditto-engine, ditto-datahub, ...
     - `packages/core/src/ditto_engine/quality/`（含 checkers/，零 .py 文件）
     - `packages/core/src/ditto_engine/engine/expression/`（零 .py 文件）
     - `packages/core/src/ditto_engine/engine/materialization/`（零 .py 文件）
-    - `packages/core/src/ditto_core.egg-info/`（改名遗留）
+    - `packages/core/src/ditto_kernel.egg-info/`（改名遗留）
   - 操作: `rm -rf` 四个目录
 
 - [ ] Task 3: pixi install + 验证 `[S]`

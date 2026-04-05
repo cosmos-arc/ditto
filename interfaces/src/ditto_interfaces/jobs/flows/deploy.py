@@ -11,7 +11,7 @@ from __future__ import annotations
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from ditto_infra.foundation import logger
 from prefect import Flow, deploy
@@ -93,21 +93,17 @@ def _resolve_flow(
 
     """
     # 检查是否已经是 Flow 对象（通过检查 Flow 对象的特征属性）
-    # Flow 对象有 name, description, to_deployment 等属性
-    # Note: type: ignore 是因为 Python 类型系统无法理解运行时检查导致的类型收窄
     if hasattr(flow, "name") and hasattr(flow, "to_deployment"):
-        return flow  # type: ignore[return-value]
+        return cast(Flow[Any, Any], flow)
 
     # 如果是可调用对象（lambda 或函数），调用它获取 Flow
-    # Note: type: ignore 是因为 Python 类型系统无法理解运行时检查导致的类型收窄
     if callable(flow):
         result = flow()
         if hasattr(result, "name") and hasattr(result, "to_deployment"):
-            return result  # type: ignore[return-value]
+            return cast(Flow[Any, Any], result)
 
     # 如果都不是，尝试直接返回（可能会失败，但至少抛出明确的错误）
-    # Note: type: ignore 是因为 Python 类型系统无法理解运行时检查导致的类型收窄
-    return flow  # type: ignore[return-value]
+    return cast(Flow[Any, Any], flow)
 
 
 def _get_flow_configs() -> list[FlowDeploymentConfig]:

@@ -87,7 +87,7 @@ D:\Ditto\                              # 项目根目录
 ├── apps/
 │   ├── server/                        # FastAPI 后端
 │   │   ├── src/
-│   │   │   ├── ditto_port/
+│   │   │   ├── ditto_interfaces/
 │   │   │   │   ├── api/               # HTTP 接口
 │   │   │   │   ├── services/          # 应用服务
 │   │   │   │   ├── ingestion/         # Prefect 数据摄取（新）
@@ -170,7 +170,7 @@ D:\Ditto\                              # 项目根目录
 ### 4.3 Prefect 部署配置
 
 ```python
-# apps/port/src/ditto_port/ingestion/schedules.py
+# apps/port/src/ditto_interfaces/ingestion/schedules.py
 
 from prefect.client.schemas.schedules import CronSchedule
 
@@ -203,7 +203,7 @@ heartbeat_deployment = heartbeat_flow.to_deployment(
 ### 4.4 Flow 实现示例
 
 ```python
-# apps/port/src/ditto_port/ingestion/flows/daily_ingest.py
+# apps/port/src/ditto_interfaces/ingestion/flows/daily_ingest.py
 
 from prefect import flow, get_run_logger
 from ditto_data_hub import DataHub
@@ -317,7 +317,7 @@ Action Required: Review and manually confirm
 ### 5.4 Prefect 告警 Hook
 
 ```python
-# apps/port/src/ditto_port/ingestion/hooks.py
+# apps/port/src/ditto_interfaces/ingestion/hooks.py
 
 from prefect import flow
 from prefect.blocks.notifications import SlackWebhook
@@ -452,7 +452,7 @@ PRAGMA busy_timeout=5000;
 ### 8.2 API 端点
 
 ```python
-# apps/port/src/ditto_port/api/health.py
+# apps/port/src/ditto_interfaces/api/health.py
 
 @router.get("/healthz")
 async def healthz():
@@ -662,7 +662,7 @@ Ditto 采用**双层环境架构**，将**依赖管理**与**行为控制**分�
 pixi run -e dev pytest
 
 # 生产环境（启动服务）
-pixi run -e default python -m ditto_port.main
+pixi run -e default python -m ditto_interfaces.main
 # 或简写（default 是默认环境）
 pixi run server
 ```
@@ -801,7 +801,7 @@ from ditto_infra.foundation.config.settings import (
     Settings,
     SystemSettings,
 )
-from ditto_port.config import load_env_file
+from ditto_interfaces.config import load_env_file
 
 loader = ConfigLoader(environment)
 
@@ -820,7 +820,7 @@ settings = Settings(system=system, observability=observability)
 │                        Port 层 (应用入口)                            │
 │                                                                      │
 │  ┌────────────────────────────────────────────────────────────┐    │
-│  │  ConfigProvider (apps/port/src/ditto_port/registry/)       │    │
+│  │  ConfigProvider (apps/port/src/ditto_interfaces/registry/)       │    │
 │  │                                                             │    │
 │  │  1. 读取 config/{environment}/*.env                         │    │
 │  │  2. 构造各层配置对象 (SystemSettings, Observability...)     │    │

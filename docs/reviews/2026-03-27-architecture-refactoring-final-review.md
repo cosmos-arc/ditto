@@ -250,7 +250,7 @@ packages/
 
 ### 5.3 `MarketSnapshot` 与执行输入契约必须补全
 
-当前 [market.py](../../packages/core/src/ditto_core/execution/reality/market.py) 已经包含：
+当前 [market.py](../../packages/core/src/ditto_kernel/execution/reality/market.py) 已经包含：
 
 - `is_suspended`
 - `limit_up`

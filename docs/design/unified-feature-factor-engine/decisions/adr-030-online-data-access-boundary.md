@@ -323,7 +323,7 @@ groups:
 ### 降级触发方式
 
 ```python
-# apps/port/src/ditto_port/cli/commands/runtime.py
+# apps/port/src/ditto_interfaces/cli/commands/runtime.py
 
 import click
 
@@ -371,7 +371,7 @@ def restore(operator: str) -> None:
 ### API 端点（受限访问）
 
 ```python
-# apps/port/src/ditto_port/api/routes/runtime.py
+# apps/port/src/ditto_interfaces/api/routes/runtime.py
 
 from fastapi import APIRouter, Depends, HTTPException
 from ditto_infra.auth import require_admin

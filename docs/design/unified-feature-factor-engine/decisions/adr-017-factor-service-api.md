@@ -59,12 +59,12 @@
 ## 目录结构
 
 ```
-apps/port/src/ditto_port/
+apps/port/src/ditto_interfaces/
 ├── api/routes/derived.py      # 🆕 REST API 路由
 ├── models/derived.py          # 🆕 Pydantic 模型
 └── cli/commands/materialize/  # 🆕 CLI 命令
 
-packages/core/src/ditto_core/
+packages/core/src/ditto_kernel/
 └── derived/                   # 🆕 核心模块
     ├── service.py             # DerivedService
     ├── catalog/               # Catalog 存储
@@ -176,7 +176,7 @@ def materialize_flow(
 ## REST API 路由示例
 
 ```python
-# apps/port/src/ditto_port/api/routes/derived.py
+# apps/port/src/ditto_interfaces/api/routes/derived.py
 
 router = APIRouter(prefix="/derived", tags=["derived"])
 

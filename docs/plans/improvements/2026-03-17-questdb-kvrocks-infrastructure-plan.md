@@ -114,7 +114,7 @@
 - Create: `packages/data/src/ditto_data/storage/market/stock/bars_minute/bars_writer.py`
 - Modify: `packages/data/src/ditto_data/config/data_store.py`
 - Modify: `packages/infra/src/ditto_infra/foundation/config/providers/data_root.py`
-- Modify: `apps/port/src/ditto_port/registry/datahub/market.py`
+- Modify: `apps/port/src/ditto_interfaces/registry/datahub/market.py`
 - Test: `packages/data/tests/unit/storage/market/stock/bars_minute/test_bars_minute_store_unit.py`
 
 **实现要点**
@@ -146,7 +146,7 @@
 
 - Modify: `pixi.toml`
 - Modify: `packages/data/src/ditto_data/config/data_store.py`
-- Modify: `apps/port/src/ditto_port/registry/infra/config.py`
+- Modify: `apps/port/src/ditto_interfaces/registry/infra/config.py`
 - Modify: `config/development/data_store.env`
 - Modify: `config/testing/data_store.env`
 - Modify: `config/production/data_store.env`
@@ -209,7 +209,7 @@
 
 - Modify: `packages/data/src/ditto_data/services/hot_layer/__init__.py`
 - Modify: `packages/data/src/ditto_data/services/__init__.py`
-- Modify: `apps/port/src/ditto_port/services/derived/__init__.py`
+- Modify: `apps/port/src/ditto_interfaces/services/derived/__init__.py`
 - Create: `packages/data/src/ditto_data/services/hot_layer/in_memory_backend.py`
 - Create: `packages/data/src/ditto_data/services/hot_layer/in_memory_series_reader.py`
 - Create: `packages/data/src/ditto_data/services/hot_layer/in_memory_snapshot_store.py`
@@ -376,8 +376,8 @@
 
 **Files**
 
-- Modify: `apps/port/src/ditto_port/services/derived/query_facade.py`
-- Modify: `apps/port/src/ditto_port/registry/datahub/derived.py`
+- Modify: `apps/port/src/ditto_interfaces/services/derived/query_facade.py`
+- Modify: `apps/port/src/ditto_interfaces/registry/datahub/derived.py`
 - Modify: `apps/port/tests/unit/services/derived/test_query_facade_unit.py`
 - Modify: `packages/data/src/ditto_data/services/__init__.py`
 
@@ -413,12 +413,12 @@
 
 **Files**
 
-- Modify: `apps/port/src/ditto_port/services/derived/materialization_orchestrator.py`
-- Modify: `apps/port/src/ditto_port/registry/datahub/derived.py`
-- Create: `apps/port/src/ditto_port/services/derived/runtime_mode_store.py`
-- Create: `apps/port/src/ditto_port/services/derived/runtime_mode_resolver.py`
-- Create: `apps/port/src/ditto_port/services/derived/hot_layer_backfill_flow.py`
-- Create: `apps/port/src/ditto_port/services/derived/state_snapshot_rebuild_flow.py`
+- Modify: `apps/port/src/ditto_interfaces/services/derived/materialization_orchestrator.py`
+- Modify: `apps/port/src/ditto_interfaces/registry/datahub/derived.py`
+- Create: `apps/port/src/ditto_interfaces/services/derived/runtime_mode_store.py`
+- Create: `apps/port/src/ditto_interfaces/services/derived/runtime_mode_resolver.py`
+- Create: `apps/port/src/ditto_interfaces/services/derived/hot_layer_backfill_flow.py`
+- Create: `apps/port/src/ditto_interfaces/services/derived/state_snapshot_rebuild_flow.py`
 - Test: `apps/port/tests/unit/services/derived/test_materialization_hot_write_unit.py`
 - Test: `apps/port/tests/unit/services/derived/test_runtime_mode_resolver_unit.py`
 - Test: `apps/port/tests/integration/services/derived/test_hot_layer_backfill_integration.py`

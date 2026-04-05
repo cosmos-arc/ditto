@@ -654,7 +654,7 @@ app 层在运行时通过 DI 注入具体实现。
 
 | PR | 内容 | 风险 |
 |----|------|------|
-| 0.5a | 将 `kernel/pipeline.py`（Context、Stage、Pipeline）移至 `ditto_core.pipeline` | 低 |
+| 0.5a | 将 `kernel/pipeline.py`（Context、Stage、Pipeline）移至 `ditto_kernel.pipeline` | 低 |
 | 0.5b | 合并 BacktestProvider/LiveProvider 为单一 `DataProviderAdapter` | 低 |
 | 0.5c | 更新 kernel `__init__.py`，移除 Pipeline/Context/Stage 导出 | 低 |
 
@@ -683,9 +683,9 @@ app 层在运行时通过 DI 注入具体实现。
 |----|------|------|------|
 | 2a | `core.quality` → `datahub.quality` | 低 | ~15 文件 import 改动 |
 | 2b-1 | 创建 `packages/analytics/` 空包 + pyproject.toml | 低 | 新包骨架 |
-| 2b-2 | 在 `ditto_core.engine.__init__` 中建立 re-export 兼容层 → `ditto_analytics` | 低 | Strangler 适配：旧路径不中断 |
-| 2b-3 | 逐步迁移 import：`ditto_core.engine.xxx` → `ditto_analytics.xxx` | 中 | 33 文件引用迁移 |
-| 2b-4 | 删除 `ditto_core.engine/` 和兼容层 | 低 | 所有引用迁移完后清理 |
+| 2b-2 | 在 `ditto_kernel.engine.__init__` 中建立 re-export 兼容层 → `ditto_analytics` | 低 | Strangler 适配：旧路径不中断 |
+| 2b-3 | 逐步迁移 import：`ditto_kernel.engine.xxx` → `ditto_analytics.xxx` | 中 | 33 文件引用迁移 |
+| 2b-4 | 删除 `ditto_kernel.engine/` 和兼容层 | 低 | 所有引用迁移完后清理 |
 | 2c | `core` → `engine` 包名重命名 | 中 | 此时 core 只剩交易引擎 4 子域 |
 | 2d | engine 内部新增 `orchestrator/`（context, stage, pipeline） | 低 | 从 kernel.pipeline 移入 + 强类型化 |
 | 2e | engine 内部子域重命名（strategy → alpha） | 低 | 内部重命名 |

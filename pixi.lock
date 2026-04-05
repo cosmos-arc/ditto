@@ -2871,8 +2871,9 @@ packages:
 - pypi: ./packages/engine
   name: ditto-engine
   version: 0.1.0
-  sha256: 8743d01fa8eef3eaae8abf9f70b901908e2963dd2fa62c0b2d302fd41941f287
+  sha256: a1a21614bbb6c76adcd5af9967e47d9634fb5892e3f7985542c9e6631badce63
   requires_dist:
+  - ditto-data
   - ditto-kernel
   requires_python: '>=3.13'
 - pypi: ./packages/infra
