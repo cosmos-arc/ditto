@@ -2919,3 +2919,63 @@ details.context-section > .context-section-body {
 .progress-bar-fill.warning  { background: var(--system-degraded-fg); }
 .progress-bar-fill.critical { background: var(--system-down-fg); }
 .progress-bar-fill.brand    { background: var(--brand-accent); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Page: Cross-Market Overview — Shell Radar Layout (core structure only)
+ * Grid: Rail (sticky) | Body (scroll)
+ * Body: Header (sticky) | Context Bar (sticky) | Scope Strip (sticky) | Workspace (main + right-rail) | Tab Band
+ * ─────────────────────────────────────────────────────────────────────── */
+.shell-radar {
+  display: flex;
+  align-items: flex-start;
+  width: 100vw;
+}
+
+.shell-radar .shell-rail {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  flex-shrink: 0;
+  width: var(--shell-rail-width);
+  z-index: 30;
+}
+
+.shell-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.shell-radar .shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--shell-header-height);
+}
+
+.shell-radar .context-bar {
+  position: sticky;
+  top: var(--shell-header-height);
+  z-index: 15;
+  height: var(--shell-context-bar-height);
+}
+
+.shell-radar .scope-strip {
+  position: sticky;
+  top: calc(var(--shell-header-height) + var(--shell-context-bar-height));
+  z-index: 14;
+}
+
+.shell-workspace {
+  display: grid;
+  grid-template-columns: 1fr var(--shell-rail-radar-width);
+}
+
+.main-content {
+  padding: 2rem var(--density-gutter);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}

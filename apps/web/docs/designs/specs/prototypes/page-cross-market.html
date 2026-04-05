@@ -77,9 +77,9 @@
       --separator-size: var(--space-4);
       --badge-size: 0.875rem; /* 14px — product-criteria: badge ≥ text(10px) + 4px padding */
       /* Shadow tokens (extracted from inline) */
-      --shadow-card-hover: 0 2px 8px oklch(0 0 0 / 0.2);
-      --shadow-conclusion: -3px 0 8px -2px oklch(0.700 0.165 255 / 0.04);
-      --shadow-context-bar: 0 1px 6px oklch(0.700 0.165 255 / 0.04);
+      --shadow-card-hover: 0 2px 8px color-mix(in oklch, var(--neutral-0) 20%, transparent);
+      --shadow-conclusion: -3px 0 8px -2px color-mix(in oklch, var(--brand-500) 4%, transparent);
+      --shadow-context-bar: 0 1px 6px color-mix(in oklch, var(--brand-500) 4%, transparent);
       /* Ambient tint tokens — derived from market-up/down-fg for region switching */
       --tint-row-lead: color-mix(in oklch, var(--market-up-fg) 5%, transparent);
       --tint-row-lead-hover: color-mix(in oklch, var(--market-up-fg) 8%, transparent);
@@ -130,10 +130,10 @@
       font-size: var(--font-size-12);
     }
 
-    /* R6: Premium shell surface — subtle depth without noise */
+    /* R6: Premium shell surface — subtle depth without noise (decoration only, core layout in shared/layout-base.css) */
     .shell-radar {
       background:
-        radial-gradient(ellipse 80% 50% at 50% 0%, oklch(0.18 0.004 253 / 0.4), transparent),
+        radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in oklch, var(--neutral-50) 40%, transparent), transparent),
         var(--surface-app);
     }
 
@@ -146,17 +146,17 @@
     .market-card:hover .market-card-judgment { color: var(--text-secondary); }
     .market-card:hover .card-sparkline polyline { opacity: 0.9; }
     .market-card.card-lead:hover {
-      box-shadow: inset 0 0 0 1px var(--border-default), 0 0 20px oklch(0.670 0.170 20 / 0.06);
+      box-shadow: inset 0 0 0 1px var(--border-default), 0 0 20px color-mix(in oklch, var(--market-up-fg) 6%, transparent);
     }
     .market-card.card-lag:hover {
-      box-shadow: 0 4px 12px oklch(0 0 0 / 0.3), 0 0 20px oklch(0.680 0.120 175 / 0.06);
+      box-shadow: 0 4px 12px color-mix(in oklch, var(--neutral-0) 30%, transparent), 0 0 20px color-mix(in oklch, var(--market-down-fg) 6%, transparent);
     }
 
     /* R6: Matrix conclusion — refined hero block */
     .matrix-conclusion {
       box-shadow:
         var(--shadow-conclusion),
-        inset 0 1px 0 oklch(1 0 0 / 0.03);
+        inset 0 1px 0 var(--overlay-3);
     }
 
     /* R5: Letter-spacing normalization — 4 levels only */
@@ -172,66 +172,30 @@
       letter-spacing: normal;
     }
 
-    .shell-radar {
-      display: flex;
-      align-items: flex-start; /* body doesn't stretch to rail's 100vh */
-      width: 100vw;
-    }
+    /* Shell layout core: extracted to shared/layout-base.css */
 
-    /* Rail: sticky left, full viewport height */
-    .shell-radar .shell-rail {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      flex-shrink: 0;
-      width: var(--shell-rail-width);
-      z-index: 30;
-    }
-
-    /* Body: natural flow, no height constraint */
+    /* Body: page-specific padding for fixed status bar */
     .shell-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-      padding-bottom: 1.5rem; /* compensate fixed status bar height */
+      padding-bottom: 1.5rem;
     }
 
-    /* Header: sticky top with frosted glass (R9) */
+    /* Header: frosted glass decoration (R9) — core layout in shared/layout-base.css */
     .shell-radar .shell-header {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      height: var(--shell-header-height);
       background: var(--surface-frosted);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
     }
 
-    /* Context Bar: sticky below header with frosted glass (R9) */
+    /* Context Bar: frosted glass decoration (R9) — core layout in shared/layout-base.css */
     .shell-radar .context-bar {
-      position: sticky;
-      top: var(--shell-header-height);
-      z-index: 15;
-      height: var(--shell-context-bar-height);
       background: var(--surface-frosted-subtle);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
     }
 
-    /* Workspace: grid for main + right-rail side-by-side */
-    .shell-workspace {
-      display: grid;
-      grid-template-columns: 1fr var(--shell-rail-radar-width);
-    }
-
-    /* Main content: no overflow, natural flow */
+    /* Main content: page-specific padding override */
     .main-content {
-      padding: 2rem var(--density-gutter);
-      padding-bottom: calc(2rem + 1.5rem); /* +status-bar height to prevent overlap */
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem; /* 24px — product-criteria: L1→L1 section gap */
+      padding-bottom: calc(2rem + 1.5rem);
     }
 
     /* ── Context Bar (L1: global environment) ── */
@@ -307,10 +271,8 @@
       overflow-x: auto;
       white-space: nowrap;
     }
+    /* Scope Strip: frosted glass decoration — core layout in shared/layout-base.css */
     .shell-radar .scope-strip {
-      position: sticky;
-      top: calc(var(--shell-header-height) + var(--shell-context-bar-height));
-      z-index: 14;
       background: var(--surface-frosted-subtle);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);

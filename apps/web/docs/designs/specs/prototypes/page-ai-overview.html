@@ -73,14 +73,14 @@
       --ai-accent-subtle:    oklch(from var(--brand-accent) l c h / 0.10);
       --ai-accent-strong:    oklch(from var(--brand-accent) l c h / 0.18);
 
-      /* AI Pulse animation */
-      --ai-pulse-duration:   2s;
+      /* AI Pulse animation — delegates to data-viz status pulse */
+      --ai-pulse-duration:   var(--status-pulse-duration);
     }
 
     /* ── AI Pulse Indicator (animated dot) ── */
     .ai-pulse-dot {
-      width: 8px;
-      height: 8px;
+      width: var(--status-dot-size-lg);
+      height: var(--status-dot-size-lg);
       border-radius: 50%;
       background: var(--ai-accent);
       position: relative;
@@ -135,11 +135,11 @@
     }
 
     .ai-pulse-value.brand {
-      color: var(--ai-accent);
+      color: var(--agent-running-fg);
     }
 
     .ai-pulse-value.warning {
-      color: var(--amber-500);
+      color: var(--agent-waiting-approval-fg);
     }
 
     .ai-pulse-value.success {
@@ -303,24 +303,24 @@
 
     .ai-section-count {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-10);
+      font-size: var(--badge-font-size);
       color: var(--text-tertiary);
       background: var(--surface-strip);
-      padding: 0 var(--space-4);
-      border-radius: var(--radius-2);
-      height: 16px;
+      padding: 0 var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
+      height: var(--badge-count-height);
       display: flex;
       align-items: center;
     }
 
     .ai-section-count.running {
-      color: var(--ai-accent);
-      background: var(--ai-accent-subtle);
+      color: var(--agent-running-fg);
+      background: var(--agent-running-bg);
     }
 
     .ai-section-count.pending {
-      color: var(--amber-500);
-      background: oklch(from var(--amber-500) l c h / 0.12);
+      color: var(--agent-waiting-approval-fg);
+      background: var(--agent-waiting-approval-bg);
     }
 
     /* ── AI Finding Row (with confidence badge) ── */
@@ -383,10 +383,10 @@
     /* ── Confidence Badge ── */
     .confidence-badge {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-10);
-      font-weight: var(--font-weight-medium);
-      padding: 1px var(--space-6);
-      border-radius: var(--radius-2);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+      padding: var(--badge-sm-padding-y) var(--space-6);
+      border-radius: var(--badge-sm-radius);
       white-space: nowrap;
       flex-shrink: 0;
     }
@@ -452,15 +452,15 @@
     }
 
     .ai-plan-status {
-      width: 6px;
-      height: 6px;
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
       border-radius: 50%;
       flex-shrink: 0;
     }
 
     .ai-plan-status.running {
-      background: var(--ai-accent);
-      box-shadow: 0 0 6px var(--ai-accent);
+      background: var(--agent-running-fg);
+      box-shadow: 0 0 6px var(--agent-running-fg);
     }
 
     .ai-plan-status.completed {
@@ -468,7 +468,7 @@
     }
 
     .ai-plan-status.failed {
-      background: var(--red-500);
+      background: var(--agent-failed-fg);
     }
 
     .ai-plan-body {
@@ -509,11 +509,15 @@
     }
 
     .ai-plan-progress-fill.active {
-      background: var(--ai-accent);
+      background: var(--agent-running-fg);
     }
 
     .ai-plan-progress-fill.done {
       background: var(--system-healthy-fg);
+    }
+
+    .ai-plan-progress-fill.failed {
+      background: var(--agent-failed-fg);
     }
 
     .ai-plan-time {
@@ -543,8 +547,8 @@
     }
 
     .ai-copilot-session-indicator {
-      width: 8px;
-      height: 8px;
+      width: var(--status-dot-size-lg);
+      height: var(--status-dot-size-lg);
       border-radius: 50%;
       background: var(--ai-accent);
       flex-shrink: 0;
@@ -573,9 +577,9 @@
     }
 
     .ai-copilot-session-mode {
-      font-size: var(--font-size-10);
-      padding: 1px var(--space-6);
-      border-radius: var(--radius-2);
+      font-size: var(--badge-font-size);
+      padding: var(--badge-sm-padding-y) var(--space-6);
+      border-radius: var(--badge-sm-radius);
       background: oklch(from var(--ai-accent) l c h / 0.20);
       color: var(--ai-accent);
     }
@@ -645,11 +649,11 @@
     }
 
     .ai-output-tag {
-      font-size: var(--font-size-10);
+      font-size: var(--badge-font-size);
       color: var(--ai-accent);
       background: var(--ai-accent-subtle);
-      padding: 1px var(--space-4);
-      border-radius: var(--radius-2);
+      padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
     }
 
     .ai-output-time {
@@ -687,8 +691,8 @@
       letter-spacing: -0.02em;
     }
 
-    .ai-stat-value.brand { color: var(--ai-accent); }
-    .ai-stat-value.warning { color: var(--amber-500); }
+    .ai-stat-value.brand { color: var(--agent-running-fg); }
+    .ai-stat-value.warning { color: var(--agent-waiting-approval-fg); }
 
     .ai-stat-sub {
       font-size: var(--font-size-10);
@@ -712,8 +716,8 @@
     }
 
     .ai-confidence-dot {
-      width: 8px;
-      height: 8px;
+      width: var(--status-dot-size-lg);
+      height: var(--status-dot-size-lg);
       border-radius: 2px;
       flex-shrink: 0;
     }
@@ -750,7 +754,7 @@
       background: var(--surface-panel-elevated);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-8);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 8px 32px oklch(0 0 0 / 0.4), 0 2px 8px oklch(0 0 0 / 0.2);
       padding: var(--space-12) var(--space-16);
       width: 320px;
       display: flex;
@@ -828,7 +832,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }
@@ -899,11 +903,11 @@
       <div class="header-actions">
         <!-- AI CTAs -->
         <span class="queue-batch-btn" title="新建 Copilot 会话">
-          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;vertical-align:-1px;margin-right:4px;"><path d="M10 3a7 7 0 00-7 7h3l-3.5 4L-1 10h3a7 7 0 1112 4.9"/></svg>
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;vertical-align:-1px;margin-right:var(--space-4);"><path d="M10 3a7 7 0 00-7 7h3l-3.5 4L-1 10h3a7 7 0 1112 4.9"/></svg>
           Copilot 会话
         </span>
         <span class="queue-batch-btn" title="新建 Agent Plan">
-          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;vertical-align:-1px;margin-right:4px;"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;vertical-align:-1px;margin-right:var(--space-4);"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
           Agent Plan
         </span>
 
@@ -1093,7 +1097,7 @@
                 <span class="ai-plan-meta">数据源超时 · Tushare API 限频</span>
               </div>
               <div class="ai-plan-progress">
-                <div class="ai-plan-progress-fill" style="width: 35%; background: var(--red-500);"></div>
+                <div class="ai-plan-progress-fill failed" style="width: 35%;"></div>
               </div>
               <span class="ai-plan-time">5小时前</span>
             </div>
@@ -1377,7 +1381,7 @@
           <div class="context-section-body">
             <div class="pulse-metric">
               <span class="pulse-metric-label">API 调用</span>
-              <span class="pulse-metric-value" style="color:var(--amber-500);">4,820 / 5,000</span>
+              <span class="pulse-metric-value" style="color:var(--agent-waiting-approval-fg);">4,820 / 5,000</span>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">GPU 使用</span>
@@ -1401,16 +1405,16 @@
           </div>
           <div class="context-section-body" style="padding-bottom: var(--space-12);">
             <div style="display:flex; flex-direction:column; gap:var(--space-4);">
-              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition:color 100ms;">
+              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition: color var(--motion-duration-fast);">
                 <span style="color:var(--text-tertiary); margin-right:var(--space-8);">→</span>/ai/agent — Agent 管理中心
               </a>
-              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition:color 100ms;">
+              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition: color var(--motion-duration-fast);">
                 <span style="color:var(--text-tertiary); margin-right:var(--space-8);">→</span>/ai/copilot — Copilot 对话
               </a>
-              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition:color 100ms;">
+              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition: color var(--motion-duration-fast);">
                 <span style="color:var(--text-tertiary); margin-right:var(--space-8);">→</span>/trading/signals — 待审批信号
               </a>
-              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition:color 100ms;">
+              <a href="#" style="font-size:var(--font-size-12); color:var(--text-secondary); text-decoration:none; padding:var(--space-4) 0; transition: color var(--motion-duration-fast);">
                 <span style="color:var(--text-tertiary); margin-right:var(--space-8);">→</span>/research/factors — Factor Discovery
               </a>
             </div>

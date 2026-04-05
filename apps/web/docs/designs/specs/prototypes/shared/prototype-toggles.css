@@ -243,7 +243,7 @@
   letter-spacing: 0.05em;
   color: var(--text-secondary, #aaa);
   border-bottom: 1px solid var(--border-default, #2a2a2a);
-  background: var(--surface-muted, #111);
+  background: var(--surface-muted);
 }
 
 .gallery-card__preview {
@@ -417,7 +417,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--surface-muted, #141414);
+  background: var(--surface-muted);
   border: 1px solid var(--brand-signature-muted, #8a7a50);
   display: flex;
   align-items: center;
@@ -460,9 +460,9 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--surface-muted, #141414) 25%,
+    var(--surface-muted) 25%,
     var(--surface-overlay, #1a1a1a) 50%,
-    var(--surface-muted, #141414) 75%
+    var(--surface-muted) 75%
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;

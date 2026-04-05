@@ -100,7 +100,8 @@
     .rail-icon:focus-visible,
     .btn:focus-visible,
     .panel-action:focus-visible,
-    .header-action-btn:focus-visible {
+    .header-action-btn:focus-visible,
+    .filter-btn:focus-visible {
       outline: none;
       box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
       border-radius: var(--radius-4);
@@ -633,6 +634,43 @@
       color: var(--risk-medium-fg);
     }
 
+    /* ── Filter group (Incidents tab) ── */
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      padding: 2px;
+    }
+    .filter-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      height: var(--density-action-height);
+      padding: 0 var(--space-8);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-3);
+      cursor: pointer;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .filter-btn:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .filter-btn.active {
+      color: var(--text-primary);
+      background: var(--interaction-selected-bg);
+    }
+
     /* ── Analysis band: Incident timeline ── */
     .incident-timeline-list {
       display: grid;
@@ -643,8 +681,8 @@
     /* ── Reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
       .btn, .rail-icon, .header-action-btn,
-      .panel-action, .breach-progress-fill,
-      .breach-dot {
+      .panel-action, .filter-btn,
+      .breach-progress-fill, .breach-dot {
         transition: none !important;
         animation: none !important;
       }
