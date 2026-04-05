@@ -41,6 +41,7 @@
   <link rel="stylesheet" href="shared/tokens-interaction.css">
   <link rel="stylesheet" href="shared/tokens-density.css">
   <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="shared/tokens-shell.css">
   <link rel="stylesheet" href="shared/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
 
@@ -1249,18 +1250,7 @@
       background: var(--surface-app);
     }
 
-    /* Stale state — yellow border + warning text */
-    .state-stale {
-      display: flex;
-      align-items: center;
-      gap: var(--space-6);
-      padding: var(--space-8) var(--space-12);
-      border: 1px solid var(--risk-high-fg);
-      border-radius: var(--radius-4);
-      background: color-mix(in oklch, var(--risk-high-fg) 6%, transparent);
-      color: var(--risk-high-fg);
-      font-size: var(--font-size-12);
-    }
+    /* Stale state uses shared prototype-toggles.css definition */
 
     /* Batch action bar */
     .batch-action-bar {
@@ -2430,6 +2420,21 @@
       </div>
     </div>
   <div class="gallery-card">
+      <div class="gallery-card__label">Filter Bar · Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">筛选条件数据过期</div>
+          <div class="state-stale-desc">会话和账户列表最后更新于 3 分钟前，可用选项可能不准确</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
       <div class="gallery-card__label">Status Strip · Loading State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
@@ -2466,6 +2471,21 @@
           <div class="state-error-title">订单状态加载失败</div>
           <div class="state-error-desc">无法获取订单统计数据，请检查网络连接或稍后重试</div>
           <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Status Strip · Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">订单统计过期</div>
+          <div class="state-stale-desc">各状态标签页的计数最后更新于 20 秒前，可能与实际不符</div>
+          <button class="state-stale-retry">立即刷新</button>
         </div>
       </div>
       </div>
@@ -2519,8 +2539,12 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
         <div class="state-stale">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v6M10 13h0"/><circle cx="10" cy="10" r="8"/></svg>
-          订单状态可能已更新 · 数据延迟 15 秒 · 建议刷新
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">订单数据过期</div>
+          <div class="state-stale-desc">订单列表最后更新于 15 秒前，订单状态和成交信息可能不准确</div>
+          <button class="state-stale-retry">立即刷新</button>
         </div>
       </div>
       </div>
@@ -2566,6 +2590,21 @@
       </div>
     </div>
   <div class="gallery-card">
+      <div class="gallery-card__label">Order Trace · Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">订单追踪数据过期</div>
+          <div class="state-stale-desc">状态时间线和路由日志最后更新于 30 秒前，可能缺少最新事件</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
       <div class="gallery-card__label">Batch Actions · Loading State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
@@ -2606,8 +2645,12 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
         <div class="state-stale">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v6M10 13h0"/><circle cx="10" cy="10" r="8"/></svg>
-          选中订单状态可能已变更 · 请刷新后操作
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">选中订单状态已变更</div>
+          <div class="state-stale-desc">部分选中订单在批量选择后状态已更新，操作前请确认</div>
+          <button class="state-stale-retry">重新选择</button>
         </div>
       </div>
       </div>
@@ -2651,6 +2694,21 @@
           <div class="pagination-controls">
             <button class="pagination-btn" style="border-color:var(--risk-high-fg);color:var(--risk-high-fg);">重试</button>
           </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Pagination · Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">分页计数过期</div>
+          <div class="state-stale-desc">总条数和页码信息可能不准确，新订单可能已增加或删除</div>
+          <button class="state-stale-retry">立即刷新</button>
         </div>
       </div>
       </div>

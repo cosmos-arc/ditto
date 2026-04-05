@@ -21,7 +21,7 @@
   State Variants: 5 components x 5 states (default/loading/empty/failed/stale) + partial selected
   - tab-view: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
   - right-rail-stocks: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
-  - right-rail-filter: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[covered]
+  - right-rail-filter: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
   - right-rail-ai-summary: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
   - analysis-band: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
 
@@ -45,6 +45,8 @@
   <link rel="stylesheet" href="shared/tokens-interaction.css">
   <link rel="stylesheet" href="shared/tokens-density.css">
   <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="shared/tokens-shell.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
@@ -146,19 +148,24 @@
      * ══════════════════════════════════════════════ */
     body { overflow-y: auto; }
 
+    /* ── Intelligence Shell (grid-based, consistent with other shells) ──
+     * 2-column grid: Rail | Body
+     * Body contains: Header (sticky) → Tab Strip (sticky) → Workspace (grid) → Analysis Band
+     */
     .shell-intel {
-      display: flex;
+      display: grid;
+      grid-template-columns: var(--shell-rail-width) 1fr;
       width: 100vw;
       min-height: 100vh;
     }
 
-    /* Rail: sticky left, full viewport height */
+    /* Rail: left column, full height */
     .shell-intel .shell-rail {
+      grid-column: 1;
+      grid-row: 1;
+      height: 100vh;
       position: sticky;
       top: 0;
-      height: 100vh;
-      flex-shrink: 0;
-      width: var(--shell-rail-width);
       z-index: 30;
       background: var(--surface-app);
       border-right: 1px solid var(--border-subtle);
@@ -218,9 +225,10 @@
       color: var(--brand-accent);
     }
 
-    /* Body: natural flow, no height constraint */
+    /* Body: right column, contains header → tab strip → workspace → analysis band */
     .shell-body {
-      flex: 1;
+      grid-column: 2;
+      grid-row: 1;
       display: flex;
       flex-direction: column;
       min-width: 0;
@@ -904,6 +912,40 @@
     /* State variant containers inherit page style */
     .state-variant .state-variant-content {
       background: var(--surface-app);
+    }
+
+    /* Inline state variant toggle (details/summary) */
+    .state-variant {
+      margin-bottom: var(--space-8);
+    }
+    .state-variant > summary.state-variant__toggle {
+      list-style: none;
+      cursor: pointer;
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-quaternary);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-subtle);
+      display: inline-block;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .state-variant > summary.state-variant__toggle::-webkit-details-marker {
+      display: none;
+    }
+    .state-variant > summary.state-variant__toggle::before {
+      content: '▶ ';
+      font-size: 8px;
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+      display: inline-block;
+    }
+    .state-variant[open] > summary.state-variant__toggle::before {
+      transform: rotate(90deg);
+    }
+    .state-variant > summary.state-variant__toggle:hover {
+      color: var(--text-secondary);
+      border-color: var(--border-default);
     }
 
     /* ── Noise texture ── */
@@ -1768,10 +1810,16 @@
           </div><!-- .tab-group -->
 
           <!-- State Variants: Tab View -->
-          
-          
-          
-          
+          <details class="state-variant">
+            <summary class="state-variant__toggle">Tab View — Stale</summary>
+            <div class="state-variant-content" data-state="stale">
+              <div style="padding:var(--space-10);display:flex;align-items:center;gap:var(--space-6);background:color-mix(in oklch, var(--system-degraded-fg) 5%, transparent);border-radius:var(--radius-4);">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">数据更新于 5 分钟前，当前情报可能不是最新状态</span>
+                <button style="margin-left:auto;font-size:var(--font-size-10);color:var(--brand-accent);cursor:pointer;background:none;border:none;">立即刷新</button>
+              </div>
+            </div>
+          </details>
 
         </main>
 
@@ -1824,10 +1872,15 @@
           </div>
 
           <!-- State Variants: Right Rail - 关联标的 -->
-          
-          
-          
-          
+          <details class="state-variant">
+            <summary class="state-variant__toggle">关联标的 — Stale</summary>
+            <div class="state-variant-content" data-state="stale">
+              <div style="padding:var(--space-8);display:flex;align-items:center;gap:var(--space-6);">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">行情数据更新于 2 分钟前</span>
+              </div>
+            </div>
+          </details>
 
           <!-- Section: 筛选器 -->
           <div class="rail-section">
@@ -1869,10 +1922,15 @@
           </div>
 
           <!-- State Variants: Right Rail - AI 摘要 -->
-          
-          
-          
-          
+          <details class="state-variant">
+            <summary class="state-variant__toggle">AI 摘要 — Stale</summary>
+            <div class="state-variant-content" data-state="stale">
+              <div style="padding:var(--space-8);display:flex;align-items:center;gap:var(--space-6);">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">摘要基于 8 分钟前数据生成</span>
+              </div>
+            </div>
+          </details>
 
         </aside>
       </div><!-- .intel-workspace -->
@@ -1900,10 +1958,15 @@
       </div>
 
       <!-- State Variants: Analysis Band -->
-      
-      
-      
-      
+      <details class="state-variant">
+        <summary class="state-variant__toggle">Analysis Band — Stale</summary>
+        <div class="state-variant-content" data-state="stale">
+          <div style="padding:var(--space-10);display:flex;align-items:center;gap:var(--space-6);">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+            <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">分析基于 10 分钟前数据生成</span>
+          </div>
+        </div>
+      </details>
 
     </div><!-- .shell-body -->
   </div><!-- .shell-intel -->
@@ -2281,6 +2344,21 @@
                 <button class="state-error-retry">重试</button>
               </div>
             </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">筛选器 — Stale</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">筛选条件数据过期</div>
+          <div class="state-stale-desc">可选筛选项最后更新于 8 分钟前，新增的板块或指标可能未显示</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
       </div>
     </div>
   <div class="gallery-card">

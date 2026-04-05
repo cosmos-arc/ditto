@@ -14,12 +14,12 @@
   - overlay-breach-detail (Drawer: Breach Detail) [covered]
   - overlay-rule-editor (Modal: Rule Editor) [covered]
 
-  State Variants: 5 components × 3 states (empty/loading/error)
-  - risk-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - risk-charts: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - active-breaches: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - stress-summary: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - incident-timeline: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  State Variants: 5 components × 4 states (empty/loading/error/stale)
+  - risk-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - risk-charts: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - active-breaches: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - stress-summary: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - incident-timeline: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
 
   Coverage Score: 100%
 -->
@@ -804,6 +804,7 @@
     }
     .shell-analytical .risk-tab-bar { grid-area: tabs; }
     .shell-analytical .tab-panels { grid-area: panels; min-height: 0; overflow: hidden; }
+
   </style>
 </head>
 <body>
@@ -1666,6 +1667,22 @@
       </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Risk Strip — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">风控指标数据过期</div>
+          <div class="state-stale-desc">VaR、回撤、Beta 等核心指标最后更新于 15 分钟前，数值可能不准确</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+
           </div>
         </div>
 
@@ -1708,6 +1725,22 @@
       </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Risk Charts — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">风险图表数据过期</div>
+          <div class="state-stale-desc">VaR 趋势和回撤曲线数据延迟更新，展示的图形可能非最新状态</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+
           </div>
         </div>
 
@@ -1751,6 +1784,22 @@
       </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Active Breaches — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">违规记录可能过期</div>
+          <div class="state-stale-desc">违规检测数据最后同步于 10 分钟前，可能有新的违规或已恢复的指标</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+
           </div>
         </div>
 
@@ -1795,6 +1844,22 @@
       </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stress Test — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">压力测试结果过期</div>
+          <div class="state-stale-desc">压力测试结果基于 20 分钟前的持仓快照，当前持仓可能已变化</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+
           </div>
         </div>
 
@@ -1839,6 +1904,22 @@
       </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Incident Timeline — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">事件记录可能不完整</div>
+          <div class="state-stale-desc">风控事件最后同步于 12 分钟前，最新触及和预警事件可能未显示</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+
           </div>
         </div>
 

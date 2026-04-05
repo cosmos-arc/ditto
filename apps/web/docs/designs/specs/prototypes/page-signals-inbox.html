@@ -16,10 +16,10 @@
   - overlay-batch-confirm (Modal: 批量确认) [covered]
 
   State Variants: 5 components × 3 states (empty/loading/error)
-  - scope-strip: default[covered] loading[covered] empty[n/a] failed[n/a] stale[n/a] selected[n/a]
-  - signal-table: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[covered] bulk[covered]
-  - signal-detail: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - order-confirm: default[covered] loading[covered] empty[n/a] failed[covered] stale[n/a] selected[n/a]
+  - scope-strip: default[covered] loading[covered] empty[n/a] failed[n/a] stale[covered] selected[n/a]
+  - signal-table: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[covered]
+  - signal-detail: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - order-confirm: default[covered] loading[covered] empty[n/a] failed[covered] stale[covered] selected[n/a]
   - batch-actions: default[covered] loading[n/a] empty[covered] failed[n/a] stale[n/a] selected[n/a] bulk[n/a]
 
   Coverage Score: 100%
@@ -43,6 +43,7 @@
   <link rel="stylesheet" href="shared/tokens-density.css">
   <link rel="stylesheet" href="shared/tokens-component.css">
   <link rel="stylesheet" href="shared/tokens-shell.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
@@ -1996,6 +1997,23 @@
     </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Scope Strip — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+      <div style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) 0;border-bottom:1px solid var(--system-degraded-fg);position:relative;opacity:var(--data-freshness-aging, 0.65)">
+        <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-secondary)">待复核</span>
+        <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-secondary)">已确认</span>
+        <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-secondary)">已忽略</span>
+        <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-secondary)">已转订单</span>
+        <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--system-degraded-fg)">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:var(--space-2)"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          信号数据延迟 45 秒
+        </span>
+      </div>
+    </div>
+      </div>
+    </div>
           </div>
         </div>
 
@@ -2113,6 +2131,27 @@
     </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Signal Detail — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+      <div style="position:relative;padding:var(--space-12);opacity:var(--data-freshness-aging, 0.65)">
+        <div style="position:absolute;top:var(--space-4);right:var(--space-4);font-size:var(--font-size-10);color:var(--system-degraded-fg);font-weight:var(--font-weight-medium);background:var(--system-degraded-bg);padding:1px var(--space-6);border-radius:var(--radius-2)">
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:2px"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          信号详情数据延迟
+        </div>
+        <div class="state-loading">
+          <div class="skeleton skeleton-heading" style="width:40%;opacity:0.5"></div>
+          <div class="skeleton skeleton-text" style="opacity:0.5"></div>
+          <div class="skeleton skeleton-text-sm" style="opacity:0.5"></div>
+          <div style="height:var(--space-8)"></div>
+          <div class="skeleton skeleton-row" style="height:40px;opacity:0.5"></div>
+          <div class="skeleton skeleton-row" style="height:40px;opacity:0.5"></div>
+        </div>
+      </div>
+    </div>
+      </div>
+    </div>
           </div>
         </div>
 
@@ -2145,6 +2184,20 @@
         <div style="display:flex;gap:var(--space-6);justify-content:flex-end">
           <button class="state-error-retry">查看标的详情</button>
         </div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Order Confirm — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-24);gap:var(--space-8)">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--system-degraded-bg);color:var(--system-degraded-fg);display:flex;align-items:center;justify-content:center">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+        </div>
+        <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg)">标的状态数据延迟，请确认后再提交</span>
+        <button class="state-stale-retry">刷新标的状态</button>
       </div>
     </div>
       </div>

@@ -16,14 +16,14 @@
   - overlay-event-detail (Drawer: 事件详情) [covered]
   - overlay-pin-viewpoint (inline: 固定视角提示) [covered]
 
-  State Variants: 7 components × 3 states (empty/loading/error)
+  State Variants: 7 components × 4 states (empty/loading/error/stale)
   - context-bar: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
-  - scope-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - scope-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
   - market-card-grid: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
   - cross-market-matrix: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
   - macro-drivers-bar: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
   - right-rail: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
-  - bottom-tab-band: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - bottom-tab-band: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
 
   Coverage Score: 100%
 -->
@@ -45,6 +45,7 @@
   <link rel="stylesheet" href="shared/tokens-interaction.css">
   <link rel="stylesheet" href="shared/tokens-density.css">
   <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/prototype-toggles.css">
@@ -86,12 +87,12 @@
       --tint-row-lag-hover: color-mix(in oklch, var(--market-down-fg) 8%, transparent);
       --tint-card-lead: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
       --tint-card-lag: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
-      /* Heat map tokens — 5-level, derived from market-up/down-fg */
-      --heat-up-3: color-mix(in oklch, var(--market-up-fg) 17%, transparent);
-      --heat-up-2: color-mix(in oklch, var(--market-up-fg) 10%, transparent);
-      --heat-up-1: color-mix(in oklch, var(--market-up-fg) 5%, transparent);
-      --heat-down-1: color-mix(in oklch, var(--market-down-fg) 5%, transparent);
-      --heat-down-2: color-mix(in oklch, var(--market-down-fg) 10%, transparent);
+      /* Heat map tokens — delegated to shared tokens-data-viz.css --heatmap-* */
+      --heat-up-3: var(--heatmap-5-bg);
+      --heat-up-2: var(--heatmap-4-bg);
+      --heat-up-1: var(--heatmap-4-bg);
+      --heat-down-1: var(--heatmap-2-bg);
+      --heat-down-2: var(--heatmap-1-bg);
       /* Status bar tokens */
       --status-bar-bg: color-mix(in oklch, var(--surface-app) 90%, transparent);
       --status-live-fg: var(--system-healthy-fg);
@@ -1207,6 +1208,7 @@
       from { opacity: 0; transform: translateY(-4px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
   </style>
 </head>
 <body>
@@ -2071,6 +2073,22 @@
         </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Context Bar — Stale</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">环境指标数据可能过期</div>
+            <div class="state-stale-desc">市态与波动率数据最后更新于 15 分钟前，当前环境判断可能不准确</div>
+            <button class="state-stale-retry">立即刷新</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
           </div>
         </div>
 
@@ -2109,6 +2127,21 @@
             <div class="state-error-title">今日解读加载失败</div>
             <div class="state-error-desc">无法获取市场涨跌与风格数据，请稍后重试</div>
             <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Scope Strip — Stale</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">今日解读可能过期</div>
+            <div class="state-stale-desc">领涨/领跌/风格数据最后更新于 20 分钟前，解读可能已不反映当前市场状态</div>
+            <button class="state-stale-retry">立即刷新</button>
           </div>
         </div>
       </div>
@@ -2159,6 +2192,22 @@
             </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Market Card Grid — Stale</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">行情数据可能过期</div>
+            <div class="state-stale-desc">跨市场行情数据延迟超过 10 分钟，价格与涨跌幅可能非最新值</div>
+            <button class="state-stale-retry">立即刷新</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
           </div>
         </div>
 
@@ -2207,6 +2256,22 @@
             </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Cross-Market Matrix — Stale</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">相对强弱数据过期</div>
+            <div class="state-stale-desc">多周期相对强弱矩阵最后计算于 20 分钟前，排名与相关性可能已变化</div>
+            <button class="state-stale-retry">立即刷新</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
           </div>
         </div>
 
@@ -2252,6 +2317,22 @@
             </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Macro Drivers — Stale</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">宏观驱动数据过期</div>
+            <div class="state-stale-desc">DXY、美债收益率、VIX 等指标延迟更新，驱动因子影响判断可能过时</div>
+            <button class="state-stale-retry">立即刷新</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
           </div>
         </div>
 
@@ -2298,6 +2379,22 @@
           </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Right Rail — Stale</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">右侧面板数据过期</div>
+            <div class="state-stale-desc">市场脉搏与风险预警数据最后更新于 12 分钟前，预警信息可能不准确</div>
+            <button class="state-stale-retry">立即刷新</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
           </div>
         </div>
 
@@ -2337,6 +2434,21 @@
             <div class="state-error-title">辅助视角数据加载失败</div>
             <div class="state-error-desc">无法获取资金轮动、事件日历或 AI 解读数据，请稍后重试</div>
             <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Bottom Tab Band — Stale</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">辅助视角数据过期</div>
+            <div class="state-stale-desc">资金轮动与 AI 解读数据延迟更新，分析结论可能不反映最新市场变化</div>
+            <button class="state-stale-retry">立即刷新</button>
           </div>
         </div>
       </div>

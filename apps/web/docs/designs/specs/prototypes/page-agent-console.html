@@ -44,6 +44,7 @@
   <link rel="stylesheet" href="shared/tokens-interaction.css">
   <link rel="stylesheet" href="shared/tokens-density.css">
   <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
@@ -156,7 +157,7 @@
 
     .shell-agent .shell-header {
       grid-area: header;
-      height: 60px;
+      height: var(--shell-header-height);
       background: var(--surface-frosted);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
@@ -1146,7 +1147,7 @@
     .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
     .overlay-btn-primary { background: var(--brand-accent); color: var(--brand-accent-fg); border-color: var(--brand-accent); }
     .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
-    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg, #ef4444); border-color: var(--risk-high-fg, #ef4444); }
+    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
 
     /* State variant containers inherit page style */
     .state-variant .state-variant-content {
@@ -2281,6 +2282,21 @@
         </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">Agent 状态数据可能过期</div>
+            <div class="state-stale-desc">Agent 运行状态最后更新于 15 分钟前，数据可能已过时</div>
+            <button class="state-stale-retry">立即刷新</button>
+          </div>
+        </div>
+      </div>
+    </div>
           </div>
         </div>
 
@@ -2349,6 +2365,21 @@
       </div>
     </div>
   <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">Plan 列表数据可能过期</div>
+            <div class="state-stale-desc">Plan 状态最后更新于 10 分钟前，运行进度可能已变化</div>
+            <button class="state-stale-retry">立即刷新</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
       <div class="gallery-card__label">Selected State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
@@ -2408,6 +2439,21 @@
         </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">Plan 详情可能过期</div>
+            <div class="state-stale-desc">详情数据最后更新于 20 分钟前，执行步骤可能已完成</div>
+            <button class="state-stale-retry">立即刷新</button>
+          </div>
+        </div>
+      </div>
+    </div>
           </div>
         </div>
 
@@ -2452,6 +2498,21 @@
             <div class="state-error-title">审批服务异常</div>
             <div class="state-error-desc">无法获取待审批列表，请稍后重试</div>
             <button class="state-error-retry">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+          <div class="state-stale">
+            <div class="state-stale-icon">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+            </div>
+            <div class="state-stale-title">审批列表可能过期</div>
+            <div class="state-stale-desc">待审批数据最后更新于 12 分钟前，可能有新的审批请求</div>
+            <button class="state-stale-retry">立即刷新</button>
           </div>
         </div>
       </div>

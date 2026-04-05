@@ -10,10 +10,10 @@
   - overlay-new-session-toast (Toast: 新建 Copilot 会话确认) [covered]
   - overlay-new-plan-toast (Toast: 新建 Agent Plan 引导) [covered]
 
-  State Variants: 3 components × 3 states (empty/loading/error)
-  - ai-pulse: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - agent-quick-view: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - copilot-quick-view: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  State Variants: 3 components × 4 states (empty/loading/error/stale)
+  - ai-pulse: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - agent-quick-view: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - copilot-quick-view: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
 
   Coverage Score: 100%
 -->
@@ -28,9 +28,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Tokens (order matters: base → semantic → domain → interaction → density → style) -->
+  <!-- Tokens (order matters: base → semantic → shell → data-viz → domain → interaction → density → component → style) -->
   <link rel="stylesheet" href="shared/tokens-base.css">
   <link rel="stylesheet" href="shared/tokens-semantic.css">
+  <link rel="stylesheet" href="shared/tokens-shell.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
   <link rel="stylesheet" href="shared/tokens-domain.css">
   <link rel="stylesheet" href="shared/tokens-interaction.css">
   <link rel="stylesheet" href="shared/tokens-density.css">
@@ -49,16 +51,16 @@
     /* Style label for comparison */
     .style-label {
       position: fixed;
-      top: 8px;
-      right: 8px;
-      z-index: 999;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
       font-family: var(--font-family-ui);
-      font-size: 11px;
+      font-size: var(--font-size-12);
       color: var(--brand-signature-fg);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
-      padding: 3px 8px;
-      border-radius: 4px;
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
       pointer-events: none;
     }
 
@@ -1521,6 +1523,21 @@
     </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">AI Pulse — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">AI 状态数据过期</div>
+          <div class="state-stale-desc">AI 运行状态最后更新于 15 分钟前，显示数据可能已过时</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
           </div>
         </div>
 
@@ -1566,6 +1583,21 @@
     </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Agent Quick View — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">Agent 数据过期</div>
+          <div class="state-stale-desc">Agent Plans 和 Finding 数据最后更新于 30 分钟前，运行状态可能不准确</div>
+          <button class="state-stale-retry">刷新 Agent 状态</button>
+        </div>
+      </div>
+      </div>
+    </div>
           </div>
         </div>
 
@@ -1608,6 +1640,21 @@
         <button class="state-error-retry">重试</button>
       </div>
     </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Copilot Quick View — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">Copilot 数据过期</div>
+          <div class="state-stale-desc">会话和产出记录最后同步于 20 分钟前，活跃状态可能不准确</div>
+          <button class="state-stale-retry">刷新 Copilot 数据</button>
+        </div>
+      </div>
       </div>
     </div>
           </div>

@@ -16,11 +16,11 @@
   - overlay-session-template (Sheet: 会话模板) [covered]
 
   State Variants: 5 components × 3 states (empty/loading/error)
-  - copilot-header: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - copilot-header: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
   - mode-switch: default[covered] loading[n/a] empty[n/a] failed[n/a] stale[n/a] selected[n/a]
-  - sessions: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[covered]
-  - conversation-output: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - context-panel: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - sessions: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - conversation-output: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - context-panel: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
 
   Coverage Score: 100%
 -->
@@ -42,6 +42,8 @@
   <link rel="stylesheet" href="shared/tokens-interaction.css">
   <link rel="stylesheet" href="shared/tokens-density.css">
   <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="shared/tokens-shell.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
@@ -138,7 +140,7 @@
     }
     .shell-copilot .shell-header {
       grid-area: header;
-      height: 60px;
+      height: var(--shell-header-height);
     }
     .shell-copilot .copilot-modes {
       grid-area: modes;
@@ -2152,7 +2154,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Sessions — Empty State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="empty">
+	<div class="state-variant-content" data-state="empty">
       <div class="state-empty">
         <div class="state-empty-icon">💬</div>
         <div class="state-empty-title">暂无历史会话</div>
@@ -2165,7 +2167,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Sessions — Loading State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="loading">
+	<div class="state-variant-content" data-state="loading">
       <div class="state-loading">
         <div class="skeleton skeleton-row"></div>
         <div class="skeleton skeleton-row"></div>
@@ -2179,7 +2181,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Sessions — Error State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="failed">
+	<div class="state-variant-content" data-state="failed">
       <div class="state-error">
         <div class="state-error-icon">!</div>
         <div class="state-error-title">会话加载失败</div>
@@ -2187,6 +2189,21 @@
         <button class="state-error-retry">重试</button>
       </div>
     </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Sessions — Stale State</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">会话列表数据过期</div>
+          <div class="state-stale-desc">会话记录最后同步于 10 分钟前，最新对话可能未显示</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
       </div>
     </div>
           </div>
@@ -2198,7 +2215,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Conversation — Empty State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="empty">
+	<div class="state-variant-content" data-state="empty">
       <div class="state-empty">
         <div class="state-empty-icon">🤖</div>
         <div class="state-empty-title">开始新的分析</div>
@@ -2210,7 +2227,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Conversation — Loading State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="loading">
+	<div class="state-variant-content" data-state="loading">
       <div class="state-loading">
         <div class="skeleton skeleton-heading"></div>
         <div class="skeleton skeleton-text"></div>
@@ -2227,7 +2244,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Conversation — Error State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="failed">
+	<div class="state-variant-content" data-state="failed">
       <div class="state-error">
         <div class="state-error-icon">!</div>
         <div class="state-error-title">AI 服务不可用</div>
@@ -2235,6 +2252,21 @@
         <button class="state-error-retry">重试</button>
       </div>
     </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Conversation — Stale State</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">AI 回复引用数据过期</div>
+          <div class="state-stale-desc">部分分析结论基于 20 分钟前的市场数据，因子指标可能有变化</div>
+          <button class="state-stale-retry">刷新数据并重新分析</button>
+        </div>
+      </div>
       </div>
     </div>
           </div>
@@ -2246,7 +2278,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Context Panel — Empty State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="empty">
+	<div class="state-variant-content" data-state="empty">
       <div class="state-empty">
         <div class="state-empty-icon">📎</div>
         <div class="state-empty-title">暂无关联上下文</div>
@@ -2258,7 +2290,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Context Panel — Loading State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="loading">
+	<div class="state-variant-content" data-state="loading">
       <div class="state-loading">
         <div class="skeleton skeleton-badge"></div>
         <div class="skeleton skeleton-badge"></div>
@@ -2273,7 +2305,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Context Panel — Error State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="failed">
+	<div class="state-variant-content" data-state="failed">
       <div class="state-error">
         <div class="state-error-icon">!</div>
         <div class="state-error-title">上下文加载失败</div>
@@ -2281,6 +2313,21 @@
         <button class="state-error-retry">重试</button>
       </div>
     </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Context Panel — Stale State</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">上下文数据过期</div>
+          <div class="state-stale-desc">相关对象价格和证据链数据最后更新于 15 分钟前</div>
+          <button class="state-stale-retry">同步最新数据</button>
+        </div>
+      </div>
       </div>
     </div>
           </div>
@@ -2292,7 +2339,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Copilot Header — Empty State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="empty">
+	<div class="state-variant-content" data-state="empty">
       <div class="state-empty">
         <div class="state-empty-icon">✨</div>
         <div class="state-empty-title">AI Copilot 就绪</div>
@@ -2304,7 +2351,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Copilot Header — Loading State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="loading">
+	<div class="state-variant-content" data-state="loading">
       <div class="state-loading">
         <div class="skeleton skeleton-heading"></div>
         <div class="skeleton skeleton-text-sm"></div>
@@ -2315,7 +2362,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Copilot Header — Error State</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="failed">
+	<div class="state-variant-content" data-state="failed">
       <div class="state-error">
         <div class="state-error-icon">!</div>
         <div class="state-error-title">AI 服务连接失败</div>
@@ -2323,6 +2370,21 @@
         <button class="state-error-retry">重试</button>
       </div>
     </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Copilot Header — Stale State</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">AI 模型状态过期</div>
+          <div class="state-stale-desc">模型连接信息最后刷新于 5 分钟前，当前就绪状态可能不准确</div>
+          <button class="state-stale-retry">检查连接</button>
+        </div>
+      </div>
       </div>
     </div>
           </div>
@@ -2334,7 +2396,7 @@
   <div class="gallery-card">
       <div class="gallery-card__label">Mode Switch — Default (only state)</div>
       <div class="gallery-card__preview">
-<div class="state-variant-content" data-state="default">
+	<div class="state-variant-content" data-state="default">
       <div style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-8);color:var(--text-tertiary);font-size:var(--font-size-12)">
         模式切换为纯交互组件，仅有 default 状态。通过 radio tab 系统切换。
       </div>

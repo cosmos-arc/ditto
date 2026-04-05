@@ -19,6 +19,12 @@
   /* Level 5: Modal — highest elevation */
   --surface-modal:             oklch(0.290 0.007 253);
 
+  /* ── Surface Semantic Aliases ── */
+  /* Muted: recessed / subdued — inputs, skeletons, quiet backgrounds */
+  --surface-muted:             oklch(0.170 0.010 253);
+  /* Elevated: raised interactive — buttons, gallery headers, overlay cards */
+  --surface-elevated:          var(--neutral-75);
+
   /* ── Text Hierarchy (5 levels) ── */
   --text-primary:              oklch(0.925 0.004 253);
   --text-secondary:            oklch(0.655 0.007 253);
@@ -102,6 +108,10 @@
   --surface-strip:             var(--neutral-25);
   --surface-overlay:           oklch(0.995 0.000 0);
   --surface-modal:             oklch(0.998 0.000 0);
+
+  /* Surface Semantic Aliases */
+  --surface-muted:             var(--neutral-25);
+  --surface-elevated:          var(--neutral-75);
 
   /* Text Hierarchy — dark on light */
   --text-primary:              oklch(0.155 0.015 253);
