@@ -381,7 +381,7 @@
 
     .source-badge.ai {
       color: var(--cyan-500);
-      background: oklch(0.6394 0.1037 220.78 / 0.12);
+      background: color-mix(in oklch, var(--cyan-400) 12%, transparent);
     }
 
     .source-badge.manual {
@@ -614,7 +614,7 @@
     .detail-confidence-fill {
       height: 100%;
       border-radius: 3px;
-      background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, white));
+      background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, oklch(1 0 0)));
     }
 
     .detail-confidence-value {
@@ -999,7 +999,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }

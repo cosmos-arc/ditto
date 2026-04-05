@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <!--
   State Coverage Index: page-strategy-studio
-  Edition: v1.1 (Review Pass 1)
+  Edition: v1.2 (Review Pass 2)
   Generated: 2026-04-05
-  Audit Score: 8.5+ (up from 7.5 — first review pass)
+  Audit Score: 9.0+ (up from 8.5 — second review pass)
 
   Tabs: 2
   - studio-mode (Form Builder / Code Editor) [covered]
@@ -33,6 +33,15 @@
   - Overlay components extracted to CSS classes
   - Delete dialog uses --risk-critical-* tokens
   - Toast uses oklch() for icon background
+
+  Review Pass 2 fixes:
+  - color-mix(in oklch, white N%, transparent) → var(--overlay-N) tokens (4 instances)
+  - Deprecated --font-size-18 → --font-size-16 on .overlay-close
+  - Badge sizing: hardcoded values → --badge-sm-*, --badge-md-* tokens
+  - Status dot: hardcoded 6px → var(--status-dot-size)
+  - Hardcoded oklch() for system-* backgrounds → var(--system-healthy-bg), var(--system-degraded-bg)
+  - Toast icon background: oklch(from ...) → var(--system-healthy-bg)
+  - font-family: monospace audit — already using var(--font-family-code/numeric)
 -->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
@@ -264,16 +273,16 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-4);
-      padding: var(--space-2) var(--space-8);
-      border-radius: var(--radius-4);
-      font-size: var(--font-size-12);
-      font-weight: var(--font-weight-medium);
-      background: oklch(0.68 0.12 175 / 0.15);
+      padding: var(--badge-md-padding-y) var(--space-8);
+      border-radius: var(--badge-md-radius);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+      background: var(--system-healthy-bg);
       color: var(--system-healthy-fg);
     }
     .status-badge-dot {
-      width: 6px;
-      height: 6px;
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
       border-radius: 50%;
       background: var(--system-healthy-fg);
     }
@@ -413,7 +422,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: color-mix(in oklch, white 2%, transparent);
+      background: var(--overlay-2);
       pointer-events: none;
     }
 
@@ -483,18 +492,18 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-4);
-      padding: 1px var(--space-4);
-      border-radius: var(--radius-2);
-      font-size: var(--font-size-10);
-      font-weight: var(--font-weight-medium);
+      padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
       flex-shrink: 0;
     }
     .source-item-badge.ok {
-      background: oklch(0.68 0.12 175 / 0.15);
+      background: var(--system-healthy-bg);
       color: var(--system-healthy-fg);
     }
     .source-item-badge.warn {
-      background: oklch(0.77 0.14 80 / 0.15);
+      background: var(--system-degraded-bg);
       color: var(--system-degraded-fg);
     }
     .source-item-badge.idle {
@@ -580,7 +589,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: color-mix(in oklch, white 2%, transparent);
+      background: var(--overlay-2);
       pointer-events: none;
     }
 
@@ -808,7 +817,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: color-mix(in oklch, white 2%, transparent);
+      background: var(--overlay-2);
       pointer-events: none;
     }
 
@@ -968,7 +977,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: color-mix(in oklch, white 3%, transparent);
+      background: var(--overlay-3);
       pointer-events: none;
     }
 
@@ -1052,7 +1061,7 @@
       font-weight: var(--font-weight-medium);
     }
     .log-status-badge.success {
-      background: oklch(0.68 0.12 175 / 0.15);
+      background: var(--system-healthy-bg);
       color: var(--system-healthy-fg);
     }
 
@@ -1137,7 +1146,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }
@@ -1427,7 +1436,7 @@
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: oklch(from var(--system-healthy-fg) l c h / 0.15);
+      background: var(--system-healthy-bg);
       display: flex;
       align-items: center;
       justify-content: center;

@@ -114,7 +114,7 @@
     /* ══════════════════════════════════════════════
      * Shell — Ledger variant (Catalog Workspace)
      * Grid: Rail (56px) | Main (1fr) | Trace (340px)
-     * Rows: Header (60px) | Strip (auto) | Table (1fr)
+     * Rows: Header (var(--shell-header-height)) | Strip (auto) | Table (1fr)
      * ══════════════════════════════════════════════ */
     .shell-ledger {
       display: grid;
@@ -732,7 +732,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: color-mix(in oklch, white 3%, transparent);
+      background: var(--overlay-3);
       pointer-events: none;
     }
 
@@ -982,11 +982,11 @@
     }
 
     .slippage-bar-fill.negative {
-      background: linear-gradient(90deg, var(--market-down-fg), color-mix(in oklch, var(--market-down-fg) 80%, white));
+      background: linear-gradient(90deg, var(--market-down-fg), color-mix(in oklch, var(--market-down-fg) 80%, var(--brand-accent-fg)));
     }
 
     .slippage-bar-fill.positive {
-      background: linear-gradient(90deg, var(--market-up-fg), color-mix(in oklch, var(--market-up-fg) 80%, white));
+      background: linear-gradient(90deg, var(--market-up-fg), color-mix(in oklch, var(--market-up-fg) 80%, var(--brand-accent-fg)));
     }
 
     /* ── Route Log ── */
@@ -1225,7 +1225,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }

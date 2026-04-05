@@ -144,38 +144,12 @@
     }
 
     /* ══════════════════════════════════════════════
-     * Shell: Intelligence Layout (Rail | Header | Tab Strip | Main+RightRail | Analysis Band)
+     * Shell: Intelligence — Page-Specific Decorations
+     * Core grid layout lives in shared/layout-base.css (.shell-intel)
      * ══════════════════════════════════════════════ */
     body { overflow-y: auto; }
 
-    /* ── Intelligence Shell (grid-based, consistent with other shells) ──
-     * 2-column grid: Rail | Body
-     * Body contains: Header (sticky) → Tab Strip (sticky) → Workspace (grid) → Analysis Band
-     */
-    .shell-intel {
-      display: grid;
-      grid-template-columns: var(--shell-rail-width) 1fr;
-      width: 100vw;
-      min-height: 100vh;
-    }
-
-    /* Rail: left column, full height */
-    .shell-intel .shell-rail {
-      grid-column: 1;
-      grid-row: 1;
-      height: 100vh;
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      background: var(--surface-app);
-      border-right: 1px solid var(--border-subtle);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: var(--space-8) 0;
-      gap: var(--space-4);
-    }
-
+    /* ── Rail Logo (page-specific branding) ── */
     .shell-intel .rail-logo {
       width: var(--rail-logo-size);
       height: var(--rail-logo-size);
@@ -188,6 +162,30 @@
       font-size: var(--font-size-14);
       color: var(--brand-accent);
       letter-spacing: -0.02em;
+    }
+
+    /* ── Header: frosted glass + signature gradient line (page-specific) ── */
+    .shell-intel .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .shell-intel .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 20%,
+        color-mix(in oklch, var(--brand-signature-line) 40%, transparent) 50%,
+        color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
     }
 
     .shell-intel .rail-nav {
@@ -223,48 +221,6 @@
     .shell-intel .rail-icon.active {
       background: var(--interaction-selected-bg);
       color: var(--brand-accent);
-    }
-
-    /* Body: right column, contains header → tab strip → workspace → analysis band */
-    .shell-body {
-      grid-column: 2;
-      grid-row: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-
-    /* Header: sticky top with frosted glass */
-    .shell-intel .shell-header {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      height: var(--shell-header-height);
-      display: flex;
-      align-items: center;
-      padding: 0 var(--density-gutter);
-      gap: var(--space-8);
-      background: var(--surface-frosted);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-subtle);
-    }
-    .shell-intel .shell-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 40%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
     }
 
     .shell-header h1.header-title {
@@ -850,7 +806,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }
@@ -880,7 +836,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
       padding: var(--space-8) var(--space-16);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 8px 32px oklch(0 0 0 / 0.4);
       z-index: 1100;
       display: none;
       align-items: center;
@@ -1899,10 +1855,17 @@
           </div>
 
           <!-- State Variants: Right Rail - 筛选器 -->
-          
-          
-          
-          
+          <details class="state-variant">
+            <summary class="state-variant__toggle">筛选器 — Stale</summary>
+            <div class="state-variant-content" data-state="stale">
+              <div style="padding:var(--space-8);display:flex;align-items:center;gap:var(--space-6);">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
+                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">筛选条件数据过期，可选筛选项最后更新于 8 分钟前</span>
+                <button style="margin-left:auto;font-size:var(--font-size-10);color:var(--brand-accent);cursor:pointer;background:none;border:none;">立即刷新</button>
+              </div>
+            </div>
+          </details>
+
 
           <!-- Section: AI 摘要 -->
           <div class="rail-section">
