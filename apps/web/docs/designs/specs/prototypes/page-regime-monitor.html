@@ -68,7 +68,7 @@
       right: 8px;
       z-index: 999;
       font-family: var(--font-family-ui);
-      font-size: 11px;
+      font-size: var(--font-size-12);
       color: var(--brand-signature-fg);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
@@ -147,7 +147,7 @@
 
     .shell-regime .shell-header {
       grid-area: header;
-      height: 64px;
+      height: var(--shell-header-height);
       background: var(--surface-frosted);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
@@ -388,7 +388,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }
@@ -492,7 +492,7 @@
 
     .regime-gauge-value {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       font-weight: var(--font-weight-semibold);
       color: var(--market-up-fg);
       letter-spacing: -0.02em;
@@ -758,8 +758,8 @@
     }
 
     .switch-time-dot {
-      width: 6px;
-      height: 6px;
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
       border-radius: 50%;
       flex-shrink: 0;
     }
@@ -926,7 +926,8 @@
     }
 
     .status-indicator {
-      width: 6px; height: 6px;
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
       border-radius: 50%;
       background: var(--risk-low-fg);
       margin-right: var(--space-6);

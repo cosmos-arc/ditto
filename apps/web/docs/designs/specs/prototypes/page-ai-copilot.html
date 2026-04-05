@@ -110,7 +110,7 @@
       outline: none;
       box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
       border-radius: var(--radius-4);
-      transition: box-shadow 150ms ease-out;
+      transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     /* ══════════════════════════════════════════════
@@ -806,7 +806,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: color-mix(in oklch, white 3%, transparent);
+      background: var(--overlay-3);
       pointer-events: none;
     }
 
@@ -922,6 +922,33 @@
       color: var(--text-tertiary);
       line-height: 1.4;
       padding-left: 15px;
+    }
+
+    /* ── Stale evidence indicator ── */
+    .evidence-item.stale .evidence-dot {
+      border-color: var(--data-quality-delayed-fg);
+      background: var(--data-quality-delayed-bg);
+    }
+    .evidence-item.stale .evidence-time {
+      color: var(--data-quality-delayed-fg);
+    }
+    .evidence-item.stale .evidence-source {
+      color: var(--text-data-stale);
+    }
+    .evidence-item.stale .evidence-desc {
+      color: var(--text-data-stale);
+    }
+    .evidence-stale-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0 var(--space-4);
+      font-size: var(--font-size-10);
+      color: var(--data-quality-delayed-fg);
+      background: var(--data-quality-delayed-bg);
+      border-radius: var(--radius-2);
+      margin-left: auto;
+      flex-shrink: 0;
     }
 
     /* ── Action Cards ── */
@@ -1376,7 +1403,7 @@
       border: none;
       color: var(--text-tertiary);
       cursor: pointer;
-      font-size: var(--font-size-18);
+      font-size: var(--font-size-16);
       padding: var(--space-2);
       line-height: 1;
     }
@@ -1880,10 +1907,14 @@
               </div>
               <span class="evidence-desc">PMI 连续 2 月低于荣枯线，北向资金连续 5 日净流出</span>
             </div>
-            <div class="evidence-item">
+            <div class="evidence-item stale">
               <div class="evidence-header">
                 <span class="evidence-dot"></span>
                 <span class="evidence-source">聚宽因子库</span>
+                <span class="evidence-stale-badge">
+                  <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+                  过期
+                </span>
                 <span class="evidence-time">14:20:00</span>
               </div>
               <span class="evidence-desc">动量因子 IC(5d) = 0.078，质量因子 IC = 0.045</span>
@@ -2051,35 +2082,35 @@
         <div class="overlay-body">
           <h4>选择对话模板</h4>
           <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
               <input type="radio" name="session-template" checked style="accent-color:var(--brand-accent)">
               <div>
                 <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">空白对话</div>
                 <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">从零开始自由探索</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
               <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
               <div>
                 <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">市场日报</div>
                 <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">每日市场概览与关键数据解读</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
               <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
               <div>
                 <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">个股深度</div>
                 <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">个股基本面、技术面、资金面全维度分析</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
               <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
               <div>
                 <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">行业比较</div>
                 <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">跨行业横向对比与轮动分析</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
               <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
               <div>
                 <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">因子挖掘预设</div>
@@ -2519,35 +2550,35 @@
           <div class="overlay-body">
             <h4>选择对话模板</h4>
             <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
                 <input type="radio" name="session-template" checked style="accent-color:var(--brand-accent)">
                 <div>
                   <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">空白对话</div>
                   <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">从零开始自由探索</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
                 <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
                 <div>
                   <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">市场日报</div>
                   <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">每日市场概览与关键数据解读</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
                 <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
                 <div>
                   <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">个股深度</div>
                   <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">个股基本面、技术面、资金面全维度分析</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
                 <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
                 <div>
                   <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">行业比较</div>
                   <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">跨行业横向对比与轮动分析</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color 0.15s">
+              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
                 <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
                 <div>
                   <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">因子挖掘预设</div>
