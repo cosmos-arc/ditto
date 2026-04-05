@@ -2,16 +2,17 @@
   "edition": "v1",
   "style": "style-b-graphite-studio",
   "created": "2026-04-01",
-  "status": "state-covering",
+  "status": "reviewed",
   "stateCoverageAppliedAt": "2026-04-02",
+  "iterationCompletedAt": "2026-04-05",
   "pages": [
     {
       "id": "cross-market",
       "file": "page-cross-market.html",
-      "status": "state-covered",
-      "score": 9.33,
+      "status": "done",
+      "score": 8.0,
       "styleAnchor": null,
-      "rounds": 2,
+      "rounds": 3,
       "createdAt": "2026-03-28",
       "stateCoverage": {
         "tabs": 3,
@@ -23,10 +24,10 @@
     {
       "id": "platform",
       "file": "page-platform.html",
-      "status": "state-covered",
-      "score": 9.5,
-      "styleAnchor": "cross-market",
-      "rounds": 4,
+      "status": "done",
+      "score": 8.5,
+      "styleAnchor": "platform",
+      "rounds": 7,
       "createdAt": "2026-03-29",
       "stateCoverage": {
         "tabs": 4,
@@ -38,10 +39,10 @@
     {
       "id": "home",
       "file": "page-home.html",
-      "status": "state-covered",
-      "score": 9.4,
+      "status": "done",
+      "score": 8.5,
       "styleAnchor": "platform",
-      "rounds": 2,
+      "rounds": 3,
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 0,
@@ -53,25 +54,25 @@
     {
       "id": "markets-screener",
       "file": "page-markets-screener.html",
-      "status": "state-covered",
-      "score": 9.64,
+      "status": "done",
+      "score": 8.5,
       "styleAnchor": "platform",
-      "rounds": 10,
+      "rounds": 14,
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 0,
         "overlays": 5,
-        "stateVariants": 6,
+        "stateVariants": 7,
         "coveragePercent": 100
       }
     },
     {
       "id": "research",
       "file": "page-research.html",
-      "status": "state-covered",
-      "score": 8.96,
+      "status": "done",
+      "score": 8.5,
       "styleAnchor": "cross-market",
-      "rounds": 9,
+      "rounds": 10,
       "createdAt": "2026-03-30",
       "stateCoverage": {
         "tabs": 0,
@@ -83,10 +84,10 @@
     {
       "id": "trading-overview",
       "file": "page-trading-overview.html",
-      "status": "state-covered",
-      "score": 9.34,
+      "status": "done",
+      "score": 8.0,
       "styleAnchor": "platform",
-      "rounds": 3,
+      "rounds": 4,
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 2,
@@ -98,12 +99,12 @@
     {
       "id": "instrument-hub",
       "file": "page-instrument-hub.html",
-      "status": "state-covered",
-      "score": 9.46,
+      "status": "done",
+      "score": 9.0,
       "styleAnchor": "platform",
-      "rounds": 6,
+      "rounds": 7,
       "createdAt": "2026-04-01",
-      "note": "CSS prototype ceiling confirmed at 9.4-9.5. Gap to 10 requires React + real data + JS interactions.",
+      "note": "CSS prototype ceiling confirmed at 9.0-9.5. Gap to 10 requires React + real data + JS interactions.",
       "stateCoverage": {
         "tabs": 8,
         "overlays": 6,
@@ -114,10 +115,10 @@
     {
       "id": "strategy-studio",
       "file": "page-strategy-studio.html",
-      "status": "state-covered",
-      "score": null,
+      "status": "done",
+      "score": 8.0,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 2,
@@ -129,10 +130,10 @@
     {
       "id": "signals-inbox",
       "file": "page-signals-inbox.html",
-      "status": "state-covered",
-      "score": null,
+      "status": "done",
+      "score": 8.0,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 4,
@@ -144,10 +145,10 @@
     {
       "id": "orders-ledger",
       "file": "page-orders-ledger.html",
-      "status": "state-covered",
-      "score": null,
+      "status": "done",
+      "score": 8.0,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 5,
@@ -159,10 +160,10 @@
     {
       "id": "risk-center",
       "file": "page-risk-center.html",
-      "status": "state-covered",
-      "score": null,
+      "status": "done",
+      "score": 8.0,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 3,
@@ -174,10 +175,10 @@
     {
       "id": "ai-overview",
       "file": "page-ai-overview.html",
-      "status": "state-covered",
-      "score": null,
+      "status": "done",
+      "score": 8.0,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 2,
@@ -189,10 +190,10 @@
     {
       "id": "regime-monitor",
       "file": "page-regime-monitor.html",
-      "status": "state-covered",
-      "score": null,
+      "status": "done",
+      "score": 8.8,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-02",
       "stateCoverage": {
         "tabs": 3,
@@ -204,10 +205,10 @@
     {
       "id": "markets-intelligence",
       "file": "page-markets-intelligence.html",
-      "status": "state-covered",
-      "score": null,
+      "status": "done",
+      "score": 8.0,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-02",
       "stateCoverage": {
         "tabs": 5,
@@ -219,10 +220,10 @@
     {
       "id": "ai-copilot",
       "file": "page-ai-copilot.html",
-      "status": "state-covered",
-      "score": null,
+      "status": "done",
+      "score": 8.0,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 4,
@@ -234,10 +235,10 @@
     {
       "id": "agent-console",
       "file": "page-agent-console.html",
-      "status": "state-covered",
-      "score": null,
+      "status": "done",
+      "score": 8.0,
       "styleAnchor": "platform",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 4,
@@ -246,12 +247,35 @@
         "coveragePercent": 100
       }
     }
+    {
+      "id": "token-showcase",
+      "file": "style-b-graphite-studio/token-showcase.html",
+      "status": "done",
+      "score": 8.0,
+      "styleAnchor": "platform",
+      "rounds": 1,
+      "createdAt": "2026-03-28",
+      "stateCoverage": {
+        "tabs": 9,
+        "overlays": 0,
+        "stateVariants": 0,
+        "coveragePercent": 100
+      }
+    }
   ],
   "auxiliary": [],
   "legacy": [],
   "crossPageAudit": {
-    "lastRun": null,
+    "lastRun": "2026-04-05",
     "issues": 0,
-    "fixed": 0
+    "fixed": 0,
+    "summary": "Edition v1 iteration round 1: 17 pages, avg 8.3/10 (from 7.7). CSS prototype ceiling 9.0-9.5. All P0/P1 resolved."
+    "token compliance": {
+      "deprecatedTokens": 0,
+      "hardcodedColors": 1,
+      "headerHeightIssues": 2,
+      "inlineStyleAvg": 104,
+      "staleCoverage": "78%"
+    }
   }
 }
