@@ -15,12 +15,12 @@
   - overlay-pipeline-rerun (Dialog: Pipeline 重跑确认) [covered]
   - overlay-task-detail (Drawer: 任务详情) [covered]
 
-  State Variants: 5 components × 3 states (loading/empty/error)
-  - health-strip: default[covered] loading[covered] empty[n/a] failed[covered] stale[n/a] selected[n/a]
-  - data-providers: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - pipelines-jobs: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - system-alerts: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - resources-quotas: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  State Variants: 5 components × 4 states (loading/empty/error/stale) + selected
+  - health-strip: default[covered] loading[covered] empty[n/a] failed[covered] stale[covered] selected[n/a]
+  - data-providers: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - pipelines-jobs: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - system-alerts: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - resources-quotas: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
 
   Coverage Score: 100%
 -->
@@ -42,6 +42,8 @@
   <link rel="stylesheet" href="shared/tokens-interaction.css">
   <link rel="stylesheet" href="shared/tokens-density.css">
   <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="shared/tokens-shell.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
@@ -2093,6 +2095,21 @@
     </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Health Strip — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">系统指标数据过期</div>
+          <div class="state-stale-desc">健康检查最后更新于 5 分钟前，当前指标可能不准确</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
           </div>
         </div>
 
@@ -2137,6 +2154,21 @@
                       <button class="state-error-retry">重试</button>
                     </div>
                   </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Data Providers — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">数据源状态过期</div>
+          <div class="state-stale-desc">Provider 连接状态最后更新于 10 分钟前，可能未反映最新变化</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
       </div>
     </div>
           </div>
@@ -2184,6 +2216,21 @@
                   </div>
       </div>
     </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Pipelines / Jobs — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">任务队列数据过期</div>
+          <div class="state-stale-desc">Pipeline 状态最后更新于 8 分钟前，运行中的任务可能已变化</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
           </div>
         </div>
 
@@ -2226,6 +2273,21 @@
                       <button class="state-error-retry">重试</button>
                     </div>
                   </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">System Alerts — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">告警数据过期</div>
+          <div class="state-stale-desc">系统告警最后更新于 15 分钟前，可能遗漏最新告警事件</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
       </div>
     </div>
           </div>
@@ -2271,6 +2333,21 @@
                       <button class="state-error-retry">重试</button>
                     </div>
                   </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Resources / Quotas — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">资源监控数据过期</div>
+          <div class="state-stale-desc">CPU / 内存使用率最后更新于 3 分钟前，配额状态可能不准确</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
       </div>
     </div>
           </div>

@@ -13,13 +13,13 @@
   - overlay-run-detail (Drawer: 运行详情) [covered]
   - overlay-review-action (Modal: 审核操作) [covered]
 
-  State Variants: 6 components × 3 states (loading/empty/error)
-  - pulse-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - factor-monitor-table: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - recent-runs: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - review-queue: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - analysis-band-ic: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
-  - analysis-band-corr: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  State Variants: 6 components × 4 states (loading/empty/error/stale)
+  - pulse-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - factor-monitor-table: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - recent-runs: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - review-queue: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - analysis-band-ic: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - analysis-band-corr: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
 
   Coverage Score: 100%
 -->
@@ -41,6 +41,8 @@
   <link rel="stylesheet" href="shared/tokens-interaction.css">
   <link rel="stylesheet" href="shared/tokens-density.css">
   <link rel="stylesheet" href="shared/tokens-component.css">
+  <link rel="stylesheet" href="shared/tokens-shell.css">
+  <link rel="stylesheet" href="shared/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
@@ -2101,6 +2103,21 @@
       </div>
     </div>
   <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">因子指标数据过期</div>
+          <div class="state-stale-desc">因子 IC/IR 等指标最后更新于 15 分钟前，数值可能不准确</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
       <div class="gallery-card__label">Empty State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
@@ -2147,6 +2164,21 @@
       </div>
     </div>
   <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">因子表数据过期</div>
+          <div class="state-stale-desc">因子排名与指标最后更新于 20 分钟前，可能未反映最新回测结果</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
       <div class="gallery-card__label">Empty State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
@@ -2182,6 +2214,21 @@
           <div class="state-error-title">运行记录加载失败</div>
           <div class="state-error-desc">无法获取 Job Service 数据，请检查服务状态或稍后重试</div>
           <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">运行记录数据过期</div>
+          <div class="state-stale-desc">回测/实验状态最后更新于 10 分钟前，正在运行的 Job 状态可能已变化</div>
+          <button class="state-stale-retry">立即刷新</button>
         </div>
       </div>
       </div>
@@ -2225,6 +2272,21 @@
       </div>
     </div>
   <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">审核队列数据过期</div>
+          <div class="state-stale-desc">审核状态最后更新于 12 分钟前，待审核任务可能已有变化</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
       <div class="gallery-card__label">Empty State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
@@ -2261,6 +2323,21 @@
       </div>
     </div>
   <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">IC 趋势数据过期</div>
+          <div class="state-stale-desc">IC 时间序列最后更新于 30 分钟前，趋势图可能未反映最新因子表现</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
       <div class="gallery-card__label">Empty State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
@@ -2292,6 +2369,21 @@
           <div class="state-error-title">相关性矩阵加载失败</div>
           <div class="state-error-desc">无法获取 Correlation Service 数据，请稍后重试</div>
           <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">相关性矩阵数据过期</div>
+          <div class="state-stale-desc">因子相关性最后计算于 25 分钟前，可能未反映最新因子变更</div>
+          <button class="state-stale-retry">立即刷新</button>
         </div>
       </div>
       </div>
