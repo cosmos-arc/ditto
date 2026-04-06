@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from types import MappingProxyType
 
 import pytest
@@ -44,6 +44,7 @@ from ditto_engine.risk.pre_trade import (
     LotSizeCheck,
     PreTradeContext,
 )
+from ditto_kernel.clock import SimulatedClock
 
 from .conftest import (
     INITIAL_CASH,
@@ -701,11 +702,9 @@ class TestNoOversell:
         )
         fills = brokerage.process_pending(process_input)
 
-        # BacktestBrokerage fills all 200 regardless (V1)
-        # This is expected — planner is responsible for limiting sell qty
-        # PreTradeContext prevents oversell in batch
-        assert len(fills) == 1
-        assert fills[0].filled_quantity == 200
+        # BacktestBrokerage now checks available_quantity for SELL orders
+        # leaves_quantity=200 > available=100 → skip (NoFill)
+        assert len(fills) == 0
 
     def test_pre_trade_context_prevents_oversell_in_batch(self) -> None:
         """PreTradeContext.with_order_accepted 防止批内超卖。"""
@@ -1295,7 +1294,11 @@ class TestSuspendedE2E:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(fee_model=fee_model, audit_collector=collector),
+            options=EngineOptions(
+                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
+                fee_model=fee_model,
+                audit_collector=collector,
+            ),
         )
         result = engine.run()
 
@@ -1435,6 +1438,7 @@ class TestExitOrderRules:
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
             options=EngineOptions(
+                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
                 fee_model=fee_model,
                 rule_provider=rule_provider,
                 audit_collector=collector,
@@ -1581,6 +1585,7 @@ class TestRuleRefsPreserved:
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
             options=EngineOptions(
+                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
                 fee_model=fee_model,
                 rule_provider=rule_provider,
             ),

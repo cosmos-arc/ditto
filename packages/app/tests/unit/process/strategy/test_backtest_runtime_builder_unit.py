@@ -9,15 +9,13 @@ from ditto_app.builders.strategy import (
     BacktestRuntimeBuilder,
     PublishedStrategyRuntime,
 )
-from ditto_app.process.strategy import (
-    BacktestServiceConfig,
-    MarketServiceDataFeed,
-)
+from ditto_app.process.strategy import BacktestServiceConfig
 from ditto_data.models.strategy import StrategySpecRecord
-from ditto_data.services.market_service import MarketService
+from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_engine.alpha.pipeline import StrategyPipeline
 from ditto_engine.alpha.specs import StrategySpec
+from ditto_engine.backtest.data_feed import ProviderBackedDataFeed
 from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
 from ditto_engine.execution.reality import SimpleFeeModel
@@ -61,11 +59,16 @@ class TestBacktestRuntimeBuilder:
         )
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
-        market_service = MagicMock(spec=MarketService)
+        metadata_service.get_universe.return_value = [2_000_001, 2_000_002]
+        metadata_service.get_instrument.return_value = {
+            "ticker": "510300",
+            "exchange": "XSHG",
+        }
+        data_provider = MagicMock(spec=DataProvider)
         builder = BacktestRuntimeBuilder(
             strategy_runtime_builder=strategy_runtime_builder,
             metadata_service=metadata_service,
-            market_service=market_service,
+            data_provider=data_provider,
         )
 
         runtime = builder.build_published_runtime(
@@ -80,7 +83,12 @@ class TestBacktestRuntimeBuilder:
 
         assert runtime.config.strategy_version == "2"
         assert runtime.config.benchmark_id == 3_000_001
-        assert isinstance(runtime.data_feed, MarketServiceDataFeed)
+        # data_feed 是 ProviderBackedDataFeed 实例
+        assert isinstance(runtime.data_feed, ProviderBackedDataFeed)
+        assert hasattr(runtime.data_feed, "trading_days")
+        assert hasattr(runtime.data_feed, "get_slice")
+        # display_map 是 dict[InstrumentId, str]
+        assert isinstance(runtime.display_map, dict)
         assert isinstance(runtime.planner, SimpleExecutionPlanner)
         assert isinstance(runtime.brokerage, BacktestBrokerage)
         assert isinstance(runtime.pre_trade_check, CompositePreTradeCheck)

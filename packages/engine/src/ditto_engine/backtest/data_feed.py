@@ -9,7 +9,7 @@ ProviderBackedDataFeed 通过 DataProvider Protocol 获取数据.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Protocol
 
 import polars as pl
@@ -78,17 +78,21 @@ def _row_to_snapshot(
     row: dict[str, Any],
 ) -> MarketSnapshot:
     """Convert a polars row dict (from ``to_dicts()``) to a MarketSnapshot."""
+    close = float(row["close"])
+    volume = float(row.get("volume", 0))
+    raw_amount = row.get("amount")
+    amount = float(raw_amount) if raw_amount is not None else close * volume
     return MarketSnapshot(
         trade_date=date,
         instrument_id=iid,
-        open=float(row["open"]),
-        high=float(row["high"]),
-        low=float(row["low"]),
-        close=float(row["close"]),
-        prev_close=float(row["prev_close"]),
-        volume=float(row["volume"]),
-        amount=float(row["amount"]),
-        is_suspended=bool(row["is_suspended"]),
+        open=float(row.get("open", close)),
+        high=float(row.get("high", close)),
+        low=float(row.get("low", close)),
+        close=close,
+        prev_close=float(row.get("prev_close", close)),
+        volume=volume,
+        amount=amount,
+        is_suspended=bool(row.get("is_suspended", False)),
         limit_up=(float(row["limit_up"]) if row.get("limit_up") is not None else None),
         limit_down=(
             float(row["limit_down"]) if row.get("limit_down") is not None else None
@@ -148,8 +152,21 @@ class ProviderBackedDataFeed:
             end=self._end_date,
         )
         result = self._provider.get_bars(query)
-        self._bars_df = result
+        self._bars_df = self._ensure_prev_close(result)
         return self._bars_df
+
+    @staticmethod
+    def _ensure_prev_close(df: pl.DataFrame) -> pl.DataFrame:
+        """若数据不含 prev_close，则通过 shift(1) 按标的计算。"""
+        if df.is_empty() or "prev_close" in df.columns:
+            return df
+        return df.sort(["instrument_id", "trade_date"]).with_columns(
+            pl.col("close")
+            .shift(1)
+            .over("instrument_id")
+            .fill_null(pl.col("close"))
+            .alias("prev_close"),
+        )
 
     # -- public interface --------------------------------------------------
 
@@ -171,7 +188,12 @@ class ProviderBackedDataFeed:
         """Build Slice for the given date from pre-loaded bar data."""
         df = self._load_bars()
         date_obj = datetime.strptime(date, "%Y-%m-%d")
-        step_time = date_obj.replace(hour=15, minute=0, second=0)
+        step_time = date_obj.replace(
+            hour=15,
+            minute=0,
+            second=0,
+            tzinfo=UTC,
+        )
 
         day_df = df.filter(pl.col("trade_date") == date)
 
@@ -184,10 +206,11 @@ class ProviderBackedDataFeed:
             if iid is None:
                 continue
 
-            bars[iid] = _row_to_snapshot(date, iid, row)
-
             if self._benchmark_id is not None and iid == self._benchmark_id:
                 benchmark_close = float(row["close"])
+                continue  # benchmark 不进入 bars
+
+            bars[iid] = _row_to_snapshot(date, iid, row)
 
         return Slice(
             trade_date=date,

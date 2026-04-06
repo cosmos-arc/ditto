@@ -12,7 +12,6 @@ from ditto_app.builders.strategy import (
 from ditto_app.process.strategy import (
     BacktestService,
     BacktestServiceConfig,
-    MarketServiceDataFeed,
     RunLifecycleService,
 )
 from ditto_data.models.strategy import StrategySpecRecord
@@ -22,6 +21,7 @@ from ditto_data.services.strategy.strategy_artifact_service import (
 )
 from ditto_engine.alpha.pipeline import StrategyPipeline
 from ditto_engine.alpha.specs import StrategySpec
+from ditto_engine.backtest.data_feed import DataFeed
 from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
 from ditto_engine.execution.reality import SimpleFeeModel
@@ -54,7 +54,11 @@ def _make_runtime() -> PublishedBacktestRuntime:
         planner=SimpleExecutionPlanner(),
         brokerage=MagicMock(spec=BacktestBrokerage),
         pre_trade_check=MagicMock(spec=CompositePreTradeCheck),
-        data_feed=MagicMock(spec=MarketServiceDataFeed),
+        data_feed=MagicMock(spec=DataFeed),
+        display_map={
+            InstrumentId(2_000_001): "510300.XSHG",
+            InstrumentId(2_000_002): "159919.XSHE",
+        },
         fee_model=SimpleFeeModel(),
         config=BacktestServiceConfig(
             strategy_id=spec.strategy_id,
@@ -128,15 +132,13 @@ class TestStrategyServiceFactory:
         assert result.display_map is display_map
 
     def test_build_backtest_service_from_catalog_injects_display_map(self) -> None:
-        """catalog-backed 路径自动从 runtime.data_feed 注入 display_map。"""
+        """catalog-backed 路径自动从 runtime.display_map 注入 display_map。"""
         from dataclasses import replace
 
         test_display_map = {InstrumentId(1): "510300.SH"}
-        mock_data_feed = MagicMock(spec=MarketServiceDataFeed)
-        mock_data_feed.display_map = test_display_map
 
         runtime = _make_runtime()
-        runtime = replace(runtime, data_feed=mock_data_feed)
+        runtime = replace(runtime, display_map=test_display_map)
 
         runtime_builder = MagicMock(spec=BacktestRuntimeBuilder)
         runtime_builder.build_published_runtime.return_value = runtime

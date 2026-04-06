@@ -503,7 +503,7 @@ class TestRebalanceFreq:
             brokerage=Mock(),
             pre_trade_check=Mock(),
             data_feed=Mock(),
-            options=EngineOptions(fee_model=Mock()),
+            options=EngineOptions(clock=Mock(), fee_model=Mock()),
         )
         loop._trading_days = tuple(trading_days)
         return loop

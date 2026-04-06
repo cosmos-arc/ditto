@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from types import MappingProxyType
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.accounting.cash import CashBook
@@ -30,6 +30,7 @@ from ditto_engine.risk.post_trade import (
 )
 from ditto_engine.risk.pre_trade import Decision, OrderCheckResult
 from ditto_kernel import SimpleEventBus
+from ditto_kernel.clock import Clock
 from ditto_kernel.events import DomainEvent
 
 # ---------------------------------------------------------------------------
@@ -40,6 +41,13 @@ from ditto_kernel.events import DomainEvent
 DAYS = ["2026-03-01"]
 
 STEP_TIME = datetime(2026, 3, 1, 15, 0, tzinfo=UTC)
+
+
+def _make_clock() -> MagicMock:
+    """构建测试用 mock Clock."""
+    clock = MagicMock(spec=Clock)
+    clock.now.return_value = STEP_TIME
+    return clock
 
 
 def _make_cash(available: float = 500_000.0) -> CashBook:
@@ -147,6 +155,7 @@ def _make_engine_loop(
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
         options=EngineOptions(
+            clock=_make_clock(),
             fee_model=fee_model,
             event_bus=event_bus,
             post_trade_guard=post_trade_guard,
@@ -205,6 +214,7 @@ class TestEngineLoopEvents:
                 get_slice=Mock(return_value=_make_slice()),
             ),
             options=EngineOptions(
+                clock=_make_clock(),
                 fee_model=fee_model,
                 event_bus=event_bus,
             ),

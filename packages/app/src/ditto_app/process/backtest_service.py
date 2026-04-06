@@ -41,6 +41,8 @@ from ditto_engine.execution.reality import FeeModel
 from ditto_engine.execution.rules import InstrumentRuleProvider
 from ditto_engine.risk.post_trade import PostTradeRiskGuard
 from ditto_engine.risk.pre_trade import CompositePreTradeCheck
+from ditto_kernel.clock import SimulatedClock
+from ditto_kernel.events import SimpleEventBus
 from ditto_kernel.identity import InstrumentId
 
 from ditto_app.process.strategy_types import (
@@ -215,8 +217,20 @@ class BacktestService:
             engine_version=self._config.engine_version,
         )
 
-        # 构建 EngineOptions (注入 audit_collector)
+        # 构造 SimulatedClock — 以回测起始日期为初始时刻
+        clock = SimulatedClock(
+            initial=datetime(
+                int(self._config.start_date[:4]),
+                int(self._config.start_date[5:7]),
+                int(self._config.start_date[8:10]),
+                tzinfo=UTC,
+            ),
+        )
+
+        # 构建 EngineOptions (注入 clock + event_bus + audit_collector)
         options = EngineOptions(
+            clock=clock,
+            event_bus=SimpleEventBus(),
             fee_model=self._options.fee_model,
             rule_provider=self._options.rule_provider,
             post_trade_guard=self._options.post_trade_guard,

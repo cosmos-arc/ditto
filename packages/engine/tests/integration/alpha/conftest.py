@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,7 @@ from ditto_engine.risk.pre_trade import (
     CompositePreTradeCheck,
     LotSizeCheck,
 )
+from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.identity import InstrumentId
 
 # ---------------------------------------------------------------------------
@@ -82,7 +84,7 @@ class TestParquetProvider:
             frames.append(df)
         if not frames:
             return pl.DataFrame()
-        result = pl.concat(frames)
+        result = pl.concat(frames, how="diagonal")
         result = result.filter(
             (pl.col("trade_date") >= query.start) & (pl.col("trade_date") <= query.end)
         )
@@ -428,7 +430,17 @@ def build_snapshot_engine(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
-        options=EngineOptions(fee_model=_fee_model),
+        options=EngineOptions(
+            clock=SimulatedClock(
+                initial=datetime(
+                    int(start_date[:4]),
+                    int(start_date[5:7]),
+                    int(start_date[8:10]),
+                    tzinfo=UTC,
+                ),
+            ),
+            fee_model=_fee_model,
+        ),
     )
 
 
@@ -500,7 +512,6 @@ def assert_non_rebalance_day_no_new_orders(
 
 def _is_monday(date_str: str) -> bool:
     """检查日期是否为周一。"""
-    from datetime import datetime
 
     parsed = datetime.strptime(date_str, "%Y-%m-%d")
     return parsed.weekday() == 0

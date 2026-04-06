@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import polars as pl
@@ -22,6 +23,7 @@ from ditto_engine.alpha.templates.stock_sector_rotation import (
 )
 from ditto_engine.backtest.data_feed import Slice
 from ditto_engine.backtest.engine import EngineLoop, EngineOptions
+from ditto_kernel.clock import SimulatedClock
 
 from .conftest import (
     INITIAL_CASH,
@@ -160,7 +162,10 @@ def _build_sector_engine(
         brokerage=base_engine._brokerage,
         pre_trade_check=base_engine._pre_trade_check,
         data_feed=base_engine._data_feed,
-        options=EngineOptions(fee_model=base_engine._fee_model),
+        options=EngineOptions(
+            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
+            fee_model=base_engine._fee_model,
+        ),
     )
 
 

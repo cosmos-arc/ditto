@@ -24,10 +24,9 @@ from ditto_app.process.strategy_run_service import (
     StrategyRunServiceConfig,
 )
 from ditto_app.process.strategy_types import (
-    MarketServiceDataFeed,
-    MarketServiceDataFeedConfig,
     RunLifecycleService,
     StrategyInputAssembler,
+    build_display_map,
     enrich_record_with_symbol,
     write_backtest_artifacts,
 )
@@ -36,8 +35,6 @@ __all__ = [
     "BacktestService",
     "BacktestServiceConfig",
     "BacktestServiceOptions",
-    "MarketServiceDataFeed",
-    "MarketServiceDataFeedConfig",
     "RunLifecycleService",
     "StrategyFacade",
     "StrategyInputAssembler",
@@ -45,6 +42,7 @@ __all__ = [
     "StrategyRunResult",
     "StrategyRunService",
     "StrategyRunServiceConfig",
+    "build_display_map",
     "enrich_record_with_symbol",
     "write_backtest_artifacts",
 ]

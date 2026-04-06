@@ -11,7 +11,7 @@ from ditto_app.builders.strategy import (
     StrategySliceBuilder,
 )
 from ditto_data.models.strategy import StrategySpecRecord
-from ditto_data.services.market_service import MarketService
+from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_engine.alpha.pipeline import StrategyPipeline
 from ditto_engine.alpha.specs import StrategySpec
@@ -36,59 +36,51 @@ def _make_strategy_spec() -> StrategySpec:
 def _make_metadata_service() -> MagicMock:
     service = MagicMock(spec=MetadataService)
     service.get_universe.return_value = [2_000_001, 2_000_002]
-    ticker_map = {
-        2_000_001: "510300.SH",
-        2_000_002: "159919.SZ",
-        3_000_001: "000300.SH",
-    }
-    service.get_source_ticker.side_effect = lambda instrument_id, *_args, **_kwargs: (
-        ticker_map[instrument_id]
-    )
     service.resolve_instrument_id.return_value = 3_000_001
-    service.get_instrument.return_value = {"asset_class": "index"}
-    service.list_calendar_range.return_value = pl.DataFrame(
+    _instrument_map = {
+        2_000_001: {"ticker": "510300", "exchange": "XSHG", "asset_class": "etf"},
+        2_000_002: {"ticker": "159919", "exchange": "XSHE", "asset_class": "etf"},
+        3_000_001: {"ticker": "000300", "exchange": "XSHG", "asset_class": "index"},
+    }
+    service.get_instrument.side_effect = _instrument_map.get
+    return service
+
+
+def _make_data_provider() -> MagicMock:
+    """构造 DataProvider mock，返回行情和交易日历。"""
+    provider = MagicMock(spec=DataProvider)
+    provider.get_bars.return_value = pl.DataFrame(
         {
-            "trade_date": ["2026-01-13"],
-            "prev_trade_date": ["2026-01-10"],
+            "instrument_id": [
+                2_000_001,
+                2_000_001,
+                2_000_002,
+                2_000_002,
+                3_000_001,
+                3_000_001,
+            ],
+            "trade_date": [
+                "2026-01-10",
+                "2026-01-13",
+                "2026-01-10",
+                "2026-01-13",
+                "2026-01-10",
+                "2026-01-13",
+            ],
+            "open": [10.1, 10.6, 19.8, 19.6, 3010.0, 3020.0],
+            "high": [10.6, 10.9, 20.0, 19.9, 3020.0, 3030.0],
+            "low": [10.0, 10.4, 19.4, 19.5, 3000.0, 3010.0],
+            "close": [10.5, 10.8, 19.5, 19.7, 3015.0, 3025.0],
+            "volume": [1100, 1200, 2100, 2200, 1, 1],
+            "amount": [11550.0, 12960.0, 40950.0, 43340.0, 3015.0, 3025.0],
         }
     )
-    return service
-
-
-def _make_market_service() -> MagicMock:
-    service = MagicMock(spec=MarketService)
-    service.list_bars.side_effect = [
-        pl.DataFrame(
-            {
-                "instrument_id": [2_000_001, 2_000_001, 2_000_002, 2_000_002],
-                "trade_date": [
-                    "2026-01-10",
-                    "2026-01-13",
-                    "2026-01-10",
-                    "2026-01-13",
-                ],
-                "open": [10.1, 10.6, 19.8, 19.6],
-                "high": [10.6, 10.9, 20.0, 19.9],
-                "low": [10.0, 10.4, 19.4, 19.5],
-                "close": [10.5, 10.8, 19.5, 19.7],
-                "volume": [1100, 1200, 2100, 2200],
-                "amount": [11550, 12960, 40950, 43340],
-            }
-        ),
-        pl.DataFrame(
-            {
-                "instrument_id": [3_000_001, 3_000_001],
-                "trade_date": ["2026-01-10", "2026-01-13"],
-                "open": [3010.0, 3020.0],
-                "high": [3020.0, 3030.0],
-                "low": [3000.0, 3010.0],
-                "close": [3015.0, 3025.0],
-                "volume": [1, 1],
-                "amount": [3015.0, 3025.0],
-            }
-        ),
-    ]
-    return service
+    provider.get_schedule.return_value = pl.DataFrame(
+        {
+            "trade_date": ["2026-01-10", "2026-01-13"],
+        }
+    )
+    return provider
 
 
 class TestStrategySliceBuilder:
@@ -112,7 +104,7 @@ class TestStrategySliceBuilder:
         builder = StrategySliceBuilder(
             strategy_runtime_builder=runtime_builder,
             metadata_service=_make_metadata_service(),
-            market_service=_make_market_service(),
+            data_provider=_make_data_provider(),
         )
 
         slice_ = builder.build_published_slice(

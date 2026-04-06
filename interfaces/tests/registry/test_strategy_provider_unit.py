@@ -14,7 +14,6 @@ from ditto_app.builders.strategy import (
 from ditto_app.process.strategy import (
     BacktestService,
     BacktestServiceConfig,
-    MarketServiceDataFeed,
     StrategyFacade,
     StrategyInputAssembler,
     StrategyRunMode,
@@ -24,6 +23,7 @@ from ditto_app.process.strategy import (
 from ditto_data.di import RuntimeProvider
 from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.services.audit import ExecutionAuditService
+from ditto_data.services.derived.query_service import DerivedQueryService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.strategy.strategy_artifact_service import (
@@ -38,7 +38,7 @@ from ditto_data.services.strategy.strategy_run_service import (
 from ditto_data.sources.source import DataSources
 from ditto_engine.alpha.pipeline import StrategyPipeline
 from ditto_engine.alpha.specs import StrategySpec
-from ditto_engine.backtest.data_feed import DataFeed
+from ditto_engine.backtest.data_feed import DataFeed, ProviderBackedDataFeed
 from ditto_engine.execution.brokerage import Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner
 from ditto_engine.risk.pre_trade import CompositePreTradeCheck
@@ -61,12 +61,16 @@ def _strategy_runtime_deps_provider() -> Provider:
         scope = Scope.APP
 
         @provide
+        def market_service(self) -> MarketService:
+            return MagicMock(spec=MarketService)
+
+        @provide
         def metadata_service(self) -> MetadataService:
             return MagicMock(spec=MetadataService)
 
         @provide
-        def market_service(self) -> MarketService:
-            return MagicMock(spec=MarketService)
+        def derived_query_service(self) -> DerivedQueryService:
+            return MagicMock(spec=DerivedQueryService)
 
     return StrategyRuntimeDepsProvider()
 
@@ -268,5 +272,6 @@ class TestAppBuilderFactory:
 
         assert isinstance(service, BacktestService)
         assert service._config.strategy_version == "2"
-        assert isinstance(service._data_feed, MarketServiceDataFeed)
+        # data_feed 是 ProviderBackedDataFeed 实例（满足 DataFeed Protocol）
+        assert isinstance(service._data_feed, ProviderBackedDataFeed)
         container.close()

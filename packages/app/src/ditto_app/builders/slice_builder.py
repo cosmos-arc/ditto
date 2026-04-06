@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-from ditto_data.services.market_service import MarketService
+from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
-from ditto_engine.backtest.data_feed import Slice
+from ditto_engine.backtest.data_feed import ProviderBackedDataFeed, Slice
 from ditto_kernel.identity import InstrumentId
 
 from ditto_app.builders.runtime_builder import StrategyRuntimeBuilder
-from ditto_app.process.strategy import (
-    MarketServiceDataFeed,
-    MarketServiceDataFeedConfig,
-)
 
 __all__ = [
     "StrategySliceBuilder",
@@ -26,11 +22,11 @@ class StrategySliceBuilder:
         *,
         strategy_runtime_builder: StrategyRuntimeBuilder,
         metadata_service: MetadataService,
-        market_service: MarketService,
+        data_provider: DataProvider,
     ) -> None:
         self._strategy_runtime_builder = strategy_runtime_builder
         self._metadata_service = metadata_service
-        self._market_service = market_service
+        self._data_provider = data_provider
 
     def build_published_slice(
         self,
@@ -50,22 +46,46 @@ class StrategySliceBuilder:
             source,
             trade_date,
         )
-        data_feed = MarketServiceDataFeed(
-            metadata_service=self._metadata_service,
-            market_service=self._market_service,
-            config=MarketServiceDataFeedConfig(
-                universe_id=runtime.spec.universe,
-                asset_class=runtime.spec.asset_class,
-                start_date=trade_date,
-                end_date=trade_date,
-                benchmark_id=benchmark_id,
-                source=source,
-            ),
+
+        # 解析 universe → tickers + id_map
+        universe_ids = self._metadata_service.get_universe(
+            runtime.spec.universe,
+            asof=trade_date,
+        )
+        tickers, id_map = self._resolve_tickers(universe_ids)
+
+        data_feed = ProviderBackedDataFeed(
+            self._data_provider,
+            tickers=tickers,
+            start_date=trade_date,
+            end_date=trade_date,
+            id_map=id_map,
+            benchmark_id=benchmark_id,
         )
         if trade_date not in data_feed.trading_days():
             msg = f"trade_date 不在可用交易日内: {trade_date}"
             raise ValueError(msg)
         return data_feed.get_slice(trade_date)
+
+    def _resolve_tickers(
+        self,
+        instrument_ids: list[int],
+    ) -> tuple[tuple[str, ...], dict[str, InstrumentId]]:
+        """将 instrument_id 列表解析为 tickers 和 id_map。"""
+        tickers: list[str] = []
+        id_map: dict[str, InstrumentId] = {}
+        for iid in instrument_ids:
+            instrument_id = InstrumentId(iid)
+            instrument = self._metadata_service.get_instrument(iid)
+            if instrument is not None:
+                ticker = instrument.get("ticker", str(iid))
+                exchange = instrument.get("exchange", "")
+                key = f"{ticker}.{exchange}" if exchange else str(iid)
+            else:
+                key = str(iid)
+            tickers.append(key)
+            id_map[key] = instrument_id
+        return tuple(tickers), id_map
 
     def _resolve_benchmark(
         self,

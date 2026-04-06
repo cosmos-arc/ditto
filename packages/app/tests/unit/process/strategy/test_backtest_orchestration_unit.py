@@ -24,12 +24,16 @@ def _make_service_config(
     strategy_id: str = "momentum-etf",
     run_id: str = "run-001",
     strategy_version: str = "",
+    start_date: str = "2026-01-01",
+    end_date: str = "2026-03-01",
 ) -> BacktestServiceConfig:
     """创建 BacktestServiceConfig。"""
     return BacktestServiceConfig(
         strategy_id=strategy_id,
         run_id=run_id,
         strategy_version=strategy_version,
+        start_date=start_date,
+        end_date=end_date,
     )
 
 

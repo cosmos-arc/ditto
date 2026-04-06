@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import polars as pl
@@ -42,6 +43,7 @@ from ditto_engine.risk.pre_trade import (
     CompositePreTradeCheck,
     LotSizeCheck,
 )
+from ditto_kernel.clock import SimulatedClock
 
 from .conftest import (
     INITIAL_CASH,
@@ -207,6 +209,7 @@ def _build_engine_with_risk_and_audit(
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
         options=EngineOptions(
+            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=fee_model,
             post_trade_guard=post_trade_guard,
             audit_collector=audit_collector,

@@ -8,6 +8,7 @@ P5 证明型测试: manifest 序列化稳定性、rule_refs 排序、pre_trade �
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +59,7 @@ from ditto_engine.risk.pre_trade import (
     CompositePreTradeCheck,
     LotSizeCheck,
 )
+from ditto_kernel.clock import SimulatedClock
 
 from .conftest import (
     INITIAL_CASH,
@@ -186,7 +188,10 @@ def _build_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
-        options=EngineOptions(fee_model=fee_model),
+        options=EngineOptions(
+            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
+            fee_model=fee_model,
+        ),
     )
 
 
@@ -231,7 +236,11 @@ def _build_audited_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
-        options=EngineOptions(fee_model=fee_model, audit_collector=collector),
+        options=EngineOptions(
+            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
+            fee_model=fee_model,
+            audit_collector=collector,
+        ),
         collector=collector,
     )
 

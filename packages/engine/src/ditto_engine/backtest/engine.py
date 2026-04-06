@@ -20,6 +20,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 import polars as pl
+from ditto_kernel.clock import Clock
 from ditto_kernel.events import DomainEvent, EventBus
 from ditto_kernel.identity import InstrumentId
 
@@ -67,7 +68,6 @@ from ditto_engine.risk.pre_trade import (
 )
 
 __all__ = [
-    "BacktestTradingOrchestrator",
     "EngineConfig",
     "EngineLoop",
     "EngineMode",
@@ -171,6 +171,7 @@ class EngineOptions:
     引擎可选组件 — 将可选依赖打包以减少构造参数数量。
 
     Attributes:
+        clock: 统一时间抽象 (必需, 用于事件时间戳和步进推进)
         fee_model: 手续费模型 (用于 PreTrade 估算, None = 不使用独立费率)
         rule_provider: 三层规则提供者 (None = 不传规则给 Planner)
         post_trade_guard: PostTrade 风控扫描器 (None = 跳过 PostTrade)
@@ -179,6 +180,7 @@ class EngineOptions:
 
     """
 
+    clock: Clock
     fee_model: FeeModel | None = None
     rule_provider: InstrumentRuleProvider | None = None
     post_trade_guard: PostTradeRiskGuard | None = None
@@ -215,7 +217,7 @@ class EngineLoop:
         brokerage: Brokerage,
         pre_trade_check: CompositePreTradeCheck,
         data_feed: DataFeed,
-        options: EngineOptions = EngineOptions(),
+        options: EngineOptions,
     ) -> None:
         self._config = config
         self._pipeline = pipeline
@@ -223,6 +225,7 @@ class EngineLoop:
         self._brokerage = brokerage
         self._pre_trade_check = pre_trade_check
         self._data_feed = data_feed
+        self._clock = options.clock
         self._fee_model = options.fee_model
         self._rule_provider = options.rule_provider
         self._post_trade_guard = options.post_trade_guard
@@ -315,6 +318,7 @@ class EngineLoop:
     def _step(self, date: str) -> None:
         """执行单日步骤。"""
         slice_ = self._data_feed.get_slice(date)
+        self._clock.advance_to(slice_.step_time)
         account_view = self._brokerage.get_account()
 
         # 收集输入标的 — 用于 manifest input_refs
@@ -363,7 +367,7 @@ class EngineLoop:
                         rule_name=action.rule_id,
                         severity=action.severity.value,
                         details={"instrument_id": action.instrument_id},
-                        timestamp=datetime.now(UTC),
+                        timestamp=self._clock.now(),
                     ),
                 )
 
@@ -418,7 +422,7 @@ class EngineLoop:
                     fill_price=fill.fill_price,
                     filled_quantity=fill.filled_quantity,
                     fee=fill.fee,
-                    timestamp=datetime.now(UTC),
+                    timestamp=self._clock.now(),
                 ),
             )
 
@@ -503,7 +507,7 @@ class EngineLoop:
                     instrument_id=final_order.instrument_id,
                     side=final_order.direction.value,
                     quantity=final_order.quantity,
-                    timestamp=datetime.now(UTC),
+                    timestamp=self._clock.now(),
                 ),
             )
 
@@ -625,12 +629,3 @@ class EngineLoop:
             trade_date=date,
             bars=slice_.bars,
         )
-
-
-# ---------------------------------------------------------------------------
-# 别名 — BacktestTradingOrchestrator = EngineLoop
-# ---------------------------------------------------------------------------
-
-
-BacktestTradingOrchestrator = EngineLoop
-"""回测交易编排器 — EngineLoop 的 TradingOrchestrator 别名."""

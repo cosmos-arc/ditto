@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from types import MappingProxyType
 from unittest.mock import Mock
 
@@ -27,6 +27,7 @@ from ditto_engine.risk.post_trade import (
     SingleLossLimitRule,
 )
 from ditto_engine.risk.pre_trade import Decision, OrderCheckResult
+from ditto_kernel.clock import SimulatedClock
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -90,7 +91,7 @@ def _make_bar(
 def _make_slice(bars: dict[int, MarketSnapshot] | None = None) -> Slice:
     return Slice(
         trade_date="2026-01-15",
-        step_time=datetime(2026, 1, 15, 15, 0),
+        step_time=datetime(2026, 1, 15, 15, 0, tzinfo=UTC),
         bars=bars or {},
     )
 
@@ -1077,6 +1078,7 @@ class TestEngineLoopPostTradeIntegration:
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
             options=EngineOptions(
+                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
                 fee_model=fee_model,
                 post_trade_guard=post_trade_guard,
             ),

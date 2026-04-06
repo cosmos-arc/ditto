@@ -13,6 +13,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 from ditto_engine.accounting.account import Account
 from ditto_engine.accounting.cash import CashBook
@@ -27,6 +29,7 @@ from ditto_engine.backtest.statistics import build_report
 from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
 from ditto_engine.execution.reality import BrokerageModel
+from ditto_kernel.clock import SimulatedClock
 
 from .conftest import INITIAL_CASH, build_test_data_feed, write_parquet_data
 
@@ -67,7 +70,18 @@ def _build_engine_with_audit(
         ),
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
-        options=EngineOptions(fee_model=fee_model, audit_collector=audit),
+        options=EngineOptions(
+            clock=SimulatedClock(
+                initial=datetime(
+                    int(start_date[:4]),
+                    int(start_date[5:7]),
+                    int(start_date[8:10]),
+                    tzinfo=UTC,
+                ),
+            ),
+            fee_model=fee_model,
+            audit_collector=audit,
+        ),
     )
     return engine, audit
 

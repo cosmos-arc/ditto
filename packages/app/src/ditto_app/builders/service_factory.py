@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from ditto_data.models.strategy import StrategySpecRecord
+from ditto_data.provider import DataProvider
 from ditto_data.services.audit import ExecutionAuditService
-from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
@@ -15,7 +15,10 @@ from ditto_engine.accounting.account import Account
 from ditto_engine.accounting.cash import CashBook
 from ditto_engine.alpha.pipeline import StrategyPipeline
 from ditto_engine.alpha.specs import StrategySpec
-from ditto_engine.backtest.data_feed import DataFeed
+from ditto_engine.backtest.data_feed import (
+    DataFeed,
+    ProviderBackedDataFeed,
+)
 from ditto_engine.execution.brokerage import BacktestBrokerage, Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner, SimpleExecutionPlanner
 from ditto_engine.execution.reality import BrokerageModel, FeeModel, SimpleFeeModel
@@ -31,12 +34,11 @@ from ditto_app.process.strategy import (
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
-    MarketServiceDataFeed,
-    MarketServiceDataFeedConfig,
     RunLifecycleService,
     StrategyInputAssembler,
     StrategyRunService,
     StrategyRunServiceConfig,
+    build_display_map,
 )
 
 __all__ = [
@@ -61,7 +63,8 @@ class PublishedBacktestRuntime:
     planner: SimpleExecutionPlanner
     brokerage: BacktestBrokerage
     pre_trade_check: CompositePreTradeCheck
-    data_feed: MarketServiceDataFeed
+    data_feed: DataFeed
+    display_map: dict[InstrumentId, str]
     fee_model: FeeModel
     config: BacktestServiceConfig
 
@@ -79,11 +82,11 @@ class BacktestRuntimeBuilder:
         *,
         strategy_runtime_builder: StrategyRuntimeBuilder,
         metadata_service: MetadataService,
-        market_service: MarketService,
+        data_provider: DataProvider,
     ) -> None:
         self._strategy_runtime_builder = strategy_runtime_builder
         self._metadata_service = metadata_service
-        self._market_service = market_service
+        self._data_provider = data_provider
 
     def build_published_runtime(
         self,
@@ -119,6 +122,24 @@ class BacktestRuntimeBuilder:
             strategy_version=str(runtime.record.version),
             benchmark_id=benchmark_id,
         )
+
+        # 解析 universe → tickers + id_map + display_map
+        universe_ids = self._metadata_service.get_universe(
+            runtime.spec.universe,
+            asof=config.start_date,
+        )
+        tickers, id_map = self._resolve_tickers(universe_ids)
+        display_map = build_display_map(universe_ids, self._metadata_service)
+
+        data_feed = ProviderBackedDataFeed(
+            self._data_provider,
+            tickers=tickers,
+            start_date=config.start_date,
+            end_date=config.end_date,
+            id_map=id_map,
+            benchmark_id=resolved_config.benchmark_id,
+        )
+
         return PublishedBacktestRuntime(
             record=runtime.record,
             spec=runtime.spec,
@@ -128,21 +149,31 @@ class BacktestRuntimeBuilder:
             pre_trade_check=CompositePreTradeCheck(
                 checks=(LotSizeCheck(), BuyingPowerCheck()),
             ),
-            data_feed=MarketServiceDataFeed(
-                metadata_service=self._metadata_service,
-                market_service=self._market_service,
-                config=MarketServiceDataFeedConfig(
-                    universe_id=runtime.spec.universe,
-                    asset_class=runtime.spec.asset_class,
-                    start_date=config.start_date,
-                    end_date=config.end_date,
-                    benchmark_id=resolved_config.benchmark_id,
-                    source=source,
-                ),
-            ),
+            data_feed=data_feed,
+            display_map=display_map,
             fee_model=fee_model,
             config=resolved_config,
         )
+
+    def _resolve_tickers(
+        self,
+        instrument_ids: list[int],
+    ) -> tuple[tuple[str, ...], dict[str, InstrumentId]]:
+        """将 instrument_id 列表解析为 tickers 和 id_map。"""
+        tickers: list[str] = []
+        id_map: dict[str, InstrumentId] = {}
+        for iid in instrument_ids:
+            instrument_id = InstrumentId(iid)
+            instrument = self._metadata_service.get_instrument(iid)
+            if instrument is not None:
+                ticker = instrument.get("ticker", str(iid))
+                exchange = instrument.get("exchange", "")
+                key = f"{ticker}.{exchange}" if exchange else str(iid)
+            else:
+                key = str(iid)
+            tickers.append(key)
+            id_map[key] = instrument_id
+        return tuple(tickers), id_map
 
     def _resolve_benchmark(
         self,
@@ -285,7 +316,7 @@ class StrategyServiceFactory:
         if resolved_options.display_map is None:
             resolved_options = replace(
                 resolved_options,
-                display_map=runtime.data_feed.display_map,
+                display_map=runtime.display_map,
             )
         return self.build_backtest_service(
             config=runtime.config,

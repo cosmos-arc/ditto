@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime
+from datetime import UTC, datetime
 from types import MappingProxyType
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from ditto_engine.accounting.account import AccountView
@@ -24,6 +24,7 @@ from ditto_engine.risk.pre_trade import (
     Decision,
     OrderCheckResult,
 )
+from ditto_kernel.clock import Clock
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -126,6 +127,13 @@ def _make_config() -> EngineConfig:
     )
 
 
+def _make_clock() -> MagicMock:
+    """构建测试用 mock Clock."""
+    clock = MagicMock(spec=Clock)
+    clock.now.return_value = datetime(2026, 3, 1, 15, 0, tzinfo=UTC)
+    return clock
+
+
 def _make_engine_loop(
     config: EngineConfig | None = None,
     pipeline: Mock | None = None,
@@ -156,7 +164,7 @@ def _make_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
-        options=EngineOptions(fee_model=fee_model),
+        options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
     )
 
 
@@ -213,7 +221,7 @@ class TestThreeDayStep:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(fee_model=fee_model),
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
         )
         result = loop.run()
 
@@ -248,7 +256,7 @@ class TestNonRebalanceDaySkipsPipeline:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(fee_model=fee_model),
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
         )
 
         # Patch _is_rebalance_day to return False for all dates
@@ -310,7 +318,7 @@ class TestPreTradeRejectSkipsOrder:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(fee_model=fee_model),
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
         )
         loop.run()
 
@@ -365,7 +373,7 @@ class TestPreTradeResizeApplied:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(fee_model=fee_model),
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
         )
         loop.run()
 
@@ -421,7 +429,7 @@ class TestRollingContextUpdates:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(fee_model=fee_model),
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
         )
         loop.run()
 
@@ -487,7 +495,7 @@ class TestProcessInputConversion:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(fee_model=fee_model),
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
         )
         loop.run()
 
@@ -552,7 +560,11 @@ class TestRuleProviderInjection:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(fee_model=fee_model, rule_provider=rule_provider),
+            options=EngineOptions(
+                clock=_make_clock(),
+                fee_model=fee_model,
+                rule_provider=rule_provider,
+            ),
         )
         loop.run()
 
@@ -602,7 +614,7 @@ class TestRuleProviderInjection:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(fee_model=fee_model),
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
         )
         loop.run()
 
@@ -649,7 +661,7 @@ class TestEmptyPlanNoOrders:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(fee_model=fee_model),
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
         )
         result = loop.run()
 

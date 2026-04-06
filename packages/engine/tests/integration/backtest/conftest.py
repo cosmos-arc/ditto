@@ -11,6 +11,7 @@ Phase 3 新增:
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +46,7 @@ from ditto_engine.risk.pre_trade import (
     CompositePreTradeCheck,
     LotSizeCheck,
 )
+from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.identity import InstrumentId
 
 # ---------------------------------------------------------------------------
@@ -92,7 +94,7 @@ class TestParquetProvider:
             frames.append(df)
         if not frames:
             return pl.DataFrame()
-        result = pl.concat(frames)
+        result = pl.concat(frames, how="diagonal")
         result = result.filter(
             (pl.col("trade_date") >= query.start) & (pl.col("trade_date") <= query.end)
         )
@@ -449,7 +451,10 @@ def assembled_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=three_day_data_feed,
-        options=EngineOptions(fee_model=fee_model),
+        options=EngineOptions(
+            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
+            fee_model=fee_model,
+        ),
     )
 
 
@@ -521,7 +526,10 @@ def five_day_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=five_day_data_feed,
-        options=EngineOptions(fee_model=fee_model),
+        options=EngineOptions(
+            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
+            fee_model=fee_model,
+        ),
     )
 
 
@@ -598,7 +606,10 @@ def limit_up_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=limit_up_data_feed,
-        options=EngineOptions(fee_model=ashare_fee_model),
+        options=EngineOptions(
+            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
+            fee_model=ashare_fee_model,
+        ),
     )
 
 
@@ -653,7 +664,10 @@ def limit_down_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=limit_down_data_feed,
-        options=EngineOptions(fee_model=ashare_fee_model),
+        options=EngineOptions(
+            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
+            fee_model=ashare_fee_model,
+        ),
     )
 
 
@@ -708,5 +722,8 @@ def st_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=st_data_feed,
-        options=EngineOptions(fee_model=ashare_fee_model),
+        options=EngineOptions(
+            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
+            fee_model=ashare_fee_model,
+        ),
     )

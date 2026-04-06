@@ -19,6 +19,7 @@ from dishka import Provider, Scope, provide
 from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.quality import QualityEngine
+from ditto_data.query.provider import ServiceBackedDataProvider
 from ditto_data.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
@@ -342,17 +343,31 @@ class AppBuilderFactory(Provider):
         return StrategyRuntimeBuilder(catalog_service=catalog_service)
 
     @provide
+    def data_provider(
+        self,
+        market_service: MarketService,
+        metadata_service: MetadataService,
+        derived_query_service: DerivedQueryService,
+    ) -> ServiceBackedDataProvider:
+        """提供 DataProvider 实现。"""
+        return ServiceBackedDataProvider(
+            market_service=market_service,
+            metadata_service=metadata_service,
+            derived_service=derived_query_service,
+        )
+
+    @provide
     def backtest_runtime_builder(
         self,
         runtime_builder: StrategyRuntimeBuilder,
         metadata_service: MetadataService,
-        market_service: MarketService,
+        data_provider: ServiceBackedDataProvider,
     ) -> BacktestRuntimeBuilder:
         """提供 published strategy backtest runtime builder。"""
         return BacktestRuntimeBuilder(
             strategy_runtime_builder=runtime_builder,
             metadata_service=metadata_service,
-            market_service=market_service,
+            data_provider=data_provider,
         )
 
     @provide
@@ -360,13 +375,13 @@ class AppBuilderFactory(Provider):
         self,
         runtime_builder: StrategyRuntimeBuilder,
         metadata_service: MetadataService,
-        market_service: MarketService,
+        data_provider: ServiceBackedDataProvider,
     ) -> StrategySliceBuilder:
         """提供 published strategy 单日 Slice builder。"""
         return StrategySliceBuilder(
             strategy_runtime_builder=runtime_builder,
             metadata_service=metadata_service,
-            market_service=market_service,
+            data_provider=data_provider,
         )
 
     @provide
