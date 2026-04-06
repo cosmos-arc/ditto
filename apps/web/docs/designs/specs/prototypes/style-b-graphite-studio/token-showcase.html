@@ -1827,6 +1827,12 @@
     .weight-regular { font-weight: 400; }
     .weight-medium { font-weight: 500; }
     .weight-semibold { font-weight: 600; }
+
+    /* -- Tab button active state enhancement -- */
+    [data-tab-target].active {
+      color: var(--brand-accent) !important;
+      background: var(--brand-accent-subtle) !important;
+    }
   </style>
 </head>
 <body>
@@ -1880,7 +1886,7 @@
     <!-- ───────────────────────────────────────────────
          Section 1: Foundation Tokens
          ─────────────────────────────────────────────── -->
-    <section class="section" id="foundation">
+    <section class="section" id="foundation" data-reveal="fade-up" data-reveal-delay="0">
       <div class="section-header">
         <span class="section-number">01</span>
         <h2 class="section-title">基础 Token (Foundation)</h2>
@@ -1923,7 +1929,7 @@
         <!-- Functional Colors -->
         <div class="swatch-group">
           <div class="swatch-group-label">Functional — 功能色</div>
-          <div class="swatch-grid compact" id="functionalSwatches"></div>
+          <div class="swatch-grid compact" id="functionalSwatches" data-mouse-glow="true"></div>
         </div>
       </div>
 
@@ -2070,31 +2076,31 @@
       <div class="subsection">
         <h3 class="subsection-title">2.5 Overlay (透明度分隔线 / 背景)</h3>
         <div class="token-swatch-grid">
-          <div class="token-swatch-item">
+          <div class="token-swatch-item" data-tooltip="--overlay-2: oklch(1 0 0 / 0.02)" data-tooltip-pos="bottom">
             <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-2);"></div>
             <code>--overlay-2</code><span class="token-value">oklch(1 0 0 / 0.02)</span>
           </div>
-          <div class="token-swatch-item">
+          <div class="token-swatch-item" data-tooltip="--overlay-3: oklch(1 0 0 / 0.03)" data-tooltip-pos="bottom">
             <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-3);"></div>
             <code>--overlay-3</code><span class="token-value">oklch(1 0 0 / 0.03)</span>
           </div>
-          <div class="token-swatch-item">
+          <div class="token-swatch-item" data-tooltip="--overlay-4: oklch(1 0 0 / 0.04)" data-tooltip-pos="bottom">
             <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-4);"></div>
             <code>--overlay-4</code><span class="token-value">oklch(1 0 0 / 0.04)</span>
           </div>
-          <div class="token-swatch-item">
+          <div class="token-swatch-item" data-tooltip="--overlay-6: oklch(1 0 0 / 0.06)" data-tooltip-pos="bottom">
             <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-6);"></div>
             <code>--overlay-6</code><span class="token-value">oklch(1 0 0 / 0.06)</span>
           </div>
-          <div class="token-swatch-item">
+          <div class="token-swatch-item" data-tooltip="--overlay-8: oklch(1 0 0 / 0.08)" data-tooltip-pos="bottom">
             <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-8);"></div>
             <code>--overlay-8</code><span class="token-value">oklch(1 0 0 / 0.08)</span>
           </div>
-          <div class="token-swatch-item">
+          <div class="token-swatch-item" data-tooltip="--overlay-10: oklch(1 0 0 / 0.10)" data-tooltip-pos="bottom">
             <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-10);"></div>
             <code>--overlay-10</code><span class="token-value">oklch(1 0 0 / 0.10)</span>
           </div>
-          <div class="token-swatch-item">
+          <div class="token-swatch-item" data-tooltip="--overlay-12: oklch(1 0 0 / 0.12)" data-tooltip-pos="bottom">
             <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-12);"></div>
             <code>--overlay-12</code><span class="token-value">oklch(1 0 0 / 0.12)</span>
           </div>
@@ -2106,11 +2112,11 @@
       <div class="subsection">
         <h3 class="subsection-title">2.6 毛玻璃效果 (Frosted Glass)</h3>
         <div class="token-swatch-grid">
-          <div class="token-swatch-item">
+          <div class="token-swatch-item" data-tooltip="--surface-frosted: surface-app @ 85% + backdrop-blur(12px)" data-tooltip-pos="bottom">
             <div class="token-swatch frosted-swatch" style="background: var(--surface-frosted);"></div>
             <code>--surface-frosted</code><span class="token-value">surface-app @ 85%</span>
           </div>
-          <div class="token-swatch-item">
+          <div class="token-swatch-item" data-tooltip="--surface-frosted-subtle: surface-app @ 80% + backdrop-blur(8px)" data-tooltip-pos="bottom">
             <div class="token-swatch frosted-swatch" style="background: var(--surface-frosted-subtle);"></div>
             <code>--surface-frosted-subtle</code><span class="token-value">surface-app @ 80%</span>
           </div>
@@ -2272,7 +2278,7 @@
     <!-- ───────────────────────────────────────────────
          Section 5: Density Comparison
          ─────────────────────────────────────────────── -->
-    <section class="section" id="density">
+    <section class="section" id="density" data-reveal="fade-up" data-reveal-delay="300">
       <div class="section-header">
         <span class="section-number">06</span>
         <h2 class="section-title">密度对比 (Density Comparison)</h2>
@@ -2359,7 +2365,7 @@
     <!-- ───────────────────────────────────────────────
          Section 6: Market Region Demo
          ─────────────────────────────────────────────── -->
-    <section class="section" id="market-region">
+    <section class="section" id="market-region" data-reveal="fade-up" data-reveal-delay="350">
       <div class="section-header">
         <span class="section-number">07</span>
         <h2 class="section-title">市场区域演示 (Market Region)</h2>
@@ -2459,27 +2465,27 @@
           Real-time data visually decays over time. Opacity-based time-fade helps users spot stale values at a glance.
         </p>
         <div class="freshness-row">
-          <div class="freshness-cell" style="opacity: var(--data-freshness-live);">
+          <div class="freshness-cell" data-tooltip="--data-freshness-live: opacity 1.0" data-tooltip-pos="bottom" style="opacity: var(--data-freshness-live);">
             <span class="freshness-label">Live</span>
             <span class="freshness-value">3,847.20</span>
             <span class="freshness-timer">&lt;1s ago</span>
           </div>
-          <div class="freshness-cell" style="opacity: var(--data-freshness-recent);">
+          <div class="freshness-cell" data-tooltip="--data-freshness-recent: opacity 0.85" data-tooltip-pos="bottom" style="opacity: var(--data-freshness-recent);">
             <span class="freshness-label">Recent</span>
             <span class="freshness-value">3,847.20</span>
             <span class="freshness-timer">12s ago</span>
           </div>
-          <div class="freshness-cell" style="opacity: var(--data-freshness-aging);">
+          <div class="freshness-cell" data-tooltip="--data-freshness-aging: opacity 0.65" data-tooltip-pos="bottom" style="opacity: var(--data-freshness-aging);">
             <span class="freshness-label">Aging</span>
             <span class="freshness-value">3,847.20</span>
             <span class="freshness-timer">2m ago</span>
           </div>
-          <div class="freshness-cell" style="opacity: var(--data-freshness-stale);">
+          <div class="freshness-cell" data-tooltip="--data-freshness-stale: opacity 0.45" data-tooltip-pos="bottom" style="opacity: var(--data-freshness-stale);">
             <span class="freshness-label">Stale</span>
             <span class="freshness-value">3,847.20</span>
             <span class="freshness-timer">18m ago</span>
           </div>
-          <div class="freshness-cell" style="opacity: var(--data-freshness-expired);">
+          <div class="freshness-cell" data-tooltip="--data-freshness-expired: opacity 0.25" data-tooltip-pos="bottom" style="opacity: var(--data-freshness-expired);">
             <span class="freshness-label">Expired</span>
             <span class="freshness-value">3,847.20</span>
             <span class="freshness-timer">&gt;30m ago</span>
@@ -2549,31 +2555,31 @@
           7 qualitative colors based on Paul Tol bright scheme, colorblind-safe. Used in portfolio allocation, exposure charts, and legend keys.
         </p>
         <div class="asset-class-row">
-          <div class="asset-class-pill">
+          <div class="asset-class-pill" data-tooltip="--asset-equity" data-tooltip-pos="bottom">
             <span class="asset-class-dot" style="background: var(--asset-equity);"></span>
             <span class="asset-class-name">Equity</span>
           </div>
-          <div class="asset-class-pill">
+          <div class="asset-class-pill" data-tooltip="--asset-fixed-income" data-tooltip-pos="bottom">
             <span class="asset-class-dot" style="background: var(--asset-fixed-income);"></span>
             <span class="asset-class-name">Fixed Income</span>
           </div>
-          <div class="asset-class-pill">
+          <div class="asset-class-pill" data-tooltip="--asset-crypto" data-tooltip-pos="bottom">
             <span class="asset-class-dot" style="background: var(--asset-crypto);"></span>
             <span class="asset-class-name">Crypto</span>
           </div>
-          <div class="asset-class-pill">
+          <div class="asset-class-pill" data-tooltip="--asset-commodity" data-tooltip-pos="bottom">
             <span class="asset-class-dot" style="background: var(--asset-commodity);"></span>
             <span class="asset-class-name">Commodity</span>
           </div>
-          <div class="asset-class-pill">
+          <div class="asset-class-pill" data-tooltip="--asset-fx" data-tooltip-pos="bottom">
             <span class="asset-class-dot" style="background: var(--asset-fx);"></span>
             <span class="asset-class-name">FX</span>
           </div>
-          <div class="asset-class-pill">
+          <div class="asset-class-pill" data-tooltip="--asset-volatility" data-tooltip-pos="bottom">
             <span class="asset-class-dot" style="background: var(--asset-volatility);"></span>
             <span class="asset-class-name">Volatility</span>
           </div>
-          <div class="asset-class-pill">
+          <div class="asset-class-pill" data-tooltip="--asset-alternative" data-tooltip-pos="bottom">
             <span class="asset-class-dot" style="background: var(--asset-alternative);"></span>
             <span class="asset-class-name">Alternative</span>
           </div>
@@ -2589,11 +2595,11 @@
         <div class="color-gradient-bar color-gradient-bar--heatmap"></div>
         <div class="gradient-bar-label"><span>-2.0%</span><span>0.0%</span><span>+2.0%</span></div>
         <div class="heatmap-row">
-          <div class="heatmap-cell" style="background: var(--heatmap-1-bg);">-2.0%</div>
-          <div class="heatmap-cell" style="background: var(--heatmap-2-bg);">-0.8%</div>
-          <div class="heatmap-cell" style="background: var(--heatmap-3-bg);">0.0%</div>
-          <div class="heatmap-cell" style="background: var(--heatmap-4-bg);">+0.8%</div>
-          <div class="heatmap-cell" style="background: var(--heatmap-5-bg);">+2.0%</div>
+          <div class="heatmap-cell" data-tooltip="--heatmap-1-bg: strongly negative" data-tooltip-pos="bottom" style="background: var(--heatmap-1-bg);">-2.0%</div>
+          <div class="heatmap-cell" data-tooltip="--heatmap-2-bg: mildly negative" data-tooltip-pos="bottom" style="background: var(--heatmap-2-bg);">-0.8%</div>
+          <div class="heatmap-cell" data-tooltip="--heatmap-3-bg: neutral midpoint" data-tooltip-pos="bottom" style="background: var(--heatmap-3-bg);">0.0%</div>
+          <div class="heatmap-cell" data-tooltip="--heatmap-4-bg: mildly positive" data-tooltip-pos="bottom" style="background: var(--heatmap-4-bg);">+0.8%</div>
+          <div class="heatmap-cell" data-tooltip="--heatmap-5-bg: strongly positive" data-tooltip-pos="bottom" style="background: var(--heatmap-5-bg);">+2.0%</div>
         </div>
       </div>
 
@@ -2749,7 +2755,7 @@
         const value = style.getPropertyValue(n.token).trim();
 
         container.innerHTML += `
-          <div class="swatch">
+          <div class="swatch" data-tooltip="${n.token}: ${value}" data-tooltip-pos="bottom">
             <div class="swatch-color" style="background: var(${n.token});"></div>
             <div class="swatch-info">
               <div class="swatch-name">${n.name}</div>
@@ -2776,7 +2782,7 @@
         const value = style.getPropertyValue(b.token).trim();
 
         container.innerHTML += `
-          <div class="swatch">
+          <div class="swatch" data-tooltip="${b.token}: ${value}" data-tooltip-pos="bottom">
             <div class="swatch-color" style="background: var(${b.token});"></div>
             <div class="swatch-info">
               <div class="swatch-name">${b.name}</div>
@@ -2830,7 +2836,7 @@
           const value = style.getPropertyValue(c.token).trim();
 
           container.innerHTML += `
-            <div class="swatch">
+            <div class="swatch" data-tooltip="${c.token}: ${value}" data-tooltip-pos="bottom">
               <div class="swatch-color" style="background: var(${c.token});"></div>
               <div class="swatch-info">
                 <div class="swatch-name">${c.name}</div>
@@ -2856,7 +2862,7 @@
 
       sizes.forEach(s => {
         container.innerHTML += `
-          <div class="type-row">
+          <div class="type-row" data-tooltip="${s.name}: ${s.rem} (${s.px})" data-tooltip-pos="right">
             <span class="type-label">${s.name}</span>
             <span class="type-sample" style="font-size: var(${s.name});">量化交易 Graphite Studio ${s.px}</span>
             <span class="type-value">${s.rem} (${s.px})</span>
@@ -2885,7 +2891,7 @@
       spacings.forEach(s => {
         const numVal = parseInt(s.px, 10);
         container.innerHTML += `
-          <div class="spacing-row">
+          <div class="spacing-row" data-tooltip="${s.name}: ${s.px}" data-tooltip-pos="right">
             <span class="spacing-label">${s.name}</span>
             <div class="spacing-bar" style="width: ${s.factor * 8}px;"></div>
             <span class="spacing-value"><span data-ticker="${numVal}" data-decimals="0" data-ticker-suffix="px">${s.px}</span></span>
@@ -2908,7 +2914,7 @@
 
       radii.forEach(r => {
         container.innerHTML += `
-          <div class="radius-item">
+          <div class="radius-item" data-tooltip="${r.name}: ${r.px}" data-tooltip-pos="bottom">
             <div class="radius-box" style="border-radius: var(${r.name});"></div>
             <span class="radius-label">${r.name}<br>${r.px}</span>
           </div>
@@ -2933,7 +2939,7 @@
         const value = style.getPropertyValue(s.token).trim();
 
         container.innerHTML += `
-          <div class="elevation-row">
+          <div class="elevation-row" data-tooltip="${s.token}: ${value}" data-tooltip-pos="right">
             <span class="elevation-label">${s.level}</span>
             <div class="elevation-preview" style="background: var(${s.token});">
               <span class="elevation-preview-text">示例文本 Sample Text</span>
@@ -2962,7 +2968,7 @@
           : `<span style="color: var(${t.token}); font-size: var(--font-size-14);">这是${t.name}的显示效果 This is ${t.name}</span>`;
 
         container.innerHTML += `
-          <div class="text-hierarchy-row">
+          <div class="text-hierarchy-row" data-tooltip="${t.token}" data-tooltip-pos="right">
             <span class="text-hierarchy-label">${t.name}</span>
             ${textContent}
             <span class="text-hierarchy-token">${t.token}</span>
@@ -2982,7 +2988,7 @@
 
       borders.forEach(b => {
         container.innerHTML += `
-          <div class="border-row">
+          <div class="border-row" data-tooltip="${b.token}" data-tooltip-pos="right">
             <span class="border-label">${b.name}</span>
             <div class="border-line" style="background: var(${b.token});"></div>
           </div>
@@ -3075,7 +3081,7 @@
             : `background: transparent; border: 1px dashed var(--border-default);`;
 
           badgesHtml += `
-            <div class="domain-badge" style="color: var(${t.fg}); ${bgStyle}">
+            <div class="domain-badge" style="color: var(${t.fg}); ${bgStyle}" data-tooltip="${t.fg}${t.bg ? ' → bg: ' + t.bg : ''}" data-tooltip-pos="bottom">
               ${t.label}
               <span class="domain-badge-label">${t.fg.replace(/^--/, '')}</span>
             </div>

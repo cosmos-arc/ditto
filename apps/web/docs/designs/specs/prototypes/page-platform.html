@@ -1572,6 +1572,46 @@
      * R4: Premium feel — hover, glow, depth
      * ══════════════════════════════════════════════ */
 
+    /* ── Service Topology Mini ── */
+    .topology-mini {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: var(--space-6);
+      padding: 2px var(--space-4);
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+    }
+    .topo-node {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .topo-node:hover {
+      transform: scale(1.6);
+    }
+    .topo-node.topo-ok {
+      background: var(--system-healthy-fg);
+      box-shadow: 0 0 4px -1px color-mix(in oklch, var(--system-healthy-fg) 40%, transparent);
+    }
+    .topo-node.topo-warn {
+      background: var(--system-degraded-fg);
+      box-shadow: 0 0 4px -1px color-mix(in oklch, var(--system-degraded-fg) 40%, transparent);
+      animation: topo-warn-pulse 3s ease-in-out infinite;
+    }
+    .topo-node.topo-down {
+      background: var(--system-down-fg);
+      box-shadow: 0 0 4px -1px color-mix(in oklch, var(--system-down-fg) 40%, transparent);
+      animation: dot-critical-pulse 2s ease-in-out infinite;
+    }
+    @keyframes topo-warn-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+
     /* Health score ring — glow based on score */
     .health-score-ring {
       position: relative;
@@ -1655,6 +1695,65 @@
     /* Rail icon — enhanced active glow */
     .rail-icon.active {
       text-shadow: 0 0 10px color-mix(in oklch, var(--brand-accent) 20%, transparent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R5: Data-driven reveal — staggered row entrance
+     * ══════════════════════════════════════════════ */
+    /* Staggered table row entrance via data-reveal */
+    .data-table tbody tr[data-reveal] td {
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* Detail panel task/resource entrance stagger */
+    .task-item[data-reveal],
+    .resource-item[data-reveal],
+    .event-item[data-reveal] {
+      opacity: 0;
+      animation: item-entrance 0.4s var(--motion-easing-emphasis) forwards;
+    }
+    @keyframes item-entrance {
+      from { opacity: 0; transform: translateX(4px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Health score ring — enhanced premium feel */
+    .health-score-ring[data-mouse-glow] {
+      transition: border-color var(--motion-duration-normal) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    /* Env badge — subtle animated border glow */
+    .env-badge {
+      transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard),
+                  border-color var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .env-badge:hover {
+      box-shadow: 0 0 12px -4px color-mix(in oklch, var(--system-healthy-fg) 35%, transparent);
+    }
+
+    /* Panel body — smooth content area */
+    .panel-body {
+      position: relative;
+    }
+
+    /* Status bar enhanced — LIVE indicator glow */
+    .status-live {
+      position: relative;
+    }
+    .status-live::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--system-healthy-fg);
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .status-bar:hover .status-live::after {
+      opacity: 0.4;
     }
   </style>
 </head>
@@ -1763,85 +1862,70 @@
     <div class="ops-health" role="status" aria-label="系统健康指标" data-reveal="fade-up">
       <div class="health-metric-group">
         <!-- Overall system health score — ring gauge -->
-        <div class="health-score-ring">
-          <div class="health-gauge">
-            <svg width="36" height="36" viewBox="0 0 36 36">
-              <circle class="health-score-ring-track" cx="18" cy="18" r="14" stroke-width="3"/>
-              <circle class="health-score-ring-fill ok" cx="18" cy="18" r="14" stroke-width="3" stroke-dasharray="87.96" stroke-dashoffset="2.64"/>
-            </svg>
-            <div class="health-score-center">
-              <span class="health-score-value"><span data-ticker="97" data-decimals="0">97</span></span>
-            </div>
-          </div>
+        <div class="health-score-ring" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--system-healthy-fg) l c h / 0.06)" data-tooltip="系统综合健康评分" data-tooltip-pos="bottom">
+          <svg data-donut='{"value":0.97,"size":36,"strokeWidth":3,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":"97"}' width="36" height="36"></svg>
           <div class="health-score-details">
             <span class="health-score-details-label">系统健康</span>
-            <span class="health-score-details-sub">97 / 100</span>
+            <span class="health-score-details-sub"><span data-counter="97" data-counter-decimals="0">97</span> / 100</span>
           </div>
         </div>
       </div>
       <div class="health-metric-group">
-        <div class="health-metric">
+        <div class="health-metric" data-tooltip="数据新鲜度：最近一次同步距今 < 30s" data-tooltip-pos="bottom">
           <span class="health-metric-dot healthy"></span>
           <span class="health-metric-label">新鲜度</span>
           <!-- Inline mini gauge: 98.2% -->
           <div class="health-inline-gauge">
-            <svg width="16" height="16" viewBox="0 0 16 16">
-              <circle class="health-gauge-track" cx="8" cy="8" r="6" stroke-width="2"/>
-              <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="0.68"/>
-            </svg>
+            <svg data-donut='{"value":0.982,"size":16,"strokeWidth":2,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="16" height="16"></svg>
           </div>
-          <span class="health-metric-value ok"><span data-ticker="98.2" data-decimals="1" data-ticker-suffix="%">98.2%</span></span><span class="health-trend up">↑</span>
+          <span class="health-metric-value ok"><span data-counter="98.2" data-counter-decimals="1" data-counter-suffix="%">98.2%</span></span><span class="health-trend up">↑</span>
         </div>
-        <div class="health-metric">
+        <div class="health-metric" data-tooltip="数据完整度：所有字段无空值比例" data-tooltip-pos="bottom">
           <span class="health-metric-dot healthy"></span>
           <span class="health-metric-label">完整度</span>
           <div class="health-inline-gauge">
-            <svg width="16" height="16" viewBox="0 0 16 16">
-              <circle class="health-gauge-track" cx="8" cy="8" r="6" stroke-width="2"/>
-              <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="0.23"/>
-            </svg>
+            <svg data-donut='{"value":0.994,"size":16,"strokeWidth":2,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="16" height="16"></svg>
           </div>
-          <span class="health-metric-value ok"><span data-ticker="99.4" data-decimals="1" data-ticker-suffix="%">99.4%</span></span><span class="health-trend flat">→</span>
+          <span class="health-metric-value ok"><span data-counter="99.4" data-counter-decimals="1" data-counter-suffix="%">99.4%</span></span><span class="health-trend flat">→</span>
         </div>
-        <div class="health-metric">
+        <div class="health-metric" data-tooltip="数据准确度：通过校验规则的比例" data-tooltip-pos="bottom">
           <span class="health-metric-dot healthy"></span>
           <span class="health-metric-label">准确度</span>
           <div class="health-inline-gauge">
-            <svg width="16" height="16" viewBox="0 0 16 16">
-              <circle class="health-gauge-track" cx="8" cy="8" r="6" stroke-width="2"/>
-              <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="0.08"/>
-            </svg>
+            <svg data-donut='{"value":0.998,"size":16,"strokeWidth":2,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="16" height="16"></svg>
           </div>
-          <span class="health-metric-value ok"><span data-ticker="99.8" data-decimals="1" data-ticker-suffix="%">99.8%</span></span><span class="health-trend flat">→</span>
+          <span class="health-metric-value ok"><span data-counter="99.8" data-counter-decimals="1" data-counter-suffix="%">99.8%</span></span><span class="health-trend flat">→</span>
         </div>
       </div>
       <div class="health-metric-group">
-        <div class="health-metric">
+        <div class="health-metric" data-tooltip="在线数据源 4/5，聚宽已断开" data-tooltip-pos="bottom">
           <span class="health-metric-dot degraded"></span>
           <span class="health-metric-label">数据源</span>
           <div class="health-inline-gauge">
-            <svg width="16" height="16" viewBox="0 0 16 16">
-              <circle class="health-gauge-track" cx="8" cy="8" r="6" stroke-width="2"/>
-              <circle class="health-gauge-fill warn" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="7.54"/>
-            </svg>
+            <svg data-donut='{"value":0.8,"size":16,"strokeWidth":2,"color":"var(--system-degraded-fg)","trackColor":"var(--border-subtle)","label":""}' width="16" height="16"></svg>
           </div>
           <span class="health-metric-value warn">4/5</span><span class="health-trend down">↓</span>
         </div>
-        <div class="health-metric">
+        <div class="health-metric" data-tooltip="运行中任务 3/4，1 个已失败" data-tooltip-pos="bottom">
           <span class="health-metric-dot brand"></span>
           <span class="health-metric-label">任务</span>
           <span class="health-metric-value brand">3/4</span>
         </div>
-        <div class="health-metric">
+        <div class="health-metric" data-tooltip="系统负载：CPU 23% + 内存 26%" data-tooltip-pos="bottom">
           <span class="health-metric-dot healthy"></span>
           <span class="health-metric-label">负载</span>
           <div class="health-inline-gauge">
-            <svg width="16" height="16" viewBox="0 0 16 16">
-              <circle class="health-gauge-track" cx="8" cy="8" r="6" stroke-width="2"/>
-              <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="29.05"/>
-            </svg>
+            <svg data-donut='{"value":0.23,"size":16,"strokeWidth":2,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="16" height="16"></svg>
           </div>
-          <span class="health-metric-value ok"><span data-ticker="23" data-decimals="0" data-ticker-suffix="%">23%</span></span><span class="health-trend up">↑</span>
+          <span class="health-metric-value ok"><span data-counter="23" data-counter-decimals="0" data-counter-suffix="%">23%</span></span><span class="health-trend up">↑</span>
+        </div>
+        <!-- Service topology mini — 5 node block indicators -->
+        <div class="topology-mini" data-tooltip="服务拓扑：● 在线 ● 在线 ◐ 降级 ● 在线 ◌ 离线" data-tooltip-pos="bottom">
+          <span class="topo-node topo-ok" data-tooltip="Tushare: 正常" data-tooltip-delay="100"></span>
+          <span class="topo-node topo-ok" data-tooltip="Wind: 正常" data-tooltip-delay="100"></span>
+          <span class="topo-node topo-warn" data-tooltip="东方财富: 延迟" data-tooltip-delay="100"></span>
+          <span class="topo-node topo-ok" data-tooltip="同花顺: 正常" data-tooltip-delay="100"></span>
+          <span class="topo-node topo-down" data-tooltip="聚宽: 断开" data-tooltip-delay="100"></span>
         </div>
       </div>
     </div>
@@ -1856,7 +1940,7 @@
 
       <!-- Tab labels -->
       <div class="ops-main">
-        <div class="panel" data-reveal="fade-up" data-reveal-delay="100">
+        <div class="panel" data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-accent) l c h / 0.03)" data-mouse-glow-size="300px">
           <div class="panel-header">
             <div class="panel-tabs">
               <label for="tab-providers" class="panel-tab panel-tab-radio active" data-tab-label="tab-providers" data-tab-target="services" role="tab" aria-selected="true">数据源 <span class="panel-subtitle">5 个源</span></label>
@@ -1884,10 +1968,10 @@
                   </thead>
                   <tbody>
                     <!-- Tushare -->
-                    <tr>
-                      <td class="cell-name">Tushare</td>
+                    <tr data-reveal="fade-up" data-reveal-delay="150">
+                      <td class="cell-name" data-tooltip="Tushare Pro 金融数据接口" data-tooltip-pos="right">Tushare</td>
                       <td>
-                        <span class="status-dot ok">
+                        <span class="status-dot ok" data-tooltip="连接正常，最近一次响应 200ms 内">
                           <span class="status-dot-dot ok"></span>
                           正常
                         </span>
@@ -1896,7 +1980,7 @@
                       <td class="cell-numeric">2s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 5 L16 8 L24 4 L32 6 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 5 L16 8 L24 4 L32 6 L40 7"/></svg></td>
                       <td>
                         <div class="quota-cell">
-                          <span class="quota-text critical">4,820/5,000</span>
+                          <span class="quota-text critical" data-tooltip="配额将在约 3 小时后重置" data-tooltip-pos="bottom">4,820/5,000</span>
                           <div class="quota-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="Tushare API 配额 96.4%"><div class="quota-bar-fill critical bar-w-96"></div></div>
                         </div>
                       </td>
@@ -1916,10 +2000,10 @@
                       </td>
                     </tr>
                     <!-- Wind -->
-                    <tr>
-                      <td class="cell-name">Wind</td>
+                    <tr data-reveal="fade-up" data-reveal-delay="200">
+                      <td class="cell-name" data-tooltip="Wind 金融终端数据接口" data-tooltip-pos="right">Wind</td>
                       <td>
-                        <span class="status-dot ok">
+                        <span class="status-dot ok" data-tooltip="连接正常，Wind API 延迟稳定">
                           <span class="status-dot-dot ok"></span>
                           正常
                         </span>
@@ -1945,10 +2029,10 @@
                       </td>
                     </tr>
                     <!-- 东方财富 Choice -->
-                    <tr>
-                      <td class="cell-name">东方财富 Choice</td>
+                    <tr data-reveal="fade-up" data-reveal-delay="250">
+                      <td class="cell-name" data-tooltip="东方财富 Choice 数据接口" data-tooltip-pos="right">东方财富 Choice</td>
                       <td>
-                        <span class="status-dot warn">
+                        <span class="status-dot warn" data-tooltip="响应延迟 45s，高于正常阈值">
                           <span class="status-dot-dot warn"></span>
                           延迟
                         </span>
@@ -1977,10 +2061,10 @@
                       </td>
                     </tr>
                     <!-- 同花顺 iFind -->
-                    <tr>
-                      <td class="cell-name">同花顺 iFind</td>
+                    <tr data-reveal="fade-up" data-reveal-delay="300">
+                      <td class="cell-name" data-tooltip="同花顺 iFind 数据接口" data-tooltip-pos="right">同花顺 iFind</td>
                       <td>
-                        <span class="status-dot ok">
+                        <span class="status-dot ok" data-tooltip="连接正常，API 延迟 3s">
                           <span class="status-dot-dot ok"></span>
                           正常
                         </span>
@@ -2009,7 +2093,7 @@
                       </td>
                     </tr>
                     <!-- 聚宽 -->
-                    <tr class="row-down">
+                    <tr class="row-down" data-reveal="fade-up" data-reveal-delay="350">
                       <td class="cell-name">聚宽</td>
                       <td>
                         <span class="status-dot down">
@@ -2050,9 +2134,9 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
+                    <tr data-reveal="fade-up" data-reveal-delay="150">
                       <td class="cell-name">日线行情同步</td>
-                      <td><span class="status-dot ok"><span class="status-dot-dot ok"></span>运行中</span></td>
+                      <td><span class="status-dot ok" data-tooltip="定时执行中，每 30 分钟同步一次"><span class="status-dot-dot ok"></span>运行中</span></td>
                       <td class="cell-time">14:30:00</td>
                       <td class="cell-numeric">—</td>
                       <td>定时（每 30 分钟）</td>
@@ -2061,9 +2145,9 @@
                         <label for="overlay-pipeline-rerun" class="row-action">重跑</label>
                       </td>
                     </tr>
-                    <tr>
+                    <tr data-reveal="fade-up" data-reveal-delay="200">
                       <td class="cell-name">财务数据更新</td>
-                      <td><span class="status-dot warn"><span class="status-dot-dot warn"></span>排队中</span></td>
+                      <td><span class="status-dot warn" data-tooltip="手动触发，当前排队中第 2 位"><span class="status-dot-dot warn"></span>排队中</span></td>
                       <td class="cell-time">14:00:00</td>
                       <td class="cell-numeric">12 分钟</td>
                       <td>手动触发</td>
@@ -2071,9 +2155,9 @@
                         <label for="overlay-task-detail" class="row-action">详情</label>
                       </td>
                     </tr>
-                    <tr>
+                    <tr data-reveal="fade-up" data-reveal-delay="250">
                       <td class="cell-name">因子计算 · 北向持仓变化率</td>
-                      <td><span class="status-dot warn"><span class="status-dot-dot warn"></span>计算中 67%</span></td>
+                      <td><span class="status-dot warn" data-tooltip="依赖触发，计算进度 67%，已积压 15 分钟"><span class="status-dot-dot warn"></span>计算中 67%</span></td>
                       <td class="cell-time">14:28:00</td>
                       <td class="cell-numeric">—</td>
                       <td>依赖触发</td>
@@ -2081,9 +2165,9 @@
                         <label for="overlay-task-detail" class="row-action">详情</label>
                       </td>
                     </tr>
-                    <tr>
+                    <tr data-reveal="fade-up" data-reveal-delay="300">
                       <td class="cell-name">模型评分 · 情绪 Alpha v2</td>
-                      <td><span class="status-dot down"><span class="status-dot-dot down"></span>已失败</span></td>
+                      <td><span class="status-dot down" data-tooltip="服务返回 503，需重试"><span class="status-dot-dot down"></span>已失败</span></td>
                       <td class="cell-time">12:32:15</td>
                       <td class="cell-numeric">2 分钟</td>
                       <td>手动触发</td>
@@ -2103,8 +2187,8 @@
               <!-- Tab Panel 3: System Alerts -->
               <div class="tab-panel" data-panel="tab-alerts" data-tab-panel="logs">
                 <!-- Alert 1 — critical -->
-                <div class="alert-row">
-                  <span class="alert-dot critical"></span>
+                <div class="alert-row" data-reveal="fade-up" data-reveal-delay="150">
+                  <span class="alert-dot critical" data-tooltip="严重级别：需要立即处理" data-tooltip-delay="200"></span>
                   <div class="alert-content">
                     <span class="alert-title">上交所行情接口响应超时 <span class="alert-severity critical">严重</span></span>
                     <span class="alert-desc">超时 45s，已自动切换备用源</span>
@@ -2114,8 +2198,8 @@
                   <label for="overlay-alert-handle" class="row-action">处理</label>
                 </div>
                 <!-- Alert 2 — critical -->
-                <div class="alert-row">
-                  <span class="alert-dot critical"></span>
+                <div class="alert-row" data-reveal="fade-up" data-reveal-delay="200">
+                  <span class="alert-dot critical" data-tooltip="严重级别：自动重试已失败 2 次" data-tooltip-delay="200"></span>
                   <div class="alert-content">
                     <span class="alert-title">模型评分服务异常 <span class="alert-severity critical">严重</span></span>
                     <span class="alert-desc">情绪 Alpha v2 评分返回 503，已自动重试 2 次</span>
@@ -2124,8 +2208,8 @@
                   <label for="overlay-alert-handle" class="row-action">处理</label>
                 </div>
                 <!-- Alert 3 — warning -->
-                <div class="alert-row">
-                  <span class="alert-dot warning"></span>
+                <div class="alert-row" data-reveal="fade-up" data-reveal-delay="250">
+                  <span class="alert-dot warning" data-tooltip="警告级别：预计 3 小时后配额重置" data-tooltip-delay="200"></span>
                   <div class="alert-content">
                     <span class="alert-title">Tushare API 日配额即将耗尽 <span class="alert-severity warning">警告</span></span>
                     <span class="alert-desc">4,820/5,000 今日请求，预计 3 小时后重置</span>
@@ -2133,8 +2217,8 @@
                   <span class="alert-time">14:20:15</span>
                 </div>
                 <!-- Alert 4 — warning -->
-                <div class="alert-row">
-                  <span class="alert-dot warning"></span>
+                <div class="alert-row" data-reveal="fade-up" data-reveal-delay="300">
+                  <span class="alert-dot warning" data-tooltip="警告级别：计算积压 15 分钟" data-tooltip-delay="200"></span>
                   <div class="alert-content">
                     <span class="alert-title">因子计算任务延迟 <span class="alert-severity warning">警告</span></span>
                     <span class="alert-desc">北向持仓变化率因子计算积压 15 分钟</span>
@@ -2160,7 +2244,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
+                    <tr data-reveal="fade-up" data-reveal-delay="150">
                       <td class="cell-name">API 配额 (Tushare)</td>
                       <td class="cell-numeric">4,820 / 5,000</td>
                       <td>
@@ -2171,7 +2255,7 @@
                       </td>
                       <td><span class="status-dot down"><span class="status-dot-dot down"></span>即将耗尽</span></td>
                     </tr>
-                    <tr>
+                    <tr data-reveal="fade-up" data-reveal-delay="200">
                       <td class="cell-name">CPU 使用率</td>
                       <td class="cell-numeric">—</td>
                       <td>
@@ -2182,7 +2266,7 @@
                       </td>
                       <td><span class="status-dot ok"><span class="status-dot-dot ok"></span>正常</span></td>
                     </tr>
-                    <tr>
+                    <tr data-reveal="fade-up" data-reveal-delay="250">
                       <td class="cell-name">内存使用</td>
                       <td class="cell-numeric">4.2 / 16 GB</td>
                       <td>
@@ -2193,7 +2277,7 @@
                       </td>
                       <td><span class="status-dot ok"><span class="status-dot-dot ok"></span>正常</span></td>
                     </tr>
-                    <tr>
+                    <tr data-reveal="fade-up" data-reveal-delay="300">
                       <td class="cell-name">磁盘空间</td>
                       <td class="cell-numeric">128 / 512 GB</td>
                       <td>
@@ -2219,10 +2303,10 @@
     </div>
 
     <!-- ═══ Detail Panel (340px right side) ═══ -->
-    <div class="ops-detail" data-reveal="fade-up" data-reveal-delay="200">
+    <div class="ops-detail" data-reveal="fade-up" data-reveal-delay="200" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-accent) l c h / 0.03)" data-mouse-glow-size="250px">
       <div class="context-rail">
         <!-- Section 1: 管道/任务 -->
-        <div class="context-section">
+        <div class="context-section" data-reveal="fade-up" data-reveal-delay="250">
           <div class="context-section-header">
             <span class="context-section-title">管道与任务</span>
             <span class="panel-count panel-count-healthy">运行中 2</span>
@@ -2276,7 +2360,7 @@
         </div>
 
         <!-- Section 2: 资源/配额 -->
-        <div class="context-section">
+        <div class="context-section" data-reveal="fade-up" data-reveal-delay="350">
           <div class="context-section-header">
             <span class="context-section-title">资源与配额</span>
           </div>
@@ -2325,7 +2409,7 @@
         </div>
 
         <!-- Section 3: 最近事件 -->
-        <div class="context-section">
+        <div class="context-section" data-reveal="fade-up" data-reveal-delay="450">
           <div class="context-section-header">
             <span class="context-section-title">最近事件</span>
           </div>
@@ -2358,16 +2442,16 @@
 
   <!-- R1: Status Bar — terminal DNA -->
   <div class="status-bar" role="status" aria-label="系统状态">
-    <span class="status-indicator" aria-hidden="true"></span>
+    <span class="status-indicator" aria-hidden="true" data-tooltip="系统运行正常，实时数据流已连接" data-tooltip-pos="top"></span>
     <span class="status-live">LIVE</span>
     <span class="status-sep">│</span>
     <span>4/5 数据源在线</span>
     <span class="status-sep">│</span>
-    <span>延迟 <span class="status-live status-live-inline">2s</span></span>
+    <span>延迟 <span class="status-live status-live-inline" data-tooltip="平均 API 延迟 2 秒" data-tooltip-pos="top">2s</span></span>
     <span class="status-sep">│</span>
     <span>14:32:15 CST</span>
     <span class="status-sep">│</span>
-    <span>CPU 23% · MEM 26%</span>
+    <span>CPU <span data-counter="23" data-counter-decimals="0" data-counter-suffix="%">23%</span> · MEM <span data-counter="26" data-counter-decimals="0" data-counter-suffix="%">26%</span></span>
     <span class="status-spacer"></span>
     <span class="status-kbd">Ctrl+K</span> 搜索
   </div>

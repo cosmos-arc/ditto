@@ -473,8 +473,8 @@
     }
 
     .message-avatar.ai {
-      background: var(--brand-accent-subtle);
-      color: var(--brand-accent);
+      background: var(--agent-running-bg);
+      color: var(--agent-running-fg);
     }
 
     .message-avatar.user {
@@ -492,6 +492,41 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
       color: var(--text-quaternary);
+    }
+
+    /* Message action toolbar — appears on hover */
+    .message-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-left: auto;
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .message:hover .message-actions {
+      opacity: 1;
+    }
+    .message-action-btn {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-2);
+      border: none;
+      background: transparent;
+      color: var(--text-quaternary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .message-action-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+    }
+    .message-action-btn svg {
+      width: 12px;
+      height: 12px;
     }
 
     .message-content {
@@ -548,6 +583,12 @@
       padding: var(--card-padding);
       margin-top: var(--space-8);
       position: relative;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .structured-card:hover {
+      border-color: var(--border-default);
+      box-shadow: 0 2px 12px color-mix(in oklch, var(--agent-running-fg) 6%, transparent);
     }
 
     .structured-card::before {
@@ -676,49 +717,46 @@
       padding-bottom: calc(var(--space-8) + 1.5rem);
       background: var(--surface-app);
       border-top: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    /* Subtle gradient fade at top of input area */
+    .conversation-input::before {
+      content: '';
+      position: absolute;
+      top: -16px;
+      left: 0;
+      right: 0;
+      height: 16px;
+      background: linear-gradient(
+        to bottom,
+        transparent,
+        var(--surface-app)
+      );
+      pointer-events: none;
+      z-index: 1;
     }
 
     .input-wrapper {
       max-width: 720px;
       margin: 0 auto;
       display: flex;
-      align-items: center;
-      gap: var(--space-8);
-      padding: var(--space-6) var(--space-12);
+      flex-direction: column;
       background: var(--surface-panel-elevated);
       border: 1px solid var(--border-default);
       border-radius: var(--input-radius);
-      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+      overflow: hidden;
+    }
+    .input-wrapper:hover {
+      border-color: var(--border-strong);
     }
 
     .input-wrapper:focus-within {
-      border-color: var(--brand-accent);
-      box-shadow: 0 0 0 3px var(--brand-accent-subtle);
+      border-color: var(--agent-running-fg);
+      box-shadow: 0 0 0 3px var(--agent-running-bg);
     }
 
-    .input-wrapper input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      font-family: var(--font-family-ui);
-      font-size: var(--font-size-13);
-      color: var(--text-primary);
-    }
-
-    .input-wrapper input::placeholder {
-      color: var(--text-quaternary);
-    }
-
-    .input-wrapper kbd {
-      font-family: var(--font-family-code);
-      font-size: var(--font-size-10);
-      padding: 1px var(--space-4);
-      background: var(--surface-strip);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-2);
-      color: var(--text-quaternary);
-    }
 
     .input-send-btn {
       width: var(--density-action-height);
@@ -727,15 +765,21 @@
       align-items: center;
       justify-content: center;
       border-radius: var(--radius-4);
-      background: var(--brand-accent);
+      background: var(--agent-running-fg);
       color: var(--text-inverse);
       border: none;
       cursor: pointer;
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
       flex-shrink: 0;
     }
     .input-send-btn:hover {
       background: var(--brand-accent-hover);
+      box-shadow: 0 0 12px color-mix(in oklch, var(--agent-running-fg) 25%, transparent);
+    }
+    .input-send-btn:active {
+      transform: scale(0.92);
     }
     .input-send-btn svg {
       width: 14px;
@@ -1311,9 +1355,13 @@
 
     /* Respect reduced motion */
     @media (prefers-reduced-motion: reduce) {
-      .message, .structured-card, .mode-tab, .status-indicator {
+      .message, .structured-card, .mode-tab, .status-indicator,
+      .thinking-step, .ai-thinking, .ai-thinking-dot,
+      .thinking-chain::after {
         transition: none !important;
         animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
       }
     }
 
@@ -1562,10 +1610,53 @@
       border-radius: var(--radius-6) var(--radius-6) var(--radius-6) var(--radius-2);
       padding: var(--space-8) var(--space-12);
       position: relative;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .message--user:hover .message-content p {
+      border-color: var(--border-default);
     }
 
     .message--ai .message-content {
       position: relative;
+    }
+
+    /* AI message — subtle brand-tinted left accent */
+    .message--ai .message-content::before {
+      content: '';
+      position: absolute;
+      left: 24px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      border-radius: 1px;
+      background: linear-gradient(
+        to bottom,
+        transparent,
+        color-mix(in oklch, var(--agent-running-fg) 30%, transparent) 15%,
+        color-mix(in oklch, var(--agent-running-fg) 20%, transparent) 85%,
+        transparent
+      );
+      pointer-events: none;
+    }
+
+    /* User message hover — subtle right accent */
+    .message--user .message-content::after {
+      content: '';
+      position: absolute;
+      right: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 0;
+      border-radius: 2px;
+      background: var(--brand-accent);
+      opacity: 0;
+      transition: height var(--motion-duration-normal) var(--motion-easing-emphasis),
+                  opacity var(--motion-duration-normal) var(--motion-easing-emphasis);
+    }
+    .message--user:hover .message-content::after {
+      height: 16px;
+      opacity: 0.4;
     }
 
     /* AI thinking indicator — pulsing shimmer */
@@ -1573,9 +1664,38 @@
       display: flex;
       align-items: center;
       gap: var(--space-6);
-      padding-left: 36px;
+      padding: var(--space-6) var(--space-12);
       margin-bottom: var(--space-12);
+      margin-left: 36px;
+      background: color-mix(in oklch, var(--agent-running-fg) 6%, transparent);
+      border: 1px solid color-mix(in oklch, var(--agent-running-fg) 12%, transparent);
+      border-radius: var(--radius-6);
+      position: relative;
+      overflow: hidden;
     }
+    /* Shimmer sweep animation */
+    .ai-thinking::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--agent-running-fg) 8%, transparent) 50%,
+        transparent 100%
+      );
+      animation: thinking-shimmer 2.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes thinking-shimmer {
+      0%   { left: -100%; }
+      100% { left: 100%; }
+    }
+
     .ai-thinking-dots {
       display: flex;
       gap: 4px;
@@ -1584,7 +1704,7 @@
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: var(--brand-accent);
+      background: var(--agent-running-fg);
       animation: thinking-pulse 1.4s ease-in-out infinite;
     }
     .ai-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
@@ -1606,6 +1726,7 @@
       border-left: 2px solid var(--border-subtle);
       padding-left: var(--space-10);
       position: relative;
+      overflow: hidden;
     }
     .thinking-chain::before {
       content: '';
@@ -1616,9 +1737,30 @@
       width: 2px;
       background: linear-gradient(
         to bottom,
-        color-mix(in oklch, var(--brand-accent) 40%, transparent),
+        color-mix(in oklch, var(--agent-running-fg) 40%, transparent),
         var(--border-subtle)
       );
+    }
+    /* Animated scanning beam on the thinking chain rail */
+    .thinking-chain::after {
+      content: '';
+      position: absolute;
+      left: -3px;
+      top: -8px;
+      width: 4px;
+      height: 8px;
+      border-radius: 2px;
+      background: var(--agent-running-fg);
+      opacity: 0.6;
+      animation: thinking-scan 3s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes thinking-scan {
+      0%   { top: -8px; opacity: 0; }
+      10%  { opacity: 0.6; }
+      90%  { opacity: 0.6; }
+      100% { top: calc(100% + 8px); opacity: 0; }
     }
 
     .thinking-step {
@@ -1629,7 +1771,18 @@
       font-size: var(--font-size-11);
       color: var(--text-tertiary);
       line-height: 1.5;
+      opacity: 0;
+      animation: thinking-step-in 0.4s var(--motion-easing-emphasis) forwards;
     }
+    .thinking-step:nth-child(1) { animation-delay: 0.1s; }
+    .thinking-step:nth-child(2) { animation-delay: 0.3s; }
+    .thinking-step:nth-child(3) { animation-delay: 0.5s; }
+
+    @keyframes thinking-step-in {
+      from { opacity: 0; transform: translateX(-4px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
     .thinking-step-icon {
       width: 6px;
       height: 6px;
@@ -1637,10 +1790,18 @@
       background: var(--border-default);
       flex-shrink: 0;
       margin-top: 4px;
+      transition: background var(--motion-duration-normal) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .thinking-step-icon--active {
-      background: var(--brand-accent);
-      box-shadow: 0 0 6px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+      background: var(--agent-running-fg);
+      box-shadow: 0 0 6px color-mix(in oklch, var(--agent-running-fg) 30%, transparent);
+      animation: step-dot-breathe 2.5s ease-in-out infinite;
+    }
+
+    @keyframes step-dot-breathe {
+      0%, 100% { box-shadow: 0 0 4px color-mix(in oklch, var(--agent-running-fg) 20%, transparent); }
+      50%      { box-shadow: 0 0 8px color-mix(in oklch, var(--agent-running-fg) 45%, transparent); }
     }
 
     /* ── Code block formatting ── */
@@ -1687,11 +1848,33 @@
       border-radius: 2px;
       overflow: hidden;
       max-width: 120px;
+      position: relative;
     }
     .confidence-bar-fill {
       height: 100%;
       border-radius: 2px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: width 0.8s var(--motion-easing-emphasis);
+      position: relative;
+    }
+    /* Confidence fill shimmer */
+    .confidence-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 12px;
+      height: 100%;
+      border-radius: 0 2px 2px 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in oklch, currentColor 40%, transparent)
+      );
+      opacity: 0;
+      transition: opacity var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .confidence-bar:hover .confidence-bar-fill::after {
+      opacity: 1;
     }
     .confidence-bar-fill.high { background: var(--risk-low-fg); width: 88%; }
     .confidence-bar-fill.medium { background: var(--risk-medium-fg); width: 65%; }
@@ -1727,7 +1910,7 @@
     .input-attachments {
       display: flex;
       gap: var(--space-6);
-      padding-bottom: var(--space-6);
+      padding: var(--space-6) var(--space-12) 0;
     }
     .input-attachment {
       display: inline-flex;
@@ -1741,6 +1924,35 @@
       color: var(--text-tertiary);
     }
     .input-attachment svg { width: 10px; height: 10px; }
+
+    /* Input row: text + kbd + send button */
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-12);
+    }
+    .input-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-13);
+      color: var(--text-primary);
+    }
+    .input-row input::placeholder {
+      color: var(--text-quaternary);
+    }
+    .input-row kbd {
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-10);
+      padding: 1px var(--space-4);
+      background: var(--surface-strip);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      color: var(--text-quaternary);
+    }
 
     /* ── Message source attribution ── */
     .message-attribution {
@@ -1764,6 +1976,10 @@
       width: 20px;
       height: 20px;
       font-size: var(--font-size-10);
+    }
+    .ai-thinking .ai-thinking-avatar {
+      background: var(--agent-running-bg);
+      color: var(--agent-running-fg);
     }
   </style>
 </head>
@@ -1891,7 +2107,7 @@
       </div>
       <div class="mode-spacer"></div>
       <div class="mode-status">
-        <span class="mode-status-dot"></span>
+        <span class="mode-status-dot" data-tooltip="AI 服务运行中"></span>
         AI 就绪
       </div>
     </div>
@@ -1993,11 +2209,11 @@
         <div data-tab-panel="conversation" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
       <div class="conversation-body" data-mouse-glow="true">
         <!-- Message 1: User -->
-        <div class="message message--user">
+        <div class="message message--user" data-reveal="fade-up" data-reveal-delay="0">
           <div class="message-header">
             <span class="message-avatar user">C</span>
             <span class="message-sender">我</span>
-            <span class="message-time">14:20</span>
+            <span class="message-time" data-tooltip="2026-04-06 14:20:35 CST">14:20</span>
           </div>
           <div class="message-content">
             <p>帮我分析一下当前沪深300的风格因子表现，重点关注价值、动量和质量因子。最近一周的 IC 和 IR 表现如何？有没有值得关注的因子假设？</p>
@@ -2005,13 +2221,21 @@
         </div>
 
         <!-- Message 2: AI -->
-        <div class="message message--ai">
+        <div class="message message--ai" data-reveal="fade-up" data-reveal-delay="80">
           <div class="message-header">
             <span class="message-avatar ai">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
             </span>
             <span class="message-sender">Ditto AI</span>
-            <span class="message-time">14:20</span>
+            <span class="message-time" data-tooltip="2026-04-06 14:20:48 CST · 推理耗时 3.8s">14:20</span>
+            <div class="message-actions">
+              <button class="message-action-btn" data-tooltip="复制回复" aria-label="复制">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="9" height="9" rx="1"/><path d="M4 14V5a1 1 0 011-1h9"/></svg>
+              </button>
+              <button class="message-action-btn" data-tooltip="有帮助" aria-label="有帮助">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+              </button>
+            </div>
           </div>
           <div class="message-content">
             <!-- Thinking Chain Visualization -->
@@ -2045,7 +2269,7 @@
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
                   Factor Hypothesis — 低波动率溢价
                 </span>
-                <span class="confidence-tag high">
+                <span class="confidence-tag high" data-tooltip="AI 置信度: 92% — 基于 IC/IR 交叉验证">
                   <span class="confidence-tag-dot"></span>
                   高置信
                 </span>
@@ -2104,11 +2328,11 @@
         </div>
 
         <!-- Message 3: User -->
-        <div class="message message--user">
+        <div class="message message--user" data-reveal="fade-up" data-reveal-delay="160">
           <div class="message-header">
             <span class="message-avatar user">C</span>
             <span class="message-sender">我</span>
-            <span class="message-time">14:22</span>
+            <span class="message-time" data-tooltip="2026-04-06 14:22:11 CST">14:22</span>
           </div>
           <div class="message-content">
             <p>这个低波动率溢价假设看起来不错。能把这个假设和当前的市场状态结合一下吗？另外质量因子的 ROE 细分维度有哪些值得关注的？</p>
@@ -2116,13 +2340,21 @@
         </div>
 
         <!-- Message 4: AI -->
-        <div class="message message--ai">
+        <div class="message message--ai" data-reveal="fade-up" data-reveal-delay="240">
           <div class="message-header">
             <span class="message-avatar ai">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
             </span>
             <span class="message-sender">Ditto AI</span>
-            <span class="message-time">14:22</span>
+            <span class="message-time" data-tooltip="2026-04-06 14:22:33 CST · 推理耗时 4.2s">14:22</span>
+            <div class="message-actions">
+              <button class="message-action-btn" data-tooltip="复制回复" aria-label="复制">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="9" height="9" rx="1"/><path d="M4 14V5a1 1 0 011-1h9"/></svg>
+              </button>
+              <button class="message-action-btn" data-tooltip="有帮助" aria-label="有帮助">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+              </button>
+            </div>
           </div>
           <div class="message-content">
             <!-- Thinking Chain Visualization -->
@@ -2162,7 +2394,7 @@
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
                   Factor Hypothesis — ROE 稳定性溢价
                 </span>
-                <span class="confidence-tag medium">
+                <span class="confidence-tag medium" data-tooltip="AI 置信度: 68% — 需更多数据验证">
                   <span class="confidence-tag-dot"></span>
                   中置信
                 </span>
@@ -2343,11 +2575,13 @@
               沪深300风格因子分析
             </span>
           </div>
-          <input type="text" placeholder="继续分析..." aria-label="输入消息">
-          <kbd>Enter</kbd>
-          <button class="input-send-btn" tabindex="0" role="button" aria-label="发送">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10l7-7v4.5h7v5h-7V17L3 10z"/></svg>
-          </button>
+          <div class="input-row">
+            <input type="text" placeholder="继续分析..." aria-label="输入消息">
+            <kbd>Enter</kbd>
+            <button class="input-send-btn" tabindex="0" role="button" aria-label="发送" data-tooltip="发送消息 (Enter)">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10l7-7v4.5h7v5h-7V17L3 10z"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     </main>
@@ -2690,7 +2924,7 @@
 
   <!-- Status Bar -->
   <div class="status-bar" role="status" aria-label="系统状态">
-    <span class="status-indicator" aria-hidden="true"></span>
+    <span class="status-indicator" aria-hidden="true" data-tooltip="系统运行正常"></span>
     <span class="status-live">LIVE</span>
     <span class="status-sep">|</span>
     <span>AI 模型 GPT-4o</span>

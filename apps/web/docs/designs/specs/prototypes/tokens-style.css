@@ -30,10 +30,10 @@
   --border-default:            oklch(0.310 0.010 260);
   --border-strong:             oklch(0.420 0.012 260);
 
-  /* ── Brand Accent — Bright blue, interactive feel ── */
-  --brand-accent:              oklch(0.700 0.165 255);
-  --brand-accent-hover:        oklch(0.760 0.160 254);
-  --brand-accent-subtle:       oklch(0.700 0.165 255 / 0.10);
+  /* ── Brand Accent — Ink Indigo, sophisticated feel ── */
+  --brand-accent:              oklch(0.700 0.085 265);
+  --brand-accent-hover:        oklch(0.760 0.065 266);
+  --brand-accent-subtle:       oklch(0.700 0.085 265 / 0.10);
 
   /* ── Market Colors — style-specific overrides (region logic in tokens-domain.css) ── */
   --market-flat-fg:    oklch(0.530 0.010 260);
@@ -56,20 +56,20 @@
   --execution-pending-bg: oklch(0.770 0.140 80 / 0.10);
   --execution-filled-fg:  oklch(0.680 0.120 175);
 
-  --agent-running-fg:    oklch(0.700 0.165 255);
-  --agent-running-bg:    oklch(0.700 0.165 255 / 0.12);
+  --agent-running-fg:    oklch(0.700 0.085 265);
+  --agent-running-bg:    oklch(0.700 0.085 265 / 0.12);
 
   --data-quality-delayed-fg: oklch(0.770 0.140 80);
   --data-quality-delayed-bg: oklch(0.770 0.140 80 / 0.10);
   --data-quality-missing-fg: oklch(0.670 0.170 20);
 
   /* ── Interaction ── */
-  --interaction-focus-ring:   oklch(0.700 0.165 255 / 0.4);
-  --interaction-focus-border: oklch(0.700 0.165 255);
+  --interaction-focus-ring:   oklch(0.700 0.085 265 / 0.4);
+  --interaction-focus-border: oklch(0.700 0.085 265);
   --interaction-hover-subtle-bg: oklch(1 0 0 / 0.05);
   --interaction-hover-strong-bg: oklch(1 0 0 / 0.08);
-  --interaction-selected-bg:  oklch(0.700 0.165 255 / 0.10);
-  --interaction-selected-border: oklch(0.700 0.165 255 / 0.25);
+  --interaction-selected-bg:  oklch(0.700 0.085 265 / 0.10);
+  --interaction-selected-border: oklch(0.700 0.085 265 / 0.25);
 
   /* ── Code / Mono ── */
   --code-bg:        oklch(0.155 0.005 260);
@@ -128,18 +128,18 @@
   --border-default:            oklch(0.775 0.010 260);
   --border-strong:             oklch(0.645 0.008 260);
 
-  /* Brand accent */
-  --brand-accent:              oklch(0.550 0.200 260);
-  --brand-accent-hover:        oklch(0.500 0.210 260);
-  --brand-accent-subtle:       oklch(0.550 0.200 260 / 0.07);
+  /* Brand accent — Ink Indigo */
+  --brand-accent:              oklch(0.550 0.100 265);
+  --brand-accent-hover:        oklch(0.500 0.105 266);
+  --brand-accent-subtle:       oklch(0.550 0.100 265 / 0.07);
 
-  /* Interaction */
-  --interaction-focus-ring:    oklch(0.550 0.200 260 / 0.35);
-  --interaction-focus-border:  oklch(0.550 0.200 260);
+  /* Interaction — Ink Indigo */
+  --interaction-focus-ring:    oklch(0.550 0.100 265 / 0.35);
+  --interaction-focus-border:  oklch(0.550 0.100 265);
   --interaction-hover-subtle-bg: oklch(0 0 0 / 0.04);
   --interaction-hover-strong-bg: oklch(0 0 0 / 0.07);
-  --interaction-selected-bg:   oklch(0.550 0.200 260 / 0.08);
-  --interaction-selected-border: oklch(0.550 0.200 260 / 0.20);
+  --interaction-selected-bg:   oklch(0.550 0.100 265 / 0.08);
+  --interaction-selected-border: oklch(0.550 0.100 265 / 0.20);
 
   /* Code */
   --code-bg:        oklch(0.938 0.003 260);

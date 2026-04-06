@@ -2,7 +2,7 @@
   "edition": "v1",
   "style": "style-b-graphite-studio",
   "created": "2026-04-01",
-  "status": "v3-complete",
+  "status": "v4-complete",
   "stateCoverageAppliedAt": "2026-04-02",
   "iterationCompletedAt": "2026-04-05",
   "iterationV2CompletedAt": "2026-04-05",
@@ -305,6 +305,52 @@
         "page-regime-monitor: </span> 闭合错误 → </div>",
         "page-research: data-tab-panel 包装层破坏 Grid → display:contents + 闭合修复"
       ]
+    }
+  },
+  "iterationV4": {
+    "startedAt": "2026-04-06",
+    "completedAt": "2026-04-06",
+    "goalScore": 9.7,
+    "maxRounds": 30,
+    "roundsUsed": 6,
+    "medium": "HTML + CSS + Vanilla JS",
+    "jsLibrary": "shared/prototype-interactions.js",
+    "brandColor": "Ink Indigo — hue 265°, chroma halved (was hue 255°, chroma 0.165)",
+    "modules": ["Tabs", "Sparkline", "DonutGauge", "HeatGrid", "NumberTicker", "ScrollReveal", "MouseGlow", "ConfidenceBar", "FlowBar", "AnimatedCounter", "TooltipSystem"],
+    "newModules": ["AnimatedCounter", "TooltipSystem"],
+    "phases": ["brand-color-upgrade", "js-v4-modules", "page-polish", "manifest-update"],
+    "currentPhase": "complete",
+    "pagesEnhanced": 14,
+    "jsModuleUsage": {
+      "data-tabs": 20,
+      "data-ticker": 73,
+      "data-reveal": 154,
+      "data-sparkline": 14,
+      "data-donut": 14,
+      "data-heatgrid": 6,
+      "data-confidence": 10,
+      "data-flow": 9,
+      "data-mouse-glow": 42,
+      "data-counter": 72,
+      "data-tooltip": 300
+    },
+    "respectsReducedMotion": true,
+    "progressiveEnhancement": true,
+    "changes": {
+      "filesModified": 14,
+      "insertions": 1991,
+      "deletions": 626,
+      "brandColorUpdate": "tokens-base.css + tokens-style.css + prototype-interactions.js + page-instrument-hub.html",
+      "newJsModules": "AnimatedCounter (data-counter) + TooltipSystem (data-tooltip)",
+      "pagesPolished": ["markets-screener", "orders-ledger", "platform", "research", "regime-monitor", "ai-copilot", "instrument-hub", "home", "markets-intelligence", "ai-overview", "token-showcase", "ai-copilot"]
+    },
+    "summary": {
+      "brandColor": "V1 hue 255° C 0.165 → Ink Indigo hue 265° C 0.085",
+      "jsModules": "9 → 11 (AnimatedCounter + TooltipSystem)",
+      "dataCounterInstances": 72,
+      "dataTooltipInstances": 300,
+      "pagesPolished": 10,
+      "hardcodedBrandColorResidual": 0
     }
   }
 }

@@ -1260,6 +1260,34 @@
     /* ── Scroll utility ── */
     .scroll-x { overflow-x: auto; }
 
+    /* ── Animated Counter ── */
+    [data-counter] {
+      display: inline-block;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── KPI card enhanced hover ── */
+    .kpi-card[data-mouse-glow] {
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card[data-mouse-glow]::before {
+      content: '';
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, oklch(from var(--brand-accent) l c h / 0.06) 0%, transparent 70%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+      transform: translate(-50%, -50%);
+      z-index: 0;
+    }
+    .kpi-card[data-mouse-glow]:hover::before {
+      opacity: 1;
+    }
+
     /* ── Reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
       .intel-tab, .news-item, .intel-table tr td, .kpi-card,
@@ -1267,6 +1295,7 @@
       .ai-summary-dot, .status-indicator { animation: none !important; opacity: 1; }
       .overlay-toast { animation: none !important; }
       .correlation-cell { transition: none !important; }
+      [data-tooltip]::after { transition: none !important; }
     }
   </style>
 </head>
@@ -1401,25 +1430,25 @@
 
               <!-- KPI Cards -->
               <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
-                <div class="kpi-card">
-                  <div class="kpi-label">北向资金</div>
-                  <div class="kpi-value text-up" data-ticker="12.4" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="亿">+12.4亿</div>
-                  <div class="kpi-change up">净买入</div>
+                <div class="kpi-card" data-mouse-glow="true">
+                  <div class="kpi-label" data-tooltip="沪深港通北向资金今日净买入金额" data-tooltip-pos="top">北向资金</div>
+                  <div class="kpi-value text-up" data-ticker="12.4" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="亿" data-counter="12.4" data-counter-decimals="1" data-counter-prefix="+" data-counter-suffix="亿">+12.4亿</div>
+                  <div class="kpi-change up" data-tooltip="较昨日多流入 4.2 亿，连续 3 日净买入" data-tooltip-pos="bottom">净买入</div>
                 </div>
-                <div class="kpi-card">
-                  <div class="kpi-label">主力资金</div>
-                  <div class="kpi-value text-up" data-ticker="86.7" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="亿">+86.7亿</div>
-                  <div class="kpi-change up">净流入</div>
+                <div class="kpi-card" data-mouse-glow="true">
+                  <div class="kpi-label" data-tooltip="全市场大单主力资金净流入额（单笔 > 50 万）" data-tooltip-pos="top">主力资金</div>
+                  <div class="kpi-value text-up" data-ticker="86.7" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="亿" data-counter="86.7" data-counter-decimals="1" data-counter-prefix="+" data-counter-suffix="亿">+86.7亿</div>
+                  <div class="kpi-change up" data-tooltip="近 5 日均值 +62 亿，今日显著高于均值" data-tooltip-pos="bottom">净流入</div>
                 </div>
-                <div class="kpi-card">
-                  <div class="kpi-label">融资余额</div>
-                  <div class="kpi-value" data-ticker="18432" data-decimals="0" data-ticker-suffix="亿">18,432亿</div>
-                  <div class="kpi-change up">+52.3亿</div>
+                <div class="kpi-card" data-mouse-glow="true">
+                  <div class="kpi-label" data-tooltip="沪深两市融资融券余额（截至昨日收盘）" data-tooltip-pos="top">融资余额</div>
+                  <div class="kpi-value" data-ticker="18432" data-decimals="0" data-ticker-suffix="亿" data-counter="18432" data-counter-decimals="0" data-counter-suffix="亿">18,432亿</div>
+                  <div class="kpi-change up" data-tooltip="连续 8 日增加，杠杆资金持续入场" data-tooltip-pos="bottom">+52.3亿</div>
                 </div>
-                <div class="kpi-card">
-                  <div class="kpi-label">成交额</div>
-                  <div class="kpi-value" data-ticker="9856" data-decimals="0" data-ticker-suffix="亿">9,856亿</div>
-                  <div class="kpi-change down">-12.3%</div>
+                <div class="kpi-card" data-mouse-glow="true">
+                  <div class="kpi-label" data-tooltip="沪深两市今日累计成交金额（实时）" data-tooltip-pos="top">成交额</div>
+                  <div class="kpi-value" data-ticker="9856" data-decimals="0" data-ticker-suffix="亿" data-counter="9856" data-counter-decimals="0" data-counter-suffix="亿">9,856亿</div>
+                  <div class="kpi-change down" data-tooltip="较昨日同期下降 12.3%，缩量整理" data-tooltip-pos="bottom">-12.3%</div>
                 </div>
               </div>
 
@@ -1535,7 +1564,7 @@
               </div>
 
               <!-- Sector Heatmap -->
-              <div data-reveal="fade-up" data-reveal-delay="75">
+              <div data-reveal="fade-up" data-reveal-delay="150">
                 <div class="section-title">板块热力图</div>
                 <svg data-heatgrid='{"rows":5,"cols":8,"cellSize":18,"gap":2,"labels":["科技","消费","新能源","医药","制造","公用","地产","金融","钢铁","煤炭","有色","化工","建材","汽车","传媒","通信","农业","纺织","食品","家电","电子","计算机","军工","环保","交运","商贸","休闲","综合","轻工","电气","机械","医药","银行","非银","石油","综合","煤炭","钢铁","有色","化工"]}' aria-label="板块热力图"></svg>
               </div>
@@ -1598,26 +1627,26 @@
             <div class="tab-panel" data-panel="tab-macro">
 
               <!-- Macro KPI Cards -->
-              <div class="kpi-row">
-                <div class="kpi-card">
-                  <div class="kpi-label">CPI 同比</div>
-                  <div class="kpi-value" data-ticker="102.3" data-decimals="1">102.3</div>
-                  <div class="kpi-change up">+0.7%</div>
+              <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
+                <div class="kpi-card" data-mouse-glow="true">
+                  <div class="kpi-label" data-tooltip="消费者物价指数同比涨幅（3月）" data-tooltip-pos="top">CPI 同比</div>
+                  <div class="kpi-value" data-ticker="102.3" data-decimals="1" data-counter="102.3" data-counter-decimals="1">102.3</div>
+                  <div class="kpi-change up" data-tooltip="高于预期 101.8，通胀温和回升" data-tooltip-pos="bottom">+0.7%</div>
                 </div>
-                <div class="kpi-card">
-                  <div class="kpi-label">PPI 同比</div>
-                  <div class="kpi-value" data-ticker="98.5" data-decimals="1">98.5</div>
-                  <div class="kpi-change down">-1.5%</div>
+                <div class="kpi-card" data-mouse-glow="true">
+                  <div class="kpi-label" data-tooltip="工业品出厂价格指数同比变动（3月）" data-tooltip-pos="top">PPI 同比</div>
+                  <div class="kpi-value" data-ticker="98.5" data-decimals="1" data-counter="98.5" data-counter-decimals="1">98.5</div>
+                  <div class="kpi-change down" data-tooltip="低于预期 99.2，工业品价格仍承压" data-tooltip-pos="bottom">-1.5%</div>
                 </div>
-                <div class="kpi-card">
-                  <div class="kpi-label">PMI</div>
-                  <div class="kpi-value text-up" data-ticker="51.2" data-decimals="1">51.2</div>
-                  <div class="kpi-change up">+0.4</div>
+                <div class="kpi-card" data-mouse-glow="true">
+                  <div class="kpi-label" data-tooltip="制造业采购经理指数（3月官方），50 为荣枯线" data-tooltip-pos="top">PMI</div>
+                  <div class="kpi-value text-up" data-ticker="51.2" data-decimals="1" data-counter="51.2" data-counter-decimals="1">51.2</div>
+                  <div class="kpi-change up" data-tooltip="超预期 50.8，连续 3 月站上荣枯线" data-tooltip-pos="bottom">+0.4</div>
                 </div>
-                <div class="kpi-card">
-                  <div class="kpi-label">M2 增速</div>
-                  <div class="kpi-value" data-ticker="7.8" data-decimals="1" data-ticker-suffix="%">7.8%</div>
-                  <div class="kpi-change down">-0.3%</div>
+                <div class="kpi-card" data-mouse-glow="true">
+                  <div class="kpi-label" data-tooltip="广义货币供应量同比增速（2月）" data-tooltip-pos="top">M2 增速</div>
+                  <div class="kpi-value" data-ticker="7.8" data-decimals="1" data-ticker-suffix="%" data-counter="7.8" data-counter-decimals="1" data-counter-suffix="%">7.8%</div>
+                  <div class="kpi-change down" data-tooltip="低于预期 8.0%，信贷投放节奏放缓" data-tooltip-pos="bottom">-0.3%</div>
                 </div>
               </div>
 
@@ -1752,22 +1781,22 @@
               <!-- Earnings Calendar KPI -->
               <div class="kpi-row">
                 <div class="kpi-card">
-                  <div class="kpi-label">本周财报</div>
+                  <div class="kpi-label" data-tooltip="本周即将披露财报的公司总数" data-tooltip-pos="top">本周财报</div>
                   <div class="kpi-value">42家</div>
                   <div class="kpi-change up">+12 家 vs 上周</div>
                 </div>
                 <div class="kpi-card">
-                  <div class="kpi-label">业绩预增</div>
+                  <div class="kpi-label" data-tooltip="发布业绩预增公告的公司数量" data-tooltip-pos="top">业绩预增</div>
                   <div class="kpi-value text-up">28家</div>
                   <div class="kpi-change up">66.7%</div>
                 </div>
                 <div class="kpi-card">
-                  <div class="kpi-label">业绩预减</div>
+                  <div class="kpi-label" data-tooltip="发布业绩预减公告的公司数量" data-tooltip-pos="top">业绩预减</div>
                   <div class="kpi-value text-down">14家</div>
                   <div class="kpi-change down">33.3%</div>
                 </div>
                 <div class="kpi-card">
-                  <div class="kpi-label">分析师上调</div>
+                  <div class="kpi-label" data-tooltip="近 7 日被分析师上调评级的个股数量" data-tooltip-pos="top">分析师上调</div>
                   <div class="kpi-value">15只</div>
                   <div class="kpi-change up">+5 只</div>
                 </div>
@@ -2038,17 +2067,17 @@
               <!-- Correlation KPI -->
               <div class="kpi-row kpi-row--3col">
                 <div class="kpi-card">
-                  <div class="kpi-label">强关联对</div>
+                  <div class="kpi-label" data-tooltip="相关系数 > 0.8 的标的配对数量" data-tooltip-pos="top">强关联对</div>
                   <div class="kpi-value text-up">12对</div>
                   <div class="kpi-change up">相关系数 &gt; 0.8</div>
                 </div>
                 <div class="kpi-card">
-                  <div class="kpi-label">板块联动</div>
+                  <div class="kpi-label" data-tooltip="跨板块资金共振联动组数" data-tooltip-pos="top">板块联动</div>
                   <div class="kpi-value">5组</div>
                   <div class="kpi-change up">活跃联动</div>
                 </div>
                 <div class="kpi-card">
-                  <div class="kpi-label">异常信号</div>
+                  <div class="kpi-label" data-tooltip="标的价格与板块走势出现背离的预警信号" data-tooltip-pos="top">异常信号</div>
                   <div class="kpi-value text-warning">3条</div>
                   <div class="kpi-change down">背离预警</div>
                 </div>
@@ -2207,48 +2236,48 @@
           <!-- Section: 关联标的 -->
           <div class="rail-section">
             <div class="rail-section-header">
-              <span class="rail-section-title">关联标的</span>
+              <span class="rail-section-title" data-tooltip="与当前情报关联度最高的标的列表" data-tooltip-pos="right">关联标的</span>
               <span class="rail-section-action" role="button" tabindex="0">管理</span>
             </div>
             <div class="rail-section-body">
               <div class="stock-quick-item">
                 <div>
-                  <div class="stock-quick-name">贵州茅台</div>
+                  <div class="stock-quick-name" data-tooltip="贵州茅台 · 沪深300 · 白酒龙头" data-tooltip-pos="right">贵州茅台</div>
                   <span class="stock-quick-code">600519</span>
                 </div>
-                <span class="stock-quick-change up">+3.10%</span>
+                <span class="stock-quick-change up" data-tooltip="1,856.00 元 · 成交 2.3 亿" data-tooltip-pos="left">+3.10%</span>
                 <svg data-sparkline='{"data":[12,14,13,15,16,15,17,18,16,18],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
-                  <div class="stock-quick-name">宁德时代</div>
+                  <div class="stock-quick-name" data-tooltip="宁德时代 · 创业板 · 动力电池龙头" data-tooltip-pos="right">宁德时代</div>
                   <span class="stock-quick-code">300750</span>
                 </div>
-                <span class="stock-quick-change up">+5.20%</span>
+                <span class="stock-quick-change up" data-tooltip="218.00 元 · 成交 1.8 亿" data-tooltip-pos="left">+5.20%</span>
                 <svg data-sparkline='{"data":[10,12,11,14,16,15,18,20,19,22],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
-                  <div class="stock-quick-name">招商银行</div>
+                  <div class="stock-quick-name" data-tooltip="招商银行 · 上证50 · 银行龙头" data-tooltip-pos="right">招商银行</div>
                   <span class="stock-quick-code">600036</span>
                 </div>
-                <span class="stock-quick-change down">-0.85%</span>
+                <span class="stock-quick-change down" data-tooltip="39.85 元 · 成交 0.9 亿" data-tooltip-pos="left">-0.85%</span>
                 <svg data-sparkline='{"data":[18,17,16,17,15,14,15,13,14,12],"stroke":"oklch(0.65 0.15 25)"}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
-                  <div class="stock-quick-name">中芯国际</div>
+                  <div class="stock-quick-name" data-tooltip="中芯国际 · 科创板 · 半导体代工龙头" data-tooltip-pos="right">中芯国际</div>
                   <span class="stock-quick-code">688981</span>
                 </div>
-                <span class="stock-quick-change up">+6.25%</span>
+                <span class="stock-quick-change up" data-tooltip="51.00 元 · 成交 1.5 亿 · 涨停" data-tooltip-pos="left">+6.25%</span>
                 <svg data-sparkline='{"data":[8,10,12,11,14,16,18,17,20,22],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
-                  <div class="stock-quick-name">比亚迪</div>
+                  <div class="stock-quick-name" data-tooltip="比亚迪 · 深证成分 · 新能源汽车龙头" data-tooltip-pos="right">比亚迪</div>
                   <span class="stock-quick-code">002594</span>
                 </div>
-                <span class="stock-quick-change up">+2.80%</span>
+                <span class="stock-quick-change up" data-tooltip="312.50 元 · 成交 1.1 亿" data-tooltip-pos="left">+2.80%</span>
                 <svg data-sparkline='{"data":[14,13,15,14,16,15,17,16,18,17],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
               </div>
             </div>
@@ -2268,7 +2297,7 @@
           <!-- Section: 筛选器 -->
           <div class="rail-section">
             <div class="rail-section-header">
-              <span class="rail-section-title">筛选条件</span>
+              <span class="rail-section-title" data-tooltip="当前已激活的数据筛选条件" data-tooltip-pos="right">筛选条件</span>
               <label for="overlay-custom-filter" class="rail-section-action cursor-pointer" tabindex="0">编辑</label>
             </div>
             <div class="rail-section-body">
@@ -2297,7 +2326,7 @@
           <!-- Section: AI 摘要 -->
           <div class="rail-section">
             <div class="rail-section-header">
-              <span class="rail-section-title">AI 摘要</span>
+              <span class="rail-section-title" data-tooltip="基于当前情报实时生成的 AI 洞察摘要" data-tooltip-pos="right">AI 摘要</span>
               <label for="overlay-send-to-copilot" class="rail-section-action cursor-pointer" tabindex="0">发送到 Copilot</label>
             </div>
             <div class="rail-section-body">
@@ -2328,19 +2357,19 @@
       <!-- ===== Analysis Band (bottom) ===== -->
       <div class="analysis-band">
         <div class="analysis-band-section">
-          <div class="analysis-band-title">趋势判断</div>
+          <div class="analysis-band-title" data-tooltip="基于多维度资金面数据的综合趋势判断" data-tooltip-pos="top">趋势判断</div>
           <div class="analysis-band-text">
             资金面 <strong class="up">偏多</strong>，北向与主力资金共振流入科技板块；宏观 PMI <strong class="up">超预期</strong>提振市场情绪，但中美利差走阔值得关注。
           </div>
         </div>
         <div class="analysis-band-section">
-          <div class="analysis-band-title">对比参考</div>
+          <div class="analysis-band-title" data-tooltip="与历史均值和近期数据的横向对比" data-tooltip-pos="top">对比参考</div>
           <div class="analysis-band-text">
             近5日资金净流入合计 <strong class="up">+386亿</strong>，高于20日均值 +215亿；板块集中度提升，科技+消费占比 62%。
           </div>
         </div>
         <div class="analysis-band-section">
-          <div class="analysis-band-title">备注</div>
+          <div class="analysis-band-title" data-tooltip="需要关注的潜在风险事件和时间节点" data-tooltip-pos="top">备注</div>
           <div class="analysis-band-text">
             14:00 社融数据发布后可能引发资金面波动，建议关注 <strong>金融板块</strong>走势变化。
           </div>

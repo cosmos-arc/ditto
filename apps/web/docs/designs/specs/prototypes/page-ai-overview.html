@@ -1284,6 +1284,103 @@
         animation: none !important;
       }
     }
+
+    /* ══════════════════════════════════════════════
+     * Tooltip System (data-tooltip)
+     * ══════════════════════════════════════════════ */
+    [data-tooltip] {
+      position: relative;
+    }
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      z-index: 100;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-ui);
+      font-weight: var(--font-weight-regular);
+      color: var(--text-secondary);
+      line-height: 1.5;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard);
+      box-shadow: 0 4px 16px oklch(0 0 0 / 0.3);
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    [data-tooltip]:hover::after {
+      opacity: 1;
+    }
+    [data-tooltip][data-tooltip-pos="top"]::after {
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+    }
+    [data-tooltip][data-tooltip-pos="top"]:hover::after {
+      transform: translateX(-50%) translateY(0);
+    }
+    [data-tooltip][data-tooltip-pos="bottom"]::after {
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%) translateY(-4px);
+    }
+    [data-tooltip][data-tooltip-pos="bottom"]:hover::after {
+      transform: translateX(-50%) translateY(0);
+    }
+    [data-tooltip][data-tooltip-pos="right"]::after {
+      left: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%) translateX(-4px);
+    }
+    [data-tooltip][data-tooltip-pos="right"]:hover::after {
+      transform: translateY(-50%) translateX(0);
+    }
+    [data-tooltip]:not([data-tooltip-pos])::after {
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+    }
+    [data-tooltip]:not([data-tooltip-pos]):hover::after {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Animated Counter (data-counter) ── */
+    [data-counter] {
+      display: inline-block;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Panel enhanced mouse glow ── */
+    .panel[data-mouse-glow] {
+      position: relative;
+      overflow: hidden;
+    }
+    .panel[data-mouse-glow]::before {
+      content: '';
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, oklch(from var(--ai-accent) l c h / 0.06) 0%, transparent 70%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+      transform: translate(-50%, -50%);
+      z-index: 0;
+    }
+    .panel[data-mouse-glow]:hover::before {
+      opacity: 1;
+    }
+
+    /* ── Reduced motion for tooltips ── */
+    @media (prefers-reduced-motion: reduce) {
+      [data-tooltip]::after { transition: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -1384,22 +1481,22 @@
     <div class="ai-pulse">
       <div class="ai-pulse-item">
         <div class="ai-pulse-dot"></div>
-        <span class="ai-pulse-label">Agent 运行中</span>
-        <span class="ai-pulse-value brand">2</span>
+        <span class="ai-pulse-label" data-tooltip="当前正在执行的 Agent Plan 数量" data-tooltip-pos="bottom">Agent 运行中</span>
+        <span class="ai-pulse-value brand" data-tooltip="行业轮动扫描 + 持仓集中度监控" data-tooltip-pos="bottom">2</span>
       </div>
       <div class="ai-pulse-separator"></div>
       <div class="ai-pulse-item">
-        <span class="ai-pulse-label">待审批</span>
+        <span class="ai-pulse-label" data-tooltip="需要人工审批的 AI Finding 数量" data-tooltip-pos="bottom">待审批</span>
         <span class="ai-pulse-value warning">3</span>
       </div>
       <div class="ai-pulse-separator"></div>
       <div class="ai-pulse-item">
-        <span class="ai-pulse-label">Copilot 活跃</span>
+        <span class="ai-pulse-label" data-tooltip="当前活跃的 Copilot 对话会话数" data-tooltip-pos="bottom">Copilot 活跃</span>
         <span class="ai-pulse-value brand">1</span>
       </div>
       <div class="ai-pulse-separator"></div>
       <div class="ai-pulse-item">
-        <span class="ai-pulse-label">本周产出</span>
+        <span class="ai-pulse-label" data-tooltip="本周 AI 产出的 Finding 总数" data-tooltip-pos="bottom">本周产出</span>
         <span class="ai-pulse-value success">12 条 Finding</span>
       </div>
       <div class="ai-pulse-separator"></div>
@@ -1439,7 +1536,7 @@
       <!-- Primary: Agent Quick View + Copilot Quick View -->
       <div class="ai-main-primary">
         <!-- ── Agent Quick View (left column) ── -->
-        <div class="panel panel-flex-col ai-active-panel">
+        <div class="panel panel-flex-col ai-active-panel" data-mouse-glow="true">
           <div class="panel-header">
             <span class="panel-title">Agent <span class="panel-subtitle">自动化执行引擎</span>
             <span class="panel-action">进入 Agent →</span>
@@ -1455,7 +1552,7 @@
             <div class="ai-plan-row">
               <span class="ai-plan-status running"></span>
               <div class="ai-plan-body">
-                <span class="ai-plan-name">行业轮动扫描 — Q1 季报因子验证</span>
+                <span class="ai-plan-name" data-tooltip="自动扫描行业轮动信号并验证季报因子有效性" data-tooltip-pos="right">行业轮动扫描 — Q1 季报因子验证</span>
                 <span class="ai-plan-meta">步骤 3/7 · 当前: 财报数据采集</span>
               </div>
               <div class="ai-plan-progress">
@@ -1467,7 +1564,7 @@
             <div class="ai-plan-row">
               <span class="ai-plan-status running"></span>
               <div class="ai-plan-body">
-                <span class="ai-plan-name">持仓集中度监控 — 每日巡检</span>
+                <span class="ai-plan-name" data-tooltip="每日检查持仓集中度是否超过风控阈值" data-tooltip-pos="right">持仓集中度监控 — 每日巡检</span>
                 <span class="ai-plan-meta">步骤 5/6 · 当前: 生成报告</span>
               </div>
               <div class="ai-plan-progress">
@@ -1487,12 +1584,12 @@
               <div class="ai-finding-body">
                 <div class="ai-finding-header">
                   <span class="ai-finding-title">贵州茅台 — 量价背离卖出信号</span>
-                  <span class="confidence-badge high">92%</span>
+                  <span class="confidence-badge high" data-tooltip="多因子共振信号 · RSI+放量+北向资金" data-tooltip-pos="right">92%</span>
                 </div>
                 <span class="ai-finding-evidence">RSI 背离 + 放量下跌 + 北向连续 3 日净卖出，多因子共振信号。</span>
                 <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill high" style="width:92%"></div></div>
                 <div class="ai-finding-footer">
-                  <span class="ai-finding-source">Alpha v3 策略 · 3分钟前</span>
+                  <span class="ai-finding-source" data-tooltip="由 Alpha v3 信号策略自动生成" data-tooltip-pos="bottom">Alpha v3 策略 · 3分钟前</span>
                   <span class="ai-finding-action">审批 →</span>
                 </div>
               </div>
@@ -1503,12 +1600,12 @@
               <div class="ai-finding-body">
                 <div class="ai-finding-header">
                   <span class="ai-finding-title">科技板块拥挤度预警 — 超过 2 倍标准差</span>
-                  <span class="confidence-badge medium">67%</span>
+                  <span class="confidence-badge medium" data-tooltip="换手率 98.5% + 估值 92% 分位数" data-tooltip-pos="right">67%</span>
                 </div>
                 <span class="ai-finding-evidence">换手率分位数 98.5%，估值分位数 92%，建议关注回调风险。</span>
                 <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill medium" style="width:67%"></div></div>
                 <div class="ai-finding-footer">
-                  <span class="ai-finding-source">风控巡检 · 18分钟前</span>
+                  <span class="ai-finding-source" data-tooltip="由风控巡检 Agent 自动发现" data-tooltip-pos="bottom">风控巡检 · 18分钟前</span>
                   <span class="ai-finding-action">审批 →</span>
                 </div>
               </div>
@@ -1519,12 +1616,12 @@
               <div class="ai-finding-body">
                 <div class="ai-finding-header">
                   <span class="ai-finding-title">情绪 Alpha v2 — IC 衰减至 0.028</span>
-                  <span class="confidence-badge low">45%</span>
+                  <span class="confidence-badge low" data-tooltip="IC 从 0.041 下滑至 0.028" data-tooltip-pos="right">45%</span>
                 </div>
                 <span class="ai-finding-evidence">近 5 日 IC 从 0.041 持续下滑，可能存在短期模型退化。</span>
                 <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill low" style="width:45%"></div></div>
                 <div class="ai-finding-footer">
-                  <span class="ai-finding-source">模型监控 · 2小时前</span>
+                  <span class="ai-finding-source" data-tooltip="由模型监控 Agent 持续跟踪" data-tooltip-pos="bottom">模型监控 · 2小时前</span>
                   <span class="ai-finding-action">审批 →</span>
                 </div>
               </div>
@@ -1592,8 +1689,8 @@
               <span class="ai-copilot-session-indicator"></span>
               <div class="ai-copilot-session-body">
                 <div class="ai-copilot-session-header">
-                  <span class="ai-copilot-session-title">A股科技板块深度分析</span>
-                  <span class="ai-copilot-session-mode">市场分析</span>
+                  <span class="ai-copilot-session-title" data-tooltip="当前正在进行的 AI 对话主题" data-tooltip-pos="right">A股科技板块深度分析</span>
+                  <span class="ai-copilot-session-mode" data-tooltip="对话模式：市场分析 / 因子研究 / 组合诊断" data-tooltip-pos="right">市场分析</span>
                 </div>
                 <span class="ai-copilot-session-desc">正在分析半导体/消费电子/软件服务三个子行业的轮动节奏和资金流向...</span>
                 <div class="ai-stat-row">
@@ -1760,7 +1857,7 @@
               <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--text-tertiary);">信号策略</span>
             </div>
             <div style="font-size:var(--font-size-24);font-weight:var(--font-weight-semibold);font-family:var(--font-family-numeric);color:var(--text-primary);margin-bottom:var(--space-4);">
-              <span data-ticker="87.3" data-decimals="1" data-ticker-suffix="%">87.3%</span>
+              <span data-ticker="87.3" data-decimals="1" data-ticker-suffix="%" data-counter="87.3" data-counter-decimals="1" data-counter-suffix="%">87.3%</span>
             </div>
             <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">信号准确率</span>
             <div data-confidence="0.873" data-confidence-label="High" style="margin-top:var(--space-8);"></div>
@@ -1770,13 +1867,13 @@
           </div>
 
           <!-- Model Card 2 -->
-          <div data-reveal="fade-up" data-reveal-delay="80" data-mouse-glow="true" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-16);">
+          <div data-reveal="fade-up" data-reveal-delay="50" data-mouse-glow="true" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-16);">
             <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);">
               <span class="ai-status-badge online"><span class="ai-status-dot"></span>情绪 Alpha v2</span>
               <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--agent-waiting-approval-fg);">IC 衰减</span>
             </div>
             <div style="font-size:var(--font-size-24);font-weight:var(--font-weight-semibold);font-family:var(--font-family-numeric);color:var(--text-primary);margin-bottom:var(--space-4);">
-              <span data-ticker="0.028" data-decimals="3">0.028</span>
+              <span data-ticker="0.028" data-decimals="3" data-counter="0.028" data-counter-decimals="3">0.028</span>
             </div>
             <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">IC 值 (5日均值)</span>
             <div data-confidence="0.45" data-confidence-label="Low" style="margin-top:var(--space-8);"></div>
@@ -1786,7 +1883,7 @@
           </div>
 
           <!-- Model Card 3 -->
-          <div data-reveal="fade-up" data-reveal-delay="160" data-mouse-glow="true" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-16);">
+          <div data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-16);">
             <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);">
               <span class="ai-status-badge processing"><span class="ai-status-dot"></span>Factor Discovery</span>
               <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--ai-accent);">运行中</span>
@@ -1802,13 +1899,13 @@
           </div>
 
           <!-- Model Card 4 -->
-          <div data-reveal="fade-up" data-reveal-delay="240" data-mouse-glow="true" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-16);">
+          <div data-reveal="fade-up" data-reveal-delay="150" data-mouse-glow="true" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-16);">
             <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);">
               <span class="ai-status-badge online"><span class="ai-status-dot"></span>风控巡检</span>
               <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--text-tertiary);">合规监控</span>
             </div>
             <div style="font-size:var(--font-size-24);font-weight:var(--font-weight-semibold);font-family:var(--font-family-numeric);color:var(--text-primary);margin-bottom:var(--space-4);">
-              <span data-ticker="99.2" data-decimals="1" data-ticker-suffix="%">99.2%</span>
+              <span data-ticker="99.2" data-decimals="1" data-ticker-suffix="%" data-counter="99.2" data-counter-decimals="1" data-counter-suffix="%">99.2%</span>
             </div>
             <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">合规检测率</span>
             <div data-confidence="0.92" data-confidence-label="High" style="margin-top:var(--space-8);"></div>
@@ -1839,34 +1936,34 @@
           </div>
 
           <!-- Signal Rows -->
-          <div data-reveal="fade-up" data-reveal-delay="80" class="ai-finding-row">
+          <div data-reveal="fade-up" data-reveal-delay="50" class="ai-finding-row">
             <div class="ai-finding-bar high"></div>
             <div class="ai-finding-body">
               <div class="ai-finding-header">
                 <span class="ai-finding-title">贵州茅台 — 量价背离卖出信号</span>
-                <span class="confidence-badge high">92%</span>
+                <span class="confidence-badge high" data-tooltip="多因子共振信号 · RSI+放量+北向资金" data-tooltip-pos="right">92%</span>
               </div>
               <span class="ai-finding-evidence">RSI 背离 + 放量下跌 + 北向连续 3 日净卖出</span>
               <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill high" style="width:92%"></div></div>
             </div>
           </div>
-          <div data-reveal="fade-up" data-reveal-delay="160" class="ai-finding-row">
+          <div data-reveal="fade-up" data-reveal-delay="100" class="ai-finding-row">
             <div class="ai-finding-bar medium"></div>
             <div class="ai-finding-body">
               <div class="ai-finding-header">
                 <span class="ai-finding-title">科技板块拥挤度预警</span>
-                <span class="confidence-badge medium">67%</span>
+                <span class="confidence-badge medium" data-tooltip="换手率 98.5% + 估值 92% 分位数" data-tooltip-pos="right">67%</span>
               </div>
               <span class="ai-finding-evidence">换手率分位数 98.5%，估值分位数 92%</span>
               <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill medium" style="width:67%"></div></div>
             </div>
           </div>
-          <div data-reveal="fade-up" data-reveal-delay="240" class="ai-finding-row">
+          <div data-reveal="fade-up" data-reveal-delay="150" class="ai-finding-row">
             <div class="ai-finding-bar low"></div>
             <div class="ai-finding-body">
               <div class="ai-finding-header">
                 <span class="ai-finding-title">情绪 Alpha v2 — IC 衰减至 0.028</span>
-                <span class="confidence-badge low">45%</span>
+                <span class="confidence-badge low" data-tooltip="IC 从 0.041 下滑至 0.028" data-tooltip-pos="right">45%</span>
               </div>
               <span class="ai-finding-evidence">近 5 日 IC 从 0.041 持续下滑，可能存在短期模型退化</span>
               <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill low" style="width:45%"></div></div>
@@ -1887,23 +1984,23 @@
           </div>
           <div class="context-section-body ai-sidebar-stats-body">
             <div class="ai-stat-block">
-              <span class="ai-stat-label">Agent Plans 今日</span>
+              <span class="ai-stat-label" data-tooltip="今日创建和运行的 Agent Plan 总数" data-tooltip-pos="right">Agent Plans 今日</span>
               <div class="ai-stat-row">
-                <span class="ai-stat-value brand"><span data-ticker="5" data-decimals="0">5</span></span>
+                <span class="ai-stat-value brand"><span data-ticker="5" data-decimals="0" data-counter="5" data-counter-decimals="0">5</span></span>
                 <span class="ai-stat-sub">运行中 2 · 完成 3</span>
               </div>
             </div>
             <div class="ai-stat-block">
-              <span class="ai-stat-label">Copilot 本周对话</span>
+              <span class="ai-stat-label" data-tooltip="本周创建的 Copilot 对话总数" data-tooltip-pos="right">Copilot 本周对话</span>
               <div class="ai-stat-row">
-                <span class="ai-stat-value"><span data-ticker="18" data-decimals="0">18</span></span>
+                <span class="ai-stat-value"><span data-ticker="18" data-decimals="0" data-counter="18" data-counter-decimals="0">18</span></span>
                 <span class="ai-stat-sub">活跃 1 · 归档 17</span>
               </div>
             </div>
             <div class="ai-stat-block">
-              <span class="ai-stat-label">待审批</span>
+              <span class="ai-stat-label" data-tooltip="等待人工审批的 AI Finding 总数" data-tooltip-pos="right">待审批</span>
               <div class="ai-stat-row">
-                <span class="ai-stat-value warning"><span data-ticker="3" data-decimals="0">3</span></span>
+                <span class="ai-stat-value warning"><span data-ticker="3" data-decimals="0" data-counter="3" data-counter-decimals="0">3</span></span>
                 <span class="ai-stat-sub">高 1 · 中 1 · 低 1</span>
               </div>
             </div>
@@ -1983,22 +2080,22 @@
           </div>
           <div class="context-section-body">
             <div class="pulse-metric">
-              <span class="pulse-metric-label">API 调用</span>
+              <span class="pulse-metric-label" data-tooltip="今日 API 调用次数 / 配额上限" data-tooltip-pos="right">API 调用</span>
               <span class="pulse-metric-value warning">4,820 / 5,000</span>
               <div data-confidence="0.964" data-confidence-label="96.4%"></div>
             </div>
             <div class="pulse-metric">
-              <span class="pulse-metric-label">GPU 使用</span>
+              <span class="pulse-metric-label" data-tooltip="当前 GPU 显存占用百分比" data-tooltip-pos="right">GPU 使用</span>
               <span class="pulse-metric-value">32%</span>
               <div data-confidence="0.32" data-confidence-label="Low"></div>
             </div>
             <div class="pulse-metric">
-              <span class="pulse-metric-label">Agent 并发</span>
+              <span class="pulse-metric-label" data-tooltip="当前并发运行的 Agent 数 / 最大并发数" data-tooltip-pos="right">Agent 并发</span>
               <span class="pulse-metric-value brand">2 / 4</span>
               <div data-confidence="0.50" data-confidence-label="Med"></div>
             </div>
             <div class="pulse-metric">
-              <span class="pulse-metric-label">模型延迟</span>
+              <span class="pulse-metric-label" data-tooltip="AI 模型平均推理响应时间" data-tooltip-pos="right">模型延迟</span>
               <span class="pulse-metric-value">180ms</span>
             </div>
           </div>

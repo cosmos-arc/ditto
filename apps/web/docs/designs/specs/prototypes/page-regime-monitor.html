@@ -961,7 +961,14 @@
     @media (prefers-reduced-motion: reduce) {
       .btn, .rail-icon, .header-action-btn,
       .panel-action, .breach-progress-fill,
-      .breach-dot, .regime-tab {
+      .breach-dot, .regime-tab,
+      .regime-state-badge, .driver-item,
+      .switch-from-tag, .switch-to-tag,
+      .switch-arrow, .factor-item,
+      .regime-probability-item,
+      .regime-strip-metric, .chart-event-marker,
+      .regime-confidence-fill,
+      .heatgrid-cell {
         transition: none !important;
         animation: none !important;
       }
@@ -1548,6 +1555,237 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
     }
+
+    /* ══════════════════════════════════════════════
+     * Regime Monitor Micro-interactions
+     * ══════════════════════════════════════════════ */
+
+    /* ── Regime state badge transitions ── */
+    .regime-state-badge {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+                  filter var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: default;
+    }
+    .regime-state-badge:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.2);
+    }
+    .regime-state-badge--bull:hover {
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--market-up-fg) 20%, transparent);
+    }
+    .regime-state-badge--bear:hover {
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--market-down-fg) 20%, transparent);
+    }
+    .regime-state-badge--range:hover {
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--risk-medium-fg) 20%, transparent);
+    }
+    .regime-state-badge__dot {
+      transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .regime-state-badge:hover .regime-state-badge__dot {
+      animation: dot-glow 1.5s ease-in-out infinite;
+    }
+    @keyframes dot-glow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ── Driver item hover micro-interaction ── */
+    .driver-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  padding-left var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .driver-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+      padding-left: var(--space-6);
+      padding-right: var(--space-6);
+      margin-left: calc(var(--space-6) * -1);
+      margin-right: calc(var(--space-6) * -1);
+    }
+
+    /* ── Switch transition tag animation ── */
+    .switch-from-tag,
+    .switch-to-tag {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .switch-from-tag:hover,
+    .switch-to-tag:hover {
+      transform: scale(1.05);
+    }
+
+    .switch-arrow {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+      display: inline-block;
+    }
+    .switch-item:hover .switch-arrow {
+      transform: translateX(2px);
+    }
+
+    /* ── Strategy row enhanced hover ── */
+    .strategy-row {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  padding-left var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Regime strip metric hover ── */
+    .regime-strip-metric {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: default;
+    }
+    .regime-strip-metric:hover {
+      opacity: 0.85;
+    }
+
+    /* ── Factor item hover ── */
+    .factor-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  padding-left var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+    }
+    .factor-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+      padding-left: var(--space-6);
+      margin-left: calc(var(--space-6) * -1);
+      margin-right: calc(var(--space-6) * -1);
+      padding-right: var(--space-6);
+    }
+
+    /* ── Regime gauge confidence fill animate on load ── */
+    .regime-confidence-fill {
+      transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── Donut probability section hover ── */
+    .regime-probability-item {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: default;
+    }
+    .regime-probability-item:hover {
+      transform: translateY(-2px);
+    }
+
+    /* ── Switch item timeline connector hover glow ── */
+    .switch-item:hover::before {
+      background: var(--brand-accent);
+      opacity: 0.3;
+    }
+    .switch-item::before {
+      transition: background var(--motion-duration-normal) var(--motion-easing-standard),
+                  opacity var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    /* ── Signal bars hover animation ── */
+    .signal-bars__bar {
+      transition: height 0.3s ease, opacity 0.3s ease;
+    }
+    .switch-item:hover .signal-bars__bar {
+      opacity: 1;
+    }
+    .signal-bars:not(:hover) .signal-bars__bar {
+      opacity: 0.7;
+    }
+    .signal-bars:hover .signal-bars__bar {
+      opacity: 1;
+    }
+
+    /* ── Strategy table row enhanced micro-interaction ── */
+    .strategy-row {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+    }
+    .strategy-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Fit bar fill animate ── */
+    .fit-bar__fill {
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── Regime time button enhanced hover ── */
+    .regime-time-btn {
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .regime-time-btn:hover:not(.active) {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Chart event marker hover ── */
+    .chart-event-marker {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: default;
+    }
+    .chart-event-marker:hover {
+      transform: scale(1.4);
+    }
+
+    /* ── Heatgrid cell hover ── */
+    .heatgrid-cell {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .heatgrid-cell:hover {
+      opacity: 0.8;
+      stroke: var(--text-tertiary);
+      stroke-width: 1;
+    }
+
+    /* ── Regime probability donut label weight ── */
+    .regime-probability-item svg {
+      transition: transform var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .regime-probability-item:hover svg {
+      transform: scale(1.06);
+    }
+
+    /* ── Signal strength bar hover ── */
+    .signal-bars__bar {
+      transition: height var(--motion-duration-fast) var(--motion-easing-standard),
+                  opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .switch-item:hover .signal-bars__bar {
+      animation: signal-grow 0.4s ease-out both;
+    }
+    .switch-item:hover .signal-bars__bar:nth-child(1) { animation-delay: 0ms; }
+    .switch-item:hover .signal-bars__bar:nth-child(2) { animation-delay: 50ms; }
+    .switch-item:hover .signal-bars__bar:nth-child(3) { animation-delay: 100ms; }
+    .switch-item:hover .signal-bars__bar:nth-child(4) { animation-delay: 150ms; }
+    .switch-item:hover .signal-bars__bar:nth-child(5) { animation-delay: 200ms; }
+    @keyframes signal-grow {
+      0% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    /* ── Switch transition tag enhanced ── */
+    .switch-transition {
+      position: relative;
+    }
+    .switch-item:hover .switch-from-tag {
+      opacity: 0.7;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Mini curve hover ── */
+    .mini-curve svg path {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .switch-item:hover .mini-curve svg path:first-child {
+      opacity: 1;
+    }
+
+    /* ── Regime state indicator entrance ── */
+    .regime-state-badge--bull .regime-state-badge__dot {
+      animation: dot-entrance 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+    @keyframes dot-entrance {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -1644,37 +1882,37 @@
 
     <!-- ═══ Regime Status Strip ═══ -->
     <div class="scope-strip">
-      <div class="regime-strip-metric">
+      <div class="regime-strip-metric" data-tooltip="Regime Engine 实时判定当前市场处于风险偏好状态">
         <span class="regime-strip-label">当前 Regime</span>
         <span class="regime-strip-value up">温和风险偏好</span>
       </div>
       <div class="regime-strip-separator"></div>
-      <div class="regime-strip-metric">
+      <div class="regime-strip-metric" data-tooltip="多因子加权置信度，>70% 为高置信">
         <span class="regime-strip-label">置信度</span>
         <span class="regime-strip-value up" data-ticker="72" data-decimals="0" data-ticker-suffix="%">0%</span>
       </div>
       <div class="regime-strip-separator"></div>
-      <div class="regime-strip-metric">
+      <div class="regime-strip-metric" data-tooltip="中国版 VIX，反映市场恐慌程度，<20 为低波动">
         <span class="regime-strip-label">IVIX</span>
         <span class="regime-strip-value ok">18.52</span>
       </div>
       <div class="regime-strip-separator"></div>
-      <div class="regime-strip-metric">
+      <div class="regime-strip-metric" data-tooltip="沪深港通北向资金当日净流入金额">
         <span class="regime-strip-label">北向资金</span>
         <span class="regime-strip-value up">+12.4亿</span>
       </div>
       <div class="regime-strip-separator"></div>
-      <div class="regime-strip-metric">
+      <div class="regime-strip-metric" data-tooltip="全市场上涨家数与下跌家数之比，>2:1 为强势">
         <span class="regime-strip-label">涨跌比</span>
         <span class="regime-strip-value up">2.1:1</span>
       </div>
       <div class="regime-strip-separator"></div>
-      <div class="regime-strip-metric">
+      <div class="regime-strip-metric" data-tooltip="最近一次 Regime 状态切换的日期">
         <span class="regime-strip-label">上次切换</span>
         <span class="regime-strip-value neutral">2026-03-18</span>
       </div>
       <div class="regime-strip-separator"></div>
-      <div class="regime-strip-metric">
+      <div class="regime-strip-metric" data-tooltip="当前 Regime 持续天数，越久越稳定">
         <span class="regime-strip-label">持续天数</span>
         <span class="regime-strip-value neutral">15天</span>
       </div>
@@ -1730,19 +1968,19 @@
                           stroke-dashoffset="91.5"/>
                       </svg>
                       <div class="regime-gauge-svg-center">
-                        <span class="regime-gauge-value">72%</span>
+                        <span class="regime-gauge-value"><span data-counter="72" data-counter-decimals="0" data-counter-suffix="%">72%</span></span>
                         <span class="regime-gauge-unit">置信度</span>
                       </div>
                     </div>
                     <div class="regime-gauge-info">
-                      <div class="regime-status-name">温和风险偏好 <span class="regime-state-badge regime-state-badge--bull"><span class="regime-state-badge__dot"></span>Moderate</span></div>
+                      <div class="regime-status-name">温和风险偏好 <span class="regime-state-badge regime-state-badge--bull" data-tooltip="当前 Regime 由多因子引擎判定，每 5 分钟更新"><span class="regime-state-badge__dot"></span>Moderate</span></div>
                       <span class="regime-status-desc">市场情绪偏暖，波动率处于低位，资金面宽松。北向资金持续净流入，个股涨跌比健康。</span>
                       <div class="regime-confidence">
                         <span class="regime-confidence-label">判定强度</span>
                         <div class="regime-confidence-bar">
                           <div class="regime-confidence-fill" style="width: 72%;"></div>
                         </div>
-                        <span class="regime-confidence-value">72%</span>
+                        <span class="regime-confidence-value"><span data-counter="72" data-counter-decimals="0" data-counter-suffix="%">72%</span></span>
                       </div>
                     </div>
                   </div>
@@ -1812,31 +2050,31 @@
                   </div>
                   <div class="context-section-body">
 
-                    <div class="driver-item">
+                    <div class="driver-item" data-tooltip="隐含波动率指数，衡量市场恐慌程度。低于 20 为低波动环境">
                       <span class="driver-name">IVIX 波动率指数</span>
                       <span class="driver-value ok">18.52</span>
                       <span class="driver-direction bullish">偏多</span>
                     </div>
 
-                    <div class="driver-item">
+                    <div class="driver-item" data-tooltip="沪深港通北向资金净流入，反映外资风险偏好">
                       <span class="driver-name">北向资金净流入</span>
                       <span class="driver-value up">+12.4亿</span>
                       <span class="driver-direction bullish">偏多</span>
                     </div>
 
-                    <div class="driver-item">
+                    <div class="driver-item" data-tooltip="全市场上涨家数/下跌家数，>2:1 表示市场广度健康">
                       <span class="driver-name">全市场涨跌比</span>
                       <span class="driver-value up">2.1:1</span>
                       <span class="driver-direction bullish">偏多</span>
                     </div>
 
-                    <div class="driver-item">
+                    <div class="driver-item" data-tooltip="两融余额周度变化，反映杠杆资金入市意愿">
                       <span class="driver-name">融资余额变化</span>
                       <span class="driver-value up">+86亿</span>
                       <span class="driver-direction bullish">偏多</span>
                     </div>
 
-                    <div class="driver-item">
+                    <div class="driver-item" data-tooltip="十年期国债收益率，影响股债配置性价比">
                       <span class="driver-name">10Y 国债收益率</span>
                       <span class="driver-value neutral">1.72%</span>
                       <span class="driver-direction neutral">中性</span>
@@ -1852,7 +2090,7 @@
                     <span class="context-section-count">多因子</span>
                   </div>
                   <div class="context-section-body">
-                    <div class="factor-item">
+                    <div class="factor-item" data-tooltip="情绪因子权重 78%，反映市场参与者的风险偏好倾向">
                       <div class="factor-item__header">
                         <div class="factor-radial">
                           <svg viewBox="0 0 48 48">
@@ -1873,7 +2111,7 @@
                         </div>
                       </div>
                     </div>
-                    <div class="factor-item">
+                    <div class="factor-item" data-tooltip="资金因子权重 71%，北向+融资余额+新增开户数综合">
                       <div class="factor-item__header">
                         <div class="factor-radial">
                           <svg viewBox="0 0 48 48">
@@ -1894,7 +2132,7 @@
                         </div>
                       </div>
                     </div>
-                    <div class="factor-item">
+                    <div class="factor-item" data-tooltip="波动率因子权重 82%，IVIX 低位运行支撑 Risk-On 判定">
                       <div class="factor-item__header">
                         <div class="factor-radial">
                           <svg viewBox="0 0 48 48">
@@ -1915,7 +2153,7 @@
                         </div>
                       </div>
                     </div>
-                    <div class="factor-item">
+                    <div class="factor-item" data-tooltip="宏观因子权重 55%，10Y 国债收益率+PMI+CPI 综合，置信度偏低">
                       <div class="factor-item__header">
                         <div class="factor-radial">
                           <svg viewBox="0 0 48 48">
@@ -1940,34 +2178,40 @@
                 </div>
 
                 <!-- Section: Market State Matrix (HeatGrid) -->
-                <div class="context-section">
+                <div class="context-section" data-reveal="fade-right" data-reveal-delay="200">
                   <div class="context-section-header">
                     <span class="context-section-title">Market State Matrix</span>
                     <span class="context-section-count">近 4 周</span>
                   </div>
-                  <div class="context-section-body" style="display:flex; justify-content:center; padding-top:var(--space-8);">
-                    <svg data-heatgrid='{"rows":4,"cols":7,"cellSize":20,"gap":2}' aria-label="市场状态矩阵"></svg>
+                  <div class="context-section-body" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-6); padding-top:var(--space-8);">
+                    <svg data-heatgrid='{"rows":4,"cols":7,"cellSize":20,"gap":2,"data":[0.12,0.08,0.15,0.22,0.35,0.48,0.55,0.18,0.25,0.42,0.58,0.62,0.71,0.78,0.32,0.38,0.52,0.68,0.75,0.82,0.88,0.45,0.55,0.65,0.72,0.78,0.85,0.92],"labels":["03-02 周一: Risk-Off","03-03 周二: Risk-Off","03-04 周三: Risk-Off","03-05 周四: Mixed-偏弱","03-06 周五: Mixed","03-09 周一: Mixed-偏强","03-10 周二: Risk-On","03-11 周三: Risk-Off","03-12 周四: Mixed-偏弱","03-13 周五: Mixed","03-16 周一: Mixed-偏强","03-17 周二: Risk-On","03-18 周三: Risk-On","03-19 周四: Risk-On 强","03-20 周五: Risk-Off","03-23 周一: Mixed","03-24 周二: Mixed-偏强","03-25 周三: Risk-On","03-26 周四: Risk-On","03-27 周五: Risk-On 强","03-30 周一: Risk-On 强","03-31 周二: Mixed-偏弱","04-01 周三: Mixed-偏强","04-02 周四: Risk-On","04-03 周五: Risk-On","04-06 周一: Risk-On 强","04-07 周二: Risk-On 强"],"colors":["oklch(from var(--market-down-fg) l c h / 0.10)","oklch(from var(--market-down-fg) l c h / 0.18)","oklch(1 0 0 / 0.02)","oklch(from var(--market-up-fg) l c h / 0.12)","oklch(from var(--market-up-fg) l c h / 0.22)","oklch(from var(--market-up-fg) l c h / 0.32)","oklch(from var(--market-up-fg) l c h / 0.45)"]}' aria-label="市场状态矩阵"></svg>
+                    <div style="display:flex; align-items:center; gap:var(--space-16); font-size:var(--font-size-10); color:var(--text-tertiary);">
+                      <span style="display:flex; align-items:center; gap:var(--space-4);"><span style="width:8px; height:8px; border-radius:2px; background:oklch(from var(--market-down-fg) l c h / 0.18);"></span>Risk-Off</span>
+                      <span style="display:flex; align-items:center; gap:var(--space-4);"><span style="width:8px; height:8px; border-radius:2px; background:oklch(1 0 0 / 0.02); border:1px solid var(--border-subtle);"></span>Mixed</span>
+                      <span style="display:flex; align-items:center; gap:var(--space-4);"><span style="width:8px; height:8px; border-radius:2px; background:oklch(from var(--market-up-fg) l c h / 0.22);"></span>Risk-On</span>
+                      <span style="display:flex; align-items:center; gap:var(--space-4);"><span style="width:8px; height:8px; border-radius:2px; background:oklch(from var(--market-up-fg) l c h / 0.45);"></span>Strong</span>
+                    </div>
                   </div>
                 </div>
 
                 <!-- Section: Regime Probability (DonutGauge) -->
-                <div class="context-section">
+                <div class="context-section" data-reveal="fade-right" data-reveal-delay="300">
                   <div class="context-section-header">
                     <span class="context-section-title">Regime Probability</span>
                     <span class="context-section-count">体制概率</span>
                   </div>
                   <div class="context-section-body" style="display:flex; align-items:center; justify-content:space-around; padding-top:var(--space-8);">
-                    <div style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
-                      <svg data-donut='{"value":0.72,"label":"72%","color":"oklch(0.55 0.15 155)","size":64}' aria-label="Bull概率"></svg>
-                      <span style="font-size:var(--font-size-10); color:var(--market-up-fg);">Bull</span>
+                    <div class="regime-probability-item" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
+                      <svg data-donut='{"value":0.72,"label":"72%","color":"oklch(from var(--market-up-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Bull概率" data-tooltip="Risk-On 概率 72%，由情绪+资金+波动率三因子驱动"></svg>
+                      <span style="font-size:var(--font-size-10); font-weight:var(--font-weight-medium); color:var(--market-up-fg);">Bull</span>
                     </div>
-                    <div style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
-                      <svg data-donut='{"value":0.18,"label":"18%","color":"oklch(0.6317 0.1567 22.64)","size":64}' aria-label="Bear概率"></svg>
-                      <span style="font-size:var(--font-size-10); color:var(--market-down-fg);">Bear</span>
+                    <div class="regime-probability-item" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
+                      <svg data-donut='{"value":0.18,"label":"18%","color":"oklch(from var(--market-down-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Bear概率" data-tooltip="Risk-Off 概率 18%，若 IVIX >22 或北向连续流出将触发"></svg>
+                      <span style="font-size:var(--font-size-10); font-weight:var(--font-weight-medium); color:var(--market-down-fg);">Bear</span>
                     </div>
-                    <div style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
-                      <svg data-donut='{"value":0.10,"label":"10%","color":"oklch(0.746 0.165 50)","size":64}' aria-label="Neutral概率"></svg>
-                      <span style="font-size:var(--font-size-10); color:var(--risk-near-limit-fg);">Neutral</span>
+                    <div class="regime-probability-item" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
+                      <svg data-donut='{"value":0.10,"label":"10%","color":"oklch(from var(--risk-near-limit-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Neutral概率" data-tooltip="Mixed 概率 10%，市场信号矛盾时的中性区间"></svg>
+                      <span style="font-size:var(--font-size-10); font-weight:var(--font-weight-medium); color:var(--risk-near-limit-fg);">Neutral</span>
                     </div>
                   </div>
                 </div>
@@ -1999,7 +2243,7 @@
           <div class="switch-grid">
 
             <!-- Switch 1 -->
-            <div class="switch-item">
+            <div class="switch-item" data-reveal="fade-up" data-reveal-delay="0">
               <div class="switch-time">
                 <span class="switch-time-dot ok"></span>
                 03-18
@@ -2037,7 +2281,7 @@
             </div>
 
             <!-- Switch 2 -->
-            <div class="switch-item">
+            <div class="switch-item" data-reveal="fade-up" data-reveal-delay="80">
               <div class="switch-time">
                 <span class="switch-time-dot warn"></span>
                 02-24
@@ -2061,7 +2305,7 @@
             </div>
 
             <!-- Switch 3 -->
-            <div class="switch-item">
+            <div class="switch-item" data-reveal="fade-up" data-reveal-delay="160">
               <div class="switch-time">
                 <span class="switch-time-dot critical"></span>
                 01-15
@@ -2085,7 +2329,7 @@
             </div>
 
             <!-- Switch 4 -->
-            <div class="switch-item">
+            <div class="switch-item" data-reveal="fade-up" data-reveal-delay="240">
               <div class="switch-time">
                 <span class="switch-time-dot ok"></span>
                 11-28
@@ -2109,7 +2353,7 @@
             </div>
 
             <!-- Switch 5 -->
-            <div class="switch-item">
+            <div class="switch-item" data-reveal="fade-up" data-reveal-delay="320">
               <div class="switch-time">
                 <span class="switch-time-dot warn"></span>
                 10-22

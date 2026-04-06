@@ -507,11 +507,14 @@
 
     .ledger-table tbody tr {
       height: var(--density-row-height);
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      transition:
+        background var(--motion-duration-fast) var(--motion-easing-standard),
+        box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: pointer;
     }
     .ledger-table tbody tr:hover {
       background: var(--interaction-hover-strong-bg);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
     }
     .ledger-table tbody tr.selected {
       background: var(--interaction-selected-bg);
@@ -531,19 +534,23 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-4);
-      font-size: var(--font-size-12);
+      font-size: var(--font-size-11);
       font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-3);
+      white-space: nowrap;
     }
 
     .order-status .status-dot-inline {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
       flex-shrink: 0;
     }
 
     .order-status.pending {
       color: var(--execution-pending-fg);
+      background: var(--execution-pending-bg);
     }
     .order-status.pending .status-dot-inline {
       background: var(--execution-pending-fg);
@@ -552,6 +559,7 @@
 
     .order-status.submitted {
       color: var(--cyan-500);
+      background: var(--execution-partial-bg);
     }
     .order-status.submitted .status-dot-inline {
       background: var(--cyan-500);
@@ -560,6 +568,7 @@
 
     .order-status.partial {
       color: var(--execution-partial-fg);
+      background: var(--execution-partial-bg);
     }
     .order-status.partial .status-dot-inline {
       background: var(--execution-partial-fg);
@@ -567,6 +576,7 @@
 
     .order-status.filled {
       color: var(--execution-filled-fg);
+      background: var(--execution-filled-bg);
     }
     .order-status.filled .status-dot-inline {
       background: var(--execution-filled-fg);
@@ -574,6 +584,7 @@
 
     .order-status.failed {
       color: var(--execution-rejected-fg);
+      background: var(--execution-rejected-bg);
     }
     .order-status.failed .status-dot-inline {
       background: var(--execution-rejected-fg);
@@ -581,6 +592,7 @@
 
     .order-status.cancelled {
       color: var(--execution-cancelled-fg);
+      background: var(--interaction-hover-subtle-bg);
     }
     .order-status.cancelled .status-dot-inline {
       background: var(--execution-cancelled-fg);
@@ -725,6 +737,17 @@
     .trace-section {
       border-bottom: 1px solid var(--border-subtle);
       position: relative;
+      opacity: 0;
+      transform: translateY(6px);
+      animation: trace-section-in 0.35s var(--motion-easing-standard) forwards;
+    }
+    .trace-section:nth-child(1) { animation-delay: 0.05s; }
+    .trace-section:nth-child(2) { animation-delay: 0.12s; }
+    .trace-section:nth-child(3) { animation-delay: 0.19s; }
+    .trace-section:nth-child(4) { animation-delay: 0.26s; }
+    .trace-section:nth-child(5) { animation-delay: 0.33s; }
+    @keyframes trace-section-in {
+      to { opacity: 1; transform: translateY(0); }
     }
     .trace-section + .trace-section::before {
       content: '';
@@ -782,6 +805,7 @@
       font-size: var(--font-size-13);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .order-info-value.up    { color: var(--market-up-fg); }
@@ -1726,27 +1750,27 @@
         <label for="orders-pending" class="status-tab label-tab" role="tab">
           <span class="tab-dot pending" aria-hidden="true"></span>
           待提交
-          <span class="tab-count">2</span>
+          <span class="tab-count" data-counter="2" data-counter-decimals="0">2</span>
         </label>
         <label for="orders-submitted" class="status-tab label-tab" role="tab">
           <span class="tab-dot submitted" aria-hidden="true"></span>
           已提交
-          <span class="tab-count">5</span>
+          <span class="tab-count" data-counter="5" data-counter-decimals="0">5</span>
         </label>
         <label for="orders-partial" class="status-tab label-tab" role="tab">
           <span class="tab-dot partial" aria-hidden="true"></span>
           部分成交
-          <span class="tab-count">1</span>
+          <span class="tab-count" data-counter="1" data-counter-decimals="0">1</span>
         </label>
         <label for="orders-done" class="status-tab label-tab active" role="tab" aria-selected="true">
           <span class="tab-dot done" aria-hidden="true"></span>
           已完成
-          <span class="tab-count">148</span>
+          <span class="tab-count" data-counter="148" data-counter-decimals="0">148</span>
         </label>
         <label for="orders-failed" class="status-tab label-tab" role="tab">
           <span class="tab-dot failed" aria-hidden="true"></span>
           失败/撤单
-          <span class="tab-count">12</span>
+          <span class="tab-count" data-counter="12" data-counter-decimals="0">12</span>
         </label>
       </div>
       <div class="status-strip-spacer"></div>
@@ -1761,7 +1785,7 @@
     <div class="kpi-strip" data-reveal="fade-up" data-reveal-delay="50" role="region" aria-label="执行概览">
       <div class="kpi-item">
         <div>
-          <div class="kpi-value"><span data-ticker="168" data-decimals="0">168</span></div>
+          <div class="kpi-value"><span data-counter="168" data-counter-decimals="0">168</span></div>
           <div class="kpi-label">今日订单</div>
         </div>
         <svg class="kpi-sparkline" viewBox="0 0 56 24" fill="none" aria-hidden="true">
@@ -1773,7 +1797,7 @@
       <div class="kpi-sep"></div>
       <div class="kpi-item">
         <div>
-          <div class="kpi-value"><span data-ticker="12800000" data-decimals="2" data-ticker-prefix="¥" data-ticker-suffix="">12,800,000.00</span><span class="kpi-unit">M</span></div>
+          <div class="kpi-value"><span data-counter="12800000" data-counter-decimals="2" data-counter-prefix="¥">12,800,000.00</span><span class="kpi-unit">M</span></div>
           <div class="kpi-label">成交额</div>
         </div>
         <span class="kpi-change up">+8.3%</span>
@@ -1781,7 +1805,7 @@
       <div class="kpi-sep"></div>
       <div class="kpi-item">
         <div>
-          <div class="kpi-value"><span data-ticker="88.1" data-decimals="1" data-ticker-suffix="%">88.1</span><span class="kpi-unit">%</span></div>
+          <div class="kpi-value"><span data-counter="88.1" data-counter-decimals="1" data-counter-suffix="%">88.1</span><span class="kpi-unit">%</span></div>
           <div class="kpi-label">成交率</div>
         </div>
         <svg class="kpi-sparkline" viewBox="0 0 56 24" fill="none" aria-hidden="true">
@@ -1793,7 +1817,7 @@
       <div class="kpi-sep"></div>
       <div class="kpi-item">
         <div>
-          <div class="kpi-value"><span data-ticker="-0.04" data-decimals="2" data-ticker-suffix="%">-0.04</span><span class="kpi-unit">%</span></div>
+          <div class="kpi-value"><span data-counter="-0.04" data-counter-decimals="2" data-counter-suffix="%">-0.04</span><span class="kpi-unit">%</span></div>
           <div class="kpi-label">平均滑点</div>
         </div>
         <span class="kpi-change down">改善</span>
@@ -1802,7 +1826,7 @@
       <div class="kpi-item">
         <div>
           <div class="kpi-label">状态分布</div>
-          <div data-flow='{"segments":[{"label":"待报","value":3},{"label":"已报","value":5},{"label":"部成","value":4},{"label":"已成","value":12},{"label":"撤单","value":2}]}' aria-label="订单状态分布"></div>
+          <div data-flow='{"segments":[{"label":"待报","value":2,"color":"var(--execution-pending-fg)"},{"label":"已报","value":5,"color":"var(--cyan-500)"},{"label":"部成","value":1,"color":"var(--execution-partial-fg)"},{"label":"已成","value":148,"color":"var(--execution-filled-fg)"},{"label":"撤单","value":12,"color":"var(--execution-rejected-fg)"}]}' data-tooltip="今日 168 笔订单状态分布" aria-label="订单状态分布"></div>
         </div>
       </div>
     </div>
@@ -1835,7 +1859,7 @@
         <tbody>
           <!-- Row 1: Filled — selected -->
           <tr class="selected row-filled" aria-selected="true" tabindex="0" role="row" data-order-id="ORD-20240401-001">
-            <td class="cell-numeric"><label for="overlay-order-detail" class="cursor-trigger">ORD-001</label></td>
+            <td class="cell-numeric"><label for="overlay-order-detail" class="cursor-trigger" data-tooltip="点击查看完整订单详情">ORD-001</label></td>
             <td class="cell-name">贵州茅台</td>
             <td>
               <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
@@ -1843,7 +1867,7 @@
             <td class="numeric">200</td>
             <td class="numeric">1,725.00</td>
             <td class="numeric">1,723.50</td>
-            <td><span class="order-type-tag">限价</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
               <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
@@ -1851,7 +1875,7 @@
           </tr>
           <!-- Row 2: Filled -->
           <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-002">
-            <td class="cell-numeric">ORD-002</td>
+            <td class="cell-numeric"><span data-tooltip="宁德时代 · 卖出 500 股 · 限价">ORD-002</span></td>
             <td class="cell-name">宁德时代</td>
             <td>
               <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
@@ -1859,7 +1883,7 @@
             <td class="numeric">500</td>
             <td class="numeric">198.80</td>
             <td class="numeric">199.20</td>
-            <td><span class="order-type-tag">限价</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
               <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
@@ -1867,7 +1891,7 @@
           </tr>
           <!-- Row 3: Partial fill -->
           <tr class="row-partial" tabindex="0" role="row" data-order-id="ORD-20240401-003">
-            <td class="cell-numeric">ORD-003</td>
+            <td class="cell-numeric"><span data-tooltip="比亚迪 · 买入 1,000 股 · 部分成交 35%">ORD-003</span></td>
             <td class="cell-name">比亚迪</td>
             <td>
               <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
@@ -1875,7 +1899,7 @@
             <td class="numeric">1,000</td>
             <td class="numeric">265.00</td>
             <td class="numeric">264.80</td>
-            <td><span class="order-type-tag">限价</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
               <span class="order-status partial"><span class="status-dot-inline" aria-hidden="true"></span> 部分成交</span>
             </td>
@@ -1883,7 +1907,7 @@
           </tr>
           <!-- Row 4: Submitted -->
           <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-004">
-            <td class="cell-numeric">ORD-004</td>
+            <td class="cell-numeric"><span data-tooltip="招商银行 · 买入 2,000 股 · 等待成交">ORD-004</span></td>
             <td class="cell-name">招商银行</td>
             <td>
               <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
@@ -1899,7 +1923,7 @@
           </tr>
           <!-- Row 5: Filled -->
           <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-005">
-            <td class="cell-numeric">ORD-005</td>
+            <td class="cell-numeric"><span data-tooltip="中国平安 · 卖出 800 股 · 市价">ORD-005</span></td>
             <td class="cell-name">中国平安</td>
             <td>
               <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
@@ -1907,7 +1931,7 @@
             <td class="numeric">800</td>
             <td class="numeric">45.20</td>
             <td class="numeric">45.15</td>
-            <td><span class="order-type-tag">市价</span></td>
+            <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
             <td>
               <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
@@ -1915,7 +1939,7 @@
           </tr>
           <!-- Row 6: Pending -->
           <tr class="row-pending" tabindex="0" role="row" data-order-id="ORD-20240401-006">
-            <td class="cell-numeric">ORD-006</td>
+            <td class="cell-numeric"><span data-tooltip="药明康德 · 买入 300 股 · 待提交">ORD-006</span></td>
             <td class="cell-name">药明康德</td>
             <td>
               <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
@@ -1931,7 +1955,7 @@
           </tr>
           <!-- Row 7: Filled -->
           <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-007">
-            <td class="cell-numeric">ORD-007</td>
+            <td class="cell-numeric"><span data-tooltip="隆基绿能 · 卖出 1,500 股 · 市价">ORD-007</span></td>
             <td class="cell-name">隆基绿能</td>
             <td>
               <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
@@ -1939,7 +1963,7 @@
             <td class="numeric">1,500</td>
             <td class="numeric">27.90</td>
             <td class="numeric">27.85</td>
-            <td><span class="order-type-tag">市价</span></td>
+            <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
             <td>
               <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
@@ -1947,7 +1971,7 @@
           </tr>
           <!-- Row 8: Failed -->
           <tr class="row-failed" tabindex="0" role="row" data-order-id="ORD-20240401-008">
-            <td class="cell-numeric">ORD-008</td>
+            <td class="cell-numeric"><span data-tooltip="紫金矿业 · 买入 3,000 股 · 已撤单">ORD-008</span></td>
             <td class="cell-name">紫金矿业</td>
             <td>
               <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
@@ -1963,7 +1987,7 @@
           </tr>
           <!-- Row 9: Submitted -->
           <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-009">
-            <td class="cell-numeric">ORD-009</td>
+            <td class="cell-numeric"><span data-tooltip="迈瑞医疗 · 买入 100 股 · 等待成交">ORD-009</span></td>
             <td class="cell-name">迈瑞医疗</td>
             <td>
               <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
@@ -1979,7 +2003,7 @@
           </tr>
           <!-- Row 10: Filled -->
           <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-010">
-            <td class="cell-numeric">ORD-010</td>
+            <td class="cell-numeric"><span data-tooltip="长江电力 · 买入 1,200 股 · 市价">ORD-010</span></td>
             <td class="cell-name">长江电力</td>
             <td>
               <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
@@ -1987,7 +2011,7 @@
             <td class="numeric">1,200</td>
             <td class="numeric">28.10</td>
             <td class="numeric">28.05</td>
-            <td><span class="order-type-tag">市价</span></td>
+            <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
             <td>
               <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
@@ -2085,7 +2109,7 @@
         <tbody>
           <!-- Row: Filled -->
           <tr class="row-filled selected" aria-selected="true" tabindex="0" role="row" data-order-id="ORD-20240401-001">
-            <td class="cell-numeric"><label for="overlay-order-detail" class="cursor-trigger">ORD-001</label></td>
+            <td class="cell-numeric"><label for="overlay-order-detail" class="cursor-trigger" data-tooltip="点击查看完整订单详情">ORD-001</label></td>
             <td class="cell-name">贵州茅台</td>
             <td>
               <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
@@ -2218,7 +2242,7 @@
       <div class="trace-header">
         <div class="trace-title">
           订单详情
-          <span class="trace-order-id">ORD-001</span>
+          <span class="trace-order-id" data-tooltip="贵州茅台 600519 · 限价买入 · 已完成">ORD-001</span>
         </div>
         <div class="trace-actions">
           <label for="overlay-cancel-confirm" class="trace-action-btn danger label-trigger" tabindex="0" role="button" aria-label="撤单">撤单</label>
@@ -2252,19 +2276,19 @@
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">委托价格</span>
-                <span class="order-info-value">1,725.00</span>
+                <span class="order-info-value"><span data-counter="1725.00" data-counter-decimals="2">1,725.00</span></span>
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">成交均价</span>
-                <span class="order-info-value">1,723.50</span>
+                <span class="order-info-value"><span data-counter="1723.50" data-counter-decimals="2">1,723.50</span></span>
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">委托金额</span>
-                <span class="order-info-value">345,000.00</span>
+                <span class="order-info-value"><span data-counter="345000.00" data-counter-decimals="2" data-counter-prefix="¥">345,000.00</span></span>
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">成交金额</span>
-                <span class="order-info-value"><span data-ticker="344700.00" data-decimals="2" data-ticker-prefix="¥">344,700.00</span></span>
+                <span class="order-info-value"><span data-counter="344700.00" data-counter-decimals="2" data-counter-prefix="¥">344,700.00</span></span>
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">账户</span>
@@ -2340,19 +2364,19 @@
           <div class="trace-section-body">
             <div class="fee-row">
               <span class="fee-label">佣金</span>
-              <span class="fee-value">172.35</span>
+              <span class="fee-value"><span data-counter="172.35" data-counter-decimals="2" data-counter-prefix="¥">172.35</span></span>
             </div>
             <div class="fee-row">
               <span class="fee-label">过户费</span>
-              <span class="fee-value">17.24</span>
+              <span class="fee-value"><span data-counter="17.24" data-counter-decimals="2" data-counter-prefix="¥">17.24</span></span>
             </div>
             <div class="fee-row">
               <span class="fee-label">印花税</span>
-              <span class="fee-value">344.70</span>
+              <span class="fee-value"><span data-counter="344.70" data-counter-decimals="2" data-counter-prefix="¥">344.70</span></span>
             </div>
             <div class="fee-row fee-total">
               <span class="fee-label">费用合计</span>
-              <span class="fee-value">534.29</span>
+              <span class="fee-value"><span data-counter="534.29" data-counter-decimals="2" data-counter-prefix="¥">534.29</span></span>
             </div>
           </div>
         </div>
@@ -2364,8 +2388,8 @@
           </div>
           <div class="trace-section-body">
             <div class="slippage-display">
-              <span class="slippage-value negative">-0.09%</span>
-              <span class="slippage-detail">委托 1,725.00 / 成交 1,723.50</span>
+              <span class="slippage-value negative" data-tooltip="滑点 = (成交均价 - 委托价) / 委托价">-0.09%</span>
+              <span class="slippage-detail">委托 1,725.00 / 成交 1,723.50 · 节省 300.00</span>
             </div>
             <div class="slippage-bar-container">
               <div class="slippage-bar" role="progressbar" aria-valuenow="3" aria-valuemin="0" aria-valuemax="100" aria-label="滑点幅度">

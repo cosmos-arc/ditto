@@ -488,7 +488,7 @@
       border-bottom: var(--tab-indicator-width) solid transparent;
       border-radius: var(--tab-pill-radius) var(--tab-pill-radius) 0 0;
       transition: color var(--motion-duration-fast) var(--motion-easing-standard),
-                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
                   background var(--motion-duration-fast) var(--motion-easing-standard);
       display: flex;
       align-items: baseline;
@@ -1361,17 +1361,8 @@
 
     /* ══════════════════════════════════════════════
      * Tab Activation Rules (prototype-toggles.css)
-     * 8 radio inputs → 8 tab panels
+     * 8 radio inputs → 8 tab panels (with smooth entrance animation)
      * ══════════════════════════════════════════════ */
-
-    .tab-group:has(#hub-overview:checked) [data-panel="hub-overview"] { display: flex; }
-    .tab-group:has(#hub-chart:checked) [data-panel="hub-chart"] { display: flex; }
-    .tab-group:has(#hub-flow:checked) [data-panel="hub-flow"] { display: flex; }
-    .tab-group:has(#hub-fundamentals:checked) [data-panel="hub-fundamentals"] { display: flex; }
-    .tab-group:has(#hub-corporate:checked) [data-panel="hub-corporate"] { display: flex; }
-    .tab-group:has(#hub-news:checked) [data-panel="hub-news"] { display: flex; }
-    .tab-group:has(#hub-network:checked) [data-panel="hub-network"] { display: flex; }
-    .tab-group:has(#hub-announcements:checked) [data-panel="hub-announcements"] { display: flex; }
 
     /* Active tab highlight — :has() drives label style */
     .tab-group:has(#hub-overview:checked) [for="hub-overview"],
@@ -1397,6 +1388,24 @@
       height: 100%;
       overflow: hidden;
       min-height: 0;
+    }
+
+    /* Tab panel entrance animation — smooth fade-in on switch */
+    @keyframes tab-panel-enter {
+      from { opacity: 0; transform: translateY(3px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .tab-group:has(#hub-overview:checked) [data-panel="hub-overview"],
+    .tab-group:has(#hub-chart:checked) [data-panel="hub-chart"],
+    .tab-group:has(#hub-flow:checked) [data-panel="hub-flow"],
+    .tab-group:has(#hub-fundamentals:checked) [data-panel="hub-fundamentals"],
+    .tab-group:has(#hub-corporate:checked) [data-panel="hub-corporate"],
+    .tab-group:has(#hub-news:checked) [data-panel="hub-news"],
+    .tab-group:has(#hub-network:checked) [data-panel="hub-network"],
+    .tab-group:has(#hub-announcements:checked) [data-panel="hub-announcements"] {
+      display: flex;
+      animation: tab-panel-enter 180ms var(--motion-easing-emphasis) both;
     }
 
     /* ══════════════════════════════════════════════
@@ -2171,35 +2180,35 @@
       <div class="tab-panel" data-panel="hub-overview" data-tab-panel="hub-overview">
       <div class="hub-object-view">
         <!-- Key Metrics -->
-        <div class="metrics-grid" role="region" aria-label="关键指标" data-mouse-glow="true" data-mouse-glow-size="150px">
-          <div class="metric-card">
-            <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,12 8,10 16,14 24,8 32,11 40,6 48,9" stroke="var(--market-down-fg)" stroke-width="1.2" fill="none"/></svg>
-            <span class="metric-label">PE (TTM)</span>
-            <span class="metric-value"><span data-ticker="28.6" data-ticker-suffix="x" data-decimals="1">0.0x</span></span>
+        <div class="metrics-grid" role="region" aria-label="关键指标" data-mouse-glow="true" data-mouse-glow-size="180px" data-mouse-glow-color="accent">
+          <div class="metric-card" data-reveal="fade-up" data-reveal-delay="0">
+            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[31.2,30.5,29.8,28.4,29.1,28.9,28.6],"stroke":"var(--market-down-fg)","fill":true,"width":48,"height":20}'></svg>
+            <span class="metric-label" data-tooltip="滚动市盈率，基于过去12个月每股收益" data-tooltip-pos="top">PE (TTM)</span>
+            <span class="metric-value"><span data-counter="28.6" data-counter-suffix="x" data-counter-decimals="1">28.6x</span></span>
             <span class="metric-change down">-1.2x</span>
           </div>
-          <div class="metric-card">
-            <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,10 8,12 16,11 24,14 32,13 40,15 48,14" stroke="var(--market-down-fg)" stroke-width="1.2" fill="none"/></svg>
-            <span class="metric-label">PB</span>
-            <span class="metric-value"><span data-ticker="10.3" data-ticker-suffix="x" data-decimals="1">0.0x</span></span>
+          <div class="metric-card" data-reveal="fade-up" data-reveal-delay="40">
+            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[11.2,10.8,10.5,10.1,10.6,10.4,10.3],"stroke":"var(--market-down-fg)","fill":true,"width":48,"height":20}'></svg>
+            <span class="metric-label" data-tooltip="市净率 = 总市值 / 净资产" data-tooltip-pos="top">PB</span>
+            <span class="metric-value"><span data-counter="10.3" data-counter-suffix="x" data-counter-decimals="1">10.3x</span></span>
             <span class="metric-change down">-0.4x</span>
           </div>
-          <div class="metric-card">
+          <div class="metric-card" data-reveal="fade-up" data-reveal-delay="80">
             <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[30.2,31.5,32.1,33.5,34.8,35.2,36.1],"stroke":"var(--market-up-fg)","fill":true,"width":48,"height":20}'></svg>
-            <span class="metric-label">ROE</span>
-            <span class="metric-value"><span data-ticker="36.1" data-ticker-suffix="%" data-decimals="1">0.0%</span></span>
+            <span class="metric-label" data-tooltip="净资产收益率 = 净利润 / 股东权益" data-tooltip-pos="top">ROE</span>
+            <span class="metric-value"><span data-counter="36.1" data-counter-suffix="%" data-counter-decimals="1">36.1%</span></span>
             <span class="metric-change up">+0.8%</span>
           </div>
-          <div class="metric-card">
+          <div class="metric-card" data-reveal="fade-up" data-reveal-delay="120">
             <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[11.8,12.5,13.2,14.1,15.0,15.6,16.2],"stroke":"var(--market-up-fg)","fill":true,"width":48,"height":20}'></svg>
-            <span class="metric-label">营收增速</span>
-            <span class="metric-value"><span data-ticker="16.2" data-ticker-suffix="%" data-decimals="1">0.0%</span></span>
+            <span class="metric-label" data-tooltip="营业总收入同比增速" data-tooltip-pos="top">营收增速</span>
+            <span class="metric-value"><span data-counter="16.2" data-counter-suffix="%" data-counter-decimals="1">16.2%</span></span>
             <span class="metric-change up">+2.1%</span>
           </div>
-          <div class="metric-card">
+          <div class="metric-card" data-reveal="fade-up" data-reveal-delay="160">
             <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[13.5,14.2,15.0,16.8,17.5,18.6,19.8],"stroke":"var(--market-up-fg)","fill":true,"width":48,"height":20}'></svg>
-            <span class="metric-label">净利润增速</span>
-            <span class="metric-value"><span data-ticker="19.8" data-ticker-suffix="%" data-decimals="1">0.0%</span></span>
+            <span class="metric-label" data-tooltip="归母净利润同比增速" data-tooltip-pos="top">净利润增速</span>
+            <span class="metric-value"><span data-counter="19.8" data-counter-suffix="%" data-counter-decimals="1">19.8%</span></span>
             <span class="metric-change up">+3.4%</span>
           </div>
         </div>
@@ -2250,34 +2259,34 @@
             <span class="panel-title">资金流向</span>
             <span class="panel-subtitle">截至 2026-03-31</span>
           </div>
-          <div class="flow-summary" data-mouse-glow="true" data-mouse-glow-size="150px">
-            <div class="flow-item">
-              <span class="flow-label">主力净流入</span>
-              <span class="flow-value inflow">+8.73亿</span>
+          <div class="flow-summary" data-mouse-glow="true" data-mouse-glow-size="200px" data-mouse-glow-color="up">
+            <div class="flow-item" data-reveal="fade-up" data-reveal-delay="0">
+              <span class="flow-label" data-tooltip="单笔成交额 > 100万" data-tooltip-pos="top">主力净流入</span>
+              <span class="flow-value inflow"><span data-counter="8.73" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+8.73亿</span></span>
               <div class="flow-bar">
                 <div class="flow-bar-fill inflow" style="width:36%"></div>
                 <div class="flow-bar-center"></div>
               </div>
             </div>
-            <div class="flow-item">
-              <span class="flow-label">超大单净流入</span>
-              <span class="flow-value inflow">+5.21亿</span>
+            <div class="flow-item" data-reveal="fade-up" data-reveal-delay="40">
+              <span class="flow-label" data-tooltip="单笔成交额 > 500万" data-tooltip-pos="top">超大单净流入</span>
+              <span class="flow-value inflow"><span data-counter="5.21" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+5.21亿</span></span>
               <div class="flow-bar">
                 <div class="flow-bar-fill inflow" style="width:29%"></div>
                 <div class="flow-bar-center"></div>
               </div>
             </div>
-            <div class="flow-item">
-              <span class="flow-label">中单净流入</span>
-              <span class="flow-value inflow">+3.52亿</span>
+            <div class="flow-item" data-reveal="fade-up" data-reveal-delay="80">
+              <span class="flow-label" data-tooltip="单笔成交额 4-100万" data-tooltip-pos="top">中单净流入</span>
+              <span class="flow-value inflow"><span data-counter="3.52" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+3.52亿</span></span>
               <div class="flow-bar">
                 <div class="flow-bar-fill inflow" style="width:20%"></div>
                 <div class="flow-bar-center"></div>
               </div>
             </div>
-            <div class="flow-item">
-              <span class="flow-label">小单净流出</span>
-              <span class="flow-value outflow">-1.86亿</span>
+            <div class="flow-item" data-reveal="fade-up" data-reveal-delay="120">
+              <span class="flow-label" data-tooltip="单笔成交额 < 4万" data-tooltip-pos="top">小单净流出</span>
+              <span class="flow-value outflow"><span data-counter="1.86" data-counter-prefix="-" data-counter-suffix="亿" data-counter-decimals="2">-1.86亿</span></span>
               <div class="flow-bar">
                 <div class="flow-bar-fill outflow" style="width:11%"></div>
                 <div class="flow-bar-center"></div>
@@ -2328,16 +2337,16 @@
           <div class="panel-header pad-panel-xs">
             <span class="panel-title" class="indicator-label">技术指标</span>
             <div class="indicator-strip">
-              <span class="text-brand">MA20</span>
-              <span class="ma60-color">MA60</span>
-              <span>MACD</span>
-              <span>RSI(14)</span>
-              <span>BOLL</span>
+              <span class="text-brand" data-tooltip="20日均线" data-tooltip-pos="bottom">MA20</span>
+              <span class="ma60-color" data-tooltip="60日均线" data-tooltip-pos="bottom">MA60</span>
+              <span data-tooltip="异同移动平均线" data-tooltip-pos="bottom">MACD</span>
+              <span data-tooltip="相对强弱指数(14)" data-tooltip-pos="bottom">RSI(14)</span>
+              <span data-tooltip="布林带" data-tooltip-pos="bottom">BOLL</span>
             </div>
           </div>
-          <div style="padding:var(--space-6) var(--space-12); display:flex; flex-direction:column; gap:var(--space-6)">
-            <div data-confidence="0.85" data-confidence-label="Strong Buy"></div>
-            <div data-confidence="0.62" data-confidence-label="Neutral"></div>
+          <div style="padding:var(--space-6) var(--space-12); display:flex; flex-direction:column; gap:var(--space-6)" data-reveal="fade-up" data-reveal-delay="60">
+            <div data-confidence="0.85" data-confidence-label="Strong Buy" data-tooltip="综合技术面信号: 强烈买入" data-tooltip-pos="top"></div>
+            <div data-confidence="0.62" data-confidence-label="Neutral" data-tooltip="综合技术面信号: 中性" data-tooltip-pos="top"></div>
           </div>
         </div>
       </div>
@@ -2431,7 +2440,7 @@
           </div>
           <div class="pad-panel-x">
             <table class="fin-table">
-              <thead><tr><th>指标</th><th>2025A</th><th>2024A</th><th>2023A</th><th>同比</th></tr></thead>
+              <thead><tr><th>指标</th><th data-tooltip="实际值" data-tooltip-pos="top">2025A</th><th data-tooltip="实际值" data-tooltip-pos="top">2024A</th><th data-tooltip="实际值" data-tooltip-pos="top">2023A</th><th>同比</th></tr></thead>
               <tbody>
                 <tr><td>营业总收入</td><td>1,562亿</td><td>1,344亿</td><td>1,182亿</td><td class="up">+16.2%</td></tr>
                 <tr><td>归母净利润</td><td>862亿</td><td>719亿</td><td>627亿</td><td class="up">+19.8%</td></tr>
@@ -2458,11 +2467,11 @@
           <div class="panel">
             <div class="panel-header"><span class="panel-title">杜邦分析</span></div>
             <div class="roe-breakdown">
-              <div class="roe-detail"><span class="text-tertiary">ROE</span><span class="text-primary">36.1%</span></div>
-              <div class="roe-detail"><span class="text-tertiary">= 净利率</span><span class="text-market-up">55.2%</span></div>
-              <div class="roe-detail"><span class="text-tertiary">x 资产周转率</span><span>0.58x</span></div>
-              <div class="roe-detail"><span class="text-tertiary">x 权益乘数</span><span>1.13x</span></div>
-              <div class="roe-total"><span class="text-tertiary">同行ROE中位数</span><span class="text-secondary-c">18.5%</span></div>
+              <div class="roe-detail"><span class="text-tertiary" data-tooltip="净资产收益率 = 净利率 x 资产周转率 x 权益乘数" data-tooltip-pos="top">ROE</span><span class="text-primary"><span data-counter="36.1" data-counter-suffix="%" data-counter-decimals="1">36.1%</span></span></div>
+              <div class="roe-detail"><span class="text-tertiary">= 净利率</span><span class="text-market-up"><span data-counter="55.2" data-counter-suffix="%" data-counter-decimals="1">55.2%</span></span></div>
+              <div class="roe-detail"><span class="text-tertiary">x 资产周转率</span><span><span data-counter="0.58" data-counter-suffix="x" data-counter-decimals="2">0.58x</span></span></div>
+              <div class="roe-detail"><span class="text-tertiary">x 权益乘数</span><span><span data-counter="1.13" data-counter-suffix="x" data-counter-decimals="2">1.13x</span></span></div>
+              <div class="roe-total"><span class="text-tertiary">同行ROE中位数</span><span class="text-secondary-c"><span data-counter="18.5" data-counter-suffix="%" data-counter-decimals="1">18.5%</span></span></div>
             </div>
           </div>
         </div>
@@ -2471,7 +2480,7 @@
           <div class="panel-header"><span class="panel-title">同行对比</span><span class="panel-subtitle">白酒行业</span></div>
           <div class="pad-panel-x">
             <table class="fin-table">
-              <thead><tr><th>公司</th><th>市值</th><th>PE</th><th>ROE</th><th>营收增速</th><th>净利增速</th></tr></thead>
+              <thead><tr><th>公司</th><th data-tooltip="总市值" data-tooltip-pos="top">市值</th><th data-tooltip="滚动市盈率" data-tooltip-pos="top">PE</th><th data-tooltip="净资产收益率" data-tooltip-pos="top">ROE</th><th>营收增速</th><th>净利增速</th></tr></thead>
               <tbody>
                 <tr class="row-selected"><td>贵州茅台</td><td>2.33万亿</td><td>28.6x</td><td>36.1%</td><td class="up">+16.2%</td><td class="up">+19.8%</td></tr>
                 <tr><td>五粮液</td><td>6,820亿</td><td>22.4x</td><td>25.8%</td><td class="up">+12.3%</td><td class="up">+14.5%</td></tr>
@@ -2713,13 +2722,13 @@
       <!-- ── Right: Related / Signals / Notes (shared across all tabs) ── -->
       <aside class="hub-sidebar" aria-label="标的辅助信息">
         <!-- Signals -->
-        <section class="context-section pos-relative" aria-label="相关信号" data-mouse-glow="true" data-mouse-glow-size="120px" data-reveal="fade-up" data-reveal-delay="120">
+        <section class="context-section pos-relative" aria-label="相关信号" data-mouse-glow="true" data-mouse-glow-size="160px" data-mouse-glow-color="accent" data-reveal="fade-up" data-reveal-delay="120">
           <div class="context-header">
             <span class="context-title">相关信号</span>
             <span class="context-count">3</span>
           </div>
           <div class="context-body">
-            <div class="signal-item" tabindex="0" role="button">
+            <div class="signal-item" tabindex="0" role="button" data-reveal="fade-up" data-reveal-delay="140">
               <div class="signal-header">
                 <span class="signal-dot opportunity" aria-hidden="true"></span>
                 <span class="signal-type opportunity">机会</span>
@@ -2728,7 +2737,7 @@
               <span class="signal-title">北向资金连续3日净买入</span>
               <span class="signal-desc">沪股通今日净买入2.1亿，累计3日净买入6.8亿</span>
             </div>
-            <div class="signal-item" tabindex="0" role="button">
+            <div class="signal-item" tabindex="0" role="button" data-reveal="fade-up" data-reveal-delay="170">
               <div class="signal-header">
                 <span class="signal-dot alert" aria-hidden="true"></span>
                 <span class="signal-type alert">预警</span>
@@ -2737,7 +2746,7 @@
               <span class="signal-title">PE 接近历史中位数</span>
               <span class="signal-desc">当前 PE 28.6x 接近5年历史中位数 27.8x</span>
             </div>
-            <div class="signal-item" tabindex="0" role="button">
+            <div class="signal-item" tabindex="0" role="button" data-reveal="fade-up" data-reveal-delay="200">
               <div class="signal-header">
                 <span class="signal-dot watch" aria-hidden="true"></span>
                 <span class="signal-type watch">关注</span>
@@ -2748,8 +2757,8 @@
             </div>
             <!-- Signal confidence indicator -->
             <div style="padding:var(--space-4) 0; border-top:1px solid var(--border-subtle); margin-top:var(--space-4)">
-              <div style="font-size:var(--font-size-10); color:var(--text-tertiary); margin-bottom:var(--space-4)">综合信号强度</div>
-              <div data-confidence="0.78" data-confidence-label="Bullish"></div>
+              <div style="font-size:var(--font-size-10); color:var(--text-tertiary); margin-bottom:var(--space-4)" data-tooltip="基于技术面+资金面+基本面综合计算" data-tooltip-pos="top">综合信号强度</div>
+              <div data-confidence="0.78" data-confidence-label="Bullish" data-tooltip="综合信号评级: 看多 (0.78)" data-tooltip-pos="top"></div>
             </div>
           </div>
         </section>
@@ -3186,7 +3195,7 @@
       textTertiary: tk('--text-tertiary')      || 'oklch(0.555 0.007 253)',
       marketUp:     tk('--market-up-fg')       || 'oklch(0.670 0.170 20)',
       marketDown:   tk('--market-down-fg')     || 'oklch(0.680 0.120 175)',
-      brandAccent:  tk('--brand-accent')       || 'oklch(0.700 0.165 255)',
+      brandAccent:  tk('--brand-accent')       || 'oklch(0.700 0.085 265)',
     };
 
     const chart = LightweightCharts.createChart(container, {

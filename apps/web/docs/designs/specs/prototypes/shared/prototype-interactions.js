@@ -1,6 +1,6 @@
 /* ─────────────────────────────────────────────
  * Ditto Prototype Interactions — Shared Library
- * Edition v1 Iteration v3 — Vanilla JS 交互增强
+ * Edition v1 Iteration v3→v4 — Vanilla JS 交互增强
  *
  * 声明式 data-* 属性驱动，零外部依赖
  * 渐进增强：JS 未加载时 CSS 基线 ≥9.0
@@ -176,7 +176,7 @@
     render: function (svg, cfg) {
       var value = Math.max(0, Math.min(1, cfg.value));
       var label = cfg.label || Math.round(value * 100) + '%';
-      var color = cfg.color || cssVar('--brand-accent', 'oklch(0.700 0.165 255)');
+      var color = cfg.color || cssVar('--brand-accent', 'oklch(0.700 0.085 265)');
       var track = cfg.trackColor || 'oklch(1 0 0 / 0.06)';
       var size  = cfg.size || 64;
       var sw    = cfg.strokeWidth || Math.max(4, size * 0.1);
@@ -458,8 +458,8 @@
    * ══════════════════════════════════════════════ */
   var FlowBar = {
     palette: [
-      'oklch(0.700 0.165 255)',
-      'oklch(0.700 0.165 255 / 0.55)',
+      'oklch(0.700 0.085 265)',
+      'oklch(0.700 0.085 265 / 0.55)',
       'oklch(0.55 0.15 155)',
       'oklch(0.746 0.165 50)',
       'oklch(1 0 0 / 0.08)',
@@ -493,6 +493,227 @@
     },
   };
 
+    /* ══════════════════════════════════════════════
+   * 10. AnimatedCounter — data-counter="1234.56"
+   *     Smoothly transitions between numeric values
+   *     MutationObserver watches data-counter for changes
+   * ══════════════════════════════════════════════ */
+  var AnimatedCounter = {
+    init: function () {
+      var els = document.querySelectorAll('[data-counter]');
+      if (!els.length) return;
+
+      els.forEach(function (el) {
+        var target = parseFloat(el.getAttribute('data-counter'));
+        if (isNaN(target)) return;
+        AnimatedCounter._setup(el, target);
+      });
+
+      /* Observe data-counter attribute changes for live updates */
+      if (typeof MutationObserver === 'undefined') return;
+      var mo = new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+          var el = m.target;
+          if (m.type === 'attributes' && m.attributeName === 'data-counter') {
+            var newTarget = parseFloat(el.getAttribute('data-counter'));
+            if (isNaN(newTarget)) return;
+            var state = el._dittoCounter;
+            if (state) {
+              state.from = state.current;
+              AnimatedCounter._animate(el, state, newTarget);
+            }
+          }
+        });
+      });
+
+      els.forEach(function (el) {
+        mo.observe(el, { attributes: true, attributeFilter: ['data-counter'] });
+      });
+    },
+
+    _setup: function (el, target) {
+      var decimals = parseInt(el.getAttribute('data-counter-decimals') || '2', 10);
+      var prefix   = el.getAttribute('data-counter-prefix') || '';
+      var suffix   = el.getAttribute('data-counter-suffix') || '';
+      var duration = parseInt(el.getAttribute('data-counter-duration') || '800', 10);
+
+      var state = {
+        from: 0,
+        current: 0,
+        decimals: decimals,
+        prefix: prefix,
+        suffix: suffix,
+        duration: duration,
+        raf: null,
+      };
+
+      el._dittoCounter = state;
+
+      if (reducedMotion) {
+        state.current = target;
+        el.textContent = prefix + AnimatedCounter.format(target, decimals) + suffix;
+        return;
+      }
+
+      AnimatedCounter._animate(el, state, target);
+    },
+
+    _animate: function (el, state, target) {
+      if (state.raf) cancelAnimationFrame(state.raf);
+      var startTime = performance.now();
+
+      function tick(now) {
+        var p = Math.min((now - startTime) / state.duration, 1);
+        /* ease-out cubic */
+        var eased = 1 - Math.pow(1 - p, 3);
+        var val = state.from + (target - state.from) * eased;
+        state.current = val;
+        el.textContent = state.prefix + AnimatedCounter.format(val, state.decimals) + state.suffix;
+        if (p < 1) {
+          state.raf = requestAnimationFrame(tick);
+        } else {
+          state.current = target;
+          state.raf = null;
+        }
+      }
+      state.raf = requestAnimationFrame(tick);
+    },
+
+    /* Thousand-separator formatting */
+    format: function (num, decimals) {
+      var parts = num.toFixed(decimals).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return parts.join('.');
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 11. TooltipSystem — data-tooltip="text"
+   *     Singleton tooltip with auto-positioning
+   *     Event delegation for minimal overhead
+   * ══════════════════════════════════════════════ */
+  var TooltipSystem = {
+    el: null,
+    timer: null,
+
+    init: function () {
+      if (!document.querySelector('[data-tooltip]')) return;
+
+      /* Create singleton tooltip element */
+      if (!TooltipSystem.el) {
+        TooltipSystem.el = document.createElement('div');
+        TooltipSystem.el.className = 'ditto-tooltip';
+        TooltipSystem.el.setAttribute('role', 'tooltip');
+        TooltipSystem.el.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(TooltipSystem.el);
+      }
+
+      /* Event delegation */
+      document.addEventListener('mouseover', TooltipSystem._onOver, true);
+      document.addEventListener('mouseout', TooltipSystem._onOut, true);
+      document.addEventListener('focusin', TooltipSystem._onOver, true);
+      document.addEventListener('focusout', TooltipSystem._onOut, true);
+    },
+
+    _onOver: function (e) {
+      var target = e.target.closest('[data-tooltip]');
+      if (!target) return;
+
+      var text = target.getAttribute('data-tooltip');
+      if (!text) return;
+
+      clearTimeout(TooltipSystem.timer);
+      var delay = parseInt(target.getAttribute('data-tooltip-delay') || '300', 10);
+
+      TooltipSystem.timer = setTimeout(function () {
+        TooltipSystem.show(target, text);
+      }, delay);
+    },
+
+    _onOut: function (e) {
+      var target = e.target.closest('[data-tooltip]');
+      if (!target) return;
+
+      /* Skip if focus moves to a child within the same trigger */
+      if (e.type === 'focusout') {
+        var related = e.relatedTarget;
+        if (related && target.contains(related)) return;
+      }
+      if (e.type === 'mouseout') {
+        var related = e.relatedTarget;
+        if (related && target.contains(related)) return;
+      }
+
+      clearTimeout(TooltipSystem.timer);
+      TooltipSystem.hide();
+    },
+
+    show: function (anchor, text) {
+      var el = TooltipSystem.el;
+      var pos = anchor.getAttribute('data-tooltip-pos') || 'bottom';
+      el.textContent = text;
+      el.setAttribute('aria-hidden', 'false');
+      el.style.visibility = 'hidden';
+      el.style.display = 'block';
+
+      /* Wait a frame for layout measurement */
+      requestAnimationFrame(function () {
+        var anchorRect = anchor.getBoundingClientRect();
+        var tipRect = el.getBoundingClientRect();
+        var gap = 8;
+        var x, y;
+
+        /* Position calculation */
+        if (pos === 'top') {
+          x = anchorRect.left + (anchorRect.width - tipRect.width) / 2;
+          y = anchorRect.top - tipRect.height - gap;
+        } else if (pos === 'left') {
+          x = anchorRect.left - tipRect.width - gap;
+          y = anchorRect.top + (anchorRect.height - tipRect.height) / 2;
+        } else if (pos === 'right') {
+          x = anchorRect.right + gap;
+          y = anchorRect.top + (anchorRect.height - tipRect.height) / 2;
+        } else {
+          /* bottom (default) */
+          x = anchorRect.left + (anchorRect.width - tipRect.width) / 2;
+          y = anchorRect.bottom + gap;
+        }
+
+        /* Boundary detection — flip if overflowing */
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        if (x < 4) x = 4;
+        if (x + tipRect.width > vw - 4) x = vw - tipRect.width - 4;
+        if (y < 4) {
+          /* Flip to opposite side if off-screen top */
+          if (pos === 'top') y = anchorRect.bottom + gap;
+          else y = 4;
+        }
+        if (y + tipRect.height > vh - 4) {
+          if (pos === 'bottom') y = anchorRect.top - tipRect.height - gap;
+          else y = vh - tipRect.height - 4;
+        }
+
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        el.style.visibility = '';
+        el.classList.add('ditto-tooltip--visible');
+      });
+    },
+
+    hide: function () {
+      if (!TooltipSystem.el) return;
+      TooltipSystem.el.classList.remove('ditto-tooltip--visible');
+      TooltipSystem.el.setAttribute('aria-hidden', 'true');
+      /* Delay display:none to allow fade-out */
+      setTimeout(function () {
+        if (!TooltipSystem.el.classList.contains('ditto-tooltip--visible')) {
+          TooltipSystem.el.style.display = 'none';
+        }
+      }, 150);
+    },
+  };
+
   /* ── Inject shared CSS for dynamic modules ── */
   var style = document.createElement('style');
   style.textContent = [
@@ -506,6 +727,15 @@
     '[data-tab-target] { cursor:pointer; }',
     '[data-tab-target].active { color:var(--brand-accent); }',
     '[data-tab-panel][aria-hidden="true"] { display:none; }',
+    '/* Tooltip */',
+    '.ditto-tooltip { position:fixed; z-index:9999; padding:6px 10px; border-radius:6px;',
+    '  background:var(--surface-overlay, oklch(0.260 0.008 253));',
+    '  color:var(--text-primary, oklch(0.925 0.004 253));',
+    '  font-size:12px; line-height:1.4; max-width:240px; pointer-events:none;',
+    '  border:1px solid var(--border-default, oklch(0.325 0.008 253));',
+    '  box-shadow:0 4px 12px oklch(0 0 0 / 0.3);',
+    '  opacity:0; transition:opacity 150ms cubic-bezier(0.4,0,0.2,1); display:none; }',
+    '.ditto-tooltip--visible { opacity:1; }',
   ].join('\n');
   document.head.appendChild(style);
 
@@ -520,6 +750,8 @@
     MouseGlow.init();
     ConfidenceBar.init();
     FlowBar.init();
+    AnimatedCounter.init();
+    TooltipSystem.init();
   }
 
   if (document.readyState === 'loading') {

@@ -246,6 +246,17 @@
 
     /* ── Decision routing label — inherits layout-base.css base, no override needed ── */
 
+    /* ── Pulse item hover micro-feedback ── */
+    .shell-pulse .pulse-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+      padding: var(--space-2) var(--space-4);
+      margin: calc(var(--space-2) * -1) calc(var(--space-4) * -1);
+    }
+    .shell-pulse .pulse-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
     /* ── Queue item active state ── */
     .queue-item:active {
       background: var(--interaction-hover-strong-bg);
@@ -653,11 +664,38 @@
       background: var(--interaction-hover-subtle-bg);
     }
 
+    /* ── Queue item priority bar micro-glow ── */
+    .queue-item:hover .queue-item-bar.p1 {
+      box-shadow: 0 0 6px 1px color-mix(in oklch, var(--risk-high-fg) 20%, transparent);
+    }
+    .queue-item:hover .queue-item-bar.p2 {
+      box-shadow: 0 0 6px 1px color-mix(in oklch, var(--system-degraded-fg) 20%, transparent);
+    }
+
+    /* ── Pulse metric hover lift ── */
+    .shell-sidebar .pulse-metric {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+      padding: var(--space-4);
+      margin: calc(var(--space-4) * -1);
+    }
+    .shell-sidebar .pulse-metric:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
     /* Decision banner KPI row */
     .decision-kpi-row {
       display: flex;
       gap: var(--space-8);
       margin-top: var(--space-4);
+    }
+    .decision-kpi-row .decision-judgment-metric {
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .decision-kpi-row .decision-judgment-metric:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
 
     /* ══════════════════════════════════════════════
@@ -733,6 +771,22 @@
     }
     .shell-home .research-item:hover {
       background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Regime tag hover subtle glow ── */
+    .regime-tag {
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .regime-tag:hover {
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--text-secondary) 12%, transparent);
+    }
+
+    /* ── Alert dot critical pulse speed variation ── */
+    .alert-row:nth-child(1) .alert-dot.critical {
+      animation-duration: 1.8s;
+    }
+    .alert-row:nth-child(2) .alert-dot.critical {
+      animation-duration: 2.2s;
     }
 
     /* ── Decision banner KPI enhanced depth ── */
@@ -857,26 +911,26 @@
       <!-- 2. PnL -->
       <div class="pulse-item">
         <span class="pulse-label">盈亏</span>
-        <span class="pulse-value positive">+<span data-ticker="0.34" data-decimals="2">0.34</span>%</span>
+        <span class="pulse-value positive" data-tooltip="今日组合收益率">+<span data-counter="0.34" data-counter-decimals="2">0.34</span>%</span>
       </div>
       <div class="pulse-separator"></div>
       <!-- 3. Risk -->
       <div class="pulse-item">
         <span class="pulse-label">风险</span>
-        <span class="pulse-value risk-medium">中等</span>
+        <span class="pulse-value risk-medium" data-tooltip="VaR 95% 分位接近预警线">中等</span>
       </div>
       <div class="pulse-separator"></div>
       <!-- 4. Regime -->
       <div class="pulse-item">
-        <span class="regime-tag moderate">温和风险偏好</span>
+        <span class="regime-tag moderate" data-tooltip="当前市场环境：波动回落+北向转暖">温和风险偏好</span>
       </div>
       <div class="pulse-separator"></div>
       <!-- 5. Pending + Jobs -->
       <div class="pulse-item">
         <span class="pulse-label">待处理</span>
-        <span class="pulse-value">2</span>
+        <span class="pulse-value" data-tooltip="2 项待处理，含 1 项 P1">2</span>
         <span class="pulse-label pulse-label-spacer">运行中</span>
-        <span class="pulse-value">3</span>
+        <span class="pulse-value" data-tooltip="3 个后台任务运行中">3</span>
       </div>
     </div>
 
@@ -902,24 +956,34 @@
                   <polygon points="2,14 14,12 26,10 38,8 50,6 62,4 62,20 2,20" fill="url(#pnl-grad)"/>
                 </svg>
               </span>
-              <span class="metric-sub">+0.34% · 总权益 ¥<span data-ticker="25432180" data-decimals="0">25,432,180</span> · <span class="indicator-up">较昨日 +¥21,400</span></span>
+              <span class="metric-sub">+0.34% · 总权益 ¥<span data-counter="25432180" data-counter-decimals="0">25,432,180</span> · <span class="indicator-up" data-tooltip="较昨日 +¥21,400 (+0.08%)">较昨日 +¥21,400</span></span>
             </div>
             <!-- Middle: Market context + judgment (~33%) -->
             <div class="decision-judgment">
-              <label for="overlay-ai-advice" class="cursor-pointer" title="查看 AI 操作建议">
+              <label for="overlay-ai-advice" class="cursor-pointer" title="查看 AI 操作建议" data-tooltip="点击查看 AI 详细操作建议" data-tooltip-delay="500">
               <div class="decision-judgment-text">波动回落，北向转暖，但局部拥挤。</div>
               </label>
+              <div class="decision-kpi-row" data-reveal="fade-up" data-reveal-delay="100">
+                <div class="decision-judgment-metric">
+                  <span class="status-label" data-tooltip="账户杠杆率">杠杆率</span>
+                  <span class="status-value" data-tooltip="处于安全区间">1.2x</span>
+                </div>
+                <div class="decision-judgment-metric">
+                  <span class="status-label" data-tooltip="组合最大回撤">回撤</span>
+                  <span class="status-value warning" data-tooltip="接近预警线 -5%">-3.8%</span>
+                </div>
+              </div>
               <div class="decision-judgment-metrics">
                 <div class="decision-judgment-metric">
-                  <span class="status-label">IVIX</span>
+                  <span class="status-label" data-tooltip="隐含波动率指数">IVIX</span>
                   <span class="status-value"><span data-ticker="18.52" data-decimals="2">18.52</span>
-                    <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"stroke":"oklch(0.746 0.165 50)","width":36,"height":14}' aria-label="IVIX 走势"></svg>
+                    <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"stroke":"oklch(0.746 0.165 50)","fill":true,"width":36,"height":14}' aria-label="IVIX 走势"></svg>
                   </span>
                 </div>
                 <div class="decision-judgment-metric">
-                  <span class="status-label">北向资金</span>
+                  <span class="status-label" data-tooltip="北向资金净流入">北向资金</span>
                   <span class="status-value up">+<span data-ticker="12.4" data-decimals="1">12.4</span> 亿
-                    <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"stroke":"oklch(0.55 0.15 155)","width":36,"height":14}' aria-label="北向资金走势"></svg>
+                    <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"stroke":"oklch(0.55 0.15 155)","fill":true,"width":36,"height":14}' aria-label="北向资金走势"></svg>
                   </span>
                 </div>
               </div>
@@ -952,12 +1016,12 @@
           </div>
           <div class="panel-body">
             <!-- P1 items first -->
-            <div class="queue-item">
+            <div class="queue-item" data-reveal="fade-up" data-reveal-delay="50">
               <div class="queue-item-bar p1"></div>
               <div class="queue-item-body">
                 <div class="queue-item-header">
                   <span class="queue-item-title">贵州茅台（600519）出现卖出信号</span>
-                  <span class="queue-item-tag trade">交易</span><span class="queue-item-tag priority">P1</span>
+                  <span class="queue-item-tag trade" data-tooltip="交易类信号">交易</span><span class="queue-item-tag priority" data-tooltip="最高优先级，需立即处理">P1</span>
                 </div>
                 <div class="queue-item-detail">
                   <span class="queue-item-reason">RSI 背离叠加放量，Alpha v3 置信度 87%，建议查看卖出上下文。</span>
@@ -970,12 +1034,12 @@
               </div>
             </div>
 
-            <div class="queue-item">
+            <div class="queue-item" data-reveal="fade-up" data-reveal-delay="100">
               <div class="queue-item-bar p1"></div>
               <div class="queue-item-body">
                 <div class="queue-item-header">
                   <span class="queue-item-title">行业集中度超限 — 科技板块 > 35%</span>
-                  <span class="queue-item-tag risk">风控</span><span class="queue-item-tag priority">P1</span>
+                  <span class="queue-item-tag risk" data-tooltip="风险控制警告">风控</span><span class="queue-item-tag priority" data-tooltip="最高优先级，需立即处理">P1</span>
                 </div>
                 <div class="queue-item-detail">
                   <span class="queue-item-reason">当前占比 37.2%，超过规则上限，需评估是否降集中度。</span>
@@ -988,12 +1052,12 @@
             </div>
 
             <!-- P2 item -->
-            <div class="queue-item">
+            <div class="queue-item" data-reveal="fade-up" data-reveal-delay="150">
               <div class="queue-item-bar p2"></div>
               <div class="queue-item-body">
                 <div class="queue-item-header">
                   <span class="queue-item-title">价值因子 2026 Q1 回测完成</span>
-                  <span class="queue-item-tag research">研究</span><span class="queue-item-tag priority">P2</span>
+                  <span class="queue-item-tag research" data-tooltip="研究任务完成">研究</span><span class="queue-item-tag priority" data-tooltip="中等优先级，建议今日处理">P2</span>
                 </div>
                 <div class="queue-item-detail">
                   <span class="queue-item-reason">Sharpe 1.42，最大回撤 -8.3%，建议审阅后决定是否部署。</span>
@@ -1006,12 +1070,12 @@
             </div>
 
             <!-- P3 items -->
-            <div class="queue-item">
+            <div class="queue-item" data-reveal="fade-up" data-reveal-delay="200">
               <div class="queue-item-bar p3"></div>
               <div class="queue-item-body">
                 <div class="queue-item-header">
                   <span class="queue-item-title">Tushare API 频率接近上限</span>
-                  <span class="queue-item-tag platform">平台</span>
+                  <span class="queue-item-tag platform" data-tooltip="平台系统通知">平台</span>
                 </div>
                 <div class="queue-item-detail">
                   <span class="queue-item-reason">今日已用 4,820 / 5,000 次，3 小时后重置。</span>
@@ -1023,12 +1087,12 @@
               </div>
             </div>
 
-            <div class="queue-item">
+            <div class="queue-item" data-reveal="fade-up" data-reveal-delay="250">
               <div class="queue-item-bar p3"></div>
               <div class="queue-item-body">
                 <div class="queue-item-header">
                   <span class="queue-item-title">沪深300 1 分钟 K线缺失</span>
-                  <span class="queue-item-tag data">数据</span>
+                  <span class="queue-item-tag data" data-tooltip="数据管道状态">数据</span>
                 </div>
                 <div class="queue-item-detail">
                   <span class="queue-item-reason">14:32–14:33 数据缺失，正在自动补全，建议关注修复结果。</span>
@@ -1162,25 +1226,25 @@
           </div>
           <div class="context-section-body">
             <div class="pulse-metric">
-              <span class="pulse-metric-label">沪深300</span>
+              <span class="pulse-metric-label" data-tooltip="沪深300 指数实时行情">沪深300</span>
               <span class="pulse-metric-value up"><span data-ticker="3432" data-decimals="0">3,432</span> · +0.82%
-                <svg data-sparkline='{"data":[3380,3395,3388,3402,3410,3420,3432],"stroke":"oklch(0.55 0.15 155)","width":48,"height":16}' aria-label="沪深300走势"></svg>
+                <svg data-sparkline='{"data":[3380,3395,3388,3402,3410,3420,3432],"stroke":"oklch(0.55 0.15 155)","fill":true,"width":48,"height":16}' aria-label="沪深300走势"></svg>
               </span>
             </div>
             <div class="pulse-metric">
-              <span class="pulse-metric-label">波动率</span>
+              <span class="pulse-metric-label" data-tooltip="IVIX 隐含波动率指数">波动率</span>
               <span class="pulse-metric-value">IVIX <span data-ticker="18.52" data-decimals="2">18.52</span> · <span class="indicator-down">-3.1%</span>
-                <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"stroke":"oklch(0.6317 0.1567 22.64)","width":48,"height":16}' aria-label="IVIX 走势"></svg>
+                <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"stroke":"oklch(0.6317 0.1567 22.64)","fill":true,"width":48,"height":16}' aria-label="IVIX 走势"></svg>
               </span>
             </div>
             <div class="pulse-metric">
-              <span class="pulse-metric-label">涨跌比</span>
+              <span class="pulse-metric-label" data-tooltip="上涨/下跌股票数量比">涨跌比</span>
               <span class="pulse-metric-value up">2.1:1 · <span class="indicator-up">偏多</span></span>
             </div>
             <div class="pulse-metric">
-              <span class="pulse-metric-label">北向资金</span>
+              <span class="pulse-metric-label" data-tooltip="沪股通+深股通 北向资金流入">北向资金</span>
               <span class="pulse-metric-value up">+<span data-ticker="12.4" data-decimals="1">12.4</span> 亿
-                <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"stroke":"oklch(0.55 0.15 155)","width":48,"height":16}' aria-label="北向资金走势"></svg>
+                <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"stroke":"oklch(0.55 0.15 155)","fill":true,"width":48,"height":16}' aria-label="北向资金走势"></svg>
               </span>
             </div>
           </div>
@@ -1195,22 +1259,22 @@
           <div class="context-section-body">
             <div class="alert-row">
               <span class="alert-dot critical"></span>
-              <span class="alert-title">组合 VaR 突破 95% 分位</span>
+              <span class="alert-title" data-tooltip="VaR 已超过 95% 历史分位，建议关注仓位风险">组合 VaR 突破 95% 分位</span>
               <span class="alert-time">8分钟前</span>
             </div>
             <div class="alert-row">
               <span class="alert-dot critical"></span>
-              <span class="alert-title">券商连接中断 — 中信证券</span>
+              <span class="alert-title" data-tooltip="中信证券 API 连接中断，交易执行可能受影响">券商连接中断 — 中信证券</span>
               <span class="alert-time">15分钟前</span>
             </div>
             <div class="alert-row">
               <span class="alert-dot warning"></span>
-              <span class="alert-title">模型漂移 — 情绪 Alpha v2</span>
+              <span class="alert-title" data-tooltip="近 5 日 IC 下降，建议检查模型参数">模型漂移 — 情绪 Alpha v2</span>
               <span class="alert-time">1小时前</span>
             </div>
             <div class="alert-row">
               <span class="alert-dot info"></span>
-              <span class="alert-title">财报数据延迟</span>
+              <span class="alert-title" data-tooltip="上交所接口响应超时，建议切换备用源">财报数据延迟</span>
               <span class="alert-time">2小时前</span>
             </div>
           </div>
@@ -1240,27 +1304,27 @@
             </div>
             <div class="health-item">
               <span class="health-dot healthy"></span>
-              <span class="health-label">行情数据</span>
+              <span class="health-label" data-tooltip="实时行情数据源">行情数据</span>
               <span class="health-status ok">正常</span>
             </div>
             <div class="health-item">
               <span class="health-dot healthy"></span>
-              <span class="health-label">期权链</span>
+              <span class="health-label" data-tooltip="期权链数据源">期权链</span>
               <span class="health-status ok">正常</span>
             </div>
             <div class="health-item">
               <span class="health-dot degraded"></span>
-              <span class="health-label">财报数据</span>
+              <span class="health-label" data-tooltip="财报数据源 — 当前延迟">财报数据</span>
               <span class="health-status warning">延迟</span>
             </div>
             <div class="health-item">
               <span class="health-dot healthy"></span>
-              <span class="health-label">新闻资讯</span>
+              <span class="health-label" data-tooltip="新闻资讯数据源">新闻资讯</span>
               <span class="health-status ok">正常</span>
             </div>
             <div class="health-item">
               <span class="health-dot degraded"></span>
-              <span class="health-label">另类数据</span>
+              <span class="health-label" data-tooltip="另类数据源 — 数据陈旧 3 天">另类数据</span>
               <span class="health-status warning">陈旧（3天）</span>
             </div>
           </div>

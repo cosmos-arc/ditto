@@ -1598,6 +1598,219 @@
       flex: 1;
       min-width: 0;
     }
+
+    /* ══════════════════════════════════════════════
+     * Deep Polish — Report Cards & Interactive Enhancement
+     * ══════════════════════════════════════════════ */
+
+    /* ── Report card: class-based layout (replaces inline styles) ── */
+    .report-card {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-8);
+      padding: var(--space-12);
+      margin-bottom: var(--space-8);
+      transition: border-color var(--motion-duration-normal) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard),
+                  transform var(--motion-duration-normal) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .report-card:last-child {
+      margin-bottom: 0;
+    }
+    .report-card:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 25%, var(--border-subtle));
+      box-shadow: 0 2px 12px color-mix(in oklch, var(--text-primary) 5%, transparent);
+      transform: translateY(-1px);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .report-card:hover { transform: none; }
+    }
+
+    .report-card-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      margin-bottom: var(--space-6);
+    }
+    .report-card-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .report-card:hover .report-card-title {
+      color: var(--brand-accent);
+    }
+    .report-card-date {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    .report-card-body {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .report-card-metrics {
+      display: flex;
+      gap: var(--space-16);
+      margin-top: var(--space-8);
+      align-items: center;
+    }
+    .report-card-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .report-card-metric-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .report-card-metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+    .report-card-tags {
+      display: flex;
+      gap: var(--space-8);
+      margin-top: var(--space-8);
+    }
+    .report-tag {
+      font-size: var(--font-size-10);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+    }
+    .report-tag.accent {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+    .report-tag.ok {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+    }
+    .report-tag.warning {
+      color: var(--system-degraded-fg);
+      background: var(--execution-pending-bg);
+    }
+    .report-tag.danger {
+      color: var(--system-down-fg);
+      background: color-mix(in oklch, var(--system-down-fg) 15%, transparent);
+    }
+    .report-tag.muted {
+      color: var(--text-tertiary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .report-card-sparkline {
+      margin-left: auto;
+      opacity: 0.6;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .report-card:hover .report-card-sparkline {
+      opacity: 1;
+    }
+
+    /* ── Analysis metric with tooltip: enhanced hover ── */
+    .analysis-metric[data-tooltip] {
+      cursor: help;
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .analysis-metric[data-tooltip]:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Analysis band section reveal ── */
+    .analysis-metrics {
+      transition: opacity 0.3s var(--motion-easing-standard);
+    }
+    .analysis-band-body[data-panel] .analysis-metrics {
+      animation: metrics-fade-in 0.4s var(--motion-easing-standard);
+    }
+    @keyframes metrics-fade-in {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .analysis-band-body[data-panel] .analysis-metrics { animation: none; }
+    }
+
+    /* ── Backtest card: class-based (replaces inline styles in backtest tab) ── */
+    .backtest-card {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-8);
+      padding: var(--space-12);
+      margin-bottom: var(--space-8);
+      transition: border-color var(--motion-duration-normal) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard),
+                  transform var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .backtest-card:last-child {
+      margin-bottom: 0;
+    }
+    .backtest-card:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 25%, var(--border-subtle));
+      box-shadow: 0 2px 12px color-mix(in oklch, var(--text-primary) 5%, transparent);
+      transform: translateY(-1px);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .backtest-card:hover { transform: none; }
+    }
+    .backtest-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-6);
+    }
+    .backtest-card-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .backtest-card:hover .backtest-card-title {
+      color: var(--brand-accent);
+    }
+    .backtest-card-metrics {
+      display: flex;
+      gap: var(--space-16);
+      align-items: center;
+    }
+    .backtest-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .backtest-metric-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .backtest-metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14);
+      font-variant-numeric: tabular-nums;
+    }
+    .backtest-sparkline {
+      margin-left: auto;
+      opacity: 0.6;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .backtest-card:hover .backtest-sparkline {
+      opacity: 1;
+    }
+
+    /* ── Backtest tab metrics row ── */
+    .backtest-metrics-row {
+      display: flex;
+      gap: var(--space-16);
+      margin-bottom: var(--space-12);
+    }
   </style>
 </head>
 <body>
@@ -1698,30 +1911,30 @@
     <!-- ═══ Scope Strip (Research context) ═══ -->
     <div class="scope-strip">
       <!-- Health group -->
-      <div class="pulse-item ic-pulse">
+      <div class="pulse-item ic-pulse" data-tooltip="当前活跃因子总数 · 近期呈上升趋势">
         <span class="pulse-label">活跃因子</span>
         <svg class="ic-sparkline" width="48" height="16" viewBox="0 0 48 16" fill="none" preserveAspectRatio="none">
           <polyline points="0,12 6,10 12,8 18,11 24,6 30,4 36,7 42,5 48,3" stroke="var(--brand-accent)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
           <polyline points="0,12 6,10 12,8 18,11 24,6 30,4 36,7 42,5 48,3" stroke="var(--brand-accent)" stroke-width="0" fill="url(#ic-spark-fill)" opacity="0.15"/>
         </svg>
-        <span class="pulse-value ok">12</span>
+        <span class="pulse-value ok" data-counter="12" data-counter-decimals="0">12</span>
       </div>
       <div class="pulse-separator"></div>
-      <div class="pulse-item">
+      <div class="pulse-item" data-tooltip="IC 持续下滑的因子数 · 建议关注">
         <span class="pulse-label">退化</span>
-        <span class="pulse-value warning">3</span>
+        <span class="pulse-value warning" data-counter="3" data-counter-decimals="0">3</span>
       </div>
       <div class="pulse-separator"></div>
-      <div class="pulse-item">
+      <div class="pulse-item" data-tooltip="数据异常或因子失效 · 建议暂停使用">
         <span class="pulse-label">异常</span>
-        <span class="pulse-value critical">1</span>
+        <span class="pulse-value critical" data-counter="1" data-counter-decimals="0">1</span>
       </div>
       <!-- Group gap separator -->
       <div class="pulse-separator group-gap"></div>
       <!-- Context group -->
-      <div class="pulse-item">
+      <div class="pulse-item" data-tooltip="正在运行和排队的回测/验证任务数">
         <span class="pulse-label">运行队列</span>
-        <span class="pulse-value brand">5</span>
+        <span class="pulse-value brand" data-counter="5" data-counter-decimals="0">5</span>
       </div>
       <div class="pulse-separator"></div>
       <div class="pulse-item">
@@ -1736,7 +1949,7 @@
       <!-- Group gap separator -->
       <div class="pulse-separator group-gap"></div>
       <!-- Data source health -->
-      <div class="pulse-item">
+      <div class="pulse-item" data-tooltip="因子计算引擎健康状态">
         <span class="pulse-label">Factor Engine</span>
         <span class="health-indicator">
           <span class="health-bar">
@@ -1750,7 +1963,7 @@
         </span>
       </div>
       <div class="pulse-separator"></div>
-      <div class="pulse-item">
+      <div class="pulse-item" data-tooltip="数据源连接状态 · 当前有波动">
         <span class="pulse-label">Data Feed</span>
         <span class="health-indicator">
           <span class="health-bar">
@@ -1775,59 +1988,141 @@
     <!-- Tab Panel: Reports -->
     <div data-tab-panel="reports" aria-hidden="true" style="display:none;">
       <div style="padding:var(--space-12);overflow:auto;">
-        <div data-reveal="fade-up" data-reveal-delay="0" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-12);margin-bottom:var(--space-8);">
-          <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">
-            <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">A股动量因子深度报告 2026Q1</span>
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto;">2026-04-01</span>
+        <!-- Report 1: A股动量因子深度报告 -->
+        <div class="report-card" data-reveal="fade-up" data-reveal-delay="0">
+          <div class="report-card-header">
+            <span class="report-card-title">A股动量因子深度报告 2026Q1</span>
+            <span class="report-card-date">2026-04-01</span>
           </div>
-          <div style="font-size:var(--font-size-12);color:var(--text-secondary);line-height:1.6;">动量因子在沪深300中表现持续优异，IC均值0.041，IR 0.82。建议维持当前权重，关注Q2行业轮动对动量衰减的影响。</div>
-          <div style="display:flex;gap:var(--space-8);margin-top:var(--space-8);">
-            <span style="font-size:var(--font-size-10);color:var(--brand-accent);background:var(--brand-accent-subtle);padding:1px var(--space-6);border-radius:var(--radius-2);">动量</span>
-            <span style="font-size:var(--font-size-10);color:var(--system-healthy-fg);background:var(--system-healthy-bg);padding:1px var(--space-6);border-radius:var(--radius-2);">沪深300</span>
+          <div class="report-card-body">动量因子在沪深300中表现持续优异，IC均值0.041，IR 0.82。建议维持当前权重，关注Q2行业轮动对动量衰减的影响。</div>
+          <div class="report-card-metrics">
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="Information Coefficient — 因子预测能力">IC</span>
+              <span class="report-card-metric-value" style="color:var(--brand-accent);" data-counter="0.041" data-counter-decimals="3">0.041</span>
+            </div>
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="Information Ratio — IC 稳定性">IR</span>
+              <span class="report-card-metric-value" style="color:var(--system-healthy-fg);" data-counter="0.82" data-counter-decimals="2">0.82</span>
+            </div>
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="风险调整后收益">Sharpe</span>
+              <span class="report-card-metric-value" data-counter="1.42" data-counter-decimals="2">1.42</span>
+            </div>
+            <div class="report-card-sparkline">
+              <svg data-sparkline='{"data":[0.032,0.035,0.038,0.036,0.039,0.041,0.040,0.041],"stroke":"oklch(0.7 0.085 265)","width":80,"height":24,"fill":true}' aria-label="IC趋势"></svg>
+            </div>
           </div>
-        </div>
-        <div data-reveal="fade-up" data-reveal-delay="80" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-12);margin-bottom:var(--space-8);">
-          <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">
-            <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">北向资金持仓变化因子研究</span>
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto;">2026-03-28</span>
-          </div>
-          <div style="font-size:var(--font-size-12);color:var(--text-secondary);line-height:1.6;">新因子"北向持仓变化率"IC达0.055，IR 0.92，但覆盖率仅76%。建议观察3个月滚动验证结果后再纳入核心因子池。</div>
-          <div style="display:flex;gap:var(--space-8);margin-top:var(--space-8);">
-            <span style="font-size:var(--font-size-10);color:var(--system-healthy-fg);background:var(--system-healthy-bg);padding:1px var(--space-6);border-radius:var(--radius-2);">Flow</span>
-            <span style="font-size:var(--font-size-10);color:var(--brand-accent);background:var(--brand-accent-subtle);padding:1px var(--space-6);border-radius:var(--radius-2);">新因子</span>
-          </div>
-        </div>
-        <div data-reveal="fade-up" data-reveal-delay="160" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-12);margin-bottom:var(--space-8);">
-          <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">
-            <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">情绪因子退化预警分析</span>
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto;">2026-03-25</span>
-          </div>
-          <div style="font-size:var(--font-size-12);color:var(--text-secondary);line-height:1.6;">情绪Alpha近5日IC从0.041降至0.028，IR同步下滑。初步判断与近期市场低波动环境相关，建议降低权重并持续监控。</div>
-          <div style="display:flex;gap:var(--space-8);margin-top:var(--space-8);">
-            <span style="font-size:var(--font-size-10);color:var(--system-degraded-fg);background:var(--execution-pending-bg);padding:1px var(--space-6);border-radius:var(--radius-2);">退化</span>
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);background:var(--interaction-hover-subtle-bg);padding:1px var(--space-6);border-radius:var(--radius-2);">情绪</span>
+          <div class="report-card-tags">
+            <span class="report-tag accent">动量</span>
+            <span class="report-tag ok">沪深300</span>
           </div>
         </div>
-        <div data-reveal="fade-up" data-reveal-delay="240" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-12);margin-bottom:var(--space-8);">
-          <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">
-            <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">价值因子组合优化报告</span>
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto;">2026-03-20</span>
+        <!-- Report 2: 北向资金持仓变化因子研究 -->
+        <div class="report-card" data-reveal="fade-up" data-reveal-delay="80">
+          <div class="report-card-header">
+            <span class="report-card-title">北向资金持仓变化因子研究</span>
+            <span class="report-card-date">2026-03-28</span>
           </div>
-          <div style="font-size:var(--font-size-12);color:var(--text-secondary);line-height:1.6;">价值PE因子在中证500表现稳定，IC 0.029。通过加入质量ROE辅助因子，组合Sharpe从0.92提升至1.12。</div>
-          <div style="display:flex;gap:var(--space-8);margin-top:var(--space-8);">
-            <span style="font-size:var(--font-size-10);color:var(--brand-accent);background:var(--brand-accent-subtle);padding:1px var(--space-6);border-radius:var(--radius-2);">价值</span>
-            <span style="font-size:var(--font-size-10);color:var(--system-healthy-fg);background:var(--system-healthy-bg);padding:1px var(--space-6);border-radius:var(--radius-2);">中证500</span>
+          <div class="report-card-body">新因子"北向持仓变化率"IC达0.055，IR 0.92，但覆盖率仅76%。建议观察3个月滚动验证结果后再纳入核心因子池。</div>
+          <div class="report-card-metrics">
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="Information Coefficient — 因子预测能力">IC</span>
+              <span class="report-card-metric-value" style="color:var(--brand-accent);" data-counter="0.055" data-counter-decimals="3">0.055</span>
+            </div>
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="Information Ratio — IC 稳定性">IR</span>
+              <span class="report-card-metric-value" style="color:var(--system-healthy-fg);" data-counter="0.92" data-counter-decimals="2">0.92</span>
+            </div>
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="因子在 Universe 中的覆盖率">覆盖率</span>
+              <span class="report-card-metric-value" style="color:var(--system-degraded-fg);" data-counter="76" data-counter-decimals="0" data-counter-suffix="%">76%</span>
+            </div>
+            <div class="report-card-sparkline">
+              <svg data-sparkline='{"data":[0.02,0.03,0.035,0.04,0.045,0.048,0.052,0.055],"stroke":"oklch(0.7 0.085 265)","width":80,"height":24,"fill":true}' aria-label="IC趋势"></svg>
+            </div>
+          </div>
+          <div class="report-card-tags">
+            <span class="report-tag ok">Flow</span>
+            <span class="report-tag accent">新因子</span>
           </div>
         </div>
-        <div data-reveal="fade-up" data-reveal-delay="320" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-12);">
-          <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-6);">
-            <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">波动率偏斜因子异常诊断</span>
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto;">2026-03-15</span>
+        <!-- Report 3: 情绪因子退化预警 -->
+        <div class="report-card" data-reveal="fade-up" data-reveal-delay="160">
+          <div class="report-card-header">
+            <span class="report-card-title">情绪因子退化预警分析</span>
+            <span class="report-card-date">2026-03-25</span>
           </div>
-          <div style="font-size:var(--font-size-12);color:var(--text-secondary);line-height:1.6;">波动率偏斜因子近期IC降至0.021，Sharpe 0.68，标记为异常状态。疑与期权市场数据源延迟有关，建议暂停使用直至数据源恢复。</div>
-          <div style="display:flex;gap:var(--space-8);margin-top:var(--space-8);">
-            <span style="font-size:var(--font-size-10);color:var(--system-down-fg);background:color-mix(in oklch, var(--system-down-fg) 15%, transparent);padding:1px var(--space-6);border-radius:var(--radius-2);">异常</span>
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);background:var(--interaction-hover-subtle-bg);padding:1px var(--space-6);border-radius:var(--radius-2);">Risk</span>
+          <div class="report-card-body">情绪Alpha近5日IC从0.041降至0.028，IR同步下滑。初步判断与近期市场低波动环境相关，建议降低权重并持续监控。</div>
+          <div class="report-card-metrics">
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="当前 IC — 因子预测能力">IC</span>
+              <span class="report-card-metric-value" style="color:var(--system-degraded-fg);" data-counter="0.028" data-counter-decimals="3">0.028</span>
+            </div>
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="IC 衰减幅度">衰减</span>
+              <span class="report-card-metric-value" style="color:var(--system-down-fg);" data-counter="31.7" data-counter-decimals="1" data-counter-suffix="%">31.7%</span>
+            </div>
+            <div class="report-card-sparkline">
+              <svg data-sparkline='{"data":[0.041,0.039,0.037,0.035,0.033,0.031,0.030,0.028],"stroke":"oklch(0.746 0.165 50)","width":80,"height":24,"fill":true}' aria-label="IC衰减趋势"></svg>
+            </div>
+          </div>
+          <div class="report-card-tags">
+            <span class="report-tag warning">退化</span>
+            <span class="report-tag muted">情绪</span>
+          </div>
+        </div>
+        <!-- Report 4: 价值因子组合优化 -->
+        <div class="report-card" data-reveal="fade-up" data-reveal-delay="240">
+          <div class="report-card-header">
+            <span class="report-card-title">价值因子组合优化报告</span>
+            <span class="report-card-date">2026-03-20</span>
+          </div>
+          <div class="report-card-body">价值PE因子在中证500表现稳定，IC 0.029。通过加入质量ROE辅助因子，组合Sharpe从0.92提升至1.12。</div>
+          <div class="report-card-metrics">
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="优化前 Sharpe Ratio">原始</span>
+              <span class="report-card-metric-value" data-counter="0.92" data-counter-decimals="2">0.92</span>
+            </div>
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="优化后 Sharpe Ratio">优化后</span>
+              <span class="report-card-metric-value" style="color:var(--brand-accent);" data-counter="1.12" data-counter-decimals="2">1.12</span>
+            </div>
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="Sharpe 提升幅度">提升</span>
+              <span class="report-card-metric-value" style="color:var(--system-healthy-fg);" data-counter="21.7" data-counter-decimals="1" data-counter-suffix="%">+21.7%</span>
+            </div>
+            <div class="report-card-sparkline">
+              <svg data-sparkline='{"data":[0.85,0.88,0.92,0.95,0.98,1.02,1.08,1.12],"stroke":"oklch(0.55 0.15 155)","width":80,"height":24,"fill":true}' aria-label="Sharpe提升趋势"></svg>
+            </div>
+          </div>
+          <div class="report-card-tags">
+            <span class="report-tag accent">价值</span>
+            <span class="report-tag ok">中证500</span>
+          </div>
+        </div>
+        <!-- Report 5: 波动率偏斜因子异常诊断 -->
+        <div class="report-card" data-reveal="fade-up" data-reveal-delay="320">
+          <div class="report-card-header">
+            <span class="report-card-title">波动率偏斜因子异常诊断</span>
+            <span class="report-card-date">2026-03-15</span>
+          </div>
+          <div class="report-card-body">波动率偏斜因子近期IC降至0.021，Sharpe 0.68，标记为异常状态。疑与期权市场数据源延迟有关，建议暂停使用直至数据源恢复。</div>
+          <div class="report-card-metrics">
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="当前 IC — 因子预测能力">IC</span>
+              <span class="report-card-metric-value" style="color:var(--system-down-fg);" data-counter="0.021" data-counter-decimals="3">0.021</span>
+            </div>
+            <div class="report-card-metric">
+              <span class="report-card-metric-label" data-tooltip="风险调整后收益">Sharpe</span>
+              <span class="report-card-metric-value" style="color:var(--system-down-fg);" data-counter="0.68" data-counter-decimals="2">0.68</span>
+            </div>
+            <div class="report-card-sparkline">
+              <svg data-sparkline='{"data":[0.038,0.035,0.032,0.029,0.026,0.024,0.022,0.021],"stroke":"oklch(0.6317 0.1567 22.64)","width":80,"height":24,"fill":true}' aria-label="IC下降趋势"></svg>
+            </div>
+          </div>
+          <div class="report-card-tags">
+            <span class="report-tag danger">异常</span>
+            <span class="report-tag muted">Risk</span>
           </div>
         </div>
       </div>
@@ -1871,12 +2166,12 @@
               <tr>
                 <th></th>
                 <th>因子名</th>
-                <th class="right th-sortable th-sorted">IC</th>
-                <th class="right">IR</th>
-                <th class="right">Sharpe</th>
+                <th class="right th-sortable th-sorted" data-tooltip="Information Coefficient — 因子预测能力" data-tooltip-pos="bottom">IC</th>
+                <th class="right" data-tooltip="Information Ratio — IC 的均值/标准差" data-tooltip-pos="bottom">IR</th>
+                <th class="right" data-tooltip="Sharpe Ratio — 风险调整后收益" data-tooltip-pos="bottom">Sharpe</th>
                 <th class="right">换手率</th>
-                <th class="right">衰减</th>
-                <th class="right">覆盖率</th>
+                <th class="right" data-tooltip="IC 随时间的衰减速率" data-tooltip-pos="bottom">衰减</th>
+                <th class="right" data-tooltip="因子在 Universe 中的覆盖率" data-tooltip-pos="bottom">覆盖率</th>
                 <th>Universe</th>
                 <th>状态</th>
               </tr>
@@ -1893,7 +2188,7 @@
                 <td class="right"><span class="cell-numeric">3.2%</span></td>
                 <td class="right"><span class="cell-numeric">98%</span></td>
                 <td><span class="cell-universe">沪深300</span></td>
-                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span> <svg data-sparkline='{"data":[1.2,1.5,1.3,1.8,1.6,2.0,1.9,2.3],"stroke":"oklch(0.7 0.085 265)","width":64,"height":24}' aria-label="动量12M因子表现"></svg></td>
+                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span> <svg data-sparkline='{"data":[1.2,1.5,1.3,1.8,1.6,2.0,1.9,2.3],"stroke":"oklch(0.7 0.085 265)","width":64,"height":24,"fill":true}' aria-label="动量12M因子表现"></svg></td>
               </tr>
               <!-- 价值PE -->
               <tr class="row">
@@ -1906,7 +2201,7 @@
                 <td class="right"><span class="cell-numeric">1.8%</span></td>
                 <td class="right"><span class="cell-numeric">95%</span></td>
                 <td><span class="cell-universe">沪深300</span></td>
-                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span> <svg data-sparkline='{"data":[1.1,1.0,1.2,1.1,1.3,1.2,1.4,1.3],"stroke":"oklch(0.7 0.085 265)","width":64,"height":24}' aria-label="价值PE因子表现"></svg></td>
+                <td><span class="cell-status"><span class="status-dot ok"></span> 正常</span> <svg data-sparkline='{"data":[1.1,1.0,1.2,1.1,1.3,1.2,1.4,1.3],"stroke":"oklch(0.7 0.085 265)","width":64,"height":24,"fill":true}' aria-label="价值PE因子表现"></svg></td>
               </tr>
               <!-- 低波动 -->
               <tr class="row">
@@ -1971,7 +2266,7 @@
                 <td class="right"><span class="cell-numeric">5.8%</span></td>
                 <td class="right"><span class="cell-numeric">76%</span></td>
                 <td><span class="cell-universe">沪深300</span></td>
-                <td><span class="cell-status"><span class="status-dot brand"></span> 验证中</span> <svg data-sparkline='{"data":[0.8,1.2,1.5,1.8,2.2,2.5,2.8,3.2],"stroke":"oklch(0.7 0.085 265)","width":64,"height":24}' aria-label="北向持仓变化率因子表现"></svg></td>
+                <td><span class="cell-status"><span class="status-dot brand"></span> 验证中</span> <svg data-sparkline='{"data":[0.8,1.2,1.5,1.8,2.2,2.5,2.8,3.2],"stroke":"oklch(0.7 0.085 265)","width":64,"height":24,"fill":true}' aria-label="北向持仓变化率因子表现"></svg></td>
               </tr>
               <!-- 情绪Alpha -->
               <tr class="row">
@@ -1984,7 +2279,7 @@
                 <td class="right"><span class="cell-numeric">7.2%</span></td>
                 <td class="right"><span class="cell-numeric">85%</span></td>
                 <td><span class="cell-universe">中证500</span></td>
-                <td><span class="cell-status degraded-text"><span class="status-dot warning"></span> 退化</span> <svg data-sparkline='{"data":[2.5,2.2,1.9,1.6,1.4,1.2,1.0,0.8],"stroke":"oklch(0.746 0.165 50)","width":64,"height":24}' aria-label="情绪Alpha因子表现"></svg></td>
+                <td><span class="cell-status degraded-text"><span class="status-dot warning"></span> 退化</span> <svg data-sparkline='{"data":[2.5,2.2,1.9,1.6,1.4,1.2,1.0,0.8],"stroke":"oklch(0.746 0.165 50)","width":64,"height":24,"fill":true}' aria-label="情绪Alpha因子表现"></svg></td>
               </tr>
               <tr class="row">
                 <td></td>
@@ -2051,7 +2346,7 @@
     <!-- ═══ Activity Stack (300px right) ═══ -->
     <div class="activity-stack">
       <!-- Section 1: 最近运行 -->
-      <div class="context-section">
+      <div class="context-section" data-reveal="fade-up" data-reveal-delay="100">
         <div class="context-section-header">
           <span class="context-section-title">最近运行</span>
         </div>
@@ -2119,7 +2414,7 @@
       </div>
 
       <!-- Section 2: 审核/实验队列 -->
-      <div class="context-section">
+      <div class="context-section" data-reveal="fade-up" data-reveal-delay="200">
         <div class="context-section-header">
           <span class="context-section-title">复审队列</span>
           <span class="context-section-count">3</span>
@@ -2183,21 +2478,21 @@
       <div class="analysis-band-body" data-panel="analysis-ic">
         <!-- Metrics row -->
         <div class="analysis-metrics">
-          <div class="analysis-metric">
+          <div class="analysis-metric" data-tooltip="所有因子 IC 的 20 日移动平均值">
             <span class="analysis-metric-label">平均 IC (20日) <span class="metric-arrow-down">↓</span></span>
-            <span class="analysis-metric-value ok">0.032</span>
+            <span class="analysis-metric-value ok" data-counter="0.032" data-counter-decimals="3">0.032</span>
           </div>
-          <div class="analysis-metric">
+          <div class="analysis-metric" data-tooltip="IC 信息比率 — 衡量 IC 稳定性">
             <span class="analysis-metric-label">IC_IR <span class="metric-arrow-down">↓</span></span>
-            <span class="analysis-metric-value ok">0.61</span>
+            <span class="analysis-metric-value ok" data-counter="0.61" data-counter-decimals="2">0.61</span>
           </div>
-          <div class="analysis-metric">
+          <div class="analysis-metric" data-tooltip="IC 值超过 0.02 阈值的比例">
             <span class="analysis-metric-label">IC &gt; 0.02 占比 <span class="metric-arrow-down">↓</span></span>
-            <span class="analysis-metric-value ok">72%</span>
+            <span class="analysis-metric-value ok" data-counter="72" data-counter-decimals="0" data-counter-suffix="%">72%</span>
           </div>
-          <div class="analysis-metric">
+          <div class="analysis-metric" data-tooltip="IC 随时间的衰减速率 — 越低越稳定">
             <span class="analysis-metric-label">IC 衰减率 <span class="metric-arrow-up-warn">↑</span></span>
-            <span class="analysis-metric-value warning">2.8%</span>
+            <span class="analysis-metric-value warning" data-counter="2.8" data-counter-decimals="1" data-counter-suffix="%">2.8%</span>
           </div>
         </div>
         <!-- Chart placeholder -->
@@ -2265,17 +2560,17 @@
       </div>
       <div class="analysis-band-body" data-panel="analysis-width">
         <div class="analysis-metrics">
-          <div class="analysis-metric">
-            <span class="analysis-metric-label">宽度得分 <span class="metric-arrow-up">↑</span></span>
-            <span class="analysis-metric-value ok">68</span>
+          <div class="analysis-metric" data-tooltip="因子宽度综合评分 · 0-100 · 越高越分散">
+            <span class="analysis-metric-label">宽度得分 <span class="metric-arrow-up-warn">↑</span></span>
+            <span class="analysis-metric-value ok" data-counter="68" data-counter-decimals="0">68</span>
           </div>
-          <div class="analysis-metric">
+          <div class="analysis-metric" data-tooltip="覆盖的行业数量 / 总行业数">
             <span class="analysis-metric-label">行业覆盖 <span class="metric-arrow-up">↑</span></span>
             <span class="analysis-metric-value ok">24/31</span>
           </div>
-          <div class="analysis-metric">
-            <span class="analysis-metric-label">风格分散 <span class="metric-arrow-down-warn">↓</span></span>
-            <span class="analysis-metric-value warning">0.42</span>
+          <div class="analysis-metric" data-tooltip="风格因子分散度 · 建议保持 > 0.5">
+            <span class="analysis-metric-label">风格分散 <span class="metric-arrow-up-warn">↓</span></span>
+            <span class="analysis-metric-value warning" data-counter="0.42" data-counter-decimals="2">0.42</span>
           </div>
         </div>
         <div class="chart-placeholder">
@@ -2318,11 +2613,11 @@
       </div>
       <div class="analysis-band-body" data-panel="analysis-corr">
         <div class="analysis-metrics">
-          <div class="analysis-metric">
+          <div class="analysis-metric" data-tooltip="所有因子对的平均截面相关系数 · 建议 < 0.3">
             <span class="analysis-metric-label">截面相关性 <span class="metric-arrow-down">↓</span></span>
-            <span class="analysis-metric-value ok">0.15</span>
+            <span class="analysis-metric-value ok" data-counter="0.15" data-counter-decimals="2">0.15</span>
           </div>
-          <div class="analysis-metric">
+          <div class="analysis-metric" data-tooltip="相关性最高的因子对 · 警戒线 0.6">
             <span class="analysis-metric-label">最高相关对 <span class="metric-arrow-up-warn">↑</span></span>
             <span class="analysis-metric-value warning">动量/反转 0.72</span>
           </div>
@@ -2380,11 +2675,11 @@
       </div>
       <div class="analysis-band-body" data-panel="analysis-notes">
         <div class="analysis-metrics">
-          <div class="analysis-metric">
+          <div class="analysis-metric" data-tooltip="需要跟进处理的研究笔记数量">
             <span class="analysis-metric-label">待处理笔记</span>
-            <span class="analysis-metric-value">3</span>
+            <span class="analysis-metric-value" data-counter="3" data-counter-decimals="0">3</span>
           </div>
-          <div class="analysis-metric">
+          <div class="analysis-metric" data-tooltip="最后一次编辑笔记的时间">
             <span class="analysis-metric-label">最近更新</span>
             <span class="analysis-metric-value">2026-04-02</span>
           </div>
@@ -2426,7 +2721,7 @@
     <div data-tab-panel="backtest" aria-hidden="true" style="display:none;">
       <div style="padding:var(--space-12);overflow:auto;">
         <!-- Backtest metrics row -->
-        <div style="display:flex;gap:var(--space-16);margin-bottom:var(--space-12);">
+        <div class="backtest-metrics-row">
           <div class="analysis-metric">
             <span class="analysis-metric-label">Sharpe Ratio</span>
             <span class="analysis-metric-value ok" data-ticker="1.42" data-decimals="2">0.00</span>
@@ -2444,43 +2739,84 @@
             <span class="analysis-metric-value ok" data-ticker="18.6" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="%">+0.0%</span>
           </div>
         </div>
-        <!-- Backtest result cards -->
-        <div data-reveal="fade-up" data-reveal-delay="0" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-12);margin-bottom:var(--space-8);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-6);">
-            <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">价值因子 Q1 回测</span>
+        <!-- Backtest 1: 价值因子 Q1 回测 -->
+        <div class="backtest-card" data-reveal="fade-up" data-reveal-delay="0">
+          <div class="backtest-card-header">
+            <span class="backtest-card-title">价值因子 Q1 回测</span>
             <span class="run-item-status complete">完成</span>
           </div>
-          <div style="display:flex;gap:var(--space-16);">
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">Sharpe</span><br><span class="cell-numeric accent" style="font-size:var(--font-size-14);">1.42</span></div>
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">Max DD</span><br><span class="cell-numeric" style="font-size:var(--font-size-14);color:var(--system-degraded-fg);">-8.3%</span></div>
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">Trades</span><br><span class="cell-numeric" style="font-size:var(--font-size-14);">1,247</span></div>
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">胜率</span><br><span class="cell-numeric" style="font-size:var(--font-size-14);color:var(--system-healthy-fg);">56.2%</span></div>
-            <div style="margin-left:auto;"><svg data-sparkline='{"data":[0.8,0.9,1.1,1.0,1.2,1.3,1.1,1.4,1.3,1.5,1.42],"stroke":"oklch(0.55 0.15 155)","width":80,"height":24}' aria-label="Sharpe趋势"></svg></div>
+          <div class="backtest-card-metrics">
+            <div class="backtest-metric">
+              <span class="backtest-metric-label" data-tooltip="风险调整后收益">Sharpe</span>
+              <span class="backtest-metric-value accent">1.42</span>
+            </div>
+            <div class="backtest-metric">
+              <span class="backtest-metric-label" data-tooltip="最大回撤幅度">Max DD</span>
+              <span class="backtest-metric-value" style="color:var(--system-degraded-fg);">-8.3%</span>
+            </div>
+            <div class="backtest-metric">
+              <span class="backtest-metric-label">Trades</span>
+              <span class="backtest-metric-value">1,247</span>
+            </div>
+            <div class="backtest-metric">
+              <span class="backtest-metric-label" data-tooltip="盈利交易占比">胜率</span>
+              <span class="backtest-metric-value" style="color:var(--system-healthy-fg);">56.2%</span>
+            </div>
+            <div class="backtest-sparkline">
+              <svg data-sparkline='{"data":[0.8,0.9,1.1,1.0,1.2,1.3,1.1,1.4,1.3,1.5,1.42],"stroke":"oklch(0.55 0.15 155)","width":80,"height":24,"fill":true}' aria-label="Sharpe趋势"></svg>
+            </div>
           </div>
         </div>
-        <div data-reveal="fade-up" data-reveal-delay="80" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-12);margin-bottom:var(--space-8);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-6);">
-            <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">行业轮动参数优化</span>
+        <!-- Backtest 2: 行业轮动参数优化 -->
+        <div class="backtest-card" data-reveal="fade-up" data-reveal-delay="80">
+          <div class="backtest-card-header">
+            <span class="backtest-card-title">行业轮动参数优化</span>
             <span class="run-item-status complete">完成</span>
           </div>
-          <div style="display:flex;gap:var(--space-16);">
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">Sharpe</span><br><span class="cell-numeric accent" style="font-size:var(--font-size-14);">1.57</span></div>
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">Max DD</span><br><span class="cell-numeric" style="font-size:var(--font-size-14);color:var(--system-degraded-fg);">-12.1%</span></div>
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">Trades</span><br><span class="cell-numeric" style="font-size:var(--font-size-14);">2,834</span></div>
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">胜率</span><br><span class="cell-numeric" style="font-size:var(--font-size-14);color:var(--system-healthy-fg);">54.8%</span></div>
-            <div style="margin-left:auto;"><svg data-sparkline='{"data":[1.0,1.1,1.2,1.1,1.3,1.4,1.5,1.4,1.5,1.6,1.57],"stroke":"oklch(0.55 0.15 155)","width":80,"height":24}' aria-label="Sharpe趋势"></svg></div>
+          <div class="backtest-card-metrics">
+            <div class="backtest-metric">
+              <span class="backtest-metric-label" data-tooltip="风险调整后收益">Sharpe</span>
+              <span class="backtest-metric-value accent">1.57</span>
+            </div>
+            <div class="backtest-metric">
+              <span class="backtest-metric-label" data-tooltip="最大回撤幅度">Max DD</span>
+              <span class="backtest-metric-value" style="color:var(--system-degraded-fg);">-12.1%</span>
+            </div>
+            <div class="backtest-metric">
+              <span class="backtest-metric-label">Trades</span>
+              <span class="backtest-metric-value">2,834</span>
+            </div>
+            <div class="backtest-metric">
+              <span class="backtest-metric-label" data-tooltip="盈利交易占比">胜率</span>
+              <span class="backtest-metric-value" style="color:var(--system-healthy-fg);">54.8%</span>
+            </div>
+            <div class="backtest-sparkline">
+              <svg data-sparkline='{"data":[1.0,1.1,1.2,1.1,1.3,1.4,1.5,1.4,1.5,1.6,1.57],"stroke":"oklch(0.55 0.15 155)","width":80,"height":24,"fill":true}' aria-label="Sharpe趋势"></svg>
+            </div>
           </div>
         </div>
-        <div data-reveal="fade-up" data-reveal-delay="160" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-12);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-6);">
-            <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">情绪Alpha v2 漂移检测</span>
+        <!-- Backtest 3: 情绪Alpha v2 漂移检测 -->
+        <div class="backtest-card" data-reveal="fade-up" data-reveal-delay="160">
+          <div class="backtest-card-header">
+            <span class="backtest-card-title">情绪Alpha v2 漂移检测</span>
             <span class="run-item-status warn">警告</span>
           </div>
-          <div style="display:flex;gap:var(--space-16);">
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">IC</span><br><span class="cell-numeric" style="font-size:var(--font-size-14);color:var(--system-degraded-fg);">0.028</span></div>
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">IR</span><br><span class="cell-numeric" style="font-size:var(--font-size-14);color:var(--system-degraded-fg);">0.45</span></div>
-            <div><span style="font-size:var(--font-size-10);color:var(--text-tertiary);">衰减</span><br><span class="cell-numeric" style="font-size:var(--font-size-14);color:var(--system-degraded-fg);">31.7%</span></div>
-            <div style="margin-left:auto;"><svg data-sparkline='{"data":[0.041,0.039,0.037,0.035,0.033,0.031,0.030,0.029,0.028,0.028,0.028],"stroke":"oklch(0.746 0.165 50)","width":80,"height":24}' aria-label="IC衰减趋势"></svg></div>
+          <div class="backtest-card-metrics">
+            <div class="backtest-metric">
+              <span class="backtest-metric-label" data-tooltip="Information Coefficient — 因子预测能力">IC</span>
+              <span class="backtest-metric-value" style="color:var(--system-degraded-fg);">0.028</span>
+            </div>
+            <div class="backtest-metric">
+              <span class="backtest-metric-label" data-tooltip="Information Ratio — IC 稳定性">IR</span>
+              <span class="backtest-metric-value" style="color:var(--system-degraded-fg);">0.45</span>
+            </div>
+            <div class="backtest-metric">
+              <span class="backtest-metric-label" data-tooltip="因子衰减百分比">衰减</span>
+              <span class="backtest-metric-value" style="color:var(--system-degraded-fg);">31.7%</span>
+            </div>
+            <div class="backtest-sparkline">
+              <svg data-sparkline='{"data":[0.041,0.039,0.037,0.035,0.033,0.031,0.030,0.029,0.028,0.028,0.028],"stroke":"oklch(0.746 0.165 50)","width":80,"height":24,"fill":true}' aria-label="IC衰减趋势"></svg>
+            </div>
           </div>
         </div>
       </div>

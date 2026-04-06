@@ -22,12 +22,12 @@
   --neutral-900: oklch(0.920 0.004 253);
   --neutral-950: oklch(0.978 0.002 253);
 
-  /* ── Brand Primitives — hue 255-258 ── */
-  --brand-300: oklch(0.820 0.090 258);
-  --brand-400: oklch(0.760 0.130 257);
-  --brand-500: oklch(0.700 0.165 255);
-  --brand-600: oklch(0.620 0.150 255);
-  --brand-700: oklch(0.530 0.130 256);
+  /* ── Brand Primitives — Ink Indigo hue 265-267, chroma halved ── */
+  --brand-300: oklch(0.820 0.045 267);
+  --brand-400: oklch(0.760 0.065 266);
+  --brand-500: oklch(0.700 0.085 265);
+  --brand-600: oklch(0.620 0.075 265);
+  --brand-700: oklch(0.530 0.065 266);
 
   /* ── Functional Primitives ── */
   /* Green */
@@ -129,10 +129,10 @@
   --neutral-900: oklch(0.200 0.007 253);
   --neutral-950: oklch(0.150 0.006 253);
 
-  /* ── Brand Primitives — hue 255-260 ── */
-  --brand-300: oklch(0.660 0.110 259);
-  --brand-400: oklch(0.610 0.145 258);
-  --brand-500: oklch(0.550 0.185 258);
-  --brand-600: oklch(0.490 0.175 259);
-  --brand-700: oklch(0.430 0.155 260);
+  /* ── Brand Primitives — Ink Indigo hue 265-267, chroma halved ── */
+  --brand-300: oklch(0.660 0.055 267);
+  --brand-400: oklch(0.610 0.073 266);
+  --brand-500: oklch(0.550 0.093 265);
+  --brand-600: oklch(0.490 0.088 265);
+  --brand-700: oklch(0.430 0.078 266);
 }
