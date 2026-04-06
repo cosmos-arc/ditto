@@ -966,6 +966,588 @@
         animation: none !important;
       }
     }
+
+    /* ══════════════════════════════════════════════
+     * Extracted Inline Style Classes
+     * ══════════════════════════════════════════════ */
+
+    /* ── Layout containers ── */
+    .regime-layout {
+      display: grid;
+      grid-template-columns: 1fr var(--shell-activity-width);
+      gap: var(--density-gutter);
+      height: 100%;
+      min-height: 0;
+    }
+
+    .regime-main-col {
+      display: flex;
+      flex-direction: column;
+      gap: var(--density-gutter);
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .regime-panel-fixed { flex: 0 0 auto; }
+    .regime-panel-grow { flex: 1; min-height: 0; }
+
+    /* ── Section headers (Switch History / Strategy Impact) ── */
+    .section-header {
+      padding: var(--space-12) var(--density-gutter);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .section-header-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+    }
+    .section-header__title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .section-header__subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+    .section-header__spacer { flex: 1; }
+    .section-header__badge {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .section-header__badge--accent {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--market-up-fg);
+    }
+
+    .section-body {
+      padding: var(--space-12) var(--density-gutter);
+    }
+    .section-body--border-top {
+      padding: var(--space-12) var(--density-gutter);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .switch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: var(--space-12);
+    }
+
+    /* ── Panel subtitle offset ── */
+    .panel-subtitle--offset { margin-left: var(--space-4); }
+
+    /* ── Active panel action ── */
+    .panel-action--active {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Chart zone labels ── */
+    .chart-zone-label {
+      position: absolute;
+      top: 8px;
+      font-size: var(--font-size-10);
+      opacity: 0.5;
+    }
+    .chart-zone-label--risk-off {
+      left: 10%;
+      color: var(--market-down-fg);
+    }
+    .chart-zone-label--mixed {
+      left: 37%;
+      color: var(--risk-near-limit-fg);
+    }
+    .chart-zone-label--risk-on {
+      left: 65%;
+      color: var(--market-up-fg);
+    }
+
+    /* ── Regime Composition factor bars ── */
+    .factor-item {
+      padding: var(--space-8) 0;
+    }
+    .factor-item__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-4);
+    }
+    .factor-item__label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .factor-item__value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+    .factor-item__value--up { color: var(--market-up-fg); }
+    .factor-item__value--ok { color: var(--risk-low-fg); }
+    .factor-item__value--neutral { color: var(--text-secondary); }
+
+    .factor-bar-track {
+      height: 3px;
+      background: var(--border-subtle);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .factor-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+    .factor-bar-fill--up { background: var(--market-up-fg); }
+    .factor-bar-fill--ok { background: var(--risk-low-fg); }
+    .factor-bar-fill--neutral { background: var(--text-secondary); }
+
+    /* ── Strategy table cell styles ── */
+    .cell-strategy-name {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .cell-advice {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+    .cell-advice--warn {
+      color: var(--risk-near-limit-fg);
+      font-size: var(--font-size-12);
+    }
+    .data-table--full { width: 100%; }
+    .th-width-140 { width: 140px; }
+    .th-width-100 { width: 100px; }
+    .th-width-80 { width: 80px; }
+
+    /* ── AI Suggestion callout ── */
+    .ai-callout {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-12);
+      padding: var(--space-12);
+      background: var(--interaction-hover-subtle-bg);
+      border-left: 2px solid var(--brand-accent);
+      border-radius: 0 var(--radius-6) var(--radius-6) 0;
+    }
+    .ai-callout__label {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--brand-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      margin-top: 1px;
+    }
+    .ai-callout__body {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ── Overlay: driver factor rows ── */
+    .overlay-driver-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-driver-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .overlay-driver-name {
+      color: var(--text-secondary);
+    }
+    .overlay-driver-values {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+    .overlay-driver-val {
+      font-family: var(--font-family-numeric);
+      color: var(--market-up-fg);
+    }
+
+    /* ── Overlay: analysis text ── */
+    .overlay-analysis { line-height: 1.8; }
+    .overlay-analysis + .overlay-analysis { margin-top: var(--space-8); }
+
+    /* ── Overlay: strategy config rows ── */
+    .overlay-strategy-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+    .overlay-strategy-row {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--space-6) 0;
+    }
+    .overlay-strategy-row--bordered {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .overlay-strategy-name {
+      color: var(--text-secondary);
+    }
+    .overlay-strategy-action {
+      font-weight: var(--font-weight-medium);
+    }
+    .overlay-strategy-action--good { color: var(--risk-low-fg); }
+    .overlay-strategy-action--warn { color: var(--risk-near-limit-fg); }
+    .overlay-strategy-action--critical { color: var(--risk-critical-fg); }
+
+    /* ── Overlay actions margin ── */
+    .overlay-actions--spaced { margin-top: var(--space-16); }
+
+    /* ── Overlay field value colored ── */
+    .overlay-field-value--up { color: var(--market-up-fg); }
+
+    /* ── Status bar separator ── */
+    .status-dot-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+
+    /* ── State variant padding ── */
+    .state-variant-pad {
+      padding: var(--space-8) var(--density-gutter);
+    }
+
+    /* ── Label click hint ── */
+    .label-clickable { cursor: pointer; }
+
+    /* ── Header selector tertiary text ── */
+    .header-selector-hint {
+      color: var(--text-tertiary);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Information Visualization Enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Regime radial gauge (SVG-enhanced) ── */
+    .regime-gauge-svg-wrap {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+    }
+    .regime-gauge-svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .regime-gauge-svg-track {
+      fill: none;
+      stroke: var(--border-subtle);
+      stroke-width: 6;
+    }
+    .regime-gauge-svg-fill {
+      fill: none;
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .regime-gauge-svg-fill--bull { stroke: var(--market-up-fg); }
+    .regime-gauge-svg-fill--bear { stroke: var(--market-down-fg); }
+    .regime-gauge-svg-fill--range { stroke: var(--risk-near-limit-fg); }
+
+    .regime-gauge-svg-center {
+      position: absolute;
+      inset: 16px;
+      border-radius: 50%;
+      background: var(--surface-panel-base);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    /* ── Regime state atmosphere ── */
+    .regime-atmosphere {
+      position: relative;
+    }
+    .regime-atmosphere::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius-6);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .regime-atmosphere--bull::before {
+      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--market-up-fg) 4%, transparent) 0%, transparent 70%);
+    }
+    .regime-atmosphere--bear::before {
+      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--market-down-fg) 4%, transparent) 0%, transparent 70%);
+    }
+    .regime-atmosphere--range::before {
+      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--risk-near-limit-fg) 3%, transparent) 0%, transparent 70%);
+    }
+    .regime-atmosphere > * { position: relative; z-index: 1; }
+
+    /* ── Regime switch timeline visualization ── */
+    .regime-timeline-viz {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: var(--space-8) 0;
+      position: relative;
+    }
+    .regime-timeline-segment {
+      height: 6px;
+      border-radius: 3px;
+      position: relative;
+      min-width: 20px;
+      transition: flex-grow 0.3s ease;
+    }
+    .regime-timeline-segment--risk-on {
+      background: var(--market-up-fg);
+    }
+    .regime-timeline-segment--risk-off {
+      background: var(--market-down-fg);
+    }
+    .regime-timeline-segment--mixed {
+      background: var(--risk-near-limit-fg);
+    }
+    .regime-timeline-segment--active::after {
+      content: '';
+      position: absolute;
+      right: -3px;
+      top: -3px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--market-up-fg);
+      box-shadow: 0 0 8px color-mix(in oklch, var(--market-up-fg) 40%, transparent);
+      animation: timeline-pulse 2s ease-in-out infinite;
+    }
+    @keyframes timeline-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.2); }
+    }
+
+    .regime-timeline-connector {
+      width: 2px;
+      height: 16px;
+      background: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .regime-timeline-date {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      position: absolute;
+      top: -14px;
+      left: 0;
+    }
+
+    /* ── Signal strength bar chart ── */
+    .signal-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 32px;
+    }
+    .signal-bars__bar {
+      width: 4px;
+      border-radius: 2px;
+      transition: height 0.3s ease;
+    }
+    .signal-bars__bar--bull { background: var(--market-up-fg); }
+    .signal-bars__bar--bear { background: var(--market-down-fg); }
+    .signal-bars__bar--neutral { background: var(--border-subtle); }
+
+    /* ── Mini equity curve ── */
+    .mini-curve {
+      width: 100%;
+      height: 40px;
+      position: relative;
+    }
+    .mini-curve svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Regime state indicator ── */
+    .regime-state-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      letter-spacing: 0.02em;
+    }
+    .regime-state-badge--bull {
+      background: var(--market-up-bg);
+      color: var(--market-up-fg);
+    }
+    .regime-state-badge--bear {
+      background: var(--market-down-bg);
+      color: var(--market-down-fg);
+    }
+    .regime-state-badge--range {
+      background: var(--risk-medium-bg);
+      color: var(--risk-medium-fg);
+    }
+    .regime-state-badge__dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .regime-state-badge--bull .regime-state-badge__dot {
+      background: var(--market-up-fg);
+      box-shadow: 0 0 6px color-mix(in oklch, var(--market-up-fg) 50%, transparent);
+    }
+    .regime-state-badge--bear .regime-state-badge__dot {
+      background: var(--market-down-fg);
+      box-shadow: 0 0 6px color-mix(in oklch, var(--market-down-fg) 50%, transparent);
+    }
+    .regime-state-badge--range .regime-state-badge__dot {
+      background: var(--risk-medium-fg);
+      box-shadow: 0 0 6px color-mix(in oklch, var(--risk-medium-fg) 50%, transparent);
+    }
+
+    /* ── Radial progress for factor weight ── */
+    .factor-radial {
+      width: 48px;
+      height: 48px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .factor-radial svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .factor-radial__track {
+      fill: none;
+      stroke: var(--border-subtle);
+      stroke-width: 3;
+    }
+    .factor-radial__fill {
+      fill: none;
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+    .factor-radial__fill--up { stroke: var(--market-up-fg); }
+    .factor-radial__fill--ok { stroke: var(--risk-low-fg); }
+    .factor-radial__fill--neutral { stroke: var(--text-secondary); }
+    .factor-radial__label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Strategy fit bar (horizontal) ── */
+    .fit-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      min-width: 120px;
+    }
+    .fit-bar__track {
+      flex: 1;
+      height: 4px;
+      background: var(--border-subtle);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .fit-bar__fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+    .fit-bar__fill--good { background: var(--risk-low-fg); }
+    .fit-bar__fill--moderate { background: var(--risk-medium-fg); }
+    .fit-bar__fill--poor { background: var(--risk-critical-fg); }
+    .fit-bar__value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      min-width: 20px;
+      text-align: right;
+    }
+
+    /* ── Chart enhanced crosshair tooltip ── */
+    .chart-tooltip {
+      position: absolute;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 5;
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--surface-app) 80%, transparent);
+    }
+    .chart-tooltip__date {
+      color: var(--text-tertiary);
+      margin-bottom: 2px;
+    }
+    .chart-tooltip__value {
+      font-weight: var(--font-weight-medium);
+    }
+    .chart-tooltip__value--up { color: var(--market-up-fg); }
+
+    /* ── Chart event markers ── */
+    .chart-event-marker {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 2px solid var(--surface-panel-base);
+      z-index: 3;
+      bottom: 30%;
+    }
+    .chart-event-marker--risk-on {
+      background: var(--market-up-fg);
+    }
+    .chart-event-marker--risk-off {
+      background: var(--market-down-fg);
+    }
+    .chart-event-marker--mixed {
+      background: var(--risk-near-limit-fg);
+    }
+    .chart-event-marker--pos-1 { left: 18%; }
+    .chart-event-marker--pos-2 { left: 35%; }
+    .chart-event-marker--pos-3 { left: 55%; }
+    .chart-event-marker--pos-4 { left: 72%; }
+
+    /* ── Chart tooltip positions ── */
+    .chart-tooltip--regime {
+      top: 22%;
+      left: 55%;
+    }
+    .chart-tooltip__tertiary {
+      color: var(--text-tertiary);
+    }
+
+    /* ── Stale data warning pulse ── */
+    .stale-pulse {
+      animation: stale-blink 2s ease-in-out infinite;
+    }
+    @keyframes stale-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
   </style>
 </head>
 <body>
@@ -1026,7 +1608,7 @@
 
       <!-- Portfolio Selector -->
       <div class="header-selector">
-        <span style="color: var(--text-tertiary);">组合</span>
+        <span class="header-selector-hint">组合</span>
         <span class="header-selector-value">主策略组合</span>
         <span class="header-selector-chevron">▾</span>
       </div>
@@ -1052,7 +1634,7 @@
             <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
           </div>
         </div>
-        <label for="overlay-ai-regime" class="btn-cta-sm" style="cursor:pointer">AI 解读</label>
+        <label for="overlay-ai-regime" class="btn-cta-sm label-clickable">AI 解读</label>
         <div class="header-action-btn" title="刷新">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><polyline points="14 5 15.5 7.5 12.5 7.5"/><polyline points="6 15 4.5 12.5 7.5 12.5"/></svg>
         </div>
@@ -1120,16 +1702,16 @@
       <!-- ─── Tab Panel: Regime Status (default) ─── -->
       <div class="tab-panel" data-panel="regime-status">
         <div class="main-content">
-          <div style="display: grid; grid-template-columns: 1fr var(--shell-activity-width); gap: var(--density-gutter); height: 100%; min-height: 0;">
+          <div class="regime-layout">
 
             <!-- Left: Regime Indicator + Chart -->
-            <div style="display: flex; flex-direction: column; gap: var(--density-gutter); min-height: 0; overflow: hidden;">
+            <div class="regime-main-col">
 
               <!-- Regime Indicator Panel -->
-              <div class="panel" style="flex: 0 0 auto;">
+              <div class="panel regime-panel-fixed">
                 <div class="panel-header">
                   <span class="panel-title">Regime Indicator</span>
-                  <span class="panel-subtitle" style="margin-left: var(--space-4);">Regime Engine 实时判定</span>
+                  <span class="panel-subtitle panel-subtitle--offset">Regime Engine 实时判定</span>
                   <div class="panel-actions">
                     <span class="regime-time-btn">1M</span>
                     <span class="regime-time-btn active">3M</span>
@@ -1138,17 +1720,22 @@
                   </div>
                 </div>
                 <div class="regime-indicator">
-                  <div class="regime-gauge">
-                    <div class="regime-gauge-visual">
-                      <div class="regime-gauge-ring"></div>
-                      <div class="regime-gauge-fill"></div>
-                      <div class="regime-gauge-center">
+                  <div class="regime-gauge regime-atmosphere regime-atmosphere--bull">
+                    <!-- SVG Radial Gauge -->
+                    <div class="regime-gauge-svg-wrap">
+                      <svg class="regime-gauge-svg" viewBox="0 0 120 120">
+                        <circle class="regime-gauge-svg-track" cx="60" cy="60" r="52"/>
+                        <circle class="regime-gauge-svg-fill regime-gauge-svg-fill--bull" cx="60" cy="60" r="52"
+                          stroke-dasharray="326.7"
+                          stroke-dashoffset="91.5"/>
+                      </svg>
+                      <div class="regime-gauge-svg-center">
                         <span class="regime-gauge-value">72%</span>
                         <span class="regime-gauge-unit">置信度</span>
                       </div>
                     </div>
                     <div class="regime-gauge-info">
-                      <span class="regime-status-name">温和风险偏好 (Moderate)</span>
+                      <div class="regime-status-name">温和风险偏好 <span class="regime-state-badge regime-state-badge--bull"><span class="regime-state-badge__dot"></span>Moderate</span></span>
                       <span class="regime-status-desc">市场情绪偏暖，波动率处于低位，资金面宽松。北向资金持续净流入，个股涨跌比健康。</span>
                       <div class="regime-confidence">
                         <span class="regime-confidence-label">判定强度</span>
@@ -1163,13 +1750,13 @@
               </div>
 
               <!-- Regime Timeline Chart -->
-              <div class="panel chart-panel" style="flex: 1; min-height: 0;">
+              <div class="panel chart-panel regime-panel-grow">
                 <div class="panel-header">
                   <span class="panel-title">Regime Timeline</span>
-                  <span class="panel-subtitle" style="margin-left: var(--space-4);">近 3 个月 Regime 变化</span>
+                  <span class="panel-subtitle panel-subtitle--offset">近 3 个月 Regime 变化</span>
                   <div class="panel-actions">
                     <span class="panel-action">日线</span>
-                    <span class="panel-action" style="color: var(--text-primary); background: var(--interaction-hover-subtle-bg);">周线</span>
+                    <span class="panel-action panel-action--active">周线</span>
                   </div>
                 </div>
                 <div class="chart-panel-body">
@@ -1180,11 +1767,33 @@
                     <div class="regime-zone risk-off"></div>
                     <div class="regime-zone mixed"></div>
                     <div class="regime-zone risk-on"></div>
-                    <div style="position:absolute; top:8px; left:10%; font-size:var(--font-size-10); color:var(--market-down-fg); opacity:0.5;">Risk-Off</div>
-                    <div style="position:absolute; top:8px; left:37%; font-size:var(--font-size-10); color:var(--risk-near-limit-fg); opacity:0.5;">Mixed</div>
-                    <div style="position:absolute; top:8px; left:65%; font-size:var(--font-size-10); color:var(--market-up-fg); opacity:0.5;">Risk-On</div>
+                    <div class="chart-zone-label chart-zone-label--risk-off">Risk-Off</div>
+                    <div class="chart-zone-label chart-zone-label--mixed">Mixed</div>
+                    <div class="chart-zone-label chart-zone-label--risk-on">Risk-On</div>
                     <div class="regime-timeline-line"></div>
                     <div class="chart-crosshair"></div>
+
+                    <!-- Event markers on timeline -->
+                    <div class="chart-event-marker chart-event-marker--risk-off chart-event-marker--pos-1"></div>
+                    <div class="chart-event-marker chart-event-marker--mixed chart-event-marker--pos-2"></div>
+                    <div class="chart-event-marker chart-event-marker--risk-on chart-event-marker--pos-3"></div>
+                    <div class="chart-event-marker chart-event-marker--risk-on chart-event-marker--active chart-event-marker--pos-4"></div>
+
+                    <!-- Tooltip at crosshair -->
+                    <div class="chart-tooltip chart-tooltip--regime">
+                      <div class="chart-tooltip__date">2026-03-18 · 周线</div>
+                      <div class="chart-tooltip__value chart-tooltip__value--up">Regime → Risk-On</div>
+                      <div class="chart-tooltip__value chart-tooltip__tertiary">置信度 72% · IVIX 18.52</div>
+                    </div>
+
+                    <!-- Mini timeline bar at bottom of chart -->
+                    <div class="regime-timeline-viz" style="position:absolute; bottom:6px; left:8%; right:8%;">
+                      <div class="regime-timeline-segment regime-timeline-segment--risk-off" style="flex:40; position:relative;">
+                        <span class="regime-timeline-date">01-15</span>
+                      </div>
+                      <div class="regime-timeline-segment regime-timeline-segment--mixed" style="flex:22;"></div>
+                      <div class="regime-timeline-segment regime-timeline-segment--risk-on regime-timeline-segment--active" style="flex:15;"></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1243,40 +1852,88 @@
                     <span class="context-section-count">多因子</span>
                   </div>
                   <div class="context-section-body">
-                    <div style="padding: var(--space-8) 0;">
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
-                        <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">情绪因子</span>
-                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-up-fg); font-weight: var(--font-weight-medium);">78%</span>
-                      </div>
-                      <div style="height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
-                        <div style="width: 78%; height: 100%; background: var(--market-up-fg); border-radius: 2px;"></div>
-                      </div>
-                    </div>
-                    <div style="padding: var(--space-8) 0;">
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
-                        <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">资金因子</span>
-                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-up-fg); font-weight: var(--font-weight-medium);">71%</span>
-                      </div>
-                      <div style="height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
-                        <div style="width: 71%; height: 100%; background: var(--market-up-fg); border-radius: 2px;"></div>
-                      </div>
-                    </div>
-                    <div style="padding: var(--space-8) 0;">
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
-                        <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">波动率因子</span>
-                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--risk-low-fg); font-weight: var(--font-weight-medium);">82%</span>
-                      </div>
-                      <div style="height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
-                        <div style="width: 82%; height: 100%; background: var(--risk-low-fg); border-radius: 2px;"></div>
+                    <div class="factor-item">
+                      <div class="factor-item__header">
+                        <div class="factor-radial">
+                          <svg viewBox="0 0 48 48">
+                            <circle class="factor-radial__track" cx="24" cy="24" r="20"/>
+                            <circle class="factor-radial__fill factor-radial__fill--up" cx="24" cy="24" r="20"
+                              stroke-dasharray="125.7" stroke-dashoffset="27.7"/>
+                          </svg>
+                          <span class="factor-radial__label" style="color:var(--market-up-fg);">78</span>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                          <div class="factor-item__header">
+                            <span class="factor-item__label">情绪因子</span>
+                            <span class="factor-item__value factor-item__value--up">78%</span>
+                          </div>
+                          <div class="factor-bar-track">
+                            <div class="factor-bar-fill factor-bar-fill--up" style="width: 78%;"></div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div style="padding: var(--space-8) 0;">
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
-                        <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">宏观因子</span>
-                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary); font-weight: var(--font-weight-medium);">55%</span>
+                    <div class="factor-item">
+                      <div class="factor-item__header">
+                        <div class="factor-radial">
+                          <svg viewBox="0 0 48 48">
+                            <circle class="factor-radial__track" cx="24" cy="24" r="20"/>
+                            <circle class="factor-radial__fill factor-radial__fill--up" cx="24" cy="24" r="20"
+                              stroke-dasharray="125.7" stroke-dashoffset="36.5"/>
+                          </svg>
+                          <span class="factor-radial__label" style="color:var(--market-up-fg);">71</span>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                          <div class="factor-item__header">
+                            <span class="factor-item__label">资金因子</span>
+                            <span class="factor-item__value factor-item__value--up">71%</span>
+                          </div>
+                          <div class="factor-bar-track">
+                            <div class="factor-bar-fill factor-bar-fill--up" style="width: 71%;"></div>
+                          </div>
+                        </div>
                       </div>
-                      <div style="height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
-                        <div style="width: 55%; height: 100%; background: var(--text-secondary); border-radius: 2px;"></div>
+                    </div>
+                    <div class="factor-item">
+                      <div class="factor-item__header">
+                        <div class="factor-radial">
+                          <svg viewBox="0 0 48 48">
+                            <circle class="factor-radial__track" cx="24" cy="24" r="20"/>
+                            <circle class="factor-radial__fill factor-radial__fill--ok" cx="24" cy="24" r="20"
+                              stroke-dasharray="125.7" stroke-dashoffset="22.6"/>
+                          </svg>
+                          <span class="factor-radial__label" style="color:var(--risk-low-fg);">82</span>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                          <div class="factor-item__header">
+                            <span class="factor-item__label">波动率因子</span>
+                            <span class="factor-item__value factor-item__value--ok">82%</span>
+                          </div>
+                          <div class="factor-bar-track">
+                            <div class="factor-bar-fill factor-bar-fill--ok" style="width: 82%;"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="factor-item">
+                      <div class="factor-item__header">
+                        <div class="factor-radial">
+                          <svg viewBox="0 0 48 48">
+                            <circle class="factor-radial__track" cx="24" cy="24" r="20"/>
+                            <circle class="factor-radial__fill factor-radial__fill--neutral" cx="24" cy="24" r="20"
+                              stroke-dasharray="125.7" stroke-dashoffset="56.6"/>
+                          </svg>
+                          <span class="factor-radial__label" style="color:var(--text-secondary);">55</span>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                          <div class="factor-item__header">
+                            <span class="factor-item__label">宏观因子</span>
+                            <span class="factor-item__value factor-item__value--neutral">55%</span>
+                          </div>
+                          <div class="factor-bar-track">
+                            <div class="factor-bar-fill factor-bar-fill--neutral" style="width: 55%;"></div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1291,11 +1948,11 @@
 
       <!-- ─── Tab Panel: Switch History ─── -->
       <div class="tab-panel" data-panel="switch-history">
-        <div style="padding: var(--space-12) var(--density-gutter); border-bottom: 1px solid var(--border-subtle);">
-          <div style="display: flex; align-items: center; gap: var(--space-12);">
-            <span style="font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">Regime 切换历史</span>
-            <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">市场状态变迁时间线</span>
-            <div style="flex:1"></div>
+        <div class="section-header">
+          <div class="section-header-row">
+            <span class="section-header__title">Regime 切换历史</span>
+            <span class="section-header__subtitle">市场状态变迁时间线</span>
+            <div class="section-header__spacer"></div>
             <div class="filter-group" role="group" aria-label="事件筛选">
               <button class="filter-btn active">全部</button>
               <button class="filter-btn">Risk-On</button>
@@ -1305,8 +1962,8 @@
           </div>
         </div>
 
-        <div style="padding: var(--space-12) var(--density-gutter);">
-          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-12);">
+        <div class="section-body">
+          <div class="switch-grid">
 
             <!-- Switch 1 -->
             <div class="switch-item">
@@ -1319,9 +1976,30 @@
                   <span class="switch-from-tag">Mixed</span>
                   <span class="switch-arrow">→</span>
                   <span class="switch-to-tag risk-on">Risk-On</span>
+                  <!-- Signal strength bars -->
+                  <div class="signal-bars">
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:18px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:24px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:28px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:22px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:30px;"></div>
+                  </div>
                 </div>
                 <div class="switch-trigger">触发因子：北向资金连续 5 日净流入，IVIX 降至 20 以下</div>
                 <div class="switch-duration">已持续 15 天 · 当前活跃</div>
+                <!-- Mini equity curve -->
+                <div class="mini-curve">
+                  <svg viewBox="0 0 280 40" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="curve-grad-1" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.15"/>
+                        <stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M0,30 Q20,28 40,26 T80,22 T120,20 T160,17 T200,14 T240,10 T280,8" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5" opacity="0.7"/>
+                    <path d="M0,30 Q20,28 40,26 T80,22 T120,20 T160,17 T200,14 T240,10 T280,8 V40 H0Z" fill="url(#curve-grad-1)"/>
+                  </svg>
+                </div>
               </div>
             </div>
 
@@ -1336,6 +2014,13 @@
                   <span class="switch-from-tag">Risk-Off</span>
                   <span class="switch-arrow">→</span>
                   <span class="switch-to-tag mixed">Mixed</span>
+                  <div class="signal-bars">
+                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:12px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--neutral" style="height:16px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:20px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:18px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--neutral" style="height:14px;"></div>
+                  </div>
                 </div>
                 <div class="switch-trigger">触发因子：两会政策落地，央行降准 50bp，市场情绪回暖</div>
                 <div class="switch-duration">持续 22 天</div>
@@ -1353,6 +2038,13 @@
                   <span class="switch-from-tag risk-on">Risk-On</span>
                   <span class="switch-arrow">→</span>
                   <span class="switch-from-tag">Risk-Off</span>
+                  <div class="signal-bars">
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:24px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:20px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:28px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:30px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:26px;"></div>
+                  </div>
                 </div>
                 <div class="switch-trigger">触发因子：美联储鹰派发言、人民币快速贬值、北向资金大幅流出</div>
                 <div class="switch-duration">持续 40 天</div>
@@ -1370,6 +2062,13 @@
                   <span class="switch-from-tag mixed">Mixed</span>
                   <span class="switch-arrow">→</span>
                   <span class="switch-to-tag risk-on">Risk-On</span>
+                  <div class="signal-bars">
+                    <div class="signal-bars__bar signal-bars__bar--neutral" style="height:14px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:20px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:26px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:28px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:32px;"></div>
+                  </div>
                 </div>
                 <div class="switch-trigger">触发因子：年末机构调仓完成，增量资金入场，涨跌比持续 > 2:1</div>
                 <div class="switch-duration">持续 48 天</div>
@@ -1387,6 +2086,13 @@
                   <span class="switch-from-tag risk-on">Risk-On</span>
                   <span class="switch-arrow">→</span>
                   <span class="switch-to-tag mixed">Mixed</span>
+                  <div class="signal-bars">
+                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:26px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--neutral" style="height:22px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:18px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:24px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--neutral" style="height:16px;"></div>
+                  </div>
                 </div>
                 <div class="switch-trigger">触发因子：三季报密集披露期，科技板块业绩不及预期，波动率上升</div>
                 <div class="switch-duration">持续 37 天</div>
@@ -1399,77 +2105,109 @@
 
       <!-- ─── Tab Panel: Strategy Impact ─── -->
       <div class="tab-panel" data-panel="strategy-impact">
-        <div style="padding: var(--space-12) var(--density-gutter); border-bottom: 1px solid var(--border-subtle);">
-          <div style="display: flex; align-items: center; gap: var(--space-12);">
-            <span style="font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">策略表现对比</span>
-            <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">不同 Regime 下的策略适配度</span>
-            <div style="flex:1"></div>
-            <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">当前 Regime: </span>
-            <span style="font-size: var(--font-size-10); font-weight: var(--font-weight-medium); color: var(--market-up-fg);">温和风险偏好</span>
+        <div class="section-header">
+          <div class="section-header-row">
+            <span class="section-header__title">策略表现对比</span>
+            <span class="section-header__subtitle">不同 Regime 下的策略适配度</span>
+            <div class="section-header__spacer"></div>
+            <span class="section-header__badge">当前 Regime: </span>
+            <span class="section-header__badge--accent">温和风险偏好</span>
           </div>
         </div>
 
         <!-- Strategy Table -->
-        <div style="padding: var(--space-12) var(--density-gutter);">
-          <table class="data-table" style="width: 100%;">
+        <div class="section-body">
+          <table class="data-table data-table--full">
             <thead>
               <tr>
-                <th scope="col" style="width: 140px;">策略名称</th>
-                <th scope="col" style="width: 100px;">近 1 月</th>
-                <th scope="col" style="width: 100px;">近 3 月</th>
-                <th scope="col" style="width: 80px;">Sharpe</th>
-                <th scope="col" style="width: 100px;">最大回撤</th>
-                <th scope="col" style="width: 80px;">适配度</th>
+                <th scope="col" class="th-width-140">策略名称</th>
+                <th scope="col" class="th-width-100">近 1 月</th>
+                <th scope="col" class="th-width-100">近 3 月</th>
+                <th scope="col" class="th-width-80">Sharpe</th>
+                <th scope="col" class="th-width-100">最大回撤</th>
+                <th scope="col" class="th-width-80">适配度</th>
                 <th scope="col">调整建议</th>
               </tr>
             </thead>
             <tbody>
               <tr class="row">
-                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">Alpha v2</span></td>
+                <td><span class="cell-strategy-name">Alpha v2</span></td>
                 <td class="cell-numeric up">+4.82%</td>
                 <td class="cell-numeric up">+12.35%</td>
                 <td class="cell-numeric">1.85</td>
                 <td class="cell-numeric down">-2.10%</td>
-                <td><span class="strategy-fit good">良好</span></td>
-                <td style="color: var(--text-tertiary); font-size: var(--font-size-12);">维持当前仓位，关注风格切换信号</td>
+                <td>
+                  <div class="fit-bar">
+                    <span class="strategy-fit good">良好</span>
+                    <div class="fit-bar__track">
+                      <div class="fit-bar__fill fit-bar__fill--good" style="width: 88%;"></div>
+                    </div>
+                    <span class="fit-bar__value">88</span>
+                  </div>
+                </td>
+                <td class="cell-advice">维持当前仓位，关注风格切换信号</td>
               </tr>
               <tr class="row">
-                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">价值因子</span></td>
+                <td><span class="cell-strategy-name">价值因子</span></td>
                 <td class="cell-numeric up">+2.15%</td>
                 <td class="cell-numeric up">+6.78%</td>
                 <td class="cell-numeric">1.42</td>
                 <td class="cell-numeric down">-3.50%</td>
-                <td><span class="strategy-fit good">良好</span></td>
-                <td style="color: var(--text-tertiary); font-size: var(--font-size-12);">低估值板块表现稳健，可适当加仓</td>
+                <td>
+                  <div class="fit-bar">
+                    <span class="strategy-fit good">良好</span>
+                    <div class="fit-bar__track">
+                      <div class="fit-bar__fill fit-bar__fill--good" style="width: 82%;"></div>
+                    </div>
+                    <span class="fit-bar__value">82</span>
+                  </div>
+                </td>
+                <td class="cell-advice">低估值板块表现稳健，可适当加仓</td>
               </tr>
               <tr class="row">
-                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">行业轮动</span></td>
+                <td><span class="cell-strategy-name">行业轮动</span></td>
                 <td class="cell-numeric up">+3.67%</td>
                 <td class="cell-numeric up">+8.92%</td>
                 <td class="cell-numeric">1.23</td>
                 <td class="cell-numeric down">-5.80%</td>
-                <td><span class="strategy-fit moderate">一般</span></td>
-                <td style="color: var(--text-tertiary); font-size: var(--font-size-12);">轮动信号频繁，建议降低换手率，关注板块持续性</td>
+                <td>
+                  <div class="fit-bar">
+                    <span class="strategy-fit moderate">一般</span>
+                    <div class="fit-bar__track">
+                      <div class="fit-bar__fill fit-bar__fill--moderate" style="width: 58%;"></div>
+                    </div>
+                    <span class="fit-bar__value">58</span>
+                  </div>
+                </td>
+                <td class="cell-advice">轮动信号频繁，建议降低换手率，关注板块持续性</td>
               </tr>
               <tr class="row">
-                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">动量策略</span></td>
+                <td><span class="cell-strategy-name">动量策略</span></td>
                 <td class="cell-numeric down">-1.23%</td>
                 <td class="cell-numeric up">+2.10%</td>
                 <td class="cell-numeric">0.68</td>
                 <td class="cell-numeric down">-8.40%</td>
-                <td><span class="strategy-fit poor">不佳</span></td>
-                <td style="color: var(--risk-near-limit-fg); font-size: var(--font-size-12);">当前市场缺乏明确趋势，动量因子失效，建议减仓或暂停</td>
+                <td>
+                  <div class="fit-bar">
+                    <span class="strategy-fit poor">不佳</span>
+                    <div class="fit-bar__track">
+                      <div class="fit-bar__fill fit-bar__fill--poor" style="width: 32%;"></div>
+                    </div>
+                    <span class="fit-bar__value">32</span>
+                  </div>
+                </td>
+                <td class="cell-advice--warn">当前市场缺乏明确趋势，动量因子失效，建议减仓或暂停</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <!-- AI Suggestion Panel -->
-        <div style="padding: var(--space-12) var(--density-gutter); border-top: 1px solid var(--border-subtle);">
-          <div style="display: flex; align-items: flex-start; gap: var(--space-12); padding: var(--space-12); background: var(--interaction-hover-subtle-bg); border-left: 2px solid var(--brand-accent); border-radius: 0 var(--radius-6) var(--radius-6) 0;">
-            <div style="font-size: var(--font-size-10); font-weight: var(--font-weight-medium); color: var(--brand-accent); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; margin-top: 1px;">AI 建议</div>
-            <div style="font-size: var(--font-size-12); color: var(--text-secondary); line-height: 1.6;">
-              当前温和 Risk-On 环境下，<strong style="color: var(--text-primary);">Alpha v2 和价值因子</strong>表现最佳。行业轮动策略信号噪声较高，建议收紧轮动阈值。动量策略在震荡市中持续亏损，<strong style="color: var(--risk-near-limit-fg);">建议减仓至 30% 以下</strong>或暂停运行。关注 IVIX 是否突破 22 阈值，若突破则需整体降低风险敞口。
+        <div class="section-body--border-top">
+          <div class="ai-callout">
+            <div class="ai-callout__label">AI 建议</div>
+            <div class="ai-callout__body">
+              当前温和 Risk-On 环境下，<strong class="cell-strategy-name">Alpha v2 和价值因子</strong>表现最佳。行业轮动策略信号噪声较高，建议收紧轮动阈值。动量策略在震荡市中持续亏损，<strong class="cell-advice--warn">建议减仓至 30% 以下</strong>或暂停运行。关注 IVIX 是否突破 22 阈值，若突破则需整体降低风险敞口。
             </div>
           </div>
         </div>
@@ -1492,7 +2230,7 @@
     <span class="status-spacer"></span>
     <span class="status-kbd">R</span>
     <span>刷新</span>
-    <span style="margin: 0 var(--space-4); color: var(--border-subtle);">·</span>
+    <span class="status-dot-sep">·</span>
     <span class="status-kbd">⌘K</span>
     <span>搜索</span>
   </div>
@@ -1512,7 +2250,7 @@
           <h4>当前 Regime 判定</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">Regime 状态</span>
-            <span class="overlay-field-value" style="color: var(--market-up-fg);">温和风险偏好 (Moderate)</span>
+            <span class="overlay-field-value overlay-field-value--up">温和风险偏好 (Moderate)</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">判定置信度</span>
@@ -1528,60 +2266,60 @@
           </div>
 
           <h4>核心驱动因子</h4>
-          <div style="display: flex; flex-direction: column; gap: var(--space-6); margin-bottom: var(--space-12);">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: var(--text-secondary);">波动率 (IVIX)</span>
-              <div style="display: flex; align-items: center; gap: var(--space-6);">
-                <span style="font-family: var(--font-family-numeric); color: var(--market-up-fg);">18.52</span>
+          <div class="overlay-driver-list">
+            <div class="overlay-driver-row">
+              <span class="overlay-driver-name">波动率 (IVIX)</span>
+              <div class="overlay-driver-values">
+                <span class="overlay-driver-val">18.52</span>
                 <span class="driver-direction bullish">偏多</span>
               </div>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: var(--text-secondary);">北向资金</span>
-              <div style="display: flex; align-items: center; gap: var(--space-6);">
-                <span style="font-family: var(--font-family-numeric); color: var(--market-up-fg);">+12.4亿</span>
+            <div class="overlay-driver-row">
+              <span class="overlay-driver-name">北向资金</span>
+              <div class="overlay-driver-values">
+                <span class="overlay-driver-val">+12.4亿</span>
                 <span class="driver-direction bullish">偏多</span>
               </div>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: var(--text-secondary);">涨跌比</span>
-              <div style="display: flex; align-items: center; gap: var(--space-6);">
-                <span style="font-family: var(--font-family-numeric); color: var(--market-up-fg);">2.1:1</span>
+            <div class="overlay-driver-row">
+              <span class="overlay-driver-name">涨跌比</span>
+              <div class="overlay-driver-values">
+                <span class="overlay-driver-val">2.1:1</span>
                 <span class="driver-direction bullish">偏多</span>
               </div>
             </div>
           </div>
 
           <h4>AI 分析摘要</h4>
-          <p style="line-height: 1.8;">
-            当前市场处于<strong style="color: var(--text-primary);">温和 Risk-On</strong>阶段，核心驱动力来自资金面的持续改善。北向资金连续净流入叠加融资余额回升，显示场外资金入市意愿增强。波动率 IVIX 维持在 20 以下低位，市场恐慌情绪消散。
+          <p class="overlay-analysis">
+            当前市场处于<strong class="cell-strategy-name">温和 Risk-On</strong>阶段，核心驱动力来自资金面的持续改善。北向资金连续净流入叠加融资余额回升，显示场外资金入市意愿增强。波动率 IVIX 维持在 20 以下低位，市场恐慌情绪消散。
           </p>
-          <p style="line-height: 1.8; margin-top: var(--space-8);">
+          <p class="overlay-analysis">
             需关注的风险点：宏观因子（10Y 国债收益率）置信度仅 55%，暗示利率环境存在不确定性。若 IVIX 突破 22 或北向资金出现连续净流出，Regime 可能切换至 Mixed 或 Risk-Off。
           </p>
 
           <h4>策略配置建议</h4>
-          <div style="display: flex; flex-direction: column; gap: var(--space-6);">
-            <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0; border-bottom: 1px solid var(--border-subtle);">
-              <span style="color: var(--text-secondary);">Alpha v2</span>
-              <span style="color: var(--risk-low-fg); font-weight: var(--font-weight-medium);">加仓 → 80%</span>
+          <div class="overlay-strategy-list">
+            <div class="overlay-strategy-row--bordered">
+              <span class="overlay-strategy-name">Alpha v2</span>
+              <span class="overlay-strategy-action overlay-strategy-action--good">加仓 → 80%</span>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0; border-bottom: 1px solid var(--border-subtle);">
-              <span style="color: var(--text-secondary);">价值因子</span>
-              <span style="color: var(--risk-low-fg); font-weight: var(--font-weight-medium);">维持 → 60%</span>
+            <div class="overlay-strategy-row--bordered">
+              <span class="overlay-strategy-name">价值因子</span>
+              <span class="overlay-strategy-action overlay-strategy-action--good">维持 → 60%</span>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0; border-bottom: 1px solid var(--border-subtle);">
-              <span style="color: var(--text-secondary);">行业轮动</span>
-              <span style="color: var(--risk-near-limit-fg); font-weight: var(--font-weight-medium);">减仓 → 40%</span>
+            <div class="overlay-strategy-row--bordered">
+              <span class="overlay-strategy-name">行业轮动</span>
+              <span class="overlay-strategy-action overlay-strategy-action--warn">减仓 → 40%</span>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0;">
-              <span style="color: var(--text-secondary);">动量策略</span>
-              <span style="color: var(--risk-critical-fg); font-weight: var(--font-weight-medium);">减仓 → 20%</span>
+            <div class="overlay-strategy-row">
+              <span class="overlay-strategy-name">动量策略</span>
+              <span class="overlay-strategy-action overlay-strategy-action--critical">减仓 → 20%</span>
             </div>
           </div>
 
-          <div class="overlay-actions" style="margin-top: var(--space-16);">
-            <label for="overlay-ai-regime" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">关闭</label>
+          <div class="overlay-actions overlay-actions--spaced">
+            <label for="overlay-ai-regime" class="overlay-btn overlay-btn-secondary label-clickable">关闭</label>
           </div>
         </div>
       </div>
@@ -1592,7 +2330,7 @@
   <!-- ═══ State Variant Blocks ═══ -->
 
   <!-- State Variants: Regime Indicator -->
-  <div style="padding: var(--space-8) var(--density-gutter);">
+  <div class="state-variant-pad">
     
     
     
@@ -1600,7 +2338,7 @@
   </div>
 
   <!-- State Variants: Status Strip -->
-  <div style="padding: var(--space-8) var(--density-gutter);">
+  <div class="state-variant-pad">
     
     
     
@@ -1608,7 +2346,7 @@
   </div>
 
   <!-- State Variants: Drivers Panel -->
-  <div style="padding: var(--space-8) var(--density-gutter);">
+  <div class="state-variant-pad">
     
     
     
@@ -1616,7 +2354,7 @@
   </div>
 
   <!-- State Variants: Switch History -->
-  <div style="padding: var(--space-8) var(--density-gutter);">
+  <div class="state-variant-pad">
     
     
     
@@ -1624,7 +2362,7 @@
   </div>
 
   <!-- State Variants: Strategy Impact -->
-  <div style="padding: var(--space-8) var(--density-gutter);">
+  <div class="state-variant-pad">
     
     
     
@@ -1972,7 +2710,7 @@
             <h4>当前 Regime 判定</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">Regime 状态</span>
-              <span class="overlay-field-value" style="color: var(--market-up-fg);">温和风险偏好 (Moderate)</span>
+              <span class="overlay-field-value overlay-field-value--up">温和风险偏好 (Moderate)</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">判定置信度</span>
@@ -1988,59 +2726,59 @@
             </div>
 
             <h4>核心驱动因子</h4>
-            <div style="display: flex; flex-direction: column; gap: var(--space-6); margin-bottom: var(--space-12);">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: var(--text-secondary);">波动率 (IVIX)</span>
-                <div style="display: flex; align-items: center; gap: var(--space-6);">
-                  <span style="font-family: var(--font-family-numeric); color: var(--market-up-fg);">18.52</span>
+            <div class="overlay-driver-list">
+              <div class="overlay-driver-row">
+                <span class="overlay-driver-name">波动率 (IVIX)</span>
+                <div class="overlay-driver-values">
+                  <span class="overlay-driver-val">18.52</span>
                   <span class="driver-direction bullish">偏多</span>
                 </div>
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: var(--text-secondary);">北向资金</span>
-                <div style="display: flex; align-items: center; gap: var(--space-6);">
-                  <span style="font-family: var(--font-family-numeric); color: var(--market-up-fg);">+12.4亿</span>
+              <div class="overlay-driver-row">
+                <span class="overlay-driver-name">北向资金</span>
+                <div class="overlay-driver-values">
+                  <span class="overlay-driver-val">+12.4亿</span>
                   <span class="driver-direction bullish">偏多</span>
                 </div>
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: var(--text-secondary);">涨跌比</span>
-                <div style="display: flex; align-items: center; gap: var(--space-6);">
-                  <span style="font-family: var(--font-family-numeric); color: var(--market-up-fg);">2.1:1</span>
+              <div class="overlay-driver-row">
+                <span class="overlay-driver-name">涨跌比</span>
+                <div class="overlay-driver-values">
+                  <span class="overlay-driver-val">2.1:1</span>
                   <span class="driver-direction bullish">偏多</span>
                 </div>
               </div>
             </div>
 
             <h4>AI 分析摘要</h4>
-            <p style="line-height: 1.8;">
-              当前市场处于<strong style="color: var(--text-primary);">温和 Risk-On</strong>阶段，核心驱动力来自资金面的持续改善。北向资金连续净流入叠加融资余额回升，显示场外资金入市意愿增强。波动率 IVIX 维持在 20 以下低位，市场恐慌情绪消散。
+            <p class="overlay-analysis">
+              当前市场处于<strong class="cell-strategy-name">温和 Risk-On</strong>阶段，核心驱动力来自资金面的持续改善。北向资金连续净流入叠加融资余额回升，显示场外资金入市意愿增强。波动率 IVIX 维持在 20 以下低位，市场恐慌情绪消散。
             </p>
-            <p style="line-height: 1.8; margin-top: var(--space-8);">
+            <p class="overlay-analysis">
               需关注的风险点：宏观因子（10Y 国债收益率）置信度仅 55%，暗示利率环境存在不确定性。若 IVIX 突破 22 或北向资金出现连续净流出，Regime 可能切换至 Mixed 或 Risk-Off。
             </p>
 
             <h4>策略配置建议</h4>
-            <div style="display: flex; flex-direction: column; gap: var(--space-6);">
-              <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0; border-bottom: 1px solid var(--border-subtle);">
-                <span style="color: var(--text-secondary);">Alpha v2</span>
-                <span style="color: var(--risk-low-fg); font-weight: var(--font-weight-medium);">加仓 → 80%</span>
+            <div class="overlay-strategy-list">
+              <div class="overlay-strategy-row--bordered">
+                <span class="overlay-strategy-name">Alpha v2</span>
+                <span class="overlay-strategy-action overlay-strategy-action--good">加仓 → 80%</span>
               </div>
-              <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0; border-bottom: 1px solid var(--border-subtle);">
-                <span style="color: var(--text-secondary);">价值因子</span>
-                <span style="color: var(--risk-low-fg); font-weight: var(--font-weight-medium);">维持 → 60%</span>
+              <div class="overlay-strategy-row--bordered">
+                <span class="overlay-strategy-name">价值因子</span>
+                <span class="overlay-strategy-action overlay-strategy-action--good">维持 → 60%</span>
               </div>
-              <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0; border-bottom: 1px solid var(--border-subtle);">
-                <span style="color: var(--text-secondary);">行业轮动</span>
-                <span style="color: var(--risk-near-limit-fg); font-weight: var(--font-weight-medium);">减仓 → 40%</span>
+              <div class="overlay-strategy-row--bordered">
+                <span class="overlay-strategy-name">行业轮动</span>
+                <span class="overlay-strategy-action overlay-strategy-action--warn">减仓 → 40%</span>
               </div>
-              <div style="display: flex; justify-content: space-between; padding: var(--space-6) 0;">
-                <span style="color: var(--text-secondary);">动量策略</span>
-                <span style="color: var(--risk-critical-fg); font-weight: var(--font-weight-medium);">减仓 → 20%</span>
+              <div class="overlay-strategy-row">
+                <span class="overlay-strategy-name">动量策略</span>
+                <span class="overlay-strategy-action overlay-strategy-action--critical">减仓 → 20%</span>
               </div>
             </div>
 
-            <div class="overlay-actions" style="margin-top: var(--space-16);">
+            <div class="overlay-actions overlay-actions--spaced">
               <button class="overlay-btn overlay-btn-secondary">关闭</button>
             </div>
           </div>

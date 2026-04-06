@@ -119,10 +119,11 @@
     .shell-ledger {
       display: grid;
       grid-template-columns: var(--shell-rail-width) 1fr 340px;
-      grid-template-rows: var(--shell-header-height) auto 1fr;
+      grid-template-rows: var(--shell-header-height) auto auto 1fr;
       grid-template-areas:
         "rail header  header"
         "rail strip  strip"
+        "rail kpi    trace"
         "rail table   trace";
       height: 100vh;
       width: 100vw;
@@ -1334,6 +1335,256 @@
     .strip-action.label-trigger {
       cursor: pointer;
     }
+
+    /* ── Overlay cursor trigger (label acting as button) ── */
+    .cursor-trigger { cursor: pointer; }
+
+    /* ── Overlay semantic colors ── */
+    .text-buy { color: var(--market-up-fg); }
+    .text-sell { color: var(--market-down-fg); }
+    .text-pending { color: var(--execution-pending-fg); }
+    .text-partial { color: var(--execution-partial-fg); }
+    .text-risk { color: var(--risk-high-fg); }
+    .text-pass { color: var(--system-healthy-fg); }
+    .text-highlight { color: var(--text-primary); }
+    .text-status-live { color: var(--market-up-fg); }
+
+    /* ── Overlay layout helpers ── */
+    .overlay-warning-title { color: var(--risk-high-fg); }
+    .overlay-desc {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: var(--space-8) 0 0;
+    }
+    .overlay-desc-error {
+      color: var(--risk-high-fg);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0;
+    }
+    .overlay-desc-batch {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0 0 var(--space-8);
+    }
+    .overlay-field-label-bold {
+      font-weight: var(--font-weight-medium);
+    }
+    .overlay-field-value-bold {
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Flex spacer ── */
+    .flex-spacer { flex: 1; }
+
+    /* ── Batch action accent button ── */
+    .batch-action-btn.accent {
+      border-color: var(--brand-accent);
+      color: var(--brand-accent);
+    }
+
+    /* ── Pending wait time ── */
+    .cell-waiting {
+      color: var(--execution-pending-fg);
+    }
+
+    /* ── Partial fill highlight ── */
+    .cell-partial-highlight {
+      color: var(--execution-partial-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Fill progress bar ── */
+    .fill-progress {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .fill-progress-track {
+      flex: 1;
+      height: 4px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .fill-progress-fill {
+      height: 100%;
+      background: var(--execution-partial-fg);
+      border-radius: 2px;
+    }
+    .fill-progress-label {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--execution-partial-fg);
+    }
+
+    /* ── Failed reason cell ── */
+    .cell-reason {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    /* ── State variant helpers ── */
+    .state-pad-lg { padding: var(--space-16) var(--space-12); }
+    .state-pad-md { padding: var(--space-8); }
+    .state-title-sm { font-size: var(--font-size-12); }
+    .state-error-icon-sm {
+      width: 24px;
+      height: 24px;
+      font-size: 12px;
+    }
+    .state-retry-sm { font-size: var(--font-size-12); }
+
+    /* ── Skeleton loading layout ── */
+    .skeleton-filter-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-4) 0;
+    }
+    .skeleton-tabs-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+    }
+
+    /* ── Batch action bar state variants ── */
+    .batch-disabled { color: var(--text-disabled); }
+    .batch-error { color: var(--risk-high-fg); }
+    .batch-error-retry {
+      border-color: var(--risk-high-fg);
+      color: var(--risk-high-fg);
+    }
+
+    /* ── Pagination state variants ── */
+    .pagination-disabled { color: var(--text-disabled); }
+    .pagination-error { color: var(--risk-high-fg); }
+    .pagination-error-retry {
+      border-color: var(--risk-high-fg);
+      color: var(--risk-high-fg);
+    }
+
+    /* ── Status strip gallery positioning ── */
+    .gallery-status-strip { position: relative; }
+
+    /* ── KPI sparkline (execution metrics) ── */
+    .kpi-strip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-16);
+      padding: 0 var(--space-16);
+      height: 48px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-strip);
+      overflow: hidden;
+    }
+    .kpi-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      min-width: 0;
+    }
+    .kpi-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      line-height: 1;
+    }
+    .kpi-label {
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .kpi-change {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+    }
+    .kpi-change.up { color: var(--market-up-fg); }
+    .kpi-change.down { color: var(--market-down-fg); }
+    .kpi-sparkline {
+      width: 56px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .kpi-sep {
+      width: 1px;
+      height: 24px;
+      background: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    /* ── Status distribution flow bar ── */
+    .status-flow-bar {
+      display: flex;
+      height: 3px;
+      border-radius: 1.5px;
+      overflow: hidden;
+      background: var(--neutral-200);
+      width: 120px;
+      flex-shrink: 0;
+    }
+    .status-flow-segment {
+      height: 100%;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .status-flow-segment.seg-filled { background: var(--execution-filled-fg); }
+    .status-flow-segment.seg-partial { background: var(--execution-partial-fg); }
+    .status-flow-segment.seg-pending { background: var(--execution-pending-fg); }
+    .status-flow-segment.seg-failed  { background: var(--execution-rejected-fg); }
+
+    /* ── KPI unit suffix ── */
+    .kpi-unit {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+    }
+
+    /* ── Table row conditional border accent ── */
+    .ledger-table tbody tr.row-filled {
+      border-left: 2px solid transparent;
+    }
+    .ledger-table tbody tr.row-filled td:first-child {
+      border-left: 2px solid color-mix(in oklch, var(--execution-filled-fg) 25%, transparent);
+    }
+    .ledger-table tbody tr.row-partial td:first-child {
+      border-left: 2px solid color-mix(in oklch, var(--execution-partial-fg) 30%, transparent);
+    }
+    .ledger-table tbody tr.row-pending td:first-child {
+      border-left: 2px solid color-mix(in oklch, var(--execution-pending-fg) 30%, transparent);
+    }
+    .ledger-table tbody tr.row-failed td:first-child {
+      border-left: 2px solid color-mix(in oklch, var(--execution-rejected-fg) 25%, transparent);
+    }
+    .ledger-table tbody tr.row-submitted td:first-child {
+      border-left: 2px solid color-mix(in oklch, var(--cyan-500) 25%, transparent);
+    }
+
+    /* ── KPI strip border accent ── */
+    .kpi-strip::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 30%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 70%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+    .kpi-strip {
+      position: relative;
+    }
   </style>
 </head>
 <body>
@@ -1498,11 +1749,62 @@
       </div>
     </div>
 
-    <!-- ═══ State Variants: Status Strip ═══ -->
-    
-    
-    
+    <!-- ═══ Execution KPI Strip ═══ -->
+    <div class="kpi-strip" role="region" aria-label="执行概览">
+      <div class="kpi-item">
+        <div>
+          <div class="kpi-value">168</div>
+          <div class="kpi-label">今日订单</div>
+        </div>
+        <svg class="kpi-sparkline" viewBox="0 0 56 24" fill="none" aria-hidden="true">
+          <polyline points="0,18 8,14 16,16 24,10 32,12 40,6 48,8 56,4" stroke="var(--brand-accent)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+          <linearGradient id="spark1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.15"/><stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/></linearGradient>
+          <polygon points="0,18 8,14 16,16 24,10 32,12 40,6 48,8 56,4 56,24 0,24" fill="url(#spark1)"/>
+        </svg>
+      </div>
+      <div class="kpi-sep"></div>
+      <div class="kpi-item">
+        <div>
+          <div class="kpi-value">12.8<span class="kpi-unit">M</span></div>
+          <div class="kpi-label">成交额</div>
+        </div>
+        <span class="kpi-change up">+8.3%</span>
+      </div>
+      <div class="kpi-sep"></div>
+      <div class="kpi-item">
+        <div>
+          <div class="kpi-value">88.1<span class="kpi-unit">%</span></div>
+          <div class="kpi-label">成交率</div>
+        </div>
+        <svg class="kpi-sparkline" viewBox="0 0 56 24" fill="none" aria-hidden="true">
+          <polyline points="0,12 8,10 16,14 24,8 32,6 40,9 48,5 56,3" stroke="var(--market-up-fg)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+          <linearGradient id="spark2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient>
+          <polygon points="0,12 8,10 16,14 24,8 32,6 40,9 48,5 56,3 56,24 0,24" fill="url(#spark2)"/>
+        </svg>
+      </div>
+      <div class="kpi-sep"></div>
+      <div class="kpi-item">
+        <div>
+          <div class="kpi-value">-0.04<span class="kpi-unit">%</span></div>
+          <div class="kpi-label">平均滑点</div>
+        </div>
+        <span class="kpi-change down">改善</span>
+      </div>
+      <div class="kpi-sep"></div>
+      <div class="kpi-item">
+        <div>
+          <div class="kpi-label">状态分布</div>
+          <div class="status-flow-bar" aria-label="订单状态分布">
+            <div class="status-flow-segment seg-filled" style="width:88.1%;"></div>
+            <div class="status-flow-segment seg-partial" style="width:0.6%;"></div>
+            <div class="status-flow-segment seg-pending" style="width:4.2%;"></div>
+            <div class="status-flow-segment seg-failed" style="width:7.1%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <!-- ═══ State Variants: Status Strip ═══ -->
     <!-- ═══ Tab Panels: Orders content area ═══ -->
     <div class="tab-group" data-tab-group="orders">
 
@@ -1527,8 +1829,8 @@
         </thead>
         <tbody>
           <!-- Row 1: Filled — selected -->
-          <tr class="selected" aria-selected="true" tabindex="0" role="row" data-order-id="ORD-20240401-001">
-            <td class="cell-numeric"><label for="overlay-order-detail" style="cursor:pointer">ORD-001</label></td>
+          <tr class="selected row-filled" aria-selected="true" tabindex="0" role="row" data-order-id="ORD-20240401-001">
+            <td class="cell-numeric"><label for="overlay-order-detail" class="cursor-trigger">ORD-001</label></td>
             <td class="cell-name">贵州茅台</td>
             <td>
               <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
@@ -1543,7 +1845,7 @@
             <td class="cell-time">09:42:15</td>
           </tr>
           <!-- Row 2: Filled -->
-          <tr tabindex="0" role="row" data-order-id="ORD-20240401-002">
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-002">
             <td class="cell-numeric">ORD-002</td>
             <td class="cell-name">宁德时代</td>
             <td>
@@ -1559,7 +1861,7 @@
             <td class="cell-time">09:35:08</td>
           </tr>
           <!-- Row 3: Partial fill -->
-          <tr tabindex="0" role="row" data-order-id="ORD-20240401-003">
+          <tr class="row-partial" tabindex="0" role="row" data-order-id="ORD-20240401-003">
             <td class="cell-numeric">ORD-003</td>
             <td class="cell-name">比亚迪</td>
             <td>
@@ -1575,7 +1877,7 @@
             <td class="cell-time">09:48:33</td>
           </tr>
           <!-- Row 4: Submitted -->
-          <tr tabindex="0" role="row" data-order-id="ORD-20240401-004">
+          <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-004">
             <td class="cell-numeric">ORD-004</td>
             <td class="cell-name">招商银行</td>
             <td>
@@ -1591,7 +1893,7 @@
             <td class="cell-time">09:50:01</td>
           </tr>
           <!-- Row 5: Filled -->
-          <tr tabindex="0" role="row" data-order-id="ORD-20240401-005">
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-005">
             <td class="cell-numeric">ORD-005</td>
             <td class="cell-name">中国平安</td>
             <td>
@@ -1607,7 +1909,7 @@
             <td class="cell-time">09:31:20</td>
           </tr>
           <!-- Row 6: Pending -->
-          <tr tabindex="0" role="row" data-order-id="ORD-20240401-006">
+          <tr class="row-pending" tabindex="0" role="row" data-order-id="ORD-20240401-006">
             <td class="cell-numeric">ORD-006</td>
             <td class="cell-name">药明康德</td>
             <td>
@@ -1623,7 +1925,7 @@
             <td class="cell-time">—</td>
           </tr>
           <!-- Row 7: Filled -->
-          <tr tabindex="0" role="row" data-order-id="ORD-20240401-007">
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-007">
             <td class="cell-numeric">ORD-007</td>
             <td class="cell-name">隆基绿能</td>
             <td>
@@ -1639,7 +1941,7 @@
             <td class="cell-time">10:05:44</td>
           </tr>
           <!-- Row 8: Failed -->
-          <tr tabindex="0" role="row" data-order-id="ORD-20240401-008">
+          <tr class="row-failed" tabindex="0" role="row" data-order-id="ORD-20240401-008">
             <td class="cell-numeric">ORD-008</td>
             <td class="cell-name">紫金矿业</td>
             <td>
@@ -1655,7 +1957,7 @@
             <td class="cell-time">10:12:30</td>
           </tr>
           <!-- Row 9: Submitted -->
-          <tr tabindex="0" role="row" data-order-id="ORD-20240401-009">
+          <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-009">
             <td class="cell-numeric">ORD-009</td>
             <td class="cell-name">迈瑞医疗</td>
             <td>
@@ -1671,7 +1973,7 @@
             <td class="cell-time">10:15:02</td>
           </tr>
           <!-- Row 10: Filled -->
-          <tr tabindex="0" role="row" data-order-id="ORD-20240401-010">
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-010">
             <td class="cell-numeric">ORD-010</td>
             <td class="cell-name">长江电力</td>
             <td>
@@ -1905,7 +2207,7 @@
 
     <!-- Tab Panel: 待提交 -->
     <div class="tab-panel" data-panel="orders-pending">
-      <div class="state-empty" style="padding:var(--space-16) var(--space-12);">
+      <div class="state-empty state-pad-lg">
         <div class="state-empty-icon">📋</div>
         <div class="state-empty-title">2 笔待提交订单</div>
         <div class="state-empty-desc">以下订单已由策略引擎生成，等待人工确认或自动提交规则触发</div>
@@ -1949,9 +2251,9 @@
         </table>
         <div class="batch-action-bar">
           <span>已选择 2 笔待提交</span>
-          <div style="flex:1;"></div>
+          <div class="flex-spacer"></div>
           <button class="batch-action-btn">批量编辑</button>
-          <button class="batch-action-btn" style="border-color:var(--brand-accent);color:var(--brand-accent);">批量提交</button>
+          <button class="batch-action-btn accent">批量提交</button>
         </div>
         <div class="pagination-bar">
           <span class="pagination-info">共 2 条 · 第 1/1 页</span>
@@ -2011,7 +2313,7 @@
               <td class="numeric">33.45</td>
               <td><span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span></td>
               <td class="cell-time">09:50:01</td>
-              <td class="cell-numeric" style="color:var(--execution-pending-fg)">3分12秒</td>
+              <td class="cell-numeric cell-waiting">3分12秒</td>
             </tr>
             <tr tabindex="0" role="row" data-order-id="ORD-20240401-009">
               <td class="cell-numeric">ORD-009</td>
@@ -2021,7 +2323,7 @@
               <td class="numeric">285.00</td>
               <td><span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span></td>
               <td class="cell-time">10:15:02</td>
-              <td class="cell-numeric" style="color:var(--execution-pending-fg)">1分48秒</td>
+              <td class="cell-numeric cell-waiting">1分48秒</td>
             </tr>
           </tbody>
         </table>
@@ -2059,14 +2361,14 @@
               <td class="cell-name">比亚迪</td>
               <td><span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span></td>
               <td class="numeric">1,000</td>
-              <td class="numeric" style="color:var(--execution-partial-fg);font-weight:var(--font-weight-medium);">350</td>
+              <td class="numeric cell-partial-highlight">350</td>
               <td class="numeric">264.80</td>
               <td>
-                <div style="display:flex;align-items:center;gap:var(--space-4);">
-                  <div style="flex:1;height:4px;background:var(--neutral-200);border-radius:2px;overflow:hidden;">
-                    <div style="width:35%;height:100%;background:var(--execution-partial-fg);border-radius:2px;"></div>
+                <div class="fill-progress">
+                  <div class="fill-progress-track">
+                    <div class="fill-progress-fill" style="width:35%;"></div>
                   </div>
-                  <span class="cell-numeric" style="font-size:var(--font-size-10);color:var(--execution-partial-fg);">35%</span>
+                  <span class="fill-progress-label">35%</span>
                 </div>
               </td>
               <td class="cell-time">09:48:33</td>
@@ -2109,7 +2411,7 @@
               <td class="numeric">3,000</td>
               <td class="numeric">15.60</td>
               <td><span class="order-status cancelled"><span class="status-dot-inline" aria-hidden="true"></span> 已撤单</span></td>
-              <td style="color:var(--text-tertiary);font-size:var(--font-size-12);">用户主动撤单</td>
+              <td class="cell-reason">用户主动撤单</td>
               <td class="cell-time">10:12:30</td>
             </tr>
           </tbody>
@@ -2142,7 +2444,7 @@
       <label class="overlay-dismiss" for="overlay-cancel-confirm" aria-label="关闭"></label>
       <div class="overlay-sheet" role="dialog" aria-label="撤单确认">
         <div class="overlay-header">
-          <span class="overlay-title" style="color:var(--risk-high-fg)">⚠ 撤单确认</span>
+          <span class="overlay-title overlay-warning-title">⚠ 撤单确认</span>
           <label for="overlay-cancel-confirm" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
@@ -2153,7 +2455,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">方向</span>
-            <span class="overlay-field-value" style="color:var(--market-up-fg)">买入</span>
+            <span class="overlay-field-value text-buy">买入</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">数量</span>
@@ -2163,12 +2465,12 @@
             <span class="overlay-field-label">当前状态</span>
             <span class="overlay-field-value"><span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span></span>
           </div>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:var(--space-8) 0 0;">
+          <p class="overlay-desc">
             确认撤销此订单？已成交部分将被保留，未成交部分将被取消。此操作不可撤销。
           </p>
           <div class="overlay-actions">
-            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-danger" style="cursor:pointer">确认撤单</label>
+            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-secondary cursor-trigger">取消</label>
+            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-danger cursor-trigger">确认撤单</label>
           </div>
         </div>
       </div>
@@ -2190,7 +2492,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">方向</span>
-            <span class="overlay-field-value" style="color:var(--market-up-fg)">买入</span>
+            <span class="overlay-field-value text-buy">买入</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">数量</span>
@@ -2202,23 +2504,23 @@
           </div>
 
           <h4>失败原因</h4>
-          <p style="color:var(--risk-high-fg);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+          <p class="overlay-desc-error">
             券商网关超时：订单在 30 秒内未收到确认回报，系统自动标记为失败。
           </p>
 
           <h4>风控检查</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">持仓集中度</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">通过 ✓</span>
+            <span class="overlay-field-value text-pass">通过 ✓</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">单笔限额</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">通过 ✓</span>
+            <span class="overlay-field-value text-pass">通过 ✓</span>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-primary" style="cursor:pointer">重新提交</label>
+            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-secondary cursor-trigger">取消</label>
+            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-primary cursor-trigger">重新提交</label>
           </div>
         </div>
       </div>
@@ -2244,7 +2546,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">方向</span>
-            <span class="overlay-field-value" style="color:var(--market-down-fg)">卖出</span>
+            <span class="overlay-field-value text-sell">卖出</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">数量</span>
@@ -2308,8 +2610,8 @@
             <span class="overlay-field-value">49.80</span>
           </div>
           <div class="overlay-field">
-            <span class="overlay-field-label" style="font-weight:var(--font-weight-medium)">费用合计</span>
-            <span class="overlay-field-value" style="font-weight:var(--font-weight-medium)">159.36</span>
+            <span class="overlay-field-label overlay-field-label-bold">费用合计</span>
+            <span class="overlay-field-value overlay-field-value-bold">159.36</span>
           </div>
         </div>
       </div>
@@ -2320,12 +2622,12 @@
       <label class="overlay-dismiss" for="overlay-batch-cancel" aria-label="关闭"></label>
       <div class="overlay-sheet" role="dialog" aria-label="批量撤单确认">
         <div class="overlay-header">
-          <span class="overlay-title" style="color:var(--risk-high-fg)">⚠ 批量撤单确认</span>
+          <span class="overlay-title overlay-warning-title">⚠ 批量撤单确认</span>
           <label for="overlay-batch-cancel" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-8);">
-            确认撤销以下 <strong style="color:var(--text-primary)">5</strong> 条订单？已成交部分将被保留，未成交部分将被取消。
+          <p class="overlay-desc-batch">
+            确认撤销以下 <strong class="text-highlight">5</strong> 条订单？已成交部分将被保留，未成交部分将被取消。
           </p>
           <h4>已选订单摘要</h4>
           <div class="overlay-field">
@@ -2349,8 +2651,8 @@
             <span class="overlay-field-value">海尔智家 · 买入 400 股 · 待提交</span>
           </div>
           <div class="overlay-actions">
-            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-danger" style="cursor:pointer">确认批量撤单</label>
+            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-secondary cursor-trigger">取消</label>
+            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-danger cursor-trigger">确认批量撤单</label>
           </div>
         </div>
       </div>
@@ -2365,7 +2667,7 @@
     <span class="status-sep">|</span>
     <span>今日 168 笔 · 成交 148 · 待处理 8</span>
     <span class="status-sep">|</span>
-    <span>成交额 <span class="status-live" style="color:var(--market-up-fg)">12.8M</span></span>
+    <span>成交额 <span class="status-live text-status-live">12.8M</span></span>
     <span class="status-sep">|</span>
     <span>10:22:18 CST</span>
     <span class="status-sep">|</span>
@@ -2387,7 +2689,7 @@
       <div class="gallery-card__label">Filter Bar · Loading State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-        <div style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-4) 0;">
+        <div class="skeleton-filter-row">
           <div class="skeleton skeleton-badge" style="width:96px;height:28px;"></div>
           <div class="skeleton skeleton-badge" style="width:88px;height:28px;"></div>
           <div class="skeleton skeleton-badge" style="width:72px;height:28px;"></div>
@@ -2400,8 +2702,8 @@
       <div class="gallery-card__label">Filter Bar · Empty State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
-        <div class="state-empty" style="padding:var(--space-8);">
-          <div class="state-empty-title" style="font-size:var(--font-size-12);">无可选筛选条件</div>
+        <div class="state-empty state-pad-md">
+          <div class="state-empty-title state-title-sm">无可选筛选条件</div>
           <div class="state-empty-desc">当前没有可用的会话或账户数据</div>
         </div>
       </div>
@@ -2411,10 +2713,10 @@
       <div class="gallery-card__label">Filter Bar · Error State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
-        <div class="state-error" style="padding:var(--space-8);">
-          <div class="state-error-icon" style="width:24px;height:24px;font-size:12px;">!</div>
-          <div class="state-error-title" style="font-size:var(--font-size-12);">筛选器加载失败</div>
-          <button class="state-error-retry" style="font-size:var(--font-size-12);">重试</button>
+        <div class="state-error state-pad-md">
+          <div class="state-error-icon state-error-icon-sm">!</div>
+          <div class="state-error-title state-title-sm">筛选器加载失败</div>
+          <button class="state-error-retry state-retry-sm">重试</button>
         </div>
       </div>
       </div>
@@ -2438,8 +2740,8 @@
       <div class="gallery-card__label">Status Strip · Loading State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-        <div class="status-strip" style="position:relative;">
-          <div class="status-tabs" style="gap:var(--space-12);">
+        <div class="status-strip gallery-status-strip">
+          <div class="status-tabs skeleton-tabs-row">
             <div class="skeleton skeleton-badge" style="width:72px;height:28px;"></div>
             <div class="skeleton skeleton-badge" style="width:64px;height:28px;"></div>
             <div class="skeleton skeleton-badge" style="width:80px;height:28px;"></div>
@@ -2610,7 +2912,7 @@
 <div class="state-variant-content" data-state="loading">
         <div class="batch-action-bar">
           <div class="skeleton skeleton-text" style="width:100px;height:16px;"></div>
-          <div style="flex:1;"></div>
+          <div class="flex-spacer"></div>
           <div class="skeleton skeleton-badge" style="width:64px;height:24px;"></div>
           <div class="skeleton skeleton-badge" style="width:64px;height:24px;"></div>
         </div>
@@ -2621,7 +2923,7 @@
       <div class="gallery-card__label">Batch Actions · Empty State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
-        <div class="batch-action-bar" style="color:var(--text-disabled);">
+        <div class="batch-action-bar batch-disabled">
           <span>未选择任何订单</span>
         </div>
       </div>
@@ -2631,11 +2933,11 @@
       <div class="gallery-card__label">Batch Actions · Error State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
-        <div class="state-error" style="padding:var(--space-8);">
-          <div class="state-error-icon" style="width:24px;height:24px;font-size:12px;">!</div>
-          <div class="state-error-title" style="font-size:var(--font-size-12);">批量操作失败</div>
-          <div class="state-error-desc" style="font-size:var(--font-size-12);">部分订单操作未成功执行</div>
-          <button class="state-error-retry" style="font-size:var(--font-size-12);">重试</button>
+        <div class="state-error state-pad-md">
+          <div class="state-error-icon state-error-icon-sm">!</div>
+          <div class="state-error-title state-title-sm">批量操作失败</div>
+          <div class="state-error-desc state-title-sm">部分订单操作未成功执行</div>
+          <button class="state-error-retry state-retry-sm">重试</button>
         </div>
       </div>
       </div>
@@ -2674,7 +2976,7 @@
       <div class="gallery-card__label">Pagination · Empty State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
-        <div class="pagination-bar" style="color:var(--text-disabled);">
+        <div class="pagination-bar pagination-disabled">
           <span class="pagination-info">共 0 条</span>
           <div class="pagination-controls">
             <button class="pagination-btn" disabled>&#8249;</button>
@@ -2689,10 +2991,10 @@
       <div class="gallery-card__label">Pagination · Error State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
-        <div class="pagination-bar" style="color:var(--risk-high-fg);">
+        <div class="pagination-bar pagination-error">
           <span>分页数据加载失败</span>
           <div class="pagination-controls">
-            <button class="pagination-btn" style="border-color:var(--risk-high-fg);color:var(--risk-high-fg);">重试</button>
+            <button class="pagination-btn pagination-error-retry">重试</button>
           </div>
         </div>
       </div>
@@ -2730,7 +3032,7 @@
       <div class="gallery-card__preview gallery-card__preview--overlay">
         <div class="overlay-sheet" role="dialog" aria-label="撤单确认">
           <div class="overlay-header">
-            <span class="overlay-title" style="color:var(--risk-high-fg)">⚠ 撤单确认</span>
+            <span class="overlay-title overlay-warning-title">⚠ 撤单确认</span>
           </div>
           <div class="overlay-body">
             <h4>订单摘要</h4>
@@ -2740,7 +3042,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">方向</span>
-              <span class="overlay-field-value" style="color:var(--market-up-fg)">买入</span>
+              <span class="overlay-field-value text-buy">买入</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">数量</span>
@@ -2750,7 +3052,7 @@
               <span class="overlay-field-label">当前状态</span>
               <span class="overlay-field-value"><span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span></span>
             </div>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:var(--space-8) 0 0;">
+            <p class="overlay-desc">
               确认撤销此订单？已成交部分将被保留，未成交部分将被取消。此操作不可撤销。
             </p>
             <div class="overlay-actions">
@@ -2777,7 +3079,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">方向</span>
-              <span class="overlay-field-value" style="color:var(--market-up-fg)">买入</span>
+              <span class="overlay-field-value text-buy">买入</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">数量</span>
@@ -2789,18 +3091,18 @@
             </div>
 
             <h4>失败原因</h4>
-            <p style="color:var(--risk-high-fg);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            <p class="overlay-desc-error">
               券商网关超时：订单在 30 秒内未收到确认回报，系统自动标记为失败。
             </p>
 
             <h4>风控检查</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">持仓集中度</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">通过 ✓</span>
+              <span class="overlay-field-value text-pass">通过 ✓</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">单笔限额</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">通过 ✓</span>
+              <span class="overlay-field-value text-pass">通过 ✓</span>
             </div>
 
             <div class="overlay-actions">
@@ -2831,7 +3133,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">方向</span>
-              <span class="overlay-field-value" style="color:var(--market-down-fg)">卖出</span>
+              <span class="overlay-field-value text-sell">卖出</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">数量</span>
@@ -2895,8 +3197,8 @@
               <span class="overlay-field-value">49.80</span>
             </div>
             <div class="overlay-field">
-              <span class="overlay-field-label" style="font-weight:var(--font-weight-medium)">费用合计</span>
-              <span class="overlay-field-value" style="font-weight:var(--font-weight-medium)">159.36</span>
+              <span class="overlay-field-label overlay-field-label-bold">费用合计</span>
+              <span class="overlay-field-value overlay-field-value-bold">159.36</span>
             </div>
           </div>
         </div>
@@ -2908,11 +3210,11 @@
       <div class="gallery-card__preview gallery-card__preview--overlay">
         <div class="overlay-sheet" role="dialog" aria-label="批量撤单确认">
           <div class="overlay-header">
-            <span class="overlay-title" style="color:var(--risk-high-fg)">⚠ 批量撤单确认</span>
+            <span class="overlay-title overlay-warning-title">⚠ 批量撤单确认</span>
           </div>
           <div class="overlay-body">
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-8);">
-              确认撤销以下 <strong style="color:var(--text-primary)">5</strong> 条订单？已成交部分将被保留，未成交部分将被取消。
+            <p class="overlay-desc-batch">
+              确认撤销以下 <strong class="text-highlight">5</strong> 条订单？已成交部分将被保留，未成交部分将被取消。
             </p>
             <h4>已选订单摘要</h4>
             <div class="overlay-field">

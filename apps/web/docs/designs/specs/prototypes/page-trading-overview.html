@@ -1407,6 +1407,380 @@
       padding-left: var(--space-12);
       padding-right: var(--space-12);
     }
+
+    /* ══════════════════════════════════════════════
+     * Extracted utility classes (P0 inline-style reduction)
+     * ══════════════════════════════════════════════ */
+
+    /* Review mode section label (h4 sub-headers) */
+    .section-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      margin-bottom: var(--space-8);
+    }
+    .section-label:first-child {
+      margin-top: 0;
+    }
+    .section-label + .section-label,
+    .attribution-section .section-label:not(:first-child) {
+      margin-top: var(--space-10);
+    }
+
+    /* Panel flex utility */
+    .panel-flex {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Panel body scroll */
+    .panel-body-scroll {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Health check value color variants */
+    .health-check-value.text-risk-critical { color: var(--risk-critical-fg); }
+    .health-check-value.text-risk-warning { color: var(--risk-high-fg); }
+    .health-check-value.text-risk-healthy { color: var(--system-healthy-fg); }
+
+    /* Overlay field value color variants */
+    .overlay-field-value.text-up { color: var(--market-up-fg); }
+    .overlay-field-value.text-down { color: var(--market-down-fg); }
+    .overlay-field-value.text-critical { color: var(--risk-critical-fg); }
+
+    /* Overlay danger title */
+    .overlay-title.text-danger { color: var(--risk-critical-fg); }
+
+    /* Overlay warning layout */
+    .overlay-warning-layout {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-10);
+      padding: var(--space-8) 0;
+    }
+
+    /* Overlay warning icon container */
+    .overlay-warning-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: color-mix(in oklch, var(--risk-critical-fg) 10%, transparent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--risk-critical-fg);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* Overlay body text styles */
+    .overlay-body p.text-primary-medium {
+      margin: 0 0 var(--space-6);
+      color: var(--text-primary);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+    }
+    .overlay-body p.text-body {
+      margin: 0;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+    }
+    .overlay-body p.text-body-desc {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* Overlay btn pointer for labels */
+    .overlay-btn.label-interactive {
+      cursor: pointer;
+    }
+
+    /* Empty state placeholder */
+    .empty-placeholder {
+      padding: var(--space-6) 0;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    /* Review panel auto size */
+    .panel-auto {
+      flex: 0 0 auto;
+    }
+
+    /* Detail link inline-flex */
+    .detail-link-inline {
+      cursor: pointer;
+      flex-shrink: 0;
+      align-self: center;
+    }
+
+    /* Skeleton width utilities */
+    .w-60 { width: 60px; }
+    .w-80 { width: 80px; }
+    .w-100 { width: 100px; }
+
+    /* Skeleton flex row */
+    .skeleton-row-flex {
+      display: flex;
+      gap: var(--space-8);
+      align-items: center;
+    }
+    .skeleton-row-flex-wide {
+      display: flex;
+      gap: var(--space-16);
+    }
+
+    /* Flex spacer */
+    .flex-spacer { flex: 1; }
+
+    /* Flex column container */
+    .flex-col-container {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Stale state critical variant */
+    .state-stale.critical-variant {
+      border-color: var(--risk-critical-fg);
+      background: color-mix(in oklch, var(--risk-critical-fg) 6%, transparent);
+      color: var(--risk-critical-fg);
+    }
+
+    /* State empty icon healthy */
+    .state-empty-icon.text-healthy { color: var(--system-healthy-fg); }
+
+    /* ══════════════════════════════════════════════
+     * P2: Activity stack visual differentiation
+     * ══════════════════════════════════════════════ */
+
+    /* Risk monitoring — severity header accent */
+    .context-section.section-risk .context-section-header {
+      border-bottom: 2px solid transparent;
+      border-image: linear-gradient(90deg, var(--risk-critical-fg), color-mix(in oklch, var(--risk-critical-fg) 30%, transparent) 1;
+    }
+
+    /* Risk progress bar with gradient fill */
+    .risk-progress-fill.warning {
+      background: linear-gradient(90deg, var(--risk-high-fg), color-mix(in oklch, var(--risk-critical-fg) 60%, var(--risk-high-fg)));
+    }
+    .risk-progress-fill.critical {
+      background: linear-gradient(90deg, var(--risk-critical-fg), color-mix(in oklch, var(--risk-critical-fg) 60%, var(--brand-accent)));
+    }
+
+    /* Signal queue — prominent priority bar */
+    .signal-queue-bar.p1 {
+      width: 3px;
+      background: linear-gradient(180deg, var(--risk-critical-fg), color-mix(in oklch, var(--risk-critical-fg) 50%, transparent));
+      box-shadow: 0 0 4px color-mix(in oklch, var(--risk-critical-fg) 25%, transparent);
+    }
+    .signal-queue-bar.p2 {
+      width: 2.5px;
+      background: linear-gradient(180deg, var(--risk-high-fg), color-mix(in oklch, var(--risk-high-fg) 50%, transparent));
+    }
+
+    /* Signal queue — confidence sparkline */
+    .signal-confidence-bar {
+      display: flex;
+      gap: 1px;
+      align-items: flex-end;
+      height: 8px;
+      margin-left: var(--space-4);
+    }
+    .signal-confidence-bar span {
+      width: 2px;
+      border-radius: 1px;
+      opacity: 0.5;
+    }
+    .signal-confidence-bar.high span { background: var(--market-up-fg); }
+    .signal-confidence-bar.medium span { background: var(--risk-high-fg); }
+    .signal-confidence-bar.low span { background: var(--text-tertiary); }
+
+    /* Recent fills — row alternation */
+    .fill-row:nth-child(even) {
+      background: color-mix(in oklch, var(--surface-panel-base) 50%, var(--surface-panel-elevated));
+    }
+
+    /* Recent fills — execution quality indicator */
+    .fill-quality {
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      margin-right: var(--space-2);
+    }
+    .fill-quality.good { background: var(--system-healthy-fg); }
+    .fill-quality.ok { background: var(--risk-high-fg); }
+
+    /* ══════════════════════════════════════════════
+     * P3: Positions table enrichment
+     * ══════════════════════════════════════════════ */
+
+    /* Positive row tint */
+    .panel-positions .data-table tbody tr.row-positive td {
+      background: color-mix(in oklch, var(--market-up-fg) 4%, transparent);
+    }
+
+    /* Sorting indicator */
+    .data-table thead th.sortable {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: var(--space-12);
+    }
+    .data-table thead th.sortable::after {
+      content: '↕';
+      position: absolute;
+      right: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: var(--font-size-8);
+      color: var(--text-tertiary);
+      opacity: 0.5;
+    }
+    .data-table thead th.sort-asc::after {
+      content: '↑';
+      opacity: 1;
+      color: var(--brand-accent);
+    }
+    .data-table thead th.sort-desc::after {
+      content: '↓';
+      opacity: 1;
+      color: var(--brand-accent);
+    }
+
+    /* Positions table total row */
+    .data-table tbody tr.row-total {
+      border-top: 2px solid var(--border-subtle);
+      font-weight: var(--font-weight-semibold);
+    }
+    .data-table tbody tr.row-total td {
+      padding-top: var(--space-6);
+      color: var(--text-primary);
+    }
+
+    /* Mini sparkline for positions */
+    .cell-sparkline {
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .cell-sparkline svg {
+      display: block;
+    }
+
+    /* ══════════════════════════════════════════════
+     * P4: Order panel state-based visual weight
+     * ══════════════════════════════════════════════ */
+
+    /* Pending order — elevated visual weight */
+    .order-row.order-pending {
+      border-left: 3px solid var(--brand-accent);
+      padding-left: calc(var(--space-12) - 3px);
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-base));
+    }
+
+    /* Partial fill — elevated with warning accent */
+    .order-row.order-partial {
+      border-left: 3px solid var(--risk-high-fg);
+      padding-left: calc(var(--space-12) - 3px);
+      background: color-mix(in oklch, var(--risk-high-fg) 3%, var(--surface-panel-base));
+    }
+
+    /* Filled order — standard treatment */
+    .order-row.order-filled {
+      opacity: 0.75;
+    }
+
+    /* Cancelled order — muted */
+    .order-row.order-cancelled {
+      opacity: 0.5;
+    }
+    .order-row.order-cancelled .order-ticker,
+    .order-row.order-cancelled .order-detail {
+      text-decoration: line-through;
+      text-decoration-color: var(--text-tertiary);
+    }
+
+    /* Order state badge */
+    .order-state-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-3);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+      gap: var(--space-2);
+    }
+    .order-state-badge.badge-pending {
+      background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      color: var(--brand-accent);
+    }
+    .order-state-badge.badge-filled {
+      background: color-mix(in oklch, var(--system-healthy-fg) 12%, transparent);
+      color: var(--system-healthy-fg);
+    }
+    .order-state-badge.badge-cancelled {
+      background: color-mix(in oklch, var(--text-tertiary) 12%, transparent);
+      color: var(--text-tertiary);
+    }
+    .order-state-badge.badge-partial {
+      background: color-mix(in oklch, var(--risk-high-fg) 12%, transparent);
+      color: var(--risk-high-fg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * P5: Entrance animations + panel stagger
+     * ══════════════════════════════════════════════ */
+
+    @keyframes panel-entrance {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .trading-panels > .panel {
+      animation: panel-entrance 0.35s var(--motion-easing-standard) both;
+    }
+    .trading-panels > .panel:nth-child(1) { animation-delay: 0ms; }
+    .trading-panels > .panel:nth-child(2) { animation-delay: 60ms; }
+    .trading-panels > .panel:nth-child(3) { animation-delay: 120ms; }
+
+    .review-panel > .panel {
+      animation: panel-entrance 0.35s var(--motion-easing-standard) both;
+    }
+    .review-panel > .panel:nth-child(1) { animation-delay: 0ms; }
+    .review-panel > .panel:nth-child(2) { animation-delay: 60ms; }
+    .review-panel > .panel:nth-child(3) { animation-delay: 120ms; }
+    .review-panel > .panel:nth-child(4) { animation-delay: 180ms; }
+
+    .context-section {
+      animation: panel-entrance 0.3s var(--motion-easing-standard) both;
+    }
+    .context-section:nth-child(1) { animation-delay: 80ms; }
+    .context-section:nth-child(2) { animation-delay: 160ms; }
+    .context-section:nth-child(3) { animation-delay: 240ms; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .trading-panels > .panel,
+      .review-panel > .panel,
+      .context-section {
+        animation: none !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1476,7 +1850,7 @@
       <span class="header-subtitle">实盘控制中心</span>
 
       <!-- Tab Bar: 交易模式 / 复盘模式 -->
-      <div class="trading-tab-bar">
+      <div class="trading-tab-bar" role="tablist" aria-label="交易模式切换">
         <input type="radio" name="trading-tabs" id="trading-mode" checked class="tab-radio sr-only">
         <label for="trading-mode" class="trading-mode-tab" role="tab">交易模式</label>
         <input type="radio" name="trading-tabs" id="review-mode" class="tab-radio sr-only">
@@ -1529,7 +1903,7 @@
     </header>
 
     <!-- ═══ Session Strip (with Trading Phase Indicator) ═══ -->
-    <div class="scope-strip">
+    <div class="scope-strip" role="status" aria-label="交易会话状态">
       <div class="scope-phase">
         <span class="phase-dot"></span>
         连续竞价
@@ -1570,7 +1944,7 @@
     <!-- ═══ Decision Banner ═══ -->
     <div class="trading-banner">
       <div class="panel">
-        <div class="decision-banner">
+        <div class="decision-banner" role="alert" aria-live="polite">
           <!-- Left: Primary status (~42%) -->
           <div class="decision-primary">
             <span class="metric-label">今日盈亏</span>
@@ -1608,15 +1982,15 @@
     </div>
 
     <!-- ═══ Main Content — Tab Panels ═══ -->
-    <div class="main-content" id="main-content" aria-live="polite">
+    <div class="main-content" id="main-content" aria-live="polite" role="main">
       <div class="tab-group" data-tab-group="trading">
 
       <!-- Tab Panel 1: 交易模式（默认） -->
-      <div class="tab-panel" data-panel="trading-mode" style="display:block">
-      <div class="trading-panels">
+      <div class="tab-panel" data-panel="trading-mode" style="display:block" role="tabpanel" aria-label="交易模式">
+      <div class="trading-panels" role="group" aria-label="交易面板">
 
         <!-- Panel 1: 权益/盈亏 (~35%) -->
-        <div class="panel panel-equity">
+        <div class="panel panel-equity" role="region" aria-label="权益盈亏">
           <div class="equity-metrics">
             <div class="equity-primary">
               <span class="equity-label">权益曲线</span>
@@ -1637,21 +2011,55 @@
               </div>
             </div>
           </div>
-          <div class="equity-chart">
+          <div class="equity-chart" role="img" aria-label="权益曲线：近一个月持续上涨，当前 +0.34%">
             <span class="equity-chart-label">权益曲线 · 日线</span>
             <svg viewBox="0 0 800 200" preserveAspectRatio="none" aria-hidden="true">
               <defs>
                 <linearGradient id="eq-gradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="var(--market-up-subtle)" stop-opacity="0.5"/>
+                  <stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.3"/>
+                  <stop offset="60%" stop-color="var(--market-up-subtle)" stop-opacity="0.08"/>
                   <stop offset="100%" stop-color="var(--market-up-subtle)" stop-opacity="0"/>
                 </linearGradient>
+                <filter id="eq-glow">
+                  <feGaussianBlur stdDeviation="2" result="blur"/>
+                  <feMerge>
+                    <feMergeNode in="blur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
               </defs>
-              <path d="M0,160 C6.7,159.2 26.7,157 40,155 C53.3,153 66.7,148.5 80,148 C93.3,147.5 106.7,153.3 120,152 C133.3,150.7 146.7,142.8 160,140 C173.3,137.2 186.7,136.7 200,135 C213.3,133.3 226.7,131.7 240,130 C253.3,128.3 266.7,127 280,125 C293.3,123 306.7,119.7 320,118 C333.3,116.3 346.7,116.7 360,115 C373.3,113.3 386.7,110.5 400,108 C413.3,105.5 426.7,102.2 440,100 C453.3,97.8 466.7,96.7 480,95 C493.3,93.3 506.7,91.7 520,90 C533.3,88.3 546.7,87 560,85 C573.3,83 586.7,80.2 600,78 C613.3,75.8 626.7,74.2 640,72 C653.3,69.8 666.7,67.8 680,65 C693.3,62.2 706.7,57.8 720,55 C733.3,52.2 746.7,50.5 760,48 C773.3,45.5 793.3,41.3 800,40 L800,200 L0,200 Z" fill="url(#eq-gradient)" opacity="0.35"/>
-              <path d="M0,160 C6.7,159.2 26.7,157 40,155 C53.3,153 66.7,148.5 80,148 C93.3,147.5 106.7,153.3 120,152 C133.3,150.7 146.7,142.8 160,140 C173.3,137.2 186.7,136.7 200,135 C213.3,133.3 226.7,131.7 240,130 C253.3,128.3 266.7,127 280,125 C293.3,123 306.7,119.7 320,118 C333.3,116.3 346.7,116.7 360,115 C373.3,113.3 386.7,110.5 400,108 C413.3,105.5 426.7,102.2 440,100 C453.3,97.8 466.7,96.7 480,95 C493.3,93.3 506.7,91.7 520,90 C533.3,88.3 546.7,87 560,85 C573.3,83 586.7,80.2 600,78 C613.3,75.8 626.7,74.2 640,72 C653.3,69.8 666.7,67.8 680,65 C693.3,62.2 706.7,57.8 720,55 C733.3,52.2 746.7,50.5 760,48 C773.3,45.5 793.3,41.3 800,40" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5" opacity="0.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <!-- Subtle reference lines -->
-              <line x1="0" y1="80" x2="800" y2="80" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4 4" opacity="0.5"/>
-              <line x1="0" y1="120" x2="800" y2="120" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4 4" opacity="0.5"/>
-              <line x1="0" y1="160" x2="800" y2="160" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4 4" opacity="0.3"/>
+              <!-- Reference grid — horizontal dashed lines -->
+              <line x1="60" y1="40" x2="780" y2="40" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="3 6" opacity="0.35"/>
+              <line x1="60" y1="80" x2="780" y2="80" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="3 6" opacity="0.35"/>
+              <line x1="60" y1="120" x2="780" y2="120" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="3 6" opacity="0.35"/>
+              <line x1="60" y1="160" x2="780" y2="160" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="3 6" opacity="0.2"/>
+              <!-- Y-axis price labels -->
+              <text x="8" y="44" fill="var(--text-tertiary)" font-size="8" font-family="var(--font-family-numeric)" opacity="0.6">25.5M</text>
+              <text x="8" y="84" fill="var(--text-tertiary)" font-size="8" font-family="var(--font-family-numeric)" opacity="0.6">25.3M</text>
+              <text x="8" y="124" fill="var(--text-tertiary)" font-size="8" font-family="var(--font-family-numeric)" opacity="0.6">25.1M</text>
+              <text x="8" y="164" fill="var(--text-tertiary)" font-size="8" font-family="var(--font-family-numeric)" opacity="0.6">24.9M</text>
+              <!-- X-axis date labels -->
+              <text x="80" y="194" fill="var(--text-tertiary)" font-size="7" font-family="var(--font-family-numeric)" opacity="0.5" text-anchor="middle">03/10</text>
+              <text x="200" y="194" fill="var(--text-tertiary)" font-size="7" font-family="var(--font-family-numeric)" opacity="0.5" text-anchor="middle">03/17</text>
+              <text x="320" y="194" fill="var(--text-tertiary)" font-size="7" font-family="var(--font-family-numeric)" opacity="0.5" text-anchor="middle">03/21</text>
+              <text x="440" y="194" fill="var(--text-tertiary)" font-size="7" font-family="var(--font-family-numeric)" opacity="0.5" text-anchor="middle">03/25</text>
+              <text x="560" y="194" fill="var(--text-tertiary)" font-size="7" font-family="var(--font-family-numeric)" opacity="0.5" text-anchor="middle">03/28</text>
+              <text x="680" y="194" fill="var(--text-tertiary)" font-size="7" font-family="var(--font-family-numeric)" opacity="0.5" text-anchor="middle">04/01</text>
+              <text x="770" y="194" fill="var(--text-tertiary)" font-size="7" font-family="var(--font-family-numeric)" opacity="0.5" text-anchor="middle">04/04</text>
+              <!-- Vertical reference lines at dates -->
+              <line x1="200" y1="35" x2="200" y2="185" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2 8" opacity="0.2"/>
+              <line x1="440" y1="35" x2="440" y2="185" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2 8" opacity="0.2"/>
+              <line x1="680" y1="35" x2="680" y2="185" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2 8" opacity="0.2"/>
+              <!-- Gradient fill area -->
+              <path d="M0,160 C6.7,159.2 26.7,157 40,155 C53.3,153 66.7,148.5 80,148 C93.3,147.5 106.7,153.3 120,152 C133.3,150.7 146.7,142.8 160,140 C173.3,137.2 186.7,136.7 200,135 C213.3,133.3 226.7,131.7 240,130 C253.3,128.3 266.7,127 280,125 C293.3,123 306.7,119.7 320,118 C333.3,116.3 346.7,116.7 360,115 C373.3,113.3 386.7,110.5 400,108 C413.3,105.5 426.7,102.2 440,100 C453.3,97.8 466.7,96.7 480,95 C493.3,93.3 506.7,91.7 520,90 C533.3,88.3 546.7,87 560,85 C573.3,83 586.7,80.2 600,78 C613.3,75.8 626.7,74.2 640,72 C653.3,69.8 666.7,67.8 680,65 C693.3,62.2 706.7,57.8 720,55 C733.3,52.2 746.7,50.5 760,48 C773.3,45.5 793.3,41.3 800,40 L800,200 L0,200 Z" fill="url(#eq-gradient)"/>
+              <!-- Main equity curve line -->
+              <path d="M0,160 C6.7,159.2 26.7,157 40,155 C53.3,153 66.7,148.5 80,148 C93.3,147.5 106.7,153.3 120,152 C133.3,150.7 146.7,142.8 160,140 C173.3,137.2 186.7,136.7 200,135 C213.3,133.3 226.7,131.7 240,130 C253.3,128.3 266.7,127 280,125 C293.3,123 306.7,119.7 320,118 C333.3,116.3 346.7,116.7 360,115 C373.3,113.3 386.7,110.5 400,108 C413.3,105.5 426.7,102.2 440,100 C453.3,97.8 466.7,96.7 480,95 C493.3,93.3 506.7,91.7 520,90 C533.3,88.3 546.7,87 560,85 C573.3,83 586.7,80.2 600,78 C613.3,75.8 626.7,74.2 640,72 C653.3,69.8 666.7,67.8 680,65 C693.3,62.2 706.7,57.8 720,55 C733.3,52.2 746.7,50.5 760,48 C773.3,45.5 793.3,41.3 800,40" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5" opacity="0.9" stroke-linecap="round" stroke-linejoin="round" filter="url(#eq-glow)"/>
+              <!-- Current value indicator dot -->
+              <circle cx="800" cy="40" r="3" fill="var(--market-up-fg)" opacity="0.9"/>
+              <circle cx="800" cy="40" r="5" fill="var(--market-up-fg)" opacity="0.2"/>
+              <!-- Crosshair line (static, shows intended interactivity) -->
+              <line x1="600" y1="30" x2="600" y2="185" stroke="var(--brand-accent)" stroke-width="0.5" stroke-dasharray="2 3" opacity="0.3"/>
+              <circle cx="600" cy="78" r="2.5" fill="var(--brand-accent)" opacity="0.5"/>
             </svg>
           </div>
         </div>
@@ -1663,7 +2071,7 @@
         
 
         <!-- Panel 2: 持仓汇总 (~38%) -->
-        <div class="panel panel-positions">
+        <div class="panel panel-positions" role="region" aria-label="持仓汇总">
           <div class="panel-header">
             <span class="panel-title">持仓</span>
             <span class="panel-count">8</span>
@@ -1672,53 +2080,58 @@
             </div>
           </div>
           <div class="panel-body">
-            <table class="data-table">
+            <table class="data-table" aria-label="持仓列表">
               <thead>
                 <tr>
-                  <th>代码</th>
+                  <th class="sortable sort-asc">代码</th>
                   <th>名称</th>
                   <th class="right">数量</th>
                   <th class="right">成本</th>
                   <th class="right">现价</th>
-                  <th class="right">盈亏</th>
+                  <th class="right">7日</th>
+                  <th class="right sortable">盈亏</th>
                   <th class="right">盈亏%</th>
                 </tr>
               </thead>
               <tbody>
-                
-                <tr class="row" style="cursor:pointer">
+
+                <tr class="row row-positive">
                   <td class="cell-ticker">600519</td>
                   <td class="cell-name">贵州茅台</td>
                   <td class="numeric right">200</td>
                   <td class="numeric right">1,785.00</td>
                   <td class="numeric right">1,856.00</td>
+                  <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,8 5,7 10,9 15,6 20,5 25,3 30,4 32,2" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+14,200</td>
                   <td class="numeric right cell-change-up">+3.98%</td>
                 </tr>
-                <tr class="row">
+                <tr class="row row-positive">
                   <td class="cell-ticker">300750</td>
                   <td class="cell-name">宁德时代</td>
                   <td class="numeric right">500</td>
                   <td class="numeric right">215.00</td>
                   <td class="numeric right">218.00</td>
+                  <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,6 5,7 10,5 15,6 20,4 25,5 30,3 32,4" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+1,500</td>
                   <td class="numeric right cell-change-up">+1.40%</td>
                 </tr>
-                <tr class="row">
+                <tr class="row row-positive">
                   <td class="cell-ticker">002594</td>
                   <td class="cell-name">比亚迪</td>
                   <td class="numeric right">300</td>
                   <td class="numeric right">285.00</td>
                   <td class="numeric right">291.00</td>
+                  <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,9 5,8 10,7 15,6 20,5 25,4 30,3 32,3" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+1,800</td>
                   <td class="numeric right cell-change-up">+2.11%</td>
                 </tr>
-                <tr class="row">
+                <tr class="row row-positive">
                   <td class="cell-ticker">601318</td>
                   <td class="cell-name">中国平安</td>
                   <td class="numeric right">1000</td>
                   <td class="numeric right">52.00</td>
                   <td class="numeric right">53.80</td>
+                  <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,7 5,8 10,6 15,5 20,7 25,4 30,3 32,2" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+1,800</td>
                   <td class="numeric right cell-change-up">+3.46%</td>
                 </tr>
@@ -1728,15 +2141,17 @@
                   <td class="numeric right">600</td>
                   <td class="numeric right">68.00</td>
                   <td class="numeric right">66.50</td>
+                  <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,4 5,5 10,6 15,5 20,7 25,8 30,9 32,9" stroke="var(--market-down-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-down">-900</td>
                   <td class="numeric right cell-change-down">-2.21%</td>
                 </tr>
-                <tr class="row">
+                <tr class="row row-positive">
                   <td class="cell-ticker">600900</td>
                   <td class="cell-name">长江电力</td>
                   <td class="numeric right">800</td>
                   <td class="numeric right">28.00</td>
                   <td class="numeric right">28.90</td>
+                  <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,6 5,5 10,7 15,4 20,5 25,3 30,2 32,3" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+720</td>
                   <td class="numeric right cell-change-up">+3.21%</td>
                 </tr>
@@ -1746,17 +2161,29 @@
                   <td class="numeric right">400</td>
                   <td class="numeric right">38.00</td>
                   <td class="numeric right">35.60</td>
+                  <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,3 5,4 10,5 15,7 20,8 25,9 30,10 32,10" stroke="var(--market-down-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-down">-960</td>
                   <td class="numeric right cell-change-down">-6.32%</td>
                 </tr>
-                <tr class="row">
+                <tr class="row row-positive">
                   <td class="cell-ticker">688981</td>
                   <td class="cell-name">中芯国际</td>
                   <td class="numeric right">300</td>
                   <td class="numeric right">48.00</td>
                   <td class="numeric right">51.00</td>
+                  <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,9 5,8 10,6 15,7 20,4 25,3 30,2 32,1" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+900</td>
                   <td class="numeric right cell-change-up">+6.25%</td>
+                </tr>
+                <!-- Total row -->
+                <tr class="row-total" aria-label="合计">
+                  <td class="numeric" colspan="2">合计 8 只</td>
+                  <td class="right"></td>
+                  <td class="right"></td>
+                  <td class="right"></td>
+                  <td class="right"></td>
+                  <td class="numeric right cell-change-up">+¥19,160</td>
+                  <td class="numeric right cell-change-up">+0.75%</td>
                 </tr>
               </tbody>
             </table>
@@ -1772,7 +2199,7 @@
         
 
         <!-- Panel 3: 订单状态 (~27%) -->
-        <div class="panel panel-orders">
+        <div class="panel panel-orders" role="region" aria-label="订单状态">
           <div class="panel-header">
             <span class="panel-title">订单</span>
             <div class="order-tabs" role="tablist">
@@ -1785,44 +2212,44 @@
             </div>
           </div>
           <div class="panel-body" role="tabpanel">
-            <div class="order-row" role="button" tabindex="0" aria-label="买入 600519 100股 ¥1,850.00 待成交">
+            <div class="order-row order-pending" role="button" tabindex="0" aria-label="买入 600519 100股 ¥1,850.00 待成交">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">600519</span>
               <span class="order-type">限价</span>
               <span class="order-detail">100股 ¥1,850.00</span>
-              <span class="order-status pending">待成交</span>
+              <span class="order-state-badge badge-pending">待成交</span>
               <span class="order-time">2分钟前</span>
             </div>
-            <div class="order-row" role="button" tabindex="0" aria-label="卖出 300750 50股 部分成交">
+            <div class="order-row order-partial" role="button" tabindex="0" aria-label="卖出 300750 50股 部分成交">
               <span class="order-side-pill sell">卖出</span>
               <span class="order-ticker">300750</span>
               <span class="order-type">市价</span>
               <span class="order-detail">50股</span>
-              <span class="order-status partial">部分成交 30/50</span>
+              <span class="order-state-badge badge-partial">部分成交 30/50</span>
               <span class="order-time">8分钟前</span>
             </div>
-            <div class="order-row" role="button" tabindex="0" aria-label="买入 002594 200股 ¥288.00 已成交">
+            <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 002594 200股 ¥288.00 已成交">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">002594</span>
               <span class="order-type">限价</span>
               <span class="order-detail">200股 ¥288.00</span>
-              <span class="order-status filled">已成交</span>
+              <span class="order-state-badge badge-filled">已成交</span>
               <span class="order-time">15分钟前</span>
             </div>
-            <div class="order-row" role="button" tabindex="0" aria-label="卖出 601318 500股 ¥54.00 已撤单">
+            <div class="order-row order-cancelled" role="button" tabindex="0" aria-label="卖出 601318 500股 ¥54.00 已撤单">
               <span class="order-side-pill sell">卖出</span>
               <span class="order-ticker">601318</span>
               <span class="order-type">限价</span>
               <span class="order-detail">500股 ¥54.00</span>
-              <span class="order-status cancelled">已撤单</span>
+              <span class="order-state-badge badge-cancelled">已撤单</span>
               <span class="order-time">28分钟前</span>
             </div>
-            <div class="order-row" role="button" tabindex="0" aria-label="买入 000333 200股 市价 已成交">
+            <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 000333 200股 市价 已成交">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">000333</span>
               <span class="order-type">市价</span>
               <span class="order-detail">200股</span>
-              <span class="order-status filled">已成交</span>
+              <span class="order-state-badge badge-filled">已成交</span>
               <span class="order-time">45分钟前</span>
             </div>
           </div>
@@ -1841,7 +2268,7 @@
         <div class="review-panel">
 
           <!-- Review: 当日交易摘要 -->
-          <div class="panel" style="flex:0 0 auto;">
+          <div class="panel panel-auto" role="region" aria-label="当日交易摘要">
             <div class="equity-metrics">
               <div class="equity-primary">
                 <span class="equity-label">今日盈亏</span>
@@ -1866,7 +2293,7 @@
           </div>
 
           <!-- Review: 当日归因 -->
-          <div class="panel attribution-section">
+          <div class="panel attribution-section" role="region" aria-label="当日归因">
             <div class="panel-header">
               <span class="panel-title">当日归因</span>
               <div class="panel-actions">
@@ -1874,7 +2301,7 @@
               </div>
             </div>
             <div class="panel-body">
-              <h4 style="font-size:var(--font-size-12);color:var(--text-tertiary);margin:0 0 var(--space-6);">行业贡献</h4>
+              <h4 class="section-label">行业贡献</h4>
               <div class="attribution-row">
                 <span class="attribution-label">科技</span>
                 <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:65%;"></div></div>
@@ -1891,7 +2318,7 @@
                 <span class="attribution-value up">+1,040</span>
               </div>
 
-              <h4 style="font-size:var(--font-size-12);color:var(--text-tertiary);margin:var(--space-10) 0 var(--space-6);">个股贡献</h4>
+              <h4 class="section-label">个股贡献</h4>
               <div class="attribution-row">
                 <span class="attribution-label">贵州茅台</span>
                 <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:45%;"></div></div>
@@ -1908,7 +2335,7 @@
                 <span class="attribution-value down">-1,200</span>
               </div>
 
-              <h4 style="font-size:var(--font-size-12);color:var(--text-tertiary);margin:var(--space-10) 0 var(--space-6);">因子贡献</h4>
+              <h4 class="section-label">因子贡献</h4>
               <div class="attribution-row">
                 <span class="attribution-label">动量</span>
                 <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:55%;"></div></div>
@@ -1933,26 +2360,26 @@
           
 
           <!-- Review: 持仓健康检查 -->
-          <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+          <div class="panel panel-flex" role="region" aria-label="持仓健康检查">
             <div class="panel-header">
               <span class="panel-title">持仓健康检查</span>
               <span class="panel-count">3</span>
             </div>
-            <div class="panel-body" style="flex:1;overflow-y:auto;">
+            <div class="panel-body panel-body-scroll">
               <div class="health-check-item">
                 <span class="health-check-icon danger"></span>
                 <span class="health-check-label">立讯精密 (002475) — 明日可能触及跌停</span>
-                <span class="health-check-value" style="color:var(--risk-critical-fg)">-6.32%</span>
+                <span class="health-check-value text-risk-critical">-6.32%</span>
               </div>
               <div class="health-check-item">
                 <span class="health-check-icon warning"></span>
                 <span class="health-check-label">美的集团 (000333) — 偏离成本 >5%</span>
-                <span class="health-check-value" style="color:var(--risk-high-fg)">-2.21%</span>
+                <span class="health-check-value text-risk-warning">-2.21%</span>
               </div>
               <div class="health-check-item">
                 <span class="health-check-icon ok"></span>
                 <span class="health-check-label">贵州茅台 (600519) — 明日财报披露</span>
-                <span class="health-check-value" style="color:var(--system-healthy-fg)">+3.98%</span>
+                <span class="health-check-value text-risk-healthy">+3.98%</span>
               </div>
             </div>
           </div>
@@ -1963,11 +2390,11 @@
           
 
           <!-- Review: 明日策略预演 -->
-          <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+          <div class="panel panel-flex" role="region" aria-label="明日策略预演">
             <div class="panel-header">
               <span class="panel-title">明日策略预演</span>
             </div>
-            <div class="panel-body" style="flex:1;overflow-y:auto;">
+            <div class="panel-body panel-body-scroll">
               <div class="strategy-preview-item">
                 <div class="strategy-preview-bar p1"></div>
                 <div class="strategy-preview-body">
@@ -2006,13 +2433,14 @@
     </div>
 
     <!-- ═══ Activity Stack (300px right side) ═══ -->
-    <div class="activity-stack">
+    <div class="activity-stack" role="complementary" aria-label="活动面板">
       <div class="context-rail">
 
         <!-- Section 1: 风控监控 -->
-        <div class="context-section">
+        <div class="context-section section-risk">
           <div class="context-section-header">
             <span class="context-section-title">风控监控</span>
+            <span class="context-section-count" aria-label="2 项预警" title="2 项预警"><span style="color:var(--risk-critical-fg);">2</span></span>
           </div>
           <div class="context-section-body">
             <div class="risk-item critical-alert">
@@ -2027,7 +2455,7 @@
                 </div>
               </div>
               
-              <label for="overlay-risk-alert-detail" class="panel-action" style="cursor:pointer;flex-shrink:0;align-self:center;" title="查看详情">详情</label>
+              <label for="overlay-risk-alert-detail" class="panel-action detail-link-inline" title="查看详情">详情</label>
             </div>
             <div class="risk-item">
               <div class="risk-item-dot warning"></div>
@@ -2070,7 +2498,7 @@
         
 
         <!-- Section 2: 信号队列 -->
-        <div class="context-section">
+        <div class="context-section" role="region" aria-label="信号队列">
           <div class="context-section-header">
             <span class="context-section-title">信号队列</span>
           </div>
@@ -2086,6 +2514,7 @@
                 <div class="signal-queue-footer">
                   <span class="signal-queue-meta">3分钟前</span>
                   <span class="signal-queue-confidence high">置信度 87%</span>
+                  <div class="signal-confidence-bar high"><span style="height:7px"></span><span style="height:5px"></span><span style="height:8px"></span><span style="height:6px"></span><span style="height:4px"></span><span style="height:3px"></span></div>
                 </div>
               </div>
             </div>
@@ -2100,6 +2529,7 @@
                 <div class="signal-queue-footer">
                   <span class="signal-queue-meta">12分钟前</span>
                   <span class="signal-queue-confidence medium">置信度 72%</span>
+                  <div class="signal-confidence-bar medium"><span style="height:4px"></span><span style="height:6px"></span><span style="height:3px"></span><span style="height:7px"></span><span style="height:5px"></span><span style="height:4px"></span></div>
                 </div>
               </div>
             </div>
@@ -2114,6 +2544,7 @@
                 <div class="signal-queue-footer">
                   <span class="signal-queue-meta">28分钟前</span>
                   <span class="signal-queue-confidence high">置信度 91%</span>
+                  <div class="signal-confidence-bar high"><span style="height:8px"></span><span style="height:7px"></span><span style="height:6px"></span><span style="height:5px"></span><span style="height:8px"></span><span style="height:7px"></span></div>
                 </div>
               </div>
             </div>
@@ -2128,6 +2559,7 @@
                 <div class="signal-queue-footer">
                   <span class="signal-queue-meta">45分钟前</span>
                   <span class="signal-queue-confidence low">置信度 68%</span>
+                  <div class="signal-confidence-bar low"><span style="height:3px"></span><span style="height:5px"></span><span style="height:2px"></span><span style="height:4px"></span><span style="height:3px"></span><span style="height:2px"></span></div>
                 </div>
               </div>
             </div>
@@ -2141,30 +2573,34 @@
         
 
         <!-- Section 3: 今日成交 -->
-        <div class="context-section">
+        <div class="context-section" role="region" aria-label="今日成交">
           <div class="context-section-header">
             <span class="context-section-title">今日成交</span>
           </div>
           <div class="context-section-body">
             <div class="fill-row">
+              <span class="fill-quality good" aria-label="执行质量优"></span>
               <span class="fill-ticker">600519</span>
               <span class="fill-side buy">买入</span>
               <span class="fill-detail">100股 @ ¥1,850.00</span>
               <span class="fill-time">2分钟前</span>
             </div>
             <div class="fill-row">
+              <span class="fill-quality good" aria-label="执行质量优"></span>
               <span class="fill-ticker">300750</span>
               <span class="fill-side sell">卖出</span>
               <span class="fill-detail">30股 @ ¥217.80</span>
               <span class="fill-time">8分钟前</span>
             </div>
             <div class="fill-row">
+              <span class="fill-quality ok" aria-label="执行质量一般"></span>
               <span class="fill-ticker">002594</span>
               <span class="fill-side buy">买入</span>
               <span class="fill-detail">200股 @ ¥288.00</span>
               <span class="fill-time">15分钟前</span>
             </div>
             <div class="fill-row">
+              <span class="fill-quality good" aria-label="执行质量优"></span>
               <span class="fill-ticker">000333</span>
               <span class="fill-side buy">买入</span>
               <span class="fill-detail">200股 @ ¥66.50</span>
@@ -2186,20 +2622,20 @@
       <label class="overlay-dismiss" for="overlay-pause-trading" aria-label="关闭"></label>
       <div class="overlay-sheet" role="dialog" aria-label="暂停交易确认">
         <div class="overlay-header">
-          <span class="overlay-title" style="color:var(--risk-critical-fg);">确认暂停交易</span>
+          <span class="overlay-title text-danger">确认暂停交易</span>
           <label for="overlay-pause-trading" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <div style="display:flex;align-items:flex-start;gap:var(--space-10);padding:var(--space-8) 0;">
-            <div style="width:32px;height:32px;border-radius:50%;background:color-mix(in oklch, var(--risk-critical-fg) 10%, transparent);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--risk-critical-fg);font-size:var(--font-size-16);font-weight:var(--font-weight-semibold);">!</div>
+          <div class="overlay-warning-layout">
+            <div class="overlay-warning-icon">!</div>
             <div>
-              <p style="margin:0 0 var(--space-6);color:var(--text-primary);font-size:var(--font-size-13);font-weight:var(--font-weight-medium);">暂停后所有新订单将被拦截</p>
-              <p style="margin:0;color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
+              <p class="text-primary-medium">暂停后所有新订单将被拦截</p>
+              <p class="text-body">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
             </div>
           </div>
           <div class="overlay-actions">
-            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-danger" style="cursor:pointer;border-color:var(--risk-critical-fg);color:var(--risk-critical-fg);">确认暂停</label>
+            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-secondary label-interactive">取消</label>
+            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-danger label-interactive">确认暂停</label>
           </div>
         </div>
       </div>
@@ -2215,55 +2651,55 @@
         </div>
         <div class="overlay-body">
           <h4>标的信息</h4>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">代码</span>
             <span class="overlay-field-value">600519</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">名称</span>
             <span class="overlay-field-value">贵州茅台</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">现价</span>
-            <span class="overlay-field-value" style="color:var(--market-up-fg)">¥1,856.00</span>
+            <span class="overlay-field-value text-up">¥1,856.00</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">涨跌幅</span>
-            <span class="overlay-field-value" style="color:var(--market-up-fg)">+3.98%</span>
+            <span class="overlay-field-value text-up">+3.98%</span>
           </div>
 
           <h4>持仓信息</h4>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">持有数量</span>
             <span class="overlay-field-value">200 股</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">成本价</span>
             <span class="overlay-field-value">¥1,785.00</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">市值</span>
             <span class="overlay-field-value">¥371,200.00</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">浮动盈亏</span>
-            <span class="overlay-field-value" style="color:var(--market-up-fg)">+¥14,200.00 (+3.98%)</span>
+            <span class="overlay-field-value text-up">+¥14,200.00 (+3.98%)</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">T+1 状态</span>
             <span class="overlay-field-value">全部可卖</span>
           </div>
 
           <h4>当日成交记录</h4>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">14:30</span>
-            <span class="overlay-field-value" style="color:var(--market-up-fg)">买入 100股 @ ¥1,850.00</span>
+            <span class="overlay-field-value text-up">买入 100股 @ ¥1,850.00</span>
           </div>
 
           <h4>关联信号</h4>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">卖出信号</span>
-            <span class="overlay-field-value" style="color:var(--market-down-fg)">Alpha v3 · RSI背离+放量 · 置信度 87%</span>
+            <span class="overlay-field-value text-down">Alpha v3 · RSI背离+放量 · 置信度 87%</span>
           </div>
         </div>
       </div>
@@ -2279,40 +2715,40 @@
         </div>
         <div class="overlay-body">
           <h4>预警概要</h4>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">类型</span>
             <span class="overlay-field-value">行业集中度超限</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">级别</span>
-            <span class="overlay-field-value" style="color:var(--risk-critical-fg)">严重</span>
+            <span class="overlay-field-value text-critical">严重</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">触发时间</span>
             <span class="overlay-field-value">14:20:33</span>
           </div>
 
           <h4>详细描述</h4>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+          <p class="text-body-desc">
             科技板块持仓集中度达到 37.2%，超过规则上限 35%。当前科技板块持仓包括：宁德时代、比亚迪、立讯精密、中芯国际。建议适度减配至 33% 以下，降低单一板块风险敞口。
           </p>
 
           <h4>影响范围</h4>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">受影响持仓</span>
             <span class="overlay-field-value">4 只标的</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">涉及市值</span>
             <span class="overlay-field-value">¥9,453,000</span>
           </div>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">占总权益</span>
-            <span class="overlay-field-value" style="color:var(--risk-critical-fg)">37.2%</span>
+            <span class="overlay-field-value text-critical">37.2%</span>
           </div>
 
           <h4>建议操作</h4>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+          <p class="text-body-desc">
             1. 优先减持立讯精密（亏损 -6.32%，动量反转信号明确）<br>
             2. 评估宁德时代仓位，当前盈利 +1.40% 可适度止盈<br>
             3. 将科技板块集中度降至 33% 以下
@@ -2331,22 +2767,22 @@
         </div>
         <div class="overlay-body">
           <h4>接近涨停</h4>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">中芯国际 (688981)</span>
-            <span class="overlay-field-value" style="color:var(--market-up-fg)">¥51.00 (+6.25%) · 距涨停 3.75%</span>
+            <span class="overlay-field-value text-up">¥51.00 (+6.25%) · 距涨停 3.75%</span>
           </div>
 
           <h4>接近跌停</h4>
-          <div class="overlay-field">
+          <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">立讯精密 (002475)</span>
-            <span class="overlay-field-value" style="color:var(--market-down-fg)">¥35.60 (-6.32%) · 距跌停 3.68%</span>
+            <span class="overlay-field-value text-down">¥35.60 (-6.32%) · 距跌停 3.68%</span>
           </div>
 
           <h4>今日已涨停</h4>
-          <div style="padding:var(--space-6) 0;color:var(--text-tertiary);font-size:var(--font-size-12);">暂无标的触及涨停</div>
+          <div class="empty-placeholder">暂无标的触及涨停</div>
 
           <h4>今日已跌停</h4>
-          <div style="padding:var(--space-6) 0;color:var(--text-tertiary);font-size:var(--font-size-12);">暂无标的触及跌停</div>
+          <div class="empty-placeholder">暂无标的触及跌停</div>
         </div>
       </div>
     </div>
@@ -2381,12 +2817,12 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="state-loading">
-          <div style="display:flex;gap:var(--space-8);align-items:center;">
+          <div class="skeleton-row-flex">
             <div class="skeleton skeleton-badge"></div>
-            <div class="skeleton skeleton-text-sm" style="width:80px;"></div>
-            <div class="skeleton skeleton-text-sm" style="width:100px;"></div>
-            <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
-            <div class="skeleton skeleton-text-sm" style="width:80px;"></div>
+            <div class="skeleton skeleton-text-sm w-80"></div>
+            <div class="skeleton skeleton-text-sm w-100"></div>
+            <div class="skeleton skeleton-text-sm w-60"></div>
+            <div class="skeleton skeleton-text-sm w-80"></div>
           </div>
         </div>
       </div>
@@ -2422,10 +2858,10 @@
 <div class="state-variant-content" data-state="loading">
             <div class="state-loading">
               <div class="skeleton skeleton-heading"></div>
-              <div style="display:flex;gap:var(--space-16);">
-                <div class="skeleton skeleton-text-sm" style="width:100px;"></div>
-                <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
-                <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
+              <div class="skeleton-row-flex-wide">
+                <div class="skeleton skeleton-text-sm w-100"></div>
+                <div class="skeleton skeleton-text-sm w-60"></div>
+                <div class="skeleton skeleton-text-sm w-60"></div>
               </div>
               <div class="skeleton skeleton-chart"></div>
             </div>
@@ -2572,7 +3008,7 @@
             </table>
             <div class="bulk-action-bar">
               <span>已选择 2 只标的</span>
-              <div style="flex:1;"></div>
+              <div class="flex-spacer"></div>
               <button class="bulk-action-btn">批量调整</button>
               <button class="bulk-action-btn danger">批量平仓</button>
             </div>
@@ -2675,7 +3111,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
               <div class="state-empty">
-                <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+                <div class="state-empty-icon text-healthy">✓</div>
                 <div class="state-empty-title">所有持仓状态正常</div>
                 <div class="state-empty-desc">无涨跌停风险持仓、无异常波动、无偏离成本预警</div>
               </div>
@@ -2713,7 +3149,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
             <div class="state-empty">
-              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-icon text-healthy">✓</div>
               <div class="state-empty-title">当前无风险预警</div>
               <div class="state-empty-desc">所有风控指标在正常范围内，暂无预警信息</div>
             </div>
@@ -2737,7 +3173,7 @@
       <div class="gallery-card__label">Risk/Alerts · Stale</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-            <div class="state-stale" style="border-color:var(--risk-critical-fg);background:color-mix(in oklch, var(--risk-critical-fg) 6%, transparent);color:var(--risk-critical-fg);">
+            <div class="state-stale critical-variant">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
               预警数据可能过期 — 上次更新 60 秒前
             </div>
@@ -2748,7 +3184,7 @@
       <div class="gallery-card__label">Risk/Alerts · Selected</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
-            <div style="display:flex;flex-direction:column;">
+            <div class="flex-col-container">
               <div class="risk-item critical-alert selected">
                 <div class="risk-item-dot critical"></div>
                 <div class="risk-item-body">
@@ -2796,7 +3232,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
             <div class="state-empty">
-              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-icon text-healthy">✓</div>
               <div class="state-empty-title">暂无待处理信号</div>
               <div class="state-empty-desc">所有信号已处理完毕，信号队列将在新信号产生时更新</div>
             </div>
@@ -2820,7 +3256,7 @@
       <div class="gallery-card__label">Signal Queue · Selected</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
-            <div style="display:flex;flex-direction:column;">
+            <div class="flex-col-container">
               <div class="signal-queue-item selected" role="button" tabindex="0">
                 <div class="signal-queue-bar p1"></div>
                 <div class="signal-queue-body">
@@ -2870,19 +3306,19 @@
       <div class="gallery-card__preview gallery-card__preview--overlay">
         <div class="overlay-sheet" role="dialog" aria-label="暂停交易确认">
           <div class="overlay-header">
-            <span class="overlay-title" style="color:var(--risk-critical-fg);">确认暂停交易</span>
+            <span class="overlay-title text-danger">确认暂停交易</span>
           </div>
-          <div class="overlay-body">
-            <div style="display:flex;align-items:flex-start;gap:var(--space-10);padding:var(--space-8) 0;">
-              <div style="width:32px;height:32px;border-radius:50%;background:color-mix(in oklch, var(--risk-critical-fg) 10%, transparent);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--risk-critical-fg);font-size:var(--font-size-16);font-weight:var(--font-weight-semibold);">!</div>
+          <div class="overlay-body" role="document">
+            <div class="overlay-warning-layout">
+              <div class="overlay-warning-icon">!</div>
               <div>
-                <p style="margin:0 0 var(--space-6);color:var(--text-primary);font-size:var(--font-size-13);font-weight:var(--font-weight-medium);">暂停后所有新订单将被拦截</p>
-                <p style="margin:0;color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
+                <p class="text-primary-medium">暂停后所有新订单将被拦截</p>
+                <p class="text-body">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
               </div>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-pause-trading" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-              <label for="overlay-pause-trading" class="overlay-btn overlay-btn-danger" style="cursor:pointer;border-color:var(--risk-critical-fg);color:var(--risk-critical-fg);">确认暂停</label>
+              <label for="overlay-pause-trading" class="overlay-btn overlay-btn-secondary label-interactive">取消</label>
+              <label for="overlay-pause-trading" class="overlay-btn overlay-btn-danger label-interactive">确认暂停</label>
             </div>
           </div>
         </div>
@@ -2896,54 +3332,54 @@
           <div class="overlay-header">
             <span class="overlay-title">持仓详情 — 贵州茅台 (600519)</span>
           </div>
-          <div class="overlay-body">
+          <div class="overlay-body" role="document">
             <h4>标的信息</h4>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">代码</span>
               <span class="overlay-field-value">600519</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">名称</span>
               <span class="overlay-field-value">贵州茅台</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">现价</span>
-              <span class="overlay-field-value" style="color:var(--market-up-fg)">¥1,856.00</span>
+              <span class="overlay-field-value text-up">¥1,856.00</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">涨跌幅</span>
-              <span class="overlay-field-value" style="color:var(--market-up-fg)">+3.98%</span>
+              <span class="overlay-field-value text-up">+3.98%</span>
             </div>
             <h4>持仓信息</h4>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">持有数量</span>
               <span class="overlay-field-value">200 股</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">成本价</span>
               <span class="overlay-field-value">¥1,785.00</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">市值</span>
               <span class="overlay-field-value">¥371,200.00</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">浮动盈亏</span>
-              <span class="overlay-field-value" style="color:var(--market-up-fg)">+¥14,200.00 (+3.98%)</span>
+              <span class="overlay-field-value text-up">+¥14,200.00 (+3.98%)</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">T+1 状态</span>
               <span class="overlay-field-value">全部可卖</span>
             </div>
             <h4>当日成交记录</h4>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">14:30</span>
-              <span class="overlay-field-value" style="color:var(--market-up-fg)">买入 100股 @ ¥1,850.00</span>
+              <span class="overlay-field-value text-up">买入 100股 @ ¥1,850.00</span>
             </div>
             <h4>关联信号</h4>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">卖出信号</span>
-              <span class="overlay-field-value" style="color:var(--market-down-fg)">Alpha v3 · RSI背离+放量 · 置信度 87%</span>
+              <span class="overlay-field-value text-down">Alpha v3 · RSI背离+放量 · 置信度 87%</span>
             </div>
           </div>
         </div>
@@ -2957,39 +3393,39 @@
           <div class="overlay-header">
             <span class="overlay-title">风控预警详情</span>
           </div>
-          <div class="overlay-body">
+          <div class="overlay-body" role="document">
             <h4>预警概要</h4>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">类型</span>
               <span class="overlay-field-value">行业集中度超限</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">级别</span>
-              <span class="overlay-field-value" style="color:var(--risk-critical-fg)">严重</span>
+              <span class="overlay-field-value text-critical">严重</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">触发时间</span>
               <span class="overlay-field-value">14:20:33</span>
             </div>
             <h4>详细描述</h4>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            <p class="text-body-desc">
               科技板块持仓集中度达到 37.2%，超过规则上限 35%。当前科技板块持仓包括：宁德时代、比亚迪、立讯精密、中芯国际。建议适度减配至 33% 以下，降低单一板块风险敞口。
             </p>
             <h4>影响范围</h4>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">受影响持仓</span>
               <span class="overlay-field-value">4 只标的</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">涉及市值</span>
               <span class="overlay-field-value">¥9,453,000</span>
             </div>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">占总权益</span>
-              <span class="overlay-field-value" style="color:var(--risk-critical-fg)">37.2%</span>
+              <span class="overlay-field-value text-critical">37.2%</span>
             </div>
             <h4>建议操作</h4>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            <p class="text-body-desc">
               1. 优先减持立讯精密（亏损 -6.32%，动量反转信号明确）<br>
               2. 评估宁德时代仓位，当前盈利 +1.40% 可适度止盈<br>
               3. 将科技板块集中度降至 33% 以下
@@ -3006,21 +3442,21 @@
           <div class="overlay-header">
             <span class="overlay-title">涨跌停标的状态概览</span>
           </div>
-          <div class="overlay-body">
+          <div class="overlay-body" role="document">
             <h4>接近涨停</h4>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">中芯国际 (688981)</span>
-              <span class="overlay-field-value" style="color:var(--market-up-fg)">¥51.00 (+6.25%) · 距涨停 3.75%</span>
+              <span class="overlay-field-value text-up">¥51.00 (+6.25%) · 距涨停 3.75%</span>
             </div>
             <h4>接近跌停</h4>
-            <div class="overlay-field">
+            <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">立讯精密 (002475)</span>
-              <span class="overlay-field-value" style="color:var(--market-down-fg)">¥35.60 (-6.32%) · 距跌停 3.68%</span>
+              <span class="overlay-field-value text-down">¥35.60 (-6.32%) · 距跌停 3.68%</span>
             </div>
             <h4>今日已涨停</h4>
-            <div style="padding:var(--space-6) 0;color:var(--text-tertiary);font-size:var(--font-size-12);">暂无标的触及涨停</div>
+            <div class="empty-placeholder">暂无标的触及涨停</div>
             <h4>今日已跌停</h4>
-            <div style="padding:var(--space-6) 0;color:var(--text-tertiary);font-size:var(--font-size-12);">暂无标的触及跌停</div>
+            <div class="empty-placeholder">暂无标的触及跌停</div>
           </div>
         </div>
       </div>

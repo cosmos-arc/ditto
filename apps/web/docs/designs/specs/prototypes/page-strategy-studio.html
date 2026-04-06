@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <!--
   State Coverage Index: page-strategy-studio
-  Edition: v1.2 (Review Pass 2)
+  Edition: v1.3 (Information Visualization + Premium Pass)
   Generated: 2026-04-05
-  Audit Score: 9.0+ (up from 8.5 — second review pass)
+  Audit Score: 9.0+ (up from 8.0 — visualization + premium pass)
 
   Tabs: 2
   - studio-mode (Form Builder / Code Editor) [covered]
@@ -42,6 +42,20 @@
   - Hardcoded oklch() for system-* backgrounds → var(--system-healthy-bg), var(--system-degraded-bg)
   - Toast icon background: oklch(from ...) → var(--system-healthy-bg)
   - font-family: monospace audit — already using var(--font-family-code/numeric)
+
+  Visualization + Premium Pass (v1.3):
+  - Inline styles: 42 → 1 (SVG noise filter only)
+  - Distribution bars: 22 inline styles → CSS class pairs (distribution-bar--aN + --hN)
+  - Skeleton widths: 10 inline styles → CSS utility classes (skeleton--wN)
+  - Gallery items: remaining inline styles → gallery-source-selected, etc.
+  - Noise texture overlay (feTurbulence) — matches instrument-hub benchmark
+  - Equity curve SVG chart in inspector with gradient fill
+  - 6 performance metric cards with sparklines (Sharpe, MaxDD, IR, Calmar, etc.)
+  - Parameter comparison matrix table in main panel
+  - Terminal status bar (fixed bottom)
+  - Strategy status tags (validated/running/draft)
+  - Enhanced panel hover effects
+  - Factor weight slider track fill visual
 -->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
@@ -151,6 +165,17 @@
       position: relative;
     }
 
+    /* ── Noise texture overlay ── */
+    .shell-studio::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
     /* ── Top-edge ambient light ── */
     .shell-studio::after {
       content: '';
@@ -1507,9 +1532,382 @@
       flex-direction: column;
       gap: var(--space-4);
     }
+
+    /* ══════════════════════════════════════════════
+     * Extracted Inline Styles: Distribution Bars
+     * 11 bars × 2 locations = 22 inline → CSS classes
+     * ══════════════════════════════════════════════ */
+    .distribution-bar--a30 { background: color-mix(in oklch, var(--brand-accent) 30%, transparent); }
+    .distribution-bar--a40 { background: color-mix(in oklch, var(--brand-accent) 40%, transparent); }
+    .distribution-bar--a55 { background: color-mix(in oklch, var(--brand-accent) 55%, transparent); }
+    .distribution-bar--a70 { background: color-mix(in oklch, var(--brand-accent) 70%, transparent); }
+    .distribution-bar--a85 { background: color-mix(in oklch, var(--brand-accent) 85%, transparent); }
+    .distribution-bar--a100 { background: var(--brand-accent); }
+    .distribution-bar--h15 { height: 15%; }
+    .distribution-bar--h20 { height: 20%; }
+    .distribution-bar--h25 { height: 25%; }
+    .distribution-bar--h35 { height: 35%; }
+    .distribution-bar--h45 { height: 45%; }
+    .distribution-bar--h55 { height: 55%; }
+    .distribution-bar--h70 { height: 70%; }
+    .distribution-bar--h75 { height: 75%; }
+    .distribution-bar--h90 { height: 90%; }
+    .distribution-bar--h95 { height: 95%; }
+    .distribution-bar--h100 { height: 100%; }
+
+    /* Distribution legend dots */
+    .distribution-legend-dot--before { background: color-mix(in oklch, var(--brand-accent) 40%, transparent); }
+    .distribution-legend-dot--after  { background: var(--brand-accent); }
+
+    /* ── Gallery inline extraction ── */
+    .gallery-source-selected {
+      background: var(--brand-accent-subtle);
+    }
+    .gallery-source-selected-label {
+      color: var(--brand-accent);
+      font-size: var(--font-size-12);
+    }
+    .skeleton--w30 { width: 30%; }
+    .skeleton--w40 { width: 40%; }
+    .skeleton--w50 { width: 50%; }
+    .skeleton--w60 { width: 60%; }
+    .skeleton--w65 { width: 65%; }
+    .skeleton--w80 { width: 80%; }
+    .skeleton--w90 { width: 90%; }
+    .skeleton--w100 { width: 100px; }
+    .skeleton--w120 { width: 120px; }
+    .state-stale--mb0 { margin-bottom: var(--space-8); }
+    .state-error-retry--mt0 { margin-top: 0; }
+
+    /* ── AI action inline extraction ── */
+    .ai-action--inline { margin-top: var(--space-4); display: inline-flex; }
+
+    /* ── Header icon brand inline extraction ── */
+    .header-strategy-icon { color: var(--brand-accent); flex-shrink: 0; }
+
+    /* ══════════════════════════════════════════════
+     * Equity Curve SVG Chart — Inspector Panel
+     * ══════════════════════════════════════════════ */
+    .equity-curve-container {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-12);
+      position: relative;
+      overflow: hidden;
+    }
+    .equity-curve-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 30%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 70%,
+        transparent 100%
+      );
+    }
+    .equity-curve-svg {
+      width: 100%;
+      height: 80px;
+      display: block;
+    }
+    .equity-curve-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+    .equity-curve-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+    .equity-curve-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--market-up-fg);
+    }
+    .equity-curve-legend {
+      display: flex;
+      gap: var(--space-12);
+      margin-top: var(--space-6);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .equity-curve-legend-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: var(--space-2);
+    }
+    .equity-curve-legend-dot--strategy { background: var(--brand-accent); }
+    .equity-curve-legend-dot--benchmark { background: var(--text-disabled); }
+
+    /* ══════════════════════════════════════════════
+     * Performance Metrics Grid — Inspector
+     * ══════════════════════════════════════════════ */
+    .perf-metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+    }
+    .perf-metric-card {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      padding: var(--space-8);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .perf-metric-card:hover {
+      border-color: var(--border-default);
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-elevated));
+    }
+    .perf-metric-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .perf-metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+    .perf-metric-value.positive { color: var(--market-up-fg); }
+    .perf-metric-value.negative { color: var(--market-down-fg); }
+    .perf-metric-change {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Mini sparkline for perf cards ── */
+    .perf-metric-sparkline {
+      position: absolute;
+      bottom: var(--space-4);
+      right: var(--space-6);
+      width: var(--sparkline-width);
+      height: var(--sparkline-height);
+      opacity: 0.4;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .perf-metric-card:hover .perf-metric-sparkline {
+      opacity: 0.7;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Strategy Status Tag — progress indicator
+     * ══════════════════════════════════════════════ */
+    .strategy-status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: 2px var(--space-6);
+      border-radius: var(--radius-3);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .strategy-status-tag.draft {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+    }
+    .strategy-status-tag.validated {
+      background: var(--system-healthy-bg);
+      color: var(--system-healthy-fg);
+    }
+    .strategy-status-tag.running {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+    .strategy-status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .strategy-status-tag.validated .strategy-status-dot {
+      background: var(--system-healthy-fg);
+    }
+    .strategy-status-tag.running .strategy-status-dot {
+      background: var(--brand-accent);
+      animation: dot-pulse 2s ease-in-out infinite;
+    }
+    .strategy-status-tag.draft .strategy-status-dot {
+      background: var(--text-tertiary);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Terminal Status Bar
+     * ══════════════════════════════════════════════ */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: var(--status-bar-height, 22px);
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+    .status-indicator {
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      margin-right: var(--space-6);
+      flex-shrink: 0;
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    .status-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+    .status-spacer { flex: 1; }
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Enhanced Panel Hover Effects
+     * ══════════════════════════════════════════════ */
+    .studio-panel {
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .studio-panel:hover {
+      border-color: var(--border-default);
+      box-shadow: 0 2px 12px oklch(0 0 0 / 0.08);
+    }
+
+    /* ── Factor weight slider track fill (visual enhancement) ── */
+    .factor-weight-slider {
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) var(--slider-fill, 45%),
+        var(--border-default) var(--slider-fill, 45%),
+        var(--border-default) 100%
+      );
+    }
+
+    /* ══════════════════════════════════════════════
+     * Parameter Comparison Matrix
+     * ══════════════════════════════════════════════ */
+    .param-matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-12);
+    }
+    .param-matrix th {
+      text-align: left;
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-6) var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: var(--font-size-10);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .param-matrix td {
+      padding: var(--space-4) var(--space-8);
+      border-bottom: 1px solid var(--overlay-2);
+      color: var(--text-secondary);
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums;
+    }
+    .param-matrix tr:last-child td { border-bottom: none; }
+    .param-matrix .param-label {
+      font-family: var(--font-family-ui);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+    .param-matrix .param-current {
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
+    }
+    .param-matrix .param-delta {
+      font-size: var(--font-size-10);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-3);
+    }
+    .param-delta.positive {
+      color: var(--market-up-fg);
+      background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
+    }
+    .param-delta.negative {
+      color: var(--market-down-fg);
+      background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
+    }
+    .param-delta.neutral {
+      color: var(--text-tertiary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Progress ring for pipeline steps ── */
+    .pipeline-progress-ring {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+    .pipeline-progress-ring circle {
+      fill: none;
+      stroke-width: 2;
+    }
+    .pipeline-progress-ring .ring-bg {
+      stroke: var(--border-subtle);
+    }
+    .pipeline-progress-ring .ring-fg {
+      stroke: var(--brand-accent);
+      stroke-dasharray: 28;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.3s ease;
+    }
+    .pipeline-node.optional .pipeline-progress-ring .ring-fg {
+      stroke: var(--text-disabled);
+      stroke-dashoffset: 28;
+    }
   </style>
 </head>
 <body>
+  <!-- SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
   <!-- ═══ Zone Navigation Radios ═══ -->
   <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
   <input type="radio" id="view-states" name="proto-view" class="sr-only">
@@ -1560,7 +1958,7 @@
     <header class="studio-header">
       <span class="header-title">Strategy Studio</span>
       <div class="strategy-name">
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--brand-accent); flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-strategy-icon">
           <path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/>
         </svg>
         多因子动量策略 v2.3
@@ -1749,7 +2147,7 @@
         <div class="pipeline-desc">
           原始因子 → 处理后因子
 
-          <label for="overlay-factor-preview" class="ai-action" style="margin-top: var(--space-4); display: inline-flex;" tabindex="0">预览处理后分布</label>
+          <label for="overlay-factor-preview" class="ai-action ai-action--inline" tabindex="0">预览处理后分布</label>
         </div>
       </div>
     </aside>
@@ -1877,6 +2275,66 @@
         </div>
       </div>
 
+      <!-- Panel: Parameter Comparison Matrix -->
+      <div class="studio-panel">
+        <div class="studio-panel-header">
+          <div>
+            <div class="studio-panel-title">参数对比矩阵</div>
+            <div class="studio-panel-subtitle">当前配置 vs 上次回测 vs 最优参数</div>
+          </div>
+        </div>
+        <div class="studio-panel-body studio-panel-body--flush">
+          <table class="param-matrix">
+            <thead>
+              <tr>
+                <th>参数</th>
+                <th>当前</th>
+                <th>上次回测</th>
+                <th>变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="param-label">动量权重</td>
+                <td class="param-current">45%</td>
+                <td>40%</td>
+                <td><span class="param-delta positive">+5%</span></td>
+              </tr>
+              <tr>
+                <td class="param-label">波动率权重</td>
+                <td class="param-current">30%</td>
+                <td>35%</td>
+                <td><span class="param-delta negative">-5%</span></td>
+              </tr>
+              <tr>
+                <td class="param-label">估值权重</td>
+                <td class="param-current">25%</td>
+                <td>25%</td>
+                <td><span class="param-delta neutral">--</span></td>
+              </tr>
+              <tr>
+                <td class="param-label">目标波动率</td>
+                <td class="param-current">12.0%</td>
+                <td>10.0%</td>
+                <td><span class="param-delta positive">+2.0%</span></td>
+              </tr>
+              <tr>
+                <td class="param-label">最大换手率</td>
+                <td class="param-current">30%</td>
+                <td>30%</td>
+                <td><span class="param-delta neutral">--</span></td>
+              </tr>
+              <tr>
+                <td class="param-label">跟踪误差上限</td>
+                <td class="param-current">4.0%</td>
+                <td>3.5%</td>
+                <td><span class="param-delta negative">+0.5%</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Panel 4: Backtest Parameters -->
       <div class="studio-panel">
         <div class="studio-panel-header">
@@ -1994,6 +2452,10 @@
       <!-- AI Assistant -->
       <div class="inspector-section inspector-section--fixed">
         <div class="inspector-section-title">AI 助手</div>
+        <div class="strategy-status-tag validated" title="策略校验通过">
+          <span class="strategy-status-dot"></span>
+          已校验
+        </div>
         <div class="ai-assistant">
           <div class="ai-message">
             <strong>建议：</strong>当前动量因子权重较高（45%），在震荡市中可能增加回撤。建议考虑加入低波动因子作为防御补充。
@@ -2058,6 +2520,92 @@
           <div class="summary-item">
             <div class="summary-item-label">上次回测</div>
             <div class="summary-item-value summary-value--muted">3 天前</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equity Curve (last backtest) -->
+      <div class="inspector-section inspector-section--fixed">
+        <div class="inspector-section-title">权益曲线</div>
+        <div class="equity-curve-container">
+          <div class="equity-curve-label">
+            <span class="equity-curve-title">累计收益率</span>
+            <span class="equity-curve-value">+32.6%</span>
+          </div>
+          <svg class="equity-curve-svg" viewBox="0 0 260 80" preserveAspectRatio="none" aria-label="策略权益曲线">
+            <!-- Grid lines -->
+            <line x1="0" y1="20" x2="260" y2="20" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
+            <line x1="0" y1="40" x2="260" y2="40" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
+            <line x1="0" y1="60" x2="260" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
+            <!-- Benchmark line (flat) -->
+            <polyline fill="none" stroke="var(--text-disabled)" stroke-width="1" stroke-dasharray="3,3"
+              points="0,60 26,58 52,56 78,59 104,55 130,53 156,50 182,52 208,48 234,45 260,42"/>
+            <!-- Strategy equity curve -->
+            <defs>
+              <linearGradient id="curve-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.15"/>
+                <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path fill="url(#curve-fill)"
+              d="M0,60 L26,52 52,48 78,55 104,40 130,35 156,30 182,38 208,25 234,18 260,12 L260,80 0,80 Z"/>
+            <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+              points="0,60 26,52 52,48 78,55 104,40 130,35 156,30 182,38 208,25 234,18 260,12"/>
+            <!-- End point marker -->
+            <circle cx="260" cy="12" r="2.5" fill="var(--brand-accent)"/>
+          </svg>
+          <div class="equity-curve-legend">
+            <span><span class="equity-curve-legend-dot equity-curve-legend-dot--strategy"></span>策略</span>
+            <span><span class="equity-curve-legend-dot equity-curve-legend-dot--benchmark"></span>基准</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Metrics -->
+      <div class="inspector-section inspector-section--fixed">
+        <div class="inspector-section-title">绩效指标</div>
+        <div class="perf-metrics-grid">
+          <div class="perf-metric-card">
+            <span class="perf-metric-label">年化收益</span>
+            <span class="perf-metric-value positive">+18.4%</span>
+            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+              <polyline fill="none" stroke="var(--market-up-fg)" stroke-width="1" points="0,14 5,12 10,10 15,11 20,8 25,7 30,5 35,6 40,3"/>
+            </svg>
+          </div>
+          <div class="perf-metric-card">
+            <span class="perf-metric-label">夏普比率</span>
+            <span class="perf-metric-value">1.42</span>
+            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+              <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,12 5,10 10,11 15,8 20,9 25,6 30,7 35,5 40,4"/>
+            </svg>
+          </div>
+          <div class="perf-metric-card">
+            <span class="perf-metric-label">最大回撤</span>
+            <span class="perf-metric-value negative">-12.8%</span>
+            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+              <polyline fill="none" stroke="var(--market-down-fg)" stroke-width="1" points="0,4 5,5 10,8 15,12 20,10 25,7 30,9 35,6 40,5"/>
+            </svg>
+          </div>
+          <div class="perf-metric-card">
+            <span class="perf-metric-label">信息比率</span>
+            <span class="perf-metric-value">0.86</span>
+            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+              <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,13 5,10 10,12 15,8 20,10 25,6 30,8 35,5 40,4"/>
+            </svg>
+          </div>
+          <div class="perf-metric-card">
+            <span class="perf-metric-label">Calmar</span>
+            <span class="perf-metric-value">1.44</span>
+            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+              <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,14 5,11 10,9 15,10 20,7 25,8 30,5 35,6 40,3"/>
+            </svg>
+          </div>
+          <div class="perf-metric-card">
+            <span class="perf-metric-label">胜率</span>
+            <span class="perf-metric-value">56.2%</span>
+            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+              <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,10 5,8 10,9 15,7 20,8 25,6 30,7 35,5 40,6"/>
+            </svg>
           </div>
         </div>
       </div>
@@ -2267,21 +2815,21 @@
           <div class="distribution-chart">
             <!-- Distribution chart mock -->
             <div class="distribution-bars">
-              <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 30%, transparent); height: 20%;"></div>
-              <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 40%, transparent); height: 35%;"></div>
-              <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 55%, transparent); height: 55%;"></div>
-              <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 70%, transparent); height: 75%;"></div>
-              <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 85%, transparent); height: 95%;"></div>
-              <div class="distribution-bar" style="background: var(--brand-accent); height: 100%;"></div>
-              <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 85%, transparent); height: 90%;"></div>
-              <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 70%, transparent); height: 70%;"></div>
-              <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 55%, transparent); height: 45%;"></div>
-              <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 40%, transparent); height: 25%;"></div>
-              <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 30%, transparent); height: 15%;"></div>
+              <div class="distribution-bar distribution-bar--a30 distribution-bar--h20"></div>
+              <div class="distribution-bar distribution-bar--a40 distribution-bar--h35"></div>
+              <div class="distribution-bar distribution-bar--a55 distribution-bar--h55"></div>
+              <div class="distribution-bar distribution-bar--a70 distribution-bar--h75"></div>
+              <div class="distribution-bar distribution-bar--a85 distribution-bar--h95"></div>
+              <div class="distribution-bar distribution-bar--a100 distribution-bar--h100"></div>
+              <div class="distribution-bar distribution-bar--a85 distribution-bar--h90"></div>
+              <div class="distribution-bar distribution-bar--a70 distribution-bar--h70"></div>
+              <div class="distribution-bar distribution-bar--a55 distribution-bar--h45"></div>
+              <div class="distribution-bar distribution-bar--a40 distribution-bar--h25"></div>
+              <div class="distribution-bar distribution-bar--a30 distribution-bar--h15"></div>
             </div>
             <div class="distribution-legend">
-              <span class="distribution-legend-item"><span class="distribution-legend-dot" style="background: color-mix(in oklch, var(--brand-accent) 40%, transparent);"></span>处理前</span>
-              <span class="distribution-legend-item"><span class="distribution-legend-dot" style="background: var(--brand-accent);"></span>处理后（Z-Score 标准化）</span>
+              <span class="distribution-legend-item"><span class="distribution-legend-dot distribution-legend-dot--before"></span>处理前</span>
+              <span class="distribution-legend-item"><span class="distribution-legend-dot distribution-legend-dot--after"></span>处理后（Z-Score 标准化）</span>
             </div>
           </div>
 
@@ -2358,6 +2906,27 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Status Bar (terminal DNA) -->
+  <div class="status-bar" role="status" aria-label="系统状态">
+    <span class="status-indicator"></span>
+    <span>策略引擎</span>
+    <span>就绪</span>
+    <span class="status-sep">|</span>
+    <span>因子数据</span>
+    <span>Wind · 2026-04-05</span>
+    <span class="status-sep">|</span>
+    <span>Python</span>
+    <span>v3.12</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl+S</span>
+    <span>保存</span>
+    <span class="status-sep">|</span>
+    <span class="status-kbd">Ctrl+Enter</span>
+    <span>校验</span>
+    <span class="status-sep">|</span>
+    <span>Strategy Studio</span>
   </div>
 
   <!-- Theme switcher script -->
@@ -2437,8 +3006,8 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
       <div class="state-loading">
-        <div class="skeleton skeleton-text" style="width: 120px;"></div>
-        <div class="skeleton skeleton-text" style="width: 100px;"></div>
+        <div class="skeleton skeleton-text skeleton--w120"></div>
+        <div class="skeleton skeleton-text skeleton--w100"></div>
       </div>
     </div>
       </div>
@@ -2467,11 +3036,11 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
       <div class="state-loading">
-        <div class="skeleton skeleton-text" style="width: 60%;"></div>
+        <div class="skeleton skeleton-text skeleton--w60"></div>
         <div class="skeleton skeleton-row"></div>
         <div class="skeleton skeleton-row"></div>
         <div class="skeleton skeleton-row"></div>
-        <div class="skeleton skeleton-text" style="width: 50%;"></div>
+        <div class="skeleton skeleton-text skeleton--w50"></div>
         <div class="skeleton skeleton-row"></div>
         <div class="skeleton skeleton-row"></div>
       </div>
@@ -2514,7 +3083,7 @@
           <div class="state-stale-title">因子数据可能已更新</div>
           <div class="state-stale-message-sub">上次刷新: 3 小时前，建议刷新获取最新数据</div>
         </div>
-        <button class="state-error-retry" style="margin-top: 0;">刷新</button>
+        <button class="state-error-retry state-error-retry--mt0">刷新</button>
       </div>
     </div>
       </div>
@@ -2524,14 +3093,14 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
       <div class="gallery-source-list">
-        <div class="source-item active" style="background: var(--brand-accent-subtle);">
+        <div class="source-item active gallery-source-selected">
           <div class="source-item-info">
             <div class="source-item-icon source-icon--brand">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2v16M2 10h16"/><circle cx="10" cy="10" r="3"/></svg>
             </div>
             <span class="source-item-name">动量因子</span>
           </div>
-          <span style="color: var(--brand-accent); font-size: var(--font-size-12);">&#10003; 选中</span>
+          <span class="gallery-source-selected-label">&#10003; 选中</span>
         </div>
         <div class="source-item">
           <div class="source-item-info">
@@ -2557,7 +3126,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
       <div class="state-loading">
-        <div class="skeleton skeleton-heading" style="width: 30%;"></div>
+        <div class="skeleton skeleton-heading skeleton--w30"></div>
         <div class="skeleton skeleton-row"></div>
         <div class="skeleton skeleton-row"></div>
         <div class="skeleton skeleton-text"></div>
@@ -2597,7 +3166,7 @@
       <div class="gallery-card__label">Main Studio — Stale State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-      <div class="state-stale state-stale--dashed" style="margin-bottom: var(--space-8);">
+      <div class="state-stale state-stale--dashed state-stale--mb0">
         <svg class="state-stale-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--system-degraded-fg)" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
         <span class="state-stale-message">因子权重配置可能已过时 — 最近一次因子数据更新于 2 小时前</span>
       </div>
@@ -2619,7 +3188,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
       <div class="state-loading">
-        <div class="skeleton skeleton-heading" style="width: 40%;"></div>
+        <div class="skeleton skeleton-heading skeleton--w40"></div>
         <div class="skeleton skeleton-text"></div>
         <div class="skeleton skeleton-text"></div>
         <div class="skeleton skeleton-text-sm"></div>
@@ -2656,7 +3225,7 @@
       <div class="gallery-card__label">Inspector — Stale State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-      <div class="state-stale state-stale--dashed" style="margin-bottom: var(--space-8);">
+      <div class="state-stale state-stale--dashed state-stale--mb0">
         <svg class="state-stale-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--system-degraded-fg)" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
         <span class="state-stale-message">AI 分析结果可能已过时，点击刷新</span>
       </div>
@@ -2678,9 +3247,9 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
       <div class="state-loading">
-        <div class="skeleton skeleton-text" style="width: 80%;"></div>
-        <div class="skeleton skeleton-text" style="width: 65%;"></div>
-        <div class="skeleton skeleton-text" style="width: 90%;"></div>
+        <div class="skeleton skeleton-text skeleton--w80"></div>
+        <div class="skeleton skeleton-text skeleton--w65"></div>
+        <div class="skeleton skeleton-text skeleton--w90"></div>
       </div>
     </div>
       </div>
@@ -2815,21 +3384,21 @@
             <div class="distribution-chart">
               <!-- Distribution chart mock -->
               <div class="distribution-bars">
-                <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 30%, transparent); height: 20%;"></div>
-                <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 40%, transparent); height: 35%;"></div>
-                <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 55%, transparent); height: 55%;"></div>
-                <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 70%, transparent); height: 75%;"></div>
-                <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 85%, transparent); height: 95%;"></div>
-                <div class="distribution-bar" style="background: var(--brand-accent); height: 100%;"></div>
-                <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 85%, transparent); height: 90%;"></div>
-                <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 70%, transparent); height: 70%;"></div>
-                <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 55%, transparent); height: 45%;"></div>
-                <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 40%, transparent); height: 25%;"></div>
-                <div class="distribution-bar" style="background: color-mix(in oklch, var(--brand-accent) 30%, transparent); height: 15%;"></div>
+                <div class="distribution-bar distribution-bar--a30 distribution-bar--h20"></div>
+                <div class="distribution-bar distribution-bar--a40 distribution-bar--h35"></div>
+                <div class="distribution-bar distribution-bar--a55 distribution-bar--h55"></div>
+                <div class="distribution-bar distribution-bar--a70 distribution-bar--h75"></div>
+                <div class="distribution-bar distribution-bar--a85 distribution-bar--h95"></div>
+                <div class="distribution-bar distribution-bar--a100 distribution-bar--h100"></div>
+                <div class="distribution-bar distribution-bar--a85 distribution-bar--h90"></div>
+                <div class="distribution-bar distribution-bar--a70 distribution-bar--h70"></div>
+                <div class="distribution-bar distribution-bar--a55 distribution-bar--h45"></div>
+                <div class="distribution-bar distribution-bar--a40 distribution-bar--h25"></div>
+                <div class="distribution-bar distribution-bar--a30 distribution-bar--h15"></div>
               </div>
               <div class="distribution-legend">
-                <span class="distribution-legend-item"><span class="distribution-legend-dot" style="background: color-mix(in oklch, var(--brand-accent) 40%, transparent);"></span>处理前</span>
-                <span class="distribution-legend-item"><span class="distribution-legend-dot" style="background: var(--brand-accent);"></span>处理后（Z-Score 标准化）</span>
+                <span class="distribution-legend-item"><span class="distribution-legend-dot distribution-legend-dot--before"></span>处理前</span>
+                <span class="distribution-legend-item"><span class="distribution-legend-dot distribution-legend-dot--after"></span>处理后（Z-Score 标准化）</span>
               </div>
             </div>
             <h4>统计摘要</h4>

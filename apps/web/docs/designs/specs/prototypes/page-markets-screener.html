@@ -882,6 +882,604 @@
     .state-variant .state-variant-content {
       background: var(--surface-app);
     }
+
+
+    /* ══════════════════════════════════════════════
+     * Extracted Utility Classes (inline style → class)
+     * ══════════════════════════════════════════════ */
+
+    /* ── Overlay input fields ── */
+    .ov-input {
+      width: 100%;
+      padding: var(--space-4) var(--space-8);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-default);
+      background: var(--surface-muted);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      outline: none;
+    }
+
+    /* ── Tag / chip items (compare tags, preset tags) ── */
+    .ov-tag {
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-12);
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+    .ov-tag--primary {
+      color: var(--text-primary);
+    }
+    .ov-tag .ov-tag-close {
+      color: var(--text-tertiary);
+      margin-left: var(--space-4);
+    }
+
+    /* ── Checkbox/radio labels (column manage, export options) ── */
+    .ov-check-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) 0;
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+    }
+    .ov-check-label--dim {
+      color: var(--text-tertiary);
+    }
+    .ov-check-label input[type="checkbox"],
+    .ov-check-label input[type="radio"] {
+      accent-color: var(--brand-accent);
+    }
+
+    /* ── Compare field cells ── */
+    .ov-compare-cell {
+      flex: 1;
+      text-align: center;
+    }
+
+    /* ── Overlay tab buttons ── */
+    .ov-tab {
+      padding: var(--space-4) var(--space-8);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .ov-tab--active {
+      border-bottom: 2px solid var(--brand-accent);
+      color: var(--text-primary);
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+
+    /* ── Overlay action labels (cursor:pointer) ── */
+    .ov-label-btn { cursor: pointer; }
+
+    /* ── Compare drawer header row ── */
+    .ov-compare-header-row {
+      padding: var(--space-6) var(--space-10);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+    .ov-compare-header-row input[type="checkbox"] {
+      accent-color: var(--brand-accent);
+    }
+    .ov-compare-row {
+      padding: var(--space-6) var(--space-10);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+    .ov-compare-row input[type="checkbox"] {
+      accent-color: var(--brand-accent);
+    }
+    .ov-compare-row--selected {
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+    }
+
+    /* ── Skeleton variants ── */
+    .skeleton-bar {
+      height: 32px;
+      width: 100%;
+      border-radius: var(--radius-4);
+    }
+    .skeleton-bar--lg {
+      height: 48px;
+      width: 100%;
+      border-radius: var(--radius-6);
+    }
+    .skeleton-bar--sm {
+      height: 24px;
+      border-radius: var(--radius-4);
+    }
+    .skeleton-bar--xl {
+      height: 80px;
+      width: 100%;
+      border-radius: var(--radius-6);
+    }
+
+    /* ── Stale state containers ── */
+    .stale-banner {
+      padding: var(--space-12);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+    .stale-dot-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-degraded-fg);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .stale-banner-text {
+      font-size: var(--font-size-12);
+      color: var(--system-degraded-fg);
+    }
+
+    /* ── Signal stale showcase column ── */
+    .stale-signal-col {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      align-items: flex-start;
+    }
+    .stale-signal-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Gallery hint text ── */
+    .gallery-hint {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      margin-top: var(--space-4);
+      display: block;
+    }
+    .gallery-hint--inline {
+      padding: var(--space-4);
+    }
+    .gallery-hint--sm {
+      font-size: var(--font-size-10);
+    }
+    .gallery-hint--mt8 {
+      margin-top: var(--space-8);
+    }
+
+    /* ── State variant containers ── */
+    .sv-pad-8 { padding: var(--space-8); }
+    .sv-pad-12 { padding: var(--space-12); }
+    .sv-flex-wrap { display: flex; gap: var(--space-6); flex-wrap: wrap; }
+    .sv-flex-wrap--mb12 { display: flex; gap: var(--space-6); flex-wrap: wrap; margin-bottom: var(--space-12); }
+    .sv-pad-section { padding: var(--space-4) 0 var(--space-8); }
+    .sv-pad-6-0 { padding: var(--space-6) 0; }
+    .sv-pad-8-0 { padding: var(--space-8) 0; }
+
+    /* ── Selected state card ── */
+    .sv-bulk-card {
+      border: 1px solid var(--brand-accent);
+      border-radius: var(--radius-4);
+      padding: var(--space-6);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+      margin-bottom: var(--space-8);
+    }
+    .sv-bulk-title {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+    .sv-bordered-box {
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-4);
+      overflow: hidden;
+    }
+    .sv-bulk-toolbar {
+      padding: var(--space-6) var(--space-10);
+      background: var(--interaction-hover-subtle-bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+    .sv-bulk-toolbar-actions {
+      display: flex;
+      gap: var(--space-6);
+    }
+    .sv-bulk-btn {
+      font-size: var(--font-size-12);
+      padding: var(--space-2) var(--space-6);
+    }
+    .sv-bulk-btn--pointer { cursor: pointer; }
+
+    /* ── Filter active state ring ── */
+    .filter-chip--ring {
+      box-shadow: 0 0 0 2px var(--brand-accent);
+    }
+
+    /* ── Preset selected state ── */
+    .preset-card--selected {
+      border-color: var(--brand-accent);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+    }
+    .preset-card-match--selected {
+      color: var(--brand-accent);
+    }
+
+    /* ── Compare drawer selected row ── */
+    .sv-compare-highlight {
+      padding: var(--space-6) var(--space-10);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+    .sv-compare-highlight-name {
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Signal stale showcase wrapper ── */
+    .sv-signal-stale-wrap {
+      padding: var(--space-8);
+      display: flex;
+      gap: var(--space-12);
+      flex-wrap: wrap;
+    }
+
+    /* ── Generate pool description text ── */
+    .ov-desc-text {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0 0 var(--space-12);
+    }
+
+    /* ── Column manage check list ── */
+    .ov-check-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    /* ── Tag list with bottom margin ── */
+    .ov-tag-list-mb12 {
+      display: flex;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-12);
+    }
+
+    /* ── Tab bar ── */
+    .ov-tab-bar {
+      display: flex;
+      gap: var(--space-4);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+
+    /* ── Radio groups for export ── */
+    .ov-radio-group {
+      display: flex;
+      gap: var(--space-6);
+      margin-bottom: var(--space-12);
+    }
+    .ov-radio-group--tight {
+      display: flex;
+      gap: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── Tag close icon ── */
+    .tag-close-icon {
+      color: var(--text-tertiary);
+      margin-left: var(--space-4);
+    }
+
+    /* ── Filter selected state wrapper ── */
+    .filter-selected-wrap {
+      padding: var(--space-8) 0;
+      display: flex;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+    }
+
+    /* ── Preset selected card in gallery ── */
+    .sv-preset-wrap { padding: var(--space-8); }
+
+    /* ── Bulk toolbar inner ── */
+    .sv-bulk-toolbar-inner {
+      padding: var(--space-6) var(--space-10);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+
+    /* ── Text color utilities ── */
+    .text-up { color: var(--market-up-fg); }
+    .text-down { color: var(--market-down-fg); }
+    .text-tertiary { color: var(--text-tertiary); }
+    .text-brand { color: var(--brand-accent); }
+    .text-secondary { color: var(--text-secondary); }
+    .font-medium { font-weight: var(--font-weight-medium); }
+    .flex-1 { flex: 1; }
+
+    /* ══════════════════════════════════════════════
+     * Information Visualization Enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Filter count badge — active count indicator ── */
+    .filter-count {
+      position: relative;
+    }
+    .filter-count::before {
+      content: '';
+      position: absolute;
+      left: calc(100% + var(--space-4));
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      border-radius: var(--radius-12);
+      background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 25%, transparent);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--brand-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+      pointer-events: none;
+    }
+    .filter-toolbar:has(.filter-chip.active:not(:only-child)) .filter-count::before {
+      content: '3';
+      opacity: 1;
+    }
+
+    /* ── Conditional row tint — subtle up/down background ── */
+    .data-table tr.row:has(.cell-change-up) td {
+      background: color-mix(in oklch, var(--market-up-fg) 2%, transparent);
+    }
+    .data-table tr.row:has(.cell-change-down) td {
+      background: color-mix(in oklch, var(--market-down-fg) 2%, transparent);
+    }
+    /* Override sorted column tint + row hover */
+    .data-table tr.row td.col-sorted {
+      background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
+    }
+    .data-table tr.row:hover td {
+      background: var(--interaction-hover-subtle-bg) !important;
+    }
+    /* Selected row overrides all */
+    .data-table tr.row.selected td {
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent) !important;
+    }
+
+    /* ── Ranking change bar — micro indicator in change cells ── */
+    .cell-change-up,
+    .cell-change-down {
+      position: relative;
+    }
+    .data-table td.cell-change-up::after,
+    .data-table td.cell-change-down::after {
+      content: '';
+      position: absolute;
+      right: 2px;
+      bottom: 2px;
+      height: 2px;
+      border-radius: 1px;
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .data-table tr:hover td.cell-change-up::after {
+      background: var(--market-up-fg);
+      opacity: 0.4;
+      width: 60%;
+    }
+    .data-table tr:hover td.cell-change-down::after {
+      background: var(--market-down-fg);
+      opacity: 0.4;
+      width: 60%;
+    }
+
+    /* ── Filter chip active pulse on interaction ── */
+    .filter-chip.active {
+      position: relative;
+    }
+    .filter-chip.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 20%;
+      right: 20%;
+      height: 1px;
+      background: var(--brand-accent);
+      opacity: 0.5;
+      border-radius: 1px;
+    }
+
+    /* ── Table header sorted column accent glow ── */
+    .data-table th.sorted {
+      position: relative;
+    }
+    .data-table th.sorted::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        var(--brand-accent),
+        transparent
+      );
+      opacity: 0.6;
+    }
+
+    /* ── Signal pill confidence micro-bar ── */
+    .signal-pill {
+      position: relative;
+      overflow: hidden;
+    }
+    .signal-pill::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 1.5px;
+      border-radius: 0 1px 0 0;
+      opacity: 0.4;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .signal-pill.s2::before { width: 90%; }
+    .signal-pill.s1::before { width: 65%; }
+    .signal-pill.s0::before { width: 40%; }
+    .signal-pill.buy::before { background: var(--market-up-fg); }
+    .signal-pill.sell::before { background: var(--market-down-fg); }
+    .signal-pill.hold::before { background: var(--text-tertiary); opacity: 0.2; }
+    .signal-pill:hover::before { opacity: 0.7; }
+
+    /* ── Noise texture overlay — signature graphite feel ── */
+    .shell-catalog::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.018;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+    }
+
+    /* ── Status bar — bottom ambient glow ── */
+    .shell-catalog::after {
+      content: '';
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      z-index: 1;
+      pointer-events: none;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 30%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 50%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 30%, transparent) 70%,
+        transparent 100%
+      );
+      opacity: 0.35;
+    }
+
+    /* ── Filter toolbar interaction lift ── */
+    .filter-toolbar {
+      position: relative;
+    }
+    .filter-toolbar::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in oklch, var(--border-default) 60%, transparent) 20%,
+        color-mix(in oklch, var(--border-default) 60%, transparent) 80%,
+        transparent
+      );
+      pointer-events: none;
+    }
+
+    /* ── Detail panel scoring — value highlight on hover ── */
+    .score-row:hover .score-bar-fill {
+      filter: brightness(1.2);
+    }
+    .score-row:hover .score-value {
+      color: var(--text-secondary);
+    }
+    .score-row.composite:hover .score-value {
+      color: var(--brand-accent);
+    }
+
+    /* ── Radar chart subtle rotation animation ── */
+    .score-radar svg {
+      transition: transform var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .score-radar:hover svg {
+      transform: scale(1.04);
+    }
+
+    /* ── Preset card hover lift with brand tint ── */
+    .preset-card:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 40%, var(--border-default));
+    }
+    .preset-card:hover .preset-card-match {
+      opacity: 1;
+    }
+
+    /* ── Compare basket item entrance feel ── */
+    .compare-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .compare-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Data table row selection checkbox area ── */
+    .data-table tr.row.selected td:first-child::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--brand-accent);
+      border-radius: 0 var(--radius-2) var(--radius-2) 0;
+    }
+    .data-table tr.row td:first-child {
+      position: relative;
+    }
+
+    /* ── Volume cell — subtle size cue ── */
+    .data-table td.cell-volume {
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Sector badge — subtle lift with industry color hint ── */
+    .cell-badge.sector {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .data-table tr:hover .cell-badge.sector {
+      box-shadow: 0 0 0 1px var(--border-subtle);
+    }
+
   </style>
 </head>
 <body>
@@ -953,7 +1551,7 @@
       </div>
       <div class="header-spacer"></div>
       <div class="header-btn-group-left">
-        <label for="overlay-save-preset" class="btn" style="cursor:pointer">保存视图</label>
+        <label for="overlay-save-preset" class="btn ov-label-btn">保存视图</label>
         <button class="btn btn-primary">执行筛选</button>
       </div>
       <div class="header-btn-group-right">
@@ -970,7 +1568,7 @@
           </div>
         </div>
         <button class="btn btn-ghost">重置</button>
-        <label for="overlay-export" class="btn btn-ghost" style="cursor:pointer">导出</label>
+        <label for="overlay-export" class="btn btn-ghost ov-label-btn">导出</label>
         <button class="header-action-btn" title="通知" aria-label="通知">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
@@ -1292,7 +1890,7 @@
         </div>
         <div class="detail-actions-body">
           <button class="btn">加入观察</button>
-          <label for="overlay-generate-pool" class="btn btn-primary" style="cursor:pointer">加入标的池</label>
+          <label for="overlay-generate-pool" class="btn btn-primary ov-label-btn">加入标的池</label>
           <button class="btn btn-ghost">发送到研究</button>
         </div>
       </div>
@@ -1367,7 +1965,7 @@
           <div class="score-row">
             <span class="score-label">价值</span>
             <div class="score-bar-wrap">
-              <div class="score-bar-fill ok" style="width: 78%"></div>
+              <div class="score-bar-fill ok" style="width:78%"></div>
             </div>
             <span class="score-value">78</span>
           </div>
@@ -1375,7 +1973,7 @@
           <div class="score-row">
             <span class="score-label">成长</span>
             <div class="score-bar-wrap">
-              <div class="score-bar-fill warn" style="width: 65%"></div>
+              <div class="score-bar-fill warn" style="width:65%"></div>
             </div>
             <span class="score-value">65</span>
           </div>
@@ -1383,7 +1981,7 @@
           <div class="score-row">
             <span class="score-label">质量</span>
             <div class="score-bar-wrap">
-              <div class="score-bar-fill ok" style="width: 82%"></div>
+              <div class="score-bar-fill ok" style="width:82%"></div>
             </div>
             <span class="score-value">82</span>
           </div>
@@ -1391,7 +1989,7 @@
           <div class="score-row">
             <span class="score-label">动量</span>
             <div class="score-bar-wrap">
-              <div class="score-bar-fill ok" style="width: 91%"></div>
+              <div class="score-bar-fill ok" style="width:91%"></div>
             </div>
             <span class="score-value">91</span>
           </div>
@@ -1399,7 +1997,7 @@
           <div class="score-row composite score-row-composite-separator">
             <span class="score-label">综合</span>
             <div class="score-bar-wrap">
-              <div class="score-bar-fill brand" style="width: 79%"></div>
+              <div class="score-bar-fill brand" style="width:79%"></div>
             </div>
             <span class="score-value">79</span>
           </div>
@@ -1450,7 +2048,7 @@
               <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除中芯国际">&times;</span>
             </div>
           </div>
-          <label for="overlay-compare" class="btn btn-primary compare-cta" style="cursor:pointer">开始对比 &rarr;</label>
+          <label for="overlay-compare" class="btn btn-primary compare-cta ov-label-btn">开始对比 &rarr;</label>
         </div>
       </details>
     </div>
@@ -1497,8 +2095,8 @@
         </div>
         <div class="overlay-body">
           <h4>预设名称</h4>
-          <div style="padding:var(--space-6) 0;">
-            <input type="text" placeholder="输入预设名称..." style="width:100%;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;">
+          <div class="sv-pad-6-0">
+            <input type="text" placeholder="输入预设名称..." class="ov-input">
           </div>
 
           <h4>当前筛选条件摘要</h4>
@@ -1524,14 +2122,14 @@
           </div>
 
           <h4>标签</h4>
-          <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
-            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-secondary);font-size:var(--font-size-12);">价值</span>
-            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-secondary);font-size:var(--font-size-12);">A股</span>
+          <div class="sv-flex-wrap sv-pad-6-0">
+            <span class="ov-tag">价值</span>
+            <span class="ov-tag">A股</span>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-save-preset" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-save-preset" class="overlay-btn overlay-btn-primary" style="cursor:pointer">保存</label>
+            <label for="overlay-save-preset" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+            <label for="overlay-save-preset" class="overlay-btn overlay-btn-primary ov-label-btn">保存</label>
           </div>
         </div>
       </div>
@@ -1547,44 +2145,44 @@
         </div>
         <div class="overlay-body">
           <h4>搜索列</h4>
-          <div style="padding:var(--space-4) 0 var(--space-8);">
-            <input type="text" placeholder="搜索列名..." style="width:100%;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;">
+          <div class="sv-pad-section">
+            <input type="text" placeholder="搜索列名..." class="ov-input">
           </div>
 
           <h4>已选列（拖拽排序）</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-4);">
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 代码
+          <div class="ov-check-list">
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 代码
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 名称
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 名称
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 最新价
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 最新价
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 涨跌幅
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 涨跌幅
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 行业
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 行业
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 信号
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 信号
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 风险
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 风险
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-tertiary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 市盈率
+            <label class="ov-check-label ov-check-label--dim">
+              <input type="checkbox" > 市盈率
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-tertiary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 市净率
+            <label class="ov-check-label ov-check-label--dim">
+              <input type="checkbox" > 市净率
             </label>
           </div>
 
           <div class="overlay-actions">
             <button class="overlay-btn overlay-btn-secondary">重置默认</button>
-            <label for="overlay-column-manage" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认</label>
+            <label for="overlay-column-manage" class="overlay-btn overlay-btn-primary ov-label-btn">确认</label>
           </div>
         </div>
       </div>
@@ -1600,54 +2198,54 @@
         </div>
         <div class="overlay-body">
           <h4>已选标的</h4>
-          <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;margin-bottom:var(--space-12);">
-            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">贵州茅台 <span style="color:var(--text-tertiary);margin-left:var(--space-4);">&times;</span></span>
-            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">宁德时代 <span style="color:var(--text-tertiary);margin-left:var(--space-4);">&times;</span></span>
-            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">中芯国际 <span style="color:var(--text-tertiary);margin-left:var(--space-4);">&times;</span></span>
+          <div class="ov-tag-list-mb12">
+            <span class="ov-tag ov-tag--primary">贵州茅台 <span class="tag-close-icon">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">宁德时代 <span class="tag-close-icon">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">中芯国际 <span class="tag-close-icon">&times;</span></span>
           </div>
 
           <h4>对比维度</h4>
-          <div style="display:flex;gap:var(--space-4);border-bottom:1px solid var(--border-subtle);margin-bottom:var(--space-12);">
-            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);border-bottom:2px solid var(--brand-accent);color:var(--text-primary);background:none;border-top:none;border-left:none;border-right:none;cursor:pointer;">概览</button>
-            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-tertiary);background:none;border:none;cursor:pointer;">技术面</button>
-            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-tertiary);background:none;border:none;cursor:pointer;">基本面</button>
-            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-tertiary);background:none;border:none;cursor:pointer;">风险</button>
+          <div class="ov-tab-bar">
+            <button class="ov-tab ov-tab--active">概览</button>
+            <button class="ov-tab">技术面</button>
+            <button class="ov-tab">基本面</button>
+            <button class="ov-tab">风险</button>
           </div>
 
           <div class="overlay-field">
             <span class="overlay-field-label"></span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">贵州茅台</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">宁德时代</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">中芯国际</span>
+            <span class="overlay-field-value ov-compare-cell">贵州茅台</span>
+            <span class="overlay-field-value ov-compare-cell">宁德时代</span>
+            <span class="overlay-field-value ov-compare-cell">中芯国际</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">最新价</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">1,856.00</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">218.00</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">51.00</span>
+            <span class="overlay-field-value ov-compare-cell">1,856.00</span>
+            <span class="overlay-field-value ov-compare-cell">218.00</span>
+            <span class="overlay-field-value ov-compare-cell">51.00</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">涨跌幅</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center;color:var(--market-up-fg)">+3.10%</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center;color:var(--market-up-fg)">+5.20%</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center;color:var(--market-up-fg)">+6.25%</span>
+            <span class="overlay-field-value ov-compare-cell text-up">+3.10%</span>
+            <span class="overlay-field-value ov-compare-cell text-up">+5.20%</span>
+            <span class="overlay-field-value ov-compare-cell text-up">+6.25%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">市值</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">2.3万亿</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">5,320亿</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">4,060亿</span>
+            <span class="overlay-field-value ov-compare-cell">2.3万亿</span>
+            <span class="overlay-field-value ov-compare-cell">5,320亿</span>
+            <span class="overlay-field-value ov-compare-cell">4,060亿</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">PE(TTM)</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">28.5</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">32.1</span>
-            <span class="overlay-field-value" style="flex:1;text-align:center">68.2</span>
+            <span class="overlay-field-value ov-compare-cell">28.5</span>
+            <span class="overlay-field-value ov-compare-cell">32.1</span>
+            <span class="overlay-field-value ov-compare-cell">68.2</span>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-primary" style="cursor:pointer">生成标的池</label>
-            <label for="overlay-compare" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">关闭</label>
+            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-primary ov-label-btn">生成标的池</label>
+            <label for="overlay-compare" class="overlay-btn overlay-btn-secondary ov-label-btn">关闭</label>
           </div>
         </div>
       </div>
@@ -1662,11 +2260,11 @@
           <label for="overlay-generate-pool" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-12);">将当前筛选结果固化为标的池（Universe），后续可用于回测、策略构建和风控。</p>
+          <p class="ov-desc-text">将当前筛选结果固化为标的池（Universe），后续可用于回测、策略构建和风控。</p>
 
           <h4>标的池名称</h4>
-          <div style="padding:var(--space-4) 0 var(--space-8);">
-            <input type="text" placeholder="输入标的池名称..." style="width:100%;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;">
+          <div class="sv-pad-section">
+            <input type="text" placeholder="输入标的池名称..." class="ov-input">
           </div>
 
           <div class="overlay-field">
@@ -1679,8 +2277,8 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认创建</label>
+            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-primary ov-label-btn">确认创建</label>
           </div>
         </div>
       </div>
@@ -1696,38 +2294,38 @@
         </div>
         <div class="overlay-body">
           <h4>导出格式</h4>
-          <div style="display:flex;gap:var(--space-6);margin-bottom:var(--space-12);">
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="export-format" checked style="accent-color:var(--brand-accent)"> CSV
+          <div class="ov-radio-group">
+            <label class="ov-check-label">
+              <input type="radio" name="export-format" checked > CSV
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="export-format" style="accent-color:var(--brand-accent)"> Excel
+            <label class="ov-check-label">
+              <input type="radio" name="export-format" > Excel
             </label>
           </div>
 
           <h4>列范围</h4>
-          <div style="display:flex;gap:var(--space-6);margin-bottom:var(--space-12);">
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="export-columns" checked style="accent-color:var(--brand-accent)"> 当前列
+          <div class="ov-radio-group">
+            <label class="ov-check-label">
+              <input type="radio" name="export-columns" checked > 当前列
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="export-columns" style="accent-color:var(--brand-accent)"> 全部列
+            <label class="ov-check-label">
+              <input type="radio" name="export-columns" > 全部列
             </label>
           </div>
 
           <h4>数据范围</h4>
-          <div style="display:flex;gap:var(--space-6);margin-bottom:var(--space-8);">
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="export-scope" checked style="accent-color:var(--brand-accent)"> 全部（238 只）
+          <div class="ov-radio-group--tight">
+            <label class="ov-check-label">
+              <input type="radio" name="export-scope" checked > 全部（238 只）
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="export-scope" style="accent-color:var(--brand-accent)"> 已选（1 只）
+            <label class="ov-check-label">
+              <input type="radio" name="export-scope" > 已选（1 只）
             </label>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-export" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-export" class="overlay-btn overlay-btn-primary" style="cursor:pointer">导出</label>
+            <label for="overlay-export" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+            <label for="overlay-export" class="overlay-btn overlay-btn-primary ov-label-btn">导出</label>
           </div>
         </div>
       </div>
@@ -1762,9 +2360,9 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="state-loading">
-          <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
-          <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
-          <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
+          <div class="skeleton skeleton-bar"></div>
+          <div class="skeleton skeleton-bar"></div>
+          <div class="skeleton skeleton-bar"></div>
         </div>
       </div>
       </div>
@@ -1786,11 +2384,11 @@
       <div class="gallery-card__label">Selected State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
-        <div style="padding:var(--space-8) 0;display:flex;gap:var(--space-6);flex-wrap:wrap;">
-          <span class="filter-chip active" style="box-shadow:0 0 0 2px var(--brand-accent)">沪深300</span>
-          <span class="filter-chip active" style="box-shadow:0 0 0 2px var(--brand-accent)">科技</span>
-          <span class="filter-chip active" style="box-shadow:0 0 0 2px var(--brand-accent)">买入信号</span>
-          <span style="font-size:var(--font-size-12);color:var(--text-tertiary);padding:var(--space-4);">↑ 激活筛选条件时高亮边框</span>
+        <div class="filter-selected-wrap">
+          <span class="filter-chip active filter-chip--ring">沪深300</span>
+          <span class="filter-chip active filter-chip--ring">科技</span>
+          <span class="filter-chip active filter-chip--ring">买入信号</span>
+          <span class="gallery-hint gallery-hint--inline">↑ 激活筛选条件时高亮边框</span>
         </div>
       </div>
       </div>
@@ -1842,9 +2440,9 @@
       <div class="gallery-card__label">Stale State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-        <div style="padding:var(--space-12);display:flex;align-items:center;gap:var(--space-6);">
-          <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-          <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">数据更新于 3 分钟前，可能不是最新状态</span>
+        <div class="sv-pad-12 stale-banner">
+          <span class="stale-dot-indicator"></span>
+          <span class="gallery-hint" style="color:var(--system-degraded-fg)">数据更新于 3 分钟前，可能不是最新状态</span>
         </div>
       </div>
       </div>
@@ -1853,25 +2451,25 @@
       <div class="gallery-card__label">Signal Stale State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-        <div style="padding:var(--space-8);display:flex;gap:var(--space-12);flex-wrap:wrap;">
-          <div style="display:flex;flex-direction:column;gap:var(--space-4);align-items:flex-start;">
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">买入（过时）</span>
+        <div class="sv-signal-stale-wrap">
+          <div class="stale-signal-col">
+            <span class="gallery-hint gallery-hint--sm">买入（过时）</span>
             <span class="signal-pill buy s2 stale">买入 <span class="signal-strength">0.92</span></span>
           </div>
-          <div style="display:flex;flex-direction:column;gap:var(--space-4);align-items:flex-start;">
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">卖出（过时）</span>
+          <div class="stale-signal-col">
+            <span class="gallery-hint gallery-hint--sm">卖出（过时）</span>
             <span class="signal-pill sell s1 stale">卖出 <span class="signal-strength">0.71</span></span>
           </div>
-          <div style="display:flex;flex-direction:column;gap:var(--space-4);align-items:flex-start;">
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">持有（过时）</span>
+          <div class="stale-signal-col">
+            <span class="gallery-hint gallery-hint--sm">持有（过时）</span>
             <span class="signal-pill hold stale">持有 <span class="signal-strength">0.45</span></span>
           </div>
-          <div style="display:flex;flex-direction:column;gap:var(--space-4);align-items:flex-start;">
-            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">风险（过时）</span>
+          <div class="stale-signal-col">
+            <span class="gallery-hint gallery-hint--sm">风险（过时）</span>
             <span class="risk-dot stale">低</span>
           </div>
         </div>
-        <div style="margin-top:var(--space-8);font-size:var(--font-size-10);color:var(--text-tertiary);">信号超过 5 分钟未更新 — 去饱和 + 橙色 stale dot</div>
+        <div class="gallery-hint gallery-hint--sm gallery-hint--mt8">信号超过 5 分钟未更新 — 去饱和 + 橙色 stale dot</div>
       </div>
       </div>
     </div>
@@ -1879,20 +2477,20 @@
       <div class="gallery-card__label">Selected State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
-        <div style="padding:var(--space-8);">
-          <div style="border:1px solid var(--border-default);border-radius:var(--radius-4);overflow:hidden;">
-            <div style="padding:var(--space-6) var(--space-10);background:color-mix(in oklch, var(--brand-accent) 5%, transparent);display:flex;align-items:center;gap:var(--space-6);font-size:var(--font-size-12);color:var(--text-primary);">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)">
-              <span style="flex:1;">600519 贵州茅台</span>
-              <span style="color:var(--market-up-fg)">+3.10%</span>
+        <div class="sv-pad-8">
+          <div class="sv-bordered-box">
+            <div class="ov-compare-header-row">
+              <input type="checkbox" checked >
+              <span class="flex-1">600519 贵州茅台</span>
+              <span class="text-up">+3.10%</span>
             </div>
-            <div style="padding:var(--space-6) var(--space-10);display:flex;align-items:center;gap:var(--space-6);font-size:var(--font-size-12);color:var(--text-primary);">
-              <input type="checkbox" style="accent-color:var(--brand-accent)">
-              <span style="flex:1;">300750 宁德时代</span>
-              <span style="color:var(--market-up-fg)">+5.20%</span>
+            <div class="ov-compare-row">
+              <input type="checkbox" >
+              <span class="flex-1">300750 宁德时代</span>
+              <span class="text-up">+5.20%</span>
             </div>
           </div>
-          <span style="font-size:var(--font-size-12);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 选中行高亮 + 左侧蓝色指示条</span>
+          <span class="gallery-hint">↑ 选中行高亮 + 左侧蓝色指示条</span>
         </div>
       </div>
       </div>
@@ -1913,18 +2511,18 @@
       <div class="gallery-card__label">Bulk Selected State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="bulk">
-        <div style="padding:var(--space-8);">
-          <div style="border:1px solid var(--brand-accent);border-radius:var(--radius-4);padding:var(--space-6);background:color-mix(in oklch, var(--brand-accent) 5%, transparent);margin-bottom:var(--space-8);">
-            <div style="font-size:var(--font-size-12);color:var(--text-primary);font-weight:var(--font-weight-medium);">已选 5 只标的</div>
+        <div class="sv-pad-8">
+          <div class="sv-bulk-card">
+            <div class="sv-bulk-title">已选 5 只标的</div>
           </div>
-          <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;">
-            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">贵州茅台 <span style="color:var(--text-tertiary);">&times;</span></span>
-            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">宁德时代 <span style="color:var(--text-tertiary);">&times;</span></span>
-            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">中芯国际 <span style="color:var(--text-tertiary);">&times;</span></span>
-            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">中国平安 <span style="color:var(--text-tertiary);">&times;</span></span>
-            <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">比亚迪 <span style="color:var(--text-tertiary);">&times;</span></span>
+          <div class="sv-flex-wrap">
+            <span class="ov-tag ov-tag--primary">贵州茅台 <span class="tag-close-icon">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">宁德时代 <span class="tag-close-icon">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">中芯国际 <span class="tag-close-icon">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">中国平安 <span class="tag-close-icon">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">比亚迪 <span class="tag-close-icon">&times;</span></span>
           </div>
-          <span style="font-size:var(--font-size-12);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 批量已选数量展示</span>
+          <span class="gallery-hint">↑ 批量已选数量展示</span>
         </div>
       </div>
       </div>
@@ -1947,9 +2545,9 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="state-loading">
-          <div class="skeleton" style="height:48px;width:100%;border-radius:var(--radius-6)"></div>
-          <div class="skeleton" style="height:48px;width:100%;border-radius:var(--radius-6)"></div>
-          <div class="skeleton" style="height:48px;width:100%;border-radius:var(--radius-6)"></div>
+          <div class="skeleton skeleton-bar--lg"></div>
+          <div class="skeleton skeleton-bar--lg"></div>
+          <div class="skeleton skeleton-bar--lg"></div>
         </div>
       </div>
       </div>
@@ -1958,13 +2556,13 @@
       <div class="gallery-card__label">Selected State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
-        <div style="padding:var(--space-8);">
-          <div class="preset-card" style="border-color:var(--brand-accent);background:color-mix(in oklch, var(--brand-accent) 5%, transparent);">
+        <div class="sv-pad-8">
+          <div class="preset-card preset-card--selected">
             <div class="preset-card-title">高ROE低估值</div>
             <div class="preset-card-desc">ROE&gt;15%, PE&lt;20</div>
-            <div class="preset-card-match" style="color:var(--brand-accent)">匹配 23 只 ✓ 已应用</div>
+            <div class="preset-card-match preset-card-match--selected">匹配 23 只 ✓ 已应用</div>
           </div>
-          <span style="font-size:var(--font-size-12);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 选中的预设卡片边框高亮</span>
+          <span class="gallery-hint">↑ 选中的预设卡片边框高亮</span>
         </div>
       </div>
       </div>
@@ -1987,9 +2585,9 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="state-loading">
-          <div class="skeleton" style="height:24px;width:60%"></div>
-          <div class="skeleton" style="height:24px;width:45%"></div>
-          <div class="skeleton" style="height:24px;width:70%"></div>
+          <div class="skeleton skeleton-bar--sm" style="width:60%"></div>
+          <div class="skeleton skeleton-bar--sm" style="width:45%"></div>
+          <div class="skeleton skeleton-bar--sm" style="width:70%"></div>
         </div>
       </div>
       </div>
@@ -1998,19 +2596,19 @@
       <div class="gallery-card__label">Bulk State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="bulk">
-        <div style="padding:var(--space-8);">
-          <div style="border:1px solid var(--border-default);border-radius:var(--radius-4);overflow:hidden;">
-            <div style="padding:var(--space-6) var(--space-10);background:var(--interaction-hover-subtle-bg);display:flex;align-items:center;justify-content:space-between;font-size:var(--font-size-12);color:var(--text-primary);">
+        <div class="sv-pad-8">
+          <div class="sv-bordered-box">
+            <div class="sv-bulk-toolbar">
               <span>已选 15 只标的</span>
-              <div style="display:flex;gap:var(--space-6);">
-                <button class="btn" style="font-size:var(--font-size-12);padding:var(--space-2) var(--space-6);">加入观察</button>
-                <button class="btn btn-primary" style="font-size:var(--font-size-12);padding:var(--space-2) var(--space-6);">加入标的池</button>
-                <label for="overlay-export" class="btn btn-ghost" style="font-size:var(--font-size-12);padding:var(--space-2) var(--space-6);cursor:pointer">导出</label>
-                <label for="overlay-compare" class="btn btn-ghost" style="font-size:var(--font-size-12);padding:var(--space-2) var(--space-6);cursor:pointer">Compare</label>
+              <div class="sv-bulk-toolbar-actions">
+                <button class="btn sv-bulk-btn">加入观察</button>
+                <button class="btn btn-primary sv-bulk-btn">加入标的池</button>
+                <label for="overlay-export" class="btn btn-ghost sv-bulk-btn sv-bulk-btn--pointer">导出</label>
+                <label for="overlay-compare" class="btn btn-ghost sv-bulk-btn sv-bulk-btn--pointer">Compare</label>
               </div>
             </div>
           </div>
-          <span style="font-size:var(--font-size-12);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 批量操作栏: 观察/标的池/导出/Compare</span>
+          <span class="gallery-hint">↑ 批量操作栏: 观察/标的池/导出/Compare</span>
         </div>
       </div>
       </div>
@@ -2036,7 +2634,7 @@
           <div class="skeleton skeleton-row"></div>
           <div class="skeleton skeleton-row"></div>
           <div class="skeleton skeleton-row"></div>
-          <div class="skeleton" style="height:80px;width:100%;border-radius:var(--radius-6)"></div>
+          <div class="skeleton skeleton-bar--xl"></div>
         </div>
       </div>
       </div>
@@ -2058,9 +2656,9 @@
       <div class="gallery-card__label">Compare Drawer Stale State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-        <div style="padding:var(--space-12);display:flex;align-items:center;gap:var(--space-6);">
-          <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-          <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">对比数据更新于 5 分钟前</span>
+        <div class="sv-pad-12 stale-banner">
+          <span class="stale-dot-indicator"></span>
+          <span class="gallery-hint" style="color:var(--system-degraded-fg)">对比数据更新于 5 分钟前</span>
         </div>
       </div>
       </div>
@@ -2069,16 +2667,16 @@
       <div class="gallery-card__label">Compare Drawer Selected State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
-        <div style="padding:var(--space-8);">
-          <div style="border:1px solid var(--border-default);border-radius:var(--radius-4);overflow:hidden;">
-            <div style="padding:var(--space-6) var(--space-10);background:color-mix(in oklch, var(--brand-accent) 5%, transparent);display:flex;align-items:center;gap:var(--space-8);font-size:var(--font-size-12);color:var(--text-primary);">
-              <span style="font-weight:var(--font-weight-medium)">贵州茅台</span>
-              <span style="color:var(--market-up-fg)">1,856.00</span>
-              <span style="color:var(--text-tertiary)">|</span>
+        <div class="sv-pad-8">
+          <div class="sv-bordered-box">
+            <div class="sv-compare-highlight">
+              <span class="sv-compare-highlight-name">贵州茅台</span>
+              <span class="text-up">1,856.00</span>
+              <span class="text-tertiary">|</span>
               <span>PE 28.5</span>
             </div>
           </div>
-          <span style="font-size:var(--font-size-12);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 对比项高亮显示</span>
+          <span class="gallery-hint">↑ 对比项高亮显示</span>
         </div>
       </div>
       </div>
@@ -2104,8 +2702,8 @@
           </div>
           <div class="overlay-body">
             <h4>预设名称</h4>
-            <div style="padding:var(--space-6) 0;">
-              <input type="text" placeholder="输入预设名称..." style="width:100%;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;">
+            <div class="sv-pad-6-0">
+              <input type="text" placeholder="输入预设名称..." class="ov-input">
             </div>
 
             <h4>当前筛选条件摘要</h4>
@@ -2131,9 +2729,9 @@
             </div>
 
             <h4>标签</h4>
-            <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
-              <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-secondary);font-size:var(--font-size-12);">价值</span>
-              <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-secondary);font-size:var(--font-size-12);">A股</span>
+            <div class="sv-flex-wrap sv-pad-6-0">
+              <span class="ov-tag">价值</span>
+              <span class="ov-tag">A股</span>
             </div>
 
             <div class="overlay-actions">
@@ -2154,38 +2752,38 @@
           </div>
           <div class="overlay-body">
             <h4>搜索列</h4>
-            <div style="padding:var(--space-4) 0 var(--space-8);">
-              <input type="text" placeholder="搜索列名..." style="width:100%;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;">
+            <div class="sv-pad-section">
+              <input type="text" placeholder="搜索列名..." class="ov-input">
             </div>
 
             <h4>已选列（拖拽排序）</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-4);">
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 代码
+            <div class="ov-check-list">
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 代码
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 名称
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 名称
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 最新价
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 最新价
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 涨跌幅
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 涨跌幅
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 行业
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 行业
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 信号
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 信号
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 风险
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 风险
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-tertiary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 市盈率
+              <label class="ov-check-label ov-check-label--dim">
+                <input type="checkbox" > 市盈率
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-tertiary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 市净率
+              <label class="ov-check-label ov-check-label--dim">
+                <input type="checkbox" > 市净率
               </label>
             </div>
 
@@ -2207,49 +2805,49 @@
           </div>
           <div class="overlay-body">
             <h4>已选标的</h4>
-            <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;margin-bottom:var(--space-12);">
-              <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">贵州茅台 <span style="color:var(--text-tertiary);margin-left:var(--space-4);">&times;</span></span>
-              <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">宁德时代 <span style="color:var(--text-tertiary);margin-left:var(--space-4);">&times;</span></span>
-              <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-primary);font-size:var(--font-size-12);">中芯国际 <span style="color:var(--text-tertiary);margin-left:var(--space-4);">&times;</span></span>
+            <div class="ov-tag-list-mb12">
+              <span class="ov-tag ov-tag--primary">贵州茅台 <span class="tag-close-icon">&times;</span></span>
+              <span class="ov-tag ov-tag--primary">宁德时代 <span class="tag-close-icon">&times;</span></span>
+              <span class="ov-tag ov-tag--primary">中芯国际 <span class="tag-close-icon">&times;</span></span>
             </div>
 
             <h4>对比维度</h4>
-            <div style="display:flex;gap:var(--space-4);border-bottom:1px solid var(--border-subtle);margin-bottom:var(--space-12);">
-              <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);border-bottom:2px solid var(--brand-accent);color:var(--text-primary);background:none;border-top:none;border-left:none;border-right:none;cursor:pointer;">概览</button>
-              <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-tertiary);background:none;border:none;cursor:pointer;">技术面</button>
-              <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-tertiary);background:none;border:none;cursor:pointer;">基本面</button>
-              <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-tertiary);background:none;border:none;cursor:pointer;">风险</button>
+            <div class="ov-tab-bar">
+              <button class="ov-tab ov-tab--active">概览</button>
+              <button class="ov-tab">技术面</button>
+              <button class="ov-tab">基本面</button>
+              <button class="ov-tab">风险</button>
             </div>
 
             <div class="overlay-field">
               <span class="overlay-field-label"></span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">贵州茅台</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">宁德时代</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">中芯国际</span>
+              <span class="overlay-field-value ov-compare-cell">贵州茅台</span>
+              <span class="overlay-field-value ov-compare-cell">宁德时代</span>
+              <span class="overlay-field-value ov-compare-cell">中芯国际</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">最新价</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">1,856.00</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">218.00</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">51.00</span>
+              <span class="overlay-field-value ov-compare-cell">1,856.00</span>
+              <span class="overlay-field-value ov-compare-cell">218.00</span>
+              <span class="overlay-field-value ov-compare-cell">51.00</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">涨跌幅</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center;color:var(--market-up-fg)">+3.10%</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center;color:var(--market-up-fg)">+5.20%</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center;color:var(--market-up-fg)">+6.25%</span>
+              <span class="overlay-field-value ov-compare-cell text-up">+3.10%</span>
+              <span class="overlay-field-value ov-compare-cell text-up">+5.20%</span>
+              <span class="overlay-field-value ov-compare-cell text-up">+6.25%</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">市值</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">2.3万亿</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">5,320亿</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">4,060亿</span>
+              <span class="overlay-field-value ov-compare-cell">2.3万亿</span>
+              <span class="overlay-field-value ov-compare-cell">5,320亿</span>
+              <span class="overlay-field-value ov-compare-cell">4,060亿</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">PE(TTM)</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">28.5</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">32.1</span>
-              <span class="overlay-field-value" style="flex:1;text-align:center">68.2</span>
+              <span class="overlay-field-value ov-compare-cell">28.5</span>
+              <span class="overlay-field-value ov-compare-cell">32.1</span>
+              <span class="overlay-field-value ov-compare-cell">68.2</span>
             </div>
 
             <div class="overlay-actions">
@@ -2269,11 +2867,11 @@
             <span class="overlay-title">生成标的池</span>
           </div>
           <div class="overlay-body">
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-12);">将当前筛选结果固化为标的池（Universe），后续可用于回测、策略构建和风控。</p>
+            <p class="ov-desc-text">将当前筛选结果固化为标的池（Universe），后续可用于回测、策略构建和风控。</p>
 
             <h4>标的池名称</h4>
-            <div style="padding:var(--space-4) 0 var(--space-8);">
-              <input type="text" placeholder="输入标的池名称..." style="width:100%;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;">
+            <div class="sv-pad-section">
+              <input type="text" placeholder="输入标的池名称..." class="ov-input">
             </div>
 
             <div class="overlay-field">
@@ -2303,32 +2901,32 @@
           </div>
           <div class="overlay-body">
             <h4>导出格式</h4>
-            <div style="display:flex;gap:var(--space-6);margin-bottom:var(--space-12);">
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="export-format" checked style="accent-color:var(--brand-accent)"> CSV
+            <div class="ov-radio-group">
+              <label class="ov-check-label">
+                <input type="radio" name="export-format" checked > CSV
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="export-format" style="accent-color:var(--brand-accent)"> Excel
+              <label class="ov-check-label">
+                <input type="radio" name="export-format" > Excel
               </label>
             </div>
 
             <h4>列范围</h4>
-            <div style="display:flex;gap:var(--space-6);margin-bottom:var(--space-12);">
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="export-columns" checked style="accent-color:var(--brand-accent)"> 当前列
+            <div class="ov-radio-group">
+              <label class="ov-check-label">
+                <input type="radio" name="export-columns" checked > 当前列
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="export-columns" style="accent-color:var(--brand-accent)"> 全部列
+              <label class="ov-check-label">
+                <input type="radio" name="export-columns" > 全部列
               </label>
             </div>
 
             <h4>数据范围</h4>
-            <div style="display:flex;gap:var(--space-6);margin-bottom:var(--space-8);">
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="export-scope" checked style="accent-color:var(--brand-accent)"> 全部（238 只）
+            <div class="ov-radio-group--tight">
+              <label class="ov-check-label">
+                <input type="radio" name="export-scope" checked > 全部（238 只）
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="export-scope" style="accent-color:var(--brand-accent)"> 已选（1 只）
+              <label class="ov-check-label">
+                <input type="radio" name="export-scope" > 已选（1 只）
               </label>
             </div>
 

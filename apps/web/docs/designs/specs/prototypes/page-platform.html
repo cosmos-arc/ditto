@@ -1296,6 +1296,366 @@
     .panel-tab-radio {
       cursor: pointer;
     }
+
+    /* ══════════════════════════════════════════════
+     * Utility Classes — extracted from inline styles
+     * ══════════════════════════════════════════════ */
+
+    /* Overlay label-as-button cursor (replaces style="cursor:pointer") */
+    .overlay-btn-secondary,
+    .overlay-btn-primary { cursor: pointer; }
+
+    /* Overlay text styles */
+    .overlay-text-primary {
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0 0 var(--space-8) 0;
+    }
+    .overlay-text-primary-flush {
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0;
+    }
+    .overlay-text-secondary {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0 0 var(--space-12) 0;
+    }
+    .overlay-text-secondary-flush {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0;
+    }
+    .overlay-text-strong {
+      color: var(--text-primary);
+    }
+
+    /* Overlay log / info box (replaces 4 inline style blocks) */
+    .overlay-log-box {
+      background: var(--surface-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      padding: var(--space-8) var(--space-10);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.8;
+    }
+    .overlay-warn-box {
+      background: var(--surface-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      padding: var(--space-8) var(--space-10);
+      font-size: var(--font-size-12);
+      color: var(--system-degraded-fg);
+      line-height: 1.5;
+    }
+    .overlay-log-box-compact {
+      background: var(--surface-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      padding: var(--space-8);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.8;
+    }
+
+    /* Overlay field value color variants */
+    .overlay-field-value.color-down { color: var(--system-down-fg); }
+    .overlay-field-value.color-healthy { color: var(--system-healthy-fg); }
+
+    /* Overlay sheet narrow variant */
+    .overlay-sheet-narrow { max-width: 400px; }
+
+    /* Status live inline color fix — already has .status-live class */
+    .status-live-inline { color: var(--system-healthy-fg); }
+
+    /* Panel count critical margin */
+    .panel-count-critical { margin-left: var(--space-4); }
+
+    /* Progress bar width utility — data-driven widths for bars */
+    .bar-w-25  { width: 25%; }
+    .bar-w-26  { width: 26%; }
+    .bar-w-23  { width: 23%; }
+    .bar-w-70  { width: 70%; }
+    .bar-w-82  { width: 82%; }
+    .bar-w-96  { width: 96.4%; }
+
+    /* ══════════════════════════════════════════════
+     * Gallery Skeleton Utility Classes
+     * ══════════════════════════════════════════════ */
+    .skeleton-row-h {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+    .skeleton-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .skeleton-w-50 { width: 50px; }
+    .skeleton-w-40 { width: 40px; }
+    .skeleton-state-row {
+      display: flex;
+      flex-direction: row;
+      gap: var(--space-16);
+      padding: var(--space-8) var(--space-16);
+    }
+    .skeleton-state-error {
+      display: flex;
+      flex-direction: row;
+      gap: var(--space-12);
+      padding: var(--space-8) var(--space-16);
+    }
+    .state-error-icon-box {
+      width: 20px;
+      height: 20px;
+      font-size: 12px;
+    }
+    .state-error-text {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+
+    /* Log line with healthy color */
+    .log-line-healthy { color: var(--system-healthy-fg); }
+
+    /* ══════════════════════════════════════════════
+     * R3: Information Visualization — Health Gauges
+     * ══════════════════════════════════════════════ */
+
+    /* SVG donut gauge for health metrics */
+    .health-gauge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .health-gauge svg {
+      transform: rotate(-90deg);
+    }
+    .health-gauge-track {
+      fill: none;
+      stroke: var(--border-subtle);
+    }
+    .health-gauge-fill {
+      fill: none;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.6s var(--motion-easing-emphasis);
+    }
+    .health-gauge-fill.ok { stroke: var(--system-healthy-fg); }
+    .health-gauge-fill.warn { stroke: var(--system-degraded-fg); }
+    .health-gauge-fill.critical { stroke: var(--system-down-fg); }
+    .health-gauge-fill.brand { stroke: var(--brand-accent); }
+    .health-gauge-label {
+      position: absolute;
+      font-family: var(--font-family-numeric);
+      font-size: 8px;
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    /* Overall health score ring — large variant */
+    .health-score-ring {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-10);
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      margin-bottom: var(--space-8);
+    }
+    .health-score-ring svg {
+      transform: rotate(-90deg);
+    }
+    .health-score-ring-track {
+      fill: none;
+      stroke: var(--border-subtle);
+    }
+    .health-score-ring-fill {
+      fill: none;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.8s var(--motion-easing-emphasis);
+    }
+    .health-score-center {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .health-score-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      line-height: 1;
+    }
+    .health-score-unit {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      line-height: 1;
+      margin-top: 2px;
+    }
+    .health-score-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .health-score-details-label {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .health-score-details-sub {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    /* API call mini chart — bar chart for hourly API call volume */
+    .api-mini-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 24px;
+      padding: var(--space-2) 0;
+    }
+    .api-mini-bar {
+      width: 4px;
+      border-radius: 1px;
+      transition: height 0.3s var(--motion-easing-emphasis);
+    }
+    .api-mini-bar.ok { background: var(--system-healthy-fg); opacity: 0.5; }
+    .api-mini-bar.ok:last-child { opacity: 1; }
+    .api-mini-bar.warn { background: var(--system-degraded-fg); opacity: 0.6; }
+    .api-mini-bar.current { opacity: 1; }
+
+    /* Resource bar enhanced — gradient glow for critical */
+    .resource-bar-fill.critical {
+      position: relative;
+      overflow: visible;
+    }
+    .resource-bar-fill.critical::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 2px;
+      box-shadow: 0 0 6px 0 color-mix(in oklch, var(--system-down-fg) 30%, transparent);
+      animation: bar-critical-pulse 2s ease-in-out infinite;
+    }
+    @keyframes bar-critical-pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    /* Health strip inline gauge — compact ring */
+    .health-inline-gauge {
+      display: inline-flex;
+      align-items: center;
+      margin-left: var(--space-4);
+    }
+    .health-inline-gauge svg {
+      transform: rotate(-90deg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R4: Premium feel — hover, glow, depth
+     * ══════════════════════════════════════════════ */
+
+    /* Health score ring — glow based on score */
+    .health-score-ring {
+      position: relative;
+      overflow: hidden;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .health-score-ring:hover {
+      border-color: color-mix(in oklch, var(--system-healthy-fg) 30%, var(--border-subtle));
+      box-shadow: 0 0 8px -2px color-mix(in oklch, var(--system-healthy-fg) 10%, transparent);
+    }
+
+    /* Detail panel card — hover depth */
+    .resource-item {
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+      padding-left: var(--space-4);
+      padding-right: var(--space-4);
+      border-radius: var(--radius-4);
+    }
+    .resource-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Task item — hover accent for non-running */
+    .task-item:not(.running):hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-radius: var(--radius-4);
+      padding-left: var(--space-4);
+      padding-right: var(--space-4);
+    }
+
+    /* Environment badge — gentle glow */
+    .env-badge {
+      position: relative;
+    }
+    .env-badge::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: calc(var(--radius-4) + 2px);
+      box-shadow: 0 0 8px -4px color-mix(in oklch, var(--system-healthy-fg) 25%, transparent);
+      pointer-events: none;
+    }
+
+    /* Panel header — hover interaction */
+    .panel-tab {
+      position: relative;
+    }
+    .panel-tab::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--brand-accent);
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .panel-tab:hover::after {
+      opacity: 0.3;
+    }
+    .panel-tab.active::after {
+      opacity: 1;
+    }
+
+    /* Status dot — enhanced glow for critical */
+    .health-metric-dot.down {
+      box-shadow: 0 0 6px 1px color-mix(in oklch, var(--system-down-fg) 40%, transparent);
+    }
+
+    /* Alert row — critical pulse */
+    .alert-row:has(.alert-dot.critical) {
+      animation: alert-critical-breathe 3s ease-in-out infinite;
+    }
+    @keyframes alert-critical-breathe {
+      0%, 100% { background: color-mix(in oklch, var(--system-down-fg) 4%, transparent); }
+      50% { background: color-mix(in oklch, var(--system-down-fg) 7%, transparent); }
+    }
+
+    /* Rail icon — enhanced active glow */
+    .rail-icon.active {
+      text-shadow: 0 0 10px color-mix(in oklch, var(--brand-accent) 20%, transparent);
+    }
   </style>
 </head>
 <body>
@@ -1402,36 +1762,85 @@
     <!-- ═══ Health Strip (36px) ═══ -->
     <div class="ops-health" role="status" aria-label="系统健康指标">
       <div class="health-metric-group">
+        <!-- Overall system health score — ring gauge -->
+        <div class="health-score-ring">
+          <div class="health-gauge">
+            <svg width="36" height="36" viewBox="0 0 36 36">
+              <circle class="health-score-ring-track" cx="18" cy="18" r="14" stroke-width="3"/>
+              <circle class="health-score-ring-fill ok" cx="18" cy="18" r="14" stroke-width="3" stroke-dasharray="87.96" stroke-dashoffset="2.64"/>
+            </svg>
+            <div class="health-score-center">
+              <span class="health-score-value">97</span>
+            </div>
+          </div>
+          <div class="health-score-details">
+            <span class="health-score-details-label">系统健康</span>
+            <span class="health-score-details-sub">97 / 100</span>
+          </div>
+        </div>
+      </div>
+      <div class="health-metric-group">
         <div class="health-metric">
           <span class="health-metric-dot healthy"></span>
-          <span class="health-metric-label">数据新鲜度</span>
+          <span class="health-metric-label">新鲜度</span>
+          <!-- Inline mini gauge: 98.2% -->
+          <div class="health-inline-gauge">
+            <svg width="16" height="16" viewBox="0 0 16 16">
+              <circle class="health-gauge-track" cx="8" cy="8" r="6" stroke-width="2"/>
+              <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="0.68"/>
+            </svg>
+          </div>
           <span class="health-metric-value ok">98.2%</span><span class="health-trend up">↑</span>
         </div>
         <div class="health-metric">
           <span class="health-metric-dot healthy"></span>
           <span class="health-metric-label">完整度</span>
+          <div class="health-inline-gauge">
+            <svg width="16" height="16" viewBox="0 0 16 16">
+              <circle class="health-gauge-track" cx="8" cy="8" r="6" stroke-width="2"/>
+              <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="0.23"/>
+            </svg>
+          </div>
           <span class="health-metric-value ok">99.4%</span><span class="health-trend flat">→</span>
         </div>
         <div class="health-metric">
           <span class="health-metric-dot healthy"></span>
           <span class="health-metric-label">准确度</span>
+          <div class="health-inline-gauge">
+            <svg width="16" height="16" viewBox="0 0 16 16">
+              <circle class="health-gauge-track" cx="8" cy="8" r="6" stroke-width="2"/>
+              <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="0.08"/>
+            </svg>
+          </div>
           <span class="health-metric-value ok">99.8%</span><span class="health-trend flat">→</span>
         </div>
       </div>
       <div class="health-metric-group">
         <div class="health-metric">
           <span class="health-metric-dot degraded"></span>
-          <span class="health-metric-label">数据源在线</span>
+          <span class="health-metric-label">数据源</span>
+          <div class="health-inline-gauge">
+            <svg width="16" height="16" viewBox="0 0 16 16">
+              <circle class="health-gauge-track" cx="8" cy="8" r="6" stroke-width="2"/>
+              <circle class="health-gauge-fill warn" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="7.54"/>
+            </svg>
+          </div>
           <span class="health-metric-value warn">4/5</span><span class="health-trend down">↓</span>
         </div>
         <div class="health-metric">
           <span class="health-metric-dot brand"></span>
-          <span class="health-metric-label">任务运行</span>
+          <span class="health-metric-label">任务</span>
           <span class="health-metric-value brand">3/4</span>
         </div>
         <div class="health-metric">
           <span class="health-metric-dot healthy"></span>
-          <span class="health-metric-label">系统负载</span>
+          <span class="health-metric-label">负载</span>
+          <div class="health-inline-gauge">
+            <svg width="16" height="16" viewBox="0 0 16 16">
+              <circle class="health-gauge-track" cx="8" cy="8" r="6" stroke-width="2"/>
+              <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="29.05"/>
+            </svg>
+          </div>
           <span class="health-metric-value ok">23%</span><span class="health-trend up">↑</span>
         </div>
       </div>
@@ -1452,7 +1861,7 @@
             <div class="panel-tabs">
               <label for="tab-providers" class="panel-tab panel-tab-radio" data-tab-label="tab-providers" role="tab" aria-selected="true">数据源 <span class="panel-subtitle">5 个源</span></label>
               <label for="tab-pipelines" class="panel-tab panel-tab-radio" data-tab-label="tab-pipelines" role="tab" aria-selected="false">管道与任务 <span class="panel-subtitle">运行中 2</span></label>
-              <label for="tab-alerts" class="panel-tab panel-tab-radio" data-tab-label="tab-alerts" role="tab" aria-selected="false">系统告警 <span class="panel-count panel-count-critical" style="margin-left:var(--space-4)">4</span></label>
+              <label for="tab-alerts" class="panel-tab panel-tab-radio" data-tab-label="tab-alerts" role="tab" aria-selected="false">系统告警 <span class="panel-count panel-count-critical">4</span></label>
               <label for="tab-resources" class="panel-tab panel-tab-radio" data-tab-label="tab-resources" role="tab" aria-selected="false">资源/配额</label>
             </div>
           </div>
@@ -1470,6 +1879,7 @@
                       <th scope="col">API 配额</th>
                       <th scope="col">上次同步</th>
                       <th scope="col" class="right">今日请求</th>
+                      <th scope="col" class="right">趋势</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1487,11 +1897,23 @@
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text critical">4,820/5,000</span>
-                          <div class="quota-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="Tushare API 配额 96.4%"><div class="quota-bar-fill critical" style="width: 96.4%;"></div></div>
+                          <div class="quota-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="Tushare API 配额 96.4%"><div class="quota-bar-fill critical bar-w-96"></div></div>
                         </div>
                       </td>
                       <td class="cell-time">14:32:15</td>
                       <td class="right cell-numeric">4,820</td>
+                      <td class="right">
+                        <div class="api-mini-chart" aria-label="近 8 小时 API 调用趋势">
+                          <div class="api-mini-bar ok" style="height:8px;"></div>
+                          <div class="api-mini-bar ok" style="height:12px;"></div>
+                          <div class="api-mini-bar ok" style="height:10px;"></div>
+                          <div class="api-mini-bar ok" style="height:14px;"></div>
+                          <div class="api-mini-bar ok" style="height:16px;"></div>
+                          <div class="api-mini-bar ok" style="height:18px;"></div>
+                          <div class="api-mini-bar ok" style="height:20px;"></div>
+                          <div class="api-mini-bar ok current" style="height:22px;"></div>
+                        </div>
+                      </td>
                     </tr>
                     <!-- Wind -->
                     <tr>
@@ -1509,6 +1931,18 @@
                       </td>
                       <td class="cell-time">14:32:10</td>
                       <td class="right cell-numeric">1,247</td>
+                      <td class="right">
+                        <div class="api-mini-chart" aria-label="近 8 小时 API 调用趋势">
+                          <div class="api-mini-bar ok" style="height:6px;"></div>
+                          <div class="api-mini-bar ok" style="height:8px;"></div>
+                          <div class="api-mini-bar ok" style="height:7px;"></div>
+                          <div class="api-mini-bar ok" style="height:6px;"></div>
+                          <div class="api-mini-bar ok" style="height:8px;"></div>
+                          <div class="api-mini-bar ok" style="height:7px;"></div>
+                          <div class="api-mini-bar ok" style="height:6px;"></div>
+                          <div class="api-mini-bar ok current" style="height:8px;"></div>
+                        </div>
+                      </td>
                     </tr>
                     <!-- 东方财富 Choice -->
                     <tr>
@@ -1524,11 +1958,23 @@
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text warn">8,200/10,000</span>
-                          <div class="quota-bar" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="东方财富 Choice API 配额 82%"><div class="quota-bar-fill warn" style="width: 82%;"></div></div>
+                          <div class="quota-bar" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="东方财富 Choice API 配额 82%"><div class="quota-bar-fill warn bar-w-82"></div></div>
                         </div>
                       </td>
                       <td class="cell-time">14:31:28</td>
                       <td class="right cell-numeric">8,200</td>
+                      <td class="right">
+                        <div class="api-mini-chart" aria-label="近 8 小时 API 调用趋势">
+                          <div class="api-mini-bar ok" style="height:10px;"></div>
+                          <div class="api-mini-bar ok" style="height:12px;"></div>
+                          <div class="api-mini-bar warn" style="height:16px;"></div>
+                          <div class="api-mini-bar warn" style="height:18px;"></div>
+                          <div class="api-mini-bar warn" style="height:20px;"></div>
+                          <div class="api-mini-bar warn" style="height:22px;"></div>
+                          <div class="api-mini-bar warn" style="height:20px;"></div>
+                          <div class="api-mini-bar warn current" style="height:24px;"></div>
+                        </div>
+                      </td>
                     </tr>
                     <!-- 同花顺 iFind -->
                     <tr>
@@ -1544,11 +1990,23 @@
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text ok">2,100/3,000</span>
-                          <div class="quota-bar" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" aria-label="同花顺 iFind API 配额 70%"><div class="quota-bar-fill ok" style="width: 70%;"></div></div>
+                          <div class="quota-bar" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" aria-label="同花顺 iFind API 配额 70%"><div class="quota-bar-fill ok bar-w-70"></div></div>
                         </div>
                       </td>
                       <td class="cell-time">14:32:08</td>
                       <td class="right cell-numeric">2,100</td>
+                      <td class="right">
+                        <div class="api-mini-chart" aria-label="近 8 小时 API 调用趋势">
+                          <div class="api-mini-bar ok" style="height:10px;"></div>
+                          <div class="api-mini-bar ok" style="height:8px;"></div>
+                          <div class="api-mini-bar ok" style="height:10px;"></div>
+                          <div class="api-mini-bar ok" style="height:12px;"></div>
+                          <div class="api-mini-bar ok" style="height:10px;"></div>
+                          <div class="api-mini-bar ok" style="height:8px;"></div>
+                          <div class="api-mini-bar ok" style="height:10px;"></div>
+                          <div class="api-mini-bar ok current" style="height:11px;"></div>
+                        </div>
+                      </td>
                     </tr>
                     <!-- 聚宽 -->
                     <tr class="row-down">
@@ -1567,6 +2025,7 @@
                       </td>
                       <td class="cell-disabled">14:15:00</td>
                       <td class="right cell-disabled">0</td>
+                      <td class="right cell-disabled">—</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1599,7 +2058,7 @@
                       <td>定时（每 30 分钟）</td>
                       <td class="right">
                         
-                        <label for="overlay-pipeline-rerun" class="row-action" style="cursor:pointer">重跑</label>
+                        <label for="overlay-pipeline-rerun" class="row-action">重跑</label>
                       </td>
                     </tr>
                     <tr>
@@ -1609,7 +2068,7 @@
                       <td class="cell-numeric">12 分钟</td>
                       <td>手动触发</td>
                       <td class="right">
-                        <label for="overlay-task-detail" class="row-action" style="cursor:pointer">详情</label>
+                        <label for="overlay-task-detail" class="row-action">详情</label>
                       </td>
                     </tr>
                     <tr>
@@ -1619,7 +2078,7 @@
                       <td class="cell-numeric">—</td>
                       <td>依赖触发</td>
                       <td class="right">
-                        <label for="overlay-task-detail" class="row-action" style="cursor:pointer">详情</label>
+                        <label for="overlay-task-detail" class="row-action">详情</label>
                       </td>
                     </tr>
                     <tr>
@@ -1629,7 +2088,7 @@
                       <td class="cell-numeric">2 分钟</td>
                       <td>手动触发</td>
                       <td class="right">
-                        <label for="overlay-pipeline-rerun" class="row-action" style="cursor:pointer">重试</label>
+                        <label for="overlay-pipeline-rerun" class="row-action">重试</label>
                       </td>
                     </tr>
                   </tbody>
@@ -1652,7 +2111,7 @@
                   </div>
                   <span class="alert-time">13:54:00</span>
                   
-                  <label for="overlay-alert-handle" class="row-action" style="cursor:pointer">处理</label>
+                  <label for="overlay-alert-handle" class="row-action">处理</label>
                 </div>
                 <!-- Alert 2 — critical -->
                 <div class="alert-row">
@@ -1662,7 +2121,7 @@
                     <span class="alert-desc">情绪 Alpha v2 评分返回 503，已自动重试 2 次</span>
                   </div>
                   <span class="alert-time">12:32:15</span>
-                  <label for="overlay-alert-handle" class="row-action" style="cursor:pointer">处理</label>
+                  <label for="overlay-alert-handle" class="row-action">处理</label>
                 </div>
                 <!-- Alert 3 — warning -->
                 <div class="alert-row">
@@ -1707,7 +2166,7 @@
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text critical">96.4%</span>
-                          <div class="quota-bar"><div class="quota-bar-fill critical" style="width: 96.4%;"></div></div>
+                          <div class="quota-bar"><div class="quota-bar-fill critical bar-w-96"></div></div>
                         </div>
                       </td>
                       <td><span class="status-dot down"><span class="status-dot-dot down"></span>即将耗尽</span></td>
@@ -1718,7 +2177,7 @@
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text ok">23%</span>
-                          <div class="quota-bar"><div class="quota-bar-fill ok" style="width: 23%;"></div></div>
+                          <div class="quota-bar"><div class="quota-bar-fill ok bar-w-23"></div></div>
                         </div>
                       </td>
                       <td><span class="status-dot ok"><span class="status-dot-dot ok"></span>正常</span></td>
@@ -1729,7 +2188,7 @@
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text ok">26%</span>
-                          <div class="quota-bar"><div class="quota-bar-fill ok" style="width: 26%;"></div></div>
+                          <div class="quota-bar"><div class="quota-bar-fill ok bar-w-26"></div></div>
                         </div>
                       </td>
                       <td><span class="status-dot ok"><span class="status-dot-dot ok"></span>正常</span></td>
@@ -1740,7 +2199,7 @@
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text ok">25%</span>
-                          <div class="quota-bar"><div class="quota-bar-fill ok" style="width: 25%;"></div></div>
+                          <div class="quota-bar"><div class="quota-bar-fill ok bar-w-25"></div></div>
                         </div>
                       </td>
                       <td><span class="status-dot ok"><span class="status-dot-dot ok"></span>正常</span></td>
@@ -1829,7 +2288,7 @@
                 <span class="resource-value critical">96.4% — 4,820/5,000</span>
               </div>
               <div class="resource-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="API 配额 (Tushare) 96.4%">
-                <div class="resource-bar-fill critical" style="width: 96.4%;"></div>
+                <div class="resource-bar-fill critical bar-w-96"></div>
               </div>
             </div>
             <!-- CPU 使用率 — ok -->
@@ -1839,7 +2298,7 @@
                 <span class="resource-value ok">23%</span>
               </div>
               <div class="resource-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100" aria-label="CPU 使用率 23%">
-                <div class="resource-bar-fill ok" style="width: 23%;"></div>
+                <div class="resource-bar-fill ok bar-w-23"></div>
               </div>
             </div>
             <!-- 内存使用 — ok -->
@@ -1849,7 +2308,7 @@
                 <span class="resource-value ok">4.2 / 16 GB</span>
               </div>
               <div class="resource-bar" role="progressbar" aria-valuenow="26" aria-valuemin="0" aria-valuemax="100" aria-label="内存使用 26%">
-                <div class="resource-bar-fill ok" style="width: 26%;"></div>
+                <div class="resource-bar-fill ok bar-w-26"></div>
               </div>
             </div>
             <!-- 磁盘空间 — ok -->
@@ -1859,7 +2318,7 @@
                 <span class="resource-value ok">128 / 512 GB</span>
               </div>
               <div class="resource-bar" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100" aria-label="磁盘空间 25%">
-                <div class="resource-bar-fill ok" style="width: 25%;"></div>
+                <div class="resource-bar-fill ok bar-w-25"></div>
               </div>
             </div>
           </div>
@@ -1904,7 +2363,7 @@
     <span class="status-sep">│</span>
     <span>4/5 数据源在线</span>
     <span class="status-sep">│</span>
-    <span>延迟 <span class="status-live" style="color:var(--system-healthy-fg)">2s</span></span>
+    <span>延迟 <span class="status-live status-live-inline">2s</span></span>
     <span class="status-sep">│</span>
     <span>14:32:15 CST</span>
     <span class="status-sep">│</span>
@@ -1932,7 +2391,7 @@
         </div>
         <div class="overlay-body">
           <h4>告警摘要</h4>
-          <p style="color:var(--text-primary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-8) 0;">上交所行情接口响应超时，超时 45s，已自动切换备用源。</p>
+          <p class="overlay-text-primary">上交所行情接口响应超时，超时 45s，已自动切换备用源。</p>
 
           <h4>影响范围</h4>
           <div class="overlay-field">
@@ -1945,16 +2404,16 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">持续时间</span>
-            <span class="overlay-field-value" style="color:var(--system-down-fg);">38 分钟</span>
+            <span class="overlay-field-value color-down">38 分钟</span>
           </div>
 
           <h4>根因分析</h4>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">上交所 Level-2 行情网关在 13:54 触发超时，疑似上游机房网络波动。备用源（东方财富）已接管，延迟略高于正常水平（45s vs 2s）。</p>
+          <p class="overlay-text-secondary-flush">上交所 Level-2 行情网关在 13:54 触发超时，疑似上游机房网络波动。备用源（东方财富）已接管，延迟略高于正常水平（45s vs 2s）。</p>
 
           <div class="overlay-actions">
-            <label for="overlay-alert-handle" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">忽略</label>
+            <label for="overlay-alert-handle" class="overlay-btn overlay-btn-secondary">忽略</label>
             <button class="overlay-btn overlay-btn-danger">升级</button>
-            <label for="overlay-alert-handle" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认处理</label>
+            <label for="overlay-alert-handle" class="overlay-btn overlay-btn-primary">确认处理</label>
           </div>
         </div>
       </div>
@@ -1963,21 +2422,21 @@
     <!-- Overlay B: Pipeline 重跑确认 Dialog (居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-pipeline-rerun">
       <label class="overlay-dismiss" for="overlay-pipeline-rerun" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="确认重跑" style="max-width:400px;">
+      <div class="overlay-sheet overlay-sheet-narrow" role="dialog" aria-label="确认重跑">
         <div class="overlay-header">
           <span class="overlay-title">确认重跑 Pipeline</span>
           <label for="overlay-pipeline-rerun" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-12) 0;">
-            确认重跑 <strong style="color:var(--text-primary);">日线行情同步</strong>？
+          <p class="overlay-text-secondary">
+            确认重跑 <strong class="overlay-text-strong">日线行情同步</strong>？
           </p>
-          <div style="background:var(--surface-muted);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8) var(--space-10);font-size:var(--font-size-12);color:var(--system-degraded-fg);line-height:1.5;">
+          <div class="overlay-warn-box">
             注意：当前正在执行的任务将被中断，重新开始获取数据。已完成的部分结果不会被保留。
           </div>
           <div class="overlay-actions">
-            <label for="overlay-pipeline-rerun" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-pipeline-rerun" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认重跑</label>
+            <label for="overlay-pipeline-rerun" class="overlay-btn overlay-btn-secondary">取消</label>
+            <label for="overlay-pipeline-rerun" class="overlay-btn overlay-btn-primary">确认重跑</label>
           </div>
         </div>
       </div>
@@ -2003,7 +2462,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">状态</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg);">运行中</span>
+            <span class="overlay-field-value color-healthy">运行中</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">触发方式</span>
@@ -2029,18 +2488,18 @@
           </div>
 
           <h4>运行日志</h4>
-          <div style="background:var(--surface-muted);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-numeric);font-size:var(--font-size-12);color:var(--text-tertiary);line-height:1.8;">
+          <div class="overlay-log-box-compact">
             <div>14:30:00 任务启动</div>
             <div>14:30:01 连接 Tushare API...</div>
             <div>14:30:03 获取日线数据 · 共 5,242 条</div>
             <div>14:30:15 Tushare 同步完成 · 5,242/5,242</div>
             <div>14:30:16 连接 Wind API...</div>
-            <div style="color:var(--system-healthy-fg);">14:30:18 Wind 同步进行中 · 3,812/4,100</div>
+            <div class="log-line-healthy">14:30:18 Wind 同步进行中 · 3,812/4,100</div>
           </div>
 
           <div class="overlay-actions">
             <button class="overlay-btn overlay-btn-secondary">查看完整日志</button>
-            <label for="overlay-task-detail" class="overlay-btn overlay-btn-primary" style="cursor:pointer">关闭</label>
+            <label for="overlay-task-detail" class="overlay-btn overlay-btn-primary">关闭</label>
           </div>
         </div>
       </div>
@@ -2058,26 +2517,26 @@
       <div class="gallery-card__label">Health Strip — Loading State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-      <div class="state-loading" style="flex-direction:row;gap:var(--space-16);padding:var(--space-8) var(--space-16);">
-        <div style="display:flex;align-items:center;gap:var(--space-6);">
-          <div class="skeleton" style="width:6px;height:6px;border-radius:50%;"></div>
-          <div class="skeleton skeleton-text-sm" style="width:50px;"></div>
-          <div class="skeleton skeleton-text-sm" style="width:40px;"></div>
+      <div class="state-loading skeleton-state-row">
+        <div class="skeleton-row-h">
+          <div class="skeleton skeleton-dot"></div>
+          <div class="skeleton skeleton-text-sm skeleton-w-50"></div>
+          <div class="skeleton skeleton-text-sm skeleton-w-40"></div>
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-6);">
-          <div class="skeleton" style="width:6px;height:6px;border-radius:50%;"></div>
-          <div class="skeleton skeleton-text-sm" style="width:50px;"></div>
-          <div class="skeleton skeleton-text-sm" style="width:40px;"></div>
+        <div class="skeleton-row-h">
+          <div class="skeleton skeleton-dot"></div>
+          <div class="skeleton skeleton-text-sm skeleton-w-50"></div>
+          <div class="skeleton skeleton-text-sm skeleton-w-40"></div>
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-6);">
-          <div class="skeleton" style="width:6px;height:6px;border-radius:50%;"></div>
-          <div class="skeleton skeleton-text-sm" style="width:50px;"></div>
-          <div class="skeleton skeleton-text-sm" style="width:40px;"></div>
+        <div class="skeleton-row-h">
+          <div class="skeleton skeleton-dot"></div>
+          <div class="skeleton skeleton-text-sm skeleton-w-50"></div>
+          <div class="skeleton skeleton-text-sm skeleton-w-40"></div>
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-6);">
-          <div class="skeleton" style="width:6px;height:6px;border-radius:50%;"></div>
-          <div class="skeleton skeleton-text-sm" style="width:50px;"></div>
-          <div class="skeleton skeleton-text-sm" style="width:40px;"></div>
+        <div class="skeleton-row-h">
+          <div class="skeleton skeleton-dot"></div>
+          <div class="skeleton skeleton-text-sm skeleton-w-50"></div>
+          <div class="skeleton skeleton-text-sm skeleton-w-40"></div>
         </div>
       </div>
     </div>
@@ -2087,9 +2546,9 @@
       <div class="gallery-card__label">Health Strip — Error State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
-      <div class="state-error" style="flex-direction:row;gap:var(--space-12);padding:var(--space-8) var(--space-16);">
-        <div class="state-error-icon" style="width:20px;height:20px;font-size:12px;">!</div>
-        <span style="color:var(--text-secondary);font-size:var(--font-size-12);">健康检查异常，无法获取系统指标</span>
+      <div class="state-error skeleton-state-error">
+        <div class="state-error-icon state-error-icon-box">!</div>
+        <span class="state-error-text">健康检查异常，无法获取系统指标</span>
         <button class="state-error-retry">重试</button>
       </div>
     </div>
@@ -2371,7 +2830,7 @@
           </div>
           <div class="overlay-body">
             <h4>告警摘要</h4>
-            <p style="color:var(--text-primary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-8) 0;">上交所行情接口响应超时，超时 45s，已自动切换备用源。</p>
+            <p class="overlay-text-primary">上交所行情接口响应超时，超时 45s，已自动切换备用源。</p>
 
             <h4>影响范围</h4>
             <div class="overlay-field">
@@ -2384,11 +2843,11 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">持续时间</span>
-              <span class="overlay-field-value" style="color:var(--system-down-fg);">38 分钟</span>
+              <span class="overlay-field-value color-down">38 分钟</span>
             </div>
 
             <h4>根因分析</h4>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">上交所 Level-2 行情网关在 13:54 触发超时，疑似上游机房网络波动。备用源（东方财富）已接管，延迟略高于正常水平（45s vs 2s）。</p>
+            <p class="overlay-text-secondary-flush">上交所 Level-2 行情网关在 13:54 触发超时，疑似上游机房网络波动。备用源（东方财富）已接管，延迟略高于正常水平（45s vs 2s）。</p>
 
             <div class="overlay-actions">
               <button class="overlay-btn overlay-btn-secondary">忽略</button>
@@ -2403,15 +2862,15 @@
     <div class="gallery-card">
       <div class="gallery-card__label">确认重跑 Pipeline (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="确认重跑" style="max-width:400px;">
+        <div class="overlay-sheet overlay-sheet-narrow" role="dialog" aria-label="确认重跑">
           <div class="overlay-header">
             <span class="overlay-title">确认重跑 Pipeline</span>
           </div>
           <div class="overlay-body">
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-12) 0;">
-              确认重跑 <strong style="color:var(--text-primary);">日线行情同步</strong>？
+            <p class="overlay-text-secondary">
+              确认重跑 <strong class="overlay-text-strong">日线行情同步</strong>？
             </p>
-            <div style="background:var(--surface-muted);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8) var(--space-10);font-size:var(--font-size-12);color:var(--system-degraded-fg);line-height:1.5;">
+            <div class="overlay-warn-box">
               注意：当前正在执行的任务将被中断，重新开始获取数据。已完成的部分结果不会被保留。
             </div>
             <div class="overlay-actions">
@@ -2442,7 +2901,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">状态</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg);">运行中</span>
+              <span class="overlay-field-value color-healthy">运行中</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">触发方式</span>
@@ -2468,13 +2927,13 @@
             </div>
 
             <h4>运行日志</h4>
-            <div style="background:var(--surface-muted);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-numeric);font-size:var(--font-size-12);color:var(--text-tertiary);line-height:1.8;">
+            <div class="overlay-log-box-compact">
               <div>14:30:00 任务启动</div>
               <div>14:30:01 连接 Tushare API...</div>
               <div>14:30:03 获取日线数据 · 共 5,242 条</div>
               <div>14:30:15 Tushare 同步完成 · 5,242/5,242</div>
               <div>14:30:16 连接 Wind API...</div>
-              <div style="color:var(--system-healthy-fg);">14:30:18 Wind 同步进行中 · 3,812/4,100</div>
+              <div class="log-line-healthy">14:30:18 Wind 同步进行中 · 3,812/4,100</div>
             </div>
 
             <div class="overlay-actions">

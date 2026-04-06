@@ -954,6 +954,13 @@
       background: var(--surface-panel-elevated);
       border: 1px solid var(--border-subtle);
       text-align: center;
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .freshness-cell:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px oklch(0 0 0 / 0.15);
     }
 
     .freshness-label {
@@ -1096,6 +1103,19 @@
       border-radius: var(--radius-6);
       border: 1px solid var(--border-subtle);
       background: var(--surface-panel-elevated);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .asset-class-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+    }
+
+    .asset-class-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+      border-color: var(--border-default);
     }
 
     .asset-class-dot {
@@ -1127,6 +1147,11 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
       color: var(--text-secondary);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .heatmap-cell:hover {
+      transform: scaleY(1.15);
     }
 
     .status-led-row {
@@ -1247,7 +1272,561 @@
     .frosted-swatch {
       position: relative;
       overflow: hidden;
+      backdrop-filter: blur(12px);
     }
+
+    /* ── Extracted: Component Token Demos ── */
+    .demo-btn-row {
+      display: flex;
+      gap: var(--space-8);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .demo-btn-sm {
+      padding: var(--btn-sm-padding-y) var(--btn-sm-padding-x);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--btn-radius);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: var(--btn-sm-font-size);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .demo-btn-sm:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    .demo-btn-default {
+      padding: var(--btn-padding-y) var(--btn-padding-x);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--btn-radius);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: var(--btn-font-size);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .demo-btn-default:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    .demo-btn-primary {
+      padding: var(--btn-padding-y) var(--btn-cta-padding-x);
+      border: 1px solid var(--brand-accent);
+      border-radius: var(--btn-radius);
+      background: var(--brand-accent);
+      color: var(--text-inverse);
+      font-size: var(--btn-font-size);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .demo-btn-primary:hover {
+      background: var(--brand-accent-hover);
+    }
+
+    .demo-badge-row {
+      display: flex;
+      gap: var(--space-8);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .demo-badge-sm {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+    }
+
+    .demo-badge-md {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--badge-md-padding-y) var(--badge-md-padding-x);
+      border-radius: var(--badge-md-radius);
+      background: oklch(from var(--red-500) l c h / 0.12);
+      color: var(--red-500);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+    }
+
+    .demo-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--badge-md-padding-y) var(--space-8);
+      border-radius: var(--badge-pill-radius);
+      background: oklch(from var(--green-500) l c h / 0.12);
+      color: var(--green-500);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+    }
+
+    .demo-card-row {
+      display: flex;
+      gap: var(--space-16);
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .demo-card {
+      background: var(--surface-panel-base);
+      border: var(--card-border);
+      border-radius: var(--card-radius);
+      padding: var(--card-padding);
+      min-width: 180px;
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .demo-card:hover {
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.15);
+    }
+
+    .demo-card-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-medium);
+      margin-bottom: var(--space-4);
+      color: var(--text-primary);
+    }
+
+    .demo-card-detail {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .demo-panel {
+      background: var(--surface-panel-base);
+      border: var(--panel-border);
+      border-radius: var(--panel-radius);
+      min-width: 180px;
+      overflow: hidden;
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .demo-panel:hover {
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.15);
+    }
+
+    .demo-panel-header {
+      padding: var(--panel-header-padding);
+      border-bottom: var(--section-divider);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .demo-panel-body {
+      padding: var(--card-padding);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .demo-status-row {
+      display: flex;
+      gap: var(--space-16);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .demo-status-item {
+      display: flex;
+      gap: var(--space-8);
+      align-items: center;
+    }
+
+    .demo-status-dot {
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+    }
+
+    .demo-status-dot-lg {
+      width: var(--status-dot-size-lg);
+      height: var(--status-dot-size-lg);
+      border-radius: 50%;
+    }
+
+    .demo-checkbox {
+      width: var(--checkbox-size);
+      height: var(--checkbox-size);
+      border-radius: var(--checkbox-radius);
+      border: var(--checkbox-border);
+      display: inline-block;
+    }
+
+    .demo-status-label {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    /* ── Extracted: Table semantic cells ── */
+    .demo-table .cell-name {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      font-family: var(--font-family-ui);
+    }
+
+    .demo-table .cell-status {
+      font-family: var(--font-family-ui);
+    }
+
+    /* ── Extracted: Description paragraphs ── */
+    .section-desc {
+      color: var(--text-secondary);
+      font-size: var(--font-size-13);
+      margin-bottom: var(--space-12);
+    }
+
+    /* ── Extracted: Feedback sub-titles ── */
+    .feedback-sub-title {
+      margin-bottom: var(--space-6);
+    }
+
+    /* ── Extracted: Progress labels ── */
+    .progress-label-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: var(--space-4);
+    }
+
+    .progress-label-text {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .progress-label-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Extracted: Market card label container ── */
+    .market-card-label-row {
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── Extracted: Subsection spacing ── */
+    .subsection-gap-top {
+      margin-top: var(--space-16);
+    }
+
+    /* ── Extracted: Token swatch with border ── */
+    .token-swatch--bordered {
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* ── Extracted: Font card sample overrides ── */
+    .font-card-sample--ui {
+      font-family: 'Inter', 'Noto Sans SC', sans-serif;
+    }
+
+    .font-card-sample-2--zh {
+      font-family: 'Noto Sans SC', sans-serif;
+    }
+
+    .font-card-sample--numeric {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .font-card-sample-2--numeric {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    .font-card-sample--code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--font-size-13);
+    }
+
+    .font-card-sample-2--code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Code syntax colors (display: showcasing semantic color) ── */
+    .syntax-keyword { color: var(--brand-accent); }
+    .syntax-ident { color: var(--text-primary); }
+    .syntax-func { color: var(--green-500); }
+
+    /* ── Extracted: Swatch group label spacing ── */
+    .swatch-group-label--spaced {
+      margin-top: var(--space-8);
+    }
+
+    /* ── Section folding / collapse ── */
+    .section-fold {
+      position: relative;
+    }
+
+    .section-fold-toggle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      padding: 2px var(--space-8);
+      cursor: pointer;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      user-select: none;
+    }
+
+    .section-fold-toggle:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    .section-fold-body {
+      transition: max-height 0.3s var(--motion-easing-standard), opacity 0.2s ease;
+      overflow: hidden;
+    }
+
+    .section-fold-body.collapsed {
+      max-height: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .section-fold-body.expanded {
+      max-height: 5000px;
+      opacity: 1;
+    }
+
+    /* ── Color scale gradient bar ── */
+    .color-gradient-bar {
+      height: 32px;
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .color-gradient-bar::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, var(--neutral-950), var(--neutral-500), var(--neutral-50));
+    }
+
+    .color-gradient-bar--brand::after {
+      background: linear-gradient(90deg, var(--brand-300), var(--brand-500), var(--brand-700));
+    }
+
+    .color-gradient-bar--green::after {
+      background: linear-gradient(90deg, var(--green-400), var(--green-500), var(--green-600));
+    }
+
+    .color-gradient-bar--red::after {
+      background: linear-gradient(90deg, var(--red-400), var(--red-500), var(--red-600));
+    }
+
+    .color-gradient-bar--amber::after {
+      background: linear-gradient(90deg, var(--amber-400), var(--amber-500), var(--amber-600));
+    }
+
+    .color-gradient-bar--heatmap::after {
+      background: linear-gradient(90deg, var(--heatmap-1-bg), var(--heatmap-3-bg), var(--heatmap-5-bg));
+    }
+
+    .gradient-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── Hover effects for swatches ── */
+    .swatch {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .swatch:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px oklch(0 0 0 / 0.2);
+    }
+
+    .token-swatch-item {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .token-swatch-item:hover {
+      transform: translateY(-1px);
+    }
+
+    /* ── Hover badge interaction ── */
+    .domain-badge:hover {
+      transform: scale(1.02);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.15);
+    }
+
+    /* ── Keyboard shortcut hint ── */
+    .kbd-hint {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 var(--space-4);
+      min-width: 20px;
+      height: 18px;
+      border-radius: var(--radius-3);
+      background: var(--surface-strip);
+      border: 1px solid var(--border-default);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Quick Nav ── */
+    .quick-nav {
+      display: flex;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-24);
+      padding: var(--space-8) var(--space-12);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .quick-nav-link {
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .quick-nav-link:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    /* ── Enhanced spacing visualization ── */
+    .spacing-row:hover .spacing-bar {
+      opacity: 1;
+    }
+
+    /* ── Enhanced elevation preview ── */
+    .elevation-preview {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .elevation-row:hover .elevation-preview {
+      transform: translateX(4px);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+    }
+
+    /* ── Radius hover preview ── */
+    .radius-item:hover .radius-box {
+      opacity: 1;
+      transform: scale(1.1);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .radius-box {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Font card hover ── */
+    .font-card {
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .font-card:hover {
+      box-shadow: 0 4px 16px oklch(0 0 0 / 0.15);
+      border-color: var(--border-default);
+    }
+
+    /* ── Section header enhancement ── */
+    .section-header {
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .section:hover .section-header {
+      border-color: var(--border-default);
+    }
+
+    /* ── Smooth scroll ── */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* ── Footer ── */
+    .showcase-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-16) 0;
+    }
+
+    .footer-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+    }
+
+    .footer-label {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .footer-version {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+
+    .footer-top {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-8) var(--space-16);
+      border-radius: var(--radius-6);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-panel-base);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      text-decoration: none;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .footer-top:hover {
+      border-color: var(--border-default);
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Font size 11 utility (used in quick-nav) ── */
+    :root {
+      --font-size-11: 0.6875rem;
+    }
+
+    /* ── Weight demo classes ── */
+    .weight-regular { font-weight: 400; }
+    .weight-medium { font-weight: 500; }
+    .weight-semibold { font-weight: 600; }
   </style>
 </head>
 <body>
@@ -1286,6 +1865,18 @@
        ═══════════════════════════════════════════════════ -->
   <main class="showcase">
 
+    <!-- ── Quick Nav ── -->
+    <nav class="quick-nav">
+      <a class="quick-nav-link" href="#foundation">01 基础</a>
+      <a class="quick-nav-link" href="#semantic">02 语义</a>
+      <a class="quick-nav-link" href="#component">03 组件</a>
+      <a class="quick-nav-link" href="#interaction">04 交互</a>
+      <a class="quick-nav-link" href="#domain">05 领域</a>
+      <a class="quick-nav-link" href="#density">06 密度</a>
+      <a class="quick-nav-link" href="#market-region">07 市场</a>
+      <a class="quick-nav-link" href="#data-viz">08 数据</a>
+    </nav>
+
     <!-- ───────────────────────────────────────────────
          Section 1: Foundation Tokens
          ─────────────────────────────────────────────── -->
@@ -1299,6 +1890,10 @@
       <div class="subsection">
         <h3 class="subsection-title">1.1 色彩原语 (Color Primitives)</h3>
 
+        <!-- Neutral gradient bar -->
+        <div class="color-gradient-bar"></div>
+        <div class="gradient-bar-label"><span>neutral-950</span><span>neutral-500</span><span>neutral-50</span></div>
+
         <!-- Neutral 0–950 -->
         <div class="swatch-group">
           <div class="swatch-group-label">Neutral — 15 级灰度</div>
@@ -1308,6 +1903,8 @@
         <!-- Brand -->
         <div class="swatch-group">
           <div class="swatch-group-label">Brand — 品牌色</div>
+          <div class="color-gradient-bar color-gradient-bar--brand"></div>
+          <div class="gradient-bar-label"><span>brand-300</span><span>brand-500</span><span>brand-700</span></div>
           <div class="swatch-grid" id="brandSwatches"></div>
         </div>
 
@@ -1331,32 +1928,32 @@
           <div class="font-card">
             <div class="font-card-title">UI</div>
             <div class="font-card-family">'Inter', 'Noto Sans SC'</div>
-            <div class="font-card-sample" style="font-family: 'Inter', 'Noto Sans SC', sans-serif;">
+            <div class="font-card-sample font-card-sample--ui">
               量化交易系统 Graphite Studio
             </div>
-            <div class="font-card-sample-2" style="font-family: 'Noto Sans SC', sans-serif;">
+            <div class="font-card-sample-2 font-card-sample-2--zh">
               简体中文排版效果演示。支持中英混排，提供一致的阅读体验。
             </div>
           </div>
           <div class="font-card">
             <div class="font-card-title">Numeric</div>
             <div class="font-card-family">'JetBrains Mono'</div>
-            <div class="font-card-sample" style="font-family: 'JetBrains Mono', monospace;">
+            <div class="font-card-sample font-card-sample--numeric">
               3,847.52<br>
               -12.34%<br>
               1.23e+08
             </div>
-            <div class="font-card-sample-2" style="font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); font-size: var(--font-size-12);">
+            <div class="font-card-sample-2 font-card-sample-2--numeric">
               等宽数字对齐，适用于表格与图表
             </div>
           </div>
           <div class="font-card">
             <div class="font-card-title">Code</div>
             <div class="font-card-family">'JetBrains Mono'</div>
-            <div class="font-card-sample" style="font-family: 'JetBrains Mono', monospace; font-size: var(--font-size-13);">
-              <span style="color: var(--brand-accent);">const</span> <span style="color: var(--text-primary);">signal</span> = <span style="color: var(--green-500);">computeAlpha</span>(data);
+            <div class="font-card-sample font-card-sample--code">
+              <span class="syntax-keyword">const</span> <span class="syntax-ident">signal</span> = <span class="syntax-func">computeAlpha</span>(data);
             </div>
-            <div class="font-card-sample-2" style="font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); font-size: var(--font-size-12);">
+            <div class="font-card-sample-2 font-card-sample-2--code">
               代码片段、日志、终端输出
             </div>
           </div>
@@ -1369,17 +1966,17 @@
         <div class="weight-list">
           <div class="weight-row">
             <span class="weight-label">font-weight-regular</span>
-            <span class="weight-sample" style="font-weight: 400;">常规 Regular — 正文与描述性文字</span>
+            <span class="weight-sample weight-regular">常规 Regular — 正文与描述性文字</span>
             <span class="weight-value">400</span>
           </div>
           <div class="weight-row">
             <span class="weight-label">font-weight-medium</span>
-            <span class="weight-sample" style="font-weight: 500;">中等 Medium — 标签、表格头部、导航</span>
+            <span class="weight-sample weight-medium">中等 Medium — 标签、表格头部、导航</span>
             <span class="weight-value">500</span>
           </div>
           <div class="weight-row">
             <span class="weight-label">font-weight-semibold</span>
-            <span class="weight-sample" style="font-weight: 600;">半粗 Semibold — 标题、强调、品牌</span>
+            <span class="weight-sample weight-semibold">半粗 Semibold — 标题、强调、品牌</span>
             <span class="weight-value">600</span>
           </div>
         </div>
@@ -1432,7 +2029,7 @@
         <h3 class="subsection-title">2.4 品牌强调色 (Brand Accent)</h3>
         <div class="accent-demo">
           <button class="accent-btn accent-btn-primary">主要按钮</button>
-          <button class="accent-btn accent-btn-primary" style="opacity: 1;" onmouseover="this.style.background='var(--brand-accent-hover)'" onmouseout="this.style.background='var(--brand-accent)'">悬停效果</button>
+          <button class="accent-btn accent-btn-primary accent-btn-demo-hover">悬停效果</button>
           <button class="accent-btn accent-btn-ghost">描边按钮</button>
           <button class="accent-btn accent-btn-subtle">微妙背景</button>
         </div>
@@ -1443,31 +2040,31 @@
         <h3 class="subsection-title">2.5 Overlay (透明度分隔线 / 背景)</h3>
         <div class="token-swatch-grid">
           <div class="token-swatch-item">
-            <div class="token-swatch" style="background: var(--overlay-2); border: 1px solid var(--border-subtle);"></div>
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-2);"></div>
             <code>--overlay-2</code><span class="token-value">oklch(1 0 0 / 0.02)</span>
           </div>
           <div class="token-swatch-item">
-            <div class="token-swatch" style="background: var(--overlay-3); border: 1px solid var(--border-subtle);"></div>
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-3);"></div>
             <code>--overlay-3</code><span class="token-value">oklch(1 0 0 / 0.03)</span>
           </div>
           <div class="token-swatch-item">
-            <div class="token-swatch" style="background: var(--overlay-4); border: 1px solid var(--border-subtle);"></div>
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-4);"></div>
             <code>--overlay-4</code><span class="token-value">oklch(1 0 0 / 0.04)</span>
           </div>
           <div class="token-swatch-item">
-            <div class="token-swatch" style="background: var(--overlay-6); border: 1px solid var(--border-subtle);"></div>
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-6);"></div>
             <code>--overlay-6</code><span class="token-value">oklch(1 0 0 / 0.06)</span>
           </div>
           <div class="token-swatch-item">
-            <div class="token-swatch" style="background: var(--overlay-8); border: 1px solid var(--border-subtle);"></div>
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-8);"></div>
             <code>--overlay-8</code><span class="token-value">oklch(1 0 0 / 0.08)</span>
           </div>
           <div class="token-swatch-item">
-            <div class="token-swatch" style="background: var(--overlay-10); border: 1px solid var(--border-subtle);"></div>
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-10);"></div>
             <code>--overlay-10</code><span class="token-value">oklch(1 0 0 / 0.10)</span>
           </div>
           <div class="token-swatch-item">
-            <div class="token-swatch" style="background: var(--overlay-12); border: 1px solid var(--border-subtle);"></div>
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-12);"></div>
             <code>--overlay-12</code><span class="token-value">oklch(1 0 0 / 0.12)</span>
           </div>
         </div>
@@ -1479,11 +2076,11 @@
         <h3 class="subsection-title">2.6 毛玻璃效果 (Frosted Glass)</h3>
         <div class="token-swatch-grid">
           <div class="token-swatch-item">
-            <div class="token-swatch frosted-swatch" style="background: var(--surface-frosted); backdrop-filter: blur(12px);"></div>
+            <div class="token-swatch frosted-swatch" style="background: var(--surface-frosted);"></div>
             <code>--surface-frosted</code><span class="token-value">surface-app @ 85%</span>
           </div>
           <div class="token-swatch-item">
-            <div class="token-swatch frosted-swatch" style="background: var(--surface-frosted-subtle); backdrop-filter: blur(12px);"></div>
+            <div class="token-swatch frosted-swatch" style="background: var(--surface-frosted-subtle);"></div>
             <code>--surface-frosted-subtle</code><span class="token-value">surface-app @ 80%</span>
           </div>
         </div>
@@ -1505,10 +2102,10 @@
       <!-- 3.1 Button Sizes -->
       <div class="subsection">
         <h3 class="subsection-title">3.1 按钮 (Button)</h3>
-        <div style="display: flex; gap: var(--space-8); align-items: center; flex-wrap: wrap;">
-          <button style="padding: var(--btn-sm-padding-y) var(--btn-sm-padding-x); border: 1px solid var(--border-subtle); border-radius: var(--btn-radius); background: transparent; color: var(--text-secondary); font-size: var(--btn-sm-font-size); cursor: pointer;">Small</button>
-          <button style="padding: var(--btn-padding-y) var(--btn-padding-x); border: 1px solid var(--border-subtle); border-radius: var(--btn-radius); background: transparent; color: var(--text-secondary); font-size: var(--btn-font-size); cursor: pointer;">Default</button>
-          <button style="padding: var(--btn-padding-y) var(--btn-cta-padding-x); border: 1px solid var(--brand-accent); border-radius: var(--btn-radius); background: var(--brand-accent); color: var(--text-inverse); font-size: var(--btn-font-size); cursor: pointer;">Primary</button>
+        <div class="demo-btn-row">
+          <button class="demo-btn-sm">Small</button>
+          <button class="demo-btn-default">Default</button>
+          <button class="demo-btn-primary">Primary</button>
         </div>
         <p class="subsection-note">btn-sm: <code>--btn-sm-padding-y</code> 2px, <code>--btn-sm-padding-x</code> space-6 | btn: <code>--btn-padding-y</code> space-4, <code>--btn-padding-x</code> space-8 | cta: <code>--btn-cta-padding-x</code> space-10</p>
       </div>
@@ -1516,10 +2113,10 @@
       <!-- 3.2 Badge / Tag Sizes -->
       <div class="subsection">
         <h3 class="subsection-title">3.2 徽标 / 标签 (Badge / Tag)</h3>
-        <div style="display: flex; gap: var(--space-8); align-items: center; flex-wrap: wrap;">
-          <span style="display: inline-flex; align-items: center; padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x); border-radius: var(--badge-sm-radius); background: var(--brand-accent-subtle); color: var(--brand-accent); font-size: var(--badge-font-size); font-weight: var(--badge-font-weight);">SM Tag</span>
-          <span style="display: inline-flex; align-items: center; padding: var(--badge-md-padding-y) var(--badge-md-padding-x); border-radius: var(--badge-md-radius); background: oklch(from var(--red-500) l c h / 0.12); color: var(--red-500); font-size: var(--badge-font-size); font-weight: var(--badge-font-weight);">MD Badge</span>
-          <span style="display: inline-flex; align-items: center; padding: var(--badge-md-padding-y) var(--space-8); border-radius: var(--badge-pill-radius); background: oklch(from var(--green-500) l c h / 0.12); color: var(--green-500); font-size: var(--badge-font-size); font-weight: var(--badge-font-weight);">Pill Chip</span>
+        <div class="demo-badge-row">
+          <span class="demo-badge-sm">SM Tag</span>
+          <span class="demo-badge-md">MD Badge</span>
+          <span class="demo-badge-pill">Pill Chip</span>
         </div>
         <p class="subsection-note">sm: <code>--badge-sm-padding-y</code> 1px, radius-2 | md: <code>--badge-md-padding-y</code> 2px, radius-4 | pill: radius-12</p>
       </div>
@@ -1527,15 +2124,15 @@
       <!-- 3.3 Card / Panel -->
       <div class="subsection">
         <h3 class="subsection-title">3.3 卡片 / 面板 (Card / Panel)</h3>
-        <div style="display: flex; gap: var(--space-16); align-items: flex-start; flex-wrap: wrap;">
-          <div style="background: var(--surface-panel-base); border: var(--card-border); border-radius: var(--card-radius); padding: var(--card-padding); min-width: 180px;">
-            <div style="font-size: var(--font-size-14); font-weight: var(--font-weight-medium); margin-bottom: var(--space-4);">Card</div>
-            <div style="font-size: var(--font-size-12); color: var(--text-secondary);">radius: <code>--card-radius</code> (6)</div>
-            <div style="font-size: var(--font-size-12); color: var(--text-secondary);">padding: <code>--card-padding</code></div>
+        <div class="demo-card-row">
+          <div class="demo-card">
+            <div class="demo-card-title">Card</div>
+            <div class="demo-card-detail">radius: <code>--card-radius</code> (6)</div>
+            <div class="demo-card-detail">padding: <code>--card-padding</code></div>
           </div>
-          <div style="background: var(--surface-panel-base); border: var(--panel-border); border-radius: var(--panel-radius); min-width: 180px;">
-            <div style="padding: var(--panel-header-padding); border-bottom: var(--section-divider); font-size: var(--font-size-13); font-weight: var(--font-weight-medium);">Panel Header</div>
-            <div style="padding: var(--card-padding); font-size: var(--font-size-12); color: var(--text-secondary);">radius: <code>--panel-radius</code> (8)</div>
+          <div class="demo-panel">
+            <div class="demo-panel-header">Panel Header</div>
+            <div class="demo-panel-body">radius: <code>--panel-radius</code> (8)</div>
           </div>
         </div>
         <p class="subsection-note">card: radius-6 | panel: radius-8 | divider: <code>--section-divider</code> 1px solid border-subtle</p>
@@ -1544,18 +2141,18 @@
       <!-- 3.4 Status Dots & Checkbox -->
       <div class="subsection">
         <h3 class="subsection-title">3.4 状态指示 & 表单 (Status Dot / Checkbox)</h3>
-        <div style="display: flex; gap: var(--space-16); align-items: center; flex-wrap: wrap;">
-          <div style="display: flex; gap: var(--space-8); align-items: center;">
-            <span style="width: var(--status-dot-size); height: var(--status-dot-size); border-radius: 50%; background: var(--green-500);"></span>
-            <span style="font-size: var(--font-size-12); color: var(--text-secondary);"><code>--status-dot-size</code> 6px</span>
+        <div class="demo-status-row">
+          <div class="demo-status-item">
+            <span class="demo-status-dot" style="background: var(--green-500);"></span>
+            <span class="demo-status-label"><code>--status-dot-size</code> 6px</span>
           </div>
-          <div style="display: flex; gap: var(--space-8); align-items: center;">
-            <span style="width: var(--status-dot-size-lg); height: var(--status-dot-size-lg); border-radius: 50%; background: var(--amber-500);"></span>
-            <span style="font-size: var(--font-size-12); color: var(--text-secondary);"><code>--status-dot-size-lg</code> 8px</span>
+          <div class="demo-status-item">
+            <span class="demo-status-dot-lg" style="background: var(--amber-500);"></span>
+            <span class="demo-status-label"><code>--status-dot-size-lg</code> 8px</span>
           </div>
-          <div style="display: flex; gap: var(--space-8); align-items: center;">
-            <span style="width: var(--checkbox-size); height: var(--checkbox-size); border-radius: var(--checkbox-radius); border: var(--checkbox-border); display: inline-block;"></span>
-            <span style="font-size: var(--font-size-12); color: var(--text-secondary);"><code>--checkbox-size</code> 14px</span>
+          <div class="demo-status-item">
+            <span class="demo-checkbox"></span>
+            <span class="demo-status-label"><code>--checkbox-size</code> 14px</span>
           </div>
         </div>
       </div>
@@ -1591,7 +2188,7 @@
         <div class="feedback-section">
           <!-- Toast -->
           <div>
-            <div class="subsection-title" style="margin-bottom: var(--space-6);">Toast</div>
+            <div class="subsection-title feedback-sub-title">Toast</div>
             <div class="feedback-toast">
               <span class="feedback-toast-icon"></span>
               <span>订单已成功提交，等待撮合引擎确认</span>
@@ -1600,8 +2197,8 @@
 
           <!-- Banners -->
           <div>
-            <div class="subsection-title" style="margin-bottom: var(--space-6);">Banner</div>
-            <div class="feedback-banner feedback-banner-warning" style="margin-bottom: var(--space-8);">
+            <div class="subsection-title feedback-sub-title">Banner</div>
+            <div class="feedback-banner feedback-banner-warning">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L15 14H1L8 1Z" fill="var(--amber-500)"/></svg>
               <span>风控预警：持仓集中度接近限制阈值 (85%)</span>
             </div>
@@ -1613,13 +2210,13 @@
 
           <!-- Progress -->
           <div>
-            <div class="subsection-title" style="margin-bottom: var(--space-6);">Progress</div>
+            <div class="subsection-title feedback-sub-title">Progress</div>
             <div class="progress-track">
               <div class="progress-fill" id="progressFill"></div>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-top: var(--space-4);">
-              <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">同步进度</span>
-              <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--text-tertiary);" id="progressLabel">65%</span>
+            <div class="progress-label-row">
+              <span class="progress-label-text">同步进度</span>
+              <span class="progress-label-value" id="progressLabel">65%</span>
             </div>
           </div>
         </div>
@@ -1650,7 +2247,7 @@
         <h2 class="section-title">密度对比 (Density Comparison)</h2>
       </div>
 
-      <p style="color: var(--text-secondary); font-size: var(--font-size-13); margin-bottom: var(--space-12);">
+      <p class="section-desc">
         切换顶部 Density 按钮，下方表格将实时响应变化。行高、内边距、字号均由 density token 驱动。
       </p>
 
@@ -1668,59 +2265,59 @@
           </thead>
           <tbody>
             <tr>
-              <td style="font-weight: var(--font-weight-medium); color: var(--text-primary); font-family: var(--font-family-ui);">IF2506</td>
+              <td class="cell-name">IF2506</td>
               <td>3,847.20</td>
               <td class="market-up">+1.24%</td>
               <td>128,456</td>
               <td>89,234</td>
-              <td style="font-family: var(--font-family-ui);"><span style="color: var(--system-healthy-fg);">正常</span></td>
+              <td class="cell-status"><span style="color: var(--system-healthy-fg);">正常</span></td>
             </tr>
             <tr>
-              <td style="font-weight: var(--font-weight-medium); color: var(--text-primary); font-family: var(--font-family-ui);">IC2506</td>
+              <td class="cell-name">IC2506</td>
               <td>5,612.80</td>
               <td class="market-down">-0.87%</td>
               <td>95,120</td>
               <td>67,891</td>
-              <td style="font-family: var(--font-family-ui);"><span style="color: var(--system-healthy-fg);">正常</span></td>
+              <td class="cell-status"><span style="color: var(--system-healthy-fg);">正常</span></td>
             </tr>
             <tr>
-              <td style="font-weight: var(--font-weight-medium); color: var(--text-primary); font-family: var(--font-family-ui);">IM2506</td>
+              <td class="cell-name">IM2506</td>
               <td>6,431.50</td>
-              <td class="market-flat" style="color: var(--market-flat-fg);">0.00%</td>
+              <td class="market-flat">0.00%</td>
               <td>72,340</td>
               <td>45,678</td>
-              <td style="font-family: var(--font-family-ui);"><span style="color: var(--system-degraded-fg);">延迟</span></td>
+              <td class="cell-status"><span style="color: var(--system-degraded-fg);">延迟</span></td>
             </tr>
             <tr>
-              <td style="font-weight: var(--font-weight-medium); color: var(--text-primary); font-family: var(--font-family-ui);">IH2506</td>
+              <td class="cell-name">IH2506</td>
               <td>2,356.40</td>
               <td class="market-up">+0.52%</td>
               <td>56,789</td>
               <td>34,567</td>
-              <td style="font-family: var(--font-family-ui);"><span style="color: var(--system-healthy-fg);">正常</span></td>
+              <td class="cell-status"><span style="color: var(--system-healthy-fg);">正常</span></td>
             </tr>
             <tr>
-              <td style="font-weight: var(--font-weight-medium); color: var(--text-primary); font-family: var(--font-family-ui);">T2506</td>
+              <td class="cell-name">T2506</td>
               <td>106.350</td>
               <td class="market-down">-0.19%</td>
               <td>203,456</td>
               <td>156,789</td>
-              <td style="font-family: var(--font-family-ui);"><span style="color: var(--system-healthy-fg);">正常</span></td>
+              <td class="cell-status"><span style="color: var(--system-healthy-fg);">正常</span></td>
             </tr>
             <tr>
-              <td style="font-weight: var(--font-weight-medium); color: var(--text-primary); font-family: var(--font-family-ui);">AU2506</td>
+              <td class="cell-name">AU2506</td>
               <td>568.42</td>
               <td class="market-up">+2.15%</td>
               <td>312,890</td>
               <td>234,567</td>
-              <td style="font-family: var(--font-family-ui);"><span style="color: var(--system-down-fg);">中断</span></td>
+              <td class="cell-status"><span style="color: var(--system-down-fg);">中断</span></td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <!-- Live density token values -->
-      <div class="subsection" style="margin-top: var(--space-16);">
+      <div class="subsection subsection-gap-top">
         <h3 class="subsection-title">当前 Density Token 实时值</h3>
         <div class="live-values" id="densityLiveValues"></div>
       </div>
@@ -1737,14 +2334,14 @@
         <h2 class="section-title">市场区域演示 (Market Region)</h2>
       </div>
 
-      <p style="color: var(--text-secondary); font-size: var(--font-size-13); margin-bottom: var(--space-12);">
+      <p class="section-desc">
         切换顶部 Region 按钮，对比 CN (红涨绿跌) 与 Intl (Green Up / Red Down) 的配色差异。
       </p>
 
       <div class="market-comparison">
         <!-- CN Card -->
         <div class="market-card" id="cnCard">
-          <div style="margin-bottom: var(--space-8);">
+          <div class="market-card-label-row">
             <span class="market-card-label">CN 红涨绿跌</span>
           </div>
           <div class="market-card-header">
@@ -1781,7 +2378,7 @@
 
         <!-- Intl Card -->
         <div class="market-card" id="intlCard">
-          <div style="margin-bottom: var(--space-8);">
+          <div class="market-card-label-row">
             <span class="market-card-label">Intl Green Up</span>
           </div>
           <div class="market-card-header">
@@ -1827,7 +2424,7 @@
       <!-- 7.1 Data Freshness Scale -->
       <div class="subsection">
         <h3 class="subsection-title">8.1 Data Freshness Scale</h3>
-        <p style="color: var(--text-secondary); font-size: var(--font-size-13); margin-bottom: var(--space-12);">
+        <p class="section-desc">
           Real-time data visually decays over time. Opacity-based time-fade helps users spot stale values at a glance.
         </p>
         <div class="freshness-row">
@@ -1862,7 +2459,7 @@
       <!-- 7.2 Chart Token Preview -->
       <div class="subsection">
         <h3 class="subsection-title">8.2 Chart Token Preview</h3>
-        <p style="color: var(--text-secondary); font-size: var(--font-size-13); margin-bottom: var(--space-12);">
+        <p class="section-desc">
           Chart pane tokens: grid lines (minor/major), crosshair, zero line, axis text, and series area fills.
         </p>
         <div class="chart-preview">
@@ -1917,7 +2514,7 @@
       <!-- 7.3 Asset Class Colors -->
       <div class="subsection">
         <h3 class="subsection-title">8.3 Asset Class Colors</h3>
-        <p style="color: var(--text-secondary); font-size: var(--font-size-13); margin-bottom: var(--space-12);">
+        <p class="section-desc">
           7 qualitative colors based on Paul Tol bright scheme, colorblind-safe. Used in portfolio allocation, exposure charts, and legend keys.
         </p>
         <div class="asset-class-row">
@@ -1955,9 +2552,11 @@
       <!-- 7.4 Heatmap Scale -->
       <div class="subsection">
         <h3 class="subsection-title">8.4 Heatmap Scale</h3>
-        <p style="color: var(--text-secondary); font-size: var(--font-size-13); margin-bottom: var(--space-12);">
+        <p class="section-desc">
           Sequential 5-step heatmap derived from market up/down tokens. Single-direction magnitude scale with neutral midpoint.
         </p>
+        <div class="color-gradient-bar color-gradient-bar--heatmap"></div>
+        <div class="gradient-bar-label"><span>-2.0%</span><span>0.0%</span><span>+2.0%</span></div>
         <div class="heatmap-row">
           <div class="heatmap-cell" style="background: var(--heatmap-1-bg);">-2.0%</div>
           <div class="heatmap-cell" style="background: var(--heatmap-2-bg);">-0.8%</div>
@@ -1970,7 +2569,7 @@
       <!-- 7.5 Status Indicators -->
       <div class="subsection">
         <h3 class="subsection-title">8.5 Status Indicators</h3>
-        <p style="color: var(--text-secondary); font-size: var(--font-size-13); margin-bottom: var(--space-12);">
+        <p class="section-desc">
           Connection/feed status LEDs with pulse animations. Connected pulses slowly, degraded pulses faster, error is solid.
         </p>
         <div class="status-led-row">
@@ -1998,6 +2597,16 @@
         </div>
       </div>
     </section>
+
+    <!-- ── Footer ── -->
+    <div class="separator"></div>
+    <footer class="showcase-footer">
+      <div class="footer-info">
+        <span class="footer-label">Ditto Design Tokens</span>
+        <span class="footer-version">Graphite Studio / R1 Stabilization</span>
+      </div>
+      <a class="footer-top" href="#">&#8593; 回到顶部</a>
+    </footer>
 
   </main>
 
@@ -2051,12 +2660,16 @@
       const style = getComputedStyle(document.documentElement);
       const upFg = style.getPropertyValue('--market-up-fg').trim();
       const downFg = style.getPropertyValue('--market-down-fg').trim();
+      const flatFg = style.getPropertyValue('--market-flat-fg').trim();
 
       document.querySelectorAll('.market-up').forEach(el => {
         el.style.color = upFg;
       });
       document.querySelectorAll('.market-down').forEach(el => {
         el.style.color = downFg;
+      });
+      document.querySelectorAll('.market-flat').forEach(el => {
+        el.style.color = flatFg;
       });
     }
 
@@ -2180,7 +2793,7 @@
       ];
 
       groups.forEach(g => {
-        container.innerHTML += `<div class="swatch-group-label" style="margin-top: var(--space-8);">${g.label}</div>`;
+        container.innerHTML += `<div class="swatch-group-label swatch-group-label--spaced">${g.label}</div>`;
         g.colors.forEach(c => {
           const style = getComputedStyle(document.documentElement);
           const value = style.getPropertyValue(c.token).trim();

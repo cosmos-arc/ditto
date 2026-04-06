@@ -1426,11 +1426,350 @@
     .state-variant .state-variant-content {
       background: var(--surface-app);
     }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Interactive Components (extracted inline styles)
+     * ══════════════════════════════════════════════ */
+
+    /* ── Overlay clickable labels ── */
+    .overlay-label-btn { cursor: pointer; }
+    .overlay-label-action { cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+    .overlay-label-row { cursor: pointer; display: flex; align-items: center; }
+
+    /* ── Radio option cards (workspace / template selectors) ── */
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+    }
+    .radio-option--lg { padding: var(--space-8); transition: border-color var(--motion-duration-normal); }
+    .radio-option--selected {
+      background: var(--brand-accent-subtle);
+      border-color: var(--brand-accent);
+    }
+    .radio-option--unselected { background: var(--surface-panel-elevated); }
+    .radio-option input[type="radio"] { accent-color: var(--brand-accent); }
+
+    .radio-option__title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .radio-option__title--brand { color: var(--brand-accent); }
+    .radio-option__desc {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Category radio pills (save conclusion) ── */
+    .category-pills {
+      display: flex;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+    .category-pill {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-8);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+    }
+    .category-pill--selected {
+      background: var(--brand-accent-subtle);
+      border: 1px solid var(--brand-accent);
+      color: var(--brand-accent);
+    }
+    .category-pill--unselected {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+    .category-pill input[type="radio"] { accent-color: var(--brand-accent); }
+
+    /* ── Tag badges ── */
+    .tag-list {
+      display: flex;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+    .tag-badge {
+      padding: 2px var(--space-6);
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+      border-radius: var(--radius-2);
+      font-size: var(--font-size-10);
+    }
+
+    /* ── Overlay description text ── */
+    .overlay-desc-text {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* ── Overlay info box ── */
+    .overlay-info-box {
+      padding: var(--space-6) var(--space-8);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+    }
+
+    /* ── Radio option stack (vertical list) ── */
+    .radio-option-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    /* ── Spacer utility ── */
+    .spacer-8 { height: var(--space-8); }
+
+    /* ── Status token highlight ── */
+    .status-token-highlight { color: var(--brand-accent); }
+
+    /* ── Mode switch default state placeholder ── */
+    .mode-switch-default {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-8);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    /* ══════════════════════════════════════════════
+     * AI Conversation Enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Chat bubble visual differentiation ── */
+    .message--user .message-content {
+      position: relative;
+    }
+    .message--user .message-content p {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6) var(--radius-6) var(--radius-6) var(--radius-2);
+      padding: var(--space-8) var(--space-12);
+      position: relative;
+    }
+
+    .message--ai .message-content {
+      position: relative;
+    }
+
+    /* AI thinking indicator — pulsing shimmer */
+    .ai-thinking {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding-left: 36px;
+      margin-bottom: var(--space-12);
+    }
+    .ai-thinking-dots {
+      display: flex;
+      gap: 4px;
+    }
+    .ai-thinking-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+      animation: thinking-pulse 1.4s ease-in-out infinite;
+    }
+    .ai-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+    .ai-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+    .ai-thinking-label {
+      font-size: var(--font-size-11);
+      color: var(--text-quaternary);
+      font-style: italic;
+    }
+
+    @keyframes thinking-pulse {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Thinking chain / reasoning collapsible ── */
+    .thinking-chain {
+      margin: var(--space-4) 0 var(--space-8) 36px;
+      border-left: 2px solid var(--border-subtle);
+      padding-left: var(--space-10);
+      position: relative;
+    }
+    .thinking-chain::before {
+      content: '';
+      position: absolute;
+      left: -2px;
+      top: 0;
+      height: 100%;
+      width: 2px;
+      background: linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent),
+        var(--border-subtle)
+      );
+    }
+
+    .thinking-step {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-6);
+      padding: var(--space-4) 0;
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      line-height: 1.5;
+    }
+    .thinking-step-icon {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border-default);
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .thinking-step-icon--active {
+      background: var(--brand-accent);
+      box-shadow: 0 0 6px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+    }
+
+    /* ── Code block formatting ── */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: var(--radius-4);
+      padding: var(--space-8) var(--space-12);
+      margin: var(--space-8) 0;
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-12);
+      color: var(--code-text);
+      line-height: 1.7;
+      overflow-x: auto;
+      position: relative;
+    }
+    .code-block::before {
+      content: attr(data-lang);
+      position: absolute;
+      top: var(--space-4);
+      right: var(--space-8);
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .code-block .code-keyword { color: var(--brand-accent); }
+    .code-block .code-string { color: var(--market-up-fg); }
+    .code-block .code-comment { color: var(--text-quaternary); font-style: italic; }
+    .code-block .code-number { color: var(--market-up-fg); font-family: var(--font-family-numeric); }
+
+    /* ── Confidence bar (visual indicator per AI message) ── */
+    .confidence-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      margin-top: var(--space-6);
+      padding-left: 36px;
+    }
+    .confidence-bar-track {
+      flex: 1;
+      height: 3px;
+      background: var(--border-subtle);
+      border-radius: 2px;
+      overflow: hidden;
+      max-width: 120px;
+    }
+    .confidence-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .confidence-bar-fill.high { background: var(--risk-low-fg); width: 88%; }
+    .confidence-bar-fill.medium { background: var(--risk-medium-fg); width: 65%; }
+    .confidence-bar-fill.low { background: var(--risk-high-fg); width: 35%; }
+    .confidence-bar-label {
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      font-family: var(--font-family-numeric);
+    }
+
+    /* ── Enhanced input area ── */
+    .input-wrapper {
+      position: relative;
+    }
+    .input-wrapper::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: calc(var(--input-radius) + 1px);
+      background: linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--brand-accent) 8%, transparent) 0%,
+        transparent 50%,
+        color-mix(in oklch, var(--brand-accent) 5%, transparent) 100%
+      );
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+      pointer-events: none;
+    }
+    .input-wrapper:focus-within::before {
+      opacity: 1;
+    }
+    .input-attachments {
+      display: flex;
+      gap: var(--space-6);
+      padding-bottom: var(--space-6);
+    }
+    .input-attachment {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: 2px var(--space-6);
+      background: var(--surface-strip);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .input-attachment svg { width: 10px; height: 10px; }
+
+    /* ── Message source attribution ── */
+    .message-attribution {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      margin-top: var(--space-4);
+      padding-left: 36px;
+    }
+    .message-attribution-source {
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .message-attribution-source svg { width: 10px; height: 10px; }
+
+    /* ── AI thinking avatar (smaller) ── */
+    .ai-thinking-avatar {
+      width: 20px;
+      height: 20px;
+      font-size: var(--font-size-10);
+    }
   </style>
 </head>
 <body>
   <!-- SVG noise filter for material texture -->
-  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <svg class="sr-only" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
     </defs>
@@ -1487,12 +1826,12 @@
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
         
-        <label for="overlay-session-template" class="header-cta primary" tabindex="0" role="button" title="新建对话" style="cursor:pointer">
+        <label for="overlay-session-template" class="header-cta primary overlay-label-btn" tabindex="0" role="button" title="新建对话">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
           新建对话
         </label>
         
-        <label for="overlay-save-conclusion" class="header-cta ghost" tabindex="0" role="button" title="保存笔记" style="cursor:pointer">
+        <label for="overlay-save-conclusion" class="header-cta ghost overlay-label-btn" tabindex="0" role="button" title="保存笔记">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h8l4 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M12 3v5h5"/></svg>
           保存笔记
         </label>
@@ -1644,7 +1983,7 @@
     <main class="copilot-conversation" id="main-content">
       <div class="conversation-body">
         <!-- Message 1: User -->
-        <div class="message">
+        <div class="message message--user">
           <div class="message-header">
             <span class="message-avatar user">C</span>
             <span class="message-sender">我</span>
@@ -1656,7 +1995,7 @@
         </div>
 
         <!-- Message 2: AI -->
-        <div class="message">
+        <div class="message message--ai">
           <div class="message-header">
             <span class="message-avatar ai">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
@@ -1665,6 +2004,22 @@
             <span class="message-time">14:20</span>
           </div>
           <div class="message-content">
+            <!-- Thinking Chain Visualization -->
+            <div class="thinking-chain">
+              <div class="thinking-step">
+                <span class="thinking-step-icon thinking-step-icon--active"></span>
+                <span>检索沪深300成分股近 5 日风格因子暴露度</span>
+              </div>
+              <div class="thinking-step">
+                <span class="thinking-step-icon thinking-step-icon--active"></span>
+                <span>计算 IC / IR 滚动窗口指标（60日/120日）</span>
+              </div>
+              <div class="thinking-step">
+                <span class="thinking-step-icon"></span>
+                <span>识别偏离历史均值的异常信号（波动率、换手率）</span>
+              </div>
+            </div>
+
             <p>基于过去 5 个交易日（3月25日-3月31日）的数据，沪深300成分股的<strong>风格因子表现</strong>如下：</p>
             <ul>
               <li><strong>价值因子 (BP, EP_TTM)</strong>：IC = -0.032，IR = -0.51。连续第三周 IC 为负，价值风格持续承压，可能与成长板块资金回流有关。</li>
@@ -1718,11 +2073,28 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Confidence Bar -->
+            <div class="confidence-bar">
+              <span class="confidence-bar-label">综合置信度</span>
+              <div class="confidence-bar-track">
+                <div class="confidence-bar-fill high"></div>
+              </div>
+              <span class="confidence-bar-label">88%</span>
+            </div>
+
+            <!-- Source Attribution -->
+            <div class="message-attribution">
+              <span class="message-attribution-source">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+                Wind 因子库 · Tushare 行情 · 东方财富板块资金流
+              </span>
+            </div>
           </div>
         </div>
 
         <!-- Message 3: User -->
-        <div class="message">
+        <div class="message message--user">
           <div class="message-header">
             <span class="message-avatar user">C</span>
             <span class="message-sender">我</span>
@@ -1734,7 +2106,7 @@
         </div>
 
         <!-- Message 4: AI -->
-        <div class="message">
+        <div class="message message--ai">
           <div class="message-header">
             <span class="message-avatar ai">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
@@ -1743,6 +2115,22 @@
             <span class="message-time">14:22</span>
           </div>
           <div class="message-content">
+            <!-- Thinking Chain Visualization -->
+            <div class="thinking-chain">
+              <div class="thinking-step">
+                <span class="thinking-step-icon thinking-step-icon--active"></span>
+                <span>关联宏观指标 PMI、A50 隐含波动率与因子假设</span>
+              </div>
+              <div class="thinking-step">
+                <span class="thinking-step-icon thinking-step-icon--active"></span>
+                <span>交叉验证北向资金偏好与低 Beta 防御性配置</span>
+              </div>
+              <div class="thinking-step">
+                <span class="thinking-step-icon"></span>
+                <span>拆解 ROE 质量因子至稳定性、动量、资产周转率三维</span>
+              </div>
+            </div>
+
             <p>好的，结合当前市场状态来看，低波动率溢价假设有<strong>三重支撑</strong>：</p>
             <ul>
               <li><strong>宏观层面</strong>：PMI 连续 2 月位于荣枯线以下，市场不确定性指标偏高（A50 隐含波动率 23.8%），低波动策略在风险厌恶环境下通常跑赢。</li>
@@ -1802,13 +2190,60 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Code Block: Factor validation pseudo-query -->
+            <div class="code-block" data-lang="sql">
+<span class="code-comment">-- ROE 稳定性因子验证查询</span>
+<span class="code-keyword">SELECT</span> ticker, roe_stddev_5y, roe_qoq, asset_turnover_yoy
+<span class="code-keyword">FROM</span> factor_exposure.<span class="code-string">hs300_roe_quality</span>
+<span class="code-keyword">WHERE</span> roe_stddev_5y &lt; <span class="code-number">0.03</span>
+  <span class="code-keyword">AND</span> roe_qoq &gt; <span class="code-number">0</span>
+<span class="code-keyword">ORDER BY</span> asset_turnover_yoy <span class="code-keyword">DESC</span>
+<span class="code-keyword">LIMIT</span> <span class="code-number">20</span>;
+            </div>
+
+            <!-- Confidence Bar -->
+            <div class="confidence-bar">
+              <span class="confidence-bar-label">综合置信度</span>
+              <div class="confidence-bar-track">
+                <div class="confidence-bar-fill medium"></div>
+              </div>
+              <span class="confidence-bar-label">65%</span>
+            </div>
+
+            <!-- Source Attribution -->
+            <div class="message-attribution">
+              <span class="message-attribution-source">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+                Wind 宏观数据 · 东方财富 Choice · Tushare 财报日历
+              </span>
+            </div>
           </div>
         </div>
+      </div>
+
+      <!-- AI Thinking Indicator (shows AI is processing) -->
+      <div class="ai-thinking">
+        <span class="message-avatar ai ai-thinking-avatar">
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </span>
+        <div class="ai-thinking-dots">
+          <span class="ai-thinking-dot"></span>
+          <span class="ai-thinking-dot"></span>
+          <span class="ai-thinking-dot"></span>
+        </div>
+        <span class="ai-thinking-label">Ditto AI 正在思考...</span>
       </div>
 
       <!-- Input Bar -->
       <div class="conversation-input">
         <div class="input-wrapper">
+          <div class="input-attachments">
+            <span class="input-attachment">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
+              沪深300风格因子分析
+            </span>
+          </div>
           <input type="text" placeholder="继续分析..." aria-label="输入消息">
           <kbd>Enter</kbd>
           <button class="input-send-btn" tabindex="0" role="button" aria-label="发送">
@@ -1933,13 +2368,13 @@
                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
               </span>
               <div class="action-card-body">
-                <label for="overlay-send-workspace" style="cursor:pointer;display:flex;flex-direction:column;gap:2px">
+                <label for="overlay-send-workspace" class="overlay-label-action">
                   <span class="action-card-title">发送到因子分析</span>
                   <span class="action-card-desc">LOWVOL_PREM + ROE_STABILITY</span>
                 </label>
               </div>
               <span class="action-card-arrow">
-                <label for="overlay-send-workspace" style="cursor:pointer">
+                <label for="overlay-send-workspace" class="overlay-label-btn">
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
                 </label>
               </span>
@@ -1987,31 +2422,31 @@
         </div>
         <div class="overlay-body">
           <h4>结论内容预览</h4>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">基于沪深300风格因子分析，发现低波动率溢价因子（IC=0.092, IR=1.48）和 ROE 稳定性溢价因子（IC=0.061, IR=0.97）具备进一步验证价值。</p>
+          <p class="overlay-desc-text">基于沪深300风格因子分析，发现低波动率溢价因子（IC=0.092, IR=1.48）和 ROE 稳定性溢价因子（IC=0.061, IR=0.97）具备进一步验证价值。</p>
 
           <h4>笔记分类</h4>
-          <div style="display:flex;gap:var(--space-4);flex-wrap:wrap">
-            <label style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);background:var(--brand-accent-subtle);border:1px solid var(--brand-accent);border-radius:var(--radius-4);color:var(--brand-accent);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="note-category" checked style="accent-color:var(--brand-accent)"> 因子研究
+          <div class="tag-list">
+            <label class="category-pill category-pill--selected">
+              <input type="radio" name="note-category" checked> 因子研究
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);color:var(--text-secondary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="note-category" style="accent-color:var(--brand-accent)"> 市场分析
+            <label class="category-pill category-pill--unselected">
+              <input type="radio" name="note-category"> 市场分析
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);color:var(--text-secondary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="note-category" style="accent-color:var(--brand-accent)"> 策略相关
+            <label class="category-pill category-pill--unselected">
+              <input type="radio" name="note-category"> 策略相关
             </label>
           </div>
 
           <h4>标签</h4>
-          <div style="display:flex;gap:var(--space-4);flex-wrap:wrap">
-            <span style="padding:2px var(--space-6);background:var(--brand-accent-subtle);color:var(--brand-accent);border-radius:var(--radius-2);font-size:var(--font-size-10)">低波动率</span>
-            <span style="padding:2px var(--space-6);background:var(--brand-accent-subtle);color:var(--brand-accent);border-radius:var(--radius-2);font-size:var(--font-size-10)">ROE稳定性</span>
-            <span style="padding:2px var(--space-6);background:var(--brand-accent-subtle);color:var(--brand-accent);border-radius:var(--radius-2);font-size:var(--font-size-10)">沪深300</span>
+          <div class="tag-list">
+            <span class="tag-badge">低波动率</span>
+            <span class="tag-badge">ROE稳定性</span>
+            <span class="tag-badge">沪深300</span>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-save-conclusion" class="overlay-btn overlay-btn-primary" style="cursor:pointer">保存</label>
-            <label for="overlay-save-conclusion" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-save-conclusion" class="overlay-btn overlay-btn-primary overlay-label-btn">保存</label>
+            <label for="overlay-save-conclusion" class="overlay-btn overlay-btn-secondary overlay-label-btn">取消</label>
           </div>
         </div>
       </div>
@@ -2027,45 +2462,45 @@
         </div>
         <div class="overlay-body">
           <h4>选择目标工作区</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--brand-accent-subtle);border:1px solid var(--brand-accent);border-radius:var(--radius-4);cursor:pointer">
-              <input type="radio" name="workspace-target" checked style="accent-color:var(--brand-accent)">
+          <div class="radio-option-stack">
+            <label class="radio-option radio-option--selected">
+              <input type="radio" name="workspace-target" checked>
               <div>
-                <div style="color:var(--brand-accent);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Factor Analysis</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">因子验证工作台</div>
+                <div class="radio-option__title radio-option__title--brand">Factor Analysis</div>
+                <div class="radio-option__desc">因子验证工作台</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer">
-              <input type="radio" name="workspace-target" style="accent-color:var(--brand-accent)">
+            <label class="radio-option radio-option--unselected">
+              <input type="radio" name="workspace-target">
               <div>
-                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Strategy Studio</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">策略构建与回测</div>
+                <div class="radio-option__title">Strategy Studio</div>
+                <div class="radio-option__desc">策略构建与回测</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer">
-              <input type="radio" name="workspace-target" style="accent-color:var(--brand-accent)">
+            <label class="radio-option radio-option--unselected">
+              <input type="radio" name="workspace-target">
               <div>
-                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Research Workspace</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">研究报告工作区</div>
+                <div class="radio-option__title">Research Workspace</div>
+                <div class="radio-option__desc">研究报告工作区</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer">
-              <input type="radio" name="workspace-target" style="accent-color:var(--brand-accent)">
+            <label class="radio-option radio-option--unselected">
+              <input type="radio" name="workspace-target">
               <div>
-                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Intelligence</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">情报中心</div>
+                <div class="radio-option__title">Intelligence</div>
+                <div class="radio-option__desc">情报中心</div>
               </div>
             </label>
           </div>
 
           <h4>附加说明</h4>
-          <div style="padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">
+          <div class="overlay-info-box">
             将发送 2 个因子假设（LOWVOL_PREM + ROE_STABILITY）和 5 条证据链到目标工作区
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-send-workspace" class="overlay-btn overlay-btn-primary" style="cursor:pointer">发送</label>
-            <label for="overlay-send-workspace" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-send-workspace" class="overlay-btn overlay-btn-primary overlay-label-btn">发送</label>
+            <label for="overlay-send-workspace" class="overlay-btn overlay-btn-secondary overlay-label-btn">取消</label>
           </div>
         </div>
       </div>
@@ -2081,47 +2516,47 @@
         </div>
         <div class="overlay-body">
           <h4>选择对话模板</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
-              <input type="radio" name="session-template" checked style="accent-color:var(--brand-accent)">
+          <div class="radio-option-stack">
+            <label class="radio-option radio-option--lg radio-option--selected">
+              <input type="radio" name="session-template" checked>
               <div>
-                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">空白对话</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">从零开始自由探索</div>
+                <div class="radio-option__title">空白对话</div>
+                <div class="radio-option__desc">从零开始自由探索</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
-              <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+            <label class="radio-option radio-option--lg radio-option--unselected">
+              <input type="radio" name="session-template">
               <div>
-                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">市场日报</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">每日市场概览与关键数据解读</div>
+                <div class="radio-option__title">市场日报</div>
+                <div class="radio-option__desc">每日市场概览与关键数据解读</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
-              <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+            <label class="radio-option radio-option--lg radio-option--unselected">
+              <input type="radio" name="session-template">
               <div>
-                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">个股深度</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">个股基本面、技术面、资金面全维度分析</div>
+                <div class="radio-option__title">个股深度</div>
+                <div class="radio-option__desc">个股基本面、技术面、资金面全维度分析</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
-              <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+            <label class="radio-option radio-option--lg radio-option--unselected">
+              <input type="radio" name="session-template">
               <div>
-                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">行业比较</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">跨行业横向对比与轮动分析</div>
+                <div class="radio-option__title">行业比较</div>
+                <div class="radio-option__desc">跨行业横向对比与轮动分析</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
-              <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+            <label class="radio-option radio-option--lg radio-option--unselected">
+              <input type="radio" name="session-template">
               <div>
-                <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">因子挖掘预设</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">预配置因子假设验证流程</div>
+                <div class="radio-option__title">因子挖掘预设</div>
+                <div class="radio-option__desc">预配置因子假设验证流程</div>
               </div>
             </label>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-session-template" class="overlay-btn overlay-btn-primary" style="cursor:pointer">创建对话</label>
-            <label for="overlay-session-template" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-session-template" class="overlay-btn overlay-btn-primary overlay-label-btn">创建对话</label>
+            <label for="overlay-session-template" class="overlay-btn overlay-btn-secondary overlay-label-btn">取消</label>
           </div>
         </div>
       </div>
@@ -2161,7 +2596,7 @@
     <span class="status-sep">|</span>
     <span>AI 模型 GPT-4o</span>
     <span class="status-sep">|</span>
-    <span>令牌 <span class="status-live" style="color:var(--brand-accent)">3,847</span></span>
+    <span>令牌 <span class="status-token-highlight">3,847</span></span>
     <span class="status-sep">|</span>
     <span>Market Analysis 模式</span>
     <span class="status-sep">|</span>
@@ -2190,7 +2625,7 @@
         <div class="state-empty-icon">💬</div>
         <div class="state-empty-title">暂无历史会话</div>
         <div class="state-empty-desc">开始新的 AI 分析对话，会话记录将自动保存到此处</div>
-        <label for="overlay-session-template" class="state-empty-cta" style="cursor:pointer">新建对话</label>
+        <label for="overlay-session-template" class="state-empty-cta overlay-label-btn">新建对话</label>
       </div>
     </div>
       </div>
@@ -2264,7 +2699,7 @@
         <div class="skeleton skeleton-text"></div>
         <div class="skeleton skeleton-text"></div>
         <div class="skeleton skeleton-text-sm"></div>
-        <div style="height:var(--space-8)"></div>
+        <div class="spacer-8"></div>
         <div class="skeleton skeleton-row"></div>
         <div class="skeleton skeleton-text"></div>
         <div class="skeleton skeleton-text"></div>
@@ -2326,7 +2761,7 @@
         <div class="skeleton skeleton-badge"></div>
         <div class="skeleton skeleton-badge"></div>
         <div class="skeleton skeleton-badge"></div>
-        <div style="height:var(--space-8)"></div>
+        <div class="spacer-8"></div>
         <div class="skeleton skeleton-row"></div>
         <div class="skeleton skeleton-row"></div>
       </div>
@@ -2428,7 +2863,7 @@
       <div class="gallery-card__label">Mode Switch — Default (only state)</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="default">
-      <div style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-8);color:var(--text-tertiary);font-size:var(--font-size-12)">
+      <div class="mode-switch-default">
         模式切换为纯交互组件，仅有 default 状态。通过 radio tab 系统切换。
       </div>
     </div>
@@ -2455,26 +2890,26 @@
           </div>
           <div class="overlay-body">
             <h4>结论内容预览</h4>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">基于沪深300风格因子分析，发现低波动率溢价因子（IC=0.092, IR=1.48）和 ROE 稳定性溢价因子（IC=0.061, IR=0.97）具备进一步验证价值。</p>
+            <p class="overlay-desc-text">基于沪深300风格因子分析，发现低波动率溢价因子（IC=0.092, IR=1.48）和 ROE 稳定性溢价因子（IC=0.061, IR=0.97）具备进一步验证价值。</p>
 
             <h4>笔记分类</h4>
-            <div style="display:flex;gap:var(--space-4);flex-wrap:wrap">
-              <label style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);background:var(--brand-accent-subtle);border:1px solid var(--brand-accent);border-radius:var(--radius-4);color:var(--brand-accent);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="note-category" checked style="accent-color:var(--brand-accent)"> 因子研究
+            <div class="tag-list">
+              <label class="category-pill category-pill--selected">
+                <input type="radio" name="note-category" checked> 因子研究
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);color:var(--text-secondary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="note-category" style="accent-color:var(--brand-accent)"> 市场分析
+              <label class="category-pill category-pill--unselected">
+                <input type="radio" name="note-category"> 市场分析
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);color:var(--text-secondary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="note-category" style="accent-color:var(--brand-accent)"> 策略相关
+              <label class="category-pill category-pill--unselected">
+                <input type="radio" name="note-category"> 策略相关
               </label>
             </div>
 
             <h4>标签</h4>
-            <div style="display:flex;gap:var(--space-4);flex-wrap:wrap">
-              <span style="padding:2px var(--space-6);background:var(--brand-accent-subtle);color:var(--brand-accent);border-radius:var(--radius-2);font-size:var(--font-size-10)">低波动率</span>
-              <span style="padding:2px var(--space-6);background:var(--brand-accent-subtle);color:var(--brand-accent);border-radius:var(--radius-2);font-size:var(--font-size-10)">ROE稳定性</span>
-              <span style="padding:2px var(--space-6);background:var(--brand-accent-subtle);color:var(--brand-accent);border-radius:var(--radius-2);font-size:var(--font-size-10)">沪深300</span>
+            <div class="tag-list">
+              <span class="tag-badge">低波动率</span>
+              <span class="tag-badge">ROE稳定性</span>
+              <span class="tag-badge">沪深300</span>
             </div>
 
             <div class="overlay-actions">
@@ -2495,39 +2930,43 @@
           </div>
           <div class="overlay-body">
             <h4>选择目标工作区</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--brand-accent-subtle);border:1px solid var(--brand-accent);border-radius:var(--radius-4);cursor:pointer">
-                <input type="radio" name="workspace-target" checked style="accent-color:var(--brand-accent)">
+            <div class="radio-option-stack">
+              <label class="radio-option radio-option--selected">
+              <label class="radio-option radio-option--selected">
+                <input type="radio" name="workspace-target" checked>
                 <div>
-                  <div style="color:var(--brand-accent);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Factor Analysis</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">因子验证工作台</div>
+                  <div class="radio-option__title radio-option__title--brand">Factor Analysis</div>
+                  <div class="radio-option__desc">因子验证工作台</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer">
-                <input type="radio" name="workspace-target" style="accent-color:var(--brand-accent)">
+              <label class="radio-option radio-option--unselected">
+              <label class="radio-option radio-option--unselected">
+                <input type="radio" name="workspace-target">
                 <div>
-                  <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Strategy Studio</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">策略构建与回测</div>
+                  <div class="radio-option__title">Strategy Studio</div>
+                  <div class="radio-option__desc">策略构建与回测</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer">
-                <input type="radio" name="workspace-target" style="accent-color:var(--brand-accent)">
+              <label class="radio-option radio-option--unselected">
+              <label class="radio-option radio-option--unselected">
+                <input type="radio" name="workspace-target">
                 <div>
-                  <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Research Workspace</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">研究报告工作区</div>
+                  <div class="radio-option__title">Research Workspace</div>
+                  <div class="radio-option__desc">研究报告工作区</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer">
-                <input type="radio" name="workspace-target" style="accent-color:var(--brand-accent)">
+              <label class="radio-option radio-option--unselected">
+              <label class="radio-option radio-option--unselected">
+                <input type="radio" name="workspace-target">
                 <div>
-                  <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">Intelligence</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">情报中心</div>
+                  <div class="radio-option__title">Intelligence</div>
+                  <div class="radio-option__desc">情报中心</div>
                 </div>
               </label>
             </div>
 
             <h4>附加说明</h4>
-            <div style="padding:var(--space-6) var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">
+            <div class="overlay-info-box">
               将发送 2 个因子假设（LOWVOL_PREM + ROE_STABILITY）和 5 条证据链到目标工作区
             </div>
 
@@ -2549,40 +2988,45 @@
           </div>
           <div class="overlay-body">
             <h4>选择对话模板</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
-                <input type="radio" name="session-template" checked style="accent-color:var(--brand-accent)">
+            <div class="radio-option-stack">
+              <label class="radio-option radio-option--lg radio-option--unselected">
+              <label class="radio-option radio-option--lg radio-option--selected">
+                <input type="radio" name="session-template" checked>
                 <div>
-                  <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">空白对话</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">从零开始自由探索</div>
+                  <div class="radio-option__title">空白对话</div>
+                  <div class="radio-option__desc">从零开始自由探索</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
-                <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+              <label class="radio-option radio-option--lg radio-option--unselected">
+              <label class="radio-option radio-option--lg radio-option--unselected">
+                <input type="radio" name="session-template">
                 <div>
-                  <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">市场日报</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">每日市场概览与关键数据解读</div>
+                  <div class="radio-option__title">市场日报</div>
+                  <div class="radio-option__desc">每日市场概览与关键数据解读</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
-                <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+              <label class="radio-option radio-option--lg radio-option--unselected">
+              <label class="radio-option radio-option--lg radio-option--unselected">
+                <input type="radio" name="session-template">
                 <div>
-                  <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">个股深度</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">个股基本面、技术面、资金面全维度分析</div>
+                  <div class="radio-option__title">个股深度</div>
+                  <div class="radio-option__desc">个股基本面、技术面、资金面全维度分析</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
-                <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+              <label class="radio-option radio-option--lg radio-option--unselected">
+              <label class="radio-option radio-option--lg radio-option--unselected">
+                <input type="radio" name="session-template">
                 <div>
-                  <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">行业比较</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">跨行业横向对比与轮动分析</div>
+                  <div class="radio-option__title">行业比较</div>
+                  <div class="radio-option__desc">跨行业横向对比与轮动分析</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8);background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;transition:border-color var(--motion-duration-normal)">
-                <input type="radio" name="session-template" style="accent-color:var(--brand-accent)">
+              <label class="radio-option radio-option--lg radio-option--unselected">
+              <label class="radio-option radio-option--lg radio-option--unselected">
+                <input type="radio" name="session-template">
                 <div>
-                  <div style="color:var(--text-primary);font-size:var(--font-size-12);font-weight:var(--font-weight-medium)">因子挖掘预设</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-10)">预配置因子假设验证流程</div>
+                  <div class="radio-option__title">因子挖掘预设</div>
+                  <div class="radio-option__desc">预配置因子假设验证流程</div>
                 </div>
               </label>
             </div>

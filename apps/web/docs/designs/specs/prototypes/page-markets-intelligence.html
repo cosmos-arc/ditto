@@ -548,6 +548,7 @@
       gap: var(--space-8);
       margin-bottom: var(--space-12);
     }
+    .kpi-row--3col { grid-template-columns: repeat(3, 1fr); }
     .kpi-card {
       background: var(--surface-panel-base);
       border: 1px solid var(--border-subtle);
@@ -917,12 +918,355 @@
     }
     .shell-intel > * { position: relative; z-index: 1; }
 
+    /* ══════════════════════════════════════════════
+     * Extracted Utility Classes (from inline styles)
+     * ══════════════════════════════════════════════ */
+    .font-numeric {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+    }
+    .text-up { color: var(--market-up-fg); }
+    .text-down { color: var(--market-down-fg); }
+    .text-left { text-align: left; }
+    .text-medium { font-weight: var(--font-weight-medium); }
+    .text-semibold { font-weight: var(--font-weight-semibold); }
+    .text-muted { color: var(--text-tertiary); }
+    .text-secondary { color: var(--text-secondary); }
+    .text-primary { color: var(--text-primary); }
+    .text-warning { color: var(--risk-medium-fg); }
+    .cursor-pointer { cursor: pointer; }
+    .bg-none { background: none; border: none; }
+    .flex-row { display: flex; align-items: center; }
+    .flex-col { display: flex; flex-direction: column; }
+    .flex-between { display: flex; align-items: center; justify-content: space-between; }
+    .flex-gap-4 { display: flex; gap: var(--space-4); }
+    .flex-gap-6 { display: flex; gap: var(--space-6); }
+    .flex-gap-8 { display: flex; gap: var(--space-8); }
+    .flex-wrap { flex-wrap: wrap; }
+
+    /* ── Panel wrapper (replaces inline bg/border/padding) ── */
+    .panel {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-10) var(--space-12);
+    }
+
+    /* ── Alert card (divergence alerts) ── */
+    .alert-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--overlay-3);
+      font-size: var(--font-size-12);
+    }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+    .alert-dot--warning { background: var(--risk-medium-fg); }
+    .alert-dot--danger { background: var(--risk-high-fg); }
+    .alert-title {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      margin-bottom: var(--space-2);
+    }
+    .alert-desc {
+      color: var(--text-secondary);
+    }
+
+    /* ── Topic tags ── */
+    .topic-tag-list {
+      display: flex;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-4);
+    }
+    .topic-tag {
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-12);
+      font-size: var(--font-size-12);
+    }
+    .topic-tag--hot {
+      background: color-mix(in oklch, var(--risk-high-fg) 12%, transparent);
+      color: var(--risk-high-fg);
+      font-weight: var(--font-weight-medium);
+    }
+    .topic-tag--accent {
+      background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-medium);
+    }
+    .topic-tag--default {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+    }
+
+    /* ── Stale banner ── */
+    .stale-banner {
+      padding: var(--space-8);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+    .stale-banner--fill {
+      padding: var(--space-10);
+      background: color-mix(in oklch, var(--system-degraded-fg) 5%, transparent);
+      border-radius: var(--radius-4);
+    }
+    .stale-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-degraded-fg);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .stale-text {
+      font-size: var(--font-size-12);
+      color: var(--system-degraded-fg);
+    }
+    .stale-action {
+      margin-left: auto;
+      font-size: var(--font-size-10);
+      color: var(--brand-accent);
+      cursor: pointer;
+      background: none;
+      border: none;
+    }
+
+    /* ── Form elements ── */
+    .form-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+    }
+    .form-checkbox {
+      accent-color: var(--brand-accent);
+    }
+    .form-input {
+      width: 80px;
+      padding: var(--space-4) var(--space-8);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-default);
+      background: var(--surface-muted);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      font-family: var(--font-family-numeric);
+      outline: none;
+    }
+    .form-textarea {
+      width: 100%;
+      height: 80px;
+      padding: var(--space-8);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-default);
+      background: var(--surface-muted);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      outline: none;
+      resize: vertical;
+      font-family: var(--font-family-ui);
+      line-height: 1.5;
+    }
+    .form-row {
+      display: flex;
+      gap: var(--space-8);
+      align-items: center;
+      padding: var(--space-4) 0;
+    }
+
+    /* ── KPI sparkline ── */
+    .kpi-sparkline {
+      position: absolute;
+      top: var(--space-6);
+      right: var(--space-8);
+      width: 60px;
+      height: 16px;
+      opacity: 0.5;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .kpi-card { position: relative; }
+    .kpi-card:hover .kpi-sparkline { opacity: 0.8; }
+
+    /* ── Flow bar (sector capital flow horizontal bars) ── */
+    .flow-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--border-subtle);
+      border-radius: var(--radius-3);
+      overflow: hidden;
+      position: relative;
+    }
+    .flow-bar-fill {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      border-radius: var(--radius-3);
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .flow-bar-fill.inflow {
+      left: 0;
+      background: linear-gradient(to right, var(--market-up-fg), color-mix(in oklch, var(--market-up-fg) 30%, transparent));
+    }
+    .flow-bar-fill.outflow {
+      right: 0;
+      background: linear-gradient(to left, var(--market-down-fg), color-mix(in oklch, var(--market-down-fg) 30%, transparent));
+    }
+
+    /* ── Mini trend indicator ── */
+    .trend-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .trend-arrow {
+      font-size: var(--font-size-10);
+    }
+    .trend-arrow.up { color: var(--market-up-fg); }
+    .trend-arrow.down { color: var(--market-down-fg); }
+
+    /* ── Correlation cell hover ── */
+    .correlation-cell {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .correlation-cell:not(.header):not(.label):hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 0 1px var(--border-default);
+      z-index: 2;
+    }
+
+    /* ── Sentiment indicator ── */
+    .sentiment-bar {
+      display: flex;
+      height: 4px;
+      border-radius: var(--radius-2);
+      overflow: hidden;
+      gap: 1px;
+    }
+    .sentiment-positive { background: var(--market-up-fg); border-radius: var(--radius-2) 0 0 var(--radius-2); }
+    .sentiment-neutral { background: var(--overlay-6); }
+    .sentiment-negative { background: var(--market-down-fg); border-radius: 0 var(--radius-2) var(--radius-2) 0; }
+
+    /* ── Status Bar (terminal DNA) ── */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: 1.5rem;
+      padding: 0 var(--space-8);
+      background: color-mix(in oklch, var(--surface-app) 90%, transparent);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--overlay-4);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+    .status-indicator {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      animation: status-breathe 2s ease-in-out infinite;
+    }
+    .status-live {
+      color: var(--system-healthy-fg);
+      margin-right: var(--space-4);
+      flex-shrink: 0;
+    }
+    .status-sep {
+      margin: 0 var(--space-6);
+      color: var(--overlay-8);
+    }
+    .status-spacer { flex: 1; }
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--overlay-10);
+      border-radius: var(--radius-3);
+      background: var(--overlay-4);
+    }
+
+    /* ── Macro card calendar layout ── */
+    .macro-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-6);
+    }
+    .macro-card {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-8) var(--space-10);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .macro-card:hover { border-color: var(--border-default); }
+    .macro-card-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-4);
+    }
+    .macro-card-name {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      margin-bottom: var(--space-4);
+    }
+    .macro-card-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+      margin-top: var(--space-4);
+    }
+    .macro-card-value.up { color: var(--market-up-fg); font-weight: var(--font-weight-medium); }
+    .macro-card-value.pending { color: var(--text-tertiary); }
+
+    /* ── Overlay action labels ── */
+    .overlay-action-label {
+      cursor: pointer;
+    }
+
+    /* ── Text body utilities ── */
+    .text-body { line-height: 1.8; }
+    .text-body-sm { line-height: 1.6; font-size: var(--font-size-12); margin: 0 0 var(--space-12); }
+
+    /* ── Padding utility ── */
+    .py-4 { padding: var(--space-4) 0; }
+
+    /* ── Cell tertiary ── */
+    .cell-tertiary { font-size: var(--font-size-12); color: var(--text-tertiary); }
+
+    /* ── Scroll utility ── */
+    .scroll-x { overflow-x: auto; }
+
     /* ── Reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
       .intel-tab, .news-item, .intel-table tr td, .kpi-card,
       .stock-quick-item, .macro-event { transition: none !important; }
-      .ai-summary-dot { animation: none !important; opacity: 1; }
+      .ai-summary-dot, .status-indicator { animation: none !important; opacity: 1; }
       .overlay-toast { animation: none !important; }
+      .correlation-cell { transition: none !important; }
     }
   </style>
 </head>
@@ -1014,7 +1358,7 @@
             <span class="header-timeframe">1D</span>
           </div>
           <div class="header-timestamp">09:46 CST</div>
-          <label for="overlay-custom-filter" class="header-action-btn" title="筛选" style="cursor:pointer">
+          <label for="overlay-custom-filter" class="header-action-btn cursor-pointer" title="筛选">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h4m6 0h4M3 10h2m3 0h9M3 15h6m3 0h5"/><circle cx="9" cy="5" r="1.5" fill="currentColor"/><circle cx="11" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
           </label>
           <button class="header-action-btn" title="通知" aria-label="通知">
@@ -1059,12 +1403,12 @@
               <div class="kpi-row">
                 <div class="kpi-card">
                   <div class="kpi-label">北向资金</div>
-                  <div class="kpi-value" style="color:var(--market-up-fg)">+12.4亿</div>
+                  <div class="kpi-value text-up">+12.4亿</div>
                   <div class="kpi-change up">净买入</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">主力资金</div>
-                  <div class="kpi-value" style="color:var(--market-up-fg)">+86.7亿</div>
+                  <div class="kpi-value text-up">+86.7亿</div>
                   <div class="kpi-change up">净流入</div>
                 </div>
                 <div class="kpi-card">
@@ -1086,7 +1430,7 @@
                   <caption class="sr-only">板块资金流入流出排行</caption>
                   <thead>
                     <tr>
-                      <th scope="col" style="text-align:left">#</th>
+                      <th scope="col" class="text-left">#</th>
                       <th scope="col">板块</th>
                       <th scope="col">净流入</th>
                       <th scope="col">净占比</th>
@@ -1097,7 +1441,7 @@
                   </thead>
                   <tbody>
                     <tr>
-                      <td style="font-family:var(--font-family-numeric)">1</td>
+                      <td class="font-numeric">1</td>
                       <td>科技</td>
                       <td class="up">+12.3亿</td>
                       <td class="up">+2.8%</td>
@@ -1106,7 +1450,7 @@
                       <td><span class="cell-badge up">强势流入</span></td>
                     </tr>
                     <tr>
-                      <td style="font-family:var(--font-family-numeric)">2</td>
+                      <td class="font-numeric">2</td>
                       <td>消费</td>
                       <td class="up">+8.5亿</td>
                       <td class="up">+1.9%</td>
@@ -1115,7 +1459,7 @@
                       <td><span class="cell-badge up">持续流入</span></td>
                     </tr>
                     <tr>
-                      <td style="font-family:var(--font-family-numeric)">3</td>
+                      <td class="font-numeric">3</td>
                       <td>新能源</td>
                       <td class="up">+6.2亿</td>
                       <td class="up">+1.4%</td>
@@ -1124,7 +1468,7 @@
                       <td><span class="cell-badge up">温和流入</span></td>
                     </tr>
                     <tr>
-                      <td style="font-family:var(--font-family-numeric)">4</td>
+                      <td class="font-numeric">4</td>
                       <td>医药</td>
                       <td class="up">+4.1亿</td>
                       <td class="up">+0.9%</td>
@@ -1133,7 +1477,7 @@
                       <td><span class="cell-badge neutral">均衡</span></td>
                     </tr>
                     <tr>
-                      <td style="font-family:var(--font-family-numeric)">5</td>
+                      <td class="font-numeric">5</td>
                       <td>制造</td>
                       <td class="up">+2.8亿</td>
                       <td class="up">+0.6%</td>
@@ -1142,7 +1486,7 @@
                       <td><span class="cell-badge neutral">均衡</span></td>
                     </tr>
                     <tr>
-                      <td style="font-family:var(--font-family-numeric)">6</td>
+                      <td class="font-numeric">6</td>
                       <td>公用</td>
                       <td class="up">+1.5亿</td>
                       <td class="up">+0.3%</td>
@@ -1151,7 +1495,7 @@
                       <td><span class="cell-badge neutral">均衡</span></td>
                     </tr>
                     <tr>
-                      <td style="font-family:var(--font-family-numeric)">7</td>
+                      <td class="font-numeric">7</td>
                       <td>地产</td>
                       <td class="down">-1.2亿</td>
                       <td class="down">-0.3%</td>
@@ -1160,7 +1504,7 @@
                       <td><span class="cell-badge down">流出</span></td>
                     </tr>
                     <tr>
-                      <td style="font-family:var(--font-family-numeric)">8</td>
+                      <td class="font-numeric">8</td>
                       <td>金融</td>
                       <td class="down">-3.2亿</td>
                       <td class="down">-0.7%</td>
@@ -1169,7 +1513,7 @@
                       <td><span class="cell-badge down">持续流出</span></td>
                     </tr>
                     <tr>
-                      <td style="font-family:var(--font-family-numeric)">9</td>
+                      <td class="font-numeric">9</td>
                       <td>钢铁</td>
                       <td class="down">-2.1亿</td>
                       <td class="down">-0.5%</td>
@@ -1178,7 +1522,7 @@
                       <td><span class="cell-badge down">流出</span></td>
                     </tr>
                     <tr>
-                      <td style="font-family:var(--font-family-numeric)">10</td>
+                      <td class="font-numeric">10</td>
                       <td>煤炭</td>
                       <td class="down">-1.8亿</td>
                       <td class="down">-0.4%</td>
@@ -1196,7 +1540,7 @@
                 <table class="intel-table" aria-label="大单追踪">
                   <thead>
                     <tr>
-                      <th scope="col" style="text-align:left">时间</th>
+                      <th scope="col" class="text-left">时间</th>
                       <th scope="col">标的</th>
                       <th scope="col">方向</th>
                       <th scope="col">金额</th>
@@ -1261,7 +1605,7 @@
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">PMI</div>
-                  <div class="kpi-value" style="color:var(--market-up-fg)">51.2</div>
+                  <div class="kpi-value text-up">51.2</div>
                   <div class="kpi-change up">+0.4</div>
                 </div>
                 <div class="kpi-card">
@@ -1274,7 +1618,7 @@
               <!-- Macro Event Calendar -->
               <div>
                 <div class="section-title">宏观经济日历</div>
-                <div style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-6);padding:var(--space-10) var(--space-12);">
+                <div class="panel">
                   <div class="macro-event">
                     <div class="macro-event-time">09:30</div>
                     <div class="macro-event-name">中国 3月 PMI (官方)</div>
@@ -1283,7 +1627,7 @@
                       <span class="importance-dot active"></span>
                       <span class="importance-dot active"></span>
                     </div>
-                    <div style="font-family:var(--font-family-numeric);color:var(--market-up-fg);font-weight:var(--font-weight-medium);font-feature-settings:'tnum' 1;letter-spacing:-0.02em;">51.2 &gt; 预期 50.8</div>
+                    <div class="font-numeric text-up text-medium">51.2 &gt; 预期 50.8</div>
                   </div>
                   <div class="macro-event">
                     <div class="macro-event-time">10:00</div>
@@ -1293,7 +1637,7 @@
                       <span class="importance-dot active"></span>
                       <span class="importance-dot"></span>
                     </div>
-                    <div style="font-family:var(--font-family-numeric);color:var(--text-tertiary);font-feature-settings:'tnum' 1;letter-spacing:-0.02em;">待公布</div>
+                    <div class="font-numeric text-muted">待公布</div>
                   </div>
                   <div class="macro-event">
                     <div class="macro-event-time">14:00</div>
@@ -1303,7 +1647,7 @@
                       <span class="importance-dot active"></span>
                       <span class="importance-dot active"></span>
                     </div>
-                    <div style="font-family:var(--font-family-numeric);color:var(--text-tertiary);font-feature-settings:'tnum' 1;letter-spacing:-0.02em;">待公布</div>
+                    <div class="font-numeric text-muted">待公布</div>
                   </div>
                   <div class="macro-event">
                     <div class="macro-event-time">20:30</div>
@@ -1313,7 +1657,7 @@
                       <span class="importance-dot active"></span>
                       <span class="importance-dot active"></span>
                     </div>
-                    <div style="font-family:var(--font-family-numeric);color:var(--text-tertiary);font-feature-settings:'tnum' 1;letter-spacing:-0.02em;">预期 180K</div>
+                    <div class="font-numeric text-muted">预期 180K</div>
                   </div>
                   <div class="macro-event">
                     <div class="macro-event-time">22:00</div>
@@ -1323,7 +1667,7 @@
                       <span class="importance-dot"></span>
                       <span class="importance-dot"></span>
                     </div>
-                    <div style="font-family:var(--font-family-numeric);color:var(--text-tertiary);font-feature-settings:'tnum' 1;letter-spacing:-0.02em;">预期 52.5</div>
+                    <div class="font-numeric text-muted">预期 52.5</div>
                   </div>
                 </div>
               </div>
@@ -1334,7 +1678,7 @@
                 <table class="intel-table" aria-label="关键宏观指标">
                   <thead>
                     <tr>
-                      <th scope="col" style="text-align:left">指标</th>
+                      <th scope="col" class="text-left">指标</th>
                       <th scope="col">最新值</th>
                       <th scope="col">前值</th>
                       <th scope="col">预期</th>
@@ -1358,7 +1702,7 @@
                     </tr>
                     <tr>
                       <td>PMI (官方)</td>
-                      <td style="color:var(--market-up-fg);font-weight:var(--font-weight-semibold)">51.2</td>
+                      <td class="text-up text-semibold">51.2</td>
                       <td>50.8</td>
                       <td>50.8</td>
                       <td class="up">+0.4</td>
@@ -1372,7 +1716,7 @@
                     </tr>
                     <tr>
                       <td>中美利差 (10Y)</td>
-                      <td style="color:var(--risk-medium-fg);font-weight:var(--font-weight-medium)">-142bp</td>
+                      <td class="text-warning text-medium">-142bp</td>
                       <td>-138bp</td>
                       <td>-140bp</td>
                       <td class="down">-4bp</td>
@@ -1408,12 +1752,12 @@
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">业绩预增</div>
-                  <div class="kpi-value" style="color:var(--market-up-fg)">28家</div>
+                  <div class="kpi-value text-up">28家</div>
                   <div class="kpi-change up">66.7%</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">业绩预减</div>
-                  <div class="kpi-value" style="color:var(--market-down-fg)">14家</div>
+                  <div class="kpi-value text-down">14家</div>
                   <div class="kpi-change down">33.3%</div>
                 </div>
                 <div class="kpi-card">
@@ -1429,7 +1773,7 @@
                 <table class="intel-table" aria-label="财报日历">
                   <thead>
                     <tr>
-                      <th scope="col" style="text-align:left">日期</th>
+                      <th scope="col" class="text-left">日期</th>
                       <th scope="col">标的</th>
                       <th scope="col">类型</th>
                       <th scope="col">预期 EPS</th>
@@ -1489,7 +1833,7 @@
                 <table class="intel-table" aria-label="分析师评级变动">
                   <thead>
                     <tr>
-                      <th scope="col" style="text-align:left">日期</th>
+                      <th scope="col" class="text-left">日期</th>
                       <th scope="col">标的</th>
                       <th scope="col">机构</th>
                       <th scope="col">调整</th>
@@ -1536,11 +1880,11 @@
               <!-- Hot Topics -->
               <div>
                 <div class="section-title">热点追踪</div>
-                <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;margin-bottom:var(--space-4);">
-                  <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:color-mix(in oklch, var(--risk-high-fg) 12%, transparent);color:var(--risk-high-fg);font-size:var(--font-size-12);font-weight:var(--font-weight-medium);">AI芯片国产替代</span>
-                  <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:color-mix(in oklch, var(--brand-accent) 12%, transparent);color:var(--brand-accent);font-size:var(--font-size-12);font-weight:var(--font-weight-medium);">PMI超预期回升</span>
-                  <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-secondary);font-size:var(--font-size-12);">北向资金持续流入</span>
-                  <span style="padding:var(--space-2) var(--space-8);border-radius:var(--radius-12);background:var(--interaction-hover-subtle-bg);color:var(--text-secondary);font-size:var(--font-size-12);">房地产政策优化</span>
+                <div class="topic-tag-list">
+                  <span class="topic-tag topic-tag--hot">AI芯片国产替代</span>
+                  <span class="topic-tag topic-tag--accent">PMI超预期回升</span>
+                  <span class="topic-tag topic-tag--default">北向资金持续流入</span>
+                  <span class="topic-tag topic-tag--default">房地产政策优化</span>
                 </div>
               </div>
 
@@ -1548,7 +1892,7 @@
               <div>
                 <div class="section-title">实时新闻流</div>
                 <div>
-                  <label for="overlay-intelligence-detail" style="cursor:pointer;display:contents">
+                  <label for="overlay-intelligence-detail" class="cursor-pointer">
                   <div class="news-item">
                     <div class="news-time">09:45</div>
                     <div class="news-body">
@@ -1614,10 +1958,10 @@
             <div class="tab-panel" data-panel="tab-network">
 
               <!-- Correlation KPI -->
-              <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+              <div class="kpi-row kpi-row--3col">
                 <div class="kpi-card">
                   <div class="kpi-label">强关联对</div>
-                  <div class="kpi-value" style="color:var(--market-up-fg)">12对</div>
+                  <div class="kpi-value text-up">12对</div>
                   <div class="kpi-change up">相关系数 &gt; 0.8</div>
                 </div>
                 <div class="kpi-card">
@@ -1627,7 +1971,7 @@
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">异常信号</div>
-                  <div class="kpi-value" style="color:var(--risk-medium-fg)">3条</div>
+                  <div class="kpi-value text-warning">3条</div>
                   <div class="kpi-change down">背离预警</div>
                 </div>
               </div>
@@ -1635,7 +1979,7 @@
               <!-- Correlation Matrix -->
               <div>
                 <div class="section-title">标的相关性矩阵</div>
-                <div style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-6);padding:var(--space-10);overflow-x:auto;">
+                <div class="panel scroll-x">
                   <div class="correlation-grid">
                     <div class="correlation-cell header"></div>
                     <div class="correlation-cell header">贵州茅台</div>
@@ -1688,7 +2032,7 @@
                 <table class="intel-table" aria-label="板块联动">
                   <thead>
                     <tr>
-                      <th scope="col" style="text-align:left">联动组</th>
+                      <th scope="col" class="text-left">联动组</th>
                       <th scope="col">板块</th>
                       <th scope="col">联动系数</th>
                       <th scope="col">资金共振</th>
@@ -1738,26 +2082,26 @@
               <!-- Divergence Alerts -->
               <div>
                 <div class="section-title">背离预警</div>
-                <div style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-6);padding:var(--space-10) var(--space-12);">
-                  <div style="display:flex;align-items:flex-start;gap:var(--space-8);padding:var(--space-6) 0;border-bottom:1px solid var(--overlay-3);font-size:var(--font-size-12);">
-                    <span style="width:6px;height:6px;border-radius:50%;background:var(--risk-medium-fg);margin-top:6px;flex-shrink:0;"></span>
+                <div class="panel">
+                  <div class="alert-item">
+                    <span class="alert-dot alert-dot--warning"></span>
                     <div>
-                      <div style="color:var(--text-primary);font-weight:var(--font-weight-medium);margin-bottom:var(--space-2);">立讯精密 vs 科技板块</div>
-                      <div style="color:var(--text-secondary);">个股走势与板块指数出现 3 日背离，资金持续流出但板块整体偏强</div>
+                      <div class="alert-title">立讯精密 vs 科技板块</div>
+                      <div class="alert-desc">个股走势与板块指数出现 3 日背离，资金持续流出但板块整体偏强</div>
                     </div>
                   </div>
-                  <div style="display:flex;align-items:flex-start;gap:var(--space-8);padding:var(--space-6) 0;border-bottom:1px solid var(--overlay-3);font-size:var(--font-size-12);">
-                    <span style="width:6px;height:6px;border-radius:50%;background:var(--risk-medium-fg);margin-top:6px;flex-shrink:0;"></span>
+                  <div class="alert-item">
+                    <span class="alert-dot alert-dot--warning"></span>
                     <div>
-                      <div style="color:var(--text-primary);font-weight:var(--font-weight-medium);margin-bottom:var(--space-2);">中国平安 vs 金融板块</div>
-                      <div style="color:var(--text-secondary);">个股逆板块上涨，北向资金净买入 1.2 亿，可能存在独立逻辑</div>
+                      <div class="alert-title">中国平安 vs 金融板块</div>
+                      <div class="alert-desc">个股逆板块上涨，北向资金净买入 1.2 亿，可能存在独立逻辑</div>
                     </div>
                   </div>
-                  <div style="display:flex;align-items:flex-start;gap:var(--space-8);padding:var(--space-6) 0;font-size:var(--font-size-12);">
-                    <span style="width:6px;height:6px;border-radius:50%;background:var(--risk-high-fg);margin-top:6px;flex-shrink:0;"></span>
+                  <div class="alert-item">
+                    <span class="alert-dot alert-dot--danger"></span>
                     <div>
-                      <div style="color:var(--text-primary);font-weight:var(--font-weight-medium);margin-bottom:var(--space-2);">美的集团 vs 制造板块</div>
-                      <div style="color:var(--text-secondary);">大单持续流出但股价未跌，分析师下调评级，资金链路异常</div>
+                      <div class="alert-title">美的集团 vs 制造板块</div>
+                      <div class="alert-desc">大单持续流出但股价未跌，分析师下调评级，资金链路异常</div>
                     </div>
                   </div>
                 </div>
@@ -1769,10 +2113,10 @@
           <details class="state-variant">
             <summary class="state-variant__toggle">Tab View — Stale</summary>
             <div class="state-variant-content" data-state="stale">
-              <div style="padding:var(--space-10);display:flex;align-items:center;gap:var(--space-6);background:color-mix(in oklch, var(--system-degraded-fg) 5%, transparent);border-radius:var(--radius-4);">
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">数据更新于 5 分钟前，当前情报可能不是最新状态</span>
-                <button style="margin-left:auto;font-size:var(--font-size-10);color:var(--brand-accent);cursor:pointer;background:none;border:none;">立即刷新</button>
+              <div class="stale-banner stale-banner--fill">
+                <span class="stale-dot"></span>
+                <span class="stale-text">数据更新于 5 分钟前，当前情报可能不是最新状态</span>
+                <button class="stale-action">立即刷新</button>
               </div>
             </div>
           </details>
@@ -1831,9 +2175,9 @@
           <details class="state-variant">
             <summary class="state-variant__toggle">关联标的 — Stale</summary>
             <div class="state-variant-content" data-state="stale">
-              <div style="padding:var(--space-8);display:flex;align-items:center;gap:var(--space-6);">
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">行情数据更新于 2 分钟前</span>
+              <div class="stale-banner">
+                <span class="stale-dot"></span>
+                <span class="stale-text">行情数据更新于 2 分钟前</span>
               </div>
             </div>
           </details>
@@ -1842,7 +2186,7 @@
           <div class="rail-section">
             <div class="rail-section-header">
               <span class="rail-section-title">筛选条件</span>
-              <label for="overlay-custom-filter" class="rail-section-action" style="cursor:pointer" tabindex="0">编辑</label>
+              <label for="overlay-custom-filter" class="rail-section-action cursor-pointer" tabindex="0">编辑</label>
             </div>
             <div class="rail-section-body">
               <div class="filter-tag-list">
@@ -1858,10 +2202,10 @@
           <details class="state-variant">
             <summary class="state-variant__toggle">筛选器 — Stale</summary>
             <div class="state-variant-content" data-state="stale">
-              <div style="padding:var(--space-8);display:flex;align-items:center;gap:var(--space-6);">
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">筛选条件数据过期，可选筛选项最后更新于 8 分钟前</span>
-                <button style="margin-left:auto;font-size:var(--font-size-10);color:var(--brand-accent);cursor:pointer;background:none;border:none;">立即刷新</button>
+              <div class="stale-banner">
+                <span class="stale-dot"></span>
+                <span class="stale-text">筛选条件数据过期，可选筛选项最后更新于 8 分钟前</span>
+                <button class="stale-action">立即刷新</button>
               </div>
             </div>
           </details>
@@ -1871,7 +2215,7 @@
           <div class="rail-section">
             <div class="rail-section-header">
               <span class="rail-section-title">AI 摘要</span>
-              <label for="overlay-send-to-copilot" class="rail-section-action" style="cursor:pointer" tabindex="0">发送到 Copilot</label>
+              <label for="overlay-send-to-copilot" class="rail-section-action cursor-pointer" tabindex="0">发送到 Copilot</label>
             </div>
             <div class="rail-section-body">
               <div class="ai-summary-text">
@@ -1888,9 +2232,9 @@
           <details class="state-variant">
             <summary class="state-variant__toggle">AI 摘要 — Stale</summary>
             <div class="state-variant-content" data-state="stale">
-              <div style="padding:var(--space-8);display:flex;align-items:center;gap:var(--space-6);">
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">摘要基于 8 分钟前数据生成</span>
+              <div class="stale-banner">
+                <span class="stale-dot"></span>
+                <span class="stale-text">摘要基于 8 分钟前数据生成</span>
               </div>
             </div>
           </details>
@@ -1924,9 +2268,9 @@
       <details class="state-variant">
         <summary class="state-variant__toggle">Analysis Band — Stale</summary>
         <div class="state-variant-content" data-state="stale">
-          <div style="padding:var(--space-10);display:flex;align-items:center;gap:var(--space-6);">
-            <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-            <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">分析基于 10 分钟前数据生成</span>
+          <div class="stale-banner stale-banner--fill">
+            <span class="stale-dot"></span>
+            <span class="stale-text">分析基于 10 分钟前数据生成</span>
           </div>
         </div>
       </details>
@@ -1954,36 +2298,36 @@
         </div>
         <div class="overlay-body">
           <h4>PMI连续3个月回升，经济复苏动能增强</h4>
-          <div style="font-size:var(--font-size-12);color:var(--text-tertiary);margin-bottom:var(--space-12);">
+          <div class="text-muted text-body-sm">
             新华财经 · 2026-04-02 09:45
           </div>
-          <p style="line-height:1.8;color:var(--text-secondary);">
+          <p class="text-secondary text-body">
             国家统计局公布数据显示，3月份中国制造业采购经理指数（PMI）为51.2%，比上月上升0.4个百分点，连续3个月运行在扩张区间，创下近12个月新高。其中新订单指数为53.2%，生产指数为52.8%，均高于荣枯线。
           </p>
-          <p style="line-height:1.8;color:var(--text-secondary);margin-top:var(--space-8);">
+          <p class="text-secondary text-body" style="margin-top:var(--space-8)">
             分行业看，高技术制造业PMI为53.5%，继续保持高景气度；装备制造业PMI为52.8%，较上月回升1.2个百分点。小型企业PMI为49.8%，虽仍在荣枯线下方但环比改善明显。
           </p>
 
           <h4>关联标的</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-4);">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) 0;">
+          <div class="flex-col flex-gap-4">
+            <div class="flex-between py-4">
               <span>贵州茅台 600519</span>
-              <span class="stock-quick-change up" style="font-size:var(--font-size-12)">+3.10%</span>
+              <span class="stock-quick-change up">+3.10%</span>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) 0;">
+            <div class="flex-between py-4">
               <span>宁德时代 300750</span>
-              <span class="stock-quick-change up" style="font-size:var(--font-size-12)">+5.20%</span>
+              <span class="stock-quick-change up">+5.20%</span>
             </div>
           </div>
 
           <h4>AI 解读</h4>
-          <p style="line-height:1.8;color:var(--text-secondary);">
-            PMI超预期回升表明制造业景气度持续改善，利好<strong style="color:var(--text-primary)">消费</strong>和<strong style="color:var(--text-primary)">制造</strong>板块。新订单指数连续走强预示需求端回暖，建议关注库存周期反转机会。
+          <p class="text-secondary text-body">
+            PMI超预期回升表明制造业景气度持续改善，利好<strong class="text-primary">消费</strong>和<strong class="text-primary">制造</strong>板块。新订单指数连续走强预示需求端回暖，建议关注库存周期反转机会。
           </p>
 
           <div class="overlay-actions">
-            <label for="overlay-bookmark-success" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">收藏</label>
-            <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-primary" style="cursor:pointer">发送到 Copilot</label>
+            <label for="overlay-bookmark-success" class="overlay-btn overlay-btn-secondary overlay-action-label cursor-pointer">收藏</label>
+            <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-primary overlay-action-label cursor-pointer">发送到 Copilot</label>
           </div>
         </div>
       </div>
@@ -1999,59 +2343,59 @@
         </div>
         <div class="overlay-body">
           <h4>情报分类</h4>
-          <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 资金面
+          <div class="flex-gap-6 py-4">
+            <label class="form-checkbox-label">
+              <input type="checkbox" checked class="form-checkbox"> 资金面
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 宏观
+            <label class="form-checkbox-label">
+              <input type="checkbox" checked class="form-checkbox"> 宏观
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 基本面
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="form-checkbox"> 基本面
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 新闻
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="form-checkbox"> 新闻
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 关联网络
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="form-checkbox"> 关联网络
             </label>
           </div>
 
           <h4>股票池</h4>
-          <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="filter-pool" checked style="accent-color:var(--brand-accent)"> 沪深300
+          <div class="flex-gap-6 py-4">
+            <label class="form-checkbox-label">
+              <input type="radio" name="filter-pool" checked class="form-checkbox"> 沪深300
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="filter-pool" style="accent-color:var(--brand-accent)"> 中证500
+            <label class="form-checkbox-label">
+              <input type="radio" name="filter-pool" class="form-checkbox"> 中证500
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="filter-pool" style="accent-color:var(--brand-accent)"> 全A
+            <label class="form-checkbox-label">
+              <input type="radio" name="filter-pool" class="form-checkbox"> 全A
             </label>
           </div>
 
           <h4>资金阈值</h4>
-          <div style="display:flex;gap:var(--space-8);align-items:center;padding:var(--space-4) 0;">
-            <span style="font-size:var(--font-size-12);color:var(--text-tertiary);">净流入 &gt;</span>
-            <input type="text" value="1亿" style="width:80px;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);font-family:var(--font-family-numeric);outline:none;">
+          <div class="form-row">
+            <span class="cell-tertiary">净流入 &gt;</span>
+            <input type="text" value="1亿" class="form-input">
           </div>
 
           <h4>时间范围</h4>
-          <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="filter-time" checked style="accent-color:var(--brand-accent)"> 今日
+          <div class="flex-gap-6 py-4">
+            <label class="form-checkbox-label">
+              <input type="radio" name="filter-time" checked class="form-checkbox"> 今日
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="filter-time" style="accent-color:var(--brand-accent)"> 1周
+            <label class="form-checkbox-label">
+              <input type="radio" name="filter-time" class="form-checkbox"> 1周
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="radio" name="filter-time" style="accent-color:var(--brand-accent)"> 1月
+            <label class="form-checkbox-label">
+              <input type="radio" name="filter-time" class="form-checkbox"> 1月
             </label>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-custom-filter" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">重置</label>
-            <label for="overlay-custom-filter" class="overlay-btn overlay-btn-primary" style="cursor:pointer">应用筛选</label>
+            <label for="overlay-custom-filter" class="overlay-btn overlay-btn-secondary overlay-action-label cursor-pointer">重置</label>
+            <label for="overlay-custom-filter" class="overlay-btn overlay-btn-primary overlay-action-label cursor-pointer">应用筛选</label>
           </div>
         </div>
       </div>
@@ -2059,9 +2403,9 @@
 
     <!-- Overlay C: 收藏成功 (Toast — checkbox toggled overlay) -->
     <div class="overlay-toast" data-overlay="overlay-bookmark-success">
-      <label for="overlay-bookmark-success" class="overlay-dismiss" style="position:absolute;inset:0;cursor:pointer;z-index:0;" aria-label="关闭"></label>
-      <div class="toast-icon" style="position:relative;z-index:1;">&#10003;</div>
-      <span class="toast-text" style="position:relative;z-index:1;">已收藏到情报库</span>
+      <label for="overlay-bookmark-success" class="overlay-dismiss cursor-pointer" aria-label="关闭"></label>
+      <div class="toast-icon">&#10003;</div>
+      <span class="toast-text">已收藏到情报库</span>
     </div>
 
     <!-- Overlay D: 删除标注确认 (Sheet — centered modal) -->
@@ -2073,7 +2417,7 @@
           <label for="overlay-delete-confirm" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-12);">
+          <p class="text-secondary text-body-sm">
             确认删除此情报标注？删除后相关笔记和关联将被移除，此操作不可撤销。
           </p>
 
@@ -2091,8 +2435,8 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-danger" style="cursor:pointer">确认删除</label>
+            <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-secondary overlay-action-label cursor-pointer">取消</label>
+            <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-danger overlay-action-label cursor-pointer">确认删除</label>
           </div>
         </div>
       </div>
@@ -2108,37 +2452,37 @@
         </div>
         <div class="overlay-body">
           <h4>发送内容</h4>
-          <p style="line-height:1.6;color:var(--text-secondary);margin-bottom:var(--space-8);">
+          <p class="text-secondary text-body-sm" style="margin-bottom:var(--space-8)">
             将当前情报摘要与分析发送到 Copilot，AI 将基于最新数据生成深度研究报告。
           </p>
 
           <h4>包含内容</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-4);">
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> AI 摘要
+          <div class="flex-col flex-gap-4">
+            <label class="form-checkbox-label">
+              <input type="checkbox" checked class="form-checkbox"> AI 摘要
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 趋势判断
+            <label class="form-checkbox-label">
+              <input type="checkbox" checked class="form-checkbox"> 趋势判断
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 关联标的
+            <label class="form-checkbox-label">
+              <input type="checkbox" checked class="form-checkbox"> 关联标的
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 资金面数据
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="form-checkbox"> 资金面数据
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 宏观指标
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="form-checkbox"> 宏观指标
             </label>
           </div>
 
           <h4>附加指令</h4>
           <div style="padding:var(--space-6) 0;">
-            <textarea placeholder="输入附加指令，如：重点分析科技板块资金流向..." style="width:100%;height:80px;padding:var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;resize:vertical;font-family:var(--font-family-ui);line-height:1.5;"></textarea>
+            <textarea placeholder="输入附加指令，如：重点分析科技板块资金流向..." class="form-textarea"></textarea>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-primary" style="cursor:pointer">发送</label>
+            <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-secondary overlay-action-label cursor-pointer">取消</label>
+            <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-primary overlay-action-label cursor-pointer">发送</label>
           </div>
         </div>
       </div>
@@ -2160,7 +2504,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
               <div class="state-loading">
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-8);">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-8)">
                   <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
                   <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
                   <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
@@ -2203,10 +2547,10 @@
       <div class="gallery-card__label">Tab View — Stale</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-              <div style="padding:var(--space-10);display:flex;align-items:center;gap:var(--space-6);background:color-mix(in oklch, var(--system-degraded-fg) 5%, transparent);border-radius:var(--radius-4);">
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">数据更新于 5 分钟前，当前情报可能不是最新状态</span>
-                <button style="margin-left:auto;font-size:var(--font-size-10);color:var(--brand-accent);cursor:pointer;background:none;border:none;">立即刷新</button>
+              <div class="stale-banner stale-banner--fill">
+                <span class="stale-dot"></span>
+                <span class="stale-text">数据更新于 5 分钟前，当前情报可能不是最新状态</span>
+                <button class="stale-action">立即刷新</button>
               </div>
             </div>
       </div>
@@ -2259,9 +2603,9 @@
       <div class="gallery-card__label">关联标的 — Stale</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-              <div style="padding:var(--space-8);display:flex;align-items:center;gap:var(--space-6);">
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">行情数据更新于 2 分钟前</span>
+              <div class="stale-banner">
+                <span class="stale-dot"></span>
+                <span class="stale-text">行情数据更新于 2 分钟前</span>
               </div>
             </div>
       </div>
@@ -2330,11 +2674,11 @@
 <div class="state-variant-content" data-state="selected">
               <div style="padding:var(--space-8);">
                 <div class="filter-tag-list">
-                  <span class="filter-tag" style="box-shadow:0 0 0 2px var(--brand-accent)">资金面 <span class="filter-tag-remove">&times;</span></span>
-                  <span class="filter-tag" style="box-shadow:0 0 0 2px var(--brand-accent)">沪深300 <span class="filter-tag-remove">&times;</span></span>
-                  <span class="filter-tag" style="box-shadow:0 0 0 2px var(--brand-accent)">净流入 > 1亿 <span class="filter-tag-remove">&times;</span></span>
+                  <span class="filter-tag filter-tag--selected">资金面 <span class="filter-tag-remove">&times;</span></span>
+                  <span class="filter-tag filter-tag--selected">沪深300 <span class="filter-tag-remove">&times;</span></span>
+                  <span class="filter-tag filter-tag--selected">净流入 > 1亿 <span class="filter-tag-remove">&times;</span></span>
                 </div>
-                <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:var(--space-4);display:block;">↑ 激活筛选条件时边框高亮</span>
+                <span class="text-muted" style="margin-top:var(--space-4);display:block;font-size:var(--font-size-10)">↑ 激活筛选条件时边框高亮</span>
               </div>
             </div>
       </div>
@@ -2387,9 +2731,9 @@
       <div class="gallery-card__label">AI 摘要 — Stale</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-              <div style="padding:var(--space-8);display:flex;align-items:center;gap:var(--space-6);">
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-                <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">摘要基于 8 分钟前数据生成</span>
+              <div class="stale-banner">
+                <span class="stale-dot"></span>
+                <span class="stale-text">摘要基于 8 分钟前数据生成</span>
               </div>
             </div>
       </div>
@@ -2441,9 +2785,9 @@
       <div class="gallery-card__label">Analysis Band — Stale</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-          <div style="padding:var(--space-10);display:flex;align-items:center;gap:var(--space-6);">
-            <span style="width:6px;height:6px;border-radius:50%;background:var(--system-degraded-fg);display:inline-block;flex-shrink:0;"></span>
-            <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg);">分析基于 10 分钟前数据生成</span>
+          <div class="stale-banner stale-banner--fill">
+            <span class="stale-dot"></span>
+            <span class="stale-text">分析基于 10 分钟前数据生成</span>
           </div>
         </div>
       </div>
@@ -2469,33 +2813,33 @@
           </div>
           <div class="overlay-body">
             <h4>PMI连续3个月回升，经济复苏动能增强</h4>
-            <div style="font-size:var(--font-size-12);color:var(--text-tertiary);margin-bottom:var(--space-12);">
+            <div class="text-muted text-body-sm">
               新华财经 · 2026-04-02 09:45
             </div>
-            <p style="line-height:1.8;color:var(--text-secondary);">
+            <p class="text-secondary text-body">
               国家统计局公布数据显示，3月份中国制造业采购经理指数（PMI）为51.2%，比上月上升0.4个百分点，连续3个月运行在扩张区间，创下近12个月新高。其中新订单指数为53.2%，生产指数为52.8%，均高于荣枯线。
             </p>
-            <p style="line-height:1.8;color:var(--text-secondary);margin-top:var(--space-8);">
+            <p class="text-secondary text-body" style="margin-top:var(--space-8)">
               分行业看，高技术制造业PMI为53.5%，继续保持高景气度；装备制造业PMI为52.8%，较上月回升1.2个百分点。小型企业PMI为49.8%，虽仍在荣枯线下方但环比改善明显。
             </p>
             <h4>关联标的</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-4);">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) 0;">
+            <div class="flex-col flex-gap-4">
+              <div class="flex-between py-4">
                 <span>贵州茅台 600519</span>
-                <span class="stock-quick-change up" style="font-size:var(--font-size-12)">+3.10%</span>
+                <span class="stock-quick-change up">+3.10%</span>
               </div>
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) 0;">
+              <div class="flex-between py-4">
                 <span>宁德时代 300750</span>
-                <span class="stock-quick-change up" style="font-size:var(--font-size-12)">+5.20%</span>
+                <span class="stock-quick-change up">+5.20%</span>
               </div>
             </div>
             <h4>AI 解读</h4>
-            <p style="line-height:1.8;color:var(--text-secondary);">
-              PMI超预期回升表明制造业景气度持续改善，利好<strong style="color:var(--text-primary)">消费</strong>和<strong style="color:var(--text-primary)">制造</strong>板块。新订单指数连续走强预示需求端回暖，建议关注库存周期反转机会。
+            <p class="text-secondary text-body">
+              PMI超预期回升表明制造业景气度持续改善，利好<strong class="text-primary">消费</strong>和<strong class="text-primary">制造</strong>板块。新订单指数连续走强预示需求端回暖，建议关注库存周期反转机会。
             </p>
             <div class="overlay-actions">
-              <label for="overlay-bookmark-success" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">收藏</label>
-              <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-primary" style="cursor:pointer">发送到 Copilot</label>
+              <label for="overlay-bookmark-success" class="overlay-btn overlay-btn-secondary overlay-action-label cursor-pointer">收藏</label>
+              <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-primary overlay-action-label cursor-pointer">发送到 Copilot</label>
             </div>
           </div>
         </div>
@@ -2511,55 +2855,55 @@
           </div>
           <div class="overlay-body">
             <h4>情报分类</h4>
-            <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 资金面
+            <div class="flex-gap-6 py-4">
+              <label class="form-checkbox-label">
+                <input type="checkbox" checked class="form-checkbox"> 资金面
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 宏观
+              <label class="form-checkbox-label">
+                <input type="checkbox" checked class="form-checkbox"> 宏观
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 基本面
+              <label class="form-checkbox-label">
+                <input type="checkbox" class="form-checkbox"> 基本面
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 新闻
+              <label class="form-checkbox-label">
+                <input type="checkbox" class="form-checkbox"> 新闻
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 关联网络
+              <label class="form-checkbox-label">
+                <input type="checkbox" class="form-checkbox"> 关联网络
               </label>
             </div>
             <h4>股票池</h4>
-            <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="filter-pool" checked style="accent-color:var(--brand-accent)"> 沪深300
+            <div class="flex-gap-6 py-4">
+              <label class="form-checkbox-label">
+                <input type="radio" name="filter-pool" checked class="form-checkbox"> 沪深300
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="filter-pool" style="accent-color:var(--brand-accent)"> 中证500
+              <label class="form-checkbox-label">
+                <input type="radio" name="filter-pool" class="form-checkbox"> 中证500
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="filter-pool" style="accent-color:var(--brand-accent)"> 全A
+              <label class="form-checkbox-label">
+                <input type="radio" name="filter-pool" class="form-checkbox"> 全A
               </label>
             </div>
             <h4>资金阈值</h4>
-            <div style="display:flex;gap:var(--space-8);align-items:center;padding:var(--space-4) 0;">
-              <span style="font-size:var(--font-size-12);color:var(--text-tertiary);">净流入 &gt;</span>
-              <input type="text" value="1亿" style="width:80px;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);font-family:var(--font-family-numeric);outline:none;">
+            <div class="form-row">
+              <span class="cell-tertiary">净流入 &gt;</span>
+              <input type="text" value="1亿" class="form-input">
             </div>
             <h4>时间范围</h4>
-            <div style="display:flex;gap:var(--space-6);padding:var(--space-4) 0;">
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="filter-time" checked style="accent-color:var(--brand-accent)"> 今日
+            <div class="flex-gap-6 py-4">
+              <label class="form-checkbox-label">
+                <input type="radio" name="filter-time" checked class="form-checkbox"> 今日
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="filter-time" style="accent-color:var(--brand-accent)"> 1周
+              <label class="form-checkbox-label">
+                <input type="radio" name="filter-time" class="form-checkbox"> 1周
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="radio" name="filter-time" style="accent-color:var(--brand-accent)"> 1月
+              <label class="form-checkbox-label">
+                <input type="radio" name="filter-time" class="form-checkbox"> 1月
               </label>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-custom-filter" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">重置</label>
-              <label for="overlay-custom-filter" class="overlay-btn overlay-btn-primary" style="cursor:pointer">应用筛选</label>
+              <label for="overlay-custom-filter" class="overlay-btn overlay-btn-secondary overlay-action-label cursor-pointer">重置</label>
+              <label for="overlay-custom-filter" class="overlay-btn overlay-btn-primary overlay-action-label cursor-pointer">应用筛选</label>
             </div>
           </div>
         </div>
@@ -2574,7 +2918,7 @@
             <span class="overlay-title">删除标注</span>
           </div>
           <div class="overlay-body">
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0 0 var(--space-12);">
+            <p class="text-secondary text-body-sm">
               确认删除此情报标注？删除后相关笔记和关联将被移除，此操作不可撤销。
             </p>
             <div class="overlay-field">
@@ -2590,8 +2934,8 @@
               <span class="overlay-field-value">3 条</span>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-              <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-danger" style="cursor:pointer">确认删除</label>
+              <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-secondary overlay-action-label cursor-pointer">取消</label>
+              <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-danger overlay-action-label cursor-pointer">确认删除</label>
             </div>
           </div>
         </div>
@@ -2607,34 +2951,34 @@
           </div>
           <div class="overlay-body">
             <h4>发送内容</h4>
-            <p style="line-height:1.6;color:var(--text-secondary);margin-bottom:var(--space-8);">
+            <p class="text-secondary text-body-sm" style="margin-bottom:var(--space-8)">
               将当前情报摘要与分析发送到 Copilot，AI 将基于最新数据生成深度研究报告。
             </p>
             <h4>包含内容</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-4);">
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> AI 摘要
+            <div class="flex-col flex-gap-4">
+              <label class="form-checkbox-label">
+                <input type="checkbox" checked class="form-checkbox"> AI 摘要
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 趋势判断
+              <label class="form-checkbox-label">
+                <input type="checkbox" checked class="form-checkbox"> 趋势判断
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 关联标的
+              <label class="form-checkbox-label">
+                <input type="checkbox" checked class="form-checkbox"> 关联标的
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 资金面数据
+              <label class="form-checkbox-label">
+                <input type="checkbox" class="form-checkbox"> 资金面数据
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 宏观指标
+              <label class="form-checkbox-label">
+                <input type="checkbox" class="form-checkbox"> 宏观指标
               </label>
             </div>
             <h4>附加指令</h4>
             <div style="padding:var(--space-6) 0;">
-              <textarea placeholder="输入附加指令，如：重点分析科技板块资金流向..." style="width:100%;height:80px;padding:var(--space-8);border-radius:var(--radius-4);border:1px solid var(--border-default);background:var(--surface-muted);color:var(--text-primary);font-size:var(--font-size-12);outline:none;resize:vertical;font-family:var(--font-family-ui);line-height:1.5;"></textarea>
+              <textarea placeholder="输入附加指令，如：重点分析科技板块资金流向..." class="form-textarea"></textarea>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-              <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-primary" style="cursor:pointer">发送</label>
+              <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-secondary overlay-action-label cursor-pointer">取消</label>
+              <label for="overlay-send-to-copilot" class="overlay-btn overlay-btn-primary overlay-action-label cursor-pointer">发送</label>
             </div>
           </div>
         </div>

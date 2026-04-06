@@ -576,8 +576,26 @@
       border-color: var(--border-default);
       background: var(--surface-panel-elevated);
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12),
+                  0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
     }
+
+    /* Metric card subtle brand glow on hover */
+    .metric-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0;
+      background: radial-gradient(
+        ellipse at top right,
+        color-mix(in oklch, var(--brand-accent) 4%, transparent) 0%,
+        transparent 60%
+      );
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+      pointer-events: none;
+    }
+    .metric-card:hover::after { opacity: 1; }
 
     /* ── Metric Sparkline (positioned top-right) ── */
     .metric-sparkline {
@@ -1331,10 +1349,14 @@
       .btn, .rail-icon, .hub-tab, .header-action-btn,
       .metric-card, .signal-item, .research-item,
       .timeline-marker, .object-status-dot, .object-price,
-      .bottom-tab, .chart-period-btn, .meta-chip {
+      .bottom-tab, .chart-period-btn, .meta-chip,
+      .toolbar-btn, .radio-card, .status-indicator,
+      .rank-bar-fill, .flow-bar-fill {
         transition: none !important;
         animation: none !important;
       }
+      .metric-card:hover { transform: none; }
+      .signal-item:hover, .research-item:hover { transform: none; }
     }
 
     /* ══════════════════════════════════════════════
@@ -1576,6 +1598,12 @@
     }
     .fin-table .up { color: var(--market-up-fg); }
     .fin-table .down { color: var(--market-down-fg); }
+    .fin-table tbody tr {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .fin-table tbody tr:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
 
     /* ── News item ── */
     .news-item {
@@ -1687,6 +1715,242 @@
     .corp-tag.dividend { background: oklch(from var(--market-up-fg) l c h / 0.1); color: var(--market-up-fg); }
     .corp-tag.unlock { background: oklch(from var(--risk-high-fg) l c h / 0.1); color: var(--risk-high-fg); }
     .corp-tag.change { background: oklch(from var(--system-degraded-fg) l c h / 0.1); color: var(--system-degraded-fg); }
+
+    /* ══════════════════════════════════════════════
+     * Extracted inline style classes — Iteration 9.5
+     * ══════════════════════════════════════════════ */
+
+    /* ── Cursor helpers ── */
+    .cursor-pointer { cursor: pointer; }
+
+    /* ── Spacer / separator ── */
+    .spacer { flex: 1; }
+    .meta-sep-line { width: 1px; height: 20px; background: var(--border-subtle); }
+    .toolbar-sep-line { width: 1px; height: 16px; background: var(--border-subtle); margin: 0 var(--space-4); }
+
+    /* ── Panel flex helpers ── */
+    .panel-grow { flex: 1; min-height: 0; }
+    .panel-shrink { flex-shrink: 0; }
+    .panel-scroll { overflow-y: auto; }
+
+    /* ── State variant grid containers ── */
+    .sv-header { grid-area: header; overflow: visible; display: flex; flex-direction: column; }
+    .sv-meta { grid-area: meta; overflow: visible; display: flex; flex-direction: column; }
+
+    /* ── Panel section padding ── */
+    .pad-panel { padding: var(--space-12); }
+    .pad-panel-x { padding: 0 var(--space-12) var(--space-12); }
+    .pad-panel-sm { padding: var(--space-8) var(--space-12); }
+    .pad-panel-xs { padding: var(--space-6) var(--space-12); }
+
+    /* ── Fundamentals ROE detail row ── */
+    .roe-detail { display: flex; justify-content: space-between; }
+    .roe-detail + .roe-total { border-top: 1px solid var(--border-subtle); padding-top: var(--space-6); display: flex; justify-content: space-between; }
+
+    /* ── Chart indicator strip ── */
+    .indicator-strip { display: flex; gap: var(--space-8); font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .indicator-label { font-size: var(--font-size-12); }
+
+    /* ── Panel subtitle for 2-col layout ── */
+    .flow-split { flex: 1; min-height: 0; padding: var(--space-12); display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-12); }
+    .flow-col { display: flex; flex-direction: column; gap: var(--space-8); }
+    .flow-col-sm { display: flex; flex-direction: column; gap: var(--space-6); }
+
+    /* ── Subsection title ── */
+    .subsection-title { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--text-primary); }
+
+    /* ── Chip distribution bars ── */
+    .chip-bars { padding: var(--space-12); height: 100px; display: flex; align-items: flex-end; gap: 1px; }
+    .chip-bar { flex: 1; border-radius: 2px 2px 0 0; }
+
+    /* ── Revenue bar chart ── */
+    .revenue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-12); flex-shrink: 0; }
+    .revenue-bars { padding: var(--space-12); height: 120px; display: flex; align-items: flex-end; gap: var(--space-6); }
+    .revenue-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .revenue-bar-inner { width: 100%; border-radius: 2px 2px 0 0; }
+    .revenue-bar-label { font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .revenue-bar-label.active { font-size: var(--font-size-10); color: var(--text-primary); font-weight: var(--font-weight-medium); }
+
+    /* ── ROE breakdown panel ── */
+    .roe-breakdown { padding: var(--space-12); display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12); }
+    .roe-total { border-top: 1px solid var(--border-subtle); padding-top: var(--space-6); display: flex; justify-content: space-between; }
+
+    /* ── 2-col layout helper ── */
+    .split-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-12); flex-shrink: 0; }
+
+    /* ── Detail page sub-panel ── */
+    .detail-sub { padding: 0 var(--space-12) var(--space-12); }
+
+    /* ── News list ── */
+    .news-list-item { cursor: pointer; display: flex; flex-direction: column; gap: var(--space-4); width: 100%; }
+
+    /* ── Announce list ── */
+    .announce-list-item { cursor: pointer; display: flex; align-items: flex-start; gap: var(--space-10); width: 100%; }
+
+    /* ── Network graph ── */
+    .network-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 56px; height: 56px; border-radius: 50%; background: var(--brand-accent-subtle); border: 2px solid var(--brand-accent); display: flex; align-items: center; justify-content: center; font-size: var(--font-size-10); font-weight: var(--font-weight-semibold); color: var(--brand-accent); z-index: 2; }
+    .network-node { border-radius: 50%; position: absolute; }
+    .network-label { position: absolute; font-size: var(--font-size-10); }
+
+    /* ── Correlation bar ── */
+    .corr-row { display: flex; align-items: center; gap: var(--space-8); }
+    .corr-name { font-size: var(--font-size-12); color: var(--text-primary); width: 80px; }
+    .corr-track { flex: 1; height: 4px; background: var(--border-subtle); border-radius: 2px; overflow: hidden; }
+    .corr-fill { height: 100%; background: var(--brand-accent); border-radius: 2px; }
+    .corr-value { font-size: var(--font-size-10); color: var(--text-tertiary); }
+
+    /* ── Overlay helpers ── */
+    .overlay-section { margin-top: var(--space-10); }
+    .overlay-body-text { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.7; margin: 0; }
+    .overlay-body-text.tight { line-height: 1.6; }
+    .overlay-ai-callout { background: var(--brand-accent-subtle); border: 1px solid color-mix(in oklch, var(--brand-accent) 20%, transparent); border-radius: var(--radius-4); padding: var(--space-8); }
+    .overlay-tag-list { display: flex; gap: var(--space-6); flex-wrap: wrap; }
+
+    /* ── Watchlist / Research form helpers ── */
+    .form-col { display: flex; flex-direction: column; gap: var(--space-4); }
+    .form-check-label { display: flex; align-items: center; gap: var(--space-6); padding: var(--space-4) 0; color: var(--text-primary); font-size: var(--font-size-12); cursor: pointer; }
+    .form-check-count { font-size: var(--font-size-10); color: var(--text-tertiary); margin-left: auto; }
+    .form-input { accent-color: var(--brand-accent); }
+    .form-row { display: flex; gap: var(--space-6); }
+    .form-text-input { flex: 1; background: var(--surface-panel-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-4); padding: var(--space-4) var(--space-8); font-size: var(--font-size-12); color: var(--text-primary); font-family: var(--font-family-ui); }
+    .form-textarea { width: 100%; background: var(--surface-panel-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-4); padding: var(--space-8); font-size: var(--font-size-12); color: var(--text-primary); font-family: var(--font-family-ui); min-height: 60px; resize: vertical; }
+
+    /* ── Research radio cards ── */
+    .radio-card { display: flex; align-items: center; gap: var(--space-6); padding: var(--space-6); border: 1px solid var(--border-subtle); border-radius: var(--radius-4); cursor: pointer; color: var(--text-primary); font-size: var(--font-size-12); transition: border-color 0.15s; }
+    .radio-card-title { font-weight: var(--font-weight-medium); }
+    .radio-card-desc { font-size: var(--font-size-10); color: var(--text-tertiary); margin-top: 2px; }
+
+    /* ── Status bar inline overrides ── */
+    .status-healthy { color: var(--system-healthy-fg); }
+    .status-muted { color: var(--text-secondary); }
+    .status-degraded { color: var(--system-degraded-fg); }
+
+    /* ── Color / type tokens as classes ── */
+    .text-primary { color: var(--text-primary); }
+    .text-secondary-c { color: var(--text-secondary); }
+    .text-tertiary { color: var(--text-tertiary); }
+    .text-brand { color: var(--brand-accent); }
+    .text-market-up { color: var(--market-up-fg); }
+
+    /* ── Toolbar drawing tools ── */
+    .toolbar-color-pick { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; }
+    .toolbar-sep { height: 1px; background: var(--border-subtle); margin: var(--space-2) 0; }
+    .toolbar-colors { display: flex; gap: var(--space-2); padding: var(--space-2); }
+
+    /* ── Skeleton state helpers ── */
+    .skel-row { flex-direction: row; gap: var(--space-12); }
+    .skel-row-sm { flex-direction: row; gap: var(--space-8); }
+    .skel-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-12); }
+    .skel-col { display: flex; flex-direction: column; gap: var(--space-4); }
+    .skel-error-icon { width: 24px; height: 24px; font-size: 12px; }
+
+    /* ── MA60 color token ── */
+    /* MA60 technical indicator color — warm amber, intentionally distinct from brand-accent */
+    .ma60-color { color: oklch(0.75 0.12 85); }
+
+    /* ── Relative position context ── */
+    .pos-relative { position: relative; }
+
+    /* ── Flex display ── */
+    .display-inline { display: inline; }
+
+    /* ── Column flex row ── */
+    .panel-section-body { padding: var(--space-8) var(--space-12); display: flex; flex-direction: column; gap: var(--space-4); }
+
+    /* ── Technical indicator sub-panel ── */
+    .indicator-sub { flex-shrink: 0; max-height: 120px; overflow: hidden; }
+
+
+
+    /* ── Additional extracted classes (batch 2) ── */
+    .network-container { position: relative; }
+    .row-selected { background: var(--interaction-selected-bg); }
+    .center-content { display: flex; align-items: center; justify-content: center; padding: var(--space-16); }
+    .pos-absolute-fill { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+
+
+    /* ══════════════════════════════════════════════
+     * Micro-innovations — 9.5 polish
+     * ══════════════════════════════════════════════ */
+
+    /* ── Refined scrollbar ── */
+    .panel-scroll::-webkit-scrollbar,
+    .hub-sidebar::-webkit-scrollbar,
+    .bottom-content::-webkit-scrollbar {
+      width: 4px;
+    }
+    .panel-scroll::-webkit-scrollbar-track,
+    .hub-sidebar::-webkit-scrollbar-track,
+    .bottom-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .panel-scroll::-webkit-scrollbar-thumb,
+    .hub-sidebar::-webkit-scrollbar-thumb,
+    .bottom-content::-webkit-scrollbar-thumb {
+      background: var(--border-subtle);
+      border-radius: 2px;
+    }
+    .panel-scroll::-webkit-scrollbar-thumb:hover,
+    .hub-sidebar::-webkit-scrollbar-thumb:hover,
+    .bottom-content::-webkit-scrollbar-thumb:hover {
+      background: var(--border-default);
+    }
+
+    /* ── Radio card hover ── */
+    .radio-card:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .radio-card:has(input:checked) {
+      border-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-default));
+      background: color-mix(in oklch, var(--brand-accent) 4%, transparent);
+    }
+
+    /* ── Form check label hover ── */
+    .form-check-label:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-radius: var(--radius-3);
+    }
+
+    /* ── Correlation bar hover ── */
+    .corr-row:hover .corr-fill {
+      filter: brightness(1.15);
+      transition: filter var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Chip bar hover ── */
+    .chip-bars:hover .chip-bar {
+      filter: brightness(0.85);
+      transition: filter var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .chip-bars:hover .chip-bar:hover {
+      filter: brightness(1.2);
+    }
+
+    /* ── Section entrance animation ── */
+    .context-section {
+      animation: section-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .context-section:nth-child(2) { animation-delay: 60ms; }
+    .context-section:nth-child(3) { animation-delay: 120ms; }
+
+    @keyframes section-fade-in {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Toolbar button press feedback ── */
+    .toolbar-btn:active {
+      transform: scale(0.92);
+      background: var(--interaction-selected-bg);
+    }
+
+    /* ── Focus ring refinement ── */
+    .radio-card:focus-within {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+    }
+
   </style>
 </head>
 <body>
@@ -1778,7 +2042,7 @@
         </div>
 
         <!-- Spacer -->
-        <div style="flex:1"></div>
+        <div class="spacer"></div>
 
         <!-- Header actions -->
         <div class="header-actions" role="toolbar" aria-label="页面操作">
@@ -1798,7 +2062,7 @@
               </button>
             </div>
           </div>
-          <div style="width:1px;height:20px;background:var(--border-subtle)"></div>
+          <div class="meta-sep-line"></div>
           <div class="header-action-btn" tabindex="0" role="button" aria-label="通知">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg>
             <span class="badge-dot"></span>
@@ -1809,15 +2073,15 @@
         <!-- CTAs -->
         <div class="header-ctas">
           <!-- Overlay triggers (checkbox first, label as visual button) -->
-          <label for="overlay-add-watchlist" class="btn" style="cursor:pointer" aria-label="加入观察">
+          <label for="overlay-add-watchlist" class="btn cursor-pointer" aria-label="加入观察">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12m-6-6h12"/></svg>
             加入观察
           </label>
-          <label for="overlay-add-watchlist" class="btn" style="cursor:pointer" aria-label="加入标的池">
+          <label for="overlay-add-watchlist" class="btn cursor-pointer" aria-label="加入标的池">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M4 10h8M4 15h12"/><circle cx="17" cy="15" r="2"/></svg>
             加入标的池
           </label>
-          <label for="overlay-send-research" class="btn" style="cursor:pointer" aria-label="发送到研究">
+          <label for="overlay-send-research" class="btn cursor-pointer" aria-label="发送到研究">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/><path d="M7 9h4"/></svg>
             发送到研究
           </label>
@@ -1830,7 +2094,7 @@
     </header>
 
     <!-- ── State Variants: 1. Object Header ── -->
-    <div style="grid-area:header;overflow:visible;display:flex;flex-direction:column">
+    <div class="sv-header">
     
     
     
@@ -1868,7 +2132,7 @@
     </div>
 
     <!-- ── State Variants: 2. Meta Strip ── -->
-    <div style="grid-area:meta;overflow:visible;display:flex;flex-direction:column">
+    <div class="sv-meta">
     
     
     </div>
@@ -1946,9 +2210,9 @@
         
 
         <!-- Industry Rank (overview section) -->
-        <div class="panel" style="flex-shrink:0">
+        <div class="panel panel-shrink">
           <div class="panel-header"><span class="panel-title">行业排名</span><span class="panel-subtitle">白酒 · 市值排名</span></div>
-          <div style="padding:0 var(--space-12) var(--space-12)">
+          <div class="pad-panel-x">
             <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">2.33万亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:100%"></div></div></div>
             <div class="rank-row"><span class="rank-num top3">2</span><span class="rank-name">五粮液</span><span class="rank-value">6,820亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:29%"></div></div></div>
             <div class="rank-row"><span class="rank-num">3</span><span class="rank-name">泸州老窖</span><span class="rank-value">3,460亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:15%"></div></div></div>
@@ -2038,7 +2302,7 @@
       <!-- ═══ Tab 2: hub-chart (行情) ═══ -->
       <div class="tab-panel" data-panel="hub-chart">
       <div class="hub-object-view">
-        <div class="chart-panel panel" style="flex:1;min-height:0">
+        <div class="chart-panel panel panel-grow">
           <div class="panel-header">
             <span class="panel-title">价格走势 · K线</span>
             <div class="chart-toolbar">
@@ -2048,24 +2312,24 @@
               <button class="chart-period-btn active" aria-pressed="true">3M</button>
               <button class="chart-period-btn" aria-pressed="false">1Y</button>
               <button class="chart-period-btn" aria-pressed="false">ALL</button>
-              <span style="width:1px;height:16px;background:var(--border-subtle);margin:0 var(--space-4)"></span>
-              <label for="overlay-chart-toolbar" class="chart-period-btn" style="cursor:pointer" title="绘图工具">
+              <span class="toolbar-sep-line"></span>
+              <label for="overlay-chart-toolbar" class="chart-period-btn cursor-pointer" title="绘图工具">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17L17 3M6 14l4 4M14 6l4-4"/></svg>
                 工具
               </label>
             </div>
           </div>
-          <div class="chart-body" style="flex:1;min-height:0">
+          <div class="chart-body panel-grow">
             <div id="tv-chart-container" aria-label="K线图"></div>
           </div>
         </div>
         <!-- 技术指标叠加区 -->
-        <div class="panel" style="flex-shrink:0;max-height:120px;overflow:hidden">
-          <div class="panel-header" style="padding:var(--space-6) var(--space-12)">
-            <span class="panel-title" style="font-size:var(--font-size-12)">技术指标</span>
-            <div style="display:flex;gap:var(--space-8);font-size:var(--font-size-10);color:var(--text-tertiary)">
-              <span style="color:var(--brand-accent)">MA20</span>
-              <span style="color:oklch(0.75 0.12 85)">MA60</span>
+        <div class="panel indicator-sub">
+          <div class="panel-header pad-panel-xs">
+            <span class="panel-title" class="indicator-label">技术指标</span>
+            <div class="indicator-strip">
+              <span class="text-brand">MA20</span>
+              <span class="ma60-color">MA60</span>
               <span>MACD</span>
               <span>RSI(14)</span>
               <span>BOLL</span>
@@ -2079,7 +2343,7 @@
       <div class="tab-panel" data-panel="hub-flow">
       <div class="hub-object-view">
         <!-- 资金流向图 -->
-        <div class="panel" style="flex:1;min-height:0">
+        <div class="panel panel-grow">
           <div class="panel-header">
             <span class="panel-title">资金流向</span>
             <div class="chart-toolbar">
@@ -2089,10 +2353,10 @@
               <button class="chart-period-btn">60日</button>
             </div>
           </div>
-          <div style="flex:1;min-height:0;padding:var(--space-12);display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12)">
+          <div class="flow-split">
             <!-- 主力/散户/北向流向图 -->
-            <div style="display:flex;flex-direction:column;gap:var(--space-8)">
-              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary)">主力资金流向</div>
+            <div class="flow-col">
+              <div class="subsection-title">主力资金流向</div>
               <div class="flow-item">
                 <span class="flow-label">主力净流入</span>
                 <span class="flow-value inflow">+8.73亿</span>
@@ -2115,8 +2379,8 @@
               </div>
             </div>
             <!-- 资金流入排行 -->
-            <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary)">同行业资金流入排行</div>
+            <div class="flow-col-sm">
+              <div class="subsection-title">同行业资金流入排行</div>
               <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">+8.73亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:87%"></div></div></div>
               <div class="rank-row"><span class="rank-num top3">2</span><span class="rank-name">五粮液</span><span class="rank-value">+5.42亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:54%"></div></div></div>
               <div class="rank-row"><span class="rank-num">3</span><span class="rank-name">泸州老窖</span><span class="rank-value">+3.18亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:32%"></div></div></div>
@@ -2126,23 +2390,23 @@
           </div>
         </div>
         <!-- 筹码分布 -->
-        <div class="panel" style="flex-shrink:0">
+        <div class="panel panel-shrink">
           <div class="panel-header">
             <span class="panel-title">筹码分布</span>
             <span class="panel-subtitle">持仓成本分析</span>
           </div>
-          <div style="padding:var(--space-12);height:100px;display:flex;align-items:flex-end;gap:1px">
+          <div class="chip-bars">
             <!-- Mock chip distribution bars -->
-            <div style="flex:1;background:var(--market-down-fg);opacity:0.2;height:15%;border-radius:2px 2px 0 0"></div>
-            <div style="flex:1;background:var(--market-down-fg);opacity:0.3;height:25%;border-radius:2px 2px 0 0"></div>
-            <div style="flex:1;background:var(--market-down-fg);opacity:0.4;height:35%;border-radius:2px 2px 0 0"></div>
-            <div style="flex:1;background:var(--brand-accent);opacity:0.5;height:55%;border-radius:2px 2px 0 0"></div>
-            <div style="flex:1;background:var(--brand-accent);opacity:0.7;height:80%;border-radius:2px 2px 0 0"></div>
-            <div style="flex:1;background:var(--brand-accent);opacity:0.9;height:100%;border-radius:2px 2px 0 0"></div>
-            <div style="flex:1;background:var(--brand-accent);opacity:0.7;height:70%;border-radius:2px 2px 0 0"></div>
-            <div style="flex:1;background:var(--market-up-fg);opacity:0.5;height:45%;border-radius:2px 2px 0 0"></div>
-            <div style="flex:1;background:var(--market-up-fg);opacity:0.3;height:28%;border-radius:2px 2px 0 0"></div>
-            <div style="flex:1;background:var(--market-up-fg);opacity:0.2;height:12%;border-radius:2px 2px 0 0"></div>
+            <div class="chip-bar" style="height:15%;opacity:0.2;background:var(--market-down-fg)"></div>
+            <div class="chip-bar" style="height:25%;opacity:0.3;background:var(--market-down-fg)"></div>
+            <div class="chip-bar" style="height:35%;opacity:0.4;background:var(--market-down-fg)"></div>
+            <div class="chip-bar" style="height:55%;opacity:0.5;background:var(--brand-accent)"></div>
+            <div class="chip-bar" style="height:80%;opacity:0.7;background:var(--brand-accent)"></div>
+            <div class="chip-bar" style="height:100%;opacity:0.9;background:var(--brand-accent)"></div>
+            <div class="chip-bar" style="height:70%;opacity:0.7;background:var(--brand-accent)"></div>
+            <div class="chip-bar" style="height:45%;opacity:0.5;background:var(--market-up-fg)"></div>
+            <div class="chip-bar" style="height:28%;opacity:0.3;background:var(--market-up-fg)"></div>
+            <div class="chip-bar" style="height:12%;opacity:0.2;background:var(--market-up-fg)"></div>
           </div>
         </div>
       </div>
@@ -2150,9 +2414,9 @@
 
       <!-- ═══ Tab 4: hub-fundamentals (基本面) ═══ -->
       <div class="tab-panel" data-panel="hub-fundamentals">
-      <div class="hub-object-view" style="overflow-y:auto">
+      <div class="hub-object-view panel-scroll">
         <!-- 财务三表摘要 -->
-        <div class="panel" style="flex-shrink:0">
+        <div class="panel panel-shrink">
           <div class="panel-header">
             <span class="panel-title">财务摘要</span>
             <div class="chart-toolbar">
@@ -2161,7 +2425,7 @@
               <button class="chart-period-btn">现金流量表</button>
             </div>
           </div>
-          <div style="padding:0 var(--space-12) var(--space-12)">
+          <div class="pad-panel-x">
             <table class="fin-table">
               <thead><tr><th>指标</th><th>2025A</th><th>2024A</th><th>2023A</th><th>同比</th></tr></thead>
               <tbody>
@@ -2175,37 +2439,37 @@
           </div>
         </div>
         <!-- 关键指标趋势 + 杜邦分析 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12);flex-shrink:0">
+        <div class="revenue-grid">
           <div class="panel">
             <div class="panel-header"><span class="panel-title">关键指标趋势</span></div>
-            <div style="padding:var(--space-12);height:120px;display:flex;align-items:flex-end;gap:var(--space-6)">
-              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);opacity:0.3;height:40%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">20A</span></div>
-              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);opacity:0.45;height:55%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">21A</span></div>
-              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);opacity:0.6;height:65%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">22A</span></div>
-              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);opacity:0.75;height:78%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">23A</span></div>
-              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);opacity:0.88;height:90%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">24A</span></div>
-              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--brand-accent);height:100%;border-radius:2px 2px 0 0"></div><span style="font-size:var(--font-size-10);color:var(--text-primary);font-weight:var(--font-weight-medium)">25A</span></div>
+            <div class="revenue-bars">
+              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:40%;opacity:0.3"></div><span class="revenue-bar-label">20A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:55%;opacity:0.45"></div><span class="revenue-bar-label">21A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:65%;opacity:0.6"></div><span class="revenue-bar-label">22A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:78%;opacity:0.75"></div><span class="revenue-bar-label">23A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:90%;opacity:0.88"></div><span class="revenue-bar-label">24A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:100%"></div><span class="revenue-bar-label active">25A</span></div>
             </div>
           </div>
           <div class="panel">
             <div class="panel-header"><span class="panel-title">杜邦分析</span></div>
-            <div style="padding:var(--space-12);display:flex;flex-direction:column;gap:var(--space-6);font-size:var(--font-size-12)">
-              <div style="display:flex;justify-content:space-between"><span style="color:var(--text-tertiary)">ROE</span><span style="color:var(--text-primary);font-weight:var(--font-weight-medium)">36.1%</span></div>
-              <div style="display:flex;justify-content:space-between"><span style="color:var(--text-tertiary)">= 净利率</span><span style="color:var(--market-up-fg)">55.2%</span></div>
-              <div style="display:flex;justify-content:space-between"><span style="color:var(--text-tertiary)">x 资产周转率</span><span>0.58x</span></div>
-              <div style="display:flex;justify-content:space-between"><span style="color:var(--text-tertiary)">x 权益乘数</span><span>1.13x</span></div>
-              <div style="border-top:1px solid var(--border-subtle);padding-top:var(--space-6);display:flex;justify-content:space-between"><span style="color:var(--text-tertiary)">同行ROE中位数</span><span style="color:var(--text-secondary)">18.5%</span></div>
+            <div class="roe-breakdown">
+              <div class="roe-detail"><span class="text-tertiary">ROE</span><span class="text-primary">36.1%</span></div>
+              <div class="roe-detail"><span class="text-tertiary">= 净利率</span><span class="text-market-up">55.2%</span></div>
+              <div class="roe-detail"><span class="text-tertiary">x 资产周转率</span><span>0.58x</span></div>
+              <div class="roe-detail"><span class="text-tertiary">x 权益乘数</span><span>1.13x</span></div>
+              <div class="roe-total"><span class="text-tertiary">同行ROE中位数</span><span class="text-secondary-c">18.5%</span></div>
             </div>
           </div>
         </div>
         <!-- 同行对比 -->
-        <div class="panel" style="flex-shrink:0">
+        <div class="panel panel-shrink">
           <div class="panel-header"><span class="panel-title">同行对比</span><span class="panel-subtitle">白酒行业</span></div>
-          <div style="padding:0 var(--space-12) var(--space-12)">
+          <div class="pad-panel-x">
             <table class="fin-table">
               <thead><tr><th>公司</th><th>市值</th><th>PE</th><th>ROE</th><th>营收增速</th><th>净利增速</th></tr></thead>
               <tbody>
-                <tr style="background:var(--interaction-selected-bg)"><td>贵州茅台</td><td>2.33万亿</td><td>28.6x</td><td>36.1%</td><td class="up">+16.2%</td><td class="up">+19.8%</td></tr>
+                <tr class="row-selected"><td>贵州茅台</td><td>2.33万亿</td><td>28.6x</td><td>36.1%</td><td class="up">+16.2%</td><td class="up">+19.8%</td></tr>
                 <tr><td>五粮液</td><td>6,820亿</td><td>22.4x</td><td>25.8%</td><td class="up">+12.3%</td><td class="up">+14.5%</td></tr>
                 <tr><td>泸州老窖</td><td>3,460亿</td><td>20.1x</td><td>32.5%</td><td class="up">+18.7%</td><td class="up">+22.1%</td></tr>
                 <tr><td>山西汾酒</td><td>3,120亿</td><td>31.2x</td><td>28.4%</td><td class="up">+21.5%</td><td class="up">+25.3%</td></tr>
@@ -2224,11 +2488,11 @@
 
       <!-- ═══ Tab 5: hub-corporate (公司行动) ═══ -->
       <div class="tab-panel" data-panel="hub-corporate">
-      <div class="hub-object-view" style="overflow-y:auto">
+      <div class="hub-object-view panel-scroll">
         <!-- 近期公司行动时间线 -->
-        <div class="panel" style="flex-shrink:0">
+        <div class="panel panel-shrink">
           <div class="panel-header"><span class="panel-title">公司行动时间线</span><span class="panel-subtitle">近12个月</span></div>
-          <div style="padding:var(--space-12)">
+          <div class="pad-panel">
             <div class="corp-event"><span class="corp-date">2026-03-28</span><div class="corp-body"><span class="corp-title">年度股东大会 <span class="corp-tag dividend">分红</span></span><span class="corp-desc">每10股派发现金红利275.28元，分红率51.9%</span></div></div>
             <div class="corp-event"><span class="corp-date">2026-02-15</span><div class="corp-body"><span class="corp-title">限售股解禁 <span class="corp-tag unlock">解禁</span></span><span class="corp-desc">237万股限售股上市流通，占流通股0.19%</span></div></div>
             <div class="corp-event"><span class="corp-date">2025-12-20</span><div class="corp-body"><span class="corp-title">高管变更 <span class="corp-tag change">变更</span></span><span class="corp-desc">副总经理张华因个人原因辞职，不影响日常经营</span></div></div>
@@ -2236,10 +2500,10 @@
           </div>
         </div>
         <!-- 分红历史 + 限售解禁 + 股东持仓 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12);flex-shrink:0">
+        <div class="revenue-grid">
           <div class="panel">
             <div class="panel-header"><span class="panel-title">分红历史</span></div>
-            <div style="padding:0 var(--space-12) var(--space-12)">
+            <div class="pad-panel-x">
               <table class="fin-table">
                 <thead><tr><th>年度</th><th>每股分红</th><th>分红率</th><th>股息率</th></tr></thead>
                 <tbody>
@@ -2252,7 +2516,7 @@
           </div>
           <div class="panel">
             <div class="panel-header"><span class="panel-title">股东持仓</span><span class="panel-subtitle">前十大股东</span></div>
-            <div style="padding:0 var(--space-12) var(--space-12)">
+            <div class="pad-panel-x">
               <table class="fin-table">
                 <thead><tr><th>股东</th><th>持股比例</th><th>变动</th></tr></thead>
                 <tbody>
@@ -2275,8 +2539,8 @@
 
       <!-- ═══ Tab 6: hub-news (新闻) ═══ -->
       <div class="tab-panel" data-panel="hub-news">
-      <div class="hub-object-view" style="overflow-y:auto">
-        <div class="panel" style="flex:1">
+      <div class="hub-object-view panel-scroll">
+        <div class="panel panel-grow">
           <div class="panel-header">
             <span class="panel-title">相关新闻</span>
             <div class="chart-toolbar">
@@ -2286,33 +2550,33 @@
               <button class="chart-period-btn">公告</button>
             </div>
           </div>
-          <div style="padding:var(--space-8) var(--space-12)">
+          <div class="pad-panel-sm">
             <div class="news-item" tabindex="0">
-              <label for="overlay-news-detail" style="cursor:pointer;display:flex;flex-direction:column;gap:var(--space-4);width:100%">
+              <label for="overlay-news-detail" class="news-list-item">
                 <span class="news-title">贵州茅台2025年年报：净利润862亿超预期，直销渠道占比提升至45%</span>
                 <span class="news-source"><span>财联社</span><span>2小时前</span><span class="news-ai-badge">AI 摘要</span></span>
               </label>
             </div>
             <div class="news-item" tabindex="0">
-              <label for="overlay-news-detail" style="cursor:pointer;display:flex;flex-direction:column;gap:var(--space-4);width:100%">
+              <label for="overlay-news-detail" class="news-list-item">
                 <span class="news-title">白酒板块集体走强，北向资金净买入超15亿</span>
                 <span class="news-source"><span>东方财富</span><span>4小时前</span></span>
               </label>
             </div>
             <div class="news-item" tabindex="0">
-              <label for="overlay-news-detail" style="cursor:pointer;display:flex;flex-direction:column;gap:var(--space-4);width:100%">
+              <label for="overlay-news-detail" class="news-list-item">
                 <span class="news-title">茅台集团2026年营收目标锁定1800亿，系列酒占比将提升至15%</span>
                 <span class="news-source"><span>证券时报</span><span>昨日</span></span>
               </label>
             </div>
             <div class="news-item" tabindex="0">
-              <label for="overlay-news-detail" style="cursor:pointer;display:flex;flex-direction:column;gap:var(--space-4);width:100%">
+              <label for="overlay-news-detail" class="news-list-item">
                 <span class="news-title">招商证券：上调贵州茅台目标价至2,200元，维持"强烈推荐"</span>
                 <span class="news-source"><span>招商证券</span><span>昨日</span><span class="news-ai-badge">AI 摘要</span></span>
               </label>
             </div>
             <div class="news-item" tabindex="0">
-              <label for="overlay-news-detail" style="cursor:pointer;display:flex;flex-direction:column;gap:var(--space-4);width:100%">
+              <label for="overlay-news-detail" class="news-list-item">
                 <span class="news-title">飞天茅台批价站稳2,700元，经销商信心持续回暖</span>
                 <span class="news-source"><span>21世纪经济报道</span><span>2天前</span></span>
               </label>
@@ -2329,25 +2593,25 @@
       </div><!-- /tab-panel hub-news -->
       <div class="tab-panel" data-panel="hub-network">
       <div class="hub-object-view">
-        <div class="panel" style="flex:1;min-height:0">
+        <div class="panel panel-grow">
           <div class="panel-header">
             <span class="panel-title">关联网络</span>
             <span class="panel-subtitle">力导向关系图</span>
           </div>
-          <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:var(--space-16)">
+          <div class="panel-grow center-content">
             <!-- Mock force-directed graph with CSS -->
-            <div style="position:relative;width:320px;height:240px">
+            <div class="network-container" style="width:320px;height:240px">
               <!-- Central node: 贵州茅台 -->
-              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;background:var(--brand-accent-subtle);border:2px solid var(--brand-accent);display:flex;align-items:center;justify-content:center;font-size:var(--font-size-10);font-weight:var(--font-weight-semibold);color:var(--brand-accent);z-index:2">茅台</div>
+              <div class="network-center">茅台</div>
               <!-- Connection lines (simplified with borders) -->
-              <div style="position:absolute;top:30%;left:15%;width:8px;height:8px;border-radius:50%;background:var(--market-up-fg);opacity:0.6"></div>
-              <div style="position:absolute;top:18%;left:60%;width:10px;height:10px;border-radius:50%;background:var(--text-tertiary);opacity:0.5"></div>
-              <div style="position:absolute;top:70%;left:20%;width:6px;height:6px;border-radius:50%;background:var(--market-up-fg);opacity:0.5"></div>
-              <div style="position:absolute;top:75%;left:65%;width:10px;height:10px;border-radius:50%;background:var(--text-tertiary);opacity:0.6"></div>
-              <div style="position:absolute;top:45%;left:85%;width:8px;height:8px;border-radius:50%;background:var(--brand-accent);opacity:0.4"></div>
-              <div style="position:absolute;top:85%;left:45%;width:6px;height:6px;border-radius:50%;background:var(--market-down-fg);opacity:0.4"></div>
+              <div class="network-node" style="top:30%;left:15%;width:8px;height:8px;background:var(--market-up-fg);opacity:0.6"></div>
+              <div class="network-node" style="top:18%;left:60%;width:10px;height:10px;background:var(--text-tertiary);opacity:0.5"></div>
+              <div class="network-node" style="top:70%;left:20%;width:6px;height:6px;background:var(--market-up-fg);opacity:0.5"></div>
+              <div class="network-node" style="top:75%;left:65%;width:10px;height:10px;background:var(--text-tertiary);opacity:0.6"></div>
+              <div class="network-node" style="top:45%;left:85%;width:8px;height:8px;background:var(--brand-accent);opacity:0.4"></div>
+              <div class="network-node" style="top:85%;left:45%;width:6px;height:6px;background:var(--market-down-fg);opacity:0.4"></div>
               <!-- SVG lines -->
-              <svg style="position:absolute;inset:0;width:100%;height:100%;z-index:1" viewBox="0 0 320 240">
+              <svg class="pos-absolute-fill" viewBox="0 0 320 240">
                 <line x1="160" y1="120" x2="48" y2="72" stroke="var(--border-default)" stroke-width="1" opacity="0.4"/>
                 <line x1="160" y1="120" x2="192" y2="43" stroke="var(--border-default)" stroke-width="1" opacity="0.3"/>
                 <line x1="160" y1="120" x2="64" y2="168" stroke="var(--border-default)" stroke-width="1" opacity="0.3"/>
@@ -2356,23 +2620,23 @@
                 <line x1="160" y1="120" x2="144" y2="204" stroke="var(--border-default)" stroke-width="1" opacity="0.2"/>
               </svg>
               <!-- Labels -->
-              <span style="position:absolute;top:26%;left:2%;font-size:var(--font-size-10);color:var(--text-secondary)">五粮液</span>
-              <span style="position:absolute;top:12%;left:55%;font-size:var(--font-size-10);color:var(--text-secondary)">泸州老窖</span>
-              <span style="position:absolute;top:66%;left:7%;font-size:var(--font-size-10);color:var(--text-tertiary)">洋河</span>
-              <span style="position:absolute;top:71%;left:60%;font-size:var(--font-size-10);color:var(--text-secondary)">沪深300</span>
-              <span style="position:absolute;top:42%;left:82%;font-size:var(--font-size-10);color:var(--brand-accent)">白酒ETF</span>
-              <span style="position:absolute;top:82%;left:40%;font-size:var(--font-size-10);color:var(--text-tertiary)">中证白酒</span>
+              <span class="network-label" style="top:26%;left:2%">五粮液</span>
+              <span class="network-label" style="top:12%;left:55%">泸州老窖</span>
+              <span class="network-label" style="top:66%;left:7%;color:var(--text-tertiary)">洋河</span>
+              <span class="network-label" style="top:71%;left:60%">沪深300</span>
+              <span class="network-label" style="top:42%;left:82%;color:var(--brand-accent)">白酒ETF</span>
+              <span class="network-label" style="top:82%;left:40%;color:var(--text-tertiary)">中证白酒</span>
             </div>
           </div>
         </div>
         <!-- 关联强度 -->
-        <div class="panel" style="flex-shrink:0">
+        <div class="panel panel-shrink">
           <div class="panel-header"><span class="panel-title">关联强度</span></div>
-          <div style="padding:var(--space-8) var(--space-12);display:flex;flex-direction:column;gap:var(--space-4)">
-            <div style="display:flex;align-items:center;gap:var(--space-8)"><span style="font-size:var(--font-size-12);color:var(--text-primary);width:80px">五粮液</span><div style="flex:1;height:4px;background:var(--border-subtle);border-radius:2px;overflow:hidden"><div style="width:82%;height:100%;background:var(--brand-accent);border-radius:2px"></div></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">0.82</span></div>
-            <div style="display:flex;align-items:center;gap:var(--space-8)"><span style="font-size:var(--font-size-12);color:var(--text-primary);width:80px">沪深300</span><div style="flex:1;height:4px;background:var(--border-subtle);border-radius:2px;overflow:hidden"><div style="width:65%;height:100%;background:var(--brand-accent);opacity:0.7;border-radius:2px"></div></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">0.65</span></div>
-            <div style="display:flex;align-items:center;gap:var(--space-8)"><span style="font-size:var(--font-size-12);color:var(--text-primary);width:80px">泸州老窖</span><div style="flex:1;height:4px;background:var(--border-subtle);border-radius:2px;overflow:hidden"><div style="width:58%;height:100%;background:var(--brand-accent);opacity:0.6;border-radius:2px"></div></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">0.58</span></div>
-            <div style="display:flex;align-items:center;gap:var(--space-8)"><span style="font-size:var(--font-size-12);color:var(--text-primary);width:80px">白酒ETF</span><div style="flex:1;height:4px;background:var(--border-subtle);border-radius:2px;overflow:hidden"><div style="width:71%;height:100%;background:var(--brand-accent);opacity:0.8;border-radius:2px"></div></div><span style="font-size:var(--font-size-10);color:var(--text-tertiary)">0.71</span></div>
+          <div class="panel-section-body">
+            <div class="corr-row"><span class="corr-name">五粮液</span><div class="corr-track"><div style="width:82%;height:100%;background:var(--brand-accent);border-radius:2px"></div></div><span class="corr-value">0.82</span></div>
+            <div class="corr-row"><span class="corr-name">沪深300</span><div class="corr-track"><div style="width:65%;height:100%;background:var(--brand-accent);opacity:0.7;border-radius:2px"></div></div><span class="corr-value">0.65</span></div>
+            <div class="corr-row"><span class="corr-name">泸州老窖</span><div class="corr-track"><div style="width:58%;height:100%;background:var(--brand-accent);opacity:0.6;border-radius:2px"></div></div><span class="corr-value">0.58</span></div>
+            <div class="corr-row"><span class="corr-name">白酒ETF</span><div class="corr-track"><div style="width:71%;height:100%;background:var(--brand-accent);opacity:0.8;border-radius:2px"></div></div><span class="corr-value">0.71</span></div>
           </div>
         </div>
       </div>
@@ -2386,8 +2650,8 @@
 
       <!-- ═══ Tab 8: hub-announcements (公告) ═══ -->
       <div class="tab-panel" data-panel="hub-announcements">
-      <div class="hub-object-view" style="overflow-y:auto">
-        <div class="panel" style="flex:1">
+      <div class="hub-object-view panel-scroll">
+        <div class="panel panel-grow">
           <div class="panel-header">
             <span class="panel-title">公司公告</span>
             <div class="chart-toolbar">
@@ -2398,33 +2662,33 @@
               <button class="chart-period-btn">股东</button>
             </div>
           </div>
-          <div style="padding:var(--space-8) var(--space-12)">
+          <div class="pad-panel-sm">
             <div class="announce-item" tabindex="0">
-              <label for="overlay-announcement-detail" style="cursor:pointer;display:flex;align-items:flex-start;gap:var(--space-10);width:100%">
+              <label for="overlay-announcement-detail" class="announce-list-item">
                 <span class="announce-tag annual">年报</span>
                 <div class="announce-body"><span class="announce-title">2025年年度报告</span><span class="announce-date">2026-03-25</span></div>
               </label>
             </div>
             <div class="announce-item" tabindex="0">
-              <label for="overlay-announcement-detail" style="cursor:pointer;display:flex;align-items:flex-start;gap:var(--space-10);width:100%">
+              <label for="overlay-announcement-detail" class="announce-list-item">
                 <span class="announce-tag dividend">分红</span>
                 <div class="announce-body"><span class="announce-title">2025年度利润分配方案公告</span><span class="announce-date">2026-03-25</span></div>
               </label>
             </div>
             <div class="announce-item" tabindex="0">
-              <label for="overlay-announcement-detail" style="cursor:pointer;display:flex;align-items:flex-start;gap:var(--space-10);width:100%">
+              <label for="overlay-announcement-detail" class="announce-list-item">
                 <span class="announce-tag board">董事会</span>
                 <div class="announce-body"><span class="announce-title">第二届董事会第四十二次会议决议公告</span><span class="announce-date">2026-03-20</span></div>
               </label>
             </div>
             <div class="announce-item" tabindex="0">
-              <label for="overlay-announcement-detail" style="cursor:pointer;display:flex;align-items:flex-start;gap:var(--space-10);width:100%">
+              <label for="overlay-announcement-detail" class="announce-list-item">
                 <span class="announce-tag shareholder">股东</span>
                 <div class="announce-body"><span class="announce-title">关于召开2025年年度股东大会的通知</span><span class="announce-date">2026-03-15</span></div>
               </label>
             </div>
             <div class="announce-item" tabindex="0">
-              <label for="overlay-announcement-detail" style="cursor:pointer;display:flex;align-items:flex-start;gap:var(--space-10);width:100%">
+              <label for="overlay-announcement-detail" class="announce-list-item">
                 <span class="announce-tag board">董事会</span>
                 <div class="announce-body"><span class="announce-title">投资者关系活动记录表（2026年3月）</span><span class="announce-date">2026-03-10</span></div>
               </label>
@@ -2445,7 +2709,7 @@
       <!-- ── Right: Related / Signals / Notes (shared across all tabs) ── -->
       <aside class="hub-sidebar" aria-label="标的辅助信息">
         <!-- Signals -->
-        <section class="context-section" style="position:relative" aria-label="相关信号">
+        <section class="context-section pos-relative" aria-label="相关信号">
           <div class="context-header">
             <span class="context-title">相关信号</span>
             <span class="context-count">3</span>
@@ -2677,13 +2941,13 @@
       <div class="toolbar-btn" title="标注" tabindex="0">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v10M10 16v1"/><circle cx="10" cy="3" r="1" fill="currentColor"/></svg>
       </div>
-      <div style="height:1px;background:var(--border-subtle);margin:var(--space-2) 0"></div>
-      <div style="display:flex;gap:var(--space-2);padding:var(--space-2)">
-        <div style="width:14px;height:14px;border-radius:50%;background:var(--brand-accent);cursor:pointer"></div>
-        <div style="width:14px;height:14px;border-radius:50%;background:var(--market-up-fg);cursor:pointer"></div>
-        <div style="width:14px;height:14px;border-radius:50%;background:var(--market-down-fg);cursor:pointer"></div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-colors">
+        <div class="toolbar-color-pick" style="background:var(--brand-accent)"></div>
+        <div class="toolbar-color-pick" style="background:var(--market-up-fg)"></div>
+        <div class="toolbar-color-pick" style="background:var(--market-down-fg)"></div>
       </div>
-      <div style="height:1px;background:var(--border-subtle);margin:var(--space-2) 0"></div>
+      <div class="toolbar-sep"></div>
       <div class="toolbar-btn" title="清除全部" tabindex="0">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l12 12M16 4L4 16"/></svg>
       </div>
@@ -2707,15 +2971,15 @@
             <span class="overlay-field-label">时间</span>
             <span class="overlay-field-value">2026-04-02 10:32</span>
           </div>
-          <div style="margin-top:var(--space-10)">
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0">贵州茅台(600519.SH)发布2025年年度报告，全年实现营业总收入1,562亿元，同比增长16.2%；归属于母公司所有者的净利润862亿元，同比增长19.8%，超出市场预期。其中直销渠道收入占比提升至45%，i茅台平台贡献显著增量。公司拟每10股派发现金红利275.28元，分红率51.9%。</p>
+          <div class="overlay-section">
+            <p class="overlay-body-text">贵州茅台(600519.SH)发布2025年年度报告，全年实现营业总收入1,562亿元，同比增长16.2%；归属于母公司所有者的净利润862亿元，同比增长19.8%，超出市场预期。其中直销渠道收入占比提升至45%，i茅台平台贡献显著增量。公司拟每10股派发现金红利275.28元，分红率51.9%。</p>
           </div>
           <h4>AI 摘要</h4>
-          <div style="background:var(--brand-accent-subtle);border:1px solid color-mix(in oklch, var(--brand-accent) 20%, transparent);border-radius:var(--radius-4);padding:var(--space-8)">
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0">年报整体超预期：净利润+19.8%超市场一致预期2.3pp，直销占比持续提升是核心亮点。分红率维持50%+，股息率1.48%具备防御价值。关注点：系列酒增速放缓及渠道库存变化。</p>
+          <div class="overlay-ai-callout">
+            <p class="overlay-body-text tight">年报整体超预期：净利润+19.8%超市场一致预期2.3pp，直销占比持续提升是核心亮点。分红率维持50%+，股息率1.48%具备防御价值。关注点：系列酒增速放缓及渠道库存变化。</p>
           </div>
           <h4>关联标的</h4>
-          <div style="display:flex;gap:var(--space-6);flex-wrap:wrap">
+          <div class="overlay-tag-list">
             <span class="meta-tag">五粮液</span>
             <span class="meta-tag">泸州老窖</span>
             <span class="meta-tag brand">白酒ETF</span>
@@ -2740,10 +3004,10 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">公告类型</span>
-            <span class="overlay-field-value"><span class="announce-tag annual" style="display:inline">年报</span></span>
+            <span class="overlay-field-value"><span class="announce-tag annual display-inline">年报</span></span>
           </div>
-          <div style="margin-top:var(--space-10)">
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0">报告期内，公司实现营业总收入1,562.34亿元，同比增长16.23%；实现归属于母公司所有者的净利润862.28亿元，同比增长19.82%。截至2025年末，公司总资产2,856.12亿元，归属于母公司股东的权益2,387.54亿元。公司拟向全体股东每10股派发现金红利275.28元（含税）。</p>
+          <div class="overlay-section">
+            <p class="overlay-body-text">报告期内，公司实现营业总收入1,562.34亿元，同比增长16.23%；实现归属于母公司所有者的净利润862.28亿元，同比增长19.82%。截至2025年末，公司总资产2,856.12亿元，归属于母公司股东的权益2,387.54亿元。公司拟向全体股东每10股派发现金红利275.28元（含税）。</p>
           </div>
           <div class="overlay-actions">
             <button class="overlay-btn overlay-btn-secondary">下载 PDF</button>
@@ -2763,28 +3027,28 @@
         </div>
         <div class="overlay-body">
           <h4>已有列表</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-4)">
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 核心池 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">12只</span>
+          <div class="skel-col">
+            <label class="form-check-label">
+              <input type="checkbox" class="form-input"> 核心池 <span class="form-check-count">12只</span>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 观察池 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">28只</span>
+            <label class="form-check-label">
+              <input type="checkbox" checked class="form-input"> 观察池 <span class="form-check-count">28只</span>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 消费龙头 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">8只</span>
+            <label class="form-check-label">
+              <input type="checkbox" class="form-input"> 消费龙头 <span class="form-check-count">8只</span>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 白酒专题 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">5只</span>
+            <label class="form-check-label">
+              <input type="checkbox" class="form-input"> 白酒专题 <span class="form-check-count">5只</span>
             </label>
           </div>
           <h4>新建列表</h4>
-          <div style="display:flex;gap:var(--space-6)">
-            <input type="text" placeholder="输入列表名称..." style="flex:1;background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-primary);font-family:var(--font-family-ui)">
-            <button class="btn" style="flex-shrink:0">新建</button>
+          <div class="form-row">
+            <input type="text" placeholder="输入列表名称..." class="form-text-input">
+            <button class="btn panel-shrink">新建</button>
           </div>
           <div class="overlay-actions">
-            <label for="overlay-add-watchlist" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-add-watchlist" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认加入</label>
+            <label for="overlay-add-watchlist" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
+            <label for="overlay-add-watchlist" class="overlay-btn overlay-btn-primary cursor-pointer">确认加入</label>
           </div>
         </div>
       </div>
@@ -2800,25 +3064,25 @@
         </div>
         <div class="overlay-body">
           <h4>选择目标</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-4)">
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
-              <input type="radio" name="research-target" checked style="accent-color:var(--brand-accent)">
-              <div><div style="font-weight:var(--font-weight-medium)">回测验证</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">将该标的加入回测策略</div></div>
+          <div class="skel-col">
+            <label class="radio-card">
+              <input type="radio" name="research-target" checked class="form-input">
+              <div><div class="radio-card-title">回测验证</div><div class="radio-card-desc">将该标的加入回测策略</div></div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
-              <input type="radio" name="research-target" style="accent-color:var(--brand-accent)">
-              <div><div style="font-weight:var(--font-weight-medium)">策略跟踪</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">纳入现有策略持续跟踪</div></div>
+            <label class="radio-card">
+              <input type="radio" name="research-target" class="form-input">
+              <div><div class="radio-card-title">策略跟踪</div><div class="radio-card-desc">纳入现有策略持续跟踪</div></div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
-              <input type="radio" name="research-target" style="accent-color:var(--brand-accent)">
-              <div><div style="font-weight:var(--font-weight-medium)">AI 实验</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">加入 AI 研究实验队列</div></div>
+            <label class="radio-card">
+              <input type="radio" name="research-target" class="form-input">
+              <div><div class="radio-card-title">AI 实验</div><div class="radio-card-desc">加入 AI 研究实验队列</div></div>
             </label>
           </div>
           <h4>附注</h4>
-          <textarea placeholder="添加备注..." style="width:100%;background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8);font-size:var(--font-size-12);color:var(--text-primary);font-family:var(--font-family-ui);min-height:60px;resize:vertical"></textarea>
+          <textarea placeholder="添加备注..." class="form-textarea"></textarea>
           <div class="overlay-actions">
-            <label for="overlay-send-research" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-send-research" class="overlay-btn overlay-btn-primary" style="cursor:pointer">发送</label>
+            <label for="overlay-send-research" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
+            <label for="overlay-send-research" class="overlay-btn overlay-btn-primary cursor-pointer">发送</label>
           </div>
         </div>
       </div>
@@ -2840,7 +3104,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">停牌原因</span>
-            <span class="overlay-field-value" style="color:var(--system-degraded-fg)">重大事项公告</span>
+            <span class="overlay-field-value" class="status-degraded">重大事项公告</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">停牌日期</span>
@@ -2864,7 +3128,7 @@
             <span class="overlay-field-value">年报披露（半天）</span>
           </div>
           <div class="overlay-actions">
-            <label for="overlay-halt-detail" class="overlay-btn overlay-btn-primary" style="cursor:pointer">关闭</label>
+            <label for="overlay-halt-detail" class="overlay-btn overlay-btn-primary cursor-pointer">关闭</label>
           </div>
         </div>
       </div>
@@ -2876,13 +3140,13 @@
   <div class="status-bar" role="status" aria-label="系统状态">
     <span class="status-indicator"></span>
     <span>行情延迟</span>
-    <span style="color:var(--system-healthy-fg)">&lt;3s</span>
+    <span class="status-healthy">&lt;3s</span>
     <span class="status-sep">|</span>
     <span>数据源</span>
-    <span style="color:var(--text-secondary)">Wind · 东方财富</span>
+    <span class="status-muted">Wind · 东方财富</span>
     <span class="status-sep">|</span>
     <span>上次刷新</span>
-    <span style="color:var(--text-secondary)">15:00:02</span>
+    <span class="status-muted">15:00:02</span>
     <span class="status-spacer"></span>
     <span class="status-kbd">?</span>
     <span>快捷键</span>
@@ -3073,7 +3337,7 @@
       <div class="gallery-card__label">Meta Strip · Loading</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-        <div class="state-loading" style="flex-direction:row;gap:var(--space-12)">
+        <div class="state-loading skel-row">
           <div class="skeleton skeleton-text" style="width:60px"></div>
           <div class="skeleton skeleton-text" style="width:80px"></div>
           <div class="skeleton skeleton-text" style="width:70px"></div>
@@ -3087,8 +3351,8 @@
       <div class="gallery-card__label">Meta Strip · Error</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
-        <div class="state-error" style="flex-direction:row;gap:var(--space-8)">
-          <div class="state-error-icon" style="width:24px;height:24px;font-size:12px">!</div>
+        <div class="state-error skel-row-sm">
+          <div class="state-error-icon skel-error-icon">!</div>
           <div class="state-error-title">元数据加载失败</div>
         </div>
       </div>
@@ -3098,12 +3362,12 @@
       <div class="gallery-card__label">指标卡片 · Loading</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-            <div class="state-loading" style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-12)">
-              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
-              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
-              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
-              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
-              <div style="display:flex;flex-direction:column;gap:var(--space-4)"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+            <div class="state-loading" class="skel-grid-5">
+              <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
             </div>
           </div>
       </div>
@@ -3534,15 +3798,15 @@
               <span class="overlay-field-label">时间</span>
               <span class="overlay-field-value">2026-04-02 10:32</span>
             </div>
-            <div style="margin-top:var(--space-10)">
-              <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0">贵州茅台(600519.SH)发布2025年年度报告，全年实现营业总收入1,562亿元，同比增长16.2%；归属于母公司所有者的净利润862亿元，同比增长19.8%，超出市场预期。其中直销渠道收入占比提升至45%，i茅台平台贡献显著增量。公司拟每10股派发现金红利275.28元，分红率51.9%。</p>
+            <div class="overlay-section">
+              <p class="overlay-body-text">贵州茅台(600519.SH)发布2025年年度报告，全年实现营业总收入1,562亿元，同比增长16.2%；归属于母公司所有者的净利润862亿元，同比增长19.8%，超出市场预期。其中直销渠道收入占比提升至45%，i茅台平台贡献显著增量。公司拟每10股派发现金红利275.28元，分红率51.9%。</p>
             </div>
             <h4>AI 摘要</h4>
-            <div style="background:var(--brand-accent-subtle);border:1px solid color-mix(in oklch, var(--brand-accent) 20%, transparent);border-radius:var(--radius-4);padding:var(--space-8)">
-              <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0">年报整体超预期：净利润+19.8%超市场一致预期2.3pp，直销占比持续提升是核心亮点。分红率维持50%+，股息率1.48%具备防御价值。关注点：系列酒增速放缓及渠道库存变化。</p>
+            <div class="overlay-ai-callout">
+              <p class="overlay-body-text tight">年报整体超预期：净利润+19.8%超市场一致预期2.3pp，直销占比持续提升是核心亮点。分红率维持50%+，股息率1.48%具备防御价值。关注点：系列酒增速放缓及渠道库存变化。</p>
             </div>
             <h4>关联标的</h4>
-            <div style="display:flex;gap:var(--space-6);flex-wrap:wrap">
+            <div class="overlay-tag-list">
               <span class="meta-tag">五粮液</span>
               <span class="meta-tag">泸州老窖</span>
               <span class="meta-tag brand">白酒ETF</span>
@@ -3567,10 +3831,10 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">公告类型</span>
-              <span class="overlay-field-value"><span class="announce-tag annual" style="display:inline">年报</span></span>
+              <span class="overlay-field-value"><span class="announce-tag annual display-inline">年报</span></span>
             </div>
-            <div style="margin-top:var(--space-10)">
-              <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0">报告期内，公司实现营业总收入1,562.34亿元，同比增长16.23%；实现归属于母公司所有者的净利润862.28亿元，同比增长19.82%。截至2025年末，公司总资产2,856.12亿元，归属于母公司股东的权益2,387.54亿元。公司拟向全体股东每10股派发现金红利275.28元（含税）。</p>
+            <div class="overlay-section">
+              <p class="overlay-body-text">报告期内，公司实现营业总收入1,562.34亿元，同比增长16.23%；实现归属于母公司所有者的净利润862.28亿元，同比增长19.82%。截至2025年末，公司总资产2,856.12亿元，归属于母公司股东的权益2,387.54亿元。公司拟向全体股东每10股派发现金红利275.28元（含税）。</p>
             </div>
             <div class="overlay-actions">
               <button class="overlay-btn overlay-btn-secondary">下载 PDF</button>
@@ -3590,24 +3854,24 @@
           </div>
           <div class="overlay-body">
             <h4>已有列表</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-4)">
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 核心池 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">12只</span>
+            <div class="skel-col">
+              <label class="form-check-label">
+                <input type="checkbox" class="form-input"> 核心池 <span class="form-check-count">12只</span>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 观察池 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">28只</span>
+              <label class="form-check-label">
+                <input type="checkbox" checked class="form-input"> 观察池 <span class="form-check-count">28只</span>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 消费龙头 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">8只</span>
+              <label class="form-check-label">
+                <input type="checkbox" class="form-input"> 消费龙头 <span class="form-check-count">8只</span>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 白酒专题 <span style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-left:auto">5只</span>
+              <label class="form-check-label">
+                <input type="checkbox" class="form-input"> 白酒专题 <span class="form-check-count">5只</span>
               </label>
             </div>
             <h4>新建列表</h4>
-            <div style="display:flex;gap:var(--space-6)">
-              <input type="text" placeholder="输入列表名称..." style="flex:1;background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);color:var(--text-primary);font-family:var(--font-family-ui)">
-              <button class="btn" style="flex-shrink:0">新建</button>
+            <div class="form-row">
+              <input type="text" placeholder="输入列表名称..." class="form-text-input">
+              <button class="btn panel-shrink">新建</button>
             </div>
             <div class="overlay-actions">
               <button class="overlay-btn overlay-btn-secondary">取消</button>
@@ -3627,22 +3891,22 @@
           </div>
           <div class="overlay-body">
             <h4>选择目标</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-4)">
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
-                <input type="radio" name="research-target" checked style="accent-color:var(--brand-accent)">
-                <div><div style="font-weight:var(--font-weight-medium)">回测验证</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">将该标的加入回测策略</div></div>
+            <div class="skel-col">
+              <label class="radio-card">
+                <input type="radio" name="research-target" checked class="form-input">
+                <div><div class="radio-card-title">回测验证</div><div class="radio-card-desc">将该标的加入回测策略</div></div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
-                <input type="radio" name="research-target" style="accent-color:var(--brand-accent)">
-                <div><div style="font-weight:var(--font-weight-medium)">策略跟踪</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">纳入现有策略持续跟踪</div></div>
+              <label class="radio-card">
+                <input type="radio" name="research-target" class="form-input">
+                <div><div class="radio-card-title">策略跟踪</div><div class="radio-card-desc">纳入现有策略持续跟踪</div></div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12);transition:border-color 0.15s">
-                <input type="radio" name="research-target" style="accent-color:var(--brand-accent)">
-                <div><div style="font-weight:var(--font-weight-medium)">AI 实验</div><div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:2px">加入 AI 研究实验队列</div></div>
+              <label class="radio-card">
+                <input type="radio" name="research-target" class="form-input">
+                <div><div class="radio-card-title">AI 实验</div><div class="radio-card-desc">加入 AI 研究实验队列</div></div>
               </label>
             </div>
             <h4>附注</h4>
-            <textarea placeholder="添加备注..." style="width:100%;background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-4);padding:var(--space-8);font-size:var(--font-size-12);color:var(--text-primary);font-family:var(--font-family-ui);min-height:60px;resize:vertical"></textarea>
+            <textarea placeholder="添加备注..." class="form-textarea"></textarea>
             <div class="overlay-actions">
               <button class="overlay-btn overlay-btn-secondary">取消</button>
               <button class="overlay-btn overlay-btn-primary">发送</button>
@@ -3667,7 +3931,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">停牌原因</span>
-              <span class="overlay-field-value" style="color:var(--system-degraded-fg)">重大事项公告</span>
+              <span class="overlay-field-value" class="status-degraded">重大事项公告</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">停牌日期</span>

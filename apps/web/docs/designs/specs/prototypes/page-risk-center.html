@@ -843,9 +843,413 @@
     .shell-analytical .risk-tab-bar { grid-area: tabs; }
     .shell-analytical .tab-panels { grid-area: panels; min-height: 0; overflow: hidden; }
 
+    /* ══════════════════════════════════════════════
+     * Noise texture + ambient light
+     * ══════════════════════════════════════════════ */
+    .shell-analytical::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+    /* Top-edge ambient light */
+    .shell-analytical::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+    .shell-analytical > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Utility classes — extracted from inline styles
+     * ══════════════════════════════════════════════ */
+    .text-tertiary { color: var(--text-tertiary); }
+    .text-secondary { color: var(--text-secondary); }
+    .text-primary { color: var(--text-primary); }
+    .text-size-10 { font-size: var(--font-size-10); }
+    .text-size-12 { font-size: var(--font-size-12); }
+    .text-size-14 { font-size: var(--font-size-14); }
+    .text-weight-medium { font-weight: var(--font-weight-medium); }
+    .text-weight-semibold { font-weight: var(--font-weight-semibold); }
+    .text-market-down { color: var(--market-down-fg); }
+    .text-risk-critical { color: var(--risk-critical-fg); }
+    .text-risk-warn { color: var(--risk-near-limit-fg); }
+    .text-risk-ok { color: var(--risk-low-fg); }
+    .flex-1 { flex: 1; }
+    .flex-center { display: flex; align-items: center; }
+    .flex-between { display: flex; align-items: center; justify-content: space-between; }
+    .flex-col-gap { display: flex; flex-direction: column; gap: var(--space-6); }
+    .gap-8 { gap: var(--space-8); }
+    .gap-12 { gap: var(--space-12); }
+    .pad-gutter { padding: var(--space-12) var(--density-gutter); }
+    .border-b { border-bottom: 1px solid var(--border-subtle); }
+    .border-t { border-top: 1px solid var(--border-subtle); }
+    .margin-left-4 { margin-left: var(--space-4); }
+    .margin-left-8 { margin-left: var(--space-8); }
+    .margin-top-2 { margin-top: var(--space-2); }
+    .margin-top-4 { margin-top: var(--space-4); }
+    .margin-bottom-8 { margin-bottom: var(--space-8); }
+    .w-full { width: 100%; }
+    .cursor-pointer { cursor: pointer; }
+
+    /* Panel action active state */
+    .panel-action.active {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Panel subtitle offset */
+    .panel-subtitle-offset { margin-left: var(--space-4); }
+
+    /* Stress meta with critical color */
+    .stress-meta.critical { margin-top: var(--space-2); color: var(--risk-critical-fg); }
+    .stress-meta.indented { margin-top: var(--space-2); }
+
+    /* Overlay label interactive */
+    .overlay-label-interactive {
+      cursor: pointer;
+    }
+
+    /* Tab panel section header */
+    .tab-section-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      padding: var(--space-12) var(--density-gutter);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .tab-section-header .section-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .tab-section-header .section-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    /* Tab panel content pad */
+    .tab-section-content {
+      padding: var(--space-12) var(--density-gutter);
+    }
+
+    /* Incident action row */
+    .incident-actions {
+      margin-top: var(--space-4);
+      display: flex;
+      gap: var(--space-6);
+    }
+
+    /* Overlay radio option */
+    .overlay-radio-option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) 0;
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+    }
+    .overlay-radio-option input[type="radio"] {
+      accent-color: var(--brand-accent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Risk Gauge — SVG donut gauge for risk metrics
+     * ══════════════════════════════════════════════ */
+    .risk-gauge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+    }
+    .risk-gauge svg {
+      transform: rotate(-90deg);
+    }
+    .risk-gauge-track {
+      fill: none;
+      stroke: var(--border-subtle);
+    }
+    .risk-gauge-fill {
+      fill: none;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.6s var(--motion-easing-emphasis);
+    }
+    .risk-gauge-fill.ok { stroke: var(--risk-low-fg); }
+    .risk-gauge-fill.warn { stroke: var(--risk-near-limit-fg); }
+    .risk-gauge-fill.critical { stroke: var(--risk-breach-fg); }
+    .risk-gauge-label {
+      position: absolute;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    /* ══════════════════════════════════════════════
+     * SVG Sparklines — for KPI / metric cards
+     * ══════════════════════════════════════════════ */
+    .metric-sparkline {
+      position: absolute;
+      top: var(--space-6);
+      right: var(--space-8);
+      width: var(--sparkline-width, 48px);
+      height: var(--sparkline-height, 20px);
+      opacity: 0.45;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .sparkline-path {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .sparkline-area {
+      opacity: 0.08;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Risk Heat Map — asset class exposure matrix
+     * ══════════════════════════════════════════════ */
+    .risk-heatmap {
+      display: grid;
+      grid-template-columns: auto repeat(4, 1fr);
+      gap: 2px;
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+    }
+    .heatmap-header {
+      text-align: center;
+      color: var(--text-tertiary);
+      padding: var(--space-2);
+      font-weight: var(--font-weight-medium);
+    }
+    .heatmap-row-label {
+      color: var(--text-tertiary);
+      padding: var(--space-2) var(--space-6) var(--space-2) 0;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .heatmap-cell {
+      border-radius: var(--radius-2);
+      padding: var(--space-4) var(--space-2);
+      text-align: center;
+      color: var(--text-primary);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .heatmap-cell:hover {
+      transform: scale(1.08);
+      z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Stress Test Bar Chart — scenario impact visual
+     * ══════════════════════════════════════════════ */
+    .stress-bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-6);
+      height: 120px;
+      padding: var(--space-8) 0;
+    }
+    .stress-bar-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+    .stress-bar {
+      width: 100%;
+      max-width: 56px;
+      border-radius: var(--radius-2) var(--radius-2) 0 0;
+      transition: height 0.5s var(--motion-easing-emphasis);
+      position: relative;
+    }
+    .stress-bar.pass { background: color-mix(in oklch, var(--market-down-fg) 35%, transparent); }
+    .stress-bar.fail { background: color-mix(in oklch, var(--risk-critical-fg) 50%, transparent); }
+    .stress-bar-limit {
+      position: absolute;
+      bottom: 80%;
+      left: -2px;
+      right: -2px;
+      height: 2px;
+      background: var(--risk-breach-fg);
+      opacity: 0.6;
+    }
+    .stress-bar-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 64px;
+    }
+    .stress-bar-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+    .stress-bar-value.fail { color: var(--risk-critical-fg); }
+
+    /* ══════════════════════════════════════════════
+     * Risk Level Visual Gradient Cards
+     * ══════════════════════════════════════════════ */
+    .risk-level-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--space-10) var(--space-12);
+      border-radius: var(--radius-6);
+      border: 1px solid var(--border-subtle);
+      position: relative;
+      overflow: hidden;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .risk-level-card:hover {
+      transform: translateY(-1px);
+      border-color: var(--border-default);
+    }
+    .risk-level-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+    }
+    .risk-level-card.healthy::before { background: var(--risk-low-fg); }
+    .risk-level-card.warning::before { background: var(--risk-near-limit-fg); }
+    .risk-level-card.critical::before { background: var(--risk-breach-fg); }
+    .risk-level-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-20);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .risk-level-card.healthy .risk-level-value { color: var(--risk-low-fg); }
+    .risk-level-card.warning .risk-level-value { color: var(--risk-near-limit-fg); }
+    .risk-level-card.critical .risk-level-value { color: var(--risk-breach-fg); }
+    .risk-level-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-top: var(--space-2);
+    }
+    .risk-level-detail {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-top: var(--space-4);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Analysis band header (extracted)
+     * ══════════════════════════════════════════════ */
+    .analysis-band-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .analysis-band-subtitle {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ══════════════════════════════════════════════
+     * History chart placeholder (replaces dashed box)
+     * ══════════════════════════════════════════════ */
+    .history-chart-placeholder {
+      height: 180px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .history-chart-placeholder::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          var(--chart-grid) 0px,
+          var(--chart-grid) 1px,
+          transparent 1px,
+          transparent 36px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          var(--chart-grid) 0px,
+          var(--chart-grid) 1px,
+          transparent 1px,
+          transparent 48px
+        );
+      opacity: 0.4;
+    }
+    .history-chart-placeholder .placeholder-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Incident detail hint (extracted)
+     * ══════════════════════════════════════════════ */
+    .incident-detail-hint {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* Override status-bar text-secondary via class */
+    .status-bar .status-val { color: var(--text-secondary); }
+    .status-bar .status-dot-sep { margin: 0 var(--space-4); color: var(--border-subtle); }
+
+    /* Stress table column widths */
+    .w-stress-name { width: 200px; }
+    .w-stress-loss { width: 120px; }
+    .w-stress-result { width: 100px; }
+    .w-stress-time { width: 120px; }
+
   </style>
 </head>
 <body>
+  <!-- SVG noise filter for material texture -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+
   <!-- ═══ Zone Navigation Radios ═══ -->
   <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
   <input type="radio" id="view-states" name="proto-view" class="sr-only">
@@ -904,14 +1308,14 @@
       <!-- Portfolio Selector -->
       <div class="header-selector">
         <span class="header-selector-value">主策略组合</span>
-        <span style="color: var(--text-tertiary);">·</span>
-        <span style="color: var(--text-tertiary); font-size: var(--font-size-10);">A50 + 沪深300</span>
+        <span class="text-tertiary">·</span>
+        <span class="text-tertiary text-size-10">A50 + 沪深300</span>
         <span class="header-selector-chevron">▾</span>
       </div>
 
       <!-- Scenario Selector -->
       <div class="header-selector">
-        <span style="color: var(--text-tertiary);">场景</span>
+        <span class="text-tertiary">场景</span>
         <span class="header-selector-value">标准风控</span>
         <span class="header-selector-chevron">▾</span>
       </div>
@@ -1019,10 +1423,10 @@
           <div class="panel chart-panel">
             <div class="panel-header">
               <span class="panel-title">VaR 趋势</span>
-              <span class="panel-subtitle" style="margin-left: var(--space-4);">95% 置信区间 · 日线</span>
+              <span class="panel-subtitle panel-subtitle-offset">95% 置信区间 · 日线</span>
               <div class="panel-actions">
                 <span class="panel-action">1W</span>
-                <span class="panel-action" style="color: var(--text-primary); background: var(--interaction-hover-subtle-bg);">1M</span>
+                <span class="panel-action active">1M</span>
                 <span class="panel-action">3M</span>
                 <span class="panel-action">1Y</span>
               </div>
@@ -1043,10 +1447,10 @@
           <div class="panel chart-panel">
             <div class="panel-header">
               <span class="panel-title">最大回撤</span>
-              <span class="panel-subtitle" style="margin-left: var(--space-4);">当前 3.45% / 阈值 5.00%</span>
+              <span class="panel-subtitle panel-subtitle-offset">当前 3.45% / 阈值 5.00%</span>
               <div class="panel-actions">
                 <span class="panel-action">1W</span>
-                <span class="panel-action" style="color: var(--text-primary); background: var(--interaction-hover-subtle-bg);">1M</span>
+                <span class="panel-action active">1M</span>
                 <span class="panel-action">3M</span>
                 <span class="panel-action">1Y</span>
               </div>
@@ -1066,10 +1470,10 @@
           <div class="panel chart-panel">
             <div class="panel-header">
               <span class="panel-title">行业暴露度</span>
-              <span class="panel-subtitle" style="margin-left: var(--space-4);">按中信一级行业分布</span>
+              <span class="panel-subtitle panel-subtitle-offset">按中信一级行业分布</span>
               <div class="panel-actions">
                 <span class="panel-action">饼图</span>
-                <span class="panel-action" style="color: var(--text-primary); background: var(--interaction-hover-subtle-bg);">条形图</span>
+                <span class="panel-action active">条形图</span>
               </div>
             </div>
             <div class="chart-panel-body">
@@ -1104,9 +1508,15 @@
                   <span class="all-clear-text">所有指标在安全范围内</span>
                 </div>
 
-                <!-- Near-limit items -->
+                <!-- Near-limit items with SVG gauge -->
                 <div class="breach-item">
-                  <div class="breach-dot warn"></div>
+                  <div class="risk-gauge">
+                    <svg width="28" height="28" viewBox="0 0 28 28">
+                      <circle class="risk-gauge-track" cx="14" cy="14" r="11" stroke-width="2.5"/>
+                      <circle class="risk-gauge-fill warn" cx="14" cy="14" r="11" stroke-width="2.5"
+                        stroke-dasharray="69.12" stroke-dashoffset="21.43"/>
+                    </svg>
+                  </div>
                   <div class="breach-body">
                     <div class="breach-label">最大回撤</div>
                     <div class="breach-detail">当前 3.45% / 阈值 5.00%</div>
@@ -1118,7 +1528,13 @@
                 </div>
 
                 <div class="breach-item">
-                  <div class="breach-dot warn"></div>
+                  <div class="risk-gauge">
+                    <svg width="28" height="28" viewBox="0 0 28 28">
+                      <circle class="risk-gauge-track" cx="14" cy="14" r="11" stroke-width="2.5"/>
+                      <circle class="risk-gauge-fill warn" cx="14" cy="14" r="11" stroke-width="2.5"
+                        stroke-dasharray="69.12" stroke-dashoffset="13.67"/>
+                    </svg>
+                  </div>
                   <div class="breach-body">
                     <div class="breach-label">科技行业集中度</div>
                     <div class="breach-detail">当前 32.1% / 限制 40.00%</div>
@@ -1130,7 +1546,13 @@
                 </div>
 
                 <div class="breach-item">
-                  <div class="breach-dot ok"></div>
+                  <div class="risk-gauge">
+                    <svg width="28" height="28" viewBox="0 0 28 28">
+                      <circle class="risk-gauge-track" cx="14" cy="14" r="11" stroke-width="2.5"/>
+                      <circle class="risk-gauge-fill ok" cx="14" cy="14" r="11" stroke-width="2.5"
+                        stroke-dasharray="69.12" stroke-dashoffset="35.14"/>
+                    </svg>
+                  </div>
                   <div class="breach-body">
                     <div class="breach-label">VaR(95%)</div>
                     <div class="breach-detail">当前 1.23% / 阈值 2.50%</div>
@@ -1159,7 +1581,7 @@
                   </div>
                   <span class="stress-meta">预计亏损</span>
                   <span class="stress-result negative">-8.23%</span>
-                  <span class="stress-meta" style="margin-top: var(--space-2);">未突破风控线 (-12%)</span>
+                  <span class="stress-meta indented">未突破风控线 (-12%)</span>
                 </div>
 
                 <div class="stress-row">
@@ -1169,7 +1591,7 @@
                   </div>
                   <span class="stress-meta">预计亏损</span>
                   <span class="stress-result negative">-3.17%</span>
-                  <span class="stress-meta" style="margin-top: var(--space-2);">未突破风控线 (-12%)</span>
+                  <span class="stress-meta indented">未突破风控线 (-12%)</span>
                 </div>
 
                 <div class="stress-row">
@@ -1179,7 +1601,7 @@
                   </div>
                   <span class="stress-meta">预计亏损</span>
                   <span class="stress-result critical">-14.82%</span>
-                  <span class="stress-meta" style="margin-top: var(--space-2); color: var(--risk-critical-fg);">突破风控线 (-12%) · 需关注</span>
+                  <span class="stress-meta critical">突破风控线 (-12%) · 需关注</span>
                 </div>
 
               </div>
@@ -1191,17 +1613,17 @@
       </div>
     </div>
 
-    <!-- ═══ Analysis Band: Incident Timeline ═══ -->
+    <!-- ═══ Analysis Band: Risk Heatmap + Incident Timeline ═══ -->
     <div class="analysis-band">
       <div class="analysis-band-header">
-        <span style="font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--text-primary);">Incident Timeline</span>
-        <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">最近风控事件</span>
-        <div style="flex: 1;"></div>
+        <span class="analysis-band-title">Incident Timeline</span>
+        <span class="analysis-band-subtitle">最近风控事件</span>
+        <div class="flex-1"></div>
         <span class="analysis-band-tab active">全部</span>
         <span class="analysis-band-tab">警告</span>
         <span class="analysis-band-tab">突破</span>
         <span class="analysis-band-tab">已处理</span>
-        <span class="panel-action" style="margin-left: var(--space-8);">查看全部 →</span>
+        <span class="panel-action margin-left-8">查看全部 →</span>
       </div>
       <div class="analysis-band-body">
         <div class="incident-timeline-list">
@@ -1281,85 +1703,132 @@
       <div class="tab-panel" data-panel="risk-stress">
 
         <!-- Stress Test Scenario Selector -->
-        <div style="padding: var(--space-12) var(--density-gutter); border-bottom: 1px solid var(--border-subtle);">
-          <div style="display: flex; align-items: center; gap: var(--space-12);">
-            <span style="font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">压力测试</span>
-            <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">选择场景并运行</span>
-            <div style="flex:1"></div>
-            
-            <label for="overlay-stress-config" class="btn-cta-sm" style="cursor:pointer">运行压力测试</label>
-          </div>
+        <div class="tab-section-header">
+          <span class="section-title">压力测试</span>
+          <span class="section-subtitle">选择场景并运行</span>
+          <div class="flex-1"></div>
+          <label for="overlay-stress-config" class="btn-cta-sm cursor-pointer">运行压力测试</label>
         </div>
 
         <!-- Stress Test Full Table -->
-        <div style="padding: var(--space-12) var(--density-gutter);">
-          <table class="data-table" style="width: 100%;">
+        <div class="tab-section-content">
+          <table class="data-table w-full">
             <thead>
               <tr>
-                <th scope="col" style="width: 200px;">场景名称</th>
-                <th scope="col" style="width: 120px;">预计亏损</th>
-                <th scope="col" style="width: 100px;">结果</th>
+                <th scope="col" class="w-stress-name">场景名称</th>
+                <th scope="col" class="w-stress-loss">预计亏损</th>
+                <th scope="col" class="w-stress-result">结果</th>
                 <th scope="col">说明</th>
-                <th scope="col" style="width: 120px;">上次运行</th>
+                <th scope="col" class="w-stress-time">上次运行</th>
               </tr>
             </thead>
             <tbody>
               <tr class="row">
-                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">极端下跌 -15%</span></td>
-                <td class="cell-numeric" style="color: var(--market-down-fg);">-8.23%</td>
+                <td><span class="text-weight-medium text-primary">极端下跌 -15%</span></td>
+                <td class="cell-numeric text-market-down">-8.23%</td>
                 <td><span class="stress-tag pass">通过</span></td>
-                <td style="color: var(--text-tertiary); font-size: var(--font-size-12);">未突破风控线 (-12%)</td>
+                <td class="text-tertiary text-size-12">未突破风控线 (-12%)</td>
                 <td class="cell-time">08:45</td>
               </tr>
               <tr class="row">
-                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">利率上行 +100bp</span></td>
-                <td class="cell-numeric" style="color: var(--market-down-fg);">-3.17%</td>
+                <td><span class="text-weight-medium text-primary">利率上行 +100bp</span></td>
+                <td class="cell-numeric text-market-down">-3.17%</td>
                 <td><span class="stress-tag pass">通过</span></td>
-                <td style="color: var(--text-tertiary); font-size: var(--font-size-12);">未突破风控线 (-12%)</td>
+                <td class="text-tertiary text-size-12">未突破风控线 (-12%)</td>
                 <td class="cell-time">08:45</td>
               </tr>
               <tr class="row">
-                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">流动性危机</span></td>
-                <td class="cell-numeric" style="color: var(--risk-critical-fg);">-14.82%</td>
+                <td><span class="text-weight-medium text-primary">流动性危机</span></td>
+                <td class="cell-numeric text-risk-critical">-14.82%</td>
                 <td><span class="stress-tag fail">突破</span></td>
-                <td style="color: var(--risk-critical-fg); font-size: var(--font-size-12);">突破风控线 (-12%) · 需关注</td>
+                <td class="text-risk-critical text-size-12">突破风控线 (-12%) · 需关注</td>
                 <td class="cell-time">08:45</td>
               </tr>
-              <!-- ⚠️ 待 PM 定义：更多预设场景 -->
               <tr class="row">
-                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">黑天鹅事件</span></td>
-                <td class="cell-numeric" style="color: var(--market-down-fg);">-11.50%</td>
+                <td><span class="text-weight-medium text-primary">黑天鹅事件</span></td>
+                <td class="cell-numeric text-market-down">-11.50%</td>
                 <td><span class="stress-tag pass">通过</span></td>
-                <td style="color: var(--text-tertiary); font-size: var(--font-size-12);">临界接近风控线</td>
+                <td class="text-tertiary text-size-12">临界接近风控线</td>
                 <td class="cell-time">前日</td>
               </tr>
               <tr class="row">
-                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">行业崩盘 -20%</span></td>
-                <td class="cell-numeric" style="color: var(--risk-critical-fg);">-16.33%</td>
+                <td><span class="text-weight-medium text-primary">行业崩盘 -20%</span></td>
+                <td class="cell-numeric text-risk-critical">-16.33%</td>
                 <td><span class="stress-tag fail">突破</span></td>
-                <td style="color: var(--risk-critical-fg); font-size: var(--font-size-12);">大幅突破风控线 · 建议调仓</td>
+                <td class="text-risk-critical text-size-12">大幅突破风控线 · 建议调仓</td>
                 <td class="cell-time">3天前</td>
               </tr>
               <tr class="row">
-                <td><span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">尾部风险 +3σ</span></td>
-                <td class="cell-numeric" style="color: var(--market-down-fg);">-9.87%</td>
+                <td><span class="text-weight-medium text-primary">尾部风险 +3σ</span></td>
+                <td class="cell-numeric text-market-down">-9.87%</td>
                 <td><span class="stress-tag pass">通过</span></td>
-                <td style="color: var(--text-tertiary); font-size: var(--font-size-12);">未突破风控线</td>
+                <td class="text-tertiary text-size-12">未突破风控线</td>
                 <td class="cell-time">5天前</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- Historical Comparison -->
-        <div style="padding: var(--space-12) var(--density-gutter); border-top: 1px solid var(--border-subtle);">
-          <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
-            <span style="font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--text-primary);">历史压力测试对比</span>
-            <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">近期结果趋势</span>
+        <!-- Stress Test Impact Bar Chart -->
+        <div class="pad-gutter border-t">
+          <div class="flex-center gap-8 margin-bottom-8">
+            <span class="text-size-12 text-weight-medium text-primary">场景冲击分布</span>
+            <span class="text-size-10 text-tertiary">红色虚线 = 风控线 -12%</span>
           </div>
-          <!-- ⚠️ 待 PM 定义：历史对比图表占位 -->
-          <div style="height: 180px; background: var(--surface-muted); border: 1px dashed var(--border-default); border-radius: var(--radius-6); display: flex; align-items: center; justify-content: center;">
-            <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">历史对比图表占位</span>
+          <div class="stress-bar-chart">
+            <div class="stress-bar-item">
+              <span class="stress-bar-value">-8.23%</span>
+              <div class="stress-bar pass" style="height:55%;">
+                <div class="stress-bar-limit"></div>
+              </div>
+              <span class="stress-bar-label">极端下跌</span>
+            </div>
+            <div class="stress-bar-item">
+              <span class="stress-bar-value">-3.17%</span>
+              <div class="stress-bar pass" style="height:21%;">
+                <div class="stress-bar-limit"></div>
+              </div>
+              <span class="stress-bar-label">利率上行</span>
+            </div>
+            <div class="stress-bar-item">
+              <span class="stress-bar-value fail">-14.82%</span>
+              <div class="stress-bar fail" style="height:99%;">
+                <div class="stress-bar-limit"></div>
+              </div>
+              <span class="stress-bar-label">流动性危机</span>
+            </div>
+            <div class="stress-bar-item">
+              <span class="stress-bar-value">-11.50%</span>
+              <div class="stress-bar pass" style="height:77%;">
+                <div class="stress-bar-limit"></div>
+              </div>
+              <span class="stress-bar-label">黑天鹅</span>
+            </div>
+            <div class="stress-bar-item">
+              <span class="stress-bar-value fail">-16.33%</span>
+              <div class="stress-bar fail" style="height:100%;">
+                <div class="stress-bar-limit"></div>
+              </div>
+              <span class="stress-bar-label">行业崩盘</span>
+            </div>
+            <div class="stress-bar-item">
+              <span class="stress-bar-value">-9.87%</span>
+              <div class="stress-bar pass" style="height:66%;">
+                <div class="stress-bar-limit"></div>
+              </div>
+              <span class="stress-bar-label">尾部风险</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Historical Comparison -->
+        <div class="pad-gutter border-t">
+          <div class="flex-center gap-8 margin-bottom-8">
+            <span class="text-size-12 text-weight-medium text-primary">历史压力测试对比</span>
+            <span class="text-size-10 text-tertiary">近期结果趋势</span>
+          </div>
+          <div class="history-chart-placeholder">
+            <span class="placeholder-label">历史对比图表占位</span>
           </div>
         </div>
 
@@ -1369,22 +1838,20 @@
       <div class="tab-panel" data-panel="risk-incidents">
 
         <!-- Incident Timeline Header -->
-        <div style="padding: var(--space-12) var(--density-gutter); border-bottom: 1px solid var(--border-subtle);">
-          <div style="display: flex; align-items: center; gap: var(--space-12);">
-            <span style="font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">Incident Timeline</span>
-            <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">风控事件全记录</span>
-            <div style="flex:1"></div>
-            <div class="filter-group" role="group" aria-label="事件筛选">
-              <button class="filter-btn active">全部</button>
-              <button class="filter-btn">警告</button>
-              <button class="filter-btn">突破</button>
-              <button class="filter-btn">已处理</button>
-            </div>
+        <div class="tab-section-header">
+          <span class="section-title">Incident Timeline</span>
+          <span class="section-subtitle">风控事件全记录</span>
+          <div class="flex-1"></div>
+          <div class="filter-group" role="group" aria-label="事件筛选">
+            <button class="filter-btn active">全部</button>
+            <button class="filter-btn">警告</button>
+            <button class="filter-btn">突破</button>
+            <button class="filter-btn">已处理</button>
           </div>
         </div>
 
         <!-- Incident Detail View -->
-        <div style="padding: var(--space-12) var(--density-gutter);">
+        <div class="tab-section-content">
           <div class="incident-timeline-list" style="grid-template-columns: 1fr;">
 
             <!-- Incident 1 — with breach detail trigger -->
@@ -1396,9 +1863,8 @@
               <div class="incident-body">
                 <div class="incident-title">最大回撤接近阈值</div>
                 <div class="incident-detail">当前回撤 3.45%，距阈值 5% 仅剩 1.55 个百分点。建议关注持仓结构。</div>
-                <div style="margin-top: var(--space-4); display: flex; gap: var(--space-6);">
-                  
-                  <label for="overlay-breach-detail" class="panel-action" style="cursor:pointer; font-size: var(--font-size-10);">查看详情</label>
+                <div class="incident-actions">
+                  <label for="overlay-breach-detail" class="panel-action cursor-pointer text-size-10">查看详情</label>
                 </div>
               </div>
               <span class="incident-status monitoring">监控中</span>
@@ -1487,8 +1953,8 @@
         </div>
 
         <!-- Incident Detail Panel placeholder -->
-        <div style="padding: var(--space-12) var(--density-gutter); border-top: 1px solid var(--border-subtle);">
-          <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">点击事件条目展开 Detail 面板</span>
+        <div class="pad-gutter border-t">
+          <span class="incident-detail-hint">点击事件条目展开 Detail 面板</span>
         </div>
 
       </div><!-- /tab-panel: risk-incidents -->
@@ -1498,19 +1964,19 @@
   </div>
 
   <!-- Status Bar -->
-  <div class="status-bar">
+  <div class="status-bar" role="status" aria-label="系统状态">
     <span class="status-indicator"></span>
     <span>RISK LIVE</span>
     <span class="status-sep">|</span>
     <span>最后刷新: 2s ago</span>
     <span class="status-sep">|</span>
-    <span>组合: 主策略组合</span>
+    <span>组合: <span class="status-val">主策略组合</span></span>
     <span class="status-sep">|</span>
-    <span>场景: 标准风控</span>
+    <span>场景: <span class="status-val">标准风控</span></span>
     <span class="status-spacer"></span>
     <span class="status-kbd">R</span>
     <span>刷新</span>
-    <span style="margin: 0 var(--space-4); color: var(--border-subtle);">·</span>
+    <span class="status-dot-sep">·</span>
     <span class="status-kbd">⌘K</span>
     <span>搜索</span>
   </div>
@@ -1528,17 +1994,17 @@
         </div>
         <div class="overlay-body">
           <h4>场景选择</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-6);">
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+          <div class="flex-col-gap">
+            <label class="overlay-radio-option">
               <input type="radio" name="stress-scenario" checked style="accent-color:var(--brand-accent)"> 极端下跌 -15%（预设）
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+            <label class="overlay-radio-option">
               <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 利率上行 +100bp（预设）
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+            <label class="overlay-radio-option">
               <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 流动性危机（预设）
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+            <label class="overlay-radio-option">
               <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 自定义场景
             </label>
           </div>
@@ -1558,8 +2024,8 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-stress-config" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-stress-config" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认运行</label>
+            <label for="overlay-stress-config" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
+            <label for="overlay-stress-config" class="overlay-btn overlay-btn-primary cursor-pointer">确认运行</label>
           </div>
         </div>
       </div>
@@ -1581,7 +2047,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">当前值</span>
-            <span class="overlay-field-value" style="color:var(--risk-near-limit-fg)">3.45%</span>
+            <span class="overlay-field-value text-risk-warn">3.45%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">阈值</span>
@@ -1595,20 +2061,19 @@
           <h4>涉及持仓</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">贵州茅台（600519）</span>
-            <span class="overlay-field-value" style="color:var(--market-down-fg)">-2.1%</span>
+            <span class="overlay-field-value text-market-down">-2.1%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">宁德时代（300750）</span>
-            <span class="overlay-field-value" style="color:var(--market-down-fg)">-3.8%</span>
+            <span class="overlay-field-value text-market-down">-3.8%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">比亚迪（002594）</span>
-            <span class="overlay-field-value" style="color:var(--market-down-fg)">-1.5%</span>
+            <span class="overlay-field-value text-market-down">-1.5%</span>
           </div>
 
           <div class="overlay-actions">
-            
-            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">调整规则</label>
+            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-secondary cursor-pointer">调整规则</label>
             <button class="overlay-btn overlay-btn-primary">查看持仓</button>
           </div>
         </div>
@@ -1647,8 +2112,8 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-primary" style="cursor:pointer">保存</label>
+            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
+            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-primary cursor-pointer">保存</label>
           </div>
         </div>
       </div>
@@ -1790,7 +2255,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
         <div class="state-empty">
-          <div class="state-empty-icon" style="color:var(--risk-low-fg)">✓</div>
+          <div class="state-empty-icon text-risk-ok">✓</div>
           <div class="state-empty-title">当前无违规项</div>
           <div class="state-empty-desc">所有指标在安全范围内，无风控触及或接近限制</div>
         </div>
@@ -1852,7 +2317,7 @@
           <div class="state-empty-icon">🧪</div>
           <div class="state-empty-title">暂无压力测试记录</div>
           <div class="state-empty-desc">点击运行压力测试，模拟极端市场场景对组合的冲击</div>
-          <label for="overlay-stress-config" class="state-empty-cta" style="cursor:pointer">运行测试</label>
+          <label for="overlay-stress-config" class="state-empty-cta cursor-pointer">运行测试</label>
         </div>
       </div>
       </div>
@@ -1979,17 +2444,17 @@
           </div>
           <div class="overlay-body">
             <h4>场景选择</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-6);">
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+            <div class="flex-col-gap">
+              <label class="overlay-radio-option">
                 <input type="radio" name="stress-scenario" checked style="accent-color:var(--brand-accent)"> 极端下跌 -15%（预设）
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <label class="overlay-radio-option">
                 <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 利率上行 +100bp（预设）
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <label class="overlay-radio-option">
                 <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 流动性危机（预设）
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
+              <label class="overlay-radio-option">
                 <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 自定义场景
               </label>
             </div>
@@ -2032,7 +2497,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">当前值</span>
-              <span class="overlay-field-value" style="color:var(--risk-near-limit-fg)">3.45%</span>
+              <span class="overlay-field-value text-risk-warn">3.45%</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">阈值</span>
@@ -2046,15 +2511,15 @@
             <h4>涉及持仓</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">贵州茅台（600519）</span>
-              <span class="overlay-field-value" style="color:var(--market-down-fg)">-2.1%</span>
+              <span class="overlay-field-value text-market-down">-2.1%</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">宁德时代（300750）</span>
-              <span class="overlay-field-value" style="color:var(--market-down-fg)">-3.8%</span>
+              <span class="overlay-field-value text-market-down">-3.8%</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">比亚迪（002594）</span>
-              <span class="overlay-field-value" style="color:var(--market-down-fg)">-1.5%</span>
+              <span class="overlay-field-value text-market-down">-1.5%</span>
             </div>
 
             <div class="overlay-actions">

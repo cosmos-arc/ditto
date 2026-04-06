@@ -697,6 +697,9 @@
       letter-spacing: 0.04em;
     }
 
+    /* ── Detail section fixed size for resource monitor ── */
+    .detail-section-fixed { flex: 0 0 auto; }
+
     .detail-section-body {
       flex: 1;
       overflow-y: auto;
@@ -1268,6 +1271,458 @@
       gap: var(--space-6);
       align-items: center;
     }
+
+    /* ══════════════════════════════════════════════
+     * Extracted Inline Styles → Reusable Classes
+     * ══════════════════════════════════════════════ */
+
+    /* ── Cursor on interactive labels ── */
+    .cursor-pointer { cursor: pointer; }
+
+    /* ── Flex utilities ── */
+    .flex-grow { flex: 1; }
+    .flex-col-gap { display: flex; flex-direction: column; gap: var(--space-6); }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .flex-between-center { display: flex; justify-content: space-between; align-items: center; }
+    .flex-center { display: flex; align-items: center; }
+    .flex-center-gap { display: flex; align-items: center; gap: var(--space-4); }
+    .flex-center-gap-sm { display: flex; align-items: center; gap: var(--space-8); }
+    .spacer-height { height: var(--space-8); }
+
+    /* ── Text color utilities ── */
+    .text-tertiary-hint { color: var(--text-tertiary); font-size: var(--font-size-12); }
+    .text-tertiary-hint-block { color: var(--text-tertiary); font-size: var(--font-size-12); line-height: 1.6; margin: 0; }
+    .text-tertiary-hint-top { color: var(--text-tertiary); font-size: var(--font-size-12); line-height: 1.6; margin-top: var(--space-8); }
+    .text-tertiary-padded { color: var(--text-tertiary); font-size: var(--font-size-12); padding: var(--space-8); }
+    .text-agent-failed { color: var(--agent-failed-fg); }
+    .text-healthy { color: var(--system-healthy-fg); }
+    .text-degraded { color: var(--system-degraded-fg); }
+    .text-down { color: var(--system-down-fg); }
+    .text-primary-sm { color: var(--text-primary); font-size: var(--font-size-12); }
+    .text-secondary-hint { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; margin: 0; }
+    .meta-sep-char { color: var(--border-subtle); }
+    .font-medium { font-weight: var(--font-weight-medium); }
+    .mt-2px { margin-top: 2px; }
+    .mt-space-6 { margin-top: var(--space-6); }
+    .mb-space-4 { margin-bottom: var(--space-4); }
+    .panel-count-sm { font-size: var(--font-size-12); }
+    .max-w-480 { max-width: 480px; }
+
+    /* ── Approval action buttons ── */
+    .btn-cta-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      height: 28px;
+      padding: var(--btn-sm-padding-y) var(--btn-cta-padding-x);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      background: var(--brand-accent);
+      border: none;
+      border-radius: var(--btn-radius);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-cta-sm:hover { background: var(--brand-accent-hover); }
+
+    .btn-ghost-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      height: 28px;
+      padding: var(--btn-sm-padding-y) var(--btn-padding-x);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--btn-radius);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-ghost-sm:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-default);
+      color: var(--text-primary);
+    }
+
+    .btn-ghost-accent-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      height: 28px;
+      padding: var(--btn-sm-padding-y) var(--btn-padding-x);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--brand-accent);
+      background: transparent;
+      border: 1px solid var(--brand-accent);
+      border-radius: var(--btn-radius);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-ghost-accent-sm:hover {
+      background: var(--brand-accent-subtle);
+    }
+
+    /* ── Plan template option ── */
+    .plan-template-option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+    }
+    .plan-template-option.checked {
+      border-color: var(--border-default);
+    }
+    .plan-template-option .option-radio {
+      accent-color: var(--brand-accent);
+    }
+    .plan-template-option .option-title {
+      font-weight: var(--font-weight-medium);
+    }
+    .plan-template-option .option-desc {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      margin-top: 2px;
+    }
+
+    /* ── Code block for tool trace ── */
+    .code-block {
+      background: var(--surface-strip);
+      border-radius: var(--radius-4);
+      padding: var(--space-8);
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-12);
+      line-height: 1.5;
+      word-break: break-all;
+    }
+    .code-block--default { color: var(--text-secondary); }
+    .code-block--success { color: var(--system-healthy-fg); }
+    .code-block--muted { color: var(--text-tertiary); line-height: 1.6; }
+
+    /* ── Detail header running status ── */
+    .detail-running-status {
+      color: var(--agent-running-fg);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Agent Visualization Enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Agent chain flow line ── */
+    .agent-chain {
+      position: relative;
+    }
+    .agent-chain::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--border-subtle);
+      z-index: 0;
+    }
+    .agent-chain > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Agent chain step with micro-animation ── */
+    .agent-chain-step.active {
+      position: relative;
+      overflow: hidden;
+    }
+    .agent-chain-step.active::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in oklch, var(--agent-running-fg) 15%, transparent),
+        transparent
+      );
+      animation: shimmer-step 2.5s ease-in-out infinite;
+    }
+
+    @keyframes shimmer-step {
+      0% { left: -100%; }
+      100% { left: 200%; }
+    }
+
+    /* ── Enhanced progress bar with glow ── */
+    .progress-bar {
+      position: relative;
+    }
+    .progress-bar-fill {
+      position: relative;
+    }
+    .progress-bar-fill.brand {
+      box-shadow: 0 0 6px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+    }
+    .progress-bar-fill.ok {
+      box-shadow: 0 0 6px color-mix(in oklch, var(--system-healthy-fg) 30%, transparent);
+    }
+    .progress-bar-fill.critical {
+      box-shadow: 0 0 6px color-mix(in oklch, var(--system-down-fg) 30%, transparent);
+    }
+
+    /* ── Plan card scan line effect ── */
+    .plan-card.selected {
+      position: relative;
+      overflow: hidden;
+    }
+    .plan-card.selected::after {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--brand-accent) 50%,
+        transparent 100%
+      );
+      animation: scan-line 3s ease-in-out infinite;
+    }
+
+    @keyframes scan-line {
+      0% { top: -1px; opacity: 0.8; }
+      50% { top: 50%; opacity: 0.3; }
+      100% { top: -1px; opacity: 0.8; }
+    }
+
+    /* ── Tool trace active indicator ── */
+    .tool-trace-item:has(.tool-trace-result.pending) {
+      border-left: 2px solid var(--brand-accent);
+      padding-left: var(--space-4);
+    }
+
+    /* ── Agent status block enhanced pulse ── */
+    .agent-status-block.running .agent-status-dot {
+      box-shadow: 0 0 4px var(--agent-running-fg), 0 0 8px color-mix(in oklch, var(--agent-running-fg) 40%, transparent);
+    }
+    .agent-status-block.running .agent-status-label strong {
+      animation: label-breathe 2s ease-in-out infinite;
+    }
+
+    @keyframes label-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.85; }
+    }
+
+    /* ── Terminal-style code block header ── */
+    .code-block::before {
+      content: '';
+      display: block;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--brand-accent) 30%, transparent),
+        transparent
+      );
+      margin-bottom: var(--space-4);
+      margin-left: calc(-1 * var(--space-8));
+      margin-right: calc(-1 * var(--space-8));
+      margin-top: calc(-1 * var(--space-8));
+    }
+
+    /* ── Resource monitor layout ── */
+    .resource-monitor {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-2) 0;
+    }
+    .resource-label {
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      color: var(--text-disabled);
+      min-width: 24px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .resource-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      min-width: 36px;
+      text-align: right;
+    }
+    .resource-bar {
+      flex: 1;
+      height: 3px;
+      background: var(--surface-strip);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .resource-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .resource-bar-fill.normal { background: var(--system-healthy-fg); }
+    .resource-bar-fill.warning { background: var(--system-degraded-fg); }
+    .resource-bar-fill.critical { background: var(--system-down-fg); }
+
+    /* ══════════════════════════════════════════════
+     * Premium Atmosphere Enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Enhanced status bar with terminal vibe ── */
+    .status-bar {
+      background: color-mix(in oklch, var(--surface-app) 92%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-subtle);
+    }
+    .status-bar::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 8%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 8%, transparent) 70%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── Terminal cursor blink for LIVE indicator ── */
+    .status-live::after {
+      content: '_';
+      animation: cursor-blink 1s step-end infinite;
+    }
+
+    @keyframes cursor-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* ── Detail panel enhanced glow ── */
+    .agent-detail::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 70%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      animation: glow-breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes glow-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* ── Frosted glass overlay for detail panel header ── */
+    .detail-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    /* ── Card hover lift micro-animation ── */
+    .plan-card,
+    .run-card,
+    .finding-card,
+    .approval-card {
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .plan-card:hover,
+    .run-card:hover,
+    .finding-card:hover,
+    .approval-card:hover {
+      transform: translateY(-1px);
+    }
+
+    /* ── Confidence badge subtle pulse for high ── */
+    .confidence-badge.high {
+      position: relative;
+    }
+    .confidence-badge.high::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      border: 1px solid color-mix(in oklch, var(--system-healthy-fg) 20%, transparent);
+      animation: badge-glow 3s ease-in-out infinite;
+    }
+
+    @keyframes badge-glow {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0; }
+    }
+
+    /* ── Stagger card entrance ── */
+    .agent-main > .plan-card,
+    .agent-main > .run-card,
+    .agent-main > .finding-card,
+    .agent-main > .approval-card {
+      animation: card-enter var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .agent-main > :nth-child(1) { animation-delay: 40ms; }
+    .agent-main > :nth-child(2) { animation-delay: 80ms; }
+    .agent-main > :nth-child(3) { animation-delay: 120ms; }
+    .agent-main > :nth-child(4) { animation-delay: 160ms; }
+
+    @keyframes card-enter {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Artifact item icon color on hover ── */
+    .artifact-item:hover .artifact-icon {
+      color: var(--brand-accent);
+    }
+
+    /* ── Respect reduced motion for new animations ── */
+    @media (prefers-reduced-motion: reduce) {
+      .plan-card, .run-card, .finding-card, .approval-card,
+      .agent-chain-step.active, .agent-status-block.running .agent-status-label strong,
+      .progress-bar-fill, .confidence-badge.high::before,
+      .status-live::after, .plan-card.selected::after,
+      .agent-detail::before {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1329,7 +1784,7 @@
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
         
-        <label for="overlay-plan-create" class="btn-cta" tabindex="0" aria-label="新建 Plan" style="cursor:pointer">
+        <label for="overlay-plan-create" class="btn-cta cursor-pointer" tabindex="0" aria-label="新建 Plan">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
           新建 Plan
         </label>
@@ -1347,7 +1802,7 @@
         </div>
         <div class="header-search" tabindex="0" role="search" aria-label="搜索">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-          <span style="color:var(--text-tertiary);font-size:var(--font-size-12)">搜索 Plans...</span>
+          <span class="text-tertiary-hint">搜索 Plans...</span>
           <kbd>Ctrl+K</kbd>
         </div>
         <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
@@ -1390,7 +1845,7 @@
             <div class="plan-card-meta">
               <span class="plan-card-time">2026-04-01 14:28</span>
               <span class="plan-card-meta-sep"></span>
-              <span style="font-size:var(--font-size-12);color:var(--text-tertiary)">预计 15 分钟</span>
+              <span class="text-tertiary-hint">预计 15 分钟</span>
             </div>
             <div class="plan-card-progress-label">
               <span class="plan-card-progress-text">整体进度</span>
@@ -1433,7 +1888,7 @@
             <div class="plan-card-meta">
               <span class="plan-card-time">2026-04-01 10:15</span>
               <span class="plan-card-meta-sep"></span>
-              <span style="font-size:var(--font-size-12);color:var(--text-tertiary)">耗时 12 分钟</span>
+              <span class="text-tertiary-hint">耗时 12 分钟</span>
             </div>
             <div class="plan-card-progress-label">
               <span class="plan-card-progress-text">整体进度</span>
@@ -1482,7 +1937,7 @@
             <div class="plan-card-meta">
               <span class="plan-card-time">2026-04-01 09:40</span>
               <span class="plan-card-meta-sep"></span>
-              <span style="font-size:var(--font-size-12);color:var(--agent-failed-fg)">Factor 挖掘阶段异常终止</span>
+              <span class="text-tertiary-hint text-agent-failed">Factor 挖掘阶段异常终止</span>
             </div>
             <div class="plan-card-progress-label">
               <span class="plan-card-progress-text">整体进度</span>
@@ -1523,7 +1978,7 @@
             <div class="plan-card-meta">
               <span class="plan-card-time">2026-04-01 13:50</span>
               <span class="plan-card-meta-sep"></span>
-              <span style="font-size:var(--font-size-12);color:var(--text-tertiary)">预计 25 分钟</span>
+              <span class="text-tertiary-hint">预计 25 分钟</span>
             </div>
             <div class="plan-card-progress-label">
               <span class="plan-card-progress-text">整体进度</span>
@@ -1655,7 +2110,7 @@
             <div class="run-card-meta">
               <span class="plan-card-time">2026-04-01 09:40</span>
               <span class="plan-card-meta-sep"></span>
-              <span style="color:var(--agent-failed-fg)">Factor 挖掘阶段异常终止</span>
+              <span class="text-agent-failed">Factor 挖掘阶段异常终止</span>
             </div>
             <div class="plan-card-progress-label">
               <span class="plan-card-progress-text">Pipeline 进度</span>
@@ -1664,9 +2119,9 @@
             <div class="progress-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100">
               <div class="progress-bar-fill critical" style="width: 23%;"></div>
             </div>
-            <div class="run-card-meta" style="margin-top:var(--space-6)">
+            <div class="run-card-meta mt-space-6">
               
-              <label for="overlay-run-rerun" class="btn-ghost" style="cursor:pointer;font-size:var(--font-size-12)">
+              <label for="overlay-run-rerun" class="btn-ghost cursor-pointer btn-ghost-sm">
                 <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
                 重跑
               </label>
@@ -1694,7 +2149,7 @@
               <span class="plan-card-meta-sep"></span>
               <span>来自: 北向资金异常流入检测</span>
               <span class="plan-card-meta-sep"></span>
-              <span style="color:var(--system-healthy-fg)">已生成信号</span>
+              <span class="text-healthy">已生成信号</span>
             </div>
           </div>
 
@@ -1714,7 +2169,7 @@
               <span class="plan-card-meta-sep"></span>
               <span>来自: Alpha 因子挖掘计划</span>
               <span class="plan-card-meta-sep"></span>
-              <span style="color:var(--system-degraded-fg)">待审批</span>
+              <span class="text-degraded">待审批</span>
             </div>
           </div>
 
@@ -1734,7 +2189,7 @@
               <span class="plan-card-meta-sep"></span>
               <span>来自: Alpha 因子挖掘计划</span>
               <span class="plan-card-meta-sep"></span>
-              <span style="color:var(--system-down-fg)">高风险 · 建议忽略</span>
+              <span class="text-down">高风险 · 建议忽略</span>
             </div>
           </div>
 
@@ -1756,13 +2211,13 @@
             </div>
             <div class="approval-card-actions">
               <span class="plan-card-time">2026-04-01 14:50 · 来自 Alpha 因子挖掘计划</span>
-              <div style="flex:1"></div>
+              <div class="flex-grow"></div>
               
-              <label for="overlay-approval-confirm" class="btn-cta" style="cursor:pointer;font-size:var(--font-size-12);height:28px">
+              <label for="overlay-approval-confirm" class="btn-cta cursor-pointer btn-cta-sm">
                 <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 10l4 4 6-8"/></svg>
                 通过
               </label>
-              <button class="btn-ghost" style="font-size:var(--font-size-12);height:28px">驳回</button>
+              <button class="btn-ghost btn-ghost-sm">驳回</button>
             </div>
           </div>
 
@@ -1779,12 +2234,12 @@
             </div>
             <div class="approval-card-actions">
               <span class="plan-card-time">2026-04-01 14:32 · 来自 Alpha 因子挖掘计划</span>
-              <div style="flex:1"></div>
+              <div class="flex-grow"></div>
               
-              <label for="overlay-approval-confirm" class="btn-ghost" style="cursor:pointer;font-size:var(--font-size-12);height:28px;border-color:var(--brand-accent);color:var(--brand-accent)">
+              <label for="overlay-approval-confirm" class="btn-ghost cursor-pointer btn-ghost-accent-sm">
                 通过
               </label>
-              <button class="btn-ghost" style="font-size:var(--font-size-12);height:28px">驳回</button>
+              <button class="btn-ghost btn-ghost-sm">驳回</button>
             </div>
           </div>
 
@@ -1799,13 +2254,13 @@
       <div class="detail-header">
         <div class="detail-header-title">Alpha 因子挖掘计划</div>
         <div class="detail-header-meta">
-          <span style="color:var(--agent-running-fg);display:flex;align-items:center;gap:var(--space-4);">
+          <span class="detail-running-status">
             <svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="3" fill="currentColor"/></svg>
             运行中
           </span>
-          <span style="color:var(--border-subtle);">|</span>
+          <span class="meta-sep-char">|</span>
           <span>2026-04-01 14:28</span>
-          <span style="color:var(--border-subtle);">|</span>
+          <span class="meta-sep-char">|</span>
           <span>已运行 8 分钟</span>
         </div>
       </div>
@@ -1822,15 +2277,53 @@
             <span class="agent-status-state">运行中</span>
           </div>
           <!-- Other agents in queue -->
-          <div class="agent-status-block idle" style="margin-bottom:var(--space-4);">
+          <div class="agent-status-block idle mb-space-4">
             <span class="agent-status-dot"></span>
             <span class="agent-status-label"><strong>策略验证 Agent</strong> · 等待 Factor 挖掘完成</span>
-            <span class="agent-status-state" style="color:var(--text-tertiary)">排队中</span>
+            <span class="agent-status-state text-tertiary-hint">排队中</span>
           </div>
           <div class="agent-status-block idle">
             <span class="agent-status-dot"></span>
             <span class="agent-status-label"><strong>风控校验 Agent</strong> · 等待策略验证完成</span>
-            <span class="agent-status-state" style="color:var(--text-tertiary)">排队中</span>
+            <span class="agent-status-state text-tertiary-hint">排队中</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 1.5: Resource Monitor -->
+      <div class="detail-section detail-section-fixed">
+        <div class="detail-section-header">
+          <span class="detail-section-title">资源监控</span>
+          <span class="panel-count panel-count-sm">实时</span>
+        </div>
+        <div class="detail-section-body">
+          <div class="resource-monitor">
+            <span class="resource-label">CPU</span>
+            <div class="resource-bar">
+              <div class="resource-bar-fill normal" style="width: 45%;"></div>
+            </div>
+            <span class="resource-value">45%</span>
+          </div>
+          <div class="resource-monitor">
+            <span class="resource-label">MEM</span>
+            <div class="resource-bar">
+              <div class="resource-bar-fill warning" style="width: 72%;"></div>
+            </div>
+            <span class="resource-value">72%</span>
+          </div>
+          <div class="resource-monitor">
+            <span class="resource-label">GPU</span>
+            <div class="resource-bar">
+              <div class="resource-bar-fill normal" style="width: 38%;"></div>
+            </div>
+            <span class="resource-value">38%</span>
+          </div>
+          <div class="resource-monitor">
+            <span class="resource-label">API</span>
+            <div class="resource-bar">
+              <div class="resource-bar-fill normal" style="width: 23%;"></div>
+            </div>
+            <span class="resource-value">23/100</span>
           </div>
         </div>
       </div>
@@ -1839,7 +2332,7 @@
       <div class="detail-section">
         <div class="detail-section-header">
           <span class="detail-section-title">Tool 调用记录</span>
-          <span class="panel-count" style="font-size:var(--font-size-12)">6 次</span>
+          <span class="panel-count panel-count-sm">6 次</span>
         </div>
         <div class="detail-section-body">
           <!-- Trace 1 -->
@@ -1981,12 +2474,12 @@
           暂停
         </button>
         
-        <label for="overlay-run-rerun" class="btn-ghost" tabindex="0" aria-label="重跑" style="cursor:pointer">
+        <label for="overlay-run-rerun" class="btn-ghost cursor-pointer" tabindex="0" aria-label="重跑">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
           重跑
         </label>
         
-        <label for="overlay-tool-trace" class="btn-ghost" tabindex="0" aria-label="查看产出" style="cursor:pointer">
+        <label for="overlay-tool-trace" class="btn-ghost cursor-pointer" tabindex="0" aria-label="查看产出">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/><path d="M9 4v12"/></svg>
           查看产出
         </label>
@@ -2031,7 +2524,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">置信度</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">87 (高置信)</span>
+            <span class="overlay-field-value text-healthy">87 (高置信)</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">来源 Plan</span>
@@ -2043,14 +2536,14 @@
           </div>
 
           <h4>操作提示</h4>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+          <p class="text-secondary-hint">
             通过后，将自动生成信号至待复核队列，出现在 /trading/signals 的"待复核"列表中。信号来源标注为 ai-agent，关联原始 Finding ID。
           </p>
 
           <div class="overlay-actions">
-            <label for="overlay-approval-confirm" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认通过</label>
+            <label for="overlay-approval-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认通过</label>
             <button class="overlay-btn overlay-btn-danger">驳回</button>
-            <label for="overlay-approval-confirm" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-approval-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
           </div>
         </div>
       </div>
@@ -2066,56 +2559,56 @@
         </div>
         <div class="overlay-body">
           <h4>选择 Plan 模板</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-default);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
-              <input type="radio" name="plan-template" checked style="accent-color:var(--brand-accent)">
+          <div class="flex-col-gap">
+            <label class="plan-template-option checked">
+              <input type="radio" name="plan-template" checked class="option-radio">
               <div>
-                <div style="font-weight:var(--font-weight-medium)">全链路研究流水线</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">因子挖掘 &#8594; 策略验证 &#8594; 风控校验</div>
+                <div class="font-medium">全链路研究流水线</div>
+                <div class="text-tertiary-hint mt-2px">因子挖掘 &#8594; 策略验证 &#8594; 风控校验</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
-              <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
+            <label class="plan-template-option">
+              <input type="radio" name="plan-template" class="option-radio">
               <div>
-                <div style="font-weight:var(--font-weight-medium)">财报季解读流水线</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">财报提取 &#8594; 归因分析 &#8594; 持仓影响评估</div>
+                <div class="font-medium">财报季解读流水线</div>
+                <div class="text-tertiary-hint mt-2px">财报提取 &#8594; 归因分析 &#8594; 持仓影响评估</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
-              <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
+            <label class="plan-template-option">
+              <input type="radio" name="plan-template" class="option-radio">
               <div>
-                <div style="font-weight:var(--font-weight-medium)">盘后复盘流水线</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">盈亏归因 &#8594; 异常检测 &#8594; 策略调整建议</div>
+                <div class="font-medium">盘后复盘流水线</div>
+                <div class="text-tertiary-hint mt-2px">盈亏归因 &#8594; 异常检测 &#8594; 策略调整建议</div>
               </div>
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
-              <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
+            <label class="plan-template-option">
+              <input type="radio" name="plan-template" class="option-radio">
               <div>
-                <div style="font-weight:var(--font-weight-medium)">自定义流水线</div>
-                <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">手动配置 Agent 链路（v1.5 支持）</div>
+                <div class="font-medium">自定义流水线</div>
+                <div class="text-tertiary-hint mt-2px">手动配置 Agent 链路（v1.5 支持）</div>
               </div>
             </label>
           </div>
 
           <h4>参数配置</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="color:var(--text-tertiary);font-size:var(--font-size-12)">目标市场</span>
-              <span style="color:var(--text-primary);font-size:var(--font-size-12)">A股</span>
+          <div class="flex-col-gap">
+            <div class="flex-between">
+              <span class="text-tertiary-hint">目标市场</span>
+              <span class="text-primary-sm">A股</span>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="color:var(--text-tertiary);font-size:var(--font-size-12)">回测周期</span>
-              <span style="color:var(--text-primary);font-size:var(--font-size-12)">2024-01 至今</span>
+            <div class="flex-between">
+              <span class="text-tertiary-hint">回测周期</span>
+              <span class="text-primary-sm">2024-01 至今</span>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="color:var(--text-tertiary);font-size:var(--font-size-12)">风控阈值</span>
-              <span style="color:var(--text-primary);font-size:var(--font-size-12)">最大回撤 -10%</span>
+            <div class="flex-between">
+              <span class="text-tertiary-hint">风控阈值</span>
+              <span class="text-primary-sm">最大回撤 -10%</span>
             </div>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-plan-create" class="overlay-btn overlay-btn-primary" style="cursor:pointer">创建 Plan</label>
-            <label for="overlay-plan-create" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-plan-create" class="overlay-btn overlay-btn-primary cursor-pointer">创建 Plan</label>
+            <label for="overlay-plan-create" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
           </div>
         </div>
       </div>
@@ -2141,20 +2634,20 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">上次状态</span>
-            <span class="overlay-field-value" style="color:var(--agent-failed-fg)">失败 (23%)</span>
+            <span class="overlay-field-value text-agent-failed">失败 (23%)</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">失败阶段</span>
             <span class="overlay-field-value">Factor 挖掘</span>
           </div>
 
-          <p style="color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;margin-top:var(--space-8)">
+          <p class="text-tertiary-hint-top">
             重跑将从失败的阶段重新开始，已完成阶段的产出物将被保留复用。
           </p>
 
           <div class="overlay-actions">
-            <label for="overlay-run-rerun" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认重跑</label>
-            <label for="overlay-run-rerun" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-run-rerun" class="overlay-btn overlay-btn-primary cursor-pointer">确认重跑</label>
+            <label for="overlay-run-rerun" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
           </div>
         </div>
       </div>
@@ -2180,17 +2673,17 @@
           </div>
 
           <h4>输入参数</h4>
-          <div style="background:var(--surface-strip);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-code);font-size:var(--font-size-12);color:var(--text-secondary);line-height:1.5;word-break:break-all">
+          <div class="code-block code-block--default">
             type=momentum<br>windows=[5,10,20,60]<br>universe=hs300<br>start=2025-01-01<br>end=2026-03-28
           </div>
 
           <h4>输出结果</h4>
-          <div style="background:var(--surface-strip);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-code);font-size:var(--font-size-12);color:var(--system-healthy-fg);line-height:1.5">
+          <div class="code-block code-block--success">
             status: ok<br>rows: 48,320<br>columns: 4<br>generated_factors: MOM_5d, MOM_10d, MOM_20d, MOM_60d<br>duration: 3.8s
           </div>
 
           <h4>数据快照</h4>
-          <div style="background:var(--surface-strip);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-code);font-size:var(--font-size-12);color:var(--text-tertiary);line-height:1.6">
+          <div class="code-block code-block--muted">
             | code | date | MOM_5d | MOM_10d | MOM_20d | MOM_60d |<br>
             |------|------|--------|---------|---------|---------|<br>
             | 600519 | 2026-03-28 | +1.2% | +3.4% | +5.1% | +8.7% |<br>
@@ -2261,10 +2754,10 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
           <div class="state-empty">
-            <div class="state-empty-icon" style="color:var(--brand-accent)">AI</div>
+            <div class="state-empty-icon text-healthy">AI</div>
             <div class="state-empty-title">Agent Console 就绪</div>
             <div class="state-empty-desc">暂无活跃 Plan，创建新的研究流水线开始探索</div>
-            <label for="overlay-plan-create" class="state-empty-cta" style="cursor:pointer">新建 Plan</label>
+            <label for="overlay-plan-create" class="state-empty-cta cursor-pointer">新建 Plan</label>
           </div>
         </div>
       </div>
@@ -2307,7 +2800,7 @@
       <div class="gallery-card__label">Agent Tabs — 仅结构展示，无额外状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content">
-      <p style="color:var(--text-tertiary);font-size:var(--font-size-12);padding:var(--space-8)">
+      <p class="text-tertiary-padded">
         Tab 系统本身为导航结构，无 loading/empty/error 状态。状态由各 Tab 内容面板独立承载。
       </p>
     </div>
@@ -2341,12 +2834,12 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
           <div class="state-empty">
-            <div class="state-empty-icon" style="color:var(--text-tertiary)">
+            <div class="state-empty-icon text-tertiary-hint">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1"/><path d="M7 7h6M7 10h4"/></svg>
             </div>
             <div class="state-empty-title">暂无 Plan</div>
             <div class="state-empty-desc">创建新的研究流水线，让 Agent 帮你完成因子挖掘、策略验证和风控校验</div>
-            <label for="overlay-plan-create" class="state-empty-cta" style="cursor:pointer">新建 Plan</label>
+            <label for="overlay-plan-create" class="state-empty-cta cursor-pointer">新建 Plan</label>
           </div>
         </div>
       </div>
@@ -2383,7 +2876,7 @@
       <div class="gallery-card__label">Selected State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
-          <div class="plan-card selected" style="max-width:480px">
+          <div class="plan-card selected max-w-480">
             <div class="plan-card-header">
               <span class="plan-card-name">Alpha 因子挖掘计划</span>
               <span class="plan-card-status running">
@@ -2394,7 +2887,7 @@
             <div class="plan-card-meta">
               <span class="plan-card-time">2026-04-01 14:28</span>
               <span class="plan-card-meta-sep"></span>
-              <span style="font-size:var(--font-size-12);color:var(--text-tertiary)">选中高亮 + 呼吸动画</span>
+              <span class="text-tertiary-hint">选中高亮 + 呼吸动画</span>
             </div>
           </div>
         </div>
@@ -2418,7 +2911,7 @@
             <div class="skeleton skeleton-heading" style="width:60%"></div>
             <div class="skeleton skeleton-text" style="width:80%"></div>
             <div class="skeleton skeleton-text-sm"></div>
-            <div style="height:var(--space-8)"></div>
+            <div class="spacer-height"></div>
             <div class="skeleton skeleton-row"></div>
             <div class="skeleton skeleton-row"></div>
             <div class="skeleton skeleton-row"></div>
@@ -2480,7 +2973,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
           <div class="state-empty">
-            <div class="state-empty-icon" style="color:var(--system-healthy-fg)">
+            <div class="state-empty-icon text-healthy">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 10l4 4 6-8"/></svg>
             </div>
             <div class="state-empty-title">暂无待审批项</div>
@@ -2579,7 +3072,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">置信度</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">87 (高置信)</span>
+              <span class="overlay-field-value text-healthy">87 (高置信)</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">来源 Plan</span>
@@ -2591,7 +3084,7 @@
             </div>
 
             <h4>操作提示</h4>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            <p class="text-secondary-hint">
               通过后，将自动生成信号至待复核队列，出现在 /trading/signals 的"待复核"列表中。信号来源标注为 ai-agent，关联原始 Finding ID。
             </p>
 
@@ -2614,50 +3107,50 @@
           </div>
           <div class="overlay-body">
             <h4>选择 Plan 模板</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-default);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
-                <input type="radio" name="plan-template" checked style="accent-color:var(--brand-accent)">
+            <div class="flex-col-gap">
+              <label class="plan-template-option checked">
+                <input type="radio" name="plan-template" checked class="option-radio">
                 <div>
-                  <div style="font-weight:var(--font-weight-medium)">全链路研究流水线</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">因子挖掘 &#8594; 策略验证 &#8594; 风控校验</div>
+                  <div class="font-medium">全链路研究流水线</div>
+                  <div class="text-tertiary-hint mt-2px">因子挖掘 &#8594; 策略验证 &#8594; 风控校验</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
-                <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
+              <label class="plan-template-option">
+                <input type="radio" name="plan-template" class="option-radio">
                 <div>
-                  <div style="font-weight:var(--font-weight-medium)">财报季解读流水线</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">财报提取 &#8594; 归因分析 &#8594; 持仓影响评估</div>
+                  <div class="font-medium">财报季解读流水线</div>
+                  <div class="text-tertiary-hint mt-2px">财报提取 &#8594; 归因分析 &#8594; 持仓影响评估</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
-                <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
+              <label class="plan-template-option">
+                <input type="radio" name="plan-template" class="option-radio">
                 <div>
-                  <div style="font-weight:var(--font-weight-medium)">盘后复盘流水线</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">盈亏归因 &#8594; 异常检测 &#8594; 策略调整建议</div>
+                  <div class="font-medium">盘后复盘流水线</div>
+                  <div class="text-tertiary-hint mt-2px">盈亏归因 &#8594; 异常检测 &#8594; 策略调整建议</div>
                 </div>
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6);border:1px solid var(--border-subtle);border-radius:var(--radius-4);cursor:pointer;color:var(--text-primary);font-size:var(--font-size-12)">
-                <input type="radio" name="plan-template" style="accent-color:var(--brand-accent)">
+              <label class="plan-template-option">
+                <input type="radio" name="plan-template" class="option-radio">
                 <div>
-                  <div style="font-weight:var(--font-weight-medium)">自定义流水线</div>
-                  <div style="color:var(--text-tertiary);font-size:var(--font-size-12);margin-top:2px">手动配置 Agent 链路（v1.5 支持）</div>
+                  <div class="font-medium">自定义流水线</div>
+                  <div class="text-tertiary-hint mt-2px">手动配置 Agent 链路（v1.5 支持）</div>
                 </div>
               </label>
             </div>
 
             <h4>参数配置</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="color:var(--text-tertiary);font-size:var(--font-size-12)">目标市场</span>
-                <span style="color:var(--text-primary);font-size:var(--font-size-12)">A股</span>
+            <div class="flex-col-gap">
+              <div class="flex-between">
+                <span class="text-tertiary-hint">目标市场</span>
+                <span class="text-primary-sm">A股</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="color:var(--text-tertiary);font-size:var(--font-size-12)">回测周期</span>
-                <span style="color:var(--text-primary);font-size:var(--font-size-12)">2024-01 至今</span>
+              <div class="flex-between">
+                <span class="text-tertiary-hint">回测周期</span>
+                <span class="text-primary-sm">2024-01 至今</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="color:var(--text-tertiary);font-size:var(--font-size-12)">风控阈值</span>
-                <span style="color:var(--text-primary);font-size:var(--font-size-12)">最大回撤 -10%</span>
+              <div class="flex-between">
+                <span class="text-tertiary-hint">风控阈值</span>
+                <span class="text-primary-sm">最大回撤 -10%</span>
               </div>
             </div>
 
@@ -2689,14 +3182,14 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">上次状态</span>
-              <span class="overlay-field-value" style="color:var(--agent-failed-fg)">失败 (23%)</span>
+              <span class="overlay-field-value text-agent-failed">失败 (23%)</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">失败阶段</span>
               <span class="overlay-field-value">Factor 挖掘</span>
             </div>
 
-            <p style="color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;margin-top:var(--space-8)">
+            <p class="text-tertiary-hint-top">
               重跑将从失败的阶段重新开始，已完成阶段的产出物将被保留复用。
             </p>
 
@@ -2728,17 +3221,17 @@
             </div>
 
             <h4>输入参数</h4>
-            <div style="background:var(--surface-strip);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-code);font-size:var(--font-size-12);color:var(--text-secondary);line-height:1.5;word-break:break-all">
+            <div class="code-block code-block--default">
               type=momentum<br>windows=[5,10,20,60]<br>universe=hs300<br>start=2025-01-01<br>end=2026-03-28
             </div>
 
             <h4>输出结果</h4>
-            <div style="background:var(--surface-strip);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-code);font-size:var(--font-size-12);color:var(--system-healthy-fg);line-height:1.5">
+            <div class="code-block code-block--success">
               status: ok<br>rows: 48,320<br>columns: 4<br>generated_factors: MOM_5d, MOM_10d, MOM_20d, MOM_60d<br>duration: 3.8s
             </div>
 
             <h4>数据快照</h4>
-            <div style="background:var(--surface-strip);border-radius:var(--radius-4);padding:var(--space-8);font-family:var(--font-family-code);font-size:var(--font-size-12);color:var(--text-tertiary);line-height:1.6">
+            <div class="code-block code-block--muted">
               | code | date | MOM_5d | MOM_10d | MOM_20d | MOM_60d |<br>
               |------|------|--------|---------|---------|---------|<br>
               | 600519 | 2026-03-28 | +1.2% | +3.4% | +5.1% | +8.7% |<br>

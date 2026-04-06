@@ -525,6 +525,232 @@
     .workspace-placeholder-icon { font-size: 24px; margin-bottom: var(--space-6); opacity: 0.5; }
     .workspace-placeholder-title { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-4); }
     .workspace-placeholder-desc { font-size: var(--font-size-12); max-width: 240px; line-height: 1.5; }
+
+    /* ══════════════════════════════════════════════
+     * Inline-style replacement utilities
+     * ══════════════════════════════════════════════ */
+
+    /* Cursor utility — label/button interactive pointer */
+    .cursor-pointer { cursor: pointer; }
+
+    /* Overlay field semantic value colors */
+    .val-weak    { color: var(--market-weak-fg); }
+    .val-strong  { color: var(--market-strong-fg); }
+    .val-healthy { color: var(--system-healthy-fg); }
+    .val-risk    { color: var(--risk-high-fg); }
+
+    /* Overlay body descriptive paragraph */
+    .overlay-desc {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0;
+    }
+    .overlay-desc--relaxed {
+      line-height: 1.7;
+    }
+
+    /* Edit workspace: widget checklist */
+    .widget-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+    .widget-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) 0;
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+    }
+    .widget-item input[type="checkbox"] {
+      accent-color: var(--brand-accent);
+    }
+
+    /* Edit workspace: layout preview area */
+    .layout-preview {
+      border: 1px dashed var(--border-default);
+      border-radius: var(--radius-4);
+      padding: var(--space-12);
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+    }
+
+    /* OK checkmark icon (replaces inline color on ✓ state icons) */
+    .icon-ok { color: var(--system-healthy-fg); }
+
+    /* Data health trust gauge */
+    .health-gauge {
+      display: flex;
+      gap: 2px;
+      height: 3px;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: var(--space-6);
+    }
+    .health-gauge-segment {
+      flex: 1;
+      border-radius: 1px;
+    }
+    .health-gauge-segment.healthy { background: var(--system-healthy-fg); }
+    .health-gauge-segment.degraded { background: var(--system-degraded-fg); }
+
+    /* ══════════════════════════════════════════════
+     * R3: Information visualization enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* KPI metric card with sparkline */
+    .kpi-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-8) var(--space-12);
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .kpi-card:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 20%, var(--border-default));
+    }
+    .kpi-card-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .kpi-card-label {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-medium);
+      letter-spacing: 0.02em;
+    }
+    .kpi-card-value {
+      font-size: var(--font-size-20);
+      font-weight: var(--font-weight-semibold);
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+    .kpi-card-change {
+      font-size: var(--font-size-11);
+      font-feature-settings: 'tnum' 1;
+    }
+    .kpi-card-sparkline {
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    /* Queue item hover elevation */
+    .queue-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .queue-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Decision banner KPI row */
+    .decision-kpi-row {
+      display: flex;
+      gap: var(--space-8);
+      margin-top: var(--space-4);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R4: Ambient brand glow — premium depth
+     * ══════════════════════════════════════════════ */
+
+    /* Main content area subtle brand glow */
+    .shell-home .main-primary::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      left: 20%;
+      right: 20%;
+      height: 80px;
+      background: radial-gradient(
+        ellipse at center,
+        color-mix(in oklch, var(--brand-accent) 3%, transparent) 0%,
+        transparent 70%
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+    .shell-home .main-primary {
+      position: relative;
+    }
+    .shell-home .main-primary > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Panel subtle inner glow on hover */
+    .panel {
+      transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .panel:hover {
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 6%, transparent),
+                  0 1px 3px color-mix(in oklch, var(--brand-accent) 3%, transparent);
+    }
+
+    /* ── Sidebar context rail premium polish ── */
+    .shell-home .context-section {
+      transition: background var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .shell-home .context-section:hover {
+      background: color-mix(in oklch, var(--brand-accent) 2%, var(--surface-card));
+    }
+
+    /* ── Alert row urgency hover ── */
+    .shell-home .alert-row {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .shell-home .alert-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Finding item interaction ── */
+    .shell-home .finding-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+      padding: var(--space-4);
+      margin: calc(var(--space-4) * -1);
+    }
+    .shell-home .finding-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Research item interaction ── */
+    .shell-home .research-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+      padding: var(--space-4);
+      margin: calc(var(--space-4) * -1);
+    }
+    .shell-home .research-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Decision banner KPI enhanced depth ── */
+    .shell-home .decision-judgment-metric {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+    }
+    .shell-home .decision-judgment-metric:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Light mode ambient glow tuning ── */
+    [data-theme="light"] .shell-home .main-primary::before {
+      opacity: 0.3;
+    }
+    [data-theme="light"] .shell-home .context-section:hover {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-card));
+    }
   </style>
 </head>
 <body>
@@ -669,22 +895,36 @@
             <!-- Left: Account primary status (~42%) -->
             <div class="decision-primary">
               <span class="metric-label">今日盈亏</span>
-              <span class="metric-value positive">+¥86,472.50</span>
+              <span class="metric-value positive">+¥86,472.50
+                <svg class="sparkline" width="64" height="20" viewBox="0 0 64 20" fill="none" aria-label="近 5 日盈亏趋势">
+                  <defs><linearGradient id="pnl-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-strong-fg)" stop-opacity="0.2"/><stop offset="100%" stop-color="var(--market-strong-fg)" stop-opacity="0"/></linearGradient></defs>
+                  <polyline points="2,14 14,12 26,10 38,8 50,6 62,4" stroke="var(--market-strong-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  <polygon points="2,14 14,12 26,10 38,8 50,6 62,4 62,20 2,20" fill="url(#pnl-grad)"/>
+                </svg>
+              </span>
               <span class="metric-sub">+0.34% · 总权益 ¥25,432,180 · <span class="indicator-up">较昨日 +¥21,400</span></span>
             </div>
             <!-- Middle: Market context + judgment (~33%) -->
             <div class="decision-judgment">
-              <label for="overlay-ai-advice" style="cursor:pointer" title="查看 AI 操作建议">
+              <label for="overlay-ai-advice" class="cursor-pointer" title="查看 AI 操作建议">
               <div class="decision-judgment-text">波动回落，北向转暖，但局部拥挤。</div>
               </label>
               <div class="decision-judgment-metrics">
                 <div class="decision-judgment-metric">
                   <span class="status-label">IVIX</span>
-                  <span class="status-value">18.52</span>
+                  <span class="status-value">18.52
+                    <svg class="sparkline" width="36" height="14" viewBox="0 0 36 14" fill="none" aria-hidden="true">
+                      <polyline points="2,4 8,6 14,5 20,8 26,10 32,11" stroke="var(--text-tertiary)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
                 </div>
                 <div class="decision-judgment-metric">
                   <span class="status-label">北向资金</span>
-                  <span class="status-value up">+12.4 亿</span>
+                  <span class="status-value up">+12.4 亿
+                    <svg class="sparkline" width="36" height="14" viewBox="0 0 36 14" fill="none" aria-hidden="true">
+                      <polyline points="2,10 8,9 14,8 20,6 26,5 32,3" stroke="var(--market-strong-fg)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
                 </div>
               </div>
             </div>
@@ -729,7 +969,7 @@
                 <div class="queue-item-footer">
                   <span class="queue-item-source">策略引擎 · 3分钟前</span>
                   
-                  <label for="overlay-signal-detail" class="panel-action" style="cursor:pointer">查看详情</label>
+                  <label for="overlay-signal-detail" class="panel-action cursor-pointer">查看详情</label>
                 </div>
               </div>
             </div>
@@ -996,6 +1236,14 @@
             <span class="context-section-title">数据健康</span>
           </div>
           <div class="context-section-body health-preview-body">
+            <!-- Health summary bar — visual data trust gauge -->
+            <div class="health-gauge" aria-label="数据健康度: 3/5 正常">
+              <div class="health-gauge-segment healthy" title="行情数据"></div>
+              <div class="health-gauge-segment healthy" title="期权链"></div>
+              <div class="health-gauge-segment degraded" title="财报数据"></div>
+              <div class="health-gauge-segment healthy" title="新闻资讯"></div>
+              <div class="health-gauge-segment degraded" title="另类数据"></div>
+            </div>
             <div class="health-item">
               <span class="health-dot healthy"></span>
               <span class="health-label">行情数据</span>
@@ -1055,7 +1303,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">信号类型</span>
-            <span class="overlay-field-value" style="color:var(--market-weak-fg)">卖出</span>
+            <span class="overlay-field-value val-weak">卖出</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">策略</span>
@@ -1071,15 +1319,15 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">标的当前状态</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">正常交易</span>
+            <span class="overlay-field-value val-healthy">正常交易</span>
           </div>
 
           <h4>风险评估</h4>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">集中度已偏高，建议分批减仓，避免单笔冲击成本过高。当前科技板块占比 37.2%，超出规则上限 35%。</p>
+          <p class="overlay-desc">集中度已偏高，建议分批减仓，避免单笔冲击成本过高。当前科技板块占比 37.2%，超出规则上限 35%。</p>
 
           <div class="overlay-actions">
             
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" style="cursor:pointer">复核通过</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">复核通过</label>
             <button class="overlay-btn overlay-btn-secondary">查看完整信号</button>
             <button class="overlay-btn overlay-btn-danger">驳回</button>
           </div>
@@ -1103,7 +1351,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">方向</span>
-            <span class="overlay-field-value" style="color:var(--market-weak-fg)">卖出</span>
+            <span class="overlay-field-value val-weak">卖出</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">数量</span>
@@ -1117,7 +1365,7 @@
           <h4>风险校验</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">校验结果</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">通过 ✓</span>
+            <span class="overlay-field-value val-healthy">通过 ✓</span>
           </div>
 
           <h4>预估费用</h4>
@@ -1131,8 +1379,8 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认提交</label>
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认提交</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
           </div>
         </div>
       </div>
@@ -1148,23 +1396,23 @@
         </div>
         <div class="overlay-body">
           <h4>可用 Widget</h4>
-          <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 持仓概览
+          <div class="widget-list">
+            <label class="widget-item">
+              <input type="checkbox" checked> 持仓概览
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 关注列表
+            <label class="widget-item">
+              <input type="checkbox" checked> 关注列表
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 快捷入口
+            <label class="widget-item">
+              <input type="checkbox"> 快捷入口
             </label>
-            <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-              <input type="checkbox" style="accent-color:var(--brand-accent)"> 市场日历
+            <label class="widget-item">
+              <input type="checkbox"> 市场日历
             </label>
           </div>
 
           <h4>当前布局预览</h4>
-          <div style="border:1px dashed var(--border-default);border-radius:var(--radius-4);padding:var(--space-12);text-align:center;color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">
+          <div class="layout-preview">
             持仓概览（顶部全宽）<br>
             关注列表 · 研究进展（并排）<br>
             Agent 洞察（底部全宽）
@@ -1188,22 +1436,22 @@
         </div>
         <div class="overlay-body">
           <h4>建议全文</h4>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0;">
+          <p class="overlay-desc overlay-desc--relaxed">
             当前市场波动回落，北向资金连续 3 日净流入，但科技板块拥挤度偏高。建议关注：(1) 科技板块适度减配至 30% 以下；(2) 关注消费板块轮动信号；(3) 沪深 300 指数增强策略近期表现优异，可考虑增配。
           </p>
 
           <h4>关联数据支撑</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">IVIX</span>
-            <span class="overlay-field-value">18.52 <span style="color:var(--market-weak-fg)">(-3.1%)</span></span>
+            <span class="overlay-field-value">18.52 <span class="val-weak">(-3.1%)</span></span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">北向资金</span>
-            <span class="overlay-field-value" style="color:var(--market-strong-fg)">+12.4 亿</span>
+            <span class="overlay-field-value val-strong">+12.4 亿</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">科技板块集中度</span>
-            <span class="overlay-field-value" style="color:var(--risk-high-fg)">37.2%</span>
+            <span class="overlay-field-value val-risk">37.2%</span>
           </div>
         </div>
       </div>
@@ -1308,7 +1556,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
             <div class="state-empty">
-              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-icon icon-ok">✓</div>
               <div class="state-empty-title">暂无待处理事项</div>
               <div class="state-empty-desc">所有任务已处理完毕，一切正常运行</div>
             </div>
@@ -1348,7 +1596,7 @@
               <div class="state-empty-icon">🧩</div>
               <div class="state-empty-title">工作区为空</div>
               <div class="state-empty-desc">添加 Widget 开始自定义你的工作区</div>
-              <label for="overlay-edit-workspace" class="state-empty-cta" style="cursor:pointer">编辑工作台</label>
+              <label for="overlay-edit-workspace" class="state-empty-cta cursor-pointer">编辑工作台</label>
             </div>
           </div>
       </div>
@@ -1455,7 +1703,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
             <div class="state-empty">
-              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-icon icon-ok">✓</div>
               <div class="state-empty-title">一切正常 — 无活跃预警</div>
               <div class="state-empty-desc">当前无风险预警、数据异常或系统告警</div>
             </div>
@@ -1492,7 +1740,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
             <div class="state-empty">
-              <div class="state-empty-icon" style="color:var(--system-healthy-fg)">✓</div>
+              <div class="state-empty-icon icon-ok">✓</div>
               <div class="state-empty-title">所有数据源正常</div>
               <div class="state-empty-desc">行情、财报、另类数据等全部数据源运行正常，无延迟或异常</div>
             </div>
@@ -1553,7 +1801,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">信号类型</span>
-              <span class="overlay-field-value" style="color:var(--market-weak-fg)">卖出</span>
+              <span class="overlay-field-value val-weak">卖出</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">策略</span>
@@ -1569,12 +1817,12 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">标的当前状态</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">正常交易</span>
+              <span class="overlay-field-value val-healthy">正常交易</span>
             </div>
             <h4>风险评估</h4>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">集中度已偏高，建议分批减仓，避免单笔冲击成本过高。当前科技板块占比 37.2%，超出规则上限 35%。</p>
+            <p class="overlay-desc">集中度已偏高，建议分批减仓，避免单笔冲击成本过高。当前科技板块占比 37.2%，超出规则上限 35%。</p>
             <div class="overlay-actions">
-              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" style="cursor:pointer">复核通过</label>
+              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">复核通过</label>
               <button class="overlay-btn overlay-btn-secondary">查看完整信号</button>
               <button class="overlay-btn overlay-btn-danger">驳回</button>
             </div>
@@ -1598,7 +1846,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">方向</span>
-              <span class="overlay-field-value" style="color:var(--market-weak-fg)">卖出</span>
+              <span class="overlay-field-value val-weak">卖出</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">数量</span>
@@ -1611,7 +1859,7 @@
             <h4>风险校验</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">校验结果</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">通过 ✓</span>
+              <span class="overlay-field-value val-healthy">通过 ✓</span>
             </div>
             <h4>预估费用</h4>
             <div class="overlay-field">
@@ -1623,8 +1871,8 @@
               <span class="overlay-field-value">¥55.90</span>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认提交</label>
-              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
+              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认提交</label>
+              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
             </div>
           </div>
         </div>
@@ -1640,22 +1888,22 @@
           </div>
           <div class="overlay-body">
             <h4>可用 Widget</h4>
-            <div style="display:flex;flex-direction:column;gap:var(--space-6)">
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 持仓概览
+            <div class="widget-list">
+              <label class="widget-item">
+                <input type="checkbox" checked> 持仓概览
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--brand-accent)"> 关注列表
+              <label class="widget-item">
+                <input type="checkbox" checked> 关注列表
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 快捷入口
+              <label class="widget-item">
+                <input type="checkbox"> 快捷入口
               </label>
-              <label style="display:flex;align-items:center;gap:var(--space-6);padding:var(--space-4) 0;color:var(--text-primary);font-size:var(--font-size-12);cursor:pointer">
-                <input type="checkbox" style="accent-color:var(--brand-accent)"> 市场日历
+              <label class="widget-item">
+                <input type="checkbox"> 市场日历
               </label>
             </div>
             <h4>当前布局预览</h4>
-            <div style="border:1px dashed var(--border-default);border-radius:var(--radius-4);padding:var(--space-12);text-align:center;color:var(--text-tertiary);font-size:var(--font-size-12);line-height:1.6;">
+            <div class="layout-preview">
               持仓概览（顶部全宽）<br>
               关注列表 · 研究进展（并排）<br>
               Agent 洞察（底部全宽）
@@ -1678,21 +1926,21 @@
           </div>
           <div class="overlay-body">
             <h4>建议全文</h4>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.7;margin:0;">
+            <p class="overlay-desc overlay-desc--relaxed">
               当前市场波动回落，北向资金连续 3 日净流入，但科技板块拥挤度偏高。建议关注：(1) 科技板块适度减配至 30% 以下；(2) 关注消费板块轮动信号；(3) 沪深 300 指数增强策略近期表现优异，可考虑增配。
             </p>
             <h4>关联数据支撑</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">IVIX</span>
-              <span class="overlay-field-value">18.52 <span style="color:var(--market-weak-fg)">(-3.1%)</span></span>
+              <span class="overlay-field-value">18.52 <span class="val-weak">(-3.1%)</span></span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">北向资金</span>
-              <span class="overlay-field-value" style="color:var(--market-strong-fg)">+12.4 亿</span>
+              <span class="overlay-field-value val-strong">+12.4 亿</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">科技板块集中度</span>
-              <span class="overlay-field-value" style="color:var(--risk-high-fg)">37.2%</span>
+              <span class="overlay-field-value val-risk">37.2%</span>
             </div>
           </div>
         </div>

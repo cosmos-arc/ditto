@@ -1262,12 +1262,341 @@
     .ic-bar.h14 { height: 14px; }
     .ic-bar.h16 { height: 16px; }
 
+    /* ── Table column widths (replace inline style on colgroup) ── */
+    .col-status-bar { width: 2px; }
+    .col-factor     { width: 19%; }
+    .col-ic         { width: 8%; }
+    .col-ir         { width: 8%; }
+    .col-sharpe     { width: 10%; }
+    .col-turnover   { width: 10%; }
+    .col-decay      { width: 8%; }
+    .col-coverage   { width: 10%; }
+    .col-universe   { width: 11%; }
+    .col-status     { width: 14%; }
+
+    /* ── SVG chart overlay (replace inline style) ── */
+    .chart-svg-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Health bar segment height variants (data-driven) ── */
+    .health-bar-segment.h4  { height: 4px; }
+    .health-bar-segment.h5  { height: 5px; }
+    .health-bar-segment.h6  { height: 6px; }
+    .health-bar-segment.h7  { height: 7px; }
+    .health-bar-segment.h8  { height: 8px; }
+    .health-bar-segment.h9  { height: 9px; }
+    .health-bar-segment.h10 { height: 10px; }
+    .health-bar-segment.h12 { height: 12px; }
+
+    /* ── Width row fill variants (data-driven) ── */
+    .width-row-fill.w45 { width: 45%; }
+    .width-row-fill.w68 { width: 68%; }
+    .width-row-fill.w72 { width: 72%; }
+    .width-row-fill.w76 { width: 76%; }
+    .width-row-fill.w85 { width: 85%; }
+    .width-row-fill.w92 { width: 92%; }
+
+    /* ── Correlation matrix grid (data-driven layout) ── */
+    .corr-matrix-5x5 {
+      grid-template-columns: repeat(5, 28px);
+      grid-template-rows: repeat(5, 28px);
+    }
+
     /* ── Stale data coverage for factor notes ── */
     .analysis-notes-item.stale .analysis-notes-title {
       color: var(--data-state-stale-fg);
     }
     .analysis-notes-item.stale .analysis-notes-body {
       color: var(--data-state-stale-fg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Information Visualization Enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Factor category badge ── */
+    .factor-category {
+      display: inline-block;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      background: var(--interaction-hover-subtle-bg);
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-2);
+      margin-left: var(--space-4);
+      vertical-align: middle;
+      line-height: 1.6;
+    }
+    .factor-category.cat-risk   { color: var(--system-degraded-fg); background: var(--execution-pending-bg); }
+    .factor-category.cat-alpha  { color: var(--brand-accent); background: var(--brand-accent-subtle); }
+    .factor-category.cat-flow   { color: var(--system-healthy-fg); background: var(--system-healthy-bg); }
+
+    /* ── Data source health indicator (scope strip) ── */
+    .health-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .health-bar {
+      display: inline-flex;
+      gap: 1px;
+      align-items: flex-end;
+      height: 12px;
+    }
+    .health-bar-segment {
+      width: 3px;
+      border-radius: 1px;
+      transition: height var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .health-bar-segment.ok   { background: var(--system-healthy-fg); }
+    .health-bar-segment.warn { background: var(--system-degraded-fg); }
+
+    /* ── Sharpe mini sparkline (run items) ── */
+    .run-item-sparkline {
+      display: inline-flex;
+      align-items: center;
+      margin-left: auto;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .run-item:hover .run-item-sparkline {
+      opacity: 0.85;
+    }
+
+    /* ── Review queue priority indicator ── */
+    .queue-priority {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-top: 2px;
+    }
+    .queue-priority-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .queue-priority-dot.high   { background: var(--system-down-fg); }
+    .queue-priority-dot.medium { background: var(--system-degraded-fg); }
+    .queue-priority-dot.low    { background: var(--text-tertiary); }
+
+    /* ── Correlation mini heatmap ── */
+    .corr-heatmap {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-8);
+    }
+    .corr-matrix {
+      display: grid;
+      gap: 1px;
+    }
+    .corr-cell {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 2px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-8);
+      font-family: var(--font-family-numeric);
+      color: var(--text-secondary);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .corr-cell:hover {
+      transform: scale(1.15);
+      z-index: 2;
+    }
+    .corr-cell.diag {
+      background: var(--brand-accent);
+      color: var(--text-inverse);
+      font-weight: var(--font-weight-semibold);
+    }
+    .corr-cell.strong-pos {
+      background: color-mix(in oklch, var(--brand-accent) 45%, transparent);
+      color: var(--text-primary);
+    }
+    .corr-cell.moderate-pos {
+      background: color-mix(in oklch, var(--brand-accent) 22%, transparent);
+    }
+    .corr-cell.weak-pos {
+      background: color-mix(in oklch, var(--brand-accent) 10%, transparent);
+    }
+    .corr-cell.strong-neg {
+      background: color-mix(in oklch, var(--system-down-fg) 35%, transparent);
+      color: var(--text-primary);
+    }
+    .corr-cell.moderate-neg {
+      background: color-mix(in oklch, var(--system-down-fg) 18%, transparent);
+    }
+    .corr-cell.weak-neg {
+      background: color-mix(in oklch, var(--system-down-fg) 8%, transparent);
+    }
+    .corr-cell.near-zero {
+      background: var(--surface-panel-base);
+    }
+    .corr-labels {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .corr-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .corr-legend {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .corr-legend-bar {
+      width: 64px;
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--system-down-fg) 35%, transparent),
+        var(--surface-panel-base),
+        color-mix(in oklch, var(--brand-accent) 45%, transparent)
+      );
+    }
+
+    /* ── Factor width mini bar chart ── */
+    .width-chart {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: var(--space-4) 0;
+    }
+    .width-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+    .width-row-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      width: 64px;
+      flex-shrink: 0;
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .width-row-track {
+      flex: 1;
+      height: 6px;
+      background: var(--surface-muted);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+    .width-row-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s var(--motion-easing-standard);
+    }
+    .width-row-fill.accent {
+      background: var(--brand-accent);
+    }
+    .width-row-fill.muted {
+      background: color-mix(in oklch, var(--brand-accent) 40%, var(--text-tertiary));
+    }
+    .width-row-fill.dim {
+      background: color-mix(in oklch, var(--text-tertiary) 50%, transparent);
+    }
+    .width-row-value {
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      color: var(--text-secondary);
+      width: 28px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    /* ── Elevated search area refinement ── */
+    .header-search {
+      position: relative;
+      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .header-search:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .header-search:focus-within {
+      border-color: var(--brand-accent);
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 25%, transparent);
+    }
+
+    /* ── Monitor panel hover elevation ── */
+    .monitor-panel {
+      transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .monitor-panel:hover {
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--text-primary) 4%, transparent);
+    }
+
+    /* ── Run item hover: subtle left accent bar ── */
+    .run-item::before {
+      content: '';
+      position: absolute;
+      left: calc(var(--space-8) * -1);
+      top: var(--space-4);
+      bottom: var(--space-4);
+      width: 0;
+      border-radius: 1px;
+      background: var(--brand-accent);
+      transition: width var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .run-item {
+      position: relative;
+    }
+    .run-item:hover::before {
+      width: 2px;
+    }
+
+    /* ── Queue review item hover: enhanced accent bar ── */
+    .queue-review-item::before {
+      content: '';
+      position: absolute;
+      left: calc(var(--space-8) * -1);
+      top: var(--space-4);
+      bottom: var(--space-4);
+      width: 0;
+      border-radius: 1px;
+      background: var(--brand-accent);
+      transition: width var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .queue-review-item:hover::before {
+      width: 2px;
+    }
+
+    /* ── Factor name group layout ── */
+    .cell-factor-group {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0;
+      max-width: 100%;
+    }
+    .cell-factor-group .cell-ticker {
+      flex: 1;
+      min-width: 0;
     }
   </style>
 </head>
@@ -1404,6 +1733,36 @@
         <span class="pulse-label">最近更新</span>
         <span class="pulse-value">14:32</span>
       </div>
+      <!-- Group gap separator -->
+      <div class="pulse-separator group-gap"></div>
+      <!-- Data source health -->
+      <div class="pulse-item">
+        <span class="pulse-label">Factor Engine</span>
+        <span class="health-indicator">
+          <span class="health-bar">
+            <span class="health-bar-segment ok h10"></span>
+            <span class="health-bar-segment ok h8"></span>
+            <span class="health-bar-segment ok h12"></span>
+            <span class="health-bar-segment ok h6"></span>
+            <span class="health-bar-segment ok h9"></span>
+          </span>
+          <span class="pulse-value ok">正常</span>
+        </span>
+      </div>
+      <div class="pulse-separator"></div>
+      <div class="pulse-item">
+        <span class="pulse-label">Data Feed</span>
+        <span class="health-indicator">
+          <span class="health-bar">
+            <span class="health-bar-segment ok h8"></span>
+            <span class="health-bar-segment warn h5"></span>
+            <span class="health-bar-segment ok h10"></span>
+            <span class="health-bar-segment warn h4"></span>
+            <span class="health-bar-segment ok h7"></span>
+          </span>
+          <span class="pulse-value warning">波动</span>
+        </span>
+      </div>
     </div>
 
     <!-- State Variants: Pulse Strip -->
@@ -1426,16 +1785,16 @@
         <div class="panel-body">
           <table class="data-table">
             <colgroup>
-              <col style="width: 2px;">
-              <col style="width: 19%;">
-              <col style="width: 8%;">
-              <col style="width: 8%;">
-              <col style="width: 10%;">
-              <col style="width: 10%;">
-              <col style="width: 8%;">
-              <col style="width: 10%;">
-              <col style="width: 11%;">
-              <col style="width: 14%;">
+              <col class="col-status-bar">
+              <col class="col-factor">
+              <col class="col-ic">
+              <col class="col-ir">
+              <col class="col-sharpe">
+              <col class="col-turnover">
+              <col class="col-decay">
+              <col class="col-coverage">
+              <col class="col-universe">
+              <col class="col-status">
             </colgroup>
             <thead>
               <tr>
@@ -1455,7 +1814,7 @@
               <!-- 动量12M -->
               <tr class="row">
                 <td></td>
-                <td><span class="cell-ticker">动量12M</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">动量12M</span><span class="factor-category cat-alpha">Alpha</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-strong">0.041</span><span class="ic-bar bar-accent h14"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-strong">0.82</span></td>
                 <td class="right"><span class="cell-numeric trend-up">1.42</span></td>
@@ -1468,7 +1827,7 @@
               <!-- 价值PE -->
               <tr class="row">
                 <td></td>
-                <td><span class="cell-ticker">价值PE</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">价值PE</span><span class="factor-category cat-alpha">Alpha</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-strong">0.038</span><span class="ic-bar bar-accent h13"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-strong">0.75</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">1.28</span></td>
@@ -1481,7 +1840,7 @@
               <!-- 低波动 -->
               <tr class="row">
                 <td></td>
-                <td><span class="cell-ticker">低波动</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">低波动</span><span class="factor-category cat-risk">Risk</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-normal">0.032</span><span class="ic-bar bar-muted h12"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-normal">0.68</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">1.15</span></td>
@@ -1494,7 +1853,7 @@
               <!-- 质量ROE -->
               <tr class="row">
                 <td></td>
-                <td><span class="cell-ticker">质量ROE</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">质量ROE</span><span class="factor-category cat-alpha">Alpha</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-muted">0.029</span><span class="ic-bar bar-muted h11"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-normal">0.61</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">1.02</span></td>
@@ -1507,7 +1866,7 @@
               <!-- 规模 -->
               <tr class="row">
                 <td></td>
-                <td><span class="cell-ticker">规模</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">规模</span><span class="factor-category">基础</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-muted">0.025</span><span class="ic-bar bar-muted h9"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-normal">0.55</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">0.92</span></td>
@@ -1520,7 +1879,7 @@
               <!-- 成长（营收） -->
               <tr class="row">
                 <td></td>
-                <td><span class="cell-ticker">成长（营收）</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">成长（营收）</span><span class="factor-category cat-alpha">Alpha</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-muted">0.022</span><span class="ic-bar bar-muted h8"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-muted">0.48</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">0.85</span></td>
@@ -1533,7 +1892,7 @@
               <!-- 北向持仓变化率 -->
               <tr class="row">
                 <td class="cell-status-bar brand"></td>
-                <td><span class="cell-ticker">北向持仓变化率</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">北向持仓变化率</span><span class="factor-category cat-flow">Flow</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-strong">0.055</span><span class="ic-bar bar-accent h16"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-strong">0.92</span></td>
                 <td class="right"><span class="cell-numeric trend-up">1.58</span></td>
@@ -1546,7 +1905,7 @@
               <!-- 情绪Alpha -->
               <tr class="row">
                 <td class="cell-status-bar degraded"></td>
-                <td><span class="cell-ticker">情绪Alpha</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">情绪Alpha</span><span class="factor-category cat-alpha">Alpha</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-degraded">0.028</span><span class="ic-bar bar-muted h10"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-degraded">0.45</span></td>
                 <td class="right"><span class="cell-numeric trend-down">0.78</span></td>
@@ -1558,7 +1917,7 @@
               </tr>
               <tr class="row">
                 <td></td>
-                <td><span class="cell-ticker">换手率动量</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">换手率动量</span><span class="factor-category cat-flow">Flow</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-normal">0.033</span><span class="ic-bar bar-muted h12"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-strong">0.71</span></td>
                 <td class="right"><span class="cell-numeric trend-flat">1.22</span></td>
@@ -1571,7 +1930,7 @@
               <!-- 行业动量 -->
               <tr class="row">
                 <td class="cell-status-bar degraded"></td>
-                <td><span class="cell-ticker">行业动量</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">行业动量</span><span class="factor-category cat-alpha">Alpha</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-degraded">0.019</span><span class="ic-bar bar-muted h7"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-degraded">0.38</span></td>
                 <td class="right"><span class="cell-numeric trend-down">0.72</span></td>
@@ -1584,7 +1943,7 @@
               <!-- 波动率偏斜 -->
               <tr class="row">
                 <td class="cell-status-bar down"></td>
-                <td><span class="cell-ticker">波动率偏斜</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">波动率偏斜</span><span class="factor-category cat-risk">Risk</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-down">0.021</span><span class="ic-bar bar-muted h8"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-down">0.42</span></td>
                 <td class="right"><span class="cell-numeric trend-down">0.68</span></td>
@@ -1597,7 +1956,7 @@
               <!-- 分析师预期变化 -->
               <tr class="row">
                 <td></td>
-                <td><span class="cell-ticker">分析师预期变化</span></td>
+                <td><span class="cell-factor-group"><span class="cell-ticker">分析师预期变化</span><span class="factor-category cat-alpha">Alpha</span></span></td>
                 <td class="right"><span class="cell-numeric cell-ic-dim">0.018</span><span class="ic-bar bar-muted h7"></span></td>
                 <td class="right"><span class="cell-numeric cell-ir-dim">0.35</span></td>
                 <td class="right"><span class="cell-numeric trend-down">0.62</span></td>
@@ -1628,12 +1987,12 @@
         <div class="context-section-body">
           <!-- Run 1: Completed -->
           <div class="run-item">
-            
+
             <span class="run-item-icon ok">
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10l3 3 9-9"/></svg>
             </span>
             <div class="run-item-content">
-              <div class="run-item-title">价值因子 Q1 回测</div>
+              <div class="run-item-title">价值因子 Q1 回测 <svg class="run-item-sparkline" width="32" height="12" viewBox="0 0 32 12" fill="none"><polyline points="0,8 4,7 8,6 12,5 16,4 20,3 24,2 28,2 32,1" stroke="var(--system-healthy-fg)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
               <div class="run-item-detail">Sharpe 1.42, 最大回撤 -8.3%, 1,247 笔交易</div>
               <div class="run-item-footer">
                 <span class="run-item-status complete">完成</span>
@@ -1648,7 +2007,7 @@
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
             </span>
             <div class="run-item-content">
-              <div class="run-item-title">情绪Alpha v2 漂移检测</div>
+              <div class="run-item-title">情绪Alpha v2 漂移检测 <svg class="run-item-sparkline" width="32" height="12" viewBox="0 0 32 12" fill="none"><polyline points="0,2 4,3 8,3 12,5 16,6 20,7 24,8 28,9 32,10" stroke="var(--system-degraded-fg)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
               <div class="run-item-detail">近 5 日 IC 从 0.041 降至 0.028</div>
               <div class="run-item-footer">
                 <span class="run-item-status warn">警告</span>
@@ -1662,7 +2021,7 @@
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10l3 3 9-9"/></svg>
             </span>
             <div class="run-item-content">
-              <div class="run-item-title">行业轮动策略参数优化</div>
+              <div class="run-item-title">行业轮动策略参数优化 <svg class="run-item-sparkline" width="32" height="12" viewBox="0 0 32 12" fill="none"><polyline points="0,6 4,5 8,4 12,3 16,3 20,2 24,2 28,1 32,1" stroke="var(--system-healthy-fg)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
               <div class="run-item-detail">新参数组 Sharpe 提升 0.15</div>
               <div class="run-item-footer">
                 <span class="run-item-status complete">完成</span>
@@ -1697,10 +2056,11 @@
         <div class="context-section-body">
           <!-- Review 1 -->
           <div class="queue-review-item">
-            
+
             <div class="queue-review-content">
               <div class="queue-review-title">行业轮动参数优化</div>
               <div class="queue-review-sub">新参数组 · 待人工复核</div>
+              <div class="queue-priority"><span class="queue-priority-dot high"></span>高优先级 · 参数变更影响 3 个策略</div>
             </div>
             <span class="queue-review-badge pending">待复核</span>
             <label for="overlay-review-action" class="inline-action-link tight">审核</label>
@@ -1710,6 +2070,7 @@
             <div class="queue-review-content">
               <div class="queue-review-title">北向持仓变化率</div>
               <div class="queue-review-sub">初步验证通过 · 待3个月滚动</div>
+              <div class="queue-priority"><span class="queue-priority-dot medium"></span>中优先级 · 验证周期剩余 67 天</div>
             </div>
             <span class="queue-review-badge validating">验证中</span>
           </div>
@@ -1718,6 +2079,7 @@
             <div class="queue-review-content">
               <div class="queue-review-title">新因子"分析师预期变化"</div>
               <div class="queue-review-sub">IC 0.018 · 待改进</div>
+              <div class="queue-priority"><span class="queue-priority-dot low"></span>低优先级 · 需进一步数据积累</div>
             </div>
             <span class="queue-review-badge improve">待改进</span>
           </div>
@@ -1794,7 +2156,7 @@
             <span class="chart-x-label">Today</span>
           </div>
           <!-- SVG Area Chart with 4 factor IC curves -->
-          <svg style="position:absolute;inset:0;z-index:1;pointer-events:none;width:100%;height:100%;" viewBox="0 0 800 50" preserveAspectRatio="none">
+          <svg class="chart-svg-overlay" viewBox="0 0 800 50" preserveAspectRatio="none">
             <defs>
               <!-- Gradient fill for main line (动量12M) -->
               <linearGradient id="ic-area-gradient" x1="0" y1="0" x2="0" y2="1">
@@ -1847,7 +2209,40 @@
         </div>
         <div class="chart-placeholder">
           <span class="chart-placeholder-label">因子宽度分布 · 近 60 日</span>
+          <span class="chart-placeholder-sublabel">按因子贡献度排序</span>
           <div class="chart-placeholder-area"></div>
+          <div class="width-chart">
+            <div class="width-row">
+              <span class="width-row-label">动量12M</span>
+              <div class="width-row-track"><div class="width-row-fill accent w92"></div></div>
+              <span class="width-row-value">92%</span>
+            </div>
+            <div class="width-row">
+              <span class="width-row-label">价值PE</span>
+              <div class="width-row-track"><div class="width-row-fill accent w85"></div></div>
+              <span class="width-row-value">85%</span>
+            </div>
+            <div class="width-row">
+              <span class="width-row-label">北向持仓</span>
+              <div class="width-row-track"><div class="width-row-fill muted w76"></div></div>
+              <span class="width-row-value">76%</span>
+            </div>
+            <div class="width-row">
+              <span class="width-row-label">低波动</span>
+              <div class="width-row-track"><div class="width-row-fill muted w72"></div></div>
+              <span class="width-row-value">72%</span>
+            </div>
+            <div class="width-row">
+              <span class="width-row-label">质量ROE</span>
+              <div class="width-row-track"><div class="width-row-fill muted w68"></div></div>
+              <span class="width-row-value">68%</span>
+            </div>
+            <div class="width-row">
+              <span class="width-row-label">情绪Alpha</span>
+              <div class="width-row-track"><div class="width-row-fill dim w45"></div></div>
+              <span class="width-row-value">45%</span>
+            </div>
+          </div>
         </div>
       </div>
       <div class="analysis-band-body" data-panel="analysis-corr">
@@ -1863,7 +2258,53 @@
         </div>
         <div class="chart-placeholder">
           <span class="chart-placeholder-label">因子相关性矩阵 · 近 20 日</span>
-          <div class="chart-placeholder-area"></div>
+          <span class="chart-placeholder-sublabel">鼠标悬停查看详情</span>
+          <div class="corr-heatmap">
+            <div class="corr-labels">
+              <span class="corr-label">动量12M</span>
+              <span class="corr-label">价值PE</span>
+              <span class="corr-label">低波动</span>
+              <span class="corr-label">北向持仓</span>
+              <span class="corr-label">情绪Alpha</span>
+            </div>
+            <div class="corr-matrix corr-matrix-5x5">
+              <!-- Row 1: 动量12M -->
+              <div class="corr-cell diag" title="动量12M vs 动量12M">1.0</div>
+              <div class="corr-cell weak-neg" title="动量12M vs 价值PE">-0.12</div>
+              <div class="corr-cell weak-neg" title="动量12M vs 低波动">-0.18</div>
+              <div class="corr-cell moderate-pos" title="动量12M vs 北向持仓">0.25</div>
+              <div class="corr-cell strong-pos" title="动量12M vs 情绪Alpha">0.72</div>
+              <!-- Row 2: 价值PE -->
+              <div class="corr-cell weak-neg" title="价值PE vs 动量12M">-0.12</div>
+              <div class="corr-cell diag" title="价值PE vs 价值PE">1.0</div>
+              <div class="corr-cell moderate-pos" title="价值PE vs 低波动">0.31</div>
+              <div class="corr-cell weak-pos" title="价值PE vs 北向持仓">0.08</div>
+              <div class="corr-cell weak-neg" title="价值PE vs 情绪Alpha">-0.05</div>
+              <!-- Row 3: 低波动 -->
+              <div class="corr-cell weak-neg" title="低波动 vs 动量12M">-0.18</div>
+              <div class="corr-cell moderate-pos" title="低波动 vs 价值PE">0.31</div>
+              <div class="corr-cell diag" title="低波动 vs 低波动">1.0</div>
+              <div class="corr-cell weak-pos" title="低波动 vs 北向持仓">0.14</div>
+              <div class="corr-cell weak-neg" title="低波动 vs 情绪Alpha">-0.22</div>
+              <!-- Row 4: 北向持仓 -->
+              <div class="corr-cell moderate-pos" title="北向持仓 vs 动量12M">0.25</div>
+              <div class="corr-cell weak-pos" title="北向持仓 vs 价值PE">0.08</div>
+              <div class="corr-cell weak-pos" title="北向持仓 vs 低波动">0.14</div>
+              <div class="corr-cell diag" title="北向持仓 vs 北向持仓">1.0</div>
+              <div class="corr-cell moderate-pos" title="北向持仓 vs 情绪Alpha">0.38</div>
+              <!-- Row 5: 情绪Alpha -->
+              <div class="corr-cell strong-pos" title="情绪Alpha vs 动量12M">0.72</div>
+              <div class="corr-cell weak-neg" title="情绪Alpha vs 价值PE">-0.05</div>
+              <div class="corr-cell weak-neg" title="情绪Alpha vs 低波动">-0.22</div>
+              <div class="corr-cell moderate-pos" title="情绪Alpha vs 北向持仓">0.38</div>
+              <div class="corr-cell diag" title="情绪Alpha vs 情绪Alpha">1.0</div>
+            </div>
+            <div class="corr-legend">
+              <span>-1</span>
+              <div class="corr-legend-bar"></div>
+              <span>+1</span>
+            </div>
+          </div>
         </div>
       </div>
       <div class="analysis-band-body" data-panel="analysis-notes">

@@ -1056,6 +1056,538 @@
     }
     .batch-btn:hover { background: var(--interaction-hover-subtle-bg); }
     .batch-btn.primary { background: var(--brand-accent); color: var(--brand-accent-fg); border-color: var(--brand-accent); }
+
+    /* ══════════════════════════════════
+     * Signal Table Column Widths
+     * ══════════════════════════════════ */
+    .sig-col-time     { width: 100px; }
+    .sig-col-symbol   { width: 160px; }
+    .sig-col-source   { width: 90px; }
+    .sig-col-side     { width: 70px; }
+    .sig-col-weight   { width: 90px; }
+    .sig-col-conf     { width: 130px; }
+    .sig-col-risk     { width: 80px; }
+    .sig-col-status   { width: 80px; }
+    .sig-col-operator { width: 100px; }
+    .sig-col-followup { width: 100px; }
+    .sig-col-reason   { width: 140px; }
+    .sig-col-action   { width: 80px; }
+    .sig-col-qty      { width: 80px; }
+    .sig-col-order    { width: 100px; }
+    .sig-col-order-st { width: 100px; }
+    .sig-col-progress { width: 80px; }
+
+    /* ══════════════════════════════════
+     * Semantic Utility Classes (extracted from inline styles)
+     * ══════════════════════════════════ */
+    .cell-name-group {
+      display: inline-flex;
+      align-items: baseline;
+      gap: var(--space-6);
+    }
+
+    /* Cell name spacing inside table cells */
+    td .cell-name {
+      margin-left: var(--space-6);
+    }
+
+    /* Confidence fill widths (dynamic per row) */
+    .conf-w-40 { width: 40%; }
+    .conf-w-52 { width: 52%; }
+    .conf-w-58 { width: 58%; }
+    .conf-w-60 { width: 60%; }
+    .conf-w-65 { width: 65%; }
+    .conf-w-78 { width: 78%; }
+    .conf-w-82 { width: 82%; }
+    .conf-w-88 { width: 88%; }
+    .conf-w-91 { width: 91%; }
+    .conf-w-100 { width: 100%; }
+
+    /* Clickable labels (cursor:pointer) */
+    label.clickable,
+    .clickable { cursor: pointer; }
+
+    /* Detail confidence fill widths */
+    .detail-conf-w-82 { width: 82%; }
+
+    /* Side badge size variants */
+    .side-badge.lg { font-size: var(--font-size-14); }
+
+    /* Numeric value styling in detail */
+    .detail-text {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Risk check icon colors */
+    .risk-check-icon.pass { color: var(--system-healthy-fg); }
+    .risk-check-icon.warn { color: var(--system-degraded-fg); }
+    .risk-check-icon.block { color: var(--system-down-fg); }
+
+    /* Cell operator (confirmed tab) */
+    .cell-operator {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    /* Cell reason variants */
+    .cell-reason {
+      font-size: var(--font-size-12);
+    }
+    .cell-reason.danger { color: var(--system-down-fg); }
+    .cell-reason.muted  { color: var(--text-tertiary); }
+
+    /* Confidence value size variant */
+    .confidence-value.sm { font-size: var(--font-size-10); }
+
+    /* Row disabled state */
+    .row.blocked { opacity: 0.45; }
+
+    /* ══════════════════════════════════
+     * Overlay Utility Classes
+     * ══════════════════════════════════ */
+    /* Overlay field-value color variants */
+    .overlay-field-value.color-up     { color: var(--market-up-fg); }
+    .overlay-field-value.color-pass   { color: var(--system-healthy-fg); }
+    .overlay-field-value.color-warn   { color: var(--system-degraded-fg); }
+
+    /* Overlay field-value numeric */
+    .overlay-field-value.tnum {
+      font-feature-settings: 'tnum' 1;
+    }
+
+    /* Overlay field total row */
+    .overlay-field-total {
+      border-bottom: none;
+      padding-top: var(--space-6);
+    }
+    .overlay-field-total .overlay-field-label {
+      font-weight: var(--font-weight-medium);
+    }
+    .overlay-field-total .overlay-field-value {
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    /* Overlay field confidence */
+    .overlay-field-confidence {
+      border-bottom: none;
+      margin-top: var(--space-8);
+    }
+    .overlay-field-confidence .overlay-field-value {
+      color: var(--system-healthy-fg);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* Overlay body text (AI解读 paragraphs) */
+    .overlay-body-text {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* ══════════════════════════════════
+     * P1: Module Hierarchy — Visual Layers
+     * ══════════════════════════════════ */
+    /* Table header: stronger treatment */
+    .data-table thead tr {
+      background: var(--surface-panel-elevated);
+    }
+    .data-table thead th {
+      font-weight: var(--font-weight-semibold);
+      border-bottom: 2px solid var(--border-default);
+    }
+
+    /* Active/selected row: left accent border */
+    .data-table tr.row.selected {
+      background: var(--interaction-selected-bg);
+      box-shadow: inset 3px 0 0 var(--brand-accent);
+    }
+
+    /* Detail panel: stronger separation */
+    .shell-signals .detail-panel {
+      border-left: 1px solid var(--border-default);
+      background: var(--surface-panel-elevated);
+    }
+    .detail-header {
+      border-bottom: 1px solid var(--border-default);
+      background: var(--surface-panel-base);
+    }
+
+    /* Tab bar: more distinct states */
+    .scope-tab.active {
+      border-bottom-width: 2px;
+      border-bottom-style: solid;
+      border-bottom-color: var(--brand-accent);
+    }
+
+    /* ══════════════════════════════════
+     * P2: Signal Item Visual Enrichment
+     * ══════════════════════════════════ */
+    /* Priority badges */
+    .priority-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-2);
+      height: 18px;
+      white-space: nowrap;
+    }
+    .priority-badge.p1 {
+      color: var(--system-down-fg);
+      background: var(--system-down-bg);
+    }
+    .priority-badge.p2 {
+      color: var(--system-degraded-fg);
+      background: var(--system-degraded-bg);
+    }
+    .priority-badge.p3 {
+      color: var(--text-tertiary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Signal type icons */
+    .signal-type-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: var(--radius-2);
+      flex-shrink: 0;
+    }
+    .signal-type-icon.strategy {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+    .signal-type-icon.ai {
+      color: var(--cyan-500);
+      background: color-mix(in oklch, var(--cyan-400) 12%, transparent);
+    }
+    .signal-type-icon.manual {
+      color: var(--text-tertiary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Read/unread state */
+    .row.unread {
+      font-weight: var(--font-weight-medium);
+    }
+    .row.unread td:first-child {
+      box-shadow: inset 2px 0 0 var(--brand-accent);
+    }
+
+    /* Cell time: numeric font */
+    .cell-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    /* ══════════════════════════════════
+     * P3: Detail Panel Enhancements
+     * ══════════════════════════════════ */
+    /* Signal strength visualization */
+    .signal-strength {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      height: 24px;
+    }
+    .signal-strength-bar {
+      width: 6px;
+      border-radius: 1px;
+      background: var(--border-subtle);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .signal-strength-bar.active { background: var(--brand-accent); }
+    .signal-strength-bar.h6  { height: 6px; }
+    .signal-strength-bar.h8  { height: 8px; }
+    .signal-strength-bar.h12 { height: 12px; }
+    .signal-strength-bar.h16 { height: 16px; }
+    .signal-strength-bar.h20 { height: 20px; }
+    .signal-strength-bar.h24 { height: 24px; }
+
+    /* Detail value color variants */
+    .detail-value.color-up   { color: var(--market-up-fg); }
+    .detail-value.color-down { color: var(--market-down-fg); }
+
+    /* Related signal source badge compact */
+    .related-signal-card .source-badge {
+      font-size: var(--font-size-9);
+    }
+    .signal-strength-bar.high   { background: var(--system-healthy-fg); }
+    .signal-strength-bar.medium { background: var(--system-degraded-fg); }
+
+    /* Related signals mini cards */
+    .related-signals {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .related-signal-card {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .related-signal-card:hover {
+      border-color: var(--border-default);
+    }
+    .related-signal-ticker {
+      font-weight: var(--font-weight-medium);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      min-width: 60px;
+    }
+    .related-signal-info {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      flex: 1;
+    }
+    .related-signal-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* Signal source attribution */
+    .signal-source-attribution {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-6) var(--space-8);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+    .signal-source-attribution svg {
+      flex-shrink: 0;
+    }
+
+    /* Detail section separator */
+    .detail-section + .detail-section {
+      padding-top: var(--space-8);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* ══════════════════════════════════
+     * P5: Subtle Animations
+     * ══════════════════════════════════ */
+    /* Staggered list entrance */
+    @keyframes row-enter {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .data-table tbody tr.row {
+      animation: row-enter 0.2s var(--motion-easing-standard) backwards;
+    }
+    .data-table tbody tr.row:nth-child(1) { animation-delay: 0.02s; }
+    .data-table tbody tr.row:nth-child(2) { animation-delay: 0.04s; }
+    .data-table tbody tr.row:nth-child(3) { animation-delay: 0.06s; }
+    .data-table tbody tr.row:nth-child(4) { animation-delay: 0.08s; }
+    .data-table tbody tr.row:nth-child(5) { animation-delay: 0.10s; }
+    .data-table tbody tr.row:nth-child(6) { animation-delay: 0.12s; }
+    .data-table tbody tr.row:nth-child(7) { animation-delay: 0.14s; }
+    .data-table tbody tr.row:nth-child(8) { animation-delay: 0.16s; }
+
+    /* Panel slide transition */
+    @keyframes detail-slide-in {
+      from { opacity: 0; transform: translateX(8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .detail-panel {
+      animation: detail-slide-in 0.25s var(--motion-easing-standard);
+    }
+
+    /* Overlay spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══════════════════════════════════
+     * State Gallery Utility Classes
+     * ══════════════════════════════════ */
+    /* Scope strip loading skeletons */
+    .scope-strip-loading {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .scope-strip-loading .skeleton {
+      width: 80px;
+      height: 28px;
+      border-radius: var(--radius-4);
+    }
+
+    /* Scope strip stale state */
+    .scope-strip-stale {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--system-degraded-fg);
+      position: relative;
+      opacity: var(--data-freshness-aging, 0.65);
+    }
+    .scope-strip-stale .tab-label {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+    .scope-strip-stale .stale-badge {
+      margin-left: auto;
+      font-size: var(--font-size-10);
+      color: var(--system-degraded-fg);
+    }
+    .stale-badge svg {
+      vertical-align: -2px;
+      margin-right: var(--space-2);
+    }
+
+    /* Stale alert badge (reusable) */
+    .stale-alert-badge {
+      position: absolute;
+      top: var(--space-4);
+      right: var(--space-4);
+      font-size: var(--font-size-10);
+      color: var(--system-degraded-fg);
+      font-weight: var(--font-weight-medium);
+      background: var(--system-degraded-bg);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+    }
+    .stale-alert-badge svg {
+      vertical-align: -2px;
+      margin-right: 2px;
+    }
+
+    /* Stale container wrapper */
+    .stale-container {
+      position: relative;
+      padding: var(--space-12);
+      opacity: var(--data-freshness-aging, 0.65);
+    }
+    .stale-border-container {
+      border: 1px solid var(--system-degraded-fg);
+      border-radius: var(--radius-6);
+      padding: var(--space-12);
+      position: relative;
+    }
+
+    /* Skeleton opacity variants */
+    .skeleton.faded { opacity: 0.6; }
+    .skeleton.ghost { opacity: 0.5; }
+
+    /* Spacer utility */
+    .spacer-sm { height: var(--space-8); }
+
+    /* Skeleton width/height variants */
+    .skeleton.w-60 { width: 60%; }
+    .skeleton.w-40 { width: 40%; }
+
+    /* Centered loading state */
+    .state-centered {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-24);
+      gap: var(--space-8);
+    }
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border-subtle);
+      border-top-color: var(--brand-accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .spinner.lg {
+      width: 32px;
+      height: 32px;
+    }
+    .state-centered-text {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+    .state-centered-text.warn {
+      color: var(--system-degraded-fg);
+    }
+
+    /* Error block state */
+    .error-block {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+    .error-block-alert {
+      padding: var(--space-8);
+      background: var(--system-down-bg);
+      border: 1px solid var(--system-down-fg);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-12);
+      color: var(--system-down-fg);
+    }
+    .error-block-alert strong { display: block; }
+    .error-block-detail {
+      margin-top: var(--space-4);
+      color: var(--text-secondary);
+    }
+    .error-block-actions {
+      display: flex;
+      gap: var(--space-6);
+      justify-content: flex-end;
+    }
+
+    /* Stale icon badge */
+    .stale-icon-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--system-degraded-bg);
+      color: var(--system-degraded-fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Batch empty state */
+    .batch-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-8) var(--density-gutter);
+      background: var(--surface-panel-elevated);
+      border-top: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    /* Skeleton height variants */
+    .skeleton.h-48 { height: 48px; }
+    .skeleton.h-40 { height: 40px; }
+
+    /* Progress bar fill override for order execution */
+    .confidence-fill.progress { background: var(--system-healthy-fg); }
   </style>
 </head>
 <body>
@@ -1204,30 +1736,33 @@
           <table class="data-table" role="grid" aria-label="信号列表">
             <thead>
               <tr>
-                <th scope="col" style="width:100px">时间</th>
-                <th scope="col" style="width:160px">标的</th>
-                <th scope="col" style="width:90px">来源</th>
-                <th scope="col" style="width:70px">方向</th>
-                <th scope="col" style="width:90px">建议权重</th>
-                <th scope="col" style="width:130px">置信度</th>
-                <th scope="col" style="width:80px">风控检查</th>
-                <th scope="col" style="width:80px">状态</th>
+                <th scope="col" class="sig-col-time">时间</th>
+                <th scope="col" class="sig-col-symbol">标的</th>
+                <th scope="col" class="sig-col-source">来源</th>
+                <th scope="col" class="sig-col-side">方向</th>
+                <th scope="col" class="sig-col-weight">建议权重</th>
+                <th scope="col" class="sig-col-conf">置信度</th>
+                <th scope="col" class="sig-col-risk">风控检查</th>
+                <th scope="col" class="sig-col-status">状态</th>
               </tr>
             </thead>
             <tbody>
               <!-- Row 1: selected -->
-              <tr class="row selected" role="row" aria-selected="true" tabindex="0">
+              <tr class="row selected unread" role="row" aria-selected="true" tabindex="0">
                 <td class="cell-time">14:32:08</td>
                 <td>
                   <span class="cell-ticker">600519</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">贵州茅台</span>
+                  <span class="cell-name">贵州茅台</span>
                 </td>
                 <td><span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span></td>
-                <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
+                <td>
+                  <div aria-label="优先级 P1" class="priority-badge p1">P1</div>
+                  <span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span>
+                </td>
                 <td class="cell-numeric">5.0%</td>
                 <td>
                   <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill high" style="width:82%"></div></div>
+                    <div class="confidence-bar"><div class="confidence-fill high conf-w-82"></div></div>
                     <span class="confidence-value">82%</span>
                   </div>
                 </td>
@@ -1236,18 +1771,21 @@
               </tr>
 
               <!-- Row 2 -->
-              <tr class="row" role="row" tabindex="0">
+              <tr class="row unread" role="row" tabindex="0">
                 <td class="cell-time">14:30:45</td>
                 <td>
                   <span class="cell-ticker">300750</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">宁德时代</span>
+                  <span class="cell-name">宁德时代</span>
                 </td>
                 <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
-                <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
+                <td>
+                  <div aria-label="优先级 P2" class="priority-badge p2">P2</div>
+                  <span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span>
+                </td>
                 <td class="cell-numeric">-3.2%</td>
                 <td>
                   <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill medium" style="width:65%"></div></div>
+                    <div class="confidence-bar"><div class="confidence-fill medium conf-w-65"></div></div>
                     <span class="confidence-value">65%</span>
                   </div>
                 </td>
@@ -1260,14 +1798,14 @@
                 <td class="cell-time">14:28:33</td>
                 <td>
                   <span class="cell-ticker">000858</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">五粮液</span>
+                  <span class="cell-name">五粮液</span>
                 </td>
                 <td><span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">3.8%</td>
                 <td>
                   <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill high" style="width:91%"></div></div>
+                    <div class="confidence-bar"><div class="confidence-fill high conf-w-91"></div></div>
                     <span class="confidence-value">91%</span>
                   </div>
                 </td>
@@ -1280,14 +1818,14 @@
                 <td class="cell-time">14:25:12</td>
                 <td>
                   <span class="cell-ticker">601318</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">中国平安</span>
+                  <span class="cell-name">中国平安</span>
                 </td>
                 <td><span class="source-badge manual"><span class="source-badge-dot"></span>手动信号</span></td>
                 <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
                 <td class="cell-numeric">-4.5%</td>
                 <td>
                   <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill low" style="width:40%"></div></div>
+                    <div class="confidence-bar"><div class="confidence-fill low conf-w-40"></div></div>
                     <span class="confidence-value">40%</span>
                   </div>
                 </td>
@@ -1296,18 +1834,18 @@
               </tr>
 
               <!-- Row 5: 涨跌停阻断 -->
-              <tr class="row" role="row" tabindex="0" style="opacity:0.45">
+              <tr class="row blocked" role="row" tabindex="0">
                 <td class="cell-time">14:22:50</td>
                 <td>
                   <span class="cell-ticker">002594</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">比亚迪</span>
+                  <span class="cell-name">比亚迪</span>
                 </td>
                 <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">2.8%</td>
                 <td>
                   <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill high" style="width:78%"></div></div>
+                    <div class="confidence-bar"><div class="confidence-fill high conf-w-78"></div></div>
                     <span class="confidence-value">78%</span>
                   </div>
                 </td>
@@ -1320,14 +1858,14 @@
                 <td class="cell-time">14:18:07</td>
                 <td>
                   <span class="cell-ticker">603259</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">药明康德</span>
+                  <span class="cell-name">药明康德</span>
                 </td>
                 <td><span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">4.2%</td>
                 <td>
                   <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill high" style="width:88%"></div></div>
+                    <div class="confidence-bar"><div class="confidence-fill high conf-w-88"></div></div>
                     <span class="confidence-value">88%</span>
                   </div>
                 </td>
@@ -1340,14 +1878,14 @@
                 <td class="cell-time">14:15:22</td>
                 <td>
                   <span class="cell-ticker">600036</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">招商银行</span>
+                  <span class="cell-name">招商银行</span>
                 </td>
                 <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
                 <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
                 <td class="cell-numeric">-2.1%</td>
                 <td>
                   <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill medium" style="width:58%"></div></div>
+                    <div class="confidence-bar"><div class="confidence-fill medium conf-w-58"></div></div>
                     <span class="confidence-value">58%</span>
                   </div>
                 </td>
@@ -1360,14 +1898,14 @@
                 <td class="cell-time">14:10:55</td>
                 <td>
                   <span class="cell-ticker">000001</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">平安银行</span>
+                  <span class="cell-name">平安银行</span>
                 </td>
                 <td><span class="source-badge manual"><span class="source-badge-dot"></span>手动信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">1.5%</td>
                 <td>
                   <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill medium" style="width:52%"></div></div>
+                    <div class="confidence-bar"><div class="confidence-fill medium conf-w-52"></div></div>
                     <span class="confidence-value">52%</span>
                   </div>
                 </td>
@@ -1382,9 +1920,9 @@
         <div class="batch-bar">
           <span>已选 <span class="batch-bar-count">3</span> 条信号</span>
           <div class="batch-bar-actions">
-            <label for="overlay-batch-confirm" class="batch-btn primary" style="cursor:pointer">批量确认</label>
+            <label for="overlay-batch-confirm" class="batch-btn primary">批量确认</label>
             <button class="batch-btn">批量忽略</button>
-            <label for="overlay-ai-read" class="batch-btn" style="cursor:pointer">AI 解读</label>
+            <label for="overlay-ai-read" class="batch-btn">AI 解读</label>
           </div>
         </div>
       </div>
@@ -1409,13 +1947,13 @@
           <table class="data-table" role="grid" aria-label="已确认信号列表">
             <thead>
               <tr>
-                <th scope="col" style="width:100px">确认时间</th>
-                <th scope="col" style="width:160px">标的</th>
-                <th scope="col" style="width:90px">来源</th>
-                <th scope="col" style="width:70px">方向</th>
-                <th scope="col" style="width:90px">权重</th>
-                <th scope="col" style="width:100px">操作人</th>
-                <th scope="col" style="width:100px">后续状态</th>
+                <th scope="col" class="sig-col-time">确认时间</th>
+                <th scope="col" class="sig-col-symbol">标的</th>
+                <th scope="col" class="sig-col-source">来源</th>
+                <th scope="col" class="sig-col-side">方向</th>
+                <th scope="col" class="sig-col-weight">权重</th>
+                <th scope="col" class="sig-col-operator">操作人</th>
+                <th scope="col" class="sig-col-followup">后续状态</th>
               </tr>
             </thead>
             <tbody>
@@ -1423,36 +1961,36 @@
                 <td class="cell-time">14:35:12</td>
                 <td>
                   <span class="cell-ticker">600036</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">招商银行</span>
+                  <span class="cell-name">招商银行</span>
                 </td>
                 <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
                 <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
                 <td class="cell-numeric">-2.1%</td>
-                <td style="font-size:var(--font-size-12);color:var(--text-secondary)">C</td>
+                <td class="cell-operator">C</td>
                 <td><span class="status-pill ordered">已转订单</span></td>
               </tr>
               <tr class="row" role="row" tabindex="0">
                 <td class="cell-time">14:28:55</td>
                 <td>
                   <span class="cell-ticker">603259</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">药明康德</span>
+                  <span class="cell-name">药明康德</span>
                 </td>
                 <td><span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">4.2%</td>
-                <td style="font-size:var(--font-size-12);color:var(--text-secondary)">C</td>
+                <td class="cell-operator">C</td>
                 <td><span class="status-pill pending">待处理</span></td>
               </tr>
               <tr class="row" role="row" tabindex="0">
                 <td class="cell-time">14:15:30</td>
                 <td>
                   <span class="cell-ticker">000858</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">五粮液</span>
+                  <span class="cell-name">五粮液</span>
                 </td>
                 <td><span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">3.8%</td>
-                <td style="font-size:var(--font-size-12);color:var(--text-secondary)">C</td>
+                <td class="cell-operator">C</td>
                 <td><span class="status-pill ordered">已转订单</span></td>
               </tr>
             </tbody>
@@ -1476,12 +2014,12 @@
           <table class="data-table" role="grid" aria-label="已忽略信号列表">
             <thead>
               <tr>
-                <th scope="col" style="width:100px">忽略时间</th>
-                <th scope="col" style="width:160px">标的</th>
-                <th scope="col" style="width:90px">来源</th>
-                <th scope="col" style="width:70px">方向</th>
-                <th scope="col" style="width:140px">忽略原因</th>
-                <th scope="col" style="width:80px">操作</th>
+                <th scope="col" class="sig-col-time">忽略时间</th>
+                <th scope="col" class="sig-col-symbol">标的</th>
+                <th scope="col" class="sig-col-source">来源</th>
+                <th scope="col" class="sig-col-side">方向</th>
+                <th scope="col" class="sig-col-reason">忽略原因</th>
+                <th scope="col" class="sig-col-action">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -1489,22 +2027,22 @@
                 <td class="cell-time">14:20:08</td>
                 <td>
                   <span class="cell-ticker">002594</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">比亚迪</span>
+                  <span class="cell-name">比亚迪</span>
                 </td>
                 <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
-                <td style="font-size:var(--font-size-12);color:var(--system-down-fg)">涨跌停阻断：涨停价买入</td>
+                <td class="cell-reason danger">涨跌停阻断：涨停价买入</td>
                 <td><button class="filter-btn">恢复</button></td>
               </tr>
               <tr class="row" role="row" tabindex="0">
                 <td class="cell-time">13:55:42</td>
                 <td>
                   <span class="cell-ticker">300059</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">东方财富</span>
+                  <span class="cell-name">东方财富</span>
                 </td>
                 <td><span class="source-badge manual"><span class="source-badge-dot"></span>手动信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
-                <td style="font-size:var(--font-size-12);color:var(--text-tertiary)">手动忽略：行情判断不符</td>
+                <td class="cell-reason muted">手动忽略：行情判断不符</td>
                 <td><button class="filter-btn">恢复</button></td>
               </tr>
             </tbody>
@@ -1529,13 +2067,13 @@
           <table class="data-table" role="grid" aria-label="已转订单信号列表">
             <thead>
               <tr>
-                <th scope="col" style="width:100px">下单时间</th>
-                <th scope="col" style="width:160px">标的</th>
-                <th scope="col" style="width:70px">方向</th>
-                <th scope="col" style="width:80px">数量</th>
-                <th scope="col" style="width:100px">关联订单</th>
-                <th scope="col" style="width:100px">订单状态</th>
-                <th scope="col" style="width:80px">执行进度</th>
+                <th scope="col" class="sig-col-time">下单时间</th>
+                <th scope="col" class="sig-col-symbol">标的</th>
+                <th scope="col" class="sig-col-side">方向</th>
+                <th scope="col" class="sig-col-qty">数量</th>
+                <th scope="col" class="sig-col-order">关联订单</th>
+                <th scope="col" class="sig-col-order-st">订单状态</th>
+                <th scope="col" class="sig-col-progress">执行进度</th>
               </tr>
             </thead>
             <tbody>
@@ -1543,7 +2081,7 @@
                 <td class="cell-time">14:36:01</td>
                 <td>
                   <span class="cell-ticker">600036</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">招商银行</span>
+                  <span class="cell-name">招商银行</span>
                 </td>
                 <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
                 <td class="cell-numeric">500 股</td>
@@ -1551,8 +2089,8 @@
                 <td><span class="status-pill ordered">已提交</span></td>
                 <td>
                   <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill high" style="width:60%;background:var(--system-healthy-fg)"></div></div>
-                    <span class="confidence-value" style="font-size:var(--font-size-10)">60%</span>
+                    <div class="confidence-bar"><div class="confidence-fill high conf-w-60 progress"></div></div>
+                    <span class="confidence-value sm">60%</span>
                   </div>
                 </td>
               </tr>
@@ -1560,7 +2098,7 @@
                 <td class="cell-time">14:16:22</td>
                 <td>
                   <span class="cell-ticker">000858</span>
-                  <span class="cell-name" style="margin-left:var(--space-6)">五粮液</span>
+                  <span class="cell-name">五粮液</span>
                 </td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">200 股</td>
@@ -1568,8 +2106,8 @@
                 <td><span class="status-pill confirmed">已完成</span></td>
                 <td>
                   <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill high" style="width:100%;background:var(--system-healthy-fg)"></div></div>
-                    <span class="confidence-value" style="font-size:var(--font-size-10)">100%</span>
+                    <div class="confidence-bar"><div class="confidence-fill high conf-w-100 progress"></div></div>
+                    <span class="confidence-value sm">100%</span>
                   </div>
                 </td>
               </tr>
@@ -1587,7 +2125,7 @@
           <div class="detail-header-title">贵州茅台</div>
           <div class="detail-header-subtitle">600519.SH</div>
         </div>
-        <span class="side-badge buy" style="font-size:var(--font-size-14)">
+        <span class="side-badge buy lg">
           <span class="side-badge-sym">▲</span> 买入
         </span>
       </div>
@@ -1623,7 +2161,7 @@
           <span class="detail-section-title">置信度</span>
           <div class="detail-confidence">
             <div class="detail-confidence-bar">
-              <div class="detail-confidence-fill" style="width:82%"></div>
+              <div class="detail-confidence-fill detail-conf-w-82"></div>
             </div>
             <span class="detail-confidence-value">82%</span>
             <span class="detail-confidence-label">高置信</span>
@@ -1633,7 +2171,7 @@
         <!-- Explanation -->
         <div class="detail-section">
           <span class="detail-section-title">策略解读</span>
-          <p style="font-size:var(--font-size-12);color:var(--text-secondary);line-height:1.6">
+          <p class="detail-text">
             动量因子持续走强，近 20 日收益率排名第 87 百分位。资金面北向连续 5 日净流入，筹码集中度提升。MACD 周线金叉确认，成交量放大 1.4 倍。
           </p>
         </div>
@@ -1644,7 +2182,7 @@
           <div class="risk-check-list">
             <div class="risk-check" tabindex="0" role="listitem">
               <div class="risk-check-left">
-                <span class="risk-check-icon" style="color:var(--system-healthy-fg)">
+                <span class="risk-check-icon pass">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8l3 3 5-5"/></svg>
                 </span>
                 <span class="risk-check-label">标的状态</span>
@@ -1653,7 +2191,7 @@
             </div>
             <div class="risk-check" tabindex="0" role="listitem">
               <div class="risk-check-left">
-                <span class="risk-check-icon" style="color:var(--system-healthy-fg)">
+                <span class="risk-check-icon pass">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8l3 3 5-5"/></svg>
                 </span>
                 <span class="risk-check-label">涨跌停校验</span>
@@ -1662,7 +2200,7 @@
             </div>
             <div class="risk-check" tabindex="0" role="listitem">
               <div class="risk-check-left">
-                <span class="risk-check-icon" style="color:var(--system-degraded-fg)">
+                <span class="risk-check-icon warn">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v5m0 3v0.5"/></svg>
                 </span>
                 <span class="risk-check-label">T+1 约束</span>
@@ -1671,7 +2209,7 @@
             </div>
             <div class="risk-check" tabindex="0" role="listitem">
               <div class="risk-check-left">
-                <span class="risk-check-icon" style="color:var(--system-healthy-fg)">
+                <span class="risk-check-icon pass">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8l3 3 5-5"/></svg>
                 </span>
                 <span class="risk-check-label">两融约束</span>
@@ -1704,20 +2242,74 @@
           </div>
         </div>
 
+        <!-- Signal Strength -->
+        <div class="detail-section">
+          <span class="detail-section-title">信号强度</span>
+          <div class="signal-strength" aria-label="信号强度：7/10" role="img">
+            <div class="signal-strength-bar active h8"></div>
+            <div class="signal-strength-bar active h12"></div>
+            <div class="signal-strength-bar active h16"></div>
+            <div class="signal-strength-bar active h20"></div>
+            <div class="signal-strength-bar active h24"></div>
+            <div class="signal-strength-bar active h20"></div>
+            <div class="signal-strength-bar active h16"></div>
+            <div class="signal-strength-bar h12"></div>
+            <div class="signal-strength-bar h8"></div>
+            <div class="signal-strength-bar h6"></div>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">动量因子</span>
+            <span class="detail-value numeric">87 百分位</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">资金面</span>
+            <span class="detail-value color-up">5 日净流入</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">技术形态</span>
+            <span class="detail-value">MACD 周线金叉</span>
+          </div>
+        </div>
+
+        <!-- Related Signals -->
+        <div class="detail-section">
+          <span class="detail-section-title">相关信号</span>
+          <div class="related-signals" role="list" aria-label="相关信号列表">
+            <div class="related-signal-card" role="listitem" tabindex="0">
+              <span class="related-signal-ticker">000858</span>
+              <span class="source-badge strategy"><span class="source-badge-dot"></span>策略</span>
+              <span class="related-signal-info">五粮液 · 买入</span>
+              <span class="related-signal-time">14:28</span>
+            </div>
+            <div class="related-signal-card" role="listitem" tabindex="0">
+              <span class="related-signal-ticker">603259</span>
+              <span class="source-badge strategy"><span class="source-badge-dot"></span>策略</span>
+              <span class="related-signal-info">药明康德 · 买入</span>
+              <span class="related-signal-time">14:18</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Signal Source Attribution -->
+        <div class="signal-source-attribution" aria-label="信号来源追溯">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M6 3v10"/></svg>
+          <span>Momentum Alpha v3 · 触发于 14:32:08 · 回测胜率 68.5%</span>
+        </div>
+
         <!-- Actions -->
         <div class="detail-actions">
           <!-- Overlay trigger: 确认信号 → 弹出订单确认面板 -->
-          <label for="overlay-order-confirm" class="detail-action primary" tabindex="0" aria-label="确认信号" style="cursor:pointer">
+          <label for="overlay-order-confirm" class="detail-action primary" tabindex="0" aria-label="确认信号">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
             确认信号
           </label>
           <!-- Overlay trigger: 生成订单复核 → 弹出订单确认面板 -->
-          <label for="overlay-order-confirm" class="detail-action secondary" tabindex="0" aria-label="生成订单复核" style="cursor:pointer">
+          <label for="overlay-order-confirm" class="detail-action secondary" tabindex="0" aria-label="生成订单复核">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
             生成订单复核
           </label>
           <!-- Overlay trigger: 交给 AI 解读 → 弹出 AI 解读 Modal -->
-          <label for="overlay-ai-read" class="detail-action secondary" tabindex="0" aria-label="交给 AI 解读" style="cursor:pointer">
+          <label for="overlay-ai-read" class="detail-action secondary" tabindex="0" aria-label="交给 AI 解读">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l2 4.5L15 7.5l-3.5 3.5.8 5L8 13.5 3.7 16l.8-5L1 7.5l5-1L8 2z"/></svg>
             交给 AI 解读
           </label>
@@ -1753,7 +2345,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">方向</span>
-            <span class="overlay-field-value" style="color:var(--market-up-fg)">买入</span>
+            <span class="overlay-field-value color-up">买入</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">数量</span>
@@ -1763,19 +2355,19 @@
           <h4>标的状态检查</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">标的状态</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">✓ 正常交易（非停牌/非退市）</span>
+            <span class="overlay-field-value color-pass">✓ 正常交易（非停牌/非退市）</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">涨跌停</span>
-            <span class="overlay-field-value" style="color:var(--system-degraded-fg)">⚠ 接近涨停（+8.7%），买入可能滑点较大</span>
+            <span class="overlay-field-value color-warn">⚠ 接近涨停（+8.7%），买入可能滑点较大</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">T+1 可卖</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">✓ 确认（非当日买入标的）</span>
+            <span class="overlay-field-value color-pass">✓ 确认（非当日买入标的）</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">两融约束</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">✓ 担保比例充足</span>
+            <span class="overlay-field-value color-pass">✓ 担保比例充足</span>
           </div>
 
           <h4>委托配置</h4>
@@ -1785,34 +2377,34 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">委托价格</span>
-            <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">1,856.00</span>
+            <span class="overlay-field-value tnum">1,856.00</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">委托数量</span>
-            <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">100 股（1 手）</span>
+            <span class="overlay-field-value tnum">100 股（1 手）</span>
           </div>
 
           <h4>预估费用</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">佣金</span>
-            <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">¥4.64</span>
+            <span class="overlay-field-value tnum">¥4.64</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">过户费</span>
-            <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">¥0.19</span>
+            <span class="overlay-field-value tnum">¥0.19</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">印花税</span>
-            <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">¥0.00（买入免征）</span>
+            <span class="overlay-field-value tnum">¥0.00（买入免征）</span>
           </div>
-          <div class="overlay-field" style="border-bottom:none;padding-top:var(--space-6)">
-            <span class="overlay-field-label" style="font-weight:var(--font-weight-medium)">预估总额</span>
-            <span class="overlay-field-value" style="font-weight:var(--font-weight-semibold);color:var(--text-primary)">185,604.83 元</span>
+          <div class="overlay-field overlay-field-total">
+            <span class="overlay-field-label">预估总额</span>
+            <span class="overlay-field-value">185,604.83 元</span>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认提交订单</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary" >取消</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" >确认提交订单</label>
           </div>
         </div>
       </div>
@@ -1828,42 +2420,42 @@
         </div>
         <div class="overlay-body">
           <h4>市场背景</h4>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+          <p class="overlay-body-text">
             当前 A 股市场整体处于温和上行通道，沪深 300 近 5 日涨幅 +1.2%。白酒板块受春节后消费数据超预期提振，行业景气度指数回升至 68.5。北向资金连续 5 日净流入，累计 +24.6 亿。
           </p>
 
           <h4>标的分析：贵州茅台 (600519)</h4>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+          <p class="overlay-body-text">
             动量因子持续走强，近 20 日收益率排名第 87 百分位。MACD 周线金叉确认，成交量放大 1.4 倍。筹码集中度提升，主力资金连续 3 日净流入。当前估值 PE(TTM) 32.8x，处于近 3 年 55% 分位，估值合理。
           </p>
 
           <h4>风险评估</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">集中度风险</span>
-            <span class="overlay-field-value" style="color:var(--system-degraded-fg)">偏高（板块占比 37.2%）</span>
+            <span class="overlay-field-value color-warn">偏高（板块占比 37.2%）</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">流动性风险</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">低（日成交额 > 50 亿）</span>
+            <span class="overlay-field-value color-pass">低（日成交额 > 50 亿）</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">T+1 约束</span>
-            <span class="overlay-field-value" style="color:var(--system-degraded-fg)">今日已买入</span>
+            <span class="overlay-field-value color-warn">今日已买入</span>
           </div>
 
           <h4>建议操作</h4>
-          <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+          <p class="overlay-body-text">
             建议分批建仓，首次买入建议权重 3%，观察 2 个交易日后视动量衰减情况追加至目标权重 5%。建议设置止损价 1,520 元（跌破 20 日均线）。
           </p>
 
-          <div class="overlay-field" style="border-bottom:none;margin-top:var(--space-8)">
+          <div class="overlay-field overlay-field-confidence">
             <span class="overlay-field-label">置信度评分</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg);font-weight:var(--font-weight-semibold)">82 / 100（高置信）</span>
+            <span class="overlay-field-value">82 / 100（高置信）</span>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-ai-read" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">关闭</label>
-            <label for="overlay-ai-read" class="overlay-btn overlay-btn-primary" style="cursor:pointer">采纳建议</label>
+            <label for="overlay-ai-read" class="overlay-btn overlay-btn-secondary" >关闭</label>
+            <label for="overlay-ai-read" class="overlay-btn overlay-btn-primary" >采纳建议</label>
           </div>
         </div>
       </div>
@@ -1889,30 +2481,30 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">总建议权重</span>
-            <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">+12.0%</span>
+            <span class="overlay-field-value tnum">+12.0%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">预估总金额</span>
-            <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">¥528,400.00</span>
+            <span class="overlay-field-value tnum">¥528,400.00</span>
           </div>
 
           <h4>风控批量检查</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">组合集中度</span>
-            <span class="overlay-field-value" style="color:var(--system-degraded-fg)">⚠ 白酒板块将达 42.3%</span>
+            <span class="overlay-field-value color-warn">⚠ 白酒板块将达 42.3%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">单票上限</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">✓ 均未超出 10%</span>
+            <span class="overlay-field-value color-pass">✓ 均未超出 10%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">涨跌停</span>
-            <span class="overlay-field-value" style="color:var(--system-healthy-fg)">✓ 均可正常交易</span>
+            <span class="overlay-field-value color-pass">✓ 均可正常交易</span>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-secondary" style="cursor:pointer">取消</label>
-            <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-primary" style="cursor:pointer">确认全部</label>
+            <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-secondary" >取消</label>
+            <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-primary" >确认全部</label>
           </div>
         </div>
       </div>
@@ -1988,11 +2580,11 @@
       <div class="gallery-card__label">Scope Strip — Loading State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-      <div style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) 0;border-bottom:1px solid var(--border-subtle)">
-        <div class="skeleton" style="width:80px;height:28px;border-radius:var(--radius-4)"></div>
-        <div class="skeleton" style="width:80px;height:28px;border-radius:var(--radius-4)"></div>
-        <div class="skeleton" style="width:80px;height:28px;border-radius:var(--radius-4)"></div>
-        <div class="skeleton" style="width:80px;height:28px;border-radius:var(--radius-4)"></div>
+      <div class="scope-strip-loading">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
       </div>
     </div>
       </div>
@@ -2001,13 +2593,13 @@
       <div class="gallery-card__label">Scope Strip — Stale State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-      <div style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) 0;border-bottom:1px solid var(--system-degraded-fg);position:relative;opacity:var(--data-freshness-aging, 0.65)">
-        <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-secondary)">待复核</span>
-        <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-secondary)">已确认</span>
-        <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-secondary)">已忽略</span>
-        <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-secondary)">已转订单</span>
-        <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--system-degraded-fg)">
-          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:var(--space-2)"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+      <div class="scope-strip-stale">
+        <span class="tab-label">待复核</span>
+        <span class="tab-label">已确认</span>
+        <span class="tab-label">已忽略</span>
+        <span class="tab-label">已转订单</span>
+        <span class="stale-badge">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
           信号数据延迟 45 秒
         </span>
       </div>
@@ -2069,12 +2661,12 @@
       <div class="gallery-card__label">Signal Table — Stale State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-      <div style="border:1px solid var(--system-degraded-fg);border-radius:var(--radius-6);padding:var(--space-12);position:relative">
-        <div style="position:absolute;top:var(--space-4);right:var(--space-4);font-size:var(--font-size-10);color:var(--system-degraded-fg);font-weight:var(--font-weight-medium);background:var(--system-degraded-bg);padding:1px var(--space-6);border-radius:var(--radius-2)">数据可能已更新，建议刷新</div>
+      <div class="stale-border-container">
+        <div class="stale-alert-badge">数据可能已更新，建议刷新</div>
         <div class="state-loading">
-          <div class="skeleton skeleton-row" style="opacity:0.6"></div>
-          <div class="skeleton skeleton-row" style="opacity:0.6"></div>
-          <div class="skeleton skeleton-row" style="opacity:0.6"></div>
+          <div class="skeleton skeleton-row faded"></div>
+          <div class="skeleton skeleton-row faded"></div>
+          <div class="skeleton skeleton-row faded"></div>
         </div>
       </div>
     </div>
@@ -2091,17 +2683,17 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
       <div class="state-loading">
-        <div class="skeleton skeleton-heading" style="width:60%"></div>
+        <div class="skeleton skeleton-heading w-60"></div>
         <div class="skeleton skeleton-text"></div>
         <div class="skeleton skeleton-text-sm"></div>
-        <div style="height:var(--space-8)"></div>
+        <div class="spacer-sm"></div>
         <div class="skeleton skeleton-text"></div>
         <div class="skeleton skeleton-text"></div>
         <div class="skeleton skeleton-text-sm"></div>
-        <div style="height:var(--space-8)"></div>
-        <div class="skeleton skeleton-row" style="height:48px"></div>
-        <div class="skeleton skeleton-row" style="height:48px"></div>
-        <div class="skeleton skeleton-row" style="height:48px"></div>
+        <div class="spacer-sm"></div>
+        <div class="skeleton skeleton-row h-48"></div>
+        <div class="skeleton skeleton-row h-48"></div>
+        <div class="skeleton skeleton-row h-48"></div>
       </div>
     </div>
       </div>
@@ -2135,18 +2727,18 @@
       <div class="gallery-card__label">Signal Detail — Stale State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-      <div style="position:relative;padding:var(--space-12);opacity:var(--data-freshness-aging, 0.65)">
-        <div style="position:absolute;top:var(--space-4);right:var(--space-4);font-size:var(--font-size-10);color:var(--system-degraded-fg);font-weight:var(--font-weight-medium);background:var(--system-degraded-bg);padding:1px var(--space-6);border-radius:var(--radius-2)">
-          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:2px"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+      <div class="stale-container">
+        <div class="stale-alert-badge">
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
           信号详情数据延迟
         </div>
         <div class="state-loading">
-          <div class="skeleton skeleton-heading" style="width:40%;opacity:0.5"></div>
-          <div class="skeleton skeleton-text" style="opacity:0.5"></div>
-          <div class="skeleton skeleton-text-sm" style="opacity:0.5"></div>
-          <div style="height:var(--space-8)"></div>
-          <div class="skeleton skeleton-row" style="height:40px;opacity:0.5"></div>
-          <div class="skeleton skeleton-row" style="height:40px;opacity:0.5"></div>
+          <div class="skeleton skeleton-heading w-40 ghost"></div>
+          <div class="skeleton skeleton-text ghost"></div>
+          <div class="skeleton skeleton-text-sm ghost"></div>
+          <div class="spacer-sm"></div>
+          <div class="skeleton skeleton-row h-40 ghost"></div>
+          <div class="skeleton skeleton-row h-40 ghost"></div>
         </div>
       </div>
     </div>
@@ -2162,13 +2754,10 @@
       <div class="gallery-card__label">Order Confirm — Loading State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-24);gap:var(--space-8)">
-        <div style="width:24px;height:24px;border:2px solid var(--border-subtle);border-top-color:var(--brand-accent);border-radius:50%;animation:spin 1s linear infinite"></div>
-        <span style="font-size:var(--font-size-12);color:var(--text-tertiary)">检查标的状态中...</span>
+      <div class="state-centered">
+        <div class="spinner"></div>
+        <span class="state-centered-text">检查标的状态中...</span>
       </div>
-      <style>
-        @keyframes spin { to { transform: rotate(360deg); } }
-      </style>
     </div>
       </div>
     </div>
@@ -2176,12 +2765,12 @@
       <div class="gallery-card__label">Order Confirm — Error State (风控阻断)</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
-      <div style="display:flex;flex-direction:column;gap:var(--space-8)">
-        <div style="padding:var(--space-8);background:var(--system-down-bg);border:1px solid var(--system-down-fg);border-radius:var(--radius-4);font-size:var(--font-size-12);color:var(--system-down-fg)">
+      <div class="error-block">
+        <div class="error-block-alert">
           <strong>下单被阻断</strong>
-          <div style="margin-top:var(--space-4);color:var(--text-secondary)">标的 002594（比亚迪）当前涨停，买入委托可能无法成交。根据风控规则，涨停买入信号已自动标灰。</div>
+          <div class="error-block-detail">标的 002594（比亚迪）当前涨停，买入委托可能无法成交。根据风控规则，涨停买入信号已自动标灰。</div>
         </div>
-        <div style="display:flex;gap:var(--space-6);justify-content:flex-end">
+        <div class="error-block-actions">
           <button class="state-error-retry">查看标的详情</button>
         </div>
       </div>
@@ -2192,11 +2781,11 @@
       <div class="gallery-card__label">Order Confirm — Stale State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-24);gap:var(--space-8)">
-        <div style="width:32px;height:32px;border-radius:50%;background:var(--system-degraded-bg);color:var(--system-degraded-fg);display:flex;align-items:center;justify-content:center">
+      <div class="state-centered">
+        <div class="stale-icon-badge">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
         </div>
-        <span style="font-size:var(--font-size-12);color:var(--system-degraded-fg)">标的状态数据延迟，请确认后再提交</span>
+        <span class="state-centered-text warn">标的状态数据延迟，请确认后再提交</span>
         <button class="state-stale-retry">刷新标的状态</button>
       </div>
     </div>
@@ -2212,7 +2801,7 @@
       <div class="gallery-card__label">Batch Actions — Empty State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
-      <div style="display:flex;align-items:center;justify-content:center;padding:var(--space-8) var(--density-gutter);background:var(--surface-panel-elevated);border-top:1px solid var(--border-subtle);font-size:var(--font-size-12);color:var(--text-tertiary)">
+      <div class="batch-empty">
         勾选信号后可进行批量操作
       </div>
     </div>
@@ -2246,7 +2835,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">方向</span>
-              <span class="overlay-field-value" style="color:var(--market-up-fg)">买入</span>
+              <span class="overlay-field-value color-up">买入</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">数量</span>
@@ -2256,19 +2845,19 @@
             <h4>标的状态检查</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">标的状态</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">✓ 正常交易（非停牌/非退市）</span>
+              <span class="overlay-field-value color-pass">✓ 正常交易（非停牌/非退市）</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">涨跌停</span>
-              <span class="overlay-field-value" style="color:var(--system-degraded-fg)">⚠ 接近涨停（+8.7%），买入可能滑点较大</span>
+              <span class="overlay-field-value color-warn">⚠ 接近涨停（+8.7%），买入可能滑点较大</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">T+1 可卖</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">✓ 确认（非当日买入标的）</span>
+              <span class="overlay-field-value color-pass">✓ 确认（非当日买入标的）</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">两融约束</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">✓ 担保比例充足</span>
+              <span class="overlay-field-value color-pass">✓ 担保比例充足</span>
             </div>
 
             <h4>委托配置</h4>
@@ -2278,29 +2867,29 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">委托价格</span>
-              <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">1,856.00</span>
+              <span class="overlay-field-value tnum">1,856.00</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">委托数量</span>
-              <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">100 股（1 手）</span>
+              <span class="overlay-field-value tnum">100 股（1 手）</span>
             </div>
 
             <h4>预估费用</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">佣金</span>
-              <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">¥4.64</span>
+              <span class="overlay-field-value tnum">¥4.64</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">过户费</span>
-              <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">¥0.19</span>
+              <span class="overlay-field-value tnum">¥0.19</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">印花税</span>
-              <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">¥0.00（买入免征）</span>
+              <span class="overlay-field-value tnum">¥0.00（买入免征）</span>
             </div>
-            <div class="overlay-field" style="border-bottom:none;padding-top:var(--space-6)">
-              <span class="overlay-field-label" style="font-weight:var(--font-weight-medium)">预估总额</span>
-              <span class="overlay-field-value" style="font-weight:var(--font-weight-semibold);color:var(--text-primary)">185,604.83 元</span>
+            <div class="overlay-field overlay-field-total">
+              <span class="overlay-field-label">预估总额</span>
+              <span class="overlay-field-value">185,604.83 元</span>
             </div>
 
             <div class="overlay-actions">
@@ -2322,37 +2911,37 @@
           </div>
           <div class="overlay-body">
             <h4>市场背景</h4>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            <p class="overlay-body-text">
               当前 A 股市场整体处于温和上行通道，沪深 300 近 5 日涨幅 +1.2%。白酒板块受春节后消费数据超预期提振，行业景气度指数回升至 68.5。北向资金连续 5 日净流入，累计 +24.6 亿。
             </p>
 
             <h4>标的分析：贵州茅台 (600519)</h4>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            <p class="overlay-body-text">
               动量因子持续走强，近 20 日收益率排名第 87 百分位。MACD 周线金叉确认，成交量放大 1.4 倍。筹码集中度提升，主力资金连续 3 日净流入。当前估值 PE(TTM) 32.8x，处于近 3 年 55% 分位，估值合理。
             </p>
 
             <h4>风险评估</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">集中度风险</span>
-              <span class="overlay-field-value" style="color:var(--system-degraded-fg)">偏高（板块占比 37.2%）</span>
+              <span class="overlay-field-value color-warn">偏高（板块占比 37.2%）</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">流动性风险</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">低（日成交额 > 50 亿）</span>
+              <span class="overlay-field-value color-pass">低（日成交额 > 50 亿）</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">T+1 约束</span>
-              <span class="overlay-field-value" style="color:var(--system-degraded-fg)">今日已买入</span>
+              <span class="overlay-field-value color-warn">今日已买入</span>
             </div>
 
             <h4>建议操作</h4>
-            <p style="color:var(--text-secondary);font-size:var(--font-size-12);line-height:1.6;margin:0;">
+            <p class="overlay-body-text">
               建议分批建仓，首次买入建议权重 3%，观察 2 个交易日后视动量衰减情况追加至目标权重 5%。建议设置止损价 1,520 元（跌破 20 日均线）。
             </p>
 
-            <div class="overlay-field" style="border-bottom:none;margin-top:var(--space-8)">
+            <div class="overlay-field overlay-field-confidence">
               <span class="overlay-field-label">置信度评分</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg);font-weight:var(--font-weight-semibold)">82 / 100（高置信）</span>
+              <span class="overlay-field-value">82 / 100（高置信）</span>
             </div>
 
             <div class="overlay-actions">
@@ -2384,25 +2973,25 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">总建议权重</span>
-              <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">+12.0%</span>
+              <span class="overlay-field-value tnum">+12.0%</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">预估总金额</span>
-              <span class="overlay-field-value" style="font-feature-settings:'tnum' 1">¥528,400.00</span>
+              <span class="overlay-field-value tnum">¥528,400.00</span>
             </div>
 
             <h4>风控批量检查</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">组合集中度</span>
-              <span class="overlay-field-value" style="color:var(--system-degraded-fg)">⚠ 白酒板块将达 42.3%</span>
+              <span class="overlay-field-value color-warn">⚠ 白酒板块将达 42.3%</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">单票上限</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">✓ 均未超出 10%</span>
+              <span class="overlay-field-value color-pass">✓ 均未超出 10%</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">涨跌停</span>
-              <span class="overlay-field-value" style="color:var(--system-healthy-fg)">✓ 均可正常交易</span>
+              <span class="overlay-field-value color-pass">✓ 均可正常交易</span>
             </div>
 
             <div class="overlay-actions">
