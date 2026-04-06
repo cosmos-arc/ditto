@@ -113,7 +113,7 @@ class TechnicalIndicatorMetadataReader:
             f"""SELECT indicator_id, code, name, type, description, formula, parameters
                FROM technical_indicators
                WHERE code IN ({placeholders})
-               ORDER BY code""",  # noqa: S608
+               ORDER BY code""",  # noqa: S608 - codes 使用参数化占位符
             codes,
         )
 

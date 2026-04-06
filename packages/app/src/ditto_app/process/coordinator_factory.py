@@ -88,7 +88,7 @@ def create_coordinator(  # noqa: PLR0913
     try:
         fred_source = source_service.get_source(Source.FRED)
     except Exception as e:
-        logger.warning(f"FRED source not available: {e}")
+        logger.warning("FRED source not available", error=str(e))
 
     # 创建协调器
     coordinator = IngestionCoordinator(

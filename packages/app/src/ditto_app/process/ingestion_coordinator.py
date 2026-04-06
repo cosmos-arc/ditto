@@ -322,7 +322,10 @@ class IngestionCoordinator:
                 self._source, include_sw_levels=[1, 2]
             )
 
-            logger.debug(f"已缓存 {len(self._index_codes_cache)} 个指数代码")
+            logger.debug(
+                "已缓存指数代码",
+                count=len(self._index_codes_cache),
+            )
 
         return self._index_codes_cache
 
@@ -469,47 +472,69 @@ class IngestionCoordinator:
         """尝试获取数据，失败时返回 IngestionResult。"""
         try:
             return self._fetch_data(dataset, trade_date)
-
-        except (httpx.NetworkError, httpx.TimeoutException) as e:
-            logger.exception(
-                "network_error_during_fetch",
+        except Exception as e:
+            return self._handle_fetch_error(
+                e,
                 dataset=dataset,
-                trade_date=trade_date,
-                error_type=type(e).__name__,
-            )
-
-            network_error = NetworkError.from_httpx(
-                error=e,
-                source=self._source_name,
+                date_identifier=trade_date,
                 context=f"fetching {dataset}",
+                log_tag="during_fetch",
             )
 
+    def _handle_fetch_error(
+        self,
+        error: Exception,
+        *,
+        dataset: str,
+        date_identifier: str,
+        context: str,
+        log_tag: str,
+    ) -> IngestionResult:
+        """
+        统一的 fetch 错误处理。
+
+        Args:
+            error: 捕获的异常
+            dataset: 数据集名称
+            date_identifier: 日期标识（trade_date 或 start_date）
+            context: NetworkError 上下文描述
+            log_tag: 日志事件后缀（如 "during_fetch"）
+
+        """
+        if isinstance(error, (httpx.NetworkError, httpx.TimeoutException)):
+            logger.exception(
+                f"network_error_{log_tag}",
+                dataset=dataset,
+                error_type=type(error).__name__,
+            )
+            network_error = NetworkError.from_httpx(
+                error=error,
+                source=self._source_name,
+                context=context,
+            )
             fetch_error = SourceFetchError(
                 message=str(network_error),
                 source=self._source_name,
                 cause=network_error,
             )
-
             return self._result_handler.handle_fetch_error(
-                dataset, trade_date, fetch_error
+                dataset, date_identifier, fetch_error
             )
 
-        except Exception as e:
-            if self._is_source_fetch_error(e):
-                fetch_error = self._normalize_source_fetch_error(e)
-
-                return self._result_handler.handle_fetch_error(
-                    dataset, trade_date, fetch_error
-                )
-
-            logger.exception(
-                "unexpected_error_during_fetch",
-                dataset=dataset,
-                trade_date=trade_date,
-                error_type=type(e).__name__,
+        if self._is_source_fetch_error(error):
+            fetch_error = self._normalize_source_fetch_error(error)
+            return self._result_handler.handle_fetch_error(
+                dataset, date_identifier, fetch_error
             )
 
-            return self._result_handler.handle_unknown_error(dataset, trade_date, e)
+        logger.exception(
+            f"unexpected_error_{log_tag}",
+            dataset=dataset,
+            error_type=type(error).__name__,
+        )
+        return self._result_handler.handle_unknown_error(
+            dataset, date_identifier, error
+        )
 
     def _process_fetched_data(
         self, df: pl.DataFrame, dataset: str, trade_date: str, force: bool
@@ -1022,48 +1047,13 @@ class IngestionCoordinator:
         """按标的尝试获取数据，失败时返回 IngestionResult。"""
         try:
             return self._fetch_by_dataset(dataset_enum, source_ticker, params)
-
-        except (httpx.NetworkError, httpx.TimeoutException) as e:
-            logger.exception(
-                "network_error_during_fetch_by_instrument",
-                dataset=dataset,
-                source_ticker=source_ticker,
-                error_type=type(e).__name__,
-            )
-
-            network_error = NetworkError.from_httpx(
-                error=e,
-                source=self._source_name,
-                context=f"fetching {dataset} for {source_ticker}",
-            )
-
-            fetch_error = SourceFetchError(
-                message=str(network_error),
-                source=self._source_name,
-                cause=network_error,
-            )
-
-            return self._result_handler.handle_fetch_error(
-                dataset, params.start_date, fetch_error
-            )
-
         except Exception as e:
-            if self._is_source_fetch_error(e):
-                fetch_error = self._normalize_source_fetch_error(e)
-
-                return self._result_handler.handle_fetch_error(
-                    dataset, params.start_date, fetch_error
-                )
-
-            logger.exception(
-                "unexpected_error_during_fetch_by_instrument",
+            return self._handle_fetch_error(
+                e,
                 dataset=dataset,
-                source_ticker=source_ticker,
-                error_type=type(e).__name__,
-            )
-
-            return self._result_handler.handle_unknown_error(
-                dataset, params.start_date, e
+                date_identifier=params.start_date,
+                context=f"fetching {dataset} for {source_ticker}",
+                log_tag="during_fetch_by_instrument",
             )
 
     def _process_fetched_data_by_instrument(

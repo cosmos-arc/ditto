@@ -99,7 +99,7 @@ class PitHelper:
             # 使用 CTE 包装以避免破坏原有 SQL 结构
             pit_filter = f"{date_column} {PIT_QUERY_OPERATOR} '{knowledge_date}'"
             wrapped = (
-                f"WITH _pit_original AS ({query}) "  # noqa: S608
+                f"WITH _pit_original AS ({query}) "  # noqa: S608 - query 是内部构建的参数化 SQL
                 f"SELECT * FROM _pit_original WHERE {pit_filter}"
             )
             return wrapped

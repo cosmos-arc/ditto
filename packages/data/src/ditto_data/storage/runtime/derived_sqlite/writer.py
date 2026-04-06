@@ -467,7 +467,7 @@ class SQLiteDerivedCatalogWriter:
         ]
         for table in delete_order:
             cursor = self._sqlite_client.execute(
-                f"DELETE FROM {table} WHERE derived_id = ? AND version = ?",  # noqa: S608
+                f"DELETE FROM {table} WHERE derived_id = ? AND version = ?",  # noqa: S608 - table 来自受控枚举，参数使用占位符
                 (derived_id, version),
             )
             total += cursor.rowcount

@@ -110,7 +110,7 @@ class IndexConstituentWriter:
         )
 
         # Check if table has existing data
-        existing_count_sql = f"SELECT COUNT(*) as count FROM {self._table}"  # noqa: S608
+        existing_count_sql = f"SELECT COUNT(*) as count FROM {self._table}"  # noqa: S608 - self._table 是受控的表名
         existing_result = self._store.fetchone(existing_count_sql)
         existing_count = int(existing_result["count"]) if existing_result else 0
         is_merge = existing_count > 0
@@ -161,7 +161,7 @@ class IndexConstituentWriter:
                 updated = 0
 
             # Delete all existing data and reinsert (simplest for SQLite)
-            self._store.execute(f"DELETE FROM {self._table}")  # noqa: S608
+            self._store.execute(f"DELETE FROM {self._table}")  # noqa: S608 - self._table 是受控的表名
         else:
             # New table
             added = len(df)
@@ -173,7 +173,7 @@ class IndexConstituentWriter:
         col_names = ",".join(f'"{col}"' for col in columns)
 
         sql = (
-            f'INSERT OR REPLACE INTO "{self._table}" ({col_names}) '  # noqa: S608
+            f'INSERT OR REPLACE INTO "{self._table}" ({col_names}) '  # noqa: S608 - self._table 是受控的表名，参数使用占位符
             f"VALUES ({placeholders})"
         )
 
@@ -249,12 +249,12 @@ class IndexConstituentWriter:
         where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
 
         # Count before deletion
-        count_sql = f"SELECT COUNT(*) as count FROM {self._table}{where_clause}"  # noqa: S608
+        count_sql = f"SELECT COUNT(*) as count FROM {self._table}{where_clause}"  # noqa: S608 - self._table 是受控表名，where_clause 通过白名单构建
         before_result = self._store.fetchone(count_sql, params)
         before_count = int(before_result["count"]) if before_result else 0
 
         # Execute deletion
-        delete_sql = f"DELETE FROM {self._table}{where_clause}"  # noqa: S608
+        delete_sql = f"DELETE FROM {self._table}{where_clause}"  # noqa: S608 - self._table 是受控表名，where_clause 通过白名单构建
         self._store.execute(delete_sql, params)
         self._store.commit()
 

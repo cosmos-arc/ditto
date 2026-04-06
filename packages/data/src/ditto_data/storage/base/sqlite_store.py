@@ -307,19 +307,19 @@ class SQLiteStore(BaseStore):
         if on_duplicate == OnDuplicate.KEEP_LAST:
             # INSERT OR REPLACE：删除旧记录，插入新记录
             sql = (
-                f'INSERT OR REPLACE INTO "{table}" ({col_names}) '  # noqa: S608
+                f'INSERT OR REPLACE INTO "{table}" ({col_names}) '  # noqa: S608 - table 是受控的表名，参数使用占位符
                 f"VALUES ({placeholders})"
             )
         elif on_duplicate == OnDuplicate.KEEP_FIRST:
             # INSERT OR IGNORE：忽略重复记录
             sql = (
-                f'INSERT OR IGNORE INTO "{table}" ({col_names}) '  # noqa: S608
+                f'INSERT OR IGNORE INTO "{table}" ({col_names}) '  # noqa: S608 - table 是受控的表名，参数使用占位符
                 f"VALUES ({placeholders})"
             )
         elif on_duplicate == OnDuplicate.ERROR:
             # 直接 INSERT：遇到重复会报错
             sql = (
-                f'INSERT INTO "{table}" ({col_names}) '  # noqa: S608
+                f'INSERT INTO "{table}" ({col_names}) '  # noqa: S608 - table 是受控的表名，参数使用占位符
                 f"VALUES ({placeholders})"
             )
         else:

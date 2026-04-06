@@ -298,11 +298,7 @@ def build_display_map(
     instrument_ids: list[int],
     metadata_service: MetadataService,
 ) -> dict[InstrumentId, str]:
-    """
-    构建 InstrumentId → standard_ticker 映射。
-
-    将 instrument_id 列表解析为 ``{InstrumentId: "510300.SH"}`` 格式的展示映射。
-    """
+    """构建 InstrumentId → standard_ticker 映射。"""
     display_map: dict[InstrumentId, str] = {}
     for iid in instrument_ids:
         instrument_id = InstrumentId(iid)

@@ -42,7 +42,7 @@ class InstrumentIdAllocator:
                 # 首次分配, 插入新记录
                 new_id = min_id
                 self._pool.execute(
-                    "INSERT INTO instrument_id_sequence "  # noqa: S608
+                    "INSERT INTO instrument_id_sequence "  # noqa: S608 - 静态表名，参数使用占位符
                     + "(asset_class, current_max) VALUES (?, ?)",
                     [asset_class, new_id],
                 )

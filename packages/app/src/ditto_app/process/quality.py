@@ -21,7 +21,7 @@ import polars.exceptions as pl_exceptions
 from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
-from ditto_data.quality.spec import DQResult
+from ditto_data.quality.spec import DQIssue, DQResult
 from ditto_infra.foundation import logger
 
 from ditto_app.query.market import MarketQueryFacade
@@ -177,7 +177,7 @@ class QualityService:
                 continue
             self._save_quarantine_issue(dataset, issue)
 
-    def _save_quarantine_issue(self, dataset: str, issue: Any) -> None:
+    def _save_quarantine_issue(self, dataset: str, issue: DQIssue) -> None:
         """保存单个 issue 的隔离数据."""
         assert self._quarantine_writer is not None  # noqa: S101  # guarded by _quarantine_data
         try:
@@ -431,7 +431,7 @@ class L3BatchService:
         self,
         trade_date: str,
         dataset: str,
-        issues: list[Any],
+        issues: list[DQIssue],
     ) -> None:
         """
         Send DQ alert notification.

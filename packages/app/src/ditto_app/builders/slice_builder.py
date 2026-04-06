@@ -5,8 +5,8 @@ from __future__ import annotations
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_engine.backtest.data_feed import ProviderBackedDataFeed, Slice
-from ditto_kernel.identity import InstrumentId
 
+from ditto_app.builders._resolution import resolve_benchmark, resolve_tickers
 from ditto_app.builders.runtime_builder import StrategyRuntimeBuilder
 
 __all__ = [
@@ -41,8 +41,9 @@ class StrategySliceBuilder:
             strategy_id,
             version,
         )
-        benchmark_id = self._resolve_benchmark(
+        benchmark_id = resolve_benchmark(
             runtime.spec.benchmark,
+            self._metadata_service,
             source,
             trade_date,
         )
@@ -52,7 +53,7 @@ class StrategySliceBuilder:
             runtime.spec.universe,
             asof=trade_date,
         )
-        tickers, id_map = self._resolve_tickers(universe_ids)
+        tickers, id_map = resolve_tickers(universe_ids, self._metadata_service)
 
         data_feed = ProviderBackedDataFeed(
             self._data_provider,
@@ -66,35 +67,3 @@ class StrategySliceBuilder:
             msg = f"trade_date 不在可用交易日内: {trade_date}"
             raise ValueError(msg)
         return data_feed.get_slice(trade_date)
-
-    def _resolve_tickers(
-        self,
-        instrument_ids: list[int],
-    ) -> tuple[tuple[str, ...], dict[str, InstrumentId]]:
-        """将 instrument_id 列表解析为 tickers 和 id_map。"""
-        tickers: list[str] = []
-        id_map: dict[str, InstrumentId] = {}
-        for iid in instrument_ids:
-            instrument_id = InstrumentId(iid)
-            instrument = self._metadata_service.get_instrument(iid)
-            if instrument is not None:
-                ticker = instrument.get("ticker", str(iid))
-                exchange = instrument.get("exchange", "")
-                key = f"{ticker}.{exchange}" if exchange else str(iid)
-            else:
-                key = str(iid)
-            tickers.append(key)
-            id_map[key] = instrument_id
-        return tuple(tickers), id_map
-
-    def _resolve_benchmark(
-        self,
-        benchmark: str | None,
-        source: str,
-        as_of: str,
-    ) -> InstrumentId | None:
-        """将 benchmark ticker 解析为 InstrumentId。"""
-        if benchmark is None:
-            return None
-        iid = self._metadata_service.resolve_instrument_id(benchmark, source, as_of)
-        return InstrumentId(iid) if iid is not None else None

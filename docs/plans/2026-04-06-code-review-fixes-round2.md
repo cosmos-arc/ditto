@@ -31,13 +31,13 @@
 
 ### Phase 1: Critical 修复（零容忍规则）
 
-- [ ] Task 1: coordinator_factory.py 消除 `# type: ignore` `[S]`
+- [x] Task 1: coordinator_factory.py 消除 `# type: ignore` `[S]` ✅ 已在之前提交中完成
   - 验收: `# type: ignore` 从源码中移除，pyright 通过，`from __future__ import annotations` 保留
   - 文件:
     - `packages/app/src/ditto_app/process/coordinator_factory.py`
   - 方案: 将行 70 的 lazy import 提升到模块顶层（行 33 后），移除行 37/49 的 `# type: ignore`
 
-- [ ] Task 2: retry_manager + backfill_manager 消除 `TYPE_CHECKING` `[S]`
+- [x] Task 2: retry_manager + backfill_manager 消除 `TYPE_CHECKING` `[S]` ✅ 已在之前提交中完成
   - 验收: `TYPE_CHECKING` 守卫替换为直接 import，pyright 通过
   - 文件:
     - `packages/app/src/ditto_app/process/retry_manager.py` (行 5, 13-14)
@@ -46,7 +46,7 @@
 
 ### Phase 2: 代码重复消除
 
-- [ ] Task 3: 提取 `_resolve_tickers` 到共享模块 `[M]`
+- [x] Task 3: 提取 `_resolve_tickers` 到共享模块 `[M]` ✅
   - 验收: 3 处重复代码收敛为 1 处实现 + 2 处调用
   - 文件:
     - **新增**: `packages/app/src/ditto_app/builders/_resolution.py`
@@ -68,7 +68,7 @@
     ```
   - 测试: `packages/app/tests/unit/builders/test_resolution_unit.py` — 正常/空列表/无 instrument 场景
 
-- [ ] Task 4: 提取 `_resolve_benchmark` 到共享模块 `[S]`
+- [x] Task 4: 提取 `_resolve_benchmark` 到共享模块 `[S]` ✅
   - 验收: 2 处重复代码收敛为 1 处实现
   - 文件:
     - **修改**: `packages/app/src/ditto_app/builders/_resolution.py`
@@ -85,7 +85,7 @@
     ) -> InstrumentId | None: ...
     ```
 
-- [ ] Task 5: 提取 ingestion_coordinator 错误处理为共享方法 `[M]`
+- [x] Task 5: 提取 ingestion_coordinator 错误处理为共享方法 `[M]` ✅
   - 验收: `_try_fetch_data` 和 `_try_fetch_data_by_instrument` 的 try/except 块收敛为 `_handle_fetch_error`
   - 文件:
     - `packages/app/src/ditto_app/process/ingestion_coordinator.py` (行 466-512, 1015-1067)
@@ -93,12 +93,12 @@
 
 ### Phase 3: 类型安全
 
-- [ ] Task 6: quality.py `Any` → `DQIssue` `[S]`
+- [x] Task 6: quality.py `Any` → `DQIssue` `[S]` ✅
   - 验收: `issue: Any` → `issue: DQIssue`，`list[Any]` → `list[DQIssue]`
   - 文件:
     - `packages/app/src/ditto_app/process/quality.py` (行 180, 434)
 
-- [ ] Task 7: S608 `# noqa` 补充安全注释 `[M]`
+- [x] Task 7: S608 `# noqa` 补充安全注释 `[M]` ✅
   - 验收: 所有 S608 noqa 均附带安全说明注释
   - 文件（13 处无注释）:
     - `packages/app/src/ditto_app/query/research.py` (行 249)
@@ -111,7 +111,7 @@
 
 ### Phase 4: 测试补充
 
-- [ ] Task 8: coordinator_factory.py 单元测试 `[M]`
+- [x] Task 8: coordinator_factory.py 单元测试 `[M]` ✅
   - 验收: 覆盖率 ≥ 80%，覆盖正常路径 + ValueError + FRED 降级
   - 文件:
     - **新增**: `packages/app/tests/unit/process/test_coordinator_factory_unit.py`
@@ -123,7 +123,7 @@
 
 ### Phase 5: 日志一致性
 
-- [ ] Task 9: f-string 日志调用改为结构化 keyword 形式 `[M]`
+- [x] Task 9: f-string 日志调用改为结构化 keyword 形式 `[M]` ✅
   - 验收: 源码中无 `logger.xxx(f"...")` 调用
   - 文件:
     - `packages/app/src/ditto_app/process/ingestion_coordinator.py` (行 293-294, 325)
@@ -156,11 +156,11 @@
 ## 验收标准
 
 ```bash
-pixi run -e dev check  # lint + fmt + type + test --fast 全部通过
+pixi run -e dev check  # lint + fmt + type + test --fast 全部通过 ✅
 ```
 
-- [ ] `# type: ignore` 在 app/src 中为 0
-- [ ] `TYPE_CHECKING` 在 app/src 中仅用于真正的循环依赖（当前应为 0）
-- [ ] `_resolve_tickers` 无重复实现
-- [ ] coordinator_factory.py 覆盖率 ≥ 80%
-- [ ] S608 noqa 全部附带安全注释
+- [x] `# type: ignore` 在 app/src 中为 0 ✅
+- [x] `TYPE_CHECKING` 在 app/src 中仅用于真正的循环依赖（当前应为 0） ✅
+- [x] `_resolve_tickers` 无重复实现 ✅（`build_display_map` 保留在 strategy_types.py 避免循环导入）
+- [x] coordinator_factory.py 覆盖率 ≥ 80% ✅
+- [x] S608 noqa 全部附带安全注释 ✅
