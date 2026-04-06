@@ -1,7 +1,7 @@
-# 交互色探索：Ink Indigo 方向确认
+# 交互色探索：Lapis Blue 方向确认
 
-> 日期：2026-04-05
-> 状态：Direction Confirmed（待 token scale 定稿 + APCA 校验）
+> 日期：2026-04-05（初版 Ink Indigo），2026-04-06（修订为 Lapis）
+> 状态：Direction Confirmed — Lapis (hue 235°) 已选定
 > 前置文档：[color-system-v1-design.md](../plans/2026-04-03-color-system-v1-design.md)
 
 ---
@@ -20,142 +20,101 @@ V1 配色体系（Graphite Studio / Calibrated Intelligence）已完成实施。
 
 ## 2. 探索过程
 
-共 6 轮、28+ 方案对比，通过自包含 HTML Demo 页面在同一视口内并排展示。
+### Phase 1：Ink Indigo 方向（已废弃）
 
-### Round 1 — 5 种基础方向
+共 6 轮、28+ 方案对比。Round 1-5 探索了 28+ 色相方向后锁定 Ink Indigo (hue 265°)，Round 6 精调选定 `Ink · More Pigment` (hue 265°, C=0.085)。
 
-| 方案 | Hue | 结论 |
-|------|-----|------|
-| Current V1 (对照) | 255° | 问题基线 |
-| Teal Steel | 185° | 方向好但偏 fintech startup |
-| Warm Copper | 28° | 与 Brass 太近 |
-| Frost Blue | 220° | 低饱和蓝灰，安全但不够独特 |
-| Electric Cyan | 200° | AI 气质但饱和度偏高 |
+**废弃原因**：在深色主题实际页面验证中，Ink Indigo 与深色骨架搭配感不佳——饱和度太低导致交互色缺乏存在感，偏紫 hue 265° 在暗底上显得沉闷。
 
-### Round 2 — 5 种个性方向
+### Phase 2：Lapis Blue 方向（最终选定）
 
-| 方案 | Hue | 结论 |
-|------|-----|------|
-| Sage Moss | 155° | 绿域，排除 |
-| Slate Violet | 295° | 有趣但不够克制 |
-| Arctic Mint | 170° | 偏绿，排除 |
-| Desert Sand | 55° | 与 Brass 太近 |
-| Obsidian Rose | 345° | 最大胆但非此方向 |
+在 Ink Indigo 废弃后，重新评估蓝域候选。关键约束：
 
-### Round 3 — 5 种极致方向
+1. 色相需远离涨跌色（红 hue 25° / 绿 hue 155°）→ 安全区 210°-260°
+2. 色相需与 Brass (hue 75°) 保持清晰距离 → 避免暖色域
+3. 暗色主题下有足够存在感 → chroma 不能太低
 
-| 方案 | Hue | 结论 |
-|------|-----|------|
-| Champagne Gold | 80° | 与 Brass 几乎重叠 |
-| Petrol Deep | 195° | 沉稳但偏工具感 |
-| **Ink Indigo** | **265°** | **命中方向，克制高级** |
-| Burnt Sienna | 18° | 红域，排除 |
-| Phantom Silver | 253° | 近无色，太极端 |
+候选对比：
 
-### Round 4 — 蓝青紫域 5 种精选
+| 候选 | Hue | Chroma | 结论 |
+|------|-----|--------|------|
+| Ink Indigo | 265° | 0.085 | 与深色搭配沉闷，已废弃 |
+| **Lapis** | **235°** | **0.120** | **选中：奢侈品克制气质 + 暗色存在感** |
+| Cobalt | 248° | 0.140 | 更饱和更专业，但偏主流 TradingView/Coinbase 风格 |
+| Dark Honey | 50° | 0.120 | 与 Brass (75°) 仅差 25°，破坏三层架构 |
 
-| 方案 | Hue | 结论 |
-|------|-----|------|
-| Blueprint Blue | 230° | 理性但不独特 |
-| Dusk Lavender | 280° | 暖紫，有潜力 |
-| Cerulean Depth | 210° | 深空感但偏传统 |
-| Dusty Plum | 310° | 奢侈品质感但色域偏远 |
-| Steel Teal | 190° | 冷锐但偏青 |
+### Lapis 选中理由
 
-### Round 5 — 8 种蓝青紫弧段深度采样
-
-Prussian Blue / Lapis Lazuli / Cobalt Night / Wisteria / Glacier Ice / Amethyst Smoke / Sapphire Steel / Iris Mist
-
-确认 Ink Indigo 方向最优后，进入 Round 6 精调。
-
-### Round 6 — Ink Indigo 微调 + 暖色系对照
-
-**Ink Indigo 4 变体：**
-
-| 变体 | 调整 | 感受 |
-|------|------|------|
-| Ink Indigo (基线) | hue 265° C=0.060 | 稍淡，按钮存在感弱 |
-| Ink · Warm Shift | hue 258° C=0.055 | 偏暖，接近骨架 |
-| Ink · Cool Shift | hue 272° C=0.065 | 偏紫，性格变化 |
-| **Ink · More Pigment** | **hue 265° C=0.085** | **按钮有存在感但不喊叫，最终选定** |
+1. **业界罕见**：无量化平台使用此色相方向（Bloomberg 橙、TradingView 蓝绿、Thinkorswim 绿）
+2. **奢侈品克制气质**：C=0.120 保持"有存在感但不喊叫"的临界点
+3. **三层色彩架构清晰**：
+   - 与 Brass (75°) 距离 160° — 清晰分层
+   - 与涨红 (25°) 距离 210° — 安全隔离
+   - 与跌绿 (155°) 距离 80° — 正交无干扰
+4. **暗色主题表现优异**：在 Home / AI Copilot / Research 三个页面实际验证，Lapis 按钮和交互元素在深色底上辨识度高且不刺眼
 
 ---
 
 ## 3. 选定方案
 
-### Ink Indigo · More Pigment
-
-```
-hue: 265°
-chroma: 0.085（极低饱和）
-lightness: 0.700（交互级亮度）
-```
-
-### 为什么高级
-
-1. **克制 = 高级**：C=0.085 是"有存在感但不喊叫"的临界点。奢侈品设计的铁律：越贵的品牌颜色越安静。
-2. **材料级配色**：不是"被选出来的颜色"，是石墨里自然渗透出来的深色。Montblanc 墨水 + Moleskine 笔记本的气质。
-3. **业界无先例**：没有任何量化平台使用此方向。Bloomberg 用橙、TradingView 用蓝绿、Thinkorswim 用绿。Ink + Brass 组合为 Ditto 独有。
-
-### 与现有体系的搭配
-
-| 体系层 | Hue | 与 Ink (265°) 关系 |
-|--------|-----|--------------------|
-| 中性骨架 | 253° | 差 12°，同族不同层 |
-| Brass 身份 | 74° | 差 191°，近互补张力而非对冲 |
-| Market 涨 | 20° | 差 245°，远距离互补无冲突 |
-| Market 跌 | 175° | 差 90°，正交无干扰 |
-
----
-
-## 4. 候选 Token Scale（待 APCA 校验）
+### Lapis Blue — hue 235°, chroma 0.120
 
 ```css
 :root {
-  /* Brand Primitives — Ink Indigo */
-  --brand-300: oklch(0.850 0.045 265);
-  --brand-400: oklch(0.785 0.065 265);
-  --brand-500: oklch(0.700 0.085 265);  /* 核心交互色 */
-  --brand-600: oklch(0.615 0.072 265);
-  --brand-700: oklch(0.525 0.058 265);
+  /* Brand Primitives — Lapis Blue hue 235 */
+  --brand-300: oklch(0.830 0.050 235);
+  --brand-400: oklch(0.760 0.080 235);
+  --brand-500: oklch(0.640 0.120 235);
+  --brand-600: oklch(0.540 0.100 235);
+  --brand-700: oklch(0.450 0.080 235);
 }
 
 [data-theme="light"] {
-  --brand-300: oklch(0.670 0.060 267);
-  --brand-400: oklch(0.610 0.080 266);
-  --brand-500: oklch(0.550 0.100 265);
-  --brand-600: oklch(0.490 0.088 266);
-  --brand-700: oklch(0.430 0.072 267);
+  --brand-300: oklch(0.660 0.050 235);
+  --brand-400: oklch(0.610 0.080 235);
+  --brand-500: oklch(0.550 0.100 235);
+  --brand-600: oklch(0.490 0.088 235);
+  --brand-700: oklch(0.430 0.078 235);
 }
 ```
 
-### 与 V1 现有值的对比
+### 与现有体系的搭配
 
-| Token | V1 (当前) | Ink Indigo (候选) | 变化 |
-|-------|----------|-------------------|------|
-| brand-500 hue | 255° | 265° | +10° 偏紫 |
-| brand-500 chroma | 0.165 | 0.085 | -48% 饱和度 |
-| brand-500 lightness | 0.700 | 0.700 | 不变 |
+| 体系层 | Hue | 与 Lapis (235°) 关系 |
+|--------|-----|---------------------|
+| 中性骨架 | 253° | 差 18°，同族不同层 |
+| Brass 身份 | 74° | 差 161°，清晰分层 |
+| Market 涨 | 20° | 差 215°，远距离安全 |
+| Market 跌 | 155° | 差 80°，正交无干扰 |
 
-核心变化：**同一亮度下饱和度减半**，从"蓝色"变成"墨色"。
+### 与 V1 原始值的对比
+
+| Token | V1 原始 | Lapis (选定) | 变化 |
+|-------|---------|-------------|------|
+| brand-500 hue | 255° | 235° | -20° 偏蓝 |
+| brand-500 chroma | 0.165 | 0.120 | -27% 饱和度 |
+| brand-500 lightness | 0.700 | 0.640 | -8% 更沉稳 |
 
 ---
 
-## 5. 下一步
+## 4. 下一步
 
 1. **APCA 校验**：验证 brand-500 在 surface-app / surface-panel / surface-elevated 上的对比度
-2. **light mode token 定稿**：确保亮色模式下 Ink Indigo 仍有辨识度
-3. **Brass 共存视觉确认**：在真实页面中验证 ink + brass 同画面无冲突
-4. **domain 色交叉验证**：确认 ink 不干扰 risk / execution / agent 等域语义色
-5. **实施迁移**：更新 tokens-base.css brand primitive → 全链路生效
+2. **light mode token 定稿**：确保 Lapis 在亮色模式下仍有辨识度
+3. **生产源 token 同步**：`src/styles/tokens/01-primitives.css` 更新
+4. **domain 色交叉验证**：确认 Lapis 不干扰 risk / execution / agent 等域语义色
 
 ---
 
-## 6. 业界先例
+## 5. 业界先例
 
 | 品牌 | 配色 | 和 Ditto 的关系 |
 |------|------|----------------|
-| Montblanc | 深墨蓝 + 金色硬件 | 几乎同构：ink accent + brass signature |
-| Moleskine | 无色封面 + 内页墨迹 | 骨架无色，信息层才有色 |
-| Linear App | 极低饱和紫灰 | 证明低饱和 = 高级的路线可行 |
+| Montblanc | 深墨蓝 + 金色硬件 | 类似结构：Lapis accent + Brass signature |
 | Bang & Olufsen | 石墨壳 + 金色细节 | 材料级的克制 |
+| Vercel | 极低饱和冷灰蓝 | 证明冷蓝 + 深色可行 |
+| Linear App | 低饱和紫灰 | 证明低饱和 = 高级的路线可行 |
+
+### Chroma 微调 (2026-04-07)
+
+brand-300 chroma 0.050→0.065, brand-400 chroma 0.080→0.090 — 提升浅色级蓝色辨识度，与 Lapis 235° 主色调更协调。同时 neutral hue 统一为 253°，market-down hue 175→155° 纯绿。

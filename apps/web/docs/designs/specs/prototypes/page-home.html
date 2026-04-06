@@ -153,8 +153,9 @@
       height: 2px;
       background: linear-gradient(
         90deg,
-        color-mix(in oklch, var(--brand-signature-line) 40%, transparent),
-        transparent
+        var(--brand-accent) 30%,
+        var(--brand-signature-fg) 60%,
+        transparent 100%
       );
       border-radius: 1px;
       pointer-events: none;
@@ -977,13 +978,13 @@
                 <div class="decision-judgment-metric">
                   <span class="status-label" data-tooltip="隐含波动率指数">IVIX</span>
                   <span class="status-value"><span data-ticker="18.52" data-decimals="2">18.52</span>
-                    <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"stroke":"oklch(0.746 0.165 50)","fill":true,"width":36,"height":14}' aria-label="IVIX 走势"></svg>
+                    <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"series":"warning","fill":true,"width":36,"height":14}' aria-label="IVIX 走势"></svg>
                   </span>
                 </div>
                 <div class="decision-judgment-metric">
                   <span class="status-label" data-tooltip="北向资金净流入">北向资金</span>
                   <span class="status-value up">+<span data-ticker="12.4" data-decimals="1">12.4</span> 亿
-                    <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"stroke":"oklch(0.55 0.15 155)","fill":true,"width":36,"height":14}' aria-label="北向资金走势"></svg>
+                    <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"series":"up","fill":true,"width":36,"height":14}' aria-label="北向资金走势"></svg>
                   </span>
                 </div>
               </div>
@@ -1228,13 +1229,13 @@
             <div class="pulse-metric">
               <span class="pulse-metric-label" data-tooltip="沪深300 指数实时行情">沪深300</span>
               <span class="pulse-metric-value up"><span data-ticker="3432" data-decimals="0">3,432</span> · +0.82%
-                <svg data-sparkline='{"data":[3380,3395,3388,3402,3410,3420,3432],"stroke":"oklch(0.55 0.15 155)","fill":true,"width":48,"height":16}' aria-label="沪深300走势"></svg>
+                <svg data-sparkline='{"data":[3380,3395,3388,3402,3410,3420,3432],"series":"up","fill":true,"width":48,"height":16}' aria-label="沪深300走势"></svg>
               </span>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label" data-tooltip="IVIX 隐含波动率指数">波动率</span>
               <span class="pulse-metric-value">IVIX <span data-ticker="18.52" data-decimals="2">18.52</span> · <span class="indicator-down">-3.1%</span>
-                <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"stroke":"oklch(0.6317 0.1567 22.64)","fill":true,"width":48,"height":16}' aria-label="IVIX 走势"></svg>
+                <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"series":"down","fill":true,"width":48,"height":16}' aria-label="IVIX 走势"></svg>
               </span>
             </div>
             <div class="pulse-metric">
@@ -1244,7 +1245,7 @@
             <div class="pulse-metric">
               <span class="pulse-metric-label" data-tooltip="沪股通+深股通 北向资金流入">北向资金</span>
               <span class="pulse-metric-value up">+<span data-ticker="12.4" data-decimals="1">12.4</span> 亿
-                <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"stroke":"oklch(0.55 0.15 155)","fill":true,"width":48,"height":16}' aria-label="北向资金走势"></svg>
+                <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"series":"up","fill":true,"width":48,"height":16}' aria-label="北向资金走势"></svg>
               </span>
             </div>
           </div>

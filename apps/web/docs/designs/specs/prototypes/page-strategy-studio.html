@@ -278,7 +278,7 @@
     .header-title::after {
       content: '';
       display: block;
-      background: linear-gradient(to right, var(--brand-signature-line) 0%, var(--brand-signature-line) 40%, transparent 100%);
+      background: linear-gradient(to right, var(--brand-accent) 30%, var(--brand-signature-fg) 60%, transparent 100%);
       background-size: 100% 2px;
       background-repeat: no-repeat;
       background-position: 0 100%;
@@ -2633,7 +2633,7 @@
               <div class="equity-curve-label">
                 <span class="equity-curve-title">累计收益率</span>
                 <span style="display:flex;align-items:center;gap:var(--space-8);">
-                  <svg data-sparkline='{"data":[100,102,101,105,104,108,107,112,110,115,118,116,120,123,125],"stroke":"oklch(0.55 0.15 155)","fill":true,"width":200,"height":60}' aria-label="权益曲线"></svg>
+                  <svg data-sparkline='{"data":[100,102,101,105,104,108,107,112,110,115,118,116,120,123,125],"series":"up","fill":true,"width":200,"height":60}' aria-label="权益曲线"></svg>
                   <span class="equity-curve-value">+32.6%</span>
                 </span>
               </div>
@@ -2715,7 +2715,7 @@
             </div>
             <div style="margin-top:var(--space-10);">
               <span class="inspector-section-title" style="margin-bottom:var(--space-6);display:block;">策略稳定性</span>
-              <svg data-sparkline='{"data":[0.82,0.79,0.85,0.83,0.88,0.86,0.91,0.89,0.87,0.92,0.90,0.94],"stroke":"oklch(0.7 0.165 255)","fill":true,"width":200,"height":50}' aria-label="策略稳定性趋势"></svg>
+              <svg data-sparkline='{"data":[0.82,0.79,0.85,0.83,0.88,0.86,0.91,0.89,0.87,0.92,0.90,0.94],"series":"accent","fill":true,"width":200,"height":50}' aria-label="策略稳定性趋势"></svg>
             </div>
           </div>
         </div>

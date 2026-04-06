@@ -29,9 +29,9 @@
   --feedback-toast-border:     var(--border-default);
 
   /* ── Feedback: Banner ── */
-  --feedback-banner-warning-bg:    oklch(0.7341 0.1177 79.66 / 0.1);
+  --feedback-banner-warning-bg:    oklch(from var(--amber-500) l c h / 0.10);
   --feedback-banner-warning-border:var(--amber-500);
-  --feedback-banner-critical-bg:   oklch(0.6317 0.1567 22.64 / 0.12);
+  --feedback-banner-critical-bg:   oklch(from var(--red-600) l c h / 0.12);
   --feedback-banner-critical-border:var(--red-600);
 
   /* ── Feedback: Progress ── */

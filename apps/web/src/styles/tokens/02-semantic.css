@@ -1,44 +1,44 @@
 /* L2 Semantic — surface / foreground / border 语义表面 */
 @theme inline {
   /* 表面层级 */
-  --color-surface-0: oklch(12% 0.006 254);
-  --color-surface-1: oklch(16% 0.008 254);
-  --color-surface-2: oklch(20% 0.009 254);
-  --color-surface-3: oklch(24% 0.010 254);
-  --color-surface-4: oklch(28% 0.011 254);
-  --color-surface-5: oklch(34% 0.012 254);
+  --color-surface-0: oklch(12% 0.006 253);
+  --color-surface-1: oklch(16% 0.008 253);
+  --color-surface-2: oklch(20% 0.009 253);
+  --color-surface-3: oklch(24% 0.010 253);
+  --color-surface-4: oklch(28% 0.011 253);
+  --color-surface-5: oklch(34% 0.012 253);
 
   /* 文本层级 */
-  --color-foreground:           oklch(97% 0.005 254);
-  --color-foreground-secondary: oklch(86% 0.009 254);
-  --color-foreground-tertiary:  oklch(58% 0.012 254);
-  --color-foreground-muted:     oklch(46% 0.012 254);
-  --color-foreground-disabled:  oklch(38% 0.011 254);
+  --color-foreground:           oklch(97% 0.005 253);
+  --color-foreground-secondary: oklch(86% 0.009 253);
+  --color-foreground-tertiary:  oklch(58% 0.012 253);
+  --color-foreground-muted:     oklch(46% 0.012 253);
+  --color-foreground-disabled:  oklch(38% 0.011 253);
 
   /* 边框 */
-  --color-border:       oklch(28% 0.008 254);
-  --color-border-subtle: oklch(22% 0.006 254);
-  --color-border-strong: oklch(38% 0.010 254);
+  --color-border:       oklch(28% 0.008 253);
+  --color-border-subtle: oklch(22% 0.006 253);
+  --color-border-strong: oklch(38% 0.010 253);
 
   /* 品牌强调 */
-  --color-accent:    oklch(60% 0.18 255);
-  --color-accent-fg: oklch(99% 0.002 254);
+  --color-accent:    var(--color-brand-500);
+  --color-accent-fg: oklch(99% 0.002 253);
 
   /* 签名色 — Brass */
-  --color-brass-500: oklch(72% 0.08 75);
-  --color-brass-400: oklch(78% 0.06 75);
-  --color-brass-300: oklch(84% 0.04 75);
+  --color-brass-500: oklch(72% 0.08 74);
+  --color-brass-400: oklch(78% 0.06 74);
+  --color-brass-300: oklch(84% 0.04 74);
 
   /* 代码 */
   --color-code-bg: oklch(14% 0.008 280);
   --color-code-fg: oklch(82% 0.06 280);
 
   /* 滚动条 */
-  --color-scrollbar:       oklch(46% 0.012 254 / 0.3);
-  --color-scrollbar-hover: oklch(58% 0.012 254 / 0.5);
+  --color-scrollbar:       oklch(46% 0.012 253 / 0.3);
+  --color-scrollbar-hover: oklch(58% 0.012 253 / 0.5);
 
   /* 分割线 */
-  --color-divider: oklch(28% 0.008 254 / 0.5);
+  --color-divider: oklch(28% 0.008 253 / 0.5);
 
   /* 遮罩 */
   --opacity-overlay:       0.5;

@@ -97,7 +97,14 @@
 
     render: function (svg, cfg) {
       var data = cfg.data;
-      var stroke = cfg.stroke || cssVar('--chart-series-up', 'oklch(0.7 0.085 265)');
+      var seriesMap = {
+        up:      cssVar('--chart-series-up'),
+        down:    cssVar('--chart-series-down'),
+        neutral: cssVar('--chart-series-neutral'),
+        accent:  cssVar('--brand-accent'),
+        warning: cssVar('--amber-500'),
+      };
+      var stroke = seriesMap[cfg.series] || cfg.stroke || cssVar('--chart-series-up', 'oklch(0.7 0.085 253)');
       var sw     = cfg.strokeWidth || parseFloat(cssVar('--sparkline-stroke-width')) || 1.5;
       var w      = cfg.width  || parseFloat(svg.getAttribute('width'))  || parseFloat(cssVar('--sparkline-width'))  || 48;
       var h      = cfg.height || parseFloat(svg.getAttribute('height')) || parseFloat(cssVar('--sparkline-height')) || 20;
@@ -419,9 +426,9 @@
     },
 
     color: function (v) {
-      if (v >= 0.8) return 'oklch(0.55 0.15 155)';
-      if (v >= 0.6) return 'oklch(0.746 0.165 50)';
-      return 'oklch(0.6317 0.1567 22.64)';
+      if (v >= 0.8) return cssVar('--chart-series-up', 'oklch(0.55 0.15 155)');
+      if (v >= 0.6) return cssVar('--amber-500', 'oklch(0.746 0.165 50)');
+      return cssVar('--red-600', 'oklch(0.6317 0.1567 22.64)');
     },
 
     render: function (el, value, label) {
@@ -458,10 +465,10 @@
    * ══════════════════════════════════════════════ */
   var FlowBar = {
     palette: [
-      'oklch(0.700 0.085 265)',
-      'oklch(0.700 0.085 265 / 0.55)',
-      'oklch(0.55 0.15 155)',
-      'oklch(0.746 0.165 50)',
+      cssVar('--brand-accent', 'oklch(0.700 0.085 253)'),
+      cssVar('--brand-accent', 'oklch(0.700 0.085 253 / 0.55)'),
+      cssVar('--chart-series-up', 'oklch(0.55 0.15 155)'),
+      cssVar('--amber-500', 'oklch(0.746 0.165 50)'),
       'oklch(1 0 0 / 0.08)',
     ],
 

@@ -3,7 +3,7 @@
   /* 市场 — CN 默认：红涨绿跌 */
   --color-market-up:         oklch(65% 0.20 25);
   --color-market-down:       oklch(70% 0.16 155);
-  --color-market-flat:       oklch(58% 0.012 254);
+  --color-market-flat:       oklch(58% 0.012 253);
   --color-market-limit-up:   oklch(70% 0.22 25);
   --color-market-limit-down: oklch(55% 0.14 155);
 
@@ -13,18 +13,18 @@
   --color-risk-warning:  oklch(75% 0.15 85);
   --color-risk-moderate: oklch(75% 0.12 195);
   --color-risk-normal:   oklch(70% 0.16 155);
-  --color-risk-info:     oklch(65% 0.15 255);
+  --color-risk-info:     oklch(58% 0.012 253);
 
   /* 交易 */
   --color-execution-filled:    oklch(70% 0.16 155);
   --color-execution-partial:   oklch(75% 0.15 85);
   --color-execution-pending:   oklch(75% 0.12 195);
-  --color-execution-cancelled: oklch(58% 0.012 254);
+  --color-execution-cancelled: oklch(58% 0.012 253);
   --color-execution-rejected:  oklch(65% 0.20 25);
 
   /* AI Agent */
-  --color-agent-running:  oklch(65% 0.15 255);
-  --color-agent-idle:     oklch(58% 0.012 254);
+  --color-agent-running:  oklch(65% 0.15 235);
+  --color-agent-idle:     oklch(58% 0.012 253);
   --color-agent-error:    oklch(65% 0.20 25);
   --color-agent-success:  oklch(70% 0.16 155);
   --color-agent-thinking: oklch(70% 0.12 195);

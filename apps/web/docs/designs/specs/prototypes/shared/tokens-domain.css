@@ -17,9 +17,9 @@
   --market-up-fg:      oklch(0.670 0.170 20);       /* red (CN: 涨) */
   --market-up-bg:      oklch(0.670 0.170 20 / 0.10);
   --market-up-subtle:  oklch(0.670 0.170 20 / 0.08);
-  --market-down-fg:    oklch(0.680 0.120 175);      /* green (CN: 跌) */
-  --market-down-bg:    oklch(0.680 0.120 175 / 0.10);
-  --market-down-subtle:oklch(0.680 0.120 175 / 0.08);
+  --market-down-fg:    oklch(0.680 0.120 155);      /* green (CN: 跌) */
+  --market-down-bg:    oklch(0.680 0.120 155 / 0.10);
+  --market-down-subtle:oklch(0.680 0.120 155 / 0.08);
   --market-flat-fg:    var(--neutral-500);
   --market-flat-bg:    transparent;
   --market-strong-fg:  var(--green-600);
@@ -96,8 +96,8 @@
 [data-theme="light"] {
   --market-up-bg:      oklch(0.670 0.170 20 / 0.08);
   --market-up-subtle:  oklch(0.670 0.170 20 / 0.06);
-  --market-down-bg:    oklch(0.680 0.120 175 / 0.08);
-  --market-down-subtle:oklch(0.680 0.120 175 / 0.06);
+  --market-down-bg:    oklch(0.680 0.120 155 / 0.08);
+  --market-down-subtle:oklch(0.680 0.120 155 / 0.06);
 
   --risk-low-bg:       oklch(0.700 0.120 162 / 0.15);
   --risk-medium-bg:    oklch(0.734 0.118 76 / 0.15);
@@ -130,9 +130,9 @@
 
 /* ── International: 绿涨红跌 ── */
 [data-market-region="intl"] {
-  --market-up-fg:      oklch(0.680 0.120 175);      /* green */
-  --market-up-bg:      oklch(0.680 0.120 175 / 0.10);
-  --market-up-subtle:  oklch(0.680 0.120 175 / 0.08);
+  --market-up-fg:      oklch(0.680 0.120 155);      /* green */
+  --market-up-bg:      oklch(0.680 0.120 155 / 0.10);
+  --market-up-subtle:  oklch(0.680 0.120 155 / 0.08);
   --market-down-fg:    oklch(0.670 0.170 20);       /* red */
   --market-down-bg:    oklch(0.670 0.170 20 / 0.10);
   --market-down-subtle:oklch(0.670 0.170 20 / 0.08);

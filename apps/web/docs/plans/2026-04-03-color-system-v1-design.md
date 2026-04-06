@@ -40,7 +40,7 @@
 V1 采用 **四通道角色分离**：
 
 1. `Neutral Skeleton`：中性骨架，负责 surface / text / border
-2. `Interaction Blue`：交互工具色，负责 focus / selected / CTA
+2. `Interaction Blue (Lapis)`：交互工具色（hue 235°），负责 focus / selected / CTA
 3. `Signature Brass`：品牌身份色，负责 shell / context / 空状态等低频品牌触点
 4. `Domain Semantic`：业务语义色，继续负责 Market / Risk / Execution / System / Data Quality / Model / Agent
 
@@ -62,8 +62,8 @@ V1 的设计意图不是把品牌从 `indigo / violet` 彻底推向 `true blue`�
 V1 的正确策略是：
 
 - **neutral skeleton** 收敛到 `253°` 的 achromatic-neutral 方向
-- **interaction blue** 保持在 `255°-257°` 区间，延续现有 Graphite Studio 的交互气质
-- **signature brass** 负责额外品牌记忆点，而不是靠 brand hue 的大幅漂移来制造差异
+- **interaction blue** 定为 Lapis `235°`，奢侈品克制的冷蓝，与骨架 (253°) 差 18° 保持分层
+- **signature brass** 负责额外品牌记忆点，与 Lapis 形成清晰的三层架构
 
 也就是说，V1 不是 “263 → 251” 的品牌换性格方案，而是：
 
@@ -171,12 +171,12 @@ V1 的原则是：
   --neutral-900: oklch(0.920 0.004 253);
   --neutral-950: oklch(0.978 0.002 253);
 
-  /* Brand Primitives — keep Graphite Studio blue personality */
-  --brand-300: oklch(0.820 0.090 258);
-  --brand-400: oklch(0.760 0.130 257);
-  --brand-500: oklch(0.700 0.165 255);
-  --brand-600: oklch(0.620 0.150 255);
-  --brand-700: oklch(0.530 0.130 256);
+  /* Brand Primitives — Lapis Blue hue 235 (2026-04-06 updated) */
+  --brand-300: oklch(0.830 0.065 235);
+  --brand-400: oklch(0.760 0.090 235);
+  --brand-500: oklch(0.640 0.120 235);
+  --brand-600: oklch(0.540 0.100 235);
+  --brand-700: oklch(0.450 0.080 235);
 
   /* Neutralized Graphite — semantic layer uses primitive mapping */
   --surface-app:            var(--neutral-0);
@@ -232,11 +232,11 @@ V1 的原则是：
   --surface-overlay:        oklch(0.995 0.000 0);
   --surface-modal:          oklch(0.998 0.000 0);
 
-  --brand-300: oklch(0.660 0.110 259);
-  --brand-400: oklch(0.610 0.145 258);
-  --brand-500: oklch(0.550 0.185 258);
-  --brand-600: oklch(0.490 0.175 259);
-  --brand-700: oklch(0.430 0.155 260);
+  --brand-300: oklch(0.660 0.065 235);
+  --brand-400: oklch(0.610 0.090 235);
+  --brand-500: oklch(0.550 0.100 235);
+  --brand-600: oklch(0.490 0.088 235);
+  --brand-700: oklch(0.430 0.078 235);
 
   --brand-signature-fg:     oklch(0.520 0.060 72);
   --brand-signature-muted:  oklch(0.470 0.050 72);
