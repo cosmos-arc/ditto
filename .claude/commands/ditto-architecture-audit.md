@@ -54,7 +54,7 @@ pixi run -e dev test --integration
 - 使用 `Grep` 搜索命名模式
 - 使用 `Grep` 追踪命名使用情况，检测孤立命名
 - 对比类名与其方法/属性命名，检测职责一致性
-- 分析 Port 层命名是否混用技术术语（如 `SQLBarLoader`）
+- 分析 Interfaces 层命名是否混用技术术语（如 `SQLBarLoader`）
 - 检测同一概念的不同表述（如 `Bar`/`Kline`/`Candlestick`）
 
 ### 4. 代码质量工具
@@ -257,12 +257,12 @@ class DataCalculator: ...
 **检查清单**：
 - [ ] 业务层出现技术术语（如 `SQLManager` / `DatabaseProcessor`）
 - [ ] 领域层包含框架概念（如 `RequestHandler` / `ResponseBuilder`）
-- [ ] 跨层概念泄漏（如 Port 层直接使用 `SQLite` / `Parquet`）
+- [ ] 跨层概念泄漏（如 Interfaces 层直接使用 `SQLite` / `Parquet`）
 
 **典型问题示例**：
 ```python
 # ❌ 业务层混用技术术语
-class SQLBarLoader: ...  # Port 层不应知道 SQL
+class SQLBarLoader: ...  # Interfaces 层不应知道 SQL
 class ParquetDataWriter: ...  # 应为 BarDataWriter
 
 # ✅ 使用业务术语

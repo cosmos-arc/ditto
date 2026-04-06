@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from ditto_data.models.ingestion import IngestionResult, RetryResult
 from ditto_data.services import IngestionLogService
 from ditto_infra.foundation import logger
 
+from ditto_app.process.ingestion_coordinator import IngestionCoordinator
 from ditto_app.process.result_handler import count_results
-
-if TYPE_CHECKING:
-    from ditto_app.process.ingestion_coordinator import IngestionCoordinator
 
 
 class RetryManager:

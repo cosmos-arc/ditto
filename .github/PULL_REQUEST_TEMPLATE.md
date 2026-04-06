@@ -19,20 +19,20 @@
 - [ ] `packages/data` - 数据存储层
 - [ ] `packages/infra` - 基础设施
 - [ ] `packages/app` - 应用编排层
-- [ ] `interfaces` - Server 应用（API/CLI/Jobs）
+- [ ] `interfaces` - 应用入口（API/CLI/Jobs + DI Composition Root）
 - [ ] 其他:
 
 ## Definition of Done
 
 ### 工程质量
-- [ ] `pixi run -e dev ci-check` 全部通过
+- [ ] `pixi run -e dev check` 全部通过
 - [ ] 测试覆盖率达标（整体 ≥80%，风控 100%）
-- [ ] 类型注解完整，Pyright 0 错误
+- [ ] 类型注解完整，basedpyright 0 错误
 
 ### 代码审美
 - [ ] 命名符合项目约定
 - [ ] 无冗余的 AI 生成代码
-- [ ] 通过所有ci-check检查
+- [ ] 通过所有 check 检查
 
 ### PIT 安全（如涉及数据）
 - [ ] 使用 `knowledge_date` 过滤

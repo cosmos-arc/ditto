@@ -110,7 +110,7 @@ config/
 
 ### 配置加载位置约束
 
-**核心原则**：配置仅在 **Port 层** 加载，其他层通过 DI 获取。
+**核心原则**：配置仅在 **Interfaces 层** 加载，其他层通过 DI 获取。
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -282,7 +282,7 @@ settings.data_root = Path("/other")  # frozen dataclass 也不允许
 
 | ❌ 禁止 | ✅ 正确 | 原因 |
 |---------|---------|------|
-| 非 Port 层加载配置 | Port 层加载 + DI 注入 | 单一职责、可测试性 |
+| 非 Interfaces 层加载配置 | Interfaces 层加载 + DI 注入 | 单一职责、可测试性 |
 | 模型内读取 `os.environ` | 通过 `load_env_file()` 传入 | 配置来源可追溯 |
 | 使用 `BaseSettings` | 使用纯 `BaseModel` | 显式加载、可控 |
 | 硬编码路径 | 使用 `DataStoreSettings` 属性 | 唯一真源 |

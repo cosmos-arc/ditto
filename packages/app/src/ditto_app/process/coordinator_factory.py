@@ -30,11 +30,12 @@ from ditto_app.process._coordinator_constants import (
     get_sw_index_codes,
 )
 from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
+from ditto_app.process.ingestion_coordinator import IngestionCoordinator
 from ditto_app.process.quality import QualityService
 
 
 @contextmanager
-def create_coordinator(  # noqa: PLR0913  # type: ignore[reportUnknownParameterType]
+def create_coordinator(  # noqa: PLR0913
     metadata_service: MetadataService,
     market_service: MarketService,
     fundamental_service: FundamentalService,
@@ -46,7 +47,7 @@ def create_coordinator(  # noqa: PLR0913  # type: ignore[reportUnknownParameterT
     ingestion_cursor_service: IngestionCursorService | None = None,
     quality_service: QualityService | None = None,
     freeze_service: FreezeService | None = None,
-) -> Iterator[IngestionCoordinator]:  # noqa: F821  # type: ignore[valid-type]
+) -> Iterator[IngestionCoordinator]:
     """
     创建 IngestionCoordinator 实例.
 
@@ -67,10 +68,6 @@ def create_coordinator(  # noqa: PLR0913  # type: ignore[reportUnknownParameterT
         IngestionCoordinator: 协调器实例
 
     """
-    from ditto_app.process.ingestion_coordinator import (  # noqa: PLC0415
-        IngestionCoordinator,
-    )
-
     # 支持 Source 枚举和字符串
     if isinstance(source_name, Source):
         source_key = source_name
@@ -119,6 +116,7 @@ __all__ = [
     "MARKET_INDEX_CODES",
     "STYLE_INDEX_CODES",
     "SUPPORTED_INSTRUMENT_DATASETS",
+    "IngestionCoordinator",
     "SWIndustryProvider",
     "create_coordinator",
     "get_all_index_codes",

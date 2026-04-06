@@ -8,7 +8,7 @@ API 模型公共日期/格式化辅助工具.
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated, Any, Self
+from typing import Annotated, Any
 
 from pydantic import BeforeValidator
 
@@ -44,7 +44,7 @@ def format_date(value: date | str | None) -> str | None:
 DateField = Annotated[date | None, BeforeValidator(parse_date)]
 
 
-def validate_date_range(self: Any) -> Self:
+def validate_date_range(self: Any) -> Any:
     """
     验证日期范围: start_date <= end_date.
 

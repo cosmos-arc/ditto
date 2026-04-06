@@ -4,8 +4,8 @@ from pathlib import Path
 
 import yaml
 from dishka import Provider, Scope, provide
+from ditto_infra.foundation import logger
 from ditto_infra.foundation.config import get_default_golden_dataset_path
-from loguru import logger
 from pydantic import ValidationError
 
 from ditto_data.quality.golden import GoldenDatasetSpec

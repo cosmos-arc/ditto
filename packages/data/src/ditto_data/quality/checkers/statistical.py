@@ -4,7 +4,7 @@ from typing import Any
 
 import polars as pl
 import polars.exceptions as pl_exceptions
-from loguru import logger
+from ditto_infra.foundation import logger
 
 from ditto_data.quality.spec import DQIssue, DQLevel, DQSeverity
 

@@ -3,7 +3,7 @@
 from typing import Any
 
 import polars as pl
-from loguru import logger
+from ditto_infra.foundation import logger
 
 from ditto_data.quality.spec import DQIssue, DQLevel, DQSeverity
 

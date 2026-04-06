@@ -366,15 +366,15 @@ from ditto_data import Data
 from ditto_data.storage.bars_store import BarsStore
 ```
 
-### Server 层导入
+### Interfaces 层导入
 
 ```python
 # ✅ 正确
-from ditto_server.api import get_hub
-from ditto_server.ingestion import flows
+from ditto_interfaces.api import get_hub
+from ditto_interfaces.ingestion import flows
 
 # ❌ 错误
-from ditto_server.api.dependencies import hub
+from ditto_interfaces.api.dependencies import hub
 直接导入内部实现
 ```
 
@@ -557,11 +557,11 @@ Interfaces Flow → Interfaces Service → App Service → Data Service → Data
 **导入语句检查：**
 
 ```python
-# ❌ Server 层禁止直接导入 Store
+# ❌ Interfaces 层禁止直接导入 Store
 from ditto_data.storage.security_store import SecurityStore
 from ditto_data.storage.bars_store import BarsStore
 
-# ❌ Server 层禁止直接导入 Runtime
+# ❌ Interfaces 层禁止直接导入 Runtime
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.runtime.sqlite_pool import SQLitePool
 
@@ -587,8 +587,8 @@ from ditto_data.storage.sqlite_client import SQLiteClient
 | 是否需要分配/管理唯一标识符（如 instrument_id）？ | Data Service | 不应在此层 |
 | 是否包含数据映射/转换逻辑（如 source_ticker → instrument_id）？ | Data Service | 不应在此层 |
 | 是否依赖外部数据源（API/爬虫）？ | Data Source/Adapter | 不应在此层 |
-| 是否是流程编排/任务协调？ | Server Service | 不应在此层 |
-| 是否是应用层用例组合？ | Server Flow | 不应在此层 |
+| 是否是流程编排/任务协调？ | App 层 Service | 不应在此层 |
+| 是否是应用层用例组合？ | App 层 Flow | 不应在此层 |
 
 ### 代码重复检测
 
@@ -598,5 +598,5 @@ grep -r "def.*register" packages/data/src/ditto_data/domains/metadata/
 ```
 
 **禁止重复实现：**
-- ❌ Server 层重复实现 Service 已有的数据访问逻辑
+- ❌ Interfaces 层重复实现 Service 已有的数据访问逻辑
 - ❌ 多个地方重复实现相同的映射/转换规则

@@ -86,7 +86,6 @@ ditto/
 │   │       ├── backtest/        # 回测引擎
 │   │       ├── portfolio/       # 组合构建
 │   │       ├── accounting/      # 账户核算
-│   │       ├── orchestrator/    # 编排器
 │   │       ├── risk/            # 风控
 │   │       └── events.py
 │   ├── analytics/               # 分析层

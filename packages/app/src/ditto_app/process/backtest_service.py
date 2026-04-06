@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from ditto_data.models.strategy import ArtifactKind, StrategyArtifactRecord
@@ -218,13 +218,9 @@ class BacktestService:
         )
 
         # 构造 SimulatedClock — 以回测起始日期为初始时刻
+        _start = date.fromisoformat(self._config.start_date)
         clock = SimulatedClock(
-            initial=datetime(
-                int(self._config.start_date[:4]),
-                int(self._config.start_date[5:7]),
-                int(self._config.start_date[8:10]),
-                tzinfo=UTC,
-            ),
+            initial=datetime(_start.year, _start.month, _start.day, tzinfo=UTC),
         )
 
         # 构建 EngineOptions (注入 clock + event_bus + audit_collector)

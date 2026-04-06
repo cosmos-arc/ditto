@@ -26,9 +26,9 @@ from ditto_app.process.coordinator_factory import (
 )
 from ditto_app.process.retry_manager import RetryManager
 
-# Re-export private function for backward compatibility
+# Re-export for backward compatibility
 IngestionCoordinator = _ic.IngestionCoordinator
-_infer_exchange_suffix = _ic._infer_exchange_suffix
+_infer_exchange_suffix = _ic._infer_exchange_suffix  # pyright: ignore[reportPrivateUsage]
 
 __all__ = [
     "EXCHANGE_PREFIX_MAP",

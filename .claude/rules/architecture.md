@@ -85,7 +85,7 @@ ditto_infra     → 其他层                                                  �
 
 ### v5 强制边界（CI 门禁）
 
-以下规则由 `pixi run -e dev arch-check` 强制执行，违反即 CI 夲败:
+以下规则由 `pixi run -e dev arch-check` 强制执行，违反即 CI 失败:
 
 使用 **Import Linter** 进行架构约束检查,配置位于 [.importlinter](../../.importlinter)。
 

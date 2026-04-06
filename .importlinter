@@ -71,7 +71,7 @@ forbidden_modules =
     ditto_app.**
 
 # ═══════════════════════════════════════════════════════════════════
-# Data 层边界：禁止依赖 Engine/Port/App
+# Data 层边界：禁止依赖 Engine/Interfaces/App
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:data-boundary]
 name = Data must not depend on Engine/Interfaces/App/Analytics
@@ -85,7 +85,7 @@ forbidden_modules =
     ditto_analytics.**
 
 # ═══════════════════════════════════════════════════════════════════
-# Analytics 层隔离：禁止依赖 Data/Engine/Port
+# Analytics 层隔离：禁止依赖 Data/Engine/Interfaces
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:analytics-isolation]
 name = Analytics must not depend on Data/Engine
@@ -100,8 +100,8 @@ ignore_imports =
     ditto_analytics.** -> ditto_data.errors
 unmatched_ignore_imports_alerting = warn
 
-[importlinter:contract:analytics-must-not-depend-on-port]
-name = Analytics must not depend on Port
+[importlinter:contract:analytics-must-not-depend-on-interfaces]
+name = Analytics must not depend on Interfaces
 type = forbidden
 source_modules =
     ditto_analytics.**
@@ -156,10 +156,10 @@ forbidden_modules =
     ditto_analytics.**
 
 # ═══════════════════════════════════════════════════════════════════
-# Port 层边界：禁止直接依赖 Data 存储/运行时实现
+# Interfaces 层边界：禁止直接依赖 Data 存储/运行时实现
 # ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:port-boundary]
-name = Port must not directly depend on Data storage/runtime
+[importlinter:contract:interfaces-boundary]
+name = Interfaces must not directly depend on Data storage/runtime
 type = forbidden
 source_modules =
     ditto_interfaces.**
@@ -170,14 +170,14 @@ forbidden_modules =
 allow_indirect_imports = true
 
 # ═══════════════════════════════════════════════════════════════════
-# Port 层边界：禁止直接依赖 Data 服务/模型（逐步收紧）
+# Interfaces 层边界：禁止直接依赖 Data 服务/模型（逐步收紧）
 #
 # Composition Root 豁免：registry/** 是 DI 组装点，允许直接导入
 # Data services/quality 以完成 Provider 装配和 Context Bundle 构建。
 # 非registry代码必须通过 App 层或 DI 容器间接访问。
 # ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:port-service-isolation]
-name = Port must not directly depend on Data services/models (tightening)
+[importlinter:contract:interfaces-service-isolation]
+name = Interfaces must not directly depend on Data services/models (tightening)
 type = forbidden
 source_modules =
     ditto_interfaces.**
@@ -194,10 +194,10 @@ allow_indirect_imports = true
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
-# App 层边界：禁止依赖 Port 层
+# App 层边界：禁止依赖 Interfaces 层
 # ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:app-no-port-import]
-name = App must not import Port layer
+[importlinter:contract:app-no-interfaces-import]
+name = App must not import Interfaces layer
 type = forbidden
 source_modules =
     ditto_app.**
