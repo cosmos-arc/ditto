@@ -1833,8 +1833,8 @@
       </div>
     </div>
 
-    <!-- Tab Panel: Factors (default visible) -->
-    <div data-tab-panel="factors" aria-hidden="false">
+    <!-- Tab Panel: Factors (default visible) — display:contents lets grid children pass through -->
+    <div data-tab-panel="factors" aria-hidden="false" style="display:contents">
 
     <!-- State Variants: Pulse Strip -->
 
@@ -2420,8 +2420,6 @@
     
     
 
-  </div>
-
     </div><!-- end data-tab-panel="factors" -->
 
     <!-- Tab Panel: Backtest -->
@@ -2487,6 +2485,8 @@
         </div>
       </div>
     </div>
+
+  </div><!-- end shell-analytical -->
 
   <!-- ═══ Overlay Containers ═══ -->
   <div class="overlays">
