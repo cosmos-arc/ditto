@@ -1,4 +1,4 @@
-"""Port 策略服务工厂 — 含 BacktestRuntimeBuilder 与 StrategyServiceFactory."""
+"""App 策略服务工厂 — 含 BacktestRuntimeBuilder 与 StrategyServiceFactory."""
 
 from __future__ import annotations
 
@@ -170,7 +170,7 @@ class BacktestRuntimeBuilder:
 
 
 class StrategyServiceFactory:
-    """为 Port 层策略服务预接控制面依赖的工厂。"""
+    """为 App 层策略服务预接控制面依赖的工厂。"""
 
     def __init__(
         self,

@@ -8,6 +8,8 @@ Prefect 任务上下文管理（使用 dishka 同步容器）.
 registry/contexts/ingestion.py 中的 create_ingestion_bundle 替代。
 """
 
+from __future__ import annotations
+
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any

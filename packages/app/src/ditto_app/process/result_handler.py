@@ -243,7 +243,7 @@ class IngestionResultHandler:
             IngestionResult: 失败结果
 
         """
-        # DQ 检查已移到 Port 层，这里使用默认错误计数
+        # DQ 检查已移到 App 层，这里使用默认错误计数
         error_count = 1
         self._save_log(
             IngestionLog(

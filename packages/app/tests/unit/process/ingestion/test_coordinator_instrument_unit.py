@@ -387,3 +387,61 @@ class TestIngestByInstrument:
         # Assert
         assert result.status == "failed"
         assert result.error == "UNKNOWN_ERROR"
+
+
+# ---------------------------------------------------------------------------
+# _infer_exchange_suffix tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestInferExchangeSuffix:
+    """测试 _infer_exchange_suffix 边界校验."""
+
+    @staticmethod
+    def _import():
+        from ditto_app.process.coordinator import _infer_exchange_suffix
+
+        return _infer_exchange_suffix
+
+    def test_sh_main_board(self) -> None:
+        f = self._import()
+        assert f("600519") == "SH"
+
+    def test_sh_star_board(self) -> None:
+        f = self._import()
+        assert f("688001") == "SH"
+
+    def test_sz_main_board(self) -> None:
+        f = self._import()
+        assert f("000001") == "SZ"
+
+    def test_sz_chi_next(self) -> None:
+        f = self._import()
+        assert f("300001") == "SZ"
+
+    def test_bj_stock_8(self) -> None:
+        f = self._import()
+        assert f("830001") == "BJ"
+
+    def test_bj_stock_4(self) -> None:
+        f = self._import()
+        assert f("430001") == "BJ"
+
+    def test_non_standard_short_code_returns_none(self) -> None:
+        """非标准短代码不应匹配."""
+        f = self._import()
+        assert f("8") is None
+
+    def test_non_standard_alpha_returns_none(self) -> None:
+        """字母代码不应匹配."""
+        f = self._import()
+        assert f("8ABC") is None
+
+    def test_empty_returns_none(self) -> None:
+        f = self._import()
+        assert f("") is None
+
+    def test_unknown_prefix_returns_none(self) -> None:
+        f = self._import()
+        assert f("999999") is None

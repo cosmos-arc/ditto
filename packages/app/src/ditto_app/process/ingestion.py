@@ -1,5 +1,7 @@
 """数据摄取服务 -- Backward-compatible re-exports (模块拆分后的 shim)."""
 
+from __future__ import annotations
+
 from ditto_app.process.coordinator import (
     EXCHANGE_PREFIX_MAP,
     MARKET_INDEX_CODES,

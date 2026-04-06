@@ -1,5 +1,7 @@
 """API 路由包."""
 
+from __future__ import annotations
+
 from ditto_interfaces.api.routes import (
     capital,
     commodity,

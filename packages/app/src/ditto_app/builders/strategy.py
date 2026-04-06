@@ -11,6 +11,8 @@
     BacktestRuntimeBuilder, StrategyServiceFactory
 """
 
+from __future__ import annotations
+
 from ditto_app.builders.runtime_builder import (
     PublishedStrategyRuntime,
     StrategyRuntimeBuilder,

@@ -4,6 +4,8 @@ Prefect Tasks for data ingestion.
 该模块提供数据摄取的 Prefect 任务，使用工厂函数模式。
 """
 
+from __future__ import annotations
+
 # DQ 检查任务
 from ditto_interfaces.jobs.tasks.dq_batch import dq_batch_check, dq_completeness_check
 

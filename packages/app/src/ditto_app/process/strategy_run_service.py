@@ -116,7 +116,7 @@ class StrategyRunResult:
 
 class StrategyRunService:
     """
-    Port 层策略运行编排服务.
+    App 层策略运行编排服务.
 
     对给定交易日运行策略 Pipeline，产出 TargetPortfolio。
     RESEARCH 模式仅返回结果，RECOMMENDATION 模式额外持久化信号。

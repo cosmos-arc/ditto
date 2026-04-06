@@ -1,5 +1,5 @@
 """
-Port-side unified derived materialization orchestration.
+App-side unified derived materialization orchestration.
 
 Provides ``DerivedMaterializationOrchestrator`` for compile-execute-persist
 lifecycle, ``RuntimeDerivedInputProvider`` for production input loading,

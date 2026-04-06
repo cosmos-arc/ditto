@@ -13,6 +13,8 @@ The original monolithic module has been split into focused files:
 All public names are re-exported here so that existing import paths remain valid.
 """
 
+from __future__ import annotations
+
 from ditto_app.process.cascade_orchestrator import (
     CASCADE_MAX_RETRY_COUNT,
     REALTIME_CASCADE_MAX_DEPTH,

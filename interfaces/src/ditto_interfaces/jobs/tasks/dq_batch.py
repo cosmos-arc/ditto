@@ -1,5 +1,7 @@
 """L3 统计异常检测的 DQ 批量检查任务."""
 
+from __future__ import annotations
+
 from typing import Any
 
 from ditto_app.process.quality import L3BatchService

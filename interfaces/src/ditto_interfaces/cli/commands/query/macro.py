@@ -2,19 +2,21 @@
 
 from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import datetime
-from typing import Any
 
-import orjson
 import typer
 from ditto_app.query.macro import MacroQueryFacade
 from rich.console import Console
 from rich.table import Table
 
 from ditto_interfaces.cli.context import create_cli_host
+from ditto_interfaces.cli.utils.output import (
+    TABLE_DISPLAY_LIMIT,
+    output_json,
+    output_json_dicts,
+    print_truncated_hint,
+)
+from ditto_interfaces.cli.utils.validation import validate_date_range
 from ditto_interfaces.models.macro import to_indicator_list
-
-_TABLE_DISPLAY_LIMIT = 20
 
 # 支持的枚举值（字符串）
 _VALID_CATEGORIES = ("economic", "interest_rate", "exchange_rate", "money_supply")
@@ -29,40 +31,6 @@ def _get_macro_facade() -> Generator[MacroQueryFacade, None, None]:
     """获取 MacroQueryFacade 实例."""
     with create_cli_host() as bundle:
         yield MacroQueryFacade(macro_service=bundle.macro_service)
-
-
-def _output_json(items: list[Any]) -> None:
-    """输出 JSON 格式."""
-    data = [item.model_dump() for item in items]
-    typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
-
-
-def _output_json_dicts(data: list[dict[str, Any]]) -> None:
-    """输出字典列表的 JSON 格式."""
-    typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
-
-
-def _print_truncated_hint(total: int) -> None:
-    """打印分页提示."""
-    typer.echo(f"\n共 {total} 条记录, 仅显示前 {_TABLE_DISPLAY_LIMIT} 条")
-
-
-def _parse_date(value: str) -> datetime:
-    """解析日期字符串."""
-    return datetime.strptime(value, "%Y-%m-%d")
-
-
-def _validate_date_range(start_date: str | None, end_date: str | None) -> None:
-    """验证日期范围."""
-    if start_date and end_date:
-        start = _parse_date(start_date)
-        end = _parse_date(end_date)
-        if start > end:
-            typer.secho(
-                f"错误: start_date ({start_date}) 不能大于 end_date ({end_date})",
-                fg=typer.colors.RED,
-            )
-            raise typer.Exit(1)
 
 
 def _validate_value(
@@ -107,7 +75,7 @@ def query_indicators(
         ditto query macro indicators --frequency monthly
 
     """
-    _validate_date_range(start_date, end_date)
+    validate_date_range(start_date, end_date)
     cat_value = _validate_value(category, _VALID_CATEGORIES, "类别")
     freq_value = _validate_value(frequency, _VALID_FREQUENCIES, "频率")
 
@@ -126,7 +94,7 @@ def query_indicators(
         indicators = to_indicator_list(df)
 
         if json_output:
-            _output_json(indicators)
+            output_json(indicators)
             return
 
         table = Table(title="宏观指标数据")
@@ -135,7 +103,7 @@ def query_indicators(
         table.add_column("值", style="yellow", justify="right")
         table.add_column("单位", style="white")
 
-        for ind in indicators[:_TABLE_DISPLAY_LIMIT]:
+        for ind in indicators[:TABLE_DISPLAY_LIMIT]:
             table.add_row(
                 ind.date,
                 ind.name or ind.code,
@@ -144,7 +112,7 @@ def query_indicators(
             )
 
         console.print(table)
-        _print_truncated_hint(len(indicators))
+        print_truncated_hint(len(indicators))
 
 
 @app.command("metadata")
@@ -181,7 +149,7 @@ def list_metadata(
         metadata_df = df.unique(subset=subset_cols) if has_indicator_id else df
 
         if json_output:
-            _output_json_dicts(metadata_df.to_dicts())
+            output_json_dicts(metadata_df.to_dicts())
             return
 
         table = Table(title="宏观指标元数据")

@@ -1,5 +1,7 @@
 """API 层错误类."""
 
+from __future__ import annotations
+
 from ditto_interfaces.exceptions import DittoException
 
 

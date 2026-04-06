@@ -1,5 +1,7 @@
 """Capital 域摄取命令."""
 
+from __future__ import annotations
+
 from typing import Annotated
 
 import typer

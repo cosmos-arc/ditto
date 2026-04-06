@@ -7,6 +7,8 @@
 - 每日修补流程
 """
 
+from __future__ import annotations
+
 from typing import cast
 
 from prefect import flow

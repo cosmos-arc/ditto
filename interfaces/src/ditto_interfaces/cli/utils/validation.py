@@ -1,11 +1,53 @@
 """CLI 参数验证工具."""
 
+from __future__ import annotations
+
 import re
 from datetime import datetime
 
 import typer
 
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def parse_date(value: str) -> datetime:
+    """
+    解析日期字符串.
+
+    Args:
+        value: 日期字符串, 格式 YYYY-MM-DD
+
+    Returns:
+        datetime 对象
+
+    """
+    return datetime.strptime(value, "%Y-%m-%d")
+
+
+def validate_date_range(
+    start_date: str | None,
+    end_date: str | None,
+) -> None:
+    """
+    验证日期范围.
+
+    Args:
+        start_date: 开始日期字符串
+        end_date: 结束日期字符串
+
+    Raises:
+        typer.Exit: 如果 start_date > end_date
+
+    """
+    if start_date and end_date:
+        start = parse_date(start_date)
+        end = parse_date(end_date)
+        if start > end:
+            typer.secho(
+                f"错误: start_date ({start_date}) 不能大于 end_date ({end_date})",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(1)
 
 
 def validate_date_format(date_str: str) -> None:

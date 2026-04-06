@@ -1,5 +1,7 @@
 """CLI backfill 命令组."""
 
+from __future__ import annotations
+
 import typer
 
 from ditto_interfaces.cli.commands.backfill.capital import app as capital_app

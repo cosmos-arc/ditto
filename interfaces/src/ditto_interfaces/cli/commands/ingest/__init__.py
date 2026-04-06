@@ -1,5 +1,7 @@
 """CLI ingest 命令组."""
 
+from __future__ import annotations
+
 import typer
 
 from ditto_interfaces.cli.commands.ingest.capital import app as capital_app

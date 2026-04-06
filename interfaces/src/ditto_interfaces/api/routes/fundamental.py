@@ -1,5 +1,7 @@
 """基本面数据 API 路由."""
 
+from __future__ import annotations
+
 import asyncio
 from datetime import date
 from typing import Annotated

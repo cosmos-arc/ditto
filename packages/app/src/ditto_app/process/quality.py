@@ -2,6 +2,16 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "ComparisonStoreProtocol",
+    "InstrumentStoreProtocol",
+    "L3BatchService",
+    "QualityReconciliationService",
+    "QualityService",
+    "ReconciliationResult",
+    "TdxSourceProtocol",
+]
+
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Literal, Protocol
@@ -12,7 +22,7 @@ from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.spec import DQResult
 from ditto_data.services.quality_record_service import QualityRecordService
-from loguru import logger
+from ditto_infra.foundation import logger
 
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
@@ -208,9 +218,6 @@ class L3BatchService:
 
     Application Layer: Orchestrates L3 statistical anomaly checks.
     Fetches historical data via facade and injects into Core Engine.
-
-    Accepts either raw services (for backward compat within ditto_app)
-    or facades (for callers from ditto_interfaces).
     """
 
     def __init__(
@@ -485,7 +492,7 @@ class QualityReconciliationService:
     """
     质量对账服务.
 
-    Port 层：编排协调
+    App 层：编排协调
     - 获取多源数据
     - 应用黄金数据集过滤
     - 调用 Engine 层引擎进行对比
@@ -533,7 +540,7 @@ class QualityReconciliationService:
         """
         每日质量对账.
 
-        Port 层：编排流程
+        App 层：编排流程
 
         标识符转换流程：
         1. 接收包含 instrument_id 的 primary_df
@@ -721,7 +728,7 @@ class QualityReconciliationService:
         """
         转换 DQResult → DataFrame.
 
-        Port 层职责：处理跨层数据转换.
+        App 层职责：处理跨层数据转换.
 
         Args:
             result: DQResult from Core layer

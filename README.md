@@ -134,7 +134,7 @@ ditto/
 │   ├── research/                # 研究文档
 │   └── sprints/                 # Sprint 计划
 ├── scripts/                     # 工具脚本
-└── tests/                       # E2E 测试
+└── (测试在各包内: packages/*/tests/ 和 interfaces/tests/)
 ```
 
 ## 快速开始

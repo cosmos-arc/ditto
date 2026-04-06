@@ -45,7 +45,12 @@ ditto_app/
 │   ├── data_writer.py             # 数据写入器
 │   ├── list_date_inference.py     # 上市日期推断服务
 │   ├── result_handler.py          # 摄取结果处理器
-│   ├── coordinator.py             # 摄取协调器 + Backfill/Retry 管理
+│   ├── _coordinator_constants.py  # 共享常量 + 指数工具函数
+│   ├── coordinator_factory.py     # create_coordinator 工厂 + re-export
+│   ├── ingestion_coordinator.py   # IngestionCoordinator 主类
+│   ├── backfill_manager.py        # BackfillManager
+│   ├── retry_manager.py           # RetryManager
+│   ├── coordinator.py             # 摄取协调器（re-export shim）
 │   ├── materialization.py  # 衍生物化（re-export shim）
 │   ├── materialization_types.py       # 物化类型定义
 │   ├── materialization_helpers.py     # 物化辅助函数

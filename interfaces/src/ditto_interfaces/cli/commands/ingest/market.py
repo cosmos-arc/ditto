@@ -1,5 +1,7 @@
 """Market 域摄取命令 (stock/etf/index/adj/status/fx/commodity)."""
 
+from __future__ import annotations
+
 from typing import Annotated
 
 import typer

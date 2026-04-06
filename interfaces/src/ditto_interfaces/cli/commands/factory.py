@@ -4,6 +4,8 @@ CLI 命令工厂函数.
 提供用于创建常见 CLI 命令模式的工厂函数，减少重复代码。
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 
 import typer

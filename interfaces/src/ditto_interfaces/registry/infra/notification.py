@@ -12,12 +12,12 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from dishka import Provider, Scope, provide
+from ditto_infra.foundation import logger
 from ditto_infra.services.notification import NotificationSettings
 from ditto_infra.services.notification.channels import EmailSender, WebhookSender
 from ditto_infra.services.notification.manager import AlertManager
 from ditto_infra.services.notification.sender import NotificationSender
 from ditto_infra.services.notification.template import TemplateEngine
-from loguru import logger
 
 __all__ = ["NotificationProvider"]
 

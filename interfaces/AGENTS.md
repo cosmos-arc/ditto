@@ -87,7 +87,7 @@ ditto_interfaces/
 | 路由函数必须类型注解 | 100% 覆盖 |
 | 请求/响应用 Pydantic | 类型安全 |
 | 异步优先 | `async def` |
-| 错误用自定义异常 | `DittoPortError` 等 |
+| 错误用自定义异常 | `DataError` 层级异常 |
 
 | 禁止 | 替代 |
 |------|------|

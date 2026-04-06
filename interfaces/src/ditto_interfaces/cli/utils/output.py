@@ -1,8 +1,59 @@
 """CLI 输出格式化工具."""
 
+from __future__ import annotations
+
 from typing import Any
 
+import orjson
 import typer
+
+#: 表格显示记录数上限
+TABLE_DISPLAY_LIMIT = 20
+
+
+def output_json(items: list[Any]) -> None:
+    """
+    输出 Pydantic 模型列表的 JSON 格式.
+
+    Args:
+        items: 包含 model_dump() 方法的对象列表
+
+    """
+    data = [item.model_dump() for item in items]
+    typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
+
+
+def output_json_single(item: Any) -> None:
+    """
+    输出单个 Pydantic 模型对象的 JSON 格式.
+
+    Args:
+        item: 包含 model_dump() 方法的对象
+
+    """
+    typer.echo(orjson.dumps(item.model_dump(), option=orjson.OPT_INDENT_2).decode())
+
+
+def output_json_dicts(data: list[dict[str, Any]]) -> None:
+    """
+    输出字典列表的 JSON 格式.
+
+    Args:
+        data: 字典列表
+
+    """
+    typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
+
+
+def print_truncated_hint(total: int) -> None:
+    """
+    打印分页提示.
+
+    Args:
+        total: 总记录数
+
+    """
+    typer.echo(f"\n共 {total} 条记录, 仅显示前 {TABLE_DISPLAY_LIMIT} 条")
 
 
 def print_ingestion_result(result: dict[str, Any], verbose: bool = False) -> None:

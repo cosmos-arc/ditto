@@ -124,7 +124,7 @@ class BacktestServiceOptions:
 
 class BacktestService:
     """
-    Port 层回测编排服务.
+    App 层回测编排服务.
 
     接收 EngineLoop 的构造参数 + 可选持久化服务，内部管理
     ExecutionAuditCollector 生命周期，编排完整回测流程:
@@ -264,7 +264,7 @@ class BacktestService:
         """
         持久化审计日志到 ExecutionAuditService。
 
-        Port 层负责将 Core record 转换为 Data 本地 DTO。
+        App 层负责将 Core record 转换为 Data 本地 DTO。
         """
         if self._options.audit_service is None:
             return

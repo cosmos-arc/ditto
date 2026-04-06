@@ -1,5 +1,7 @@
 """App Builders 模块 — 装配，不查询不写入."""
 
+from __future__ import annotations
+
 from ditto_app.builders.runtime_builder import (
     PublishedStrategyRuntime,
     StrategyRuntimeBuilder,

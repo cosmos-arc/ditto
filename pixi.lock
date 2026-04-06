@@ -2862,10 +2862,9 @@ packages:
 - pypi: ./packages/data
   name: ditto-data
   version: 0.1.0
-  sha256: 45044cd94a0d0103f9cc4600d09246760966907e2a88bdbf197639543614fdb9
+  sha256: 5a53b5902b24be3506b80e18587187f12518fb8e060705b56448468b56343d37
   requires_dist:
   - ditto-kernel
-  - ditto-analytics
   - ditto-infra
   requires_python: '>=3.13'
 - pypi: ./packages/engine

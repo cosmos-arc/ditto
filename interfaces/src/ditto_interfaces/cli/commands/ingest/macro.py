@@ -1,5 +1,7 @@
 """Macro 域摄取命令."""
 
+from __future__ import annotations
+
 import typer
 
 from ditto_interfaces.cli.commands.factory import create_daily_command

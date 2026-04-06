@@ -1,5 +1,7 @@
 """App Process 模块 — 编排协调."""
 
+from __future__ import annotations
+
 from ditto_app.process.ingestion import (
     API_LIMITS,
     EARLIEST_LIST_DATE_INFERENCE,
@@ -11,6 +13,7 @@ from ditto_app.process.ingestion import (
     BackfillManager,
     IngestionConfig,
     IngestionCoordinator,
+    IngestionCoordinatorConfig,
     IngestionDataWriter,
     IngestionResultHandler,
     ListDateInferenceService,
@@ -47,6 +50,7 @@ from ditto_app.process.materialization import (
     dependency_refs,
     earliest_pending_start,
     hydrate_spec,
+    prepare_input_frame,
     resolve_shadow_baseline,
 )
 from ditto_app.process.quality import (
@@ -99,6 +103,7 @@ __all__ = [
     "InMemoryDerivedInputProvider",
     "IngestionConfig",
     "IngestionCoordinator",
+    "IngestionCoordinatorConfig",
     "IngestionDataWriter",
     "IngestionResultHandler",
     "InputContext",
@@ -140,6 +145,7 @@ __all__ = [
     "get_default_index_codes",
     "get_sw_index_codes",
     "hydrate_spec",
+    "prepare_input_frame",
     "resolve_shadow_baseline",
     "write_backtest_artifacts",
 ]

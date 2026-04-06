@@ -11,12 +11,13 @@ Market 域 API 模型.
 
 from __future__ import annotations
 
-from datetime import date
 from enum import StrEnum
 from typing import Annotated, Any, Self
 
 import polars as pl
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+
+from ditto_interfaces.models._date_helpers import DateField, format_date, format_float
 
 
 class Adjustment(StrEnum):
@@ -35,17 +36,6 @@ class Adjustment(StrEnum):
     HFQ = "hfq"
 
 
-def _parse_date(v: Any) -> date | None:
-    """解析日期值，支持字符串和 date 对象."""
-    if v is None:
-        return None
-    if isinstance(v, date):
-        return v
-    if isinstance(v, str):
-        return date.fromisoformat(v)
-    raise ValueError(f"Invalid date format: {v}")
-
-
 def _parse_adjustment(v: Any) -> Adjustment:
     """解析复权类型，支持字符串和 Adjustment 对象."""
     if isinstance(v, Adjustment):
@@ -55,8 +45,6 @@ def _parse_adjustment(v: Any) -> Adjustment:
     raise ValueError(f"Invalid adjustment type: {v}")
 
 
-# 支持从 JSON 字符串解析日期的类型
-DateField = Annotated[date | None, BeforeValidator(_parse_date)]
 # 支持从 JSON 字符串解析复权类型
 AdjustmentField = Annotated[Adjustment, BeforeValidator(_parse_adjustment)]
 
@@ -142,22 +130,6 @@ class Bar(BaseModel):
     )
 
 
-def _format_float(value: float | None, decimals: int = 2) -> float | None:
-    """格式化浮点数到指定小数位."""
-    if value is None:
-        return None
-    return round(value, decimals)
-
-
-def _format_date(value: date | str | None) -> str | None:
-    """将日期转换为字符串格式 (YYYY-MM-DD)."""
-    if value is None:
-        return None
-    if isinstance(value, str):
-        return value
-    return value.isoformat()
-
-
 def to_bar(row: dict[str, Any]) -> Bar:
     """
     将数据库行转换为 Bar 模型.
@@ -172,14 +144,14 @@ def to_bar(row: dict[str, Any]) -> Bar:
     """
     return Bar(
         instrument_id=row["instrument_id"],
-        trade_date=_format_date(row["trade_date"]) or "",
-        open=_format_float(row["open"]) or 0.0,
-        high=_format_float(row["high"]) or 0.0,
-        low=_format_float(row["low"]) or 0.0,
-        close=_format_float(row["close"]) or 0.0,
-        volume=_format_float(row["volume"]) or 0.0,
-        amount=_format_float(row["amount"]) or 0.0,
-        turnover_rate=_format_float(row.get("turnover_rate")),
+        trade_date=format_date(row["trade_date"]) or "",
+        open=format_float(row["open"]) or 0.0,
+        high=format_float(row["high"]) or 0.0,
+        low=format_float(row["low"]) or 0.0,
+        close=format_float(row["close"]) or 0.0,
+        volume=format_float(row["volume"]) or 0.0,
+        amount=format_float(row["amount"]) or 0.0,
+        turnover_rate=format_float(row.get("turnover_rate")),
     )
 
 

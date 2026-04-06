@@ -2,10 +2,7 @@
 
 from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import datetime
-from typing import Any
 
-import orjson
 import typer
 from ditto_app.query.fundamental import FundamentalQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
@@ -13,14 +10,18 @@ from rich.console import Console
 from rich.table import Table
 
 from ditto_interfaces.cli.context import create_cli_host
+from ditto_interfaces.cli.utils.output import (
+    TABLE_DISPLAY_LIMIT,
+    output_json,
+    print_truncated_hint,
+)
+from ditto_interfaces.cli.utils.validation import parse_date, validate_date_range
 from ditto_interfaces.models.fundamental import (
     FinancialType,
     to_corporate_action_list,
     to_dividend_list,
     to_financial_list,
 )
-
-_TABLE_DISPLAY_LIMIT = 20
 
 app = typer.Typer(help="基本面数据查询")
 console = Console()
@@ -65,34 +66,6 @@ def _resolve_identifier(
         ticker=ticker,
         asof=as_of_date,
     )
-
-
-def _output_json(items: list[Any]) -> None:
-    """输出 JSON 格式."""
-    data = [item.model_dump() for item in items]
-    typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
-
-
-def _print_truncated_hint(total: int) -> None:
-    """打印分页提示."""
-    typer.echo(f"\n共 {total} 条记录, 仅显示前 {_TABLE_DISPLAY_LIMIT} 条")
-
-
-def _parse_date(value: str) -> datetime:
-    """解析日期字符串."""
-    return datetime.strptime(value, "%Y-%m-%d")
-
-
-def _validate_date_range(start_date: str, end_date: str) -> None:
-    """验证日期范围."""
-    start = _parse_date(start_date)
-    end = _parse_date(end_date)
-    if start > end:
-        typer.secho(
-            f"错误: start_date ({start_date}) 不能大于 end_date ({end_date})",
-            fg=typer.colors.RED,
-        )
-        raise typer.Exit(1)
 
 
 @app.command("financials")
@@ -140,7 +113,7 @@ def get_financials(
         raise typer.Exit(1)
 
     financial_type = type_map[report_type]
-    as_of = _parse_date(as_of_date).date()
+    as_of = parse_date(as_of_date).date()
 
     with _get_facades() as (facade, metadata_facade):
         resolved_id = _resolve_identifier(
@@ -169,7 +142,7 @@ def get_financials(
         financials = to_financial_list(df, financial_type)
 
         if json_output:
-            _output_json(financials)
+            output_json(financials)
             return
 
         table = Table(title=f"财务报表 - {report_type}")
@@ -177,7 +150,7 @@ def get_financials(
         table.add_column("报告期", style="white")
         table.add_column("报表类型", style="yellow")
 
-        for fin in financials[:_TABLE_DISPLAY_LIMIT]:
+        for fin in financials[:TABLE_DISPLAY_LIMIT]:
             table.add_row(
                 str(fin.instrument_id),
                 fin.report_date or "-",
@@ -185,7 +158,7 @@ def get_financials(
             )
 
         console.print(table)
-        _print_truncated_hint(len(financials))
+        print_truncated_hint(len(financials))
 
 
 @app.command("dividend")
@@ -209,7 +182,7 @@ def get_dividend(
         ditto query fundamental dividend -t 000001 --date 2024-12-31
 
     """
-    as_of = _parse_date(as_of_date).date()
+    as_of = parse_date(as_of_date).date()
     with _get_facades() as (facade, metadata_facade):
         resolved_id = _resolve_identifier(
             metadata_facade,
@@ -231,7 +204,7 @@ def get_dividend(
         dividends = to_dividend_list(df)
 
         if json_output:
-            _output_json(dividends)
+            output_json(dividends)
             return
 
         table = Table(title="分红数据")
@@ -272,9 +245,9 @@ def list_corporate_actions(
             --start-date 2024-01-01 -e 2024-12-31
 
     """
-    _validate_date_range(start_date, end_date)
-    start = _parse_date(start_date).date()
-    end = _parse_date(end_date).date()
+    validate_date_range(start_date, end_date)
+    start = parse_date(start_date).date()
+    end = parse_date(end_date).date()
 
     with _get_facades() as (facade, metadata_facade):
         resolved_id = _resolve_identifier(
@@ -296,7 +269,7 @@ def list_corporate_actions(
         actions = to_corporate_action_list(df)
 
         if json_output:
-            _output_json(actions)
+            output_json(actions)
             return
 
         table = Table(title="公司行动")

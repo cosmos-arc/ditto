@@ -10,26 +10,12 @@ Commodity (商品) 域 API 模型.
 
 from __future__ import annotations
 
-from datetime import date
-from typing import Annotated, Any, Self
+from typing import Any, Self
 
 import polars as pl
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-
-def _parse_date(v: Any) -> date | None:
-    """解析日期值，支持字符串和 date 对象."""
-    if v is None:
-        return None
-    if isinstance(v, date):
-        return v
-    if isinstance(v, str):
-        return date.fromisoformat(v)
-    raise ValueError(f"Invalid date format: {v}")
-
-
-# 支持从 JSON 字符串解析日期的类型
-DateField = Annotated[date | None, BeforeValidator(_parse_date)]
+from ditto_interfaces.models._date_helpers import DateField, format_date, format_float
 
 
 class CommodityQuery(BaseModel):
@@ -107,22 +93,6 @@ class CommodityBar(BaseModel):
     )
 
 
-def _format_float(value: float | None, decimals: int = 4) -> float | None:
-    """格式化浮点数到指定小数位."""
-    if value is None:
-        return None
-    return round(value, decimals)
-
-
-def _format_date(value: date | str | None) -> str | None:
-    """将日期转换为字符串格式 (YYYY-MM-DD)."""
-    if value is None:
-        return None
-    if isinstance(value, str):
-        return value
-    return value.isoformat()
-
-
 def to_commodity_bar(row: dict[str, Any]) -> CommodityBar:
     """
     将数据库行转换为 CommodityBar 模型.
@@ -137,12 +107,12 @@ def to_commodity_bar(row: dict[str, Any]) -> CommodityBar:
     """
     return CommodityBar(
         commodity_code=row["commodity_code"],
-        trade_date_utc=_format_date(row["trade_date_utc"]) or "",
-        open=_format_float(row["open"]) or 0.0,
-        high=_format_float(row["high"]) or 0.0,
-        low=_format_float(row["low"]) or 0.0,
-        close=_format_float(row["close"]) or 0.0,
-        volume=_format_float(row.get("volume")),
+        trade_date_utc=format_date(row["trade_date_utc"]) or "",
+        open=format_float(row["open"]) or 0.0,
+        high=format_float(row["high"]) or 0.0,
+        low=format_float(row["low"]) or 0.0,
+        close=format_float(row["close"]) or 0.0,
+        volume=format_float(row.get("volume")),
     )
 
 

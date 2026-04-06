@@ -2,19 +2,21 @@
 
 from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import datetime
-from typing import Any
 
-import orjson
 import typer
 from ditto_app.query.market import MarketQueryFacade
 from rich.console import Console
 from rich.table import Table
 
 from ditto_interfaces.cli.context import create_cli_host
+from ditto_interfaces.cli.utils.output import (
+    TABLE_DISPLAY_LIMIT,
+    output_json,
+    output_json_dicts,
+    print_truncated_hint,
+)
+from ditto_interfaces.cli.utils.validation import validate_date_range
 from ditto_interfaces.models.market import to_bar_list
-
-_TABLE_DISPLAY_LIMIT = 20
 
 app = typer.Typer(help="行情数据查询")
 console = Console()
@@ -25,39 +27,6 @@ def _get_market_facade() -> Generator[MarketQueryFacade, None, None]:
     """获取 MarketQueryFacade 实例."""
     with create_cli_host() as bundle:
         yield MarketQueryFacade(market_service=bundle.market_service)
-
-
-def _output_json(items: list[Any]) -> None:
-    """输出 JSON 格式."""
-    data = [item.model_dump() for item in items]
-    typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
-
-
-def _output_json_dicts(data: list[dict[str, Any]]) -> None:
-    """输出字典列表的 JSON 格式."""
-    typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
-
-
-def _print_truncated_hint(total: int) -> None:
-    """打印分页提示."""
-    typer.echo(f"\n共 {total} 条记录, 仅显示前 {_TABLE_DISPLAY_LIMIT} 条")
-
-
-def _parse_date(value: str) -> datetime:
-    """解析日期字符串."""
-    return datetime.strptime(value, "%Y-%m-%d")
-
-
-def _validate_date_range(start_date: str, end_date: str) -> None:
-    """验证日期范围."""
-    start = _parse_date(start_date)
-    end = _parse_date(end_date)
-    if start > end:
-        typer.secho(
-            f"错误: start_date ({start_date}) 不能大于 end_date ({end_date})",
-            fg=typer.colors.RED,
-        )
-        raise typer.Exit(1)
 
 
 @app.command("bars")
@@ -78,7 +47,7 @@ def query_bars(
         ditto query market bars -i 1 -s 2024-01-01 -e 2024-12-31 -a qfq
 
     """
-    _validate_date_range(start_date, end_date)
+    validate_date_range(start_date, end_date)
 
     with _get_market_facade() as facade:
         df = facade.find_bars(
@@ -95,7 +64,7 @@ def query_bars(
         bars = to_bar_list(df)
 
         if json_output:
-            _output_json(bars)
+            output_json(bars)
             return
 
         table = Table(title=f"K 线数据 (标的 {instrument_id})")
@@ -106,7 +75,7 @@ def query_bars(
         table.add_column("收盘", style="yellow", justify="right")
         table.add_column("成交量", style="white", justify="right")
 
-        for bar in bars[:_TABLE_DISPLAY_LIMIT]:
+        for bar in bars[:TABLE_DISPLAY_LIMIT]:
             table.add_row(
                 str(bar.trade_date),
                 f"{bar.open:.2f}",
@@ -117,7 +86,7 @@ def query_bars(
             )
 
         console.print(table)
-        _print_truncated_hint(len(bars))
+        print_truncated_hint(len(bars))
 
 
 @app.command("constituents")
@@ -141,7 +110,7 @@ def get_constituents(
             return
 
         if json_output:
-            _output_json_dicts(df.to_dicts())
+            output_json_dicts(df.to_dicts())
             return
 
         table = Table(title=f"指数成分股 (ID: {index_id}, 日期: {as_of_date})")

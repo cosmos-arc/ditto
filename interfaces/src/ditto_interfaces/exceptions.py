@@ -1,5 +1,7 @@
 """自定义异常类."""
 
+from __future__ import annotations
+
 
 class DittoException(Exception):
     """Ditto系统基础异常类."""

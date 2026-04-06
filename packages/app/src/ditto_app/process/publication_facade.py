@@ -1,5 +1,5 @@
 """
-Port facade for derived publication orchestration.
+App facade for derived publication orchestration.
 
 Provides ``DerivedPublicationFacade`` for the publication lifecycle
 (shadow publish, compare, certify, promote, rollback, deprecate) and

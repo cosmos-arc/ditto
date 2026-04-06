@@ -1,5 +1,7 @@
 """上下文组合包定义."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from ditto_app.process.ingestion import (

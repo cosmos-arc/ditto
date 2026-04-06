@@ -1,5 +1,7 @@
 """Infrastructure 层 Provider 聚合。"""
 
+from __future__ import annotations
+
 from dishka import Provider
 
 from .config import ConfigProvider

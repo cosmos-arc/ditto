@@ -1,5 +1,7 @@
 """Ditto CLI 主入口."""
 
+from __future__ import annotations
+
 import typer
 
 from ditto_interfaces.cli.commands.backfill import app as backfill_app

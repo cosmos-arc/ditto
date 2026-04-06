@@ -11,6 +11,8 @@ DI Provider 已下沉至各业务包：
 - contexts/ : 上下文组合包（解决 ARCH-003/004）
 """
 
+from __future__ import annotations
+
 # Infrastructure 层
 # Data 层（从 ditto_data.di re-export）
 from ditto_data.di import (
@@ -40,10 +42,12 @@ from .infra import (
     NotificationProvider,
     ObservabilityProvider,
 )
+from .infra.config import DataStoreSettings
 
 __all__ = [
     "CapitalProvider",
     "ConfigProvider",
+    "DataStoreSettings",
     "DerivedProvider",
     "FundamentalProvider",
     "GoldenDatasetProvider",

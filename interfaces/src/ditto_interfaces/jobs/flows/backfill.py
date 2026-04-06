@@ -9,6 +9,8 @@
 - 支持按标的回填
 """
 
+from __future__ import annotations
+
 from ditto_app.types import InstrumentIngestParams
 from prefect import flow
 from pydantic import BaseModel

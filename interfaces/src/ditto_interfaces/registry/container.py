@@ -1,5 +1,7 @@
 """DI 容器工厂."""
 
+from __future__ import annotations
+
 from dishka import (
     AsyncContainer,
     Container,

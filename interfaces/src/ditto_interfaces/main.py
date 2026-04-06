@@ -4,6 +4,8 @@ Ditto FastAPI 主应用.
 量化系统的REST API服务器入口点
 """
 
+from __future__ import annotations
+
 # Standard library imports
 import time
 import uuid
@@ -18,7 +20,6 @@ import orjson
 
 # Local imports - using editable packages
 from dishka.integrations.fastapi import setup_dishka
-from ditto_data.config.data_store import DataStoreSettings
 from ditto_infra.foundation.config import ConfigInitError
 from ditto_infra.foundation.config.environment import get_environment
 from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
@@ -49,6 +50,7 @@ from ditto_interfaces.middleware import (
     http_exception_handler,
     validation_exception_handler,
 )
+from ditto_interfaces.registry import DataStoreSettings
 from ditto_interfaces.registry.container import make_async_app_container
 
 # Initialize project root

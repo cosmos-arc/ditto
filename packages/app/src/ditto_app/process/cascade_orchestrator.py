@@ -27,7 +27,7 @@ from ditto_analytics.materialization import (
 )
 from ditto_data.models.derived import DerivedInvalidationRecord
 from ditto_data.services import DerivedCatalogService
-from loguru import logger
+from ditto_infra.foundation import logger
 
 from ditto_app.process.materialization_orchestrator import (
     DerivedMaterializationOrchestrator,

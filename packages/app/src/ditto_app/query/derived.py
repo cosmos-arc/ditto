@@ -17,7 +17,7 @@ from ditto_data.services import (
     DerivedSourceScope,
 )
 from ditto_data.services.hot_layer import HotLayerReader
-from loguru import logger
+from ditto_infra.foundation import logger
 
 type TemporalValue = date | datetime
 

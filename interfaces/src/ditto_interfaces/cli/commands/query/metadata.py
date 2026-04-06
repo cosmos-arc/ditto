@@ -2,9 +2,7 @@
 
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any
 
-import orjson
 import polars as pl
 import typer
 from ditto_app.query.metadata import MetadataQueryFacade
@@ -12,9 +10,13 @@ from rich.console import Console
 from rich.table import Table
 
 from ditto_interfaces.cli.context import create_cli_host
+from ditto_interfaces.cli.utils.output import (
+    TABLE_DISPLAY_LIMIT,
+    output_json,
+    output_json_single,
+    print_truncated_hint,
+)
 from ditto_interfaces.models.metadata import to_instrument_list
-
-_TABLE_DISPLAY_LIMIT = 20
 
 app = typer.Typer(help="标的元数据查询")
 console = Console()
@@ -25,22 +27,6 @@ def _get_metadata_facade() -> Generator[MetadataQueryFacade, None, None]:
     """获取 MetadataQueryFacade 实例."""
     with create_cli_host() as bundle:
         yield MetadataQueryFacade(metadata_service=bundle.metadata_service)
-
-
-def _output_json(items: list[Any]) -> None:
-    """输出 JSON 格式."""
-    data = [item.model_dump() for item in items]
-    typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
-
-
-def _output_json_single(item: Any) -> None:
-    """输出单个对象的 JSON 格式."""
-    typer.echo(orjson.dumps(item.model_dump(), option=orjson.OPT_INDENT_2).decode())
-
-
-def _print_truncated_hint(total: int) -> None:
-    """打印分页提示."""
-    typer.echo(f"\n共 {total} 条记录, 仅显示前 {_TABLE_DISPLAY_LIMIT} 条")
 
 
 @app.command("instruments")
@@ -79,7 +65,7 @@ def query_instruments(
         instruments = to_instrument_list(df)
 
         if json_output:
-            _output_json(instruments)
+            output_json(instruments)
             return
 
         table = Table(title="标的列表")
@@ -89,7 +75,7 @@ def query_instruments(
         table.add_column("类型", style="yellow")
         table.add_column("交易所", style="blue")
 
-        for inst in instruments[:_TABLE_DISPLAY_LIMIT]:
+        for inst in instruments[:TABLE_DISPLAY_LIMIT]:
             table.add_row(
                 str(inst.instrument_id),
                 inst.ticker or "-",
@@ -99,7 +85,7 @@ def query_instruments(
             )
 
         console.print(table)
-        _print_truncated_hint(len(instruments))
+        print_truncated_hint(len(instruments))
 
 
 @app.command("instrument")
@@ -125,7 +111,7 @@ def get_instrument(
         inst = to_instrument_list(df)[0]
 
         if json_output:
-            _output_json_single(inst)
+            output_json_single(inst)
             return
 
         table = Table(title=f"标的详情 - {inst.ticker}")

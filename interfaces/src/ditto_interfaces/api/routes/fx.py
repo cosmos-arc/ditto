@@ -1,5 +1,7 @@
 """FX (外汇) 模 API 路由."""
 
+from __future__ import annotations
+
 import asyncio
 from typing import Annotated
 

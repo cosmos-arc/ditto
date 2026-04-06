@@ -1,5 +1,7 @@
 """CLI query 命令组."""
 
+from __future__ import annotations
+
 import typer
 
 from ditto_interfaces.cli.commands.query.capital import app as capital_app

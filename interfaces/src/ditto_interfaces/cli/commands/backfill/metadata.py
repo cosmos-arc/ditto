@@ -1,5 +1,7 @@
 """Metadata 域回补命令 (calendar + basic)."""
 
+from __future__ import annotations
+
 import typer
 
 from ditto_interfaces.cli.commands.factory import create_backfill_command

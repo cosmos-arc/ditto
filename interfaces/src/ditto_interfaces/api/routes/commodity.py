@@ -1,5 +1,7 @@
 """Commodity (商品) 域 API 路由."""
 
+from __future__ import annotations
+
 import asyncio
 from typing import Annotated
 

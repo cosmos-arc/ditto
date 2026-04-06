@@ -1,5 +1,7 @@
 """上下文组合包模块。"""
 
+from __future__ import annotations
+
 from ditto_interfaces.registry.contexts.bundle import (
     IngestionBundle,
     MaterializationBundle,

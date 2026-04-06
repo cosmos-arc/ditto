@@ -14,6 +14,8 @@ Flow 功能：
 使用 Prefect 原生依赖机制（@task + wait_for）实现声明式编排。
 """
 
+from __future__ import annotations
+
 from itertools import chain
 from typing import Any
 

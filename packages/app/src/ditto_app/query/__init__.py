@@ -1,5 +1,7 @@
 """App Query 模块 — 只读查询，零副作用."""
 
+from __future__ import annotations
+
 from ditto_app.query.capital import CapitalQueryFacade
 from ditto_app.query.commodity import CommodityQueryFacade
 from ditto_app.query.derived import (

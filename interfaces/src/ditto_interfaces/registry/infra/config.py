@@ -14,6 +14,7 @@ from ditto_data.config import (
 )
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.quality.config import DQSettings
+from ditto_infra.foundation import logger
 from ditto_infra.foundation.cache import DataCache
 from ditto_infra.foundation.config import (
     ConfigInitCoordinator,
@@ -28,12 +29,11 @@ from ditto_infra.foundation.config.settings import (
     SystemSettings,
 )
 from ditto_infra.services.notification import NotificationSettings
-from loguru import logger
 
 from ditto_interfaces.config import load_env_file
 from ditto_interfaces.registry.init_providers import MetadataDbInitProvider
 
-__all__ = ["ConfigProvider", "RuntimeFlags"]
+__all__ = ["ConfigProvider", "DataStoreSettings", "RuntimeFlags"]
 
 
 def _load_keyring_secret(service: str, key: str) -> str | None:

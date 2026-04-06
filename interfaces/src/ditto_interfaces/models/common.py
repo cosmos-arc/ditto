@@ -1,5 +1,7 @@
 """API 响应通用模型."""
 
+from __future__ import annotations
+
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field

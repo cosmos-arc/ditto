@@ -9,6 +9,8 @@ CLI 本地执行器.
 - 所有依赖组装由 create_cli_executor 上下文管理器处理
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 from ditto_app.process.ingestion import BackfillManager, IngestionCoordinator

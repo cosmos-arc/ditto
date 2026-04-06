@@ -1,5 +1,7 @@
 """Models 包。"""
 
+from __future__ import annotations
+
 from ditto_app.config import (
     INGESTION_SPECS,
     DatasetSpec,

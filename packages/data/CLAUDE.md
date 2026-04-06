@@ -1,25 +1,84 @@
 # Data 架构规范
 
+## 目录结构
+
+```
+ditto_data/
+├── config/              # 数据层配置（数据源/存储/存储路径）
+├── di/                  # DI 注册（builders/sources/quality/runtime 等 Provider）
+├── errors.py            # DataError 异常层级
+├── events.py            # 数据事件定义
+├── helpers/             # 辅助工具（复权调整/PIT 策略与 SQL/DataFrame）
+│   └── pit/             # PIT（Point-in-Time）辅助
+├── ingestion/           # 摄入服务（游标/日志/冻结/晚到数据/质量记录/发布安全）
+├── models/              # 数据模型（枚举/市场/元数据/宏观/衍生/摄入/存储/策略等）
+├── provider.py          # DataProvider Protocol 定义
+├── quality/             # 数据质量引擎
+│   └── checkers/        # L1-L4 检查器（技术/业务/统计/跨源）
+├── query/               # 查询服务（市场/元数据查询 + Provider 路由）
+├── runtime/             # 运行时基础设施（SQL 引擎/冻结管理/ID 分配）
+├── scripts/             # 工具脚本
+├── services/            # 域服务（Facade 模式）
+│   ├── audit/           # 审计服务
+│   ├── derived/         # 衍生数据服务（物化/查询/GC/并发）
+│   ├── hot_layer/       # 热数据层
+│   ├── metadata/        # 元数据子服务（日历/工具/Universe）
+│   └── strategy/        # 策略数据服务（目录/运行/产物/规则）
+├── sources/             # 外部数据源
+│   ├── fred/            # FRED 数据源（宏观/商品适配器）
+│   ├── schemas/         # 数据源 Schema 定义
+│   ├── tdx/             # 通达信数据源
+│   └── tushare/         # Tushare 数据源（适配器/处理器/映射）
+│       ├── adapters/    # 数据适配器（ETF/股票/宏观/资金等）
+│       ├── processors/  # 数据处理器（列映射/合并/转换）
+│       └── utils/       # 工具（HTTP/限流）
+├── storage/             # 存储引擎（Reader/Writer CQRS）
+│   ├── base/            # 存储基类（Parquet/SQLite/分区策略）
+│   ├── capital/         # 资本数据（估值/融资融券/质押/指数成分）
+│   ├── factors/         # 因子存储
+│   ├── features/        # 特征存储（技术指标）
+│   ├── fundamental/     # 基本面存储（财报/预测/公司行为）
+│   ├── macro/           # 宏观数据存储
+│   ├── market/          # 市场数据存储（ETF/股票/指数/商品/外汇）
+│   ├── metadata/        # 元数据存储（日历/工具/行业/Universe/策略）
+│   ├── runtime/         # 运行时存储（摄入游标/日志/质量/衍生/研究/发布安全）
+│   └── schemas/         # 存储层 Schema
+├── stores/              # 高层 Store（基于 storage 构建）
+│   ├── base/            # Store 基类
+│   ├── capital/         # 资本 Store
+│   ├── fundamental/     # 基本面 Store
+│   ├── macro/           # 宏观 Store
+│   ├── market/          # 市场 Store
+│   ├── metadata/        # 元数据 Store
+│   └── runtime/         # 运行时 Store
+└── utils/               # 工具函数（时区等）
+```
+
 ## 分层职责
 
 | 层级 | 职责 | 禁止 | 必须 |
 |------|------|------|------|
-| Reader | 数据查询操作 | 包含业务逻辑 | 类型注解 |
-| Writer | 数据写入/删除操作 | 包含业务逻辑 | 类型注解 |
-| Service | 业务逻辑封装 | 直接访问文件系统 | 通过 Reader/Writer |
-| Runtime | 基础设施 | 包含业务逻辑 | - |
-| Source | 外部数据源 | 包含业务逻辑 | 重试、限流、监控埋点 |
+| storage (Reader/Writer) | 数据读写操作（CQRS 分离） | 包含业务逻辑 | 类型注解 |
+| stores | 高层 Store 封装 | 跳过 storage 层 | 基于 storage Reader/Writer |
+| services | 域服务（Facade 模式） | 直接访问文件系统 | 通过 stores/storage |
+| sources | 外部数据源接入 | 包含业务逻辑 | 重试、限流、监控埋点 |
+| query | 查询服务与 Provider 路由 | 包含写入逻辑 | 类型注解 |
+| ingestion | 数据摄入编排 | 绕过质量检查 | 游标管理 |
+| quality | 数据质量引擎 | 包含业务逻辑 | L1-L4 检查 |
+| runtime | 运行时基础设施 | 包含业务逻辑 | SQL/PIT/Freeze |
+| models | 数据模型定义 | 包含行为方法 | 纯数据类 |
+| di | DI 注册 | 包含业务逻辑 | Provider 注册 |
 
 ## CQRS 模式（Command Query Responsibility Segregation）
 
-Data Store 层采用 CQRS 模式，将读写操作分离：
+`storage/` 层采用 CQRS 模式，将读写操作分离：
 
-### Reader 组件
+### Reader 组件（`storage/**/reader.py`）
 - **职责**：数据查询（read/count/get_*）
 - **特点**：无副作用，可并发执行
 - **方法**：`read()`, `count()`, `get_*()`
 
-### Writer 组件
+### Writer 组件（`storage/**/writer.py`）
 - **职责**：数据写入/删除（write/delete）
 - **特点**：有副作用，需要并发控制
 - **方法**：`write()`, `delete()`
@@ -28,6 +87,7 @@ Data Store 层采用 CQRS 模式，将读写操作分离：
 - 查询类：`*_reader.py`（如 `instrument_reader.py`）
 - 写入类：`*_writer.py`（如 `instrument_writer.py`）
 - 服务类：`*_service.py`（如 `metadata_service.py`）
+- 存储基类：`storage/base/`（Parquet/SQLite/分区策略）
 
 ## 层级访问规则（2026-02-10 更新）
 
@@ -36,8 +96,9 @@ Data Store 层采用 CQRS 模式，将读写操作分离：
 | 访问类型 | ✅ 允许 | ❌ 禁止 | 说明 |
 |---------|--------|--------|------|
 | **通过 Domain Service** | `MetadataService`, `MarketService` 等 | - | **推荐方式**，通过 DI 容器注入 |
+| **通过 Query Provider** | `QueryProvider` | - | 统一查询路由 |
 | **直接导入** | `from ditto_data.sources.*` | `from ditto_data.storage.*` | Sources 可直接访问，Storage 禁止 |
-| **Reader/Writer** | - | 直接实例化 | **禁止**直接访问 Reader/Writer 层 |
+| **Reader/Writer** | - | 直接实例化 | **禁止**直接访问 storage 层 |
 
 ### 正确示例
 

@@ -9,6 +9,8 @@
 本文件仅做 re-export，保持所有公共 API 的导入路径不变。
 """
 
+from __future__ import annotations
+
 from ditto_app.process.backtest_service import (
     BacktestService,
     BacktestServiceConfig,

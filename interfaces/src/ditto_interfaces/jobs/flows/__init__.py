@@ -10,6 +10,8 @@ Prefect flows for data ingestion.
 - daily_repair_flow: 每日修补流程
 """
 
+from __future__ import annotations
+
 # 新版 flows（基于 IngestionCoordinator）
 from ditto_interfaces.jobs.flows.backfill import (
     BackfillFlowConfig,

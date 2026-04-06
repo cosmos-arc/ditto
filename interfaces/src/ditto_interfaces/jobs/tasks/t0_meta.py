@@ -5,6 +5,8 @@ T0 元数据摄取任务工厂.
 任务是轻量 wrapper，真正逻辑在 IngestionCoordinator。
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 from ditto_app.config import INGESTION_SPECS

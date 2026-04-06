@@ -1,5 +1,7 @@
 """Source 数据查询 API 路由."""
 
+from __future__ import annotations
+
 import asyncio
 import time
 from typing import Annotated, Any

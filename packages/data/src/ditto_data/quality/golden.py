@@ -115,7 +115,7 @@ class GoldenDatasetSpec(BaseModel):
                     tickers_set.add(ticker_val.strip())
                     try:
                         specs.append(TickerSpec(**item_dict))
-                    except Exception:
+                    except (TypeError, ValueError):
                         msg = repr(cast(object, item))
                         logger.debug("忽略无效的 TickerSpec: %s", msg)
 
