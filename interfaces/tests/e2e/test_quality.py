@@ -19,15 +19,11 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import polars as pl
 import pytest
-from ditto_data.quality import QualityEngine
+from ditto_data.quality import GoldenDatasetSpec, QualityEngine
 from ditto_data.quality.spec import DatasetRules, DQSpec
-
-if TYPE_CHECKING:
-    from ditto_data.quality import GoldenDatasetSpec
 
 
 @pytest.fixture

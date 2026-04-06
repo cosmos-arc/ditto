@@ -19,10 +19,8 @@ class TestDQBlockingBehavior:
 
     def test_dq_blocked_returns_failed_status(self, mocker):
         """Test that DQ blocked ingestion returns failed status."""
-        from ditto_app.process.ingestion import (
-            IngestionCoordinator,
-            IngestionCoordinatorConfig,
-        )
+        from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
+        from ditto_app.process.ingestion_coordinator import IngestionCoordinator
         from ditto_data.models.storage import WriteResult
         from ditto_data.quality.spec import DQResult
 
@@ -89,10 +87,8 @@ class TestDQBlockingBehavior:
 
     def test_dq_blocked_logs_fail_status(self, mocker):
         """Test that DQ blocked ingestion logs FAIL status for retry."""
-        from ditto_app.process.ingestion import (
-            IngestionCoordinator,
-            IngestionCoordinatorConfig,
-        )
+        from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
+        from ditto_app.process.ingestion_coordinator import IngestionCoordinator
         from ditto_data.models.ingestion import IngestionLog, IngestionStatus
         from ditto_data.models.storage import WriteResult
         from ditto_data.quality.spec import DQResult

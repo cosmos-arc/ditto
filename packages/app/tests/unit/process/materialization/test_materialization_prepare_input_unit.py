@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_app.process.materialization import (
+from ditto_app.process.materialization_types import (
     MissingDependencyError,
     prepare_input_frame,
 )

@@ -1044,21 +1044,21 @@ class TestPValueImplementation:
 
         For t=2.093, df=19 (two-tailed), p ~ 0.05.
         """
-        from ditto_analytics.evaluation.metrics import _two_sided_p_value
+        from ditto_analytics.evaluation.metrics._math import two_sided_p_value
 
-        p = _two_sided_p_value(2.093, 19)
+        p = two_sided_p_value(2.093, 19)
         assert 0.04 < p < 0.06  # approximately 0.05
 
     def test_p_value_large_t_is_small(self) -> None:
         """Large t-statistic should yield very small p-value."""
-        from ditto_analytics.evaluation.metrics import _two_sided_p_value
+        from ditto_analytics.evaluation.metrics._math import two_sided_p_value
 
-        p = _two_sided_p_value(5.0, 100)
+        p = two_sided_p_value(5.0, 100)
         assert p < 0.001
 
     def test_p_value_zero_t_is_one(self) -> None:
         """t=0 should yield p=1."""
-        from ditto_analytics.evaluation.metrics import _two_sided_p_value
+        from ditto_analytics.evaluation.metrics._math import two_sided_p_value
 
-        p = _two_sided_p_value(0.0, 50)
+        p = two_sided_p_value(0.0, 50)
         assert abs(p - 1.0) < 1e-10

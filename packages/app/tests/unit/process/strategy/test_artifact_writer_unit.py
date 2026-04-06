@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import orjson
 import polars as pl
 import pytest
-from ditto_app.process.strategy import (
+from ditto_app.process.strategy_types import (
     enrich_record_with_symbol,
     write_backtest_artifacts,
 )

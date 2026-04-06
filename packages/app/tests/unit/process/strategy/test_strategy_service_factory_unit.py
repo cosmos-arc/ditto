@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from ditto_app.builders.strategy import (
+from ditto_app.builders import (
     BacktestRuntimeBuilder,
     PublishedBacktestRuntime,
     StrategyServiceFactory,
 )
-from ditto_app.process.strategy import (
+from ditto_app.process.backtest_service import (
     BacktestService,
     BacktestServiceConfig,
-    RunLifecycleService,
 )
+from ditto_app.process.strategy_types import RunLifecycleService
 from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.services.audit import ExecutionAuditService
 from ditto_data.services.strategy.strategy_artifact_service import (
@@ -117,7 +117,7 @@ class TestStrategyServiceFactory:
 
     def test_build_backtest_options_preserves_display_map(self) -> None:
         """_build_backtest_options 保留调用方传入的 display_map。"""
-        from ditto_app.process.strategy import (
+        from ditto_app.process.backtest_service import (
             BacktestServiceOptions,
         )
 

@@ -7,8 +7,7 @@ from typing import Annotated
 import typer
 
 from ditto_interfaces.cli.commands.factory import create_daily_command
-from ditto_interfaces.cli.context import create_executor
-from ditto_interfaces.cli.utils.output import print_ingestion_result
+from ditto_interfaces.cli.commands.ingest._shared import run_instrument_ingest
 from ditto_interfaces.cli.utils.validation import (
     check_instrument_mode,
     validate_instrument_params,
@@ -24,30 +23,6 @@ _dividend_impl = create_daily_command("dividend", "摄取分红送配")
 
 # 公司行为
 _corporate_actions_impl = create_daily_command("corporate_actions", "摄取公司行为")
-
-
-def _run_instrument_ingest(  # noqa: PLR0913
-    ctx: typer.Context,
-    dataset: str,
-    ticker: str | None,
-    standard_ticker: str | None,
-    instrument_id: int | None,
-    start: str | None,
-    end: str | None,
-    force: bool,
-) -> None:
-    """执行按标的摄取."""
-    with create_executor() as executor:
-        result = executor.ingest_by_instrument(
-            dataset=dataset,
-            ticker=ticker,
-            standard_ticker=standard_ticker,
-            instrument_id=instrument_id,
-            start_date=start or "",
-            end_date=end or "",
-            force=force,
-        )
-        print_ingestion_result(result, ctx.obj["verbose"])
 
 
 @app.command("balance")
@@ -99,7 +74,7 @@ def balance(  # noqa: PLR0913
     validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
 
     if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        _run_instrument_ingest(
+        run_instrument_ingest(
             ctx,
             "balance_sheet",
             ticker,
@@ -162,7 +137,7 @@ def income(  # noqa: PLR0913
     validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
 
     if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        _run_instrument_ingest(
+        run_instrument_ingest(
             ctx,
             "income_statement",
             ticker,
@@ -225,7 +200,7 @@ def cash_flow(  # noqa: PLR0913
     validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
 
     if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        _run_instrument_ingest(
+        run_instrument_ingest(
             ctx,
             "cash_flow",
             ticker,
@@ -288,7 +263,7 @@ def dividend(  # noqa: PLR0913
     validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
 
     if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        _run_instrument_ingest(
+        run_instrument_ingest(
             ctx,
             "dividend",
             ticker,

@@ -6,19 +6,12 @@ SQLite 连接池，用于并发访问.
 
 from __future__ import annotations
 
-import os
 import sqlite3
 import threading
 from pathlib import Path
 from typing import Any, cast
 
 from ditto_infra.foundation.observability import logger, span, traced
-
-
-class LegacySchemaError(Exception):
-    """Raised when legacy schema is detected and rebuild is not allowed."""
-
-    pass
 
 
 class SQLitePool:
@@ -278,29 +271,13 @@ class SQLitePool:
         conn.commit()
 
     def _handle_legacy_schema(self, conn: sqlite3.Connection) -> None:
-        """
-        Handle legacy schema detection with fail-fast protection.
-
-        By default, raises LegacySchemaError to prevent accidental data loss.
-        Set DITTO_ALLOW_SCHEMA_REBUILD=1 to allow automatic schema rebuild.
-
-        Raises:
-            LegacySchemaError: If legacy schema detected and rebuild not allowed.
-
-        """
-        if os.getenv("DITTO_ALLOW_SCHEMA_REBUILD") == "1":
-            logger.warning(
-                "Legacy schema detected, rebuilding with explicit permission",
-                event="schema_legacy_rebuild_allowed",
-                db_path=str(self._db_path),
-            )
-            self._reset_all_user_tables(conn)
-        else:
-            msg = (
-                "Legacy schema detected. Set DITTO_ALLOW_SCHEMA_REBUILD=1 "
-                "to allow rebuild, or manually migrate the database."
-            )
-            raise LegacySchemaError(msg)
+        """Rebuild all user tables when legacy schema is detected."""
+        logger.warning(
+            "Legacy schema detected, rebuilding all user tables",
+            event="schema_legacy_rebuild",
+            db_path=str(self._db_path),
+        )
+        self._reset_all_user_tables(conn)
 
     def _get_schema(self) -> str:
         """

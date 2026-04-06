@@ -1,11 +1,9 @@
 """Tests for FreezeManager SHA-256 checksum migration."""
 
 import hashlib
-import json
 import tempfile
 from pathlib import Path
 
-import pytest
 from ditto_data.runtime.freeze_manager import FreezeManager
 
 
@@ -46,34 +44,6 @@ class TestFreezeManagerChecksum:
         assert len(checksum) == 64
         # Verify SHA-256 format (hexadecimal)
         assert all(c in "0123456789abcdef" for c in checksum)
-
-    def test_backward_compatibility_md5_raises_error(self):
-        """Test that old MD5 manifests are no longer supported."""
-        # Create a test file
-        test_file = self.temp_dir / "test.parquet"
-        test_file.write_text("test data")
-
-        # Create an old-style manifest with MD5
-        old_manifest_path = self.temp_dir / "freezes" / "old_freeze.json"
-        old_manifest_path.parent.mkdir(exist_ok=True)
-
-        # Create old manifest format (without version and checksum_type)
-        old_manifest_data = {
-            "freeze_id": "old_freeze",
-            "description": "Old freeze",
-            "created_at": "2024-01-01T00:00:00",
-            "files": {"test.parquet": "dummy_checksum"},
-        }
-
-        with old_manifest_path.open("w", encoding="utf-8") as f:
-            json.dump(old_manifest_data, f, indent=2, ensure_ascii=False)
-
-        # Loading old manifest should raise ValueError
-        with pytest.raises(ValueError) as exc_info:
-            self.manager.get_manifest("old_freeze")
-
-        assert "Invalid freeze manifest" in str(exc_info.value)
-        assert "SHA-256" in str(exc_info.value)
 
     def test_sha256_vs_md5_different_checksums(self):
         """Test that SHA-256 and MD5 produce different checksums for the same file."""

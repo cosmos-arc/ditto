@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from unittest.mock import MagicMock
 
-import ditto_app.builders.strategy as strategy_services
+import ditto_app.builders as strategy_services
 import pytest
 from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.services.strategy.strategy_catalog_service import (

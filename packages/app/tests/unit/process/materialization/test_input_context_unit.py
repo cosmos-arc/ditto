@@ -13,7 +13,7 @@ from ditto_analytics.materialization import (
     DerivedRunMode,
     DerivedRunTrigger,
 )
-from ditto_app.process.materialization import (
+from ditto_app.process.materialization_types import (
     DerivedInputProvider,
     InMemoryDerivedInputProvider,
     InputContext,

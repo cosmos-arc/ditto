@@ -15,7 +15,10 @@ from ditto_analytics.materialization.models import (
     DerivedVersionStatus,
 )
 from ditto_analytics.publication_safety import CertificationStage
-from ditto_app.process.materialization import DerivedPublicationFacade
+from ditto_app.process.publication_facade import DerivedPublicationFacade
+from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRuntimeStores,
+)
 from ditto_data.models.derived import (
     DerivedRunRecord,
     DerivedSpecRecord,
@@ -31,9 +34,6 @@ from ditto_data.services import (
     PublicationSafetyRecordService,
 )
 from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotService
-from ditto_data.services.publication_safety_record_service import (
-    PublicationSafetyRuntimeStores,
-)
 from ditto_data.storage.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,

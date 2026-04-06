@@ -1,15 +1,15 @@
 """Tests for PublicationSafetyRecordService."""
 
+from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+    PublicationSafetyRuntimeStores,
+)
 from ditto_data.models.publication_safety import (
     CertificationReportRecord,
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
     ShadowDiffReportRecord,
     ShadowTraceRecordRecord,
-)
-from ditto_data.services.publication_safety_record_service import (
-    PublicationSafetyRecordService,
-    PublicationSafetyRuntimeStores,
 )
 from pytest_mock import MockerFixture
 

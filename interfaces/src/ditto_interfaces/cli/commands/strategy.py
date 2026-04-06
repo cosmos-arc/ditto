@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import typer
-from ditto_app.process.strategy import (
-    BacktestServiceConfig,
+from ditto_app.process.backtest_service import BacktestServiceConfig
+from ditto_app.process.strategy_run_service import (
     StrategyRunMode,
     StrategyRunServiceConfig,
 )

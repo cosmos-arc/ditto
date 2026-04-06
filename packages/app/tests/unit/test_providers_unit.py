@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from dishka import Provider, Scope, make_container, provide
-from ditto_app.builders.strategy import (
+from ditto_app.builders import (
     BacktestRuntimeBuilder,
     StrategyRuntimeBuilder,
     StrategyServiceFactory,
@@ -18,7 +18,7 @@ from ditto_app.process.materialization import (
     InvalidationCascadeOrchestrator,
 )
 from ditto_app.process.quality import QualityService
-from ditto_app.process.strategy import StrategyFacade
+from ditto_app.process.strategy_run_service import StrategyFacade
 from ditto_app.providers import (
     AppBuilderFactory,
     AppProcessProvider,

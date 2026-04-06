@@ -98,25 +98,6 @@ class TestSharpeUsesRiskFreeRate:
         if result_zero.annual_volatility > 0:
             assert result_rf.sharpe != result_zero.sharpe
 
-    def test_sharpe_zero_rf_backward_compat(self) -> None:
-        """rf=0 result should match the old formula: mean * P / (std * sqrt(P))."""
-        q_ret = _make_quantile_ret_df(n_dates=200)
-        result = long_short_returns(q_ret, risk_free_rate=0.0, periods_per_year=244)
-
-        # Manually compute expected Sharpe
-        top = q_ret.filter(pl.col("quantile") == 5).sort("trade_date")["mean_return"]
-        bottom = q_ret.filter(pl.col("quantile") == 1).sort("trade_date")["mean_return"]
-        ls_daily = top - bottom
-        mean_daily = float(ls_daily.mean())
-        std_daily = float(ls_daily.std(ddof=1))
-        P = 244
-        if std_daily > 0:
-            expected_sharpe = (mean_daily * P) / (std_daily * math.sqrt(P))
-        else:
-            expected_sharpe = 0.0
-
-        assert abs(result.sharpe - expected_sharpe) < 1e-10
-
     def test_portfolio_ir_equals_sharpe_when_rf_in_sharpe(self) -> None:
         """When rf is already subtracted in Sharpe, portfolio_ir should equal sharpe."""
         q_ret = _make_quantile_ret_df(n_dates=200)

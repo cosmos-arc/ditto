@@ -306,26 +306,3 @@ class TestMacroTushareAdapterFetchIndicators:
         )
 
         assert result["date"][0] == date(2024, 1, 15)
-
-
-@pytest.mark.unit
-class TestMacroTushareAdapterLegacyMethod:
-    """Tests for backward compatibility with fetch_macro_indicators."""
-
-    def test_fetch_macro_indicators_returns_shibor(self) -> None:
-        """Legacy method still works for Shibor data."""
-        from ditto_data.sources.tushare.adapters.macro import MacroTushareAdapter
-
-        mock_client = MagicMock()
-        mock_client.query.return_value = pl.DataFrame(
-            {
-                "date": ["20240115"],
-                "on": [1.75],
-            }
-        )
-
-        adapter = MacroTushareAdapter(_client=mock_client)
-        result = adapter.fetch_macro_indicators(trade_date="2024-01-15")
-
-        assert result.height == 1
-        assert result["indicator_code"][0] == "SHIBOR_ON"

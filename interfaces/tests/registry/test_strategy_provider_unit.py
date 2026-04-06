@@ -6,20 +6,22 @@ from dataclasses import asdict
 from unittest.mock import MagicMock
 
 from dishka import Container, Provider, Scope, make_container, provide
-from ditto_app.builders.strategy import (
+from ditto_app.builders import (
     BacktestRuntimeBuilder,
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
-from ditto_app.process.strategy import (
+from ditto_app.process.backtest_service import (
     BacktestService,
     BacktestServiceConfig,
+)
+from ditto_app.process.strategy_run_service import (
     StrategyFacade,
-    StrategyInputAssembler,
     StrategyRunMode,
     StrategyRunService,
     StrategyRunServiceConfig,
 )
+from ditto_app.process.strategy_types import StrategyInputAssembler
 from ditto_data.di import RuntimeProvider
 from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.services.audit import ExecutionAuditService

@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from ditto_infra.foundation.db import LegacySchemaError, SQLitePool
+from ditto_infra.foundation.db import SQLitePool
 
 
 @pytest.fixture
@@ -423,17 +423,6 @@ class TestSQLitePoolExceptionPaths:
 class TestLegacySchemaProtection:
     """Tests for legacy schema protection (ENG-004)."""
 
-    LEGACY_SCHEMA = """
-        CREATE TABLE instrument (
-            id INTEGER PRIMARY KEY,
-            old_column TEXT
-        );
-        CREATE TABLE instrument_mapping (
-            id INTEGER PRIMARY KEY,
-            instrument_id INTEGER
-        );
-    """
-
     VALID_SCHEMA = """
         CREATE TABLE IF NOT EXISTS instrument (
             instrument_id TEXT PRIMARY KEY,
@@ -449,12 +438,8 @@ class TestLegacySchemaProtection:
         );
     """
 
-    def test_init_schema_raises_error_on_legacy_without_env(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test LegacySchemaError is raised on legacy schema without env var."""
-
-        monkeypatch.delenv("DITTO_ALLOW_SCHEMA_REBUILD", raising=False)
+    def test_init_schema_rebuilds_legacy(self, tmp_path: Path) -> None:
+        """Test that init_schema rebuilds legacy schema automatically."""
 
         db_path = tmp_path / "test.db"
         schema_path = tmp_path / "schema.sql"
@@ -464,37 +449,17 @@ class TestLegacySchemaProtection:
 
         # Create legacy tables
         conn = pool.get_connection()
-        conn.executescript(self.LEGACY_SCHEMA)
+        conn.execute(
+            "CREATE TABLE instrument (id INTEGER PRIMARY KEY, old_column TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE instrument_mapping "
+            "(id INTEGER PRIMARY KEY, instrument_id INTEGER)"
+        )
         conn.commit()
         pool.close()
 
-        # Reopen pool and try to init_schema
-        pool2 = SQLitePool(str(db_path), schema_path=schema_path)
-
-        with pytest.raises(LegacySchemaError, match="Legacy schema detected"):
-            pool2.init_schema()
-
-        pool2.close()
-
-    def test_init_schema_rebuilds_with_env_var(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that init_schema rebuilds legacy schema when env var is set."""
-        monkeypatch.setenv("DITTO_ALLOW_SCHEMA_REBUILD", "1")
-
-        db_path = tmp_path / "test.db"
-        schema_path = tmp_path / "schema.sql"
-        schema_path.write_text(self.VALID_SCHEMA)
-
-        pool = SQLitePool(str(db_path), schema_path=schema_path)
-
-        # Create legacy tables
-        conn = pool.get_connection()
-        conn.executescript(self.LEGACY_SCHEMA)
-        conn.commit()
-        pool.close()
-
-        # Reopen pool and init_schema with env var set
+        # Reopen pool and init_schema should rebuild automatically
         pool2 = SQLitePool(str(db_path), schema_path=schema_path)
         pool2.init_schema()  # Should not raise
 
@@ -506,12 +471,8 @@ class TestLegacySchemaProtection:
 
         pool2.close()
 
-    def test_init_schema_no_rebuild_needed(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_init_schema_no_rebuild_needed(self, tmp_path: Path) -> None:
         """Test that init_schema works when schema is already valid."""
-        monkeypatch.delenv("DITTO_ALLOW_SCHEMA_REBUILD", raising=False)
-
         db_path = tmp_path / "test.db"
         schema_path = tmp_path / "schema.sql"
         schema_path.write_text(self.VALID_SCHEMA)
@@ -526,12 +487,8 @@ class TestLegacySchemaProtection:
 
         pool2.close()
 
-    def test_init_schema_empty_db_no_rebuild_needed(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that init_schema works on empty database without env var."""
-        monkeypatch.delenv("DITTO_ALLOW_SCHEMA_REBUILD", raising=False)
-
+    def test_init_schema_empty_db_no_rebuild_needed(self, tmp_path: Path) -> None:
+        """Test that init_schema works on empty database."""
         db_path = tmp_path / "test.db"
         schema_path = tmp_path / "schema.sql"
         schema_path.write_text(self.VALID_SCHEMA)

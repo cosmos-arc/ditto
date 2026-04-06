@@ -33,7 +33,6 @@ _WINDOW_FUNCTIONS = frozenset(
         "ts_delay",
         "ts_delta",
         "ts_pct_change",
-        "ts_diff",
         "ts_rank",
         "ts_argmax",
         "ts_argmin",
@@ -73,7 +72,6 @@ _SHIFT_ONLY_FUNCTIONS = frozenset(
         "ts_delay",
         "ts_delta",
         "ts_pct_change",
-        "ts_diff",
     }
 )
 
@@ -104,7 +102,6 @@ _NUMERIC_FIRST_ARG_OPERATORS = frozenset(
         "ts_delay",
         "ts_delta",
         "ts_pct_change",
-        "ts_diff",
         "abs",
         "log",
         "log10",
@@ -295,5 +292,5 @@ def _extract_lookback(name: str, arguments: tuple[ExpressionNode, ...]) -> int:
     window = int(argument.value)
     if name in _ROLLING_WINDOW_FUNCTIONS:
         return window + 1
-    # Shift-only: ts_delay, ts_delta, ts_pct_change, ts_diff
+    # Shift-only: ts_delay, ts_delta, ts_pct_change
     return window

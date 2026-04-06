@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from ditto_app.builders.strategy import StrategyServiceFactory, StrategySliceBuilder
-from ditto_app.process.strategy import (
-    BacktestServiceConfig,
+from ditto_app.builders import StrategyServiceFactory, StrategySliceBuilder
+from ditto_app.process.backtest_service import BacktestServiceConfig
+from ditto_app.process.strategy_run_service import (
     StrategyFacade,
     StrategyRunMode,
     StrategyRunResult,

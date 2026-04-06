@@ -77,17 +77,6 @@ class TestFactorSpecWithContext:
         assert spec.calendar_context.exchange == "SZSE"
         assert spec.calendar_context.is_half_day is True
 
-    def test_backward_compatible(self) -> None:
-        """Existing FactorSpec creation without context still works."""
-        spec = FactorSpec(
-            id="rsi_14",
-            expression="ts_rsi(market.close, 14)",
-            dependencies=("market.close",),
-            description="RSI-14",
-        )
-        assert spec.id == "rsi_14"
-        assert spec.calendar_context is None
-
     def test_spec_is_frozen_with_context(self) -> None:
         """FactorSpec should remain immutable even with context."""
         ctx = FactorContext(is_special=True)

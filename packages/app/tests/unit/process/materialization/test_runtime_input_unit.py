@@ -11,14 +11,12 @@ from ditto_analytics.materialization.contracts import (
     DerivedExecutionPlan,
     DerivedRunMode,
 )
-from ditto_app.process.materialization import (
-    InputContext,
-    RuntimeDerivedInputProvider,
-)
 from ditto_app.process.materialization_orchestrator import (
+    RuntimeDerivedInputProvider,
     _resolve_etf_dependency,
     _resolve_market_dependency,
 )
+from ditto_app.process.materialization_types import InputContext
 from ditto_kernel.specs import (
     DerivedRole,
     DerivedSpec,

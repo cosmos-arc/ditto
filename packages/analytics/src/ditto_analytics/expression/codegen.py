@@ -498,7 +498,6 @@ type _TsSpecialFn = Callable[
 _TS_SPECIAL_DISPATCH: dict[str, _TsSpecialFn] = {
     "ts_delay": _ts_delay,
     "ts_delta": _ts_delta,
-    "ts_diff": _ts_delta,
     "ts_pct_change": _ts_pct_change,
     "ts_rank": _ts_rank,
     "ts_argmax": _ts_argmax,

@@ -7,8 +7,7 @@ from typing import Annotated
 import typer
 
 from ditto_interfaces.cli.commands.factory import create_daily_command
-from ditto_interfaces.cli.context import create_executor
-from ditto_interfaces.cli.utils.output import print_ingestion_result
+from ditto_interfaces.cli.commands.ingest._shared import run_instrument_ingest
 from ditto_interfaces.cli.utils.validation import (
     check_instrument_mode,
     validate_instrument_params,
@@ -33,30 +32,6 @@ _fx_daily_impl = create_daily_command("fx_daily", "摄取汇率日线数据")
 
 # commodity (商品)
 _commodity_daily_impl = create_daily_command("commodity_daily", "摄取商品价格数据")
-
-
-def _run_instrument_ingest(  # noqa: PLR0913
-    ctx: typer.Context,
-    dataset: str,
-    ticker: str | None,
-    standard_ticker: str | None,
-    instrument_id: int | None,
-    start: str | None,
-    end: str | None,
-    force: bool,
-) -> None:
-    """执行按标的摄取."""
-    with create_executor() as executor:
-        result = executor.ingest_by_instrument(
-            dataset=dataset,
-            ticker=ticker,
-            standard_ticker=standard_ticker,
-            instrument_id=instrument_id,
-            start_date=start or "",
-            end_date=end or "",
-            force=force,
-        )
-        print_ingestion_result(result, ctx.obj["verbose"])
 
 
 @app.command("stock")
@@ -109,7 +84,7 @@ def stock(  # noqa: PLR0913
     validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
 
     if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        _run_instrument_ingest(
+        run_instrument_ingest(
             ctx,
             "stock_daily",
             ticker,
@@ -172,7 +147,7 @@ def etf(  # noqa: PLR0913
     validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
 
     if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        _run_instrument_ingest(
+        run_instrument_ingest(
             ctx,
             "etf_daily",
             ticker,
@@ -234,7 +209,7 @@ def index(  # noqa: PLR0913
     validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
 
     if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        _run_instrument_ingest(
+        run_instrument_ingest(
             ctx,
             "index_daily",
             ticker,
@@ -298,7 +273,7 @@ def adj(  # noqa: PLR0913
             date, ticker, standard_ticker, instrument_id, start, end
         )
         if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-            _run_instrument_ingest(
+            run_instrument_ingest(
                 ctx,
                 "fund_adj",
                 ticker,

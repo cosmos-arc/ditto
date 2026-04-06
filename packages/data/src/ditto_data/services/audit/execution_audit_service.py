@@ -86,26 +86,11 @@ class ExecutionAuditService:
 
     @traced("audit.init_schema")
     def init_schema(self) -> None:
-        """
-        创建 execution_audit 表和索引（幂等操作）。
-
-        对于已存在但缺少 instrument_scope 列的旧表，自动执行
-        ALTER TABLE ADD COLUMN 补齐。
-        """
+        """创建 execution_audit 表和索引（幂等操作）。"""
         conn = self._pool.get_connection()
         conn.executescript(
             _CREATE_TABLE + _CREATE_INDEX_RUN_DATE + _CREATE_INDEX_RUN_TYPE
         )
-        # Legacy migration: add instrument_scope if missing
-        cursor = conn.execute("PRAGMA table_info(execution_audit)")
-        columns = {row[1] for row in cursor.fetchall()}
-        if "instrument_scope" not in columns:
-            _ADD_COL = (
-                "ALTER TABLE execution_audit "
-                "ADD COLUMN instrument_scope "
-                "TEXT NOT NULL DEFAULT 'instrument'"
-            )
-            conn.execute(_ADD_COL)
         self._pool.commit()
         logger.debug(
             "execution_audit schema initialized",

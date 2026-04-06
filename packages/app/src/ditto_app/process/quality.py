@@ -18,10 +18,10 @@ from typing import Any, Literal, Protocol
 
 import polars as pl
 import polars.exceptions as pl_exceptions
+from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.spec import DQResult
-from ditto_data.services.quality_record_service import QualityRecordService
 from ditto_infra.foundation import logger
 
 from ditto_app.query.market import MarketQueryFacade

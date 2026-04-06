@@ -10,7 +10,7 @@ Design notes
 ------------
 * Time-series operators (ts_*) apply ``shift(1)`` internally for PIT
   protection (except ``ts_delay`` / ``ts_delta`` / ``ts_pct_change`` /
-  ``ts_diff`` which shift by the user-specified period directly).
+  ``ts_pct_change`` which shift by the user-specified period directly).
 * Rolling aggregations use ``min_samples=window``, so the first
   ``(window - 1)`` output slots after the shift are always null.
 * Cross-section operators (cs_*) operate over the entire frame (rank /
@@ -406,16 +406,6 @@ class TestTsPctChange:
             "value",
             [None, -1.0, 0.0, 0.0],
         )
-
-
-class TestTsDiff:
-    """ts_diff is an alias for ts_delta."""
-
-    def test_ts_diff_period1(self) -> None:
-        """ts_diff should produce the same result as ts_delta."""
-        df = _single_entity_frame("close", [10.0, 11.0, 10.0, 12.0, 15.0, 8.0])
-        result = _eval_expr(df, "ts_diff(close, 1)")
-        _assert_values(result, "value", [None, 1.0, -1.0, 2.0, 3.0, -7.0])
 
 
 # ===================================================================

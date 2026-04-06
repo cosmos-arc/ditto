@@ -1,7 +1,7 @@
 """Tests for QualityRecordService."""
 
 import polars as pl
-from ditto_data.services.quality_record_service import QualityRecordService
+from ditto_data.ingestion.quality_record_service import QualityRecordService
 from pytest_mock import MockerFixture
 
 

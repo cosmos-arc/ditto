@@ -11,10 +11,6 @@ work without modification.
 """
 
 from ._math import EvaluationColumns
-
-# Re-export private helpers for backward compatibility (used in tests).
-from ._math import scalar_to_float as _scalar_to_float
-from ._math import two_sided_p_value as _two_sided_p_value
 from .factor_analysis import (
     factor_exposure,
     fama_macbeth,
@@ -42,8 +38,6 @@ from .tail_risk import grinold_kahn_ir, tail_risk_metrics
 
 __all__ = [
     "EvaluationColumns",
-    "_scalar_to_float",
-    "_two_sided_p_value",
     "factor_exposure",
     "fama_macbeth",
     "grinold_kahn_ir",

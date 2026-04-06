@@ -10,10 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from ditto_data.quality import GoldenDatasetSpec
+from ditto_data.quality import GoldenDatasetSpec
 
 
 @dataclass

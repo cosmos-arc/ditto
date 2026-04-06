@@ -81,12 +81,6 @@ P0_OPERATOR_SPECS: dict[str, OperatorSpec] = {
         max_args=2,
         int_literal_positions=(1,),
     ),
-    "ts_diff": _operator(
-        "ts_diff",
-        min_args=2,
-        max_args=2,
-        int_literal_positions=(1,),
-    ),
     "ts_rank": _operator(
         "ts_rank",
         min_args=2,

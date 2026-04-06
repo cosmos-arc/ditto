@@ -6,7 +6,7 @@ from dataclasses import asdict
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_app.builders.strategy import (
+from ditto_app.builders import (
     PublishedStrategyRuntime,
     StrategySliceBuilder,
 )

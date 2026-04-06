@@ -120,51 +120,6 @@ class TestInitSchema:
         cursor = conn.execute("SELECT COUNT(*) FROM execution_audit")
         assert cursor.fetchone()[0] == 0
 
-    def test_migrates_legacy_table_missing_instrument_scope(
-        self, tmp_path: object
-    ) -> None:
-        """init_schema should add instrument_scope to legacy tables.
-
-        Simulates a pre-existing execution_audit table that lacks the
-        instrument_scope column. After init_schema(), save_risk_log()
-        and query() must work correctly.
-        """
-        pool = SQLitePool(str(tmp_path / "legacy_audit.db"))
-        conn = pool.get_connection()
-        # Create legacy table WITHOUT instrument_scope
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS execution_audit ("
-            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "run_id TEXT NOT NULL, "
-            "trade_date TEXT NOT NULL, "
-            "record_type TEXT NOT NULL, "
-            "instrument_id INTEGER NULL, "
-            "payload TEXT NOT NULL, "
-            "created_at TEXT NOT NULL DEFAULT (datetime('now'))"
-            ")"
-        )
-        pool.commit()
-
-        svc = ExecutionAuditService(pool)
-        svc.init_schema()
-
-        # Verify column now exists
-        cursor = conn.execute("PRAGMA table_info(execution_audit)")
-        columns = {row[1] for row in cursor.fetchall()}
-        assert "instrument_scope" in columns
-
-        # Verify save_risk_log works on migrated table
-        rec = _make_risk_payload()
-        count = svc.save_risk_log("legacy-run", (rec,))
-        assert count == 1
-
-        # Verify query returns correct data
-        rows = svc.query("legacy-run")
-        assert len(rows) == 1
-        assert rows[0]["instrument_scope"] == "instrument"
-
-        pool.close()
-
 
 # ---------------------------------------------------------------------------
 # Tests: save_risk_log

@@ -4,10 +4,8 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_app.process.ingestion import (
-    IngestionCoordinator,
-    IngestionCoordinatorConfig,
-)
+from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
+from ditto_app.process.ingestion_coordinator import IngestionCoordinator
 from ditto_data.errors import IdentifierNotFoundError
 from ditto_data.models.ingestion import InstrumentIngestParams
 from ditto_infra.foundation.config.environment import Environment

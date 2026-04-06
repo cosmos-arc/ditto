@@ -5,12 +5,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from ditto_app.process.ingestion import (
-    BackfillManager,
-    RetryManager,
-    create_coordinator,
-)
+from ditto_app.process.backfill_manager import BackfillManager
+from ditto_app.process.coordinator_factory import create_coordinator
 from ditto_app.process.quality import QualityService
+from ditto_app.process.retry_manager import RetryManager
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_data.services import (
     FreezeService,

@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import asdict
 from unittest.mock import MagicMock
 
-from ditto_app.builders.strategy import (
+from ditto_app.builders import (
     BacktestRuntimeBuilder,
     PublishedStrategyRuntime,
 )
-from ditto_app.process.strategy import BacktestServiceConfig
+from ditto_app.process.backtest_service import BacktestServiceConfig
 from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService

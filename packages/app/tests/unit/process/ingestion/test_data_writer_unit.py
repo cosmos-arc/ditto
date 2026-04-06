@@ -4,7 +4,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_app.process.ingestion import IngestionDataWriter
+from ditto_app.process.data_writer import IngestionDataWriter
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing
 from ditto_infra.foundation.observability.config import ObservabilityConfig

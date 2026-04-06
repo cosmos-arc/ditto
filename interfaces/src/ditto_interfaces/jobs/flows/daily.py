@@ -24,7 +24,7 @@ from ditto_app.config import (
     get_datasets_by_tier,
     get_parallel_datasets,
 )
-from ditto_app.process.ingestion import count_results
+from ditto_app.process.result_handler import count_results
 from ditto_app.types import Dataset
 from prefect import flow, task
 

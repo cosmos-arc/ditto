@@ -4,10 +4,8 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_app.process.ingestion import (
-    IngestionCoordinator,
-    IngestionCoordinatorConfig,
-)
+from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
+from ditto_app.process.ingestion_coordinator import IngestionCoordinator
 from ditto_data.models import OnDuplicate
 from ditto_data.models.ingestion import IngestionLog, IngestionResult, IngestionStatus
 from ditto_data.sources.base import DataSource, SourceFetchError

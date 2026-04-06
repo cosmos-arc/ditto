@@ -710,44 +710,6 @@ class TestStreamingMemoryManagement:
             streaming=True,
         )
 
-    def test_find_series_defaults_to_non_streaming(self) -> None:
-        """find_series() should default to streaming=False for backward compat."""
-        catalog_service = MagicMock(spec=DerivedCatalogService)
-        catalog_service.list_specs.return_value = ()
-        catalog_service.get_version.return_value = None
-
-        artifact_reader = MagicMock(spec=DerivedArtifactReader)
-        artifact_reader.resolve_offline_version.return_value = 1
-        artifact_reader.read_frame.return_value = pl.DataFrame(
-            {
-                "instrument_id": [1],
-                "trade_date": [date(2026, 3, 10)],
-                "value": [1.0],
-                "availability_time": [date(2026, 3, 10)],
-            }
-        )
-
-        service = DerivedQueryService(
-            catalog_service=catalog_service,
-            artifact_reader=artifact_reader,
-        )
-        query = DerivedSeriesQuery(
-            derived_ids=("factor.momentum_20d",),
-            instrument_ids=(1,),
-        )
-
-        service.find_series(query)
-
-        artifact_reader.read_frame.assert_called_once_with(
-            derived_id="factor.momentum_20d",
-            version=1,
-            instrument_ids=(1,),
-            start=None,
-            end=None,
-            as_of=None,
-            streaming=False,
-        )
-
     def test_find_latest_passes_streaming_to_read_frame(self) -> None:
         """find_latest(streaming=True) should pass streaming=True to read_frame."""
         catalog_service = MagicMock(spec=DerivedCatalogService)
@@ -782,42 +744,6 @@ class TestStreamingMemoryManagement:
             instrument_ids=(1,),
             as_of=None,
             streaming=True,
-        )
-
-    def test_find_latest_defaults_to_non_streaming(self) -> None:
-        """find_latest() should default to streaming=False for backward compat."""
-        catalog_service = MagicMock(spec=DerivedCatalogService)
-        catalog_service.list_specs.return_value = ()
-        catalog_service.get_version.return_value = None
-
-        artifact_reader = MagicMock(spec=DerivedArtifactReader)
-        artifact_reader.resolve_serving_version.return_value = 2
-        artifact_reader.read_frame.return_value = pl.DataFrame(
-            {
-                "instrument_id": [1],
-                "trade_date": [date(2026, 3, 11)],
-                "value": 2.0,
-                "availability_time": [date(2026, 3, 11)],
-            }
-        )
-
-        service = DerivedQueryService(
-            catalog_service=catalog_service,
-            artifact_reader=artifact_reader,
-        )
-        query = DerivedLatestQuery(
-            derived_ids=("factor.momentum_20d",),
-            instrument_ids=(1,),
-        )
-
-        service.find_latest(query)
-
-        artifact_reader.read_frame.assert_called_once_with(
-            derived_id="factor.momentum_20d",
-            version=2,
-            instrument_ids=(1,),
-            as_of=None,
-            streaming=False,
         )
 
     def test_query_for_evaluation_passes_streaming_to_read_frame(self) -> None:

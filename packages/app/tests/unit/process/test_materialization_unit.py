@@ -37,7 +37,7 @@ def test_compute_value_jump_rate_normal() -> None:
     dates = [f"2025-01-{d:02d}" for d in range(1, 12)]
 
     frame = _make_frame(dates, values)
-    rate = _compute_value_jump_rate(frame, value_std=50.0)
+    rate = _compute_value_jump_rate(frame)
 
     # pct_change: 前 9 个约 0.01，最后一个约 1.0 → std 偏小，跳跃被检出
     assert rate > 0.0
@@ -59,7 +59,7 @@ def test_compute_value_jump_rate_no_jumps() -> None:
     dates = [f"2025-01-{d:02d}" for d in range(1, 6)]
 
     frame = _make_frame(dates, values)
-    rate = _compute_value_jump_rate(frame, value_std=10.0)
+    rate = _compute_value_jump_rate(frame)
 
     # 所有 value 相同 → pct_change 全为 0 → std=0 → 返回 0
     assert rate == 0.0
@@ -79,7 +79,7 @@ def test_compute_value_jump_rate_empty_frame() -> None:
             "value": pl.Series([], dtype=pl.Float64),
         }
     )
-    rate = _compute_value_jump_rate(frame, value_std=1.0)
+    rate = _compute_value_jump_rate(frame)
     assert rate == 0.0
 
 
@@ -91,7 +91,7 @@ def test_compute_value_jump_rate_empty_frame() -> None:
 def test_compute_value_jump_rate_single_row() -> None:
     """单行数据无法计算 pct_change，返回 0。"""
     frame = _make_frame(["2025-01-01"], [100.0])
-    rate = _compute_value_jump_rate(frame, value_std=1.0)
+    rate = _compute_value_jump_rate(frame)
     assert rate == 0.0
 
 
@@ -106,7 +106,7 @@ def test_compute_value_jump_rate_zero_pct_std() -> None:
     dates = [f"2025-01-{d:02d}" for d in range(1, 6)]
 
     frame = _make_frame(dates, values)
-    rate = _compute_value_jump_rate(frame, value_std=1.0)
+    rate = _compute_value_jump_rate(frame)
     assert rate == 0.0
 
 
@@ -132,7 +132,7 @@ def test_compute_value_jump_rate_multiple_entities() -> None:
         ]
     )
 
-    rate = _compute_value_jump_rate(frame, value_std=50.0)
+    rate = _compute_value_jump_rate(frame)
 
     assert rate >= 0.0
     assert rate <= 1.0
@@ -141,22 +141,3 @@ def test_compute_value_jump_rate_multiple_entities() -> None:
     # 大量正常点（~38 个 pct_change ≈ 0.01）使 std 仍然很小
     # 3σ 阈值远小于 99，跳跃应被检出
     assert rate > 0.0, "应该检出 Entity B 的跳跃点"
-
-
-# ---------------------------------------------------------------------------
-# 7. value_std 参数不影响结果（签名兼容验证）
-# ---------------------------------------------------------------------------
-
-
-def test_compute_value_jump_rate_value_std_ignored() -> None:
-    """value_std 参数不影响阈值计算。"""
-    values = [100.0] * 10 + [200.0]  # 最后一个跳跃
-    dates = [f"2025-01-{d:02d}" for d in range(1, 12)]
-
-    frame = _make_frame(dates, values)
-
-    # 无论 value_std 取什么值，结果应该完全相同
-    rate_small = _compute_value_jump_rate(frame, value_std=0.001)
-    rate_large = _compute_value_jump_rate(frame, value_std=1_000_000.0)
-
-    assert rate_small == rate_large

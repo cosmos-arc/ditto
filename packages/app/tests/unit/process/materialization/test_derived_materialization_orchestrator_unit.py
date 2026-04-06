@@ -17,10 +17,13 @@ from ditto_analytics.materialization.models import (
     DerivedVersionStatus,
 )
 from ditto_analytics.publication_safety import CompatibilityManifest
-from ditto_app.process.materialization import (
+from ditto_app.process.materialization_orchestrator import (
     DerivedMaterializationOrchestrator,
-    InMemoryDerivedInputProvider,
     RuntimeDerivedInputProvider,
+)
+from ditto_app.process.materialization_types import InMemoryDerivedInputProvider
+from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRuntimeStores,
 )
 from ditto_data.models.derived import (
     DerivedCheckpointRecord,
@@ -33,9 +36,6 @@ from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )
 from ditto_data.services.derived_catalog_service import DerivedCatalogService
-from ditto_data.services.publication_safety_record_service import (
-    PublicationSafetyRuntimeStores,
-)
 from ditto_data.storage.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,

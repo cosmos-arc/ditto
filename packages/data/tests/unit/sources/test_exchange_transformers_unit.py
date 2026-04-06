@@ -1,13 +1,8 @@
 """Tests for ExchangeTransformer Protocol and ExchangeTransformers factory."""
 
-from typing import TYPE_CHECKING
-
 import pytest
 from ditto_data.sources import ExchangeTransformer, ExchangeTransformers
 from pytest_mock import MockerFixture
-
-if TYPE_CHECKING:
-    pass
 
 
 class TestExchangeTransformerProtocol:

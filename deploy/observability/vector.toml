@@ -15,12 +15,6 @@ type = "file"
 include = ["/logs/job/*.jsonl", "/logs/job/*.json"]
 read_from = "end"
 
-# 兼容旧格式(单一日志目录)
-[sources.legacy_logs]
-type = "file"
-include = ["/logs/ditto*.jsonl"]
-read_from = "end"
-
 # ============ 数据转换 ============
 
 # API 日志转换
@@ -41,19 +35,11 @@ source = '''
 .source = "ditto-job"
 '''
 
-# 兼容旧格式转换
-[transforms.legacy_logs_transform]
-type = "remap"
-inputs = ["legacy_logs"]
-source = '''
-. = parse_json!(.message)
-'''
-
 # ============ 数据汇 - VictoriaLogs ============
 
 [sinks.victorialogs]
 type = "http"
-inputs = ["api_logs_transform", "job_logs_transform", "legacy_logs_transform"]
+inputs = ["api_logs_transform", "job_logs_transform"]
 uri = "http://victorialogs:9428/insert/jsonline?_stream_fields=source"
 encoding.codec = "json"
 framing.method = "newline_delimited"
