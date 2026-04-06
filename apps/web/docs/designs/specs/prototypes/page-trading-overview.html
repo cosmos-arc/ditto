@@ -1911,12 +1911,12 @@
       <div class="scope-separator"></div>
       <div class="scope-metric">
         <span class="scope-metric-label">可用资金</span>
-        <span class="scope-metric-value">¥8,432,180.50</span>
+        <span class="scope-metric-value"><span data-ticker="8432180.50" data-decimals="2" data-ticker-prefix="¥" data-ticker-suffix="">8,432,180.50</span></span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric">
         <span class="scope-metric-label">风险预算</span>
-        <span class="scope-metric-value warning">68.2%</span>
+        <span class="scope-metric-value warning"><span data-ticker="68.2" data-decimals="1" data-ticker-prefix="" data-ticker-suffix="%">68.2</span>%</span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric">
@@ -1932,7 +1932,7 @@
       <div class="scope-separator"></div>
       <div class="scope-metric">
         <span class="scope-metric-label">今日成交</span>
-        <span class="scope-metric-value">47 笔</span>
+        <span class="scope-metric-value"><span data-ticker="47" data-decimals="0" data-ticker-prefix="" data-ticker-suffix=" 笔">47</span> 笔</span>
       </div>
     </div>
 
@@ -1948,7 +1948,7 @@
           <!-- Left: Primary status (~42%) -->
           <div class="decision-primary">
             <span class="metric-label">今日盈亏</span>
-            <span class="metric-value positive">+¥86,472.50</span>
+            <span class="metric-value positive"><span data-ticker="86472.50" data-decimals="2" data-ticker-prefix="+¥" data-ticker-suffix="">86,472.50</span></span>
             <span class="metric-sub">+0.34% · 总权益 ¥25,432,180 · <span class="indicator-up">较昨日 +¥21,400</span></span>
           </div>
           <!-- Middle: Context judgment (~33%) -->
@@ -1990,11 +1990,11 @@
       <div class="trading-panels" role="group" aria-label="交易面板">
 
         <!-- Panel 1: 权益/盈亏 (~35%) -->
-        <div class="panel panel-equity" role="region" aria-label="权益盈亏">
+        <div class="panel panel-equity" role="region" aria-label="权益盈亏" data-reveal="fade-up" data-reveal-delay="0">
           <div class="equity-metrics">
             <div class="equity-primary">
               <span class="equity-label">权益曲线</span>
-              <span class="equity-pct">+¥86,472.50 · +0.34%</span>
+              <span class="equity-pct"><span data-ticker="86472.50" data-decimals="2" data-ticker-prefix="+¥" data-ticker-suffix="">86,472.50</span> · +0.34%</span>
             </div>
             <div class="equity-sub-row">
               <div class="equity-sub-item">
@@ -2010,8 +2010,12 @@
                 <span class="equity-sub-value up">+18.6%</span>
               </div>
             </div>
+            <div style="padding: 0 var(--space-12) var(--space-8);">
+              <div data-flow='{"segments":[{"label":"股票","value":45},{"label":"期货","value":25},{"label":"期权","value":18},{"label":"现金","value":12}]}' aria-label="资金流向"></div>
+            </div>
           </div>
           <div class="equity-chart" role="img" aria-label="权益曲线：近一个月持续上涨，当前 +0.34%">
+            <svg data-sparkline='{"data":[100,102,101,104,103,107,106,110,108,112,115,113,118,120,122,119,125,128,126,130,133,131,136,140,138,142,145,143,148,152],"stroke":"oklch(0.7 0.085 265)","fill":true,"width":200,"height":60}' aria-label="权益曲线 Sparkline"></svg>
             <span class="equity-chart-label">权益曲线 · 日线</span>
             <svg viewBox="0 0 800 200" preserveAspectRatio="none" aria-hidden="true">
               <defs>
@@ -2071,7 +2075,7 @@
         
 
         <!-- Panel 2: 持仓汇总 (~38%) -->
-        <div class="panel panel-positions" role="region" aria-label="持仓汇总">
+        <div class="panel panel-positions" role="region" aria-label="持仓汇总" data-reveal="fade-up" data-reveal-delay="1">
           <div class="panel-header">
             <span class="panel-title">持仓</span>
             <span class="panel-count">8</span>
@@ -2199,19 +2203,20 @@
         
 
         <!-- Panel 3: 订单状态 (~27%) -->
-        <div class="panel panel-orders" role="region" aria-label="订单状态">
+        <div class="panel panel-orders" role="region" aria-label="订单状态" data-reveal="fade-up" data-reveal-delay="2">
           <div class="panel-header">
             <span class="panel-title">订单</span>
-            <div class="order-tabs" role="tablist">
-              <button class="order-tab active" role="tab" aria-selected="true">待成交 <span class="tab-count">2</span></button>
-              <button class="order-tab" role="tab" aria-selected="false">已成交 <span class="tab-count">5</span></button>
-              <button class="order-tab" role="tab" aria-selected="false">已撤单 <span class="tab-count">1</span></button>
+            <div class="order-tabs" role="tablist" data-tabs="trading-tabs">
+              <button class="order-tab active" role="tab" aria-selected="true" data-tab-target="positions">待成交 <span class="tab-count">2</span></button>
+              <button class="order-tab" role="tab" aria-selected="false" data-tab-target="orders">已成交 <span class="tab-count">5</span></button>
+              <button class="order-tab" role="tab" aria-selected="false" data-tab-target="fills">已撤单 <span class="tab-count">1</span></button>
             </div>
             <div class="panel-actions">
               <button class="panel-action">查看全部 →</button>
             </div>
           </div>
           <div class="panel-body" role="tabpanel">
+            <div data-tab-panel="positions">
             <div class="order-row order-pending" role="button" tabindex="0" aria-label="买入 600519 100股 ¥1,850.00 待成交">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">600519</span>
@@ -2228,6 +2233,8 @@
               <span class="order-state-badge badge-partial">部分成交 30/50</span>
               <span class="order-time">8分钟前</span>
             </div>
+            </div>
+            <div data-tab-panel="orders" hidden>
             <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 002594 200股 ¥288.00 已成交">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">002594</span>
@@ -2236,6 +2243,16 @@
               <span class="order-state-badge badge-filled">已成交</span>
               <span class="order-time">15分钟前</span>
             </div>
+            <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 000333 200股 市价 已成交">
+              <span class="order-side-pill buy">买入</span>
+              <span class="order-ticker">000333</span>
+              <span class="order-type">市价</span>
+              <span class="order-detail">200股</span>
+              <span class="order-state-badge badge-filled">已成交</span>
+              <span class="order-time">45分钟前</span>
+            </div>
+            </div>
+            <div data-tab-panel="fills" hidden>
             <div class="order-row order-cancelled" role="button" tabindex="0" aria-label="卖出 601318 500股 ¥54.00 已撤单">
               <span class="order-side-pill sell">卖出</span>
               <span class="order-ticker">601318</span>
@@ -2244,13 +2261,6 @@
               <span class="order-state-badge badge-cancelled">已撤单</span>
               <span class="order-time">28分钟前</span>
             </div>
-            <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 000333 200股 市价 已成交">
-              <span class="order-side-pill buy">买入</span>
-              <span class="order-ticker">000333</span>
-              <span class="order-type">市价</span>
-              <span class="order-detail">200股</span>
-              <span class="order-state-badge badge-filled">已成交</span>
-              <span class="order-time">45分钟前</span>
             </div>
           </div>
         </div>
@@ -2272,7 +2282,7 @@
             <div class="equity-metrics">
               <div class="equity-primary">
                 <span class="equity-label">今日盈亏</span>
-                <span class="equity-value">+¥86,472.50</span>
+                <span class="equity-value"><span data-ticker="86472.50" data-decimals="2" data-ticker-prefix="+¥" data-ticker-suffix="">86,472.50</span></span>
                 <span class="equity-pct">+0.34%</span>
               </div>
               <div class="equity-sub-row">
@@ -2282,7 +2292,7 @@
                 </div>
                 <div class="equity-sub-item">
                   <span class="equity-sub-label">胜率</span>
-                  <span class="equity-sub-value up">68%</span>
+                  <span class="equity-sub-value up"><span data-ticker="68" data-decimals="0" data-ticker-prefix="" data-ticker-suffix="%">68</span>%</span>
                 </div>
                 <div class="equity-sub-item">
                   <span class="equity-sub-label">最大单笔盈利</span>
@@ -2437,7 +2447,7 @@
       <div class="context-rail">
 
         <!-- Section 1: 风控监控 -->
-        <div class="context-section section-risk">
+        <div class="context-section section-risk" data-reveal="fade-up" data-reveal-delay="3">
           <div class="context-section-header">
             <span class="context-section-title">风控监控</span>
             <span class="context-section-count" aria-label="2 项预警" title="2 项预警"><span style="color:var(--risk-critical-fg);">2</span></span>
@@ -2804,6 +2814,7 @@
   </div>
 
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   </section>
 

@@ -1417,6 +1417,25 @@
 
     <!-- ====== Main Content ====== -->
     <div class="ai-main">
+
+      <!-- Tab Navigation Bar -->
+      <div data-tabs="ai-tabs" style="display:flex;gap:var(--space-4);border-bottom:1px solid var(--border-subtle);padding-bottom:var(--space-4);flex-shrink:0;">
+        <button data-tab-target="overview" class="ai-status-badge online" style="border:none;background:none;cursor:pointer;font-size:var(--font-size-12);" aria-selected="true">
+          <span class="ai-status-dot"></span>
+          概览
+        </button>
+        <button data-tab-target="models" class="ai-status-badge idle" style="border:none;background:none;cursor:pointer;font-size:var(--font-size-12);" aria-selected="false">
+          <span class="ai-status-dot"></span>
+          模型
+        </button>
+        <button data-tab-target="signals" class="ai-status-badge idle" style="border:none;background:none;cursor:pointer;font-size:var(--font-size-12);" aria-selected="false">
+          <span class="ai-status-dot"></span>
+          信号
+        </button>
+      </div>
+
+      <!-- Tab Panel: Overview (default active) -->
+      <div data-tab-panel="overview">
       <!-- Primary: Agent Quick View + Copilot Quick View -->
       <div class="ai-main-primary">
         <!-- ── Agent Quick View (left column) ── -->
@@ -1729,6 +1748,133 @@
           </div>
         </div>
       </div>
+      </div><!-- /data-tab-panel="overview" -->
+
+      <!-- Tab Panel: Models -->
+      <div data-tab-panel="models" aria-hidden="true">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--density-gutter);padding-top:var(--space-8);">
+          <!-- Model Card 1 -->
+          <div data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-16);">
+            <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);">
+              <span class="ai-status-badge online"><span class="ai-status-dot"></span>Alpha v3</span>
+              <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--text-tertiary);">信号策略</span>
+            </div>
+            <div style="font-size:var(--font-size-24);font-weight:var(--font-weight-semibold);font-family:var(--font-family-numeric);color:var(--text-primary);margin-bottom:var(--space-4);">
+              <span data-ticker="87.3" data-decimals="1" data-ticker-suffix="%">87.3%</span>
+            </div>
+            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">信号准确率</span>
+            <div data-confidence="0.873" data-confidence-label="High" style="margin-top:var(--space-8);"></div>
+            <div style="margin-top:var(--space-8);font-size:var(--font-size-10);color:var(--text-tertiary);">
+              平均响应 <span data-ticker="1.2" data-decimals="1" data-ticker-suffix="s" style="font-family:var(--font-family-numeric);">1.2s</span> · 上次更新 3分钟前
+            </div>
+          </div>
+
+          <!-- Model Card 2 -->
+          <div data-reveal="fade-up" data-reveal-delay="80" data-mouse-glow="true" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-16);">
+            <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);">
+              <span class="ai-status-badge online"><span class="ai-status-dot"></span>情绪 Alpha v2</span>
+              <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--agent-waiting-approval-fg);">IC 衰减</span>
+            </div>
+            <div style="font-size:var(--font-size-24);font-weight:var(--font-weight-semibold);font-family:var(--font-family-numeric);color:var(--text-primary);margin-bottom:var(--space-4);">
+              <span data-ticker="0.028" data-decimals="3">0.028</span>
+            </div>
+            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">IC 值 (5日均值)</span>
+            <div data-confidence="0.45" data-confidence-label="Low" style="margin-top:var(--space-8);"></div>
+            <div style="margin-top:var(--space-8);font-size:var(--font-size-10);color:var(--text-tertiary);">
+              5日 IC 从 0.041 持续下滑 · 建议关注模型退化
+            </div>
+          </div>
+
+          <!-- Model Card 3 -->
+          <div data-reveal="fade-up" data-reveal-delay="160" data-mouse-glow="true" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-16);">
+            <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);">
+              <span class="ai-status-badge processing"><span class="ai-status-dot"></span>Factor Discovery</span>
+              <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--ai-accent);">运行中</span>
+            </div>
+            <div style="font-size:var(--font-size-24);font-weight:var(--font-weight-semibold);font-family:var(--font-family-numeric);color:var(--text-primary);margin-bottom:var(--space-4);">
+              <span data-ticker="42" data-decimals="0">42</span>
+            </div>
+            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">已探索因子组合</span>
+            <div data-confidence="0.72" data-confidence-label="Med" style="margin-top:var(--space-8);"></div>
+            <div style="margin-top:var(--space-8);font-size:var(--font-size-10);color:var(--text-tertiary);">
+              平均探索耗时 <span data-ticker="3.5" data-decimals="1" data-ticker-suffix="s" style="font-family:var(--font-family-numeric);">3.5s</span> · 当前进度 72%
+            </div>
+          </div>
+
+          <!-- Model Card 4 -->
+          <div data-reveal="fade-up" data-reveal-delay="240" data-mouse-glow="true" style="background:var(--surface-panel-base);border:1px solid var(--border-subtle);border-radius:var(--radius-8);padding:var(--space-16);">
+            <div style="display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);">
+              <span class="ai-status-badge online"><span class="ai-status-dot"></span>风控巡检</span>
+              <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--text-tertiary);">合规监控</span>
+            </div>
+            <div style="font-size:var(--font-size-24);font-weight:var(--font-weight-semibold);font-family:var(--font-family-numeric);color:var(--text-primary);margin-bottom:var(--space-4);">
+              <span data-ticker="99.2" data-decimals="1" data-ticker-suffix="%">99.2%</span>
+            </div>
+            <span style="font-size:var(--font-size-10);color:var(--text-tertiary);">合规检测率</span>
+            <div data-confidence="0.92" data-confidence-label="High" style="margin-top:var(--space-8);"></div>
+            <div style="margin-top:var(--space-8);font-size:var(--font-size-10);color:var(--text-tertiary);">
+              最近一次巡检 30分钟前 · 全部通过
+            </div>
+          </div>
+        </div>
+      </div><!-- /data-tab-panel="models" -->
+
+      <!-- Tab Panel: Signals -->
+      <div data-tab-panel="signals" aria-hidden="true">
+        <div style="display:flex;flex-direction:column;gap:var(--space-8);padding-top:var(--space-8);">
+          <!-- Signal Summary Bar -->
+          <div data-reveal="fade-up" data-reveal-delay="0" style="display:flex;gap:var(--space-16);padding:var(--space-12);background:var(--surface-panel-elevated);border-radius:var(--radius-6);border:1px solid var(--border-subtle);">
+            <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+              <span style="font-size:var(--font-size-10);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;">信号总数</span>
+              <span style="font-family:var(--font-family-numeric);font-size:var(--font-size-20);font-weight:var(--font-weight-semibold);color:var(--text-primary);"><span data-ticker="127" data-decimals="0">127</span></span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+              <span style="font-size:var(--font-size-10);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;">本周产出</span>
+              <span style="font-family:var(--font-family-numeric);font-size:var(--font-size-20);font-weight:var(--font-weight-semibold);color:var(--agent-running-fg);"><span data-ticker="12" data-decimals="0">12</span></span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+              <span style="font-size:var(--font-size-10);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;">待审批</span>
+              <span style="font-family:var(--font-family-numeric);font-size:var(--font-size-20);font-weight:var(--font-weight-semibold);color:var(--agent-waiting-approval-fg);"><span data-ticker="3" data-decimals="0">3</span></span>
+            </div>
+          </div>
+
+          <!-- Signal Rows -->
+          <div data-reveal="fade-up" data-reveal-delay="80" class="ai-finding-row">
+            <div class="ai-finding-bar high"></div>
+            <div class="ai-finding-body">
+              <div class="ai-finding-header">
+                <span class="ai-finding-title">贵州茅台 — 量价背离卖出信号</span>
+                <span class="confidence-badge high">92%</span>
+              </div>
+              <span class="ai-finding-evidence">RSI 背离 + 放量下跌 + 北向连续 3 日净卖出</span>
+              <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill high" style="width:92%"></div></div>
+            </div>
+          </div>
+          <div data-reveal="fade-up" data-reveal-delay="160" class="ai-finding-row">
+            <div class="ai-finding-bar medium"></div>
+            <div class="ai-finding-body">
+              <div class="ai-finding-header">
+                <span class="ai-finding-title">科技板块拥挤度预警</span>
+                <span class="confidence-badge medium">67%</span>
+              </div>
+              <span class="ai-finding-evidence">换手率分位数 98.5%，估值分位数 92%</span>
+              <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill medium" style="width:67%"></div></div>
+            </div>
+          </div>
+          <div data-reveal="fade-up" data-reveal-delay="240" class="ai-finding-row">
+            <div class="ai-finding-bar low"></div>
+            <div class="ai-finding-body">
+              <div class="ai-finding-header">
+                <span class="ai-finding-title">情绪 Alpha v2 — IC 衰减至 0.028</span>
+                <span class="confidence-badge low">45%</span>
+              </div>
+              <span class="ai-finding-evidence">近 5 日 IC 从 0.041 持续下滑，可能存在短期模型退化</span>
+              <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill low" style="width:45%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /data-tab-panel="signals" -->
+
     </div>
 
     <!-- ====== Sidebar ====== -->
@@ -1743,21 +1889,21 @@
             <div class="ai-stat-block">
               <span class="ai-stat-label">Agent Plans 今日</span>
               <div class="ai-stat-row">
-                <span class="ai-stat-value brand">5</span>
+                <span class="ai-stat-value brand"><span data-ticker="5" data-decimals="0">5</span></span>
                 <span class="ai-stat-sub">运行中 2 · 完成 3</span>
               </div>
             </div>
             <div class="ai-stat-block">
               <span class="ai-stat-label">Copilot 本周对话</span>
               <div class="ai-stat-row">
-                <span class="ai-stat-value">18</span>
+                <span class="ai-stat-value"><span data-ticker="18" data-decimals="0">18</span></span>
                 <span class="ai-stat-sub">活跃 1 · 归档 17</span>
               </div>
             </div>
             <div class="ai-stat-block">
               <span class="ai-stat-label">待审批</span>
               <div class="ai-stat-row">
-                <span class="ai-stat-value warning">3</span>
+                <span class="ai-stat-value warning"><span data-ticker="3" data-decimals="0">3</span></span>
                 <span class="ai-stat-sub">高 1 · 中 1 · 低 1</span>
               </div>
             </div>
@@ -1787,6 +1933,9 @@
                 <span class="ai-section-count ai-count-right">3</span>
               </div>
             </div>
+
+            <!-- Model confidence bar -->
+            <div data-confidence="0.87" data-confidence-label="High" style="margin-top:var(--space-8);"></div>
 
             <!-- Mini bar chart -->
             <div class="ai-confidence-bars">
@@ -1836,14 +1985,17 @@
             <div class="pulse-metric">
               <span class="pulse-metric-label">API 调用</span>
               <span class="pulse-metric-value warning">4,820 / 5,000</span>
+              <div data-confidence="0.964" data-confidence-label="96.4%"></div>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">GPU 使用</span>
               <span class="pulse-metric-value">32%</span>
+              <div data-confidence="0.32" data-confidence-label="Low"></div>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">Agent 并发</span>
               <span class="pulse-metric-value brand">2 / 4</span>
+              <div data-confidence="0.50" data-confidence-label="Med"></div>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">模型延迟</span>
@@ -1916,13 +2068,13 @@
     <div class="status-bar" role="status" aria-label="AI 系统状态">
       <span class="status-indicator"></span>
       <span>模型延迟</span>
-      <span class="status-healthy">180ms</span>
+      <span class="status-healthy"><span data-ticker="180" data-decimals="0" data-ticker-suffix="ms">180ms</span></span>
       <span class="status-sep">|</span>
       <span>API 余量</span>
       <span class="status-value">180 / 5,000</span>
       <span class="status-sep">|</span>
       <span>GPU</span>
-      <span class="status-value">32%</span>
+      <span class="status-value"><span data-ticker="32" data-decimals="0" data-ticker-suffix="%">32%</span></span>
       <span class="status-sep">|</span>
       <span>Agent 并发</span>
       <span class="status-healthy">2 / 4</span>
@@ -1989,6 +2141,7 @@
   
 
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   </section>
 

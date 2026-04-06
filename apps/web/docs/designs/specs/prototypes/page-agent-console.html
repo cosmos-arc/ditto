@@ -1833,8 +1833,19 @@
         <!-- ═══ Panel: Plans (default) ═══ -->
         <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content">
 
+          <!-- Status Filter Tabs -->
+          <div data-tabs="agent-status-filter" style="display:flex;gap:var(--space-4);align-items:center;margin-bottom:var(--space-6);">
+            <span data-tab-target="all" class="active" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-2) var(--space-8);border-radius:var(--radius-4);cursor:pointer;color:var(--brand-accent);background:var(--brand-accent-subtle);" aria-selected="true">全部</span>
+            <span data-tab-target="running" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-2) var(--space-8);border-radius:var(--radius-4);cursor:pointer;color:var(--text-tertiary);" aria-selected="false">运行中</span>
+            <span data-tab-target="completed" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-2) var(--space-8);border-radius:var(--radius-4);cursor:pointer;color:var(--text-tertiary);" aria-selected="false">已完成</span>
+            <span data-tab-target="failed" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-2) var(--space-8);border-radius:var(--radius-4);cursor:pointer;color:var(--text-tertiary);" aria-selected="false">失败</span>
+          </div>
+
+          <!-- Tab Panel: All Plans -->
+          <div data-tab-panel="all">
+
           <!-- Plan 1: Running (selected) -->
-          <div class="plan-card selected" tabindex="0" role="button" aria-label="Alpha 因子挖掘计划 — 运行中">
+          <div class="plan-card selected" data-reveal="fade-up" data-reveal-delay="50" tabindex="0" role="button" aria-label="Alpha 因子挖掘计划 — 运行中">
             <div class="plan-card-header">
               <span class="plan-card-name">Alpha 因子挖掘计划</span>
               <span class="plan-card-status running">
@@ -1877,7 +1888,7 @@
           </div>
 
           <!-- Plan 2: Completed -->
-          <div class="plan-card" tabindex="0" role="button" aria-label="北向资金异常流入检测 — 已完成">
+          <div class="plan-card" data-reveal="fade-up" data-reveal-delay="100" tabindex="0" role="button" aria-label="北向资金异常流入检测 — 已完成">
             <div class="plan-card-header">
               <span class="plan-card-name">北向资金异常流入检测</span>
               <span class="plan-card-status completed">
@@ -1926,7 +1937,7 @@
           </div>
 
           <!-- Plan 3: Failed -->
-          <div class="plan-card" tabindex="0" role="button" aria-label="行业轮动策略回测 — 失败">
+          <div class="plan-card" data-reveal="fade-up" data-reveal-delay="150" tabindex="0" role="button" aria-label="行业轮动策略回测 — 失败">
             <div class="plan-card-header">
               <span class="plan-card-name">行业轮动策略回测</span>
               <span class="plan-card-status failed">
@@ -1966,6 +1977,98 @@
             </div>
           </div>
 
+          <!-- Plan 4: Running -->
+          <div class="plan-card" data-reveal="fade-up" data-reveal-delay="200" tabindex="0" role="button" aria-label="多因子合成模型优化 — 运行中">
+            <div class="plan-card-header">
+              <span class="plan-card-name">多因子合成模型优化</span>
+              <span class="plan-card-status running">
+                <span class="plan-card-status-dot"></span>
+                运行中
+              </span>
+            </div>
+            <div class="plan-card-meta">
+              <span class="plan-card-time">2026-04-01 13:50</span>
+              <span class="plan-card-meta-sep"></span>
+              <span class="text-tertiary-hint">预计 25 分钟</span>
+            </div>
+            <div class="plan-card-progress-label">
+              <span class="plan-card-progress-text">整体进度</span>
+              <span class="plan-card-progress-pct">38%</span>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 38%">
+              <div class="progress-bar-fill brand" style="width: 38%;"></div>
+            </div>
+            <div class="agent-chain">
+              <span class="agent-chain-step done">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+                历史数据回填
+              </span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step done">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+                因子筛选
+              </span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step active">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+                模型训练
+              </span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step">回测验证</span>
+            </div>
+            <div class="plan-card-output">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/></svg>
+              <span>产出物</span>
+              <span class="plan-card-output-count">5 个候选因子</span>
+            </div>
+          </div>
+
+          </div><!-- /tab-panel: all -->
+
+          <!-- Tab Panel: Running Plans -->
+          <div data-tab-panel="running">
+          <!-- Plan 1: Running (selected) -->
+          <div class="plan-card selected" tabindex="0" role="button" aria-label="Alpha 因子挖掘计划 — 运行中">
+            <div class="plan-card-header">
+              <span class="plan-card-name">Alpha 因子挖掘计划</span>
+              <span class="plan-card-status running">
+                <span class="plan-card-status-dot"></span>
+                运行中
+              </span>
+            </div>
+            <div class="plan-card-meta">
+              <span class="plan-card-time">2026-04-01 14:28</span>
+              <span class="plan-card-meta-sep"></span>
+              <span class="text-tertiary-hint">预计 15 分钟</span>
+            </div>
+            <div class="plan-card-progress-label">
+              <span class="plan-card-progress-text">整体进度</span>
+              <span class="plan-card-progress-pct">62%</span>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 62%">
+              <div class="progress-bar-fill brand" style="width: 62%;"></div>
+            </div>
+            <div class="agent-chain">
+              <span class="agent-chain-step done">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+                数据探索
+              </span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step active">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+                Factor 挖掘
+              </span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step">策略验证</span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step">风控校验</span>
+            </div>
+            <div class="plan-card-output">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/></svg>
+              <span>产出物</span>
+              <span class="plan-card-output-count">8 个因子 · 3 个策略</span>
+            </div>
+          </div>
           <!-- Plan 4: Running -->
           <div class="plan-card" tabindex="0" role="button" aria-label="多因子合成模型优化 — 运行中">
             <div class="plan-card-header">
@@ -2011,6 +2114,103 @@
               <span class="plan-card-output-count">5 个候选因子</span>
             </div>
           </div>
+          </div><!-- /tab-panel: running -->
+
+          <!-- Tab Panel: Completed Plans -->
+          <div data-tab-panel="completed">
+          <!-- Plan 2: Completed -->
+          <div class="plan-card" tabindex="0" role="button" aria-label="北向资金异常流入检测 — 已完成">
+            <div class="plan-card-header">
+              <span class="plan-card-name">北向资金异常流入检测</span>
+              <span class="plan-card-status completed">
+                <span class="plan-card-status-dot"></span>
+                已完成
+              </span>
+            </div>
+            <div class="plan-card-meta">
+              <span class="plan-card-time">2026-04-01 10:15</span>
+              <span class="plan-card-meta-sep"></span>
+              <span class="text-tertiary-hint">耗时 12 分钟</span>
+            </div>
+            <div class="plan-card-progress-label">
+              <span class="plan-card-progress-text">整体进度</span>
+              <span class="plan-card-progress-pct">100%</span>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 100%">
+              <div class="progress-bar-fill ok" style="width: 100%;"></div>
+            </div>
+            <div class="agent-chain">
+              <span class="agent-chain-step done">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+                数据采集
+              </span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step done">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+                异常识别
+              </span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step done">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+                信号生成
+              </span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step done">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+                风控校验
+              </span>
+            </div>
+            <div class="plan-card-output">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/></svg>
+              <span>产出物</span>
+              <span class="plan-card-output-count">2 个 Finding · 1 个 Signal</span>
+            </div>
+          </div>
+          </div><!-- /tab-panel: completed -->
+
+          <!-- Tab Panel: Failed Plans -->
+          <div data-tab-panel="failed">
+          <!-- Plan 3: Failed -->
+          <div class="plan-card" tabindex="0" role="button" aria-label="行业轮动策略回测 — 失败">
+            <div class="plan-card-header">
+              <span class="plan-card-name">行业轮动策略回测</span>
+              <span class="plan-card-status failed">
+                <span class="plan-card-status-dot"></span>
+                失败
+              </span>
+            </div>
+            <div class="plan-card-meta">
+              <span class="plan-card-time">2026-04-01 09:40</span>
+              <span class="plan-card-meta-sep"></span>
+              <span class="text-tertiary-hint text-agent-failed">Factor 挖掘阶段异常终止</span>
+            </div>
+            <div class="plan-card-progress-label">
+              <span class="plan-card-progress-text">整体进度</span>
+              <span class="plan-card-progress-pct">23%</span>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 23%">
+              <div class="progress-bar-fill critical" style="width: 23%;"></div>
+            </div>
+            <div class="agent-chain">
+              <span class="agent-chain-step done">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
+                数据准备
+              </span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step failed">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15"/></svg>
+                Factor 挖掘
+              </span>
+              <span class="agent-chain-arrow">&#8594;</span>
+              <span class="agent-chain-step">策略回测</span>
+            </div>
+            <div class="plan-card-output">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/></svg>
+              <span>产出物</span>
+              <span class="plan-card-output-count">0 个因子</span>
+            </div>
+          </div>
+          </div><!-- /tab-panel: failed -->
 
         </div><!-- /panel: Plans -->
 
@@ -2018,7 +2218,7 @@
         <div class="tab-panel agent-main" data-panel="agent-runs">
 
           <!-- Run 1: Running -->
-          <div class="run-card" tabindex="0" role="button" aria-label="Run #42 — Alpha 因子挖掘计划 — 运行中">
+          <div class="run-card" data-reveal="fade-up" data-reveal-delay="50" tabindex="0" role="button" aria-label="Run #42 — Alpha 因子挖掘计划 — 运行中">
             <div class="run-card-header">
               <span class="plan-card-name">Run #42 · Alpha 因子挖掘计划</span>
               <span class="plan-card-status running">
@@ -2058,7 +2258,7 @@
           </div>
 
           <!-- Run 2: Completed -->
-          <div class="run-card" tabindex="0" role="button" aria-label="Run #39 — 北向资金异常流入检测 — 已完成">
+          <div class="run-card" data-reveal="fade-up" data-reveal-delay="100" tabindex="0" role="button" aria-label="Run #39 — 北向资金异常流入检测 — 已完成">
             <div class="run-card-header">
               <span class="plan-card-name">Run #39 · 北向资金异常流入检测</span>
               <span class="plan-card-status completed">
@@ -2099,7 +2299,7 @@
           </div>
 
           <!-- Run 3: Failed -->
-          <div class="run-card" tabindex="0" role="button" aria-label="Run #38 — 行业轮动策略回测 — 失败">
+          <div class="run-card" data-reveal="fade-up" data-reveal-delay="150" tabindex="0" role="button" aria-label="Run #38 — 行业轮动策略回测 — 失败">
             <div class="run-card-header">
               <span class="plan-card-name">Run #38 · 行业轮动策略回测</span>
               <span class="plan-card-status failed">
@@ -2134,7 +2334,7 @@
         <div class="tab-panel agent-main" data-panel="agent-findings">
 
           <!-- Finding 1: High confidence -->
-          <div class="finding-card" tabindex="0" role="button" aria-label="Finding — 北向资金连续净流入 — 高置信">
+          <div class="finding-card" data-reveal="fade-up" data-reveal-delay="50" tabindex="0" role="button" aria-label="Finding — 北向资金连续净流入 — 高置信">
             <div class="finding-card-header">
               <span class="finding-card-name">北向资金连续 3 日净流入，电子板块获增配 2.3%</span>
               <span class="confidence-badge high">
@@ -2154,7 +2354,7 @@
           </div>
 
           <!-- Finding 2: Medium confidence -->
-          <div class="finding-card" tabindex="0" role="button" aria-label="Finding — 动量因子 MOM_20d — 中置信">
+          <div class="finding-card" data-reveal="fade-up" data-reveal-delay="100" tabindex="0" role="button" aria-label="Finding — 动量因子 MOM_20d — 中置信">
             <div class="finding-card-header">
               <span class="finding-card-name">动量因子 MOM_20d 漂移预警：近 5 日 IC 从 0.041 降至 0.028</span>
               <span class="confidence-badge medium">
@@ -2174,7 +2374,7 @@
           </div>
 
           <!-- Finding 3: Low confidence -->
-          <div class="finding-card" tabindex="0" role="button" aria-label="Finding — 波动率异常 — 低置信">
+          <div class="finding-card" data-reveal="fade-up" data-reveal-delay="150" tabindex="0" role="button" aria-label="Finding — 波动率异常 — 低置信">
             <div class="finding-card-header">
               <span class="finding-card-name">VOL_60d 波动率因子在小盘股样本中出现异常聚类</span>
               <span class="confidence-badge low">
@@ -2251,7 +2451,7 @@
     <!-- ═══ Detail / Tool Trace Panel (340px) ═══ -->
     <div class="agent-detail">
       <!-- Detail Header -->
-      <div class="detail-header">
+      <div class="detail-header" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-accent) l c h / 0.03)" data-mouse-glow-size="160px">
         <div class="detail-header-title">Alpha 因子挖掘计划</div>
         <div class="detail-header-meta">
           <span class="detail-running-status">
@@ -2261,7 +2461,9 @@
           <span class="meta-sep-char">|</span>
           <span>2026-04-01 14:28</span>
           <span class="meta-sep-char">|</span>
-          <span>已运行 8 分钟</span>
+          <span>已运行 <span data-ticker="8" data-decimals="0" data-ticker-suffix=" 分钟">8</span></span>
+          <span class="meta-sep-char">|</span>
+          <span><span data-ticker="4832" data-decimals="0">4832</span> 行数据</span>
         </div>
       </div>
 
@@ -2270,7 +2472,7 @@
         <div class="detail-section-header">
           <span class="detail-section-title">当前 Agent</span>
         </div>
-        <div class="detail-section-body">
+        <div class="detail-section-body" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--agent-running-fg) l c h / 0.04)" data-mouse-glow-size="120px">
           <div class="agent-status-block running">
             <span class="agent-status-dot"></span>
             <span class="agent-status-label"><strong>Factor 挖掘 Agent</strong> · 正在分析动量因子</span>
@@ -2297,6 +2499,25 @@
           <span class="panel-count panel-count-sm">实时</span>
         </div>
         <div class="detail-section-body">
+          <!-- Donut Gauge Visual -->
+          <div style="display:flex;gap:var(--space-12);align-items:center;justify-content:center;margin-bottom:var(--space-8);">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
+              <svg data-donut='{"value":0.45,"label":"45%","color":"oklch(0.55 0.15 155)","size":56}' aria-label="CPU使用率"></svg>
+              <span class="resource-label">CPU</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
+              <svg data-donut='{"value":0.72,"label":"72%","color":"oklch(0.746 0.165 50)","size":56}' aria-label="内存使用率"></svg>
+              <span class="resource-label">MEM</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
+              <svg data-donut='{"value":0.38,"label":"38%","color":"oklch(0.55 0.15 155)","size":56}' aria-label="GPU使用率"></svg>
+              <span class="resource-label">GPU</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
+              <svg data-donut='{"value":0.23,"label":"23%","color":"oklch(0.55 0.15 155)","size":56}' aria-label="API调用率"></svg>
+              <span class="resource-label">API</span>
+            </div>
+          </div>
           <div class="resource-monitor">
             <span class="resource-label">CPU</span>
             <div class="resource-bar">
@@ -2492,11 +2713,13 @@
     <span class="status-indicator" aria-hidden="true"></span>
     <span class="status-live">LIVE</span>
     <span class="status-sep">|</span>
-    <span>2 Plans 运行中</span>
+    <span><span data-ticker="2" data-decimals="0">2</span> Plans 运行中</span>
     <span class="status-sep">|</span>
-    <span>3 Findings 待审</span>
+    <span><span data-ticker="3" data-decimals="0">3</span> Findings 待审</span>
     <span class="status-sep">|</span>
-    <span>2 Approvals 待批</span>
+    <span><span data-ticker="2" data-decimals="0">2</span> Approvals 待批</span>
+    <span class="status-sep">|</span>
+    <span><span data-ticker="156" data-decimals="0">156</span> Tasks · <span data-ticker="94.7" data-decimals="1">94.7</span>% 成功率</span>
     <span class="status-sep">|</span>
     <span>14:36:42 CST</span>
     <span class="status-spacer"></span>
@@ -2725,6 +2948,7 @@
   
 
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   </section>
 

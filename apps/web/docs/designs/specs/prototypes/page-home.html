@@ -857,7 +857,7 @@
       <!-- 2. PnL -->
       <div class="pulse-item">
         <span class="pulse-label">盈亏</span>
-        <span class="pulse-value positive">+0.34%</span>
+        <span class="pulse-value positive">+<span data-ticker="0.34" data-decimals="2">0.34</span>%</span>
       </div>
       <div class="pulse-separator"></div>
       <!-- 3. Risk -->
@@ -891,18 +891,18 @@
       <div class="main-primary">
         <!-- Decision Banner: Account status + Regime judgment + Execution summary -->
         <div class="panel">
-          <div class="decision-banner">
+          <div class="decision-banner" data-mouse-glow="true">
             <!-- Left: Account primary status (~42%) -->
             <div class="decision-primary">
               <span class="metric-label">今日盈亏</span>
-              <span class="metric-value positive">+¥86,472.50
+              <span class="metric-value positive">+¥<span data-ticker="86472.50" data-decimals="2">86,472.50</span>
                 <svg class="sparkline" width="64" height="20" viewBox="0 0 64 20" fill="none" aria-label="近 5 日盈亏趋势">
                   <defs><linearGradient id="pnl-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-strong-fg)" stop-opacity="0.2"/><stop offset="100%" stop-color="var(--market-strong-fg)" stop-opacity="0"/></linearGradient></defs>
                   <polyline points="2,14 14,12 26,10 38,8 50,6 62,4" stroke="var(--market-strong-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                   <polygon points="2,14 14,12 26,10 38,8 50,6 62,4 62,20 2,20" fill="url(#pnl-grad)"/>
                 </svg>
               </span>
-              <span class="metric-sub">+0.34% · 总权益 ¥25,432,180 · <span class="indicator-up">较昨日 +¥21,400</span></span>
+              <span class="metric-sub">+0.34% · 总权益 ¥<span data-ticker="25432180" data-decimals="0">25,432,180</span> · <span class="indicator-up">较昨日 +¥21,400</span></span>
             </div>
             <!-- Middle: Market context + judgment (~33%) -->
             <div class="decision-judgment">
@@ -912,18 +912,14 @@
               <div class="decision-judgment-metrics">
                 <div class="decision-judgment-metric">
                   <span class="status-label">IVIX</span>
-                  <span class="status-value">18.52
-                    <svg class="sparkline" width="36" height="14" viewBox="0 0 36 14" fill="none" aria-hidden="true">
-                      <polyline points="2,4 8,6 14,5 20,8 26,10 32,11" stroke="var(--text-tertiary)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                  <span class="status-value"><span data-ticker="18.52" data-decimals="2">18.52</span>
+                    <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"stroke":"oklch(0.746 0.165 50)","width":36,"height":14}' aria-label="IVIX 走势"></svg>
                   </span>
                 </div>
                 <div class="decision-judgment-metric">
                   <span class="status-label">北向资金</span>
-                  <span class="status-value up">+12.4 亿
-                    <svg class="sparkline" width="36" height="14" viewBox="0 0 36 14" fill="none" aria-hidden="true">
-                      <polyline points="2,10 8,9 14,8 20,6 26,5 32,3" stroke="var(--market-strong-fg)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                  <span class="status-value up">+<span data-ticker="12.4" data-decimals="1">12.4</span> 亿
+                    <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"stroke":"oklch(0.55 0.15 155)","width":36,"height":14}' aria-label="北向资金走势"></svg>
                   </span>
                 </div>
               </div>
@@ -946,7 +942,7 @@
         
 
         <!-- Today's Priority Items — Main Work Surface -->
-        <div class="panel panel-grow">
+        <div class="panel panel-grow" data-mouse-glow="true" data-mouse-glow-size="160px" data-reveal="fade-up">
           <div class="panel-header">
             <span class="panel-title">今日优先事项 <span class="panel-subtitle">跨域关注项</span></span>
             <span class="panel-count">5</span>
@@ -1068,7 +1064,7 @@
       <!-- Secondary: Research Progress + Agent Insights -->
       <div class="shell-secondary">
         <!-- Research Progress (cross-domain, not trading-specific) -->
-        <div class="secondary-panel">
+        <div class="secondary-panel" data-reveal="fade-up" data-reveal-delay="150">
           <div class="panel-header">
             <span class="panel-title">研究进展 <span class="panel-subtitle">研究动态</span></span>
             <button class="panel-action">查看全部 →</button>
@@ -1114,7 +1110,7 @@
         
 
         <!-- Agent Insights (cross-domain intelligence summary) -->
-        <div class="findings-feed">
+        <div class="findings-feed" data-reveal="fade-up" data-reveal-delay="250">
           <div class="findings-feed-label">Agent 洞察 <span class="findings-feed-subtitle">关联分析</span></div>
           <div class="finding-item">
             <span class="finding-icon icon-agent">
@@ -1160,22 +1156,22 @@
     <div class="shell-sidebar">
       <div class="context-rail">
         <!-- Market Pulse (context-first — lightest ambient data) -->
-        <div class="context-section">
+        <div class="context-section" data-reveal="fade-right" data-reveal-delay="100">
           <div class="context-section-header">
             <span class="context-section-title">市场脉搏</span>
           </div>
           <div class="context-section-body">
             <div class="pulse-metric">
               <span class="pulse-metric-label">沪深300</span>
-              <span class="pulse-metric-value up">3,432 · +0.82%
-                <svg class="sparkline" width="48" height="16" viewBox="0 0 48 16" fill="none" aria-hidden="true">
-                  <polyline points="2,12 8,10 14,11 20,8 26,9 32,5 38,4 44,3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+              <span class="pulse-metric-value up"><span data-ticker="3432" data-decimals="0">3,432</span> · +0.82%
+                <svg data-sparkline='{"data":[3380,3395,3388,3402,3410,3420,3432],"stroke":"oklch(0.55 0.15 155)","width":48,"height":16}' aria-label="沪深300走势"></svg>
               </span>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">波动率</span>
-              <span class="pulse-metric-value">IVIX 18.52 · <span class="indicator-down">-3.1%</span></span>
+              <span class="pulse-metric-value">IVIX <span data-ticker="18.52" data-decimals="2">18.52</span> · <span class="indicator-down">-3.1%</span>
+                <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"stroke":"oklch(0.6317 0.1567 22.64)","width":48,"height":16}' aria-label="IVIX 走势"></svg>
+              </span>
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">涨跌比</span>
@@ -1183,10 +1179,8 @@
             </div>
             <div class="pulse-metric">
               <span class="pulse-metric-label">北向资金</span>
-              <span class="pulse-metric-value up">+12.4 亿
-                <svg class="sparkline" width="48" height="16" viewBox="0 0 48 16" fill="none" aria-hidden="true">
-                  <polyline points="2,10 8,12 14,9 20,11 26,7 32,8 38,5 44,4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+              <span class="pulse-metric-value up">+<span data-ticker="12.4" data-decimals="1">12.4</span> 亿
+                <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"stroke":"oklch(0.55 0.15 155)","width":48,"height":16}' aria-label="北向资金走势"></svg>
               </span>
             </div>
           </div>
@@ -1466,6 +1460,7 @@
   
 
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   </section>
 

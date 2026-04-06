@@ -1981,7 +1981,17 @@
 
     <!-- ======== Conversation + Structured Output ======== -->
     <main class="copilot-conversation" id="main-content">
-      <div class="conversation-body">
+      <!-- JS Tabs: conversation / analysis / recommendations -->
+      <div data-tabs="copilot-tabs" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+        <div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-4) var(--density-gutter);border-bottom:1px solid var(--border-subtle);flex-shrink:0;">
+          <button data-tab-target="conversation" class="active" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-4) var(--space-10);border-radius:var(--radius-4);border:1px solid transparent;background:var(--brand-accent-subtle);color:var(--brand-accent);cursor:pointer;white-space:nowrap;">对话</button>
+          <button data-tab-target="analysis" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-4) var(--space-10);border-radius:var(--radius-4);border:1px solid transparent;background:transparent;color:var(--text-tertiary);cursor:pointer;white-space:nowrap;">分析步骤</button>
+          <button data-tab-target="recommendations" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-4) var(--space-10);border-radius:var(--radius-4);border:1px solid transparent;background:transparent;color:var(--text-tertiary);cursor:pointer;white-space:nowrap;">推荐结论</button>
+        </div>
+
+        <!-- Tab Panel: Conversation (existing content) -->
+        <div data-tab-panel="conversation" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+      <div class="conversation-body" data-mouse-glow="true">
         <!-- Message 1: User -->
         <div class="message message--user">
           <div class="message-header">
@@ -2221,6 +2231,95 @@
           </div>
         </div>
       </div>
+        </div><!-- /data-tab-panel="conversation" -->
+
+        <!-- Tab Panel: Analysis Steps (ScrollReveal timeline) -->
+        <div data-tab-panel="analysis" style="display:none;flex:1;overflow-y:auto;padding:var(--density-gutter);max-width:720px;width:100%;margin:0 auto;">
+          <div style="margin-bottom:var(--space-16);">
+            <h3 style="font-size:var(--font-size-14);font-weight:var(--font-weight-semibold);color:var(--text-primary);margin-bottom:var(--space-12);">分析推理时间线</h3>
+
+            <div data-reveal="fade-up" data-reveal-delay="0" style="padding:var(--space-8) 0;border-left:2px solid var(--brand-accent);margin-left:6px;padding-left:var(--space-12);position:relative;">
+              <div style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--brand-accent);"></div>
+              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">Step 1 — 数据检索</div>
+              <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-top:var(--space-2);">检索沪深300成分股近 5 日风格因子暴露度，获取价值、动量、质量三大因子维度的截面数据</div>
+              <div style="font-size:var(--font-size-10);color:var(--text-quaternary);margin-top:var(--space-2);">数据源：Wind 因子库 · 聚宽因子库</div>
+            </div>
+
+            <div data-reveal="fade-up" data-reveal-delay="100" style="padding:var(--space-8) 0;border-left:2px solid var(--brand-accent);margin-left:6px;padding-left:var(--space-12);position:relative;">
+              <div style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--brand-accent);"></div>
+              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">Step 2 — IC/IR 计算</div>
+              <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-top:var(--space-2);">计算 IC/IR 滚动窗口指标（60日/120日），识别偏离历史均值的异常信号（波动率、换手率）</div>
+              <div style="font-size:var(--font-size-10);color:var(--text-quaternary);margin-top:var(--space-2);">方法：Fama-MacBeth 回归 · 分层回测</div>
+            </div>
+
+            <div data-reveal="fade-up" data-reveal-delay="200" style="padding:var(--space-8) 0;border-left:2px solid var(--brand-accent);margin-left:6px;padding-left:var(--space-12);position:relative;">
+              <div style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--brand-accent);"></div>
+              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">Step 3 — 宏观关联验证</div>
+              <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-top:var(--space-2);">关联宏观指标 PMI、A50 隐含波动率与因子假设，交叉验证北向资金偏好与低 Beta 防御性配置</div>
+              <div style="font-size:var(--font-size-10);color:var(--text-quaternary);margin-top:var(--space-2);">数据源：Wind 宏观数据 · 东方财富 Choice</div>
+            </div>
+
+            <div data-reveal="fade-up" data-reveal-delay="300" style="padding:var(--space-8) 0;border-left:2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);margin-left:6px;padding-left:var(--space-12);position:relative;">
+              <div style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--border-default);"></div>
+              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">Step 4 — ROE 质量拆解</div>
+              <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-top:var(--space-2);">拆解 ROE 质量因子至稳定性（5年标准差）、动量（QoQ 变化率）、资产周转率三维度</div>
+              <div style="font-size:var(--font-size-10);color:var(--text-quaternary);margin-top:var(--space-2);">结果：ROE 稳定性 IC=0.061 IR=0.97 最优</div>
+            </div>
+
+            <div data-reveal="fade-up" data-reveal-delay="400" style="padding:var(--space-8) 0;border-left:2px solid var(--border-subtle);margin-left:6px;padding-left:var(--space-12);position:relative;">
+              <div style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--border-subtle);"></div>
+              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">Step 5 — 假设生成与置信度评估</div>
+              <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-top:var(--space-2);">生成 LOWVOL_PREM（高置信 92%）和 ROE_STABILITY（中置信 68%）两个因子假设卡片</div>
+              <div style="font-size:var(--font-size-10);color:var(--text-quaternary);margin-top:var(--space-2);">令牌消耗：3,847 · 推理耗时 4.2s</div>
+            </div>
+          </div>
+
+          <!-- FlowBar: 信息流向 -->
+          <div style="margin-top:var(--space-12);">
+            <div style="font-size:var(--font-size-11);font-weight:var(--font-weight-medium);color:var(--text-secondary);margin-bottom:var(--space-6);">信息流向</div>
+            <div data-flow='{"segments":[{"label":"市场数据","value":30},{"label":"模型推理","value":25},{"label":"信号生成","value":20},{"label":"决策输出","value":25}]}' aria-label="信息流向"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:var(--space-4);">
+              <span style="font-size:var(--font-size-10);color:var(--text-quaternary);">市场数据 30%</span>
+              <span style="font-size:var(--font-size-10);color:var(--text-quaternary);">模型推理 25%</span>
+              <span style="font-size:var(--font-size-10);color:var(--text-quaternary);">信号生成 20%</span>
+              <span style="font-size:var(--font-size-10);color:var(--text-quaternary);">决策输出 25%</span>
+            </div>
+          </div>
+        </div><!-- /data-tab-panel="analysis" -->
+
+        <!-- Tab Panel: Recommendations (ConfidenceBars) -->
+        <div data-tab-panel="recommendations" style="display:none;flex:1;overflow-y:auto;padding:var(--density-gutter);max-width:720px;width:100%;margin:0 auto;">
+          <h3 style="font-size:var(--font-size-14);font-weight:var(--font-weight-semibold);color:var(--text-primary);margin-bottom:var(--space-12);">推荐结论</h3>
+
+          <div style="background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--card-radius);padding:var(--card-padding);margin-bottom:var(--space-10);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-8);">
+              <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">低波动率溢价因子</span>
+              <span class="confidence-tag high"><span class="confidence-tag-dot"></span>高置信</span>
+            </div>
+            <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-bottom:var(--space-8);">低波动率股票在市场不确定性上升期间呈现超额收益，IC=0.092 IR=1.48 多空年化收益 12.3%</div>
+            <div data-confidence="0.92" data-confidence-label="High"></div>
+          </div>
+
+          <div style="background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--card-radius);padding:var(--card-padding);margin-bottom:var(--space-10);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-8);">
+              <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">ROE 稳定性溢价因子</span>
+              <span class="confidence-tag medium"><span class="confidence-tag-dot"></span>中置信</span>
+            </div>
+            <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-bottom:var(--space-8);">连续 5 年 ROE 标准差低于 3% 的公司，在市场下行期表现出更强的抗跌能力，IC=0.061 IR=0.97</div>
+            <div data-confidence="0.68" data-confidence-label="Medium"></div>
+          </div>
+
+          <div style="background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--card-radius);padding:var(--card-padding);margin-bottom:var(--space-10);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-8);">
+              <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">动量反转复合信号</span>
+              <span class="confidence-tag medium"><span class="confidence-tag-dot"></span>中置信</span>
+            </div>
+            <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-bottom:var(--space-8);">5日与20日动量共振 + 波动率压缩后方向选择信号，需进一步验证正交性，IC=0.078 IR=1.24</div>
+            <div data-confidence="0.76" data-confidence-label="Medium-High"></div>
+          </div>
+        </div><!-- /data-tab-panel="recommendations" -->
+
+      </div><!-- /data-tabs="copilot-tabs" -->
 
       <!-- AI Thinking Indicator (shows AI is processing) -->
       <div class="ai-thinking">
@@ -2606,6 +2705,7 @@
   </div>
 
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   <!-- Overlay trigger: send-workspace checkbox -->
   

@@ -1886,6 +1886,18 @@
         <h2 class="section-title">基础 Token (Foundation)</h2>
       </div>
 
+      <!-- ── Tabs Navigation ── -->
+      <div data-tabs="token-tabs" style="margin-bottom: var(--space-16);">
+        <div style="display: flex; gap: var(--space-4); margin-bottom: var(--space-16); padding: 2px; border-radius: var(--radius-6); background: var(--surface-app); border: 1px solid var(--border-subtle);">
+          <button data-tab-target="colors" class="active" style="padding: var(--space-2) var(--space-12); border: none; border-radius: var(--radius-4); background: transparent; color: var(--text-secondary); font-family: var(--font-family-ui); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); cursor: pointer; transition: all 0.15s ease;">色彩</button>
+          <button data-tab-target="typography" style="padding: var(--space-2) var(--space-12); border: none; border-radius: var(--radius-4); background: transparent; color: var(--text-secondary); font-family: var(--font-family-ui); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); cursor: pointer; transition: all 0.15s ease;">字号 / 字体</button>
+          <button data-tab-target="spacing" style="padding: var(--space-2) var(--space-12); border: none; border-radius: var(--radius-4); background: transparent; color: var(--text-secondary); font-family: var(--font-family-ui); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); cursor: pointer; transition: all 0.15s ease;">间距</button>
+          <button data-tab-target="radii" style="padding: var(--space-2) var(--space-12); border: none; border-radius: var(--radius-4); background: transparent; color: var(--text-secondary); font-family: var(--font-family-ui); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); cursor: pointer; transition: all 0.15s ease;">圆角</button>
+        </div>
+
+        <!-- ── Tab Panel: Colors ── -->
+        <div data-tab-panel="colors">
+
       <!-- 1.1 Color Primitives -->
       <div class="subsection">
         <h3 class="subsection-title">1.1 色彩原语 (Color Primitives)</h3>
@@ -1905,7 +1917,7 @@
           <div class="swatch-group-label">Brand — 品牌色</div>
           <div class="color-gradient-bar color-gradient-bar--brand"></div>
           <div class="gradient-bar-label"><span>brand-300</span><span>brand-500</span><span>brand-700</span></div>
-          <div class="swatch-grid" id="brandSwatches"></div>
+          <div class="swatch-grid" id="brandSwatches" data-mouse-glow="true"></div>
         </div>
 
         <!-- Functional Colors -->
@@ -1914,6 +1926,11 @@
           <div class="swatch-grid compact" id="functionalSwatches"></div>
         </div>
       </div>
+
+        </div><!-- /data-tab-panel="colors" -->
+
+        <!-- ── Tab Panel: Typography ── -->
+        <div data-tab-panel="typography">
 
       <!-- 1.2 Typography Scale -->
       <div class="subsection">
@@ -1967,20 +1984,25 @@
           <div class="weight-row">
             <span class="weight-label">font-weight-regular</span>
             <span class="weight-sample weight-regular">常规 Regular — 正文与描述性文字</span>
-            <span class="weight-value">400</span>
+            <span class="weight-value"><span data-ticker="400" data-decimals="0">400</span></span>
           </div>
           <div class="weight-row">
             <span class="weight-label">font-weight-medium</span>
             <span class="weight-sample weight-medium">中等 Medium — 标签、表格头部、导航</span>
-            <span class="weight-value">500</span>
+            <span class="weight-value"><span data-ticker="500" data-decimals="0">500</span></span>
           </div>
           <div class="weight-row">
             <span class="weight-label">font-weight-semibold</span>
             <span class="weight-sample weight-semibold">半粗 Semibold — 标题、强调、品牌</span>
-            <span class="weight-value">600</span>
+            <span class="weight-value"><span data-ticker="600" data-decimals="0">600</span></span>
           </div>
         </div>
       </div>
+
+        </div><!-- /data-tab-panel="typography" -->
+
+        <!-- ── Tab Panel: Spacing ── -->
+        <div data-tab-panel="spacing">
 
       <!-- 1.5 Spacing Scale -->
       <div class="subsection">
@@ -1988,11 +2010,20 @@
         <div class="spacing-list" id="spacingScale"></div>
       </div>
 
+        </div><!-- /data-tab-panel="spacing" -->
+
+        <!-- ── Tab Panel: Radii ── -->
+        <div data-tab-panel="radii">
+
       <!-- 1.6 Radius Scale -->
       <div class="subsection">
         <h3 class="subsection-title">1.6 圆角阶梯 (Radius Scale)</h3>
         <div class="radius-grid" id="radiusScale"></div>
       </div>
+
+        </div><!-- /data-tab-panel="radii" -->
+
+      </div><!-- /data-tabs="token-tabs" -->
     </section>
 
     <div class="separator"></div>
@@ -2000,7 +2031,7 @@
     <!-- ───────────────────────────────────────────────
          Section 2: Semantic Tokens
          ─────────────────────────────────────────────── -->
-    <section class="section" id="semantic">
+    <section class="section" id="semantic" data-reveal="fade-up" data-reveal-delay="0">
       <div class="section-header">
         <span class="section-number">02</span>
         <h2 class="section-title">语义 Token (Semantic)</h2>
@@ -2093,7 +2124,7 @@
     <!-- ───────────────────────────────────────────────
          Section 3: Component Tokens (L5)
          ─────────────────────────────────────────────── -->
-    <section class="section" id="component">
+    <section class="section" id="component" data-reveal="fade-up" data-reveal-delay="100">
       <div class="section-header">
         <span class="section-number">03</span>
         <h2 class="section-title">组件 Token (Component)</h2>
@@ -2163,7 +2194,7 @@
     <!-- ───────────────────────────────────────────────
          Section 4: Interaction Tokens
          ─────────────────────────────────────────────── -->
-    <section class="section" id="interaction">
+    <section class="section" id="interaction" data-reveal="fade-up" data-reveal-delay="200">
       <div class="section-header">
         <span class="section-number">04</span>
         <h2 class="section-title">交互 Token (Interaction)</h2>
@@ -2228,12 +2259,12 @@
     <!-- ───────────────────────────────────────────────
          Section 4: Domain Semantic Tokens
          ─────────────────────────────────────────────── -->
-    <section class="section" id="domain">
+    <section class="section" id="domain" data-reveal="fade-up" data-reveal-delay="300">
       <div class="section-header">
         <span class="section-number">05</span>
         <h2 class="section-title">领域语义 Token (Domain Semantic)</h2>
       </div>
-      <div id="domainTokens"></div>
+      <div id="domainTokens" data-mouse-glow="true"></div>
     </section>
 
     <div class="separator"></div>
@@ -2415,7 +2446,7 @@
       </div>
     </section>
 
-    <section class="section" id="data-viz">
+    <section class="section" id="data-viz" data-reveal="fade-up" data-reveal-delay="400">
       <div class="section-header">
         <span class="section-number">08</span>
         <h2 class="section-title">数据可视化 (Data Visualization)</h2>
@@ -2852,11 +2883,12 @@
       ];
 
       spacings.forEach(s => {
+        const numVal = parseInt(s.px, 10);
         container.innerHTML += `
           <div class="spacing-row">
             <span class="spacing-label">${s.name}</span>
             <div class="spacing-bar" style="width: ${s.factor * 8}px;"></div>
-            <span class="spacing-value">${s.px}</span>
+            <span class="spacing-value"><span data-ticker="${numVal}" data-decimals="0" data-ticker-suffix="px">${s.px}</span></span>
           </div>
         `;
       });
@@ -3105,5 +3137,6 @@
       animateProgress();
     })();
   </script>
+  <script src="../shared/prototype-interactions.js"></script>
 </body>
 </html>

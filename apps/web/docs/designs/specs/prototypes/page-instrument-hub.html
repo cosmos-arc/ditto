@@ -2032,10 +2032,10 @@
             -->
           </div>
           <div class="object-price-row">
-            <span class="object-price" aria-label="当前价格 ¥1,856.00">¥1,856.00</span>
+            <span class="object-price" aria-label="当前价格 ¥1,856.00"><span data-ticker="1856.00" data-ticker-prefix="¥" data-decimals="2">¥0.00</span></span>
             <span class="object-change" aria-label="涨跌幅 +2.35%">
               <span class="object-change-arrow">&#9650;</span>
-              <span class="object-change-value">+2.35%</span>
+              <span class="object-change-value"><span data-ticker="2.35" data-ticker-prefix="+" data-ticker-suffix="%" data-decimals="2">+0.00%</span></span>
               <span class="object-change-amount">+42.60</span>
             </span>
           </div>
@@ -2141,13 +2141,13 @@
          Tab Band — Radio Tab System (prototype-toggles.css)
          ══════════════════════════════════════════════ -->
     <div class="tab-group" data-tab-group="hub">
-      <div class="hub-tabs" role="tablist" aria-label="标的详情导航">
+      <div class="hub-tabs" role="tablist" aria-label="标的详情导航" data-tabs="hub-tabs">
         <input type="radio" name="hub" id="hub-overview" checked class="tab-radio sr-only">
-        <label for="hub-overview" class="hub-tab" role="tab" tabindex="0">概览</label>
+        <label for="hub-overview" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-overview">概览</label>
         <input type="radio" name="hub" id="hub-chart" class="tab-radio sr-only">
-        <label for="hub-chart" class="hub-tab" role="tab" tabindex="0">行情</label>
+        <label for="hub-chart" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-chart">行情</label>
         <input type="radio" name="hub" id="hub-flow" class="tab-radio sr-only">
-        <label for="hub-flow" class="hub-tab" role="tab" tabindex="0">态势</label>
+        <label for="hub-flow" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-flow">态势</label>
         <input type="radio" name="hub" id="hub-fundamentals" class="tab-radio sr-only">
         <label for="hub-fundamentals" class="hub-tab" role="tab" tabindex="0">基本面</label>
         <input type="radio" name="hub" id="hub-corporate" class="tab-radio sr-only">
@@ -2168,38 +2168,38 @@
       <div class="tab-panels">
 
       <!-- ═══ Tab 1: hub-overview (概览) ═══ -->
-      <div class="tab-panel" data-panel="hub-overview">
+      <div class="tab-panel" data-panel="hub-overview" data-tab-panel="hub-overview">
       <div class="hub-object-view">
         <!-- Key Metrics -->
-        <div class="metrics-grid" role="region" aria-label="关键指标">
+        <div class="metrics-grid" role="region" aria-label="关键指标" data-mouse-glow="true" data-mouse-glow-size="150px">
           <div class="metric-card">
             <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,12 8,10 16,14 24,8 32,11 40,6 48,9" stroke="var(--market-down-fg)" stroke-width="1.2" fill="none"/></svg>
             <span class="metric-label">PE (TTM)</span>
-            <span class="metric-value">28.6x</span>
+            <span class="metric-value"><span data-ticker="28.6" data-ticker-suffix="x" data-decimals="1">0.0x</span></span>
             <span class="metric-change down">-1.2x</span>
           </div>
           <div class="metric-card">
             <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,10 8,12 16,11 24,14 32,13 40,15 48,14" stroke="var(--market-down-fg)" stroke-width="1.2" fill="none"/></svg>
             <span class="metric-label">PB</span>
-            <span class="metric-value">10.3x</span>
+            <span class="metric-value"><span data-ticker="10.3" data-ticker-suffix="x" data-decimals="1">0.0x</span></span>
             <span class="metric-change down">-0.4x</span>
           </div>
           <div class="metric-card">
-            <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,14 8,12 16,11 24,9 32,8 40,6 48,5" stroke="var(--market-up-fg)" stroke-width="1.2" fill="none"/></svg>
+            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[30.2,31.5,32.1,33.5,34.8,35.2,36.1],"stroke":"var(--market-up-fg)","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label">ROE</span>
-            <span class="metric-value">36.1%</span>
+            <span class="metric-value"><span data-ticker="36.1" data-ticker-suffix="%" data-decimals="1">0.0%</span></span>
             <span class="metric-change up">+0.8%</span>
           </div>
           <div class="metric-card">
-            <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,16 8,14 16,12 24,10 32,8 40,6 48,4" stroke="var(--market-up-fg)" stroke-width="1.2" fill="none"/></svg>
+            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[11.8,12.5,13.2,14.1,15.0,15.6,16.2],"stroke":"var(--market-up-fg)","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label">营收增速</span>
-            <span class="metric-value">16.2%</span>
+            <span class="metric-value"><span data-ticker="16.2" data-ticker-suffix="%" data-decimals="1">0.0%</span></span>
             <span class="metric-change up">+2.1%</span>
           </div>
           <div class="metric-card">
-            <svg class="metric-sparkline" viewBox="0 0 48 20" fill="none" aria-hidden="true"><polyline points="0,18 8,16 16,14 24,11 32,8 40,5 48,3" stroke="var(--market-up-fg)" stroke-width="1.2" fill="none"/></svg>
+            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[13.5,14.2,15.0,16.8,17.5,18.6,19.8],"stroke":"var(--market-up-fg)","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label">净利润增速</span>
-            <span class="metric-value">19.8%</span>
+            <span class="metric-value"><span data-ticker="19.8" data-ticker-suffix="%" data-decimals="1">0.0%</span></span>
             <span class="metric-change up">+3.4%</span>
           </div>
         </div>
@@ -2210,7 +2210,7 @@
         
 
         <!-- Industry Rank (overview section) -->
-        <div class="panel panel-shrink">
+        <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="0">
           <div class="panel-header"><span class="panel-title">行业排名</span><span class="panel-subtitle">白酒 · 市值排名</span></div>
           <div class="pad-panel-x">
             <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">2.33万亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:100%"></div></div></div>
@@ -2227,7 +2227,7 @@
         
 
         <!-- Price Chart -->
-        <div class="chart-panel panel">
+        <div class="chart-panel panel" data-reveal="fade-up" data-reveal-delay="40">
           <div class="panel-header">
             <span class="panel-title">价格走势</span>
             <div class="chart-toolbar">
@@ -2245,12 +2245,12 @@
         </div>
 
         <!-- Flow Summary -->
-        <div class="flow-panel panel">
+        <div class="flow-panel panel" data-reveal="fade-up" data-reveal-delay="80">
           <div class="panel-header">
             <span class="panel-title">资金流向</span>
             <span class="panel-subtitle">截至 2026-03-31</span>
           </div>
-          <div class="flow-summary">
+          <div class="flow-summary" data-mouse-glow="true" data-mouse-glow-size="150px">
             <div class="flow-item">
               <span class="flow-label">主力净流入</span>
               <span class="flow-value inflow">+8.73亿</span>
@@ -2300,7 +2300,7 @@
       </div><!-- /tab-panel hub-overview -->
 
       <!-- ═══ Tab 2: hub-chart (行情) ═══ -->
-      <div class="tab-panel" data-panel="hub-chart">
+      <div class="tab-panel" data-panel="hub-chart" data-tab-panel="hub-chart">
       <div class="hub-object-view">
         <div class="chart-panel panel panel-grow">
           <div class="panel-header">
@@ -2335,12 +2335,16 @@
               <span>BOLL</span>
             </div>
           </div>
+          <div style="padding:var(--space-6) var(--space-12); display:flex; flex-direction:column; gap:var(--space-6)">
+            <div data-confidence="0.85" data-confidence-label="Strong Buy"></div>
+            <div data-confidence="0.62" data-confidence-label="Neutral"></div>
+          </div>
         </div>
       </div>
       </div><!-- /tab-panel hub-chart -->
 
       <!-- ═══ Tab 3: hub-flow (态势) ═══ -->
-      <div class="tab-panel" data-panel="hub-flow">
+      <div class="tab-panel" data-panel="hub-flow" data-tab-panel="hub-flow">
       <div class="hub-object-view">
         <!-- 资金流向图 -->
         <div class="panel panel-grow">
@@ -2709,7 +2713,7 @@
       <!-- ── Right: Related / Signals / Notes (shared across all tabs) ── -->
       <aside class="hub-sidebar" aria-label="标的辅助信息">
         <!-- Signals -->
-        <section class="context-section pos-relative" aria-label="相关信号">
+        <section class="context-section pos-relative" aria-label="相关信号" data-mouse-glow="true" data-mouse-glow-size="120px" data-reveal="fade-up" data-reveal-delay="120">
           <div class="context-header">
             <span class="context-title">相关信号</span>
             <span class="context-count">3</span>
@@ -2742,11 +2746,16 @@
               <span class="signal-title">白酒板块资金面异动</span>
               <span class="signal-desc">板块整体净流入15.3亿，龙头股领涨</span>
             </div>
+            <!-- Signal confidence indicator -->
+            <div style="padding:var(--space-4) 0; border-top:1px solid var(--border-subtle); margin-top:var(--space-4)">
+              <div style="font-size:var(--font-size-10); color:var(--text-tertiary); margin-bottom:var(--space-4)">综合信号强度</div>
+              <div data-confidence="0.78" data-confidence-label="Bullish"></div>
+            </div>
           </div>
         </section>
 
         <!-- Related Research (默认折叠 — 低频补充) -->
-        <details class="context-section" aria-label="关联研究">
+        <details class="context-section" aria-label="关联研究" data-reveal="fade-up" data-reveal-delay="160">
           <summary class="context-header">
             <span class="context-title">关联研究</span>
             <span class="collapse-count">2 条</span>
@@ -2773,7 +2782,7 @@
         </details>
 
         <!-- Notes -->
-        <section class="context-section" aria-label="备注">
+        <section class="context-section" aria-label="备注" data-reveal="fade-up" data-reveal-delay="200">
           <div class="context-header">
             <span class="context-title">备注</span>
           </div>
@@ -3156,6 +3165,7 @@
 
   <!-- Theme Switcher Script -->
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   <!-- TradingView Lightweight Charts -->
   <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>

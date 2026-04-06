@@ -1400,33 +1400,33 @@
             <div class="tab-panel" data-panel="tab-capital-flow">
 
               <!-- KPI Cards -->
-              <div class="kpi-row">
+              <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
                 <div class="kpi-card">
                   <div class="kpi-label">北向资金</div>
-                  <div class="kpi-value text-up">+12.4亿</div>
+                  <div class="kpi-value text-up" data-ticker="12.4" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="亿">+12.4亿</div>
                   <div class="kpi-change up">净买入</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">主力资金</div>
-                  <div class="kpi-value text-up">+86.7亿</div>
+                  <div class="kpi-value text-up" data-ticker="86.7" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="亿">+86.7亿</div>
                   <div class="kpi-change up">净流入</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">融资余额</div>
-                  <div class="kpi-value">18,432亿</div>
+                  <div class="kpi-value" data-ticker="18432" data-decimals="0" data-ticker-suffix="亿">18,432亿</div>
                   <div class="kpi-change up">+52.3亿</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">成交额</div>
-                  <div class="kpi-value">9,856亿</div>
+                  <div class="kpi-value" data-ticker="9856" data-decimals="0" data-ticker-suffix="亿">9,856亿</div>
                   <div class="kpi-change down">-12.3%</div>
                 </div>
               </div>
 
               <!-- Sector Capital Flow Table -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="50">
                 <div class="section-title">板块资金流向 Top10</div>
-                <table class="intel-table" aria-label="板块资金流向">
+                <table class="intel-table" data-mouse-glow="true" aria-label="板块资金流向">
                   <caption class="sr-only">板块资金流入流出排行</caption>
                   <thead>
                     <tr>
@@ -1534,8 +1534,14 @@
                 </table>
               </div>
 
+              <!-- Sector Heatmap -->
+              <div data-reveal="fade-up" data-reveal-delay="75">
+                <div class="section-title">板块热力图</div>
+                <svg data-heatgrid='{"rows":5,"cols":8,"cellSize":18,"gap":2,"labels":["科技","消费","新能源","医药","制造","公用","地产","金融","钢铁","煤炭","有色","化工","建材","汽车","传媒","通信","农业","纺织","食品","家电","电子","计算机","军工","环保","交运","商贸","休闲","综合","轻工","电气","机械","医药","银行","非银","石油","综合","煤炭","钢铁","有色","化工"]}' aria-label="板块热力图"></svg>
+              </div>
+
               <!-- Big Order Tracking -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="100">
                 <div class="section-title">大单追踪</div>
                 <table class="intel-table" aria-label="大单追踪">
                   <thead>
@@ -1595,28 +1601,28 @@
               <div class="kpi-row">
                 <div class="kpi-card">
                   <div class="kpi-label">CPI 同比</div>
-                  <div class="kpi-value">102.3</div>
+                  <div class="kpi-value" data-ticker="102.3" data-decimals="1">102.3</div>
                   <div class="kpi-change up">+0.7%</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">PPI 同比</div>
-                  <div class="kpi-value">98.5</div>
+                  <div class="kpi-value" data-ticker="98.5" data-decimals="1">98.5</div>
                   <div class="kpi-change down">-1.5%</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">PMI</div>
-                  <div class="kpi-value text-up">51.2</div>
+                  <div class="kpi-value text-up" data-ticker="51.2" data-decimals="1">51.2</div>
                   <div class="kpi-change up">+0.4</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label">M2 增速</div>
-                  <div class="kpi-value">7.8%</div>
+                  <div class="kpi-value" data-ticker="7.8" data-decimals="1" data-ticker-suffix="%">7.8%</div>
                   <div class="kpi-change down">-0.3%</div>
                 </div>
               </div>
 
               <!-- Macro Event Calendar -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="50">
                 <div class="section-title">宏观经济日历</div>
                 <div class="panel">
                   <div class="macro-event">
@@ -1888,10 +1894,82 @@
                 </div>
               </div>
 
+              <!-- News / Research / Announcements Tabs -->
+              <div data-tabs="intelligence-tabs" style="display:flex;flex-direction:column;gap:var(--space-8);">
+                <div style="display:flex;gap:var(--space-2);border-bottom:1px solid var(--border-subtle);padding-bottom:var(--space-4);">
+                  <button class="intel-tab active" data-tab-target="panel-news-flash" aria-selected="true">快讯</button>
+                  <button class="intel-tab" data-tab-target="panel-research" aria-selected="false">研报</button>
+                  <button class="intel-tab" data-tab-target="panel-announcement" aria-selected="false">公告</button>
+                </div>
+
+                <!-- Panel: 快讯 -->
+                <div data-tab-panel="panel-news-flash" aria-hidden="false">
+                  <div data-reveal="fade-up" data-reveal-delay="50">
+                    <div class="section-title">实时快讯</div>
+                  </div>
+                </div>
+
+                <!-- Panel: 研报 -->
+                <div data-tab-panel="panel-research" aria-hidden="true">
+                  <div data-reveal="fade-up" data-reveal-delay="50">
+                    <div class="section-title">最新研报</div>
+                    <div class="news-item">
+                      <div class="news-time">09:40</div>
+                      <div class="news-body">
+                        <div class="news-headline">中金公司：科技板块Q2展望——AI算力需求持续爆发 <span class="news-tag report">研报</span></div>
+                        <div class="news-source">中金研究</div>
+                      </div>
+                    </div>
+                    <div class="news-item">
+                      <div class="news-time">09:15</div>
+                      <div class="news-body">
+                        <div class="news-headline">国泰君安：新能源行业深度——钠电池产业链投资机会 <span class="news-tag report">研报</span></div>
+                        <div class="news-source">国泰君安研究</div>
+                      </div>
+                    </div>
+                    <div class="news-item">
+                      <div class="news-time">08:50</div>
+                      <div class="news-body">
+                        <div class="news-headline">华泰证券：PMI数据点评——经济复苏节奏加快，制造业景气延续</div>
+                        <div class="news-source">华泰研究</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Panel: 公告 -->
+                <div data-tab-panel="panel-announcement" aria-hidden="true">
+                  <div data-reveal="fade-up" data-reveal-delay="50">
+                    <div class="section-title">公司公告</div>
+                    <div class="news-item">
+                      <div class="news-time">09:30</div>
+                      <div class="news-body">
+                        <div class="news-headline">贵州茅台：2025年年度报告（已披露）</div>
+                        <div class="news-source">上交所公告</div>
+                      </div>
+                    </div>
+                    <div class="news-item">
+                      <div class="news-time">08:00</div>
+                      <div class="news-body">
+                        <div class="news-headline">宁德时代：关于新一代钠离子电池发布的自愿性信息披露</div>
+                        <div class="news-source">创业板公告</div>
+                      </div>
+                    </div>
+                    <div class="news-item">
+                      <div class="news-time">07:45</div>
+                      <div class="news-body">
+                        <div class="news-headline">美的集团：2026年第一季度业绩预告</div>
+                        <div class="news-source">深交所公告</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- News Flow -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="50">
                 <div class="section-title">实时新闻流</div>
-                <div>
+                <div data-mouse-glow="true">
                   <label for="overlay-intelligence-detail" class="cursor-pointer">
                   <div class="news-item">
                     <div class="news-time">09:45</div>
@@ -1977,9 +2055,9 @@
               </div>
 
               <!-- Correlation Matrix -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="50">
                 <div class="section-title">标的相关性矩阵</div>
-                <div class="panel scroll-x">
+                <div class="panel scroll-x" data-mouse-glow="true">
                   <div class="correlation-grid">
                     <div class="correlation-cell header"></div>
                     <div class="correlation-cell header">贵州茅台</div>
@@ -2139,6 +2217,7 @@
                   <span class="stock-quick-code">600519</span>
                 </div>
                 <span class="stock-quick-change up">+3.10%</span>
+                <svg data-sparkline='{"data":[12,14,13,15,16,15,17,18,16,18],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
@@ -2146,6 +2225,7 @@
                   <span class="stock-quick-code">300750</span>
                 </div>
                 <span class="stock-quick-change up">+5.20%</span>
+                <svg data-sparkline='{"data":[10,12,11,14,16,15,18,20,19,22],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
@@ -2153,6 +2233,7 @@
                   <span class="stock-quick-code">600036</span>
                 </div>
                 <span class="stock-quick-change down">-0.85%</span>
+                <svg data-sparkline='{"data":[18,17,16,17,15,14,15,13,14,12],"stroke":"oklch(0.65 0.15 25)"}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
@@ -2160,6 +2241,7 @@
                   <span class="stock-quick-code">688981</span>
                 </div>
                 <span class="stock-quick-change up">+6.25%</span>
+                <svg data-sparkline='{"data":[8,10,12,11,14,16,18,17,20,22],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
@@ -2167,6 +2249,7 @@
                   <span class="stock-quick-code">002594</span>
                 </div>
                 <span class="stock-quick-change up">+2.80%</span>
+                <svg data-sparkline='{"data":[14,13,15,14,16,15,17,16,18,17],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
               </div>
             </div>
           </div>
@@ -2491,6 +2574,7 @@
   </div><!-- .overlays -->
 
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   </section>
 

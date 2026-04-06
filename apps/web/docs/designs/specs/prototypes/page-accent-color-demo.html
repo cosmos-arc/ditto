@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — 交互色方案对比</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════
+     * ROOT — Shared Graphite Studio Skeleton
+     * ═══════════════════════════════════════════════ */
+    :root {
+      /* Neutral Surface */
+      --surface-app: oklch(0.166 0.010 253);
+      --surface-panel: oklch(0.184 0.011 253);
+      --surface-elevated: oklch(0.215 0.012 253);
+      --surface-strip: oklch(0.176 0.004 253);
+
+      /* Text */
+      --text-primary: oklch(0.925 0.004 253);
+      --text-secondary: oklch(0.655 0.007 253);
+      --text-tertiary: oklch(0.555 0.007 253);
+      --text-quaternary: oklch(0.490 0.006 253);
+      --text-inverse: oklch(0.99 0.002 253);
+
+      /* Border */
+      --border-subtle: oklch(0.255 0.006 253);
+      --border-default: oklch(0.325 0.008 253);
+      --border-strong: oklch(0.425 0.010 253);
+
+      /* Signature Brass */
+      --brass-fg: oklch(0.760 0.055 74);
+      --brass-muted: oklch(0.620 0.040 74);
+      --brass-subtle: oklch(0.760 0.055 74 / 0.08);
+
+      /* Market Colors (CN: red up, green down) */
+      --market-up: oklch(0.6317 0.1567 22.64);
+      --market-down: oklch(0.6442 0.1203 156.74);
+
+      /* Typography */
+      --font-ui: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Spacing */
+      --sp-1: 4px;
+      --sp-2: 8px;
+      --sp-3: 12px;
+      --sp-4: 16px;
+      --sp-5: 20px;
+      --sp-6: 24px;
+      --sp-8: 32px;
+      --sp-10: 40px;
+
+      /* Radius */
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+    }
+
+    /* ═══════════════════════════════════════════════
+     * VARIANT COLORS — 5 Accent Schemes
+     * ═══════════════════════════════════════════════ */
+    [data-variant="0"] {
+      --brand-300: oklch(0.820 0.090 258);
+      --brand-400: oklch(0.760 0.130 257);
+      --brand-500: oklch(0.700 0.165 255);
+      --brand-600: oklch(0.620 0.150 255);
+      --brand-700: oklch(0.530 0.130 256);
+    }
+    [data-variant="A"] {
+      --brand-300: oklch(0.820 0.075 187);
+      --brand-400: oklch(0.760 0.095 186);
+      --brand-500: oklch(0.700 0.110 185);
+      --brand-600: oklch(0.620 0.100 184);
+      --brand-700: oklch(0.530 0.085 183);
+    }
+    [data-variant="B"] {
+      --brand-300: oklch(0.810 0.070 34);
+      --brand-400: oklch(0.740 0.090 32);
+      --brand-500: oklch(0.680 0.100 30);
+      --brand-600: oklch(0.600 0.090 28);
+      --brand-700: oklch(0.520 0.075 26);
+    }
+    [data-variant="C"] {
+      --brand-300: oklch(0.840 0.038 224);
+      --brand-400: oklch(0.780 0.050 222);
+      --brand-500: oklch(0.720 0.060 220);
+      --brand-600: oklch(0.640 0.055 218);
+      --brand-700: oklch(0.550 0.050 216);
+    }
+    [data-variant="D"] {
+      --brand-300: oklch(0.840 0.085 204);
+      --brand-400: oklch(0.780 0.115 202);
+      --brand-500: oklch(0.720 0.130 200);
+      --brand-600: oklch(0.640 0.120 198);
+      --brand-700: oklch(0.550 0.105 196);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * BASE RESET
+     * ═══════════════════════════════════════════════ */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      background: var(--surface-app);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ═══════════════════════════════════════════════
+     * PAGE HEADER
+     * ═══════════════════════════════════════════════ */
+    .page-header {
+      padding: var(--sp-10) var(--sp-8) var(--sp-6);
+      max-width: 1800px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .page-header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+    }
+    .page-header h1 .logo-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+      background: var(--brass-fg);
+      color: var(--surface-app);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .page-header .subtitle {
+      margin-top: var(--sp-2);
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      max-width: 640px;
+      line-height: 1.6;
+    }
+    .page-header .meta-row {
+      margin-top: var(--sp-3);
+      display: flex;
+      gap: var(--sp-4);
+      font-size: 0.6875rem;
+      color: var(--text-quaternary);
+      font-family: var(--font-mono);
+    }
+    .page-header .meta-row span {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-1);
+    }
+    .page-header .meta-row .dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--border-default);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COLUMN GRID
+     * ═══════════════════════════════════════════════ */
+    .columns-container {
+      max-width: 1800px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0;
+    }
+
+    @media (max-width: 1400px) {
+      .columns-container {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (max-width: 900px) {
+      .columns-container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 600px) {
+      .columns-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .variant-column {
+      padding: var(--sp-6);
+      border-right: 1px solid var(--border-subtle);
+      min-width: 0;
+    }
+    .variant-column:last-child {
+      border-right: none;
+    }
+
+    /* ═══════════════════════════════════════════════
+     * VARIANT HEADER — Swatch + Name + Desc
+     * ═══════════════════════════════════════════════ */
+    .variant-header {
+      margin-bottom: var(--sp-6);
+    }
+    .variant-label {
+      font-size: 0.6875rem;
+      font-family: var(--font-mono);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: var(--sp-2);
+    }
+    .variant-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--sp-1);
+    }
+    .variant-tagline {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--brand-400);
+      margin-bottom: var(--sp-3);
+    }
+    .variant-desc {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Color Scale Strip */
+    .swatch-strip {
+      display: flex;
+      gap: var(--sp-1);
+      margin-top: var(--sp-4);
+      margin-bottom: var(--sp-2);
+    }
+    .swatch-strip .swatch {
+      flex: 1;
+      height: 24px;
+      border-radius: var(--radius-sm);
+      position: relative;
+    }
+    .swatch-strip .swatch-label {
+      font-size: 0.625rem;
+      font-family: var(--font-mono);
+      color: var(--text-quaternary);
+      text-align: center;
+      margin-top: 2px;
+    }
+    .swatch-strip .swatch-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ═══════════════════════════════════════════════
+     * SECTION DIVIDER
+     * ═══════════════════════════════════════════════ */
+    .section {
+      margin-top: var(--sp-6);
+    }
+    .section-title {
+      font-size: 0.6875rem;
+      font-family: var(--font-mono);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: var(--sp-3);
+      padding-bottom: var(--sp-2);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Buttons
+     * ═══════════════════════════════════════════════ */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 36px;
+      padding: 0 var(--sp-4);
+      background: var(--brand-500);
+      color: var(--text-inverse);
+      font-family: var(--font-ui);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: background 0.15s ease;
+    }
+    .btn-primary:hover {
+      background: var(--brand-400);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 36px;
+      padding: 0 var(--sp-4);
+      background: transparent;
+      color: var(--brand-500);
+      font-family: var(--font-ui);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      border: 1px solid var(--brand-500);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: all 0.15s ease;
+    }
+    .btn-secondary:hover {
+      background: oklch(from var(--brand-500) l c h / 0.08);
+      color: var(--brand-400);
+      border-color: var(--brand-400);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 32px;
+      padding: 0 var(--sp-2);
+      background: transparent;
+      color: var(--brand-500);
+      font-family: var(--font-ui);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: all 0.15s ease;
+    }
+    .btn-ghost:hover {
+      background: oklch(from var(--brand-500) l c h / 0.06);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Tabs
+     * ═══════════════════════════════════════════════ */
+    .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border-subtle);
+      gap: 0;
+    }
+    .tab-item {
+      padding: var(--sp-2) var(--sp-3);
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: var(--text-tertiary);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .tab-item:hover {
+      color: var(--text-secondary);
+    }
+    .tab-item.active {
+      color: var(--brand-500);
+      font-weight: 500;
+      border-bottom-color: var(--brand-500);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Text Link
+     * ═══════════════════════════════════════════════ */
+    .text-link {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--brand-500);
+      text-decoration: none;
+      cursor: pointer;
+      transition: color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-1);
+    }
+    .text-link:hover {
+      color: var(--brand-400);
+    }
+    .text-link .arrow {
+      font-size: 0.75rem;
+      transition: transform 0.15s ease;
+    }
+    .text-link:hover .arrow {
+      transform: translateX(2px);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Selected List Item
+     * ═══════════════════════════════════════════════ */
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-3) var(--sp-3);
+      border-left: 3px solid transparent;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .list-item:hover {
+      background: oklch(1 0 0 / 0.02);
+    }
+    .list-item.selected {
+      border-left-color: var(--brand-500);
+      background: oklch(from var(--brand-500) l c h / 0.06);
+    }
+    .list-item .item-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .list-item .item-title {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .list-item.selected .item-title {
+      color: var(--brand-400);
+    }
+    .list-item .item-sub {
+      font-size: 0.6875rem;
+      color: var(--text-tertiary);
+    }
+    .list-item .item-value {
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Badge/Tag
+     * ═══════════════════════════════════════════════ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 var(--sp-2);
+      font-size: 0.6875rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.01em;
+    }
+    .badge-accent {
+      background: oklch(from var(--brand-500) l c h / 0.10);
+      color: var(--brand-400);
+    }
+    .badge-market-up {
+      background: oklch(from var(--market-up) l c h / 0.10);
+      color: var(--market-up);
+    }
+    .badge-market-down {
+      background: oklch(from var(--market-down) l c h / 0.10);
+      color: var(--market-down);
+    }
+    .badge-neutral {
+      background: oklch(1 0 0 / 0.04);
+      color: var(--text-tertiary);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Brass Coexistence Strip
+     * ═══════════════════════════════════════════════ */
+    .brass-demo {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
+    .brass-line {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+    }
+    .brass-hairline {
+      width: 32px;
+      height: 1px;
+      background: var(--brass-muted);
+    }
+    .brass-text {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      color: var(--brass-fg);
+      letter-spacing: 0.04em;
+    }
+    .brass-accent-pair {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      padding: var(--sp-2) var(--sp-3);
+      background: oklch(1 0 0 / 0.02);
+      border-radius: var(--radius-sm);
+    }
+    .brass-accent-pair .brass-side {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+    }
+    .brass-accent-pair .brass-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--brass-fg);
+    }
+    .brass-accent-pair .accent-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--brand-500);
+    }
+    .brass-accent-pair .label-text {
+      font-size: 0.6875rem;
+      color: var(--text-secondary);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Mini Data Table
+     * ═══════════════════════════════════════════════ */
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+    }
+    .mini-table thead th {
+      font-size: 0.625rem;
+      font-weight: 500;
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: var(--sp-2) var(--sp-2);
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: left;
+    }
+    .mini-table thead th:nth-child(2),
+    .mini-table thead th:nth-child(3) {
+      text-align: right;
+    }
+    .mini-table tbody td {
+      padding: var(--sp-2) var(--sp-2);
+      border-bottom: 1px solid oklch(1 0 0 / 0.03);
+      vertical-align: middle;
+    }
+    .mini-table tbody td:nth-child(2) {
+      text-align: right;
+      font-family: var(--font-mono);
+      font-weight: 500;
+    }
+    .mini-table tbody td:nth-child(3) {
+      text-align: right;
+    }
+    .mini-table .stock-name {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .mini-table .stock-code {
+      font-family: var(--font-mono);
+      font-size: 0.625rem;
+      color: var(--text-quaternary);
+      display: block;
+      margin-top: 1px;
+    }
+    .mini-table .change-up {
+      color: var(--market-up);
+    }
+    .mini-table .change-down {
+      color: var(--market-down);
+    }
+    .mini-table .status-active {
+      color: var(--brand-400);
+      font-weight: 500;
+      font-size: 0.6875rem;
+    }
+    .mini-table .status-paused {
+      color: var(--text-quaternary);
+      font-size: 0.6875rem;
+    }
+    .mini-table .status-stopped {
+      color: var(--text-quaternary);
+      font-size: 0.6875rem;
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Input Focus Ring Demo
+     * ═══════════════════════════════════════════════ */
+    .input-demo {
+      width: 100%;
+      height: 34px;
+      padding: 0 var(--sp-3);
+      background: var(--surface-app);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .input-demo::placeholder {
+      color: var(--text-quaternary);
+    }
+    .input-demo:focus {
+      border-color: var(--brand-500);
+      box-shadow: 0 0 0 2px oklch(from var(--brand-500) l c h / 0.15);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Toggle / Switch
+     * ═══════════════════════════════════════════════ */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+    }
+    .toggle-label {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+    }
+    .toggle-switch {
+      width: 36px;
+      height: 20px;
+      border-radius: 10px;
+      background: var(--border-default);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .toggle-switch.on {
+      background: var(--brand-500);
+    }
+    .toggle-switch .toggle-knob {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--text-inverse);
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.15s ease;
+    }
+    .toggle-switch.on .toggle-knob {
+      transform: translateX(16px);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Progress Bar
+     * ═══════════════════════════════════════════════ */
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: oklch(1 0 0 / 0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-bar .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--brand-500);
+    }
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      margin-top: var(--sp-1);
+    }
+    .progress-info span {
+      font-size: 0.625rem;
+      font-family: var(--font-mono);
+      color: var(--text-quaternary);
+    }
+    .progress-info .progress-value {
+      color: var(--brand-400);
+    }
+
+    /* ═══════════════════════════════════════════════
+     * COMPONENT: Chip / Filter Tag
+     * ═══════════════════════════════════════════════ */
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-1);
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      height: 26px;
+      padding: 0 var(--sp-2);
+      font-size: 0.6875rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .chip-default {
+      background: oklch(1 0 0 / 0.04);
+      color: var(--text-tertiary);
+      border: 1px solid var(--border-subtle);
+    }
+    .chip-default:hover {
+      color: var(--text-secondary);
+      border-color: var(--border-default);
+    }
+    .chip-selected {
+      background: oklch(from var(--brand-500) l c h / 0.10);
+      color: var(--brand-400);
+      border: 1px solid oklch(from var(--brand-500) l c h / 0.20);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════════
+       PAGE HEADER
+       ════════════════════════════════════════════ -->
+  <header class="page-header">
+    <h1>
+      <span class="logo-mark">D</span>
+      Ditto — 交互色方案对比
+    </h1>
+    <p class="subtitle">
+      仅替换交互强调色 (accent/brand-500)。中性骨架、Brass 签名色、市场涨跌色均保持不变。<br>
+      以下 5 列使用完全相同的 UI 组件，唯一差异是 brand-300 ~ brand-700 色阶。
+    </p>
+    <div class="meta-row">
+      <span>Graphite Studio</span>
+      <span class="dot"></span>
+      <span>Dark Mode</span>
+      <span class="dot"></span>
+      <span>Brass: oklch(0.760 0.055 74)</span>
+      <span class="dot"></span>
+      <span>Skeleton: oklch(0.166 0.010 253)</span>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════
+       5-COLUMN COMPARISON
+       ════════════════════════════════════════════ -->
+  <div class="columns-container">
+
+
+    <!-- ─────── VARIANT 0: Indigo SaaS (Baseline) ─────── -->
+    <div class="variant-column" data-variant="0">
+      <div class="variant-header">
+        <div class="variant-label">Variant 0 — Baseline</div>
+        <div class="variant-name">Indigo SaaS</div>
+        <div class="variant-tagline">当前方案 — 典型 SaaS indigo-blue</div>
+        <div class="variant-desc">hue 255° indigo-blue，按钮色偏土。典型 SaaS 产品视觉，缺乏辨识度。作为对比基线保留。</div>
+        <div class="swatch-strip">
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-300)"></div><div class="swatch-label">300</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-400)"></div><div class="swatch-label">400</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-500)"></div><div class="swatch-label">500</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-600)"></div><div class="swatch-label">600</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-700)"></div><div class="swatch-label">700</div></div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="section">
+        <div class="section-title">Buttons</div>
+        <div class="btn-group">
+          <button class="btn-primary">执行买入</button>
+          <button class="btn-secondary">添加观察</button>
+          <button class="btn-ghost">查看详情</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="section">
+        <div class="section-title">Tabs</div>
+        <div class="tab-bar">
+          <div class="tab-item active">持仓</div>
+          <div class="tab-item">委托</div>
+          <div class="tab-item">成交</div>
+          <div class="tab-item">资金</div>
+        </div>
+      </div>
+
+      <!-- Link -->
+      <div class="section">
+        <div class="section-title">Text Link</div>
+        <a class="text-link">持仓明细 <span class="arrow">→</span></a>
+      </div>
+
+      <!-- Input -->
+      <div class="section">
+        <div class="section-title">Input Focus</div>
+        <input class="input-demo" type="text" placeholder="搜索股票代码..." value="600519">
+      </div>
+
+      <!-- Toggle -->
+      <div class="section">
+        <div class="section-title">Toggle</div>
+        <div class="toggle-row">
+          <span class="toggle-label">自动止损</span>
+          <div class="toggle-switch on"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="toggle-row" style="margin-top:8px">
+          <span class="toggle-label">实时推送</span>
+          <div class="toggle-switch"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div class="section">
+        <div class="section-title">List Item</div>
+        <div class="list-item">
+          <div class="item-main"><span class="item-title">贵州茅台</span><span class="item-sub">600519.SH</span></div>
+          <span class="item-value" style="color:var(--market-up)">+2.31%</span>
+        </div>
+        <div class="list-item selected">
+          <div class="item-main"><span class="item-title">宁德时代</span><span class="item-sub">300750.SZ</span></div>
+          <span class="item-value" style="color:var(--market-down)">-1.05%</span>
+        </div>
+        <div class="list-item">
+          <div class="item-main"><span class="item-title">比亚迪</span><span class="item-sub">002594.SZ</span></div>
+          <span class="item-value" style="color:var(--market-up)">+0.87%</span>
+        </div>
+      </div>
+
+      <!-- Badges -->
+      <div class="section">
+        <div class="section-title">Badge</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span class="badge badge-accent">运行中</span>
+          <span class="badge badge-market-up">涨停</span>
+          <span class="badge badge-market-down">跌停</span>
+          <span class="badge badge-neutral">已暂停</span>
+        </div>
+      </div>
+
+      <!-- Chips -->
+      <div class="section">
+        <div class="section-title">Filter Chips</div>
+        <div class="chip-group">
+          <span class="chip chip-default">全部</span>
+          <span class="chip chip-selected">活跃</span>
+          <span class="chip chip-default">暂停</span>
+          <span class="chip chip-default">已结束</span>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="section">
+        <div class="section-title">Progress</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:68%"></div></div>
+        <div class="progress-info"><span>策略执行</span><span class="progress-value">68%</span></div>
+      </div>
+
+      <!-- Brass Coexistence -->
+      <div class="section">
+        <div class="section-title">Brass 共存</div>
+        <div class="brass-demo">
+          <div class="brass-line">
+            <div class="brass-hairline"></div>
+            <span class="brass-text">DITTO SIGNATURE</span>
+          </div>
+          <div class="brass-accent-pair">
+            <div class="brass-side">
+              <div class="brass-dot"></div>
+              <span class="label-text">Brass 品牌色</span>
+            </div>
+            <div class="brass-side">
+              <div class="accent-dot"></div>
+              <span class="label-text">交互色</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini Data Table -->
+      <div class="section">
+        <div class="section-title">Data Table</div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>股票</th>
+              <th>涨跌幅</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="stock-name">贵州茅台</span><span class="stock-code">600519</span></td>
+              <td class="change-up">+2.31%</td>
+              <td><span class="status-active">活跃</span></td>
+            </tr>
+            <tr>
+              <td><span class="stock-name">宁德时代</span><span class="stock-code">300750</span></td>
+              <td class="change-down">-1.05%</td>
+              <td><span class="status-paused">暂停</span></td>
+            </tr>
+            <tr>
+              <td><span class="stock-name">比亚迪</span><span class="stock-code">002594</span></td>
+              <td class="change-up">+0.87%</td>
+              <td><span class="status-active">活跃</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ─────── VARIANT A: Teal Steel — Terminal Precision ─────── -->
+    <div class="variant-column" data-variant="A">
+      <div class="variant-header">
+        <div class="variant-label">Variant A</div>
+        <div class="variant-name">Teal Steel</div>
+        <div class="variant-tagline">青钢 — 精密仪器面板气质</div>
+        <div class="variant-desc">hue 185° teal，与 Brass split-complementary (74° vs 185° = 111°)。参考 Bloomberg Terminal，示波器面板气质。</div>
+        <div class="swatch-strip">
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-300)"></div><div class="swatch-label">300</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-400)"></div><div class="swatch-label">400</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-500)"></div><div class="swatch-label">500</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-600)"></div><div class="swatch-label">600</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-700)"></div><div class="swatch-label">700</div></div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="section">
+        <div class="section-title">Buttons</div>
+        <div class="btn-group">
+          <button class="btn-primary">执行买入</button>
+          <button class="btn-secondary">添加观察</button>
+          <button class="btn-ghost">查看详情</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="section">
+        <div class="section-title">Tabs</div>
+        <div class="tab-bar">
+          <div class="tab-item active">持仓</div>
+          <div class="tab-item">委托</div>
+          <div class="tab-item">成交</div>
+          <div class="tab-item">资金</div>
+        </div>
+      </div>
+
+      <!-- Link -->
+      <div class="section">
+        <div class="section-title">Text Link</div>
+        <a class="text-link">持仓明细 <span class="arrow">→</span></a>
+      </div>
+
+      <!-- Input -->
+      <div class="section">
+        <div class="section-title">Input Focus</div>
+        <input class="input-demo" type="text" placeholder="搜索股票代码..." value="600519">
+      </div>
+
+      <!-- Toggle -->
+      <div class="section">
+        <div class="section-title">Toggle</div>
+        <div class="toggle-row">
+          <span class="toggle-label">自动止损</span>
+          <div class="toggle-switch on"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="toggle-row" style="margin-top:8px">
+          <span class="toggle-label">实时推送</span>
+          <div class="toggle-switch"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div class="section">
+        <div class="section-title">List Item</div>
+        <div class="list-item">
+          <div class="item-main"><span class="item-title">贵州茅台</span><span class="item-sub">600519.SH</span></div>
+          <span class="item-value" style="color:var(--market-up)">+2.31%</span>
+        </div>
+        <div class="list-item selected">
+          <div class="item-main"><span class="item-title">宁德时代</span><span class="item-sub">300750.SZ</span></div>
+          <span class="item-value" style="color:var(--market-down)">-1.05%</span>
+        </div>
+        <div class="list-item">
+          <div class="item-main"><span class="item-title">比亚迪</span><span class="item-sub">002594.SZ</span></div>
+          <span class="item-value" style="color:var(--market-up)">+0.87%</span>
+        </div>
+      </div>
+
+      <!-- Badges -->
+      <div class="section">
+        <div class="section-title">Badge</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span class="badge badge-accent">运行中</span>
+          <span class="badge badge-market-up">涨停</span>
+          <span class="badge badge-market-down">跌停</span>
+          <span class="badge badge-neutral">已暂停</span>
+        </div>
+      </div>
+
+      <!-- Chips -->
+      <div class="section">
+        <div class="section-title">Filter Chips</div>
+        <div class="chip-group">
+          <span class="chip chip-default">全部</span>
+          <span class="chip chip-selected">活跃</span>
+          <span class="chip chip-default">暂停</span>
+          <span class="chip chip-default">已结束</span>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="section">
+        <div class="section-title">Progress</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:68%"></div></div>
+        <div class="progress-info"><span>策略执行</span><span class="progress-value">68%</span></div>
+      </div>
+
+      <!-- Brass Coexistence -->
+      <div class="section">
+        <div class="section-title">Brass 共存</div>
+        <div class="brass-demo">
+          <div class="brass-line">
+            <div class="brass-hairline"></div>
+            <span class="brass-text">DITTO SIGNATURE</span>
+          </div>
+          <div class="brass-accent-pair">
+            <div class="brass-side">
+              <div class="brass-dot"></div>
+              <span class="label-text">Brass 品牌色</span>
+            </div>
+            <div class="brass-side">
+              <div class="accent-dot"></div>
+              <span class="label-text">交互色</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini Data Table -->
+      <div class="section">
+        <div class="section-title">Data Table</div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>股票</th>
+              <th>涨跌幅</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="stock-name">贵州茅台</span><span class="stock-code">600519</span></td>
+              <td class="change-up">+2.31%</td>
+              <td><span class="status-active">活跃</span></td>
+            </tr>
+            <tr>
+              <td><span class="stock-name">宁德时代</span><span class="stock-code">300750</span></td>
+              <td class="change-down">-1.05%</td>
+              <td><span class="status-paused">暂停</span></td>
+            </tr>
+            <tr>
+              <td><span class="stock-name">比亚迪</span><span class="stock-code">002594</span></td>
+              <td class="change-up">+0.87%</td>
+              <td><span class="status-active">活跃</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ─────── VARIANT B: Warm Copper — Instrument Luxury ─────── -->
+    <div class="variant-column" data-variant="B">
+      <div class="variant-header">
+        <div class="variant-label">Variant B</div>
+        <div class="variant-name">Warm Copper</div>
+        <div class="variant-tagline">暖铜 — 彻底去除蓝色, 暖色系统一</div>
+        <div class="variant-desc">hue 30° warm copper，高端音频设备气质 (McIntosh)。彻底去除蓝色，暖色系统一，零 SaaS 感。</div>
+        <div class="swatch-strip">
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-300)"></div><div class="swatch-label">300</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-400)"></div><div class="swatch-label">400</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-500)"></div><div class="swatch-label">500</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-600)"></div><div class="swatch-label">600</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-700)"></div><div class="swatch-label">700</div></div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="section">
+        <div class="section-title">Buttons</div>
+        <div class="btn-group">
+          <button class="btn-primary">执行买入</button>
+          <button class="btn-secondary">添加观察</button>
+          <button class="btn-ghost">查看详情</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="section">
+        <div class="section-title">Tabs</div>
+        <div class="tab-bar">
+          <div class="tab-item active">持仓</div>
+          <div class="tab-item">委托</div>
+          <div class="tab-item">成交</div>
+          <div class="tab-item">资金</div>
+        </div>
+      </div>
+
+      <!-- Link -->
+      <div class="section">
+        <div class="section-title">Text Link</div>
+        <a class="text-link">持仓明细 <span class="arrow">→</span></a>
+      </div>
+
+      <!-- Input -->
+      <div class="section">
+        <div class="section-title">Input Focus</div>
+        <input class="input-demo" type="text" placeholder="搜索股票代码..." value="600519">
+      </div>
+
+      <!-- Toggle -->
+      <div class="section">
+        <div class="section-title">Toggle</div>
+        <div class="toggle-row">
+          <span class="toggle-label">自动止损</span>
+          <div class="toggle-switch on"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="toggle-row" style="margin-top:8px">
+          <span class="toggle-label">实时推送</span>
+          <div class="toggle-switch"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div class="section">
+        <div class="section-title">List Item</div>
+        <div class="list-item">
+          <div class="item-main"><span class="item-title">贵州茅台</span><span class="item-sub">600519.SH</span></div>
+          <span class="item-value" style="color:var(--market-up)">+2.31%</span>
+        </div>
+        <div class="list-item selected">
+          <div class="item-main"><span class="item-title">宁德时代</span><span class="item-sub">300750.SZ</span></div>
+          <span class="item-value" style="color:var(--market-down)">-1.05%</span>
+        </div>
+        <div class="list-item">
+          <div class="item-main"><span class="item-title">比亚迪</span><span class="item-sub">002594.SZ</span></div>
+          <span class="item-value" style="color:var(--market-up)">+0.87%</span>
+        </div>
+      </div>
+
+      <!-- Badges -->
+      <div class="section">
+        <div class="section-title">Badge</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span class="badge badge-accent">运行中</span>
+          <span class="badge badge-market-up">涨停</span>
+          <span class="badge badge-market-down">跌停</span>
+          <span class="badge badge-neutral">已暂停</span>
+        </div>
+      </div>
+
+      <!-- Chips -->
+      <div class="section">
+        <div class="section-title">Filter Chips</div>
+        <div class="chip-group">
+          <span class="chip chip-default">全部</span>
+          <span class="chip chip-selected">活跃</span>
+          <span class="chip chip-default">暂停</span>
+          <span class="chip chip-default">已结束</span>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="section">
+        <div class="section-title">Progress</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:68%"></div></div>
+        <div class="progress-info"><span>策略执行</span><span class="progress-value">68%</span></div>
+      </div>
+
+      <!-- Brass Coexistence -->
+      <div class="section">
+        <div class="section-title">Brass 共存</div>
+        <div class="brass-demo">
+          <div class="brass-line">
+            <div class="brass-hairline"></div>
+            <span class="brass-text">DITTO SIGNATURE</span>
+          </div>
+          <div class="brass-accent-pair">
+            <div class="brass-side">
+              <div class="brass-dot"></div>
+              <span class="label-text">Brass 品牌色</span>
+            </div>
+            <div class="brass-side">
+              <div class="accent-dot"></div>
+              <span class="label-text">交互色</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini Data Table -->
+      <div class="section">
+        <div class="section-title">Data Table</div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>股票</th>
+              <th>涨跌幅</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="stock-name">贵州茅台</span><span class="stock-code">600519</span></td>
+              <td class="change-up">+2.31%</td>
+              <td><span class="status-active">活跃</span></td>
+            </tr>
+            <tr>
+              <td><span class="stock-name">宁德时代</span><span class="stock-code">300750</span></td>
+              <td class="change-down">-1.05%</td>
+              <td><span class="status-paused">暂停</span></td>
+            </tr>
+            <tr>
+              <td><span class="stock-name">比亚迪</span><span class="stock-code">002594</span></td>
+              <td class="change-up">+0.87%</td>
+              <td><span class="status-active">活跃</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ─────── VARIANT C: Frost Silver — Refined Cool ─────── -->
+    <div class="variant-column" data-variant="C">
+      <div class="variant-header">
+        <div class="variant-label">Variant C</div>
+        <div class="variant-name">Frost Silver</div>
+        <div class="variant-tagline">霜银 — 极度脱饱和蓝灰, 克制到近乎无色</div>
+        <div class="variant-desc">hue 220° 极低 chroma (0.060)，"蓝灰" 而非 "蓝"。老 IBM 终端 / old-money luxury 气质。不与 Brass 冲突。</div>
+        <div class="swatch-strip">
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-300)"></div><div class="swatch-label">300</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-400)"></div><div class="swatch-label">400</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-500)"></div><div class="swatch-label">500</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-600)"></div><div class="swatch-label">600</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-700)"></div><div class="swatch-label">700</div></div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="section">
+        <div class="section-title">Buttons</div>
+        <div class="btn-group">
+          <button class="btn-primary">执行买入</button>
+          <button class="btn-secondary">添加观察</button>
+          <button class="btn-ghost">查看详情</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="section">
+        <div class="section-title">Tabs</div>
+        <div class="tab-bar">
+          <div class="tab-item active">持仓</div>
+          <div class="tab-item">委托</div>
+          <div class="tab-item">成交</div>
+          <div class="tab-item">资金</div>
+        </div>
+      </div>
+
+      <!-- Link -->
+      <div class="section">
+        <div class="section-title">Text Link</div>
+        <a class="text-link">持仓明细 <span class="arrow">→</span></a>
+      </div>
+
+      <!-- Input -->
+      <div class="section">
+        <div class="section-title">Input Focus</div>
+        <input class="input-demo" type="text" placeholder="搜索股票代码..." value="600519">
+      </div>
+
+      <!-- Toggle -->
+      <div class="section">
+        <div class="section-title">Toggle</div>
+        <div class="toggle-row">
+          <span class="toggle-label">自动止损</span>
+          <div class="toggle-switch on"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="toggle-row" style="margin-top:8px">
+          <span class="toggle-label">实时推送</span>
+          <div class="toggle-switch"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div class="section">
+        <div class="section-title">List Item</div>
+        <div class="list-item">
+          <div class="item-main"><span class="item-title">贵州茅台</span><span class="item-sub">600519.SH</span></div>
+          <span class="item-value" style="color:var(--market-up)">+2.31%</span>
+        </div>
+        <div class="list-item selected">
+          <div class="item-main"><span class="item-title">宁德时代</span><span class="item-sub">300750.SZ</span></div>
+          <span class="item-value" style="color:var(--market-down)">-1.05%</span>
+        </div>
+        <div class="list-item">
+          <div class="item-main"><span class="item-title">比亚迪</span><span class="item-sub">002594.SZ</span></div>
+          <span class="item-value" style="color:var(--market-up)">+0.87%</span>
+        </div>
+      </div>
+
+      <!-- Badges -->
+      <div class="section">
+        <div class="section-title">Badge</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span class="badge badge-accent">运行中</span>
+          <span class="badge badge-market-up">涨停</span>
+          <span class="badge badge-market-down">跌停</span>
+          <span class="badge badge-neutral">已暂停</span>
+        </div>
+      </div>
+
+      <!-- Chips -->
+      <div class="section">
+        <div class="section-title">Filter Chips</div>
+        <div class="chip-group">
+          <span class="chip chip-default">全部</span>
+          <span class="chip chip-selected">活跃</span>
+          <span class="chip chip-default">暂停</span>
+          <span class="chip chip-default">已结束</span>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="section">
+        <div class="section-title">Progress</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:68%"></div></div>
+        <div class="progress-info"><span>策略执行</span><span class="progress-value">68%</span></div>
+      </div>
+
+      <!-- Brass Coexistence -->
+      <div class="section">
+        <div class="section-title">Brass 共存</div>
+        <div class="brass-demo">
+          <div class="brass-line">
+            <div class="brass-hairline"></div>
+            <span class="brass-text">DITTO SIGNATURE</span>
+          </div>
+          <div class="brass-accent-pair">
+            <div class="brass-side">
+              <div class="brass-dot"></div>
+              <span class="label-text">Brass 品牌色</span>
+            </div>
+            <div class="brass-side">
+              <div class="accent-dot"></div>
+              <span class="label-text">交互色</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini Data Table -->
+      <div class="section">
+        <div class="section-title">Data Table</div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>股票</th>
+              <th>涨跌幅</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="stock-name">贵州茅台</span><span class="stock-code">600519</span></td>
+              <td class="change-up">+2.31%</td>
+              <td><span class="status-active">活跃</span></td>
+            </tr>
+            <tr>
+              <td><span class="stock-name">宁德时代</span><span class="stock-code">300750</span></td>
+              <td class="change-down">-1.05%</td>
+              <td><span class="status-paused">暂停</span></td>
+            </tr>
+            <tr>
+              <td><span class="stock-name">比亚迪</span><span class="stock-code">002594</span></td>
+              <td class="change-up">+0.87%</td>
+              <td><span class="status-active">活跃</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ─────── VARIANT D: Electric Cyan — AI-Native ─────── -->
+    <div class="variant-column" data-variant="D">
+      <div class="variant-header">
+        <div class="variant-label">Variant D</div>
+        <div class="variant-name">Electric Cyan</div>
+        <div class="variant-tagline">电青 — AI-native 时代的 cyan</div>
+        <div class="variant-desc">hue 200° cyan，Vercel / OpenAI 气质。信号数据智能而非老派 SaaS blue。与 Brass 暖冷互补。</div>
+        <div class="swatch-strip">
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-300)"></div><div class="swatch-label">300</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-400)"></div><div class="swatch-label">400</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-500)"></div><div class="swatch-label">500</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-600)"></div><div class="swatch-label">600</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:var(--brand-700)"></div><div class="swatch-label">700</div></div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="section">
+        <div class="section-title">Buttons</div>
+        <div class="btn-group">
+          <button class="btn-primary">执行买入</button>
+          <button class="btn-secondary">添加观察</button>
+          <button class="btn-ghost">查看详情</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="section">
+        <div class="section-title">Tabs</div>
+        <div class="tab-bar">
+          <div class="tab-item active">持仓</div>
+          <div class="tab-item">委托</div>
+          <div class="tab-item">成交</div>
+          <div class="tab-item">资金</div>
+        </div>
+      </div>
+
+      <!-- Link -->
+      <div class="section">
+        <div class="section-title">Text Link</div>
+        <a class="text-link">持仓明细 <span class="arrow">→</span></a>
+      </div>
+
+      <!-- Input -->
+      <div class="section">
+        <div class="section-title">Input Focus</div>
+        <input class="input-demo" type="text" placeholder="搜索股票代码..." value="600519">
+      </div>
+
+      <!-- Toggle -->
+      <div class="section">
+        <div class="section-title">Toggle</div>
+        <div class="toggle-row">
+          <span class="toggle-label">自动止损</span>
+          <div class="toggle-switch on"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="toggle-row" style="margin-top:8px">
+          <span class="toggle-label">实时推送</span>
+          <div class="toggle-switch"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div class="section">
+        <div class="section-title">List Item</div>
+        <div class="list-item">
+          <div class="item-main"><span class="item-title">贵州茅台</span><span class="item-sub">600519.SH</span></div>
+          <span class="item-value" style="color:var(--market-up)">+2.31%</span>
+        </div>
+        <div class="list-item selected">
+          <div class="item-main"><span class="item-title">宁德时代</span><span class="item-sub">300750.SZ</span></div>
+          <span class="item-value" style="color:var(--market-down)">-1.05%</span>
+        </div>
+        <div class="list-item">
+          <div class="item-main"><span class="item-title">比亚迪</span><span class="item-sub">002594.SZ</span></div>
+          <span class="item-value" style="color:var(--market-up)">+0.87%</span>
+        </div>
+      </div>
+
+      <!-- Badges -->
+      <div class="section">
+        <div class="section-title">Badge</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span class="badge badge-accent">运行中</span>
+          <span class="badge badge-market-up">涨停</span>
+          <span class="badge badge-market-down">跌停</span>
+          <span class="badge badge-neutral">已暂停</span>
+        </div>
+      </div>
+
+      <!-- Chips -->
+      <div class="section">
+        <div class="section-title">Filter Chips</div>
+        <div class="chip-group">
+          <span class="chip chip-default">全部</span>
+          <span class="chip chip-selected">活跃</span>
+          <span class="chip chip-default">暂停</span>
+          <span class="chip chip-default">已结束</span>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="section">
+        <div class="section-title">Progress</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:68%"></div></div>
+        <div class="progress-info"><span>策略执行</span><span class="progress-value">68%</span></div>
+      </div>
+
+      <!-- Brass Coexistence -->
+      <div class="section">
+        <div class="section-title">Brass 共存</div>
+        <div class="brass-demo">
+          <div class="brass-line">
+            <div class="brass-hairline"></div>
+            <span class="brass-text">DITTO SIGNATURE</span>
+          </div>
+          <div class="brass-accent-pair">
+            <div class="brass-side">
+              <div class="brass-dot"></div>
+              <span class="label-text">Brass 品牌色</span>
+            </div>
+            <div class="brass-side">
+              <div class="accent-dot"></div>
+              <span class="label-text">交互色</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini Data Table -->
+      <div class="section">
+        <div class="section-title">Data Table</div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>股票</th>
+              <th>涨跌幅</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="stock-name">贵州茅台</span><span class="stock-code">600519</span></td>
+              <td class="change-up">+2.31%</td>
+              <td><span class="status-active">活跃</span></td>
+            </tr>
+            <tr>
+              <td><span class="stock-name">宁德时代</span><span class="stock-code">300750</span></td>
+              <td class="change-down">-1.05%</td>
+              <td><span class="status-paused">暂停</span></td>
+            </tr>
+            <tr>
+              <td><span class="stock-name">比亚迪</span><span class="stock-code">002594</span></td>
+              <td class="change-up">+0.87%</td>
+              <td><span class="status-active">活跃</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /columns-container -->
+
+</body>
+</html>

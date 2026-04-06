@@ -1594,7 +1594,7 @@
         <main id="main-content" class="main-content">
 
           <!-- L1: Market Card Grid (unified 3-line template) -->
-          <div class="market-card-grid">
+          <div class="market-card-grid" data-mouse-glow="true" data-reveal="fade-up" data-reveal-delay="0">
 
             <div class="market-card card-lead" tabindex="0" role="button" aria-label="A股 沪深300 +0.67% 广度偏强 AI+半导体主线扩散" onclick="document.getElementById('overlay-market-depth').checked=true">
               <div class="market-card-top">
@@ -1681,11 +1681,24 @@
           <div class="matrix-section">
             <div class="matrix-header">
               <h2 class="matrix-title">相对强弱矩阵</h2>
+              <div data-flow='{"segments":[{"label":"流入","value":35},{"label":"流出","value":28},{"label":"净流入","value":7}]}' aria-label="资金流向" style="width:8rem;margin-left:auto"></div>
             </div>
-            <div class="matrix-conclusion">
+            <div class="matrix-conclusion" data-reveal="fade-up" data-reveal-delay="100">
               <span class="lead">港股</span>弹性领跑全市场，<span class="lead">黄金</span>避险持续偏强；
               <span class="lag">美元</span>走弱，<span class="lag">利率</span>上行对成长估值形成压制。
             </div>
+
+            <!-- JS Tabs: 关联矩阵 / 资金流向 / 板块联动 -->
+            <div data-tabs="cross-market-tabs" style="margin-top:var(--space-12)">
+              <div style="display:flex;gap:var(--space-8);margin-bottom:var(--space-10)">
+                <button data-tab-target="correlation" class="tab-band-tab active" aria-selected="true">关联矩阵</button>
+                <button data-tab-target="capital-flow" class="tab-band-tab" aria-selected="false">资金流向</button>
+                <button data-tab-target="sector" class="tab-band-tab" aria-selected="false">板块联动</button>
+              </div>
+
+              <!-- Panel: 关联矩阵 -->
+              <div data-tab-panel="correlation">
+            <div data-mouse-glow="true">
             <table class="matrix-table">
               <caption class="sr-only">相对强弱矩阵 — 跨市场多周期表现对比</caption>
               <thead>
@@ -1765,10 +1778,13 @@
                 </tr>
               </tbody>
             </table>
+            </div>
+            <!-- /data-mouse-glow -->
 
             <!-- Correlation Matrix Heatmap — CSS grid + color scale -->
-            <div class="correlation-section">
+            <div class="correlation-section" data-reveal="fade-up" data-reveal-delay="200">
               <div class="correlation-title">跨市场相关性 · 30D</div>
+              <svg data-heatgrid='{"rows":6,"cols":6,"cellSize":24,"gap":3}' aria-label="资产相关性矩阵"></svg>
               <div class="correlation-grid">
                 <!-- Header row -->
                 <div class="corr-header"></div>
@@ -1814,6 +1830,73 @@
                 <div class="corr-cell corr-cell--self">1.00</div>
               </div>
             </div>
+              </div>
+              <!-- /Panel: correlation -->
+
+              <!-- Panel: 资金流向 -->
+              <div data-tab-panel="capital-flow" aria-hidden="true">
+                <div class="flow-bar-group">
+                  <div class="flow-bar-item">
+                    <span class="flow-bar-label">港股科技</span>
+                    <div class="flow-bar-track"><div class="flow-bar-fill inflow" style="width:78%"></div></div>
+                    <span class="flow-bar-value inflow">+42.3 亿</span>
+                  </div>
+                  <div class="flow-bar-item">
+                    <span class="flow-bar-label">A股成长</span>
+                    <div class="flow-bar-track"><div class="flow-bar-fill inflow" style="width:52%"></div></div>
+                    <span class="flow-bar-value inflow">+18.6 亿</span>
+                  </div>
+                  <div class="flow-bar-item">
+                    <span class="flow-bar-label">黄金</span>
+                    <div class="flow-bar-track"><div class="flow-bar-fill inflow" style="width:35%"></div></div>
+                    <span class="flow-bar-value inflow">+12.1 亿</span>
+                  </div>
+                  <div class="flow-bar-item">
+                    <span class="flow-bar-label">长债</span>
+                    <div class="flow-bar-track"><div class="flow-bar-fill outflow" style="width:45%"></div></div>
+                    <span class="flow-bar-value outflow">-15.8 亿</span>
+                  </div>
+                  <div class="flow-bar-item">
+                    <span class="flow-bar-label">美元</span>
+                    <div class="flow-bar-track"><div class="flow-bar-fill outflow" style="width:32%"></div></div>
+                    <span class="flow-bar-value outflow">-8.7 亿</span>
+                  </div>
+                </div>
+                <div class="rotation-sentence" style="margin-top:var(--space-10)">
+                  资金偏好从<strong>美元与长债</strong>转向<strong>港股科技、A股成长与黄金</strong>，风险偏好持续回升。
+                </div>
+              </div>
+              <!-- /Panel: capital-flow -->
+
+              <!-- Panel: 板块联动 -->
+              <div data-tab-panel="sector" aria-hidden="true">
+                <div style="display:flex;flex-direction:column;gap:var(--space-8)">
+                  <div class="drilldown-item" tabindex="0">
+                    <span class="drilldown-market">港股科技</span>
+                    <span class="drilldown-reason">弹性领先，南向资金持续流入，AI 概念扩散</span>
+                    <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"stroke":"oklch(0.7 0.085 155)"}' aria-label="港股科技走势"></svg>
+                  </div>
+                  <div class="drilldown-item" tabindex="0">
+                    <span class="drilldown-market">A股 AI</span>
+                    <span class="drilldown-reason">半导体 + 算力主线扩散，成交占比升至 18%</span>
+                    <svg data-sparkline='{"data":[8,9,11,10,13,14,12,16],"stroke":"oklch(0.7 0.085 155)"}' aria-label="A股 AI走势"></svg>
+                  </div>
+                  <div class="drilldown-item" tabindex="0">
+                    <span class="drilldown-market">黄金避险</span>
+                    <span class="drilldown-reason">央行购金 + 地缘风险推升，突破前高</span>
+                    <svg data-sparkline='{"data":[12,13,12,15,16,18,17,20],"stroke":"oklch(0.7 0.085 155)"}' aria-label="黄金避险走势"></svg>
+                  </div>
+                  <div class="drilldown-item" tabindex="0">
+                    <span class="drilldown-market">美元资产</span>
+                    <span class="drilldown-reason">降息预期降温 + 欧元走强，美元承压</span>
+                    <svg data-sparkline='{"data":[18,16,15,14,12,13,11,10],"stroke":"oklch(0.7 0.085 25)"}' aria-label="美元资产走势"></svg>
+                  </div>
+                </div>
+              </div>
+              <!-- /Panel: sector -->
+
+            </div>
+            <!-- /data-tabs="cross-market-tabs" -->
 
           </div>
 
@@ -1830,6 +1913,7 @@
               <span class="driver-item-val">102.4</span>
               <span class="driver-item-change down">-0.4%</span>
               <span class="driver-mini-bar down"></span>
+              <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"stroke":"oklch(0.7 0.085 265)","width":28,"height":10}' aria-label="DXY走势"></svg>
             </div>
             <div class="driver-sep"></div>
             <div class="driver-item">
@@ -1837,6 +1921,7 @@
               <span class="driver-item-val">4.41%</span>
               <span class="driver-item-change up">+7bp</span>
               <span class="driver-mini-bar up"></span>
+              <svg data-sparkline='{"data":[8,9,8,10,11,12,13,15],"stroke":"oklch(0.7 0.085 265)","width":28,"height":10}' aria-label="US10Y走势"></svg>
             </div>
             <div class="driver-sep"></div>
             <div class="driver-item">
@@ -1851,6 +1936,7 @@
               <span class="driver-item-val">16.8</span>
               <span class="driver-item-change up">-5.2%</span>
               <span class="driver-mini-bar up"></span>
+              <svg data-sparkline='{"data":[16,15,14,12,11,10,9,8],"stroke":"oklch(0.7 0.085 155)","width":28,"height":10}' aria-label="VIX走势"></svg>
             </div>
             <div class="driver-sep"></div>
             <div class="driver-item">
@@ -1858,6 +1944,7 @@
               <span class="driver-item-val">2,648</span>
               <span class="driver-item-change up">+1.2%</span>
               <span class="driver-mini-bar up"></span>
+              <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"stroke":"oklch(0.7 0.085 155)","width":28,"height":10}' aria-label="XAUUSD走势"></svg>
             </div>
             <div class="driver-sep"></div>
             <div class="driver-item">
@@ -1883,7 +1970,7 @@
         </main>
 
         <!-- Right Rail (sticky, no internal scroll) -->
-        <div class="right-rail">
+        <div class="right-rail" data-reveal="fade-right" data-reveal-delay="150">
 
           <!-- 1. Pulse: ultra-compact, always expanded -->
           <div class="rail-section">
@@ -2166,6 +2253,7 @@
     });
   </script>
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   <!-- ═══ Overlay Containers ═══ -->
   <div class="overlays">

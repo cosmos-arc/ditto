@@ -1760,7 +1760,7 @@
     </header>
 
     <!-- ═══ Health Strip (36px) ═══ -->
-    <div class="ops-health" role="status" aria-label="系统健康指标">
+    <div class="ops-health" role="status" aria-label="系统健康指标" data-reveal="fade-up">
       <div class="health-metric-group">
         <!-- Overall system health score — ring gauge -->
         <div class="health-score-ring">
@@ -1770,7 +1770,7 @@
               <circle class="health-score-ring-fill ok" cx="18" cy="18" r="14" stroke-width="3" stroke-dasharray="87.96" stroke-dashoffset="2.64"/>
             </svg>
             <div class="health-score-center">
-              <span class="health-score-value">97</span>
+              <span class="health-score-value"><span data-ticker="97" data-decimals="0">97</span></span>
             </div>
           </div>
           <div class="health-score-details">
@@ -1790,7 +1790,7 @@
               <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="0.68"/>
             </svg>
           </div>
-          <span class="health-metric-value ok">98.2%</span><span class="health-trend up">↑</span>
+          <span class="health-metric-value ok"><span data-ticker="98.2" data-decimals="1" data-ticker-suffix="%">98.2%</span></span><span class="health-trend up">↑</span>
         </div>
         <div class="health-metric">
           <span class="health-metric-dot healthy"></span>
@@ -1801,7 +1801,7 @@
               <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="0.23"/>
             </svg>
           </div>
-          <span class="health-metric-value ok">99.4%</span><span class="health-trend flat">→</span>
+          <span class="health-metric-value ok"><span data-ticker="99.4" data-decimals="1" data-ticker-suffix="%">99.4%</span></span><span class="health-trend flat">→</span>
         </div>
         <div class="health-metric">
           <span class="health-metric-dot healthy"></span>
@@ -1812,7 +1812,7 @@
               <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="0.08"/>
             </svg>
           </div>
-          <span class="health-metric-value ok">99.8%</span><span class="health-trend flat">→</span>
+          <span class="health-metric-value ok"><span data-ticker="99.8" data-decimals="1" data-ticker-suffix="%">99.8%</span></span><span class="health-trend flat">→</span>
         </div>
       </div>
       <div class="health-metric-group">
@@ -1841,13 +1841,13 @@
               <circle class="health-gauge-fill ok" cx="8" cy="8" r="6" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="29.05"/>
             </svg>
           </div>
-          <span class="health-metric-value ok">23%</span><span class="health-trend up">↑</span>
+          <span class="health-metric-value ok"><span data-ticker="23" data-decimals="0" data-ticker-suffix="%">23%</span></span><span class="health-trend up">↑</span>
         </div>
       </div>
     </div>
 
     <!-- ═══ Main Content: Tab Group (4 Tabs) ═══ -->
-    <div class="tab-group" data-tab-group="ops" id="main-content">
+    <div class="tab-group" data-tab-group="ops" data-tabs="platform-tabs" id="main-content">
       <!-- Tab radios (hidden) -->
       <input type="radio" name="ops" id="tab-providers" checked class="tab-radio sr-only">
       <input type="radio" name="ops" id="tab-pipelines" class="tab-radio sr-only">
@@ -1856,19 +1856,19 @@
 
       <!-- Tab labels -->
       <div class="ops-main">
-        <div class="panel">
+        <div class="panel" data-reveal="fade-up" data-reveal-delay="100">
           <div class="panel-header">
             <div class="panel-tabs">
-              <label for="tab-providers" class="panel-tab panel-tab-radio" data-tab-label="tab-providers" role="tab" aria-selected="true">数据源 <span class="panel-subtitle">5 个源</span></label>
-              <label for="tab-pipelines" class="panel-tab panel-tab-radio" data-tab-label="tab-pipelines" role="tab" aria-selected="false">管道与任务 <span class="panel-subtitle">运行中 2</span></label>
-              <label for="tab-alerts" class="panel-tab panel-tab-radio" data-tab-label="tab-alerts" role="tab" aria-selected="false">系统告警 <span class="panel-count panel-count-critical">4</span></label>
-              <label for="tab-resources" class="panel-tab panel-tab-radio" data-tab-label="tab-resources" role="tab" aria-selected="false">资源/配额</label>
+              <label for="tab-providers" class="panel-tab panel-tab-radio active" data-tab-label="tab-providers" data-tab-target="services" role="tab" aria-selected="true">数据源 <span class="panel-subtitle">5 个源</span></label>
+              <label for="tab-pipelines" class="panel-tab panel-tab-radio" data-tab-label="tab-pipelines" data-tab-target="performance" role="tab" aria-selected="false">管道与任务 <span class="panel-subtitle">运行中 2</span></label>
+              <label for="tab-alerts" class="panel-tab panel-tab-radio" data-tab-label="tab-alerts" data-tab-target="logs" role="tab" aria-selected="false">系统告警 <span class="panel-count panel-count-critical">4</span></label>
+              <label for="tab-resources" class="panel-tab panel-tab-radio" data-tab-label="tab-resources" data-tab-target="resources" role="tab" aria-selected="false">资源/配额</label>
             </div>
           </div>
           <div class="panel-body">
             <div class="tab-panels">
               <!-- Tab Panel 1: Data Providers / DQ -->
-              <div class="tab-panel" data-panel="tab-providers">
+              <div class="tab-panel" data-panel="tab-providers" data-tab-panel="services">
                 <table class="data-table">
                   <thead>
                     <tr>
@@ -2037,7 +2037,7 @@
               </div>
 
               <!-- Tab Panel 2: Pipelines / Jobs -->
-              <div class="tab-panel" data-panel="tab-pipelines">
+              <div class="tab-panel" data-panel="tab-pipelines" data-tab-panel="performance">
                 <table class="data-table">
                   <thead>
                     <tr>
@@ -2101,7 +2101,7 @@
               </div>
 
               <!-- Tab Panel 3: System Alerts -->
-              <div class="tab-panel" data-panel="tab-alerts">
+              <div class="tab-panel" data-panel="tab-alerts" data-tab-panel="logs">
                 <!-- Alert 1 — critical -->
                 <div class="alert-row">
                   <span class="alert-dot critical"></span>
@@ -2149,7 +2149,7 @@
               </div>
 
               <!-- Tab Panel 4: Resources / Quotas -->
-              <div class="tab-panel" data-panel="tab-resources">
+              <div class="tab-panel" data-panel="tab-resources" data-tab-panel="resources">
                 <table class="data-table">
                   <thead>
                     <tr>
@@ -2219,7 +2219,7 @@
     </div>
 
     <!-- ═══ Detail Panel (340px right side) ═══ -->
-    <div class="ops-detail">
+    <div class="ops-detail" data-reveal="fade-up" data-reveal-delay="200">
       <div class="context-rail">
         <!-- Section 1: 管道/任务 -->
         <div class="context-section">
@@ -2376,6 +2376,7 @@
   
 
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   <!-- ══════════════════════════════════════════════
        Overlays (3: Modal + Dialog + Drawer)

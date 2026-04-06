@@ -1661,6 +1661,14 @@
           <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l5 5 5-5"/></svg>
         </button>
         <span class="filter-sep" aria-hidden="true"></span>
+        <!-- JS Tabs: 快速过滤 -->
+        <div data-tabs="order-tabs" role="tablist" aria-label="订单快速过滤">
+          <button class="filter-btn active" data-tab-target="all" role="tab" aria-selected="true">全部</button>
+          <button class="filter-btn" data-tab-target="pending" role="tab" aria-selected="false">待处理</button>
+          <button class="filter-btn" data-tab-target="filled" role="tab" aria-selected="false">已成</button>
+          <button class="filter-btn" data-tab-target="cancelled" role="tab" aria-selected="false">撤单</button>
+        </div>
+        <span class="filter-sep" aria-hidden="true"></span>
         <button class="filter-btn" tabindex="0" aria-label="日期范围: 今日">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="14" height="13" rx="1"/><path d="M3 9h14M7 2v4M13 2v4"/></svg>
           <span class="filter-value">今日</span>
@@ -1700,7 +1708,7 @@
     
 
     <!-- ═══ Status Strip (Radio Tab System) ═══ -->
-    <div class="status-strip" aria-label="订单状态筛选">
+    <div class="status-strip" data-reveal="fade-up" data-reveal-delay="0" aria-label="订单状态筛选">
       <!-- Overlay checkbox inputs (placed here for :has() scope) -->
       
       
@@ -1750,10 +1758,10 @@
     </div>
 
     <!-- ═══ Execution KPI Strip ═══ -->
-    <div class="kpi-strip" role="region" aria-label="执行概览">
+    <div class="kpi-strip" data-reveal="fade-up" data-reveal-delay="50" role="region" aria-label="执行概览">
       <div class="kpi-item">
         <div>
-          <div class="kpi-value">168</div>
+          <div class="kpi-value"><span data-ticker="168" data-decimals="0">168</span></div>
           <div class="kpi-label">今日订单</div>
         </div>
         <svg class="kpi-sparkline" viewBox="0 0 56 24" fill="none" aria-hidden="true">
@@ -1765,7 +1773,7 @@
       <div class="kpi-sep"></div>
       <div class="kpi-item">
         <div>
-          <div class="kpi-value">12.8<span class="kpi-unit">M</span></div>
+          <div class="kpi-value"><span data-ticker="12800000" data-decimals="2" data-ticker-prefix="¥" data-ticker-suffix="">12,800,000.00</span><span class="kpi-unit">M</span></div>
           <div class="kpi-label">成交额</div>
         </div>
         <span class="kpi-change up">+8.3%</span>
@@ -1773,7 +1781,7 @@
       <div class="kpi-sep"></div>
       <div class="kpi-item">
         <div>
-          <div class="kpi-value">88.1<span class="kpi-unit">%</span></div>
+          <div class="kpi-value"><span data-ticker="88.1" data-decimals="1" data-ticker-suffix="%">88.1</span><span class="kpi-unit">%</span></div>
           <div class="kpi-label">成交率</div>
         </div>
         <svg class="kpi-sparkline" viewBox="0 0 56 24" fill="none" aria-hidden="true">
@@ -1785,7 +1793,7 @@
       <div class="kpi-sep"></div>
       <div class="kpi-item">
         <div>
-          <div class="kpi-value">-0.04<span class="kpi-unit">%</span></div>
+          <div class="kpi-value"><span data-ticker="-0.04" data-decimals="2" data-ticker-suffix="%">-0.04</span><span class="kpi-unit">%</span></div>
           <div class="kpi-label">平均滑点</div>
         </div>
         <span class="kpi-change down">改善</span>
@@ -1794,12 +1802,7 @@
       <div class="kpi-item">
         <div>
           <div class="kpi-label">状态分布</div>
-          <div class="status-flow-bar" aria-label="订单状态分布">
-            <div class="status-flow-segment seg-filled" style="width:88.1%;"></div>
-            <div class="status-flow-segment seg-partial" style="width:0.6%;"></div>
-            <div class="status-flow-segment seg-pending" style="width:4.2%;"></div>
-            <div class="status-flow-segment seg-failed" style="width:7.1%;"></div>
-          </div>
+          <div data-flow='{"segments":[{"label":"待报","value":3},{"label":"已报","value":5},{"label":"部成","value":4},{"label":"已成","value":12},{"label":"撤单","value":2}]}' aria-label="订单状态分布"></div>
         </div>
       </div>
     </div>
@@ -1812,7 +1815,9 @@
       <div class="tab-panel" data-panel="orders-done">
 
     <!-- ═══ Orders Ledger Table ═══ -->
-    <div class="ledger-table-area" id="main-content" role="region" aria-label="订单列表">
+    <div class="ledger-table-area" id="main-content" data-reveal="fade-up" data-reveal-delay="100" role="region" aria-label="订单列表">
+      <!-- JS Tab Panel: 全部 (default visible) -->
+      <div data-tab-panel="all">
       <table class="ledger-table" aria-label="订单账本">
         <thead>
           <tr>
@@ -1990,6 +1995,215 @@
           </tr>
         </tbody>
       </table>
+      </div><!-- /data-tab-panel="all" -->
+
+      <!-- JS Tab Panel: 待处理 -->
+      <div data-tab-panel="pending">
+      <table class="ledger-table" aria-label="待处理订单">
+        <thead>
+          <tr>
+            <th scope="col" style="width:100px">订单ID</th>
+            <th scope="col" style="width:100px">标的</th>
+            <th scope="col" style="width:80px">方向</th>
+            <th scope="col" style="width:80px">数量</th>
+            <th scope="col" style="width:90px">委托价</th>
+            <th scope="col" style="width:90px">成交价</th>
+            <th scope="col" style="width:72px">类型</th>
+            <th scope="col" style="width:100px">状态</th>
+            <th scope="col" style="width:72px">时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row: Pending -->
+          <tr class="row-pending" tabindex="0" role="row" data-order-id="ORD-20240401-006">
+            <td class="cell-numeric">ORD-006</td>
+            <td class="cell-name">药明康德</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">300</td>
+            <td class="numeric">62.80</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status pending"><span class="status-dot-inline" aria-hidden="true"></span> 待提交</span>
+            </td>
+            <td class="cell-time">—</td>
+          </tr>
+          <!-- Row: Submitted -->
+          <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-004">
+            <td class="cell-numeric">ORD-004</td>
+            <td class="cell-name">招商银行</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">2,000</td>
+            <td class="numeric">33.45</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+            </td>
+            <td class="cell-time">09:50:01</td>
+          </tr>
+          <!-- Row: Submitted -->
+          <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-009">
+            <td class="cell-numeric">ORD-009</td>
+            <td class="cell-name">迈瑞医疗</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">100</td>
+            <td class="numeric">285.00</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+            </td>
+            <td class="cell-time">10:15:02</td>
+          </tr>
+        </tbody>
+      </table>
+      </div><!-- /data-tab-panel="pending" -->
+
+      <!-- JS Tab Panel: 已成 -->
+      <div data-tab-panel="filled">
+      <table class="ledger-table" aria-label="已成订单">
+        <thead>
+          <tr>
+            <th scope="col" style="width:100px">订单ID</th>
+            <th scope="col" style="width:100px">标的</th>
+            <th scope="col" style="width:80px">方向</th>
+            <th scope="col" style="width:80px">数量</th>
+            <th scope="col" style="width:90px">委托价</th>
+            <th scope="col" style="width:90px">成交价</th>
+            <th scope="col" style="width:72px">类型</th>
+            <th scope="col" style="width:100px">状态</th>
+            <th scope="col" style="width:72px">时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row: Filled -->
+          <tr class="row-filled selected" aria-selected="true" tabindex="0" role="row" data-order-id="ORD-20240401-001">
+            <td class="cell-numeric"><label for="overlay-order-detail" class="cursor-trigger">ORD-001</label></td>
+            <td class="cell-name">贵州茅台</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">200</td>
+            <td class="numeric">1,725.00</td>
+            <td class="numeric">1,723.50</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:42:15</td>
+          </tr>
+          <!-- Row: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-002">
+            <td class="cell-numeric">ORD-002</td>
+            <td class="cell-name">宁德时代</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">500</td>
+            <td class="numeric">198.80</td>
+            <td class="numeric">199.20</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:35:08</td>
+          </tr>
+          <!-- Row: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-005">
+            <td class="cell-numeric">ORD-005</td>
+            <td class="cell-name">中国平安</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">800</td>
+            <td class="numeric">45.20</td>
+            <td class="numeric">45.15</td>
+            <td><span class="order-type-tag">市价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:31:20</td>
+          </tr>
+          <!-- Row: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-007">
+            <td class="cell-numeric">ORD-007</td>
+            <td class="cell-name">隆基绿能</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">1,500</td>
+            <td class="numeric">27.90</td>
+            <td class="numeric">27.85</td>
+            <td><span class="order-type-tag">市价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:05:44</td>
+          </tr>
+          <!-- Row: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-010">
+            <td class="cell-numeric">ORD-010</td>
+            <td class="cell-name">长江电力</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">1,200</td>
+            <td class="numeric">28.10</td>
+            <td class="numeric">28.05</td>
+            <td><span class="order-type-tag">市价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:22:18</td>
+          </tr>
+        </tbody>
+      </table>
+      </div><!-- /data-tab-panel="filled" -->
+
+      <!-- JS Tab Panel: 撤单 -->
+      <div data-tab-panel="cancelled">
+      <table class="ledger-table" aria-label="已撤单订单">
+        <thead>
+          <tr>
+            <th scope="col" style="width:100px">订单ID</th>
+            <th scope="col" style="width:100px">标的</th>
+            <th scope="col" style="width:80px">方向</th>
+            <th scope="col" style="width:80px">数量</th>
+            <th scope="col" style="width:90px">委托价</th>
+            <th scope="col" style="width:90px">成交价</th>
+            <th scope="col" style="width:72px">类型</th>
+            <th scope="col" style="width:100px">状态</th>
+            <th scope="col" style="width:72px">时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row: Failed -->
+          <tr class="row-failed" tabindex="0" role="row" data-order-id="ORD-20240401-008">
+            <td class="cell-numeric">ORD-008</td>
+            <td class="cell-name">紫金矿业</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">3,000</td>
+            <td class="numeric">15.60</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status failed"><span class="status-dot-inline" aria-hidden="true"></span> 已撤单</span>
+            </td>
+            <td class="cell-time">10:12:30</td>
+          </tr>
+        </tbody>
+      </table>
+      </div><!-- /data-tab-panel="cancelled" -->
+
     </div>
 
     <!-- ═══ State Variants: Orders Ledger Table ═══ -->
@@ -1999,7 +2213,7 @@
     
 
     <!-- ═══ Order Trace Panel (340px) ═══ -->
-    <aside class="order-trace" id="order-trace" role="complementary" aria-label="订单追踪">
+    <aside class="order-trace" id="order-trace" data-reveal="fade-right" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
       <!-- Trace Header -->
       <div class="trace-header">
         <div class="trace-title">
@@ -2050,7 +2264,7 @@
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">成交金额</span>
-                <span class="order-info-value">344,700.00</span>
+                <span class="order-info-value"><span data-ticker="344700.00" data-decimals="2" data-ticker-prefix="¥">344,700.00</span></span>
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">账户</span>
@@ -2677,6 +2891,7 @@
   </div>
 
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   </section>
 

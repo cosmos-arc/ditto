@@ -1705,7 +1705,7 @@
     </div>
 
     <!-- ═══ Main Content — Tab Panels ═══ -->
-    <main class="signals-main" id="main-content" role="main">
+    <main class="signals-main" id="main-content" role="main" data-mouse-glow="true">
 
       <!-- ══════════ Tab Panel: 待复核 (default) ══════════ -->
       <div class="tab-panel active-by-default" data-panel="tab-pending" role="tabpanel" aria-label="待复核信号">
@@ -1725,6 +1725,14 @@
               <button class="filter-btn" aria-pressed="false">低</button>
             </div>
           </div>
+          <div class="signals-filters" data-tabs="signal-tabs">
+            <div class="filter-group" role="tablist" aria-label="信号方向过滤">
+              <button class="filter-btn active" data-tab-target="all" role="tab" aria-selected="true">全部</button>
+              <button class="filter-btn" data-tab-target="buy" role="tab" aria-selected="false">买入</button>
+              <button class="filter-btn" data-tab-target="sell" role="tab" aria-selected="false">卖出</button>
+              <button class="filter-btn" data-tab-target="hold" role="tab" aria-selected="false">持有</button>
+            </div>
+          </div>
           <div class="account-selector" tabindex="0" role="button" aria-label="切换账户">
             <span class="account-selector-dot"></span>
             主策略账户
@@ -1732,7 +1740,7 @@
         </div>
 
         <!-- Signal Table -->
-        <div class="signals-table-wrap">
+        <div class="signals-table-wrap" data-tab-panel="all">
           <table class="data-table" role="grid" aria-label="信号列表">
             <thead>
               <tr>
@@ -1748,7 +1756,7 @@
             </thead>
             <tbody>
               <!-- Row 1: selected -->
-              <tr class="row selected unread" role="row" aria-selected="true" tabindex="0">
+              <tr class="row selected unread" role="row" aria-selected="true" tabindex="0" data-reveal="fade-up" data-reveal-delay="0">
                 <td class="cell-time">14:32:08</td>
                 <td>
                   <span class="cell-ticker">600519</span>
@@ -1759,19 +1767,16 @@
                   <div aria-label="优先级 P1" class="priority-badge p1">P1</div>
                   <span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span>
                 </td>
-                <td class="cell-numeric">5.0%</td>
+                <td class="cell-numeric"><span data-ticker="5.0" data-decimals="1" data-ticker-suffix="%">5.0%</span></td>
                 <td>
-                  <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill high conf-w-82"></div></div>
-                    <span class="confidence-value">82%</span>
-                  </div>
+                  <div class="confidence-cell" data-confidence="0.82" data-confidence-label="High"></div>
                 </td>
                 <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
                 <td><span class="status-pill pending">待复核</span></td>
               </tr>
 
               <!-- Row 2 -->
-              <tr class="row unread" role="row" tabindex="0">
+              <tr class="row unread" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="80">
                 <td class="cell-time">14:30:45</td>
                 <td>
                   <span class="cell-ticker">300750</span>
@@ -1782,19 +1787,16 @@
                   <div aria-label="优先级 P2" class="priority-badge p2">P2</div>
                   <span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span>
                 </td>
-                <td class="cell-numeric">-3.2%</td>
+                <td class="cell-numeric"><span data-ticker="3.2" data-decimals="1" data-ticker-prefix="-" data-ticker-suffix="%">-3.2%</span></td>
                 <td>
-                  <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill medium conf-w-65"></div></div>
-                    <span class="confidence-value">65%</span>
-                  </div>
+                  <div class="confidence-cell" data-confidence="0.65" data-confidence-label="Medium"></div>
                 </td>
                 <td><span class="risk-badge warn"><span class="risk-badge-icon">!</span> 警告</span></td>
                 <td><span class="status-pill pending">待复核</span></td>
               </tr>
 
               <!-- Row 3 -->
-              <tr class="row" role="row" tabindex="0">
+              <tr class="row" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="160">
                 <td class="cell-time">14:28:33</td>
                 <td>
                   <span class="cell-ticker">000858</span>
@@ -1804,17 +1806,14 @@
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">3.8%</td>
                 <td>
-                  <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill high conf-w-91"></div></div>
-                    <span class="confidence-value">91%</span>
-                  </div>
+                  <div class="confidence-cell" data-confidence="0.91" data-confidence-label="High"></div>
                 </td>
                 <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
                 <td><span class="status-pill pending">待复核</span></td>
               </tr>
 
               <!-- Row 4 -->
-              <tr class="row" role="row" tabindex="0">
+              <tr class="row" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="240">
                 <td class="cell-time">14:25:12</td>
                 <td>
                   <span class="cell-ticker">601318</span>
@@ -1822,19 +1821,16 @@
                 </td>
                 <td><span class="source-badge manual"><span class="source-badge-dot"></span>手动信号</span></td>
                 <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
-                <td class="cell-numeric">-4.5%</td>
+                <td class="cell-numeric"><span data-ticker="4.5" data-decimals="1" data-ticker-prefix="-" data-ticker-suffix="%">-4.5%</span></td>
                 <td>
-                  <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill low conf-w-40"></div></div>
-                    <span class="confidence-value">40%</span>
-                  </div>
+                  <div class="confidence-cell" data-confidence="0.40" data-confidence-label="Low"></div>
                 </td>
                 <td><span class="risk-badge warn"><span class="risk-badge-icon">!</span> 警告</span></td>
                 <td><span class="status-pill pending">待复核</span></td>
               </tr>
 
               <!-- Row 5: 涨跌停阻断 -->
-              <tr class="row blocked" role="row" tabindex="0">
+              <tr class="row blocked" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="320">
                 <td class="cell-time">14:22:50</td>
                 <td>
                   <span class="cell-ticker">002594</span>
@@ -1844,17 +1840,14 @@
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">2.8%</td>
                 <td>
-                  <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill high conf-w-78"></div></div>
-                    <span class="confidence-value">78%</span>
-                  </div>
+                  <div class="confidence-cell" data-confidence="0.78" data-confidence-label="High"></div>
                 </td>
                 <td><span class="risk-badge block"><span class="risk-badge-icon">✕</span> 阻断</span></td>
                 <td><span class="status-pill pending">待复核</span></td>
               </tr>
 
               <!-- Row 6 -->
-              <tr class="row" role="row" tabindex="0">
+              <tr class="row" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="400">
                 <td class="cell-time">14:18:07</td>
                 <td>
                   <span class="cell-ticker">603259</span>
@@ -1864,17 +1857,14 @@
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">4.2%</td>
                 <td>
-                  <div class="confidence-cell">
-                    <div class="confidence-bar"><div class="confidence-fill high conf-w-88"></div></div>
-                    <span class="confidence-value">88%</span>
-                  </div>
+                  <div class="confidence-cell" data-confidence="0.88" data-confidence-label="High"></div>
                 </td>
                 <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
                 <td><span class="status-pill pending">待复核</span></td>
               </tr>
 
               <!-- Row 7 -->
-              <tr class="row" role="row" tabindex="0">
+              <tr class="row" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="480">
                 <td class="cell-time">14:15:22</td>
                 <td>
                   <span class="cell-ticker">600036</span>
@@ -1894,7 +1884,7 @@
               </tr>
 
               <!-- Row 8 -->
-              <tr class="row" role="row" tabindex="0">
+              <tr class="row" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="560">
                 <td class="cell-time">14:10:55</td>
                 <td>
                   <span class="cell-ticker">000001</span>
@@ -1924,6 +1914,69 @@
             <button class="batch-btn">批量忽略</button>
             <label for="overlay-ai-read" class="batch-btn">AI 解读</label>
           </div>
+        </div>
+
+        <!-- Direction-filtered panels (Tabs target) -->
+        <div data-tab-panel="buy" aria-hidden="true" style="padding:var(--space-12); color:var(--text-secondary); font-size:var(--font-size-12);">
+          <div style="display:flex; flex-direction:column; gap:var(--space-8);">
+            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
+              <span style="color:var(--brand-accent); font-weight:500;">▲ 买入</span>
+              <span style="flex:1;">贵州茅台 600519 — 策略信号</span>
+              <span class="cell-numeric">5.0%</span>
+              <span style="color:var(--system-healthy-fg);">置信度 82%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
+              <span style="color:var(--brand-accent); font-weight:500;">▲ 买入</span>
+              <span style="flex:1;">五粮液 000858 — 策略信号</span>
+              <span class="cell-numeric">3.8%</span>
+              <span style="color:var(--system-healthy-fg);">置信度 91%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
+              <span style="color:var(--brand-accent); font-weight:500;">▲ 买入</span>
+              <span style="flex:1;">药明康德 603259 — 策略信号</span>
+              <span class="cell-numeric">4.2%</span>
+              <span style="color:var(--system-healthy-fg);">置信度 88%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
+              <span style="color:var(--brand-accent); font-weight:500;">▲ 买入</span>
+              <span style="flex:1;">比亚迪 002594 — AI信号</span>
+              <span class="cell-numeric">2.8%</span>
+              <span style="color:var(--system-healthy-fg);">置信度 78%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
+              <span style="color:var(--brand-accent); font-weight:500;">▲ 买入</span>
+              <span style="flex:1;">平安银行 000001 — 手动信号</span>
+              <span class="cell-numeric">1.5%</span>
+              <span style="color:var(--system-degraded-fg);">置信度 52%</span>
+            </div>
+          </div>
+        </div>
+
+        <div data-tab-panel="sell" aria-hidden="true" style="padding:var(--space-12); color:var(--text-secondary); font-size:var(--font-size-12);">
+          <div style="display:flex; flex-direction:column; gap:var(--space-8);">
+            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
+              <span style="color:var(--system-down-fg); font-weight:500;">▼ 卖出</span>
+              <span style="flex:1;">宁德时代 300750 — AI信号</span>
+              <span class="cell-numeric">-3.2%</span>
+              <span style="color:var(--system-degraded-fg);">置信度 65%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
+              <span style="color:var(--system-down-fg); font-weight:500;">▼ 卖出</span>
+              <span style="flex:1;">中国平安 601318 — 手动信号</span>
+              <span class="cell-numeric">-4.5%</span>
+              <span style="color:var(--system-down-fg);">置信度 40%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
+              <span style="color:var(--system-down-fg); font-weight:500;">▼ 卖出</span>
+              <span style="flex:1;">招商银行 600036 — AI信号</span>
+              <span class="cell-numeric">-2.1%</span>
+              <span style="color:var(--system-degraded-fg);">置信度 58%</span>
+            </div>
+          </div>
+        </div>
+
+        <div data-tab-panel="hold" aria-hidden="true" style="padding:var(--space-16); text-align:center; color:var(--text-tertiary); font-size:var(--font-size-12);">
+          当前无持有信号
         </div>
       </div>
 
@@ -2119,7 +2172,7 @@
     </main>
 
     <!-- ═══ Detail Panel (380px) ═══ -->
-    <aside class="detail-panel" role="complementary" aria-label="信号详情">
+    <aside class="detail-panel" role="complementary" aria-label="信号详情" data-mouse-glow="true" data-mouse-glow-size="150px">
       <div class="detail-header">
         <div>
           <div class="detail-header-title">贵州茅台</div>
@@ -2148,11 +2201,11 @@
           </div>
           <div class="detail-row">
             <span class="detail-label">建议权重</span>
-            <span class="detail-value numeric">5.0%</span>
+            <span class="detail-value numeric" data-ticker="5.0" data-decimals="1" data-ticker-suffix="%">5.0%</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">建议价格</span>
-            <span class="detail-value numeric">1,586.00</span>
+            <span class="detail-value numeric" data-ticker="1586.00" data-decimals="2" data-ticker-prefix="¥">1,586.00</span>
           </div>
         </div>
 
@@ -2481,11 +2534,11 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">总建议权重</span>
-            <span class="overlay-field-value tnum">+12.0%</span>
+            <span class="overlay-field-value tnum" data-ticker="12.0" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="%">+12.0%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">预估总金额</span>
-            <span class="overlay-field-value tnum">¥528,400.00</span>
+            <span class="overlay-field-value tnum" data-ticker="528400.00" data-decimals="2" data-ticker-prefix="¥">¥528,400.00</span>
           </div>
 
           <h4>风控批量检查</h4>
@@ -2568,6 +2621,7 @@
   
 
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   </section>
 

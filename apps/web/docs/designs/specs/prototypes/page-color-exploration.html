@@ -1,0 +1,356 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ditto — Accent Color Exploration (Round 6)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--neutral-0:oklch(0.166 0.010 253);--neutral-25:oklch(0.184 0.011 253);--neutral-75:oklch(0.215 0.012 253);--surface-app:var(--neutral-0);--surface-panel:var(--neutral-25);--surface-elevated:var(--neutral-75);--text-primary:oklch(0.925 0.004 253);--text-secondary:oklch(0.655 0.007 253);--text-tertiary:oklch(0.555 0.007 253);--border-subtle:oklch(0.255 0.006 253);--market-up:oklch(0.670 0.170 20);--market-down:oklch(0.680 0.120 175);--font-ui:'Inter','Noto Sans SC',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace}
+[data-scheme="ink-original"]{--brand-300:oklch(0.860 0.030 265);--brand-400:oklch(0.800 0.045 265);--brand-500:oklch(0.720 0.060 265);--brand-600:oklch(0.640 0.050 265);--brand-700:oklch(0.550 0.040 265);--brand-accent:var(--brand-500);--brand-accent-hover:var(--brand-400);--brand-accent-subtle:oklch(from var(--brand-500) l c h / 0.10);--brand-accent-fg:oklch(0.99 0.002 253);--brand-signature-fg:oklch(0.760 0.055 74);--brand-signature-line:oklch(0.620 0.040 74)}
+[data-scheme="ink-warm"]{--brand-300:oklch(0.860 0.028 258);--brand-400:oklch(0.800 0.040 258);--brand-500:oklch(0.720 0.055 258);--brand-600:oklch(0.640 0.045 258);--brand-700:oklch(0.550 0.036 258);--brand-accent:var(--brand-500);--brand-accent-hover:var(--brand-400);--brand-accent-subtle:oklch(from var(--brand-500) l c h / 0.10);--brand-accent-fg:oklch(0.99 0.002 253);--brand-signature-fg:oklch(0.760 0.055 74);--brand-signature-line:oklch(0.620 0.040 74)}
+[data-scheme="ink-cool"]{--brand-300:oklch(0.855 0.032 272);--brand-400:oklch(0.795 0.048 272);--brand-500:oklch(0.715 0.065 272);--brand-600:oklch(0.635 0.054 272);--brand-700:oklch(0.545 0.042 272);--brand-accent:var(--brand-500);--brand-accent-hover:var(--brand-400);--brand-accent-subtle:oklch(from var(--brand-500) l c h / 0.10);--brand-accent-fg:oklch(0.99 0.002 253);--brand-signature-fg:oklch(0.760 0.055 74);--brand-signature-line:oklch(0.620 0.040 74)}
+[data-scheme="ink-saturated"]{--brand-300:oklch(0.850 0.045 265);--brand-400:oklch(0.785 0.065 265);--brand-500:oklch(0.700 0.085 265);--brand-600:oklch(0.615 0.072 265);--brand-700:oklch(0.525 0.058 265);--brand-accent:var(--brand-500);--brand-accent-hover:var(--brand-400);--brand-accent-subtle:oklch(from var(--brand-500) l c h / 0.10);--brand-accent-fg:oklch(0.99 0.002 253);--brand-signature-fg:oklch(0.760 0.055 74);--brand-signature-line:oklch(0.620 0.040 74)}
+[data-scheme="amber-glow"]{--brand-300:oklch(0.860 0.065 42);--brand-400:oklch(0.800 0.092 42);--brand-500:oklch(0.720 0.120 42);--brand-600:oklch(0.640 0.105 42);--brand-700:oklch(0.550 0.085 42);--brand-accent:var(--brand-500);--brand-accent-hover:var(--brand-400);--brand-accent-subtle:oklch(from var(--brand-500) l c h / 0.10);--brand-accent-fg:oklch(0.99 0.002 253);--brand-signature-fg:oklch(0.760 0.055 74);--brand-signature-line:oklch(0.620 0.040 74)}
+[data-scheme="bronze-age"]{--brand-300:oklch(0.830 0.058 35);--brand-400:oklch(0.755 0.082 35);--brand-500:oklch(0.665 0.108 35);--brand-600:oklch(0.585 0.092 35);--brand-700:oklch(0.500 0.075 35);--brand-accent:var(--brand-500);--brand-accent-hover:var(--brand-400);--brand-accent-subtle:oklch(from var(--brand-500) l c h / 0.10);--brand-accent-fg:oklch(0.99 0.002 253);--brand-signature-fg:oklch(0.760 0.055 74);--brand-signature-line:oklch(0.620 0.040 74)}
+[data-scheme="honey-cream"]{--brand-300:oklch(0.895 0.040 65);--brand-400:oklch(0.845 0.055 65);--brand-500:oklch(0.775 0.072 65);--brand-600:oklch(0.695 0.060 65);--brand-700:oklch(0.605 0.048 65);--brand-accent:var(--brand-500);--brand-accent-hover:var(--brand-400);--brand-accent-subtle:oklch(from var(--brand-500) l c h / 0.10);--brand-accent-fg:oklch(0.99 0.002 253);--brand-signature-fg:oklch(0.760 0.055 74);--brand-signature-line:oklch(0.620 0.040 74)}
+[data-scheme="terracotta"]{--brand-300:oklch(0.840 0.055 32);--brand-400:oklch(0.770 0.078 32);--brand-500:oklch(0.685 0.102 32);--brand-600:oklch(0.605 0.088 32);--brand-700:oklch(0.520 0.070 32);--brand-accent:var(--brand-500);--brand-accent-hover:var(--brand-400);--brand-accent-subtle:oklch(from var(--brand-500) l c h / 0.10);--brand-accent-fg:oklch(0.99 0.002 253);--brand-signature-fg:oklch(0.760 0.055 74);--brand-signature-line:oklch(0.620 0.040 74)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--surface-app);color:var(--text-primary);font-family:var(--font-ui);font-size:13px;line-height:1.5;padding:24px;-webkit-font-smoothing:antialiased}
+.page-header{text-align:center;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--border-subtle)}
+.page-header h1{font-size:20px;font-weight:600;letter-spacing:-0.02em;margin-bottom:4px}
+.page-header h2{font-size:14px;font-weight:500;color:var(--text-secondary);margin-bottom:8px}
+.page-header p{color:var(--text-tertiary);font-size:12px}
+.row-label{max-width:1440px;margin:0 auto 8px;font-size:11px;font-weight:500;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.08em;padding-left:4px}
+.row-label:not(:first-of-type){margin-top:28px}
+.schemes-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1440px;margin:0 auto}
+.scheme-col{background:var(--surface-panel);border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden}
+.scheme-header{padding:16px;background:var(--surface-elevated)}
+.scheme-name{font-size:15px;font-weight:600;margin-bottom:2px}
+.scheme-sub{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.scheme-desc{font-size:11px;color:var(--text-tertiary);margin-bottom:4px}
+.scheme-hue{font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)}
+.section{padding:12px 16px;border-top:1px solid var(--border-subtle)}
+.section-title{font-size:10px;font-weight:500;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+.btn-primary{padding:5px 12px;background:var(--brand-accent);color:var(--brand-accent-fg);border:none;border-radius:4px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer}
+.btn-primary:hover{background:var(--brand-accent-hover)}
+.btn-secondary{padding:5px 12px;background:transparent;color:var(--brand-accent);border:1px solid var(--brand-accent);border-radius:4px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer}
+.btn-ghost{padding:5px 12px;background:transparent;color:var(--text-secondary);border:none;border-radius:4px;font-family:var(--font-ui);font-size:12px;cursor:pointer}
+.btn-ghost:hover{color:var(--text-primary)}
+.btn-sm{padding:3px 8px;font-size:11px}
+.tab-bar{display:flex;border-bottom:1px solid var(--border-subtle)}
+.tab{padding:6px 12px;font-size:12px;color:var(--text-tertiary);cursor:pointer;border-bottom:2px solid transparent}
+.tab:hover{color:var(--text-secondary)}
+.tab.active{color:var(--brand-accent);border-bottom-color:var(--brand-accent)}
+.list-items{display:flex;flex-direction:column;gap:2px}
+.list-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;font-size:12px}
+.list-item.selected{background:oklch(from var(--brand-accent) l c h / 0.10);border:1px solid oklch(from var(--brand-accent) l c h / 0.20)}
+.item-dot{width:6px;height:6px;border-radius:50%;background:var(--text-tertiary)}
+.list-item.selected .item-dot{background:var(--brand-accent)}
+.item-badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:3px;background:var(--surface-elevated);color:var(--text-tertiary)}
+.item-badge.active{background:oklch(from var(--brand-accent) l c h / 0.15);color:var(--brand-accent)}
+.link-row{display:flex;gap:16px}
+.text-link{color:var(--brand-accent);font-size:12px;cursor:pointer;text-decoration:none}
+.text-link:hover{color:var(--brand-accent-hover);text-decoration:underline}
+.mini-table{font-size:12px}
+.table-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:4px 0}
+.table-row.header{color:var(--text-tertiary);font-size:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:6px;margin-bottom:2px}
+.mono{font-family:var(--font-mono);font-size:11px}
+.up{color:var(--market-up);font-family:var(--font-mono);font-size:11px}
+.down{color:var(--market-down);font-family:var(--font-mono);font-size:11px}
+.brass-demo{display:flex;flex-direction:column;gap:8px}
+.brass-marker{padding:4px 8px 4px 10px;font-size:12px;color:var(--brand-signature-fg)}
+.brass-inline{display:flex;align-items:center;gap:8px}
+.brass-label{font-size:11px;color:var(--brand-signature-fg);border:1px solid var(--brand-signature-line);padding:1px 6px;border-radius:3px}
+.badge-row{display:flex;gap:6px;flex-wrap:wrap}
+.badge{font-size:10px;padding:2px 8px;border-radius:3px}
+.badge.accent{background:var(--brand-accent);color:var(--brand-accent-fg)}
+.badge.accent-subtle{background:oklch(from var(--brand-accent) l c h / 0.12);color:var(--brand-accent)}
+.badge.neutral{background:var(--surface-elevated);color:var(--text-tertiary)}
+.swatch-row{display:flex;gap:4px}
+.swatch{width:100%;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center}
+.swatch span{font-size:9px;font-family:var(--font-mono);color:oklch(0.99 0.002 253);text-shadow:0 1px 2px oklch(0 0 0/0.4)}
+</style></head><body>
+<div class="page-header">
+  <h1>Accent Color — Ink Indigo × Warm Family</h1>
+  <h2>两个方向的深度微调</h2>
+  <p>Ink Indigo 4 个变体（色相偏移 + 饱和度梯度） · 暖色系 4 个变体（Amber/Bronze/Cream/Terra）</p>
+</div>
+<div class="row-label">Ink Indigo 家族 — hue 258°-272° · chroma 0.040-0.085</div>
+<div class="schemes-grid">
+<div class="scheme-col" data-scheme="ink-original">
+    <div class="scheme-header" style="border-top:3px solid oklch(0.720 0.060 265)">
+      <div class="scheme-name">Ink Indigo</div><div class="scheme-sub">Baseline · hue 265° C=0.060</div>
+      <div class="scheme-desc">Round 3 原版对照 — 钢笔墨水干在纸上</div><div class="scheme-hue">hue 265°</div></div>
+    <div class="section"><div class="section-title">按钮</div>
+      <div class="btn-row"><button class="btn-primary">新建策略</button><button class="btn-secondary">筛选</button><button class="btn-ghost">更多</button></div></div>
+    <div class="section"><div class="section-title">标签页</div>
+      <div class="tab-bar"><span class="tab active">交易</span><span class="tab">持仓</span><span class="tab">信号</span></div></div>
+    <div class="section"><div class="section-title">选中态</div>
+      <div class="list-items">
+        <div class="list-item selected"><span class="item-dot"></span><span>沪深300ETF</span><span class="item-badge active">运行中</span></div>
+        <div class="list-item"><span class="item-dot"></span><span>中证500对冲</span><span class="item-badge">待审批</span></div></div></div>
+    <div class="section"><div class="section-title">链接</div>
+      <div class="link-row"><a class="text-link">查看详情</a><a class="text-link">风控报告</a></div></div>
+    <div class="section"><div class="section-title">市场数据</div>
+      <div class="mini-table">
+        <div class="table-row header"><span>标的</span><span>最新</span><span>涨跌</span></div>
+        <div class="table-row"><span>沪深300</span><span class="mono">3,847.22</span><span class="up">+1.23%</span></div>
+        <div class="table-row"><span>中证500</span><span class="mono">5,612.80</span><span class="down">-0.45%</span></div>
+        <div class="table-row"><span>创业板指</span><span class="mono">2,156.33</span><span class="up">+2.17%</span></div></div></div>
+    <div class="section"><div class="section-title">Brass 共存</div>
+      <div class="brass-demo">
+        <div class="brass-marker" style="border-left:2px solid oklch(0.620 0.040 74)">Workspace · Alpha 基金</div>
+        <div class="brass-inline"><span class="brass-label">Shell</span><button class="btn-primary btn-sm">操作</button></div></div></div>
+    <div class="section"><div class="section-title">Badge</div>
+      <div class="badge-row"><span class="badge accent">重点</span><span class="badge accent-subtle">监控中</span><span class="badge neutral">已归档</span></div></div>
+    <div class="section"><div class="section-title">Swatch</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:oklch(0.860 0.030 265)"><span>300</span></div>
+        <div class="swatch" style="background:oklch(0.800 0.045 265)"><span>400</span></div>
+        <div class="swatch" style="background:oklch(0.720 0.060 265)"><span>500</span></div>
+        <div class="swatch" style="background:oklch(0.640 0.050 265)"><span>600</span></div>
+        <div class="swatch" style="background:oklch(0.550 0.040 265)"><span>700</span></div></div></div>
+  </div>
+<div class="scheme-col" data-scheme="ink-warm">
+    <div class="scheme-header" style="border-top:3px solid oklch(0.720 0.055 258)">
+      <div class="scheme-name">Ink · Warm Shift</div><div class="scheme-sub">hue 258° C=0.055</div>
+      <div class="scheme-desc">偏暖 7° — 墨水在暖色纸上的晕染</div><div class="scheme-hue">hue 258°</div></div>
+    <div class="section"><div class="section-title">按钮</div>
+      <div class="btn-row"><button class="btn-primary">新建策略</button><button class="btn-secondary">筛选</button><button class="btn-ghost">更多</button></div></div>
+    <div class="section"><div class="section-title">标签页</div>
+      <div class="tab-bar"><span class="tab active">交易</span><span class="tab">持仓</span><span class="tab">信号</span></div></div>
+    <div class="section"><div class="section-title">选中态</div>
+      <div class="list-items">
+        <div class="list-item selected"><span class="item-dot"></span><span>沪深300ETF</span><span class="item-badge active">运行中</span></div>
+        <div class="list-item"><span class="item-dot"></span><span>中证500对冲</span><span class="item-badge">待审批</span></div></div></div>
+    <div class="section"><div class="section-title">链接</div>
+      <div class="link-row"><a class="text-link">查看详情</a><a class="text-link">风控报告</a></div></div>
+    <div class="section"><div class="section-title">市场数据</div>
+      <div class="mini-table">
+        <div class="table-row header"><span>标的</span><span>最新</span><span>涨跌</span></div>
+        <div class="table-row"><span>沪深300</span><span class="mono">3,847.22</span><span class="up">+1.23%</span></div>
+        <div class="table-row"><span>中证500</span><span class="mono">5,612.80</span><span class="down">-0.45%</span></div>
+        <div class="table-row"><span>创业板指</span><span class="mono">2,156.33</span><span class="up">+2.17%</span></div></div></div>
+    <div class="section"><div class="section-title">Brass 共存</div>
+      <div class="brass-demo">
+        <div class="brass-marker" style="border-left:2px solid oklch(0.620 0.040 74)">Workspace · Alpha 基金</div>
+        <div class="brass-inline"><span class="brass-label">Shell</span><button class="btn-primary btn-sm">操作</button></div></div></div>
+    <div class="section"><div class="section-title">Badge</div>
+      <div class="badge-row"><span class="badge accent">重点</span><span class="badge accent-subtle">监控中</span><span class="badge neutral">已归档</span></div></div>
+    <div class="section"><div class="section-title">Swatch</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:oklch(0.860 0.028 258)"><span>300</span></div>
+        <div class="swatch" style="background:oklch(0.800 0.040 258)"><span>400</span></div>
+        <div class="swatch" style="background:oklch(0.720 0.055 258)"><span>500</span></div>
+        <div class="swatch" style="background:oklch(0.640 0.045 258)"><span>600</span></div>
+        <div class="swatch" style="background:oklch(0.550 0.036 258)"><span>700</span></div></div></div>
+  </div>
+<div class="scheme-col" data-scheme="ink-cool">
+    <div class="scheme-header" style="border-top:3px solid oklch(0.715 0.065 272)">
+      <div class="scheme-name">Ink · Cool Shift</div><div class="scheme-sub">hue 272° C=0.065</div>
+      <div class="scheme-desc">偏紫 7° — 墨水在冷色纸上的沉淀</div><div class="scheme-hue">hue 272°</div></div>
+    <div class="section"><div class="section-title">按钮</div>
+      <div class="btn-row"><button class="btn-primary">新建策略</button><button class="btn-secondary">筛选</button><button class="btn-ghost">更多</button></div></div>
+    <div class="section"><div class="section-title">标签页</div>
+      <div class="tab-bar"><span class="tab active">交易</span><span class="tab">持仓</span><span class="tab">信号</span></div></div>
+    <div class="section"><div class="section-title">选中态</div>
+      <div class="list-items">
+        <div class="list-item selected"><span class="item-dot"></span><span>沪深300ETF</span><span class="item-badge active">运行中</span></div>
+        <div class="list-item"><span class="item-dot"></span><span>中证500对冲</span><span class="item-badge">待审批</span></div></div></div>
+    <div class="section"><div class="section-title">链接</div>
+      <div class="link-row"><a class="text-link">查看详情</a><a class="text-link">风控报告</a></div></div>
+    <div class="section"><div class="section-title">市场数据</div>
+      <div class="mini-table">
+        <div class="table-row header"><span>标的</span><span>最新</span><span>涨跌</span></div>
+        <div class="table-row"><span>沪深300</span><span class="mono">3,847.22</span><span class="up">+1.23%</span></div>
+        <div class="table-row"><span>中证500</span><span class="mono">5,612.80</span><span class="down">-0.45%</span></div>
+        <div class="table-row"><span>创业板指</span><span class="mono">2,156.33</span><span class="up">+2.17%</span></div></div></div>
+    <div class="section"><div class="section-title">Brass 共存</div>
+      <div class="brass-demo">
+        <div class="brass-marker" style="border-left:2px solid oklch(0.620 0.040 74)">Workspace · Alpha 基金</div>
+        <div class="brass-inline"><span class="brass-label">Shell</span><button class="btn-primary btn-sm">操作</button></div></div></div>
+    <div class="section"><div class="section-title">Badge</div>
+      <div class="badge-row"><span class="badge accent">重点</span><span class="badge accent-subtle">监控中</span><span class="badge neutral">已归档</span></div></div>
+    <div class="section"><div class="section-title">Swatch</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:oklch(0.855 0.032 272)"><span>300</span></div>
+        <div class="swatch" style="background:oklch(0.795 0.048 272)"><span>400</span></div>
+        <div class="swatch" style="background:oklch(0.715 0.065 272)"><span>500</span></div>
+        <div class="swatch" style="background:oklch(0.635 0.054 272)"><span>600</span></div>
+        <div class="swatch" style="background:oklch(0.545 0.042 272)"><span>700</span></div></div></div>
+  </div>
+<div class="scheme-col" data-scheme="ink-saturated">
+    <div class="scheme-header" style="border-top:3px solid oklch(0.700 0.085 265)">
+      <div class="scheme-name">Ink · More Pigment</div><div class="scheme-sub">hue 265° C=0.085</div>
+      <div class="scheme-desc">同色相加饱和 — 墨水未干时的浓度</div><div class="scheme-hue">hue 265°</div></div>
+    <div class="section"><div class="section-title">按钮</div>
+      <div class="btn-row"><button class="btn-primary">新建策略</button><button class="btn-secondary">筛选</button><button class="btn-ghost">更多</button></div></div>
+    <div class="section"><div class="section-title">标签页</div>
+      <div class="tab-bar"><span class="tab active">交易</span><span class="tab">持仓</span><span class="tab">信号</span></div></div>
+    <div class="section"><div class="section-title">选中态</div>
+      <div class="list-items">
+        <div class="list-item selected"><span class="item-dot"></span><span>沪深300ETF</span><span class="item-badge active">运行中</span></div>
+        <div class="list-item"><span class="item-dot"></span><span>中证500对冲</span><span class="item-badge">待审批</span></div></div></div>
+    <div class="section"><div class="section-title">链接</div>
+      <div class="link-row"><a class="text-link">查看详情</a><a class="text-link">风控报告</a></div></div>
+    <div class="section"><div class="section-title">市场数据</div>
+      <div class="mini-table">
+        <div class="table-row header"><span>标的</span><span>最新</span><span>涨跌</span></div>
+        <div class="table-row"><span>沪深300</span><span class="mono">3,847.22</span><span class="up">+1.23%</span></div>
+        <div class="table-row"><span>中证500</span><span class="mono">5,612.80</span><span class="down">-0.45%</span></div>
+        <div class="table-row"><span>创业板指</span><span class="mono">2,156.33</span><span class="up">+2.17%</span></div></div></div>
+    <div class="section"><div class="section-title">Brass 共存</div>
+      <div class="brass-demo">
+        <div class="brass-marker" style="border-left:2px solid oklch(0.620 0.040 74)">Workspace · Alpha 基金</div>
+        <div class="brass-inline"><span class="brass-label">Shell</span><button class="btn-primary btn-sm">操作</button></div></div></div>
+    <div class="section"><div class="section-title">Badge</div>
+      <div class="badge-row"><span class="badge accent">重点</span><span class="badge accent-subtle">监控中</span><span class="badge neutral">已归档</span></div></div>
+    <div class="section"><div class="section-title">Swatch</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:oklch(0.850 0.045 265)"><span>300</span></div>
+        <div class="swatch" style="background:oklch(0.785 0.065 265)"><span>400</span></div>
+        <div class="swatch" style="background:oklch(0.700 0.085 265)"><span>500</span></div>
+        <div class="swatch" style="background:oklch(0.615 0.072 265)"><span>600</span></div>
+        <div class="swatch" style="background:oklch(0.525 0.058 265)"><span>700</span></div></div></div>
+  </div>
+</div>
+<div class="row-label" style="margin-top:28px">暖色系家族 — hue 32°-65° · 与 Brass (hue 74°) 同族延伸</div>
+<div class="schemes-grid" style="margin-top:8px">
+<div class="scheme-col" data-scheme="amber-glow">
+    <div class="scheme-header" style="border-top:3px solid oklch(0.720 0.120 42)">
+      <div class="scheme-name">Amber Glow</div><div class="scheme-sub">Warm Amber · hue 42°</div>
+      <div class="scheme-desc">琥珀微光 — 蜂蜜琥珀内部的光，温暖有力</div><div class="scheme-hue">hue 42°</div></div>
+    <div class="section"><div class="section-title">按钮</div>
+      <div class="btn-row"><button class="btn-primary">新建策略</button><button class="btn-secondary">筛选</button><button class="btn-ghost">更多</button></div></div>
+    <div class="section"><div class="section-title">标签页</div>
+      <div class="tab-bar"><span class="tab active">交易</span><span class="tab">持仓</span><span class="tab">信号</span></div></div>
+    <div class="section"><div class="section-title">选中态</div>
+      <div class="list-items">
+        <div class="list-item selected"><span class="item-dot"></span><span>沪深300ETF</span><span class="item-badge active">运行中</span></div>
+        <div class="list-item"><span class="item-dot"></span><span>中证500对冲</span><span class="item-badge">待审批</span></div></div></div>
+    <div class="section"><div class="section-title">链接</div>
+      <div class="link-row"><a class="text-link">查看详情</a><a class="text-link">风控报告</a></div></div>
+    <div class="section"><div class="section-title">市场数据</div>
+      <div class="mini-table">
+        <div class="table-row header"><span>标的</span><span>最新</span><span>涨跌</span></div>
+        <div class="table-row"><span>沪深300</span><span class="mono">3,847.22</span><span class="up">+1.23%</span></div>
+        <div class="table-row"><span>中证500</span><span class="mono">5,612.80</span><span class="down">-0.45%</span></div>
+        <div class="table-row"><span>创业板指</span><span class="mono">2,156.33</span><span class="up">+2.17%</span></div></div></div>
+    <div class="section"><div class="section-title">Brass 共存</div>
+      <div class="brass-demo">
+        <div class="brass-marker" style="border-left:2px solid oklch(0.620 0.040 74)">Workspace · Alpha 基金</div>
+        <div class="brass-inline"><span class="brass-label">Shell</span><button class="btn-primary btn-sm">操作</button></div></div></div>
+    <div class="section"><div class="section-title">Badge</div>
+      <div class="badge-row"><span class="badge accent">重点</span><span class="badge accent-subtle">监控中</span><span class="badge neutral">已归档</span></div></div>
+    <div class="section"><div class="section-title">Swatch</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:oklch(0.860 0.065 42)"><span>300</span></div>
+        <div class="swatch" style="background:oklch(0.800 0.092 42)"><span>400</span></div>
+        <div class="swatch" style="background:oklch(0.720 0.120 42)"><span>500</span></div>
+        <div class="swatch" style="background:oklch(0.640 0.105 42)"><span>600</span></div>
+        <div class="swatch" style="background:oklch(0.550 0.085 42)"><span>700</span></div></div></div>
+  </div>
+<div class="scheme-col" data-scheme="bronze-age">
+    <div class="scheme-header" style="border-top:3px solid oklch(0.665 0.108 35)">
+      <div class="scheme-name">Bronze Age</div><div class="scheme-sub">Deep Bronze · hue 35°</div>
+      <div class="scheme-desc">青铜时代 — 比 Brass 更深更重的青铜色</div><div class="scheme-hue">hue 35°</div></div>
+    <div class="section"><div class="section-title">按钮</div>
+      <div class="btn-row"><button class="btn-primary">新建策略</button><button class="btn-secondary">筛选</button><button class="btn-ghost">更多</button></div></div>
+    <div class="section"><div class="section-title">标签页</div>
+      <div class="tab-bar"><span class="tab active">交易</span><span class="tab">持仓</span><span class="tab">信号</span></div></div>
+    <div class="section"><div class="section-title">选中态</div>
+      <div class="list-items">
+        <div class="list-item selected"><span class="item-dot"></span><span>沪深300ETF</span><span class="item-badge active">运行中</span></div>
+        <div class="list-item"><span class="item-dot"></span><span>中证500对冲</span><span class="item-badge">待审批</span></div></div></div>
+    <div class="section"><div class="section-title">链接</div>
+      <div class="link-row"><a class="text-link">查看详情</a><a class="text-link">风控报告</a></div></div>
+    <div class="section"><div class="section-title">市场数据</div>
+      <div class="mini-table">
+        <div class="table-row header"><span>标的</span><span>最新</span><span>涨跌</span></div>
+        <div class="table-row"><span>沪深300</span><span class="mono">3,847.22</span><span class="up">+1.23%</span></div>
+        <div class="table-row"><span>中证500</span><span class="mono">5,612.80</span><span class="down">-0.45%</span></div>
+        <div class="table-row"><span>创业板指</span><span class="mono">2,156.33</span><span class="up">+2.17%</span></div></div></div>
+    <div class="section"><div class="section-title">Brass 共存</div>
+      <div class="brass-demo">
+        <div class="brass-marker" style="border-left:2px solid oklch(0.620 0.040 74)">Workspace · Alpha 基金</div>
+        <div class="brass-inline"><span class="brass-label">Shell</span><button class="btn-primary btn-sm">操作</button></div></div></div>
+    <div class="section"><div class="section-title">Badge</div>
+      <div class="badge-row"><span class="badge accent">重点</span><span class="badge accent-subtle">监控中</span><span class="badge neutral">已归档</span></div></div>
+    <div class="section"><div class="section-title">Swatch</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:oklch(0.830 0.058 35)"><span>300</span></div>
+        <div class="swatch" style="background:oklch(0.755 0.082 35)"><span>400</span></div>
+        <div class="swatch" style="background:oklch(0.665 0.108 35)"><span>500</span></div>
+        <div class="swatch" style="background:oklch(0.585 0.092 35)"><span>600</span></div>
+        <div class="swatch" style="background:oklch(0.500 0.075 35)"><span>700</span></div></div></div>
+  </div>
+<div class="scheme-col" data-scheme="honey-cream">
+    <div class="scheme-header" style="border-top:3px solid oklch(0.775 0.072 65)">
+      <div class="scheme-name">Honey Cream</div><div class="scheme-sub">Pale Warm · hue 65°</div>
+      <div class="scheme-desc">蜜奶油 — 比 Champagne Gold 更淡更雅，高级感暖白</div><div class="scheme-hue">hue 65°</div></div>
+    <div class="section"><div class="section-title">按钮</div>
+      <div class="btn-row"><button class="btn-primary">新建策略</button><button class="btn-secondary">筛选</button><button class="btn-ghost">更多</button></div></div>
+    <div class="section"><div class="section-title">标签页</div>
+      <div class="tab-bar"><span class="tab active">交易</span><span class="tab">持仓</span><span class="tab">信号</span></div></div>
+    <div class="section"><div class="section-title">选中态</div>
+      <div class="list-items">
+        <div class="list-item selected"><span class="item-dot"></span><span>沪深300ETF</span><span class="item-badge active">运行中</span></div>
+        <div class="list-item"><span class="item-dot"></span><span>中证500对冲</span><span class="item-badge">待审批</span></div></div></div>
+    <div class="section"><div class="section-title">链接</div>
+      <div class="link-row"><a class="text-link">查看详情</a><a class="text-link">风控报告</a></div></div>
+    <div class="section"><div class="section-title">市场数据</div>
+      <div class="mini-table">
+        <div class="table-row header"><span>标的</span><span>最新</span><span>涨跌</span></div>
+        <div class="table-row"><span>沪深300</span><span class="mono">3,847.22</span><span class="up">+1.23%</span></div>
+        <div class="table-row"><span>中证500</span><span class="mono">5,612.80</span><span class="down">-0.45%</span></div>
+        <div class="table-row"><span>创业板指</span><span class="mono">2,156.33</span><span class="up">+2.17%</span></div></div></div>
+    <div class="section"><div class="section-title">Brass 共存</div>
+      <div class="brass-demo">
+        <div class="brass-marker" style="border-left:2px solid oklch(0.620 0.040 74)">Workspace · Alpha 基金</div>
+        <div class="brass-inline"><span class="brass-label">Shell</span><button class="btn-primary btn-sm">操作</button></div></div></div>
+    <div class="section"><div class="section-title">Badge</div>
+      <div class="badge-row"><span class="badge accent">重点</span><span class="badge accent-subtle">监控中</span><span class="badge neutral">已归档</span></div></div>
+    <div class="section"><div class="section-title">Swatch</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:oklch(0.895 0.040 65)"><span>300</span></div>
+        <div class="swatch" style="background:oklch(0.845 0.055 65)"><span>400</span></div>
+        <div class="swatch" style="background:oklch(0.775 0.072 65)"><span>500</span></div>
+        <div class="swatch" style="background:oklch(0.695 0.060 65)"><span>600</span></div>
+        <div class="swatch" style="background:oklch(0.605 0.048 65)"><span>700</span></div></div></div>
+  </div>
+<div class="scheme-col" data-scheme="terracotta">
+    <div class="scheme-header" style="border-top:3px solid oklch(0.685 0.102 32)">
+      <div class="scheme-name">Terracotta</div><div class="scheme-sub">Earth Orange · hue 32°</div>
+      <div class="scheme-desc">赤陶 — 介于 Copper 和 Bronze 之间的陶土色</div><div class="scheme-hue">hue 32°</div></div>
+    <div class="section"><div class="section-title">按钮</div>
+      <div class="btn-row"><button class="btn-primary">新建策略</button><button class="btn-secondary">筛选</button><button class="btn-ghost">更多</button></div></div>
+    <div class="section"><div class="section-title">标签页</div>
+      <div class="tab-bar"><span class="tab active">交易</span><span class="tab">持仓</span><span class="tab">信号</span></div></div>
+    <div class="section"><div class="section-title">选中态</div>
+      <div class="list-items">
+        <div class="list-item selected"><span class="item-dot"></span><span>沪深300ETF</span><span class="item-badge active">运行中</span></div>
+        <div class="list-item"><span class="item-dot"></span><span>中证500对冲</span><span class="item-badge">待审批</span></div></div></div>
+    <div class="section"><div class="section-title">链接</div>
+      <div class="link-row"><a class="text-link">查看详情</a><a class="text-link">风控报告</a></div></div>
+    <div class="section"><div class="section-title">市场数据</div>
+      <div class="mini-table">
+        <div class="table-row header"><span>标的</span><span>最新</span><span>涨跌</span></div>
+        <div class="table-row"><span>沪深300</span><span class="mono">3,847.22</span><span class="up">+1.23%</span></div>
+        <div class="table-row"><span>中证500</span><span class="mono">5,612.80</span><span class="down">-0.45%</span></div>
+        <div class="table-row"><span>创业板指</span><span class="mono">2,156.33</span><span class="up">+2.17%</span></div></div></div>
+    <div class="section"><div class="section-title">Brass 共存</div>
+      <div class="brass-demo">
+        <div class="brass-marker" style="border-left:2px solid oklch(0.620 0.040 74)">Workspace · Alpha 基金</div>
+        <div class="brass-inline"><span class="brass-label">Shell</span><button class="btn-primary btn-sm">操作</button></div></div></div>
+    <div class="section"><div class="section-title">Badge</div>
+      <div class="badge-row"><span class="badge accent">重点</span><span class="badge accent-subtle">监控中</span><span class="badge neutral">已归档</span></div></div>
+    <div class="section"><div class="section-title">Swatch</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:oklch(0.840 0.055 32)"><span>300</span></div>
+        <div class="swatch" style="background:oklch(0.770 0.078 32)"><span>400</span></div>
+        <div class="swatch" style="background:oklch(0.685 0.102 32)"><span>500</span></div>
+        <div class="swatch" style="background:oklch(0.605 0.088 32)"><span>600</span></div>
+        <div class="swatch" style="background:oklch(0.520 0.070 32)"><span>700</span></div></div></div>
+  </div>
+</div></body></html>

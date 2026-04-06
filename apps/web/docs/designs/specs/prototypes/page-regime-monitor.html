@@ -1651,7 +1651,7 @@
       <div class="regime-strip-separator"></div>
       <div class="regime-strip-metric">
         <span class="regime-strip-label">置信度</span>
-        <span class="regime-strip-value up">72%</span>
+        <span class="regime-strip-value up" data-ticker="72" data-decimals="0" data-ticker-suffix="%">0%</span>
       </div>
       <div class="regime-strip-separator"></div>
       <div class="regime-strip-metric">
@@ -1708,7 +1708,7 @@
             <div class="regime-main-col">
 
               <!-- Regime Indicator Panel -->
-              <div class="panel regime-panel-fixed">
+              <div class="panel regime-panel-fixed" data-reveal="fade-up">
                 <div class="panel-header">
                   <span class="panel-title">Regime Indicator</span>
                   <span class="panel-subtitle panel-subtitle--offset">Regime Engine 实时判定</span>
@@ -1750,7 +1750,7 @@
               </div>
 
               <!-- Regime Timeline Chart -->
-              <div class="panel chart-panel regime-panel-grow">
+              <div class="panel chart-panel regime-panel-grow" data-reveal="fade-up" data-reveal-delay="150">
                 <div class="panel-header">
                   <span class="panel-title">Regime Timeline</span>
                   <span class="panel-subtitle panel-subtitle--offset">近 3 个月 Regime 变化</span>
@@ -1805,7 +1805,7 @@
               <div class="context-rail">
 
                 <!-- Section: Key Drivers -->
-                <div class="context-section">
+                <div class="context-section" data-reveal="fade-right">
                   <div class="context-section-header">
                     <span class="context-section-title">Key Drivers</span>
                     <span class="context-section-count">5 因子</span>
@@ -1846,7 +1846,7 @@
                 </div>
 
                 <!-- Section: Regime Composition -->
-                <div class="context-section">
+                <div class="context-section" data-reveal="fade-right" data-reveal-delay="100">
                   <div class="context-section-header">
                     <span class="context-section-title">Regime Composition</span>
                     <span class="context-section-count">多因子</span>
@@ -1935,6 +1935,39 @@
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Section: Market State Matrix (HeatGrid) -->
+                <div class="context-section">
+                  <div class="context-section-header">
+                    <span class="context-section-title">Market State Matrix</span>
+                    <span class="context-section-count">近 4 周</span>
+                  </div>
+                  <div class="context-section-body" style="display:flex; justify-content:center; padding-top:var(--space-8);">
+                    <svg data-heatgrid='{"rows":4,"cols":7,"cellSize":20,"gap":2}' aria-label="市场状态矩阵"></svg>
+                  </div>
+                </div>
+
+                <!-- Section: Regime Probability (DonutGauge) -->
+                <div class="context-section">
+                  <div class="context-section-header">
+                    <span class="context-section-title">Regime Probability</span>
+                    <span class="context-section-count">体制概率</span>
+                  </div>
+                  <div class="context-section-body" style="display:flex; align-items:center; justify-content:space-around; padding-top:var(--space-8);">
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
+                      <svg data-donut='{"value":0.72,"label":"72%","color":"oklch(0.55 0.15 155)","size":64}' aria-label="Bull概率"></svg>
+                      <span style="font-size:var(--font-size-10); color:var(--market-up-fg);">Bull</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
+                      <svg data-donut='{"value":0.18,"label":"18%","color":"oklch(0.6317 0.1567 22.64)","size":64}' aria-label="Bear概率"></svg>
+                      <span style="font-size:var(--font-size-10); color:var(--market-down-fg);">Bear</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
+                      <svg data-donut='{"value":0.10,"label":"10%","color":"oklch(0.746 0.165 50)","size":64}' aria-label="Neutral概率"></svg>
+                      <span style="font-size:var(--font-size-10); color:var(--risk-near-limit-fg);">Neutral</span>
                     </div>
                   </div>
                 </div>
@@ -2370,6 +2403,7 @@
   </div>
 
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
 
   </section>
 

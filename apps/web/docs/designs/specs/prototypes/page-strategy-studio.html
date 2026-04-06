@@ -2159,7 +2159,7 @@
       <div class="tab-panel" data-panel="studio-mode-form">
 
       <!-- Panel 1: Strategy Basic Info -->
-      <div class="studio-panel">
+      <div class="studio-panel" data-reveal="fade-up" data-reveal-delay="0">
         <div class="studio-panel-header">
           <div>
             <div class="studio-panel-title">策略基本信息</div>
@@ -2189,7 +2189,7 @@
       </div>
 
       <!-- Panel 2: Factor Weights -->
-      <div class="studio-panel">
+      <div class="studio-panel" data-reveal="fade-up" data-reveal-delay="80">
         <div class="studio-panel-header">
           <div>
             <div class="studio-panel-title">因子权重配置</div>
@@ -2276,7 +2276,7 @@
       </div>
 
       <!-- Panel: Parameter Comparison Matrix -->
-      <div class="studio-panel">
+      <div class="studio-panel" data-reveal="fade-up" data-reveal-delay="160">
         <div class="studio-panel-header">
           <div>
             <div class="studio-panel-title">参数对比矩阵</div>
@@ -2336,7 +2336,7 @@
       </div>
 
       <!-- Panel 4: Backtest Parameters -->
-      <div class="studio-panel">
+      <div class="studio-panel" data-reveal="fade-up" data-reveal-delay="240">
         <div class="studio-panel-header">
           <div>
             <div class="studio-panel-title">回测参数</div>
@@ -2449,7 +2449,7 @@
 
     <!-- ═══ Inspector Panel (Right) ═══ -->
     <aside class="studio-inspector" aria-label="检查器">
-      <!-- AI Assistant -->
+      <!-- AI Assistant (always visible above tabs) -->
       <div class="inspector-section inspector-section--fixed">
         <div class="inspector-section-title">AI 助手</div>
         <div class="strategy-status-tag validated" title="策略校验通过">
@@ -2467,148 +2467,259 @@
         </div>
       </div>
 
-      <!-- Warnings / Suggestions -->
-      <div class="inspector-section inspector-section--scroll">
-        <div class="inspector-section-title">警告与建议</div>
-        <div class="inspector-list">
-          <div class="inspector-item warn" role="alert">
-            <div class="inspector-item-icon">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
-            </div>
-            <div class="inspector-item-body">
-              <div class="inspector-item-title">估值因子待校验</div>
-              <div class="inspector-item-desc">最近数据更新于 3 天前，可能影响因子有效性</div>
-            </div>
-          </div>
-          <div class="inspector-item warn" role="alert">
-            <div class="inspector-item-icon">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
-            </div>
-            <div class="inspector-item-body">
-              <div class="inspector-item-title">行业集中度偏高</div>
-              <div class="inspector-item-desc">金融行业占比 28%，接近 30% 预警线</div>
-            </div>
-          </div>
-          <div class="inspector-item info">
-            <div class="inspector-item-icon">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 8v4M10 14h.01"/></svg>
-            </div>
-            <div class="inspector-item-body">
-              <div class="inspector-item-title">正交化步骤可选</div>
-              <div class="inspector-item-desc">启用正交化可降低因子间共线性，提升稳定性</div>
-            </div>
-          </div>
+      <!-- Inspector Tabs: 策略 / 参数 / 绩效 -->
+      <div data-tabs="strategy-tabs" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+        <div style="display:flex;align-items:center;padding:0 var(--density-panel-padding);border-bottom:1px solid var(--border-subtle);gap:0;flex-shrink:0;">
+          <span data-tab-target="strategy" class="mode-tab active" role="tab" aria-selected="true" tabindex="0" style="font-size:var(--font-size-11);padding:var(--space-4) var(--space-8);">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+            策略
+          </span>
+          <span data-tab-target="params" class="mode-tab" role="tab" aria-selected="false" tabindex="0" style="font-size:var(--font-size-11);padding:var(--space-4) var(--space-8);">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><rect x="3" y="3" width="14" height="3" rx="1"/><rect x="3" y="8.5" width="14" height="3" rx="1"/><rect x="3" y="14" width="14" height="3" rx="1"/></svg>
+            参数
+          </span>
+          <span data-tab-target="performance" class="mode-tab" role="tab" aria-selected="false" tabindex="0" style="font-size:var(--font-size-11);padding:var(--space-4) var(--space-8);">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+            绩效
+          </span>
         </div>
-      </div>
 
-      <!-- Strategy Summary -->
-      <div class="inspector-section inspector-section--fixed">
-        <div class="inspector-section-title">策略摘要</div>
-        <div class="summary-grid">
-          <div class="summary-item">
-            <div class="summary-item-label">启用因子</div>
-            <div class="summary-item-value">3 / 4</div>
+        <!-- Tab Panel: 策略 -->
+        <div data-tab-panel="strategy" style="overflow-y:auto;display:flex;flex-direction:column;">
+          <!-- Warnings / Suggestions -->
+          <div class="inspector-section">
+            <div class="inspector-section-title">警告与建议</div>
+            <div class="inspector-list">
+              <div class="inspector-item warn" role="alert">
+                <div class="inspector-item-icon">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
+                </div>
+                <div class="inspector-item-body">
+                  <div class="inspector-item-title">估值因子待校验</div>
+                  <div class="inspector-item-desc">最近数据更新于 3 天前，可能影响因子有效性</div>
+                </div>
+              </div>
+              <div class="inspector-item warn" role="alert">
+                <div class="inspector-item-icon">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
+                </div>
+                <div class="inspector-item-body">
+                  <div class="inspector-item-title">行业集中度偏高</div>
+                  <div class="inspector-item-desc">金融行业占比 28%，接近 30% 预警线</div>
+                </div>
+              </div>
+              <div class="inspector-item info">
+                <div class="inspector-item-icon">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 8v4M10 14h.01"/></svg>
+                </div>
+                <div class="inspector-item-body">
+                  <div class="inspector-item-title">正交化步骤可选</div>
+                  <div class="inspector-item-desc">启用正交化可降低因子间共线性，提升稳定性</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="summary-item">
-            <div class="summary-item-label">股票池</div>
-            <div class="summary-item-value">沪深300</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-item-label">风险规则</div>
-            <div class="summary-item-value">2 条</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-item-label">上次回测</div>
-            <div class="summary-item-value summary-value--muted">3 天前</div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Equity Curve (last backtest) -->
-      <div class="inspector-section inspector-section--fixed">
-        <div class="inspector-section-title">权益曲线</div>
-        <div class="equity-curve-container">
-          <div class="equity-curve-label">
-            <span class="equity-curve-title">累计收益率</span>
-            <span class="equity-curve-value">+32.6%</span>
-          </div>
-          <svg class="equity-curve-svg" viewBox="0 0 260 80" preserveAspectRatio="none" aria-label="策略权益曲线">
-            <!-- Grid lines -->
-            <line x1="0" y1="20" x2="260" y2="20" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
-            <line x1="0" y1="40" x2="260" y2="40" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
-            <line x1="0" y1="60" x2="260" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
-            <!-- Benchmark line (flat) -->
-            <polyline fill="none" stroke="var(--text-disabled)" stroke-width="1" stroke-dasharray="3,3"
-              points="0,60 26,58 52,56 78,59 104,55 130,53 156,50 182,52 208,48 234,45 260,42"/>
-            <!-- Strategy equity curve -->
-            <defs>
-              <linearGradient id="curve-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.15"/>
-                <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <path fill="url(#curve-fill)"
-              d="M0,60 L26,52 52,48 78,55 104,40 130,35 156,30 182,38 208,25 234,18 260,12 L260,80 0,80 Z"/>
-            <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-              points="0,60 26,52 52,48 78,55 104,40 130,35 156,30 182,38 208,25 234,18 260,12"/>
-            <!-- End point marker -->
-            <circle cx="260" cy="12" r="2.5" fill="var(--brand-accent)"/>
-          </svg>
-          <div class="equity-curve-legend">
-            <span><span class="equity-curve-legend-dot equity-curve-legend-dot--strategy"></span>策略</span>
-            <span><span class="equity-curve-legend-dot equity-curve-legend-dot--benchmark"></span>基准</span>
+          <!-- Strategy Summary -->
+          <div class="inspector-section">
+            <div class="inspector-section-title">策略摘要</div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-item-label">启用因子</div>
+                <div class="summary-item-value">3 / 4</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">股票池</div>
+                <div class="summary-item-value">沪深300</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">风险规则</div>
+                <div class="summary-item-value">2 条</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">上次回测</div>
+                <div class="summary-item-value summary-value--muted">3 天前</div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Performance Metrics -->
-      <div class="inspector-section inspector-section--fixed">
-        <div class="inspector-section-title">绩效指标</div>
-        <div class="perf-metrics-grid">
-          <div class="perf-metric-card">
-            <span class="perf-metric-label">年化收益</span>
-            <span class="perf-metric-value positive">+18.4%</span>
-            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
-              <polyline fill="none" stroke="var(--market-up-fg)" stroke-width="1" points="0,14 5,12 10,10 15,11 20,8 25,7 30,5 35,6 40,3"/>
-            </svg>
+        <!-- Tab Panel: 参数 -->
+        <div data-tab-panel="params" style="overflow-y:auto;display:none;flex-direction:column;">
+          <!-- Portfolio Optimization Config -->
+          <div class="inspector-section">
+            <div class="inspector-section-title">组合优化</div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-item-label">优化方法</div>
+                <div class="summary-item-value">风险平价</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">再平衡频率</div>
+                <div class="summary-item-value">月度</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">最大换手率</div>
+                <div class="summary-item-value">30%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">目标波动率</div>
+                <div class="summary-item-value">12.0%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">跟踪误差上限</div>
+                <div class="summary-item-value">4.0%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">最大回撤限制</div>
+                <div class="summary-item-value">-15.0%</div>
+              </div>
+            </div>
           </div>
-          <div class="perf-metric-card">
-            <span class="perf-metric-label">夏普比率</span>
-            <span class="perf-metric-value">1.42</span>
-            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
-              <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,12 5,10 10,11 15,8 20,9 25,6 30,7 35,5 40,4"/>
-            </svg>
+
+          <!-- Factor Weights Summary -->
+          <div class="inspector-section">
+            <div class="inspector-section-title">因子权重</div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-item-label">动量因子</div>
+                <div class="summary-item-value" style="color:var(--brand-accent);">45%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">波动率因子</div>
+                <div class="summary-item-value" style="color:var(--system-healthy-fg);">30%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">估值因子</div>
+                <div class="summary-item-value" style="color:var(--system-degraded-fg);">25%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">流动性因子</div>
+                <div class="summary-item-value summary-value--muted">未启用</div>
+              </div>
+            </div>
           </div>
-          <div class="perf-metric-card">
-            <span class="perf-metric-label">最大回撤</span>
-            <span class="perf-metric-value negative">-12.8%</span>
-            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
-              <polyline fill="none" stroke="var(--market-down-fg)" stroke-width="1" points="0,4 5,5 10,8 15,12 20,10 25,7 30,9 35,6 40,5"/>
-            </svg>
-          </div>
-          <div class="perf-metric-card">
-            <span class="perf-metric-label">信息比率</span>
-            <span class="perf-metric-value">0.86</span>
-            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
-              <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,13 5,10 10,12 15,8 20,10 25,6 30,8 35,5 40,4"/>
-            </svg>
-          </div>
-          <div class="perf-metric-card">
-            <span class="perf-metric-label">Calmar</span>
-            <span class="perf-metric-value">1.44</span>
-            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
-              <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,14 5,11 10,9 15,10 20,7 25,8 30,5 35,6 40,3"/>
-            </svg>
-          </div>
-          <div class="perf-metric-card">
-            <span class="perf-metric-label">胜率</span>
-            <span class="perf-metric-value">56.2%</span>
-            <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
-              <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,10 5,8 10,9 15,7 20,8 25,6 30,7 35,5 40,6"/>
-            </svg>
+
+          <!-- Backtest Config Summary -->
+          <div class="inspector-section">
+            <div class="inspector-section-title">回测配置</div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-item-label">回测区间</div>
+                <div class="summary-item-value">2020–2025</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">调仓频率</div>
+                <div class="summary-item-value">每月</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">初始资金</div>
+                <div class="summary-item-value">1,000 万</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">基准指数</div>
+                <div class="summary-item-value">沪深300</div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+
+        <!-- Tab Panel: 绩效 -->
+        <div data-tab-panel="performance" style="overflow-y:auto;display:none;flex-direction:column;">
+          <!-- Equity Curve (last backtest) -->
+          <div class="inspector-section">
+            <div class="inspector-section-title">权益曲线</div>
+            <div class="equity-curve-container">
+              <div class="equity-curve-label">
+                <span class="equity-curve-title">累计收益率</span>
+                <span style="display:flex;align-items:center;gap:var(--space-8);">
+                  <svg data-sparkline='{"data":[100,102,101,105,104,108,107,112,110,115,118,116,120,123,125],"stroke":"oklch(0.55 0.15 155)","fill":true,"width":200,"height":60}' aria-label="权益曲线"></svg>
+                  <span class="equity-curve-value">+32.6%</span>
+                </span>
+              </div>
+              <svg class="equity-curve-svg" viewBox="0 0 260 80" preserveAspectRatio="none" aria-label="策略权益曲线">
+                <!-- Grid lines -->
+                <line x1="0" y1="20" x2="260" y2="20" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
+                <line x1="0" y1="40" x2="260" y2="40" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
+                <line x1="0" y1="60" x2="260" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
+                <!-- Benchmark line (flat) -->
+                <polyline fill="none" stroke="var(--text-disabled)" stroke-width="1" stroke-dasharray="3,3"
+                  points="0,60 26,58 52,56 78,59 104,55 130,53 156,50 182,52 208,48 234,45 260,42"/>
+                <!-- Strategy equity curve -->
+                <defs>
+                  <linearGradient id="curve-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.15"/>
+                    <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path fill="url(#curve-fill)"
+                  d="M0,60 L26,52 52,48 78,55 104,40 130,35 156,30 182,38 208,25 234,18 260,12 L260,80 0,80 Z"/>
+                <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                  points="0,60 26,52 52,48 78,55 104,40 130,35 156,30 182,38 208,25 234,18 260,12"/>
+                <!-- End point marker -->
+                <circle cx="260" cy="12" r="2.5" fill="var(--brand-accent)"/>
+              </svg>
+              <div class="equity-curve-legend">
+                <span><span class="equity-curve-legend-dot equity-curve-legend-dot--strategy"></span>策略</span>
+                <span><span class="equity-curve-legend-dot equity-curve-legend-dot--benchmark"></span>基准</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Performance Metrics -->
+          <div class="inspector-section">
+            <div class="inspector-section-title">绩效指标</div>
+            <div class="perf-metrics-grid">
+              <div class="perf-metric-card">
+                <span class="perf-metric-label">年化收益</span>
+                <span class="perf-metric-value positive"><span data-ticker="18.4" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="%">18.4%</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--market-up-fg)" stroke-width="1" points="0,14 5,12 10,10 15,11 20,8 25,7 30,5 35,6 40,3"/>
+                </svg>
+              </div>
+              <div class="perf-metric-card">
+                <span class="perf-metric-label">夏普比率</span>
+                <span class="perf-metric-value"><span data-ticker="1.42" data-decimals="2">1.42</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,12 5,10 10,11 15,8 20,9 25,6 30,7 35,5 40,4"/>
+                </svg>
+              </div>
+              <div class="perf-metric-card">
+                <span class="perf-metric-label">最大回撤</span>
+                <span class="perf-metric-value negative"><span data-ticker="12.8" data-decimals="1" data-ticker-prefix="-" data-ticker-suffix="%">-12.8%</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--market-down-fg)" stroke-width="1" points="0,4 5,5 10,8 15,12 20,10 25,7 30,9 35,6 40,5"/>
+                </svg>
+              </div>
+              <div class="perf-metric-card">
+                <span class="perf-metric-label">信息比率</span>
+                <span class="perf-metric-value"><span data-ticker="0.86" data-decimals="2">0.86</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,13 5,10 10,12 15,8 20,10 25,6 30,8 35,5 40,4"/>
+                </svg>
+              </div>
+              <div class="perf-metric-card">
+                <span class="perf-metric-label">Calmar</span>
+                <span class="perf-metric-value"><span data-ticker="1.44" data-decimals="2">1.44</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,14 5,11 10,9 15,10 20,7 25,8 30,5 35,6 40,3"/>
+                </svg>
+              </div>
+              <div class="perf-metric-card">
+                <span class="perf-metric-label">胜率</span>
+                <span class="perf-metric-value"><span data-ticker="56.2" data-decimals="1" data-ticker-suffix="%">56.2%</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,10 5,8 10,9 15,7 20,8 25,6 30,7 35,5 40,6"/>
+                </svg>
+              </div>
+            </div>
+            <div style="margin-top:var(--space-10);">
+              <span class="inspector-section-title" style="margin-bottom:var(--space-6);display:block;">策略稳定性</span>
+              <svg data-sparkline='{"data":[0.82,0.79,0.85,0.83,0.88,0.86,0.91,0.89,0.87,0.92,0.90,0.94],"stroke":"oklch(0.7 0.165 255)","fill":true,"width":200,"height":50}' aria-label="策略稳定性趋势"></svg>
+            </div>
+          </div>
+        </div>
+      </div><!-- /data-tabs="strategy-tabs" -->
     </aside>
 
     <!-- ═══ Bottom Logs Panel ═══ -->
@@ -2931,6 +3042,9 @@
 
   <!-- Theme switcher script -->
   <script src="shared/theme-switcher.js"></script>
+
+  <!-- Prototype interactions library -->
+  <script src="shared/prototype-interactions.js"></script>
 
   <!-- Factor weight slider value sync -->
   <script>
