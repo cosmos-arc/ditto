@@ -89,7 +89,7 @@ ditto_infra     → 其他层                                                  �
 
 使用 **Import Linter** 进行架构约束检查,配置位于 [.importlinter](../../.importlinter)。
 
-共 18 条合约（0 broken, 0 warnings）。
+共 22 条合约（0 broken, 0 warnings）。
 
 **检查类型：**
 1. **分层架构** (`layers`): Interfaces → App → Engine → Data → Infra

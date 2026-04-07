@@ -1,6 +1,5 @@
 """Base store abstractions."""
 
-from ditto_data.storage.base.base_store import BaseStore
 from ditto_data.storage.base.parquet_store import MergeResult, ParquetStore
 from ditto_data.storage.base.partition_strategy import (
     PartitionStrategy,
@@ -9,7 +8,6 @@ from ditto_data.storage.base.partition_strategy import (
 from ditto_data.storage.base.sqlite_store import SQLiteStore
 
 __all__ = [
-    "BaseStore",
     "MergeResult",
     "ParquetStore",
     "PartitionStrategy",

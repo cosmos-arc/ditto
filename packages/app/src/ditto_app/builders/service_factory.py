@@ -31,8 +31,7 @@ from ditto_kernel.identity import InstrumentId
 
 from ditto_app.builders._resolution import (
     resolve_benchmark,
-    resolve_display_map,
-    resolve_tickers,
+    resolve_instrument_display,
 )
 from ditto_app.builders.runtime_builder import StrategyRuntimeBuilder
 from ditto_app.process.backtest_service import (
@@ -137,8 +136,10 @@ class BacktestRuntimeBuilder:
             runtime.spec.universe,
             asof=config.start_date,
         )
-        tickers, id_map = resolve_tickers(universe_ids, self._metadata_service)
-        display_map = resolve_display_map(universe_ids, self._metadata_service)
+        resolution = resolve_instrument_display(universe_ids, self._metadata_service)
+        tickers = resolution.tickers
+        id_map = resolution.id_map
+        display_map = resolution.display_map
 
         data_feed = ProviderBackedDataFeed(
             self._data_provider,

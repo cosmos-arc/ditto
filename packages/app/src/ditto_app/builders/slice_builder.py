@@ -6,7 +6,7 @@ from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_engine.backtest.data_feed import ProviderBackedDataFeed, Slice
 
-from ditto_app.builders._resolution import resolve_benchmark, resolve_tickers
+from ditto_app.builders._resolution import resolve_benchmark, resolve_instrument_display
 from ditto_app.builders.runtime_builder import StrategyRuntimeBuilder
 
 __all__ = [
@@ -53,7 +53,9 @@ class StrategySliceBuilder:
             runtime.spec.universe,
             asof=trade_date,
         )
-        tickers, id_map = resolve_tickers(universe_ids, self._metadata_service)
+        resolution = resolve_instrument_display(universe_ids, self._metadata_service)
+        tickers = resolution.tickers
+        id_map = resolution.id_map
 
         data_feed = ProviderBackedDataFeed(
             self._data_provider,

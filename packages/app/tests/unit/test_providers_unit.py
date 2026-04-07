@@ -25,7 +25,7 @@ from ditto_app.providers import (
     AppQueryProvider,
     get_app_providers,
 )
-from ditto_app.query.derived import DerivedQueryFacade, StaticRuntimeModeResolver
+from ditto_app.query.derived import DerivedQueryFacade
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.di import (
     CapitalProvider,
@@ -134,7 +134,6 @@ class TestAppProviderStructure:
         provider = AppQueryProvider()
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
-            "runtime_mode_resolver",
             "derived_query_facade",
             "research_dataset_facade",
         }
@@ -201,10 +200,6 @@ class TestAppProviderIntegration:
 
     def test_query_services_resolved(self, app_container) -> None:
         """AppQueryProvider 的服务应可从容器解析."""
-        assert isinstance(
-            app_container.get(StaticRuntimeModeResolver),
-            StaticRuntimeModeResolver,
-        )
         assert isinstance(app_container.get(DerivedQueryFacade), DerivedQueryFacade)
 
     def test_process_services_resolved(self, app_container) -> None:

@@ -183,7 +183,6 @@ class IngestionDataWriter:
                 dataset,
                 df,
                 year,
-                on_duplicate,
                 source_ticker_col,
             ),
             Dataset.ADJ_FACTOR: lambda: self._write_adj_factor(
@@ -400,7 +399,6 @@ class IngestionDataWriter:
         dataset: str,
         df: pl.DataFrame,
         year: int,
-        on_duplicate: OnDuplicate,
         source_ticker_col: str,
     ) -> WriteResult:
         # 股票状态数据不包含创建证券所需的元数据字段，
@@ -632,7 +630,7 @@ class IngestionDataWriter:
             blocked=False,
         )
 
-    def write_stock_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
+    def write_stock_basic(self, df: pl.DataFrame, _trade_date: str) -> tuple[str, str]:
         """
         写入 stock_basic 数据到 instrument_store。
 
@@ -654,7 +652,7 @@ class IngestionDataWriter:
 
         return file_path, checksum
 
-    def write_etf_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
+    def write_etf_basic(self, df: pl.DataFrame, _trade_date: str) -> tuple[str, str]:
         """
         写入 etf_basic 数据到 instrument_store。
 
@@ -676,7 +674,7 @@ class IngestionDataWriter:
 
         return file_path, checksum
 
-    def write_index_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
+    def write_index_basic(self, df: pl.DataFrame, _trade_date: str) -> tuple[str, str]:
         """
         写入 index_basic 数据到 instrument_store。
 

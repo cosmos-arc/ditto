@@ -10,10 +10,9 @@ from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_app.query.fundamental import FundamentalQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
-from ditto_app.types import AmbiguousTickerError, NoIdentifierProvidedError
-from ditto_infra.foundation import logger
 from fastapi import APIRouter, HTTPException, Query
 
+from ditto_interfaces.api.utils.identifier import resolve_identifier_for_api
 from ditto_interfaces.models.common import APIResponse
 from ditto_interfaces.models.fundamental import (
     CorporateAction,
@@ -26,51 +25,6 @@ from ditto_interfaces.models.fundamental import (
 )
 
 router = APIRouter(prefix="/fundamental", tags=["fundamental"])
-
-
-def _resolve_identifier(
-    metadata_facade: MetadataQueryFacade,
-    *,
-    instrument_id: int | None,
-    standard_ticker: str | None,
-    ticker: str | None,
-    as_of_date: date | None = None,
-) -> int | None:
-    """
-    解析标识符为 canonical instrument_id.
-
-    至少提供一个标识符（instrument_id / standard_ticker / ticker），
-    委托给 MetadataQueryFacade.resolve_instrument_identifier 进行统一解析。
-
-    Returns:
-        解析后的 canonical instrument_id (int)，查不到返回 None.
-
-    Raises:
-        HTTPException: 标识符缺失或解析失败时.
-
-    """
-    if not any([instrument_id, standard_ticker, ticker]):
-        raise HTTPException(
-            status_code=422,
-            detail="必须提供 instrument_id、standard_ticker 或 ticker 之一",
-        )
-
-    try:
-        return metadata_facade.resolve_instrument_identifier(
-            instrument_id=instrument_id,
-            standard_ticker=standard_ticker,
-            ticker=ticker,
-            asof=as_of_date.isoformat() if as_of_date else None,
-        )
-    except AmbiguousTickerError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except NoIdentifierProvidedError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        logger.exception("Unexpected error resolving fundamental identifier")
-        raise HTTPException(
-            status_code=500, detail="Failed to resolve identifier"
-        ) from exc
 
 
 @router.get("/financials/{report_type}", response_model=APIResponse[list[Financial]])
@@ -93,12 +47,13 @@ async def get_financials(
     - ticker: 裸代码，如 "000001"
 
     """
-    resolved_id = _resolve_identifier(
+    resolved_id = resolve_identifier_for_api(
         metadata_facade,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
         as_of_date=as_of_date,
+        domain="fundamental",
     )
 
     if resolved_id is None:
@@ -153,12 +108,13 @@ async def get_dividend(
     - ticker: 裸代码，如 "000001"
 
     """
-    resolved_id = _resolve_identifier(
+    resolved_id = resolve_identifier_for_api(
         metadata_facade,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
         as_of_date=as_of_date,
+        domain="fundamental",
     )
 
     if resolved_id is None:
@@ -213,11 +169,12 @@ async def list_corporate_actions(
             ),
         )
 
-    resolved_id = _resolve_identifier(
+    resolved_id = resolve_identifier_for_api(
         metadata_facade,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
         ticker=ticker,
+        domain="fundamental",
     )
 
     if resolved_id is None:

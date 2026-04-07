@@ -2,153 +2,33 @@
 
 from __future__ import annotations
 
-from typing import Annotated
-
 import typer
 
-from ditto_interfaces.cli.commands.factory import create_daily_command
-from ditto_interfaces.cli.commands.ingest._shared import run_instrument_ingest
-from ditto_interfaces.cli.utils.validation import (
-    check_instrument_mode,
-    validate_instrument_params,
+from ditto_interfaces.cli.commands.factory import (
+    create_daily_command,
+    create_instrument_command,
 )
 
 app = typer.Typer(help="资本面数据摄取")
 
-# 估值指标
-_valuation_impl = create_daily_command("valuation_metrics", "摄取估值指标")
-
-# 融资融券
-_margin_impl = create_daily_command("margin_trading", "摄取融资融券")
-
 # 股权质押
 _pledge_impl = create_daily_command("pledge_ratio", "摄取股权质押")
 
-
-@app.command("valuation")
-def valuation(  # noqa: PLR0913
-    ctx: typer.Context,
-    date: Annotated[
-        str | None,
-        typer.Argument(help="交易日期 (YYYY-MM-DD)"),
-    ] = None,
-    # 标识符参数（三选一）
-    ticker: Annotated[
-        str | None,
-        typer.Option("--ticker", "-t", help="裸代码 (如 000001)"),
-    ] = None,
-    standard_ticker: Annotated[
-        str | None,
-        typer.Option("--standard-ticker", help="Ditto 标准格式 (如 000001.XSHE)"),
-    ] = None,
-    instrument_id: Annotated[
-        int | None,
-        typer.Option("--instrument-id", "-i", help="内部 ID"),
-    ] = None,
-    # 时间范围
-    start: Annotated[
-        str | None,
-        typer.Option("--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    ] = None,
-    end: Annotated[
-        str | None,
-        typer.Option("--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    ] = None,
-    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
-) -> None:
-    r"""
-    摄取估值指标.
-
-    支持两种模式：
-
-    1. 按日期批量摄取：
-       pixi run ingest capital valuation 2024-01-15
-
-    2. 按标的+时间段摄取（标识符三选一）：
-       pixi run ingest capital valuation --ticker 000001 \
-           -s 2024-01-01 -e 2024-06-30
-       pixi run ingest capital valuation --standard-ticker 000001.XSHE \
-           -s 2024-01-01 -e 2024-06-30
-
-    """
-    validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
-
-    if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        run_instrument_ingest(
-            ctx,
-            "valuation_metrics",
-            ticker,
-            standard_ticker,
-            instrument_id,
-            start,
-            end,
-            force,
-        )
-    else:
-        return _valuation_impl(ctx, date or "", force)
-
-
-@app.command("margin")
-def margin(  # noqa: PLR0913
-    ctx: typer.Context,
-    date: Annotated[
-        str | None,
-        typer.Argument(help="交易日期 (YYYY-MM-DD)"),
-    ] = None,
-    # 标识符参数（三选一）
-    ticker: Annotated[
-        str | None,
-        typer.Option("--ticker", "-t", help="裸代码 (如 000001)"),
-    ] = None,
-    standard_ticker: Annotated[
-        str | None,
-        typer.Option("--standard-ticker", help="Ditto 标准格式 (如 000001.XSHE)"),
-    ] = None,
-    instrument_id: Annotated[
-        int | None,
-        typer.Option("--instrument-id", "-i", help="内部 ID"),
-    ] = None,
-    # 时间范围
-    start: Annotated[
-        str | None,
-        typer.Option("--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    ] = None,
-    end: Annotated[
-        str | None,
-        typer.Option("--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    ] = None,
-    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
-) -> None:
-    r"""
-    摄取融资融券.
-
-    支持两种模式：
-
-    1. 按日期批量摄取：
-       pixi run ingest capital margin 2024-01-15
-
-    2. 按标的+时间段摄取（标识符三选一）：
-       pixi run ingest capital margin --ticker 000001 \
-           -s 2024-01-01 -e 2024-06-30
-       pixi run ingest capital margin --standard-ticker 000001.XSHE \
-           -s 2024-01-01 -e 2024-06-30
-
-    """
-    validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
-
-    if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        run_instrument_ingest(
-            ctx,
-            "margin_trading",
-            ticker,
-            standard_ticker,
-            instrument_id,
-            start,
-            end,
-            force,
-        )
-    else:
-        return _margin_impl(ctx, date or "", force)
+# 双模式命令（按日期/按标的）
+app.command("valuation")(
+    create_instrument_command(
+        "valuation_metrics",
+        "摄取估值指标",
+        cli_path="ingest capital valuation",
+    )
+)
+app.command("margin")(
+    create_instrument_command(
+        "margin_trading",
+        "摄取融资融券",
+        cli_path="ingest capital margin",
+    )
+)
 
 
 @app.command("pledge")

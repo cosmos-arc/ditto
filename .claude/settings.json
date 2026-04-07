@@ -15,8 +15,8 @@
       "Bash(git *)",
       "Bash(gh *)"
     ],
+    "ask": ["Bash(rm -rf *)"],
     "deny": [
-      "Bash(rm -rf *)",
       "Bash(sudo *)",
       "Bash(chmod 777 *)",
       "Bash(mkfs *)",

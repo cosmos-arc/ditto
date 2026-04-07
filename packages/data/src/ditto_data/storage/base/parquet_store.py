@@ -25,7 +25,6 @@ from ditto_infra.foundation.util.io import atomic_write, file_md5
 
 from ditto_data.models import OnDuplicate
 from ditto_data.models.storage import WriteStoreResult as WriteResult
-from ditto_data.storage.base.base_store import BaseStore
 from ditto_data.storage.base.partition_strategy import (
     PartitionStrategy,
     YearlyPartition,
@@ -41,7 +40,7 @@ class MergeResult:
     updated: int
 
 
-class ParquetStore(BaseStore):
+class ParquetStore:
     """
     Parquet 文件存储实现.
 
@@ -73,8 +72,13 @@ class ParquetStore(BaseStore):
             partition_strategy: 分区策略，默认按年分区.
 
         """
-        super().__init__(data_root)
+        self._data_root = Path(data_root)
         self._partition = partition_strategy
+
+    @property
+    def data_root(self) -> Path:
+        """获取数据根目录路径."""
+        return self._data_root
 
     # ============ Path operations ============
 

@@ -5,8 +5,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
-from enum import StrEnum
-from typing import Protocol
 
 import polars as pl
 from ditto_data.services import (
@@ -16,10 +14,9 @@ from ditto_data.services import (
     DerivedSeriesQuery,
     DerivedSourceScope,
 )
-from ditto_data.services.hot_layer import HotLayerReader
-from ditto_infra.foundation import logger
 
 type TemporalValue = date | datetime
+
 
 # ---------------------------------------------------------------------------
 # Request / Response models (formerly ditto_interfaces.models.derived)
@@ -31,11 +28,8 @@ __all__ = [
     "DerivedQueryFacade",
     "DerivedSeriesResult",
     "LatestDerivedRequest",
-    "RuntimeMode",
-    "RuntimeModeResolver",
     "SeriesDerivedRequest",
     "SourceCompareRequest",
-    "StaticRuntimeModeResolver",
 ]
 
 
@@ -180,38 +174,6 @@ class DerivedCompareResult:
 
 
 # ---------------------------------------------------------------------------
-# Runtime mode
-# ---------------------------------------------------------------------------
-
-
-class RuntimeMode(StrEnum):
-    """Runtime modes reserved for Phase 3 routing decisions."""
-
-    ONLINE = "ONLINE"
-    OFFLINE = "OFFLINE"
-    DEGRADED = "DEGRADED"
-
-
-class RuntimeModeResolver(Protocol):
-    """Resolve the current runtime mode without exposing it publicly."""
-
-    def resolve(self) -> RuntimeMode:
-        """Return the current runtime mode."""
-        ...
-
-
-@dataclass(frozen=True)
-class StaticRuntimeModeResolver:
-    """Static runtime mode resolver used by the DI container."""
-
-    mode: RuntimeMode = RuntimeMode.OFFLINE
-
-    def resolve(self) -> RuntimeMode:
-        """Return the configured runtime mode."""
-        return self.mode
-
-
-# ---------------------------------------------------------------------------
 # Facade
 # ---------------------------------------------------------------------------
 
@@ -229,45 +191,11 @@ class DerivedQueryFacade:
     def __init__(
         self,
         service: DerivedQueryService,
-        mode_resolver: RuntimeModeResolver,
-        hot_layer: HotLayerReader,
     ) -> None:
         self._service = service
-        self._mode_resolver = mode_resolver
-        self._hot_layer = hot_layer
 
     def get_latest(self, request: LatestDerivedRequest) -> DerivedLatestResult:
-        """
-        Map latest requests to the serving contract.
-
-        In ONLINE mode with a single derived_id, attempts to serve from
-        the hot layer (QuestDB) first. Falls back to the cold layer on
-        unavailability, empty results, or any exception.
-        """
-        mode = self._mode_resolver.resolve()
-
-        # Try hot layer when in ONLINE mode with a single derived_id
-        if (
-            mode == RuntimeMode.ONLINE
-            and len(request.derived_ids) == 1
-            and self._hot_layer.is_available()
-        ):
-            try:
-                data = self._hot_layer.read_latest(
-                    derived_id=request.derived_ids[0],
-                    instrument_ids=request.instrument_ids,
-                    as_of=_temporal_to_iso(request.as_of),
-                )
-                if not data.is_empty():
-                    return DerivedLatestResult(data=data)
-            except Exception:
-                logger.warning(
-                    "Hot layer read failed, falling back to cold layer",
-                    derived_id=request.derived_ids[0],
-                    exc_info=True,
-                )
-
-        # Cold layer (existing code)
+        """Map latest requests to the serving contract."""
         query = DerivedLatestQuery(
             derived_ids=request.derived_ids,
             instrument_ids=request.instrument_ids,

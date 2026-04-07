@@ -389,7 +389,6 @@ class TestDerivedMaterializationOrchestrator:
                 catalog_service=catalog_service,
                 market_service=mock_market,
                 artifact_root=tmp_path,
-                data_root=tmp_path,
             ),
             artifact_writer=ArtifactPersistenceService(tmp_path),
         )
@@ -487,7 +486,6 @@ class TestDerivedMaterializationOrchestrator:
                 catalog_service=catalog_service,
                 market_service=mock_market,
                 artifact_root=tmp_path,
-                data_root=tmp_path,
             ),
             artifact_writer=ArtifactPersistenceService(tmp_path),
         )

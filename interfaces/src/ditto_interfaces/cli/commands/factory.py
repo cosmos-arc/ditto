@@ -15,7 +15,116 @@ from ditto_interfaces.cli.utils.output import (
     print_backfill_summary,
     print_ingestion_result,
 )
-from ditto_interfaces.cli.utils.validation import validate_date_format
+from ditto_interfaces.cli.utils.validation import (
+    check_instrument_mode,
+    validate_date_format,
+    validate_instrument_params,
+)
+
+
+def _run_instrument_ingest(  # noqa: PLR0913
+    ctx: typer.Context,
+    dataset: str,
+    ticker: str | None,
+    standard_ticker: str | None,
+    instrument_id: int | None,
+    start: str | None,
+    end: str | None,
+    force: bool,
+) -> None:
+    """执行按标的摄取."""
+    with create_executor() as executor:
+        result = executor.ingest_by_instrument(
+            dataset=dataset,
+            ticker=ticker,
+            standard_ticker=standard_ticker,
+            instrument_id=instrument_id,
+            start_date=start or "",
+            end_date=end or "",
+            force=force,
+        )
+        print_ingestion_result(result, ctx.obj["verbose"])
+
+
+def create_instrument_command(
+    dataset: str,
+    description: str,
+    *,
+    cli_path: str = "",
+) -> Callable[..., None]:
+    """
+    创建双模式（按日期/按标的）摄取命令的工厂函数.
+
+    生成一个支持两种模式的命令函数:
+    1. 按日期批量摄取: ``pixi run <cli_path> 2024-01-15``
+    2. 按标的+时间段摄取: ``pixi run <cli_path> --ticker 000001 -s ... -e ...``
+
+    Args:
+        dataset: 数据集名称 (如 "stock_daily", "valuation_metrics")
+        description: 命令简述.
+        cli_path: CLI 示例路径 (如 "ingest market stock")，用于生成帮助文档.
+
+    Returns:
+        可直接注册为 Typer 命令的函数.
+
+    """
+    daily_impl = create_daily_command(dataset, description)
+
+    def command(  # noqa: PLR0913
+        ctx: typer.Context,
+        date: str | None = typer.Argument(None, help="交易日期 (YYYY-MM-DD)"),
+        ticker: str | None = typer.Option(
+            None, "--ticker", "-t", help="裸代码 (如 000001)"
+        ),
+        standard_ticker: str | None = typer.Option(
+            None,
+            "--standard-ticker",
+            help="标准格式 (如 000001.XSHE)",
+        ),
+        instrument_id: int | None = typer.Option(
+            None, "--instrument-id", "-i", help="内部 ID"
+        ),
+        start: str | None = typer.Option(
+            None, "--start", "-s", help="开始日期 (YYYY-MM-DD)"
+        ),
+        end: str | None = typer.Option(
+            None, "--end", "-e", help="结束日期 (YYYY-MM-DD)"
+        ),
+        force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
+    ) -> None:
+        validate_instrument_params(
+            date, ticker, standard_ticker, instrument_id, start, end
+        )
+        if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
+            _run_instrument_ingest(
+                ctx,
+                dataset,
+                ticker,
+                standard_ticker,
+                instrument_id,
+                start,
+                end,
+                force,
+            )
+        else:
+            return daily_impl(ctx, date or "", force)
+
+    if cli_path:
+        command.__doc__ = (
+            f"{description}.\n\n"
+            "支持两种模式:\n\n"
+            "1. 按日期批量摄取:\n"
+            f"   pixi run {cli_path} 2024-01-15\n\n"
+            "2. 按标的+时间段摄取 (标识符三选一):\n"
+            f"   pixi run {cli_path} --ticker 000001 "
+            "-s 2024-01-01 -e 2024-06-30\n"
+            f"   pixi run {cli_path} --standard-ticker 000001.XSHE "
+            "-s 2024-01-01 -e 2024-06-30"
+        )
+    else:
+        command.__doc__ = description
+
+    return command
 
 
 def create_daily_command(

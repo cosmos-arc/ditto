@@ -12,7 +12,9 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_app.types import AmbiguousTickerError
-from ditto_interfaces.api.routes.fundamental import _resolve_identifier
+from ditto_interfaces.api.utils.identifier import (
+    resolve_identifier_for_api as _resolve_identifier,
+)
 from ditto_interfaces.models.common import APIResponse
 from ditto_interfaces.models.fundamental import (
     FinancialType,

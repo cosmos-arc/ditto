@@ -8,7 +8,6 @@ from ditto_app.query.macro import MacroQueryFacade
 from rich.console import Console
 from rich.table import Table
 
-from ditto_interfaces.cli.context import create_cli_host
 from ditto_interfaces.cli.utils.output import (
     TABLE_DISPLAY_LIMIT,
     output_json,
@@ -17,6 +16,7 @@ from ditto_interfaces.cli.utils.output import (
 )
 from ditto_interfaces.cli.utils.validation import validate_date_range
 from ditto_interfaces.models.macro import to_indicator_list
+from ditto_interfaces.registry.contexts import create_query_context
 
 # 支持的枚举值（字符串）
 _VALID_CATEGORIES = ("economic", "interest_rate", "exchange_rate", "money_supply")
@@ -29,8 +29,8 @@ console = Console()
 @contextmanager
 def _get_macro_facade() -> Generator[MacroQueryFacade, None, None]:
     """获取 MacroQueryFacade 实例."""
-    with create_cli_host() as bundle:
-        yield MacroQueryFacade(macro_service=bundle.macro_service)
+    with create_query_context() as ctx:
+        yield ctx.macro
 
 
 def _validate_value(

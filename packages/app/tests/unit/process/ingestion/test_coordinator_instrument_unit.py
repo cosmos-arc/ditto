@@ -398,9 +398,9 @@ class TestInferExchangeSuffix:
 
     @staticmethod
     def _import():
-        from ditto_app.process.ingestion_coordinator import _infer_exchange_suffix
+        from ditto_app.process.auto_init import infer_exchange_suffix
 
-        return _infer_exchange_suffix
+        return infer_exchange_suffix
 
     def test_sh_main_board(self) -> None:
         f = self._import()

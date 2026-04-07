@@ -11,12 +11,12 @@ from ditto_analytics.materialization.contracts import (
     DerivedExecutionPlan,
     DerivedRunMode,
 )
-from ditto_app.process.materialization_orchestrator import (
-    RuntimeDerivedInputProvider,
+from ditto_app.process.materialization_dependencies import (
     _resolve_etf_dependency,
     _resolve_market_dependency,
 )
 from ditto_app.process.materialization_types import InputContext
+from ditto_app.process.runtime_input_provider import RuntimeDerivedInputProvider
 from ditto_kernel.specs import (
     DerivedRole,
     DerivedSpec,
@@ -184,7 +184,6 @@ class TestRuntimeDerivedInputProvider:
             catalog_service=catalog_service,
             market_service=market,
             artifact_root=Path("/tmp/artifacts"),
-            data_root=Path("/tmp/data"),
         )
 
     def test_load_input_delegates_to_market_service_get_stock_bars(self) -> None:

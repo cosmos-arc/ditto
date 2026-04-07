@@ -16,6 +16,7 @@ from ditto_app.process.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
     RepairBatchResult,
 )
+from ditto_app.process.certification_rules import build_certification_checks
 from ditto_app.process.coordinator_factory import (
     EXCHANGE_PREFIX_MAP,
     MARKET_INDEX_CODES,
@@ -28,6 +29,9 @@ from ditto_app.process.coordinator_factory import (
     get_sw_index_codes,
 )
 from ditto_app.process.data_writer import IngestionDataWriter
+from ditto_app.process.factor_orthogonalization import (
+    FactorOrthogonalizationService,
+)
 from ditto_app.process.ingestion_config import (
     IngestionConfig,
     IngestionCoordinatorConfig,
@@ -39,6 +43,7 @@ from ditto_app.process.list_date_inference import (
     TRADING_DAYS_PER_YEAR,
     ListDateInferenceService,
 )
+from ditto_app.process.materialization_dependencies import apply_cs_amplification
 from ditto_app.process.materialization_helpers import (
     build_manifest_record,
     build_minimal_dq_record,
@@ -47,10 +52,7 @@ from ditto_app.process.materialization_helpers import (
 )
 from ditto_app.process.materialization_orchestrator import (
     DerivedMaterializationOrchestrator,
-    FactorOrthogonalizationService,
-    RuntimeDerivedInputProvider,
     UniverseProvider,
-    apply_cs_amplification,
 )
 from ditto_app.process.materialization_types import (
     DerivedInputProvider,
@@ -63,10 +65,7 @@ from ditto_app.process.materialization_types import (
     prepare_input_frame,
 )
 from ditto_app.process.metadata_manager import MetadataManager
-from ditto_app.process.publication_facade import (
-    DerivedPublicationFacade,
-    build_certification_checks,
-)
+from ditto_app.process.publication_facade import DerivedPublicationFacade
 from ditto_app.process.quality import (
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
@@ -78,6 +77,7 @@ from ditto_app.process.quality import (
 )
 from ditto_app.process.result_handler import IngestionResultHandler, count_results
 from ditto_app.process.retry_manager import RetryManager
+from ditto_app.process.runtime_input_provider import RuntimeDerivedInputProvider
 from ditto_app.process.strategy_run_service import (
     StrategyFacade,
     StrategyRunMode,

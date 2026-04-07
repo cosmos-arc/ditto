@@ -6,14 +6,13 @@ from unittest.mock import MagicMock
 
 from ditto_app.builders._resolution import (
     resolve_benchmark,
-    resolve_display_map,
-    resolve_tickers,
+    resolve_instrument_display,
 )
 from ditto_kernel.identity import InstrumentId
 
 
-class TestResolveTickers:
-    """resolve_tickers 测试."""
+class TestResolveInstrumentDisplay:
+    """resolve_instrument_display 测试."""
 
     def test_normal_case(self) -> None:
         metadata = MagicMock()
@@ -21,59 +20,39 @@ class TestResolveTickers:
             {"ticker": "510300", "exchange": "SH"},
             {"ticker": "159919", "exchange": "SZ"},
         ]
-        result_tickers, result_map = resolve_tickers([1, 2], metadata)
-        assert result_tickers == ("510300.SH", "159919.SZ")
-        assert result_map == {
+        result = resolve_instrument_display([1, 2], metadata)
+        assert result.tickers == ("510300.SH", "159919.SZ")
+        assert result.id_map == {
             "510300.SH": InstrumentId(1),
             "159919.SZ": InstrumentId(2),
         }
-
-    def test_empty_list(self) -> None:
-        metadata = MagicMock()
-        tickers, id_map = resolve_tickers([], metadata)
-        assert tickers == ()
-        assert id_map == {}
-
-    def test_no_instrument(self) -> None:
-        metadata = MagicMock()
-        metadata.get_instrument.return_value = None
-        tickers, id_map = resolve_tickers([42], metadata)
-        assert tickers == ("42",)
-        assert id_map == {"42": InstrumentId(42)}
-
-    def test_no_exchange(self) -> None:
-        metadata = MagicMock()
-        metadata.get_instrument.return_value = {"ticker": "510300", "exchange": ""}
-        tickers, id_map = resolve_tickers([1], metadata)
-        assert tickers == ("1",)
-        assert id_map == {"1": InstrumentId(1)}
-
-
-class TestResolveDisplayMap:
-    """resolve_display_map 测试."""
-
-    def test_normal_case(self) -> None:
-        metadata = MagicMock()
-        metadata.get_instrument.side_effect = [
-            {"ticker": "510300", "exchange": "SH"},
-            {"ticker": "159919", "exchange": "SZ"},
-        ]
-        result = resolve_display_map([1, 2], metadata)
-        assert result == {
+        assert result.display_map == {
             InstrumentId(1): "510300.SH",
             InstrumentId(2): "159919.SZ",
         }
 
     def test_empty_list(self) -> None:
         metadata = MagicMock()
-        result = resolve_display_map([], metadata)
-        assert result == {}
+        result = resolve_instrument_display([], metadata)
+        assert result.tickers == ()
+        assert result.id_map == {}
+        assert result.display_map == {}
 
     def test_no_instrument(self) -> None:
         metadata = MagicMock()
         metadata.get_instrument.return_value = None
-        result = resolve_display_map([42], metadata)
-        assert result == {InstrumentId(42): "42"}
+        result = resolve_instrument_display([42], metadata)
+        assert result.tickers == ("42",)
+        assert result.id_map == {"42": InstrumentId(42)}
+        assert result.display_map == {InstrumentId(42): "42"}
+
+    def test_no_exchange(self) -> None:
+        metadata = MagicMock()
+        metadata.get_instrument.return_value = {"ticker": "510300", "exchange": ""}
+        result = resolve_instrument_display([1], metadata)
+        assert result.tickers == ("1",)
+        assert result.id_map == {"1": InstrumentId(1)}
+        assert result.display_map == {InstrumentId(1): "1"}
 
 
 class TestResolveBenchmark:

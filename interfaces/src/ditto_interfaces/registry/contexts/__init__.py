@@ -11,13 +11,16 @@ from ditto_interfaces.registry.contexts.ingestion import create_ingestion_bundle
 from ditto_interfaces.registry.contexts.materialization import (
     create_materialization_bundle,
 )
+from ditto_interfaces.registry.contexts.query import QueryContext, create_query_context
 from ditto_interfaces.registry.contexts.strategy import create_strategy_bundle
 
 __all__ = [
     "IngestionBundle",
     "MaterializationBundle",
+    "QueryContext",
     "StrategyBundle",
     "create_ingestion_bundle",
     "create_materialization_bundle",
+    "create_query_context",
     "create_strategy_bundle",
 ]

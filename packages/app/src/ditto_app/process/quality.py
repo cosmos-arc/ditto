@@ -148,7 +148,7 @@ class QualityService:
 
     def _quarantine_data(
         self,
-        df: pl.DataFrame,
+        _df: pl.DataFrame,
         result: DQResult,
         dataset: str,
     ) -> None:

@@ -279,8 +279,12 @@ class InMemoryRuleProvider:
         candidates: list[T] = []
         for rec in records:
             ef = getattr(rec, "as_of_date", None)
-            if ef is not None and ef <= as_of_date:
-                candidates.append(rec)
+            if ef is None or ef > as_of_date:
+                continue
+            et = getattr(rec, "effective_to", None)
+            if et is not None and et <= as_of_date:
+                continue
+            candidates.append(rec)
 
         if not candidates:
             return None

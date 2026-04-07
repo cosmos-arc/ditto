@@ -9,7 +9,6 @@ from ditto_app.query.metadata import MetadataQueryFacade
 from rich.console import Console
 from rich.table import Table
 
-from ditto_interfaces.cli.context import create_cli_host
 from ditto_interfaces.cli.utils.output import (
     TABLE_DISPLAY_LIMIT,
     output_json,
@@ -17,6 +16,7 @@ from ditto_interfaces.cli.utils.output import (
     print_truncated_hint,
 )
 from ditto_interfaces.models.metadata import to_instrument_list
+from ditto_interfaces.registry.contexts import create_query_context
 
 app = typer.Typer(help="标的元数据查询")
 console = Console()
@@ -25,8 +25,8 @@ console = Console()
 @contextmanager
 def _get_metadata_facade() -> Generator[MetadataQueryFacade, None, None]:
     """获取 MetadataQueryFacade 实例."""
-    with create_cli_host() as bundle:
-        yield MetadataQueryFacade(metadata_service=bundle.metadata_service)
+    with create_query_context() as ctx:
+        yield ctx.metadata
 
 
 @app.command("instruments")

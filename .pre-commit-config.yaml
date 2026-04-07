@@ -116,7 +116,6 @@ exclude: |
     dist/|
     \.venv/|
     node_modules/|
-    apps/web/\.next/|
     data/
   )
 

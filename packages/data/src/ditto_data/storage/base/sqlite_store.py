@@ -13,10 +13,9 @@ from ditto_infra.foundation.util.io import file_md5
 
 from ditto_data.models import OnDuplicate
 from ditto_data.models.storage import WriteStoreResult
-from ditto_data.storage.base.base_store import BaseStore
 
 
-class SQLiteStore(BaseStore):
+class SQLiteStore:
     """
     SQLite 数据库存储实现.
 
@@ -41,8 +40,7 @@ class SQLiteStore(BaseStore):
             db_path: SQLite 数据库文件路径.
 
         """
-        # 调用父类初始化，data_root 是数据库的父目录
-        super().__init__(db_path.parent)
+        self._data_root = Path(db_path.parent)
         self._db_path = Path(db_path)
         self._pool = SQLitePool(str(db_path))
         logger.debug(
@@ -50,6 +48,11 @@ class SQLiteStore(BaseStore):
             event="store_init_complete",
             db_path=str(db_path),
         )
+
+    @property
+    def data_root(self) -> Path:
+        """获取数据根目录路径."""
+        return self._data_root
 
     @property
     def db_path(self) -> Path:

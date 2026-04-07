@@ -60,7 +60,7 @@ from ditto_infra.config import ...  # 应为 ditto_infra.foundation.config
 │  所有层都可以访问 Infra（foundation）│
 │  interfaces → infra ✅             │
 │  app → infra ✅                    │
-│  engine → infra ✅                 │
+│  engine → infra ❌                 │
 │  analytics → infra ✅              │
 │  data → infra ✅                   │
 └─────────────────────────────────────┘

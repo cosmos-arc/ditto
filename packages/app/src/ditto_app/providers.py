@@ -18,8 +18,8 @@ from dishka import Provider, Scope, provide
 # ---------------------------------------------------------------------------
 from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.providers.provider import ServiceBackedDataProvider
 from ditto_data.quality import QualityEngine
-from ditto_data.query.provider import ServiceBackedDataProvider
 from ditto_data.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
@@ -35,7 +35,6 @@ from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )
 from ditto_data.services.fundamental_service import FundamentalService
-from ditto_data.services.hot_layer import UnavailableHotLayerReader
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -79,10 +78,7 @@ from ditto_app.process.strategy_run_service import StrategyFacade
 # ---------------------------------------------------------------------------
 from ditto_app.query.capital import CapitalQueryFacade
 from ditto_app.query.commodity import CommodityQueryFacade
-from ditto_app.query.derived import (
-    DerivedQueryFacade,
-    StaticRuntimeModeResolver,
-)
+from ditto_app.query.derived import DerivedQueryFacade
 from ditto_app.query.forward_return_service import ForwardReturnService
 from ditto_app.query.fundamental import FundamentalQueryFacade
 from ditto_app.query.fx import FXQueryFacade
@@ -111,11 +107,6 @@ class AppQueryProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def runtime_mode_resolver(self) -> StaticRuntimeModeResolver:
-        """Static runtime mode resolver for Phase 2 contract wiring."""
-        return StaticRuntimeModeResolver()
-
-    @provide
     def forward_return_service(
         self,
         market_service: MarketService,
@@ -127,13 +118,10 @@ class AppQueryProvider(Provider):
     def derived_query_facade(
         self,
         derived_query_service: DerivedQueryService,
-        runtime_mode_resolver: StaticRuntimeModeResolver,
     ) -> DerivedQueryFacade:
         """Derived query use-case facade."""
         return DerivedQueryFacade(
             service=derived_query_service,
-            mode_resolver=runtime_mode_resolver,
-            hot_layer=UnavailableHotLayerReader(),
         )
 
     @provide
@@ -255,7 +243,6 @@ class AppProcessProvider(Provider):
             catalog_service=derived_catalog_service,
             market_service=market_service,
             artifact_root=Path(settings.data_root),
-            data_root=Path(settings.data_root),
         )
 
     @provide

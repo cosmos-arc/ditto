@@ -2,17 +2,30 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.identity import InstrumentId
 
 
-def resolve_tickers(
+@dataclass(frozen=True)
+class ResolutionResult:
+    """单次遍历 instrument_ids 产生的完整解析结果."""
+
+    tickers: tuple[str, ...]
+    id_map: dict[str, InstrumentId]
+    display_map: dict[InstrumentId, str]
+
+
+def resolve_instrument_display(
     instrument_ids: list[int],
     metadata_service: MetadataService,
-) -> tuple[tuple[str, ...], dict[str, InstrumentId]]:
-    """将 instrument_id 列表解析为 tickers 和 id_map。"""
+) -> ResolutionResult:
+    """将 instrument_id 列表解析为 tickers + id_map + display_map（单次遍历）."""
     tickers: list[str] = []
     id_map: dict[str, InstrumentId] = {}
+    display_map: dict[InstrumentId, str] = {}
+
     for iid in instrument_ids:
         instrument_id = InstrumentId(iid)
         instrument = metadata_service.get_instrument(iid)
@@ -24,26 +37,13 @@ def resolve_tickers(
             key = str(iid)
         tickers.append(key)
         id_map[key] = instrument_id
-    return tuple(tickers), id_map
+        display_map[instrument_id] = key
 
-
-def resolve_display_map(
-    instrument_ids: list[int],
-    metadata_service: MetadataService,
-) -> dict[InstrumentId, str]:
-    """构建 InstrumentId → standard_ticker 映射。"""
-    display_map: dict[InstrumentId, str] = {}
-    for iid in instrument_ids:
-        instrument_id = InstrumentId(iid)
-        instrument = metadata_service.get_instrument(iid)
-        if instrument is not None:
-            ticker = instrument.get("ticker", str(iid))
-            exchange = instrument.get("exchange", "")
-            key = f"{ticker}.{exchange}" if exchange else str(iid)
-            display_map[instrument_id] = key
-        else:
-            display_map[instrument_id] = str(iid)
-    return display_map
+    return ResolutionResult(
+        tickers=tuple(tickers),
+        id_map=id_map,
+        display_map=display_map,
+    )
 
 
 def resolve_benchmark(

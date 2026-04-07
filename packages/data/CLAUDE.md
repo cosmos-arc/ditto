@@ -21,7 +21,6 @@ ditto_data/
 ├── services/            # 域服务（Facade 模式）
 │   ├── audit/           # 审计服务
 │   ├── derived/         # 衍生数据服务（物化/查询/GC/并发）
-│   ├── hot_layer/       # 热数据层
 │   ├── metadata/        # 元数据子服务（日历/工具/Universe）
 │   └── strategy/        # 策略数据服务（目录/运行/产物/规则）
 ├── sources/             # 外部数据源
@@ -43,14 +42,6 @@ ditto_data/
 │   ├── metadata/        # 元数据存储（日历/工具/行业/Universe/策略）
 │   ├── runtime/         # 运行时存储（摄入游标/日志/质量/衍生/研究/发布安全）
 │   └── schemas/         # 存储层 Schema
-├── stores/              # 高层 Store（基于 storage 构建）
-│   ├── base/            # Store 基类
-│   ├── capital/         # 资本 Store
-│   ├── fundamental/     # 基本面 Store
-│   ├── macro/           # 宏观 Store
-│   ├── market/          # 市场 Store
-│   ├── metadata/        # 元数据 Store
-│   └── runtime/         # 运行时 Store
 └── utils/               # 工具函数（时区等）
 ```
 
@@ -59,8 +50,7 @@ ditto_data/
 | 层级 | 职责 | 禁止 | 必须 |
 |------|------|------|------|
 | storage (Reader/Writer) | 数据读写操作（CQRS 分离） | 包含业务逻辑 | 类型注解 |
-| stores | 高层 Store 封装 | 跳过 storage 层 | 基于 storage Reader/Writer |
-| services | 域服务（Facade 模式） | 直接访问文件系统 | 通过 stores/storage |
+| services | 域服务（Facade 模式） | 直接访问文件系统 | 通过 storage |
 | sources | 外部数据源接入 | 包含业务逻辑 | 重试、限流、监控埋点 |
 | query | 查询服务与 Provider 路由 | 包含写入逻辑 | 类型注解 |
 | ingestion | 数据摄入编排 | 绕过质量检查 | 游标管理 |

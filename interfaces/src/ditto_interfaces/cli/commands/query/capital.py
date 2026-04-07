@@ -9,7 +9,7 @@ from ditto_app.query.metadata import MetadataQueryFacade
 from rich.console import Console
 from rich.table import Table
 
-from ditto_interfaces.cli.context import create_cli_host
+from ditto_interfaces.cli.utils.identifier import resolve_identifier_for_cli
 from ditto_interfaces.cli.utils.output import (
     TABLE_DISPLAY_LIMIT,
     output_json,
@@ -20,6 +20,7 @@ from ditto_interfaces.models.capital import (
     to_margin_list,
     to_valuation_list,
 )
+from ditto_interfaces.registry.contexts import create_query_context
 
 app = typer.Typer(help="资本数据查询")
 console = Console()
@@ -30,40 +31,8 @@ def _get_facades() -> Generator[
     tuple[CapitalQueryFacade, MetadataQueryFacade], None, None
 ]:
     """获取 CapitalQueryFacade 和 MetadataQueryFacade 实例."""
-    with create_cli_host() as bundle:
-        yield (
-            CapitalQueryFacade(capital_service=bundle.capital_service),
-            MetadataQueryFacade(metadata_service=bundle.metadata_service),
-        )
-
-
-def _resolve_identifier(
-    metadata_facade: MetadataQueryFacade,
-    *,
-    instrument_id: int | None,
-    ticker: str | None,
-    standard_ticker: str | None,
-    as_of_date: str | None = None,
-) -> int | None:
-    """
-    解析标识符为 canonical instrument_id.
-
-    至少提供一个标识符，委托给 MetadataQueryFacade.resolve_instrument_identifier。
-
-    Returns:
-        解析后的 canonical instrument_id (int)，查不到返回 None.
-
-    """
-    if not any([instrument_id, standard_ticker, ticker]):
-        typer.echo("错误: 必须提供 --instrument-id、--ticker 或 --standard-ticker 之一")
-        raise typer.Exit(code=1)
-
-    return metadata_facade.resolve_instrument_identifier(
-        instrument_id=instrument_id,
-        standard_ticker=standard_ticker,
-        ticker=ticker,
-        asof=as_of_date,
-    )
+    with create_query_context() as ctx:
+        yield (ctx.capital, ctx.metadata)
 
 
 @app.command("margin")
@@ -89,7 +58,7 @@ def get_margin(
     """
     as_of = parse_date(as_of_date).date()
     with _get_facades() as (facade, metadata_facade):
-        resolved_id = _resolve_identifier(
+        resolved_id = resolve_identifier_for_cli(
             metadata_facade,
             instrument_id=instrument_id,
             ticker=ticker,
@@ -160,7 +129,7 @@ def get_valuation(
     """
     as_of = parse_date(as_of_date).date()
     with _get_facades() as (facade, metadata_facade):
-        resolved_id = _resolve_identifier(
+        resolved_id = resolve_identifier_for_cli(
             metadata_facade,
             instrument_id=instrument_id,
             ticker=ticker,

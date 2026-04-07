@@ -8,7 +8,6 @@ from ditto_app.query.market import MarketQueryFacade
 from rich.console import Console
 from rich.table import Table
 
-from ditto_interfaces.cli.context import create_cli_host
 from ditto_interfaces.cli.utils.output import (
     TABLE_DISPLAY_LIMIT,
     output_json,
@@ -17,6 +16,7 @@ from ditto_interfaces.cli.utils.output import (
 )
 from ditto_interfaces.cli.utils.validation import validate_date_range
 from ditto_interfaces.models.market import to_bar_list
+from ditto_interfaces.registry.contexts import create_query_context
 
 app = typer.Typer(help="行情数据查询")
 console = Console()
@@ -25,8 +25,8 @@ console = Console()
 @contextmanager
 def _get_market_facade() -> Generator[MarketQueryFacade, None, None]:
     """获取 MarketQueryFacade 实例."""
-    with create_cli_host() as bundle:
-        yield MarketQueryFacade(market_service=bundle.market_service)
+    with create_query_context() as ctx:
+        yield ctx.market
 
 
 @app.command("bars")

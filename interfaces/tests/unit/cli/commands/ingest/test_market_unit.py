@@ -28,20 +28,11 @@ def mock_ctx():
 class TestMarketCommands:
     """Market 命令测试."""
 
-    def test_ingest_market_stock_command_exists(self) -> None:
-        """测试 stock 命令存在且可调用."""
-        assert hasattr(market, "stock")
-        assert callable(market.stock)
-
-    def test_ingest_market_etf_command_exists(self) -> None:
-        """测试 etf 命令存在且可调用."""
-        assert hasattr(market, "etf")
-        assert callable(market.etf)
-
-    def test_ingest_market_index_command_exists(self) -> None:
-        """测试 index 命令存在且可调用."""
-        assert hasattr(market, "index")
-        assert callable(market.index)
+    def test_ingest_market_instrument_commands_registered(self) -> None:
+        """测试 stock/etf/index 命令已通过 Typer app 注册."""
+        command_names = [cmd.name for cmd in market.app.registered_commands]
+        for expected in ("stock", "etf", "index"):
+            assert expected in command_names, f"{expected} 命令未注册"
 
     def test_ingest_market_adj_command_exists(self) -> None:
         """测试 adj 命令存在且可调用."""
@@ -52,30 +43,6 @@ class TestMarketCommands:
         """测试 status 命令存在且可调用."""
         assert hasattr(market, "status")
         assert callable(market.status)
-
-    def test_ingest_market_stock_delegates_to_factory(
-        self, mocker: MockerFixture, mock_ctx: Mock
-    ) -> None:
-        """测试 stock 命令委托给工厂函数."""
-        mock_impl = mocker.patch.object(market, "_stock_daily_impl")
-        market.stock(mock_ctx, date="2024-01-02", force=False)
-        mock_impl.assert_called_once_with(mock_ctx, "2024-01-02", False)
-
-    def test_ingest_market_etf_delegates_to_factory(
-        self, mocker: MockerFixture, mock_ctx: Mock
-    ) -> None:
-        """测试 etf 命令委托给工厂函数."""
-        mock_impl = mocker.patch.object(market, "_etf_daily_impl")
-        market.etf(mock_ctx, date="2024-01-02", force=False)
-        mock_impl.assert_called_once_with(mock_ctx, "2024-01-02", False)
-
-    def test_ingest_market_index_delegates_to_factory(
-        self, mocker: MockerFixture, mock_ctx: Mock
-    ) -> None:
-        """测试 index 命令委托给工厂函数."""
-        mock_impl = mocker.patch.object(market, "_index_daily_impl")
-        market.index(mock_ctx, date="2024-01-02", force=False)
-        mock_impl.assert_called_once_with(mock_ctx, "2024-01-02", False)
 
     def test_ingest_market_adj_stock_delegates_to_factory(
         self, mocker: MockerFixture, mock_ctx: Mock

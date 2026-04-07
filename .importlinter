@@ -284,6 +284,9 @@ ignore_imports =
     ditto_data.storage.** -> ditto_data.models.macro
     ditto_data.storage.** -> ditto_data.models.strategy
     ditto_data.storage.** -> ditto_data.models.strategy_run
+    ditto_data.storage.** -> ditto_data.models.derived
+    ditto_data.storage.** -> ditto_data.models.ingestion
+    ditto_data.storage.** -> ditto_data.models.publication_safety
 unmatched_ignore_imports_alerting = warn
 
 [importlinter:contract:data-sources-no-storage-import]

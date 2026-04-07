@@ -4,7 +4,7 @@ Part 07: InstrumentRuleProvider Protocol + InMemoryRuleProvider.
 Part 08: default_price_limit_pct lifecycle mapping.
 """
 
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, dataclass
 
 import pytest
 from ditto_engine.execution.rules import (
@@ -15,6 +15,7 @@ from ditto_engine.execution.rules import (
     TradingRuleSet,
     default_price_limit_pct,
 )
+from ditto_kernel.identity import InstrumentId
 
 # ---------------------------------------------------------------------------
 # Shared fixture data — avoids repeating identical construction 3x each.
@@ -401,6 +402,86 @@ class TestInMemoryRuleProviderPIT:
         )
         # as_of_date 恰好等于记录的 as_of_date → 包含
         result = provider.get_trading_rule(100, "2026-03-01")
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# _find_pit — effective_to 可选过滤（前向兼容）
+# ---------------------------------------------------------------------------
+
+_RULE_ID: InstrumentId = 100  # type: ignore[assignment]
+
+
+@dataclass(frozen=True)
+class _RuleWithExpiry:
+    """测试辅助：带 effective_to 的规则记录。"""
+
+    instrument_id: int
+    as_of_date: str
+    effective_to: str | None = None
+    value: str = ""
+
+
+class TestFindPitEffectiveTo:
+    """_find_pit — effective_to 可选过滤。"""
+
+    def test_effective_to_excludes_expired(self) -> None:
+        """effective_to <= as_of_date 的记录应被排除。"""
+        expired = _RuleWithExpiry(
+            instrument_id=100,
+            as_of_date="2026-01-01",
+            effective_to="2026-03-01",
+            value="expired",
+        )
+        active = _RuleWithExpiry(
+            instrument_id=100,
+            as_of_date="2026-02-01",
+            effective_to="2026-06-01",
+            value="active",
+        )
+        store: dict[InstrumentId, list[_RuleWithExpiry]] = {100: [expired, active]}
+        result = InMemoryRuleProvider._find_pit(store, _RULE_ID, "2026-04-01")
+        assert result is not None
+        assert result.value == "active"
+
+    def test_effective_to_none_always_included(self) -> None:
+        """effective_to is None → 永不过期。"""
+        record = _RuleWithExpiry(
+            instrument_id=100,
+            as_of_date="2026-01-01",
+            effective_to=None,
+            value="no_expiry",
+        )
+        store: dict[InstrumentId, list[_RuleWithExpiry]] = {100: [record]}
+        result = InMemoryRuleProvider._find_pit(store, _RULE_ID, "2026-12-31")
+        assert result is not None
+        assert result.value == "no_expiry"
+
+    def test_effective_to_boundary_expired(self) -> None:
+        """effective_to == as_of_date → 已过期（必须严格 > 才包含）。"""
+        record = _RuleWithExpiry(
+            instrument_id=100,
+            as_of_date="2026-01-01",
+            effective_to="2026-04-01",
+            value="boundary",
+        )
+        store: dict[InstrumentId, list[_RuleWithExpiry]] = {100: [record]}
+        result = InMemoryRuleProvider._find_pit(store, _RULE_ID, "2026-04-01")
+        assert result is None
+
+    def test_no_effective_to_field_backward_compat(self) -> None:
+        """没有 effective_to 属性 → getattr 回退 None，永不过期。"""
+        record = TradingRuleSet(
+            instrument_id=100,
+            as_of_date="2026-01-01",
+            settlement_cycle=1,
+            fund_settlement_cycle=1,
+            price_limit_pct=0.10,
+            order_types_supported=("market",),
+            call_auction_sessions=("open",),
+        )
+        store: dict[InstrumentId, list[TradingRuleSet]] = {100: [record]}
+        result = InMemoryRuleProvider._find_pit(store, _RULE_ID, "2026-12-31")
         assert result is not None
 
 

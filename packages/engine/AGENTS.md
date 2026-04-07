@@ -13,13 +13,13 @@ Engine 层是 **Domain Layer（领域层）**，包含量化系统的核心业�
 
 ```
 ditto_engine/
-├── engine/            # 核心引擎（specs、评估指标、publication_safety、research）
 ├── accounting/        # 共享账户契约层（Account / CashBook / OrderBook / Position）
 ├── execution/         # 执行层（Planner / Brokerage / TradeBuilder / Reality Model）
 ├── alpha/             # Alpha 决策层（StrategySpec / Pipeline / 内置 Stages / 策略模板）
 ├── backtest/          # 回测引擎（EngineLoop / BacktestTradingOrchestrator / Manifest / Statistics / Audit）
 ├── portfolio/         # 组合构建（WeightAllocator / ConstraintChecker / compare_reports）
-└── orchestrator/      # 交易编排抽象（TradingOrchestrator Protocol / Stage 合约 / 别名）
+├── risk/              # 风险管理（PreTrade 检查 / PostTrade Guard / 风险模型）
+└── events.py          # 领域事件定义
 ```
 
 ## 子领域规范

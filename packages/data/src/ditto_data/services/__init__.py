@@ -52,16 +52,6 @@ from ditto_data.services.derived_shadow_slot_service import (
 # Fundamental 域服务
 from ditto_data.services.fundamental_service import FundamentalService
 
-# Hot layer protocols (Phase 5+ infrastructure)
-from ditto_data.services.hot_layer import (
-    HotLayerReader,
-    HotLayerWriter,
-    StateStore,
-    UnavailableHotLayerReader,
-    UnavailableHotLayerWriter,
-    UnavailableStateStore,
-)
-
 # Macro 域服务
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import (
@@ -101,8 +91,6 @@ __all__ = [
     "FundamentalReadPorts",
     "FundamentalService",
     "FundamentalWritePorts",
-    "HotLayerReader",
-    "HotLayerWriter",
     "IngestionCursorService",
     "IngestionLogService",
     "MacroService",
@@ -116,8 +104,4 @@ __all__ = [
     "QualityRecordService",
     "ResearchCatalogService",
     "SourceService",
-    "StateStore",
-    "UnavailableHotLayerReader",
-    "UnavailableHotLayerWriter",
-    "UnavailableStateStore",
 ]

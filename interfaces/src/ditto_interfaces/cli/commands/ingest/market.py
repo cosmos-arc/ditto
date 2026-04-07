@@ -6,7 +6,10 @@ from typing import Annotated
 
 import typer
 
-from ditto_interfaces.cli.commands.factory import create_daily_command
+from ditto_interfaces.cli.commands.factory import (
+    create_daily_command,
+    create_instrument_command,
+)
 from ditto_interfaces.cli.commands.ingest._shared import run_instrument_ingest
 from ditto_interfaces.cli.utils.validation import (
     check_instrument_mode,
@@ -15,10 +18,28 @@ from ditto_interfaces.cli.utils.validation import (
 
 app = typer.Typer(help="行情数据摄取")
 
-# daily (stock/etf/index 日行情)
-_stock_daily_impl = create_daily_command("stock_daily", "摄取股票日行情")
-_etf_daily_impl = create_daily_command("etf_daily", "摄取ETF日行情")
-_index_daily_impl = create_daily_command("index_daily", "摄取指数日行情")
+# 双模式命令（按日期/按标的）
+app.command("stock")(
+    create_instrument_command(
+        "stock_daily",
+        "摄取股票日行情",
+        cli_path="ingest market stock",
+    )
+)
+app.command("etf")(
+    create_instrument_command(
+        "etf_daily",
+        "摄取ETF日行情",
+        cli_path="ingest market etf",
+    )
+)
+app.command("index")(
+    create_instrument_command(
+        "index_daily",
+        "摄取指数日行情",
+        cli_path="ingest market index",
+    )
+)
 
 # adj (复权因子)
 _adj_factor_impl = create_daily_command("adj_factor", "摄取股票复权因子")
@@ -32,195 +53,6 @@ _fx_daily_impl = create_daily_command("fx_daily", "摄取汇率日线数据")
 
 # commodity (商品)
 _commodity_daily_impl = create_daily_command("commodity_daily", "摄取商品价格数据")
-
-
-@app.command("stock")
-def stock(  # noqa: PLR0913
-    ctx: typer.Context,
-    date: Annotated[
-        str | None,
-        typer.Argument(help="交易日期 (YYYY-MM-DD)"),
-    ] = None,
-    # 标识符参数（三选一）
-    ticker: Annotated[
-        str | None,
-        typer.Option("--ticker", "-t", help="裸代码 (如 000001)"),
-    ] = None,
-    standard_ticker: Annotated[
-        str | None,
-        typer.Option("--standard-ticker", help="Ditto 标准格式 (如 000001.XSHE)"),
-    ] = None,
-    instrument_id: Annotated[
-        int | None,
-        typer.Option("--instrument-id", "-i", help="内部 ID"),
-    ] = None,
-    # 时间范围
-    start: Annotated[
-        str | None,
-        typer.Option("--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    ] = None,
-    end: Annotated[
-        str | None,
-        typer.Option("--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    ] = None,
-    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
-) -> None:
-    r"""
-    摄取股票日行情.
-
-    支持两种模式：
-
-    1. 按日期批量摄取：
-       pixi run ingest market stock 2024-01-15
-
-    2. 按标的+时间段摄取（标识符三选一）：
-       pixi run ingest market stock --ticker 000001 -s 2024-01-01 -e 2024-01-31
-       pixi run ingest market stock --standard-ticker 000001.XSHE \
-           -s 2024-01-01 -e 2024-06-30
-       pixi run ingest market stock --instrument-id 1000001 \
-           -s 2024-01-01 -e 2024-01-31
-
-    """
-    validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
-
-    if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        run_instrument_ingest(
-            ctx,
-            "stock_daily",
-            ticker,
-            standard_ticker,
-            instrument_id,
-            start,
-            end,
-            force,
-        )
-    else:
-        # 此时 date 必定不为 None（由 check_instrument_mode 保证）
-        return _stock_daily_impl(ctx, date or "", force)
-
-
-@app.command("etf")
-def etf(  # noqa: PLR0913
-    ctx: typer.Context,
-    date: Annotated[
-        str | None,
-        typer.Argument(help="交易日期 (YYYY-MM-DD)"),
-    ] = None,
-    # 标识符参数（三选一）
-    ticker: Annotated[
-        str | None,
-        typer.Option("--ticker", "-t", help="裸代码 (如 510300)"),
-    ] = None,
-    standard_ticker: Annotated[
-        str | None,
-        typer.Option("--standard-ticker", help="Ditto 标准格式 (如 510300.XSHG)"),
-    ] = None,
-    instrument_id: Annotated[
-        int | None,
-        typer.Option("--instrument-id", "-i", help="内部 ID"),
-    ] = None,
-    # 时间范围
-    start: Annotated[
-        str | None,
-        typer.Option("--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    ] = None,
-    end: Annotated[
-        str | None,
-        typer.Option("--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    ] = None,
-    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
-) -> None:
-    r"""
-    摄取ETF日行情.
-
-    支持两种模式：
-
-    1. 按日期批量摄取：
-       pixi run ingest market etf 2024-01-15
-
-    2. 按标的+时间段摄取（标识符三选一）：
-       pixi run ingest market etf --ticker 510300 -s 2024-01-01 -e 2024-01-31
-       pixi run ingest market etf --standard-ticker 510300.XSHG \
-           -s 2024-01-01 -e 2024-06-30
-
-    """
-    validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
-
-    if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        run_instrument_ingest(
-            ctx,
-            "etf_daily",
-            ticker,
-            standard_ticker,
-            instrument_id,
-            start,
-            end,
-            force,
-        )
-    else:
-        return _etf_daily_impl(ctx, date or "", force)
-
-
-@app.command("index")
-def index(  # noqa: PLR0913
-    ctx: typer.Context,
-    date: Annotated[
-        str | None,
-        typer.Argument(help="交易日期 (YYYY-MM-DD)"),
-    ] = None,
-    # 标识符参数（三选一）
-    ticker: Annotated[
-        str | None,
-        typer.Option("--ticker", "-t", help="裸代码 (如 000001)"),
-    ] = None,
-    standard_ticker: Annotated[
-        str | None,
-        typer.Option("--standard-ticker", help="Ditto 标准格式 (如 000001.XSHG)"),
-    ] = None,
-    instrument_id: Annotated[
-        int | None,
-        typer.Option("--instrument-id", "-i", help="内部 ID"),
-    ] = None,
-    # 时间范围
-    start: Annotated[
-        str | None,
-        typer.Option("--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    ] = None,
-    end: Annotated[
-        str | None,
-        typer.Option("--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    ] = None,
-    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
-) -> None:
-    r"""
-    摄取指数日行情.
-
-    支持两种模式：
-
-    1. 按日期批量摄取：
-       pixi run ingest market index 2024-01-15
-
-    2. 按标的+时间段摄取（标识符三选一）：
-       pixi run ingest market index --ticker 000001 -s 2024-01-01 -e 2024-01-31
-       pixi run ingest market index --standard-ticker 000001.XSHG \
-           -s 2024-01-01 -e 2024-06-30
-
-    """
-    validate_instrument_params(date, ticker, standard_ticker, instrument_id, start, end)
-
-    if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-        run_instrument_ingest(
-            ctx,
-            "index_daily",
-            ticker,
-            standard_ticker,
-            instrument_id,
-            start,
-            end,
-            force,
-        )
-    else:
-        return _index_daily_impl(ctx, date or "", force)
 
 
 @app.command("adj")

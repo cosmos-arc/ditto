@@ -2,22 +2,18 @@
 App-side unified derived materialization orchestration.
 
 Provides ``DerivedMaterializationOrchestrator`` for compile-execute-persist
-lifecycle, ``RuntimeDerivedInputProvider`` for production input loading,
-and ``FactorOrthogonalizationService`` for factor decorrelation.
+lifecycle.
 """
 
 from __future__ import annotations
 
-from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import asdict
-from pathlib import Path
 from typing import NamedTuple, Protocol, runtime_checkable
 from uuid import uuid4
 
 import polars as pl
 from ditto_analytics.compile_cache import SQLiteCompileCache
-from ditto_analytics.evaluation.metrics import orthogonalize
 from ditto_analytics.materialization import (
     CompileIdentity,
     DerivedExecutionPlan,
@@ -39,7 +35,6 @@ from ditto_data.models.derived import (
 )
 from ditto_data.models.publication_safety import DerivedMinimalDQSummaryRecord
 from ditto_data.services import (
-    DerivedArtifactReader,
     DerivedCatalogService,
     PublicationSafetyRecordService,
 )
@@ -47,9 +42,12 @@ from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactMetadataParams,
     ArtifactPersistenceService,
 )
-from ditto_data.services.market_service import MarketService
 from ditto_kernel.specs import DerivedSpec, MaterializationProfile
 
+from ditto_app.process.factor_orthogonalization import (
+    FactorOrthogonalizationService,
+)
+from ditto_app.process.materialization_dependencies import apply_cs_amplification
 from ditto_app.process.materialization_helpers import (
     build_manifest_record,
     build_minimal_dq_record,
@@ -62,6 +60,7 @@ from ditto_app.process.materialization_types import (
     hydrate_spec,
     prepare_input_frame,
 )
+from ditto_app.process.runtime_input_provider import RuntimeDerivedInputProvider
 from ditto_app.query._utils import now_iso
 
 __all__ = [
@@ -547,448 +546,4 @@ class DerivedMaterializationOrchestrator:
             instrument_ids=instrument_ids,
             time_keys=spec.effective_time_keys,
             entity_keys=spec.entity_keys,
-        )
-
-
-# ===========================================================================
-# Cross-section amplification
-# ===========================================================================
-
-
-def apply_cs_amplification(
-    *,
-    frame: pl.DataFrame,
-    instrument_ids: list[int],
-    time_keys: tuple[str, ...] = ("trade_date",),
-    entity_keys: tuple[str, ...] = ("instrument_id",),
-) -> pl.DataFrame:
-    """
-    Expand a materialized frame to full cross-section coverage.
-
-    Creates a cartesian product of all observed dates (from *time_keys*)
-    with every instrument in *instrument_ids*, then left-joins the original
-    frame so that missing (date, instrument) pairs appear as null rows.
-
-    This is required for CS factors where the output is only meaningful
-    when every instrument is present for each date.
-    """
-    if frame.is_empty() or not instrument_ids:
-        return frame
-    key_columns = list(entity_keys) + list(time_keys)
-    extra_cols = ["availability_time"] if "availability_time" in frame.columns else []
-    unique_dates = frame.select(pl.col(time_keys[0]).unique().sort()).to_series()
-    cross = unique_dates.to_frame(time_keys[0]).join(
-        pl.DataFrame({entity_keys[0]: instrument_ids}),
-        how="cross",
-    )
-    return cross.join(
-        frame.select([*key_columns, "value", *extra_cols]),
-        on=key_columns,
-        how="left",
-    )
-
-
-# ===========================================================================
-# Runtime input provider
-# ===========================================================================
-
-
-_MARKET_DATASET_COLUMNS: dict[str, frozenset[str]] = {
-    "market.stock_daily": frozenset(
-        {
-            "open",
-            "high",
-            "low",
-            "close",
-            "pre_close",
-            "volume",
-            "amount",
-        }
-    ),
-    "market.adj_factor": frozenset({"adj_factor"}),
-    "market.stock_status": frozenset(
-        {"is_suspended", "suspend_timing", "is_st", "st_type", "list_status"}
-    ),
-}
-
-_ETF_DATASET_COLUMNS: dict[str, frozenset[str]] = {
-    "etf.daily": frozenset(
-        {
-            "open",
-            "high",
-            "low",
-            "close",
-            "pre_close",
-            "volume",
-            "amount",
-            "pct_change",
-        }
-    ),
-}
-
-
-class RuntimeDerivedInputProvider:
-    """Read runtime inputs from local market truth and upstream derived artifacts."""
-
-    def __init__(
-        self,
-        *,
-        catalog_service: DerivedCatalogService,
-        market_service: MarketService,
-        artifact_root: Path,
-        data_root: Path,
-    ) -> None:
-        self._artifact_reader = DerivedArtifactReader(
-            catalog_service=catalog_service,
-            artifact_root=artifact_root,
-        )
-        self._market_service = market_service
-
-    def load_input(self, context: InputContext) -> pl.DataFrame:
-        """Load one runtime input frame for the requested dependency set."""
-        spec = context.spec
-        plan = context.plan
-        join_keys = [*spec.entity_keys, *spec.effective_time_keys]
-
-        market_deps, etf_deps, derived_deps = _classify_dependencies(
-            context.dependencies,
-        )
-        adj = _resolve_adj_type(spec)
-
-        start = str(plan.compute_start)
-        end = str(plan.compute_end)
-
-        frames = list(
-            self._load_market_frames(market_deps, start, end, join_keys),
-        )
-        frames.extend(self._load_etf_frames(etf_deps, start, end, join_keys, adj))
-        frames.extend(self._load_derived_frames(derived_deps, start, end, join_keys))
-
-        if not frames:
-            raise NotImplementedError(
-                f"Phase 3 input backend not wired for derived_id={spec.id}"
-            )
-        return _join_frames(frames, join_keys=join_keys)
-
-    def _load_market_frames(
-        self,
-        deps: dict[str, set[str]],
-        start: str,
-        end: str,
-        join_keys: list[str],
-    ) -> list[pl.DataFrame]:
-        """Load stock market data frames for classified market dependencies."""
-        frames: list[pl.DataFrame] = []
-        for dataset_ref, value_columns in deps.items():
-            raw = self._fetch_market_data(dataset_ref, start, end)
-            if raw is None:
-                continue
-            frames.append(
-                _prepare_market_frame(
-                    raw,
-                    join_keys=join_keys,
-                    value_columns=value_columns,
-                    availability_column="trade_date",
-                )
-            )
-        return frames
-
-    def _fetch_market_data(
-        self,
-        dataset_ref: str,
-        start: str,
-        end: str,
-    ) -> pl.DataFrame | None:
-        """Fetch market data for a given dataset reference."""
-        if dataset_ref == "market.stock_daily":
-            return self._market_service.get_stock_bars(start=start, end=end)
-        if dataset_ref == "market.adj_factor":
-            return self._market_service.get_adj_factors(start=start, end=end)
-        if dataset_ref == "market.stock_status":
-            return self._market_service.get_stock_status(start=start, end=end)
-        return None
-
-    def _load_etf_frames(
-        self,
-        deps: dict[str, set[str]],
-        start: str,
-        end: str,
-        join_keys: list[str],
-        adj: str,
-    ) -> list[pl.DataFrame]:
-        """Load ETF data frames for classified ETF dependencies."""
-        frames: list[pl.DataFrame] = []
-        if "etf.daily" in deps:
-            raw = self._market_service.get_etf_bars(
-                start=start,
-                end=end,
-                adj=adj,
-            )
-            frames.append(
-                _prepare_market_frame(
-                    raw,
-                    join_keys=join_keys,
-                    value_columns=deps["etf.daily"],
-                    availability_column="trade_date",
-                )
-            )
-        return frames
-
-    def _load_derived_frames(
-        self,
-        deps: list[str],
-        start: str,
-        end: str,
-        join_keys: list[str],
-    ) -> list[pl.DataFrame]:
-        """Load upstream derived artifact frames."""
-        frames: list[pl.DataFrame] = []
-        for derived_id in deps:
-            version = self._artifact_reader.resolve_offline_version(derived_id)
-            upstream = self._artifact_reader.read_frame(
-                derived_id=derived_id,
-                version=version,
-                start=start,
-                end=end,
-            )
-            frames.append(
-                _prepare_derived_frame(
-                    upstream,
-                    join_keys=join_keys,
-                    column_name=derived_id,
-                )
-            )
-        return frames
-
-
-def _classify_dependencies(
-    dependencies: tuple[str, ...],
-) -> tuple[
-    dict[str, set[str]],
-    dict[str, set[str]],
-    list[str],
-]:
-    """Separate dependencies into market, ETF, and derived namespaces."""
-    market_dependencies: dict[str, set[str]] = defaultdict(set)
-    etf_dependencies: dict[str, set[str]] = defaultdict(set)
-    derived_dependencies: list[str] = []
-
-    for dependency in dependencies:
-        if dependency.startswith("etf."):
-            dataset_ref, column = _resolve_etf_dependency(dependency)
-            etf_dependencies[dataset_ref].add(column)
-        elif dependency.startswith("market."):
-            dataset_ref, column = _resolve_market_dependency(dependency)
-            market_dependencies[dataset_ref].add(column)
-        elif "." in dependency:
-            derived_dependencies.append(dependency)
-        else:
-            raise NotImplementedError(
-                f"Unsupported dependency={dependency} (market.*, etf.*, @derived only)"
-            )
-
-    return (
-        dict(market_dependencies),
-        dict(etf_dependencies),
-        derived_dependencies,
-    )
-
-
-def _resolve_adj_type(spec: object) -> str:
-    """Extract adj_type from spec's execution_policy, defaulting to 'none'."""
-    ep = getattr(spec, "execution_policy", None)
-    return ep.adj_type if ep else "none"
-
-
-def _resolve_market_dependency(dependency: str) -> tuple[str, str]:
-    """Resolve a 'market.*' dependency to (dataset_ref, column_name)."""
-    column_name = dependency.removeprefix("market.")
-    for dataset_ref, columns in _MARKET_DATASET_COLUMNS.items():
-        if column_name in columns:
-            return (dataset_ref, column_name)
-    raise NotImplementedError(f"Unsupported market dependency={dependency}")
-
-
-def _resolve_etf_dependency(dependency: str) -> tuple[str, str]:
-    """Resolve an 'etf.*' dependency to (dataset_ref, column_name)."""
-    column_name = dependency.removeprefix("etf.")
-    for dataset_ref, columns in _ETF_DATASET_COLUMNS.items():
-        if column_name in columns:
-            return (dataset_ref, column_name)
-    raise NotImplementedError(f"Unsupported ETF dependency={dependency}")
-
-
-def _prepare_market_frame(
-    frame: pl.DataFrame,
-    *,
-    join_keys: list[str],
-    value_columns: set[str],
-    availability_column: str,
-) -> pl.DataFrame:
-    selected_columns = [*join_keys, *sorted(value_columns)]
-    existing_columns = [
-        column for column in selected_columns if column in frame.columns
-    ]
-    prepared = frame.select(existing_columns)
-    return prepared.with_columns(
-        pl.col(availability_column).alias("availability_time__0")
-    )
-
-
-def _prepare_derived_frame(
-    frame: pl.DataFrame,
-    *,
-    join_keys: list[str],
-    column_name: str,
-) -> pl.DataFrame:
-    selected_columns = [*join_keys]
-    if "value" in frame.columns:
-        selected_columns.append("value")
-    if "availability_time" in frame.columns:
-        selected_columns.append("availability_time")
-    prepared = frame.select(selected_columns)
-    renamed: dict[str, str] = {}
-    if "value" in prepared.columns:
-        renamed["value"] = column_name
-    if "availability_time" in prepared.columns:
-        renamed["availability_time"] = "availability_time__0"
-    return prepared.rename(renamed)
-
-
-def _join_frames(
-    frames: list[pl.DataFrame],
-    *,
-    join_keys: list[str],
-) -> pl.DataFrame:
-    base = frames[0]
-    availability_columns = ["availability_time__0"]
-    for index, frame in enumerate(frames[1:], start=1):
-        renamed = {
-            column: f"{column}__{index}"
-            for column in frame.columns
-            if column.startswith("availability_time__")
-        }
-        next_frame = frame.rename(renamed)
-        availability_columns.extend(renamed.values())
-        base = base.join(next_frame, on=join_keys, how="left")
-    return base.with_columns(
-        pl.max_horizontal(
-            *(pl.col(column) for column in availability_columns),
-        ).alias("availability_time"),
-    ).drop(availability_columns)
-
-
-# ===========================================================================
-# Factor orthogonalization service
-# ===========================================================================
-
-
-class FactorOrthogonalizationService:
-    """
-    Orthogonalize a target factor against control factors.
-
-    Loads the target and control factor artifacts via
-    :class:`DerivedArtifactReader`, joins them on
-    ``(trade_date, instrument_id)``, and delegates to the pure-function
-    :func:`~ditto_analytics.evaluation.metrics.orthogonalize` from
-    ``ditto_analytics``.
-    """
-
-    def __init__(self, artifact_reader: DerivedArtifactReader) -> None:
-        self._artifact_reader = artifact_reader
-
-    def load_and_orthogonalize(
-        self,
-        target_id: str,
-        target_version: int,
-        other_factor_ids: list[tuple[str, int]],
-        *,
-        start: str,
-        end: str,
-        method: str = "sequential",
-    ) -> pl.DataFrame:
-        """
-        Load factors and compute orthogonalized target values.
-
-        Args:
-            target_id: Derived artifact identifier for the target factor.
-            target_version: Version of the target artifact.
-            other_factor_ids: List of ``(factor_id, version)`` pairs for
-                control factors.
-            start: Start date (``YYYY-MM-DD``).
-            end: End date (``YYYY-MM-DD``).
-            method: Orthogonalization method (``"sequential"`` or
-                ``"symmetric"``).
-
-        Returns:
-            ``pl.DataFrame[trade_date, instrument_id,
-            orthogonalized_value]``.
-
-        """
-        target_df = self._artifact_reader.read_frame(
-            derived_id=target_id,
-            version=target_version,
-            start=start,
-            end=end,
-        )
-
-        if not other_factor_ids:
-            # No control factors -- return the target values unchanged.
-            if target_df.is_empty():
-                return pl.DataFrame(
-                    schema={
-                        "trade_date": pl.Utf8,
-                        "instrument_id": pl.Int64,
-                        "orthogonalized_value": pl.Float64,
-                    },
-                )
-            return target_df.select(
-                pl.col("trade_date"),
-                pl.col("instrument_id"),
-                pl.col("value").alias("orthogonalized_value"),
-            )
-
-        # Load and join control factors.  Each factor gets a
-        # ``factor_name`` column so that the orthogonalize() function
-        # can distinguish them.
-        control_frames: list[pl.DataFrame] = []
-        for factor_id, factor_version in other_factor_ids:
-            frame = self._artifact_reader.read_frame(
-                derived_id=factor_id,
-                version=factor_version,
-                start=start,
-                end=end,
-            )
-            if frame.is_empty():
-                continue
-            control_frames.append(
-                frame.select(
-                    pl.col("trade_date"),
-                    pl.col("instrument_id"),
-                    pl.col("value"),
-                    pl.lit(factor_id).alias("factor_name"),
-                ),
-            )
-
-        if not control_frames:
-            if target_df.is_empty():
-                return pl.DataFrame(
-                    schema={
-                        "trade_date": pl.Utf8,
-                        "instrument_id": pl.Int64,
-                        "orthogonalized_value": pl.Float64,
-                    },
-                )
-            return target_df.select(
-                pl.col("trade_date"),
-                pl.col("instrument_id"),
-                pl.col("value").alias("orthogonalized_value"),
-            )
-
-        factors_df = pl.concat(control_frames)
-
-        return orthogonalize(
-            target_df,
-            factors_df,
-            method=method,
         )

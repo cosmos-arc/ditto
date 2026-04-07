@@ -745,7 +745,7 @@ Data 提供三级数据质量检查机制：
 **L3 统计检查**: Z-score 异常检测、完整性检查
 
 ```python
-from ditto_engine.quality import QualityEngine
+from ditto_data.quality import QualityEngine
 
 # QualityEngine 由容器注入（Data 本身不持有 dq_checker）
 engine: QualityEngine = container.get(QualityEngine)
@@ -877,7 +877,7 @@ bars/
 - 新增基础抽象类：`BaseReader` 和 `BaseWriter`
   - `BaseReader` 定义查询接口
   - `BaseWriter` 定义写入接口
-  - 替代原有的 `BaseStore` 统一接口
+  - 替代原有的统一 Store 接口
 
 **改进**
 - 架构更简洁：移除 Facade 层，减少间接层级
@@ -1184,14 +1184,13 @@ bars/
 
 ### v0.6.0 (2026-01-27)
 **新增**
-- 基础层架构：添加 `BaseStore` 抽象基类，定义统一存储接口
 - `ParquetStore`：Parquet 文件存储实现，支持按年分区、自动去重
 - `SQLiteStore`：SQLite 数据库存储实现，支持事务、PIT 查询
 - `DataRootConfig`：统一数据根路径配置，简化路径管理
 
 **改进**
 - 从多路径配置简化为单 `data_root` 配置（`data_store.env`）
-- 所有存储实现继承 `BaseStore`，保证接口一致性
+- 存储实现各自独立，职责清晰
 - 增强类型安全和代码可维护性
 
 ### v0.5.0 (2026-01-23)
