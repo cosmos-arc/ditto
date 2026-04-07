@@ -2,7 +2,7 @@
   "edition": "v1",
   "style": "style-b-graphite-studio",
   "created": "2026-04-01",
-  "status": "v5-complete",
+  "status": "edition-reviewed",
   "stateCoverageAppliedAt": "2026-04-02",
   "iterationCompletedAt": "2026-04-05",
   "iterationV2CompletedAt": "2026-04-05",
@@ -491,14 +491,19 @@
     }
   },
   "crossPageAudit": {
-    "lastRun": "2026-04-06",
+    "lastRun": "2026-04-07",
     "issues": 2,
     "fixed": 2,
-    "summary": "v3 subagent 引入 2 处 DOM 嵌套错误(regime-monitor + research)，已手动修复。17/17 页面功能正常。",
+    "summary": "Edition v1 验收：修复 agent-console 5 处 gallery-card 未闭合 + ai-overview 1 处 span 未闭合。16/17 页面 DOM 全部平衡。",
+    "previousIssues": {
+      "v5Audit": "v3 subagent 引入 2 处 DOM 嵌套错误(regime-monitor + research)，已手动修复",
+      "editionReview": "agent-console 5 处 <details> 闭合错误 + 5 处 gallery-card 未闭合; ai-overview 1 处 </span> 缺失"
+    },
     "tokenCompliance": {
       "deprecatedTokens": 0,
       "hardcodedColors": 0,
-      "inlineStyleAvg": 43,
+      "inlineStyleAvg": 25,
+      "inlineStyleTotal": 402,
       "staleCoverage": "100%"
     }
   },
