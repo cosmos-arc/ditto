@@ -1427,6 +1427,9 @@
     @media (prefers-reduced-motion: reduce) {
       [data-tooltip]::after { transition: none !important; }
     }
+
+    /* ── Page-specific utilities ── */
+    .agent-status-label { margin-left: auto; font-size: var(--font-size-10); }
   </style>
 </head>
 <body>
@@ -1562,16 +1565,16 @@
     <div class="ai-main">
 
       <!-- Tab Navigation Bar -->
-      <div data-tabs="ai-tabs" class="flex-row-center gap-4" style="border-bottom:1px solid var(--border-subtle);padding-bottom:var(--space-4);flex-shrink:0;">
-        <button data-tab-target="overview" class="ai-status-badge online" style="border:none;font-size:var(--font-size-12);" aria-selected="true">
+      <div data-tabs="ai-tabs" class="flex-row-center gap-4 border-b-subtle" style="padding-bottom:var(--space-4);flex-shrink:0;">
+        <button data-tab-target="overview" class="ai-status-badge online tab-button" aria-selected="true">
           <span class="ai-status-dot"></span>
           概览
         </button>
-        <button data-tab-target="models" class="ai-status-badge idle" style="border:none;font-size:var(--font-size-12);" aria-selected="false">
+        <button data-tab-target="models" class="ai-status-badge idle tab-button" aria-selected="false">
           <span class="ai-status-dot"></span>
           模型
         </button>
-        <button data-tab-target="signals" class="ai-status-badge idle" style="border:none;font-size:var(--font-size-12);" aria-selected="false">
+        <button data-tab-target="signals" class="ai-status-badge idle tab-button" aria-selected="false">
           <span class="ai-status-dot"></span>
           信号
         </button>
@@ -1895,12 +1898,12 @@
 
       <!-- Tab Panel: Models -->
       <div data-tab-panel="models" aria-hidden="true">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--density-gutter);padding-top:var(--space-8);">
+        <div class="grid-2col" style="padding-top:var(--space-8);">
           <!-- Model Card 1 -->
           <div data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" class="panel-base">
             <div class="model-card-header">
               <span class="ai-status-badge online"><span class="ai-status-dot"></span>Alpha v3</span>
-              <span class="text-caption" style="margin-left:auto;">信号策略</span>
+              <span class="text-caption ml-auto">信号策略</span>
             </div>
             <div class="model-card-value">
               <span data-ticker="87.3" data-decimals="1" data-ticker-suffix="%" data-counter="87.3" data-counter-decimals="1" data-counter-suffix="%">87.3%</span>
@@ -1916,7 +1919,7 @@
           <div data-reveal="fade-up" data-reveal-delay="50" data-mouse-glow="true" class="panel-base">
             <div class="model-card-header">
               <span class="ai-status-badge online"><span class="ai-status-dot"></span>情绪 Alpha v2</span>
-              <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--agent-waiting-approval-fg);">IC 衰减</span>
+              <span class="agent-status-label" style="color:var(--agent-waiting-approval-fg);">IC 衰减</span>
             </div>
             <div class="model-card-value">
               <span data-ticker="0.028" data-decimals="3" data-counter="0.028" data-counter-decimals="3">0.028</span>
@@ -1932,7 +1935,7 @@
           <div data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" class="panel-base">
             <div class="model-card-header">
               <span class="ai-status-badge processing"><span class="ai-status-dot"></span>Factor Discovery</span>
-              <span style="margin-left:auto;font-size:var(--font-size-10);color:var(--ai-accent);">运行中</span>
+              <span class="agent-status-label" style="color:var(--ai-accent);">运行中</span>
             </div>
             <div class="model-card-value">
               <span data-ticker="42" data-decimals="0">42</span>
@@ -1948,7 +1951,7 @@
           <div data-reveal="fade-up" data-reveal-delay="150" data-mouse-glow="true" class="panel-base">
             <div class="model-card-header">
               <span class="ai-status-badge online"><span class="ai-status-dot"></span>风控巡检</span>
-              <span class="text-caption" style="margin-left:auto;">合规监控</span>
+              <span class="text-caption ml-auto">合规监控</span>
             </div>
             <div class="model-card-value">
               <span data-ticker="99.2" data-decimals="1" data-ticker-suffix="%" data-counter="99.2" data-counter-decimals="1" data-counter-suffix="%">99.2%</span>

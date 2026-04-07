@@ -1326,6 +1326,11 @@
       .correlation-cell { transition: none !important; }
       [data-tooltip]::after { transition: none !important; }
     }
+
+    /* ── Page-specific utilities ── */
+    .py-6 { padding: var(--space-6) 0; }
+    .mb-8 { margin-bottom: var(--space-8); }
+    .pb-4 { padding-bottom: var(--space-4); }
   </style>
 </head>
 <body>
@@ -1954,7 +1959,7 @@
 
               <!-- News / Research / Announcements Tabs -->
               <div data-tabs="intelligence-tabs" class="flex-col gap-8">
-                <div style="display:flex;gap:var(--space-2);border-bottom:1px solid var(--border-subtle);padding-bottom:var(--space-4);">
+                <div class="flex-row-center gap-2 border-b-subtle pb-4">
                   <button class="intel-tab active" data-tab-target="panel-news-flash" aria-selected="true">快讯</button>
                   <button class="intel-tab" data-tab-target="panel-research" aria-selected="false">研报</button>
                   <button class="intel-tab" data-tab-target="panel-announcement" aria-selected="false">公告</button>
@@ -2608,7 +2613,7 @@
         </div>
         <div class="overlay-body">
           <h4>发送内容</h4>
-          <p class="text-secondary text-body-sm" style="margin-bottom:var(--space-8)">
+          <p class="text-secondary text-body-sm mb-8">
             将当前情报摘要与分析发送到 Copilot，AI 将基于最新数据生成深度研究报告。
           </p>
 
@@ -2632,7 +2637,7 @@
           </div>
 
           <h4>附加指令</h4>
-          <div style="padding:var(--space-6) 0;">
+          <div class="py-6">
             <textarea placeholder="输入附加指令，如：重点分析科技板块资金流向..." class="form-textarea"></textarea>
           </div>
 
@@ -2661,11 +2666,11 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
               <div class="state-loading">
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-8)">
-                  <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
-                  <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
-                  <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
-                  <div class="skeleton" style="height:80px;border-radius:var(--radius-6)"></div>
+                <div class="grid-4col">
+                  <div class="skeleton skeleton--card"></div>
+                  <div class="skeleton skeleton--card"></div>
+                  <div class="skeleton skeleton--card"></div>
+                  <div class="skeleton skeleton--card"></div>
                 </div>
                 <div class="skeleton skeleton-row"></div>
                 <div class="skeleton skeleton-row"></div>
@@ -2723,9 +2728,9 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
               <div class="state-loading">
-                <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
-                <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
-                <div class="skeleton" style="height:32px;width:100%;border-radius:var(--radius-4)"></div>
+                <div class="skeleton skeleton--input"></div>
+                <div class="skeleton skeleton--input"></div>
+                <div class="skeleton skeleton--input"></div>
               </div>
             </div>
       </div>
@@ -3108,7 +3113,7 @@
           </div>
           <div class="overlay-body">
             <h4>发送内容</h4>
-            <p class="text-secondary text-body-sm" style="margin-bottom:var(--space-8)">
+            <p class="text-secondary text-body-sm mb-8">
               将当前情报摘要与分析发送到 Copilot，AI 将基于最新数据生成深度研究报告。
             </p>
             <h4>包含内容</h4>
@@ -3130,7 +3135,7 @@
               </label>
             </div>
             <h4>附加指令</h4>
-            <div style="padding:var(--space-6) 0;">
+            <div class="py-6">
               <textarea placeholder="输入附加指令，如：重点分析科技板块资金流向..." class="form-textarea"></textarea>
             </div>
             <div class="overlay-actions">

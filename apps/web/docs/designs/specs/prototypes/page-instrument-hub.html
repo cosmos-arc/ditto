@@ -1867,6 +1867,9 @@
     .signal-confidence-sep { padding: var(--space-4) 0; border-top: 1px solid var(--border-subtle); margin-top: var(--space-4); }
     .signal-confidence-label { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-4); }
     .toolbar-color-pick { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; }
+    .toolbar-color-pick--accent { background: var(--brand-accent); }
+    .toolbar-color-pick--up    { background: var(--market-up-fg); }
+    .toolbar-color-pick--down  { background: var(--market-down-fg); }
     .toolbar-sep { height: 1px; background: var(--border-subtle); margin: var(--space-2) 0; }
     .toolbar-colors { display: flex; gap: var(--space-2); padding: var(--space-2); }
 
@@ -2994,9 +2997,9 @@
       </div>
       <div class="toolbar-sep"></div>
       <div class="toolbar-colors">
-        <div class="toolbar-color-pick" style="background:var(--brand-accent)"></div>
-        <div class="toolbar-color-pick" style="background:var(--market-up-fg)"></div>
-        <div class="toolbar-color-pick" style="background:var(--market-down-fg)"></div>
+        <div class="toolbar-color-pick toolbar-color-pick--accent"></div>
+        <div class="toolbar-color-pick toolbar-color-pick--up"></div>
+        <div class="toolbar-color-pick toolbar-color-pick--down"></div>
       </div>
       <div class="toolbar-sep"></div>
       <div class="toolbar-btn" title="清除全部" tabindex="0">

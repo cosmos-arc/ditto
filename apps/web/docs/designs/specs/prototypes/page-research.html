@@ -1984,6 +1984,9 @@
       color: var(--text-secondary);
       background: var(--interaction-hover-subtle-bg);
     }
+    /* ── Page-specific utilities ── */
+    .tab-panel-scroll { padding: var(--space-12); overflow: auto; }
+    .research-tab-bar { gap: var(--space-4); padding: var(--space-6) var(--space-12); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -2152,15 +2155,15 @@
     </div>
 
     <!-- ═══ Research View Tabs ═══ -->
-    <div data-tabs="research-tabs" class="flex-row-center" style="gap:var(--space-4);padding:var(--space-6) var(--space-12);border-bottom:1px solid var(--border-subtle);flex-shrink:0;">
-      <button data-tab-target="reports" style="font-family:var(--font-family-ui);font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-tertiary);background:none;border:none;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);cursor:pointer;transition:all var(--motion-duration-fast) var(--motion-easing-standard);">研报</button>
-      <button data-tab-target="factors" class="active" style="font-family:var(--font-family-ui);font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--brand-accent);background:none;border:none;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);cursor:pointer;transition:all var(--motion-duration-fast) var(--motion-easing-standard);">因子</button>
-      <button data-tab-target="backtest" style="font-family:var(--font-family-ui);font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-tertiary);background:none;border:none;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);cursor:pointer;transition:all var(--motion-duration-fast) var(--motion-easing-standard);">回测</button>
+    <div data-tabs="research-tabs" class="flex-row-center research-tab-bar">
+      <button data-tab-target="reports" class="tab-button">研报</button>
+      <button data-tab-target="factors" class="tab-button active">因子</button>
+      <button data-tab-target="backtest" class="tab-button">回测</button>
     </div>
 
     <!-- Tab Panel: Reports -->
     <div data-tab-panel="reports" aria-hidden="true" style="display:none;">
-      <div style="padding:var(--space-12);overflow:auto;">
+      <div class="tab-panel-scroll">
         <!-- Report 1: A股动量因子深度报告 -->
         <div class="report-card" data-reveal="fade-up" data-reveal-delay="0" data-glow>
           <div class="report-card-header">
@@ -2171,7 +2174,7 @@
           <div class="report-card-metrics">
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="Information Coefficient — 因子预测能力">IC</span>
-              <span class="report-card-metric-value" style="color:var(--brand-accent);" data-counter="0.041" data-counter-decimals="3">0.041</span>
+              <span class="report-card-metric-value text-accent" data-counter="0.041" data-counter-decimals="3">0.041</span>
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="Information Ratio — IC 稳定性">IR</span>
@@ -2200,7 +2203,7 @@
           <div class="report-card-metrics">
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="Information Coefficient — 因子预测能力">IC</span>
-              <span class="report-card-metric-value" style="color:var(--brand-accent);" data-counter="0.055" data-counter-decimals="3">0.055</span>
+              <span class="report-card-metric-value text-accent" data-counter="0.055" data-counter-decimals="3">0.055</span>
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="Information Ratio — IC 稳定性">IR</span>
@@ -2258,7 +2261,7 @@
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="优化后 Sharpe Ratio">优化后</span>
-              <span class="report-card-metric-value" style="color:var(--brand-accent);" data-counter="1.12" data-counter-decimals="2">1.12</span>
+              <span class="report-card-metric-value text-accent" data-counter="1.12" data-counter-decimals="2">1.12</span>
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="Sharpe 提升幅度">提升</span>
@@ -2892,7 +2895,7 @@
 
     <!-- Tab Panel: Backtest -->
     <div data-tab-panel="backtest" aria-hidden="true" style="display:none;">
-      <div style="padding:var(--space-12);overflow:auto;">
+      <div class="tab-panel-scroll">
         <!-- Backtest metrics row -->
         <div class="backtest-metrics-row">
           <div class="analysis-metric">

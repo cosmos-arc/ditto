@@ -1833,6 +1833,16 @@
       color: var(--brand-accent) !important;
       background: var(--brand-accent-subtle) !important;
     }
+
+    /* ── Showcase tab modifier ── */
+    .tab-button.showcase-tab {
+      padding: var(--space-2) var(--space-12);
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+    .tab-button.showcase-tab.active {
+      color: var(--brand-accent);
+    }
   </style>
 </head>
 <body>
@@ -1895,10 +1905,10 @@
       <!-- ── Tabs Navigation ── -->
       <div data-tabs="token-tabs" style="margin-bottom: var(--space-16);">
         <div style="display: flex; gap: var(--space-4); margin-bottom: var(--space-16); padding: 2px; border-radius: var(--radius-6); background: var(--surface-app); border: 1px solid var(--border-subtle);">
-          <button data-tab-target="colors" class="active" style="padding: var(--space-2) var(--space-12); border: none; border-radius: var(--radius-4); background: transparent; color: var(--text-secondary); font-family: var(--font-family-ui); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); cursor: pointer; transition: all 0.15s ease;">色彩</button>
-          <button data-tab-target="typography" style="padding: var(--space-2) var(--space-12); border: none; border-radius: var(--radius-4); background: transparent; color: var(--text-secondary); font-family: var(--font-family-ui); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); cursor: pointer; transition: all 0.15s ease;">字号 / 字体</button>
-          <button data-tab-target="spacing" style="padding: var(--space-2) var(--space-12); border: none; border-radius: var(--radius-4); background: transparent; color: var(--text-secondary); font-family: var(--font-family-ui); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); cursor: pointer; transition: all 0.15s ease;">间距</button>
-          <button data-tab-target="radii" style="padding: var(--space-2) var(--space-12); border: none; border-radius: var(--radius-4); background: transparent; color: var(--text-secondary); font-family: var(--font-family-ui); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); cursor: pointer; transition: all 0.15s ease;">圆角</button>
+          <button data-tab-target="colors" class="tab-button showcase-tab active">色彩</button>
+          <button data-tab-target="typography" class="tab-button showcase-tab">字号 / 字体</button>
+          <button data-tab-target="spacing" class="tab-button showcase-tab">间距</button>
+          <button data-tab-target="radii" class="tab-button showcase-tab">圆角</button>
         </div>
 
         <!-- ── Tab Panel: Colors ── -->

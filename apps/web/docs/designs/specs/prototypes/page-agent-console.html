@@ -1745,6 +1745,9 @@
         animation: none !important;
       }
     }
+
+    /* ── Page-specific utilities ── */
+    .mb-6 { margin-bottom: var(--space-6); }
   </style>
 </head>
 <body>
@@ -1856,7 +1859,7 @@
         <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content">
 
           <!-- Status Filter Tabs -->
-          <div data-tabs="agent-status-filter" class="flex-row-center gap-4" style="margin-bottom:var(--space-6);">
+          <div data-tabs="agent-status-filter" class="flex-row-center gap-4 mb-6">
             <span data-tab-target="all" class="agent-filter-tab active" aria-selected="true">全部</span>
             <span data-tab-target="running" class="agent-filter-tab" aria-selected="false">运行中</span>
             <span data-tab-target="completed" class="agent-filter-tab" aria-selected="false">已完成</span>
@@ -3251,9 +3254,9 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
           <div class="state-loading">
-            <div class="skeleton skeleton-row" style="height:48px"></div>
-            <div class="skeleton skeleton-row" style="height:48px"></div>
-            <div class="skeleton skeleton-row" style="height:48px"></div>
+            <div class="skeleton skeleton-row skeleton--row-lg"></div>
+            <div class="skeleton skeleton-row skeleton--row-lg"></div>
+            <div class="skeleton skeleton-row skeleton--row-lg"></div>
           </div>
         </div>
     </div>

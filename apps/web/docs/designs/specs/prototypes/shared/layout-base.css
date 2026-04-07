@@ -3103,16 +3103,42 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 /* ── Flex growth ── */
 .flex-1 { flex: 1; }
 
-/* ── Margin top ── */
+/* ── Margin ── */
 .mt-2 { margin-top: var(--space-2); }
 .mt-8 { margin-top: var(--space-8); }
+.ml-auto { margin-left: auto; }
 
 /* ── Gap fill ── */
 .gap-1 { gap: var(--space-1); }
 
+/* ── Border ── */
+.border-b-subtle { border-bottom: 1px solid var(--border-subtle); }
+
 /* ── Text roles (semantic) ── */
 .text-brand-medium { color: var(--brand-accent); font-weight: var(--font-weight-medium); }
 .text-danger-medium { color: var(--system-down-fg); font-weight: var(--font-weight-medium); }
+.text-accent { color: var(--brand-accent); }
+
+/* ── Grid layouts ── */
+.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--density-gutter); }
+.grid-4col { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-8); }
+.grid-sidebar { display: grid; grid-template-columns: 320px 1fr; gap: var(--density-gutter); }
+
+/* ── Tab button ── */
+.tab-button {
+  border: none; border-radius: var(--radius-4); background: transparent;
+  font-family: var(--font-family-ui); font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium); color: var(--text-tertiary);
+  padding: var(--space-4) var(--space-8); cursor: pointer;
+  transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+}
+.tab-button.active { color: var(--brand-accent); }
+
+/* ── Skeleton sizes ── */
+.skeleton--block  { height: 120px; }
+.skeleton--card   { height: 80px; border-radius: var(--radius-6); }
+.skeleton--row-lg { height: 48px; }
+.skeleton--input  { height: 32px; width: 100%; border-radius: var(--radius-4); }
 
 /* ── Truncate ── */
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

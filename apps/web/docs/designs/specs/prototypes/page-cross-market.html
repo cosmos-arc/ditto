@@ -1688,7 +1688,7 @@
           <div class="matrix-section">
             <div class="matrix-header">
               <h2 class="matrix-title">相对强弱矩阵</h2>
-              <div data-flow='{"segments":[{"label":"流入","value":35},{"label":"流出","value":28},{"label":"净流入","value":7}]}' aria-label="资金流向" style="width:8rem;margin-left:auto"></div>
+              <div data-flow='{"segments":[{"label":"流入","value":35},{"label":"流出","value":28},{"label":"净流入","value":7}]}' aria-label="资金流向" class="ml-auto" style="width:8rem"></div>
             </div>
             <div class="matrix-conclusion" data-reveal="fade-up" data-reveal-delay="100">
               <span class="lead">港股</span>弹性领跑全市场，<span class="lead">黄金</span>避险持续偏强；
@@ -1697,7 +1697,7 @@
 
             <!-- JS Tabs: 关联矩阵 / 资金流向 / 板块联动 -->
             <div data-tabs="cross-market-tabs" style="margin-top:var(--space-12)">
-              <div style="display:flex;gap:var(--space-8);margin-bottom:var(--space-10)">
+              <div class="flex-row-center gap-8" style="margin-bottom:var(--space-10)">
                 <button data-tab-target="correlation" class="tab-band-tab active" aria-selected="true">关联矩阵</button>
                 <button data-tab-target="capital-flow" class="tab-band-tab" aria-selected="false">资金流向</button>
                 <button data-tab-target="sector" class="tab-band-tab" aria-selected="false">板块联动</button>
@@ -2568,9 +2568,9 @@
 <div class="state-variant-content" data-state="loading">
               <div class="state-loading">
                 <div class="skeleton-grid-3">
-                  <div class="skeleton" style="height:120px"></div>
-                  <div class="skeleton" style="height:120px"></div>
-                  <div class="skeleton" style="height:120px"></div>
+                  <div class="skeleton skeleton--block"></div>
+                  <div class="skeleton skeleton--block"></div>
+                  <div class="skeleton skeleton--block"></div>
                 </div>
               </div>
             </div>
