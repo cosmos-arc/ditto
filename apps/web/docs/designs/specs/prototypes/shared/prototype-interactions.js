@@ -51,7 +51,12 @@
         if (activeTarget) {
           var tid = activeTarget.getAttribute('data-tab-target');
           panels.forEach(function (p) {
-            p.style.display = p.getAttribute('data-tab-panel') === tid ? '' : 'none';
+            /* Preserve display:contents or other non-block display values */
+            var currentDisplay = p.style.display;
+            if (currentDisplay && currentDisplay !== 'none') {
+              p.setAttribute('data-tab-display', currentDisplay);
+            }
+            p.style.display = p.getAttribute('data-tab-panel') === tid ? (p.getAttribute('data-tab-display') || '') : 'none';
           });
         }
 
@@ -70,7 +75,7 @@
 
           panels.forEach(function (p) {
             var match = p.getAttribute('data-tab-panel') === target;
-            p.style.display = match ? '' : 'none';
+            p.style.display = match ? (p.getAttribute('data-tab-display') || '') : 'none';
             p.setAttribute('aria-hidden', match ? 'false' : 'true');
           });
 

@@ -2750,7 +2750,7 @@ details.context-section > .context-section-body {
 
 .shell-catalog .catalog-table {
   grid-area: table;
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
 }
 
