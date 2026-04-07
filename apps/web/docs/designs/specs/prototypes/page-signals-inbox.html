@@ -81,6 +81,31 @@
       border: 0;
     }
 
+    /* ── Signal list items ── */
+    .signal-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-8) var(--space-12);
+      border-radius: var(--radius-6);
+      background: var(--surface-base);
+    }
+
+    /* ── Tab panel content (direction-filtered panels) ── */
+    .tab-panel-content {
+      padding: var(--space-12);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Tab panel empty state ── */
+    .tab-panel-empty {
+      padding: var(--space-16);
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
     /* ── Focus-visible ring system ── */
     .rail-icon:focus-visible,
     .btn:focus-visible,
@@ -1917,65 +1942,65 @@
         </div>
 
         <!-- Direction-filtered panels (Tabs target) -->
-        <div data-tab-panel="buy" aria-hidden="true" style="padding:var(--space-12); color:var(--text-secondary); font-size:var(--font-size-12);">
-          <div style="display:flex; flex-direction:column; gap:var(--space-8);">
-            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
-              <span style="color:var(--brand-accent); font-weight:500;">▲ 买入</span>
-              <span style="flex:1;">贵州茅台 600519 — 策略信号</span>
+        <div data-tab-panel="buy" aria-hidden="true" class="tab-panel-content">
+          <div class="flex-col gap-8">
+            <div class="signal-item">
+              <span class="text-brand-medium">▲ 买入</span>
+              <span class="col-auto">贵州茅台 600519 — 策略信号</span>
               <span class="cell-numeric">5.0%</span>
-              <span style="color:var(--system-healthy-fg);">置信度 82%</span>
+              <span class="status-healthy">置信度 82%</span>
             </div>
-            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
-              <span style="color:var(--brand-accent); font-weight:500;">▲ 买入</span>
-              <span style="flex:1;">五粮液 000858 — 策略信号</span>
+            <div class="signal-item">
+              <span class="text-brand-medium">▲ 买入</span>
+              <span class="col-auto">五粮液 000858 — 策略信号</span>
               <span class="cell-numeric">3.8%</span>
-              <span style="color:var(--system-healthy-fg);">置信度 91%</span>
+              <span class="status-healthy">置信度 91%</span>
             </div>
-            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
-              <span style="color:var(--brand-accent); font-weight:500;">▲ 买入</span>
-              <span style="flex:1;">药明康德 603259 — 策略信号</span>
+            <div class="signal-item">
+              <span class="text-brand-medium">▲ 买入</span>
+              <span class="col-auto">药明康德 603259 — 策略信号</span>
               <span class="cell-numeric">4.2%</span>
-              <span style="color:var(--system-healthy-fg);">置信度 88%</span>
+              <span class="status-healthy">置信度 88%</span>
             </div>
-            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
-              <span style="color:var(--brand-accent); font-weight:500;">▲ 买入</span>
-              <span style="flex:1;">比亚迪 002594 — AI信号</span>
+            <div class="signal-item">
+              <span class="text-brand-medium">▲ 买入</span>
+              <span class="col-auto">比亚迪 002594 — AI信号</span>
               <span class="cell-numeric">2.8%</span>
-              <span style="color:var(--system-healthy-fg);">置信度 78%</span>
+              <span class="status-healthy">置信度 78%</span>
             </div>
-            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
-              <span style="color:var(--brand-accent); font-weight:500;">▲ 买入</span>
-              <span style="flex:1;">平安银行 000001 — 手动信号</span>
+            <div class="signal-item">
+              <span class="text-brand-medium">▲ 买入</span>
+              <span class="col-auto">平安银行 000001 — 手动信号</span>
               <span class="cell-numeric">1.5%</span>
-              <span style="color:var(--system-degraded-fg);">置信度 52%</span>
+              <span class="status-degraded">置信度 52%</span>
             </div>
           </div>
         </div>
 
-        <div data-tab-panel="sell" aria-hidden="true" style="padding:var(--space-12); color:var(--text-secondary); font-size:var(--font-size-12);">
-          <div style="display:flex; flex-direction:column; gap:var(--space-8);">
-            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
-              <span style="color:var(--system-down-fg); font-weight:500;">▼ 卖出</span>
-              <span style="flex:1;">宁德时代 300750 — AI信号</span>
+        <div data-tab-panel="sell" aria-hidden="true" class="tab-panel-content">
+          <div class="flex-col gap-8">
+            <div class="signal-item">
+              <span class="text-danger-medium">▼ 卖出</span>
+              <span class="col-auto">宁德时代 300750 — AI信号</span>
               <span class="cell-numeric">-3.2%</span>
-              <span style="color:var(--system-degraded-fg);">置信度 65%</span>
+              <span class="status-degraded">置信度 65%</span>
             </div>
-            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
-              <span style="color:var(--system-down-fg); font-weight:500;">▼ 卖出</span>
-              <span style="flex:1;">中国平安 601318 — 手动信号</span>
+            <div class="signal-item">
+              <span class="text-danger-medium">▼ 卖出</span>
+              <span class="col-auto">中国平安 601318 — 手动信号</span>
               <span class="cell-numeric">-4.5%</span>
-              <span style="color:var(--system-down-fg);">置信度 40%</span>
+              <span class="text-danger-medium">置信度 40%</span>
             </div>
-            <div style="display:flex; align-items:center; gap:var(--space-8); padding:var(--space-8) var(--space-12); border-radius:var(--radius-6); background:var(--surface-base);">
-              <span style="color:var(--system-down-fg); font-weight:500;">▼ 卖出</span>
-              <span style="flex:1;">招商银行 600036 — AI信号</span>
+            <div class="signal-item">
+              <span class="text-danger-medium">▼ 卖出</span>
+              <span class="col-auto">招商银行 600036 — AI信号</span>
               <span class="cell-numeric">-2.1%</span>
-              <span style="color:var(--system-degraded-fg);">置信度 58%</span>
+              <span class="status-degraded">置信度 58%</span>
             </div>
           </div>
         </div>
 
-        <div data-tab-panel="hold" aria-hidden="true" style="padding:var(--space-16); text-align:center; color:var(--text-tertiary); font-size:var(--font-size-12);">
+        <div data-tab-panel="hold" aria-hidden="true" class="tab-panel-empty">
           当前无持有信号
         </div>
       </div>

@@ -2152,7 +2152,7 @@
     </div>
 
     <!-- ═══ Research View Tabs ═══ -->
-    <div data-tabs="research-tabs" style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-6) var(--space-12);border-bottom:1px solid var(--border-subtle);flex-shrink:0;">
+    <div data-tabs="research-tabs" class="flex-row-center" style="gap:var(--space-4);padding:var(--space-6) var(--space-12);border-bottom:1px solid var(--border-subtle);flex-shrink:0;">
       <button data-tab-target="reports" style="font-family:var(--font-family-ui);font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-tertiary);background:none;border:none;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);cursor:pointer;transition:all var(--motion-duration-fast) var(--motion-easing-standard);">研报</button>
       <button data-tab-target="factors" class="active" style="font-family:var(--font-family-ui);font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--brand-accent);background:none;border:none;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);cursor:pointer;transition:all var(--motion-duration-fast) var(--motion-easing-standard);">因子</button>
       <button data-tab-target="backtest" style="font-family:var(--font-family-ui);font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-tertiary);background:none;border:none;padding:var(--space-4) var(--space-8);border-radius:var(--radius-4);cursor:pointer;transition:all var(--motion-duration-fast) var(--motion-easing-standard);">回测</button>
@@ -2175,7 +2175,7 @@
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="Information Ratio — IC 稳定性">IR</span>
-              <span class="report-card-metric-value" style="color:var(--system-healthy-fg);" data-counter="0.82" data-counter-decimals="2">0.82</span>
+              <span class="report-card-metric-value status-healthy" data-counter="0.82" data-counter-decimals="2">0.82</span>
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="风险调整后收益">Sharpe</span>
@@ -2204,11 +2204,11 @@
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="Information Ratio — IC 稳定性">IR</span>
-              <span class="report-card-metric-value" style="color:var(--system-healthy-fg);" data-counter="0.92" data-counter-decimals="2">0.92</span>
+              <span class="report-card-metric-value status-healthy" data-counter="0.92" data-counter-decimals="2">0.92</span>
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="因子在 Universe 中的覆盖率">覆盖率</span>
-              <span class="report-card-metric-value" style="color:var(--system-degraded-fg);" data-counter="76" data-counter-decimals="0" data-counter-suffix="%">76%</span>
+              <span class="report-card-metric-value status-degraded" data-counter="76" data-counter-decimals="0" data-counter-suffix="%">76%</span>
             </div>
             <div class="report-card-sparkline">
               <svg data-sparkline='{"data":[0.02,0.03,0.035,0.04,0.045,0.048,0.052,0.055],"series":"neutral","width":80,"height":24,"fill":true}' aria-label="IC趋势"></svg>
@@ -2229,11 +2229,11 @@
           <div class="report-card-metrics">
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="当前 IC — 因子预测能力">IC</span>
-              <span class="report-card-metric-value" style="color:var(--system-degraded-fg);" data-counter="0.028" data-counter-decimals="3">0.028</span>
+              <span class="report-card-metric-value status-degraded" data-counter="0.028" data-counter-decimals="3">0.028</span>
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="IC 衰减幅度">衰减</span>
-              <span class="report-card-metric-value" style="color:var(--system-down-fg);" data-counter="31.7" data-counter-decimals="1" data-counter-suffix="%">31.7%</span>
+              <span class="report-card-metric-value status-weak" data-counter="31.7" data-counter-decimals="1" data-counter-suffix="%">31.7%</span>
             </div>
             <div class="report-card-sparkline">
               <svg data-sparkline='{"data":[0.041,0.039,0.037,0.035,0.033,0.031,0.030,0.028],"series":"warning","width":80,"height":24,"fill":true}' aria-label="IC衰减趋势"></svg>
@@ -2262,7 +2262,7 @@
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="Sharpe 提升幅度">提升</span>
-              <span class="report-card-metric-value" style="color:var(--system-healthy-fg);" data-counter="21.7" data-counter-decimals="1" data-counter-suffix="%">+21.7%</span>
+              <span class="report-card-metric-value status-healthy" data-counter="21.7" data-counter-decimals="1" data-counter-suffix="%">+21.7%</span>
             </div>
             <div class="report-card-sparkline">
               <svg data-sparkline='{"data":[0.85,0.88,0.92,0.95,0.98,1.02,1.08,1.12],"series":"up","width":80,"height":24,"fill":true}' aria-label="Sharpe提升趋势"></svg>
@@ -2283,11 +2283,11 @@
           <div class="report-card-metrics">
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="当前 IC — 因子预测能力">IC</span>
-              <span class="report-card-metric-value" style="color:var(--system-down-fg);" data-counter="0.021" data-counter-decimals="3">0.021</span>
+              <span class="report-card-metric-value status-weak" data-counter="0.021" data-counter-decimals="3">0.021</span>
             </div>
             <div class="report-card-metric">
               <span class="report-card-metric-label" data-tooltip="风险调整后收益">Sharpe</span>
-              <span class="report-card-metric-value" style="color:var(--system-down-fg);" data-counter="0.68" data-counter-decimals="2">0.68</span>
+              <span class="report-card-metric-value status-weak" data-counter="0.68" data-counter-decimals="2">0.68</span>
             </div>
             <div class="report-card-sparkline">
               <svg data-sparkline='{"data":[0.038,0.035,0.032,0.029,0.026,0.024,0.022,0.021],"series":"down","width":80,"height":24,"fill":true}' aria-label="IC下降趋势"></svg>
@@ -2925,7 +2925,7 @@
             </div>
             <div class="backtest-metric">
               <span class="backtest-metric-label" data-tooltip="最大回撤幅度">Max DD</span>
-              <span class="backtest-metric-value" style="color:var(--system-degraded-fg);">-8.3%</span>
+              <span class="backtest-metric-value status-degraded">-8.3%</span>
             </div>
             <div class="backtest-metric">
               <span class="backtest-metric-label">Trades</span>
@@ -2933,7 +2933,7 @@
             </div>
             <div class="backtest-metric">
               <span class="backtest-metric-label" data-tooltip="盈利交易占比">胜率</span>
-              <span class="backtest-metric-value" style="color:var(--system-healthy-fg);">56.2%</span>
+              <span class="backtest-metric-value status-healthy">56.2%</span>
             </div>
             <div class="backtest-sparkline">
               <svg data-sparkline='{"data":[0.8,0.9,1.1,1.0,1.2,1.3,1.1,1.4,1.3,1.5,1.42],"series":"up","width":80,"height":24,"fill":true}' aria-label="Sharpe趋势"></svg>
@@ -2953,7 +2953,7 @@
             </div>
             <div class="backtest-metric">
               <span class="backtest-metric-label" data-tooltip="最大回撤幅度">Max DD</span>
-              <span class="backtest-metric-value" style="color:var(--system-degraded-fg);">-12.1%</span>
+              <span class="backtest-metric-value status-degraded">-12.1%</span>
             </div>
             <div class="backtest-metric">
               <span class="backtest-metric-label">Trades</span>
@@ -2961,7 +2961,7 @@
             </div>
             <div class="backtest-metric">
               <span class="backtest-metric-label" data-tooltip="盈利交易占比">胜率</span>
-              <span class="backtest-metric-value" style="color:var(--system-healthy-fg);">54.8%</span>
+              <span class="backtest-metric-value status-healthy">54.8%</span>
             </div>
             <div class="backtest-sparkline">
               <svg data-sparkline='{"data":[1.0,1.1,1.2,1.1,1.3,1.4,1.5,1.4,1.5,1.6,1.57],"series":"up","width":80,"height":24,"fill":true}' aria-label="Sharpe趋势"></svg>
@@ -2977,15 +2977,15 @@
           <div class="backtest-card-metrics">
             <div class="backtest-metric">
               <span class="backtest-metric-label" data-tooltip="Information Coefficient — 因子预测能力">IC</span>
-              <span class="backtest-metric-value" style="color:var(--system-degraded-fg);">0.028</span>
+              <span class="backtest-metric-value status-degraded">0.028</span>
             </div>
             <div class="backtest-metric">
               <span class="backtest-metric-label" data-tooltip="Information Ratio — IC 稳定性">IR</span>
-              <span class="backtest-metric-value" style="color:var(--system-degraded-fg);">0.45</span>
+              <span class="backtest-metric-value status-degraded">0.45</span>
             </div>
             <div class="backtest-metric">
               <span class="backtest-metric-label" data-tooltip="因子衰减百分比">衰减</span>
-              <span class="backtest-metric-value" style="color:var(--system-degraded-fg);">31.7%</span>
+              <span class="backtest-metric-value status-degraded">31.7%</span>
             </div>
             <div class="backtest-sparkline">
               <svg data-sparkline='{"data":[0.041,0.039,0.037,0.035,0.033,0.031,0.030,0.029,0.028,0.028,0.028],"series":"warning","width":80,"height":24,"fill":true}' aria-label="IC衰减趋势"></svg>

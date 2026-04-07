@@ -1441,24 +1441,24 @@
     </div>
 
     <!-- ═══ Risk Gauges — DonutGauge ═══ -->
-    <div style="display:flex;align-items:center;gap:var(--space-16);padding:var(--space-12) var(--density-gutter);border-bottom:1px solid var(--border-subtle);" data-mouse-glow="true" data-mouse-glow-size="180px">
-      <div style="display:flex;align-items:center;gap:var(--space-10);" data-tooltip="VaR 额度使用率，当前 68% 安全" data-tooltip-delay="500">
+    <div class="flex-row-center gap-16" style="padding:var(--space-12) var(--density-gutter);border-bottom:1px solid var(--border-subtle);" data-mouse-glow="true" data-mouse-glow-size="180px">
+      <div class="flex-row-center gap-10" data-tooltip="VaR 额度使用率，当前 68% 安全" data-tooltip-delay="500">
         <svg data-donut='{"value":0.68,"label":"68%","color":"oklch(0.746 0.165 50)","size":72}' aria-label="风险利用率"></svg>
-        <div style="display:flex;flex-direction:column;gap:var(--space-1);">
+        <div class="flex-col gap-1">
           <span class="text-size-12 text-weight-medium text-primary">风险利用率</span>
           <span class="text-size-10 text-tertiary">VaR 额度已用 68%</span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:var(--space-10);" data-tooltip="VaR 占总阈值 49.2%，安全范围" data-tooltip-delay="500">
+      <div class="flex-row-center gap-10" data-tooltip="VaR 占总阈值 49.2%，安全范围" data-tooltip-delay="500">
         <svg data-donut='{"value":0.49,"label":"49%","color":"oklch(0.55 0.15 155)","size":72}' aria-label="VaR占比"></svg>
-        <div style="display:flex;flex-direction:column;gap:var(--space-1);">
+        <div class="flex-col gap-1">
           <span class="text-size-12 text-weight-medium text-primary">VaR 占比</span>
           <span class="text-size-10 text-tertiary">占阈值 2.50% 的 49.2%</span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:var(--space-10);" data-tooltip="科技行业集中度 80.2%，接近限制" data-tooltip-delay="500">
+      <div class="flex-row-center gap-10" data-tooltip="科技行业集中度 80.2%，接近限制" data-tooltip-delay="500">
         <svg data-donut='{"value":0.80,"label":"80%","color":"oklch(0.6317 0.1567 22.64)","size":72}' aria-label="集中度"></svg>
-        <div style="display:flex;flex-direction:column;gap:var(--space-1);">
+        <div class="flex-col gap-1">
           <span class="text-size-12 text-weight-medium text-primary">行业集中度</span>
           <span class="text-size-10 text-tertiary">科技行业 32.1% / 40%</span>
         </div>
@@ -1552,7 +1552,7 @@
           <div class="context-rail risk-activity">
 
             <!-- JS Tabs: Breaches / Stress -->
-            <div data-tabs="risk-activity-tabs" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+            <div data-tabs="risk-activity-tabs" class="flex-col col-auto" style="min-height:0;">
               <div style="display:flex;gap:var(--space-2);padding:var(--space-4) 0;border-bottom:1px solid var(--border-subtle);margin-bottom:var(--space-4);">
                 <button data-tab-target="breaches" class="filter-btn active" aria-selected="true">Breaches</button>
                 <button data-tab-target="stress-test" class="filter-btn" aria-selected="false">Stress Test</button>
@@ -1648,12 +1648,12 @@
                         <span class="stress-scenario">极端下跌 -15%</span>
                         <span class="stress-tag pass">通过</span>
                       </div>
-                      <div style="display:flex;align-items:center;gap:var(--space-8);">
+                      <div class="flex-row-center gap-8">
                         <span class="stress-meta">预计亏损</span>
                         <span class="stress-result negative">-8.23%</span>
                         <svg data-sparkline='{"data":[2.1,3.5,2.8,4.2,3.1,5.0,4.5,6.2],"series":"warning","width":60,"height":22}' aria-label="VaR趋势"></svg>
                       </div>
-                      <div data-confidence="0.69" data-confidence-label="距风控线 -12% 有余量" style="margin-top:var(--space-2);"></div>
+                      <div data-confidence="0.69" data-confidence-label="距风控线 -12% 有余量" class="mt-2"></div>
                     </div>
 
                     <div class="stress-row">
@@ -1661,12 +1661,12 @@
                         <span class="stress-scenario">利率上行 +100bp</span>
                         <span class="stress-tag pass">通过</span>
                       </div>
-                      <div style="display:flex;align-items:center;gap:var(--space-8);">
+                      <div class="flex-row-center gap-8">
                         <span class="stress-meta">预计亏损</span>
                         <span class="stress-result negative">-3.17%</span>
                         <svg data-sparkline='{"data":[1.2,1.8,2.5,2.1,3.0,3.8,3.2,4.1],"series":"warning","width":60,"height":22}' aria-label="利率影响趋势"></svg>
                       </div>
-                      <div data-confidence="0.26" data-confidence-label="距风控线 -12% 较远" style="margin-top:var(--space-2);"></div>
+                      <div data-confidence="0.26" data-confidence-label="距风控线 -12% 较远" class="mt-2"></div>
                     </div>
 
                     <div class="stress-row">
@@ -1674,12 +1674,12 @@
                         <span class="stress-scenario">流动性危机</span>
                         <span class="stress-tag fail">突破</span>
                       </div>
-                      <div style="display:flex;align-items:center;gap:var(--space-8);">
+                      <div class="flex-row-center gap-8">
                         <span class="stress-meta">预计亏损</span>
                         <span class="stress-result critical">-14.82%</span>
                         <svg data-sparkline='{"data":[5.2,7.8,9.1,11.3,10.5,13.2,12.8,14.8],"series":"warning","width":60,"height":22}' aria-label="流动性冲击趋势"></svg>
                       </div>
-                      <div data-confidence="0.95" data-confidence-label="已突破风控线 -12% · 需关注" style="margin-top:var(--space-2);"></div>
+                      <div data-confidence="0.95" data-confidence-label="已突破风控线 -12% · 需关注" class="mt-2"></div>
                     </div>
 
                   </div>
@@ -1709,8 +1709,8 @@
         <div style="display:grid;grid-template-columns:320px 1fr;gap:var(--density-gutter);">
 
           <!-- Left: Asset Risk Heatmap -->
-          <div style="display:flex;flex-direction:column;gap:var(--space-8);">
-            <div style="display:flex;align-items:center;gap:var(--space-6);">
+          <div class="flex-col gap-8">
+            <div class="flex-row-center gap-6">
               <span class="text-size-12 text-weight-medium text-primary">资产风险热力图</span>
               <span class="text-size-10 text-tertiary">近 20 日 VaR 贡献</span>
             </div>
@@ -2089,16 +2089,16 @@
           <h4>场景选择</h4>
           <div class="flex-col-gap">
             <label class="overlay-radio-option">
-              <input type="radio" name="stress-scenario" checked style="accent-color:var(--brand-accent)"> 极端下跌 -15%（预设）
+              <input type="radio" name="stress-scenario" checked> 极端下跌 -15%（预设）
             </label>
             <label class="overlay-radio-option">
-              <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 利率上行 +100bp（预设）
+              <input type="radio" name="stress-scenario"> 利率上行 +100bp（预设）
             </label>
             <label class="overlay-radio-option">
-              <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 流动性危机（预设）
+              <input type="radio" name="stress-scenario"> 流动性危机（预设）
             </label>
             <label class="overlay-radio-option">
-              <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 自定义场景
+              <input type="radio" name="stress-scenario"> 自定义场景
             </label>
           </div>
 
@@ -2540,16 +2540,16 @@
             <h4>场景选择</h4>
             <div class="flex-col-gap">
               <label class="overlay-radio-option">
-                <input type="radio" name="stress-scenario" checked style="accent-color:var(--brand-accent)"> 极端下跌 -15%（预设）
+                <input type="radio" name="stress-scenario" checked> 极端下跌 -15%（预设）
               </label>
               <label class="overlay-radio-option">
-                <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 利率上行 +100bp（预设）
+                <input type="radio" name="stress-scenario"> 利率上行 +100bp（预设）
               </label>
               <label class="overlay-radio-option">
-                <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 流动性危机（预设）
+                <input type="radio" name="stress-scenario"> 流动性危机（预设）
               </label>
               <label class="overlay-radio-option">
-                <input type="radio" name="stress-scenario" style="accent-color:var(--brand-accent)"> 自定义场景
+                <input type="radio" name="stress-scenario"> 自定义场景
               </label>
             </div>
 

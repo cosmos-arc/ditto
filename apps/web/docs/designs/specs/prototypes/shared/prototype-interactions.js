@@ -189,7 +189,7 @@
       var value = Math.max(0, Math.min(1, cfg.value));
       var label = cfg.label || Math.round(value * 100) + '%';
       var color = cfg.color || cssVar('--brand-accent', 'oklch(0.700 0.120 235)');
-      var track = cfg.trackColor || 'oklch(1 0 0 / 0.06)';
+      var track = cfg.trackColor || cssVar('--overlay-6', 'oklch(1 0 0 / 0.06)');
       var size  = cfg.size || 64;
       var sw    = cfg.strokeWidth || Math.max(4, size * 0.1);
       var cx = size / 2;
@@ -396,7 +396,7 @@
     init: function () {
       if (reducedMotion) return;
       document.querySelectorAll('[data-mouse-glow]').forEach(function (el) {
-        var color = el.getAttribute('data-mouse-glow-color') || 'oklch(from var(--brand-500) l c h / 0.06)';
+        var color = el.getAttribute('data-mouse-glow-color') || cssVar('--brand-accent-subtle', 'oklch(from var(--brand-500) l c h / 0.06)');
         var size  = el.getAttribute('data-mouse-glow-size')  || '200px';
 
         el.addEventListener('mousemove', function (e) {
@@ -474,7 +474,7 @@
       cssVar('--brand-accent', 'oklch(0.700 0.120 235 / 0.55)'),
       cssVar('--chart-series-up', 'oklch(0.55 0.15 155)'),
       cssVar('--amber-500', 'oklch(0.746 0.165 50)'),
-      'oklch(1 0 0 / 0.08)',
+      cssVar('--overlay-8', 'oklch(1 0 0 / 0.08)'),
     ],
 
     init: function () {
@@ -730,7 +730,7 @@
   var style = document.createElement('style');
   style.textContent = [
     '/* Ditto Interactions — dynamic module base styles */',
-    '.confidence-track { flex:1; height:4px; border-radius:2px; overflow:hidden; background:oklch(1 0 0 / 0.06); }',
+    '.confidence-track { flex:1; height:4px; border-radius:2px; overflow:hidden; background:var(--overlay-6); }',
     '.confidence-fill  { height:100%; border-radius:2px; transition:width 1s cubic-bezier(0.4,0,0.2,1); }',
     '[data-confidence] { display:flex; align-items:center; gap:8px; }',
     '.confidence-label { font-size:11px; color:var(--text-tertiary); white-space:nowrap; }',
@@ -745,7 +745,7 @@
     '  color:var(--text-primary, oklch(0.925 0.004 253));',
     '  font-size:12px; line-height:1.4; max-width:240px; pointer-events:none;',
     '  border:1px solid var(--border-default, oklch(0.325 0.008 253));',
-    '  box-shadow:0 4px 12px oklch(0 0 0 / 0.3);',
+    '  box-shadow:0 4px 12px oklch(0 0 0 / 0.3); /* no shadow token — oklch fallback is intentional */',
     '  opacity:0; transition:opacity 150ms cubic-bezier(0.4,0,0.2,1); display:none; }',
     '.ditto-tooltip--visible { opacity:1; }',
   ].join('\n');

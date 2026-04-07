@@ -1712,6 +1712,28 @@
       color: var(--brand-accent);
     }
 
+    /* ── Agent filter tabs ── */
+    .agent-filter-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      color: var(--text-tertiary);
+    }
+    .agent-filter-tab.active {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+
+    /* ── Metric center layout ── */
+    .metric-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
     /* ── Respect reduced motion for new animations ── */
     @media (prefers-reduced-motion: reduce) {
       .plan-card, .run-card, .finding-card, .approval-card,
@@ -1834,11 +1856,11 @@
         <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content">
 
           <!-- Status Filter Tabs -->
-          <div data-tabs="agent-status-filter" style="display:flex;gap:var(--space-4);align-items:center;margin-bottom:var(--space-6);">
-            <span data-tab-target="all" class="active" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-2) var(--space-8);border-radius:var(--radius-4);cursor:pointer;color:var(--brand-accent);background:var(--brand-accent-subtle);" aria-selected="true">全部</span>
-            <span data-tab-target="running" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-2) var(--space-8);border-radius:var(--radius-4);cursor:pointer;color:var(--text-tertiary);" aria-selected="false">运行中</span>
-            <span data-tab-target="completed" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-2) var(--space-8);border-radius:var(--radius-4);cursor:pointer;color:var(--text-tertiary);" aria-selected="false">已完成</span>
-            <span data-tab-target="failed" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-2) var(--space-8);border-radius:var(--radius-4);cursor:pointer;color:var(--text-tertiary);" aria-selected="false">失败</span>
+          <div data-tabs="agent-status-filter" class="flex-row-center gap-4" style="margin-bottom:var(--space-6);">
+            <span data-tab-target="all" class="agent-filter-tab active" aria-selected="true">全部</span>
+            <span data-tab-target="running" class="agent-filter-tab" aria-selected="false">运行中</span>
+            <span data-tab-target="completed" class="agent-filter-tab" aria-selected="false">已完成</span>
+            <span data-tab-target="failed" class="agent-filter-tab" aria-selected="false">失败</span>
           </div>
 
           <!-- Tab Panel: All Plans -->
@@ -2500,20 +2522,20 @@
         </div>
         <div class="detail-section-body">
           <!-- Donut Gauge Visual -->
-          <div style="display:flex;gap:var(--space-12);align-items:center;justify-content:center;margin-bottom:var(--space-8);">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
+          <div class="flex-row-center gap-12" style="justify-content:center;margin-bottom:var(--space-8);">
+            <div class="metric-center">
               <svg data-donut='{"value":0.45,"label":"45%","color":"oklch(0.55 0.15 155)","size":56}' aria-label="CPU使用率"></svg>
               <span class="resource-label">CPU</span>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
+            <div class="metric-center">
               <svg data-donut='{"value":0.72,"label":"72%","color":"oklch(0.746 0.165 50)","size":56}' aria-label="内存使用率"></svg>
               <span class="resource-label">MEM</span>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
+            <div class="metric-center">
               <svg data-donut='{"value":0.38,"label":"38%","color":"oklch(0.55 0.15 155)","size":56}' aria-label="GPU使用率"></svg>
               <span class="resource-label">GPU</span>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
+            <div class="metric-center">
               <svg data-donut='{"value":0.23,"label":"23%","color":"oklch(0.55 0.15 155)","size":56}' aria-label="API调用率"></svg>
               <span class="resource-label">API</span>
             </div>

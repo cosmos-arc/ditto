@@ -88,6 +88,7 @@
   --overlay-4:   oklch(1 0 0 / 0.04);
   --overlay-6:   oklch(1 0 0 / 0.06);
   --overlay-8:   oklch(1 0 0 / 0.08);
+  --danger-subtle-bg: oklch(from var(--red-500) l c h / 0.10);
   --overlay-10:  oklch(1 0 0 / 0.10);
   --overlay-12:  oklch(1 0 0 / 0.12);
 

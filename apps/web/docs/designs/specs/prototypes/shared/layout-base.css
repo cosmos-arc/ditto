@@ -772,14 +772,14 @@ button {
 }
 
 .queue-item-tag.p1 { background: var(--risk-high-bg); color: var(--risk-high-fg); }
-.queue-item-tag.p2 { background: oklch(from var(--amber-500) l c h / 0.1); color: var(--amber-500); }
+.queue-item-tag.p2 { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
 .queue-item-tag.p3 { background: var(--interaction-hover-subtle-bg); color: var(--text-tertiary); }
 
 /* Domain tags (Home cross-domain priority items) */
-.queue-item-tag.domain   { background: var(--brand-accent-subtle); color: var(--brand-accent); }
+.queue-item-tag.domain   { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
 .queue-item-tag.risk     { background: var(--risk-high-bg); color: var(--risk-high-fg); }
 .queue-item-tag.trade    { background: var(--brand-accent-subtle); color: var(--brand-accent); }
-.queue-item-tag.data     { background: oklch(from var(--amber-500) l c h / 0.1); color: var(--amber-500); }
+.queue-item-tag.data     { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
 .queue-item-tag.platform { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
 
 .queue-item-tag.priority {
@@ -842,7 +842,7 @@ button {
 }
 
 .queue-item-btn.primary-action:hover {
-  background: oklch(from var(--brand-500) l c h / 0.1);
+  background: var(--brand-accent-subtle);
 }
 
 /* ── Context Rail (continuous sidebar) ── */
@@ -1512,8 +1512,26 @@ details.context-section > .context-section-body {
   padding-right: var(--space-20);
   border-radius: var(--radius-4);
   border: 1px solid var(--border-subtle);
-  background: var(--surface-panel-base) url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238B949E' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 6px center;
+  background: var(--surface-panel-base);
   color: var(--text-secondary);
+  appearance: none;
+  cursor: pointer;
+  position: relative;
+}
+.filter-select::after {
+  content: '';
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 6px;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  background-color: var(--icon-secondary);
+}
   appearance: none;
   cursor: pointer;
   transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
@@ -1926,7 +1944,7 @@ details.context-section > .context-section-body {
 }
 
 .btn-danger:hover {
-  background: oklch(from var(--red-500) l c h / 0.1);
+  background: var(--danger-subtle-bg);
 }
 
 .btn-ghost {
@@ -2624,7 +2642,7 @@ details.context-section > .context-section-body {
 .shell-analytical {
   display: grid;
   grid-template-columns: var(--shell-rail-width) 1fr var(--shell-activity-width);
-  grid-template-rows: 64px auto 1fr var(--shell-analysis-band-height);
+  grid-template-rows: var(--shell-header-height) auto 1fr var(--shell-analysis-band-height);
   grid-template-areas:
     "rail header   header"
     "rail strip    strip"
@@ -2641,7 +2659,7 @@ details.context-section > .context-section-body {
 
 .shell-analytical .shell-header {
   grid-area: header;
-  height: 64px;
+  height: var(--shell-header-height);
 }
 
 /* ── Scope / Context Strip (Analytical) ── */
@@ -2729,7 +2747,7 @@ details.context-section > .context-section-body {
 .shell-catalog {
   display: grid;
   grid-template-columns: var(--shell-rail-width) 1fr var(--shell-catalog-detail-width);
-  grid-template-rows: 60px auto 1fr;
+  grid-template-rows: var(--shell-header-height) auto 1fr;
   grid-template-areas:
     "rail header  header"
     "rail toolbar toolbar"
@@ -2745,7 +2763,7 @@ details.context-section > .context-section-body {
 
 .shell-catalog .shell-header {
   grid-area: header;
-  height: 60px;
+  height: var(--shell-header-height);
 }
 
 .shell-catalog .catalog-table {
@@ -3079,7 +3097,22 @@ details.context-section > .context-section-body {
 .timeline-item { padding: var(--space-8) 0; border-left: 2px solid var(--brand-accent); margin-left: 6px; }
 
 /* ── Accent checkbox ── */
-input[type="checkbox"].accent-brand { accent-color: var(--brand-accent); }
+input[type="checkbox"].accent-brand,
+input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
+
+/* ── Flex growth ── */
+.flex-1 { flex: 1; }
+
+/* ── Margin top ── */
+.mt-2 { margin-top: var(--space-2); }
+.mt-8 { margin-top: var(--space-8); }
+
+/* ── Gap fill ── */
+.gap-1 { gap: var(--space-1); }
+
+/* ── Text roles (semantic) ── */
+.text-brand-medium { color: var(--brand-accent); font-weight: var(--font-weight-medium); }
+.text-danger-medium { color: var(--system-down-fg); font-weight: var(--font-weight-medium); }
 
 /* ── Truncate ── */
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
