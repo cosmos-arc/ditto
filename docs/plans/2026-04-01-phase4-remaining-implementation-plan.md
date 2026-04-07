@@ -153,10 +153,10 @@ depth: deep
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| EDIT | `apps/port/src/ditto_interfaces/errors.py` | 全部 re-export from `ditto_data.errors` |
-| EDIT | `apps/port/src/ditto_interfaces/models/ingestion.py` | 全部 re-export from `ditto_data.models.ingestion` |
-| EDIT | `apps/port/src/ditto_interfaces/models/config.py` | 全部 re-export from `ditto_app.config` |
-| EDIT | `apps/port/src/ditto_interfaces/models/__init__.py` | 保持不变（已通过子模块 re-export） |
+| EDIT | `interfaces/src/ditto_interfaces/errors.py` | 全部 re-export from `ditto_data.errors` |
+| EDIT | `interfaces/src/ditto_interfaces/models/ingestion.py` | 全部 re-export from `ditto_data.models.ingestion` |
+| EDIT | `interfaces/src/ditto_interfaces/models/config.py` | 全部 re-export from `ditto_app.config` |
+| EDIT | `interfaces/src/ditto_interfaces/models/__init__.py` | 保持不变（已通过子模块 re-export） |
 
 **注意**：`DittoPortError` 保留在 `ditto_interfaces/errors.py`（API 层仍需要）。
 
@@ -185,7 +185,7 @@ depth: deep
 
 #### A6: 更新 tests import `[M]`
 
-**影响的测试文件**（约 16 个，均在 `apps/port/tests/`）：
+**影响的测试文件**（约 16 个，均在 `interfaces/tests/`）：
 
 - `tests/unit/services/ingestion/` — 14 个文件
 - `tests/integration/ingestion/` — 1 个文件
@@ -208,12 +208,12 @@ pixi run -e dev arch-check     # 全部 importlinter contract 通过
 ```bash
 # ingestion 内部代码不再直接引用 port.models.ingestion
 grep -rn "from ditto_interfaces.models.ingestion\|from ditto_interfaces.models import.*IngestionResult" \
-  apps/port/src/ditto_interfaces/services/ingestion/ --include="*.py"
+  interfaces/src/ditto_interfaces/services/ingestion/ --include="*.py"
 # 应仅剩 shim 文件
 
 # ingestion 内部代码不再直接引用 port.errors
 grep -rn "from ditto_interfaces.errors" \
-  apps/port/src/ditto_interfaces/services/ingestion/ --include="*.py"
+  interfaces/src/ditto_interfaces/services/ingestion/ --include="*.py"
 # 应仅剩 shim 文件
 ```
 
@@ -369,11 +369,11 @@ pixi run -e dev arch-check
 **grep 验证**：
 ```bash
 # ingestion 内部文件已删除（仅保留 __init__.py shim）
-ls apps/port/src/ditto_interfaces/services/ingestion/*.py
+ls interfaces/src/ditto_interfaces/services/ingestion/*.py
 # 应仅剩 __init__.py
 
 # quality 内部文件已删除（仅保留 __init__.py shim）
-ls apps/port/src/ditto_interfaces/services/ingestion/quality/*.py
+ls interfaces/src/ditto_interfaces/services/ingestion/quality/*.py
 # 应仅剩 __init__.py
 ```
 
@@ -569,7 +569,7 @@ pixi run -e dev arch-check
 **grep 验证**：
 ```bash
 # registry 不再引用 ditto_interfaces.services
-grep -rn "from ditto_interfaces.services" apps/port/src/ditto_interfaces/registry/ --include="*.py"
+grep -rn "from ditto_interfaces.services" interfaces/src/ditto_interfaces/registry/ --include="*.py"
 # 应返回 0 结果
 ```
 
@@ -577,7 +577,7 @@ grep -rn "from ditto_interfaces.services" apps/port/src/ditto_interfaces/registr
 
 ### PR-D: port → interfaces 重命名（4d） `[L]`
 
-**目标**：将 `apps/port/` 重命名为 `apps/interfaces/`，全库引用更新。
+**目标**：将 `interfaces/` 重命名为 `interfaces/`，全库引用更新。
 
 #### D1: 目录重命名 `[S]`
 
@@ -589,9 +589,9 @@ git mv apps/port apps/interfaces
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| EDIT | `apps/interfaces/pyproject.toml` | `ditto_interfaces` → `ditto_interfaces` |
-| EDIT | `apps/interfaces/src/ditto_interfaces/` → `ditto_interfaces/` | 目录重命名 |
-| EDIT | `apps/interfaces/src/ditto_interfaces/__init__.py` | 包名更新 |
+| EDIT | `interfaces/pyproject.toml` | `ditto_interfaces` → `ditto_interfaces` |
+| EDIT | `interfaces/src/ditto_interfaces/` → `ditto_interfaces/` | 目录重命名 |
+| EDIT | `interfaces/src/ditto_interfaces/__init__.py` | 包名更新 |
 
 #### D3: 全库引用更新 `[L]`
 
@@ -604,8 +604,8 @@ find packages/ apps/ -name "*.py" -exec sed -i 's/ditto_interfaces/ditto_interfa
 - `packages/app/` — `from ditto_app.query.derived` 无变化，但 `__init__.py` 可能引用 port
 - `packages/data/` — `importlinter` 配置引用
 - `packages/data/` — 测试中可能引用
-- `apps/interfaces/` — 自身内部引用
-- `apps/port/tests/` → `apps/interfaces/tests/`
+- `interfaces/` — 自身内部引用
+- `interfaces/tests/` → `interfaces/tests/`
 
 **注意**：需仔细处理 `ditto_interfaces` → `ditto_interfaces` 的替换，避免误改 `ditto_data.models.port` 等无关字符串。建议使用精确的正则替换。
 
@@ -630,7 +630,7 @@ find packages/ apps/ -name "*.py" -exec sed -i 's/ditto_interfaces/ditto_interfa
 | 文件 | 变更 |
 |------|------|
 | `CLAUDE.md` | 架构图、依赖矩阵、命令示例中的 `port` → `interfaces` |
-| `apps/interfaces/CLAUDE.md` | 全面更新 |
+| `interfaces/CLAUDE.md` | 全面更新 |
 | 各包 `CLAUDE.md` | 引用 `ditto_interfaces` 的地方更新 |
 
 #### D6: 最终验证 `[S]`
@@ -696,7 +696,7 @@ grep -rn "ditto_interfaces" packages/ apps/ --include="*.py"
 #### E3: 文档同步 `[S]`
 
 - `CLAUDE.md` — 最终架构图
-- `apps/interfaces/CLAUDE.md` — 最终模块结构
+- `interfaces/CLAUDE.md` — 最终模块结构
 - `packages/app/CLAUDE.md` — 新增或更新（如需要）
 - 本设计文档状态更新为 `completed`
 
@@ -715,7 +715,7 @@ grep -rn "ditto_interfaces\|from ditto_interfaces.services" packages/ apps/ --in
 # 应返回 0
 
 # interfaces 不依赖 services（已清空）
-ls apps/interfaces/src/ditto_interfaces/services/
+ls interfaces/src/ditto_interfaces/services/
 # 应为空目录或不存在
 ```
 

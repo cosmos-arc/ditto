@@ -80,7 +80,7 @@ Phase 0（Kernel 扩展）计划向 Kernel 包新增 4 个模块（clock.py、pr
 
 将 Kernel 定位从"Shared Kernel（共享内核）"更新为"Shared Kernel — 类型 + Protocol 抽象 + 薄实现"。
 
-### 3.2 `packages/core/CLAUDE.md` — 依赖规则统一
+### 3.2 `packages/engine/CLAUDE.md` — 依赖规则统一
 
 Phase 1 完成后（非 Phase 0 前置），更新 Core 依赖规则：
 
@@ -107,7 +107,7 @@ Phase 1 完成后（非 Phase 0 前置），更新 Core 依赖规则：
 |------|------|------|------|
 | **Step -1a** | `packages/kernel/CLAUDE.md` | 增量扩展准入标准 + 去掉类型上限 + 更新定位 | Phase 0 前 |
 | **Step -1b** | `.claude/rules/architecture.md` | 术语修正 Server → Port | Phase 0 前 |
-| **Step +1** | `packages/core/CLAUDE.md` | 依赖规则统一为 kernel only | Phase 1 完成后 |
+| **Step +1** | `packages/engine/CLAUDE.md` | 依赖规则统一为 kernel only | Phase 1 完成后 |
 | **Step +2** | `packages/data/CLAUDE.md` | 新增 query/ 子模块描述 | Phase 1 Task 1a 时 |
 
 ### 验证
@@ -128,7 +128,7 @@ pixi run -e dev arch-check  # 确保架构边界检查不受影响
 | `.importlinter` | Phase 0/1 无新依赖方向，现有规则已覆盖 |
 | `packages/kernel/pyproject.toml` | 零依赖，Phase 0 新增模块仅用标准库 |
 | `packages/data/pyproject.toml` | 已声明 ditto-kernel 依赖 |
-| `packages/core/pyproject.toml` | 已声明 ditto-kernel 依赖 |
+| `packages/engine/pyproject.toml` | 已声明 ditto-kernel 依赖 |
 | `.claude/rules/core.md` | 代码风格规则，与架构变更无冲突 |
 | `.claude/rules/polars.md` | DataFrame 使用规范，无冲突 |
 | `.claude/rules/python-test.md` | 测试规范，无冲突 |

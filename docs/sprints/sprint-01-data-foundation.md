@@ -215,9 +215,9 @@
 
 **6.1 Prefect 基础设施** [S] ✅
 - 文件：
-  - `apps/port/pyproject.toml`（新增包）
-  - `apps/port/src/ditto_interfaces/__init__.py`
-  - `apps/port/src/ditto_interfaces/main.py`
+  - `interfaces/pyproject.toml`（新增包）
+  - `interfaces/src/ditto_interfaces/__init__.py`
+  - `interfaces/src/ditto_interfaces/main.py`
 - 功能：
   - FastAPI 基础应用
   - Prefect 本地 Server 启动
@@ -229,7 +229,7 @@
         "uvicorn>=0.23",
         "prefect>=3.0",
         "keyring>=25.0",
-        "ditto-data-hub",
+        "ditto-data",
     ]
     ```
 - 验收标准：
@@ -239,12 +239,12 @@
 
 **6.2 完整摄取 Flow 实现** [L] ✅
 - 文件：
-  - `apps/port/src/ditto_interfaces/ingestion/flows/__init__.py`
-  - `apps/port/src/ditto_interfaces/ingestion/flows/daily_ingest.py`
-  - `apps/port/src/ditto_interfaces/ingestion/tasks/__init__.py`
-  - `apps/port/src/ditto_interfaces/ingestion/tasks/bars.py`
-  - `apps/port/src/ditto_interfaces/ingestion/tasks/stock.py`
-  - `apps/port/src/ditto_interfaces/ingestion/tasks/adj_factor.py`
+  - `interfaces/src/ditto_interfaces/ingestion/flows/__init__.py`
+  - `interfaces/src/ditto_interfaces/ingestion/flows/daily_ingest.py`
+  - `interfaces/src/ditto_interfaces/ingestion/tasks/__init__.py`
+  - `interfaces/src/ditto_interfaces/ingestion/tasks/bars.py`
+  - `interfaces/src/ditto_interfaces/ingestion/tasks/stock.py`
+  - `interfaces/src/ditto_interfaces/ingestion/tasks/adj_factor.py`
 - 功能：
   - **daily_ingest_flow**：
     - 完整版本，支持 7 个摄取任务
@@ -382,10 +382,10 @@
 3. 支持环境变量覆盖（`DITTO_*_DIR` 优先级最高）
 
 **修改文件**:
-- `packages/foundation/src/ditto_foundation/config/paths.py` (新增)
-- `packages/foundation/src/ditto_foundation/config/settings.py`
-- `packages/foundation/src/ditto_foundation/config/__init__.py`
-- `packages/foundation/src/ditto_foundation/observability/logging.py`
+- `packages/infra/src/ditto_infra/config/paths.py` (新增)
+- `packages/infra/src/ditto_infra/config/settings.py`
+- `packages/infra/src/ditto_infra/config/__init__.py`
+- `packages/infra/src/ditto_infra/observability/logging.py`
 
 **验收**:
 - ✅ Windows 默认使用 `D:\data\ditto`
@@ -409,7 +409,7 @@ packages/data/
 │       ├── client.py               # Tushare 客户端（限流、重试、keyring）
 │       └── source.py               # TushareSource 实现（7个fetch方法）
 │
-apps/port/
+interfaces/
 ├── README.md                       # Server 模块说明
 ├── pyproject.toml                  # Server 包配置
 └── src/ditto_interfaces/

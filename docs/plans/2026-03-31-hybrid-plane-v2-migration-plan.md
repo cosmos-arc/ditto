@@ -186,7 +186,7 @@ class ServiceBackedDataProvider:
 |--------|---------|---------|
 | `ditto_data.query.__init__` | re-export | 低 — 仅更新导出名 |
 | `ditto_kernel.backtest.data_feed:200` | docstring 引用 | 低 — 仅更新注释 |
-| `apps/port/` | 无导入 | 无影响 — grep 确认零引用 |
+| `interfaces/` | 无导入 | 无影响 — grep 确认零引用 |
 
 **测试场景**：
 
@@ -282,8 +282,8 @@ class ServiceBackedDataProvider:
 
 | 文件 | 使用方式 | 迁移策略 |
 |------|---------|---------|
-| [data_feed.py](../packages/engine/src/ditto_kernel/backtest/data_feed.py) | 定义 + ParquetDataFeed + ProviderBackedDataFeed | 删除 ParquetDataFeed 类，保留 ProviderBackedDataFeed |
-| [backtest/__init__.py](../packages/engine/src/ditto_kernel/backtest/__init__.py) | 导出 ParquetDataFeed | 从 `__all__` 移除 |
+| [data_feed.py](../packages/engine/src/ditto_engine/backtest/data_feed.py) | 定义 + ParquetDataFeed + ProviderBackedDataFeed | 删除 ParquetDataFeed 类，保留 ProviderBackedDataFeed |
+| [backtest/__init__.py](../packages/engine/src/ditto_engine/backtest/__init__.py) | 导出 ParquetDataFeed | 从 `__all__` 移除 |
 | [conftest.py](../packages/engine/tests/integration/strategy/conftest.py) | 1 个 fixture | 转换为使用 mock DataProvider 的 ProviderBackedDataFeed |
 | [conftest.py](../packages/engine/tests/integration/backtest/conftest.py) | 6 个 fixture (three_day/five_day/limit_up/limit_down/st) | 同上 |
 | [test_backtest_invariants.py](../packages/engine/tests/integration/backtest/test_backtest_invariants.py) | 5 处局部 import + 构造 | 使用 conftest 中转换后的 fixture |
@@ -300,7 +300,7 @@ class ServiceBackedDataProvider:
 > **关键洞察**：`ProviderBackedDataFeed` 只调用 DataProvider 的 `get_bars()` 和 `get_schedule()` 两个方法。`get_instruments()` 和 `get_factor()` 不被 `ProviderBackedDataFeed` 使用。
 
 ```text
-# packages/core/tests/integration/backtest/conftest.py
+# packages/engine/tests/integration/backtest/conftest.py
 
 class TestParquetProvider:
     """测试专用：从 parquet 目录读取数据，满足 DataProvider Protocol.
@@ -347,8 +347,8 @@ class TestParquetProvider:
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| EDIT | [data_feed.py](../packages/engine/src/ditto_kernel/backtest/data_feed.py) | 删除 ParquetDataFeed 类（约 90 行），更新模块 docstring |
-| EDIT | [backtest/__init__.py](../packages/engine/src/ditto_kernel/backtest/__init__.py) | 从 `__all__` 移除 `"ParquetDataFeed"` |
+| EDIT | [data_feed.py](../packages/engine/src/ditto_engine/backtest/data_feed.py) | 删除 ParquetDataFeed 类（约 90 行），更新模块 docstring |
+| EDIT | [backtest/__init__.py](../packages/engine/src/ditto_engine/backtest/__init__.py) | 从 `__all__` 移除 `"ParquetDataFeed"` |
 | EDIT | [conftest.py](../packages/engine/tests/integration/strategy/conftest.py) | 新增 `TestParquetProvider`，转换 fixture |
 | EDIT | [conftest.py](../packages/engine/tests/integration/backtest/conftest.py) | 同上，转换 6 个 fixture |
 | EDIT | [test_backtest_invariants.py](../packages/engine/tests/integration/backtest/test_backtest_invariants.py) | 移除局部 `from ... import ParquetDataFeed`，使用 conftest fixture |

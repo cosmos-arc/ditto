@@ -11,7 +11,7 @@ from ditto_data.models.storage import WriteResult
 from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.macro_service import MacroService
-from ditto_data.services.market_service import MarketService
+from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_infra.foundation import logger
 from ditto_infra.foundation.util.checksum import ChecksumCompute
@@ -97,7 +97,7 @@ class IngestionDataWriter:
     def __init__(
         self,
         metadata_service: MetadataService,
-        market_service: MarketService,
+        market_write_service: MarketWriteService,
         fundamental_service: FundamentalService,
         capital_service: CapitalService,
         macro_service: MacroService,
@@ -108,7 +108,7 @@ class IngestionDataWriter:
 
         Args:
             metadata_service: MetadataService 实例
-            market_service: MarketService 实例
+            market_write_service: MarketWriteService 实例
             fundamental_service: FundamentalService 实例
             capital_service: CapitalService 实例
             macro_service: MacroService 实例
@@ -116,7 +116,7 @@ class IngestionDataWriter:
 
         """
         self._metadata_service = metadata_service
-        self._market_service = market_service
+        self._market_write_service = market_write_service
         self._fundamental_service = fundamental_service
         self._capital_service = capital_service
         self._macro_service = macro_service
@@ -302,7 +302,7 @@ class IngestionDataWriter:
             self._source_name,
         )
         bars_dataset = cast(Literal["stock_daily", "etf_daily"], dataset_enum.value)
-        rows_written = self._market_service.save_bars(
+        rows_written = self._market_write_service.save_bars(
             dataset=bars_dataset,
             df=enriched_df,
             year=year,
@@ -352,8 +352,8 @@ class IngestionDataWriter:
             df, instrument_id_mapping, source_ticker_col, self._source_name
         )
 
-        # 写入到 MarketService
-        rows_written = self._market_service.save_bars(
+        # 写入到 MarketWriteService
+        rows_written = self._market_write_service.save_bars(
             dataset="index_daily",
             df=enriched_df,
             year=year,
@@ -370,7 +370,7 @@ class IngestionDataWriter:
         on_duplicate: OnDuplicate,
     ) -> WriteResult:
         """Write FX daily bars data."""
-        rows_written = self._market_service.save_bars(
+        rows_written = self._market_write_service.save_bars(
             dataset="fx_daily",
             df=df,
             year=year,
@@ -386,7 +386,7 @@ class IngestionDataWriter:
         on_duplicate: OnDuplicate,
     ) -> WriteResult:
         """Write Commodity daily bars data."""
-        rows_written = self._market_service.save_bars(
+        rows_written = self._market_write_service.save_bars(
             dataset="commodity_daily",
             df=df,
             year=year,
@@ -415,7 +415,7 @@ class IngestionDataWriter:
             source_ticker_col,
             self._source_name,
         )
-        rows_written = self._market_service.save_stock_status(
+        rows_written = self._market_write_service.save_stock_status(
             df=enriched_df,
             year=year,
         )
@@ -451,7 +451,7 @@ class IngestionDataWriter:
                 self._source_name,
             )
 
-        rows_written = self._market_service.save_adj_factor(
+        rows_written = self._market_write_service.save_adj_factor(
             df=enriched_df,
             year=year,
             on_duplicate=on_duplicate,

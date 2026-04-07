@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 
 from ditto_data.models import Source
 from ditto_data.services import (
@@ -15,6 +16,7 @@ from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
+from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
 from ditto_infra.foundation import logger
@@ -30,20 +32,32 @@ from ditto_app.process._coordinator_constants import (
     get_sw_index_codes,
 )
 from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-from ditto_app.process.ingestion_coordinator import IngestionCoordinator
+from ditto_app.process.ingestion_coordinator import (
+    IngestionCoordinator,
+    MarketServices,
+)
 from ditto_app.process.quality import QualityService
 
 
+@dataclass(frozen=True)
+class CoordinatorServices:
+    """create_coordinator 所需的服务依赖聚合."""
+
+    metadata_service: MetadataService
+    market_service: MarketService
+    market_write_service: MarketWriteService
+    fundamental_service: FundamentalService
+    capital_service: CapitalService
+    macro_service: MacroService
+    source_service: SourceService
+    ingestion_log_service: IngestionLogService
+
+
 @contextmanager
-def create_coordinator(  # noqa: PLR0913
-    metadata_service: MetadataService,
-    market_service: MarketService,
-    fundamental_service: FundamentalService,
-    capital_service: CapitalService,
-    macro_service: MacroService,
-    source_service: SourceService,
-    ingestion_log_service: IngestionLogService,
+def create_coordinator(
+    services: CoordinatorServices,
     source_name: str | Source,
+    *,
     ingestion_cursor_service: IngestionCursorService | None = None,
     quality_service: QualityService | None = None,
     freeze_service: FreezeService | None = None,
@@ -52,17 +66,11 @@ def create_coordinator(  # noqa: PLR0913
     创建 IngestionCoordinator 实例.
 
     Args:
-        metadata_service: MetadataService 实例
-        market_service: MarketService 实例
-        fundamental_service: FundamentalService 实例
-        capital_service: CapitalService 实例
-        macro_service: MacroService 实例
-        source_service: SourceService 实例
-        ingestion_log_service: IngestionLogService 实例
-        ingestion_cursor_service: IngestionCursorService 实例（可选）
-        quality_service: QualityService 实例（可选）
-        freeze_service: FreezeService 实例（可选）
-        source_name: 数据源名称
+        services: 协调器所需服务依赖.
+        source_name: 数据源名称.
+        ingestion_cursor_service: IngestionCursorService 实例（可选）.
+        quality_service: QualityService 实例（可选）.
+        freeze_service: FreezeService 实例（可选）.
 
     Yields:
         IngestionCoordinator: 协调器实例
@@ -81,26 +89,29 @@ def create_coordinator(  # noqa: PLR0913
             ) from e
 
     # 获取主数据源
-    data_source = source_service.get_source(source_key)
+    data_source = services.source_service.get_source(source_key)
 
     # 获取 FRED 数据源（用于大宗商品数据）
     fred_source = None
     try:
-        fred_source = source_service.get_source(Source.FRED)
+        fred_source = services.source_service.get_source(Source.FRED)
     except Exception as e:
         logger.warning("FRED source not available", error=str(e))
 
     # 创建协调器
     coordinator = IngestionCoordinator(
-        metadata_service=metadata_service,
-        market_service=market_service,
-        fundamental_service=fundamental_service,
-        capital_service=capital_service,
-        macro_service=macro_service,
+        metadata_service=services.metadata_service,
+        market_services=MarketServices(
+            query=services.market_service,
+            write=services.market_write_service,
+        ),
+        fundamental_service=services.fundamental_service,
+        capital_service=services.capital_service,
+        macro_service=services.macro_service,
         source=data_source,
         config=IngestionCoordinatorConfig(
             source_name=source_key.value,
-            ingestion_log_service=ingestion_log_service,
+            ingestion_log_service=services.ingestion_log_service,
             ingestion_cursor_service=ingestion_cursor_service,
             quality_service=quality_service,
             freeze_service=freeze_service,
@@ -116,6 +127,7 @@ __all__ = [
     "MARKET_INDEX_CODES",
     "STYLE_INDEX_CODES",
     "SUPPORTED_INSTRUMENT_DATASETS",
+    "CoordinatorServices",
     "IngestionCoordinator",
     "SWIndustryProvider",
     "create_coordinator",

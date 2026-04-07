@@ -71,10 +71,10 @@ class ReconciliationResult:
 
 class QualityService:
     """
-    Quality service for write-time DQ checks.
+    写入时数据质量检查服务.
 
-    Application Layer: Orchestrates L1/L2 checks during data ingestion.
-    Handles quarantine logic and metrics/logging.
+    应用层：在数据摄取过程中编排 L1/L2 检查。
+    处理隔离逻辑和指标/日志记录。
     """
 
     def __init__(
@@ -83,11 +83,11 @@ class QualityService:
         quarantine_writer: QualityRecordService | None = None,
     ) -> None:
         """
-        Initialize quality service.
+        初始化质量检查服务.
 
         Args:
-            engine: Quality engine instance
-            quarantine_writer: Optional quarantine writer for failed data
+            engine: 质量引擎实例
+            quarantine_writer: 可选的隔离写入器，用于存储失败数据
 
         """
         self._engine = engine
@@ -100,18 +100,18 @@ class QualityService:
         context: dict[str, Any] | None = None,
     ) -> tuple[pl.DataFrame, bool]:
         """
-        Execute DQ checks and quarantine bad data if needed.
+        执行 DQ 检查，必要时隔离不良数据.
 
         Args:
-            df: Data to check
-            dataset: Dataset identifier
-            context: Additional context (e.g., reference_values for FK checks)
+            df: 待检查的数据
+            dataset: 数据集标识
+            context: 附加上下文（如外键检查的 reference_values）
 
         Returns:
-            Tuple of (df, should_block):
-                - df: Original DataFrame (unchanged;
-                  quarantine copies bad rows to separate store)
-                - should_block: Whether to block ingestion (True if L1 errors found)
+            元组 (df, should_block):
+                - df: 原始 DataFrame（不变；
+                  隔离机制会将不良行复制到独立存储）
+                - should_block: 是否阻止摄取（发现 L1 错误时为 True）
 
         """
         result = self._engine.check(
@@ -153,14 +153,14 @@ class QualityService:
         dataset: str,
     ) -> None:
         """
-        Quarantine data with quality issues.
+        隔离存在质量问题的数据.
 
-        Saves failed data to quarantine store if available.
+        如果配置了隔离存储，则将失败数据保存到隔离区。
 
         Args:
-            df: Data with issues
-            result: DQ check result
-            dataset: Dataset identifier
+            _df: 存在问题的数据
+            result: DQ 检查结果
+            dataset: 数据集标识
 
         """
         if self._quarantine_writer is None:
@@ -179,7 +179,8 @@ class QualityService:
 
     def _save_quarantine_issue(self, dataset: str, issue: DQIssue) -> None:
         """保存单个 issue 的隔离数据."""
-        assert self._quarantine_writer is not None  # noqa: S101  # guarded by _quarantine_data
+        if self._quarantine_writer is None:
+            raise RuntimeError("quarantine_writer 未初始化, 需先调用 _quarantine_data")
         try:
             failed_df = pl.DataFrame(issue.sample_data)
             self._quarantine_writer.save_failed_data(
@@ -214,10 +215,10 @@ class QualityService:
 
 class L3BatchService:
     """
-    L3 batch check service.
+    L3 批量统计检查服务.
 
-    Application Layer: Orchestrates L3 statistical anomaly checks.
-    Fetches historical data via facade and injects into Core Engine.
+    应用层：编排 L3 统计异常检查。
+    通过 facade 获取历史数据并注入核心引擎。
     """
 
     def __init__(
@@ -227,12 +228,12 @@ class L3BatchService:
         metadata_facade: MetadataQueryFacade,
     ) -> None:
         """
-        Initialize L3 batch service.
+        初始化 L3 批量检查服务.
 
         Args:
-            engine: Quality engine instance
-            market_facade: MarketQueryFacade for data access
-            metadata_facade: MetadataQueryFacade for data access
+            engine: 质量引擎实例
+            market_facade: 行情查询 facade，用于数据访问
+            metadata_facade: 元数据查询 facade，用于数据访问
 
         """
         self._engine = engine
@@ -247,16 +248,16 @@ class L3BatchService:
         market_wide: bool = False,
     ) -> dict[str, Any]:
         """
-        Orchestrate L3 check for a dataset.
+        对数据集执行 L3 检查.
 
         Args:
-            dataset: Dataset identifier
-            trade_date: Trade date to check (YYYY-MM-DD)
-            asset_class: Asset class for market-wide queries
-            market_wide: Whether to use market-wide query mode
+            dataset: 数据集标识
+            trade_date: 待检查的交易日期（YYYY-MM-DD）
+            asset_class: 资产类别，用于全市场查询
+            market_wide: 是否使用全市场查询模式
 
         Returns:
-            Check result summary
+            检查结果摘要
 
         """
         logger.info(
@@ -367,16 +368,16 @@ class L3BatchService:
         market_wide: bool = False,
     ) -> tuple[pl.DataFrame, pl.DataFrame]:
         """
-        Fetch historical and current data via MarketQueryFacade.
+        通过 MarketQueryFacade 获取历史和当前数据.
 
         Args:
-            trade_date: Trade date (YYYY-MM-DD)
-            window: Lookback window for historical data (days)
-            asset_class: Asset class filter
-            market_wide: Market-wide query mode
+            trade_date: 交易日期（YYYY-MM-DD）
+            window: 历史数据的回溯窗口（天）
+            asset_class: 资产类别过滤
+            market_wide: 全市场查询模式
 
         Returns:
-            Tuple of (historical_df, current_df)
+            元组 (historical_df, current_df)
 
         """
         # Calculate start date with buffer for weekends
@@ -406,14 +407,14 @@ class L3BatchService:
 
     def _fetch_calendar(self, trade_date: str, lookback_days: int = 10) -> pl.DataFrame:
         """
-        Fetch trading calendar via MetadataQueryFacade.
+        通过 MetadataQueryFacade 获取交易日历.
 
         Args:
-            trade_date: Trade date (YYYY-MM-DD)
-            lookback_days: Days to look back
+            trade_date: 交易日期（YYYY-MM-DD）
+            lookback_days: 回溯天数
 
         Returns:
-            Calendar DataFrame
+            交易日历 DataFrame
 
         """
         # Calculate start date
@@ -434,12 +435,12 @@ class L3BatchService:
         issues: list[DQIssue],
     ) -> None:
         """
-        Send DQ alert notification.
+        发送 DQ 告警通知.
 
         Args:
-            trade_date: Trade date
-            dataset: Dataset name
-            issues: List of DQ issues
+            trade_date: 交易日期
+            dataset: 数据集名称
+            issues: DQ 问题列表
 
         """
         logger.warning(
@@ -461,30 +462,30 @@ class L3BatchService:
 
 
 class InstrumentStoreProtocol(Protocol):
-    """Protocol for instrument enrichment dependency."""
+    """证券信息补充依赖协议."""
 
     def enrich_with_ticker(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Add ticker column from instrument id."""
+        """从 instrument_id 添加 ticker 列."""
         ...
 
 
 class TdxSourceProtocol(Protocol):
-    """Protocol for TDX source dependency."""
+    """通达信数据源依赖协议."""
 
     def fetch_stock_daily_bars(
         self, tickers: list[str], trade_date: str
     ) -> pl.DataFrame:
-        """Fetch TDX stock daily bars."""
+        """获取通达信股票日线数据."""
         ...
 
 
 class ComparisonStoreProtocol(Protocol):
-    """Protocol for reconciliation result persistence."""
+    """对账结果持久化协议."""
 
     def write_comparison(
         self, trade_date: str, comparison_df: pl.DataFrame, dataset: str
     ) -> None:
-        """Persist comparison dataframe."""
+        """持久化对比数据。"""
         ...
 
 
@@ -531,7 +532,7 @@ class QualityReconciliationService:
         self._instrument_store = instrument_store
         self._golden_dataset = golden_dataset
 
-    async def daily_reconciliation(
+    def daily_reconciliation(
         self,
         primary_df: pl.DataFrame,
         trade_date: str,
@@ -570,7 +571,7 @@ class QualityReconciliationService:
             if isinstance(enriched, ReconciliationResult):
                 return enriched
 
-            return await self._execute_comparison(enriched, trade_date, dataset)
+            return self._execute_comparison(enriched, trade_date, dataset)
         except Exception as e:
             return self._handle_reconciliation_error(trade_date, dataset, e)
 
@@ -631,7 +632,7 @@ class QualityReconciliationService:
 
         return primary_df
 
-    async def _execute_comparison(
+    def _execute_comparison(
         self,
         primary_df: pl.DataFrame,
         trade_date: str,
@@ -656,7 +657,7 @@ class QualityReconciliationService:
             self._comparison_store.write_comparison(trade_date, comparison_df, dataset)
 
         if result.issues:
-            await self._send_alerts(result, trade_date, dataset)
+            self._send_alerts(result, trade_date, dataset)
 
         logger.info(
             "Daily reconciliation complete",
@@ -761,9 +762,7 @@ class QualityReconciliationService:
 
         return pl.DataFrame(rows)
 
-    async def _send_alerts(
-        self, result: DQResult, trade_date: str, dataset: str
-    ) -> None:
+    def _send_alerts(self, result: DQResult, trade_date: str, dataset: str) -> None:
         """
         发送告警.
 

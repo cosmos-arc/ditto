@@ -21,13 +21,15 @@ We adopt a **monorepo with package separation** structure:
 
 ```
 ditto/
-├── apps/
-│   ├── server/      # FastAPI application
-│   └── web/         # Next.js frontend
+├── interfaces/      # Application entry (API/CLI/Jobs + DI Composition Root)
 ├── packages/
-│   ├── core/        # Business logic (engines, strategies, portfolio)
-│   ├── datahub/     # Data access layer
-│   └── foundation/  # Shared utilities
+│   ├── engine/      # Core engine (alpha/portfolio/backtest/execution/risk)
+│   ├── data/        # Data access layer (storage/sources/query/quality)
+│   ├── app/         # Application orchestration (CQRS: query/process/command)
+│   ├── analytics/   # Expression compilation + materialization + factors + research
+│   ├── kernel/      # Shared kernel (zero-dependency types)
+│   └── infra/       # Infrastructure (config, observability, cache, etc.)
+├── config/          # Environment configuration
 ├── data/            # Data storage
 ├── docs/            # Documentation
 └── scripts/         # Utility scripts

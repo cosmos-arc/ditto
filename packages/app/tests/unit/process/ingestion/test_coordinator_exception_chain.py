@@ -5,7 +5,10 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-from ditto_app.process.ingestion_coordinator import IngestionCoordinator
+from ditto_app.process.ingestion_coordinator import (
+    IngestionCoordinator,
+    MarketServices,
+)
 from ditto_data.errors import IdentifierNotFoundError
 from ditto_data.models.ingestion import InstrumentIngestParams
 from ditto_infra.foundation.config.environment import Environment
@@ -108,7 +111,10 @@ def coordinator(
     """创建 IngestionCoordinator 实例."""
     return IngestionCoordinator(
         metadata_service=mock_metadata_service,
-        market_service=mock_market_service,
+        market_services=MarketServices(
+            query=mock_market_service,
+            write=mock_market_service,
+        ),
         fundamental_service=mock_fundamental_service,
         capital_service=mock_capital_service,
         macro_service=mock_macro_service,

@@ -187,7 +187,7 @@ class MetadataProvider(Provider):
     # ========================================================================
 
     @provide
-    def metadata_service(  # noqa: PLR0913
+    def metadata_service(  # noqa: PLR0913 — DI 基础设施代码，参数由容器注入
         self,
         instrument_reader: InstrumentReader,
         instrument_writer: InstrumentWriter,
@@ -207,7 +207,7 @@ class MetadataProvider(Provider):
         index_composition_reader: IndexCompositionReader,
         exchange_transformers: ExchangeTransformers,
     ) -> MetadataService:
-        """Metadata 查询服务（CQRS Reader/Writer）。"""
+        """Metadata 域统一查询服务."""
         return MetadataService(
             instrument_reader=instrument_reader,
             instrument_writer=instrument_writer,

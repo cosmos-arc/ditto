@@ -11,11 +11,31 @@ from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_app.query.source import SourceQueryFacade
 from ditto_infra.foundation import logger
-from fastapi import APIRouter, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path
+from pydantic import BaseModel, Field
 
 from ditto_interfaces.models.common import APIResponse
 
 router = APIRouter(prefix="/source", tags=["source"])
+
+
+class SourceDataQueryParams(BaseModel):
+    """
+    Source 数据查询参数.
+
+    将标识符和时间范围查询参数组合为单一模型，
+    通过 FastAPI Depends() 注入路由函数。
+    """
+
+    ticker: str | None = Field(None, description="裸代码 (如 000001)")
+    standard_ticker: str | None = Field(
+        None, description="Ditto 标准格式 (如 000001.XSHE)"
+    )
+    instrument_id: int | None = Field(None, description="内部 ID")
+    start_date: str = Field(..., description="开始日期 (YYYY-MM-DD)")
+    end_date: str = Field(..., description="结束日期 (YYYY-MM-DD)")
+
+    model_config = {"extra": "ignore"}
 
 
 class SourceDataResponse(APIResponse[list[dict[str, Any]]]):
@@ -35,21 +55,14 @@ class SourceDataResponse(APIResponse[list[dict[str, Any]]]):
 
 @router.get("/{source}/{dataset}", response_model=SourceDataResponse)
 @inject
-async def get_source_data(  # noqa: PLR0913
+async def get_source_data(
     # 依赖注入
     facade: Annotated[SourceQueryFacade, FromComponent()],
+    # 查询参数（分组注入）
+    params: Annotated[SourceDataQueryParams, Depends()],
     # 路径参数
     source: str = Path(..., description="数据源名称 (如 tushare)"),
     dataset: str = Path(..., description="数据集名称 (如 stock_daily)"),
-    # 标识符（三选一）
-    ticker: str | None = Query(None, description="裸代码 (如 000001)"),
-    standard_ticker: str | None = Query(
-        None, description="Ditto 标准格式 (如 000001.XSHE)"
-    ),
-    instrument_id: int | None = Query(None, description="内部 ID"),
-    # 时间范围
-    start_date: str = Query(..., description="开始日期 (YYYY-MM-DD)"),
-    end_date: str = Query(..., description="结束日期 (YYYY-MM-DD)"),
 ) -> SourceDataResponse:
     """
     查询 Source 层数据.
@@ -81,7 +94,7 @@ async def get_source_data(  # noqa: PLR0913
     start_time = time.monotonic()
 
     # 验证必须提供至少一个标识符
-    if not any([ticker, standard_ticker, instrument_id]):
+    if not any([params.ticker, params.standard_ticker, params.instrument_id]):
         raise HTTPException(
             status_code=400,
             detail="必须提供 ticker、standard_ticker 或 instrument_id 之一",
@@ -101,9 +114,9 @@ async def get_source_data(  # noqa: PLR0913
     # 解析标识符为 source_ticker
     try:
         resolved_source_ticker = facade.resolve_source_ticker(
-            ticker=ticker,
-            standard_ticker=standard_ticker,
-            instrument_id=instrument_id,
+            ticker=params.ticker,
+            standard_ticker=params.standard_ticker,
+            instrument_id=params.instrument_id,
             asset_class=asset_class,
             source=source,
         )
@@ -129,8 +142,8 @@ async def get_source_data(  # noqa: PLR0913
             data_source,
             dataset,
             resolved_source_ticker,
-            start_date,
-            end_date,
+            params.start_date,
+            params.end_date,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -140,12 +153,12 @@ async def get_source_data(  # noqa: PLR0913
     return SourceDataResponse(
         dataset=dataset,
         source=source,
-        ticker=ticker,
-        standard_ticker=standard_ticker,
-        instrument_id=instrument_id,
+        ticker=params.ticker,
+        standard_ticker=params.standard_ticker,
+        instrument_id=params.instrument_id,
         resolved_source_ticker=resolved_source_ticker,
-        start_date=start_date,
-        end_date=end_date,
+        start_date=params.start_date,
+        end_date=params.end_date,
         data=df.to_dicts() if not df.is_empty() else [],
         row_count=len(df),
         query_time_ms=query_time_ms,

@@ -26,7 +26,6 @@ from ditto_data.storage.market.stock.adj import (
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
-from ditto_infra.foundation.concurrency import FileLockManager
 
 # ==============================================================================
 # Fixtures
@@ -126,41 +125,33 @@ def market_service(
 
     Args:
         stock_bars_reader: Stock 日线数据 Reader.
-        stock_bars_writer: Stock 日线数据 Writer.
+        stock_bars_writer: Stock 日线数据 Writer（仅用于 write fixture）.
         stock_adj_reader: Stock 复权因子 Reader.
-        stock_adj_writer: Stock 复权因子 Writer.
+        stock_adj_writer: Stock 复权因子 Writer（仅用于 write fixture）.
         mock_instrument_reader: Mock 的 Instrument Reader.
         tmp_path: 临时目录.
 
     Returns:
-        MarketService: 配置好的 MarketService 实例.
+        MarketService: 配置好的 MarketService 实例（只读）.
 
     """
-    lock_dir = tmp_path / "locks"
-    lock_dir.mkdir(parents=True, exist_ok=True)
+    from ditto_data.services.ports import MarketReadPorts
 
     # Mock 不需要的组件
     mock_stock_status_reader = MagicMock()
-    mock_stock_status_writer = MagicMock()
     mock_etf_bars_reader = MagicMock()
-    mock_etf_bars_writer = MagicMock()
     mock_etf_status_reader = MagicMock()
-    mock_etf_status_writer = MagicMock()
 
-    return MarketService(
-        stock_bars_reader=stock_bars_reader,
-        stock_bars_writer=stock_bars_writer,
-        stock_status_reader=mock_stock_status_reader,
-        stock_status_writer=mock_stock_status_writer,
-        stock_adj_reader=stock_adj_reader,
-        stock_adj_writer=stock_adj_writer,
-        etf_bars_reader=mock_etf_bars_reader,
-        etf_bars_writer=mock_etf_bars_writer,
-        etf_status_reader=mock_etf_status_reader,
-        etf_status_writer=mock_etf_status_writer,
-        instrument_reader=mock_instrument_reader,
-        file_lock=FileLockManager(lock_dir),
+    read_ports = MarketReadPorts(
+        stock_bars=stock_bars_reader,
+        stock_status=mock_stock_status_reader,
+        stock_adj=stock_adj_reader,
+        etf_bars=mock_etf_bars_reader,
+        etf_status=mock_etf_status_reader,
+        instrument=mock_instrument_reader,
     )
+
+    return MarketService(read_ports=read_ports)
 
 
 @pytest.fixture

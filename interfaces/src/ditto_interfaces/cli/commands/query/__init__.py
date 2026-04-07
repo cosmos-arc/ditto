@@ -17,3 +17,5 @@ app.add_typer(market_app, name="market")
 app.add_typer(fundamental_app, name="fundamental")
 app.add_typer(capital_app, name="capital")
 app.add_typer(macro_app, name="macro")
+
+__all__ = ["app"]

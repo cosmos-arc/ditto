@@ -60,6 +60,7 @@ from ditto_data.services.market_service import (
     MarketConstituentsQuery,
     MarketService,
 )
+from ditto_data.services.market_write_service import MarketWriteService
 
 # Metadata 域服务
 from ditto_data.services.metadata_service import MetadataService
@@ -99,6 +100,7 @@ __all__ = [
     "MarketReadPorts",
     "MarketService",
     "MarketWritePorts",
+    "MarketWriteService",
     "MetadataService",
     "PublicationSafetyRecordService",
     "QualityRecordService",

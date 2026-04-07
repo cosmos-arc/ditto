@@ -30,18 +30,16 @@
 
 ```
 ditto/
-├─ apps/
-│  ├─ port/                          # 组合根 + 配置加载 + DI
-│  │  ├─ src/ditto_interfaces/
-│  │  │  ├─ bootstrap/               # 启动/关闭流程
-│  │  │  ├─ config/                  # 唯一配置入口
-│  │  │  ├─ cli/                     # CLI 入口
-│  │  │  ├─ api/                     # API 入口
-│  │  │  ├─ jobs/                    # 事件驱动任务/调度
-│  │  │  ├─ eventbus/                # 事件总线适配器
-│  │  │  └─ wiring/                  # DI 注册
-│  │  └─ tests/
-│  └─ web/
+├─ interfaces/                           # 组合根 + 配置加载 + DI
+│  ├─ src/ditto_interfaces/
+│  │  ├─ bootstrap/               # 启动/关闭流程
+│  │  ├─ config/                  # 唯一配置入口
+│  │  ├─ cli/                     # CLI 入口
+│  │  ├─ api/                     # API 入口
+│  │  ├─ jobs/                    # 事件驱动任务/调度
+│  │  ├─ registry/                # DI Composition Root
+│  │  └─ models/                  # DTO
+│  └─ tests/
 │
 ├─ packages/
 │  ├─ engine/                        # 事件驱动核心引擎
@@ -116,7 +114,7 @@ ditto/
 - Telemetry 仅定义指标 catalog，不包含 OTel 实现
 
 ## 5. 依赖规则（强约束）
-- **配置只允许在 apps/port/config 读取**
+- **配置只允许在 interfaces/config 读取**
 - **Domain/Engine/Trading 不允许直接读取环境变量**
 - **Infra.adapters 不允许反向依赖 Engine/Data/Research**
 - **Telemetry 仅是规范层，不依赖 OTel**
@@ -137,6 +135,6 @@ ditto/
 
 ## 8. 验收标准
 - 核心引擎不依赖外部系统（IO/HTTP/DB）
-- 配置只有一个入口（apps/port/config）
+- 配置只有一个入口（interfaces/config）
 - DataFrame 作为领域语言在核心计算中可直接使用
 - 指标定义唯一来源（telemetry catalog）

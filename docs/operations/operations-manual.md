@@ -25,20 +25,20 @@
 
 | 应用 | 入口文件 | 用途 |
 |------|----------|------|
-| **API Server** | [main.py](../apps/port/src/ditto_interfaces/main.py) | REST API 服务（FastAPI + Granian） |
-| **CLI** | [cli/main.py](../apps/port/src/ditto_interfaces/cli/main.py) | 命令行工具 |
-| **Prefect Flows** | [jobs/flows/](../apps/port/src/ditto_interfaces/jobs/flows/) | 数据摄取编排 |
+| **API Server** | [main.py](../interfaces/src/ditto_interfaces/main.py) | REST API 服务（FastAPI + Granian） |
+| **CLI** | [cli/main.py](../interfaces/src/ditto_interfaces/cli/main.py) | 命令行工具 |
+| **Prefect Flows** | [jobs/flows/](../interfaces/src/ditto_interfaces/jobs/flows/) | 数据摄取编排 |
 
 ### 1.2 Prefect Flows 列表
 
 | Flow | 文件 | 功能 |
 |------|------|------|
-| `daily_ingestion_flow` | [daily.py](../apps/port/src/ditto_interfaces/jobs/flows/daily.py) | 每日增量摄取（T0→T1→T3） |
-| `backfill_flow` | [backfill.py](../apps/port/src/ditto_interfaces/jobs/flows/backfill.py) | 全量数据回补 |
-| `backfill_missing_flow` | [backfill.py](../apps/port/src/ditto_interfaces/jobs/flows/backfill.py) | 回补缺失数据 |
-| `daily_repair_flow` | [repair.py](../apps/port/src/ditto_interfaces/jobs/flows/repair.py) | 每日修补流程 |
-| `repair_holes_flow` | [repair.py](../apps/port/src/ditto_interfaces/jobs/flows/repair.py) | 修补数据空洞 |
-| `retry_failed_flow` | [repair.py](../apps/port/src/ditto_interfaces/jobs/flows/repair.py) | 重试失败任务 |
+| `daily_ingestion_flow` | [daily.py](../interfaces/src/ditto_interfaces/jobs/flows/daily.py) | 每日增量摄取（T0→T1→T3） |
+| `backfill_flow` | [backfill.py](../interfaces/src/ditto_interfaces/jobs/flows/backfill.py) | 全量数据回补 |
+| `backfill_missing_flow` | [backfill.py](../interfaces/src/ditto_interfaces/jobs/flows/backfill.py) | 回补缺失数据 |
+| `daily_repair_flow` | [repair.py](../interfaces/src/ditto_interfaces/jobs/flows/repair.py) | 每日修补流程 |
+| `repair_holes_flow` | [repair.py](../interfaces/src/ditto_interfaces/jobs/flows/repair.py) | 修补数据空洞 |
+| `retry_failed_flow` | [repair.py](../interfaces/src/ditto_interfaces/jobs/flows/repair.py) | 重试失败任务 |
 
 ### 1.3 包结构
 
@@ -47,7 +47,7 @@ ditto/
 ├── packages/infra/         # 基础设施层（配置、日志、路径、Runtime）
 ├── packages/data/       # 数据访问层（存储、数据源）
 ├── packages/engine/          # 核心引擎层（DQ、业务逻辑）
-└── apps/port/              # 应用层（API、CLI、Flows）
+└── interfaces/              # 应用层（API、CLI、Flows）
 ```
 
 ### 1.4 双层环境架构

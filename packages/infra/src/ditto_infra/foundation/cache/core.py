@@ -135,9 +135,10 @@ class DataCache[T]:
 
     def _get_with_custom_time(self, key: str, default: T | None) -> T | None:
         """使用自定义时间源获取缓存值（确定性 TTL 检查）."""
-        # 类型缩窄：这些断言确保类型检查器知道变量不为 None
-        assert self._ttl_entries is not None  # noqa: S101
-        assert self._time_source is not None  # noqa: S101
+        if self._ttl_entries is None:
+            raise RuntimeError("ttl_entries 未初始化")
+        if self._time_source is None:
+            raise RuntimeError("time_source 未初始化")
 
         entry = self._ttl_entries.get(key)
         if entry is None:
@@ -200,9 +201,10 @@ class DataCache[T]:
 
     def _set_with_custom_time(self, key: str, value: T, ttl: int | None) -> None:
         """使用自定义时间源设置缓存值."""
-        # 类型缩窄：这些断言确保类型检查器知道变量不为 None
-        assert self._ttl_entries is not None  # noqa: S101
-        assert self._time_source is not None  # noqa: S101
+        if self._ttl_entries is None:
+            raise RuntimeError("ttl_entries 未初始化")
+        if self._time_source is None:
+            raise RuntimeError("time_source 未初始化")
 
         # 计算过期时间
         effective_ttl = self._default_ttl if ttl is None else ttl

@@ -1,26 +1,14 @@
-# App 层架构规范
+# ditto-app
 
-## 定位
+**版本**: v0.4.0
+**最后更新**: 2026-04-07
+**状态**: 应用编排层（CQRS）
 
-App 层是 **Application Layer（应用层）**，负责 Use Case 编排，采用 CQRS 模式组织。
+## 概要
 
-**核心原则**：
-- 纯编排层，不包含核心业务逻辑
-- 通过 CQRS 模式分离读写职责
-- 协调 Engine（领域计算）+ Data（数据服务）
+应用编排层 -- 采用 CQRS 模式组织 Use Case，协调 Engine（领域计算）与 Data（数据服务）。
 
-## 依赖
-
-```
-ditto_app → ditto_kernel ✅
-ditto_app → ditto_data ✅
-ditto_app → ditto_engine ✅
-ditto_app → ditto_analytics ✅
-ditto_app → ditto_infra ✅
-ditto_app 禁止 → ditto_interfaces ❌
-```
-
-## CQRS 模块结构
+## 模块结构
 
 ```
 ditto_app/
@@ -45,17 +33,14 @@ ditto_app/
 │   ├── data_writer.py             # 数据写入器
 │   ├── list_date_inference.py     # 上市日期推断服务
 │   ├── result_handler.py          # 摄取结果处理器
-│   ├── _coordinator_constants.py  # 共享常量 + 指数工具函数
-│   ├── coordinator_factory.py     # create_coordinator 工厂 + re-export
+│   ├── coordinator_factory.py     # create_coordinator 工厂
 │   ├── ingestion_coordinator.py   # IngestionCoordinator 主类
 │   ├── backfill_manager.py        # BackfillManager
 │   ├── retry_manager.py           # RetryManager
-│   ├── coordinator.py             # 摄取协调器（re-export shim）
-│   ├── materialization.py  # 衍生物化（re-export shim）
-│   ├── materialization_types.py       # 物化类型定义
-│   ├── materialization_helpers.py     # 物化辅助函数
-│   ├── publication_facade.py          # 发布门面
-│   ├── cascade_orchestrator.py        # 级联编排器
+│   ├── materialization.py         # 衍生物化（re-export shim）
+│   ├── materialization_types.py   # 物化类型定义
+│   ├── publication_facade.py      # 发布门面
+│   ├── cascade_orchestrator.py    # 级联编排器
 │   ├── materialization_orchestrator.py # 物化主编排器
 │   ├── quality.py     # 质量校验流程
 │   ├── strategy.py    # 策略运行（re-export shim）
@@ -66,42 +51,65 @@ ditto_app/
 │   ├── ingestion.py   # 摄取命令
 │   └── strategy.py    # 策略命令
 ├── builders/           # 运行时装配（DI 构造）
-│   ├── strategy.py    # 策略构建器（re-export shim）
 │   ├── runtime_builder.py   # 运行时构建器
 │   ├── slice_builder.py     # 切片构建器
 │   └── service_factory.py   # 服务工厂
-├── backtest_serialization.py  # 回测序列化
 ├── providers.py        # DI Provider 注册
 ├── config.py           # 数据集配置
 └── _reexports.py       # 共享类型 re-export
 ```
 
-## R8 互斥规则（importlinter 强制）
+## 架构定位
 
-| 方向 | 规则 |
+```
+interfaces → app → engine → data → infra
+                → analytics
+                → kernel
+```
+
+**允许的依赖**:
+
+| 依赖 | 用途 |
 |------|------|
-| query → process | r8-query-no-process ❌ |
-| query → builders | r8-query-no-builders ❌ |
-| query → command | r8-query-no-command ❌ |
-| builders → query | r8-builders-no-query ❌ |
-| command → query | r8-command-no-query ❌ |
-| command → builders | r8-command-no-builders ❌ |
-| process → query | ✅ 允许（编排可调用查询） |
-| process ↔ builders | ✅ 允许（双向） |
-| command → process | ✅ 允许（委托执行） |
+| `ditto_kernel` | 共享类型 |
+| `ditto_data` | 数据服务 |
+| `ditto_engine` | 领域计算 |
+| `ditto_analytics` | 表达式编译 / 物化 |
+| `ditto_infra` | 基础设施（仅 foundation） |
 
-## 测试规范
+**禁止依赖**: interfaces
 
+## CQRS 模式
+
+App 层采用 CQRS 模式分离读写职责：
+
+| 模块 | 职责 | 规则 |
+|------|------|------|
+| `query/` | 只读查询 | 禁止写入、禁止调用 process/builders/command |
+| `process/` | 编排流程 | 可调用 query，可双向访问 builders |
+| `command/` | 纯写入 | 禁止调用 query/builders |
+| `builders/` | 运行时装配 | 禁止调用 query |
+
+## 使用示例
+
+### DI 注册
+
+```python
+from ditto_app.providers import get_app_providers
+
+providers = get_app_providers()  # [AppQueryProvider, AppProcessProvider, AppBuilderFactory]
 ```
-packages/app/
-├── src/ditto_app/
-└── tests/
-    ├── unit/
-    └── integration/
+
+### 查询服务
+
+```python
+from ditto_app.query.market import MarketQueryFacade
+
+facade = container.get(MarketQueryFacade)
+bars = facade.list_bars(code="159915.SZ", start="2024-01-01", end="2024-12-31")
 ```
 
-### 运行测试
+## 相关文档
 
-```bash
-pixi run -e dev pytest packages/app/tests/
-```
+- [App 层规范](CLAUDE.md)
+- [架构规则](../../.claude/rules/architecture.md)

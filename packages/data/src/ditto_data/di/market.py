@@ -1,7 +1,5 @@
 """Data 层 - Market Domain Provider。"""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
@@ -9,6 +7,7 @@ from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services.market_service import MarketService
+from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.ports import MarketReadPorts, MarketWritePorts
 from ditto_data.storage.market.commodity.bars import (
     CommodityBarsReader,
@@ -196,12 +195,13 @@ class MarketProvider(Provider):
         etf_status_reader: EtfStatusReader,
         instrument_reader: InstrumentReader,
         etf_adj_reader: EtfAdjFactorReader,
+        etf_nav_reader: EtfNavReader,
         index_bars_reader: IndexBarsReader,
         index_constituent_reader: IndexConstituentReader,
         fx_bars_reader: FxBarsReader,
         commodity_bars_reader: CommodityBarsReader,
     ) -> MarketReadPorts:
-        """Market 域读取端口."""
+        """Market 域读取端口聚合。"""
         return MarketReadPorts(
             stock_bars=stock_bars_reader,
             stock_status=stock_status_reader,
@@ -210,6 +210,7 @@ class MarketProvider(Provider):
             etf_status=etf_status_reader,
             instrument=instrument_reader,
             etf_adj=etf_adj_reader,
+            etf_nav=etf_nav_reader,
             index_bars=index_bars_reader,
             index_constituent=index_constituent_reader,
             fx_bars=fx_bars_reader,
@@ -230,7 +231,7 @@ class MarketProvider(Provider):
         fx_bars_writer: FxBarsWriter,
         commodity_bars_writer: CommodityBarsWriter,
     ) -> MarketWritePorts:
-        """Market 域写入端口."""
+        """Market 域写入端口聚合。"""
         return MarketWritePorts(
             stock_bars=stock_bars_writer,
             stock_status=stock_status_writer,
@@ -252,12 +253,20 @@ class MarketProvider(Provider):
     def market_service(
         self,
         read_ports: MarketReadPorts,
-        write_ports: MarketWritePorts,
-        file_lock_manager: FileLockManager,
     ) -> MarketService:
-        """Market 查询服务（支持读写）。"""
+        """Market 查询服务（只读）。"""
         return MarketService(
             read_ports=read_ports,
+        )
+
+    @provide
+    def market_write_service(
+        self,
+        write_ports: MarketWritePorts,
+        file_lock_manager: FileLockManager,
+    ) -> MarketWriteService:
+        """Market 写入服务。"""
+        return MarketWriteService(
             write_ports=write_ports,
             file_lock=file_lock_manager,
         )

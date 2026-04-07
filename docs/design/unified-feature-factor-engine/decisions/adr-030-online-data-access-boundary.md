@@ -182,7 +182,7 @@ __all__ = [
 ]
 
 # ParquetFactorReader 只在内部使用
-# 禁止在 apps/port 的 API 层直接导入
+# 禁止在 interfaces 的 API 层直接导入
 ```
 
 ---
@@ -323,7 +323,7 @@ groups:
 ### 降级触发方式
 
 ```python
-# apps/port/src/ditto_interfaces/cli/commands/runtime.py
+# interfaces/src/ditto_interfaces/cli/commands/runtime.py
 
 import click
 
@@ -371,7 +371,7 @@ def restore(operator: str) -> None:
 ### API 端点（受限访问）
 
 ```python
-# apps/port/src/ditto_interfaces/api/routes/runtime.py
+# interfaces/src/ditto_interfaces/api/routes/runtime.py
 
 from fastapi import APIRouter, Depends, HTTPException
 from ditto_infra.auth import require_admin

@@ -4,6 +4,7 @@ Data layer exception classes.
 Following design document at docs/design/02_data_design.md
 """
 
+import httpx
 
 # ---------------------------------------------------------------------------
 # Derived* error hierarchy — canonical definition (Data layer owns these
@@ -414,8 +415,6 @@ class NetworkError(DataSourceError):
             NetworkError 实例.
 
         """
-        import httpx  # noqa: PLC0415
-
         is_timeout = isinstance(error, httpx.TimeoutException)
         error_type = type(error).__name__
         msg = f"Network error ({error_type})"
@@ -612,8 +611,6 @@ def convert_httpx_to_network_error(
         ValueError: 如果 error 不是 httpx 异常.
 
     """
-    import httpx  # noqa: PLC0415
-
     if not isinstance(error, (httpx.NetworkError, httpx.TimeoutException)):
         raise ValueError(
             "Expected httpx.NetworkError or httpx.TimeoutException, "

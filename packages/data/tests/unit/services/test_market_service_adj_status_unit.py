@@ -5,14 +5,12 @@ P3-2 层边界修复：验证 MarketService 暴露 adj_factor 和 stock_status
 的公开查询接口，供 RuntimeDerivedInputProvider 使用。
 """
 
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
 from ditto_data.services.market_service import MarketService
-from ditto_data.services.ports import MarketReadPorts, MarketWritePorts
-from ditto_infra.foundation.concurrency import FileLockManager
+from ditto_data.services.ports import MarketReadPorts
 
 
 @pytest.fixture
@@ -29,27 +27,10 @@ def mock_readers() -> dict[str, MagicMock]:
 
 
 @pytest.fixture
-def mock_writers() -> dict[str, MagicMock]:
-    """创建 Mock Writer 实例."""
-    return {
-        "stock_bars": MagicMock(),
-        "stock_status": MagicMock(),
-        "stock_adj": MagicMock(),
-        "etf_bars": MagicMock(),
-        "etf_status": MagicMock(),
-    }
-
-
-@pytest.fixture
 def market_service(
     mock_readers: dict[str, MagicMock],
-    mock_writers: dict[str, MagicMock],
-    tmp_path: Path,
 ) -> MarketService:
     """创建 MarketService 实例."""
-    lock_dir = tmp_path / "locks"
-    lock_dir.mkdir(parents=True, exist_ok=True)
-
     read_ports = MarketReadPorts(
         stock_bars=mock_readers["stock_bars"],
         stock_status=mock_readers["stock_status"],
@@ -59,18 +40,8 @@ def market_service(
         instrument=mock_readers["instrument"],
     )
 
-    write_ports = MarketWritePorts(
-        stock_bars=mock_writers["stock_bars"],
-        stock_status=mock_writers["stock_status"],
-        stock_adj=mock_writers["stock_adj"],
-        etf_bars=mock_writers["etf_bars"],
-        etf_status=mock_writers["etf_status"],
-    )
-
     return MarketService(
         read_ports=read_ports,
-        write_ports=write_ports,
-        file_lock=FileLockManager(lock_dir),
     )
 
 

@@ -49,7 +49,7 @@ engine → datahub.errors（re-export chain: engine.errors → datahub.errors �
 
 #### Step 2: 复制 quality 模块到 ditto_data
 
-从 `packages/core/src/ditto_kernel/quality/` 复制 12 个文件到 `packages/data/src/ditto_data/quality/`。
+从 `packages/data/src/ditto_data/quality/` 复制 12 个文件到 `packages/data/src/ditto_data/quality/`。
 
 **内部 import 重写**（`ditto_kernel.quality` → `ditto_data.quality`）：
 - `__init__.py` — 15 处 import
@@ -73,7 +73,7 @@ from ditto_data.errors import __all__  # noqa: F401
 
 #### Step 4: 转换 ditto_kernel.quality 为 re-export shim
 
-`packages/core/src/ditto_kernel/quality/__init__.py` 改为 re-export ditto_data.quality 的所有符号。
+`packages/data/src/ditto_data/quality/__init__.py` 改为 re-export ditto_data.quality 的所有符号。
 删除 quality 子目录中所有非 `__init__.py` 文件。
 
 #### Step 5: 更新包配置
@@ -81,7 +81,7 @@ from ditto_data.errors import __all__  # noqa: F401
 | 文件 | 变更 |
 |------|------|
 | `pixi.toml` [pypi-dependencies] | 添加 `ditto-data = { path = "packages/data", editable = true }` |
-| `packages/core/pyproject.toml` | deps 添加 `ditto-data`（re-export 兼容需要） |
+| `packages/engine/pyproject.toml` | deps 添加 `ditto-data`（re-export 兼容需要） |
 | `packages/data/pyproject.toml` | deps 添加 `ditto-data`（errors re-export 需要） |
 | `pyproject.toml` [basedpyright] extraPaths | 添加 `"packages/data/src"` |
 | `pyproject.toml` [pytest] pythonpath | 添加 `"packages/data/src"` |
@@ -108,15 +108,15 @@ from ditto_data.errors import __all__  # noqa: F401
 #### Step 1: 更新 Port 源码导入（10 文件）
 
 `ditto_kernel.quality` → `ditto_data.quality`：
-- `apps/port/src/ditto_interfaces/registry/core/quality.py`
-- `apps/port/src/ditto_interfaces/registry/core/golden.py`
-- `apps/port/src/ditto_interfaces/registry/infra/config.py`
-- `apps/port/src/ditto_interfaces/services/ingestion/quality/service.py`
-- `apps/port/src/ditto_interfaces/services/ingestion/quality/l3_batch_service.py`
-- `apps/port/src/ditto_interfaces/services/ingestion/quality/reconciliation_service.py`
-- `apps/port/src/ditto_interfaces/jobs/tasks/dq_batch.py`
-- `apps/port/src/ditto_interfaces/jobs/tasks/monitoring.py`
-- `apps/port/src/ditto_interfaces/jobs/context.py`
+- `interfaces/src/ditto_interfaces/registry/core/quality.py`
+- `interfaces/src/ditto_interfaces/registry/core/golden.py`
+- `interfaces/src/ditto_interfaces/registry/infra/config.py`
+- `interfaces/src/ditto_interfaces/services/ingestion/quality/service.py`
+- `interfaces/src/ditto_interfaces/services/ingestion/quality/l3_batch_service.py`
+- `interfaces/src/ditto_interfaces/services/ingestion/quality/reconciliation_service.py`
+- `interfaces/src/ditto_interfaces/jobs/tasks/dq_batch.py`
+- `interfaces/src/ditto_interfaces/jobs/tasks/monitoring.py`
+- `interfaces/src/ditto_interfaces/jobs/context.py`
 
 #### Step 2: 更新 E2E 测试导入（7 文件）
 
@@ -125,11 +125,11 @@ from ditto_data.errors import __all__  # noqa: F401
 
 #### Step 3: 更新 Port 测试导入
 
-`apps/port/tests/` 下所有引用 `ditto_kernel.quality` 的测试文件（~8 文件）
+`interfaces/tests/` 下所有引用 `ditto_kernel.quality` 的测试文件（~8 文件）
 
 #### Step 4: 迁移 quality 测试文件
 
-移动 `packages/core/tests/unit/quality/` 整个目录到 `packages/data/tests/unit/quality/`
+移动 `packages/engine/tests/unit/quality/` 整个目录到 `packages/data/tests/unit/quality/`
 （含 `checkers/` 子目录和 `fixtures/`）
 
 #### Step 5: 更新 DataHub 测试导入
@@ -138,10 +138,10 @@ from ditto_data.errors import __all__  # noqa: F401
 
 #### Step 6: 清理
 
-- 删除 `packages/core/src/ditto_kernel/quality/` 整个目录
-- `packages/core/pyproject.toml` deps 移除 `ditto-data`
+- 删除 `packages/data/src/ditto_data/quality/` 整个目录
+- `packages/engine/pyproject.toml` deps 移除 `ditto-data`
 - `.importlinter` `core-must-not-depend-on-datahub` 移除 `ditto_kernel.** -> ditto_data.quality` ignore
-- `pyproject.toml` per-file-ignores: `packages/core/src/ditto_kernel/quality/golden.py` → `packages/data/src/ditto_data/quality/golden.py`
+- `pyproject.toml` per-file-ignores: `packages/data/src/ditto_data/quality/golden.py` → `packages/data/src/ditto_data/quality/golden.py`
 
 **验证**：`pixi run -e dev check` + `grep -rn "ditto_kernel.quality" packages/ apps/ tests/ --include="*.py"` 返回 0
 
@@ -186,17 +186,17 @@ from ditto_data.errors import __all__  # noqa: F401
 
 #### Step 5: 转换 engine 为 re-export shim
 
-- `packages/core/src/ditto_kernel/engine/expression/` → 仅保留 `__init__.py` re-export shim
-- `packages/core/src/ditto_kernel/engine/materialization/` → 仅保留 `__init__.py` re-export shim
-- `packages/core/src/ditto_kernel/engine/compile_cache.py` → re-export shim
-- `packages/core/src/ditto_kernel/engine/__init__.py` — analytics 相关 import 改为从 `ditto_analytics` re-export
+- `packages/analytics/src/ditto_analytics/expression/` → 仅保留 `__init__.py` re-export shim
+- `packages/analytics/src/ditto_analytics/materialization/` → 仅保留 `__init__.py` re-export shim
+- `packages/analytics/src/ditto_analytics/compile_cache.py` → re-export shim
+- `packages/engine/src/ditto_engine/__init__.py` — analytics 相关 import 改为从 `ditto_analytics` re-export
 
 #### Step 6: 更新包配置
 
 | 文件 | 变更 |
 |------|------|
 | `pixi.toml` [pypi-dependencies] | 添加 `ditto-analytics = { path = "packages/analytics", editable = true }` |
-| `packages/core/pyproject.toml` | deps 添加 `ditto-analytics` |
+| `packages/engine/pyproject.toml` | deps 添加 `ditto-analytics` |
 | `pyproject.toml` [basedpyright] extraPaths | 添加 `"packages/analytics/src"` |
 | `pyproject.toml` [pytest] pythonpath | 添加 `"packages/analytics/src"` |
 | `pyproject.toml` [pytest] testpaths | 添加 `"packages/analytics"` |
@@ -221,13 +221,13 @@ from ditto_data.errors import __all__  # noqa: F401
 #### Step 1: 更新 Port 源码导入
 
 **需要改的 import（analytics 相关）**：
-- `apps/port/src/ditto_interfaces/registry/datahub/derived.py`: `ditto_kernel.engine` → `ditto_analytics.compile_cache`
-- `apps/port/src/ditto_interfaces/services/derived/__init__.py`: `ditto_kernel.engine` → `ditto_analytics`
-- `apps/port/src/ditto_interfaces/services/derived/materialization_orchestrator.py`: materialization types → `ditto_analytics.materialization`
-- `apps/port/src/ditto_interfaces/services/derived/cascade_protocol.py`: materialization → `ditto_analytics.materialization`
-- `apps/port/src/ditto_interfaces/services/derived/publication.py`: `ditto_kernel.engine.materialization.models` → `ditto_analytics.materialization.models`
-- `apps/port/src/ditto_interfaces/services/derived/manifest_builder.py`: materialization → `ditto_analytics.materialization`
-- `apps/port/src/ditto_interfaces/services/derived/input_preparation.py`: materialization → `ditto_analytics.materialization`
+- `interfaces/src/ditto_interfaces/registry/datahub/derived.py`: `ditto_kernel.engine` → `ditto_analytics.compile_cache`
+- `interfaces/src/ditto_interfaces/services/derived/__init__.py`: `ditto_kernel.engine` → `ditto_analytics`
+- `interfaces/src/ditto_interfaces/services/derived/materialization_orchestrator.py`: materialization types → `ditto_analytics.materialization`
+- `interfaces/src/ditto_interfaces/services/derived/cascade_protocol.py`: materialization → `ditto_analytics.materialization`
+- `interfaces/src/ditto_interfaces/services/derived/publication.py`: `ditto_kernel.engine.materialization.models` → `ditto_analytics.materialization.models`
+- `interfaces/src/ditto_interfaces/services/derived/manifest_builder.py`: materialization → `ditto_analytics.materialization`
+- `interfaces/src/ditto_interfaces/services/derived/input_preparation.py`: materialization → `ditto_analytics.materialization`
 
 **保持不变的 import**（engine 保留模块）：
 - `ditto_kernel.engine.specs` — specs 留在 engine
@@ -261,17 +261,17 @@ from ditto_data.errors import __all__  # noqa: F401
 - `test_materialization_models_unit.py`
 - `test_operator_golden_data.py`
 
-保留在 `packages/core/tests/unit/engine/`（测试 engine 内部模块）：
+保留在 `packages/engine/tests/unit/engine/`（测试 engine 内部模块）：
 - `test_specs_unit.py`
 - `test_factor_definitions.py` — 更新 import：`ditto_kernel.engine.expression.compiler` → `ditto_analytics.expression.compiler`
 
 #### Step 5: 清理 engine re-export shim
 
-- 删除 `packages/core/src/ditto_kernel/engine/expression/` 目录
-- 删除 `packages/core/src/ditto_kernel/engine/materialization/` 目录
-- 删除 `packages/core/src/ditto_kernel/engine/compile_cache.py`
+- 删除 `packages/analytics/src/ditto_analytics/expression/` 目录
+- 删除 `packages/analytics/src/ditto_analytics/materialization/` 目录
+- 删除 `packages/analytics/src/ditto_analytics/compile_cache.py`
 - 从 `engine/__init__.py` 移除所有 analytics 相关 import 和 `__all__` 条目
-- `packages/core/pyproject.toml` deps 移除 `ditto-analytics`
+- `packages/engine/pyproject.toml` deps 移除 `ditto-analytics`
 
 #### Step 6: 更新 .importlinter
 
@@ -289,13 +289,13 @@ from ditto_data.errors import __all__  # noqa: F401
 
 #### Step 1: 重命名源码目录
 
-`packages/core/src/ditto_kernel/` → `packages/core/src/ditto_engine/`
+`packages/kernel/src/ditto_kernel/` → `packages/engine/src/ditto_engine/`
 
 #### Step 2: 更新包声明
 
 | 文件 | 变更 |
 |------|------|
-| `packages/core/pyproject.toml` | name: `ditto-engine` |
+| `packages/engine/pyproject.toml` | name: `ditto-engine` |
 | `pixi.toml` [pypi-dependencies] | `ditto-core` → `ditto-engine` |
 | `packages/analytics/pyproject.toml` | deps: `ditto-core` → `ditto-engine` |
 
@@ -304,10 +304,10 @@ from ditto_data.errors import __all__  # noqa: F401
 所有 `.py` 文件中 `ditto_kernel` → `ditto_engine`。
 
 **预估影响范围**：
-- packages/core/src/ — ~50 处（模块内部互引）
-- packages/core/tests/ — ~60 处
-- apps/port/src/ — ~30 处
-- apps/port/tests/ — ~20 处
+- packages/engine/src/ — ~50 处（模块内部互引）
+- packages/engine/tests/ — ~60 处
+- interfaces/src/ — ~30 处
+- interfaces/tests/ — ~20 处
 - packages/data/src/ — ~5 处
 - packages/data/tests/ — ~10 处
 - packages/analytics/src/ — ~5 处（specs/errors 引用）
@@ -343,14 +343,14 @@ from ditto_data.errors import __all__  # noqa: F401
 | 文件 | 变更 |
 |------|------|
 | `CLAUDE.md` | 架构图：添加 analytics/data 包，core→engine |
-| `packages/core/CLAUDE.md` | 模块结构移除 quality/，所有 ditto_kernel → ditto_engine |
+| `packages/engine/CLAUDE.md` | 模块结构移除 quality/，所有 ditto_kernel → ditto_engine |
 | `packages/data/CLAUDE.md` | 更新 errors 引用路径 |
 | 新建 `packages/analytics/CLAUDE.md` | analytics 模块规范 |
 | 新建 `packages/data/CLAUDE.md` | data 模块规范 |
 
 #### Step 2: 更新 README / AGENTS.md
 
-`packages/core/README.md`, `packages/core/AGENTS.md` — ditto_kernel → ditto_engine
+`packages/engine/README.md`, `packages/engine/AGENTS.md` — ditto_kernel → ditto_engine
 
 #### Step 3: 最终验证
 

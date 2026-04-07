@@ -4,7 +4,7 @@
 
 - **状态**: 当前真相源
 - **最后更新**: 2026-03-18
-- **适用范围**: `packages/core` + `packages/data` + `apps/port`
+- **适用范围**: `packages/engine` + `packages/data` + `interfaces/`
 - **定位**: 这是 unified-feature-factor-engine 的唯一完整设计入口；阅读本文件应能理解当前架构、语义、边界、控制面与剩余延期项。
 
 ### 0.1 当前真相源
@@ -126,21 +126,21 @@
 - 负责 facade、orchestration、flow、调度入口。
 - 不直接访问底层 store，不直接做文件 I/O。
 - 当前关键入口：
-  - `apps/port/src/ditto_interfaces/services/derived/query_facade.py`
-  - `apps/port/src/ditto_interfaces/services/derived/materialization_orchestrator.py`
-  - `apps/port/src/ditto_interfaces/services/derived/publication.py`
-  - `apps/port/src/ditto_interfaces/services/derived/research.py`
+  - `interfaces/src/ditto_interfaces/services/derived/query_facade.py`
+  - `interfaces/src/ditto_interfaces/services/derived/materialization_orchestrator.py`
+  - `interfaces/src/ditto_interfaces/services/derived/publication.py`
+  - `interfaces/src/ditto_interfaces/services/derived/research.py`
 
 #### Core
 
 - 负责语义模型、编译链路、执行规划、研究对象、发布安全领域模型。
 - 保持纯计算、纯规则、低 I/O。
 - 当前关键入口：
-  - `packages/core/src/ditto_kernel/engine/specs.py`
-  - `packages/core/src/ditto_kernel/engine/expression/*`
-  - `packages/core/src/ditto_kernel/engine/materialization/*`
-  - `packages/core/src/ditto_kernel/engine/research.py`
-  - `packages/core/src/ditto_kernel/engine/publication_safety.py`
+  - `packages/kernel/src/ditto_kernel/specs.py`
+  - `packages/analytics/src/ditto_analytics/expression/*`
+  - `packages/analytics/src/ditto_analytics/materialization/*`
+  - `packages/analytics/src/ditto_analytics/research/domain.py`
+  - `packages/analytics/src/ditto_analytics/publication_safety.py`
 
 #### DataHub
 

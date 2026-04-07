@@ -830,7 +830,7 @@ provider raw payload
 - `packages/analytics/CLAUDE.md`
 - `packages/sources/CLAUDE.md`
 - `packages/data/CLAUDE.md`
-- `apps/interfaces/CLAUDE.md`
+- `interfaces/CLAUDE.md`
 
 ---
 

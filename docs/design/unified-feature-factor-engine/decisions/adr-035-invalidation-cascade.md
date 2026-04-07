@@ -136,7 +136,7 @@ def propagate_invalidation(event, visited: set, depth: int) -> None:
 
 ## 失效事件结构
 
-> **代码变更记录（2026-03-20）**：Phase 1 实现中，失效事件结构经过重新设计，聚焦于数据源变更描述（source domain/dataset/date），而非 ADR 原始设计的因子级追踪（event_id/source_version/priority/depth）。实际代码见 `DerivedInvalidationEvent`（`packages/core/src/ditto_kernel/engine/materialization/contracts.py`）。
+> **代码变更记录（2026-03-20）**：Phase 1 实现中，失效事件结构经过重新设计，聚焦于数据源变更描述（source domain/dataset/date），而非 ADR 原始设计的因子级追踪（event_id/source_version/priority/depth）。实际代码见 `DerivedInvalidationEvent`（`packages/analytics/src/ditto_analytics/materialization/contracts.py`）。
 
 ### 原始设计（概念层）
 

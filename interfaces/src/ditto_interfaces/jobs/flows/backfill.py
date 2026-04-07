@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from ditto_app.types import InstrumentIngestParams
+from ditto_app._reexports import InstrumentIngestParams
 from prefect import flow
 from pydantic import BaseModel
 

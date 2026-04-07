@@ -111,7 +111,7 @@ dependencies = [
 
 ### Task 3.2: 修复脚本中的过期路径 `[S]`
 
-**现状**：3 个脚本引用 `packages/datahub/` 路径。
+**现状**：3 个脚本引用 `packages/data/` 路径。
 
 | 文件 | 修复 |
 |------|------|
@@ -157,7 +157,7 @@ dependencies = [
 - `DataHub 层` → `Data 层`
 - `DataHub Service` → `Data Service`
 - `from DataHub` / `DataHub 创建` → `Data 层` / `Data 初始化`
-- `packages/datahub/` 路径 → `packages/data/`
+- `packages/data/` 路径 → `packages/data/`
 - `ditto-datahub` → `ditto-data`
 - `.claude/rules/datahub.md` 引用 → `.claude/rules/data.md`（如已重命名）
 
@@ -168,7 +168,7 @@ dependencies = [
 - `packages/kernel/src/ditto_kernel/` 下 3 个"预期跨层使用"注释
 - `packages/engine/src/ditto_engine/` 下 2 个注释
 - `packages/app/src/ditto_app/` 下 3 个注释
-- `apps/interfaces/src/ditto_interfaces/` 下 5 个注释
+- `interfaces/src/ditto_interfaces/` 下 5 个注释
 - 各 `tests/` 下的 conftest 和 test 文件 docstring (~10 文件)
 
 **验收**：`grep -rn "DataHub\|datahub" packages/ apps/ --include="*.py"` 返回 0
@@ -215,7 +215,7 @@ dependencies = [
 | 文件 | 修复内容 |
 |------|---------|
 | `packages/data/CLAUDE.md` | 标题 "DataHub 架构规范" → "Data 架构规范"；正文 "DataHub" → "Data" |
-| `packages/data/AGENTS.md` | 标题 + DQ config 路径 `packages/datahub/config/dq/` → `packages/data/config/dq/` |
+| `packages/data/AGENTS.md` | 标题 + DQ config 路径 `packages/data/config/dq/` → `packages/data/config/dq/` |
 | `packages/data/README.md` | 标题 `ditto-datahub` → `ditto-data`；架构图 + 变更记录 |
 | `packages/kernel/CLAUDE.md` | 消费者表 "DataHub, Port" → "Data, Interfaces"；依赖图 "datahub → kernel" → "data → kernel"；DerivedRole 3→4 成员；MaterializationProfile 2→4 成员；新增 RiskScope 行 |
 | `packages/kernel/AGENTS.md` | 消费者表 + 依赖图更新 |
@@ -230,9 +230,9 @@ dependencies = [
 | `packages/engine/tests/README.md` | 代码示例 |
 | `packages/engine/tests/integration/README.md` | 代码示例 |
 | `packages/engine/tests/unit/README.md` | 代码示例 |
-| `apps/interfaces/CLAUDE.md` | "DataHub Service/Sources/Stores" → "Data Service/Sources/Storage" |
-| `apps/interfaces/AGENTS.md` | 全量更新 |
-| `apps/interfaces/README.md` | 架构引用 |
+| `interfaces/CLAUDE.md` | "DataHub Service/Sources/Stores" → "Data Service/Sources/Storage" |
+| `interfaces/AGENTS.md` | 全量更新 |
+| `interfaces/README.md` | 架构引用 |
 | `packages/analytics/CLAUDE.md` | 消费者引用更新 |
 | `packages/app/CLAUDE.md` | 依赖图更新（如有 DataHub 引用） |
 | 根 `CLAUDE.md` | 架构图 + 依赖矩阵（如有 DataHub 引用） |

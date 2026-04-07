@@ -42,7 +42,7 @@
 ### 2. 扁平化 app 层级
 
 ```
-apps/interfaces/  →  interfaces/
+interfaces/  →  interfaces/
 ```
 
 同步更新：
@@ -104,7 +104,7 @@ ditto/
 │
 ├── docs/                      # 文档（不变）
 │
-├── interfaces/                # 唯一应用入口（原 apps/interfaces/）
+├── interfaces/                # 唯一应用入口（原 interfaces/）
 │   ├── src/ditto_interfaces/  # API / CLI / Jobs / Registry
 │   └── tests/                 # 所有测试
 │       ├── unit/

@@ -170,7 +170,7 @@
 **核心思想**：`DATASET_REGISTRY` 作为单一配置源
 
 ```python
-# apps/port/src/ditto_interfaces/ingestion/config/datasets.py
+# interfaces/src/ditto_interfaces/ingestion/config/datasets.py
 
 class Dataset(str, Enum):
     """数据集枚举"""
@@ -229,7 +229,7 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        Server (apps/port)                                  │
+│                        Server (interfaces/)                                  │
 │                                                                              │
 │   职责：应用层编排                                                           │
 │   - Prefect Flows：任务编排、调度、依赖管理                                   │
@@ -245,7 +245,7 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
                                     │ 调用
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                      DataHub (packages/ditto-data-hub)                       │
+│                      DataHub (packages/ditto-data)                            │
 │                                                                              │
 │   职责：统一数据入口                                                         │
 │   - Sources：轻量无状态数据源适配（只获取数据）                              │
@@ -473,66 +473,52 @@ daily_ingestion_flow
 ## 5. 代码结构（更新）
 
 ```
-apps/
-  server/
-    pyproject.toml
+interfaces/
+  pyproject.toml
 
-    src/
-      ditto_interfaces/
+  src/
+    ditto_interfaces/
+      __init__.py
+      main.py                     # FastAPI 入口
+
+      # ============ API 层 ============
+      api/
         __init__.py
-        main.py                     # FastAPI 入口
+        router.py                 # 主路由
+        health.py                 # 健康检查（含 Prefect 状态）
+        ingestion.py              # 摄取触发 API
 
-        # ============ API 层 ============
-        api/
+      # ============ 数据摄取模块 ============
+      jobs/
+        __init__.py
+
+        # Prefect Flows（编排层）
+        flows/
           __init__.py
-          router.py                 # 主路由
-          health.py                 # 健康检查（含 Prefect 状态）
-          ingestion.py              # 摄取触发 API
+          daily.py                # 每日增量 Flow (T0→T1→T3)
+          backfill.py             # 全量回补 Flow
+          repair.py               # 空洞修补 + 重试 Flow (T2)
+          quality.py              # 独立 DQC Flow (T3)
 
-        # ============ 数据摄取模块 ============
-        ingestion/
+        # Prefect Tasks（轻量 wrapper）
+        tasks/
           __init__.py
+          t0_meta.py              # T0: 日历、标的
+          t1_bars.py              # T1: 行情摄取
+          t1_adj_factor.py        # T1: 复权因子
+          t3_quality.py           # T3: DQC 检查
 
-          # Ingestion Service 层（新增）
-          services/
-            __init__.py
-            coordinator.py          # IngestionCoordinator
-            metadata.py             # MetadataManager
-            backfill.py             # BackfillManager
-            retry.py                # RetryManager
+        # 调度配置
+        schedules.py              # Prefect Deployment 定义
+        hooks.py                  # Flow/Task 状态变化钩子（告警）
 
-          # Config（新增）
-          config/
-            __init__.py
-            datasets.py             # DATASET_REGISTRY
+      # ============ 部署脚本 ============
+      deploy.py                   # Prefect 部署脚本
 
-          # Prefect Flows（编排层）
-          flows/
-            __init__.py
-            daily.py                # 每日增量 Flow (T0→T1→T3)
-            backfill.py             # 全量回补 Flow
-            repair.py               # 空洞修补 + 重试 Flow (T2)
-            quality.py              # 独立 DQC Flow (T3)
-
-          # Prefect Tasks（轻量 wrapper）
-          tasks/
-            __init__.py
-            t0_meta.py              # T0: 日历、标的
-            t1_bars.py              # T1: 行情摄取
-            t1_adj_factor.py        # T1: 复权因子
-            t3_quality.py           # T3: DQC 检查
-
-          # 调度配置
-          schedules.py              # Prefect Deployment 定义
-          hooks.py                  # Flow/Task 状态变化钩子（告警）
-
-        # ============ 部署脚本 ============
-        deploy.py                   # Prefect 部署脚本
-
-        # ============ 其他服务 ============
-        services/
-          __init__.py
-          notification.py           # 告警通知（钉钉/Telegram）
+      # ============ 其他服务 ============
+      services/
+        __init__.py
+        notification.py           # 告警通知（钉钉/Telegram）
 ```
 
 **关键变化**：
@@ -1273,7 +1259,7 @@ async def send_notification(message: str):
 ## 9. FastAPI 集成
 
 ```python
-# apps/port/src/ditto_interfaces/main.py
+# interfaces/src/ditto_interfaces/main.py
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI

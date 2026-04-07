@@ -63,7 +63,7 @@ def _build_in_clause(
         ("s.instrument_id IN (?,?,?)", [1, 2, 3])
         >>> _build_in_clause("s.instrument_id", [], 200)
         ("1=0", [])
-        >>> # 分块处理（超过 chunk_size）  # noqa: E501
+        >>> # 分块处理（超过 chunk_size）
         >>> _build_in_clause("s.instrument_id", list(range(500)), 200)
         ("(...)", [...])
 

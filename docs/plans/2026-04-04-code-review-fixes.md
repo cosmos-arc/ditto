@@ -20,7 +20,7 @@
 
 ### Task 1: 修复 CI 陈旧路径 `[M]`
 
-**问题**: ci.yml 多处引用已删除的 `apps/`、`packages/datahub/`、`packages/core/`、`packages/foundation/`
+**问题**: ci.yml 多处引用已删除的 `apps/`、`packages/data/`、`packages/core/`、`packages/foundation/`
 
 **修改文件**:
 - `.github/workflows/ci.yml`
@@ -32,7 +32,7 @@
 
 ci.yml:
 - L6: 注释 `apps/*` → `interfaces/*`
-- L149: `packages/datahub/tests/unit/` → `packages/data/tests/unit/`，`--cov=packages` 不变
+- L149: `packages/data/tests/unit/` → `packages/data/tests/unit/`，`--cov=packages` 不变
 - L163: `--cov=apps` → `--cov=interfaces`
 - L209-211: build step 重写为当前 6 个包 (`infra`, `kernel`, `data`, `analytics`, `engine`, `app`)
 
@@ -41,7 +41,7 @@ e2e-validation.yml:
 - L70-71, L80: 路径已是 `interfaces/tests/reports/` ✅ 已正确
 
 codecov.yml:
-- L29: `packages/datahub/src/` → `packages/data/src/`，名称 `datahub:` → `data:`
+- L29: `packages/data/src/` → `packages/data/src/`，名称 `datahub:` → `data:`
 
 PULL_REQUEST_TEMPLATE.md:
 - L19: `packages/datahub` → `packages/data`

@@ -205,6 +205,20 @@ forbidden_modules =
     ditto_interfaces.**
 
 # ═══════════════════════════════════════════════════════════════════
+# App → Infra 范围约束：仅允许访问 foundation 子模块
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:app-infra-scope]
+name = App must only access ditto_infra.foundation
+type = forbidden
+source_modules =
+    ditto_app.**
+forbidden_modules =
+    ditto_infra.services.**
+    ditto_infra.config.**
+ignore_imports =
+    ditto_app.** -> ditto_infra.foundation.**
+
+# ═══════════════════════════════════════════════════════════════════
 # R8 — App 内部互斥规则（Use Case 间职责隔离）
 # ═══════════════════════════════════════════════════════════════════
 # 矩阵：

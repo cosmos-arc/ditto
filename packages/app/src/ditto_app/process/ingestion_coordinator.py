@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import date, timedelta
-from typing import Literal, cast
+from typing import Literal, NamedTuple, cast
 
 import httpx
 import polars as pl
@@ -29,6 +29,7 @@ from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
+from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger
@@ -38,6 +39,9 @@ from ditto_app.process._coordinator_constants import (
     get_all_index_codes,
 )
 from ditto_app.process.auto_init import resolve_identifier_with_auto_init
+from ditto_app.process.backfill_handler import (
+    BackfillContext,
+)
 from ditto_app.process.backfill_handler import (
     backfill_adj_factor as _backfill_adj_factor,
 )
@@ -87,13 +91,20 @@ def _list_natural_days(start_date: str, end_date: str) -> list[str]:
     return days
 
 
+class MarketServices(NamedTuple):
+    """Market 域读写服务聚合."""
+
+    query: MarketService
+    write: MarketWriteService
+
+
 class IngestionCoordinator:
     """统一摄取协调器。"""
 
     def __init__(
         self,
         metadata_service: MetadataService,
-        market_service: MarketService,
+        market_services: MarketServices,
         fundamental_service: FundamentalService,
         capital_service: CapitalService,
         macro_service: MacroService,
@@ -104,7 +115,8 @@ class IngestionCoordinator:
         cfg = config or IngestionCoordinatorConfig()
 
         self._metadata_service = metadata_service
-        self._market_service = market_service
+        self._market_service = market_services.query
+        self._market_write_service = market_services.write
         self._fundamental_service = fundamental_service
         self._capital_service = capital_service
         self._macro_service = macro_service
@@ -122,7 +134,7 @@ class IngestionCoordinator:
         )
         self._data_writer = IngestionDataWriter(
             metadata_service=metadata_service,
-            market_service=market_service,
+            market_write_service=self._market_write_service,
             fundamental_service=fundamental_service,
             capital_service=capital_service,
             macro_service=macro_service,
@@ -927,14 +939,17 @@ class IngestionCoordinator:
             instrument_id=instrument_id,
             start=start,
             end=end,
-            metadata_service=self._metadata_service,
-            market_service=self._market_service,
-            source=self._source,
-            source_name=self._source_name,
-            data_writer=self._data_writer,
+            ctx=BackfillContext(
+                metadata_service=self._metadata_service,
+                market_service=self._market_service,
+                source=self._source,
+                source_name=self._source_name,
+                data_writer=self._data_writer,
+            ),
         )
 
 
 __all__ = [
     "IngestionCoordinator",
+    "MarketServices",
 ]

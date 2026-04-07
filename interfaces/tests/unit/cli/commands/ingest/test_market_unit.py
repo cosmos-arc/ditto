@@ -49,20 +49,13 @@ class TestMarketCommands:
     ) -> None:
         """测试 adj 命令委托给股票复权因子工厂函数."""
         mock_impl = mocker.patch.object(market, "_adj_factor_impl")
-        mock_fund_impl = mocker.patch.object(market, "_fund_adj_impl")
-        market.adj(mock_ctx, date="2024-01-02", force=False, fund=False)
+        market.adj(mock_ctx, date="2024-01-02", force=False)
         mock_impl.assert_called_once_with(mock_ctx, "2024-01-02", False)
-        mock_fund_impl.assert_not_called()
 
-    def test_ingest_market_adj_fund_delegates_to_factory(
-        self, mocker: MockerFixture, mock_ctx: Mock
-    ) -> None:
-        """测试 adj 命令 --fund 选项委托给 ETF/基金复权因子工厂函数."""
-        mock_impl = mocker.patch.object(market, "_adj_factor_impl")
-        mock_fund_impl = mocker.patch.object(market, "_fund_adj_impl")
-        market.adj(mock_ctx, date="2024-01-02", force=False, fund=True)
-        mock_fund_impl.assert_called_once_with(mock_ctx, "2024-01-02", False)
-        mock_impl.assert_not_called()
+    def test_ingest_market_adj_fund_command_registered(self) -> None:
+        """测试 adj-fund 命令已通过 Typer app 注册."""
+        command_names = [cmd.name for cmd in market.app.registered_commands]
+        assert "adj-fund" in command_names, "adj-fund 命令未注册"
 
     def test_ingest_market_status_delegates_to_factory(
         self, mocker: MockerFixture, mock_ctx: Mock
@@ -124,7 +117,7 @@ class TestMarketCommandIntegration:
     def test_ingest_market_adj_fund_success(
         self, runner: CliRunner, mocker: MockerFixture
     ) -> None:
-        """测试摄取 ETF/基金复权因子."""
+        """测试摄取 ETF/基金复权因子（adj-fund 命令）."""
         mock_executor = MagicMock()
         mock_executor.ingest_daily.return_value = {
             "dataset": "fund_adj",
@@ -140,7 +133,7 @@ class TestMarketCommandIntegration:
         )
         mock_create_exec.return_value.__enter__.return_value = mock_executor
 
-        result = runner.invoke(app, ["ingest", "market", "adj", "2024-01-02", "--fund"])
+        result = runner.invoke(app, ["ingest", "market", "adj-fund", "2024-01-02"])
         assert result.exit_code == 0
 
     def test_ingest_market_stock_help(self, runner: CliRunner) -> None:

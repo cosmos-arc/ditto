@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 
 import polars as pl
@@ -14,15 +15,22 @@ from ditto_infra.foundation import logger
 from ditto_app.process.data_writer import IngestionDataWriter
 
 
-def backfill_adj_factor(  # noqa: PLR0913
+@dataclass(frozen=True)
+class BackfillContext:
+    """backfill_adj_factor 所需的服务依赖聚合."""
+
+    metadata_service: MetadataService
+    market_service: MarketService
+    source: DataSource
+    source_name: str
+    data_writer: IngestionDataWriter
+
+
+def backfill_adj_factor(
     instrument_id: int,
     start: str,
     end: str,
-    metadata_service: MetadataService,
-    market_service: MarketService,
-    source: DataSource,
-    source_name: str,
-    data_writer: IngestionDataWriter,
+    ctx: BackfillContext,
 ) -> dict[str, object]:
     """
     按标的智能回补复权因子空洞.
@@ -34,11 +42,7 @@ def backfill_adj_factor(  # noqa: PLR0913
         instrument_id: 证券内部 ID.
         start: 开始日期 (YYYY-MM-DD).
         end: 结束日期 (YYYY-MM-DD).
-        metadata_service: 元数据服务.
-        market_service: 行情服务.
-        source: 数据源.
-        source_name: 数据源名称.
-        data_writer: 数据写入器.
+        ctx: 回补上下文（服务依赖）.
 
     Returns:
         回补结果摘要，包含 status / gap_count / filled_dates.
@@ -53,7 +57,7 @@ def backfill_adj_factor(  # noqa: PLR0913
     )
 
     # 1. 前置检查：范围内是否有交易日
-    trading_days = metadata_service.list_trading_days(start, end)
+    trading_days = ctx.metadata_service.list_trading_days(start, end)
     if not trading_days:
         logger.info(
             "范围内无交易日",
@@ -64,7 +68,7 @@ def backfill_adj_factor(  # noqa: PLR0913
 
     # 2. 检测空洞
     gap_dates = detect_adj_factor_gaps(
-        instrument_id, start, end, metadata_service, market_service
+        instrument_id, start, end, ctx.metadata_service, ctx.market_service
     )
     if not gap_dates:
         logger.info(
@@ -75,20 +79,22 @@ def backfill_adj_factor(  # noqa: PLR0913
         return {"status": "ok", "gap_count": 0, "filled_dates": 0}
 
     # 3. 解析 source_ticker
-    source_ticker = metadata_service.resolve_source_ticker(
+    source_ticker = ctx.metadata_service.resolve_source_ticker(
         instrument_id=instrument_id,
         asset_class="stock",
-        source=source_name,
+        source=ctx.source_name,
     )
 
     # 4. 逐段 fetch + 写入
     gap_ranges = group_contiguous_dates(gap_dates)
     total_filled = 0
     for range_start, range_end in gap_ranges:
-        gap_df = fetch_adj_factor_range(source, source_ticker, range_start, range_end)
+        gap_df = fetch_adj_factor_range(
+            ctx.source, source_ticker, range_start, range_end
+        )
         if gap_df.is_empty():
             continue
-        total_filled += write_adj_factor_range(data_writer, gap_df, range_start)
+        total_filled += write_adj_factor_range(ctx.data_writer, gap_df, range_start)
 
     logger.info(
         "智能回补复权因子完成",
@@ -210,6 +216,7 @@ def group_contiguous_dates(dates: list[str]) -> list[tuple[str, str]]:
 
 
 __all__ = [
+    "BackfillContext",
     "backfill_adj_factor",
     "detect_adj_factor_gaps",
     "fetch_adj_factor_range",

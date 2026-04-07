@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ditto_app._reexports import Dataset, DQIssue
 from ditto_app.process.quality import L3BatchService
-from ditto_app.types import Dataset, DQIssue
 from ditto_infra.foundation import Metrics, logger
 from prefect import task
 
@@ -13,30 +13,21 @@ from ditto_interfaces.jobs.context import (
     create_dq_and_metadata_context,
 )
 
+_DEFAULT_DATASETS = ["etf_daily", "index_daily", "stock_daily", "adj_factor"]
+
 
 @task(
     name="dq-batch-check",
     description="批量数据质量检查(L3 统计异常)",
     tags=["dq", "batch", "l3"],
 )
-async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一函数以维持可读性
+async def dq_batch_check(
     trade_date: str | None = None,
     datasets: list[str] | None = None,
     market_wide: bool = False,
 ) -> dict[str, Any]:
     """
-    执行 L3 批量检查任务。
-
-    这是一个完整的端到端业务流程，包括：
-    1. 初始化服务和上下文
-    2. 遍历数据集执行检查
-    3. 汇总结果和指标
-    4. 发送告警通知
-
-    拆分为子函数会：
-    - 增加状态传递复杂性
-    - 降低流程可读性
-    - 分散相关逻辑
+    执行 L3 批量检查任务.
 
     Args:
         trade_date: 交易日期(YYYY-MM-DD)，默认为最后一个交易日
@@ -56,125 +47,212 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
     )
 
     with create_dq_and_metadata_context() as (engine, metadata_service, market_service):
-        # 获取最后一个交易日
-        if trade_date is None:
-            trade_date = metadata_service.get_last_trading_day()
-            logger.info(
-                "Using last trading day",
-                event="dq_batch_date_resolved",
-                trade_date=trade_date,
-            )
+        resolved_date = _resolve_trade_date(trade_date, metadata_service)
+        resolved_datasets = datasets or list(_DEFAULT_DATASETS)
 
-        # 类型收窄：确保 trade_date 不是 None（用于后续类型检查）
-        if trade_date is None:
-            raise ValueError("Failed to resolve trade_date")
-
-        # 默认数据集
-        if datasets is None:
-            datasets = ["etf_daily", "index_daily", "stock_daily", "adj_factor"]
-
-        # 初始化 L3 Batch Service
         l3_service = L3BatchService(
             engine=engine,
             market_facade=market_service,
             metadata_facade=metadata_service,
         )
 
-        all_issues: list[DQIssue] = []
-        results_by_dataset: dict[str, dict[str, Any]] = {}
-
-        # 执行 L3 检查
-        for dataset in datasets:
-            try:
-                # 使用 Dataset.get_asset_class() 获取资产类别
-                asset_class = Dataset.get_asset_class(dataset)
-                if asset_class == "other":
-                    raise ValueError(f"Unknown dataset: {dataset}")
-
-                result = l3_service.check_dataset(
-                    dataset=dataset,
-                    trade_date=trade_date,
-                    asset_class=asset_class,
-                    market_wide=market_wide,
-                )
-
-                results_by_dataset[dataset] = {
-                    "passed": result["passed"],
-                    "issue_count": result.get("issue_count", 0),
-                    "alert_count": result.get("alert_count", 0),
-                }
-
-                # 收集 issues（如果有）
-                if "issues" in result:
-                    all_issues.extend(result["issues"])
-
-                if result.get("alert_count", 0) > 0:
-                    logger.warning(
-                        "L3 DQ issues found",
-                        event="dq_batch_issues",
-                        dataset=dataset,
-                        count=result.get("issue_count", 0),
-                    )
-
-            except (ValueError, TypeError, KeyError, AttributeError) as e:
-                # 已知的数据处理异常
-                logger.warning(
-                    "dq_batch_known_error",
-                    event="dq_batch_error",
-                    dataset=dataset,
-                    error_type=type(e).__name__,
-                    error=str(e),
-                )
-                # 记录失败结果，避免"假通过/漏报"
-                results_by_dataset[dataset] = {
-                    "passed": False,
-                    "issue_count": 0,
-                    "alert_count": 0,
-                    "error": f"{type(e).__name__}: {e}",
-                }
-            except Exception as e:
-                # 未知异常
-                logger.exception(
-                    "dq_batch_unknown_error",
-                    event="dq_batch_error",
-                    dataset=dataset,
-                    error_type=type(e).__name__,
-                )
-                results_by_dataset[dataset] = {
-                    "passed": False,
-                    "issue_count": 0,
-                    "alert_count": 0,
-                    "error": f"{type(e).__name__}: {e}",
-                }
-
-        # 汇总结果
-        total_issues = len(all_issues)
-        alert_count = sum(1 for i in all_issues if i.severity.value == "alert")
-
-        summary = {
-            "trade_date": trade_date,
-            "datasets_checked": datasets,
-            "total_issues": total_issues,
-            "alert_count": alert_count,
-            "results_by_dataset": results_by_dataset,
-        }
-
-        logger.info(
-            "DQ batch check complete",
-            event="dq_batch_complete",
-            **summary,
+        all_issues, results_by_dataset = _execute_all_checks(
+            l3_service, resolved_datasets, resolved_date, market_wide
         )
 
-        # 如果有告警，发送通知
-        if alert_count > 0:
-            _send_dq_alert(trade_date, all_issues)
-
-        # 记录指标
-        Metrics.dq_batch_checks.add(1.0, {"trade_date": trade_date})
-        Metrics.dq_batch_issues.add(float(total_issues), {"trade_date": trade_date})
-        Metrics.dq_batch_alerts.add(float(alert_count), {"trade_date": trade_date})
+        summary = _build_batch_summary(
+            resolved_date, resolved_datasets, all_issues, results_by_dataset
+        )
 
         return summary
+
+
+def _resolve_trade_date(
+    trade_date: str | None,
+    metadata_service: Any,
+) -> str:
+    """
+    Resolve trade_date: use provided value or fetch last trading day.
+
+    Args:
+        trade_date: Explicit trade_date, or None to auto-resolve.
+        metadata_service: Metadata service for fetching last trading day.
+
+    Returns:
+        Resolved trade_date string.
+
+    Raises:
+        ValueError: If trade_date cannot be resolved.
+
+    """
+    if trade_date is not None:
+        return trade_date
+
+    trade_date = metadata_service.get_last_trading_day()
+    logger.info(
+        "Using last trading day",
+        event="dq_batch_date_resolved",
+        trade_date=trade_date,
+    )
+    if trade_date is None:
+        raise ValueError("Failed to resolve trade_date")
+    return trade_date
+
+
+def _execute_all_checks(
+    l3_service: L3BatchService,
+    datasets: list[str],
+    trade_date: str,
+    market_wide: bool,
+) -> tuple[list[DQIssue], dict[str, dict[str, Any]]]:
+    """
+    Execute L3 checks for all datasets and collect results.
+
+    Args:
+        l3_service: L3 batch service instance.
+        datasets: Dataset names to check.
+        trade_date: Trade date string.
+        market_wide: Whether to use market-wide query mode.
+
+    Returns:
+        Tuple of (all issues, per-dataset results).
+
+    """
+    all_issues: list[DQIssue] = []
+    results_by_dataset: dict[str, dict[str, Any]] = {}
+
+    for dataset in datasets:
+        dataset_result, dataset_issues = _execute_single_check(
+            l3_service, dataset, trade_date, market_wide
+        )
+        results_by_dataset[dataset] = dataset_result
+        all_issues.extend(dataset_issues)
+
+    return all_issues, results_by_dataset
+
+
+def _execute_single_check(
+    l3_service: L3BatchService,
+    dataset: str,
+    trade_date: str,
+    market_wide: bool,
+) -> tuple[dict[str, Any], list[DQIssue]]:
+    """
+    Execute L3 check for a single dataset with error handling.
+
+    Args:
+        l3_service: L3 batch service instance.
+        dataset: Dataset name to check.
+        trade_date: Trade date string.
+        market_wide: Whether to use market-wide query mode.
+
+    Returns:
+        Tuple of (result dict, collected issues).
+
+    """
+    try:
+        asset_class = Dataset.get_asset_class(dataset)
+        if asset_class == "other":
+            raise ValueError(f"Unknown dataset: {dataset}")
+
+        result = l3_service.check_dataset(
+            dataset=dataset,
+            trade_date=trade_date,
+            asset_class=asset_class,
+            market_wide=market_wide,
+        )
+
+        dataset_result: dict[str, Any] = {
+            "passed": result["passed"],
+            "issue_count": result.get("issue_count", 0),
+            "alert_count": result.get("alert_count", 0),
+        }
+
+        issues: list[DQIssue] = result.get("issues", [])
+
+        if result.get("alert_count", 0) > 0:
+            logger.warning(
+                "L3 DQ issues found",
+                event="dq_batch_issues",
+                dataset=dataset,
+                count=result.get("issue_count", 0),
+            )
+
+        return dataset_result, issues
+
+    except (ValueError, TypeError, KeyError, AttributeError) as e:
+        logger.warning(
+            "dq_batch_known_error",
+            event="dq_batch_error",
+            dataset=dataset,
+            error_type=type(e).__name__,
+            error=str(e),
+        )
+        return {
+            "passed": False,
+            "issue_count": 0,
+            "alert_count": 0,
+            "error": f"{type(e).__name__}: {e}",
+        }, []
+
+    except Exception as e:
+        logger.exception(
+            "dq_batch_unknown_error",
+            event="dq_batch_error",
+            dataset=dataset,
+            error_type=type(e).__name__,
+        )
+        return {
+            "passed": False,
+            "issue_count": 0,
+            "alert_count": 0,
+            "error": f"{type(e).__name__}: {e}",
+        }, []
+
+
+def _build_batch_summary(
+    trade_date: str,
+    datasets: list[str],
+    all_issues: list[DQIssue],
+    results_by_dataset: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """
+    Build the batch check summary, send alerts, and record metrics.
+
+    Args:
+        trade_date: Trade date string.
+        datasets: List of dataset names checked.
+        all_issues: All issues collected across datasets.
+        results_by_dataset: Per-dataset results.
+
+    Returns:
+        Summary dict.
+
+    """
+    alert_count = sum(1 for i in all_issues if i.severity.value == "alert")
+
+    summary = {
+        "trade_date": trade_date,
+        "datasets_checked": datasets,
+        "total_issues": len(all_issues),
+        "alert_count": alert_count,
+        "results_by_dataset": results_by_dataset,
+    }
+
+    logger.info(
+        "DQ batch check complete",
+        event="dq_batch_complete",
+        **summary,
+    )
+
+    if alert_count > 0:
+        _send_dq_alert(trade_date, all_issues)
+
+    Metrics.dq_batch_checks.add(1.0, {"trade_date": trade_date})
+    Metrics.dq_batch_issues.add(float(len(all_issues)), {"trade_date": trade_date})
+    Metrics.dq_batch_alerts.add(float(alert_count), {"trade_date": trade_date})
+
+    return summary
 
 
 def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:

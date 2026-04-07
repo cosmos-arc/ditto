@@ -163,9 +163,9 @@
 - **风险**：中等 — 影响回测核心数据流
 - **验收**：回测行为不变（golden test），DataFeed 通过 DataProvider 获取数据
 - **文件**：
-  - 修改 `packages/core/src/ditto_kernel/backtest/data_feed.py`
+  - 修改 `packages/engine/src/ditto_engine/backtest/data_feed.py`
   - 修改相关测试文件
-  - 可能涉及 `packages/core/src/ditto_kernel/backtest/engine.py` — 调整构造参数
+  - 可能涉及 `packages/engine/src/ditto_engine/backtest/engine.py` — 调整构造参数
 - **关键设计**：
   - `ParquetDataFeed` 当前直接读 parquet 文件 → 改为通过 `DataProvider.get_bars()` 获取
   - 保留 `DataFeed` Protocol 接口不变（内部实现切换）
@@ -204,10 +204,10 @@
 | `.claude/rules/architecture.md` | 架构规则，-1b 术语修正（Phase -1 前置） |
 | `packages/kernel/src/ditto_kernel/__init__.py` | 统一导出，每个 PR 都改 |
 | `packages/kernel/pyproject.toml` | 保持零依赖，0c 升版本 |
-| `packages/core/src/ditto_kernel/backtest/data_feed.py` | Phase 1 核心改造点 |
-| `packages/core/src/ditto_kernel/backtest/engine.py` | 回测主循环，可能需调整注入 |
+| `packages/engine/src/ditto_engine/backtest/data_feed.py` | Phase 1 核心改造点 |
+| `packages/engine/src/ditto_engine/backtest/engine.py` | 回测主循环，可能需调整注入 |
 | `packages/data/src/ditto_data/services/` | Provider 实现的底层依赖 |
-| `apps/port/src/ditto_interfaces/registry/` | DI 容器，Phase 1 需新增 Provider 注册 |
+| `interfaces/src/ditto_interfaces/registry/` | DI 容器，Phase 1 需新增 Provider 注册 |
 | `.importlinter` | Phase 0/1 无需修改（无新包、无新依赖方向） |
 
 ## 风险与缓解

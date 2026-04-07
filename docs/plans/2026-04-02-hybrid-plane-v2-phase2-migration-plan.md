@@ -57,8 +57,8 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - `ditto_engine.engine.factors` 为 re-export shim
 - **文件**:
   - `packages/analytics/src/ditto_analytics/factors/` (新建 6 文件)
-  - `packages/core/src/ditto_engine/engine/factors/` (改为 shim)
-  - `packages/core/tests/unit/engine/test_factors_*.py` (更新 import)
+  - `packages/engine/src/ditto_engine/engine/factors/` (改为 shim)
+  - `packages/engine/tests/unit/engine/test_factors_*.py` (更新 import)
 
 ### PR2: evaluation/ 迁移 `[L]`
 - **操作**: `ditto_engine.engine.evaluation/` (7 文件: evaluator, report, metrics/*) → `ditto_analytics.evaluation/`
@@ -72,7 +72,7 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - 3 个外部消费者更新 import（或通过 shim 兼容）
 - **文件**:
   - `packages/analytics/src/ditto_analytics/evaluation/` (新建 7 文件)
-  - `packages/core/src/ditto_engine/engine/evaluation/` (改为 shim)
+  - `packages/engine/src/ditto_engine/engine/evaluation/` (改为 shim)
   - `packages/app/src/ditto_app/query/evaluation.py` (更新 import)
   - `packages/app/src/ditto_app/process/materialization.py` (更新 import)
 
@@ -89,8 +89,8 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
 - **文件**:
   - `packages/analytics/src/ditto_analytics/research/` (新建)
   - `packages/analytics/src/ditto_analytics/publication_safety.py` (新建)
-  - `packages/core/src/ditto_engine/engine/research.py` (改为 shim)
-  - `packages/core/src/ditto_engine/engine/publication_safety.py` (改为 shim)
+  - `packages/engine/src/ditto_engine/engine/research.py` (改为 shim)
+  - `packages/engine/src/ditto_engine/engine/publication_safety.py` (改为 shim)
 
 ### PR4: specs 清理 + analytics→engine 依赖断开 `[M]`
 - **操作**:
@@ -117,11 +117,11 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - ✅ arch-check 15 KEPT, 0 BROKEN
   - ✅ 2274 单元测试全部通过
 - **文件**:
-  - `packages/core/src/ditto_engine/engine/factors/` (已删除)
-  - `packages/core/src/ditto_engine/engine/evaluation/` (已删除)
-  - `packages/core/src/ditto_engine/engine/research.py` (已删除)
-  - `packages/core/src/ditto_engine/engine/publication_safety.py` (已删除)
-  - `packages/core/src/ditto_engine/engine/__init__.py` (已清理 re-export，仅保留 specs + errors)
+  - `packages/engine/src/ditto_engine/engine/factors/` (已删除)
+  - `packages/engine/src/ditto_engine/engine/evaluation/` (已删除)
+  - `packages/engine/src/ditto_engine/engine/research.py` (已删除)
+  - `packages/engine/src/ditto_engine/engine/publication_safety.py` (已删除)
+  - `packages/engine/src/ditto_engine/engine/__init__.py` (已清理 re-export，仅保留 specs + errors)
   - 6 个测试文件 evaluation 导入迁移至 ditto_analytics.evaluation
 
 ### PR6: Wave 1 集成验证 `[S]` ✅ DONE
@@ -150,11 +150,11 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - `ditto_engine.alpha/` 含全部 19 文件
   - `pixi run -e dev check` 通过
 - **文件**:
-  - `packages/core/src/ditto_engine/strategy/` → `packages/core/src/ditto_engine/alpha/`
-  - `packages/core/src/ditto_engine/__init__.py` (更新 re-export)
+  - `packages/engine/src/ditto_engine/strategy/` → `packages/engine/src/ditto_engine/alpha/`
+  - `packages/engine/src/ditto_engine/__init__.py` (更新 re-export)
   - `packages/app/src/ditto_app/builders/strategy.py` (更新 import)
   - `packages/app/src/ditto_app/process/strategy.py` (更新 import)
-  - `packages/core/tests/unit/strategy/` → `packages/core/tests/unit/alpha/`
+  - `packages/engine/tests/unit/strategy/` → `packages/engine/tests/unit/alpha/`
   - interfaces 测试文件 (7 个, 更新 import)
 
 ### PR8: risk/ 提取为顶层子域 `[M]` ✅ DONE
@@ -168,9 +168,9 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - `ditto_engine.backtest.risk/` 为 re-export shim（或直接引用新位置）
   - `pixi run -e dev check` 通过
 - **文件**:
-  - `packages/core/src/ditto_engine/risk/` (新建 4 文件)
-  - `packages/core/src/ditto_engine/backtest/risk/` (改为 shim 或删除)
-  - `packages/core/src/ditto_engine/backtest/engine.py` (更新 import)
+  - `packages/engine/src/ditto_engine/risk/` (新建 4 文件)
+  - `packages/engine/src/ditto_engine/backtest/risk/` (改为 shim 或删除)
+  - `packages/engine/src/ditto_engine/backtest/engine.py` (更新 import)
   - `packages/app/src/ditto_app/builders/strategy.py` (更新 import)
   - `packages/app/src/ditto_app/process/strategy.py` (更新 import)
 
@@ -186,10 +186,10 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - `from ditto_engine import DerivedSpec` 仍可用
   - `pixi run -e dev check` 通过
 - **文件**:
-  - `packages/core/src/ditto_engine/engine/` (清理/删除)
-  - `packages/core/src/ditto_engine/__init__.py` (新增 re-export)
-  - `packages/core/src/ditto_engine/specs.py` (新建 re-export)
-  - `packages/core/src/ditto_engine/errors.py` (新建 re-export)
+  - `packages/engine/src/ditto_engine/engine/` (清理/删除)
+  - `packages/engine/src/ditto_engine/__init__.py` (新增 re-export)
+  - `packages/engine/src/ditto_engine/specs.py` (新建 re-export)
+  - `packages/engine/src/ditto_engine/errors.py` (新建 re-export)
 
 ---
 
@@ -211,8 +211,8 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - `packages/data/src/ditto_data/provider.py` (新增)
   - `packages/data/src/ditto_data/quality/` (合并)
   - `packages/data/src/ditto_data/` (迁移后删除)
-  - `packages/core/src/ditto_engine/backtest/data_feed.py` (更新 import: ditto_data → ditto_data)
-  - `packages/core/src/ditto_engine/engine/errors.py` (更新 import: ditto_data → ditto_data)
+  - `packages/engine/src/ditto_engine/backtest/data_feed.py` (更新 import: ditto_data → ditto_data)
+  - `packages/engine/src/ditto_engine/engine/errors.py` (更新 import: ditto_data → ditto_data)
   - `pixi.toml` (移除 ditto-data 依赖)
   - `.importlinter` (移除 data-boundary, data 相关引用)
 
@@ -220,7 +220,7 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
 - **操作**（与 PR10 合并执行）:
   1. 合并 data 内容到 datahub
   2. 删除旧 packages/data/
-  3. 重命名 packages/datahub/ → packages/data/
+  3. 重命名 packages/data/ → packages/data/
   4. pyproject.toml: `name = "ditto-datahub"` → `name = "ditto-data"`
   5. src 目录: `ditto_data/` → `ditto_data/`
   6. 全局 import 更新: `ditto_data` → `ditto_data`（~250 文件）
@@ -327,7 +327,7 @@ Wave 4: App + 收尾 ──────── 依赖 Wave 1-3 ──────
   - ✅ 15 个事件单元测试 + 2 个继承测试
   - ✅ basedpyright 0 errors
 - **文件**:
-  - `packages/core/src/ditto_engine/events.py` (新建)
+  - `packages/engine/src/ditto_engine/events.py` (新建)
   - `packages/data/src/ditto_data/events.py` (新建)
   - `packages/kernel/src/ditto_kernel/events.py` (更新基类 kw_only)
   - 对应测试文件

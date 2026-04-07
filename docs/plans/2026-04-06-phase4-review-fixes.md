@@ -193,7 +193,7 @@ Run: `diff <(ls interfaces/tests/unit/services/ingestion/*.py | xargs -I{} basen
 
 **Step 2: 检查仅 interfaces 独有的 3 个测试**
 
-读取这 3 个文件，确认其导入路径指向 ditto_app 还是 ditto_port。如果仍导入 ditto_port，说明是未迁移的旧测试，也应删除或迁移。
+读取这 3 个文件，确认其导入路径指向 ditto_app 还是 ditto_interfaces。如果仍导入 ditto_interfaces，说明是未迁移的旧测试，也应删除或迁移。
 
 **Step 3: 删除整个 interfaces/tests/unit/services/ 目录**
 

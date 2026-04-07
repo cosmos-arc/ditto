@@ -15,35 +15,12 @@ from ditto_interfaces.cli.utils.output import (
     print_backfill_summary,
     print_ingestion_result,
 )
+from ditto_interfaces.cli.utils.params import CLIIngestOptions, run_instrument_ingest
 from ditto_interfaces.cli.utils.validation import (
     check_instrument_mode,
     validate_date_format,
     validate_instrument_params,
 )
-
-
-def _run_instrument_ingest(  # noqa: PLR0913
-    ctx: typer.Context,
-    dataset: str,
-    ticker: str | None,
-    standard_ticker: str | None,
-    instrument_id: int | None,
-    start: str | None,
-    end: str | None,
-    force: bool,
-) -> None:
-    """执行按标的摄取."""
-    with create_executor() as executor:
-        result = executor.ingest_by_instrument(
-            dataset=dataset,
-            ticker=ticker,
-            standard_ticker=standard_ticker,
-            instrument_id=instrument_id,
-            start_date=start or "",
-            end_date=end or "",
-            force=force,
-        )
-        print_ingestion_result(result, ctx.obj["verbose"])
 
 
 def create_instrument_command(
@@ -70,7 +47,7 @@ def create_instrument_command(
     """
     daily_impl = create_daily_command(dataset, description)
 
-    def command(  # noqa: PLR0913
+    def command(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer 注入
         ctx: typer.Context,
         date: str | None = typer.Argument(None, help="交易日期 (YYYY-MM-DD)"),
         ticker: str | None = typer.Option(
@@ -96,16 +73,15 @@ def create_instrument_command(
             date, ticker, standard_ticker, instrument_id, start, end
         )
         if check_instrument_mode(date, ticker, standard_ticker, instrument_id):
-            _run_instrument_ingest(
-                ctx,
-                dataset,
-                ticker,
-                standard_ticker,
-                instrument_id,
-                start,
-                end,
-                force,
+            params = CLIIngestOptions(
+                ticker=ticker,
+                standard_ticker=standard_ticker,
+                instrument_id=instrument_id,
+                start=start,
+                end=end,
+                force=force,
             )
+            run_instrument_ingest(dataset, params)
         else:
             return daily_impl(ctx, date or "", force)
 

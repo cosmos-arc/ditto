@@ -65,9 +65,9 @@ ditto_kernel/
 | `Exchange` | enums.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
 | `OrderSide` | enums.py | `StrEnum`（BUY/SELL） | Data, Engine |
 | `RunStatus` | enums.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | Data |
-| `DerivedRole` | specs.py | `StrEnum`（FACTOR/FEATURE/COMPOSITE） | Analytics, Engine |
+| `DerivedRole` | specs.py | `StrEnum`（FEATURE/FACTOR/SIGNAL） | Analytics, Engine |
 | `DerivedSpec` | specs.py | frozen dataclass | Analytics, Engine |
-| `MaterializationProfile` | specs.py | `StrEnum`（SERIES/STATE） | Analytics, Engine |
+| `MaterializationProfile` | specs.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Engine |
 | `TimeSpec` | specs.py | frozen dataclass | Analytics, Engine |
 | `ExecutionPolicy` | specs.py | frozen dataclass（含默认值） | Analytics, Engine |
 | `CalendarId` | specs.py | `Literal["cn_stock"]` | Analytics |

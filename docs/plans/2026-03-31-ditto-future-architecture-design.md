@@ -784,10 +784,10 @@ provider raw payload
 | `packages/data/services/metadata*` | `packages/metadata/*` | 语义 owner 回归 |
 | `packages/data/services/market*` | `packages/market/*` | 语义 owner 回归 |
 | `packages/data/sources/*` | `packages/integration/sources/*` | 外部世界 ACL |
-| `apps/port/services/*` | `packages/application/*` | application 收口 |
-| `apps/port/api/*` | `apps/api/*` | 入口适配 |
-| `apps/port/cli/*` | `apps/cli/*` | 入口适配 |
-| `apps/port/jobs/*` | `apps/jobs/*` | 入口适配 |
+| `interfaces/services/*` | `packages/application/*` | application 收口 |
+| `interfaces/api/*` | `apps/api/*` | 入口适配 |
+| `interfaces/cli/*` | `apps/cli/*` | 入口适配 |
+| `interfaces/jobs/*` | `apps/jobs/*` | 入口适配 |
 
 ---
 
@@ -816,7 +816,7 @@ provider raw payload
 
 目标：
 
-- 从现有 `apps/port/services` 中提炼真正的 application 逻辑
+- 从现有 `interfaces/services` 中提炼真正的 application 逻辑
 - 把回测编排、研究编排、摄取编排收口到 `packages/application`
 
 此阶段不着急改大目录名。

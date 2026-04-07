@@ -6,6 +6,7 @@ InstrumentService - 证券元数据子服务.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import polars as pl
@@ -40,48 +41,43 @@ from ditto_data.storage.metadata.instrument import (
 )
 
 
+@dataclass(frozen=True)
+class InstrumentServiceDeps:
+    """InstrumentService 依赖聚合 — 减少构造参数数量."""
+
+    instrument_reader: InstrumentReader
+    instrument_writer: InstrumentWriter
+    name_history_reader: NameHistoryReader
+    name_history_writer: NameHistoryWriter
+    industry_reader: IndustryReader
+    industry_writer: IndustryWriter
+    industry_mapping_reader: IndustryMappingReader
+    industry_mapping_writer: IndustryMappingWriter
+    instrument_id_allocator: InstrumentIdAllocator
+    exchange_transformers: ExchangeTransformers
+
+
 class InstrumentService:
     """证券元数据子服务."""
 
-    def __init__(  # noqa: PLR0913
-        self,
-        instrument_reader: InstrumentReader,
-        instrument_writer: InstrumentWriter,
-        name_history_reader: NameHistoryReader,
-        name_history_writer: NameHistoryWriter,
-        industry_reader: IndustryReader,
-        industry_writer: IndustryWriter,
-        industry_mapping_reader: IndustryMappingReader,
-        industry_mapping_writer: IndustryMappingWriter,
-        instrument_id_allocator: InstrumentIdAllocator,
-        exchange_transformers: ExchangeTransformers,
-    ) -> None:
+    def __init__(self, deps: InstrumentServiceDeps) -> None:
         """
         初始化 InstrumentService.
 
         Args:
-            instrument_reader: 证券主数据读取器.
-            instrument_writer: 证券主数据写入器.
-            name_history_reader: 证券名称变更历史读取器.
-            name_history_writer: 证券名称变更历史写入器.
-            industry_reader: 行业主数据读取器.
-            industry_writer: 行业主数据写入器.
-            industry_mapping_reader: 行业映射读取器.
-            industry_mapping_writer: 行业映射写入器.
-            instrument_id_allocator: instrument_id 分配器.
-            exchange_transformers: 交易所转换器工厂.
+            deps: 证券元数据服务依赖聚合.
 
         """
-        self._instrument_reader = instrument_reader
-        self._instrument_writer = instrument_writer
-        self._name_history_reader = name_history_reader
-        self._name_history_writer = name_history_writer
-        self._industry_reader = industry_reader
-        self._industry_writer = industry_writer
-        self._industry_mapping_reader = industry_mapping_reader
-        self._industry_mapping_writer = industry_mapping_writer
-        self._instrument_id_allocator = instrument_id_allocator
-        self._exchange_transformers = exchange_transformers
+        self._instrument_reader = deps.instrument_reader
+        self._instrument_writer = deps.instrument_writer
+        self._name_history_reader = deps.name_history_reader
+        self._name_history_writer = deps.name_history_writer
+        self._industry_reader = deps.industry_reader
+        self._industry_writer = deps.industry_writer
+        self._industry_mapping_reader = deps.industry_mapping_reader
+        self._industry_mapping_writer = deps.industry_mapping_writer
+        self._instrument_id_allocator = deps.instrument_id_allocator
+        self._exchange_transformers = deps.exchange_transformers
 
     # ============ Identity 解析 ============
 
@@ -146,56 +142,18 @@ class InstrumentService:
         return self._instrument_reader.get_by_instrument_id(instrument_id)
 
     @traced("metadata.instrument.find_securities")
-    def find_securities(  # noqa: PLR0913
-        self,
-        query: SecurityQuery | None = None,
-        *,
-        instrument_ids: list[int] | None = None,
-        source_tickers: list[str] | None = None,
-        source: str = "tushare",
-        asset_class: str | None = None,
-        exchange: str | None = None,
-        is_active: bool | None = True,
-        asof: str | None = None,
-        min_list_days: int | None = None,
-    ) -> pl.DataFrame:
+    def find_securities(self, query: SecurityQuery) -> pl.DataFrame:
         """
         多维查询证券数据.
 
-        支持两种调用方式：
-        1. 传入 SecurityQuery 对象
-        2. 传入独立的关键字参数（向后兼容）
-
         Args:
             query: SecurityQuery 查询参数对象。
-            instrument_ids: 过滤 instrument_id 列表.
-            source_tickers: 过滤源代码列表.
-            source: 数据源标识.
-            asset_class: 过滤资产类别.
-            exchange: 过滤交易所.
-            is_active: 过滤活跃状态.
-            asof: 时间点日期.
-            min_list_days: 最低上市天数（需配合 asof 使用）.
 
         Returns:
             证券数据 DataFrame.
 
         """
-        if query is not None:
-            return self._instrument_reader.find_securities(query)
-
-        return self._instrument_reader.find_securities(
-            SecurityQuery(
-                instrument_ids=instrument_ids,
-                source_tickers=source_tickers,
-                source=source,
-                asset_class=asset_class,
-                exchange=exchange,
-                is_active=is_active,
-                asof=asof,
-                min_list_days=min_list_days,
-            ),
-        )
+        return self._instrument_reader.find_securities(query)
 
     @traced("metadata.instrument.list_instrument_ids")
     def list_instrument_ids(

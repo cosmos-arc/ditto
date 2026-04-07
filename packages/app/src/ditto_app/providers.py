@@ -17,6 +17,7 @@ from dishka import Provider, Scope, provide
 # Data 层依赖（由更底层的 Provider 注册，此处仅声明类型）
 # ---------------------------------------------------------------------------
 from ditto_analytics.compile_cache import SQLiteCompileCache
+from ditto_data import SQLiteClient
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.providers.provider import ServiceBackedDataProvider
 from ditto_data.quality import QualityEngine
@@ -49,7 +50,6 @@ from ditto_data.services.strategy.strategy_catalog_service import (
 from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunService as StrategyRunLifecycleService,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 # ---------------------------------------------------------------------------
 # App Builder 层
@@ -111,7 +111,7 @@ class AppQueryProvider(Provider):
         self,
         market_service: MarketService,
     ) -> ForwardReturnService:
-        """Forward return computation service."""
+        """前向收益率计算服务."""
         return ForwardReturnService(market_service=market_service)
 
     @provide
@@ -119,7 +119,7 @@ class AppQueryProvider(Provider):
         self,
         derived_query_service: DerivedQueryService,
     ) -> DerivedQueryFacade:
-        """Derived query use-case facade."""
+        """衍生数据查询用例 facade."""
         return DerivedQueryFacade(
             service=derived_query_service,
         )
@@ -129,7 +129,7 @@ class AppQueryProvider(Provider):
         self,
         market_service: MarketService,
     ) -> MarketQueryFacade:
-        """Market data query facade — hides internal query types."""
+        """行情数据查询 facade — 隐藏内部查询类型."""
         return MarketQueryFacade(market_service=market_service)
 
     @provide
@@ -138,7 +138,7 @@ class AppQueryProvider(Provider):
         source_service: SourceService,
         metadata_service: MetadataService,
     ) -> SourceQueryFacade:
-        """Source data query facade — hides Dataset enum and service wiring."""
+        """数据源查询 facade — 隐藏 Dataset 枚举和服务接线."""
         return SourceQueryFacade(
             source_service=source_service,
             metadata_service=metadata_service,
@@ -153,7 +153,7 @@ class AppQueryProvider(Provider):
         research_artifact_service: ResearchArtifactService,
         settings: DataStoreSettings,
     ) -> ResearchDatasetFacade:
-        """Research dataset snapshot builder facade."""
+        """研究数据集快照构建 facade."""
         return ResearchDatasetFacade(
             metadata_service=metadata_service,
             research_catalog_service=research_catalog_service,
@@ -169,7 +169,7 @@ class AppQueryProvider(Provider):
         self,
         metadata_service: MetadataService,
     ) -> MetadataQueryFacade:
-        """Metadata query facade — hides SecurityQuery and internal types."""
+        """元数据查询 facade — 隐藏 SecurityQuery 和内部类型."""
         return MetadataQueryFacade(metadata_service=metadata_service)
 
     @provide
@@ -177,7 +177,7 @@ class AppQueryProvider(Provider):
         self,
         capital_service: CapitalService,
     ) -> CapitalQueryFacade:
-        """Capital query facade — hides CQRS port types."""
+        """资金查询 facade — 隐藏 CQRS 端口类型."""
         return CapitalQueryFacade(capital_service=capital_service)
 
     @provide
@@ -185,7 +185,7 @@ class AppQueryProvider(Provider):
         self,
         fundamental_service: FundamentalService,
     ) -> FundamentalQueryFacade:
-        """Fundamental query facade — hides CQRS port types."""
+        """基本面查询 facade — 隐藏 CQRS 端口类型."""
         return FundamentalQueryFacade(fundamental_service=fundamental_service)
 
     @provide
@@ -193,7 +193,7 @@ class AppQueryProvider(Provider):
         self,
         macro_service: MacroService,
     ) -> MacroQueryFacade:
-        """Macro query facade — hides MacroQuery and enum types."""
+        """宏观查询 facade — 隐藏 MacroQuery 和枚举类型."""
         return MacroQueryFacade(macro_service=macro_service)
 
     @provide
@@ -201,7 +201,7 @@ class AppQueryProvider(Provider):
         self,
         market_service: MarketService,
     ) -> FXQueryFacade:
-        """FX query facade — hides FX code mapping and asset class."""
+        """外汇查询 facade — 隐藏 FX 代码映射和资产类别."""
         return FXQueryFacade(market_service=market_service)
 
     @provide
@@ -209,7 +209,7 @@ class AppQueryProvider(Provider):
         self,
         market_service: MarketService,
     ) -> CommodityQueryFacade:
-        """Commodity query facade — hides Commodity/VIX mapping and asset class."""
+        """商品查询 facade — 隐藏 Commodity/VIX 映射和资产类别."""
         return CommodityQueryFacade(market_service=market_service)
 
 
@@ -228,7 +228,7 @@ class AppProcessProvider(Provider):
         self,
         sqlite_client: SQLiteClient,
     ) -> SQLiteCompileCache:
-        """SQLite-backed compile cache service."""
+        """基于 SQLite 的编译缓存服务."""
         return SQLiteCompileCache(sqlite_client)
 
     @provide
@@ -238,7 +238,7 @@ class AppProcessProvider(Provider):
         market_service: MarketService,
         settings: DataStoreSettings,
     ) -> RuntimeDerivedInputProvider:
-        """Runtime input provider backed by truth-layer parquet and artifacts."""
+        """基于 truth-layer parquet 和制品的运行时输入提供器."""
         return RuntimeDerivedInputProvider(
             catalog_service=derived_catalog_service,
             market_service=market_service,
@@ -255,7 +255,7 @@ class AppProcessProvider(Provider):
         metadata_service: MetadataService,
         settings: DataStoreSettings,
     ) -> DerivedMaterializationOrchestrator:
-        """Unified materialization orchestrator."""
+        """统一物化编排器."""
         return DerivedMaterializationOrchestrator(
             catalog_service=derived_catalog_service,
             compile_cache_service=compile_cache_service,
@@ -273,7 +273,7 @@ class AppProcessProvider(Provider):
         derived_catalog_service: DerivedCatalogService,
         derived_materialization_orchestrator: DerivedMaterializationOrchestrator,
     ) -> InvalidationCascadeOrchestrator:
-        """BFS-based invalidation cascade with cycle guard and state machine."""
+        """基于 BFS 的失效级联，带环检测和状态机."""
         return InvalidationCascadeOrchestrator(
             catalog_service=derived_catalog_service,
             materialization_service=derived_materialization_orchestrator,
@@ -287,7 +287,7 @@ class AppProcessProvider(Provider):
         shadow_slot_service: DerivedShadowSlotService,
         settings: DataStoreSettings,
     ) -> DerivedPublicationFacade:
-        """Publication orchestration facade."""
+        """发布编排 facade."""
         return DerivedPublicationFacade(
             catalog_service=derived_catalog_service,
             artifact_reader=DerivedArtifactReader(

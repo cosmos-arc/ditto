@@ -42,10 +42,10 @@ ditto-port → ditto-engine, ditto-datahub, ...
 - [ ] Task 2: 清理陈旧目录 `[S]`
   - 验收: 目录不存在 + `pixi run -e dev check` 无新增失败
   - 文件/目录:
-    - `packages/core/src/ditto_engine/quality/`（含 checkers/，零 .py 文件）
-    - `packages/core/src/ditto_engine/engine/expression/`（零 .py 文件）
-    - `packages/core/src/ditto_engine/engine/materialization/`（零 .py 文件）
-    - `packages/core/src/ditto_kernel.egg-info/`（改名遗留）
+    - `packages/engine/src/ditto_engine/quality/`（含 checkers/，零 .py 文件）
+    - `packages/engine/src/ditto_engine/engine/expression/`（零 .py 文件）
+    - `packages/engine/src/ditto_engine/engine/materialization/`（零 .py 文件）
+    - `packages/engine/src/ditto_kernel.egg-info/`（改名遗留）
   - 操作: `rm -rf` 四个目录
 
 - [ ] Task 3: pixi install + 验证 `[S]`

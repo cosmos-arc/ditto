@@ -127,7 +127,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
             return result
 
     @traced("source.tushare.fetch_indicators")
-    def fetch_indicators(  # noqa: C901, PLR0912
+    def fetch_indicators(
         self,
         codes: list[str],
         start_date: str,
@@ -154,65 +154,15 @@ class MacroTushareAdapter(BaseTushareAdapter):
             end_date=end_date,
         )
 
-        # Filter valid indicators and group by API name for deduplication
-        valid_indicators: list[TushareMacroIndicator] = []
-        for code in codes:
-            indicator = get_tushare_macro_indicator(code)
-            if indicator is not None:
-                valid_indicators.append(indicator)
-
-        if not valid_indicators:
+        api_to_indicators = self._resolve_indicators_by_api(codes)
+        if not api_to_indicators:
             return empty_macro_dataframe()
-
-        # Group indicators by API name
-        api_to_indicators: dict[str, list[TushareMacroIndicator]] = defaultdict(list)
-        for indicator in valid_indicators:
-            api_to_indicators[indicator.api_name].append(indicator)
 
         compact_start = start_date.replace("-", "")
         compact_end = end_date.replace("-", "")
-        results: list[pl.DataFrame] = []
-
-        # Fetch from each API
-        for api_name, indicators in api_to_indicators.items():
-            # Collect all fields needed for this API
-            fields = list({ind.field for ind in indicators})
-            # Determine date column based on frequency
-            frequency = indicators[0].frequency
-            if frequency == "daily":
-                date_field = "date"
-            elif frequency == "monthly":
-                date_field = "month"
-            elif frequency == "quarterly":
-                date_field = "quarter"
-            else:
-                date_field = "date"
-
-            all_fields = [date_field, *fields]
-
-            with tushare_fetch_error_handler("macro_indicators", api_name):
-                response = self._client.query(
-                    api_name=api_name,
-                    fields=",".join(all_fields),
-                    start_date=compact_start,
-                    end_date=compact_end,
-                )
-
-                if response.is_empty():
-                    continue
-
-                # Process each indicator
-                for indicator in indicators:
-                    if indicator.field not in response.columns:
-                        continue
-
-                    df = self._transform_to_schema(
-                        response,
-                        indicator,
-                        date_field,
-                    )
-                    if df.height > 0:
-                        results.append(df)
+        results = self._fetch_all_api_groups(
+            api_to_indicators, compact_start, compact_end
+        )
 
         if not results:
             return empty_macro_dataframe()
@@ -224,6 +174,122 @@ class MacroTushareAdapter(BaseTushareAdapter):
             row_count=len(result),
         )
         return result
+
+    @staticmethod
+    def _resolve_indicators_by_api(
+        codes: list[str],
+    ) -> dict[str, list[TushareMacroIndicator]]:
+        """
+        Resolve indicator codes to valid indicators grouped by API name.
+
+        Args:
+            codes: List of unified indicator codes.
+
+        Returns:
+            Mapping from API name to list of indicators. Empty dict if no valid codes.
+
+        """
+        valid_indicators: list[TushareMacroIndicator] = []
+        for code in codes:
+            indicator = get_tushare_macro_indicator(code)
+            if indicator is not None:
+                valid_indicators.append(indicator)
+
+        if not valid_indicators:
+            return {}
+
+        api_to_indicators: dict[str, list[TushareMacroIndicator]] = defaultdict(list)
+        for indicator in valid_indicators:
+            api_to_indicators[indicator.api_name].append(indicator)
+        return dict(api_to_indicators)
+
+    def _fetch_all_api_groups(
+        self,
+        api_to_indicators: dict[str, list[TushareMacroIndicator]],
+        compact_start: str,
+        compact_end: str,
+    ) -> list[pl.DataFrame]:
+        """
+        Fetch and transform indicators from each API group.
+
+        Args:
+            api_to_indicators: Mapping from API name to indicators.
+            compact_start: Compact start date (YYYYMMDD).
+            compact_end: Compact end date (YYYYMMDD).
+
+        Returns:
+            List of non-empty transformed DataFrames.
+
+        """
+        results: list[pl.DataFrame] = []
+
+        for api_name, indicators in api_to_indicators.items():
+            dfs = self._fetch_single_api(
+                api_name, indicators, compact_start, compact_end
+            )
+            results.extend(dfs)
+
+        return results
+
+    def _fetch_single_api(
+        self,
+        api_name: str,
+        indicators: list[TushareMacroIndicator],
+        compact_start: str,
+        compact_end: str,
+    ) -> list[pl.DataFrame]:
+        """
+        Fetch indicators from a single API and transform results.
+
+        Args:
+            api_name: Tushare API name.
+            indicators: Indicators to fetch from this API.
+            compact_start: Compact start date (YYYYMMDD).
+            compact_end: Compact end date (YYYYMMDD).
+
+        Returns:
+            List of non-empty transformed DataFrames for this API.
+
+        """
+        fields = list({ind.field for ind in indicators})
+        date_field = self._resolve_date_field(indicators[0].frequency)
+        all_fields = [date_field, *fields]
+
+        with tushare_fetch_error_handler("macro_indicators", api_name):
+            response = self._client.query(
+                api_name=api_name,
+                fields=",".join(all_fields),
+                start_date=compact_start,
+                end_date=compact_end,
+            )
+
+            if response.is_empty():
+                return []
+
+            results: list[pl.DataFrame] = []
+            for indicator in indicators:
+                if indicator.field not in response.columns:
+                    continue
+                df = self._transform_to_schema(response, indicator, date_field)
+                if df.height > 0:
+                    results.append(df)
+            return results
+
+    @staticmethod
+    def _resolve_date_field(frequency: str) -> str:
+        """
+        Map indicator frequency to the Tushare date column name.
+
+        Args:
+            frequency: Data frequency (daily, monthly, quarterly).
+
+        Returns:
+            Column name used by Tushare for dates.
+
+        """
+        return {"daily": "date", "monthly": "month", "quarterly": "quarter"}.get(
+            frequency, "date"
+        )
 
     def _transform_to_schema(
         self,

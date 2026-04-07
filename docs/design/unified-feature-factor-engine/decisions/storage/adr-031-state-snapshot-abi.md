@@ -33,7 +33,7 @@ STATE 类因子（B 类）需要维护状态快照，支持：
 ## StateSnapshotStrategy 枚举
 
 ```python
-# packages/core/src/ditto_kernel/specs.py
+# packages/kernel/src/ditto_kernel/specs.py
 
 from enum import Enum
 
@@ -333,7 +333,7 @@ class KvrocksStateWriter:
 ### 自动选择逻辑
 
 ```python
-# packages/core/src/ditto_kernel/specs.py
+# packages/kernel/src/ditto_kernel/specs.py
 
 class FactorSpec(BaseSpec):
     # ... 现有字段 ...
@@ -379,7 +379,7 @@ class FactorSpec(BaseSpec):
 ## FactorSpec 扩展
 
 ```python
-# packages/core/src/ditto_kernel/specs.py
+# packages/kernel/src/ditto_kernel/specs.py
 
 class FactorSpec(BaseSpec):
     id: str

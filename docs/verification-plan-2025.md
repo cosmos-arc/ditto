@@ -1845,7 +1845,7 @@ echo "=== API 验证完成 ==="
 | P021 | 🟡 脚本 | CLI Query 命令参数错误 | ✅ 已修复 |
 
 **P018 详情 - 交易日历只摄入单天数据**:
-- **位置**: `apps/port/src/ditto_interfaces/services/ingestion/coordinator.py:758-760`
+- **位置**: `interfaces/src/ditto_interfaces/services/ingestion/coordinator.py:758-760`
 - **原因**: `fetch_calendar(trade_date, trade_date)` 传入相同的开始和结束日期
 - **修复**: 使用整年日期范围 `f"{year}-01-01"` 到 `f"{year}-12-31"`
 - **修复代码**:
@@ -2289,13 +2289,13 @@ docs/verification-results-YYYYMMDD-HHMMSS.md
    - 问题：指数行情文件路径错误为 `data/market/index/bars/market/index/bars/2025.parquet`
    - 原因：`MarketProvider` 中 `index_bars_writer` 的 `data_root` 参数重复包含了 `market/index/bars`
    - 修复：将 `index_bars_reader/writer` 改为使用 `settings.data_root`
-   - 文件：`apps/port/src/ditto_interfaces/registry/datahub/market.py`
+   - 文件：`packages/data/src/ditto_data/di/market.py`
 
 2. **FX/Commodity Writer 未配置** (已修复)
    - 问题：外汇和大宗商品数据摄入失败，错误 `FxBarsWriter not configured`
    - 原因：`MarketProvider` 中缺少 FX 和 Commodity 的 Reader/Writer Provider
    - 修复：添加 `FxBarsReader/Writer` 和 `CommodityBarsReader/Writer` 的 Provider
-   - 文件：`apps/port/src/ditto_interfaces/registry/datahub/market.py`
+   - 文件：`packages/data/src/ditto_data/di/market.py`
 
 **已知限制**：
 

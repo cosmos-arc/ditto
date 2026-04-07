@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+from ditto_app._reexports import (
+    BackfillResult,
+    Dataset,
+    IngestionResult,
+    InstrumentIngestParams,
+    ResultCounts,
+    RetryResult,
+)
 from ditto_app.config import (
     INGESTION_SPECS,
     DatasetSpec,
@@ -22,14 +30,6 @@ from ditto_app.query.derived import (
     LatestDerivedRequest,
     SeriesDerivedRequest,
     SourceCompareRequest,
-)
-from ditto_app.types import (
-    BackfillResult,
-    Dataset,
-    IngestionResult,
-    InstrumentIngestParams,
-    ResultCounts,
-    RetryResult,
 )
 from ditto_kernel.enums import AssetClass
 

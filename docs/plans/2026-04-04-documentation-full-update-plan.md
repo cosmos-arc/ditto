@@ -23,9 +23,9 @@
 
 **当前问题**:
 - 架构图仍为旧三层（ditto-core / ditto-datahub / ditto-infra）
-- 项目结构显示 `apps/port/` → 应为 `interfaces/`
+- 项目结构显示 `interfaces/` → 应为 `interfaces/`
 - 引用 `packages/core/` → 应为 `packages/engine/`
-- 引用 `packages/datahub/` → 应为 `packages/data/`
+- 引用 `packages/data/` → 应为 `packages/data/`
 - 缺少 packages/app/、packages/analytics/、packages/kernel/ 的描述
 - 相关文档链接指向不存在文件
 - 版本停留在 v0.9.0 Phase 2
@@ -57,7 +57,7 @@
 
 **当前问题**:
 - 标题为 "ditto-port" → 应为 "ditto-interfaces"
-- 目录结构显示 `apps/port/src/ditto_interfaces/` → 应为 `interfaces/src/ditto_interfaces/`
+- 目录结构显示 `interfaces/src/ditto_interfaces/` → 应为 `interfaces/src/ditto_interfaces/`
 - 架构图和服务描述全基于旧路径
 - services 描述中业务逻辑已迁入 `ditto_app`
 

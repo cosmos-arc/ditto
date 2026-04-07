@@ -191,7 +191,7 @@ builders -X-> query / write         # 只装配，不查询不写入
 
 - **v2 为执行基线**：5 包结构对应当前体量，不过度模块化。v3 的设计约束作为纪律文档融入。
 - **data 统一不拆**：metadata/market 的纠缠是实现层面交叉访问，不是概念混淆。用 importlinter 内部约束 + query 统一对外暴露解决。
-- **app 上升到 packages/**：app 是业务包（有依赖、有 DI、有业务逻辑），不是部署入口。部署入口是 apps/interfaces/。
+- **app 上升到 packages/**：app 是业务包（有依赖、有 DI、有业务逻辑），不是部署入口。部署入口是 interfaces/。
 - **Runtime Contract 精简为 5 个**：engine 侧 3 个（SessionContext, MarketSlice, AccountSnapshot）+ research 侧 2 个（ResearchDataset, EvaluationInput）。子模块内部 contract 不上升。
 - **Orchestrator 异常 = abort + 审计**：简单可靠，适合当前回测场景。未来实盘可演进为可配置策略。
 - **EventBus 基础隔离**：成本极低（try/except + log），防止级联故障。

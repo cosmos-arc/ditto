@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_app.types import AmbiguousTickerError, NoIdentifierProvidedError
+from ditto_app._reexports import AmbiguousTickerError, NoIdentifierProvidedError
 from ditto_interfaces.api.utils.identifier import resolve_identifier_for_api
 from fastapi import HTTPException
 

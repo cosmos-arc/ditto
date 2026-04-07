@@ -6,7 +6,10 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-from ditto_app.process.ingestion_coordinator import IngestionCoordinator
+from ditto_app.process.ingestion_coordinator import (
+    IngestionCoordinator,
+    MarketServices,
+)
 from ditto_data.models.ingestion import (
     IngestionLog,
     IngestionStatus,
@@ -80,7 +83,7 @@ def mock_metadata_service():
 
 
 @pytest.fixture
-def mock_market_service():
+def mock_market_write_service():
     """创建 Mock MarketService."""
     service = MagicMock()
     service.save_bars.return_value = 1
@@ -133,7 +136,7 @@ def mock_source():
 @pytest.fixture
 def coordinator(
     mock_metadata_service,
-    mock_market_service,
+    mock_market_write_service,
     mock_fundamental_service,
     mock_capital_service,
     mock_macro_service,
@@ -143,7 +146,10 @@ def coordinator(
     """创建 IngestionCoordinator 实例."""
     return IngestionCoordinator(
         metadata_service=mock_metadata_service,
-        market_service=mock_market_service,
+        market_services=MarketServices(
+            query=mock_market_write_service,
+            write=mock_market_write_service,
+        ),
         fundamental_service=mock_fundamental_service,
         capital_service=mock_capital_service,
         macro_service=mock_macro_service,
@@ -163,7 +169,7 @@ class TestIngestByInstrument:
         coordinator,
         mock_metadata_service,
         mock_source,
-        mock_market_service,
+        mock_market_write_service,
         mock_ingestion_log_service,
     ) -> None:
         """成功通过 ticker 按标的摄取数据."""
@@ -192,7 +198,7 @@ class TestIngestByInstrument:
             }
         )
         mock_source.fetch_stock_daily.return_value = source_df
-        mock_market_service.save_bars.return_value = 3
+        mock_market_write_service.save_bars.return_value = 3
         mock_ingestion_log_service.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
@@ -227,7 +233,7 @@ class TestIngestByInstrument:
         coordinator,
         mock_metadata_service,
         mock_source,
-        mock_market_service,
+        mock_market_write_service,
         mock_ingestion_log_service,
     ) -> None:
         """成功通过 instrument_id 按标的摄取数据."""
@@ -247,7 +253,7 @@ class TestIngestByInstrument:
             }
         )
         mock_source.fetch_stock_daily.return_value = source_df
-        mock_market_service.save_bars.return_value = 1
+        mock_market_write_service.save_bars.return_value = 1
         mock_ingestion_log_service.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
@@ -275,7 +281,7 @@ class TestIngestByInstrument:
         coordinator,
         mock_metadata_service,
         mock_source,
-        mock_market_service,
+        mock_market_write_service,
         mock_ingestion_log_service,
     ) -> None:
         """成功通过 standard_ticker 按标的摄取数据."""
@@ -295,7 +301,7 @@ class TestIngestByInstrument:
             }
         )
         mock_source.fetch_stock_daily.return_value = source_df
-        mock_market_service.save_bars.return_value = 1
+        mock_market_write_service.save_bars.return_value = 1
         mock_ingestion_log_service.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",

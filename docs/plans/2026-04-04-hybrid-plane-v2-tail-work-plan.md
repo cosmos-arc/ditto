@@ -141,7 +141,7 @@ pixi run -e dev check
 - Modify: `packages/engine/src/ditto_engine/backtest/data_feed.py`
 - Modify: `packages/data/src/ditto_data/query/provider.py`
 - Modify: `packages/data/src/ditto_data/provider.py`
-- Modify: `apps/interfaces/src/ditto_interfaces/testing.py`
+- Modify: `interfaces/src/ditto_interfaces/testing.py`
 
 **清理重点：**
 - `kernel.DataProvider` 旧表述
@@ -167,10 +167,10 @@ pixi run -e dev check
 
 **Files:**
 - Modify: `.importlinter`
-- Modify: `apps/interfaces/src/ditto_interfaces/registry/contexts/bundle.py`
-- Modify: `apps/interfaces/src/ditto_interfaces/registry/contexts/ingestion.py`
-- Modify: `apps/interfaces/src/ditto_interfaces/registry/infra/config.py`
-- Modify: `apps/interfaces/CLAUDE.md`
+- Modify: `interfaces/src/ditto_interfaces/registry/contexts/bundle.py`
+- Modify: `interfaces/src/ditto_interfaces/registry/contexts/ingestion.py`
+- Modify: `interfaces/src/ditto_interfaces/registry/infra/config.py`
+- Modify: `interfaces/CLAUDE.md`
 
 **推荐决策：**
 - 推荐保留 registry 范围豁免，不再为“形式上 100% 纯净”增加无价值包装层
@@ -194,7 +194,7 @@ pixi run -e dev arch-check
 **Files:**
 - Modify: `docs/plans/2026-03-30-architecture-hybrid-plane-design.md`
 - Modify: `docs/adr/0006-hybrid-plane-v2-accepted-deviations.md`
-- Modify: `apps/interfaces/src/ditto_interfaces/registry/container.py`
+- Modify: `interfaces/src/ditto_interfaces/registry/container.py`
 - Modify: `packages/app/src/ditto_app/providers.py`
 - Modify: `packages/data/src/ditto_data/di/__init__.py`
 

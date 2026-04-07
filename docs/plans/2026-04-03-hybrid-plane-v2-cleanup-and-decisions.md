@@ -23,8 +23,8 @@ Hybrid Plane v2 架构重构已基本完成（Phase 0-5），但源码审计发�
 - `rm -rf packages/core/`
 - 编辑 `pyright.tests.json`：移除 `extraPaths` 中的 3 个过期路径
   - `"packages/core/src"` (L7)
-  - `"packages/datahub/src"` (L9)
-  - `"apps/port/src"` (L12)
+  - `"packages/data/src"` (L9)
+  - `"interfaces/src"` (L12)
 - 清理 `.claude/settings.local.json`：移除引用 `packages/core/data/sqlite/` 的 bash 权限条目 (L78-79)
 
 **验收**：`pixi run -e dev lint && pixi run -e dev type` 通过；`ls packages/core` 报错
@@ -37,8 +37,8 @@ Hybrid Plane v2 架构重构已基本完成（Phase 0-5），但源码审计发�
 
 ### Task 1.3: 删除 interfaces registry 中的鬼目录 `[S]`
 
-- `rm -rf apps/interfaces/src/ditto_interfaces/registry/core/`（仅含 `__pycache__`）
-- `rm -rf apps/interfaces/src/ditto_interfaces/registry/datahub/`（仅含 `__pycache__`）
+- `rm -rf interfaces/src/ditto_interfaces/registry/core/`（仅含 `__pycache__`）
+- `rm -rf interfaces/src/ditto_interfaces/registry/datahub/`（仅含 `__pycache__`）
 
 **验收**：`pixi run -e dev arch-check` 通过
 

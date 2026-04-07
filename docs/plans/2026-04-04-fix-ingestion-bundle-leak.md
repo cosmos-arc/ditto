@@ -14,7 +14,7 @@
 
 ## Step 1: 创建 QueryContext + query context manager
 
-**新建** `apps/interfaces/src/ditto_interfaces/registry/contexts/query.py`
+**新建** `interfaces/src/ditto_interfaces/registry/contexts/query.py`
 
 ```python
 @dataclass(frozen=True)
@@ -111,16 +111,16 @@ class IngestionBundle:
 
 | 文件 | 操作 |
 |------|------|
-| `apps/interfaces/src/ditto_interfaces/registry/contexts/query.py` | **新建** |
-| `apps/interfaces/src/ditto_interfaces/registry/contexts/bundle.py` | 修改 |
-| `apps/interfaces/src/ditto_interfaces/registry/contexts/ingestion.py` | 修改 |
-| `apps/interfaces/src/ditto_interfaces/registry/contexts/__init__.py` | 修改 |
-| `apps/interfaces/src/ditto_interfaces/cli/context.py` | 修改 |
-| `apps/interfaces/src/ditto_interfaces/cli/commands/query/*.py` (5 文件) | 修改 |
-| `apps/interfaces/src/ditto_interfaces/jobs/flows/daily.py` | 修改 |
-| `apps/interfaces/src/ditto_interfaces/jobs/flows/backfill.py` | 修改 |
-| `apps/interfaces/src/ditto_interfaces/jobs/flows/repair.py` | 修改 |
-| `apps/interfaces/tests/` 相关测试文件 | 修改 |
+| `interfaces/src/ditto_interfaces/registry/contexts/query.py` | **新建** |
+| `interfaces/src/ditto_interfaces/registry/contexts/bundle.py` | 修改 |
+| `interfaces/src/ditto_interfaces/registry/contexts/ingestion.py` | 修改 |
+| `interfaces/src/ditto_interfaces/registry/contexts/__init__.py` | 修改 |
+| `interfaces/src/ditto_interfaces/cli/context.py` | 修改 |
+| `interfaces/src/ditto_interfaces/cli/commands/query/*.py` (5 文件) | 修改 |
+| `interfaces/src/ditto_interfaces/jobs/flows/daily.py` | 修改 |
+| `interfaces/src/ditto_interfaces/jobs/flows/backfill.py` | 修改 |
+| `interfaces/src/ditto_interfaces/jobs/flows/repair.py` | 修改 |
+| `interfaces/tests/` 相关测试文件 | 修改 |
 
 ## 验证
 
@@ -128,5 +128,5 @@ class IngestionBundle:
 pixi run -e dev check
 pixi run -e dev arch-check
 # interfaces src 中（除 registry/contexts/ingestion.py 外）不应有 ditto_data.services 引用
-grep -rn "ditto_data\.services" apps/interfaces/src/ --include="*.py" | grep -v registry/contexts/ingestion.py
+grep -rn "ditto_data\.services" interfaces/src/ --include="*.py" | grep -v registry/contexts/ingestion.py
 ```

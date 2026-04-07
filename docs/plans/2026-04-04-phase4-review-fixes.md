@@ -44,7 +44,7 @@ Task 8 (interfaces CLAUDE.md) → 无前置
   - 验收: CI yml 所有路径引用与当前目录结构一致
   - 文件: `.github/workflows/ci.yml`
   - 变更:
-    1. L149: `packages/datahub/tests/unit/` → `packages/data/tests/unit/` + `packages/engine/tests/unit/` + `packages/analytics/tests/unit/` + `packages/kernel/tests/unit/` + `packages/app/tests/unit/`
+    1. L149: `packages/data/tests/unit/` → `packages/data/tests/unit/` + `packages/engine/tests/unit/` + `packages/analytics/tests/unit/` + `packages/kernel/tests/unit/` + `packages/app/tests/unit/`
     2. L163: `--cov=apps` → 移除（pyproject.toml 已有 `--cov=packages --cov=interfaces`）
     3. L160: port 测试步骤保留 `interfaces/tests/unit/`
     4. L209-211: 构建步骤改为 `packages/infra`, `packages/engine`, `packages/data`, `packages/app`, `packages/analytics`, `packages/kernel`
@@ -55,8 +55,8 @@ Task 8 (interfaces CLAUDE.md) → 无前置
   - 变更:
     1. 架构图: 替换 `ditto-core`/`ditto-datahub`/`port` 为 `ditto-engine`/`ditto-data`/`ditto-interfaces` + 新增 `ditto-app`/`ditto-analytics`/`ditto-kernel`
     2. 依赖方向: `interfaces → app → engine → data → infra`
-    3. 项目结构: 删除 `apps/` 目录，用 `interfaces/` 替代；`packages/core/` → `packages/engine/`；`packages/datahub/` → `packages/data/`；新增 `packages/app/`/`packages/analytics/`/`packages/kernel/`
-    4. 文档链接: `packages/datahub/CLAUDE.md` → `packages/data/CLAUDE.md`；`apps/port/CLAUDE.md` → `interfaces/CLAUDE.md`
+    3. 项目结构: 删除 `apps/` 目录，用 `interfaces/` 替代；`packages/core/` → `packages/engine/`；`packages/data/` → `packages/data/`；新增 `packages/app/`/`packages/analytics/`/`packages/kernel/`
+    4. 文档链接: `packages/data/CLAUDE.md` → `packages/data/CLAUDE.md`；`interfaces/CLAUDE.md` → `interfaces/CLAUDE.md`
 
 ### Batch 2: Important（强烈建议）
 

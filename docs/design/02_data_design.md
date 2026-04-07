@@ -273,7 +273,7 @@ DATA_ROOT=data
 
 ```
 packages/
-  ditto-data-hub/
+  ditto-data/
     pyproject.toml
     README.md
 

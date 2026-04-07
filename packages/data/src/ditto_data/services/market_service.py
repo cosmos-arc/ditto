@@ -12,20 +12,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import Literal
+from typing import Any
 
 import polars as pl
 from ditto_infra.foundation import Metrics, logger, traced
-from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
-from ditto_data.ingestion.late_arrival import check_late_arrival
-from ditto_data.models import InstrumentIdRange, OnDuplicate
-from ditto_data.models.ingestion import (
-    DataLateArrivalPolicy,
-    LateArrivalCheckResult,
-)
-from ditto_data.services.ports import MarketReadPorts, MarketWritePorts
+from ditto_data.models import InstrumentIdRange
+from ditto_data.services.ports import MarketReadPorts
 
 
 class AdjType(Enum):
@@ -120,21 +114,15 @@ class MarketService:
     def __init__(
         self,
         read_ports: MarketReadPorts,
-        write_ports: MarketWritePorts,
-        file_lock: FileLockManager,
     ) -> None:
         """
         初始化 MarketService.
 
         Args:
             read_ports: Market 域读取端口（包含所有 Reader）.
-            write_ports: Market 域写入端口（包含所有 Writer）.
-            file_lock: 文件锁管理器（用于并发写入保护）.
 
         """
         self._read_ports = read_ports
-        self._write_ports = write_ports
-        self._file_lock = file_lock
 
     @traced("market.find_bars")
     def find_bars(self, query: MarketBarsQuery) -> pl.DataFrame:
@@ -263,9 +251,12 @@ class MarketService:
     def _query_constituents(self, query: MarketConstituentsQuery) -> pl.DataFrame:
         """执行指数成分股查询."""
         if self._read_ports.index_constituent is None:
-            raise NotImplementedError(
-                "IndexConstituentReader not configured. Please provide index_constituent when initializing MarketReadPorts.",  # noqa: E501
+            msg = (
+                "IndexConstituentReader not configured. "
+                "Please provide index_constituent when "
+                "initializing MarketReadPorts."
             )
+            raise NotImplementedError(msg)
 
         # 使用当前日期（如果未指定 asof）
         asof_date = query.asof or date.today().isoformat()
@@ -297,7 +288,7 @@ class MarketService:
 
         return df
 
-    def _load_bars_core(  # noqa: PLR0911
+    def _load_bars_core(
         self,
         instrument_ids: list[int],
         start: date | None,
@@ -320,44 +311,40 @@ class MarketService:
         start_str = start.isoformat() if start else None
         end_str = end.isoformat() if end else None
 
-        if asset_class == "stock":
-            return self._read_ports.stock_bars.read(
-                instrument_ids=instrument_ids,
-                start_date=start_str,
-                end_date=end_str,
-            )
-        elif asset_class == "etf":
-            return self._read_ports.etf_bars.read(
-                instrument_ids=instrument_ids,
-                start_date=start_str,
-                end_date=end_str,
-            )
-        elif asset_class == "index":
-            if self._read_ports.index_bars is None:
-                return pl.DataFrame()
-            return self._read_ports.index_bars.read(
-                instrument_ids=instrument_ids,
-                start_date=start_str,
-                end_date=end_str,
-            )
-        elif asset_class == "fx":
-            if self._read_ports.fx_bars is None:
-                return pl.DataFrame()
-            return self._read_ports.fx_bars.read(
-                instrument_ids=instrument_ids,
-                start_date=start_str,
-                end_date=end_str,
-            )
-        elif asset_class == "commodity":
-            if self._read_ports.commodity_bars is None:
-                return pl.DataFrame()
-            return self._read_ports.commodity_bars.read(
-                instrument_ids=instrument_ids,
-                start_date=start_str,
-                end_date=end_str,
-            )
-        else:
+        reader = self._get_bars_reader(asset_class)
+        if reader is None:
             return pl.DataFrame()
+
+        return reader.read(
+            instrument_ids=instrument_ids,
+            start_date=start_str,
+            end_date=end_str,
+        )
+
+    def _get_bars_reader(self, asset_class: str) -> Any:
+        """
+        获取指定资产类别的 K线读取器.
+
+        Args:
+            asset_class: 资产类别 ("stock", "etf", "index", "fx", "commodity").
+
+        Returns:
+            对应的 Reader 实例，如果未配置则返回 None.
+
+        """
+        # 必需端口：stock 和 etf 始终可用
+        if asset_class == "stock":
+            return self._read_ports.stock_bars
+        if asset_class == "etf":
+            return self._read_ports.etf_bars
+
+        # 可选端口：index / fx / commodity 可能未配置
+        optional_readers = {
+            "index": self._read_ports.index_bars,
+            "fx": self._read_ports.fx_bars,
+            "commodity": self._read_ports.commodity_bars,
+        }
+        return optional_readers.get(asset_class)
 
     def _resolve_instrument_ids_and_asset_class(
         self, query: MarketBarsQuery
@@ -401,9 +388,11 @@ class MarketService:
             # 验证显式 asset_class 与从 Instrument ID 检测出的类别是否一致
             detected = InstrumentIdRange.detect_asset_class(instrument_ids)
             if detected != asset_class:
-                raise ValueError(
-                    f"显式指定的资产类别 '{asset_class}' 与从 Instrument ID 检测出的类别 '{detected}' 不一致",  # noqa: E501
+                msg = (
+                    f"显式指定的资产类别 '{asset_class}' 与从 Instrument ID "
+                    f"检测出的类别 '{detected}' 不一致"
                 )
+                raise ValueError(msg)
         else:
             asset_class = InstrumentIdRange.detect_asset_class(instrument_ids)
 
@@ -807,246 +796,3 @@ class MarketService:
         )
 
         return df
-
-    @staticmethod
-    def _to_storage_columns(df: pl.DataFrame) -> pl.DataFrame:
-        """归一化列名到存储层约定。"""
-        return df
-
-    @staticmethod
-    def _map_on_duplicate(on_duplicate: OnDuplicate) -> OnDuplicate:
-        """归一化 OnDuplicate 枚举."""
-        return on_duplicate
-
-    @traced("market.save_bars")
-    def save_bars(
-        self,
-        dataset: Literal[
-            "stock_daily", "etf_daily", "index_daily", "fx_daily", "commodity_daily"
-        ],
-        df: pl.DataFrame,
-        year: int,
-        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
-    ) -> int:
-        """
-        保存K线数据.
-
-        Args:
-            dataset: 数据集类型（stock_daily, etf_daily, index_daily,
-                fx_daily, commodity_daily）.
-            df: K线数据 DataFrame.
-            year: 年份.
-            on_duplicate: 重复数据处理策略.
-
-        Returns:
-            写入的记录数.
-
-        """
-        logger.info(
-            "Writing bars data",
-            event="market_write_bars_start",
-            dataset=dataset,
-            year=year,
-            row_count=len(df),
-        )
-
-        on_duplicate_enum = self._map_on_duplicate(on_duplicate)
-        storage_df = self._to_storage_columns(df)
-
-        # 使用文件锁保护并发写入
-        lock_name = f"bars_write_{dataset}_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            if dataset == "stock_daily":
-                write_result = self._write_ports.stock_bars.write(
-                    storage_df,
-                    year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            elif dataset == "etf_daily":
-                write_result = self._write_ports.etf_bars.write(
-                    storage_df,
-                    year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            elif dataset == "index_daily":
-                if self._write_ports.index_bars is None:
-                    raise ValueError("IndexBarsWriter not configured")
-                write_result = self._write_ports.index_bars.write(
-                    storage_df,
-                    year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            elif dataset == "fx_daily":
-                if self._write_ports.fx_bars is None:
-                    raise ValueError("FxBarsWriter not configured")
-                write_result = self._write_ports.fx_bars.write(
-                    storage_df,
-                    year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            elif dataset == "commodity_daily":
-                if self._write_ports.commodity_bars is None:
-                    raise ValueError("CommodityBarsWriter not configured")
-                write_result = self._write_ports.commodity_bars.write(
-                    storage_df,
-                    year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            else:
-                raise ValueError(f"Unsupported dataset: {dataset}")
-
-        rows_written = write_result.added + write_result.updated
-
-        logger.info(
-            "Bars data written",
-            event="market_write_bars_complete",
-            dataset=dataset,
-            year=year,
-            rows_written=rows_written,
-        )
-
-        # 记录指标
-        Metrics.data_records.add(
-            len(storage_df),
-            {"dataset": dataset, "operation": "write"},
-        )
-
-        return rows_written
-
-    @traced("market.save_adj_factor")
-    def save_adj_factor(
-        self,
-        df: pl.DataFrame,
-        year: int,
-        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
-    ) -> int:
-        """
-        保存复权因子数据（股票）.
-
-        Args:
-            df: 复权因子数据 DataFrame.
-            year: 年份.
-            on_duplicate: 重复数据处理策略.
-
-        Returns:
-            写入的记录数.
-
-        """
-        logger.info(
-            "Writing adjustment factor data",
-            event="market_write_adj_factor_start",
-            dataset="adj_factor",
-            year=year,
-            row_count=len(df),
-        )
-
-        on_duplicate_enum = self._map_on_duplicate(on_duplicate)
-        storage_df = self._to_storage_columns(df)
-
-        # 使用文件锁保护并发写入
-        lock_name = f"adj_factor_write_adj_factor_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = self._write_ports.stock_adj.write(
-                storage_df,
-                year,
-                on_duplicate=on_duplicate_enum,
-            )
-
-        rows_written = write_result.added + write_result.updated
-
-        logger.info(
-            "Adjustment factor data written",
-            event="market_write_adj_factor_complete",
-            dataset="adj_factor",
-            year=year,
-            rows_written=rows_written,
-        )
-
-        # 记录指标
-        Metrics.data_records.add(
-            len(storage_df),
-            {"dataset": "adj_factor", "operation": "write"},
-        )
-
-        return rows_written
-
-    @traced("market.save_stock_status")
-    def save_stock_status(
-        self,
-        df: pl.DataFrame,
-        year: int,
-    ) -> int:
-        """
-        保存股票状态数据.
-
-        Args:
-            df: 股票状态数据 DataFrame.
-            year: 年份.
-
-        Returns:
-            写入的记录数.
-
-        """
-        logger.info(
-            "Writing stock status data",
-            event="market_write_stock_status_start",
-            dataset="stock_status",
-            year=year,
-            row_count=len(df),
-        )
-
-        lock_name = f"stock_status_write_{year}"
-        storage_df = self._to_storage_columns(df)
-
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            self._write_ports.stock_status.write(storage_df, year)
-
-        rows_written = len(storage_df)
-
-        logger.info(
-            "Stock status data written",
-            event="market_write_stock_status_complete",
-            year=year,
-            rows_written=rows_written,
-        )
-
-        Metrics.data_records.add(
-            rows_written,
-            {"dataset": "stock_status", "operation": "write"},
-        )
-
-        return rows_written
-
-    @staticmethod
-    def check_late_arrival_on_write(
-        *,
-        knowledge_date: date,
-        trade_date: date,
-        policy: DataLateArrivalPolicy,
-        max_delay_days: int = 999_999,
-    ) -> LateArrivalCheckResult:
-        """
-        检查写入数据的延迟到达策略.
-
-        供调用方在 save_bars / save_adj_factor 等写入方法之前调用，
-        以检查数据的 knowledge_date 是否晚于 trade_date。
-
-        Args:
-            knowledge_date: 数据可知日期.
-            trade_date: 数据所属交易日期.
-            policy: 延迟到达策略.
-            max_delay_days: REJECT 策略下允许的最大延迟天数.
-
-        Returns:
-            检查结果.
-
-        Raises:
-            LateArrivalRejectedError: 当策略为 REJECT 且延迟超过阈值时.
-
-        """
-        return check_late_arrival(
-            knowledge_date=knowledge_date,
-            trade_date=trade_date,
-            policy=policy,
-            max_delay_days=max_delay_days,
-        )

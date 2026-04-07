@@ -85,7 +85,7 @@ class TestDailyReconciliationSuccess:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        result = await service.daily_reconciliation(
+        result = service.daily_reconciliation(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
@@ -130,7 +130,7 @@ class TestDailyReconciliationSuccess:
         mock_tdx_source.fetch_stock_daily_bars.return_value = pl.DataFrame()
 
         # Act
-        result = await service.daily_reconciliation(
+        result = service.daily_reconciliation(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
@@ -171,7 +171,7 @@ class TestDailyReconciliationSuccess:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        result = await service.daily_reconciliation(
+        result = service.daily_reconciliation(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
@@ -216,7 +216,7 @@ class TestDailyReconciliationWithIssues:
         )
 
         # Act
-        result = await service.daily_reconciliation(
+        result = service.daily_reconciliation(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
@@ -258,7 +258,7 @@ class TestDailyReconciliationWithIssues:
         )
 
         # Act
-        await service.daily_reconciliation(
+        service.daily_reconciliation(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
@@ -298,7 +298,7 @@ class TestDailyReconciliationEdgeCases:
         )
 
         # Act & Assert
-        result = await service.daily_reconciliation(
+        result = service.daily_reconciliation(
             primary_df=df_without_sid,
             trade_date="20240101",
             dataset="stock_daily",
@@ -338,7 +338,7 @@ class TestDailyReconciliationEdgeCases:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        result = await service.daily_reconciliation(
+        result = service.daily_reconciliation(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
@@ -380,7 +380,7 @@ class TestDailyReconciliationEdgeCases:
         )
 
         # Act
-        result = await service.daily_reconciliation(
+        result = service.daily_reconciliation(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
@@ -509,9 +509,7 @@ class TestSendAlerts:
         )
 
         # Act - 调用 _send_alerts
-        await service._send_alerts(
-            sample_dq_result_with_issues, "20240101", "stock_daily"
-        )
+        service._send_alerts(sample_dq_result_with_issues, "20240101", "stock_daily")
 
         # Assert - 验证方法完成（通过日志记录验证）
         # （实际验证需要检查日志输出）

@@ -100,9 +100,9 @@ class Strategy(ABC):
 
 #### 任务1: 实现RegimeEngine
 - **文件**：
-  - `packages/core/src/ditto_engine/engine/regime_engine.py`
-  - `packages/core/src/ditto_engine/engine/extreme_market_detector.py`
-- **测试**：`packages/core/tests/unit/test_regime_engine.py`
+  - `packages/engine/src/ditto_engine/engine/regime_engine.py`
+  - `packages/engine/src/ditto_engine/engine/extreme_market_detector.py`
+- **测试**：`packages/engine/tests/unit/test_regime_engine.py`
 - **关键实现**：
   - 完全按照官方文档的算法实现
   - 包含自适应阈值计算
@@ -112,36 +112,36 @@ class Strategy(ABC):
 
 #### 任务2: 实现因子系统
 - **文件**：
-  - `packages/core/src/ditto_engine/factors/base.py` - Factor基类
-  - `packages/core/src/ditto_engine/factors/rs_factor.py`
-  - `packages/core/src/ditto_engine/factors/volatility_factor.py`
-  - `packages/core/src/ditto_engine/factors/value_factor.py`
-  - `packages/core/src/ditto_engine/factors/crowding_factor.py`
-  - `packages/core/src/ditto_engine/factors/analyzer.py` - FactorAnalyzer
-- **测试**：`packages/core/tests/unit/test_factors/`
+  - `packages/engine/src/ditto_engine/factors/base.py` - Factor基类
+  - `packages/engine/src/ditto_engine/factors/rs_factor.py`
+  - `packages/engine/src/ditto_engine/factors/volatility_factor.py`
+  - `packages/engine/src/ditto_engine/factors/value_factor.py`
+  - `packages/engine/src/ditto_engine/factors/crowding_factor.py`
+  - `packages/engine/src/ditto_engine/factors/analyzer.py` - FactorAnalyzer
+- **测试**：`packages/engine/tests/unit/test_factors/`
 - **状态**：❌
 
 #### 任务3: 实现策略框架
 - **文件**：
-  - `packages/core/src/ditto_engine/strategy/base.py`
-  - `packages/core/src/ditto_engine/strategy/rotation_strategy.py`
-  - `packages/core/src/ditto_engine/strategy/defensive_strategy.py`
-  - `packages/core/src/ditto_engine/strategy/momentum_strategy.py`
-- **测试**：`packages/core/tests/unit/test_strategies/`
+  - `packages/engine/src/ditto_engine/strategy/base.py`
+  - `packages/engine/src/ditto_engine/strategy/rotation_strategy.py`
+  - `packages/engine/src/ditto_engine/strategy/defensive_strategy.py`
+  - `packages/engine/src/ditto_engine/strategy/momentum_strategy.py`
+- **测试**：`packages/engine/tests/unit/test_strategies/`
 - **状态**：❌
 
 #### 任务4: 实现PortfolioManager
 - **文件**：
-  - `packages/core/src/ditto_engine/portfolio/portfolio_manager.py`
-  - `packages/core/src/ditto_engine/portfolio/strategy_allocation.py`
-- **测试**：`packages/core/tests/unit/test_portfolio_manager.py`
+  - `packages/engine/src/ditto_engine/portfolio/portfolio_manager.py`
+  - `packages/engine/src/ditto_engine/portfolio/strategy_allocation.py`
+- **测试**：`packages/engine/tests/unit/test_portfolio_manager.py`
 - **状态**：❌
 
 ### P1 - 应该完成
 
 #### 任务5: 技术指标库
 - **文件**：
-  - `packages/core/src/ditto_engine/indicators/technical.py`
+  - `packages/engine/src/ditto_engine/indicators/technical.py`
 - **功能**：
   - Polars原生实现
   - 比Pandas-TA快18倍
@@ -162,7 +162,7 @@ class Strategy(ABC):
 ## 关键文件清单
 
 ```
-packages/core/src/ditto_engine/
+packages/engine/src/ditto_engine/
 ├── engine/
 │   ├── __init__.py
 │   ├── base_engine.py

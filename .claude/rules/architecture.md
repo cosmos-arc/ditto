@@ -69,18 +69,18 @@ paths:
 
 ```
 ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_infra
-ditto_interfaces → ditto_analytics → ditto_engine → ditto_kernel
+ditto_interfaces → ditto_analytics → ditto_kernel
 ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
 ditto_app → ditto_engine, ditto_data, ditto_analytics, ditto_kernel, ditto_infra
 ditto_engine      → ditto_kernel                                            ✅
-ditto_analytics   → ditto_kernel, ditto_data.errors                     ✅
-ditto_data   → ditto_kernel, ditto_infra                               ✅
-ditto_kernel    → (无业务依赖)                                             ✅
-ditto_infra     → (无业务依赖)                                             ✅
-ditto_engine      → ditto_data (仅 errors/provider)                     ❌ (beyond)
-ditto_data   → ditto_engine                                              ❌
-ditto_data   → ditto_interfaces                                           ❌
-ditto_infra     → 其他层                                                  ❌
+ditto_analytics   → ditto_kernel, ditto_data.errors, ditto_infra.foundation ✅
+ditto_data        → ditto_kernel, ditto_infra                              ✅
+ditto_kernel      → (无业务依赖)                                             ✅
+ditto_infra       → (无业务依赖)                                             ✅
+ditto_engine      → ditto_data (仅 errors/provider)                        ❌ (beyond)
+ditto_data        → ditto_engine                                            ❌
+ditto_data        → ditto_interfaces                                        ❌
+ditto_infra       → 其他层                                                  ❌
 ```
 
 ### v5 强制边界（CI 门禁）

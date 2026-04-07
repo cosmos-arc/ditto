@@ -6,7 +6,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from ditto_app.process.backfill_manager import BackfillManager
-from ditto_app.process.coordinator_factory import create_coordinator
+from ditto_app.process.coordinator_factory import (
+    CoordinatorServices,
+    create_coordinator,
+)
 from ditto_app.process.quality import QualityService
 from ditto_app.process.retry_manager import RetryManager
 from ditto_app.query.metadata import MetadataQueryFacade
@@ -19,6 +22,7 @@ from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
+from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
 from ditto_data.sources import ExchangeTransformers
@@ -52,6 +56,7 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
         # 获取所有服务
         metadata_service = container.get(MetadataService)
         market_service = container.get(MarketService)
+        market_write_service = container.get(MarketWriteService)
         fundamental_service = container.get(FundamentalService)
         capital_service = container.get(CapitalService)
         macro_service = container.get(MacroService)
@@ -64,17 +69,20 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
 
         # 创建协调器
         with create_coordinator(
-            metadata_service=metadata_service,
-            market_service=market_service,
-            fundamental_service=fundamental_service,
-            capital_service=capital_service,
-            macro_service=macro_service,
-            source_service=source_service,
-            ingestion_log_service=ingestion_log_service,
+            CoordinatorServices(
+                metadata_service=metadata_service,
+                market_service=market_service,
+                market_write_service=market_write_service,
+                fundamental_service=fundamental_service,
+                capital_service=capital_service,
+                macro_service=macro_service,
+                source_service=source_service,
+                ingestion_log_service=ingestion_log_service,
+            ),
+            source_name=source,
             ingestion_cursor_service=ingestion_cursor_service,
             quality_service=quality_service,
             freeze_service=freeze_service,
-            source_name=source,
         ) as coordinator:
             # 创建管理器
             backfill_manager = BackfillManager(

@@ -5,7 +5,10 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_app.process.ingestion_coordinator import IngestionCoordinator
+from ditto_app.process.ingestion_coordinator import (
+    IngestionCoordinator,
+    MarketServices,
+)
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing
 from ditto_infra.foundation.observability.config import ObservabilityConfig
@@ -49,9 +52,8 @@ def mock_metadata_service():
 
 @pytest.fixture
 def mock_market_service():
-    """创建 Mock MarketService。"""
+    """创建 Mock MarketService（用于读取）。"""
     service = MagicMock()
-    service.save_adj_factor.return_value = 1
     return service
 
 
@@ -91,7 +93,10 @@ def coordinator(
     """创建 IngestionCoordinator 实例。"""
     return IngestionCoordinator(
         metadata_service=mock_metadata_service,
-        market_service=mock_market_service,
+        market_services=MarketServices(
+            query=mock_market_service,
+            write=MagicMock(),
+        ),
         fundamental_service=mock_fundamental_service,
         capital_service=mock_capital_service,
         macro_service=mock_macro_service,

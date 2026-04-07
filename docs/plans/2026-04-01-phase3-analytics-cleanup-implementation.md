@@ -165,9 +165,9 @@ from ditto_analytics.models.research import (
 | `packages/data/src/ditto_data/stores/runtime/research_sqlite/reader.py` | store |
 | `packages/data/src/ditto_data/stores/runtime/research_sqlite/writer.py` | store |
 | `packages/data/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py` | test |
-| `apps/port/src/ditto_interfaces/services/derived/research.py` | port service |
-| `apps/port/tests/unit/services/derived/test_research_dataset_facade_unit.py` | port test |
-| `apps/port/tests/integration/flows/test_research_dataset_integration.py` | e2e test |
+| `interfaces/src/ditto_interfaces/services/derived/research.py` | port service |
+| `interfaces/tests/unit/services/derived/test_research_dataset_facade_unit.py` | port test |
+| `interfaces/tests/integration/flows/test_research_dataset_integration.py` | e2e test |
 
 #### Step 4: 删除 datahub 原文件 + 更新 __init__.py
 

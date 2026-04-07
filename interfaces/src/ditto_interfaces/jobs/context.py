@@ -14,9 +14,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
+from ditto_app._reexports import QualityEngine
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
-from ditto_app.types import QualityEngine
 
 from ditto_interfaces.registry.container import make_app_container
 
@@ -55,7 +55,7 @@ def create_dq_and_metadata_context() -> Iterator[
         tuple: (QualityEngine, MetadataQueryFacade, MarketQueryFacade) - 容器管理的实例
 
     Example:
-        with create_dq_and_metadata_context() as (  # noqa: E501
+        with create_dq_and_metadata_context() as (
             engine, metadata_facade, market_facade
         ):
             result = engine.check(...)

@@ -28,7 +28,6 @@ from ditto_data.storage.market.stock.adj import (
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
-from ditto_infra.foundation.concurrency import FileLockManager
 
 
 def _make_instrument_id(df: pl.DataFrame) -> pl.DataFrame:
@@ -114,30 +113,25 @@ def market_service(
     stock_adj_writer: StockAdjFactorWriter,
     pipeline_root: Path,
 ) -> MarketService:
-    """创建 MarketService 实例."""
-    lock_dir = pipeline_root / "locks"
-    lock_dir.mkdir(parents=True, exist_ok=True)
-
+    """创建 MarketService 实例（只读）。"""
     mock_instrument_reader = MagicMock()
     mock_instrument_reader.list_instrument_ids.return_value = [1000001]
     mock_instrument_reader.get_instrument_id_ticker_map.return_value = {
         1000001: "600519"
     }
 
-    return MarketService(
-        stock_bars_reader=stock_bars_reader,
-        stock_bars_writer=stock_bars_writer,
-        stock_status_reader=MagicMock(),
-        stock_status_writer=MagicMock(),
-        stock_adj_reader=stock_adj_reader,
-        stock_adj_writer=stock_adj_writer,
-        etf_bars_reader=MagicMock(),
-        etf_bars_writer=MagicMock(),
-        etf_status_reader=MagicMock(),
-        etf_status_writer=MagicMock(),
-        instrument_reader=mock_instrument_reader,
-        file_lock=FileLockManager(lock_dir),
+    from ditto_data.services.ports import MarketReadPorts
+
+    read_ports = MarketReadPorts(
+        stock_bars=stock_bars_reader,
+        stock_status=MagicMock(),
+        stock_adj=stock_adj_reader,
+        etf_bars=MagicMock(),
+        etf_status=MagicMock(),
+        instrument=mock_instrument_reader,
     )
+
+    return MarketService(read_ports=read_ports)
 
 
 # ==============================================================================

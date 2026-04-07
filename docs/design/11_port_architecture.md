@@ -10,7 +10,7 @@
 
 ### 1.1 设计目标
 
-`apps/port` 是 ditto 项目的统一入口层，提供多种对外接口：
+`interfaces/` 是 ditto 项目的统一入口层，提供多种对外接口：
 - **HTTP API**：Web 应用和外部系统集成
 - **CLI**：命令行工具，支持数据摄取和管理
 - **Jobs**：定时任务调度（基于 Prefect）
@@ -50,7 +50,7 @@
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              Core Engines & DataHub (核心层)                │
-│  packages/ditto-core/    packages/ditto-data-hub/          │
+│  packages/ditto-engine/    packages/ditto-data/             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -59,7 +59,7 @@
 ## 3. 目录结构
 
 ```
-apps/port/
+interfaces/
 ├── pyproject.toml                      # 包配置
 └── src/ditto_interfaces/
     ├── __init__.py
@@ -307,7 +307,7 @@ Prefect Scheduler
 ### 9.1 新增入口类型
 
 如果需要新增入口（如 gRPC），只需：
-1. 在 `apps/port/` 下创建新目录
+1. 在 `interfaces/` 下创建新目录
 2. 调用 `services/` 层的服务
 
 ### 9.2 新增业务服务

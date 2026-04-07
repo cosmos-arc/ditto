@@ -55,7 +55,7 @@ Ditto 配置系统采用**分层架构**设计，支持多环境配置、路径�
 | 存储配置 | `ditto_data.config.data_store` | DataStoreSettings |
 | 数据源配置 | `ditto_data.config.data_source` | DataSourceSettings |
 | 通知配置 | `ditto_infra.services.notification.config` | NotificationSettings |
-| 质量配置 | `ditto_kernel.quality.config` | DQSettings |
+| 质量配置 | `ditto_data.quality.config` | DQSettings |
 
 ---
 
@@ -347,7 +347,7 @@ NEW_OPTION=my_value
 3. **在 ConfigProvider 中加载**（如果需要新配置文件）
 
 ```python
-# apps/port/src/ditto_interfaces/registry/infra/config.py
+# interfaces/src/ditto_interfaces/registry/infra/config.py
 @provide
 def new_settings(self, config_loader: ConfigLoader) -> NewSettings:
     values = load_env_file(config_loader, "new_config")
@@ -581,7 +581,7 @@ c.close()
 | `DataStoreSettings` | `ditto_data/config/data_store.py` | `data_store.env` |
 | `DataSourceSettings` | `ditto_data/config/data_source.py` | `data_source.env` |
 | `FileStorageSettings` | `ditto_data/config/` | 派生自 `DataStoreSettings` |
-| `DQSettings` | `ditto_kernel/quality/config/` | `dq.env` |
+| `DQSettings` | `ditto_data/quality/config/` | `dq.env` |
 | `NotificationSettings` | `ditto_infra/services/notification/config.py` | `notification.env` |
 
 ### 相关文档

@@ -6,21 +6,25 @@ from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
-from ditto_app.process.coordinator_factory import create_coordinator
+from ditto_app.process.coordinator_factory import (
+    CoordinatorServices,
+    create_coordinator,
+)
 from ditto_data.models import Source
 
 
-def _make_services() -> dict[str, MagicMock]:
-    """创建 create_coordinator 所需的 mock 服务字典."""
-    return {
-        "metadata_service": MagicMock(),
-        "market_service": MagicMock(),
-        "fundamental_service": MagicMock(),
-        "capital_service": MagicMock(),
-        "macro_service": MagicMock(),
-        "source_service": MagicMock(),
-        "ingestion_log_service": MagicMock(),
-    }
+def _make_services() -> CoordinatorServices:
+    """创建 create_coordinator 所需的 mock 服务."""
+    return CoordinatorServices(
+        metadata_service=MagicMock(),
+        market_service=MagicMock(),
+        market_write_service=MagicMock(),
+        fundamental_service=MagicMock(),
+        capital_service=MagicMock(),
+        macro_service=MagicMock(),
+        source_service=MagicMock(),
+        ingestion_log_service=MagicMock(),
+    )
 
 
 @contextmanager
@@ -40,26 +44,26 @@ class TestCreateCoordinatorStringSource:
     def test_valid_string_creates_coordinator(self) -> None:
         services = _make_services()
         mock_source = MagicMock()
-        services["source_service"].get_source.return_value = mock_source
+        services.source_service.get_source.return_value = mock_source
 
         with _patch_coordinator_init() as (mock_cls, mock_instance):
             with create_coordinator(
-                **services,
+                services,
                 source_name="tushare",
             ) as coordinator:
                 assert coordinator is mock_instance
 
             # 验证 source_service.get_source 被正确调用
-            services["source_service"].get_source.assert_any_call(Source.TUSHARE)
+            services.source_service.get_source.assert_any_call(Source.TUSHARE)
             # 验证 IngestionCoordinator 被创建
             mock_cls.assert_called_once()
 
     def test_case_insensitive(self) -> None:
         services = _make_services()
         with _patch_coordinator_init() as (_, _):
-            with create_coordinator(**services, source_name="TUSHARE"):
+            with create_coordinator(services, source_name="TUSHARE"):
                 pass
-            services["source_service"].get_source.assert_any_call(Source.TUSHARE)
+            services.source_service.get_source.assert_any_call(Source.TUSHARE)
 
 
 class TestCreateCoordinatorEnumSource:
@@ -69,12 +73,12 @@ class TestCreateCoordinatorEnumSource:
         services = _make_services()
         with _patch_coordinator_init() as (_, mock_instance):
             with create_coordinator(
-                **services,
+                services,
                 source_name=Source.TUSHARE,
             ) as coordinator:
                 assert coordinator is mock_instance
 
-            services["source_service"].get_source.assert_any_call(Source.TUSHARE)
+            services.source_service.get_source.assert_any_call(Source.TUSHARE)
 
 
 class TestCreateCoordinatorInvalidSource:
@@ -86,7 +90,7 @@ class TestCreateCoordinatorInvalidSource:
             _patch_coordinator_init() as (mock_cls, _),
             pytest.raises(ValueError, match="Unknown source"),
         ):
-            with create_coordinator(**services, source_name="invalid_source"):
+            with create_coordinator(services, source_name="invalid_source"):
                 pass
 
         # 不应创建协调器
@@ -105,10 +109,10 @@ class TestCreateCoordinatorFredDegradation:
                 raise RuntimeError("FRED not configured")
             return MagicMock()
 
-        services["source_service"].get_source.side_effect = get_source_side_effect
+        services.source_service.get_source.side_effect = get_source_side_effect
 
         with _patch_coordinator_init() as (mock_cls, mock_instance):
-            with create_coordinator(**services, source_name="tushare") as coordinator:
+            with create_coordinator(services, source_name="tushare") as coordinator:
                 assert coordinator is mock_instance
 
             # 验证协调器创建时 fred_source 为 None
@@ -119,7 +123,7 @@ class TestCreateCoordinatorFredDegradation:
     def test_fred_available(self) -> None:
         services = _make_services()
         mock_fred = MagicMock()
-        services["source_service"].get_source.return_value = MagicMock()
+        services.source_service.get_source.return_value = MagicMock()
 
         # FRED 可用时返回 mock
         with _patch_coordinator_init() as (mock_cls, _):
@@ -134,9 +138,9 @@ class TestCreateCoordinatorFredDegradation:
                     return mock_fred
                 return original_source
 
-            services["source_service"].get_source.side_effect = get_source_side_effect
+            services.source_service.get_source.side_effect = get_source_side_effect
 
-            with create_coordinator(**services, source_name="tushare"):
+            with create_coordinator(services, source_name="tushare"):
                 pass
 
             config = mock_cls.call_args.kwargs["config"]

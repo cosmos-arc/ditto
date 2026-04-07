@@ -20,7 +20,10 @@ class TestDQBlockingBehavior:
     def test_dq_blocked_returns_failed_status(self, mocker):
         """Test that DQ blocked ingestion returns failed status."""
         from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-        from ditto_app.process.ingestion_coordinator import IngestionCoordinator
+        from ditto_app.process.ingestion_coordinator import (
+            IngestionCoordinator,
+            MarketServices,
+        )
         from ditto_data.models.storage import WriteResult
         from ditto_data.quality.spec import DQResult
 
@@ -39,7 +42,10 @@ class TestDQBlockingBehavior:
         # Create coordinator
         coordinator = IngestionCoordinator(
             metadata_service=mock_metadata_service,
-            market_service=mock_market_service,
+            market_services=MarketServices(
+                query=mock_market_service,
+                write=mock_market_service,
+            ),
             fundamental_service=mock_fundamental_service,
             capital_service=mock_capital_service,
             macro_service=mock_macro_service,
@@ -88,7 +94,10 @@ class TestDQBlockingBehavior:
     def test_dq_blocked_logs_fail_status(self, mocker):
         """Test that DQ blocked ingestion logs FAIL status for retry."""
         from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-        from ditto_app.process.ingestion_coordinator import IngestionCoordinator
+        from ditto_app.process.ingestion_coordinator import (
+            IngestionCoordinator,
+            MarketServices,
+        )
         from ditto_data.models.ingestion import IngestionLog, IngestionStatus
         from ditto_data.models.storage import WriteResult
         from ditto_data.quality.spec import DQResult
@@ -108,7 +117,10 @@ class TestDQBlockingBehavior:
         # Create coordinator
         coordinator = IngestionCoordinator(
             metadata_service=mock_metadata_service,
-            market_service=mock_market_service,
+            market_services=MarketServices(
+                query=mock_market_service,
+                write=mock_market_service,
+            ),
             fundamental_service=mock_fundamental_service,
             capital_service=mock_capital_service,
             macro_service=mock_macro_service,

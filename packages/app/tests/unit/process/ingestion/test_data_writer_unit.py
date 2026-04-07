@@ -55,8 +55,8 @@ def mock_metadata_service(mocker):
 
 
 @pytest.fixture
-def mock_market_service(mocker):
-    """创建 Mock MarketService。"""
+def mock_market_write_service(mocker):
+    """创建 Mock MarketWriteService。"""
     service = mocker.Mock()
     service.save_bars.return_value = 1
     service.save_adj_factor.return_value = 1
@@ -98,7 +98,7 @@ def mock_macro_service(mocker):
 @pytest.fixture
 def data_writer(
     mock_metadata_service,
-    mock_market_service,
+    mock_market_write_service,
     mock_fundamental_service,
     mock_capital_service,
     mock_macro_service,
@@ -106,7 +106,7 @@ def data_writer(
     """创建 IngestionDataWriter 实例。"""
     return IngestionDataWriter(
         metadata_service=mock_metadata_service,
-        market_service=mock_market_service,
+        market_write_service=mock_market_write_service,
         fundamental_service=mock_fundamental_service,
         capital_service=mock_capital_service,
         macro_service=mock_macro_service,

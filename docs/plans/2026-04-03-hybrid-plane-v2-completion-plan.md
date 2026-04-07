@@ -94,7 +94,7 @@ ditto_kernel/
 |--------|------|------|------|
 | packages/app/ 存在 | Use Case 编排层 | 存在，`ditto-app` | PASS |
 | CQRS 四模块结构 | query/process/command/builders | 全部存在 | PASS |
-| apps/port/ 删除 | 不存在 | **已完全删除**，0 处 `from ditto_interfaces` | PASS |
+| interfaces/ 删除 | 不存在 | **已完全删除**，0 处 `from ditto_interfaces` | PASS |
 | R8 互斥规则 | importlinter 6 条规则 | 6 条规则全部存在 | PASS |
 | `from ditto_app` 使用 | interfaces→app | **116 处 / 74 文件** | PASS |
 
@@ -393,12 +393,12 @@ Phase B: forward_return_service 迁移       │         (4 PR, MEDIUM risk)
     - Engine 纯领域包无需 DI（所有创建由 ditto_app.builders 负责）
   - 文件:
     - 新建: `packages/data/src/ditto_data/di/__init__.py`（聚合 10 个 providers）
-    - 迁移: `apps/interfaces/registry/datahub/*.py`（8 providers + builders）→ `packages/data/src/ditto_data/di/`
-    - 迁移: `apps/interfaces/registry/core/golden.py`, `quality.py` → `packages/data/src/ditto_data/di/`
-    - 删除: `apps/interfaces/src/ditto_interfaces/registry/datahub/`（整个目录）
-    - 删除: `apps/interfaces/src/ditto_interfaces/registry/core/`（整个目录）
-    - 修改: `apps/interfaces/src/ditto_interfaces/registry/__init__.py`（直接从 ditto_data.di re-export）
-    - 修改: `apps/interfaces/src/ditto_interfaces/registry/container.py`（使用 get_data_providers）
+    - 迁移: `interfaces/registry/datahub/*.py`（8 providers + builders）→ `packages/data/src/ditto_data/di/`
+    - 迁移: `interfaces/registry/core/golden.py`, `quality.py` → `packages/data/src/ditto_data/di/`
+    - 删除: `interfaces/src/ditto_interfaces/registry/datahub/`（整个目录）
+    - 删除: `interfaces/src/ditto_interfaces/registry/core/`（整个目录）
+    - 修改: `interfaces/src/ditto_interfaces/registry/__init__.py`（直接从 ditto_data.di re-export）
+    - 修改: `interfaces/src/ditto_interfaces/registry/container.py`（使用 get_data_providers）
     - 修改: `packages/data/pyproject.toml`（添加 ditto-infra 依赖）
     - 修改: 4 个测试文件导入路径更新
   - 验证: lint ✅ type ✅ arch-check ✅ 4315 tests passed ✅
@@ -434,7 +434,7 @@ Phase B: forward_return_service 迁移       │         (4 PR, MEDIUM risk)
 
 - [x] **Task F.2**: 文档同步 `[M]` ✅ 2026-04-03
   - 验收: 所有 CLAUDE.md 反映最终架构, 含 orchestrator/ 和 TradingOrchestrator
-  - 文件: root CLAUDE.md + packages/engine/CLAUDE.md + apps/interfaces/CLAUDE.md + packages/analytics/CLAUDE.md(新建) + packages/app/CLAUDE.md(新建) + .claude/rules/architecture.md + .claude/rules/config.md + .claude/rules/core.md
+  - 文件: root CLAUDE.md + packages/engine/CLAUDE.md + interfaces/CLAUDE.md + packages/analytics/CLAUDE.md(新建) + packages/app/CLAUDE.md(新建) + .claude/rules/architecture.md + .claude/rules/config.md + .claude/rules/core.md
 - [x] **Task F.3**: CI 全量验证 `[S]` ✅ 2026-04-03
   - 验收: 18 条 importlinter 合约全通过(0 broken, 0 warnings), 4367 tests passed
   - 命令: `pixi run -e dev ci` + `pixi run -e dev test`

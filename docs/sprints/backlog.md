@@ -40,7 +40,7 @@
   - Grafana 集成
   - Prometheus 指标导出
   - 实时告警展示
-- **影响范围**: `apps/port/`
+- **影响范围**: `interfaces/`
 - **预计工作量**: L
 
 ## 低优先级

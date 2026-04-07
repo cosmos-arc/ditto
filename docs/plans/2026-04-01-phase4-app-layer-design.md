@@ -8,7 +8,7 @@ depth: deep
 
 # Phase 4: Application 层提炼 — 设计文档
 
-**目标**：将 `apps/port/services/` 中的业务编排逻辑提取为独立的 `packages/app/`，实现 Query/Command/Process 互斥分离，重构 DI 容器，最终 `port` → `interfaces` 重命名。
+**目标**：将 `interfaces/services/` 中的业务编排逻辑提取为独立的 `packages/app/`，实现 Query/Command/Process 互斥分离，重构 DI 容器，最终 `port` → `interfaces` 重命名。
 
 **源文档**：[hybrid-plane-v2-migration-plan.md](2026-03-31-hybrid-plane-v2-migration-plan.md)
 **需求文档**：[refined-requirements.md](../brainstorms/2026-03-31-hybrid-plane-v2-refined-requirements.md)
@@ -176,7 +176,7 @@ interfaces (apps/) → app (packages/) → data, engine, analytics, kernel, infr
 ### 当前状态
 
 ```text
-apps/port/registry/
+interfaces/registry/
 ├── container.py        # Composition Root（14 Provider）
 ├── infra/              # 3 Provider（Config, Observability, Notification）
 ├── core/               # 2 Provider（Quality, GoldenDataset）
@@ -198,7 +198,7 @@ apps/port/registry/
 packages/app/src/ditto_app/
 └── providers.py        # AppProvider — 注册 app 层 Use Case 服务
 
-apps/port/registry/     # → apps/interfaces/registry/（Phase 4d）
+interfaces/registry/     # → interfaces/registry/（Phase 4d）
 ├── container.py        # Composition Root — 引用 get_app_providers()
 ├── infra/              # 保持不变（3 Provider）
 ├── datahub/            # DerivedProvider 拆分：只留 data 层服务
@@ -408,16 +408,16 @@ layers = ditto_interfaces
 **验证**：
 - [ ] `pixi run -e dev check` 全通过
 - [ ] DI 解析无错误：FastAPI 启动 + CLI smoke test
-- [ ] `grep -rn "from ditto_interfaces.services" apps/port/registry/ --include="*.py"` 返回 0（registry 不再引用 services）
+- [ ] `grep -rn "from ditto_interfaces.services" interfaces/registry/ --include="*.py"` 返回 0（registry 不再引用 services）
 
 ### PR 4 (4d): port → interfaces 重命名
 
-**目标**：将 `apps/port/` 重命名为 `apps/interfaces/`，全库引用更新。
+**目标**：将 `interfaces/` 重命名为 `interfaces/`，全库引用更新。
 
 | 操作 | 文件 | 变更 |
 |------|------|------|
-| RENAME | `apps/port/` → `apps/interfaces/` | 目录重命名 |
-| EDIT | `apps/interfaces/pyproject.toml` | `ditto_interfaces` → `ditto_interfaces` |
+| RENAME | `interfaces/` → `interfaces/` | 目录重命名 |
+| EDIT | `interfaces/pyproject.toml` | `ditto_interfaces` → `ditto_interfaces` |
 | EDIT | 全库 `.py` 文件 | `ditto_interfaces` → `ditto_interfaces` |
 | EDIT | `.importlinter` | root_modules + contract 中包名更新 |
 | EDIT | `CLAUDE.md` | 文档更新 |

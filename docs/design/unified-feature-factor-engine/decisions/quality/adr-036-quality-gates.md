@@ -315,15 +315,15 @@ class DQReport:
 
 | 文件路径 | 用途 |
 |---------|------|
-| `packages/core/src/ditto_engine/engine/gates/__init__.py` | 门禁模块入口 |
-| `packages/core/src/ditto_engine/engine/gates/checkers.py` | 检查器实现 |
-| `packages/core/src/ditto_engine/engine/gates/report.py` | DQReport 模型 |
+| `packages/engine/src/ditto_engine/engine/gates/__init__.py` | 门禁模块入口 |
+| `packages/engine/src/ditto_engine/engine/gates/checkers.py` | 检查器实现 |
+| `packages/engine/src/ditto_engine/engine/gates/report.py` | DQReport 模型 |
 
 ### 修改文件
 
 | 文件路径 | 修改内容 |
 |---------|---------|
-| `packages/core/src/ditto_engine/engine/specs.py` | 增加 `null_rate_limit` 字段 |
+| `packages/engine/src/ditto_engine/engine/specs.py` | 增加 `null_rate_limit` 字段 |
 | `packages/data/src/ditto_data/stores/catalog/schema.py` | 增加 DQ 相关字段 |
 
 ---

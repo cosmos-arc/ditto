@@ -548,7 +548,7 @@ ditto_interfaces.registry.container (Composition Root)
 ```
 
 ```python
-# apps/interfaces/src/ditto_interfaces/registry/container.py
+# interfaces/src/ditto_interfaces/registry/container.py
 def make_app_container() -> Container:
     return make_container(
         *get_infra_providers(),       # Infrastructure 层

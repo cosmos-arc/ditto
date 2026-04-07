@@ -31,7 +31,7 @@
 ### FactorServeMode 定义
 
 ```python
-# packages/core/src/ditto_kernel/specs.py
+# packages/kernel/src/ditto_kernel/specs.py
 
 from enum import Enum
 

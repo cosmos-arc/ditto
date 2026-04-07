@@ -7,8 +7,6 @@ MetadataService - Metadata 域统一查询服务（门面模式）.
 CQRS 架构：使用 Reader 处理查询，Writer 处理写入。
 """
 
-from __future__ import annotations
-
 from datetime import date
 from typing import Any, Literal
 
@@ -22,7 +20,10 @@ from ditto_data.services.metadata.calendar import (
     CalendarService,
     compute_calendar_enrichment,
 )
-from ditto_data.services.metadata.instrument import InstrumentService
+from ditto_data.services.metadata.instrument import (
+    InstrumentService,
+    InstrumentServiceDeps,
+)
 from ditto_data.services.metadata.universe import UniverseService
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.storage.capital.index_composition import IndexCompositionReader
@@ -41,6 +42,8 @@ from ditto_data.storage.metadata.instrument import (
     SecurityQuery,
 )
 from ditto_data.storage.metadata.universe import (
+    RebalanceReader,
+    RebalanceWriter,
     UniverseReader,
     UniverseWriter,
 )
@@ -76,8 +79,8 @@ class MetadataService:
         industry_mapping_writer: IndustryMappingWriter,
         universe_reader: UniverseReader,
         universe_writer: UniverseWriter,
-        rebalance_reader: Any,
-        rebalance_writer: Any,
+        rebalance_reader: RebalanceReader,
+        rebalance_writer: RebalanceWriter,
         instrument_id_allocator: InstrumentIdAllocator,
         index_composition_reader: IndexCompositionReader,
         exchange_transformers: ExchangeTransformers,
@@ -111,16 +114,18 @@ class MetadataService:
         # 构建子服务
         self._calendar = CalendarService(calendar_reader, calendar_writer)
         self._instrument = InstrumentService(
-            instrument_reader=instrument_reader,
-            instrument_writer=instrument_writer,
-            name_history_reader=name_history_reader,
-            name_history_writer=name_history_writer,
-            industry_reader=industry_reader,
-            industry_writer=industry_writer,
-            industry_mapping_reader=industry_mapping_reader,
-            industry_mapping_writer=industry_mapping_writer,
-            instrument_id_allocator=instrument_id_allocator,
-            exchange_transformers=exchange_transformers,
+            InstrumentServiceDeps(
+                instrument_reader=instrument_reader,
+                instrument_writer=instrument_writer,
+                name_history_reader=name_history_reader,
+                name_history_writer=name_history_writer,
+                industry_reader=industry_reader,
+                industry_writer=industry_writer,
+                industry_mapping_reader=industry_mapping_reader,
+                industry_mapping_writer=industry_mapping_writer,
+                instrument_id_allocator=instrument_id_allocator,
+                exchange_transformers=exchange_transformers,
+            ),
         )
         self._universe = UniverseService(
             universe_reader=universe_reader,
@@ -243,16 +248,20 @@ class MetadataService:
         min_list_days: int | None = None,
     ) -> pl.DataFrame:
         """多维查询证券数据。委托到 InstrumentService."""
+        if query is not None:
+            return self._instrument.find_securities(query)
+
         return self._instrument.find_securities(
-            query,
-            instrument_ids=instrument_ids,
-            source_tickers=source_tickers,
-            source=source,
-            asset_class=asset_class,
-            exchange=exchange,
-            is_active=is_active,
-            asof=asof,
-            min_list_days=min_list_days,
+            SecurityQuery(
+                instrument_ids=instrument_ids,
+                source_tickers=source_tickers,
+                source=source,
+                asset_class=asset_class,
+                exchange=exchange,
+                is_active=is_active,
+                asof=asof,
+                min_list_days=min_list_days,
+            ),
         )
 
     def list_instrument_ids(

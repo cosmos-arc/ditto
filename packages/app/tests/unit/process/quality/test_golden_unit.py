@@ -209,7 +209,7 @@ class TestGoldenDatasetFilter:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        result = await service.daily_reconciliation(
+        result = service.daily_reconciliation(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
@@ -263,7 +263,7 @@ class TestGoldenDatasetFilter:
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
         # Act
-        result = await service.daily_reconciliation(
+        result = service.daily_reconciliation(
             primary_df=primary_df,
             trade_date="20240101",
             dataset="stock_daily",
