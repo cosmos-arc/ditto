@@ -38,8 +38,8 @@
 
   /* ── Market Colors — style-specific overrides (region logic in tokens-domain.css) ── */
   --market-flat-fg:    oklch(0.530 0.010 253);
-  --market-strong-fg:  oklch(0.700 0.140 155);
-  --market-weak-fg:    oklch(0.680 0.180 18);
+  --market-strong-fg:  oklch(0.680 0.180 18);    /* red hue ~18 (CN: 涨/强势) */
+  --market-weak-fg:    oklch(0.700 0.140 155);   /* green hue ~155 (CN: 跌/弱势) */
 
   /* ── Domain Overrides — Teal/Coral harmonized ── */
   --risk-critical-fg:  oklch(0.680 0.180 18);

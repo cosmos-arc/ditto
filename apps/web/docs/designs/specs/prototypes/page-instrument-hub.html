@@ -1169,6 +1169,7 @@
 
     .bottom-tab:hover {
       color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
     }
 
     .bottom-content {
@@ -1543,6 +1544,10 @@
       gap: var(--space-12);
       padding: var(--space-6) 0;
       border-bottom: 1px solid var(--border-subtle);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .rank-row:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
     .rank-row:last-child { border-bottom: none; }
     .rank-num {
@@ -1552,6 +1557,7 @@
       color: var(--text-tertiary);
       width: 24px;
       text-align: center;
+      font-variant-numeric: tabular-nums;
     }
     .rank-num.top3 { color: var(--brand-accent); }
     .rank-name {
@@ -1563,6 +1569,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
     }
     .rank-bar-track {
       width: 80px;
@@ -1576,6 +1583,10 @@
       border-radius: 2px;
       background: var(--brand-accent);
       opacity: 0.6;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .rank-row:hover .rank-bar-fill {
+      opacity: 1;
     }
 
     /* ── Financial table ── */
@@ -1599,6 +1610,7 @@
       color: var(--text-secondary);
       padding: var(--space-6) var(--space-8);
       border-bottom: 1px solid var(--border-subtle);
+      font-variant-numeric: tabular-nums;
     }
     .fin-table td:first-child {
       font-family: var(--font-family-ui);
@@ -1622,7 +1634,8 @@
       padding: var(--space-8) 0;
       border-bottom: 1px solid var(--border-subtle);
       cursor: pointer;
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  padding var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .news-item:last-child { border-bottom: none; }
     .news-item:hover { background: var(--interaction-hover-subtle-bg); padding-left: var(--space-4); padding-right: var(--space-4); }
@@ -1656,7 +1669,8 @@
       padding: var(--space-8) 0;
       border-bottom: 1px solid var(--border-subtle);
       cursor: pointer;
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  padding var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .announce-item:last-child { border-bottom: none; }
     .announce-item:hover { background: var(--interaction-hover-subtle-bg); padding-left: var(--space-4); padding-right: var(--space-4); }
@@ -1684,6 +1698,7 @@
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       margin-top: 2px;
+      font-variant-numeric: tabular-nums;
     }
 
     /* ── Corporate timeline event ── */
@@ -1693,6 +1708,10 @@
       gap: var(--space-12);
       padding: var(--space-8) 0;
       border-bottom: 1px solid var(--border-subtle);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .corp-event:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
     .corp-event:last-child { border-bottom: none; }
     .corp-date {
@@ -1702,6 +1721,7 @@
       white-space: nowrap;
       width: 80px;
       flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
     }
     .corp-body { flex: 1; }
     .corp-title {
@@ -1770,13 +1790,15 @@
 
     /* ── Chip distribution bars ── */
     .chip-bars { padding: var(--space-12); height: 100px; display: flex; align-items: flex-end; gap: 1px; }
-    .chip-bar { flex: 1; border-radius: 2px 2px 0 0; }
+    .chip-bar { flex: 1; border-radius: 2px 2px 0 0; transition: filter var(--motion-duration-fast) var(--motion-easing-standard); }
 
     /* ── Revenue bar chart ── */
     .revenue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-12); flex-shrink: 0; }
     .revenue-bars { padding: var(--space-12); height: 120px; display: flex; align-items: flex-end; gap: var(--space-6); }
     .revenue-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .revenue-bar-inner { width: 100%; border-radius: 2px 2px 0 0; }
+    .revenue-bar-inner { width: 100%; border-radius: 2px 2px 0 0; background: var(--brand-accent); transition: opacity var(--motion-duration-fast) var(--motion-easing-standard); }
+    .revenue-bar-col { cursor: pointer; }
+    .revenue-bar-col:hover .revenue-bar-inner { opacity: 1 !important; }
     .revenue-bar-label { font-size: var(--font-size-10); color: var(--text-tertiary); }
     .revenue-bar-label.active { font-size: var(--font-size-10); color: var(--text-primary); font-weight: var(--font-weight-medium); }
 
@@ -1805,8 +1827,8 @@
     .corr-row { display: flex; align-items: center; gap: var(--space-8); }
     .corr-name { font-size: var(--font-size-12); color: var(--text-primary); width: 80px; }
     .corr-track { flex: 1; height: 4px; background: var(--border-subtle); border-radius: 2px; overflow: hidden; }
-    .corr-fill { height: 100%; background: var(--brand-accent); border-radius: 2px; }
-    .corr-value { font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .corr-fill { height: 100%; background: var(--brand-accent); border-radius: 2px; transition: filter var(--motion-duration-fast) var(--motion-easing-standard); }
+    .corr-value { font-size: var(--font-size-10); color: var(--text-tertiary); font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; }
 
     /* ── Overlay helpers ── */
     .overlay-section { margin-top: var(--space-10); }
@@ -1841,7 +1863,9 @@
     .text-brand { color: var(--brand-accent); }
     .text-market-up { color: var(--market-up-fg); }
 
-    /* ── Toolbar drawing tools ── */
+    /* ── Signal confidence separator ── */
+    .signal-confidence-sep { padding: var(--space-4) 0; border-top: 1px solid var(--border-subtle); margin-top: var(--space-4); }
+    .signal-confidence-label { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-4); }
     .toolbar-color-pick { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; }
     .toolbar-sep { height: 1px; background: var(--border-subtle); margin: var(--space-2) 0; }
     .toolbar-colors { display: flex; gap: var(--space-2); padding: var(--space-2); }
@@ -1868,6 +1892,7 @@
 
     /* ── Technical indicator sub-panel ── */
     .indicator-sub { flex-shrink: 0; max-height: 120px; overflow: hidden; }
+    .indicator-sub-body { padding: var(--space-6) var(--space-12); display: flex; flex-direction: column; gap: var(--space-6); }
 
 
 
@@ -1922,6 +1947,14 @@
     }
 
     /* ── Correlation bar hover ── */
+    .corr-row {
+      padding: var(--space-4) var(--space-6);
+      border-radius: var(--radius-3);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .corr-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
     .corr-row:hover .corr-fill {
       filter: brightness(1.15);
       transition: filter var(--motion-duration-fast) var(--motion-easing-standard);
@@ -2028,7 +2061,7 @@
           <div class="object-name-row">
             <span class="object-name">贵州茅台</span>
             <span class="object-code">600519.SH</span>
-            <span class="object-status trading" role="status" aria-label="正常交易">
+            <span class="object-status trading" role="status" aria-label="正常交易" data-tooltip="交易状态: 正常交易中" data-tooltip-pos="bottom">
               <span class="object-status-dot"></span>
               交易中
             </span>
@@ -2158,15 +2191,15 @@
         <input type="radio" name="hub" id="hub-flow" class="tab-radio sr-only">
         <label for="hub-flow" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-flow">态势</label>
         <input type="radio" name="hub" id="hub-fundamentals" class="tab-radio sr-only">
-        <label for="hub-fundamentals" class="hub-tab" role="tab" tabindex="0">基本面</label>
+        <label for="hub-fundamentals" class="hub-tab" role="tab" tabindex="0" data-tooltip="财务三表、杜邦分析、同行对比" data-tooltip-pos="bottom">基本面</label>
         <input type="radio" name="hub" id="hub-corporate" class="tab-radio sr-only">
-        <label for="hub-corporate" class="hub-tab" role="tab" tabindex="0">公司行动</label>
+        <label for="hub-corporate" class="hub-tab" role="tab" tabindex="0" data-tooltip="分红、解禁、高管变更" data-tooltip-pos="bottom">公司行动</label>
         <input type="radio" name="hub" id="hub-news" class="tab-radio sr-only">
-        <label for="hub-news" class="hub-tab" role="tab" tabindex="0">新闻</label>
+        <label for="hub-news" class="hub-tab" role="tab" tabindex="0" data-tooltip="相关新闻、AI摘要" data-tooltip-pos="bottom">新闻</label>
         <input type="radio" name="hub" id="hub-network" class="tab-radio sr-only">
-        <label for="hub-network" class="hub-tab" role="tab" tabindex="0">关联网络</label>
+        <label for="hub-network" class="hub-tab" role="tab" tabindex="0" data-tooltip="标的关联关系、相关性分析" data-tooltip-pos="bottom">关联网络</label>
         <input type="radio" name="hub" id="hub-announcements" class="tab-radio sr-only">
-        <label for="hub-announcements" class="hub-tab" role="tab" tabindex="0">公告</label>
+        <label for="hub-announcements" class="hub-tab" role="tab" tabindex="0" data-tooltip="公司公告、年报、董事会决议" data-tooltip-pos="bottom">公告</label>
       </div>
 
     <!-- ══════════════════════════════════════════════
@@ -2182,31 +2215,31 @@
         <!-- Key Metrics -->
         <div class="metrics-grid" role="region" aria-label="关键指标" data-mouse-glow="true" data-mouse-glow-size="180px" data-mouse-glow-color="accent">
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="0">
-            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[31.2,30.5,29.8,28.4,29.1,28.9,28.6],"stroke":"var(--market-down-fg)","fill":true,"width":48,"height":20}'></svg>
+            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[31.2,30.5,29.8,28.4,29.1,28.9,28.6],"series":"down","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="滚动市盈率，基于过去12个月每股收益" data-tooltip-pos="top">PE (TTM)</span>
             <span class="metric-value"><span data-counter="28.6" data-counter-suffix="x" data-counter-decimals="1">28.6x</span></span>
             <span class="metric-change down">-1.2x</span>
           </div>
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="40">
-            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[11.2,10.8,10.5,10.1,10.6,10.4,10.3],"stroke":"var(--market-down-fg)","fill":true,"width":48,"height":20}'></svg>
+            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[11.2,10.8,10.5,10.1,10.6,10.4,10.3],"series":"down","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="市净率 = 总市值 / 净资产" data-tooltip-pos="top">PB</span>
             <span class="metric-value"><span data-counter="10.3" data-counter-suffix="x" data-counter-decimals="1">10.3x</span></span>
             <span class="metric-change down">-0.4x</span>
           </div>
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="80">
-            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[30.2,31.5,32.1,33.5,34.8,35.2,36.1],"stroke":"var(--market-up-fg)","fill":true,"width":48,"height":20}'></svg>
+            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[30.2,31.5,32.1,33.5,34.8,35.2,36.1],"series":"up","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="净资产收益率 = 净利润 / 股东权益" data-tooltip-pos="top">ROE</span>
             <span class="metric-value"><span data-counter="36.1" data-counter-suffix="%" data-counter-decimals="1">36.1%</span></span>
             <span class="metric-change up">+0.8%</span>
           </div>
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="120">
-            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[11.8,12.5,13.2,14.1,15.0,15.6,16.2],"stroke":"var(--market-up-fg)","fill":true,"width":48,"height":20}'></svg>
+            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[11.8,12.5,13.2,14.1,15.0,15.6,16.2],"series":"up","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="营业总收入同比增速" data-tooltip-pos="top">营收增速</span>
             <span class="metric-value"><span data-counter="16.2" data-counter-suffix="%" data-counter-decimals="1">16.2%</span></span>
             <span class="metric-change up">+2.1%</span>
           </div>
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="160">
-            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[13.5,14.2,15.0,16.8,17.5,18.6,19.8],"stroke":"var(--market-up-fg)","fill":true,"width":48,"height":20}'></svg>
+            <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[13.5,14.2,15.0,16.8,17.5,18.6,19.8],"series":"up","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="归母净利润同比增速" data-tooltip-pos="top">净利润增速</span>
             <span class="metric-value"><span data-counter="19.8" data-counter-suffix="%" data-counter-decimals="1">19.8%</span></span>
             <span class="metric-change up">+3.4%</span>
@@ -2219,7 +2252,7 @@
         
 
         <!-- Industry Rank (overview section) -->
-        <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="0">
+        <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" data-mouse-glow-size="160px" data-mouse-glow-color="accent">
           <div class="panel-header"><span class="panel-title">行业排名</span><span class="panel-subtitle">白酒 · 市值排名</span></div>
           <div class="pad-panel-x">
             <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">2.33万亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:100%"></div></div></div>
@@ -2335,7 +2368,7 @@
         <!-- 技术指标叠加区 -->
         <div class="panel indicator-sub">
           <div class="panel-header pad-panel-xs">
-            <span class="panel-title" class="indicator-label">技术指标</span>
+            <span class="panel-title indicator-label">技术指标</span>
             <div class="indicator-strip">
               <span class="text-brand" data-tooltip="20日均线" data-tooltip-pos="bottom">MA20</span>
               <span class="ma60-color" data-tooltip="60日均线" data-tooltip-pos="bottom">MA60</span>
@@ -2344,7 +2377,7 @@
               <span data-tooltip="布林带" data-tooltip-pos="bottom">BOLL</span>
             </div>
           </div>
-          <div style="padding:var(--space-6) var(--space-12); display:flex; flex-direction:column; gap:var(--space-6)" data-reveal="fade-up" data-reveal-delay="60">
+          <div class="indicator-sub-body" data-reveal="fade-up" data-reveal-delay="60">
             <div data-confidence="0.85" data-confidence-label="Strong Buy" data-tooltip="综合技术面信号: 强烈买入" data-tooltip-pos="top"></div>
             <div data-confidence="0.62" data-confidence-label="Neutral" data-tooltip="综合技术面信号: 中性" data-tooltip-pos="top"></div>
           </div>
@@ -2371,22 +2404,22 @@
             <div class="flow-col">
               <div class="subsection-title">主力资金流向</div>
               <div class="flow-item">
-                <span class="flow-label">主力净流入</span>
+                <span class="flow-label" data-tooltip="单笔成交额 > 100万" data-tooltip-pos="top">主力净流入</span>
                 <span class="flow-value inflow">+8.73亿</span>
                 <div class="flow-bar"><div class="flow-bar-fill inflow" style="width:36%"></div><div class="flow-bar-center"></div></div>
               </div>
               <div class="flow-item">
-                <span class="flow-label">超大单净流入</span>
+                <span class="flow-label" data-tooltip="单笔成交额 > 500万" data-tooltip-pos="top">超大单净流入</span>
                 <span class="flow-value inflow">+5.21亿</span>
                 <div class="flow-bar"><div class="flow-bar-fill inflow" style="width:29%"></div><div class="flow-bar-center"></div></div>
               </div>
               <div class="flow-item">
-                <span class="flow-label">散户净流出</span>
+                <span class="flow-label" data-tooltip="散户非主力资金" data-tooltip-pos="top">散户净流出</span>
                 <span class="flow-value outflow">-3.18亿</span>
                 <div class="flow-bar"><div class="flow-bar-fill outflow" style="width:18%"></div><div class="flow-bar-center"></div></div>
               </div>
               <div class="flow-item">
-                <span class="flow-label">北向资金</span>
+                <span class="flow-label" data-tooltip="沪深港通资金" data-tooltip-pos="top">北向资金</span>
                 <span class="flow-value inflow">+2.10亿</span>
                 <div class="flow-bar"><div class="flow-bar-fill inflow" style="width:14%"></div><div class="flow-bar-center"></div></div>
               </div>
@@ -2403,7 +2436,7 @@
           </div>
         </div>
         <!-- 筹码分布 -->
-        <div class="panel panel-shrink">
+        <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="40">
           <div class="panel-header">
             <span class="panel-title">筹码分布</span>
             <span class="panel-subtitle">持仓成本分析</span>
@@ -2427,7 +2460,7 @@
 
       <!-- ═══ Tab 4: hub-fundamentals (基本面) ═══ -->
       <div class="tab-panel" data-panel="hub-fundamentals">
-      <div class="hub-object-view panel-scroll">
+      <div class="hub-object-view panel-scroll" data-reveal="fade-up" data-reveal-delay="0">
         <!-- 财务三表摘要 -->
         <div class="panel panel-shrink">
           <div class="panel-header">
@@ -2452,7 +2485,7 @@
           </div>
         </div>
         <!-- 关键指标趋势 + 杜邦分析 -->
-        <div class="revenue-grid">
+        <div class="revenue-grid" data-reveal="fade-up" data-reveal-delay="40">
           <div class="panel">
             <div class="panel-header"><span class="panel-title">关键指标趋势</span></div>
             <div class="revenue-bars">
@@ -2476,7 +2509,7 @@
           </div>
         </div>
         <!-- 同行对比 -->
-        <div class="panel panel-shrink">
+        <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="80">
           <div class="panel-header"><span class="panel-title">同行对比</span><span class="panel-subtitle">白酒行业</span></div>
           <div class="pad-panel-x">
             <table class="fin-table">
@@ -2501,9 +2534,9 @@
 
       <!-- ═══ Tab 5: hub-corporate (公司行动) ═══ -->
       <div class="tab-panel" data-panel="hub-corporate">
-      <div class="hub-object-view panel-scroll">
+      <div class="hub-object-view panel-scroll" data-reveal="fade-up" data-reveal-delay="0">
         <!-- 近期公司行动时间线 -->
-        <div class="panel panel-shrink">
+        <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="0">
           <div class="panel-header"><span class="panel-title">公司行动时间线</span><span class="panel-subtitle">近12个月</span></div>
           <div class="pad-panel">
             <div class="corp-event"><span class="corp-date">2026-03-28</span><div class="corp-body"><span class="corp-title">年度股东大会 <span class="corp-tag dividend">分红</span></span><span class="corp-desc">每10股派发现金红利275.28元，分红率51.9%</span></div></div>
@@ -2552,7 +2585,7 @@
 
       <!-- ═══ Tab 6: hub-news (新闻) ═══ -->
       <div class="tab-panel" data-panel="hub-news">
-      <div class="hub-object-view panel-scroll">
+      <div class="hub-object-view panel-scroll" data-reveal="fade-up" data-reveal-delay="0">
         <div class="panel panel-grow">
           <div class="panel-header">
             <span class="panel-title">相关新闻</span>
@@ -2643,13 +2676,13 @@
           </div>
         </div>
         <!-- 关联强度 -->
-        <div class="panel panel-shrink">
+        <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="40">
           <div class="panel-header"><span class="panel-title">关联强度</span></div>
           <div class="panel-section-body">
-            <div class="corr-row"><span class="corr-name">五粮液</span><div class="corr-track"><div style="width:82%;height:100%;background:var(--brand-accent);border-radius:2px"></div></div><span class="corr-value">0.82</span></div>
-            <div class="corr-row"><span class="corr-name">沪深300</span><div class="corr-track"><div style="width:65%;height:100%;background:var(--brand-accent);opacity:0.7;border-radius:2px"></div></div><span class="corr-value">0.65</span></div>
-            <div class="corr-row"><span class="corr-name">泸州老窖</span><div class="corr-track"><div style="width:58%;height:100%;background:var(--brand-accent);opacity:0.6;border-radius:2px"></div></div><span class="corr-value">0.58</span></div>
-            <div class="corr-row"><span class="corr-name">白酒ETF</span><div class="corr-track"><div style="width:71%;height:100%;background:var(--brand-accent);opacity:0.8;border-radius:2px"></div></div><span class="corr-value">0.71</span></div>
+            <div class="corr-row"><span class="corr-name">五粮液</span><div class="corr-track"><div class="corr-fill" style="width:82%"></div></div><span class="corr-value">0.82</span></div>
+            <div class="corr-row"><span class="corr-name">沪深300</span><div class="corr-track"><div class="corr-fill" style="width:65%;opacity:0.7"></div></div><span class="corr-value">0.65</span></div>
+            <div class="corr-row"><span class="corr-name">泸州老窖</span><div class="corr-track"><div class="corr-fill" style="width:58%;opacity:0.6"></div></div><span class="corr-value">0.58</span></div>
+            <div class="corr-row"><span class="corr-name">白酒ETF</span><div class="corr-track"><div class="corr-fill" style="width:71%;opacity:0.8"></div></div><span class="corr-value">0.71</span></div>
           </div>
         </div>
       </div>
@@ -2663,7 +2696,7 @@
 
       <!-- ═══ Tab 8: hub-announcements (公告) ═══ -->
       <div class="tab-panel" data-panel="hub-announcements">
-      <div class="hub-object-view panel-scroll">
+      <div class="hub-object-view panel-scroll" data-reveal="fade-up" data-reveal-delay="0">
         <div class="panel panel-grow">
           <div class="panel-header">
             <span class="panel-title">公司公告</span>
@@ -2756,8 +2789,8 @@
               <span class="signal-desc">板块整体净流入15.3亿，龙头股领涨</span>
             </div>
             <!-- Signal confidence indicator -->
-            <div style="padding:var(--space-4) 0; border-top:1px solid var(--border-subtle); margin-top:var(--space-4)">
-              <div style="font-size:var(--font-size-10); color:var(--text-tertiary); margin-bottom:var(--space-4)" data-tooltip="基于技术面+资金面+基本面综合计算" data-tooltip-pos="top">综合信号强度</div>
+            <div class="signal-confidence-sep">
+              <div class="signal-confidence-label" data-tooltip="基于技术面+资金面+基本面综合计算" data-tooltip-pos="top">综合信号强度</div>
               <div data-confidence="0.78" data-confidence-label="Bullish" data-tooltip="综合信号评级: 看多 (0.78)" data-tooltip-pos="top"></div>
             </div>
           </div>
@@ -3122,7 +3155,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">停牌原因</span>
-            <span class="overlay-field-value" class="status-degraded">重大事项公告</span>
+            <span class="overlay-field-value status-degraded">重大事项公告</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">停牌日期</span>
@@ -3158,13 +3191,13 @@
   <div class="status-bar" role="status" aria-label="系统状态">
     <span class="status-indicator"></span>
     <span>行情延迟</span>
-    <span class="status-healthy">&lt;3s</span>
+    <span class="status-healthy" style="font-variant-numeric:tabular-nums">&lt;3s</span>
     <span class="status-sep">|</span>
     <span>数据源</span>
     <span class="status-muted">Wind · 东方财富</span>
     <span class="status-sep">|</span>
     <span>上次刷新</span>
-    <span class="status-muted">15:00:02</span>
+    <span class="status-muted" style="font-variant-numeric:tabular-nums">15:00:02</span>
     <span class="status-spacer"></span>
     <span class="status-kbd">?</span>
     <span>快捷键</span>
@@ -3194,8 +3227,8 @@
       borderSubtle: tk('--border-subtle')      || 'oklch(0.255 0.006 253)',
       textTertiary: tk('--text-tertiary')      || 'oklch(0.555 0.007 253)',
       marketUp:     tk('--market-up-fg')       || 'oklch(0.670 0.170 20)',
-      marketDown:   tk('--market-down-fg')     || 'oklch(0.680 0.120 175)',
-      brandAccent:  tk('--brand-accent')       || 'oklch(0.700 0.085 265)',
+      marketDown:   tk('--market-down-fg')     || 'oklch(0.680 0.120 155)',
+      brandAccent:  tk('--brand-accent')       || 'oklch(0.700 0.120 235)',
     };
 
     const chart = LightweightCharts.createChart(container, {
@@ -3381,7 +3414,7 @@
       <div class="gallery-card__label">指标卡片 · Loading</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-            <div class="state-loading" class="skel-grid-5">
+            <div class="state-loading skel-grid-5">
               <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
               <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
               <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
@@ -3950,7 +3983,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">停牌原因</span>
-              <span class="overlay-field-value" class="status-degraded">重大事项公告</span>
+              <span class="overlay-field-value status-degraded">重大事项公告</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">停牌日期</span>

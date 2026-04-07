@@ -355,6 +355,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
+      font-feature-settings: 'tnum' 1, 'zero' 1;
     }
 
     .scope-metric-value.up {
@@ -495,6 +496,7 @@
       font-size: var(--font-size-24);
       font-weight: var(--font-weight-semibold);
       color: var(--market-up-fg);
+      font-feature-settings: 'tnum' 1, 'zero' 1;
       letter-spacing: -0.02em;
     }
 
@@ -503,6 +505,7 @@
       font-size: var(--font-size-14);
       font-weight: var(--font-weight-medium);
       color: var(--market-up-fg);
+      font-feature-settings: 'tnum' 1, 'zero' 1;
     }
 
     .equity-sub-row {
@@ -526,6 +529,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-secondary);
+      font-feature-settings: 'tnum' 1, 'zero' 1;
     }
 
     .equity-sub-value.up {
@@ -681,6 +685,7 @@
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       white-space: nowrap;
+      font-feature-settings: 'tnum' 1;
     }
 
     /* ── Order Tabs (semantic) ── */
@@ -724,6 +729,12 @@
       gap: var(--space-8);
       padding: var(--space-6) 0;
       border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .risk-item:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
 
     .risk-item:last-child {
@@ -774,6 +785,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
+      font-feature-settings: 'tnum' 1, 'zero' 1;
     }
 
     .risk-item-value.warning {
@@ -939,6 +951,7 @@
       font-size: var(--font-size-10);
       font-weight: var(--font-weight-medium);
       color: var(--text-secondary);
+      font-feature-settings: 'tnum' 1;
     }
 
     .signal-queue-confidence.high { color: var(--market-up-fg); }
@@ -963,6 +976,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
+      font-feature-settings: 'tnum' 1, 'zero' 1;
     }
 
     .fill-side {
@@ -989,6 +1003,7 @@
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       white-space: nowrap;
+      font-feature-settings: 'tnum' 1;
     }
 
     /* ══════════════════════════════════════════════
@@ -1247,6 +1262,7 @@
       width: 80px;
       text-align: right;
       flex-shrink: 0;
+      font-feature-settings: 'tnum' 1, 'zero' 1;
     }
 
     .attribution-value.up { color: var(--market-up-fg); }
@@ -1457,6 +1473,9 @@
     /* Overlay danger title */
     .overlay-title.text-danger { color: var(--risk-critical-fg); }
 
+    /* Generic critical text color */
+    .text-risk-critical { color: var(--risk-critical-fg); }
+
     /* Overlay warning layout */
     .overlay-warning-layout {
       display: flex;
@@ -1522,6 +1541,11 @@
       cursor: pointer;
       flex-shrink: 0;
       align-self: center;
+    }
+
+    /* Equity flow data container */
+    .equity-flow-wrap {
+      padding: 0 var(--space-12) var(--space-8);
     }
 
     /* Skeleton width utilities */
@@ -1910,28 +1934,28 @@
         连续竞价
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric">
+      <div class="scope-metric" data-tooltip="账户可用资金（含未冻结保证金）">
         <span class="scope-metric-label">可用资金</span>
         <span class="scope-metric-value"><span data-ticker="8432180.50" data-decimals="2" data-ticker-prefix="¥" data-ticker-suffix="">8,432,180.50</span></span>
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric">
+      <div class="scope-metric" data-tooltip="风险预算使用率，阈值 70% 预警、85% 熔断">
         <span class="scope-metric-label">风险预算</span>
         <span class="scope-metric-value warning"><span data-ticker="68.2" data-decimals="1" data-ticker-prefix="" data-ticker-suffix="%">68.2</span>%</span>
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric">
+      <div class="scope-metric" data-tooltip="华泰证券极速通道，延迟 < 20ms 为优">
         <span class="scope-status-dot green"></span>
         <span class="scope-metric-label">券商连接</span>
         <span class="scope-metric-value ok">已连接</span>
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric">
+      <div class="scope-metric" data-tooltip="订单通道往返延迟">
         <span class="scope-metric-label">通道延迟</span>
         <span class="scope-metric-value">12ms</span>
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric">
+      <div class="scope-metric" data-tooltip="今日已成交订单总数">
         <span class="scope-metric-label">今日成交</span>
         <span class="scope-metric-value"><span data-ticker="47" data-decimals="0" data-ticker-prefix="" data-ticker-suffix=" 笔">47</span> 笔</span>
       </div>
@@ -1945,27 +1969,27 @@
     <!-- ═══ Decision Banner ═══ -->
     <div class="trading-banner">
       <div class="panel">
-        <div class="decision-banner" role="alert" aria-live="polite">
+        <div class="decision-banner" data-mouse-glow="true" data-mouse-glow-size="180px" role="alert" aria-live="polite">
           <!-- Left: Primary status (~42%) -->
           <div class="decision-primary">
             <span class="metric-label">今日盈亏</span>
-            <span class="metric-value positive"><span data-ticker="86472.50" data-decimals="2" data-ticker-prefix="+¥" data-ticker-suffix="">86,472.50</span></span>
-            <span class="metric-sub">+0.34% · 总权益 ¥25,432,180 · <span class="indicator-up">较昨日 +¥21,400</span></span>
+            <span class="metric-value positive" data-tooltip="今日实现盈亏 + 浮动盈亏合计"><span data-ticker="86472.50" data-decimals="2" data-ticker-prefix="+¥" data-ticker-suffix="">86,472.50</span></span>
+            <span class="metric-sub">+0.34% · 总权益 ¥25,432,180 · <span class="indicator-up" data-tooltip="较昨日权益变动 +¥21,400 (+0.08%)">较昨日 +¥21,400</span></span>
           </div>
           <!-- Middle: Context judgment (~33%) -->
           <div class="decision-judgment">
             <div class="decision-judgment-header">
-              <span class="decision-regime-tag">震荡市</span>
+              <span class="decision-regime-tag" data-tooltip="当前市场环境判定：震荡市，适合中性策略">震荡市</span>
               <span class="decision-judgment-text">科技板块集中度超限 2.2%，贵州茅台出现卖出信号待复核。</span>
             </div>
             <div class="decision-judgment-metrics">
               <div class="decision-judgment-metric">
                 <span class="status-label">待处理信号</span>
-                <span class="status-value warning">4</span>
+                <span class="status-value warning" data-tooltip="含 P1 卖出信号 1 个，P2 买入信号 1 个">4</span>
               </div>
               <div class="decision-judgment-metric">
                 <span class="status-label">待成交订单</span>
-                <span class="status-value">2</span>
+                <span class="status-value" data-tooltip="限价单 1 笔，部分成交 1 笔">2</span>
               </div>
             </div>
           </div>
@@ -2011,12 +2035,12 @@
                 <span class="equity-sub-value up">+18.6%</span>
               </div>
             </div>
-            <div style="padding: 0 var(--space-12) var(--space-8);">
+            <div class="equity-flow-wrap">
               <div data-flow='{"segments":[{"label":"股票","value":45},{"label":"期货","value":25},{"label":"期权","value":18},{"label":"现金","value":12}]}' aria-label="资金流向"></div>
             </div>
           </div>
           <div class="equity-chart" role="img" aria-label="权益曲线：近一个月持续上涨，当前 +0.34%">
-            <svg data-sparkline='{"data":[100,102,101,104,103,107,106,110,108,112,115,113,118,120,122,119,125,128,126,130,133,131,136,140,138,142,145,143,148,152],"stroke":"oklch(0.7 0.085 265)","fill":true,"width":200,"height":60}' aria-label="权益曲线 Sparkline"></svg>
+            <svg data-sparkline='{"data":[100,102,101,104,103,107,106,110,108,112,115,113,118,120,122,119,125,128,126,130,133,131,136,140,138,142,145,143,148,152],"series":"up","fill":true,"width":200,"height":60}' aria-label="权益曲线 Sparkline"></svg>
             <span class="equity-chart-label">权益曲线 · 日线</span>
             <svg viewBox="0 0 800 200" preserveAspectRatio="none" aria-hidden="true">
               <defs>
@@ -2079,7 +2103,7 @@
         <div class="panel panel-positions" role="region" aria-label="持仓汇总" data-reveal="fade-up" data-reveal-delay="1">
           <div class="panel-header">
             <span class="panel-title">持仓</span>
-            <span class="panel-count">8</span>
+            <span class="panel-count" data-tooltip="持有 8 只标的，含 2 只亏损">8</span>
             <div class="panel-actions">
               <button class="panel-action">查看全部 →</button>
             </div>
@@ -2218,7 +2242,7 @@
           </div>
           <div class="panel-body" role="tabpanel">
             <div data-tab-panel="positions">
-            <div class="order-row order-pending" role="button" tabindex="0" aria-label="买入 600519 100股 ¥1,850.00 待成交">
+            <div class="order-row order-pending" role="button" tabindex="0" aria-label="买入 600519 100股 ¥1,850.00 待成交" data-tooltip="限价买入贵州茅台，委托价 ¥1,850.00">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">600519</span>
               <span class="order-type">限价</span>
@@ -2226,7 +2250,7 @@
               <span class="order-state-badge badge-pending">待成交</span>
               <span class="order-time">2分钟前</span>
             </div>
-            <div class="order-row order-partial" role="button" tabindex="0" aria-label="卖出 300750 50股 部分成交">
+            <div class="order-row order-partial" role="button" tabindex="0" aria-label="卖出 300750 50股 部分成交" data-tooltip="市价卖出宁德时代，已成交 30/50 股">
               <span class="order-side-pill sell">卖出</span>
               <span class="order-ticker">300750</span>
               <span class="order-type">市价</span>
@@ -2236,7 +2260,7 @@
             </div>
             </div>
             <div data-tab-panel="orders" hidden>
-            <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 002594 200股 ¥288.00 已成交">
+            <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 002594 200股 ¥288.00 已成交" data-tooltip="限价买入比亚迪，成交价 ¥288.00">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">002594</span>
               <span class="order-type">限价</span>
@@ -2244,7 +2268,7 @@
               <span class="order-state-badge badge-filled">已成交</span>
               <span class="order-time">15分钟前</span>
             </div>
-            <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 000333 200股 市价 已成交">
+            <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 000333 200股 市价 已成交" data-tooltip="市价买入美的集团，200股">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">000333</span>
               <span class="order-type">市价</span>
@@ -2254,7 +2278,7 @@
             </div>
             </div>
             <div data-tab-panel="fills" hidden>
-            <div class="order-row order-cancelled" role="button" tabindex="0" aria-label="卖出 601318 500股 ¥54.00 已撤单">
+            <div class="order-row order-cancelled" role="button" tabindex="0" aria-label="卖出 601318 500股 ¥54.00 已撤单" data-tooltip="限价卖出中国平安，已撤单">
               <span class="order-side-pill sell">卖出</span>
               <span class="order-ticker">601318</span>
               <span class="order-type">限价</span>
@@ -2451,10 +2475,10 @@
         <div class="context-section section-risk" data-reveal="fade-up" data-reveal-delay="3">
           <div class="context-section-header">
             <span class="context-section-title">风控监控</span>
-            <span class="context-section-count" aria-label="2 项预警" title="2 项预警"><span style="color:var(--risk-critical-fg);">2</span></span>
+            <span class="context-section-count" aria-label="2 项预警" title="2 项预警"><span class="text-risk-critical">2</span></span>
           </div>
           <div class="context-section-body">
-            <div class="risk-item critical-alert">
+            <div class="risk-item critical-alert" data-tooltip="科技板块集中度 37.2%，超出上限 35%，建议减持">
               <div class="risk-item-dot critical"></div>
               <div class="risk-item-body">
                 <div class="risk-item-row">
@@ -2468,7 +2492,7 @@
               
               <label for="overlay-risk-alert-detail" class="panel-action detail-link-inline" title="查看详情">详情</label>
             </div>
-            <div class="risk-item">
+            <div class="risk-item" data-tooltip="风险预算使用率，阈值 70% 预警、85% 熔断">
               <div class="risk-item-dot warning"></div>
               <div class="risk-item-body">
                 <div class="risk-item-row">
@@ -2480,7 +2504,7 @@
                 </div>
               </div>
             </div>
-            <div class="risk-item">
+            <div class="risk-item" data-tooltip="单只标的最大持仓占比，上限 15%">
               <div class="risk-item-dot ok"></div>
               <div class="risk-item-body">
                 <div class="risk-item-row">
@@ -2489,7 +2513,7 @@
                 </div>
               </div>
             </div>
-            <div class="risk-item">
+            <div class="risk-item" data-tooltip="日内最大回撤，阈值 -2% 预警">
               <div class="risk-item-dot ok"></div>
               <div class="risk-item-body">
                 <div class="risk-item-row">
@@ -2509,7 +2533,7 @@
         
 
         <!-- Section 2: 信号队列 -->
-        <div class="context-section" role="region" aria-label="信号队列">
+        <div class="context-section" role="region" aria-label="信号队列" data-reveal="fade-up" data-reveal-delay="4">
           <div class="context-section-header">
             <span class="context-section-title">信号队列</span>
           </div>
@@ -2584,7 +2608,7 @@
         
 
         <!-- Section 3: 今日成交 -->
-        <div class="context-section" role="region" aria-label="今日成交">
+        <div class="context-section" role="region" aria-label="今日成交" data-reveal="fade-up" data-reveal-delay="5">
           <div class="context-section-header">
             <span class="context-section-title">今日成交</span>
           </div>

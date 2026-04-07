@@ -433,7 +433,10 @@
     .calendar-summary-time,
     .calendar-summary-markets,
     .header-timeframe,
-    .header-timestamp {
+    .header-timestamp,
+    .corr-cell,
+    .corr-label,
+    .flow-bar-value {
       letter-spacing: -0.02em;
       font-feature-settings: 'tnum' 1, 'zero' 1;
     }
@@ -1268,6 +1271,7 @@
       display: flex;
       align-items: center;
       padding-right: var(--space-4);
+      font-family: var(--font-family-numeric);
     }
     .corr-cell {
       display: flex;
@@ -1275,9 +1279,10 @@
       justify-content: center;
       padding: var(--space-4) var(--space-2);
       border-radius: var(--radius-3);
-      font-feature-settings: 'tnum' 1;
+      font-feature-settings: 'tnum' 1, 'zero' 1;
       letter-spacing: -0.02em;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
     }
     .corr-cell[data-corr="1"]  { background: color-mix(in oklch, var(--market-up-fg) 35%, transparent); color: var(--text-primary); }
     .corr-cell[data-corr="2"]  { background: color-mix(in oklch, var(--market-up-fg) 22%, transparent); color: var(--text-secondary); }
@@ -1292,6 +1297,8 @@
     }
     .corr-cell:hover {
       filter: brightness(1.15);
+      background: var(--interaction-hover-subtle-bg);
+      transform: scale(1.03);
     }
 
     /* ══════════════════════════════════════════════
@@ -1596,7 +1603,7 @@
           <!-- L1: Market Card Grid (unified 3-line template) -->
           <div class="market-card-grid" data-mouse-glow="true" data-reveal="fade-up" data-reveal-delay="0">
 
-            <div class="market-card card-lead" tabindex="0" role="button" aria-label="A股 沪深300 +0.67% 广度偏强 AI+半导体主线扩散" onclick="document.getElementById('overlay-market-depth').checked=true">
+            <div class="market-card card-lead" tabindex="0" role="button" aria-label="A股 沪深300 +0.67% 广度偏强 AI+半导体主线扩散" data-tooltip="沪深300 · 涨跌比偏强 · AI+半导体扩散 · 点击查看板块详情" onclick="document.getElementById('overlay-market-depth').checked=true">
               <div class="market-card-top">
                 <span class="market-card-name" onclick="event.stopPropagation()">
                   <label for="overlay-index-components" class="cursor-pointer" title="查看指数成分股">A股 · 沪深300</label>
@@ -1604,67 +1611,67 @@
                 <span class="market-card-regime on">风险偏好</span>
               </div>
               <div class="market-card-index">
-                沪深300 <span class="market-card-change up">+0.67%</span>
+                <span data-counter="3,912.45" data-counter-decimals="2" data-counter-suffix="">沪深300</span> <span class="market-card-change up">+0.67%</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,10 10,12 20,8 30,6 40,9 50,4 60,2" stroke="var(--market-up-fg)"/></svg>
               <div class="market-card-judgment">涨跌比偏强，AI 半导体扩散</div>
             </div>
 
-            <div class="market-card card-lead" tabindex="0" role="button" aria-label="港股 恒生科技 +1.9% 弹性领先 南向资金偏强" onclick="document.getElementById('overlay-market-depth').checked=true">
+            <div class="market-card card-lead" tabindex="0" role="button" aria-label="港股 恒生科技 +1.9% 弹性领先 南向资金偏强" data-tooltip="恒生科技 · 弹性领跑全市场 · 南向资金持续流入" onclick="document.getElementById('overlay-market-depth').checked=true">
               <div class="market-card-top">
                 <span class="market-card-name">港股 · 恒科</span>
                 <span class="market-card-regime on">高弹性</span>
               </div>
               <div class="market-card-index">
-                恒生科技 <span class="market-card-change up">+1.9%</span>
+                <span data-counter="4,567.82" data-counter-decimals="2">恒生科技</span> <span class="market-card-change up">+1.9%</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,14 10,12 20,10 30,8 40,5 50,3 60,1" stroke="var(--market-up-fg)"/></svg>
               <div class="market-card-judgment">弹性领先，南向资金偏强</div>
             </div>
 
-            <div class="market-card" tabindex="0" role="button" aria-label="美股 纳指 +0.4% 科技权重主导 广度偏弱">
+            <div class="market-card" tabindex="0" role="button" aria-label="美股 纳指 +0.4% 科技权重主导 广度偏弱" data-tooltip="纳指 · 涨跌比偏弱 · 科技权重主导 · 分化行情">
               <div class="market-card-top">
                 <span class="market-card-name">美股 · 纳指</span>
                 <span class="market-card-regime mixed">分化</span>
               </div>
               <div class="market-card-index">
-                纳指 <span class="market-card-change up">+0.4%</span>
+                <span data-counter="18,234.56" data-counter-decimals="2">纳指</span> <span class="market-card-change up">+0.4%</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,8 10,6 20,10 30,12 40,8 50,7 60,9" stroke="var(--text-tertiary)"/></svg>
               <div class="market-card-judgment">涨跌比偏弱，科技权重主导</div>
             </div>
 
-            <div class="market-card card-lag" tabindex="0" role="button" aria-label="利率 US10Y +7bp 长端承压 降息预期降温">
+            <div class="market-card card-lag" tabindex="0" role="button" aria-label="利率 US10Y +7bp 长端承压 降息预期降温" data-tooltip="US10Y · 长端承压 · 降息预期降温 · 压制成长估值">
               <div class="market-card-top">
                 <span class="market-card-name">利率</span>
                 <span class="market-card-regime off">利率上行</span>
               </div>
               <div class="market-card-index">
-                US10Y <span class="market-card-change down">+7bp</span>
+                <span data-counter="4.41" data-counter-decimals="2" data-counter-suffix="%">US10Y</span> <span class="market-card-change down">+7bp</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,4 10,5 20,6 30,8 40,10 50,12 60,14" stroke="var(--market-down-fg)"/></svg>
               <div class="market-card-judgment">长端承压，降息预期降温</div>
             </div>
 
-            <div class="market-card card-lag" tabindex="0" role="button" aria-label="外汇 DXY -0.4% 美元走弱 非美货币普涨">
+            <div class="market-card card-lag" tabindex="0" role="button" aria-label="外汇 DXY -0.4% 美元走弱 非美货币普涨" data-tooltip="DXY · 美元走弱 · 非美货币普涨 · 风险偏好回升">
               <div class="market-card-top">
                 <span class="market-card-name">外汇</span>
                 <span class="market-card-regime off">美元走弱</span>
               </div>
               <div class="market-card-index">
-                DXY <span class="market-card-change down">-0.4%</span>
+                <span data-counter="102.4" data-counter-decimals="1">DXY</span> <span class="market-card-change down">-0.4%</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,3 10,4 20,5 30,7 40,9 50,11 60,13" stroke="var(--market-down-fg)"/></svg>
               <div class="market-card-judgment">美元走弱，非美货币普涨</div>
             </div>
 
-            <div class="market-card card-lead" tabindex="0" role="button" aria-label="商品 黄金+1.2% 避险推升金价，原油OPEC观望-0.3%">
+            <div class="market-card card-lead" tabindex="0" role="button" aria-label="商品 黄金+1.2% 避险推升金价，原油OPEC观望-0.3%" data-tooltip="黄金 · 避险推升 · 央行购金+地缘风险 · 原油 OPEC 观望">
               <div class="market-card-top">
                 <span class="market-card-name">商品</span>
                 <span class="market-card-regime on">避险</span>
               </div>
               <div class="market-card-index">
-                黄金 <span class="market-card-change up">+1.2%</span>
+                <span data-counter="2,648" data-counter-decimals="0">黄金</span> <span class="market-card-change up">+1.2%</span>
               </div>
               <svg class="card-sparkline" viewBox="0 0 60 16" fill="none" aria-hidden="true"><polyline points="0,12 10,10 20,8 30,6 40,4 50,3 60,1" stroke="var(--market-up-fg)"/></svg>
               <div class="market-card-judgment">避险推升金价，原油 OPEC 观望 <span class="market-card-index-inline">-0.3%</span></div>
@@ -1715,63 +1722,63 @@
               <tbody>
                 <tr class="row-lead" aria-label="港股：1D +1.4%, 1W +3.2%, 1M +7.6%">
                   <td>港股</td>
-                  <td class="up" data-heat="2">+1.4%</td>
-                  <td class="up" data-heat="3">+3.2%</td>
-                  <td class="up" data-heat="3">+7.6%</td>
+                  <td class="up" data-heat="2" data-tooltip="港股 1日涨跌幅 +1.4%">+1.4%</td>
+                  <td class="up" data-heat="3" data-tooltip="港股 1周涨跌幅 +3.2%">+3.2%</td>
+                  <td class="up" data-heat="3" data-tooltip="港股 1月涨跌幅 +7.6%">+7.6%</td>
                   <td data-heat="2">高</td>
                   <td class="up" data-heat="2">强</td>
                   <td>南向流入</td>
                 </tr>
                 <tr class="row-lead" aria-label="黄金：1D +1.1%, 1W +2.4%, 1M +5.0%">
                   <td>黄金</td>
-                  <td class="up" data-heat="2">+1.1%</td>
-                  <td class="up" data-heat="2">+2.4%</td>
-                  <td class="up" data-heat="3">+5.0%</td>
+                  <td class="up" data-heat="2" data-tooltip="黄金 1日涨跌幅 +1.1%">+1.1%</td>
+                  <td class="up" data-heat="2" data-tooltip="黄金 1周涨跌幅 +2.4%">+2.4%</td>
+                  <td class="up" data-heat="3" data-tooltip="黄金 1月涨跌幅 +5.0%">+5.0%</td>
                   <td data-heat="1">中</td>
                   <td class="neutral">—</td>
                   <td>防御偏强</td>
                 </tr>
                 <tr aria-label="A股：1D +0.6%, 1W +1.8%, 1M +4.3%">
                   <td>A股</td>
-                  <td class="up" data-heat="2">+0.6%</td>
-                  <td class="up" data-heat="2">+1.8%</td>
-                  <td class="up" data-heat="3">+4.3%</td>
+                  <td class="up" data-heat="2" data-tooltip="A股 1日涨跌幅 +0.6%">+0.6%</td>
+                  <td class="up" data-heat="2" data-tooltip="A股 1周涨跌幅 +1.8%">+1.8%</td>
+                  <td class="up" data-heat="3" data-tooltip="A股 1月涨跌幅 +4.3%">+4.3%</td>
                   <td data-heat="1">中</td>
                   <td class="up" data-heat="2">偏强</td>
                   <td>北向流入</td>
                 </tr>
                 <tr aria-label="美股：1D +0.2%, 1W -0.4%, 1M +1.1%">
                   <td>美股</td>
-                  <td class="up" data-heat="1">+0.2%</td>
-                  <td class="down" data-heat="-1">-0.4%</td>
-                  <td class="up" data-heat="2">+1.1%</td>
+                  <td class="up" data-heat="1" data-tooltip="美股 1日涨跌幅 +0.2%">+0.2%</td>
+                  <td class="down" data-heat="-1" data-tooltip="美股 1周涨跌幅 -0.4%">-0.4%</td>
+                  <td class="up" data-heat="2" data-tooltip="美股 1月涨跌幅 +1.1%">+1.1%</td>
                   <td data-heat="1">低</td>
                   <td class="neutral">中性</td>
                   <td>科技偏强</td>
                 </tr>
                 <tr class="row-lag" aria-label="DXY：1D -0.4%, 1W -0.8%, 1M -1.5%">
                   <td>DXY</td>
-                  <td class="down" data-heat="-1">-0.4%</td>
-                  <td class="down" data-heat="-1">-0.8%</td>
-                  <td class="down" data-heat="-2">-1.5%</td>
+                  <td class="down" data-heat="-1" data-tooltip="DXY 1日涨跌幅 -0.4%">-0.4%</td>
+                  <td class="down" data-heat="-1" data-tooltip="DXY 1周涨跌幅 -0.8%">-0.8%</td>
+                  <td class="down" data-heat="-2" data-tooltip="DXY 1月涨跌幅 -1.5%">-1.5%</td>
                   <td data-heat="1">低</td>
                   <td class="neutral">—</td>
                   <td>走弱</td>
                 </tr>
                 <tr class="row-lag" aria-label="原油：1D -0.8%, 1W -2.1%, 1M -1.3%">
                   <td>原油</td>
-                  <td class="down" data-heat="-1">-0.8%</td>
-                  <td class="down" data-heat="-2">-2.1%</td>
-                  <td class="down" data-heat="-2">-1.3%</td>
+                  <td class="down" data-heat="-1" data-tooltip="原油 1日涨跌幅 -0.8%">-0.8%</td>
+                  <td class="down" data-heat="-2" data-tooltip="原油 1周涨跌幅 -2.1%">-2.1%</td>
+                  <td class="down" data-heat="-2" data-tooltip="原油 1月涨跌幅 -1.3%">-1.3%</td>
                   <td data-heat="2">高</td>
                   <td class="neutral">—</td>
                   <td>风险偏弱</td>
                 </tr>
                 <tr aria-label="利率：1D +7bp, 1W +15bp, 1M +32bp">
                   <td>利率</td>
-                  <td class="up" data-heat="3">+7bp</td>
-                  <td class="up" data-heat="3">+15bp</td>
-                  <td class="up" data-heat="3">+32bp</td>
+                  <td class="up" data-heat="3" data-tooltip="US10Y 1日变动 +7bp">+7bp</td>
+                  <td class="up" data-heat="3" data-tooltip="US10Y 1周变动 +15bp">+15bp</td>
+                  <td class="up" data-heat="3" data-tooltip="US10Y 1月变动 +32bp">+32bp</td>
                   <td data-heat="1">中</td>
                   <td class="neutral">—</td>
                   <td>抛售</td>
@@ -1795,39 +1802,39 @@
                 <div class="corr-header">美元</div>
                 <!-- A股 row -->
                 <div class="corr-label">A股</div>
-                <div class="corr-cell corr-cell--self">1.00</div>
-                <div class="corr-cell" data-corr="2">0.82</div>
-                <div class="corr-cell" data-corr="3">0.54</div>
-                <div class="corr-cell" data-corr="4">0.08</div>
-                <div class="corr-cell" data-corr="5">-0.31</div>
+                <div class="corr-cell corr-cell--self" data-tooltip="A股 vs A股 — 自相关">1.00</div>
+                <div class="corr-cell" data-corr="2" data-tooltip="A股 vs 港股 · 相关系数 0.82 · 高度正相关">0.82</div>
+                <div class="corr-cell" data-corr="3" data-tooltip="A股 vs 美股 · 相关系数 0.54 · 中度正相关">0.54</div>
+                <div class="corr-cell" data-corr="4" data-tooltip="A股 vs 黄金 · 相关系数 0.08 · 弱相关">0.08</div>
+                <div class="corr-cell" data-corr="5" data-tooltip="A股 vs 美元 · 相关系数 -0.31 · 弱负相关">-0.31</div>
                 <!-- 港股 row -->
                 <div class="corr-label">港股</div>
-                <div class="corr-cell" data-corr="2">0.82</div>
-                <div class="corr-cell corr-cell--self">1.00</div>
-                <div class="corr-cell" data-corr="3">0.61</div>
-                <div class="corr-cell" data-corr="2">0.73</div>
-                <div class="corr-cell" data-corr="6">-0.58</div>
+                <div class="corr-cell" data-corr="2" data-tooltip="港股 vs A股 · 相关系数 0.82 · 高度正相关">0.82</div>
+                <div class="corr-cell corr-cell--self" data-tooltip="港股 vs 港股 — 自相关">1.00</div>
+                <div class="corr-cell" data-corr="3" data-tooltip="港股 vs 美股 · 相关系数 0.61 · 中度正相关">0.61</div>
+                <div class="corr-cell" data-corr="2" data-tooltip="港股 vs 黄金 · 相关系数 0.73 · 较高正相关">0.73</div>
+                <div class="corr-cell" data-corr="6" data-tooltip="港股 vs 美元 · 相关系数 -0.58 · 中度负相关">-0.58</div>
                 <!-- 美股 row -->
                 <div class="corr-label">美股</div>
-                <div class="corr-cell" data-corr="3">0.54</div>
-                <div class="corr-cell" data-corr="3">0.61</div>
-                <div class="corr-cell corr-cell--self">1.00</div>
-                <div class="corr-cell" data-corr="4">0.12</div>
-                <div class="corr-cell" data-corr="5">-0.22</div>
+                <div class="corr-cell" data-corr="3" data-tooltip="美股 vs A股 · 相关系数 0.54 · 中度正相关">0.54</div>
+                <div class="corr-cell" data-corr="3" data-tooltip="美股 vs 港股 · 相关系数 0.61 · 中度正相关">0.61</div>
+                <div class="corr-cell corr-cell--self" data-tooltip="美股 vs 美股 — 自相关">1.00</div>
+                <div class="corr-cell" data-corr="4" data-tooltip="美股 vs 黄金 · 相关系数 0.12 · 弱相关">0.12</div>
+                <div class="corr-cell" data-corr="5" data-tooltip="美股 vs 美元 · 相关系数 -0.22 · 弱负相关">-0.22</div>
                 <!-- 黄金 row -->
                 <div class="corr-label">黄金</div>
-                <div class="corr-cell" data-corr="4">0.08</div>
-                <div class="corr-cell" data-corr="2">0.73</div>
-                <div class="corr-cell" data-corr="4">0.12</div>
-                <div class="corr-cell corr-cell--self">1.00</div>
-                <div class="corr-cell" data-corr="7">-0.84</div>
+                <div class="corr-cell" data-corr="4" data-tooltip="黄金 vs A股 · 相关系数 0.08 · 弱相关">0.08</div>
+                <div class="corr-cell" data-corr="2" data-tooltip="黄金 vs 港股 · 相关系数 0.73 · 较高正相关">0.73</div>
+                <div class="corr-cell" data-corr="4" data-tooltip="黄金 vs 美股 · 相关系数 0.12 · 弱相关">0.12</div>
+                <div class="corr-cell corr-cell--self" data-tooltip="黄金 vs 黄金 — 自相关">1.00</div>
+                <div class="corr-cell" data-corr="7" data-tooltip="黄金 vs 美元 · 相关系数 -0.84 · 强负相关">-0.84</div>
                 <!-- 美元 row -->
                 <div class="corr-label">美元</div>
-                <div class="corr-cell" data-corr="5">-0.31</div>
-                <div class="corr-cell" data-corr="6">-0.58</div>
-                <div class="corr-cell" data-corr="5">-0.22</div>
-                <div class="corr-cell" data-corr="7">-0.84</div>
-                <div class="corr-cell corr-cell--self">1.00</div>
+                <div class="corr-cell" data-corr="5" data-tooltip="美元 vs A股 · 相关系数 -0.31 · 弱负相关">-0.31</div>
+                <div class="corr-cell" data-corr="6" data-tooltip="美元 vs 港股 · 相关系数 -0.58 · 中度负相关">-0.58</div>
+                <div class="corr-cell" data-corr="5" data-tooltip="美元 vs 美股 · 相关系数 -0.22 · 弱负相关">-0.22</div>
+                <div class="corr-cell" data-corr="7" data-tooltip="美元 vs 黄金 · 相关系数 -0.84 · 强负相关">-0.84</div>
+                <div class="corr-cell corr-cell--self" data-tooltip="美元 vs 美元 — 自相关">1.00</div>
               </div>
             </div>
               </div>
@@ -1874,22 +1881,22 @@
                   <div class="drilldown-item" tabindex="0">
                     <span class="drilldown-market">港股科技</span>
                     <span class="drilldown-reason">弹性领先，南向资金持续流入，AI 概念扩散</span>
-                    <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"stroke":"oklch(0.7 0.085 155)"}' aria-label="港股科技走势"></svg>
+                    <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"series":"up","width":48,"height":16}' aria-label="港股科技走势"></svg>
                   </div>
                   <div class="drilldown-item" tabindex="0">
                     <span class="drilldown-market">A股 AI</span>
                     <span class="drilldown-reason">半导体 + 算力主线扩散，成交占比升至 18%</span>
-                    <svg data-sparkline='{"data":[8,9,11,10,13,14,12,16],"stroke":"oklch(0.7 0.085 155)"}' aria-label="A股 AI走势"></svg>
+                    <svg data-sparkline='{"data":[8,9,11,10,13,14,12,16],"series":"up","width":48,"height":16}' aria-label="A股 AI走势"></svg>
                   </div>
                   <div class="drilldown-item" tabindex="0">
                     <span class="drilldown-market">黄金避险</span>
                     <span class="drilldown-reason">央行购金 + 地缘风险推升，突破前高</span>
-                    <svg data-sparkline='{"data":[12,13,12,15,16,18,17,20],"stroke":"oklch(0.7 0.085 155)"}' aria-label="黄金避险走势"></svg>
+                    <svg data-sparkline='{"data":[12,13,12,15,16,18,17,20],"series":"up","width":48,"height":16}' aria-label="黄金避险走势"></svg>
                   </div>
                   <div class="drilldown-item" tabindex="0">
                     <span class="drilldown-market">美元资产</span>
                     <span class="drilldown-reason">降息预期降温 + 欧元走强，美元承压</span>
-                    <svg data-sparkline='{"data":[18,16,15,14,12,13,11,10],"stroke":"oklch(0.7 0.085 25)"}' aria-label="美元资产走势"></svg>
+                    <svg data-sparkline='{"data":[18,16,15,14,12,13,11,10],"series":"down","width":48,"height":16}' aria-label="美元资产走势"></svg>
                   </div>
                 </div>
               </div>
@@ -1908,57 +1915,57 @@
           <!-- L3: Macro Drivers Strip (ultra-lightweight, no border) -->
           <div class="drivers-strip">
             <span class="drivers-strip-label">宏观驱动</span>
-            <div class="driver-item">
+            <div class="driver-item" data-tooltip="美元指数 DXY · 日跌幅 -0.4% · 走弱趋势">
               <span class="driver-item-name">DXY</span>
               <span class="driver-item-val">102.4</span>
               <span class="driver-item-change down">-0.4%</span>
               <span class="driver-mini-bar down"></span>
-              <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"stroke":"oklch(0.7 0.085 265)","width":28,"height":10}' aria-label="DXY走势"></svg>
+              <svg data-sparkline='{"data":[18,16,15,13,12,10,9,8],"series":"down","width":28,"height":10}' aria-label="DXY走势"></svg>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-item">
+            <div class="driver-item" data-tooltip="美债10Y收益率 · 日涨 +7bp · 利率上行">
               <span class="driver-item-name">US10Y</span>
               <span class="driver-item-val">4.41%</span>
               <span class="driver-item-change up">+7bp</span>
               <span class="driver-mini-bar up"></span>
-              <svg data-sparkline='{"data":[8,9,8,10,11,12,13,15],"stroke":"oklch(0.7 0.085 265)","width":28,"height":10}' aria-label="US10Y走势"></svg>
+              <svg data-sparkline='{"data":[8,9,8,10,11,12,13,15],"series":"up","width":28,"height":10}' aria-label="US10Y走势"></svg>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-item">
+            <div class="driver-item" data-tooltip="中债10Y收益率 · 日涨 +2bp · 小幅上行">
               <span class="driver-item-name">CN10Y</span>
               <span class="driver-item-val">2.32%</span>
               <span class="driver-item-change up">+2bp</span>
               <span class="driver-mini-bar up"></span>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-item">
+            <div class="driver-item" data-tooltip="VIX 恐慌指数 · 日跌幅 -5.2% · 波动回落">
               <span class="driver-item-name">VIX</span>
               <span class="driver-item-val">16.8</span>
-              <span class="driver-item-change up">-5.2%</span>
-              <span class="driver-mini-bar up"></span>
-              <svg data-sparkline='{"data":[16,15,14,12,11,10,9,8],"stroke":"oklch(0.7 0.085 155)","width":28,"height":10}' aria-label="VIX走势"></svg>
+              <span class="driver-item-change down">-5.2%</span>
+              <span class="driver-mini-bar down"></span>
+              <svg data-sparkline='{"data":[16,15,14,12,11,10,9,8],"series":"down","width":28,"height":10}' aria-label="VIX走势"></svg>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-item">
+            <div class="driver-item" data-tooltip="黄金现货 · 日涨幅 +1.2% · 避险推升">
               <span class="driver-item-name">XAUUSD</span>
               <span class="driver-item-val">2,648</span>
               <span class="driver-item-change up">+1.2%</span>
               <span class="driver-mini-bar up"></span>
-              <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"stroke":"oklch(0.7 0.085 155)","width":28,"height":10}' aria-label="XAUUSD走势"></svg>
+              <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"series":"up","width":28,"height":10}' aria-label="XAUUSD走势"></svg>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-item">
+            <div class="driver-item" data-tooltip="WTI 原油 · 日跌幅 -0.8% · OPEC 观望">
               <span class="driver-item-name">WTI</span>
               <span class="driver-item-val">71.3</span>
               <span class="driver-item-change down">-0.8%</span>
               <span class="driver-mini-bar down"></span>
             </div>
             <div class="driver-sep"></div>
-            <div class="driver-item">
+            <div class="driver-item" data-tooltip="美元/离岸人民币 · 日跌幅 -0.3% · 人民币偏强">
               <span class="driver-item-name">USD/CNH</span>
               <span class="driver-item-val">7.24</span>
-              <span class="driver-item-change up">-0.3%</span>
-              <span class="driver-mini-bar up"></span>
+              <span class="driver-item-change down">-0.3%</span>
+              <span class="driver-mini-bar down"></span>
             </div>
           </div>
 
@@ -1978,27 +1985,27 @@
               <span class="rail-section-title">市场脉搏</span>
             </div>
             <div class="rail-section-body" role="list">
-              <div class="pulse-item" role="listitem">
+              <div class="pulse-item" role="listitem" data-tooltip="沪深300 +0.67% · 涨跌比偏强">
                 <span class="pulse-market">A股</span>
                 <svg class="pulse-sparkline" viewBox="0 0 20 10" fill="none" aria-hidden="true"><polyline points="0,6 4,5 8,7 12,4 16,3 20,4" stroke="var(--market-up-fg)" opacity="0.5"/></svg>
                 <span class="pulse-status on">偏强</span>
               </div>
-              <div class="pulse-item" role="listitem">
+              <div class="pulse-item" role="listitem" data-tooltip="恒生科技 +1.9% · 弹性领先全市场">
                 <span class="pulse-market">港股</span>
                 <svg class="pulse-sparkline" viewBox="0 0 20 10" fill="none" aria-hidden="true"><polyline points="0,8 4,7 8,5 12,4 16,2 20,1" stroke="var(--market-up-fg)" opacity="0.5"/></svg>
                 <span class="pulse-status on">领先</span>
               </div>
-              <div class="pulse-item" role="listitem">
+              <div class="pulse-item" role="listitem" data-tooltip="纳指 +0.4% · 科技权重主导，广度偏弱">
                 <span class="pulse-market">美股</span>
                 <svg class="pulse-sparkline" viewBox="0 0 20 10" fill="none" aria-hidden="true"><polyline points="0,5 4,4 8,6 12,5 16,5 20,4" stroke="var(--text-tertiary)" opacity="0.4"/></svg>
                 <span class="pulse-status neutral">分化</span>
               </div>
-              <div class="pulse-item" role="listitem">
+              <div class="pulse-item" role="listitem" data-tooltip="黄金 +1.2% · 避险推升，突破前高">
                 <span class="pulse-market">黄金</span>
                 <svg class="pulse-sparkline" viewBox="0 0 20 10" fill="none" aria-hidden="true"><polyline points="0,7 4,6 8,5 12,4 16,3 20,2" stroke="var(--market-up-fg)" opacity="0.5"/></svg>
                 <span class="pulse-status on">偏强</span>
               </div>
-              <div class="pulse-item" role="listitem">
+              <div class="pulse-item" role="listitem" data-tooltip="DXY -0.4% · 美元走弱，非美普涨">
                 <span class="pulse-market">美元</span>
                 <svg class="pulse-sparkline" viewBox="0 0 20 10" fill="none" aria-hidden="true"><polyline points="0,3 4,4 8,5 12,6 16,7 20,8" stroke="var(--market-down-fg)" opacity="0.5"/></svg>
                 <span class="pulse-status down">走弱</span>
@@ -2012,15 +2019,15 @@
               <span class="rail-section-title rail-section-title--alert">风险与预警</span>
             </div>
             <div class="rail-section-body" role="list">
-              <div class="risk-item" role="listitem">
+              <div class="risk-item" role="listitem" data-tooltip="明日 FOMC 利率决议 · 市场波动率预计抬升" data-tooltip-pos="left">
                 <span class="risk-dot high"></span>
                 <span class="risk-text high">FOMC 前夜，波动可能抬升</span>
               </div>
-              <div class="risk-item" role="listitem">
+              <div class="risk-item" role="listitem" data-tooltip="US10Y +32bp/m · 长端利率上行压制成长估值" data-tooltip-pos="left">
                 <span class="risk-dot high"></span>
                 <span class="risk-text high">美债长端上行压制成长</span>
               </div>
-              <div class="risk-item" role="listitem">
+              <div class="risk-item" role="listitem" data-tooltip="A股科技成交占比 18% · 拥挤度偏高" data-tooltip-pos="left">
                 <span class="risk-dot medium"></span>
                 <span class="risk-text medium">A股科技拥挤度升高</span>
               </div>
@@ -2033,14 +2040,14 @@
               <span class="rail-section-title">关键事件</span>
             </div>
             <div class="rail-section-body" role="list">
-              <div class="event-item" role="listitem">
+              <div class="event-item" role="listitem" data-tooltip="美国 CPI · 预期 3.1% · 前值 3.2% · 高影响" data-tooltip-pos="left">
                 <span class="event-time">今晚 20:30</span>
                 <div>
                   <div class="event-name">美国 CPI</div>
                   <div class="event-impact">美股 / 美债 / 美元</div>
                 </div>
               </div>
-              <div class="event-item" role="listitem">
+              <div class="event-item" role="listitem" data-tooltip="FOMC 利率决议 · 预期维持不变 · 全球影响" data-tooltip-pos="left">
                 <span class="event-time">明日 02:00</span>
                 <div>
                   <div class="event-name">FOMC 利率决议</div>

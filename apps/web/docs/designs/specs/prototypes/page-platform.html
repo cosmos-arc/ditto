@@ -177,6 +177,7 @@
       display: flex;
       align-items: baseline;
       gap: var(--space-8);
+      position: relative;
     }
 
     .panel-tab:hover {
@@ -234,6 +235,20 @@
       font-weight: var(--font-weight-medium);
       color: var(--system-healthy-fg);
       border-left: 2px solid var(--system-healthy-fg);
+      position: relative;
+      transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard),
+                  border-color var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .env-badge::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: calc(var(--radius-4) + 2px);
+      box-shadow: 0 0 8px -4px color-mix(in oklch, var(--system-healthy-fg) 25%, transparent);
+      pointer-events: none;
+    }
+    .env-badge:hover {
+      box-shadow: 0 0 12px -4px color-mix(in oklch, var(--system-healthy-fg) 35%, transparent);
     }
 
     .env-badge-dot {
@@ -334,8 +349,6 @@
     .health-metric-value.ok     { color: var(--system-healthy-fg); }
     .health-metric-value.warn   { color: var(--system-degraded-fg); }
     .health-metric-value.alert  { color: var(--system-down-fg); }
-    .health-metric-value.brand  { color: var(--brand-accent); }
-    .health-metric-value        { font-family: var(--font-family-numeric); }
 
     /* ── Cell state classes ── */
     .cell-warn { font-family: var(--font-family-numeric); color: var(--system-degraded-fg); }
@@ -425,6 +438,7 @@
 
     .quota-text {
       font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums;
       font-size: var(--font-size-12);
       white-space: nowrap;
     }
@@ -512,14 +526,17 @@
     .task-item.progress .task-status-icon { color: var(--system-degraded-fg); }
     .task-item.failed   .task-status-icon { color: var(--system-down-fg); }
     .task-item.failed   .task-meta        { color: var(--system-down-fg); }
+    .task-item.failed   .task-meta-error  { color: var(--system-down-fg); }
 
     /* ── Resource Row ── */
     .resource-item {
       display: flex;
       flex-direction: column;
       gap: var(--space-4);
-      padding: var(--space-8) 0;
+      padding: var(--space-8) var(--space-4);
       border-bottom: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .resource-item:last-child {
@@ -607,9 +624,9 @@
 
     /* ── Cell utility classes (replace inline styles) ── */
     .cell-name     { font-weight: var(--font-weight-medium); }
-    .cell-numeric  { font-family: var(--font-family-numeric); }
-    .cell-time     { font-family: var(--font-family-numeric); color: var(--text-secondary); }
-    .cell-disabled { font-family: var(--font-family-numeric); color: var(--text-disabled); }
+    .cell-numeric  { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; }
+    .cell-time     { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+    .cell-disabled { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; color: var(--text-disabled); }
 
     /* ── Sort indicator ── */
     .sort-indicator {
@@ -617,13 +634,6 @@
       color: var(--text-disabled);
       margin-left: var(--space-2);
     }
-
-    /* ── Task status icon color via parent ── */
-    .task-item.running  .task-status-icon { color: var(--system-healthy-fg); }
-    .task-item.waiting  .task-status-icon { color: var(--text-tertiary); }
-    .task-item.progress .task-status-icon { color: var(--system-degraded-fg); }
-    .task-item.failed   .task-status-icon { color: var(--system-down-fg); }
-    .task-item.failed   .task-meta-error  { color: var(--system-down-fg); }
 
     /* ── Alert severity text label ── */
     .alert-severity {
@@ -1386,6 +1396,20 @@
     .bar-w-82  { width: 82%; }
     .bar-w-96  { width: 96.4%; }
 
+    /* API mini-bar height utility — data-driven heights */
+    .api-h-6  { height: 6px; }
+    .api-h-7  { height: 7px; }
+    .api-h-8  { height: 8px; }
+    .api-h-10 { height: 10px; }
+    .api-h-11 { height: 11px; }
+    .api-h-12 { height: 12px; }
+    .api-h-14 { height: 14px; }
+    .api-h-16 { height: 16px; }
+    .api-h-18 { height: 18px; }
+    .api-h-20 { height: 20px; }
+    .api-h-22 { height: 22px; }
+    .api-h-24 { height: 24px; }
+
     /* ══════════════════════════════════════════════
      * Gallery Skeleton Utility Classes
      * ══════════════════════════════════════════════ */
@@ -1625,12 +1649,6 @@
     }
 
     /* Detail panel card — hover depth */
-    .resource-item {
-      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
-      padding-left: var(--space-4);
-      padding-right: var(--space-4);
-      border-radius: var(--radius-4);
-    }
     .resource-item:hover {
       background: var(--interaction-hover-subtle-bg);
     }
@@ -1641,19 +1659,6 @@
       border-radius: var(--radius-4);
       padding-left: var(--space-4);
       padding-right: var(--space-4);
-    }
-
-    /* Environment badge — gentle glow */
-    .env-badge {
-      position: relative;
-    }
-    .env-badge::after {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      border-radius: calc(var(--radius-4) + 2px);
-      box-shadow: 0 0 8px -4px color-mix(in oklch, var(--system-healthy-fg) 25%, transparent);
-      pointer-events: none;
     }
 
     /* Panel header — hover interaction */
@@ -1723,15 +1728,6 @@
                   box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
-    /* Env badge — subtle animated border glow */
-    .env-badge {
-      transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard),
-                  border-color var(--motion-duration-normal) var(--motion-easing-standard);
-    }
-    .env-badge:hover {
-      box-shadow: 0 0 12px -4px color-mix(in oklch, var(--system-healthy-fg) 35%, transparent);
-    }
-
     /* Panel body — smooth content area */
     .panel-body {
       position: relative;
@@ -1754,6 +1750,53 @@
     }
     .status-bar:hover .status-live::after {
       opacity: 0.4;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Enhancement: Sparkline & Donut integration polish
+     * ══════════════════════════════════════════════ */
+    /* Health strip sparkline sizing */
+    .health-metric svg[data-sparkline] {
+      flex-shrink: 0;
+      opacity: 0.7;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .health-metric:hover svg[data-sparkline] {
+      opacity: 1;
+    }
+
+    /* Resources tab donut gauge cell */
+    .data-table td svg[data-donut] {
+      vertical-align: middle;
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .data-table tr:hover td svg[data-donut] {
+      transform: scale(1.1);
+    }
+
+    /* Counter value subtle entrance */
+    [data-counter] {
+      display: inline-block;
+    }
+
+    /* Resource item data-reveal entrance polish */
+    .resource-item[data-reveal] {
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Task item data-reveal entrance polish */
+    .task-item[data-reveal] {
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Event item data-reveal entrance polish */
+    .event-item[data-reveal] {
+      transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
   </style>
 </head>
@@ -1904,7 +1947,7 @@
           <div class="health-inline-gauge">
             <svg data-donut='{"value":0.8,"size":16,"strokeWidth":2,"color":"var(--system-degraded-fg)","trackColor":"var(--border-subtle)","label":""}' width="16" height="16"></svg>
           </div>
-          <span class="health-metric-value warn">4/5</span><span class="health-trend down">↓</span>
+          <span class="health-metric-value warn">4/5</span><span class="health-trend down">↓</span> <svg data-sparkline='{"data":[5,5,5,4,5,4,5,4],"series":"down","width":40,"height":14,"strokeWidth":1.2}' width="40" height="14"></svg>
         </div>
         <div class="health-metric" data-tooltip="运行中任务 3/4，1 个已失败" data-tooltip-pos="bottom">
           <span class="health-metric-dot brand"></span>
@@ -1917,7 +1960,7 @@
           <div class="health-inline-gauge">
             <svg data-donut='{"value":0.23,"size":16,"strokeWidth":2,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="16" height="16"></svg>
           </div>
-          <span class="health-metric-value ok"><span data-counter="23" data-counter-decimals="0" data-counter-suffix="%">23%</span></span><span class="health-trend up">↑</span>
+          <span class="health-metric-value ok"><span data-counter="23" data-counter-decimals="0" data-counter-suffix="%">23%</span></span><span class="health-trend up">↑</span> <svg data-sparkline='{"data":[15,18,20,22,25,23,21,23],"series":"up","width":40,"height":14,"strokeWidth":1.2}' width="40" height="14"></svg>
         </div>
         <!-- Service topology mini — 5 node block indicators -->
         <div class="topology-mini" data-tooltip="服务拓扑：● 在线 ● 在线 ◐ 降级 ● 在线 ◌ 离线" data-tooltip-pos="bottom">
@@ -1985,17 +2028,17 @@
                         </div>
                       </td>
                       <td class="cell-time">14:32:15</td>
-                      <td class="right cell-numeric">4,820</td>
+                      <td class="right cell-numeric"><span data-counter="4820" data-counter-decimals="0">4,820</span></td>
                       <td class="right">
                         <div class="api-mini-chart" aria-label="近 8 小时 API 调用趋势">
-                          <div class="api-mini-bar ok" style="height:8px;"></div>
-                          <div class="api-mini-bar ok" style="height:12px;"></div>
-                          <div class="api-mini-bar ok" style="height:10px;"></div>
-                          <div class="api-mini-bar ok" style="height:14px;"></div>
-                          <div class="api-mini-bar ok" style="height:16px;"></div>
-                          <div class="api-mini-bar ok" style="height:18px;"></div>
-                          <div class="api-mini-bar ok" style="height:20px;"></div>
-                          <div class="api-mini-bar ok current" style="height:22px;"></div>
+                          <div class="api-mini-bar ok api-h-8"></div>
+                          <div class="api-mini-bar ok api-h-12"></div>
+                          <div class="api-mini-bar ok api-h-10"></div>
+                          <div class="api-mini-bar ok api-h-14"></div>
+                          <div class="api-mini-bar ok api-h-16"></div>
+                          <div class="api-mini-bar ok api-h-18"></div>
+                          <div class="api-mini-bar ok api-h-20"></div>
+                          <div class="api-mini-bar ok current api-h-22"></div>
                         </div>
                       </td>
                     </tr>
@@ -2014,17 +2057,17 @@
                         <span class="quota-text ok">无限制</span>
                       </td>
                       <td class="cell-time">14:32:10</td>
-                      <td class="right cell-numeric">1,247</td>
+                      <td class="right cell-numeric"><span data-counter="1247" data-counter-decimals="0">1,247</span></td>
                       <td class="right">
                         <div class="api-mini-chart" aria-label="近 8 小时 API 调用趋势">
-                          <div class="api-mini-bar ok" style="height:6px;"></div>
-                          <div class="api-mini-bar ok" style="height:8px;"></div>
-                          <div class="api-mini-bar ok" style="height:7px;"></div>
-                          <div class="api-mini-bar ok" style="height:6px;"></div>
-                          <div class="api-mini-bar ok" style="height:8px;"></div>
-                          <div class="api-mini-bar ok" style="height:7px;"></div>
-                          <div class="api-mini-bar ok" style="height:6px;"></div>
-                          <div class="api-mini-bar ok current" style="height:8px;"></div>
+                          <div class="api-mini-bar ok api-h-6"></div>
+                          <div class="api-mini-bar ok api-h-8"></div>
+                          <div class="api-mini-bar ok api-h-7"></div>
+                          <div class="api-mini-bar ok api-h-6"></div>
+                          <div class="api-mini-bar ok api-h-8"></div>
+                          <div class="api-mini-bar ok api-h-7"></div>
+                          <div class="api-mini-bar ok api-h-6"></div>
+                          <div class="api-mini-bar ok current api-h-8"></div>
                         </div>
                       </td>
                     </tr>
@@ -2046,17 +2089,17 @@
                         </div>
                       </td>
                       <td class="cell-time">14:31:28</td>
-                      <td class="right cell-numeric">8,200</td>
+                      <td class="right cell-numeric"><span data-counter="8200" data-counter-decimals="0">8,200</span></td>
                       <td class="right">
                         <div class="api-mini-chart" aria-label="近 8 小时 API 调用趋势">
-                          <div class="api-mini-bar ok" style="height:10px;"></div>
-                          <div class="api-mini-bar ok" style="height:12px;"></div>
-                          <div class="api-mini-bar warn" style="height:16px;"></div>
-                          <div class="api-mini-bar warn" style="height:18px;"></div>
-                          <div class="api-mini-bar warn" style="height:20px;"></div>
-                          <div class="api-mini-bar warn" style="height:22px;"></div>
-                          <div class="api-mini-bar warn" style="height:20px;"></div>
-                          <div class="api-mini-bar warn current" style="height:24px;"></div>
+                          <div class="api-mini-bar ok api-h-10"></div>
+                          <div class="api-mini-bar ok api-h-12"></div>
+                          <div class="api-mini-bar warn api-h-16"></div>
+                          <div class="api-mini-bar warn api-h-18"></div>
+                          <div class="api-mini-bar warn api-h-20"></div>
+                          <div class="api-mini-bar warn api-h-22"></div>
+                          <div class="api-mini-bar warn api-h-20"></div>
+                          <div class="api-mini-bar warn current api-h-24"></div>
                         </div>
                       </td>
                     </tr>
@@ -2078,17 +2121,17 @@
                         </div>
                       </td>
                       <td class="cell-time">14:32:08</td>
-                      <td class="right cell-numeric">2,100</td>
+                      <td class="right cell-numeric"><span data-counter="2100" data-counter-decimals="0">2,100</span></td>
                       <td class="right">
                         <div class="api-mini-chart" aria-label="近 8 小时 API 调用趋势">
-                          <div class="api-mini-bar ok" style="height:10px;"></div>
-                          <div class="api-mini-bar ok" style="height:8px;"></div>
-                          <div class="api-mini-bar ok" style="height:10px;"></div>
-                          <div class="api-mini-bar ok" style="height:12px;"></div>
-                          <div class="api-mini-bar ok" style="height:10px;"></div>
-                          <div class="api-mini-bar ok" style="height:8px;"></div>
-                          <div class="api-mini-bar ok" style="height:10px;"></div>
-                          <div class="api-mini-bar ok current" style="height:11px;"></div>
+                          <div class="api-mini-bar ok api-h-10"></div>
+                          <div class="api-mini-bar ok api-h-8"></div>
+                          <div class="api-mini-bar ok api-h-10"></div>
+                          <div class="api-mini-bar ok api-h-12"></div>
+                          <div class="api-mini-bar ok api-h-10"></div>
+                          <div class="api-mini-bar ok api-h-8"></div>
+                          <div class="api-mini-bar ok api-h-10"></div>
+                          <div class="api-mini-bar ok current api-h-11"></div>
                         </div>
                       </td>
                     </tr>
@@ -2247,6 +2290,7 @@
                     <tr data-reveal="fade-up" data-reveal-delay="150">
                       <td class="cell-name">API 配额 (Tushare)</td>
                       <td class="cell-numeric">4,820 / 5,000</td>
+                      <td><svg data-donut='{"value":0.964,"size":28,"strokeWidth":3,"color":"var(--system-down-fg)","trackColor":"var(--border-subtle)","label":"96%"}' width="28" height="28"></svg></td>
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text critical">96.4%</span>
@@ -2258,6 +2302,7 @@
                     <tr data-reveal="fade-up" data-reveal-delay="200">
                       <td class="cell-name">CPU 使用率</td>
                       <td class="cell-numeric">—</td>
+                      <td><svg data-donut='{"value":0.23,"size":28,"strokeWidth":3,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="28" height="28"></svg></td>
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text ok">23%</span>
@@ -2269,6 +2314,7 @@
                     <tr data-reveal="fade-up" data-reveal-delay="250">
                       <td class="cell-name">内存使用</td>
                       <td class="cell-numeric">4.2 / 16 GB</td>
+                      <td><svg data-donut='{"value":0.26,"size":28,"strokeWidth":3,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="28" height="28"></svg></td>
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text ok">26%</span>
@@ -2280,6 +2326,7 @@
                     <tr data-reveal="fade-up" data-reveal-delay="300">
                       <td class="cell-name">磁盘空间</td>
                       <td class="cell-numeric">128 / 512 GB</td>
+                      <td><svg data-donut='{"value":0.25,"size":28,"strokeWidth":3,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="28" height="28"></svg></td>
                       <td>
                         <div class="quota-cell">
                           <span class="quota-text ok">25%</span>
@@ -2313,7 +2360,7 @@
           </div>
           <div class="context-section-body">
             <!-- Task 1: 日线行情同步 — running -->
-            <div class="task-item running">
+            <div class="task-item running" data-reveal="fade-up" data-reveal-delay="280">
               <span class="task-status-icon">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
               </span>
@@ -2321,10 +2368,10 @@
                 <span class="task-name">日线行情同步</span>
                 <span class="task-meta">Tushare + Wind</span>
               </div>
-              <span class="task-status running">运行中 · 剩余 2 分钟</span>
+              <span class="task-status running" data-tooltip="Tushare + Wind 日线数据同步中" data-tooltip-pos="left">运行中 · 剩余 2 分钟</span>
             </div>
             <!-- Task 2: 财务数据更新 — waiting -->
-            <div class="task-item waiting">
+            <div class="task-item waiting" data-reveal="fade-up" data-reveal-delay="340">
               <span class="task-status-icon">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
               </span>
@@ -2332,10 +2379,10 @@
                 <span class="task-name">财务数据更新</span>
                 <span class="task-meta">东方财富 Choice</span>
               </div>
-              <span class="task-status waiting">排队中 · 第 2 位</span>
+              <span class="task-status waiting" data-tooltip="等待东方财富 API 连接" data-tooltip-pos="left">排队中 · 第 2 位</span>
             </div>
             <!-- Task 3: 因子计算 — progress -->
-            <div class="task-item progress">
+            <div class="task-item progress" data-reveal="fade-up" data-reveal-delay="400">
               <span class="task-status-icon">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
               </span>
@@ -2343,10 +2390,10 @@
                 <span class="task-name">因子计算 · 北向持仓变化率</span>
                 <span class="task-meta">计算中 67%</span>
               </div>
-              <span class="task-status progress">计算中 · 积压 15 分钟</span>
+              <span class="task-status progress" data-tooltip="北向持仓变化率因子计算 67%" data-tooltip-pos="left">计算中 · 积压 15 分钟</span>
             </div>
             <!-- Task 4: 模型评分 — failed -->
-            <div class="task-item failed">
+            <div class="task-item failed" data-reveal="fade-up" data-reveal-delay="460">
               <span class="task-status-icon">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 5l10 10M15 5L5 15"/></svg>
               </span>
@@ -2354,7 +2401,7 @@
                 <span class="task-name">模型评分 · 情绪 Alpha v2</span>
                 <span class="task-meta">服务返回 503</span>
               </div>
-              <span class="task-status failed">已失败 · 需重试</span>
+              <span class="task-status failed" data-tooltip="服务返回 503 错误，建议手动重试" data-tooltip-pos="left">已失败 · 需重试</span>
             </div>
           </div>
         </div>
@@ -2366,32 +2413,32 @@
           </div>
           <div class="context-section-body">
             <!-- API 配额 (Tushare) — critical -->
-            <div class="resource-item">
+            <div class="resource-item" data-reveal="fade-up" data-reveal-delay="380">
               <div class="resource-header">
                 <span class="resource-label">API 配额 (Tushare)</span>
-                <span class="resource-value critical">96.4% — 4,820/5,000</span>
+                <span class="resource-value critical"><span data-counter="96.4" data-counter-decimals="1" data-counter-suffix="%">96.4%</span> — 4,820/5,000</span>
               </div>
-              <div class="resource-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="API 配额 (Tushare) 96.4%">
+              <div class="resource-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="API 配额 (Tushare) 96.4%" data-tooltip="API 配额将在约 3 小时后重置" data-tooltip-pos="left">
                 <div class="resource-bar-fill critical bar-w-96"></div>
               </div>
             </div>
             <!-- CPU 使用率 — ok -->
-            <div class="resource-item">
+            <div class="resource-item" data-reveal="fade-up" data-reveal-delay="530">
               <div class="resource-header">
                 <span class="resource-label">CPU 使用率</span>
-                <span class="resource-value ok">23%</span>
+                <span class="resource-value ok"><span data-counter="23" data-counter-decimals="0" data-counter-suffix="%">23%</span></span>
               </div>
-              <div class="resource-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100" aria-label="CPU 使用率 23%">
+              <div class="resource-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100" aria-label="CPU 使用率 23%" data-tooltip="CPU 负载正常，低于 50% 阈值" data-tooltip-pos="left">
                 <div class="resource-bar-fill ok bar-w-23"></div>
               </div>
             </div>
             <!-- 内存使用 — ok -->
-            <div class="resource-item">
+            <div class="resource-item" data-reveal="fade-up" data-reveal-delay="430">
               <div class="resource-header">
                 <span class="resource-label">内存使用</span>
-                <span class="resource-value ok">4.2 / 16 GB</span>
+                <span class="resource-value ok"><span data-counter="4.2" data-counter-decimals="1">4.2</span> / 16 GB</span>
               </div>
-              <div class="resource-bar" role="progressbar" aria-valuenow="26" aria-valuemin="0" aria-valuemax="100" aria-label="内存使用 26%">
+              <div class="resource-bar" role="progressbar" aria-valuenow="26" aria-valuemin="0" aria-valuemax="100" aria-label="内存使用 26%" data-tooltip="内存使用 4.2GB / 16GB，充裕" data-tooltip-pos="left">
                 <div class="resource-bar-fill ok bar-w-26"></div>
               </div>
             </div>
@@ -2399,9 +2446,9 @@
             <div class="resource-item">
               <div class="resource-header">
                 <span class="resource-label">磁盘空间</span>
-                <span class="resource-value ok">128 / 512 GB</span>
+                <span class="resource-value ok"><span data-counter="128" data-counter-decimals="0">128</span> / 512 GB</span>
               </div>
-              <div class="resource-bar" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100" aria-label="磁盘空间 25%">
+              <div class="resource-bar" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100" aria-label="磁盘空间 25%" data-tooltip="磁盘使用 128GB / 512GB" data-tooltip-pos="left">
                 <div class="resource-bar-fill ok bar-w-25"></div>
               </div>
             </div>
@@ -2414,19 +2461,19 @@
             <span class="context-section-title">最近事件</span>
           </div>
           <div class="context-section-body">
-            <div class="event-item">
+            <div class="event-item" data-reveal="fade-up" data-reveal-delay="520">
               <span class="event-time">14:32:15</span>
               <span class="event-text">Tushare 日线数据同步完成</span>
             </div>
-            <div class="event-item">
+            <div class="event-item" data-reveal="fade-up" data-reveal-delay="640">
               <span class="event-time">14:31:00</span>
               <span class="event-text">因子计算任务启动 · 北向持仓变化率</span>
             </div>
-            <div class="event-item">
+            <div class="event-item" data-reveal="fade-up" data-reveal-delay="560">
               <span class="event-time">14:28:42</span>
               <span class="event-text">Wind 分钟线数据同步完成</span>
             </div>
-            <div class="event-item">
+            <div class="event-item" data-reveal="fade-up" data-reveal-delay="680">
               <span class="event-time">14:25:08</span>
               <span class="event-text">模型评分服务返回 503（连续第 2 次）</span>
             </div>

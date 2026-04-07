@@ -972,7 +972,12 @@
     .analysis-metric-value,
     .chart-grid-label,
     .chart-grid-label-right,
-    .chart-x-label {
+    .chart-x-label,
+    .report-card-metric-value,
+    .backtest-metric-value,
+    .scope-strip .pulse-value,
+    .queue-review-badge,
+    .run-item-status {
       font-variant-numeric: tabular-nums;
     }
 
@@ -1811,6 +1816,174 @@
       gap: var(--space-16);
       margin-bottom: var(--space-12);
     }
+
+    /* ══════════════════════════════════════════════
+     * Deep Polish — 9.0 → 9.5+ Enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Reading progress: report card subtle left progress bar ── */
+    .report-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .report-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        var(--brand-accent),
+        color-mix(in oklch, var(--brand-accent) 60%, transparent)
+      );
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .report-card:hover::after {
+      width: 100%;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .report-card::after { transition: none; }
+    }
+
+    /* ── Backtest card: same reading progress treatment ── */
+    .backtest-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .backtest-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        var(--brand-accent),
+        color-mix(in oklch, var(--brand-accent) 60%, transparent)
+      );
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .backtest-card:hover::after {
+      width: 100%;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .backtest-card::after { transition: none; }
+    }
+
+    /* ── Analysis notes: gentle left-accent for stale items ── */
+    .analysis-notes-item.stale {
+      border-left: 2px solid var(--data-state-stale-fg);
+      padding-left: var(--space-8);
+    }
+
+    /* ── Factor table row: enhanced selected state ── */
+    .data-table tbody tr.row.selected {
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+      box-shadow: inset 3px 0 0 var(--brand-accent);
+    }
+    .data-table tbody tr.row.selected .cell-ticker {
+      color: var(--brand-accent);
+    }
+
+    /* ── Run item: smooth border-left accent on hover ── */
+    .run-item {
+      padding-left: var(--space-8);
+    }
+
+    /* ── Queue review: consistent tag sizing with report tags ── */
+    .queue-review-badge {
+      font-size: var(--font-size-10);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Correlation matrix cell: enhanced tooltip hover ── */
+    .corr-cell {
+      cursor: help;
+    }
+    .corr-cell:hover {
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+    }
+
+    /* ── Analysis band tab: hover feedback ── */
+    .analysis-band-tab {
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .analysis-band-tab:hover {
+      color: var(--text-secondary);
+    }
+
+    /* ── Scope strip value: micro font-feature for numbers ── */
+    .scope-strip .pulse-value {
+      font-family: var(--font-family-numeric);
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Panel elevation tiers ── */
+    /* Tier 1: Primary panels (Factor Monitor) — subtle brand top border + shadow */
+    .monitor-panel {
+      border-top: 1px solid color-mix(in oklch, var(--brand-accent) 25%, transparent);
+      box-shadow: 0 1px 3px color-mix(in oklch, var(--text-primary) 3%, transparent);
+    }
+    .monitor-panel:hover {
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--text-primary) 5%, transparent),
+                  0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
+    }
+
+    /* Tier 2: Report cards — elevated cards with deeper shadow on hover */
+    .report-card {
+      box-shadow: 0 1px 4px color-mix(in oklch, var(--text-primary) 3%, transparent);
+    }
+    .report-card:hover {
+      box-shadow: 0 4px 16px color-mix(in oklch, var(--text-primary) 6%, transparent);
+    }
+
+    /* Tier 3: Backtest cards — same elevation as reports */
+    .backtest-card {
+      box-shadow: 0 1px 4px color-mix(in oklch, var(--text-primary) 3%, transparent);
+    }
+    .backtest-card:hover {
+      box-shadow: 0 4px 16px color-mix(in oklch, var(--text-primary) 6%, transparent);
+    }
+
+    /* Tier 4: Analysis notes — lowest elevation, content-level */
+    .analysis-notes-item {
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .analysis-notes-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Context section header: subtle weight emphasis ── */
+    .activity-stack .context-section-title {
+      font-size: var(--font-size-14);
+      letter-spacing: 0.01em;
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* ── Tab button: enhanced active/hover states ── */
+    [data-tabs] [data-tab-target] {
+      position: relative;
+    }
+    [data-tabs] [data-tab-target].active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: var(--space-8);
+      right: var(--space-8);
+      height: 2px;
+      background: var(--brand-accent);
+      border-radius: 1px 1px 0 0;
+    }
+    [data-tabs] [data-tab-target]:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
   </style>
 </head>
 <body>
@@ -1989,10 +2162,10 @@
     <div data-tab-panel="reports" aria-hidden="true" style="display:none;">
       <div style="padding:var(--space-12);overflow:auto;">
         <!-- Report 1: A股动量因子深度报告 -->
-        <div class="report-card" data-reveal="fade-up" data-reveal-delay="0">
+        <div class="report-card" data-reveal="fade-up" data-reveal-delay="0" data-glow>
           <div class="report-card-header">
             <span class="report-card-title">A股动量因子深度报告 2026Q1</span>
-            <span class="report-card-date">2026-04-01</span>
+            <span class="report-card-date" data-tooltip="报告发布日期" data-tooltip-pos="top">2026-04-01</span>
           </div>
           <div class="report-card-body">动量因子在沪深300中表现持续优异，IC均值0.041，IR 0.82。建议维持当前权重，关注Q2行业轮动对动量衰减的影响。</div>
           <div class="report-card-metrics">
@@ -2018,10 +2191,10 @@
           </div>
         </div>
         <!-- Report 2: 北向资金持仓变化因子研究 -->
-        <div class="report-card" data-reveal="fade-up" data-reveal-delay="80">
+        <div class="report-card" data-reveal="fade-up" data-reveal-delay="80" data-glow>
           <div class="report-card-header">
             <span class="report-card-title">北向资金持仓变化因子研究</span>
-            <span class="report-card-date">2026-03-28</span>
+            <span class="report-card-date" data-tooltip="报告发布日期" data-tooltip-pos="top">2026-03-28</span>
           </div>
           <div class="report-card-body">新因子"北向持仓变化率"IC达0.055，IR 0.92，但覆盖率仅76%。建议观察3个月滚动验证结果后再纳入核心因子池。</div>
           <div class="report-card-metrics">
@@ -2050,7 +2223,7 @@
         <div class="report-card" data-reveal="fade-up" data-reveal-delay="160">
           <div class="report-card-header">
             <span class="report-card-title">情绪因子退化预警分析</span>
-            <span class="report-card-date">2026-03-25</span>
+            <span class="report-card-date" data-tooltip="报告发布日期" data-tooltip-pos="top">2026-03-25</span>
           </div>
           <div class="report-card-body">情绪Alpha近5日IC从0.041降至0.028，IR同步下滑。初步判断与近期市场低波动环境相关，建议降低权重并持续监控。</div>
           <div class="report-card-metrics">
@@ -2075,7 +2248,7 @@
         <div class="report-card" data-reveal="fade-up" data-reveal-delay="240">
           <div class="report-card-header">
             <span class="report-card-title">价值因子组合优化报告</span>
-            <span class="report-card-date">2026-03-20</span>
+            <span class="report-card-date" data-tooltip="报告发布日期" data-tooltip-pos="top">2026-03-20</span>
           </div>
           <div class="report-card-body">价值PE因子在中证500表现稳定，IC 0.029。通过加入质量ROE辅助因子，组合Sharpe从0.92提升至1.12。</div>
           <div class="report-card-metrics">
@@ -2104,7 +2277,7 @@
         <div class="report-card" data-reveal="fade-up" data-reveal-delay="320">
           <div class="report-card-header">
             <span class="report-card-title">波动率偏斜因子异常诊断</span>
-            <span class="report-card-date">2026-03-15</span>
+            <span class="report-card-date" data-tooltip="报告发布日期" data-tooltip-pos="top">2026-03-15</span>
           </div>
           <div class="report-card-body">波动率偏斜因子近期IC降至0.021，Sharpe 0.68，标记为异常状态。疑与期权市场数据源延迟有关，建议暂停使用直至数据源恢复。</div>
           <div class="report-card-metrics">
@@ -2138,9 +2311,9 @@
 
     <!-- ═══ Main Content — Factor Monitor Table ═══ -->
     <div class="main-content">
-      <div class="monitor-panel">
+      <div class="monitor-panel" data-glow>
         <div class="panel-header">
-          <span class="panel-title">因子监控 <span class="panel-subtitle">12 因子</span></span>
+          <span class="panel-title">因子监控 <span class="panel-subtitle" data-tooltip="正常 8 · 验证中 1 · 退化 2 · 异常 1">12 因子</span></span>
           <span class="panel-count">12</span>
           <div class="panel-actions">
             <span class="column-icon" title="列管理">
@@ -2363,7 +2536,7 @@
               <div class="run-item-footer">
                 <span class="run-item-status complete">完成</span>
                 <label for="overlay-run-detail" class="inline-action-link">查看详情</label>
-                <span class="run-item-time">1小时前</span>
+                <span class="run-item-time" data-tooltip="完成于 2026-04-02 13:28">1小时前</span>
               </div>
             </div>
           </div>
@@ -2377,7 +2550,7 @@
               <div class="run-item-detail">近 5 日 IC 从 0.041 降至 0.028</div>
               <div class="run-item-footer">
                 <span class="run-item-status warn">警告</span>
-                <span class="run-item-time">2小时前</span>
+                <span class="run-item-time" data-tooltip="检测时间 2026-04-02 12:30">2小时前</span>
               </div>
             </div>
           </div>
@@ -2391,7 +2564,7 @@
               <div class="run-item-detail">新参数组 Sharpe 提升 0.15</div>
               <div class="run-item-footer">
                 <span class="run-item-status complete">完成</span>
-                <span class="run-item-time">3小时前</span>
+                <span class="run-item-time" data-tooltip="完成于 2026-04-02 11:45">3小时前</span>
               </div>
             </div>
           </div>
@@ -2406,7 +2579,7 @@
               <div class="run-item-progress"></div>
               <div class="run-item-footer">
                 <span class="run-item-status running">运行中</span>
-                <span class="run-item-time">4小时前</span>
+                <span class="run-item-time" data-tooltip="启动于 2026-04-02 10:15 · 运行中">4小时前</span>
               </div>
             </div>
           </div>
@@ -2477,7 +2650,7 @@
       </div>
       <div class="analysis-band-body" data-panel="analysis-ic">
         <!-- Metrics row -->
-        <div class="analysis-metrics">
+        <div class="analysis-metrics" data-reveal="fade-up" data-reveal-delay="0">
           <div class="analysis-metric" data-tooltip="所有因子 IC 的 20 日移动平均值">
             <span class="analysis-metric-label">平均 IC (20日) <span class="metric-arrow-down">↓</span></span>
             <span class="analysis-metric-value ok" data-counter="0.032" data-counter-decimals="3">0.032</span>
@@ -2559,7 +2732,7 @@
         </div>
       </div>
       <div class="analysis-band-body" data-panel="analysis-width">
-        <div class="analysis-metrics">
+        <div class="analysis-metrics" data-reveal="fade-up" data-reveal-delay="0">
           <div class="analysis-metric" data-tooltip="因子宽度综合评分 · 0-100 · 越高越分散">
             <span class="analysis-metric-label">宽度得分 <span class="metric-arrow-up-warn">↑</span></span>
             <span class="analysis-metric-value ok" data-counter="68" data-counter-decimals="0">68</span>
@@ -2612,7 +2785,7 @@
         </div>
       </div>
       <div class="analysis-band-body" data-panel="analysis-corr">
-        <div class="analysis-metrics">
+        <div class="analysis-metrics" data-reveal="fade-up" data-reveal-delay="0">
           <div class="analysis-metric" data-tooltip="所有因子对的平均截面相关系数 · 建议 < 0.3">
             <span class="analysis-metric-label">截面相关性 <span class="metric-arrow-down">↓</span></span>
             <span class="analysis-metric-value ok" data-counter="0.15" data-counter-decimals="2">0.15</span>
@@ -2674,7 +2847,7 @@
         </div>
       </div>
       <div class="analysis-band-body" data-panel="analysis-notes">
-        <div class="analysis-metrics">
+        <div class="analysis-metrics" data-reveal="fade-up" data-reveal-delay="0">
           <div class="analysis-metric" data-tooltip="需要跟进处理的研究笔记数量">
             <span class="analysis-metric-label">待处理笔记</span>
             <span class="analysis-metric-value" data-counter="3" data-counter-decimals="0">3</span>

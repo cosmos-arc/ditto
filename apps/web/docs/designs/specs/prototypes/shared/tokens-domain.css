@@ -22,8 +22,8 @@
   --market-down-subtle:oklch(0.680 0.120 155 / 0.08);
   --market-flat-fg:    var(--neutral-500);
   --market-flat-bg:    transparent;
-  --market-strong-fg:  var(--green-600);
-  --market-weak-fg:    var(--red-600);
+  --market-strong-fg:  var(--red-600);      /* red (CN: 涨/强势) */
+  --market-weak-fg:    var(--green-600);    /* green (CN: 跌/弱势) */
 
   /* ── Risk Domain ── */
   --risk-low-fg:       var(--green-500);

@@ -490,6 +490,7 @@
 
     .message-time {
       font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
       font-size: var(--font-size-10);
       color: var(--text-quaternary);
     }
@@ -587,8 +588,11 @@
                   box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .structured-card:hover {
-      border-color: var(--border-default);
+      border-color: color-mix(in oklch, var(--brand-accent) 25%, var(--border-subtle));
       box-shadow: 0 2px 12px color-mix(in oklch, var(--agent-running-fg) 6%, transparent);
+    }
+    .structured-card:hover .structured-card-title {
+      color: var(--brand-accent);
     }
 
     .structured-card::before {
@@ -623,6 +627,7 @@
       display: flex;
       align-items: center;
       gap: var(--space-6);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .structured-card-title svg {
@@ -692,6 +697,7 @@
       padding: var(--space-6) var(--space-8);
       border-bottom: 1px solid var(--border-subtle);
       vertical-align: top;
+      font-feature-settings: 'tnum' 1;
     }
 
     .factor-table tr:last-child td {
@@ -708,6 +714,11 @@
       font-family: var(--font-family-code);
       font-size: var(--font-size-10);
       color: var(--brand-accent);
+    }
+
+    .factor-table .factor-metric {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
     }
 
     /* ── Conversation Input Bar (bottom fixed) ── */
@@ -894,6 +905,7 @@
 
     .object-chip-market {
       font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
       font-size: var(--font-size-10);
     }
 
@@ -956,6 +968,7 @@
 
     .evidence-time {
       font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
       font-size: var(--font-size-10);
       color: var(--text-quaternary);
       margin-left: auto;
@@ -1016,6 +1029,7 @@
     .action-card:hover {
       background: var(--interaction-hover-subtle-bg);
       border-color: var(--border-default);
+      box-shadow: 0 1px 6px color-mix(in oklch, var(--text-primary) 3%, transparent);
     }
 
     .action-card-icon {
@@ -1057,6 +1071,10 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .action-card:hover .action-card-title {
+      color: var(--brand-accent);
     }
 
     .action-card-desc {
@@ -1091,6 +1109,7 @@
       -webkit-backdrop-filter: blur(8px);
       border-top: 1px solid var(--border-subtle);
       font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       letter-spacing: 0.02em;
@@ -1117,6 +1136,7 @@
 
     .status-kbd {
       font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
       font-size: var(--font-size-10);
       padding: 0 var(--space-2);
       border: 1px solid var(--border-subtle);
@@ -1883,6 +1903,7 @@
       font-size: var(--font-size-10);
       color: var(--text-quaternary);
       font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
     }
 
     /* ── Enhanced input area ── */
@@ -1980,6 +2001,168 @@
     .ai-thinking .ai-thinking-avatar {
       background: var(--agent-running-bg);
       color: var(--agent-running-fg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Inline Cleanup — extracted from inline styles
+     * ══════════════════════════════════════════════ */
+
+    /* ── Copilot inner tab strip ── */
+    .copilot-tab-strip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-4) var(--density-gutter);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+    .copilot-tab-btn {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-4) var(--space-10);
+      border-radius: var(--radius-4);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .copilot-tab-btn:hover:not(.active) {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .copilot-tab-btn.active {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+    .copilot-tab-panel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .copilot-tab-panel--scroll {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--density-gutter);
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ── Analysis timeline ── */
+    .analysis-timeline {
+      margin-bottom: var(--space-16);
+    }
+    .analysis-timeline-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      margin-bottom: var(--space-12);
+    }
+    .analysis-step {
+      padding: var(--space-8) 0;
+      border-left: 2px solid var(--brand-accent);
+      margin-left: 6px;
+      padding-left: var(--space-12);
+      position: relative;
+    }
+    .analysis-step--muted {
+      border-left-color: color-mix(in oklch, var(--brand-accent) 40%, transparent);
+    }
+    .analysis-step--subtle {
+      border-left-color: var(--border-subtle);
+    }
+    .analysis-step-dot {
+      position: absolute;
+      left: -5px;
+      top: 10px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+    }
+    .analysis-step-dot--muted { background: var(--border-default); }
+    .analysis-step-dot--subtle { background: var(--border-subtle); }
+    .analysis-step-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .analysis-step-desc {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      line-height: 1.5;
+      margin-top: var(--space-2);
+    }
+    .analysis-step-source {
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      margin-top: var(--space-2);
+    }
+
+    /* ── Flow info section ── */
+    .flow-section { margin-top: var(--space-12); }
+    .flow-label {
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-6);
+    }
+    .flow-legend {
+      display: flex;
+      justify-content: space-between;
+      margin-top: var(--space-4);
+    }
+    .flow-legend-item {
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+    }
+
+    /* ── Recommendation cards ── */
+    .rec-card {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: var(--card-padding);
+      margin-bottom: var(--space-10);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .rec-card:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 20%, var(--border-subtle));
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--text-primary) 4%, transparent);
+    }
+    .rec-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+    .rec-card-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .rec-card:hover .rec-card-title {
+      color: var(--brand-accent);
+    }
+    .rec-card-desc {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      line-height: 1.5;
+      margin-bottom: var(--space-8);
+    }
+    .rec-panel-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      margin-bottom: var(--space-12);
     }
   </style>
 </head>
@@ -2138,27 +2321,27 @@
 
         <!-- History -->
         <div class="sessions-group-label">历史会话</div>
-        <div class="session-item active" tabindex="0" role="button">
+        <div class="session-item active" tabindex="0" role="button" data-tooltip="当前会话 · 沪深300风格因子分析">
           <span class="session-item-title">沪深300风格因子分析</span>
           <span class="session-item-meta">今天 14:20 · Market Analysis</span>
         </div>
-        <div class="session-item" tabindex="0" role="button">
+        <div class="session-item" tabindex="0" role="button" data-tooltip="Factor Discovery · 6 条消息">
           <span class="session-item-title">北向资金流入预测模型</span>
           <span class="session-item-meta">今天 11:05 · Factor Discovery</span>
         </div>
-        <div class="session-item" tabindex="0" role="button">
+        <div class="session-item" tabindex="0" role="button" data-tooltip="Market Analysis · 8 条消息">
           <span class="session-item-title">新能源板块拥挤度评估</span>
           <span class="session-item-meta">昨天 16:30 · Market Analysis</span>
         </div>
-        <div class="session-item" tabindex="0" role="button">
+        <div class="session-item" tabindex="0" role="button" data-tooltip="Strategy Draft · 4 条消息">
           <span class="session-item-title">动量反转策略初稿</span>
           <span class="session-item-meta">昨天 10:15 · Strategy Draft</span>
         </div>
-        <div class="session-item" tabindex="0" role="button">
+        <div class="session-item" tabindex="0" role="button" data-tooltip="Stock Discovery · 3 条消息">
           <span class="session-item-title">高股息选股筛选</span>
           <span class="session-item-meta">3月29日 · Stock Discovery</span>
         </div>
-        <div class="session-item" tabindex="0" role="button">
+        <div class="session-item" tabindex="0" role="button" data-tooltip="Market Analysis · 12 条消息">
           <span class="session-item-title">量价背离信号复盘</span>
           <span class="session-item-meta">3月28日 · Market Analysis</span>
         </div>
@@ -2198,15 +2381,15 @@
     <!-- ======== Conversation + Structured Output ======== -->
     <main class="copilot-conversation" id="main-content">
       <!-- JS Tabs: conversation / analysis / recommendations -->
-      <div data-tabs="copilot-tabs" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
-        <div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-4) var(--density-gutter);border-bottom:1px solid var(--border-subtle);flex-shrink:0;">
-          <button data-tab-target="conversation" class="active" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-4) var(--space-10);border-radius:var(--radius-4);border:1px solid transparent;background:var(--brand-accent-subtle);color:var(--brand-accent);cursor:pointer;white-space:nowrap;">对话</button>
-          <button data-tab-target="analysis" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-4) var(--space-10);border-radius:var(--radius-4);border:1px solid transparent;background:transparent;color:var(--text-tertiary);cursor:pointer;white-space:nowrap;">分析步骤</button>
-          <button data-tab-target="recommendations" style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);padding:var(--space-4) var(--space-10);border-radius:var(--radius-4);border:1px solid transparent;background:transparent;color:var(--text-tertiary);cursor:pointer;white-space:nowrap;">推荐结论</button>
+      <div data-tabs="copilot-tabs" class="copilot-tab-panel">
+        <div class="copilot-tab-strip">
+          <button data-tab-target="conversation" class="copilot-tab-btn active">对话</button>
+          <button data-tab-target="analysis" class="copilot-tab-btn">分析步骤</button>
+          <button data-tab-target="recommendations" class="copilot-tab-btn">推荐结论</button>
         </div>
 
         <!-- Tab Panel: Conversation (existing content) -->
-        <div data-tab-panel="conversation" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+        <div data-tab-panel="conversation" class="copilot-tab-panel">
       <div class="conversation-body" data-mouse-glow="true">
         <!-- Message 1: User -->
         <div class="message message--user" data-reveal="fade-up" data-reveal-delay="0">
@@ -2300,7 +2483,7 @@
                   </tr>
                   <tr>
                     <td class="factor-name">初始指标</td>
-                    <td>
+                    <td class="factor-metric">
                       IC = 0.092 (5d) · IR = 1.48 · 多空年化收益 12.3% · 最大回撤 -4.2%
                     </td>
                   </tr>
@@ -2425,7 +2608,7 @@
                   </tr>
                   <tr>
                     <td class="factor-name">初始指标</td>
-                    <td>
+                    <td class="factor-metric">
                       IC = 0.061 (5d) · IR = 0.97 · 多空年化收益 8.7% · 信息比率 0.92
                     </td>
                   </tr>
@@ -2434,7 +2617,7 @@
             </div>
 
             <!-- Code Block: Factor validation pseudo-query -->
-            <div class="code-block" data-lang="sql">
+            <div class="code-block" data-lang="sql" data-reveal="fade-up" data-reveal-delay="300">
 <span class="code-comment">-- ROE 稳定性因子验证查询</span>
 <span class="code-keyword">SELECT</span> ticker, roe_stddev_5y, roe_qoq, asset_turnover_yoy
 <span class="code-keyword">FROM</span> factor_exposure.<span class="code-string">hs300_roe_quality</span>
@@ -2466,87 +2649,87 @@
         </div><!-- /data-tab-panel="conversation" -->
 
         <!-- Tab Panel: Analysis Steps (ScrollReveal timeline) -->
-        <div data-tab-panel="analysis" style="display:none;flex:1;overflow-y:auto;padding:var(--density-gutter);max-width:720px;width:100%;margin:0 auto;">
-          <div style="margin-bottom:var(--space-16);">
-            <h3 style="font-size:var(--font-size-14);font-weight:var(--font-weight-semibold);color:var(--text-primary);margin-bottom:var(--space-12);">分析推理时间线</h3>
+        <div data-tab-panel="analysis" class="copilot-tab-panel--scroll">
+          <div class="analysis-timeline">
+            <h3 class="analysis-timeline-title">分析推理时间线</h3>
 
-            <div data-reveal="fade-up" data-reveal-delay="0" style="padding:var(--space-8) 0;border-left:2px solid var(--brand-accent);margin-left:6px;padding-left:var(--space-12);position:relative;">
-              <div style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--brand-accent);"></div>
-              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">Step 1 — 数据检索</div>
-              <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-top:var(--space-2);">检索沪深300成分股近 5 日风格因子暴露度，获取价值、动量、质量三大因子维度的截面数据</div>
-              <div style="font-size:var(--font-size-10);color:var(--text-quaternary);margin-top:var(--space-2);">数据源：Wind 因子库 · 聚宽因子库</div>
+            <div data-reveal="fade-up" data-reveal-delay="0" class="analysis-step">
+              <div class="analysis-step-dot"></div>
+              <div class="analysis-step-title">Step 1 — 数据检索</div>
+              <div class="analysis-step-desc">检索沪深300成分股近 5 日风格因子暴露度，获取价值、动量、质量三大因子维度的截面数据</div>
+              <div class="analysis-step-source">数据源：Wind 因子库 · 聚宽因子库</div>
             </div>
 
-            <div data-reveal="fade-up" data-reveal-delay="100" style="padding:var(--space-8) 0;border-left:2px solid var(--brand-accent);margin-left:6px;padding-left:var(--space-12);position:relative;">
-              <div style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--brand-accent);"></div>
-              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">Step 2 — IC/IR 计算</div>
-              <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-top:var(--space-2);">计算 IC/IR 滚动窗口指标（60日/120日），识别偏离历史均值的异常信号（波动率、换手率）</div>
-              <div style="font-size:var(--font-size-10);color:var(--text-quaternary);margin-top:var(--space-2);">方法：Fama-MacBeth 回归 · 分层回测</div>
+            <div data-reveal="fade-up" data-reveal-delay="100" class="analysis-step">
+              <div class="analysis-step-dot"></div>
+              <div class="analysis-step-title">Step 2 — IC/IR 计算</div>
+              <div class="analysis-step-desc">计算 IC/IR 滚动窗口指标（60日/120日），识别偏离历史均值的异常信号（波动率、换手率）</div>
+              <div class="analysis-step-source">方法：Fama-MacBeth 回归 · 分层回测</div>
             </div>
 
-            <div data-reveal="fade-up" data-reveal-delay="200" style="padding:var(--space-8) 0;border-left:2px solid var(--brand-accent);margin-left:6px;padding-left:var(--space-12);position:relative;">
-              <div style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--brand-accent);"></div>
-              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">Step 3 — 宏观关联验证</div>
-              <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-top:var(--space-2);">关联宏观指标 PMI、A50 隐含波动率与因子假设，交叉验证北向资金偏好与低 Beta 防御性配置</div>
-              <div style="font-size:var(--font-size-10);color:var(--text-quaternary);margin-top:var(--space-2);">数据源：Wind 宏观数据 · 东方财富 Choice</div>
+            <div data-reveal="fade-up" data-reveal-delay="200" class="analysis-step">
+              <div class="analysis-step-dot"></div>
+              <div class="analysis-step-title">Step 3 — 宏观关联验证</div>
+              <div class="analysis-step-desc">关联宏观指标 PMI、A50 隐含波动率与因子假设，交叉验证北向资金偏好与低 Beta 防御性配置</div>
+              <div class="analysis-step-source">数据源：Wind 宏观数据 · 东方财富 Choice</div>
             </div>
 
-            <div data-reveal="fade-up" data-reveal-delay="300" style="padding:var(--space-8) 0;border-left:2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);margin-left:6px;padding-left:var(--space-12);position:relative;">
-              <div style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--border-default);"></div>
-              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">Step 4 — ROE 质量拆解</div>
-              <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-top:var(--space-2);">拆解 ROE 质量因子至稳定性（5年标准差）、动量（QoQ 变化率）、资产周转率三维度</div>
-              <div style="font-size:var(--font-size-10);color:var(--text-quaternary);margin-top:var(--space-2);">结果：ROE 稳定性 IC=0.061 IR=0.97 最优</div>
+            <div data-reveal="fade-up" data-reveal-delay="300" class="analysis-step analysis-step--muted">
+              <div class="analysis-step-dot analysis-step-dot--muted"></div>
+              <div class="analysis-step-title">Step 4 — ROE 质量拆解</div>
+              <div class="analysis-step-desc">拆解 ROE 质量因子至稳定性（5年标准差）、动量（QoQ 变化率）、资产周转率三维度</div>
+              <div class="analysis-step-source">结果：ROE 稳定性 IC=0.061 IR=0.97 最优</div>
             </div>
 
-            <div data-reveal="fade-up" data-reveal-delay="400" style="padding:var(--space-8) 0;border-left:2px solid var(--border-subtle);margin-left:6px;padding-left:var(--space-12);position:relative;">
-              <div style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--border-subtle);"></div>
-              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">Step 5 — 假设生成与置信度评估</div>
-              <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-top:var(--space-2);">生成 LOWVOL_PREM（高置信 92%）和 ROE_STABILITY（中置信 68%）两个因子假设卡片</div>
-              <div style="font-size:var(--font-size-10);color:var(--text-quaternary);margin-top:var(--space-2);">令牌消耗：3,847 · 推理耗时 4.2s</div>
+            <div data-reveal="fade-up" data-reveal-delay="400" class="analysis-step analysis-step--subtle">
+              <div class="analysis-step-dot analysis-step-dot--subtle"></div>
+              <div class="analysis-step-title">Step 5 — 假设生成与置信度评估</div>
+              <div class="analysis-step-desc">生成 LOWVOL_PREM（高置信 92%）和 ROE_STABILITY（中置信 68%）两个因子假设卡片</div>
+              <div class="analysis-step-source">令牌消耗：3,847 · 推理耗时 4.2s</div>
             </div>
           </div>
 
           <!-- FlowBar: 信息流向 -->
-          <div style="margin-top:var(--space-12);">
-            <div style="font-size:var(--font-size-11);font-weight:var(--font-weight-medium);color:var(--text-secondary);margin-bottom:var(--space-6);">信息流向</div>
+          <div class="flow-section">
+            <div class="flow-label">信息流向</div>
             <div data-flow='{"segments":[{"label":"市场数据","value":30},{"label":"模型推理","value":25},{"label":"信号生成","value":20},{"label":"决策输出","value":25}]}' aria-label="信息流向"></div>
-            <div style="display:flex;justify-content:space-between;margin-top:var(--space-4);">
-              <span style="font-size:var(--font-size-10);color:var(--text-quaternary);">市场数据 30%</span>
-              <span style="font-size:var(--font-size-10);color:var(--text-quaternary);">模型推理 25%</span>
-              <span style="font-size:var(--font-size-10);color:var(--text-quaternary);">信号生成 20%</span>
-              <span style="font-size:var(--font-size-10);color:var(--text-quaternary);">决策输出 25%</span>
+            <div class="flow-legend">
+              <span class="flow-legend-item">市场数据 30%</span>
+              <span class="flow-legend-item">模型推理 25%</span>
+              <span class="flow-legend-item">信号生成 20%</span>
+              <span class="flow-legend-item">决策输出 25%</span>
             </div>
           </div>
         </div><!-- /data-tab-panel="analysis" -->
 
         <!-- Tab Panel: Recommendations (ConfidenceBars) -->
-        <div data-tab-panel="recommendations" style="display:none;flex:1;overflow-y:auto;padding:var(--density-gutter);max-width:720px;width:100%;margin:0 auto;">
-          <h3 style="font-size:var(--font-size-14);font-weight:var(--font-weight-semibold);color:var(--text-primary);margin-bottom:var(--space-12);">推荐结论</h3>
+        <div data-tab-panel="recommendations" class="copilot-tab-panel--scroll">
+          <h3 class="rec-panel-title">推荐结论</h3>
 
-          <div style="background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--card-radius);padding:var(--card-padding);margin-bottom:var(--space-10);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-8);">
-              <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">低波动率溢价因子</span>
+          <div class="rec-card">
+            <div class="rec-card-header">
+              <span class="rec-card-title">低波动率溢价因子</span>
               <span class="confidence-tag high"><span class="confidence-tag-dot"></span>高置信</span>
             </div>
-            <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-bottom:var(--space-8);">低波动率股票在市场不确定性上升期间呈现超额收益，IC=0.092 IR=1.48 多空年化收益 12.3%</div>
+            <div class="rec-card-desc">低波动率股票在市场不确定性上升期间呈现超额收益，IC=0.092 IR=1.48 多空年化收益 12.3%</div>
             <div data-confidence="0.92" data-confidence-label="High"></div>
           </div>
 
-          <div style="background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--card-radius);padding:var(--card-padding);margin-bottom:var(--space-10);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-8);">
-              <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">ROE 稳定性溢价因子</span>
+          <div class="rec-card">
+            <div class="rec-card-header">
+              <span class="rec-card-title">ROE 稳定性溢价因子</span>
               <span class="confidence-tag medium"><span class="confidence-tag-dot"></span>中置信</span>
             </div>
-            <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-bottom:var(--space-8);">连续 5 年 ROE 标准差低于 3% 的公司，在市场下行期表现出更强的抗跌能力，IC=0.061 IR=0.97</div>
+            <div class="rec-card-desc">连续 5 年 ROE 标准差低于 3% 的公司，在市场下行期表现出更强的抗跌能力，IC=0.061 IR=0.97</div>
             <div data-confidence="0.68" data-confidence-label="Medium"></div>
           </div>
 
-          <div style="background:var(--surface-panel-elevated);border:1px solid var(--border-subtle);border-radius:var(--card-radius);padding:var(--card-padding);margin-bottom:var(--space-10);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-8);">
-              <span style="font-size:var(--font-size-12);font-weight:var(--font-weight-semibold);color:var(--text-primary);">动量反转复合信号</span>
+          <div class="rec-card">
+            <div class="rec-card-header">
+              <span class="rec-card-title">动量反转复合信号</span>
               <span class="confidence-tag medium"><span class="confidence-tag-dot"></span>中置信</span>
             </div>
-            <div style="font-size:var(--font-size-11);color:var(--text-tertiary);line-height:1.5;margin-bottom:var(--space-8);">5日与20日动量共振 + 波动率压缩后方向选择信号，需进一步验证正交性，IC=0.078 IR=1.24</div>
+            <div class="rec-card-desc">5日与20日动量共振 + 波动率压缩后方向选择信号，需进一步验证正交性，IC=0.078 IR=1.24</div>
             <div data-confidence="0.76" data-confidence-label="Medium-High"></div>
           </div>
         </div><!-- /data-tab-panel="recommendations" -->
@@ -2597,11 +2780,11 @@
           </div>
           <div class="context-section-body">
             <div class="object-chips">
-              <span class="object-chip">
+              <span class="object-chip" data-tooltip="沪深300 · 当前分析标的">
                 <span class="object-chip-type">指数</span>
                 <span class="object-chip-name">沪深300</span>
               </span>
-              <span class="object-chip">
+              <span class="object-chip" data-tooltip="中证500 · 日涨跌">
                 <span class="object-chip-type">指数</span>
                 <span class="object-chip-name">中证500</span>
                 <span class="object-chip-market up">+0.82%</span>
@@ -2611,11 +2794,11 @@
                 <span class="object-chip-name">创业板指</span>
                 <span class="object-chip-market down">-1.24%</span>
               </span>
-              <span class="object-chip">
+              <span class="object-chip" data-tooltip="低波动率溢价因子 · IC=0.092">
                 <span class="object-chip-type">因子</span>
                 <span class="object-chip-name">LOWVOL_PREM</span>
               </span>
-              <span class="object-chip">
+              <span class="object-chip" data-tooltip="ROE 稳定性因子 · IC=0.061">
                 <span class="object-chip-type">因子</span>
                 <span class="object-chip-name">ROE_STABILITY</span>
               </span>
@@ -2643,7 +2826,7 @@
             <span class="context-section-title">证据链</span>
           </div>
           <div class="context-section-body">
-            <div class="evidence-item">
+            <div class="evidence-item" data-tooltip="数据源：Wind 因子库 · 最新">
               <div class="evidence-header">
                 <span class="evidence-dot recent"></span>
                 <span class="evidence-source">Wind 因子库</span>
@@ -2651,7 +2834,7 @@
               </div>
               <span class="evidence-desc">LOWVOL_PREM IC(5d) = 0.092，滚动 IR(60d) = 1.48</span>
             </div>
-            <div class="evidence-item">
+            <div class="evidence-item" data-tooltip="数据源：东方财富 Choice · 新鲜">
               <div class="evidence-header">
                 <span class="evidence-dot"></span>
                 <span class="evidence-source">东方财富 Choice</span>
@@ -2659,7 +2842,7 @@
               </div>
               <span class="evidence-desc">ROE 稳定性因子 IC(5d) = 0.061，资产周转率 IC = 0.053</span>
             </div>
-            <div class="evidence-item">
+            <div class="evidence-item" data-tooltip="数据源：Tushare 行情 · 新鲜">
               <div class="evidence-header">
                 <span class="evidence-dot"></span>
                 <span class="evidence-source">Tushare 行情</span>
@@ -2667,7 +2850,7 @@
               </div>
               <span class="evidence-desc">沪深300 20日历史波动率降至 14.2%（25% 分位）</span>
             </div>
-            <div class="evidence-item">
+            <div class="evidence-item" data-tooltip="数据源：Wind 宏观数据 · 新鲜">
               <div class="evidence-header">
                 <span class="evidence-dot"></span>
                 <span class="evidence-source">Wind 宏观数据</span>
@@ -2675,7 +2858,7 @@
               </div>
               <span class="evidence-desc">PMI 连续 2 月低于荣枯线，北向资金连续 5 日净流出</span>
             </div>
-            <div class="evidence-item stale">
+            <div class="evidence-item stale" data-tooltip="数据已过期 · 最后更新 14:20:00">
               <div class="evidence-header">
                 <span class="evidence-dot"></span>
                 <span class="evidence-source">聚宽因子库</span>
@@ -2929,7 +3112,7 @@
     <span class="status-sep">|</span>
     <span>AI 模型 GPT-4o</span>
     <span class="status-sep">|</span>
-    <span>令牌 <span class="status-token-highlight">3,847</span></span>
+    <span>令牌 <span class="status-token-highlight" data-counter="3847" data-counter-decimals="0" data-counter-duration="1200">0</span></span>
     <span class="status-sep">|</span>
     <span>Market Analysis 模式</span>
     <span class="status-sep">|</span>

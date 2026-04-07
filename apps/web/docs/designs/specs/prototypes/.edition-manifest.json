@@ -315,7 +315,7 @@
     "roundsUsed": 6,
     "medium": "HTML + CSS + Vanilla JS",
     "jsLibrary": "shared/prototype-interactions.js",
-    "brandColor": "Ink Indigo — hue 265°, chroma halved (was hue 255°, chroma 0.165)",
+    "brandColor": "Lapis — hue 235°, chroma 0.120",
     "modules": ["Tabs", "Sparkline", "DonutGauge", "HeatGrid", "NumberTicker", "ScrollReveal", "MouseGlow", "ConfidenceBar", "FlowBar", "AnimatedCounter", "TooltipSystem"],
     "newModules": ["AnimatedCounter", "TooltipSystem"],
     "phases": ["brand-color-upgrade", "js-v4-modules", "page-polish", "manifest-update"],
@@ -345,7 +345,7 @@
       "pagesPolished": ["markets-screener", "orders-ledger", "platform", "research", "regime-monitor", "ai-copilot", "instrument-hub", "home", "markets-intelligence", "ai-overview", "token-showcase", "ai-copilot"]
     },
     "summary": {
-      "brandColor": "V1 hue 255° C 0.165 → Ink Indigo hue 265° C 0.085",
+      "brandColor": "V1 hue 255° C 0.165 → Lapis hue 235° C 0.120 (current)",
       "jsModules": "9 → 11 (AnimatedCounter + TooltipSystem)",
       "dataCounterInstances": 72,
       "dataTooltipInstances": 300,

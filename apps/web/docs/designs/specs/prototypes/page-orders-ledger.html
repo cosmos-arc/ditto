@@ -491,6 +491,7 @@
     }
 
     .ledger-table th.right { text-align: right; }
+    .ledger-table th.numeric { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; }
 
     .ledger-table td {
       font-size: var(--font-size-12);
@@ -503,13 +504,14 @@
     }
 
     .ledger-table td.right { text-align: right; }
-    .ledger-table td.numeric { font-family: var(--font-family-numeric); }
+    .ledger-table td.numeric { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; }
 
     .ledger-table tbody tr {
       height: var(--density-row-height);
       transition:
         background var(--motion-duration-fast) var(--motion-easing-standard),
-        box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+        box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+        transform var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: pointer;
     }
     .ledger-table tbody tr:hover {
@@ -539,6 +541,8 @@
       padding: 1px var(--space-6);
       border-radius: var(--radius-3);
       white-space: nowrap;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .order-status .status-dot-inline {
@@ -638,6 +642,8 @@
       border-radius: var(--radius-2);
       background: var(--interaction-hover-subtle-bg);
       color: var(--text-tertiary);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     /* ── Order Trace Panel (right 340px) ── */
@@ -1095,9 +1101,9 @@
 
     /* ── Cell utility classes ── */
     .cell-name     { font-weight: var(--font-weight-medium); }
-    .cell-numeric  { font-family: var(--font-family-numeric); }
-    .cell-time     { font-family: var(--font-family-numeric); color: var(--text-secondary); }
-    .cell-disabled { font-family: var(--font-family-numeric); color: var(--text-disabled); }
+    .cell-numeric  { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; }
+    .cell-time     { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; color: var(--text-secondary); }
+    .cell-disabled { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; color: var(--text-disabled); }
 
     /* ── Status Bar ── */
     .status-bar {
@@ -1609,6 +1615,23 @@
     .kpi-strip {
       position: relative;
     }
+
+    /* ── Page-local column widths (non-standard) ── */
+    .col-xwide   { width: 110px; }
+    .col-2xwide  { width: 120px; }
+
+    /* ── Skeleton badge variants (state gallery) ── */
+    .skel-badge-96   { width: 96px; height: 28px; }
+    .skel-badge-88   { width: 88px; height: 28px; }
+    .skel-badge-80   { width: 80px; height: 28px; }
+    .skel-badge-72   { width: 72px; height: 28px; }
+    .skel-badge-64   { width: 64px; height: 28px; }
+    .skel-badge-56   { width: 56px; height: 28px; }
+    .skel-badge-24   { width: 64px; height: 24px; }
+    .skel-text-100   { width: 100px; height: 16px; }
+    .skel-text-80    { width: 80px; height: 14px; }
+    .skel-heading-60 { width: 60%; }
+    .skel-page-btn   { width: 28px; height: 28px; border-radius: var(--radius-4); }
   </style>
 </head>
 <body>
@@ -1845,15 +1868,15 @@
       <table class="ledger-table" aria-label="订单账本">
         <thead>
           <tr>
-            <th scope="col" style="width:100px">订单ID</th>
-            <th scope="col" style="width:100px">标的</th>
-            <th scope="col" style="width:80px">方向</th>
-            <th scope="col" style="width:80px">数量</th>
-            <th scope="col" style="width:90px">委托价</th>
-            <th scope="col" style="width:90px">成交价</th>
-            <th scope="col" style="width:72px">类型</th>
-            <th scope="col" style="width:100px">状态</th>
-            <th scope="col" style="width:72px">时间</th>
+            <th scope="col" class="col-wide">订单ID</th>
+            <th scope="col" class="col-wide">标的</th>
+            <th scope="col" class="col-small">方向</th>
+            <th scope="col" class="col-small">数量</th>
+            <th scope="col" class="col-medium">委托价</th>
+            <th scope="col" class="col-medium">成交价</th>
+            <th scope="col" class="col-narrow">类型</th>
+            <th scope="col" class="col-wide">状态</th>
+            <th scope="col" class="col-narrow">时间</th>
           </tr>
         </thead>
         <tbody>
@@ -1866,10 +1889,10 @@
             </td>
             <td class="numeric">200</td>
             <td class="numeric">1,725.00</td>
-            <td class="numeric">1,723.50</td>
+            <td class="numeric" data-tooltip="滑点 -0.09% · 较委托价节省 ¥300"><span data-counter="1723.50" data-counter-decimals="2">1,723.50</span></td>
             <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
-              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 200/200 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
             <td class="cell-time">09:42:15</td>
           </tr>
@@ -1882,10 +1905,10 @@
             </td>
             <td class="numeric">500</td>
             <td class="numeric">198.80</td>
-            <td class="numeric">199.20</td>
+            <td class="numeric" data-tooltip="滑点 +0.20% · 高于委托价 ¥0.40/股"><span data-counter="199.20" data-counter-decimals="2">199.20</span></td>
             <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
-              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 500/500 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
             <td class="cell-time">09:35:08</td>
           </tr>
@@ -1898,10 +1921,10 @@
             </td>
             <td class="numeric">1,000</td>
             <td class="numeric">265.00</td>
-            <td class="numeric">264.80</td>
+            <td class="numeric" data-tooltip="滑点 -0.08% · 已成交 350/1,000 股"><span data-counter="264.80" data-counter-decimals="2">264.80</span></td>
             <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
-              <span class="order-status partial"><span class="status-dot-inline" aria-hidden="true"></span> 部分成交</span>
+              <span class="order-status partial" data-tooltip="部分成交 · 350/1,000 股 · 等待剩余"><span class="status-dot-inline" aria-hidden="true"></span> 部分成交</span>
             </td>
             <td class="cell-time">09:48:33</td>
           </tr>
@@ -1915,9 +1938,9 @@
             <td class="numeric">2,000</td>
             <td class="numeric">33.45</td>
             <td class="cell-disabled">—</td>
-            <td><span class="order-type-tag">限价</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
-              <span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+              <span class="order-status submitted" data-tooltip="已报券商 · 等待撮合 · 等待 3分12秒"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
             </td>
             <td class="cell-time">09:50:01</td>
           </tr>
@@ -1930,10 +1953,10 @@
             </td>
             <td class="numeric">800</td>
             <td class="numeric">45.20</td>
-            <td class="numeric">45.15</td>
+            <td class="numeric" data-tooltip="滑点 -0.11% · 市价即时成交"><span data-counter="45.15" data-counter-decimals="2">45.15</span></td>
             <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
             <td>
-              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 800/800 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
             <td class="cell-time">09:31:20</td>
           </tr>
@@ -1947,9 +1970,9 @@
             <td class="numeric">300</td>
             <td class="numeric">62.80</td>
             <td class="cell-disabled">—</td>
-            <td><span class="order-type-tag">限价</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
-              <span class="order-status pending"><span class="status-dot-inline" aria-hidden="true"></span> 待提交</span>
+              <span class="order-status pending" data-tooltip="策略引擎生成 · 等待确认提交"><span class="status-dot-inline" aria-hidden="true"></span> 待提交</span>
             </td>
             <td class="cell-time">—</td>
           </tr>
@@ -1962,10 +1985,10 @@
             </td>
             <td class="numeric">1,500</td>
             <td class="numeric">27.90</td>
-            <td class="numeric">27.85</td>
+            <td class="numeric" data-tooltip="滑点 -0.18% · 市价即时成交"><span data-counter="27.85" data-counter-decimals="2">27.85</span></td>
             <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
             <td>
-              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 1,500/1,500 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
             <td class="cell-time">10:05:44</td>
           </tr>
@@ -1979,9 +2002,9 @@
             <td class="numeric">3,000</td>
             <td class="numeric">15.60</td>
             <td class="cell-disabled">—</td>
-            <td><span class="order-type-tag">限价</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
-              <span class="order-status failed"><span class="status-dot-inline" aria-hidden="true"></span> 已撤单</span>
+              <span class="order-status failed" data-tooltip="用户主动撤单 · 未成交"><span class="status-dot-inline" aria-hidden="true"></span> 已撤单</span>
             </td>
             <td class="cell-time">10:12:30</td>
           </tr>
@@ -1995,9 +2018,9 @@
             <td class="numeric">100</td>
             <td class="numeric">285.00</td>
             <td class="cell-disabled">—</td>
-            <td><span class="order-type-tag">限价</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
-              <span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+              <span class="order-status submitted" data-tooltip="已报券商 · 等待撮合 · 等待 1分48秒"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
             </td>
             <td class="cell-time">10:15:02</td>
           </tr>
@@ -2010,10 +2033,10 @@
             </td>
             <td class="numeric">1,200</td>
             <td class="numeric">28.10</td>
-            <td class="numeric">28.05</td>
+            <td class="numeric" data-tooltip="滑点 -0.18% · 市价即时成交"><span data-counter="28.05" data-counter-decimals="2">28.05</span></td>
             <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
             <td>
-              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 1,200/1,200 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
             <td class="cell-time">10:22:18</td>
           </tr>
@@ -2026,15 +2049,15 @@
       <table class="ledger-table" aria-label="待处理订单">
         <thead>
           <tr>
-            <th scope="col" style="width:100px">订单ID</th>
-            <th scope="col" style="width:100px">标的</th>
-            <th scope="col" style="width:80px">方向</th>
-            <th scope="col" style="width:80px">数量</th>
-            <th scope="col" style="width:90px">委托价</th>
-            <th scope="col" style="width:90px">成交价</th>
-            <th scope="col" style="width:72px">类型</th>
-            <th scope="col" style="width:100px">状态</th>
-            <th scope="col" style="width:72px">时间</th>
+            <th scope="col" class="col-wide">订单ID</th>
+            <th scope="col" class="col-wide">标的</th>
+            <th scope="col" class="col-small">方向</th>
+            <th scope="col" class="col-small">数量</th>
+            <th scope="col" class="col-medium">委托价</th>
+            <th scope="col" class="col-medium">成交价</th>
+            <th scope="col" class="col-narrow">类型</th>
+            <th scope="col" class="col-wide">状态</th>
+            <th scope="col" class="col-narrow">时间</th>
           </tr>
         </thead>
         <tbody>
@@ -2095,15 +2118,15 @@
       <table class="ledger-table" aria-label="已成订单">
         <thead>
           <tr>
-            <th scope="col" style="width:100px">订单ID</th>
-            <th scope="col" style="width:100px">标的</th>
-            <th scope="col" style="width:80px">方向</th>
-            <th scope="col" style="width:80px">数量</th>
-            <th scope="col" style="width:90px">委托价</th>
-            <th scope="col" style="width:90px">成交价</th>
-            <th scope="col" style="width:72px">类型</th>
-            <th scope="col" style="width:100px">状态</th>
-            <th scope="col" style="width:72px">时间</th>
+            <th scope="col" class="col-wide">订单ID</th>
+            <th scope="col" class="col-wide">标的</th>
+            <th scope="col" class="col-small">方向</th>
+            <th scope="col" class="col-small">数量</th>
+            <th scope="col" class="col-medium">委托价</th>
+            <th scope="col" class="col-medium">成交价</th>
+            <th scope="col" class="col-narrow">类型</th>
+            <th scope="col" class="col-wide">状态</th>
+            <th scope="col" class="col-narrow">时间</th>
           </tr>
         </thead>
         <tbody>
@@ -2196,15 +2219,15 @@
       <table class="ledger-table" aria-label="已撤单订单">
         <thead>
           <tr>
-            <th scope="col" style="width:100px">订单ID</th>
-            <th scope="col" style="width:100px">标的</th>
-            <th scope="col" style="width:80px">方向</th>
-            <th scope="col" style="width:80px">数量</th>
-            <th scope="col" style="width:90px">委托价</th>
-            <th scope="col" style="width:90px">成交价</th>
-            <th scope="col" style="width:72px">类型</th>
-            <th scope="col" style="width:100px">状态</th>
-            <th scope="col" style="width:72px">时间</th>
+            <th scope="col" class="col-wide">订单ID</th>
+            <th scope="col" class="col-wide">标的</th>
+            <th scope="col" class="col-small">方向</th>
+            <th scope="col" class="col-small">数量</th>
+            <th scope="col" class="col-medium">委托价</th>
+            <th scope="col" class="col-medium">成交价</th>
+            <th scope="col" class="col-narrow">类型</th>
+            <th scope="col" class="col-wide">状态</th>
+            <th scope="col" class="col-narrow">时间</th>
           </tr>
         </thead>
         <tbody>
@@ -2450,18 +2473,18 @@
         <div class="state-empty-title">2 笔待提交订单</div>
         <div class="state-empty-desc">以下订单已由策略引擎生成，等待人工确认或自动提交规则触发</div>
       </div>
-      <div class="ledger-table-area">
+      <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
         <table class="ledger-table" aria-label="待提交订单">
           <thead>
             <tr>
-              <th scope="col" style="width:100px">订单ID</th>
-              <th scope="col" style="width:100px">标的</th>
-              <th scope="col" style="width:80px">方向</th>
-              <th scope="col" style="width:80px">数量</th>
-              <th scope="col" style="width:90px">委托价</th>
-              <th scope="col" style="width:72px">类型</th>
-              <th scope="col" style="width:100px">状态</th>
-              <th scope="col" style="width:72px">时间</th>
+              <th scope="col" class="col-wide">订单ID</th>
+              <th scope="col" class="col-wide">标的</th>
+              <th scope="col" class="col-small">方向</th>
+              <th scope="col" class="col-small">数量</th>
+              <th scope="col" class="col-medium">委托价</th>
+              <th scope="col" class="col-narrow">类型</th>
+              <th scope="col" class="col-wide">状态</th>
+              <th scope="col" class="col-narrow">时间</th>
             </tr>
           </thead>
           <tbody>
@@ -2528,18 +2551,18 @@
 
     <!-- Tab Panel: 已提交 -->
     <div class="tab-panel" data-panel="orders-submitted">
-      <div class="ledger-table-area">
+      <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
         <table class="ledger-table" aria-label="已提交订单">
           <thead>
             <tr>
-              <th scope="col" style="width:100px">订单ID</th>
-              <th scope="col" style="width:100px">标的</th>
-              <th scope="col" style="width:80px">方向</th>
-              <th scope="col" style="width:80px">数量</th>
-              <th scope="col" style="width:90px">委托价</th>
-              <th scope="col" style="width:100px">状态</th>
-              <th scope="col" style="width:110px">提交时间</th>
-              <th scope="col" style="width:90px">等待</th>
+              <th scope="col" class="col-wide">订单ID</th>
+              <th scope="col" class="col-wide">标的</th>
+              <th scope="col" class="col-small">方向</th>
+              <th scope="col" class="col-small">数量</th>
+              <th scope="col" class="col-medium">委托价</th>
+              <th scope="col" class="col-wide">状态</th>
+              <th scope="col" class="col-xwide">提交时间</th>
+              <th scope="col" class="col-medium">等待</th>
             </tr>
           </thead>
           <tbody>
@@ -2579,18 +2602,18 @@
 
     <!-- Tab Panel: 部分成交 -->
     <div class="tab-panel" data-panel="orders-partial">
-      <div class="ledger-table-area">
+      <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
         <table class="ledger-table" aria-label="部分成交订单">
           <thead>
             <tr>
-              <th scope="col" style="width:100px">订单ID</th>
-              <th scope="col" style="width:100px">标的</th>
-              <th scope="col" style="width:80px">方向</th>
-              <th scope="col" style="width:80px">委托</th>
-              <th scope="col" style="width:80px">已成交</th>
-              <th scope="col" style="width:90px">均价</th>
-              <th scope="col" style="width:120px">进度</th>
-              <th scope="col" style="width:72px">时间</th>
+              <th scope="col" class="col-wide">订单ID</th>
+              <th scope="col" class="col-wide">标的</th>
+              <th scope="col" class="col-small">方向</th>
+              <th scope="col" class="col-small">委托</th>
+              <th scope="col" class="col-small">已成交</th>
+              <th scope="col" class="col-medium">均价</th>
+              <th scope="col" class="col-2xwide">进度</th>
+              <th scope="col" class="col-narrow">时间</th>
             </tr>
           </thead>
           <tbody>
@@ -2627,18 +2650,18 @@
 
     <!-- Tab Panel: 失败/撤单 -->
     <div class="tab-panel" data-panel="orders-failed">
-      <div class="ledger-table-area">
+      <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
         <table class="ledger-table" aria-label="失败/撤单订单">
           <thead>
             <tr>
-              <th scope="col" style="width:100px">订单ID</th>
-              <th scope="col" style="width:100px">标的</th>
-              <th scope="col" style="width:80px">方向</th>
-              <th scope="col" style="width:80px">数量</th>
-              <th scope="col" style="width:90px">委托价</th>
-              <th scope="col" style="width:100px">状态</th>
-              <th scope="col" style="width:120px">原因</th>
-              <th scope="col" style="width:72px">时间</th>
+              <th scope="col" class="col-wide">订单ID</th>
+              <th scope="col" class="col-wide">标的</th>
+              <th scope="col" class="col-small">方向</th>
+              <th scope="col" class="col-small">数量</th>
+              <th scope="col" class="col-medium">委托价</th>
+              <th scope="col" class="col-wide">状态</th>
+              <th scope="col" class="col-2xwide">原因</th>
+              <th scope="col" class="col-narrow">时间</th>
             </tr>
           </thead>
           <tbody>
@@ -2929,10 +2952,10 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="skeleton-filter-row">
-          <div class="skeleton skeleton-badge" style="width:96px;height:28px;"></div>
-          <div class="skeleton skeleton-badge" style="width:88px;height:28px;"></div>
-          <div class="skeleton skeleton-badge" style="width:72px;height:28px;"></div>
-          <div class="skeleton skeleton-badge" style="width:56px;height:28px;"></div>
+          <div class="skeleton skeleton-badge skel-badge-96"></div>
+          <div class="skeleton skeleton-badge skel-badge-88"></div>
+          <div class="skeleton skeleton-badge skel-badge-72"></div>
+          <div class="skeleton skeleton-badge skel-badge-56"></div>
         </div>
       </div>
       </div>
@@ -2981,11 +3004,11 @@
 <div class="state-variant-content" data-state="loading">
         <div class="status-strip gallery-status-strip">
           <div class="status-tabs skeleton-tabs-row">
-            <div class="skeleton skeleton-badge" style="width:72px;height:28px;"></div>
-            <div class="skeleton skeleton-badge" style="width:64px;height:28px;"></div>
-            <div class="skeleton skeleton-badge" style="width:80px;height:28px;"></div>
-            <div class="skeleton skeleton-badge" style="width:64px;height:28px;"></div>
-            <div class="skeleton skeleton-badge" style="width:80px;height:28px;"></div>
+            <div class="skeleton skeleton-badge skel-badge-72"></div>
+            <div class="skeleton skeleton-badge skel-badge-64"></div>
+            <div class="skeleton skeleton-badge skel-badge-80"></div>
+            <div class="skeleton skeleton-badge skel-badge-64"></div>
+            <div class="skeleton skeleton-badge skel-badge-80"></div>
           </div>
         </div>
       </div>
@@ -2998,6 +3021,7 @@
         <div class="state-empty">
           <div class="state-empty-icon">📋</div>
           <div class="state-empty-title">暂无订单</div>
+
           <div class="state-empty-desc">当前会话无任何订单记录，通过策略引擎生成或手动创建订单后将在此处展示</div>
         </div>
       </div>
@@ -3095,7 +3119,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="state-loading">
-          <div class="skeleton skeleton-heading" style="width:60%;"></div>
+          <div class="skeleton skeleton-heading skel-heading-60"></div>
           <div class="skeleton skeleton-text"></div>
           <div class="skeleton skeleton-text-sm"></div>
           <div class="skeleton skeleton-text"></div>
@@ -3150,10 +3174,10 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="batch-action-bar">
-          <div class="skeleton skeleton-text" style="width:100px;height:16px;"></div>
+          <div class="skeleton skeleton-text skel-text-100"></div>
           <div class="flex-spacer"></div>
-          <div class="skeleton skeleton-badge" style="width:64px;height:24px;"></div>
-          <div class="skeleton skeleton-badge" style="width:64px;height:24px;"></div>
+          <div class="skeleton skeleton-badge skel-badge-24"></div>
+          <div class="skeleton skeleton-badge skel-badge-24"></div>
         </div>
       </div>
       </div>
@@ -3201,11 +3225,11 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="pagination-bar">
-          <div class="skeleton skeleton-text-sm" style="width:80px;height:14px;"></div>
+          <div class="skeleton skeleton-text-sm skel-text-80"></div>
           <div class="pagination-controls">
-            <div class="skeleton skeleton-badge" style="width:28px;height:28px;border-radius:var(--radius-4);"></div>
-            <div class="skeleton skeleton-badge" style="width:28px;height:28px;border-radius:var(--radius-4);"></div>
-            <div class="skeleton skeleton-badge" style="width:28px;height:28px;border-radius:var(--radius-4);"></div>
+            <div class="skeleton skeleton-badge skel-page-btn"></div>
+            <div class="skeleton skeleton-badge skel-page-btn"></div>
+            <div class="skeleton skeleton-badge skel-page-btn"></div>
           </div>
         </div>
       </div>

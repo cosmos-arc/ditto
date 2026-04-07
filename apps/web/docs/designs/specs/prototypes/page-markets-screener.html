@@ -1221,6 +1221,49 @@
     .flex-1 { flex: 1; }
 
     /* ══════════════════════════════════════════════
+     * Extracted Inline Style Utility Classes (v5 cleanup pass 2)
+     * ══════════════════════════════════════════════ */
+
+    /* ── Sector Heatmap Details ── */
+    .shm-details { margin: 0 var(--space-12); border-bottom: 1px solid var(--border-subtle); }
+    .shm-summary { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--text-secondary); padding: var(--space-6) 0; cursor: pointer; list-style: none; display: flex; align-items: center; gap: var(--space-6); }
+    .shm-summary .shm-arrow { transition: transform 0.2s; }
+    .shm-summary .shm-count { font-size: var(--font-size-11); color: var(--text-tertiary); font-weight: var(--font-weight-regular); }
+    .shm-body { padding: var(--space-8) 0 var(--space-10); display: flex; align-items: flex-start; gap: var(--space-12); }
+    .shm-legend { display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--font-size-11); color: var(--text-tertiary); }
+    .shm-legend-row { display: flex; align-items: center; gap: var(--space-4); }
+    .shm-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .shm-swatch--down { background: oklch(0.6317 0.1567 22.64 / 0.25); }
+    .shm-swatch--flat { background: oklch(1 0 0 / 0.00); border: 1px solid var(--border-subtle); }
+    .shm-swatch--up { background: oklch(0.55 0.15 155 / 0.25); }
+
+    /* ── View Tabs Bar ── */
+    .view-tabs-bar { display: flex; gap: var(--space-2); padding: var(--space-6) var(--space-12) 0; border-bottom: 1px solid var(--border-subtle); }
+
+    /* ── Sort Panel ── */
+    .sort-panel { padding: var(--space-16) var(--space-12); display: none; }
+    .sort-panel-desc { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-12); }
+    .sort-list { display: flex; flex-direction: column; gap: var(--space-4); }
+    .sort-item { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-10); border: 1px solid var(--border-subtle); border-radius: var(--radius-4); font-size: var(--font-size-12); color: var(--text-primary); }
+    .sort-item--active { border-color: var(--border-default); background: var(--interaction-hover-subtle-bg); }
+    .sort-item-rank { color: var(--brand-accent); font-weight: var(--font-weight-medium); }
+    .sort-item-name { flex: 1; }
+    .sort-item-dir { color: var(--text-tertiary); }
+    .sort-panel-actions { margin-top: var(--space-12); display: flex; gap: var(--space-6); justify-content: flex-end; }
+
+    /* ── Compare Panel ── */
+    .compare-panel { padding: var(--space-16) var(--space-12); display: none; }
+    .compare-panel-desc { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-12); }
+    .compare-list { display: flex; flex-direction: column; gap: var(--space-8); }
+    .compare-row { display: flex; align-items: center; gap: var(--space-10); padding: var(--space-8) var(--space-10); border: 1px solid var(--border-subtle); border-radius: var(--radius-4); font-size: var(--font-size-12); }
+    .compare-row-ticker { font-weight: var(--font-weight-medium); color: var(--text-primary); width: 80px; }
+    .compare-row-name { flex: 1; color: var(--text-primary); }
+    .compare-panel-actions { margin-top: var(--space-12); display: flex; gap: var(--space-6); justify-content: flex-end; }
+
+    /* ── Stale gallery hint color override ── */
+    .gallery-hint--stale { color: var(--system-degraded-fg); }
+
+    /* ══════════════════════════════════════════════
      * Information Visualization Enhancements
      * ══════════════════════════════════════════════ */
 
@@ -1620,8 +1663,225 @@
       .data-table tr.row { transition: none !important; }
       .score-row { transition: none !important; }
       .compare-item { transition: none !important; }
+      .sort-item { transition: none !important; }
+      .compare-row { transition: none !important; }
+      .pagination-btn:not(.active) { transition: none !important; }
+      .overlay-btn { transition: none !important; }
+      .header-action-btn { transition: none !important; }
+      .shm-summary { transition: none !important; }
     }
 
+    /* ══════════════════════════════════════════════
+     * Deep Polish — Column widths, transitions, enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Table column widths (replacing inline style=width) ── */
+    .col-code   { width: 80px; }
+    .col-name   { width: 100px; }
+    .col-price  { width: 90px; }
+    .col-change { width: 80px; }
+    .col-delta  { width: 80px; }
+    .col-vol    { width: 80px; }
+    .col-mcap   { width: 90px; }
+    .col-sector { width: 60px; }
+    .col-signal { width: 80px; }
+    .col-risk   { width: 50px; }
+    .col-trend  { width: 56px; }
+
+    /* ── Overlay button hover transitions ── */
+    .overlay-btn {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .overlay-btn-primary:hover {
+      filter: brightness(1.15);
+    }
+    .overlay-btn-secondary:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    /* ── Sort item hover ── */
+    .sort-item {
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .sort-item:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Compare row hover ── */
+    .compare-row {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .compare-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── View tab hover ── */
+    .ov-tab:not(.ov-tab--active) {
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .ov-tab:not(.ov-tab--active):hover {
+      color: var(--text-secondary);
+    }
+
+    /* ── Pagination button hover ── */
+    .pagination-btn:not(.active) {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .pagination-btn:not(.active):hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    /* ── Score bar value numeric alignment ── */
+    .score-value {
+      font-feature-settings: 'tnum' 1;
+    }
+
+    /* ── Header button hover ── */
+    .header-action-btn {
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .header-action-btn:hover {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Sector heatmap summary hover ── */
+    .shm-summary {
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .shm-summary:hover {
+      color: var(--text-primary);
+    }
+
+  </style>
+
+  <!-- Polishing Pass — Score bar fill animation + micro-refinements -->
+  <style>
+    /* ── Score bar: animated fill on load with stagger ── */
+    @keyframes scoreFillIn {
+      from { width: 0%; }
+    }
+    .score-bar-fill {
+      animation: scoreFillIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+    }
+    .score-row:nth-child(1) .score-bar-fill { animation-delay: 0.3s; }
+    .score-row:nth-child(2) .score-bar-fill { animation-delay: 0.4s; }
+    .score-row:nth-child(3) .score-bar-fill { animation-delay: 0.5s; }
+    .score-row:nth-child(4) .score-bar-fill { animation-delay: 0.6s; }
+    .score-row:nth-child(5) .score-bar-fill { animation-delay: 0.7s; }
+
+    /* ── Sort item: enhanced hover with brand tint ── */
+    .sort-item:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-default));
+      background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 10%, transparent);
+    }
+
+    /* ── Pagination active: refined hover ── */
+    .pagination-btn.active:hover {
+      background: color-mix(in oklch, var(--brand-accent) 18%, transparent);
+    }
+
+    /* ── Score bar fill glow on hover ── */
+    .score-row:hover .score-bar-fill.brand {
+      box-shadow: 0 0 8px -2px color-mix(in oklch, var(--brand-accent) 40%, transparent);
+    }
+    .score-row:hover .score-bar-fill.ok {
+      box-shadow: 0 0 8px -2px color-mix(in oklch, var(--system-healthy-fg) 40%, transparent);
+    }
+    .score-row:hover .score-bar-fill.warn {
+      box-shadow: 0 0 8px -2px color-mix(in oklch, var(--system-degraded-fg) 40%, transparent);
+    }
+
+    /* ── Preset card: subtle inner shadow on hover for depth ── */
+    .preset-card:hover {
+      box-shadow: 0 1px 4px -1px var(--overlay-4);
+    }
+
+    /* ── Context section header: hover emphasis ── */
+    .context-section-header {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-2);
+    }
+    .context-section-header:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Heatgrid cell: hover scale ── */
+    .heatgrid-cell {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .heatgrid-cell:hover {
+      opacity: 0.85;
+      transform: scale(1.15);
+    }
+
+    /* ── Ticker cell: hover accent tint ── */
+    .data-table td.cell-ticker:hover {
+      color: var(--brand-accent);
+      cursor: pointer;
+    }
+
+    /* ── Table footer: refined separator ── */
+    .table-footer {
+      border-top: 1px solid var(--border-subtle);
+      background: var(--surface-muted);
+    }
+
+    /* ── View tab: underline transition ── */
+    .ov-tab {
+      position: relative;
+    }
+    .ov-tab::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--brand-accent);
+      transform: scaleX(0);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .ov-tab.active::after,
+    .ov-tab.ov-tab--active::after {
+      transform: scaleX(1);
+    }
+
+    /* ── Filter chip: refined hover micro-feedback ── */
+    .filter-chip {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .filter-chip:hover {
+      background: var(--interaction-hover-strong-bg);
+      border-color: var(--border-default);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .score-bar-fill { animation: none !important; }
+      .sort-item { transition: none !important; }
+      .compare-row { transition: none !important; }
+      .pagination-btn:not(.active) { transition: none !important; }
+      .header-action-btn { transition: none !important; }
+      .ov-tab::after { transition: none !important; }
+      .heatgrid-cell { transition: none !important; }
+      .filter-chip { transition: none !important; }
+      .context-section-header { transition: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -1720,7 +1980,7 @@
     </header>
 
     <!-- ═══ Filter Toolbar ═══ -->
-    <div class="filter-toolbar" data-reveal="fade-up" data-reveal-delay="0">
+    <div class="filter-toolbar" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true">
       <div class="filter-group">
         <span class="filter-label">股票池:</span>
         <button class="filter-chip active" data-tooltip="沪深300成分股，大盘蓝筹">沪深300</button>
@@ -1763,25 +2023,25 @@
 
 
     <!-- ═══ Sector Heatmap Overview ═══ -->
-    <details style="margin:0 var(--space-12);border-bottom:1px solid var(--border-subtle);">
-      <summary style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-secondary);padding:var(--space-6) 0;cursor:pointer;list-style:none;display:flex;align-items:center;gap:var(--space-6);">
-        <span style="transition:transform 0.2s;">▶</span>
+    <details class="shm-details" data-reveal="fade-up" data-reveal-delay="50">
+      <summary class="shm-summary">
+        <span class="shm-arrow">▶</span>
         板块热力概览
-        <span style="font-size:var(--font-size-11);color:var(--text-tertiary);font-weight:var(--font-weight-regular);">24 板块 · 涨跌分布</span>
+        <span class="shm-count">24 板块 · 涨跌分布</span>
       </summary>
-      <div style="padding:var(--space-8) 0 var(--space-10);display:flex;align-items:flex-start;gap:var(--space-12);">
+      <div class="shm-body">
         <svg data-heatgrid='{"rows":4,"cols":6,"cellSize":16,"gap":2}' aria-label="板块热力"></svg>
-        <div style="display:flex;flex-direction:column;gap:var(--space-2);font-size:var(--font-size-11);color:var(--text-tertiary);">
-          <div style="display:flex;align-items:center;gap:var(--space-4);">
-            <span style="width:10px;height:10px;border-radius:2px;background:oklch(0.6317 0.1567 22.64 / 0.25);flex-shrink:0;"></span>
+        <div class="shm-legend">
+          <div class="shm-legend-row">
+            <span class="shm-swatch shm-swatch--down"></span>
             <span>领跌板块</span>
           </div>
-          <div style="display:flex;align-items:center;gap:var(--space-4);">
-            <span style="width:10px;height:10px;border-radius:2px;background:oklch(1 0 0 / 0.00);flex-shrink:0;border:1px solid var(--border-subtle);"></span>
+          <div class="shm-legend-row">
+            <span class="shm-swatch shm-swatch--flat"></span>
             <span>持平</span>
           </div>
-          <div style="display:flex;align-items:center;gap:var(--space-4);">
-            <span style="width:10px;height:10px;border-radius:2px;background:oklch(0.55 0.15 155 / 0.25);flex-shrink:0;"></span>
+          <div class="shm-legend-row">
+            <span class="shm-swatch shm-swatch--up"></span>
             <span>领涨板块</span>
           </div>
         </div>
@@ -1789,7 +2049,7 @@
     </details>
 
     <!-- ═══ View Tabs: 筛选 / 排序 / 对比 ═══ -->
-    <div data-tabs="screener-tabs" style="display:flex;gap:var(--space-2);padding:var(--space-6) var(--space-12) 0;border-bottom:1px solid var(--border-subtle);">
+    <div data-tabs="screener-tabs" class="view-tabs-bar">
       <button class="ov-tab active" data-tab-target="filter" aria-selected="true">筛选</button>
       <button class="ov-tab" data-tab-target="sort" aria-selected="false">排序</button>
       <button class="ov-tab" data-tab-target="compare" aria-selected="false">对比</button>
@@ -1804,17 +2064,17 @@
             <colgroup><col class="col-sorted"></colgroup>
             <thead>
               <tr>
-                <th scope="col" style="width:80px" class="sorted" data-tooltip="点击切换排序方向">代码 <span class="sort-icon">▲</span></th>
-                <th scope="col" style="width:100px">名称</th>
-                <th scope="col" style="width:90px" class="right" data-tooltip="最新一笔成交价格">最新价 <span class="sort-icon"></span></th>
-                <th scope="col" style="width:80px" class="right" data-tooltip="相对前收盘价涨跌百分比">涨跌幅 <span class="sort-icon"></span></th>
-                <th scope="col" style="width:80px" class="right" data-tooltip="相对前收盘价涨跌金额">涨跌额 <span class="sort-icon"></span></th>
-                <th scope="col" style="width:80px" class="right" data-tooltip="当日累计成交金额">成交额 <span class="sort-icon"></span></th>
-                <th scope="col" style="width:90px" class="right" data-tooltip="当前流通市值">流通市值 <span class="sort-icon"></span></th>
-                <th scope="col" style="width:60px" data-tooltip="申万一级行业分类">行业</th>
-                <th scope="col" style="width:80px" data-tooltip="AI信号评级与置信度">信号</th>
-                <th scope="col" style="width:50px" data-tooltip="风险等级评估">风险</th>
-                <th scope="col" style="width:56px" data-tooltip="近期走势迷你图">趋势</th>
+                <th scope="col" class="col-code sorted" data-tooltip="点击切换排序方向">代码 <span class="sort-icon">▲</span></th>
+                <th scope="col" class="col-name">名称</th>
+                <th scope="col" class="col-price right" data-tooltip="最新一笔成交价格">最新价 <span class="sort-icon"></span></th>
+                <th scope="col" class="col-change right" data-tooltip="相对前收盘价涨跌百分比">涨跌幅 <span class="sort-icon"></span></th>
+                <th scope="col" class="col-delta right" data-tooltip="相对前收盘价涨跌金额">涨跌额 <span class="sort-icon"></span></th>
+                <th scope="col" class="col-vol right" data-tooltip="当日累计成交金额">成交额 <span class="sort-icon"></span></th>
+                <th scope="col" class="col-mcap right" data-tooltip="当前流通市值">流通市值 <span class="sort-icon"></span></th>
+                <th scope="col" class="col-sector" data-tooltip="申万一级行业分类">行业</th>
+                <th scope="col" class="col-signal" data-tooltip="AI信号评级与置信度">信号</th>
+                <th scope="col" class="col-risk" data-tooltip="风险等级评估">风险</th>
+                <th scope="col" class="col-trend" data-tooltip="近期走势迷你图">趋势</th>
               </tr>
             </thead>
             <tbody>
@@ -1829,7 +2089,7 @@
                 <td class="right numeric cell-volume" data-tooltip="流通市值约 2.3 万亿元">2.3万亿</td>
                 <td><span class="cell-badge sector" data-tooltip="消费行业板块">消费</span></td>
                 <td><span class="signal-pill buy s2" data-tooltip="AI买入信号 · 置信度 0.92 · 强信号">买入 <span class="signal-strength">0.92</span></span></td>
-                <td><span class="risk-dot low">低</span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
                 <td><span class="sparkline-up"><svg data-sparkline='{"data":[10,12,11,14,13,16,15,18,17,20],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 300750 宁德时代 -->
@@ -1843,75 +2103,75 @@
                 <td class="right numeric cell-volume" data-tooltip="流通市值约 5,320 亿元">5,320亿</td>
                 <td><span class="cell-badge sector" data-tooltip="新能源行业板块">新能源</span></td>
                 <td><span class="signal-pill buy s2" data-tooltip="AI买入信号 · 置信度 0.85 · 强信号">买入 <span class="signal-strength">0.85</span></span></td>
-                <td><span class="risk-dot medium">中</span></td>
+                <td><span class="risk-dot medium" data-tooltip="中等风险等级">中</span></td>
                 <td><span class="sparkline-up"><svg data-sparkline='{"data":[8,9,7,11,10,14,12,17,16,21],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 002594 比亚迪 -->
               <tr class="row">
                 <td class="cell-ticker numeric">002594</td>
                 <td>比亚迪</td>
-                <td class="right numeric">291.00</td>
-                <td class="right numeric cell-change-up">+2.80%</td>
+                <td class="right numeric" data-tooltip="最新成交价">291.00</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 2.80%">+2.80%</td>
                 <td class="right numeric cell-change-up">+7.90</td>
-                <td class="right numeric cell-volume">98.4亿</td>
-                <td class="right numeric cell-volume">8,450亿</td>
-                <td><span class="cell-badge sector">新能源</span></td>
-                <td><span class="signal-pill buy s0">买入 <span class="signal-strength">0.58</span></span></td>
-                <td><span class="risk-dot low">低</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 98.4 亿元">98.4亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 8,450 亿元">8,450亿</td>
+                <td><span class="cell-badge sector" data-tooltip="新能源行业板块">新能源</span></td>
+                <td><span class="signal-pill buy s0" data-tooltip="AI买入信号 · 置信度 0.58 · 弱信号">买入 <span class="signal-strength">0.58</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
                 <td><span class="sparkline-up"><svg data-sparkline='{"data":[10,10,12,15,16,19,18],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 601318 中国平安 -->
               <tr class="row">
                 <td class="cell-ticker numeric">601318</td>
                 <td>中国平安</td>
-                <td class="right numeric">53.80</td>
-                <td class="right numeric cell-change-up">+3.46%</td>
+                <td class="right numeric" data-tooltip="最新成交价">53.80</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 3.46%">+3.46%</td>
                 <td class="right numeric cell-change-up">+1.80</td>
-                <td class="right numeric cell-volume">45.2亿</td>
-                <td class="right numeric cell-volume">9,820亿</td>
-                <td><span class="cell-badge sector">金融</span></td>
-                <td><span class="signal-pill buy s1">买入 <span class="signal-strength">0.78</span></span></td>
-                <td><span class="risk-dot low">低</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 45.2 亿元">45.2亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 9,820 亿元">9,820亿</td>
+                <td><span class="cell-badge sector" data-tooltip="金融行业板块">金融</span></td>
+                <td><span class="signal-pill buy s1" data-tooltip="AI买入信号 · 置信度 0.78 · 中等信号">买入 <span class="signal-strength">0.78</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
                 <td><span class="sparkline-up"><svg data-sparkline='{"data":[8,10,9,12,12,16,18],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 000333 美的集团 -->
               <tr class="row">
                 <td class="cell-ticker numeric">000333</td>
                 <td>美的集团</td>
-                <td class="right numeric">66.50</td>
-                <td class="right numeric cell-change-down">-2.21%</td>
+                <td class="right numeric" data-tooltip="最新成交价">66.50</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 2.21%">-2.21%</td>
                 <td class="right numeric cell-change-down">-1.50</td>
-                <td class="right numeric cell-volume">32.1亿</td>
-                <td class="right numeric cell-volume">4,560亿</td>
-                <td><span class="cell-badge sector">制造</span></td>
-                <td><span class="signal-pill sell s1">卖出 <span class="signal-strength">0.71</span></span></td>
-                <td><span class="risk-dot low">低</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 32.1 亿元">32.1亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 4,560 亿元">4,560亿</td>
+                <td><span class="cell-badge sector" data-tooltip="制造行业板块">制造</span></td>
+                <td><span class="signal-pill sell s1" data-tooltip="AI卖出信号 · 置信度 0.71 · 中等信号">卖出 <span class="signal-strength">0.71</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
                 <td><span class="sparkline-down"><svg data-sparkline='{"data":[20,18,19,16,17,13,14,11,10,7],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 600900 长江电力 -->
               <tr class="row">
                 <td class="cell-ticker numeric">600900</td>
                 <td>长江电力</td>
-                <td class="right numeric">28.90</td>
-                <td class="right numeric cell-change-up">+3.21%</td>
+                <td class="right numeric" data-tooltip="最新成交价">28.90</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 3.21%">+3.21%</td>
                 <td class="right numeric cell-change-up">+0.90</td>
-                <td class="right numeric cell-volume">18.6亿</td>
-                <td class="right numeric cell-volume">7,120亿</td>
-                <td><span class="cell-badge sector">公用</span></td>
-                <td><span class="signal-pill hold">持有 <span class="signal-strength">0.48</span></span></td>
-                <td><span class="risk-dot low">低</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 18.6 亿元">18.6亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 7,120 亿元">7,120亿</td>
+                <td><span class="cell-badge sector" data-tooltip="公用事业板块">公用</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.48 · 观望">持有 <span class="signal-strength">0.48</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
                 <td><span class="sparkline-up"><svg data-sparkline='{"data":[6,7,8,10,12,14,17],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 002475 立讯精密 -->
               <tr class="row">
                 <td class="cell-ticker numeric">002475</td>
                 <td>立讯精密</td>
-                <td class="right numeric">35.60</td>
+                <td class="right numeric" data-tooltip="最新成交价">35.60</td>
                 <td class="right numeric cell-change-down" data-tooltip="跌幅 6.32%">-6.32%</td>
                 <td class="right numeric cell-change-down">-2.40</td>
-                <td class="right numeric cell-volume">28.9亿</td>
-                <td class="right numeric cell-volume">2,530亿</td>
-                <td><span class="cell-badge sector">科技</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 28.9 亿元">28.9亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 2,530 亿元">2,530亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
                 <td><span class="signal-pill sell s2" data-tooltip="AI卖出信号 · 置信度 0.83 · 强信号">卖出 <span class="signal-strength">0.83</span></span></td>
                 <td><span class="risk-dot medium" data-tooltip="中等风险等级">中</span></td>
                 <td><span class="sparkline-down"><svg data-sparkline='{"data":[22,20,18,16,14,12,10,8,7,5],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
@@ -1920,12 +2180,12 @@
               <tr class="row">
                 <td class="cell-ticker numeric">688981</td>
                 <td>中芯国际</td>
-                <td class="right numeric">51.00</td>
+                <td class="right numeric" data-tooltip="最新成交价">51.00</td>
                 <td class="right numeric cell-change-up" data-tooltip="涨幅 6.25%">+6.25%</td>
                 <td class="right numeric cell-change-up">+3.00</td>
-                <td class="right numeric cell-volume">67.8亿</td>
-                <td class="right numeric cell-volume">4,060亿</td>
-                <td><span class="cell-badge sector">科技</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 67.8 亿元">67.8亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 4,060 亿元">4,060亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
                 <td><span class="signal-pill buy s2" data-tooltip="AI买入信号 · 置信度 0.82 · 强信号">买入 <span class="signal-strength">0.82</span></span></td>
                 <td><span class="risk-dot high" data-tooltip="高风险等级 · 波动率较高">高</span></td>
                 <td><span class="sparkline-up"><svg data-sparkline='{"data":[5,7,6,10,8,13,11,16,15,20],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
@@ -1934,97 +2194,97 @@
               <tr class="row">
                 <td class="cell-ticker numeric">300760</td>
                 <td>迈瑞医疗</td>
-                <td class="right numeric">268.00</td>
-                <td class="right numeric cell-change-up">+1.52%</td>
+                <td class="right numeric" data-tooltip="最新成交价">268.00</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 1.52%">+1.52%</td>
                 <td class="right numeric cell-change-up">+4.02</td>
-                <td class="right numeric cell-volume">12.3亿</td>
-                <td class="right numeric cell-volume">3,240亿</td>
-                <td><span class="cell-badge sector">医药</span></td>
-                <td><span class="signal-pill hold">持有 <span class="signal-strength">0.52</span></span></td>
-                <td><span class="risk-dot low">低</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 12.3 亿元">12.3亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 3,240 亿元">3,240亿</td>
+                <td><span class="cell-badge sector" data-tooltip="医药行业板块">医药</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.52 · 观望">持有 <span class="signal-strength">0.52</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
                 <td><span class="sparkline-flat"><svg data-sparkline='{"data":[10,9,11,10,10,10,10],"series":"neutral","width":48,"height":18,"fill":false}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 002371 北方华创 -->
               <tr class="row">
                 <td class="cell-ticker numeric">002371</td>
                 <td>北方华创</td>
-                <td class="right numeric">342.00</td>
-                <td class="right numeric cell-change-up">+4.25%</td>
+                <td class="right numeric" data-tooltip="最新成交价">342.00</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 4.25%">+4.25%</td>
                 <td class="right numeric cell-change-up">+13.94</td>
-                <td class="right numeric cell-volume">56.2亿</td>
-                <td class="right numeric cell-volume">1,780亿</td>
-                <td><span class="cell-badge sector">科技</span></td>
-                <td><span class="signal-pill buy s2">买入 <span class="signal-strength">0.88</span></span></td>
-                <td><span class="risk-dot medium">中</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 56.2 亿元">56.2亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,780 亿元">1,780亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
+                <td><span class="signal-pill buy s2" data-tooltip="AI买入信号 · 置信度 0.88 · 强信号">买入 <span class="signal-strength">0.88</span></span></td>
+                <td><span class="risk-dot medium" data-tooltip="中等风险等级">中</span></td>
                 <td><span class="sparkline-up"><svg data-sparkline='{"data":[8,10,14,12,16,18,20],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 688012 中微公司 -->
               <tr class="row">
                 <td class="cell-ticker numeric">688012</td>
                 <td>中微公司</td>
-                <td class="right numeric">185.00</td>
-                <td class="right numeric cell-change-down">-1.60%</td>
+                <td class="right numeric" data-tooltip="最新成交价">185.00</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 1.60%">-1.60%</td>
                 <td class="right numeric cell-change-down">-3.00</td>
-                <td class="right numeric cell-volume">15.4亿</td>
-                <td class="right numeric cell-volume">1,120亿</td>
-                <td><span class="cell-badge sector">科技</span></td>
-                <td><span class="signal-pill hold">持有 <span class="signal-strength">0.45</span></span></td>
-                <td><span class="risk-dot low">低</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 15.4 亿元">15.4亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,120 亿元">1,120亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.45 · 观望">持有 <span class="signal-strength">0.45</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
                 <td><span class="sparkline-down"><svg data-sparkline='{"data":[20,17,14,16,10,7,4],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 603259 药明康德 -->
               <tr class="row">
                 <td class="cell-ticker numeric">603259</td>
                 <td>药明康德</td>
-                <td class="right numeric">42.50</td>
-                <td class="right numeric cell-change-down">-3.41%</td>
+                <td class="right numeric" data-tooltip="最新成交价">42.50</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 3.41%">-3.41%</td>
                 <td class="right numeric cell-change-down">-1.50</td>
-                <td class="right numeric cell-volume">22.1亿</td>
-                <td class="right numeric cell-volume">1,260亿</td>
-                <td><span class="cell-badge sector">医药</span></td>
-                <td><span class="signal-pill sell s1">卖出 <span class="signal-strength">0.76</span></span></td>
-                <td><span class="risk-dot high">高</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 22.1 亿元">22.1亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,260 亿元">1,260亿</td>
+                <td><span class="cell-badge sector" data-tooltip="医药行业板块">医药</span></td>
+                <td><span class="signal-pill sell s1" data-tooltip="AI卖出信号 · 置信度 0.76 · 中等信号">卖出 <span class="signal-strength">0.76</span></span></td>
+                <td><span class="risk-dot high" data-tooltip="高风险等级 · 波动率较高">高</span></td>
                 <td><span class="sparkline-down"><svg data-sparkline='{"data":[18,16,20,12,14,8,5],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 601888 中国中免 -->
               <tr class="row">
                 <td class="cell-ticker numeric">601888</td>
                 <td>中国中免</td>
-                <td class="right numeric">78.30</td>
-                <td class="right numeric cell-change-down">-2.12%</td>
+                <td class="right numeric" data-tooltip="最新成交价">78.30</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 2.12%">-2.12%</td>
                 <td class="right numeric cell-change-down">-1.70</td>
-                <td class="right numeric cell-volume">18.7亿</td>
-                <td class="right numeric cell-volume">1,620亿</td>
-                <td><span class="cell-badge sector">消费</span></td>
-                <td><span class="signal-pill hold">持有 <span class="signal-strength">0.50</span></span></td>
-                <td><span class="risk-dot low">低</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 18.7 亿元">18.7亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,620 亿元">1,620亿</td>
+                <td><span class="cell-badge sector" data-tooltip="消费行业板块">消费</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.50 · 观望">持有 <span class="signal-strength">0.50</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
                 <td><span class="sparkline-down"><svg data-sparkline='{"data":[20,18,15,14,10,8,5],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 601012 隆基绿能 -->
               <tr class="row">
                 <td class="cell-ticker numeric">601012</td>
                 <td>隆基绿能</td>
-                <td class="right numeric">22.80</td>
-                <td class="right numeric cell-change-down">-1.72%</td>
+                <td class="right numeric" data-tooltip="最新成交价">22.80</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 1.72%">-1.72%</td>
                 <td class="right numeric cell-change-down">-0.40</td>
-                <td class="right numeric cell-volume">25.3亿</td>
-                <td class="right numeric cell-volume">1,730亿</td>
-                <td><span class="cell-badge sector">新能源</span></td>
-                <td><span class="signal-pill hold">持有 <span class="signal-strength">0.42</span></span></td>
-                <td><span class="risk-dot medium">中</span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 25.3 亿元">25.3亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,730 亿元">1,730亿</td>
+                <td><span class="cell-badge sector" data-tooltip="新能源行业板块">新能源</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.42 · 观望">持有 <span class="signal-strength">0.42</span></span></td>
+                <td><span class="risk-dot medium" data-tooltip="中等风险等级">中</span></td>
                 <td><span class="sparkline-down"><svg data-sparkline='{"data":[18,16,14,16,10,10,6],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
               <!-- 002049 紫光国微 (stale signal — 信号超过 5 分钟未更新) -->
               <tr class="row">
                 <td class="cell-ticker numeric">002049</td>
                 <td>紫光国微</td>
-                <td class="right numeric">98.50</td>
-                <td class="right numeric cell-change-up">+2.07%</td>
+                <td class="right numeric" data-tooltip="最新成交价">98.50</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 2.07%">+2.07%</td>
                 <td class="right numeric cell-change-up">+2.00</td>
-                <td class="right numeric cell-volume">8.9亿</td>
-                <td class="right numeric cell-volume">580亿</td>
-                <td><span class="cell-badge sector">科技</span></td>
-                <td><span class="signal-pill hold s0 stale">持有 <span class="signal-strength">0.45</span></span></td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 8.9 亿元">8.9亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 580 亿元">580亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
+                <td><span class="signal-pill hold s0 stale" data-tooltip="持有信号 · 置信度 0.45 · 信号已过时（超过5分钟未更新）">持有 <span class="signal-strength">0.45</span></span></td>
                 <td><span class="risk-dot low stale">低</span></td>
                 <td><span class="sparkline-up stale"><svg data-sparkline='{"data":[8,10,9,11,13,15,17],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
               </tr>
@@ -2035,7 +2295,7 @@
         <!-- Table Footer -->
         <div class="table-footer">
           <div class="table-footer-info">
-            <span>显示 1-15 / 共 <span data-counter="238" data-counter-decimals="0">238</span> 只 · 第 1/16 页</span>
+            <span>显示 1-<span data-ticker="15" data-decimals="0">15</span> / 共 <span data-counter="238" data-counter-decimals="0">238</span> 只 · 第 1/16 页</span>
           </div>
           <div class="table-footer-actions">
             <button class="pagination-btn active">1</button>
@@ -2058,69 +2318,73 @@
     </div><!-- end data-tab-panel="filter" -->
 
     <!-- Sort Panel -->
-    <div data-tab-panel="sort" aria-hidden="true" style="padding:var(--space-16) var(--space-12);display:none;">
-      <div style="font-size:var(--font-size-12);color:var(--text-secondary);margin-bottom:var(--space-12);">拖拽或点击调整排序优先级，已排序列：</div>
-      <div style="display:flex;flex-direction:column;gap:var(--space-4);">
-        <div style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-10);border:1px solid var(--border-default);border-radius:var(--radius-4);font-size:var(--font-size-12);color:var(--text-primary);background:var(--interaction-hover-subtle-bg);">
-          <span style="color:var(--brand-accent);font-weight:var(--font-weight-medium);">1</span>
-          <span style="flex:1;">涨跌幅</span>
-          <span style="color:var(--text-tertiary);">降序 ▼</span>
+    <div data-tab-panel="sort" aria-hidden="true" class="sort-panel" data-reveal="fade-up" data-reveal-delay="0">
+      <div class="sort-panel-desc">拖拽或点击调整排序优先级，已排序列：</div>
+      <div class="sort-list">
+        <div class="sort-item sort-item--active" data-tooltip="当前首要排序条件，点击切换方向">
+          <span class="sort-item-rank">1</span>
+          <span class="sort-item-name">涨跌幅</span>
+          <span class="sort-item-dir">降序 ▼</span>
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-10);border:1px solid var(--border-subtle);border-radius:var(--radius-4);font-size:var(--font-size-12);color:var(--text-primary);">
-          <span style="color:var(--brand-accent);font-weight:var(--font-weight-medium);">2</span>
-          <span style="flex:1;">成交额</span>
-          <span style="color:var(--text-tertiary);">降序 ▼</span>
+        <div class="sort-item" data-tooltip="次要排序条件">
+          <span class="sort-item-rank">2</span>
+          <span class="sort-item-name">成交额</span>
+          <span class="sort-item-dir">降序 ▼</span>
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-10);border:1px solid var(--border-subtle);border-radius:var(--radius-4);font-size:var(--font-size-12);color:var(--text-primary);">
-          <span style="color:var(--brand-accent);font-weight:var(--font-weight-medium);">3</span>
-          <span style="flex:1;">信号强度</span>
-          <span style="color:var(--text-tertiary);">降序 ▼</span>
+        <div class="sort-item" data-tooltip="AI信号置信度排序">
+          <span class="sort-item-rank">3</span>
+          <span class="sort-item-name">信号强度</span>
+          <span class="sort-item-dir">降序 ▼</span>
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-8);padding:var(--space-6) var(--space-10);border:1px solid var(--border-subtle);border-radius:var(--radius-4);font-size:var(--font-size-12);color:var(--text-primary);">
-          <span style="color:var(--brand-accent);font-weight:var(--font-weight-medium);">4</span>
-          <span style="flex:1;">流通市值</span>
-          <span style="color:var(--text-tertiary);">升序 ▲</span>
+        <div class="sort-item" data-tooltip="按流通市值从小到大排列">
+          <span class="sort-item-rank">4</span>
+          <span class="sort-item-name">流通市值</span>
+          <span class="sort-item-dir">升序 ▲</span>
         </div>
       </div>
-      <div style="margin-top:var(--space-12);display:flex;gap:var(--space-6);justify-content:flex-end;">
+      <div class="sort-panel-actions">
         <button class="btn btn-ghost">重置</button>
         <button class="btn btn-primary">应用排序</button>
       </div>
     </div><!-- end data-tab-panel="sort" -->
 
     <!-- Compare Panel -->
-    <div data-tab-panel="compare" aria-hidden="true" style="padding:var(--space-16) var(--space-12);display:none;">
-      <div style="font-size:var(--font-size-12);color:var(--text-secondary);margin-bottom:var(--space-12);">快速对比已选标的，当前已选 3 只：</div>
-      <div style="display:flex;flex-direction:column;gap:var(--space-8);">
-        <div style="display:flex;align-items:center;gap:var(--space-10);padding:var(--space-8) var(--space-10);border:1px solid var(--border-subtle);border-radius:var(--radius-4);font-size:var(--font-size-12);">
-          <span style="font-weight:var(--font-weight-medium);color:var(--text-primary);width:80px;">600519</span>
-          <span style="flex:1;color:var(--text-primary);">贵州茅台</span>
-          <span style="color:var(--market-up-fg);">+3.10%</span>
+    <div data-tab-panel="compare" aria-hidden="true" class="compare-panel" data-reveal="fade-up" data-reveal-delay="0">
+      <div class="compare-panel-desc">快速对比已选标的，当前已选 3 只：</div>
+      <div style="margin-bottom: var(--space-8);">
+        <div style="font-size: var(--font-size-11); color: var(--text-tertiary); margin-bottom: var(--space-4);">成交额占比</div>
+        <div data-flow='{"segments":[{"value":82.3,"label":"贵州茅台"},{"value":156.7,"label":"宁德时代"},{"value":67.8,"label":"中芯国际"}]}'></div>
+      </div>
+      <div class="compare-list">
+        <div class="compare-row" data-tooltip="贵州茅台 600519 · 涨幅 +3.10% · 成交额 82.3亿">
+          <span class="compare-row-ticker">600519</span>
+          <span class="compare-row-name">贵州茅台</span>
+          <span class="text-up">+3.10%</span>
           <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18,17,20],"series":"up","width":48,"height":18}' aria-label="走势"></svg>
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-10);padding:var(--space-8) var(--space-10);border:1px solid var(--border-subtle);border-radius:var(--radius-4);font-size:var(--font-size-12);">
-          <span style="font-weight:var(--font-weight-medium);color:var(--text-primary);width:80px;">300750</span>
-          <span style="flex:1;color:var(--text-primary);">宁德时代</span>
-          <span style="color:var(--market-up-fg);">+5.20%</span>
+        <div class="compare-row" data-tooltip="宁德时代 300750 · 涨幅 +5.20% · 成交额 156.7亿">
+          <span class="compare-row-ticker">300750</span>
+          <span class="compare-row-name">宁德时代</span>
+          <span class="text-up">+5.20%</span>
           <svg data-sparkline='{"data":[8,10,9,12,14,11,16,18,20,22],"series":"up","width":48,"height":18}' aria-label="走势"></svg>
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-10);padding:var(--space-8) var(--space-10);border:1px solid var(--border-subtle);border-radius:var(--radius-4);font-size:var(--font-size-12);">
-          <span style="font-weight:var(--font-weight-medium);color:var(--text-primary);width:80px;">688981</span>
-          <span style="flex:1;color:var(--text-primary);">中芯国际</span>
-          <span style="color:var(--market-up-fg);">+6.25%</span>
+        <div class="compare-row" data-tooltip="中芯国际 688981 · 涨幅 +6.25% · 成交额 67.8亿">
+          <span class="compare-row-ticker">688981</span>
+          <span class="compare-row-name">中芯国际</span>
+          <span class="text-up">+6.25%</span>
           <svg data-sparkline='{"data":[5,7,6,9,8,12,10,15,14,18],"series":"up","width":48,"height":18}' aria-label="走势"></svg>
         </div>
       </div>
-      <div style="margin-top:var(--space-12);display:flex;gap:var(--space-6);justify-content:flex-end;">
+      <div class="compare-panel-actions">
         <button class="btn btn-ghost">清空</button>
         <label for="overlay-compare" class="btn btn-primary ov-label-btn">开始对比 &rarr;</label>
       </div>
     </div><!-- end data-tab-panel="compare" -->
 
     <!-- ═══ Detail Panel (320px right side) ═══ -->
-    <div class="catalog-detail">
+    <div class="catalog-detail" data-mouse-glow="true">
       <!-- Section 1: 结果去向 -->
-      <div class="detail-actions">
+      <div class="detail-actions" data-reveal="fade-up" data-reveal-delay="0">
         <div class="context-section-header">
           <span class="context-section-title">结果去向</span>
           <span class="context-section-count">贵州茅台</span>
@@ -2161,12 +2425,20 @@
       </details>
 
       <!-- Section 3: 多维评分 -->
-      <div class="context-section">
+      <div class="context-section" data-reveal="fade-up" data-reveal-delay="150">
         <div class="context-section-header">
           <span class="context-section-title">多维评分</span>
           <span class="context-section-count">贵州茅台</span>
         </div>
         <div class="context-section-body">
+          <!-- Composite Score Donut -->
+          <div style="display:flex;align-items:center;justify-content:center;padding:var(--space-4) 0 var(--space-2);" data-reveal="scale-up" data-reveal-delay="180">
+            <svg data-donut='{"value":0.79,"label":"79","size":48,"strokeWidth":4}' aria-label="综合评分 79"></svg>
+            <div style="margin-left:var(--space-8);">
+              <div style="font-size:var(--font-size-12);font-weight:var(--font-weight-medium);color:var(--text-primary);">综合评分</div>
+              <div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-top:1px;">多维度加权</div>
+            </div>
+          </div>
           <!-- Radar Chart -->
           <div class="score-radar" data-reveal="scale-up" data-reveal-delay="200">
             <svg viewBox="0 0 100 100">
@@ -2680,7 +2952,7 @@
 <div class="state-variant-content" data-state="stale">
         <div class="sv-pad-12 stale-banner">
           <span class="stale-dot-indicator"></span>
-          <span class="gallery-hint" style="color:var(--system-degraded-fg)">数据更新于 3 分钟前，可能不是最新状态</span>
+          <span class="gallery-hint gallery-hint--stale">数据更新于 3 分钟前，可能不是最新状态</span>
         </div>
       </div>
       </div>
@@ -2896,7 +3168,7 @@
 <div class="state-variant-content" data-state="stale">
         <div class="sv-pad-12 stale-banner">
           <span class="stale-dot-indicator"></span>
-          <span class="gallery-hint" style="color:var(--system-degraded-fg)">对比数据更新于 5 分钟前</span>
+          <span class="gallery-hint gallery-hint--stale">对比数据更新于 5 分钟前</span>
         </div>
       </div>
       </div>

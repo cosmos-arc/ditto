@@ -325,6 +325,11 @@
       background: var(--overlay-4);
       box-shadow: 0 1px 0 var(--brand-accent);
     }
+    .intel-tab[data-tab-target].active {
+      box-shadow: none;
+      color: var(--brand-accent);
+      background: var(--interaction-selected-bg);
+    }
     .tab-strip-spacer { flex: 1; }
     .tab-strip-meta {
       font-family: var(--font-family-numeric);
@@ -385,7 +390,9 @@
       font-size: var(--font-size-10);
       color: var(--brand-accent);
       cursor: pointer;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
+    .rail-section-action:hover { opacity: 0.75; }
     .rail-section-body {
       padding: 0 var(--space-12) var(--space-10);
     }
@@ -398,8 +405,10 @@
       padding: var(--space-4) 0;
       border-bottom: 1px solid var(--overlay-3);
       font-size: var(--font-size-12);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .stock-quick-item:last-child { border-bottom: none; }
+    .stock-quick-item:hover { background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-4); padding-left: var(--space-4); padding-right: var(--space-4); }
     .stock-quick-name {
       color: var(--text-primary);
       font-weight: var(--font-weight-medium);
@@ -436,12 +445,15 @@
       background: var(--interaction-hover-subtle-bg);
       color: var(--text-secondary);
       font-size: var(--font-size-12);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
+    .filter-tag:hover { background: var(--interaction-hover-strong-bg); }
     .filter-tag-remove {
       color: var(--text-tertiary);
       cursor: pointer;
       font-size: var(--font-size-14);
       line-height: 1;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .filter-tag-remove:hover { color: var(--market-down-fg); }
 
@@ -494,7 +506,6 @@
       text-transform: uppercase;
       letter-spacing: 0.06em;
       font-feature-settings: 'tnum' 1;
-      letter-spacing: -0.02em;
       text-rendering: optimizeLegibility;
     }
     .intel-table th:first-child { text-align: left; }
@@ -554,6 +565,12 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
       padding: var(--space-10) var(--space-12);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .kpi-card:hover {
+      border-color: var(--border-default);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
     }
     .kpi-label {
       font-size: var(--font-size-10);
@@ -567,8 +584,9 @@
       font-size: var(--font-size-16);
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
-      font-feature-settings: 'tnum' 1;
+      font-feature-settings: 'tnum' 1, 'zero' 1;
       letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
     }
     .kpi-change {
       font-family: var(--font-family-numeric);
@@ -811,7 +829,7 @@
       padding: var(--space-2);
       line-height: 1;
     }
-    .overlay-close:hover { color: var(--text-secondary); }
+    .overlay-close:hover { color: var(--text-secondary); transition: color var(--motion-duration-fast) var(--motion-easing-standard); }
 
     .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
     .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
@@ -961,8 +979,10 @@
       padding: var(--space-6) 0;
       border-bottom: 1px solid var(--overlay-3);
       font-size: var(--font-size-12);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .alert-item:last-child { border-bottom: none; }
+    .alert-item:hover { background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-4); }
     .alert-dot {
       width: 6px;
       height: 6px;
@@ -992,6 +1012,13 @@
       padding: var(--space-2) var(--space-8);
       border-radius: var(--radius-12);
       font-size: var(--font-size-12);
+      cursor: pointer;
+      transition: filter var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .topic-tag:hover {
+      filter: brightness(1.15);
+      transform: translateY(-1px);
     }
     .topic-tag--hot {
       background: color-mix(in oklch, var(--risk-high-fg) 12%, transparent);
@@ -1039,7 +1066,9 @@
       cursor: pointer;
       background: none;
       border: none;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
+    .stale-action:hover { opacity: 0.75; }
 
     /* ── Form elements ── */
     .form-checkbox-label {
@@ -1217,7 +1246,7 @@
       padding: var(--space-8) var(--space-10);
       transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
-    .macro-card:hover { border-color: var(--border-default); }
+    .macro-card:hover { border-color: var(--border-default); box-shadow: 0 1px 4px oklch(0 0 0 / 0.08); }
     .macro-card-time {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
@@ -1627,7 +1656,7 @@
             <div class="tab-panel" data-panel="tab-macro">
 
               <!-- Macro KPI Cards -->
-              <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
+              <div class="kpi-row" data-reveal="fade-up">
                 <div class="kpi-card" data-mouse-glow="true">
                   <div class="kpi-label" data-tooltip="消费者物价指数同比涨幅（3月）" data-tooltip-pos="top">CPI 同比</div>
                   <div class="kpi-value" data-ticker="102.3" data-decimals="1" data-counter="102.3" data-counter-decimals="1">102.3</div>
@@ -1708,7 +1737,7 @@
               </div>
 
               <!-- Key Indicators Detail -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="100">
                 <div class="section-title">关键指标追踪</div>
                 <table class="intel-table" aria-label="关键宏观指标">
                   <thead>
@@ -1779,7 +1808,7 @@
             <div class="tab-panel" data-panel="tab-fundamental">
 
               <!-- Earnings Calendar KPI -->
-              <div class="kpi-row">
+              <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
                 <div class="kpi-card">
                   <div class="kpi-label" data-tooltip="本周即将披露财报的公司总数" data-tooltip-pos="top">本周财报</div>
                   <div class="kpi-value">42家</div>
@@ -1803,7 +1832,7 @@
               </div>
 
               <!-- Earnings Calendar -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="50">
                 <div class="section-title">财报日历</div>
                 <table class="intel-table" aria-label="财报日历">
                   <thead>
@@ -1863,7 +1892,7 @@
               </div>
 
               <!-- Analyst Rating Changes -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="100">
                 <div class="section-title">分析师评级变动</div>
                 <table class="intel-table" aria-label="分析师评级变动">
                   <thead>
@@ -1913,7 +1942,7 @@
             <div class="tab-panel" data-panel="tab-news">
 
               <!-- Hot Topics -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="0">
                 <div class="section-title">热点追踪</div>
                 <div class="topic-tag-list">
                   <span class="topic-tag topic-tag--hot">AI芯片国产替代</span>
@@ -2065,7 +2094,7 @@
             <div class="tab-panel" data-panel="tab-network">
 
               <!-- Correlation KPI -->
-              <div class="kpi-row kpi-row--3col">
+              <div class="kpi-row kpi-row--3col" data-reveal="fade-up" data-reveal-delay="0">
                 <div class="kpi-card">
                   <div class="kpi-label" data-tooltip="相关系数 > 0.8 的标的配对数量" data-tooltip-pos="top">强关联对</div>
                   <div class="kpi-value text-up">12对</div>
@@ -2134,7 +2163,7 @@
               </div>
 
               <!-- Sector Linkage -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="100">
                 <div class="section-title">板块联动分析</div>
                 <table class="intel-table" aria-label="板块联动">
                   <thead>
@@ -2187,7 +2216,7 @@
               </div>
 
               <!-- Divergence Alerts -->
-              <div>
+              <div data-reveal="fade-up" data-reveal-delay="150">
                 <div class="section-title">背离预警</div>
                 <div class="panel">
                   <div class="alert-item">
@@ -2246,7 +2275,7 @@
                   <span class="stock-quick-code">600519</span>
                 </div>
                 <span class="stock-quick-change up" data-tooltip="1,856.00 元 · 成交 2.3 亿" data-tooltip-pos="left">+3.10%</span>
-                <svg data-sparkline='{"data":[12,14,13,15,16,15,17,18,16,18],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
+                <svg data-sparkline='{"data":[12,14,13,15,16,15,17,18,16,18],"series":"up","width":48,"height":20}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
@@ -2254,7 +2283,7 @@
                   <span class="stock-quick-code">300750</span>
                 </div>
                 <span class="stock-quick-change up" data-tooltip="218.00 元 · 成交 1.8 亿" data-tooltip-pos="left">+5.20%</span>
-                <svg data-sparkline='{"data":[10,12,11,14,16,15,18,20,19,22],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
+                <svg data-sparkline='{"data":[10,12,11,14,16,15,18,20,19,22],"series":"up","width":48,"height":20}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
@@ -2262,7 +2291,7 @@
                   <span class="stock-quick-code">600036</span>
                 </div>
                 <span class="stock-quick-change down" data-tooltip="39.85 元 · 成交 0.9 亿" data-tooltip-pos="left">-0.85%</span>
-                <svg data-sparkline='{"data":[18,17,16,17,15,14,15,13,14,12],"stroke":"oklch(0.65 0.15 25)"}' aria-label="走势"></svg>
+                <svg data-sparkline='{"data":[18,17,16,17,15,14,15,13,14,12],"series":"down","width":48,"height":20}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
@@ -2270,7 +2299,7 @@
                   <span class="stock-quick-code">688981</span>
                 </div>
                 <span class="stock-quick-change up" data-tooltip="51.00 元 · 成交 1.5 亿 · 涨停" data-tooltip-pos="left">+6.25%</span>
-                <svg data-sparkline='{"data":[8,10,12,11,14,16,18,17,20,22],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
+                <svg data-sparkline='{"data":[8,10,12,11,14,16,18,17,20,22],"series":"up","width":48,"height":20}' aria-label="走势"></svg>
               </div>
               <div class="stock-quick-item">
                 <div>
@@ -2278,7 +2307,7 @@
                   <span class="stock-quick-code">002594</span>
                 </div>
                 <span class="stock-quick-change up" data-tooltip="312.50 元 · 成交 1.1 亿" data-tooltip-pos="left">+2.80%</span>
-                <svg data-sparkline='{"data":[14,13,15,14,16,15,17,16,18,17],"stroke":"oklch(0.7 0.085 265)"}' aria-label="走势"></svg>
+                <svg data-sparkline='{"data":[14,13,15,14,16,15,17,16,18,17],"series":"up","width":48,"height":20}' aria-label="走势"></svg>
               </div>
             </div>
           </div>
@@ -2358,6 +2387,21 @@
       <div class="analysis-band">
         <div class="analysis-band-section">
           <div class="analysis-band-title" data-tooltip="基于多维度资金面数据的综合趋势判断" data-tooltip-pos="top">趋势判断</div>
+          <div class="analysis-band-text">
+            资金面 <strong class="up">偏多</strong>，北向与主力资金共振流入科技板块；宏观 PMI <strong class="up">超预期</strong>提振市场情绪，但中美利差走阔值得关注。
+          </div>
+        </div>
+        <div class="analysis-band-section">
+          <div class="analysis-band-title" data-tooltip="与历史均值和近期数据的横向对比" data-tooltip-pos="top">对比参考</div>
+          <div class="analysis-band-text">
+            近5日资金净流入合计 <strong class="up">+386亿</strong>，高于20日均值 +215亿；板块集中度提升，科技+消费占比 62%。
+          </div>
+        </div>
+        <div class="analysis-band-section">
+          <div class="analysis-band-title" data-tooltip="需要关注的潜在风险事件和时间节点" data-tooltip-pos="top">备注</div>
+          <div class="analysis-band-text">
+            14:00 社融数据发布后可能引发资金面波动，建议关注 <strong>金融板块</strong>走势变化。
+          </div>
           <div class="analysis-band-text">
             资金面 <strong class="up">偏多</strong>，北向与主力资金共振流入科技板块；宏观 PMI <strong class="up">超预期</strong>提振市场情绪，但中美利差走阔值得关注。
           </div>

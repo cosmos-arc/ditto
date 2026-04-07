@@ -842,7 +842,7 @@ button {
 }
 
 .queue-item-btn.primary-action:hover {
-  background: rgba(var(--brand-500-rgb), 0.1);
+  background: oklch(from var(--brand-500) l c h / 0.1);
 }
 
 /* ── Context Rail (continuous sidebar) ── */
@@ -3029,3 +3029,57 @@ details.context-section > .context-section-body {
   gap: var(--space-8);
   border-bottom: 1px solid var(--border-subtle);
 }
+
+/* ══════════════════════════════════════════════════
+ * Shared Prototype Utility Classes
+ * Extracted from inline style patterns (v5 inline cleanup)
+ * ══════════════════════════════════════════════════ */
+
+/* ── Flex utilities ── */
+.flex-row-center { display: flex; align-items: center; }
+.flex-col        { display: flex; flex-direction: column; }
+
+/* ── Spacing presets ── */
+.gap-4   { gap: var(--space-4); }
+.gap-6   { gap: var(--space-6); }
+.gap-8   { gap: var(--space-8); }
+.gap-10  { gap: var(--space-10); }
+.gap-12  { gap: var(--space-12); }
+.gap-16  { gap: var(--space-16); }
+
+/* ── Text roles ── */
+.text-caption  { font-size: var(--font-size-10); color: var(--text-tertiary); }
+.text-label    { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--text-primary); }
+.text-body     { font-size: var(--font-size-13); color: var(--text-secondary); }
+.text-value    { font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.text-mono     { font-family: var(--font-family-mono); font-variant-numeric: tabular-nums; }
+
+/* ── Status colors ── */
+.status-healthy   { color: var(--system-healthy-fg); }
+.status-degraded  { color: var(--system-degraded-fg); }
+.status-strong    { color: var(--market-strong-fg); }
+.status-weak      { color: var(--market-weak-fg); }
+
+/* ── Panel / Card ── */
+.panel-base      { background: var(--surface-panel-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-8); padding: var(--space-16); }
+.panel-elevated  { background: var(--surface-panel-elevated); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); padding: var(--card-padding); }
+
+/* ── Column widths (data tables) ── */
+.col-narrow  { width: 72px; }
+.col-small   { width: 80px; }
+.col-medium  { width: 90px; }
+.col-wide    { width: 100px; }
+.col-auto    { flex: 1; min-width: 0; }
+
+/* ── Progress bar ── */
+.bar-track   { height: 3px; border-radius: var(--radius-full); background: var(--surface-secondary); overflow: hidden; }
+.bar-fill    { height: 100%; border-radius: var(--radius-full); }
+
+/* ── Timeline ── */
+.timeline-item { padding: var(--space-8) 0; border-left: 2px solid var(--brand-accent); margin-left: 6px; }
+
+/* ── Accent checkbox ── */
+input[type="checkbox"].accent-brand { accent-color: var(--brand-accent); }
+
+/* ── Truncate ── */
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

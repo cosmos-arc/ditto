@@ -279,6 +279,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
+      font-feature-settings: 'tnum' 1;
     }
     .regime-strip-value.ok { color: var(--risk-low-fg); }
     .regime-strip-value.warn { color: var(--risk-near-limit-fg); }
@@ -431,6 +432,7 @@
     .regime-time-btn {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
+      font-feature-settings: 'tnum' 1;
       color: var(--text-tertiary);
       padding: var(--space-2) var(--space-6);
       border: 1px solid var(--border-subtle);
@@ -494,6 +496,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-16);
       font-weight: var(--font-weight-semibold);
+      font-feature-settings: 'tnum' 1;
       color: var(--market-up-fg);
       letter-spacing: -0.02em;
     }
@@ -555,6 +558,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
+      font-feature-settings: 'tnum' 1;
       color: var(--market-up-fg);
     }
 
@@ -696,6 +700,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
+      font-feature-settings: 'tnum' 1;
       flex-shrink: 0;
       white-space: nowrap;
     }
@@ -749,6 +754,7 @@
     .switch-time {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
+      font-feature-settings: 'tnum' 1;
       color: var(--text-tertiary);
       flex-shrink: 0;
       min-width: 70px;
@@ -791,6 +797,14 @@
       background: var(--market-down-bg);
       color: var(--market-down-fg);
     }
+    .switch-from-tag.risk-on {
+      background: var(--market-up-bg);
+      color: var(--market-up-fg);
+    }
+    .switch-from-tag.mixed {
+      background: var(--risk-medium-bg);
+      color: var(--risk-medium-fg);
+    }
     .switch-to-tag.risk-on {
       background: var(--market-up-bg);
       color: var(--market-up-fg);
@@ -817,6 +831,7 @@
     .switch-duration {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
+      font-feature-settings: 'tnum' 1;
       color: var(--text-tertiary);
       margin-top: 2px;
     }
@@ -844,6 +859,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
+      font-feature-settings: 'tnum' 1;
       width: 80px;
       text-align: right;
       flex-shrink: 0;
@@ -855,6 +871,7 @@
     .strategy-sharpe {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
+      font-feature-settings: 'tnum' 1;
       color: var(--text-secondary);
       width: 60px;
       text-align: right;
@@ -907,6 +924,7 @@
       border-top: 1px solid var(--border-subtle);
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
+      font-feature-settings: 'tnum' 1;
       color: var(--text-tertiary);
       letter-spacing: 0.02em;
       user-select: none;
@@ -946,6 +964,7 @@
     .status-kbd {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
+      font-feature-settings: 'tnum' 1;
       padding: 0 var(--space-2);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-2);
@@ -1089,6 +1108,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
+      font-feature-settings: 'tnum' 1;
     }
     .factor-item__value--up { color: var(--market-up-fg); }
     .factor-item__value--ok { color: var(--risk-low-fg); }
@@ -1122,6 +1142,15 @@
       font-size: var(--font-size-12);
     }
     .data-table--full { width: 100%; }
+    .cell-numeric {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-feature-settings: 'tnum' 1;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .cell-numeric.up { color: var(--market-up-fg); }
+    .cell-numeric.down { color: var(--market-down-fg); }
     .th-width-140 { width: 140px; }
     .th-width-100 { width: 100px; }
     .th-width-80 { width: 80px; }
@@ -1173,6 +1202,7 @@
     }
     .overlay-driver-val {
       font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
       color: var(--market-up-fg);
     }
 
@@ -1349,6 +1379,7 @@
     .regime-timeline-date {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
+      font-feature-settings: 'tnum' 1;
       color: var(--text-tertiary);
       white-space: nowrap;
       position: absolute;
@@ -1458,6 +1489,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
       font-weight: var(--font-weight-medium);
+      font-feature-settings: 'tnum' 1;
     }
 
     /* ── Strategy fit bar (horizontal) ── */
@@ -1485,6 +1517,7 @@
     .fit-bar__value {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
+      font-feature-settings: 'tnum' 1;
       color: var(--text-tertiary);
       min-width: 20px;
       text-align: right;
@@ -1499,6 +1532,7 @@
       border-radius: var(--radius-4);
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
+      font-feature-settings: 'tnum' 1;
       color: var(--text-secondary);
       pointer-events: none;
       white-space: nowrap;
@@ -1735,6 +1769,122 @@
       stroke-width: 1;
     }
 
+    /* ── Heatgrid section body (Market State Matrix) ── */
+    .heatgrid-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-6);
+      padding-top: var(--space-8);
+    }
+
+    /* ── Heatgrid legend ── */
+    .heatgrid-legend {
+      display: flex;
+      align-items: center;
+      gap: var(--space-16);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .heatgrid-legend-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .heatgrid-legend-swatch {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+    .heatgrid-legend-swatch--risk-off {
+      background: oklch(from var(--market-down-fg) l c h / 0.18);
+    }
+    .heatgrid-legend-swatch--mixed {
+      background: oklch(1 0 0 / 0.02);
+      border: 1px solid var(--border-subtle);
+    }
+    .heatgrid-legend-swatch--risk-on {
+      background: oklch(from var(--market-up-fg) l c h / 0.22);
+    }
+    .heatgrid-legend-swatch--strong {
+      background: oklch(from var(--market-up-fg) l c h / 0.45);
+    }
+
+    /* ── Probability section body ── */
+    .probability-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding-top: var(--space-8);
+    }
+    .regime-probability-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    /* ── Probability label variants ── */
+    .probability-label--bull {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--market-up-fg);
+    }
+    .probability-label--bear {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--market-down-fg);
+    }
+    .probability-label--neutral {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--risk-near-limit-fg);
+    }
+
+    /* ── Loading state layouts ── */
+    .state-loading--regime {
+      gap: var(--space-12);
+      padding: var(--space-16);
+    }
+    .state-loading--regime-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+    }
+    .skeleton-circle-lg {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+    }
+    .state-loading--regime-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+    .skeleton--width-60 { width: 60%; }
+    .skeleton--width-80 { width: 80%; }
+    .state-loading--strip {
+      flex-direction: row;
+      gap: var(--space-12);
+    }
+
+    /* ── Timeline viz positioning ── */
+    .regime-timeline-viz--chart {
+      position: absolute;
+      bottom: 6px;
+      left: 8%;
+      right: 8%;
+    }
+    .regime-timeline-segment--first {
+      position: relative;
+    }
+
+    /* ── Factor radial label colors ── */
+    .factor-radial__label--up { color: var(--market-up-fg); }
+    .factor-radial__label--ok { color: var(--risk-low-fg); }
+    .factor-radial__label--neutral { color: var(--text-secondary); }
+
     /* ── Regime probability donut label weight ── */
     .regime-probability-item svg {
       transition: transform var(--motion-duration-normal) var(--motion-easing-standard);
@@ -1894,7 +2044,7 @@
       <div class="regime-strip-separator"></div>
       <div class="regime-strip-metric" data-tooltip="中国版 VIX，反映市场恐慌程度，<20 为低波动">
         <span class="regime-strip-label">IVIX</span>
-        <span class="regime-strip-value ok">18.52</span>
+        <span class="regime-strip-value ok" data-counter="18.52" data-counter-decimals="2">18.52</span>
       </div>
       <div class="regime-strip-separator"></div>
       <div class="regime-strip-metric" data-tooltip="沪深港通北向资金当日净流入金额">
@@ -1946,7 +2096,7 @@
             <div class="regime-main-col">
 
               <!-- Regime Indicator Panel -->
-              <div class="panel regime-panel-fixed" data-reveal="fade-up">
+              <div class="panel regime-panel-fixed" data-reveal="fade-up" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.04)" data-mouse-glow-size="280px">
                 <div class="panel-header">
                   <span class="panel-title">Regime Indicator</span>
                   <span class="panel-subtitle panel-subtitle--offset">Regime Engine 实时判定</span>
@@ -1988,7 +2138,7 @@
               </div>
 
               <!-- Regime Timeline Chart -->
-              <div class="panel chart-panel regime-panel-grow" data-reveal="fade-up" data-reveal-delay="150">
+              <div class="panel chart-panel regime-panel-grow" data-reveal="fade-up" data-reveal-delay="150" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)" data-mouse-glow-size="320px">
                 <div class="panel-header">
                   <span class="panel-title">Regime Timeline</span>
                   <span class="panel-subtitle panel-subtitle--offset">近 3 个月 Regime 变化</span>
@@ -2012,10 +2162,10 @@
                     <div class="chart-crosshair"></div>
 
                     <!-- Event markers on timeline -->
-                    <div class="chart-event-marker chart-event-marker--risk-off chart-event-marker--pos-1"></div>
-                    <div class="chart-event-marker chart-event-marker--mixed chart-event-marker--pos-2"></div>
-                    <div class="chart-event-marker chart-event-marker--risk-on chart-event-marker--pos-3"></div>
-                    <div class="chart-event-marker chart-event-marker--risk-on chart-event-marker--active chart-event-marker--pos-4"></div>
+                    <div class="chart-event-marker chart-event-marker--risk-off chart-event-marker--pos-1" data-tooltip="2026-01-15: Risk-Off 切换，美联储鹰派发言"></div>
+                    <div class="chart-event-marker chart-event-marker--mixed chart-event-marker--pos-2" data-tooltip="2026-02-24: Mixed 切换，两会政策落地"></div>
+                    <div class="chart-event-marker chart-event-marker--risk-on chart-event-marker--pos-3" data-tooltip="2026-03-09: Risk-On 趋势确认"></div>
+                    <div class="chart-event-marker chart-event-marker--risk-on chart-event-marker--active chart-event-marker--pos-4" data-tooltip="2026-03-18: 当前 Regime 确立 — 温和 Risk-On"></div>
 
                     <!-- Tooltip at crosshair -->
                     <div class="chart-tooltip chart-tooltip--regime">
@@ -2025,7 +2175,7 @@
                     </div>
 
                     <!-- Mini timeline bar at bottom of chart -->
-                    <div class="regime-timeline-viz" style="position:absolute; bottom:6px; left:8%; right:8%;">
+                    <div class="regime-timeline-viz regime-timeline-viz--chart">
                       <div class="regime-timeline-segment regime-timeline-segment--risk-off" style="flex:40; position:relative;">
                         <span class="regime-timeline-date">01-15</span>
                       </div>
@@ -2045,7 +2195,7 @@
                 <!-- Section: Key Drivers -->
                 <div class="context-section" data-reveal="fade-right">
                   <div class="context-section-header">
-                    <span class="context-section-title">Key Drivers</span>
+                    <span class="context-section-title" data-tooltip="影响当前 Regime 判定的 5 个核心驱动因子">Key Drivers</span>
                     <span class="context-section-count">5 因子</span>
                   </div>
                   <div class="context-section-body">
@@ -2086,7 +2236,7 @@
                 <!-- Section: Regime Composition -->
                 <div class="context-section" data-reveal="fade-right" data-reveal-delay="100">
                   <div class="context-section-header">
-                    <span class="context-section-title">Regime Composition</span>
+                    <span class="context-section-title" data-tooltip="Regime 判定的多因子加权组合，展示各因子的独立贡献">Regime Composition</span>
                     <span class="context-section-count">多因子</span>
                   </div>
                   <div class="context-section-body">
@@ -2098,9 +2248,9 @@
                             <circle class="factor-radial__fill factor-radial__fill--up" cx="24" cy="24" r="20"
                               stroke-dasharray="125.7" stroke-dashoffset="27.7"/>
                           </svg>
-                          <span class="factor-radial__label" style="color:var(--market-up-fg);">78</span>
+                          <span class="factor-radial__label factor-radial__label--up" data-counter="78" data-counter-decimals="0">78</span>
                         </div>
-                        <div style="flex:1;min-width:0;">
+                        <div class="col-auto">
                           <div class="factor-item__header">
                             <span class="factor-item__label">情绪因子</span>
                             <span class="factor-item__value factor-item__value--up">78%</span>
@@ -2119,9 +2269,9 @@
                             <circle class="factor-radial__fill factor-radial__fill--up" cx="24" cy="24" r="20"
                               stroke-dasharray="125.7" stroke-dashoffset="36.5"/>
                           </svg>
-                          <span class="factor-radial__label" style="color:var(--market-up-fg);">71</span>
+                          <span class="factor-radial__label factor-radial__label--up" data-counter="71" data-counter-decimals="0">71</span>
                         </div>
-                        <div style="flex:1;min-width:0;">
+                        <div class="col-auto">
                           <div class="factor-item__header">
                             <span class="factor-item__label">资金因子</span>
                             <span class="factor-item__value factor-item__value--up">71%</span>
@@ -2140,9 +2290,9 @@
                             <circle class="factor-radial__fill factor-radial__fill--ok" cx="24" cy="24" r="20"
                               stroke-dasharray="125.7" stroke-dashoffset="22.6"/>
                           </svg>
-                          <span class="factor-radial__label" style="color:var(--risk-low-fg);">82</span>
+                          <span class="factor-radial__label factor-radial__label--ok" data-counter="82" data-counter-decimals="0">82</span>
                         </div>
-                        <div style="flex:1;min-width:0;">
+                        <div class="col-auto">
                           <div class="factor-item__header">
                             <span class="factor-item__label">波动率因子</span>
                             <span class="factor-item__value factor-item__value--ok">82%</span>
@@ -2161,9 +2311,9 @@
                             <circle class="factor-radial__fill factor-radial__fill--neutral" cx="24" cy="24" r="20"
                               stroke-dasharray="125.7" stroke-dashoffset="56.6"/>
                           </svg>
-                          <span class="factor-radial__label" style="color:var(--text-secondary);">55</span>
+                          <span class="factor-radial__label factor-radial__label--neutral" data-counter="55" data-counter-decimals="0">55</span>
                         </div>
-                        <div style="flex:1;min-width:0;">
+                        <div class="col-auto">
                           <div class="factor-item__header">
                             <span class="factor-item__label">宏观因子</span>
                             <span class="factor-item__value factor-item__value--neutral">55%</span>
@@ -2180,16 +2330,16 @@
                 <!-- Section: Market State Matrix (HeatGrid) -->
                 <div class="context-section" data-reveal="fade-right" data-reveal-delay="200">
                   <div class="context-section-header">
-                    <span class="context-section-title">Market State Matrix</span>
+                    <span class="context-section-title" data-tooltip="近 4 周每日 Regime 状态热力图，颜色越深表示风险偏好越强">Market State Matrix</span>
                     <span class="context-section-count">近 4 周</span>
                   </div>
-                  <div class="context-section-body" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-6); padding-top:var(--space-8);">
+                  <div class="heatgrid-body">
                     <svg data-heatgrid='{"rows":4,"cols":7,"cellSize":20,"gap":2,"data":[0.12,0.08,0.15,0.22,0.35,0.48,0.55,0.18,0.25,0.42,0.58,0.62,0.71,0.78,0.32,0.38,0.52,0.68,0.75,0.82,0.88,0.45,0.55,0.65,0.72,0.78,0.85,0.92],"labels":["03-02 周一: Risk-Off","03-03 周二: Risk-Off","03-04 周三: Risk-Off","03-05 周四: Mixed-偏弱","03-06 周五: Mixed","03-09 周一: Mixed-偏强","03-10 周二: Risk-On","03-11 周三: Risk-Off","03-12 周四: Mixed-偏弱","03-13 周五: Mixed","03-16 周一: Mixed-偏强","03-17 周二: Risk-On","03-18 周三: Risk-On","03-19 周四: Risk-On 强","03-20 周五: Risk-Off","03-23 周一: Mixed","03-24 周二: Mixed-偏强","03-25 周三: Risk-On","03-26 周四: Risk-On","03-27 周五: Risk-On 强","03-30 周一: Risk-On 强","03-31 周二: Mixed-偏弱","04-01 周三: Mixed-偏强","04-02 周四: Risk-On","04-03 周五: Risk-On","04-06 周一: Risk-On 强","04-07 周二: Risk-On 强"],"colors":["oklch(from var(--market-down-fg) l c h / 0.10)","oklch(from var(--market-down-fg) l c h / 0.18)","oklch(1 0 0 / 0.02)","oklch(from var(--market-up-fg) l c h / 0.12)","oklch(from var(--market-up-fg) l c h / 0.22)","oklch(from var(--market-up-fg) l c h / 0.32)","oklch(from var(--market-up-fg) l c h / 0.45)"]}' aria-label="市场状态矩阵"></svg>
-                    <div style="display:flex; align-items:center; gap:var(--space-16); font-size:var(--font-size-10); color:var(--text-tertiary);">
-                      <span style="display:flex; align-items:center; gap:var(--space-4);"><span style="width:8px; height:8px; border-radius:2px; background:oklch(from var(--market-down-fg) l c h / 0.18);"></span>Risk-Off</span>
-                      <span style="display:flex; align-items:center; gap:var(--space-4);"><span style="width:8px; height:8px; border-radius:2px; background:oklch(1 0 0 / 0.02); border:1px solid var(--border-subtle);"></span>Mixed</span>
-                      <span style="display:flex; align-items:center; gap:var(--space-4);"><span style="width:8px; height:8px; border-radius:2px; background:oklch(from var(--market-up-fg) l c h / 0.22);"></span>Risk-On</span>
-                      <span style="display:flex; align-items:center; gap:var(--space-4);"><span style="width:8px; height:8px; border-radius:2px; background:oklch(from var(--market-up-fg) l c h / 0.45);"></span>Strong</span>
+                    <div class="heatgrid-legend">
+                      <span class="heatgrid-legend-item"><span class="heatgrid-legend-swatch heatgrid-legend-swatch--risk-off"></span>Risk-Off</span>
+                      <span class="heatgrid-legend-item"><span class="heatgrid-legend-swatch heatgrid-legend-swatch--mixed"></span>Mixed</span>
+                      <span class="heatgrid-legend-item"><span class="heatgrid-legend-swatch heatgrid-legend-swatch--risk-on"></span>Risk-On</span>
+                      <span class="heatgrid-legend-item"><span class="heatgrid-legend-swatch heatgrid-legend-swatch--strong"></span>Strong</span>
                     </div>
                   </div>
                 </div>
@@ -2197,21 +2347,21 @@
                 <!-- Section: Regime Probability (DonutGauge) -->
                 <div class="context-section" data-reveal="fade-right" data-reveal-delay="300">
                   <div class="context-section-header">
-                    <span class="context-section-title">Regime Probability</span>
+                    <span class="context-section-title" data-tooltip="多因子模型预测未来 5 个交易日的 Regime 状态概率分布">Regime Probability</span>
                     <span class="context-section-count">体制概率</span>
                   </div>
-                  <div class="context-section-body" style="display:flex; align-items:center; justify-content:space-around; padding-top:var(--space-8);">
-                    <div class="regime-probability-item" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
+                  <div class="context-section-body probability-body">
+                    <div class="regime-probability-item">
                       <svg data-donut='{"value":0.72,"label":"72%","color":"oklch(from var(--market-up-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Bull概率" data-tooltip="Risk-On 概率 72%，由情绪+资金+波动率三因子驱动"></svg>
-                      <span style="font-size:var(--font-size-10); font-weight:var(--font-weight-medium); color:var(--market-up-fg);">Bull</span>
+                      <span class="probability-label--bull">Bull</span>
                     </div>
-                    <div class="regime-probability-item" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
+                    <div class="regime-probability-item">
                       <svg data-donut='{"value":0.18,"label":"18%","color":"oklch(from var(--market-down-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Bear概率" data-tooltip="Risk-Off 概率 18%，若 IVIX >22 或北向连续流出将触发"></svg>
-                      <span style="font-size:var(--font-size-10); font-weight:var(--font-weight-medium); color:var(--market-down-fg);">Bear</span>
+                      <span class="probability-label--bear">Bear</span>
                     </div>
-                    <div class="regime-probability-item" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4);">
+                    <div class="regime-probability-item">
                       <svg data-donut='{"value":0.10,"label":"10%","color":"oklch(from var(--risk-near-limit-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Neutral概率" data-tooltip="Mixed 概率 10%，市场信号矛盾时的中性区间"></svg>
-                      <span style="font-size:var(--font-size-10); font-weight:var(--font-weight-medium); color:var(--risk-near-limit-fg);">Neutral</span>
+                      <span class="probability-label--neutral">Neutral</span>
                     </div>
                   </div>
                 </div>
@@ -2227,14 +2377,14 @@
       <div class="tab-panel" data-panel="switch-history">
         <div class="section-header">
           <div class="section-header-row">
-            <span class="section-header__title">Regime 切换历史</span>
+            <span class="section-header__title" data-tooltip="记录所有 Regime 状态切换事件，包含触发因子和持续时间">Regime 切换历史</span>
             <span class="section-header__subtitle">市场状态变迁时间线</span>
             <div class="section-header__spacer"></div>
             <div class="filter-group" role="group" aria-label="事件筛选">
-              <button class="filter-btn active">全部</button>
-              <button class="filter-btn">Risk-On</button>
-              <button class="filter-btn">Risk-Off</button>
-              <button class="filter-btn">Mixed</button>
+              <button class="filter-btn active" data-tooltip="显示所有 Regime 切换事件">全部</button>
+              <button class="filter-btn" data-tooltip="仅显示切换至 Risk-On 的事件">Risk-On</button>
+              <button class="filter-btn" data-tooltip="仅显示切换至 Risk-Off 的事件">Risk-Off</button>
+              <button class="filter-btn" data-tooltip="仅显示切换至 Mixed 的事件">Mixed</button>
             </div>
           </div>
         </div>
@@ -2384,7 +2534,7 @@
       <div class="tab-panel" data-panel="strategy-impact">
         <div class="section-header">
           <div class="section-header-row">
-            <span class="section-header__title">策略表现对比</span>
+            <span class="section-header__title" data-tooltip="各策略在当前 Regime 下的表现对比与适配度评估">策略表现对比</span>
             <span class="section-header__subtitle">不同 Regime 下的策略适配度</span>
             <div class="section-header__spacer"></div>
             <span class="section-header__badge">当前 Regime: </span>
@@ -2393,7 +2543,7 @@
         </div>
 
         <!-- Strategy Table -->
-        <div class="section-body">
+        <div class="section-body" data-reveal="fade-up">
           <table class="data-table data-table--full">
             <thead>
               <tr>
@@ -2407,7 +2557,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr class="row">
+              <tr class="row strategy-row" data-tooltip="Alpha v2 — Risk-On 环境适配最佳，Sharpe 1.85 表现优异">
                 <td><span class="cell-strategy-name">Alpha v2</span></td>
                 <td class="cell-numeric up">+4.82%</td>
                 <td class="cell-numeric up">+12.35%</td>
@@ -2419,12 +2569,12 @@
                     <div class="fit-bar__track">
                       <div class="fit-bar__fill fit-bar__fill--good" style="width: 88%;"></div>
                     </div>
-                    <span class="fit-bar__value">88</span>
+                    <span class="fit-bar__value" data-counter="88" data-counter-decimals="0">88</span>
                   </div>
                 </td>
                 <td class="cell-advice">维持当前仓位，关注风格切换信号</td>
               </tr>
-              <tr class="row">
+              <tr class="row strategy-row" data-tooltip="价值因子 — 低估值板块表现稳健，适配度良好">
                 <td><span class="cell-strategy-name">价值因子</span></td>
                 <td class="cell-numeric up">+2.15%</td>
                 <td class="cell-numeric up">+6.78%</td>
@@ -2436,12 +2586,12 @@
                     <div class="fit-bar__track">
                       <div class="fit-bar__fill fit-bar__fill--good" style="width: 82%;"></div>
                     </div>
-                    <span class="fit-bar__value">82</span>
+                    <span class="fit-bar__value" data-counter="82" data-counter-decimals="0">82</span>
                   </div>
                 </td>
                 <td class="cell-advice">低估值板块表现稳健，可适当加仓</td>
               </tr>
-              <tr class="row">
+              <tr class="row strategy-row" data-tooltip="行业轮动 — 信号噪声较高，适配度一般，建议收紧阈值">
                 <td><span class="cell-strategy-name">行业轮动</span></td>
                 <td class="cell-numeric up">+3.67%</td>
                 <td class="cell-numeric up">+8.92%</td>
@@ -2453,12 +2603,12 @@
                     <div class="fit-bar__track">
                       <div class="fit-bar__fill fit-bar__fill--moderate" style="width: 58%;"></div>
                     </div>
-                    <span class="fit-bar__value">58</span>
+                    <span class="fit-bar__value" data-counter="58" data-counter-decimals="0">58</span>
                   </div>
                 </td>
                 <td class="cell-advice">轮动信号频繁，建议降低换手率，关注板块持续性</td>
               </tr>
-              <tr class="row">
+              <tr class="row strategy-row" data-tooltip="动量策略 — 震荡市中持续亏损，适配度不佳，建议减仓至 30% 以下">
                 <td><span class="cell-strategy-name">动量策略</span></td>
                 <td class="cell-numeric down">-1.23%</td>
                 <td class="cell-numeric up">+2.10%</td>
@@ -2470,7 +2620,7 @@
                     <div class="fit-bar__track">
                       <div class="fit-bar__fill fit-bar__fill--poor" style="width: 32%;"></div>
                     </div>
-                    <span class="fit-bar__value">32</span>
+                    <span class="fit-bar__value" data-counter="32" data-counter-decimals="0">32</span>
                   </div>
                 </td>
                 <td class="cell-advice--warn">当前市场缺乏明确趋势，动量因子失效，建议减仓或暂停</td>
@@ -2480,8 +2630,8 @@
         </div>
 
         <!-- AI Suggestion Panel -->
-        <div class="section-body--border-top">
-          <div class="ai-callout">
+        <div class="section-body--border-top" data-reveal="fade-up" data-reveal-delay="150">
+          <div class="ai-callout" data-tooltip="基于当前 Regime 状态和各策略适配度的 AI 自动化建议">
             <div class="ai-callout__label">AI 建议</div>
             <div class="ai-callout__body">
               当前温和 Risk-On 环境下，<strong class="cell-strategy-name">Alpha v2 和价值因子</strong>表现最佳。行业轮动策略信号噪声较高，建议收紧轮动阈值。动量策略在震荡市中持续亏损，<strong class="cell-advice--warn">建议减仓至 30% 以下</strong>或暂停运行。关注 IVIX 是否突破 22 阈值，若突破则需整体降低风险敞口。
@@ -2496,7 +2646,7 @@
 
   <!-- Status Bar -->
   <div class="status-bar">
-    <span class="status-indicator"></span>
+    <span class="status-indicator" data-tooltip="系统健康 — Regime Engine 运行正常"></span>
     <span>REGIME LIVE</span>
     <span class="status-sep">|</span>
     <span>最后刷新: 5s ago</span>
@@ -2675,13 +2825,13 @@
       <div class="gallery-card__label">Regime Indicator — Loading State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-        <div class="state-loading" style="gap: var(--space-12); padding: var(--space-16);">
-          <div style="display: flex; align-items: center; gap: var(--space-12);">
-            <div class="skeleton" style="width: 100px; height: 100px; border-radius: 50%;"></div>
-            <div style="flex: 1; display: flex; flex-direction: column; gap: var(--space-8);">
-              <div class="skeleton skeleton-heading" style="width: 60%;"></div>
+        <div class="state-loading state-loading--regime">
+          <div class="state-loading--regime-row">
+            <div class="skeleton skeleton-circle-lg"></div>
+            <div class="state-loading--regime-details">
+              <div class="skeleton skeleton-heading skeleton--width-60"></div>
               <div class="skeleton skeleton-text"></div>
-              <div class="skeleton skeleton-text-sm" style="width: 80%;"></div>
+              <div class="skeleton skeleton-text-sm skeleton--width-80"></div>
             </div>
           </div>
         </div>
@@ -2740,7 +2890,7 @@
       <div class="gallery-card__label">Status Strip — Loading State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-        <div class="state-loading" style="flex-direction: row; gap: var(--space-12);">
+        <div class="state-loading state-loading--strip">
           <div class="skeleton skeleton-badge"></div>
           <div class="skeleton skeleton-badge"></div>
           <div class="skeleton skeleton-badge"></div>

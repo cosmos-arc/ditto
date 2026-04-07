@@ -212,6 +212,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
+      font-feature-settings: 'tnum' 1;
     }
     .risk-strip-value.ok { color: var(--risk-low-fg); }
     .risk-strip-value.warn { color: var(--risk-near-limit-fg); }
@@ -420,6 +421,12 @@
       gap: var(--space-8);
       padding: var(--space-6) 0;
       border-bottom: 1px solid var(--border-subtle);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+      border-radius: var(--radius-2);
+    }
+    .breach-item:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
     .breach-item:last-child {
       border-bottom: none;
@@ -432,8 +439,8 @@
       margin-top: 5px;
     }
     .breach-dot.ok { background: var(--risk-low-fg); }
-    .breach-dot.warn { background: var(--risk-near-limit-fg); }
-    .breach-dot.critical { background: var(--risk-breach-fg); }
+    .breach-dot.warn { background: var(--risk-near-limit-fg); animation: dot-pulse 3s ease-in-out infinite; }
+    .breach-dot.critical { background: var(--risk-breach-fg); animation: dot-pulse 1.5s ease-in-out infinite; }
 
     .breach-body {
       flex: 1;
@@ -454,6 +461,7 @@
       font-weight: var(--font-weight-medium);
       flex-shrink: 0;
       white-space: nowrap;
+      font-feature-settings: 'tnum' 1;
     }
     .breach-value.ok { color: var(--risk-low-fg); }
     .breach-value.warn { color: var(--risk-near-limit-fg); }
@@ -494,6 +502,7 @@
       align-items: center;
       justify-content: center;
       color: var(--risk-low-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
     }
     .all-clear-text {
       font-size: var(--font-size-12);
@@ -508,6 +517,12 @@
       gap: var(--space-4);
       padding: var(--space-8) 0;
       border-bottom: 1px solid var(--border-subtle);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+      border-radius: var(--radius-2);
+    }
+    .stress-row:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
     .stress-row:last-child {
       border-bottom: none;
@@ -546,6 +561,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-secondary);
+      font-feature-settings: 'tnum' 1;
     }
     .stress-result.negative {
       color: var(--market-down-fg);
@@ -562,6 +578,12 @@
       padding: var(--space-6) 0;
       border-bottom: 1px solid var(--border-subtle);
       position: relative;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+      border-radius: var(--radius-2);
+    }
+    .incident-item:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
     .incident-item:last-child {
       border-bottom: none;
@@ -588,6 +610,7 @@
       display: flex;
       align-items: center;
       gap: var(--space-4);
+      font-feature-settings: 'tnum' 1;
     }
     .incident-time-dot {
       width: 6px;
@@ -1114,6 +1137,7 @@
       font-size: var(--font-size-10);
       color: var(--text-secondary);
       font-weight: var(--font-weight-medium);
+      font-feature-settings: 'tnum' 1;
     }
     .stress-bar-value.fail { color: var(--risk-critical-fg); }
 
@@ -1153,6 +1177,7 @@
       font-weight: var(--font-weight-semibold);
       letter-spacing: -0.02em;
       line-height: 1.2;
+      font-feature-settings: 'tnum' 1;
     }
     .risk-level-card.healthy .risk-level-value { color: var(--risk-low-fg); }
     .risk-level-card.warning .risk-level-value { color: var(--risk-near-limit-fg); }
@@ -1231,7 +1256,7 @@
     }
 
     /* Override status-bar text-secondary via class */
-    .status-bar .status-val { color: var(--text-secondary); }
+    .status-bar .status-val { color: var(--text-secondary); font-feature-settings: 'tnum' 1; }
     .status-bar .status-dot-sep { margin: 0 var(--space-4); color: var(--border-subtle); }
 
     /* Stress table column widths */
@@ -1239,6 +1264,10 @@
     .w-stress-loss { width: 120px; }
     .w-stress-result { width: 100px; }
     .w-stress-time { width: 120px; }
+
+    /* Data table numeric alignment + tabular figures */
+    .cell-numeric { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; }
+    .cell-time { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; color: var(--text-tertiary); }
 
   </style>
 </head>
@@ -1372,62 +1401,62 @@
     <div class="scope-strip">
       <div class="risk-strip-metric">
         <span class="risk-strip-label">VaR(95%)</span>
-        <span class="risk-strip-value ok"><span data-ticker="1.23" data-decimals="2" data-ticker-suffix="%">1.23%</span></span>
+        <span class="risk-strip-value ok" data-tooltip="VaR 95% 分位，阈值 2.50%" data-tooltip-delay="400"><span data-ticker="1.23" data-decimals="2" data-ticker-suffix="%">1.23%</span></span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">最大回撤</span>
-        <span class="risk-strip-value warn"><span data-ticker="3.45" data-decimals="2" data-ticker-suffix="%">3.45%</span></span>
+        <span class="risk-strip-value warn" data-tooltip="最大回撤 3.45%，距阈值 5% 剩 1.55pp" data-tooltip-delay="400"><span data-ticker="3.45" data-decimals="2" data-ticker-suffix="%">3.45%</span></span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">Beta</span>
-        <span class="risk-strip-value neutral"><span data-ticker="0.87" data-decimals="2">0.87</span></span>
+        <span class="risk-strip-value neutral" data-tooltip="组合 Beta 系数，限制 1.1" data-tooltip-delay="400"><span data-ticker="0.87" data-decimals="2">0.87</span></span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">总仓位</span>
-        <span class="risk-strip-value ok"><span data-ticker="72.3" data-decimals="1" data-ticker-suffix="%">72.3%</span></span>
+        <span class="risk-strip-value ok" data-tooltip="总仓位占比，限制 90%" data-tooltip-delay="400"><span data-ticker="72.3" data-decimals="1" data-ticker-suffix="%">72.3%</span></span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">净敞口</span>
-        <span class="risk-strip-value neutral"><span data-ticker="45.1" data-decimals="1" data-ticker-suffix="%">45.1%</span></span>
+        <span class="risk-strip-value neutral" data-tooltip="净多空敞口，中性地带" data-tooltip-delay="400"><span data-ticker="45.1" data-decimals="1" data-ticker-suffix="%">45.1%</span></span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">接近限制</span>
-        <span class="risk-strip-value warn">2</span>
+        <span class="risk-strip-value warn" data-tooltip="回撤 69% + 集中度 80.2% 接近阈值" data-tooltip-delay="400">2</span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">风控触及</span>
-        <span class="risk-strip-value ok"><span data-ticker="0" data-decimals="0">0</span></span>
+        <span class="risk-strip-value ok" data-tooltip="当前无指标突破风控线" data-tooltip-delay="400"><span data-ticker="0" data-decimals="0">0</span></span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">夏普比率</span>
-        <span class="risk-strip-value ok"><span data-ticker="1.42" data-decimals="2">1.42</span></span>
+        <span class="risk-strip-value ok" data-tooltip="风险调整后收益，>1.0 为优" data-tooltip-delay="400"><span data-ticker="1.42" data-decimals="2">1.42</span></span>
       </div>
     </div>
 
     <!-- ═══ Risk Gauges — DonutGauge ═══ -->
-    <div style="display:flex;align-items:center;gap:var(--space-16);padding:var(--space-12) var(--density-gutter);border-bottom:1px solid var(--border-subtle);">
-      <div style="display:flex;align-items:center;gap:var(--space-10);">
+    <div style="display:flex;align-items:center;gap:var(--space-16);padding:var(--space-12) var(--density-gutter);border-bottom:1px solid var(--border-subtle);" data-mouse-glow="true" data-mouse-glow-size="180px">
+      <div style="display:flex;align-items:center;gap:var(--space-10);" data-tooltip="VaR 额度使用率，当前 68% 安全" data-tooltip-delay="500">
         <svg data-donut='{"value":0.68,"label":"68%","color":"oklch(0.746 0.165 50)","size":72}' aria-label="风险利用率"></svg>
         <div style="display:flex;flex-direction:column;gap:var(--space-1);">
           <span class="text-size-12 text-weight-medium text-primary">风险利用率</span>
           <span class="text-size-10 text-tertiary">VaR 额度已用 68%</span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:var(--space-10);">
+      <div style="display:flex;align-items:center;gap:var(--space-10);" data-tooltip="VaR 占总阈值 49.2%，安全范围" data-tooltip-delay="500">
         <svg data-donut='{"value":0.49,"label":"49%","color":"oklch(0.55 0.15 155)","size":72}' aria-label="VaR占比"></svg>
         <div style="display:flex;flex-direction:column;gap:var(--space-1);">
           <span class="text-size-12 text-weight-medium text-primary">VaR 占比</span>
           <span class="text-size-10 text-tertiary">占阈值 2.50% 的 49.2%</span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:var(--space-10);">
+      <div style="display:flex;align-items:center;gap:var(--space-10);" data-tooltip="科技行业集中度 80.2%，接近限制" data-tooltip-delay="500">
         <svg data-donut='{"value":0.80,"label":"80%","color":"oklch(0.6317 0.1567 22.64)","size":72}' aria-label="集中度"></svg>
         <div style="display:flex;flex-direction:column;gap:var(--space-1);">
           <span class="text-size-12 text-weight-medium text-primary">行业集中度</span>
@@ -1450,7 +1479,7 @@
         <div class="risk-charts">
 
           <!-- Chart 1: VaR 趋势图 -->
-          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="0">
+          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" data-mouse-glow-size="200px">
             <div class="panel-header">
               <span class="panel-title">VaR 趋势</span>
               <span class="panel-subtitle panel-subtitle-offset">95% 置信区间 · 日线</span>
@@ -1474,7 +1503,7 @@
           </div>
 
           <!-- Chart 2: 回撤图 -->
-          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="100">
+          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" data-mouse-glow-size="200px">
             <div class="panel-header">
               <span class="panel-title">最大回撤</span>
               <span class="panel-subtitle panel-subtitle-offset">当前 3.45% / 阈值 5.00%</span>
@@ -1497,7 +1526,7 @@
           </div>
 
           <!-- Chart 3: 行业暴露度 -->
-          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="200">
+          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="200" data-mouse-glow="true" data-mouse-glow-size="200px">
             <div class="panel-header">
               <span class="panel-title">行业暴露度</span>
               <span class="panel-subtitle panel-subtitle-offset">按中信一级行业分布</span>
@@ -1534,7 +1563,7 @@
                 <div class="context-section">
                   <div class="context-section-header">
                     <span class="context-section-title">Active Breaches</span>
-                    <span class="context-section-count">0 突破</span>
+                    <span class="context-section-count" data-tooltip="当前无指标突破风控线" data-tooltip-delay="500">0 突破</span>
                   </div>
                   <div class="context-section-body">
 
@@ -1624,7 +1653,7 @@
                         <span class="stress-result negative">-8.23%</span>
                         <svg data-sparkline='{"data":[2.1,3.5,2.8,4.2,3.1,5.0,4.5,6.2],"series":"warning","width":60,"height":22}' aria-label="VaR趋势"></svg>
                       </div>
-                      <span class="stress-meta indented">未突破风控线 (-12%)</span>
+                      <div data-confidence="0.69" data-confidence-label="距风控线 -12% 有余量" style="margin-top:var(--space-2);"></div>
                     </div>
 
                     <div class="stress-row">
@@ -1637,7 +1666,7 @@
                         <span class="stress-result negative">-3.17%</span>
                         <svg data-sparkline='{"data":[1.2,1.8,2.5,2.1,3.0,3.8,3.2,4.1],"series":"warning","width":60,"height":22}' aria-label="利率影响趋势"></svg>
                       </div>
-                      <span class="stress-meta indented">未突破风控线 (-12%)</span>
+                      <div data-confidence="0.26" data-confidence-label="距风控线 -12% 较远" style="margin-top:var(--space-2);"></div>
                     </div>
 
                     <div class="stress-row">
@@ -1650,7 +1679,7 @@
                         <span class="stress-result critical">-14.82%</span>
                         <svg data-sparkline='{"data":[5.2,7.8,9.1,11.3,10.5,13.2,12.8,14.8],"series":"warning","width":60,"height":22}' aria-label="流动性冲击趋势"></svg>
                       </div>
-                      <span class="stress-meta critical">突破风控线 (-12%) · 需关注</span>
+                      <div data-confidence="0.95" data-confidence-label="已突破风控线 -12% · 需关注" style="margin-top:var(--space-2);"></div>
                     </div>
 
                   </div>
@@ -1667,8 +1696,8 @@
     <!-- ═══ Analysis Band: Risk Heatmap + Incident Timeline ═══ -->
     <div class="analysis-band" data-reveal="fade-up" data-reveal-delay="300">
       <div class="analysis-band-header">
-        <span class="analysis-band-title">Incident Timeline</span>
-        <span class="analysis-band-subtitle">最近风控事件</span>
+        <span class="analysis-band-title">Risk Overview</span>
+        <span class="analysis-band-subtitle">资产风险热力矩阵 · 最近事件</span>
         <div class="flex-1"></div>
         <span class="analysis-band-tab active">全部</span>
         <span class="analysis-band-tab">警告</span>
@@ -1677,10 +1706,22 @@
         <span class="panel-action margin-left-8">查看全部 →</span>
       </div>
       <div class="analysis-band-body">
-        <div class="incident-timeline-list">
+        <div style="display:grid;grid-template-columns:320px 1fr;gap:var(--density-gutter);">
+
+          <!-- Left: Asset Risk Heatmap -->
+          <div style="display:flex;flex-direction:column;gap:var(--space-8);">
+            <div style="display:flex;align-items:center;gap:var(--space-6);">
+              <span class="text-size-12 text-weight-medium text-primary">资产风险热力图</span>
+              <span class="text-size-10 text-tertiary">近 20 日 VaR 贡献</span>
+            </div>
+            <svg data-heatgrid='{"rows":4,"cols":6,"palette":["oklch(0.55 0.15 155)","oklch(0.746 0.165 50)","oklch(0.746 0.165 50)","oklch(0.6317 0.1567 22.64)"],"rowLabels":["股票","债券","商品","加密"],"colLabels":["W1","W2","W3","W4","W5","W6"],"data":[[0.3,0.5,0.7,0.4,0.6,0.8],[0.1,0.2,0.15,0.3,0.25,0.2],[0.2,0.4,0.6,0.9,0.5,0.3],[0.4,0.6,0.8,0.95,0.7,0.5]]}' aria-label="资产风险热力图"></svg>
+          </div>
+
+          <!-- Right: Incident Timeline -->
+          <div class="incident-timeline-list">
 
           <!-- Incident 1 -->
-          <div class="incident-item">
+          <div class="incident-item" data-reveal="fade-up" data-reveal-delay="0">
             <div class="incident-time">
               <span class="incident-time-dot warn"></span>
               09:32
@@ -1693,7 +1734,7 @@
           </div>
 
           <!-- Incident 2 -->
-          <div class="incident-item">
+          <div class="incident-item" data-reveal="fade-up" data-reveal-delay="50">
             <div class="incident-time">
               <span class="incident-time-dot ok"></span>
               08:45
@@ -1706,7 +1747,7 @@
           </div>
 
           <!-- Incident 3 -->
-          <div class="incident-item">
+          <div class="incident-item" data-reveal="fade-up" data-reveal-delay="100">
             <div class="incident-time">
               <span class="incident-time-dot warn"></span>
               14:22
@@ -1719,7 +1760,7 @@
           </div>
 
           <!-- Incident 4 -->
-          <div class="incident-item">
+          <div class="incident-item" data-reveal="fade-up" data-reveal-delay="150">
             <div class="incident-time">
               <span class="incident-time-dot ok"></span>
               前日
@@ -1732,7 +1773,7 @@
           </div>
 
           <!-- Incident 5 -->
-          <div class="incident-item">
+          <div class="incident-item" data-reveal="fade-up" data-reveal-delay="200">
             <div class="incident-time">
               <span class="incident-time-dot ok"></span>
               3天前
@@ -1744,7 +1785,8 @@
             <span class="incident-status resolved">已处理</span>
           </div>
 
-        </div>
+        </div><!-- /incident-timeline-list -->
+        </div><!-- /grid wrapper -->
       </div>
     </div>
 
@@ -1821,49 +1863,49 @@
         </div>
 
         <!-- Stress Test Impact Bar Chart -->
-        <div class="pad-gutter border-t">
+        <div class="pad-gutter border-t" data-reveal="fade-up" data-reveal-delay="0">
           <div class="flex-center gap-8 margin-bottom-8">
             <span class="text-size-12 text-weight-medium text-primary">场景冲击分布</span>
             <span class="text-size-10 text-tertiary">红色虚线 = 风控线 -12%</span>
           </div>
           <div class="stress-bar-chart">
-            <div class="stress-bar-item">
-              <span class="stress-bar-value">-8.23%</span>
+            <div class="stress-bar-item" data-tooltip="极端下跌 -15%: 预计亏损 -8.23%，未突破风控线" data-tooltip-delay="300">
+              <span class="stress-bar-value"><span data-counter="-8.23" data-counter-decimals="2" data-counter-suffix="%">-8.23%</span></span>
               <div class="stress-bar pass" style="height:55%;">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">极端下跌</span>
             </div>
-            <div class="stress-bar-item">
-              <span class="stress-bar-value">-3.17%</span>
+            <div class="stress-bar-item" data-tooltip="利率上行 +100bp: 预计亏损 -3.17%，未突破风控线" data-tooltip-delay="300">
+              <span class="stress-bar-value"><span data-counter="-3.17" data-counter-decimals="2" data-counter-suffix="%">-3.17%</span></span>
               <div class="stress-bar pass" style="height:21%;">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">利率上行</span>
             </div>
-            <div class="stress-bar-item">
-              <span class="stress-bar-value fail">-14.82%</span>
+            <div class="stress-bar-item" data-tooltip="流动性危机: 预计亏损 -14.82%，突破风控线 -12%" data-tooltip-delay="300">
+              <span class="stress-bar-value fail"><span data-counter="-14.82" data-counter-decimals="2" data-counter-suffix="%">-14.82%</span></span>
               <div class="stress-bar fail" style="height:99%;">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">流动性危机</span>
             </div>
-            <div class="stress-bar-item">
-              <span class="stress-bar-value">-11.50%</span>
+            <div class="stress-bar-item" data-tooltip="黑天鹅事件: 预计亏损 -11.50%，临界接近风控线" data-tooltip-delay="300">
+              <span class="stress-bar-value"><span data-counter="-11.50" data-counter-decimals="2" data-counter-suffix="%">-11.50%</span></span>
               <div class="stress-bar pass" style="height:77%;">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">黑天鹅</span>
             </div>
-            <div class="stress-bar-item">
-              <span class="stress-bar-value fail">-16.33%</span>
+            <div class="stress-bar-item" data-tooltip="行业崩盘 -20%: 预计亏损 -16.33%，大幅突破风控线" data-tooltip-delay="300">
+              <span class="stress-bar-value fail"><span data-counter="-16.33" data-counter-decimals="2" data-counter-suffix="%">-16.33%</span></span>
               <div class="stress-bar fail" style="height:100%;">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">行业崩盘</span>
             </div>
-            <div class="stress-bar-item">
-              <span class="stress-bar-value">-9.87%</span>
+            <div class="stress-bar-item" data-tooltip="尾部风险 +3σ: 预计亏损 -9.87%，未突破风控线" data-tooltip-delay="300">
+              <span class="stress-bar-value"><span data-counter="-9.87" data-counter-decimals="2" data-counter-suffix="%">-9.87%</span></span>
               <div class="stress-bar pass" style="height:66%;">
                 <div class="stress-bar-limit"></div>
               </div>
@@ -1873,7 +1915,7 @@
         </div>
 
         <!-- Historical Comparison -->
-        <div class="pad-gutter border-t">
+        <div class="pad-gutter border-t" data-reveal="fade-up" data-reveal-delay="100">
           <div class="flex-center gap-8 margin-bottom-8">
             <span class="text-size-12 text-weight-medium text-primary">历史压力测试对比</span>
             <span class="text-size-10 text-tertiary">近期结果趋势</span>
@@ -1918,7 +1960,7 @@
                   <label for="overlay-breach-detail" class="panel-action cursor-pointer text-size-10">查看详情</label>
                 </div>
               </div>
-              <span class="incident-status monitoring">监控中</span>
+              <span class="incident-status monitoring" data-tooltip="持续监控中，指标未回到安全区间" data-tooltip-delay="500">监控中</span>
             </div>
 
             <!-- Incident 2 -->
@@ -1931,7 +1973,7 @@
                 <div class="incident-title">压力测试完成</div>
                 <div class="incident-detail">极端下跌和利率上行场景均通过，流动性危机场景突破风控线。</div>
               </div>
-              <span class="incident-status resolved">已处理</span>
+              <span class="incident-status resolved" data-tooltip="事件已处理，无需进一步操作" data-tooltip-delay="500">已处理</span>
             </div>
 
             <!-- Incident 3 -->
@@ -1944,7 +1986,7 @@
                 <div class="incident-title">科技行业集中度预警</div>
                 <div class="incident-detail">科技行业持仓占比达 32.1%，接近限制值 40%。建议分散配置。</div>
               </div>
-              <span class="incident-status monitoring">监控中</span>
+              <span class="incident-status monitoring" data-tooltip="集中度持续偏高，待调仓生效" data-tooltip-delay="500">监控中</span>
             </div>
 
             <!-- Incident 4 -->
@@ -1957,7 +1999,7 @@
                 <div class="incident-title">日内 VaR 超限触发</div>
                 <div class="incident-detail">昨日 14:08 VaR(95%) 短暂触及 2.53%，超过阈值 2.50%，随后回落。已自动记录。</div>
               </div>
-              <span class="incident-status resolved">已处理</span>
+              <span class="incident-status resolved" data-tooltip="短暂超限后已恢复，已记录" data-tooltip-delay="500">已处理</span>
             </div>
 
             <!-- Incident 5 -->
@@ -1970,7 +2012,7 @@
                 <div class="incident-title">风控规则更新</div>
                 <div class="incident-detail">Beta 限制从 1.2 调整为 1.1；新增行业集中度预警规则。所有规则已生效。</div>
               </div>
-              <span class="incident-status resolved">已处理</span>
+              <span class="incident-status resolved" data-tooltip="规则已更新生效" data-tooltip-delay="500">已处理</span>
             </div>
 
             <!-- Incident 6 -->
@@ -1984,7 +2026,7 @@
                 <div class="incident-title">组合调仓完成</div>
                 <div class="incident-detail">根据风控建议完成科技板块减仓，集中度从 37.2% 降至 32.1%。</div>
               </div>
-              <span class="incident-status resolved">已处理</span>
+              <span class="incident-status resolved" data-tooltip="调仓已完成，集中度回落" data-tooltip-delay="500">已处理</span>
             </div>
 
             <!-- Incident 7 -->
@@ -1997,7 +2039,7 @@
                 <div class="incident-title">VaR 模型参数更新</div>
                 <div class="incident-detail">置信区间从 90% 调整为 95%，回看窗口从 250 日调整为 500 日。</div>
               </div>
-              <span class="incident-status resolved">已处理</span>
+              <span class="incident-status resolved" data-tooltip="模型参数已更新" data-tooltip-delay="500">已处理</span>
             </div>
 
           </div>
