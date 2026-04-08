@@ -48,6 +48,8 @@ ENV/
 .ruff_cache/
 .hypothesis/
 .mypy_cache/
+.pyright_cache/
+.basedpyright/
 .grimp_cache/
 .import_linter_cache/
 .benchmarks/

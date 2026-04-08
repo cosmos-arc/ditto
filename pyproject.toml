@@ -186,6 +186,10 @@ pythonVersion = "3.13"
 pythonPlatform = "All"
 stubPath = "typings"
 
+# 显式指定 pixi 虚拟环境，确保 VS Code 扩展和 pixi shell 都能正确定位
+venvPath = ".pixi/envs"
+venv = "dev"
+
 # 核心：standard 模式打底（比 basic 严格，比 strict 宽松）
 typeCheckingMode = "standard"
 
