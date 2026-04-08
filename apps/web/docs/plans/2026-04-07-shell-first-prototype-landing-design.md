@@ -1,7 +1,7 @@
 # Shell-First 原型落地设计
 
 > 日期: 2026-04-07
-> 状态: Approved
+> 状态: In Progress
 > 范围: 将 17 个 HTML 原型的壳层体系落地为 React 运行时代码
 
 ---
@@ -334,3 +334,14 @@ src/
 3. **导航联动**：Rail 点击切换域，Header 标题随路由变化
 4. **Token 对齐**：所有尺寸、颜色使用 CSS 变量，与原型 Token 1:1
 5. **`bun run check` 通过**：lint + type + test 全绿
+
+---
+
+## 8. 实施决策（2026-04-07 确认）
+
+| 决策 | 选择 | 理由 |
+|------|------|------|
+| Token 命名 | 沿用生产 `--width-rail` / `--height-header` | 与 primitives `--spacing-*` / `--radius-*` 体系一致，值更新为原型数值 |
+| Grid 实现 | Tailwind arbitrary values | 零额外 CSS，样式自包含在组件中，与 Tailwind 体系一致 |
+| 导航状态 | 纯路由派生 `useLocation()` | 无额外依赖，首期最简方案 |
+| AppShell 结构 | 两列 Grid（Rail + Content） | 页面级 Shell 在 Content 内自行定义多列，Rail/Header 作为固定装饰层 |

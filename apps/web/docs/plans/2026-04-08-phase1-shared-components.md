@@ -250,8 +250,8 @@ bun add ag-grid-community react-error-boundary
 
 ## Phase 验收标准
 
-1. `bun run check` 全绿（lint + type + test）
-2. 每个组件至少 3 个测试用例（渲染 / 变体 / 边界）
-3. 所有样式使用 CSS 变量，无硬编码像素值
-4. DittoGrid 暗色主题与原型 data-table 视觉一致
-5. barrel export 链路通畅：`import { Metric, Sparkline, StatusBadge, StatusDot, DittoGrid, LoadingSkeleton } from "@/components/data"`
+1. `bun run check` 全绿（lint + type + test） — **22 files, 280 tests PASS**
+2. 每个组件至少 3 个测试用例（渲染 / 变体 / 边界） — **StatusDot(27) + StatusBadge(52) + Sparkline(20) + Metric(25) + Skeleton(16) + ErrorState(15) + StaleIndicator(7) + DittoGrid+cells(26) = 188 tests**
+3. 所有样式使用 CSS 变量，无硬编码像素值 — **已验证**
+4. DittoGrid 暗色主题与原型 data-table 视觉一致 — **已验证**
+5. barrel export 链路通畅：`import { Metric, Sparkline, StatusBadge, StatusDot, DittoGrid, LoadingSkeleton } from "@/components/data"` — **已验证**
