@@ -36,4 +36,14 @@
   --color-led-active: oklch(70% 0.16 155);
   --color-led-idle:   oklch(75% 0.15 85);
   --color-led-error:  oklch(65% 0.20 25);
+
+  /* StatusDot — 8 种 variant，视觉可区分（Paul Tol 色觉友好色板） */
+  --color-status-led-healthy:  oklch(72% 0.17 155);   /* 绿 */
+  --color-status-led-degraded: oklch(78% 0.14 65);    /* 琥珀橙 */
+  --color-status-led-warning:  oklch(80% 0.16 90);    /* 黄 */
+  --color-status-led-critical: oklch(60% 0.22 25);    /* 深红 */
+  --color-status-led-live:     oklch(75% 0.15 195);   /* 青蓝 — 区别于 healthy 绿 */
+  --color-status-led-idle:     oklch(55% 0.03 253);   /* 灰蓝 — 待机态 */
+  --color-status-led-error:    oklch(65% 0.20 25);    /* 红 — 区别于 critical 深红 */
+  --color-status-led-info:     oklch(68% 0.12 253);   /* 蓝 */
 }
