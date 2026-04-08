@@ -1,11 +1,10 @@
 """Integration tests for research dataset build flow."""
 
-from __future__ import annotations
-
 from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import date
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import orjson
@@ -66,8 +65,8 @@ def _make_test_container():
     )
 
 
-def _invoke_research_build_flow(**kwargs: object) -> dict[str, object]:
-    flow_entrypoint = getattr(
+def _invoke_research_build_flow(**kwargs: Any) -> dict[str, Any]:
+    flow_entrypoint: Any = getattr(
         research_dataset_build_flow,
         "fn",
         research_dataset_build_flow,

@@ -40,7 +40,7 @@ class TestDatabaseManager:
 
         # 验证表是否存在
         tables = conn.execute("SHOW TABLES").fetchall()
-        table_names = [row[0] for row in tables]
+        table_names = [row[0] for row in tables if row is not None]
 
         assert "etf_list" in table_names
         assert "daily_price_raw" in table_names
@@ -54,7 +54,7 @@ class TestDatabaseManager:
 
         # 验证表结构
         schema = conn.execute("DESCRIBE etf_list").fetchall()
-        column_names = [row[0] for row in schema]
+        column_names = [row[0] for row in schema if row is not None]
 
         assert "symbol" in column_names
         assert "name" in column_names
@@ -72,7 +72,7 @@ class TestDatabaseManager:
 
         # 验证表结构
         schema = conn.execute("DESCRIBE daily_price_raw").fetchall()
-        column_names = [row[0] for row in schema]
+        column_names = [row[0] for row in schema if row is not None]
 
         assert "symbol" in column_names
         assert "date" in column_names
@@ -91,7 +91,7 @@ class TestDatabaseManager:
 
         # 验证表结构
         schema = conn.execute("DESCRIBE daily_price_adjusted").fetchall()
-        column_names = [row[0] for row in schema]
+        column_names = [row[0] for row in schema if row is not None]
 
         assert "symbol" in column_names
         assert "date" in column_names
@@ -109,7 +109,7 @@ class TestDatabaseManager:
 
         # 验证表结构
         schema = conn.execute("DESCRIBE adjustment_factors").fetchall()
-        column_names = [row[0] for row in schema]
+        column_names = [row[0] for row in schema if row is not None]
 
         assert "symbol" in column_names
         assert "ex_date" in column_names
@@ -146,27 +146,35 @@ class TestDatabaseManager:
         """)
 
         # 验证数据已插入
-        assert conn.execute("SELECT COUNT(*) FROM etf_list").fetchone()[0] == 1
-        assert conn.execute("SELECT COUNT(*) FROM daily_price_raw").fetchone()[0] == 1
-        assert (
-            conn.execute("SELECT COUNT(*) FROM daily_price_adjusted").fetchone()[0] == 1
-        )
-        assert (
-            conn.execute("SELECT COUNT(*) FROM adjustment_factors").fetchone()[0] == 1
-        )
+        count = conn.execute("SELECT COUNT(*) FROM etf_list").fetchone()
+        assert count is not None
+        assert count[0] == 1
+        count = conn.execute("SELECT COUNT(*) FROM daily_price_raw").fetchone()
+        assert count is not None
+        assert count[0] == 1
+        count = conn.execute("SELECT COUNT(*) FROM daily_price_adjusted").fetchone()
+        assert count is not None
+        assert count[0] == 1
+        count = conn.execute("SELECT COUNT(*) FROM adjustment_factors").fetchone()
+        assert count is not None
+        assert count[0] == 1
 
         # 清理数据
         manager.clean_duckdb()
 
         # 验证所有表已清空
-        assert conn.execute("SELECT COUNT(*) FROM etf_list").fetchone()[0] == 0
-        assert conn.execute("SELECT COUNT(*) FROM daily_price_raw").fetchone()[0] == 0
-        assert (
-            conn.execute("SELECT COUNT(*) FROM daily_price_adjusted").fetchone()[0] == 0
-        )
-        assert (
-            conn.execute("SELECT COUNT(*) FROM adjustment_factors").fetchone()[0] == 0
-        )
+        count = conn.execute("SELECT COUNT(*) FROM etf_list").fetchone()
+        assert count is not None
+        assert count[0] == 0
+        count = conn.execute("SELECT COUNT(*) FROM daily_price_raw").fetchone()
+        assert count is not None
+        assert count[0] == 0
+        count = conn.execute("SELECT COUNT(*) FROM daily_price_adjusted").fetchone()
+        assert count is not None
+        assert count[0] == 0
+        count = conn.execute("SELECT COUNT(*) FROM adjustment_factors").fetchone()
+        assert count is not None
+        assert count[0] == 0
 
     def test_clean_duckdb_preserves_table_structure(self):
         """测试 clean_duckdb 保留表结构."""
@@ -187,7 +195,7 @@ class TestDatabaseManager:
 
         # 验证表结构仍然存在
         tables = conn.execute("SHOW TABLES").fetchall()
-        table_names = [row[0] for row in tables]
+        table_names = [row[0] for row in tables if row is not None]
 
         assert "etf_list" in table_names
         assert "daily_price_raw" in table_names
@@ -237,10 +245,14 @@ class TestDatabaseManager:
         )
 
         # 第一个连接应该有数据
-        assert conn1.execute("SELECT COUNT(*) FROM etf_list").fetchone()[0] == 1
+        count = conn1.execute("SELECT COUNT(*) FROM etf_list").fetchone()
+        assert count is not None
+        assert count[0] == 1
 
         # 第二个连接应该没有数据
-        assert conn2.execute("SELECT COUNT(*) FROM etf_list").fetchone()[0] == 0
+        count = conn2.execute("SELECT COUNT(*) FROM etf_list").fetchone()
+        assert count is not None
+        assert count[0] == 0
 
 
 @pytest.mark.unit
@@ -337,4 +349,4 @@ class TestPatchDataFixture:
         # Data 类不存在（已被删除），所以不需要测试创建 Data
         # 如果尝试导入会失败
         with pytest.raises(ImportError):
-            from ditto_data import DataHub  # noqa: F401
+            from ditto_data import DataHub  # type: ignore[attr-defined]  # noqa: F401

@@ -723,8 +723,9 @@ class TestPITQueryValidation:
             # 这里验证数据查询的基本正确性
             if ticker_data.height > 0:
                 max_date = ticker_data["trade_date"].max()
+                assert max_date is not None
                 # 基本验证：数据范围应在查询范围内
-                assert max_date <= date(2024, 6, 10), (
+                assert max_date <= date(2024, 6, 10), (  # type: ignore[operator]
                     f"Instrument {ticker} max date {max_date} exceeds query range"
                 )
 

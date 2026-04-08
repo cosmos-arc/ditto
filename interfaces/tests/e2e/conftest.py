@@ -9,9 +9,8 @@
 参考文档：docs/plans/2026-02-17-e2e-validation-design.md
 """
 
-from __future__ import annotations
-
 import sys
+from collections.abc import Generator
 from pathlib import Path
 
 # 确保 tests 目录在 sys.path 中（支持 xdist 并行测试）
@@ -346,7 +345,9 @@ def reporter(golden_spec: GoldenDatasetSpec) -> E2EReporter:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def generate_report(request: pytest.FixtureRequest, reporter: E2EReporter) -> None:
+def generate_report(
+    request: pytest.FixtureRequest, reporter: E2EReporter
+) -> Generator[None, None, None]:
     """自动生成 E2E 验收报告。
 
     Session 级别自动 fixture，在所有测试结束后自动生成报告。
@@ -357,6 +358,7 @@ def generate_report(request: pytest.FixtureRequest, reporter: E2EReporter) -> No
         reporter: 报告生成器实例。
 
     """
+
     _ = request  # 预留参数，可用于获取测试会话信息
     yield
     # 所有测试结束后生成报告

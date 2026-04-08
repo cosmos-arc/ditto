@@ -22,7 +22,7 @@ class TestGetFlow:
         # Note: 在单元测试中，@flow decorator 被 mock，返回原始函数
         flow = _get_flow("daily_ingestion_flow")
         assert callable(flow)
-        assert flow.__name__ == "daily_ingestion_flow"
+        assert flow.__name__ == "daily_ingestion_flow"  # type: ignore[attr-defined]
 
     def test_get_flow_raises_for_unknown_flow(self):
         """测试获取未知 flow 时抛出异常。"""

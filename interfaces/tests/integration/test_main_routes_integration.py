@@ -14,6 +14,7 @@ import pytest
 from ditto_interfaces.api.routes import __all__ as expected_route_modules
 from ditto_interfaces.main import app
 from fastapi.routing import APIRoute
+from starlette.routing import Route
 
 
 @pytest.mark.integration
@@ -104,7 +105,7 @@ class TestMainRoutesAssembly:
     def test_health_endpoint_exists(self) -> None:
         """验证健康检查端点存在."""
         health_paths = {"/healthz", "/"}
-        actual_paths = {route.path for route in app.routes if hasattr(route, "path")}
+        actual_paths = {route.path for route in app.routes if isinstance(route, Route)}
 
         assert health_paths.issubset(actual_paths), (
             f"健康检查端点缺失\n期望: {health_paths}\n实际路径: {actual_paths}"

@@ -70,13 +70,17 @@ class TestCleanDuckdbFixture:
         )
 
         # 验证数据已插入
-        assert clean_duckdb.execute("SELECT COUNT(*) FROM etf_list").fetchone()[0] == 1
+        count = clean_duckdb.execute("SELECT COUNT(*) FROM etf_list").fetchone()
+        assert count is not None
+        assert count[0] == 1
 
         # 再次调用 clean_duckdb fixture（通过 manager）
         db_manager.clean_duckdb()
 
         # 验证数据已清理
-        assert clean_duckdb.execute("SELECT COUNT(*) FROM etf_list").fetchone()[0] == 0
+        count = clean_duckdb.execute("SELECT COUNT(*) FROM etf_list").fetchone()
+        assert count is not None
+        assert count[0] == 0
 
     def test_clean_duckdb_preserves_structure(
         self, clean_duckdb: duckdb.DuckDBPyConnection
@@ -108,7 +112,9 @@ class TestCleanDuckdbFixture:
         )
 
         # 验证数据已插入
-        assert clean_duckdb.execute("SELECT COUNT(*) FROM etf_list").fetchone()[0] == 1
+        count = clean_duckdb.execute("SELECT COUNT(*) FROM etf_list").fetchone()
+        assert count is not None
+        assert count[0] == 1
 
         # 注意：我们无法直接测试"在每个测试前清理"的行为
         # 因为这需要运行多个测试

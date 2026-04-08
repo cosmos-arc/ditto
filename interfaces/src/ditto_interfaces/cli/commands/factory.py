@@ -103,9 +103,7 @@ def create_instrument_command(
     return command
 
 
-def create_daily_command(
-    dataset: str, description: str
-) -> Callable[[typer.Context, str, bool], None]:
+def create_daily_command(dataset: str, description: str) -> Callable[..., None]:
     """
     创建 daily 命令的工厂函数.
 
@@ -141,9 +139,7 @@ def create_daily_command(
     return command
 
 
-def create_backfill_command(
-    dataset: str, description: str
-) -> Callable[[typer.Context, str, str, int], None]:
+def create_backfill_command(dataset: str, description: str) -> Callable[..., None]:
     """
     创建 backfill 命令的工厂函数.
 
@@ -185,9 +181,7 @@ def create_backfill_command(
     return command
 
 
-def create_basic_command(
-    dataset: str, description: str
-) -> Callable[[typer.Context, bool], None]:
+def create_basic_command(dataset: str, description: str) -> Callable[..., None]:
     """
     创建 basic 命令的工厂函数.
 

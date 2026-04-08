@@ -58,7 +58,7 @@ def set_test_database_path(tmp_path: Path) -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def metrics_registry() -> Generator[CollectorRegistry, None, None]:
+def metrics_registry() -> CollectorRegistry:
     """提供内存 Registry（不依赖外部服务）。
 
     使用方式:
@@ -72,9 +72,7 @@ def metrics_registry() -> Generator[CollectorRegistry, None, None]:
                     if sample.name == "api_requests_total":
                         assert sample.value == 1.0
     """
-    registry = CollectorRegistry()
-    yield registry
-    registry.clear()  # 清理
+    return CollectorRegistry()
 
 
 @pytest.fixture(autouse=True)
@@ -110,7 +108,7 @@ def prefect_test_session() -> Generator[None, None, None]:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def configure_observability_for_testing() -> Generator[None, None, None]:
+def configure_observability_for_testing() -> None:
     """配置观察性系统用于测试环境（禁用日志输出到 stdout）.
 
     解决 CliRunner I/O 错误：
@@ -128,8 +126,6 @@ def configure_observability_for_testing() -> Generator[None, None, None]:
         pytest_running=True,  # 关键：跳过 stdout handler 配置
     )
     init(config, force=True)
-
-    return
 
 
 # 集成测试串行执行，避免并发副作用

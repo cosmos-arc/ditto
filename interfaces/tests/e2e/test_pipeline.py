@@ -88,8 +88,8 @@ def stock_adj_writer(pipeline_root: Path) -> StockAdjFactorWriter:
 @pytest.fixture
 def quality_engine() -> QualityEngine:
     """创建质量引擎实例."""
-    dq_spec = DQSpec(
-        datasets={
+    dq_spec = DQSpec(  # type: ignore[arg-type]
+        datasets={  # type: ignore[arg-type]
             "stock_daily": {
                 "dataset": "stock_daily",
                 "description": "股票日线数据质量检查",
@@ -233,7 +233,7 @@ class TestMarketDataPipeline:
         dq_result = quality_engine.check(df_with_id, "stock_daily")
 
         # 验证质量检查通过
-        assert dq_result.passed, f"质量阶段: 检查应通过, 错误: {dq_result.errors}"
+        assert dq_result.passed, f"质量阶段: 检查应通过, 错误: {dq_result.issues}"
 
     def test_etf_daily_full_pipeline(
         self,
@@ -269,7 +269,7 @@ class TestMarketDataPipeline:
         # 添加 instrument_id 列用于质量检查
         df_with_id = _make_instrument_id(raw_df)
         dq_result = quality_engine.check(df_with_id, "stock_daily")  # 使用相同规则
-        assert dq_result.passed, f"ETF 质量阶段: 检查应通过, 错误: {dq_result.errors}"
+        assert dq_result.passed, f"ETF 质量阶段: 检查应通过, 错误: {dq_result.issues}"
 
     def test_index_daily_full_pipeline(
         self,
@@ -314,7 +314,7 @@ class TestMarketDataPipeline:
         # === 阶段 4: Quality ===
         df_with_id = _make_instrument_id(raw_df)
         dq_result = quality_engine.check(df_with_id, "stock_daily")
-        assert dq_result.passed, f"指数质量阶段: 检查应通过, 错误: {dq_result.errors}"
+        assert dq_result.passed, f"指数质量阶段: 检查应通过, 错误: {dq_result.issues}"
 
 
 @pytest.mark.e2e
@@ -463,7 +463,7 @@ class TestGoldenDatasetPipeline:
             # 质量检查
             df_with_id = _make_instrument_id(stock_df)
             dq_result = quality_engine.check(df_with_id, "stock_daily")
-            assert dq_result.passed, f"股票质量检查失败: {dq_result.errors}"
+            assert dq_result.passed, f"股票质量检查失败: {dq_result.issues}"
 
         # ETF
         etf_df = tushare_source.fetch_etf_daily(trade_date=trade_date)

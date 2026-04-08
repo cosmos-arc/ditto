@@ -122,7 +122,7 @@ class TestCheckTradingDay:
         此测试验证 mock 没有破坏函数的基本属性。
         """
         assert callable(check_trading_day)
-        assert check_trading_day.__name__ == "check_trading_day"
+        assert check_trading_day.name == "check_trading_day"
 
 
 @pytest.mark.unit

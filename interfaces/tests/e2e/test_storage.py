@@ -15,6 +15,7 @@ import polars as pl
 import pytest
 from ditto_data.models import OnDuplicate
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
+from pytest_mock import MockerFixture
 
 
 @pytest.mark.e2e
@@ -318,7 +319,7 @@ class TestStorage:
         stock_bars_writer: StockBarsWriter,
         stock_bars_reader: StockBarsReader,
         sample_bars_df: pl.DataFrame,
-        mocker: pytest.MockerFixture,
+        mocker: MockerFixture,
     ) -> None:
         """S2-06: 事务回滚恢复验证.
 

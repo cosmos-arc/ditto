@@ -105,7 +105,7 @@ def test_exception_handler_can_access_request_id(test_app: FastAPI) -> None:
     async def value_error_handler(request: Request, exc: ValueError) -> Response:
         """模拟 ditto_exception_handler 行为."""
         req_id = getattr(request.state, "request_id", None)
-        exception_request_id.append(req_id)
+        exception_request_id.append(str(req_id))
         return Response(
             content='{"error": "test"}',
             status_code=500,

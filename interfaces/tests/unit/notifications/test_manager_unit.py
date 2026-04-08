@@ -81,8 +81,10 @@ class TestAlertManager:
 
         assert result == {"telegram": True}
         assert sender.send_count == 1
-        assert "Alert: Test error occurred" in sender.last_sent_content
-        assert "Level: error" in sender.last_sent_content
+        content = sender.last_sent_content
+        assert content is not None
+        assert "Alert: Test error occurred" in content
+        assert "Level: error" in content
 
     def test_send_alert_multiple_senders(self, tmp_path: Path) -> None:
         """Test alert sending to multiple channels."""
@@ -162,7 +164,9 @@ class TestAlertManager:
         )
 
         assert result == {"telegram": True}
-        assert str(now) in sender.last_sent_content
+        content = sender.last_sent_content
+        assert content is not None
+        assert str(now) in content
 
     def test_send_alert_empty_senders(self, tmp_path: Path) -> None:
         """Test alert sending with no senders configured."""
@@ -214,7 +218,9 @@ class TestAlertManager:
         )
 
         assert result == {"telegram": True}
-        assert "Foundation template: Test" in sender.last_sent_content
+        content = sender.last_sent_content
+        assert content is not None
+        assert "Foundation template: Test" in content
 
     def test_send_alert_different_levels(self, tmp_path: Path) -> None:
         """Test sending alerts with different severity levels."""
@@ -249,7 +255,9 @@ class TestAlertManager:
 
             assert result == {"email": True}
             assert sender.send_count == 1
-            assert f"Severity: {level.value}" in sender.last_sent_content
+            content = sender.last_sent_content
+            assert content is not None
+            assert f"Severity: {level.value}" in content
 
     def test_send_alert_with_complex_context(self, tmp_path: Path) -> None:
         """Test alert sending with complex context data."""
@@ -281,6 +289,7 @@ class TestAlertManager:
         )
 
         assert result == {"telegram": True}
+        assert sender.last_sent_content is not None
         content = sender.last_sent_content
         assert "Dataset: stock_daily" in content
         assert "Date: 2026-01-22" in content

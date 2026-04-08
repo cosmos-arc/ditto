@@ -1,11 +1,10 @@
 """Integration tests for derived publication orchestration."""
 
-from __future__ import annotations
-
 from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import date
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -97,8 +96,8 @@ def _materialization_bundle_context():
         container.close()
 
 
-def _invoke_flow(flow_entrypoint: object, **kwargs: object) -> dict[str, object]:
-    runner = getattr(flow_entrypoint, "fn", flow_entrypoint)
+def _invoke_flow(flow_entrypoint: Any, **kwargs: Any) -> dict[str, Any]:
+    runner: Any = getattr(flow_entrypoint, "fn", flow_entrypoint)
     return runner(**kwargs)
 
 

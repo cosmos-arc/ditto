@@ -1,14 +1,18 @@
 """Tests for ingestion monitoring task."""
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 from ditto_data.quality.spec import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_infra.foundation.config.environment import Environment
-from ditto_infra.foundation.observability import init, reset_for_testing
+from ditto_infra.foundation.observability import init
 from ditto_infra.foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.observability.testing import reset_for_testing
 from ditto_interfaces.jobs.tasks.monitoring import monitor_ingestion_quality
 
 
-def _prefect_runner(entrypoint):
+def _prefect_runner(entrypoint: Any) -> Callable[..., Any]:
     return getattr(entrypoint, "func", getattr(entrypoint, "fn", entrypoint))
 
 

@@ -319,7 +319,7 @@ class TestQuality:
 ## 检查结果
 
 - **错误数**: {result.error_count if hasattr(result, "error_count") else 0}
-- **警告数**: {result.warning_count if hasattr(result, "warning_count") else 0}
+- **警告数**: {result.warn_count if hasattr(result, "warn_count") else 0}
 """
         report_path.write_text(content, encoding="utf-8")
 

@@ -58,7 +58,7 @@ class TestRetryFailedFlow:
         )
 
         # Should respect limit
-        assert result["retried_count"] <= 2
+        assert result["retried_count"] <= 2  # type: ignore[operator]
 
     def test_flow_handles_no_failures(self):
         """

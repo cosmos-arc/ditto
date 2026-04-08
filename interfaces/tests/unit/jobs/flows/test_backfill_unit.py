@@ -120,7 +120,7 @@ class TestBackfillFlowConfig:
     def test_config_validates_required_fields(self):
         """Test that config validates required fields."""
         with pytest.raises(ValidationError) as exc_info:
-            BackfillFlowConfig(
+            BackfillFlowConfig(  # type: ignore[call-arg]
                 start_date="2024-01-01",
                 end_date="2024-01-31",
             )
@@ -206,7 +206,7 @@ class TestBackfillFlow:
     def test_is_prefect_flow(self):
         """Test that backfill_flow is callable."""
         assert callable(backfill_flow)
-        assert backfill_flow.__name__ == "backfill_flow"
+        assert backfill_flow.__name__ == "backfill_flow"  # type: ignore[attr-defined]
 
     def test_uses_ingestion_bundle(self, mocker):
         """Test that flow uses create_ingestion_bundle."""
@@ -366,7 +366,7 @@ class TestBackfillMissingFlow:
     def test_is_prefect_flow(self):
         """Test that backfill_missing_flow is callable."""
         assert callable(backfill_missing_flow)
-        assert backfill_missing_flow.__name__ == "backfill_missing_flow"
+        assert backfill_missing_flow.__name__ == "backfill_missing_flow"  # type: ignore[attr-defined]
 
     def test_uses_ingestion_bundle(self, mocker):
         """Test that flow uses create_ingestion_bundle."""

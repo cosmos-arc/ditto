@@ -78,16 +78,17 @@ class TestValidationExceptionHandler:
         request = create_mock_request()
 
         # Create a validation error with proper structure
+        line_errors: list[dict[str, object]] = [
+            {
+                "type": "missing",
+                "loc": ("field",),
+                "input": None,
+                "msg": "Field required",
+            }
+        ]
         error = ValidationError.from_exception_data(
             "test",
-            [
-                {
-                    "type": "missing",
-                    "loc": ("field",),
-                    "input": {},
-                    "msg": "Field required",
-                }
-            ],
+            line_errors,  # type: ignore[arg-type]
         )
         exc = RequestValidationError(error.errors())
 

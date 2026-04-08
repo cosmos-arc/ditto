@@ -188,7 +188,7 @@ def reset_observability() -> Generator[None, None, None]:
     注意：此 fixture 不再自动应用，需要显式请求。
     CLI 测试目录有独立的空 override 以避免 I/O 冲突。
     """
-    from ditto_infra.foundation import reset_for_testing
+    from ditto_infra.foundation.observability.testing import reset_for_testing
 
     reset_for_testing()
     yield

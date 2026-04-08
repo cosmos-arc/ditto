@@ -1,6 +1,7 @@
 """Unit tests for Phase 3 materialization Prefect flows."""
 
-from __future__ import annotations
+from collections.abc import Callable
+from typing import Any
 
 from ditto_analytics.publication_safety import CertificationStage
 from ditto_app.process.cascade_orchestrator import RepairBatchResult
@@ -17,7 +18,7 @@ from ditto_interfaces.jobs.flows.materialization import (
 from pytest_mock import MockerFixture
 
 
-def _prefect_runner(entrypoint):
+def _prefect_runner(entrypoint: Any) -> Callable[..., Any]:
     return getattr(entrypoint, "func", getattr(entrypoint, "fn", entrypoint))
 
 
@@ -68,7 +69,7 @@ class TestRepairFromInvalidationFlow:
         """Repair flow should delegate to the invalidation service."""
         bundle = mocker.MagicMock()
         bundle.invalidation_service.repair_batch.return_value = RepairBatchResult(
-            repaired=(
+            repaired=(  # type: ignore[arg-type]
                 {"derived_id": "factor.alpha_simple"},
                 {"derived_id": "factor.alpha_other"},
             ),

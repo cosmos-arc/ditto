@@ -106,9 +106,10 @@ class TestInstrument:
         """验证基本 Instrument 创建."""
         from ditto_interfaces.models.metadata import Instrument
         from ditto_kernel.enums import AssetClass
+        from ditto_kernel.identity import InstrumentId
 
         instrument = Instrument(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             ticker="600000",
             name="浦发银行",
             asset_class=AssetClass.STOCK,
@@ -129,10 +130,11 @@ class TestInstrument:
         """验证可选字段."""
         from ditto_interfaces.models.metadata import Instrument
         from ditto_kernel.enums import AssetClass
+        from ditto_kernel.identity import InstrumentId
 
         # list_date 可以为 None
         instrument = Instrument(
-            instrument_id=2,
+            instrument_id=InstrumentId(2),
             ticker="000001",
             name="平安银行",
             asset_class=AssetClass.STOCK,
@@ -147,9 +149,10 @@ class TestInstrument:
         """验证 model_dump 序列化."""
         from ditto_interfaces.models.metadata import Instrument
         from ditto_kernel.enums import AssetClass
+        from ditto_kernel.identity import InstrumentId
 
         instrument = Instrument(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             ticker="600000",
             name="浦发银行",
             asset_class=AssetClass.STOCK,
