@@ -7,6 +7,7 @@ InstrumentService - 证券元数据子服务.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Any, Literal
 
 import polars as pl
@@ -757,7 +758,9 @@ class InstrumentService:
     # ============ list_date 更新 ============
 
     @traced("metadata.instrument.update_list_date")
-    def update_list_date(self, instrument_id: int, list_date: Any) -> None:
+    def update_list_date(
+        self, instrument_id: int, list_date: date | str | None
+    ) -> None:
         """
         更新证券的上市日期.
 

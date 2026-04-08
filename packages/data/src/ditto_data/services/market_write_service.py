@@ -114,7 +114,7 @@ class MarketWriteService:
 
         return rows_written
 
-    def _get_bars_writer(self, dataset: str) -> Any:
+    def _get_bars_writer(self, dataset: str) -> Any:  # noqa: ANN401
         """
         获取指定数据集的 K线写入器.
 

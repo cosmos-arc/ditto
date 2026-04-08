@@ -17,7 +17,7 @@ Flow 功能：
 from __future__ import annotations
 
 from itertools import chain
-from typing import Any
+from typing import Any, cast
 
 from ditto_app.config import (
     TaskTier,
@@ -27,6 +27,7 @@ from ditto_app.config import (
 from ditto_app.process.result_handler import count_results
 from ditto_data.models import Dataset
 from prefect import flow, task
+from prefect.futures import PrefectFuture
 
 from ditto_interfaces.jobs.tasks import (
     create_ingest_task_t0,
@@ -37,7 +38,9 @@ from ditto_interfaces.jobs.tasks import (
 from ditto_interfaces.registry import create_ingestion_bundle
 
 
-def _collect_results(futures: list[Any]) -> dict[str, dict[str, object]]:
+def _collect_results(
+    futures: list[PrefectFuture[dict[str, object]]],
+) -> dict[str, dict[str, object]]:
     """
     从 Prefect futures 收集结果字典。
 
@@ -52,7 +55,7 @@ def _collect_results(futures: list[Any]) -> dict[str, dict[str, object]]:
     results: dict[str, dict[str, object]] = {}
     for future in futures:
         result = future.result()
-        dataset_name = result.get("dataset", "unknown")
+        dataset_name = cast(str, result.get("dataset", "unknown"))
         results[dataset_name] = result
     return results
 
@@ -129,7 +132,7 @@ def daily_ingestion_flow(
 
     # 2. 提交 T0 任务（并行执行）
     t0_datasets = get_datasets_by_tier(TaskTier.T0_META)
-    t0_futures: list[Any] = []
+    t0_futures: list[PrefectFuture[dict[str, object]]] = []
     for dataset in t0_datasets:
         t0_task = create_ingest_task_t0(dataset)
         future = t0_task.submit(
@@ -144,8 +147,8 @@ def daily_ingestion_flow(
     # - Level 0: etf_daily, stock_daily (只依赖 T0)
     # - Level 1: stock_status/adj_factor/fund_adj (依赖日行情数据)
     t1_levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
-    t1_futures: list[Any] = []
-    level_futures: list[list[Any]] = []
+    t1_futures: list[PrefectFuture[dict[str, object]]] = []
+    level_futures: list[list[PrefectFuture[dict[str, object]]]] = []
 
     for level_idx, level in enumerate(t1_levels):
         # 确定等待的任务：第一层等待 T0，后续层等待前面所有层
@@ -155,7 +158,7 @@ def daily_ingestion_flow(
             # 收集前面所有层的 futures
             wait_for_futures = list(chain.from_iterable(level_futures))
 
-        current_level_futures: list[Any] = []
+        current_level_futures: list[PrefectFuture[dict[str, object]]] = []
         for dataset in level:
             # 根据数据集类型选择对应的 task 创建函数
             if dataset in [Dataset.ADJ_FACTOR, Dataset.FUND_ADJ]:
@@ -180,12 +183,12 @@ def daily_ingestion_flow(
     t1_results = _collect_results(t1_futures)
 
     # 5. 触发 DQC（等待 T1 任务完成）
-    dqc_future: Any = dq_batch_check.submit(  # pyright: ignore[reportCallIssue, reportUnknownMemberType, reportUnknownVariableType]
+    dqc_future: PrefectFuture[dict[str, Any]] = dq_batch_check.submit(  # pyright: ignore[reportCallIssue, reportUnknownMemberType, reportUnknownVariableType]
         trade_date=trade_date,
         datasets=["etf_daily", "index_daily", "stock_daily", "adj_factor"],
         wait_for=t1_futures,
     )
-    dqc_results: Any = dqc_future.result()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+    dqc_results: dict[str, Any] = dqc_future.result()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
     # 6. 汇总统计
     all_results = {**t0_results, **t1_results}

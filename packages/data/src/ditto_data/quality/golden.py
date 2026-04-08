@@ -123,7 +123,7 @@ class GoldenDatasetSpec(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def parse_tickers_data(cls, data: Any) -> Any:
+    def parse_tickers_data(cls, data: Any) -> Any:  # noqa: ANN401
         """
         从 tickers 字段同时解析 ticker 字符串和 TickerSpec 对象。
 

@@ -11,6 +11,9 @@ from typing import Any
 
 import polars as pl
 from ditto_infra.foundation import traced
+from ditto_infra.foundation.cache import DataCache
+
+from ditto_data.storage.sqlite_client import SQLiteClient
 
 
 class IndustryReader:
@@ -25,7 +28,7 @@ class IndustryReader:
 
     """
 
-    def __init__(self, client: Any, cache: Any) -> None:
+    def __init__(self, client: SQLiteClient, cache: DataCache[Any]) -> None:
         """
         初始化 IndustryReader.
 

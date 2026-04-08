@@ -1,4 +1,3 @@
-# pyright: reportPrivateUsage=false
 """InstrumentReader - 证券主数据查询接口."""
 
 from __future__ import annotations
@@ -8,6 +7,9 @@ from typing import Any, cast
 
 import polars as pl
 from ditto_infra.foundation import logger
+from ditto_infra.foundation.cache import DataCache
+
+from ditto_data.storage.sqlite_client import SQLiteClient
 
 
 @dataclass(frozen=True)
@@ -111,7 +113,9 @@ class InstrumentReader:
 
     """
 
-    def __init__(self, client: Any, cache: Any | None = None) -> None:
+    def __init__(
+        self, client: SQLiteClient, cache: DataCache[Any] | None = None
+    ) -> None:
         """
         初始化 InstrumentReader。
 

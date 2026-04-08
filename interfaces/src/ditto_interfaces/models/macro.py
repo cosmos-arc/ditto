@@ -18,7 +18,7 @@ from ditto_data.models import MacroCategory, MacroFrequency
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 
-def _parse_date(v: Any) -> date | None:
+def _parse_date(v: Any) -> date | None:  # noqa: ANN401
     """解析日期值，支持字符串和 date 对象."""
     if v is None:
         return None
@@ -29,7 +29,7 @@ def _parse_date(v: Any) -> date | None:
     raise ValueError(f"Invalid date format: {v}")
 
 
-def _parse_category(v: Any) -> MacroCategory | None:
+def _parse_category(v: Any) -> MacroCategory | None:  # noqa: ANN401
     """解析 MacroCategory，支持字符串和 MacroCategory 对象."""
     if v is None:
         return None
@@ -40,7 +40,7 @@ def _parse_category(v: Any) -> MacroCategory | None:
     raise ValueError(f"Invalid category: {v}")
 
 
-def _parse_frequency(v: Any) -> MacroFrequency | None:
+def _parse_frequency(v: Any) -> MacroFrequency | None:  # noqa: ANN401
     """解析 MacroFrequency，支持字符串和 MacroFrequency 对象."""
     if v is None:
         return None

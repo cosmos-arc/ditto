@@ -58,7 +58,7 @@ _state = TracingState()
 class SpanContext:
     """Span 上下文管理器。"""
 
-    def __init__(self, name: str, **attributes: Any) -> None:
+    def __init__(self, name: str, **attributes: Any) -> None:  # noqa: ANN401
         self.name = name
         self.attributes = attributes
         self._span: Any = None
@@ -88,7 +88,7 @@ class SpanContext:
                 current.record_exception(exc_val)
         self._span.__exit__(exc_type, exc_val, exc_tb)
 
-    def set_attribute(self, key: str, value: Any) -> None:
+    def set_attribute(self, key: str, value: Any) -> None:  # noqa: ANN401
         current = trace.get_current_span()
         if current.is_recording():
             current.set_attribute(key, str(value))
@@ -143,7 +143,7 @@ def configure_tracing(config: ObservabilityConfig) -> trace.Tracer:
     return _state.tracer
 
 
-def span(name: str, **attributes: Any) -> SpanContext:
+def span(name: str, **attributes: Any) -> SpanContext:  # noqa: ANN401
     """创建 Span 上下文管理器。"""
     return SpanContext(name, **attributes)
 

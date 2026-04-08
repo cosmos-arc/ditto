@@ -235,6 +235,8 @@ class ExecutionAuditService:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _serialize_record(record: Any) -> str:
+    def _serialize_record(
+        record: RiskScanPayload | PreTradeDecisionPayload,
+    ) -> str:
         """将 frozen dataclass 序列化为 orjson 字符串。"""
         return orjson.dumps(dataclasses.asdict(record)).decode("utf-8")

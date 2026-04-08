@@ -15,6 +15,8 @@ from ditto_infra.foundation import traced
 from ditto_data.storage.capital.index_composition import IndexCompositionReader
 from ditto_data.storage.metadata.instrument import InstrumentReader, SecurityQuery
 from ditto_data.storage.metadata.universe import (
+    RebalanceReader,
+    RebalanceWriter,
     UniverseReader,
     UniverseWriter,
 )
@@ -29,8 +31,8 @@ class UniverseService:
         universe_writer: UniverseWriter,
         instrument_reader: InstrumentReader,
         index_composition_reader: IndexCompositionReader,
-        rebalance_reader: Any,
-        rebalance_writer: Any,
+        rebalance_reader: RebalanceReader,
+        rebalance_writer: RebalanceWriter,
     ) -> None:
         """
         初始化 UniverseService.

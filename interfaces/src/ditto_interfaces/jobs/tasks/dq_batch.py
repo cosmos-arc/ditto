@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ditto_app.process.quality import L3BatchService
+from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_data.models import Dataset
 from ditto_data.quality import DQIssue
 from ditto_infra.foundation import Metrics, logger
@@ -70,7 +71,7 @@ async def dq_batch_check(
 
 def _resolve_trade_date(
     trade_date: str | None,
-    metadata_service: Any,
+    metadata_service: MetadataQueryFacade,
 ) -> str:
     """
     解析 trade_date: 使用显式传入值或获取最后一个交易日.

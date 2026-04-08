@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import logger, traced
+from ditto_infra.foundation.cache import DataCache
 
 
 class StChangeHistoryWriter:
@@ -23,7 +25,7 @@ class StChangeHistoryWriter:
 
     """
 
-    def __init__(self, client: Any, cache: Any) -> None:
+    def __init__(self, client: SQLiteClient, cache: DataCache[Any] | None) -> None:
         """
         初始化 StChangeHistoryWriter.
 
@@ -112,7 +114,8 @@ class StChangeHistoryWriter:
         self._client.commit()
 
         # 失效缓存
-        self._cache.invalidate_pattern("st_change_history:*")
+        if self._cache is not None:
+            self._cache.invalidate_pattern("st_change_history:*")
 
         logger.info(
             "ST change recorded",

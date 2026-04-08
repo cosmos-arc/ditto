@@ -16,8 +16,9 @@ from prefect import task
 from ditto_interfaces.registry import create_ingestion_bundle
 
 
-# Prefect Task 返回类型是复杂的泛型，使用 Any 简化类型注解
-def create_ingest_task(dataset: Dataset) -> Any:
+# Prefect Task 泛型无法精确表达动态工厂返回类型，保留 Any
+# (Task[..., dict[str, object]] 会导致下游 submit 类型推断失败)
+def create_ingest_task(dataset: Dataset) -> Any:  # noqa: ANN401
     """
     创建摄取任务的工厂函数。
 

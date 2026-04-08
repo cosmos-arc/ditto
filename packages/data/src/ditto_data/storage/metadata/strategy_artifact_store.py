@@ -6,6 +6,9 @@ using SQLitePool for direct SQL access.  Uses orjson for serializing metadata
 (dict) to a JSON TEXT column.
 """
 
+from __future__ import annotations
+
+import sqlite3
 from typing import Any
 
 import orjson
@@ -85,7 +88,7 @@ WHERE artifact_id = ?
 # ---------------------------------------------------------------------------
 
 
-def _row_to_record(row: Any) -> StrategyArtifactRecord:
+def _row_to_record(row: sqlite3.Row) -> StrategyArtifactRecord:
     """Convert a sqlite3.Row-like object to StrategyArtifactRecord."""
     d: dict[str, Any] = dict(row)
     return StrategyArtifactRecord(

@@ -321,7 +321,7 @@ class MarketService:
             end_date=end_str,
         )
 
-    def _get_bars_reader(self, asset_class: str) -> Any:
+    def _get_bars_reader(self, asset_class: str) -> Any:  # noqa: ANN401
         """
         获取指定资产类别的 K线读取器.
 

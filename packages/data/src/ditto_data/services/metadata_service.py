@@ -454,7 +454,9 @@ class MetadataService:
 
     # ============ list_date 更新（→ InstrumentService） ============
 
-    def update_list_date(self, instrument_id: int, list_date: Any) -> None:
+    def update_list_date(
+        self, instrument_id: int, list_date: date | str | None
+    ) -> None:
         """更新证券的上市日期。委托到 InstrumentService."""
         return self._instrument.update_list_date(instrument_id, list_date)
 

@@ -35,6 +35,6 @@ class CommandHandler(Protocol[C_contra]):
        路由完善后启用。
     """
 
-    def handle(self, command: C_contra) -> Any:
+    def handle(self, command: C_contra) -> Any:  # noqa: ANN401
         """处理给定 command 并返回结果."""
         ...

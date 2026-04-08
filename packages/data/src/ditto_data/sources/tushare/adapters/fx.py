@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import polars as pl
 from ditto_infra.foundation import traced
 
@@ -44,7 +42,7 @@ class FxTushareAdapter:
         self,
         token: str | None = None,
         *,
-        _client: Any = None,
+        _client: TushareClient | None = None,
     ) -> None:
         """
         初始化汇率适配器.

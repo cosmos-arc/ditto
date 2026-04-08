@@ -13,7 +13,7 @@ from typing import Annotated, Any
 from pydantic import BeforeValidator
 
 
-def parse_date(v: Any) -> date | None:
+def parse_date(v: Any) -> date | None:  # noqa: ANN401
     """解析日期值，支持字符串和 date 对象."""
     if v is None:
         return None
@@ -44,7 +44,9 @@ def format_date(value: date | str | None) -> str | None:
 DateField = Annotated[date | None, BeforeValidator(parse_date)]
 
 
-def validate_date_range(self: Any) -> Any:
+def validate_date_range(
+    self: Any,  # noqa: ANN401
+) -> Any:  # noqa: ANN401
     """
     验证日期范围: start_date <= end_date.
 

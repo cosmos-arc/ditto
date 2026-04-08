@@ -20,7 +20,7 @@ def _resolve_log_dir(config: ObservabilityConfig) -> Path:
     return log_dir
 
 
-def _build_log_record(record: dict[str, Any] | Any) -> dict[str, Any]:
+def _build_log_record(record: dict[str, Any] | Any) -> dict[str, Any]:  # noqa: ANN401
     rec = record["record"]
     extra = record["extra"]
 
@@ -46,7 +46,7 @@ def _build_log_record(record: dict[str, Any] | Any) -> dict[str, Any]:
     return log_entry
 
 
-def _json_formatter(record: dict[str, Any] | Any) -> str:
+def _json_formatter(record: dict[str, Any] | Any) -> str:  # noqa: ANN401
     log_entry = _build_log_record(record)
     return orjson.dumps(log_entry).decode("utf-8") + "\n"
 

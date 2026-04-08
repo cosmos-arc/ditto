@@ -6,6 +6,9 @@ SQLitePool for direct SQL access.  Uses orjson for serializing spec_json
 (dict) and tags (tuple[str, ...]) to JSON TEXT columns.
 """
 
+from __future__ import annotations
+
+import sqlite3
 from typing import Any
 
 import orjson
@@ -98,7 +101,7 @@ WHERE strategy_id = ? AND version = ?
 # ---------------------------------------------------------------------------
 
 
-def _row_to_record(row: Any) -> StrategySpecRecord:
+def _row_to_record(row: sqlite3.Row) -> StrategySpecRecord:
     """Convert a sqlite3.Row-like object to StrategySpecRecord."""
     d: dict[str, Any] = dict(row)
     return StrategySpecRecord(

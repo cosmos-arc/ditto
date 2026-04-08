@@ -7,6 +7,7 @@ SQLitePool for direct SQL access.
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import UTC, datetime
 from typing import Any
 
@@ -76,7 +77,7 @@ WHERE run_id = ?
 """
 
 
-def _row_to_record(row: Any) -> StrategyRunRecord:
+def _row_to_record(row: sqlite3.Row) -> StrategyRunRecord:
     """Convert a sqlite3.Row-like object to StrategyRunRecord."""
     data: dict[str, Any] = dict(row)
     return StrategyRunRecord(

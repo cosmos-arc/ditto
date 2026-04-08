@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import orjson
 import typer
+from pydantic import BaseModel
 
 #: 表格显示记录数上限
 TABLE_DISPLAY_LIMIT = 20
 
 
-def output_json(items: list[Any]) -> None:
+def output_json(items: Sequence[BaseModel]) -> None:
     """
     输出 Pydantic 模型列表的 JSON 格式.
 
@@ -23,7 +25,7 @@ def output_json(items: list[Any]) -> None:
     typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
 
 
-def output_json_single(item: Any) -> None:
+def output_json_single(item: BaseModel) -> None:
     """
     输出单个 Pydantic 模型对象的 JSON 格式.
 

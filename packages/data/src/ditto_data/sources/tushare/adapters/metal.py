@@ -6,8 +6,6 @@ Uses fx_daily API with METAL classify to fetch XAUUSD and XAGUSD data.
 
 from __future__ import annotations
 
-from typing import Any
-
 import polars as pl
 from ditto_infra.foundation import traced
 
@@ -54,7 +52,7 @@ class MetalTushareAdapter:
         self,
         token: str | None = None,
         *,
-        _client: Any = None,
+        _client: TushareClient | None = None,
     ) -> None:
         """
         初始化贵金属适配器.

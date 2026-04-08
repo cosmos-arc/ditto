@@ -10,7 +10,6 @@ from opentelemetry import trace as otel_trace
 from .config import EffectiveConfig, ObservabilityConfig
 from .logging import configure_logging, logger
 from .metrics import Metrics, configure_metrics
-from .testing import get_recorded_metrics, get_recorded_spans, reset_for_testing
 from .tracing import (
     configure_tracing,
     get_span_id,
@@ -23,17 +22,24 @@ __all__ = [
     "EffectiveConfig",
     "Metrics",
     "ObservabilityConfig",
-    "get_recorded_metrics",
-    "get_recorded_spans",
     "get_span_id",
     "get_trace_id",
     "init",
     "logger",
-    "reset_for_testing",
     "shutdown",
     "span",
     "traced",
 ]
+
+
+def __getattr__(name: str) -> object:
+    """延迟导入 testing 模块，避免循环依赖。"""
+    if name in ("get_recorded_metrics", "get_recorded_spans", "reset_for_testing"):
+        from . import testing  # noqa: PLC0415
+
+        return getattr(testing, name)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
 
 
 @dataclass

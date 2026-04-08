@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, ClassVar
 
 from ditto_infra.foundation import logger
+from ditto_infra.foundation.cache import DataCache
 
 from ditto_data.models.metadata import (
     ETFExtension,
@@ -13,6 +15,7 @@ from ditto_data.models.metadata import (
     InstrumentRegistration,
     StockExtension,
 )
+from ditto_data.storage.sqlite_client import SQLiteClient
 
 
 class InstrumentWriter:
@@ -35,7 +38,9 @@ class InstrumentWriter:
         IndexExtension: "_register_index",
     }
 
-    def __init__(self, client: Any, cache: Any | None = None) -> None:
+    def __init__(
+        self, client: SQLiteClient, cache: DataCache[Any] | None = None
+    ) -> None:
         """
         初始化 InstrumentWriter。
 
@@ -227,7 +232,9 @@ class InstrumentWriter:
             ],
         )
 
-    def update_list_date(self, instrument_id: int, list_date: Any) -> None:
+    def update_list_date(
+        self, instrument_id: int, list_date: date | str | None
+    ) -> None:
         """
         更新证券的上市日期.
 

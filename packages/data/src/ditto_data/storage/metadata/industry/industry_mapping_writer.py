@@ -10,8 +10,10 @@ from __future__ import annotations
 from typing import Any
 
 from ditto_infra.foundation import logger, traced
+from ditto_infra.foundation.cache import DataCache
 
 from ditto_data.models.metadata import IndustryMapping
+from ditto_data.storage.sqlite_client import SQLiteClient
 
 
 class IndustryMappingWriter:
@@ -26,7 +28,7 @@ class IndustryMappingWriter:
 
     """
 
-    def __init__(self, client: Any, cache: Any) -> None:
+    def __init__(self, client: SQLiteClient, cache: DataCache[Any]) -> None:
         """
         初始化 IndustryMappingWriter.
 

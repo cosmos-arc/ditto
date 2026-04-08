@@ -36,7 +36,7 @@ class Adjustment(StrEnum):
     HFQ = "hfq"
 
 
-def _parse_adjustment(v: Any) -> Adjustment:
+def _parse_adjustment(v: Any) -> Adjustment:  # noqa: ANN401
     """解析复权类型，支持字符串和 Adjustment 对象."""
     if isinstance(v, Adjustment):
         return v

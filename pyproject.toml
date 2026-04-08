@@ -72,10 +72,9 @@ select = [
 
 ignore = [
     "B008",   # 允许函数调用作为默认参数（FastAPI Depends）
-    "N803",
-    "N806",
-    "N818",
-    "ANN401", # 允许 Any 类型注解
+    "N803",   # 函数参数命名：第三方库适配（numpy 矩阵变量等）
+    "N806",   # 函数内变量命名：数学/科学计算常量（X, XtX, CONVERGENCE_TOL 等）
+    "N818",   # DittoException 基类命名是设计选择
     "RUF002", # 中文标点符号
     "RUF003", # 中文注释标点符号
     "D203",   # 与 Black 冲突
@@ -107,6 +106,8 @@ unfixable = []
 "packages/engine/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
 "packages/engine/src/ditto_engine/portfolio/report_views.py" = ["D102"]
+# 第三方 stub 文件包含 Any 类型签名，无法修改
+"typings/**/*.pyi" = ["ANN401"]
 
 # 测试文件 - 最宽松（所有 tests/ 目录通用）
 "**/tests/**/*.py" = [
@@ -154,7 +155,6 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.ruff.lint.flake8-annotations]
-ignore-fully-untyped = true
 suppress-none-returning = true
 suppress-dummy-args = true
 

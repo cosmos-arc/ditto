@@ -10,6 +10,7 @@ import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_app.query.source import SourceQueryFacade
+from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger
 from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
@@ -165,7 +166,7 @@ async def get_source_data(
     )
 
 
-def _get_data_source(facade: SourceQueryFacade, source: str) -> Any:
+def _get_data_source(facade: SourceQueryFacade, source: str) -> DataSource:
     """获取指定数据源."""
     if source == "tushare":
         return facade.tushare
@@ -178,7 +179,7 @@ SUPPORTED_SOURCE_DATASETS: set[str] = {"stock_daily"}
 
 
 def _fetch_source_data(
-    source: Any,
+    source: DataSource,
     dataset: str,
     source_ticker: str,
     start_date: str,

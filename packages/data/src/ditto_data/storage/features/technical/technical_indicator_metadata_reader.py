@@ -7,10 +7,10 @@ Following design document at docs/plans/2026-02-09-data-cqrs-refactor.md
 
 from __future__ import annotations
 
-from typing import Any
-
 import polars as pl
 from ditto_infra.foundation import logger, traced
+
+from ditto_data.storage.sqlite_client import SQLiteClient
 
 
 class TechnicalIndicatorMetadataReader:
@@ -25,7 +25,7 @@ class TechnicalIndicatorMetadataReader:
 
     """
 
-    def __init__(self, client: Any) -> None:
+    def __init__(self, client: SQLiteClient) -> None:
         """
         Initialize TechnicalIndicatorMetadataReader.
 
