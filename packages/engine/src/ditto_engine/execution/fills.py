@@ -3,22 +3,15 @@ FillOutcome -- 显式联合类型 (F4).
 
 替代 v2 的 FillEvent | None + side-channel 模式。
 FillModel 恢复纯函数语义，无隐式状态。
-
-Note:
-    FillEvent 已提升至 ditto_engine.accounting.fills（消除循环依赖），
-    此处保留 re-export 以保持向后兼容。
-
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-# re-export: FillEvent 定义在 accounting 层
 from ditto_engine.accounting.fills import FillEvent
 
 __all__ = [
-    "FillEvent",
     "FillOutcome",
     "Filled",
     "NoFill",

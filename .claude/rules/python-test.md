@@ -25,9 +25,8 @@ paths:
 ## 目录结构
 
 ```
-tests/
+packages/*/tests/
 ├── conftest.py
-├── fixtures/
 ├── unit/           # 80% - 每次提交，完全 Mock，测原子功能
 └── integration/    # 20% - CI运行，测"接缝"处（DAO、HTTP Client）
 ```
@@ -43,23 +42,22 @@ tests/
 #### 目录映射规则
 
 ```
-src/ditto_infra/                         tests/unit/
+src/ditto_infra/                         packages/infra/tests/unit/
 ├── foundation/               →          ├── foundation/
 │   ├── cache/                →          │   ├── cache/
 │   ├── config/               →          │   ├── config/
 │   └── observability/        →          │   └── observability/
 
-src/ditto_data/                       tests/unit/
-├── alerts/                   →          ├── alerts/
-├── accessors/                →          ├── accessors/
-├── stores/                   →          ├── stores/
-├── dq/                       →          ├── dq/
-├── models/                   →          ├── models/
-└── runtime/                  →          └── runtime/
+src/ditto_data/                       packages/data/tests/unit/
+├── storage/                 →          ├── storage/
+├── services/                →          ├── services/
+├── sources/                 →          ├── sources/
+├── quality/                 →          ├── quality/
+├── models/                  →          ├── models/
+└── runtime/                 →          └── runtime/
 
-src/ditto_interfaces/                           tests/unit/
+src/ditto_interfaces/                   interfaces/tests/unit/
 ├── cli/                      →          ├── cli/
-├── services/                 →          ├── services/
 ├── jobs/                     →          ├── jobs/
 ├── models/                   →          ├── models/
 └── registry/                 →          └── registry/
@@ -170,21 +168,17 @@ git commit -m "refactor: rename cache to caching
 # ✅ 单元测试：所有依赖都是 Mock
 
 def test_data_is_trading_day_delegates_correctly(mocker):
-    """测试 Data 委托逻辑，不关心 Calendar 如何实现"""
+    """测试 MetadataService 委托逻辑，不关心底层如何实现"""
     # Mock 所有依赖
-    mock_calendar = mocker.Mock()
-    mock_calendar.is_trading_day.return_value = True
+    mock_reader = mocker.Mock()
+    mock_reader.is_trading_day.return_value = True
 
     # 直接创建被测对象
-    hub = Data(
-        data_root=Path("/tmp"),
-        calendar=mock_calendar,
-        # ... 其他 Mock 依赖
-    )
+    service = MetadataService(reader=mock_reader)
 
     # 验证委托逻辑
-    result = hub.is_trading_day("2024-01-02")
-    mock_calendar.is_trading_day.assert_called_once_with("2024-01-02")
+    result = service.is_trading_day("2024-01-02")
+    mock_reader.is_trading_day.assert_called_once_with("2024-01-02")
     assert result is True
 ```
 
@@ -201,21 +195,21 @@ def test_data_is_trading_day_delegates_correctly(mocker):
 # ✅ 集成测试：测试 DAO 与数据库的"接缝"
 
 @pytest.mark.integration
-def test_security_store_can_write_and_read_sqlite():
-    """测试 SecurityStore 能否正确写入 SQLite 数据库"""
+def test_metadata_writer_can_write_and_read_sqlite():
+    """测试 MetadataWriter 能否正确写入 SQLite 数据库"""
     # 真实 SQLite 数据库（:memory:，与真实数据隔离）
     pool = SQLitePool(":memory:", schema_path=_SCHEMA_PATH)
     pool.init_schema()
 
-    # 真实 SecurityStore
-    sqlite_client = SQLiteClient(pool)
-    store = SecurityStore(sqlite_client)
+    # 真实 Writer
+    writer = MetadataWriter(pool)
 
     # 验证"接缝"：能否写入数据库
-    store.add_security(sid=1000001, symbol="000001.SZ", source="tushare")
+    writer.write_instruments(df)
 
     # 验证"接缝"：能否读取数据库
-    df = store.get_by_sid(1000001)
+    reader = MetadataReader(pool)
+    df = reader.get_by_id(1000001)
     assert df["symbol"][0] == "000001.SZ"
 ```
 
@@ -279,7 +273,7 @@ def test_tushare_client_can_parse_api_response(respx_mock):
 |------|-----------------|----------------|
 | **DAO** | `mocker.Mock()` | 真实数据库 + 真实 SQL |
 | **HTTP Client** | `respx.mock()` | 真实 Client + Mock 响应 |
-| **Data** | Mock 所有 Accessor | （不测，中间层无接缝） |
+| **Data** | Mock 所有 Reader/Writer | （不测，中间层无接缝） |
 
 ### 常见误区
 

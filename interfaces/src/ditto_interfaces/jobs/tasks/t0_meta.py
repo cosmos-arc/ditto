@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_app._reexports import Dataset
 from ditto_app.config import INGESTION_SPECS
+from ditto_data.models import Dataset
 from prefect import task
 
 from ditto_interfaces.registry import create_ingestion_bundle

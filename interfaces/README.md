@@ -11,16 +11,27 @@
 ```
 interfaces/
 ├── src/ditto_interfaces/
-│   ├── api/            # FastAPI 路由
-│   ├── cli/            # Typer CLI（main.py, context.py, executor.py）
-│   ├── config/         # 配置加载
-│   ├── jobs/           # Prefect 任务（context.py）
-│   ├── models/         # API Pydantic 模型（market, capital, fundamental, macro 等）
-│   ├── registry/       # Dishka DI Composition Root（container.py, init_providers.py）
-│   ├── main.py         # FastAPI 入口
+│   ├── api/                # FastAPI 路由
+│   │   ├── errors.py       # API 层错误处理
+│   │   └── routes/         # capital, commodity, debug, fundamental, fx, ingestion, macro, market, metadata, portfolio, source
+│   ├── cli/                # Typer CLI（main.py, context.py, executor.py）
+│   │   ├── commands/       # factory.py, init.py, strategy.py
+│   │   │   ├── backfill/   # capital, fundamental, macro, market, metadata
+│   │   │   ├── ingest/     # capital, fundamental, macro, market, metadata
+│   │   │   └── query/      # capital, fundamental, macro, market, metadata
+│   │   ├── models/         # （预留）
+│   │   └── utils/          # identifier.py, output.py, params.py, validation.py
+│   ├── config/             # 配置加载（loader.py）
+│   ├── jobs/               # Prefect 任务（context.py）
+│   │   ├── flows/          # backfill, daily, deploy, materialization, repair, research
+│   │   └── tasks/          # dq_batch, monitoring, t0_meta
+│   ├── models/             # API Pydantic 模型（capital, commodity, common, fundamental, fx, identifier, macro, market, metadata）
+│   ├── registry/           # Dishka DI Composition Root（container.py, init_providers.py）
+│   │   ├── contexts/       # bundle, ingestion, materialization, query, strategy
+│   │   └── infra/          # config, notification, observability
+│   ├── main.py             # FastAPI 入口
 │   ├── middleware.py
-│   ├── errors.py
-│   ├── exceptions.py
+│   ├── exceptions.py       # 自定义异常
 │   └── testing.py
 └── tests/
     ├── unit/

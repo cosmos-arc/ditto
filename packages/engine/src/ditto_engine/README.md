@@ -13,7 +13,7 @@ interfaces → app → engine → kernel
 
 ### alpha/
 Alpha 决策层。StrategySpec 策略语义契约、StrategyPipeline 流水线编排、DecisionStage Protocol。
-内置 8 个 Stages（Universe / Signal / Scoring / Filtering / Selection / RiskLock / Trend / Regime）和
+内置 7 个 Stages（Universe / Signal / Scoring / Filtering / Selection / RiskLock / Trend / Regime）和
 4 个策略模板（etf_rotation / etf_trend_swing / stock_sector_rotation / stock_selection_trend）。
 DecisionFrame 通过 Polars DataFrame 列名约定流转。
 
@@ -34,10 +34,6 @@ AllocationStage / ConstraintStage 适配 DecisionStage、compare_reports() 报�
 ### accounting/
 共享账户契约层。Account（唯一可变对象）/ CashBook / OrderBook / Position 均为 frozen dataclass，
 AccountView 只读快照供上层安全消费，BuyingPowerModel Protocol。
-
-### orchestrator/
-交易编排抽象。TradingOrchestrator Protocol 定义 `run() -> EngineResult` 接口，
-BacktestTradingOrchestrator 是 EngineLoop 的别名。
 
 ### risk/
 风险管理。风险模型计算（回撤检测、风险度量），告警编排在 App 层。

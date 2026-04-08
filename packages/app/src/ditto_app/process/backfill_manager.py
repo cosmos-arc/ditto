@@ -24,23 +24,16 @@ class BackfillManager:
         ingestion_log_service: IngestionLogService,
     ) -> None:
         """
-
         初始化 BackfillManager。
 
         Args:
             coordinator: IngestionCoordinator 实例。
-
             metadata_service: MetadataService 实例。
-
             ingestion_log_service: IngestionLogService 实例。
-
-
 
         """
         self._coordinator = coordinator
-
         self._metadata_service = metadata_service
-
         self._ingestion_log_service = ingestion_log_service
 
     def backfill_range(
@@ -51,24 +44,16 @@ class BackfillManager:
         parallel: int = 1,
     ) -> BackfillResult:
         """
-
         全量回补指定日期范围。
 
         Args:
             dataset: 数据集名称。
-
             start_date: 开始日期 (YYYY-MM-DD)。
-
             end_date: 结束日期 (YYYY-MM-DD)。
-
             parallel: 并行度，默认为 1（串行）。
-
-
 
         Returns:
             BackfillResult: 回补结果。
-
-
 
         """
         logger.info(
@@ -80,10 +65,7 @@ class BackfillManager:
             parallel=parallel,
         )
 
-        # 获取日期范围内的所有交易日
-
         trade_dates = self._metadata_service.list_trading_days(start_date, end_date)
-
         if not trade_dates:
             return BackfillResult(
                 dataset=dataset,
@@ -94,52 +76,130 @@ class BackfillManager:
                 results=(),
             )
 
+        # 按年份分组，并发度上限为 min(parallel, 年份数)
+        # 注意：同一年内的日期仍会并行执行，依赖 FileLockManager 避免冲突
+        dates_by_year: defaultdict[str, list[str]] = defaultdict(list)
+        for trade_date in trade_dates:
+            dates_by_year[trade_date[:4]].append(trade_date)
+
+        result = self._execute_backfill(
+            dataset=dataset,
+            trade_dates=trade_dates,
+            parallel=parallel,
+            log_event="backfill_range_complete",
+        )
+        return result
+
+    def backfill_missing(
+        self,
+        dataset: str,
+        source: str = "tushare",
+        parallel: int = 1,
+    ) -> BackfillResult:
+        """
+        回补缺失的交易日。
+
+        Args:
+            dataset: 数据集名称。
+            source: 数据源标识符（默认: "tushare"）。
+            parallel: 并行度，默认为 1（串行）。
+
+        Returns:
+            BackfillResult: 回补结果。
+
+        """
+        logger.info(
+            "开始回补缺失数据",
+            event="backfill_missing_start",
+            dataset=dataset,
+            parallel=parallel,
+        )
+
+        first_date = self._metadata_service.get_first_trading_day()
+        last_date = self._metadata_service.get_last_trading_day()
+        if not first_date or not last_date:
+            return BackfillResult(
+                dataset=dataset,
+                total_dates=0,
+                success_count=0,
+                skipped_count=0,
+                failed_count=0,
+                results=(),
+            )
+
+        all_trade_dates = self._metadata_service.list_trading_days(
+            first_date,
+            last_date,
+        )
+        if not all_trade_dates:
+            return BackfillResult(
+                dataset=dataset,
+                total_dates=0,
+                success_count=0,
+                skipped_count=0,
+                failed_count=0,
+                results=(),
+            )
+
+        ingested_dates = self._ingestion_log_service.list_ingested_dates(
+            dataset,
+            source,
+        )
+        missing_dates = set(all_trade_dates) - set(ingested_dates)
+        if not missing_dates:
+            return BackfillResult(
+                dataset=dataset,
+                total_dates=0,
+                success_count=0,
+                skipped_count=0,
+                failed_count=0,
+                results=(),
+            )
+
+        sorted_missing_dates = sorted(missing_dates)
+
+        return self._execute_backfill(
+            dataset=dataset,
+            trade_dates=sorted_missing_dates,
+            parallel=parallel,
+            log_event="backfill_missing_complete",
+        )
+
+    def _execute_backfill(
+        self,
+        dataset: str,
+        trade_dates: list[str],
+        parallel: int,
+        log_event: str,
+    ) -> BackfillResult:
+        """
+        执行回补：并行/串行摄取 + 结果统计。
+
+        Args:
+            dataset: 数据集名称。
+            trade_dates: 待回补的交易日期列表。
+            parallel: 并行度。
+            log_event: 完成日志事件名。
+
+        Returns:
+            BackfillResult: 回补结果。
+
+        """
         results: list[IngestionResult] = []
 
         if parallel > 1:
-            # 按年份分组，并发度上限为 min(parallel, 年份数)
-
-            # 注意：同一年内的日期仍会并行执行，依赖 FileLockManager 避免冲突
-
-            dates_by_year: defaultdict[str, list[str]] = defaultdict(list)
-
-            for trade_date in trade_dates:
-                year = trade_date[:4]  # 提取年份
-
-                dates_by_year[year].append(trade_date)
-
-            with ThreadPoolExecutor(
-                max_workers=min(parallel, len(dates_by_year))
-            ) as executor:
-                futures: dict[Future[IngestionResult], str] = {}
-
-                for _year, year_dates in dates_by_year.items():
-                    for date in year_dates:
-                        future = executor.submit(
-                            self._coordinator.ingest_date,
-                            dataset,
-                            date,
-                        )
-
-                        futures[future] = date
-
+            with ThreadPoolExecutor(max_workers=parallel) as executor:
+                futures: dict[Future[IngestionResult], str] = {
+                    executor.submit(self._coordinator.ingest_date, dataset, d): d
+                    for d in trade_dates
+                }
                 for future in as_completed(futures):
-                    result = future.result()
-
-                    results.append(result)
-
+                    results.append(future.result())
         else:
-            # 串行执行
-
             for trade_date in trade_dates:
-                result = self._coordinator.ingest_date(dataset, trade_date)
-
-                results.append(result)
-
-        # 统计结果
+                results.append(self._coordinator.ingest_date(dataset, trade_date))
 
         counts = count_results(results)
-
         backfill_result = BackfillResult(
             dataset=dataset,
             total_dates=len(trade_dates),
@@ -151,148 +211,7 @@ class BackfillManager:
 
         logger.info(
             "回补完成",
-            event="backfill_range_complete",
-            dataset=dataset,
-            total_dates=backfill_result.total_dates,
-            success_count=backfill_result.success_count,
-            skipped_count=backfill_result.skipped_count,
-            failed_count=backfill_result.failed_count,
-        )
-
-        return backfill_result
-
-    def backfill_missing(
-        self,
-        dataset: str,
-        source: str = "tushare",
-        parallel: int = 1,
-    ) -> BackfillResult:
-        """
-
-        回补缺失的交易日。
-
-        Args:
-            dataset: 数据集名称。
-
-            source: 数据源标识符（默认: "tushare"）。
-
-            parallel: 并行度，默认为 1（串行）。
-
-
-
-        Returns:
-            BackfillResult: 回补结果。
-
-
-
-        """
-        logger.info(
-            "开始回补缺失数据",
-            event="backfill_missing_start",
-            dataset=dataset,
-            parallel=parallel,
-        )
-
-        # 获取日历的完整日期范围
-
-        first_date = self._metadata_service.get_first_trading_day()
-
-        last_date = self._metadata_service.get_last_trading_day()
-
-        if not first_date or not last_date:
-            return BackfillResult(
-                dataset=dataset,
-                total_dates=0,
-                success_count=0,
-                skipped_count=0,
-                failed_count=0,
-                results=(),
-            )
-
-        # 获取所有交易日
-
-        all_trade_dates = self._metadata_service.list_trading_days(
-            first_date, last_date
-        )
-
-        if not all_trade_dates:
-            return BackfillResult(
-                dataset=dataset,
-                total_dates=0,
-                success_count=0,
-                skipped_count=0,
-                failed_count=0,
-                results=(),
-            )
-
-        # 获取已摄取的日期
-
-        ingested_dates = self._ingestion_log_service.list_ingested_dates(
-            dataset, source
-        )
-
-        # 计算缺失的日期
-
-        missing_dates = set(all_trade_dates) - set(ingested_dates)
-
-        if not missing_dates:
-            return BackfillResult(
-                dataset=dataset,
-                total_dates=0,
-                success_count=0,
-                skipped_count=0,
-                failed_count=0,
-                results=(),
-            )
-
-        # 按日期排序
-
-        sorted_missing_dates = sorted(missing_dates)
-
-        # 回补缺失的日期
-
-        results: list[IngestionResult] = []
-
-        if parallel > 1:
-            # 并行执行
-
-            with ThreadPoolExecutor(max_workers=parallel) as executor:
-                futures = {
-                    executor.submit(
-                        self._coordinator.ingest_date, dataset, trade_date
-                    ): trade_date
-                    for trade_date in sorted_missing_dates
-                }
-
-                for future in as_completed(futures):
-                    result = future.result()
-
-                    results.append(result)
-
-        else:
-            # 串行执行
-
-            for trade_date in sorted_missing_dates:
-                result = self._coordinator.ingest_date(dataset, trade_date)
-
-                results.append(result)
-
-        # 统计结果
-
-        counts = count_results(results)
-
-        backfill_result = BackfillResult(
-            dataset=dataset,
-            total_dates=len(sorted_missing_dates),
-            success_count=counts.success,
-            skipped_count=counts.skipped,
-            failed_count=counts.failed,
-            results=tuple(results),
-        )
-
-        logger.info(
-            "缺失数据回补完成",
-            event="backfill_missing_complete",
+            event=log_event,
             dataset=dataset,
             total_dates=backfill_result.total_dates,
             success_count=backfill_result.success_count,

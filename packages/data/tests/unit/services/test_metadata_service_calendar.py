@@ -6,10 +6,8 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.services.metadata_service import (
-    MetadataService,
-    _compute_calendar_enrichment,
-)
+from ditto_data.services.metadata.calendar import compute_calendar_enrichment
+from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.tushare.transformer import TushareExchangeTransformer
 
@@ -73,15 +71,15 @@ def service(
     )
 
 
-# ============ _compute_calendar_enrichment 纯函数测试 ============
+# ============ compute_calendar_enrichment 纯函数测试 ============
 
 
 class TestComputeCalendarEnrichment:
-    """Tests for the _compute_calendar_enrichment pure function."""
+    """Tests for the compute_calendar_enrichment pure function."""
 
     def test_empty_input_returns_empty(self) -> None:
         """空列表应返回空结果."""
-        result = _compute_calendar_enrichment([])
+        result = compute_calendar_enrichment([])
         assert result == []
 
     def test_single_trading_day(self) -> None:
@@ -89,7 +87,7 @@ class TestComputeCalendarEnrichment:
         days = [
             {"trade_date": "2024-01-02", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert len(result) == 1
         assert result[0]["trade_date"] == "2024-01-02"
         assert result[0]["is_open"] is True
@@ -107,7 +105,7 @@ class TestComputeCalendarEnrichment:
             {"trade_date": "2024-01-03", "is_open": True},
             {"trade_date": "2024-01-04", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert len(result) == 3
 
         assert result[0]["prev_trade_date"] is None
@@ -126,7 +124,7 @@ class TestComputeCalendarEnrichment:
             {"trade_date": "2024-01-02", "is_open": True},
             {"trade_date": "2024-01-06", "is_open": False},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert len(result) == 1
         assert result[0]["trade_date"] == "2024-01-02"
 
@@ -136,7 +134,7 @@ class TestComputeCalendarEnrichment:
             {"trade_date": "2024-01-31", "is_open": True},
             {"trade_date": "2024-02-01", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["is_month_end"] is True
         assert result[1]["is_month_end"] is False
 
@@ -146,7 +144,7 @@ class TestComputeCalendarEnrichment:
             {"trade_date": "2024-03-29", "is_open": True},
             {"trade_date": "2024-04-01", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["is_quarter_end"] is True
         assert result[1]["is_quarter_end"] is False
 
@@ -158,7 +156,7 @@ class TestComputeCalendarEnrichment:
             {"trade_date": "2024-01-05", "is_open": True},
             {"trade_date": "2024-01-08", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["is_week_end"] is True
         assert result[1]["is_week_end"] is False
 
@@ -168,7 +166,7 @@ class TestComputeCalendarEnrichment:
             {"trade_date": "2024-12-31", "is_open": True},
             {"trade_date": "2025-01-02", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["is_month_end"] is True
         assert result[0]["is_quarter_end"] is True
         # 2024-12-31 ISO calendar: (2025, 1, 2) — same week as 2025-01-02
@@ -185,7 +183,7 @@ class TestComputeCalendarEnrichment:
         days = [
             {"trade_date": "2024-01-08", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         # date(2024, 1, 8).isocalendar() = (2024, 2, 1)
         assert result[0]["week_of_year"] == 2
 
@@ -194,7 +192,7 @@ class TestComputeCalendarEnrichment:
         days = [
             {"trade_date": "2024-01-02", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["is_half_day"] is False
 
     def test_default_exchange_sse(self) -> None:
@@ -202,7 +200,7 @@ class TestComputeCalendarEnrichment:
         days = [
             {"trade_date": "2024-01-02", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["exchange"] == "SSE"
 
     def test_custom_exchange_preserved(self) -> None:
@@ -210,7 +208,7 @@ class TestComputeCalendarEnrichment:
         days = [
             {"trade_date": "2024-01-02", "is_open": True, "exchange": "SZSE"},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["exchange"] == "SZSE"
 
     def test_default_is_special_false(self) -> None:
@@ -218,7 +216,7 @@ class TestComputeCalendarEnrichment:
         days = [
             {"trade_date": "2024-01-02", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["is_special"] is False
 
     def test_is_special_true_preserved(self) -> None:
@@ -226,7 +224,7 @@ class TestComputeCalendarEnrichment:
         days = [
             {"trade_date": "2024-09-18", "is_open": True, "is_special": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["is_special"] is True
 
     def test_sorted_by_trade_date(self) -> None:
@@ -236,7 +234,7 @@ class TestComputeCalendarEnrichment:
             {"trade_date": "2024-01-02", "is_open": True},
             {"trade_date": "2024-01-03", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["trade_date"] == "2024-01-02"
         assert result[1]["trade_date"] == "2024-01-03"
         assert result[2]["trade_date"] == "2024-01-04"
@@ -246,7 +244,7 @@ class TestComputeCalendarEnrichment:
         days = [
             {"trade_date": "2024-01-02", "is_open": True},
         ]
-        result = _compute_calendar_enrichment(days)
+        result = compute_calendar_enrichment(days)
         assert result[0]["is_week_end"] is False
         assert result[0]["is_month_end"] is False
         assert result[0]["is_quarter_end"] is False

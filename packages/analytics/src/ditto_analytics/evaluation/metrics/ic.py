@@ -224,6 +224,10 @@ def ic_decay(
     ``IC(lag) = A * exp(-lag / half_life)`` using least-squares on
     ``log(IC^2)`` vs *lag*.
 
+    .. warning::
+       此函数使用前向收益率（shift(-lag)），仅限离线因子评估使用。
+       禁止用于任何实盘信号生成路径。
+
     Args:
         factor_df: DataFrame with factor values.
         close_df: DataFrame with ``[date, entity, close]`` prices.

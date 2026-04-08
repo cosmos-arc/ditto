@@ -16,9 +16,23 @@ ditto_engine/
 ├── accounting/        # 共享账户契约层（Account / CashBook / OrderBook / Position）
 ├── execution/         # 执行层（Planner / Brokerage / TradeBuilder / Reality Model）
 ├── alpha/             # Alpha 决策层（StrategySpec / Pipeline / 内置 Stages / 策略模板）
+│   ├── context.py     # 策略运行上下文
+│   ├── models.py      # Alpha 领域模型
+│   ├── specs.py       # StrategySpec 定义
+│   ├── pipeline.py    # StrategyPipeline
+│   ├── protocols.py   # DecisionStage Protocol
+│   ├── validation.py  # 参数校验
+│   ├── builtins/      # 内置 Stages（universe/signal/scoring/filtering/selection/regime）
+│   └── templates/     # 策略模板（etf_rotation/etf_trend_swing/stock_sector_rotation/stock_selection_trend）
 ├── backtest/          # 回测引擎（EngineLoop / BacktestTradingOrchestrator / Manifest / Statistics / Audit）
+│   ├── engine.py      # EngineLoop 主循环
+│   ├── data_feed.py   # ProviderBackedDataFeed
+│   ├── manifest.py    # RunManifest
+│   ├── statistics.py  # BacktestReport / Statistics
+│   └── audit/         # 执行审计
+│       ├── collector.py  # ExecutionAuditCollector
+│       └── records.py    # 审计记录类型
 ├── portfolio/         # 组合构建（WeightAllocator / ConstraintChecker / compare_reports）
-├── orchestrator/      # 交易编排抽象（TradingOrchestrator Protocol / Stage 合约 / 别名）
 ├── risk/              # 风险管理（PreTrade 检查 / PostTrade Guard / 风险模型）
 └── events.py          # 领域事件定义
 ```
@@ -30,7 +44,7 @@ ditto_engine/
 **职责**：因子计算算法（RS、动量、波动率）
 
 **关键点**：
-- 计算逻辑在 Engine（纯函数、无状态）
+- 因子计算在 Analytics 层（ditto_analytics.factors/），Engine 层无独立因子计算模块
 - 编排流程在 Application（获取数据、调用计算、保存结果）
 - 存储在 Data 层（parquet 文件）
 
@@ -98,15 +112,6 @@ ditto_engine/
 - RunManifest 记录运行清单（规则引用、输入引用、配置哈希）
 - ExecutionAuditCollector 收集账户快照/成交/风控审计
 - 详见 v3 设计文档 §7, §8
-
-### Orchestrator（交易编排抽象）
-
-**职责**：TradingOrchestrator Protocol + Backtest 别名
-
-**关键点**：
-- TradingOrchestrator Protocol 定义 `run() -> EngineResult` 接口
-- BacktestTradingOrchestrator 是 EngineLoop 的别名，满足 TradingOrchestrator Protocol
-- EventBus 可选注入到 EngineLoop，EventBus=None 时零副作用
 
 ### Risk（风险管理）
 
@@ -179,11 +184,12 @@ packages/engine/
 └── tests/
     ├── unit/
     │   ├── accounting/
+    │   ├── alpha/           # 对应 src/ditto_engine/alpha/
     │   ├── backtest/
+    │   ├── engine/          # test_specs_unit.py
     │   ├── execution/
     │   ├── portfolio/
-    │   ├── risk/
-    │   └── strategy/  # 对应 src/ditto_engine/alpha/
+    │   └── risk/
     └── integration/
 ```
 

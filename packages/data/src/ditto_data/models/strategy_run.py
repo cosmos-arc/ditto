@@ -8,10 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_kernel.enums import RunStatus as _KernelRunStatus
-
-# RunStatus 已迁移到 ditto_kernel.enums，此处 re-export 保持向后兼容
-RunStatus = _KernelRunStatus
+from ditto_kernel.enums import RunStatus
 
 
 @dataclass(frozen=True)
@@ -41,4 +38,4 @@ class StrategyRunRecord:
     error_message: str = ""
 
 
-__all__ = ["RunStatus", "StrategyRunRecord"]
+__all__ = ["StrategyRunRecord"]

@@ -77,7 +77,7 @@ config/
 | `ditto_infra` | `foundation/config/settings.py` | `Settings`, `SystemSettings`, `ObservabilitySettings` |
 | `ditto_data` | `config/data_store.py` | `DataStoreSettings`, `FileStorageSettings` |
 | `ditto_data` | `config/data_source.py` | `DataSourceSettings` |
-| `ditto_engine` | `quality/config.py` | `DQSettings` |
+| `ditto_data` | `quality/config.py` | `DQSettings` |
 
 ### 禁止事项
 

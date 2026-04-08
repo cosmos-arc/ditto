@@ -15,18 +15,17 @@ Alpha 决策层，基于 Pipeline + Stage 架构提供可组合的策略信号�
 ```
 alpha/
 ├── pipeline.py          # StrategyPipeline — Stage 编排器
-├── spec.py              # StrategySpec — 策略完整语义契约
+├── specs.py             # StrategySpec — 策略完整语义契约
 ├── context.py           # StrategyContext — 策略运行时上下文
 ├── models.py            # Signal / DecisionFrame / MarketState
 ├── protocols.py         # DecisionStage Protocol
 ├── validation.py        # validate_spec_params()
-├── stages/              # 内置 Stages
+├── builtins/            # 内置 Stages
 │   ├── universe.py      # UniverseStage — 标的筛选
 │   ├── signal.py        # SignalStage — 信号计算
 │   ├── scoring.py       # ScoringStage — 得分排名
-│   ├── filtering.py     # FilteringStage — 条件过滤
+│   ├── filtering.py     # FilteringStage — 条件过滤（含 RiskLockFilter）
 │   ├── selection.py     # SelectionStage — Top-N 选择
-│   ├── risk_lock.py     # RiskLockFilterStage — 风控锁定
 │   └── regime.py        # RegimeStage — 市场状态
 └── templates/           # 策略模板
     ├── etf_rotation.py          # ETF 轮动模板

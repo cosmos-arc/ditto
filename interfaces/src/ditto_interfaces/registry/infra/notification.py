@@ -28,6 +28,7 @@ def _mask_webhook_url(url: str) -> str:
         parsed = urlparse(url)
         return f"{parsed.scheme}://{parsed.netloc}/***"
     except Exception:
+        logger.debug("Failed to parse webhook URL for masking", exc_info=True)
         return "***"
 
 

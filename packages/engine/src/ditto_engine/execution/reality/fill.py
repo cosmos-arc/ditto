@@ -12,8 +12,9 @@ from typing import Protocol
 
 from ditto_kernel.enums import OrderSide
 
+from ditto_engine.accounting.fills import FillEvent
 from ditto_engine.accounting.order_book import Order, OrderType
-from ditto_engine.execution.fills import Filled, FillEvent, FillOutcome, NoFill
+from ditto_engine.execution.fills import Filled, FillOutcome, NoFill
 from ditto_engine.execution.reality.market import MarketSnapshot
 from ditto_engine.execution.rules import InstrumentDefinition, TradingRuleSet
 

@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ditto_data.models.strategy_run import RunStatus, StrategyRunRecord
+from ditto_data.models.strategy_run import StrategyRunRecord
 from ditto_data.storage.metadata.strategy_run_store import (
     SQLiteStrategyRunReader,
     SQLiteStrategyRunWriter,
 )
 from ditto_infra.foundation import SQLitePool
+from ditto_kernel.enums import RunStatus
 
 
 def _make_record(

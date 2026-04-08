@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_app._reexports import Dataset, DQIssue
 from ditto_app.process.quality import L3BatchService
+from ditto_data.models import Dataset
+from ditto_data.quality import DQIssue
 from ditto_infra.foundation import Metrics, logger
 from prefect import task
 
@@ -72,17 +73,17 @@ def _resolve_trade_date(
     metadata_service: Any,
 ) -> str:
     """
-    Resolve trade_date: use provided value or fetch last trading day.
+    解析 trade_date: 使用显式传入值或获取最后一个交易日.
 
     Args:
-        trade_date: Explicit trade_date, or None to auto-resolve.
-        metadata_service: Metadata service for fetching last trading day.
+        trade_date: 显式交易日期，或 None 自动解析.
+        metadata_service: 元数据服务，用于获取最后一个交易日.
 
     Returns:
-        Resolved trade_date string.
+        解析后的交易日期字符串.
 
     Raises:
-        ValueError: If trade_date cannot be resolved.
+        ValueError: 无法解析交易日期时.
 
     """
     if trade_date is not None:
@@ -106,16 +107,16 @@ def _execute_all_checks(
     market_wide: bool,
 ) -> tuple[list[DQIssue], dict[str, dict[str, Any]]]:
     """
-    Execute L3 checks for all datasets and collect results.
+    对所有数据集执行 L3 检查并汇总结果.
 
     Args:
-        l3_service: L3 batch service instance.
-        datasets: Dataset names to check.
-        trade_date: Trade date string.
-        market_wide: Whether to use market-wide query mode.
+        l3_service: L3 批量检查服务实例.
+        datasets: 待检查的数据集名称列表.
+        trade_date: 交易日期字符串.
+        market_wide: 是否使用全市场查询模式.
 
     Returns:
-        Tuple of (all issues, per-dataset results).
+        元组 (所有问题列表, 按数据集分组的结果).
 
     """
     all_issues: list[DQIssue] = []
@@ -138,16 +139,16 @@ def _execute_single_check(
     market_wide: bool,
 ) -> tuple[dict[str, Any], list[DQIssue]]:
     """
-    Execute L3 check for a single dataset with error handling.
+    对单个数据集执行 L3 检查（含错误处理）.
 
     Args:
-        l3_service: L3 batch service instance.
-        dataset: Dataset name to check.
-        trade_date: Trade date string.
-        market_wide: Whether to use market-wide query mode.
+        l3_service: L3 批量检查服务实例.
+        dataset: 待检查的数据集名称.
+        trade_date: 交易日期字符串.
+        market_wide: 是否使用全市场查询模式.
 
     Returns:
-        Tuple of (result dict, collected issues).
+        元组 (结果字典, 收集的问题列表).
 
     """
     try:
@@ -217,16 +218,16 @@ def _build_batch_summary(
     results_by_dataset: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     """
-    Build the batch check summary, send alerts, and record metrics.
+    构建批量检查摘要，发送告警并记录指标.
 
     Args:
-        trade_date: Trade date string.
-        datasets: List of dataset names checked.
-        all_issues: All issues collected across datasets.
-        results_by_dataset: Per-dataset results.
+        trade_date: 交易日期字符串.
+        datasets: 已检查的数据集名称列表.
+        all_issues: 跨数据集收集的所有问题.
+        results_by_dataset: 按数据集分组的结果.
 
     Returns:
-        Summary dict.
+        摘要字典.
 
     """
     alert_count = sum(1 for i in all_issues if i.severity.value == "alert")

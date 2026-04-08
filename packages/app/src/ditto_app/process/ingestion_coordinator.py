@@ -58,14 +58,12 @@ from ditto_app.process.result_handler import IngestionResultHandler
 
 def _is_source_fetch_error(error: Exception) -> bool:
     """Check whether exception should be treated as source fetch failure."""
-    return isinstance(error, SourceFetchError) or (
-        error.__class__.__name__ == "SourceFetchError"
-    )
+    return isinstance(error, SourceFetchError)
 
 
 def _normalize_source_fetch_error(error: Exception) -> SourceFetchError:
     """Normalize external fetch error into app-level SourceFetchError."""
-    source_name = getattr(error, "source", type(error).__name__)
+    source_name = getattr(error, "source", "unknown")
     return SourceFetchError(message=str(error), source=str(source_name))
 
 

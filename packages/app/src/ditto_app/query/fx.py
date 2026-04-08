@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import polars as pl
 from ditto_data.models.source_codes import FX_CODE_TO_INSTRUMENT_ID
 from ditto_data.services.market_service import MarketService
+
+from ditto_app.query._instrument_code_facade import InstrumentCodeQueryFacade
 
 __all__ = ["FXQueryFacade"]
 
@@ -12,7 +13,7 @@ __all__ = ["FXQueryFacade"]
 _INSTRUMENT_ID_TO_PAIR = {v: k for k, v in FX_CODE_TO_INSTRUMENT_ID.items()}
 
 
-class FXQueryFacade:
+class FXQueryFacade(InstrumentCodeQueryFacade):
     """
     FX 域查询 facade.
 
@@ -21,7 +22,7 @@ class FXQueryFacade:
     """
 
     def __init__(self, market_service: MarketService) -> None:
-        self._service = market_service
+        super().__init__(market_service, asset_class="fx")
 
     def get_valid_pairs(self) -> set[str]:
         """
@@ -32,16 +33,6 @@ class FXQueryFacade:
 
         """
         return set(FX_CODE_TO_INSTRUMENT_ID.keys())
-
-    def get_all_instrument_ids(self) -> list[int]:
-        """
-        获取所有汇率品种的 instrument_id.
-
-        Returns:
-            instrument_id 列表
-
-        """
-        return list(FX_CODE_TO_INSTRUMENT_ID.values())
 
     def pair_to_instrument_id(self, pair: str) -> int:
         """
@@ -72,31 +63,10 @@ class FXQueryFacade:
         """
         return _INSTRUMENT_ID_TO_PAIR.get(instrument_id)
 
-    def list_bars(
-        self,
-        *,
-        instrument_ids: list[int],
-        start: str | None = None,
-        end: str | None = None,
-        limit: int | None = None,
-    ) -> pl.DataFrame:
-        """
-        查询 FX K 线数据.
+    @property
+    def _code_to_instrument_id(self) -> dict[str, int]:
+        return FX_CODE_TO_INSTRUMENT_ID
 
-        Args:
-            instrument_ids: 标的 ID 列表
-            start: 开始日期 (YYYY-MM-DD)
-            end: 结束日期 (YYYY-MM-DD)
-            limit: 返回数量限制
-
-        Returns:
-            K 线数据 DataFrame
-
-        """
-        return self._service.list_bars(
-            instrument_ids=instrument_ids,
-            start=start,
-            end=end,
-            asset_class="fx",
-            limit=limit,
-        )
+    @property
+    def _instrument_id_to_code(self) -> dict[int, str]:
+        return _INSTRUMENT_ID_TO_PAIR

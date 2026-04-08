@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from ditto_app._reexports import InstrumentIngestParams
+from ditto_data.models import InstrumentIngestParams
 from prefect import flow
 from pydantic import BaseModel
 
@@ -111,6 +111,7 @@ def backfill_missing_flow(
         # 执行回补
         result = bundle.backfill_manager.backfill_missing(
             dataset=dataset,
+            source=source,
             parallel=parallel,
         )
 

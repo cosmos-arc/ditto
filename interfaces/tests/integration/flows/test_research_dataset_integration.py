@@ -13,10 +13,8 @@ import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_analytics.materialization.models import DerivedVersionStatus
-from ditto_app.process.materialization import (
-    DerivedPublicationFacade,
-    InvalidationCascadeOrchestrator,
-)
+from ditto_app.process.cascade_orchestrator import InvalidationCascadeOrchestrator
+from ditto_app.process.publication_facade import DerivedPublicationFacade
 from ditto_app.query.research import ResearchDatasetFacade
 from ditto_data.di import (
     DerivedProvider,
@@ -220,7 +218,7 @@ def _write_artifact(
 
 @contextmanager
 def _materialization_bundle_context():
-    from ditto_app.process.materialization import (
+    from ditto_app.process.materialization_orchestrator import (
         DerivedMaterializationOrchestrator,
     )
 

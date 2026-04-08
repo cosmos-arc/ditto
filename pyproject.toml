@@ -99,14 +99,10 @@ unfixable = []
 "packages/data/src/ditto_data/services/derived/artifact_reader.py" = ["PLR0913"]
 # MarketService.list_bars - 便利方法，参数透传到 MarketBarsQuery
 "packages/data/src/ditto_data/services/market_service.py" = ["PLR0913"]
-# IndicatorMetadataWriter.upsert - CQRS upsert 写入模式
-"packages/data/src/ditto_data/stores/macro/indicator/metadata_writer.py" = ["PLR0913"]
-# MetadataStore batch_get_by_codes - 参数化查询，使用 ? 占位符
-"packages/data/src/ditto_data/domains/macro/indicator/metadata_store.py" = ["S608"]
-"packages/data/src/ditto_data/domains/features/technical/indicator_metadata_store.py" = ["S608"]
-"packages/data/src/ditto_data/domains/factors/factor_metadata_store.py" = ["S608"]
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
 "interfaces/src/ditto_interfaces/services/derived/research.py" = ["S608"]
+# ResearchQuery.export() - 表名来自内部枚举，非用户输入
+"packages/app/src/ditto_app/query/research.py" = ["S608"]
 # EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
 "packages/engine/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
@@ -215,15 +211,8 @@ ignore = [
     "**/tests/**",
     "packages/*/tests/**",
     "interfaces/tests/**",
-    # StockAdjFactorStore and ETF stores intentionally change API to remove dataset parameter
-    # This is a domain-specific specialization that hardcodes the dataset name
-    "packages/data/src/ditto_data/domains/market/stock/adj/adj_factor_store.py",
-    "packages/data/src/ditto_data/domains/market/etf/bars/bars_store.py",
-    "packages/data/src/ditto_data/domains/market/etf/status/status_store.py",
-    "packages/data/src/ditto_data/domains/market/etf/nav/nav_store.py",
-    "packages/data/src/ditto_data/domains/market/etf/adj/adj_factor_store.py",
     # MarketQueryService: multi-line error message uses implicit string concatenation
-    "packages/data/src/ditto_data/domains/market/market_query_service.py",
+    # (已迁移至 services/)
 ]
 
 # ═══════════════════════════════════════════════════════════════════

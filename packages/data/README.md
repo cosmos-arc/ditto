@@ -14,7 +14,7 @@ Ditto 量化系统的数据层，统一管理数据获取、存储、查询和 P
 - **PIT 安全**: 时点安全的数据查询，避免未来函数
 - **高性能存储**: Parquet 文件存储 + SQLite 元数据
 - **数据质量检查**: 多维度 DQ 检查和报告
-- **多数据源支持**: Tushare、Akshare 等
+- **多数据源支持**: Tushare 等
 - **SourceSchema**: 数据源输出格式标准协议，确保数据质量
 - **域驱动设计**: Metadata、Market、Capital、Fundamental、Macro、Features、Factors 七域
 
@@ -33,9 +33,9 @@ Data 采用分层架构，Store 层实现 CQRS 模式（Reader/Writer 分离）�
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
 │ Runtime层    │ │  Store层     │ │  Service层   │ │  Sources层   │
 │              │ │  (CQRS)      │ │              │ │              │
-│ SQLitePool   │ │ Reader/      │ │ MetadataSvc  │ │ Tushare      │
-│ FileLock     │ │ Writer       │ │ MarketSvc    │ │ Akshare      │
-│ Allocator    │ │              │ │ Fundamental  │ │              │
+│ Allocator    │ │ Reader/      │ │ MetadataSvc  │ │ Tushare      │
+│              │ │ Writer       │ │ MarketSvc    │ │              │
+│              │ │              │ │ Fundamental  │ │              │
 │ FreezeMgr    │ │ ParquetStore │ │ CapitalSvc   │ │              │
 │ SqlEngine    │ │ SQLiteStore  │ │ MacroSvc     │ │              │
 │              │ │              │ │ FeaturesSvc  │ │              │

@@ -65,6 +65,7 @@ ditto_kernel/
 | `Exchange` | enums.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
 | `OrderSide` | enums.py | `StrEnum`（BUY/SELL） | Data, Engine |
 | `RunStatus` | enums.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | Data |
+| `RiskScope` | enums.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Engine |
 | `DerivedRole` | specs.py | `StrEnum`（FEATURE/FACTOR/SIGNAL） | Analytics, Engine |
 | `DerivedSpec` | specs.py | frozen dataclass | Analytics, Engine |
 | `MaterializationProfile` | specs.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Engine |
@@ -135,8 +136,10 @@ packages/kernel/
 ├── src/ditto_kernel/
 └── tests/
     └── unit/           # 单元测试
-        ├── test_identity.py
-        └── test_enums.py
+        ├── test_clock.py
+        ├── test_enums.py
+        ├── test_events.py
+        └── test_identity.py
 ```
 
 ### 运行测试

@@ -19,16 +19,33 @@ Interfaces 层是 **Application Boundary Layer（应用边界层）**，负责�
 ditto_interfaces/
 ├── api/               # API 路由
 ├── cli/               # CLI 命令
+│   ├── main.py        # CLI 入口
+│   ├── context.py     # CLI 上下文
+│   ├── executor.py    # 命令执行器
 │   ├── commands/      # 命令实现
+│   │   ├── factory.py # 命令工厂
+│   │   ├── init.py    # 初始化命令
+│   │   ├── strategy.py # 策略命令
 │   │   ├── ingest/    # 数据摄入命令
 │   │   ├── backfill/  # 回填命令
 │   │   └── query/     # 查询命令
-│   └── utils/         # CLI 工具
+│   ├── models/        # CLI 数据模型
+│   └── utils/         # CLI 工具（identifier/output/params/validation）
 ├── jobs/              # Prefect 任务
+│   ├── context.py     # 任务上下文
 │   ├── flows/         # Flow 定义
 │   └── tasks/         # Task 实现
 ├── models/            # API 数据模型（Pydantic）
 ├── registry/          # DI 容器（Dishka Composition Root）
+│   ├── container.py   # 容器定义
+│   ├── init_providers.py  # Provider 初始化
+│   ├── contexts/      # DI 上下文（bundle/ingestion/materialization/query/strategy）
+│   └── infra/         # 基础设施配置（config/notification/observability）
+├── config/            # 配置加载
+│   └── loader.py      # 环境配置加载器
+├── middleware.py       # ASGI 中间件
+├── testing.py         # 测试工具
+├── exceptions.py      # 自定义异常
 └── main.py            # 启动入口
 ```
 

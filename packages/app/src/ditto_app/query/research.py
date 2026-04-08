@@ -246,7 +246,7 @@ class ResearchDatasetFacade:
                 f"CREATE TABLE IF NOT EXISTS {table_name} ({col_str})",
             )
             conn.executemany(
-                f"INSERT INTO {table_name} VALUES ({placeholders})",  # noqa: S608 - table_name 来自内部枚举，placeholders 为参数化占位
+                f"INSERT INTO {table_name} VALUES ({placeholders})",
                 [tuple(r.values()) for r in records],
             )
             conn.commit()

@@ -7,7 +7,7 @@ MarketWriteService - Market 域写入服务。
 from __future__ import annotations
 
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 import polars as pl
 from ditto_infra.foundation import Metrics, logger, traced
@@ -89,44 +89,12 @@ class MarketWriteService:
         # 使用文件锁保护并发写入
         lock_name = f"bars_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            if dataset == "stock_daily":
-                write_result = self._write_ports.stock_bars.write(
-                    storage_df,
-                    year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            elif dataset == "etf_daily":
-                write_result = self._write_ports.etf_bars.write(
-                    storage_df,
-                    year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            elif dataset == "index_daily":
-                if self._write_ports.index_bars is None:
-                    raise ValueError("IndexBarsWriter not configured")
-                write_result = self._write_ports.index_bars.write(
-                    storage_df,
-                    year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            elif dataset == "fx_daily":
-                if self._write_ports.fx_bars is None:
-                    raise ValueError("FxBarsWriter not configured")
-                write_result = self._write_ports.fx_bars.write(
-                    storage_df,
-                    year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            elif dataset == "commodity_daily":
-                if self._write_ports.commodity_bars is None:
-                    raise ValueError("CommodityBarsWriter not configured")
-                write_result = self._write_ports.commodity_bars.write(
-                    storage_df,
-                    year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            else:
-                raise ValueError(f"Unsupported dataset: {dataset}")
+            writer = self._get_bars_writer(dataset)
+            write_result = writer.write(
+                storage_df,
+                year,
+                on_duplicate=on_duplicate_enum,
+            )
 
         rows_written = write_result.added + write_result.updated
 
@@ -145,6 +113,41 @@ class MarketWriteService:
         )
 
         return rows_written
+
+    def _get_bars_writer(self, dataset: str) -> Any:
+        """
+        获取指定数据集的 K线写入器.
+
+        Args:
+            dataset: 数据集名称.
+
+        Returns:
+            对应的 Writer 实例.
+
+        Raises:
+            ValueError: 数据集不支持或 Writer 未配置.
+
+        """
+        _REQUIRED_WRITERS = {
+            "stock_daily": self._write_ports.stock_bars,
+            "etf_daily": self._write_ports.etf_bars,
+        }
+        _OPTIONAL_WRITERS = {
+            "index_daily": self._write_ports.index_bars,
+            "fx_daily": self._write_ports.fx_bars,
+            "commodity_daily": self._write_ports.commodity_bars,
+        }
+
+        if dataset in _REQUIRED_WRITERS:
+            return _REQUIRED_WRITERS[dataset]
+
+        if dataset in _OPTIONAL_WRITERS:
+            writer = _OPTIONAL_WRITERS[dataset]
+            if writer is None:
+                raise ValueError(f"{dataset} writer not configured")
+            return writer
+
+        raise ValueError(f"Unsupported dataset: {dataset}")
 
     @traced("market.save_adj_factor")
     def save_adj_factor(

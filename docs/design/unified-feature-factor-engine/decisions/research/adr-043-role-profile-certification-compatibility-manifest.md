@@ -193,7 +193,7 @@ materialize
 
 | 模块 | 修改内容 |
 |------|---------|
-| `packages/core` | `CertificationPack`、`CertificationReport`、`CompatibilityManifest` 模型 |
+| `packages/kernel` | `CertificationPack`、`CertificationReport`、`CompatibilityManifest` 模型 |
 | `packages/data` | 认证结果与 manifest 持久化 |
 | `packages/port` | publish orchestration 中接入认证阶段 |
 

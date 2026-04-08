@@ -5,32 +5,9 @@ from __future__ import annotations
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
 
 from ditto_interfaces.cli.executor import CLIExecutor
 from ditto_interfaces.registry.contexts import create_ingestion_bundle
-
-
-@contextmanager
-def create_cli_host() -> Generator[Any, None, None]:
-    """
-    CLI Host - 仿照 .NET Generic Host 模式.
-
-    管理整个 CLI 应用的生命周期：
-    - 创建容器
-    - 初始化所有组件
-    - 优雅关闭
-
-    Note: 此函数保留用于向后兼容。
-    推荐使用 create_executor() 获取完整的 CLIExecutor。
-
-    Yields:
-        dishka 同步容器实例
-
-    """
-    # 委托给 create_ingestion_bundle 以保持一致性
-    with create_ingestion_bundle() as bundle:
-        yield bundle
 
 
 @contextmanager

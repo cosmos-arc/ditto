@@ -5,10 +5,10 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_container, provide
-from ditto_app.process.materialization import (
+from ditto_app.process.materialization_orchestrator import (
     DerivedMaterializationOrchestrator,
-    DerivedPublicationFacade,
 )
+from ditto_app.process.publication_facade import DerivedPublicationFacade
 from ditto_app.query.derived import DerivedQueryFacade
 from ditto_data.di import (
     CapitalProvider,
@@ -91,15 +91,13 @@ class TestDerivedProvider:
         container.close()
 
     def test_registry_exports_derived_provider(self) -> None:
-        """Registry exports should keep DerivedProvider."""
+        """DerivedProvider should be defined in ditto_data.di."""
         import ditto_data.di as data_di
-        import ditto_interfaces.registry as root_registry
 
         provider_names = [type(provider).__name__ for provider in get_data_providers()]
 
         assert "DerivedProvider" in provider_names
         assert "DerivedProvider" in data_di.__all__
-        assert "DerivedProvider" in root_registry.__all__
 
     def test_derived_provider_only_has_data_methods(self) -> None:
         """DerivedProvider 应仅包含 Data 层方法。"""

@@ -263,7 +263,7 @@ class ArchitectureAuditor:
         for module in interfaces_modules:
             for dep in self.import_graph.get(module, set()):
                 # 检查是否依赖了 stores（禁止）
-                if dep.startswith("packages.data.stores."):
+                if dep.startswith("packages.data.storage."):
                     self.findings.append(
                         {
                             "id": "ARCH-001",

@@ -52,18 +52,11 @@ paths:
 **详细分层规范**：
 - Kernel → [packages/kernel/CLAUDE.md](../../packages/kernel/CLAUDE.md)
 - Infra → [packages/infra/CLAUDE.md](../../packages/infra/CLAUDE.md)
-- Data → [packages/data/CLAUDE.md](../../packages/data/CLAUDE.md)
- | [pit.md](../../.claude/rules/pit.md)
-- Engine → [packages/engine/CLAUDE.md](../../packages/engine/CLAUDE.md)
- | [engine.md](../../.claude/rules/engine.md)
+- Data → [packages/data/CLAUDE.md](../../packages/data/CLAUDE.md) | [pit.md](../../.claude/rules/pit.md)
+- Engine → [packages/engine/CLAUDE.md](../../packages/engine/CLAUDE.md) | [engine.md](../../.claude/rules/engine.md)
 - Analytics → [packages/analytics/CLAUDE.md](../../packages/analytics/CLAUDE.md)
-（新建）
-- App → [packages/app/CLAUDE.md](../../packages/app/CLAUDE.md)（新建）
+- App → [packages/app/CLAUDE.md](../../packages/app/CLAUDE.md)
 - Interfaces → [interfaces/CLAUDE.md](../../interfaces/CLAUDE.md)
-
- | [architecture.md](../../.claude/rules/architecture.md) | [config.md](../../.claude/rules/config.md) | [core.md](../../.claude/rules/core.md)
-
- | [engine.md](../../.claude/rules/engine.md)
 
 ### 依赖规则
 
@@ -392,7 +385,7 @@ def get_source(name: str) -> DataSource:
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/engine/src/ditto_engine/quality/` | 检查规则算法（OHLC、涨跌停、成交量异常） |
+| **Domain** | `packages/data/src/ditto_data/quality/` | 检查规则算法（OHLC、涨跌停、成交量异常） |
 | **Data Service** | `packages/data/` | DQ 结果持久化、数据质量元数据管理 |
 | **Application** | `packages/app/src/ditto_app/process/` | 编排 dq 检查流程 |
 

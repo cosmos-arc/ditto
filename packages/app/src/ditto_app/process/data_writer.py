@@ -162,7 +162,34 @@ class IngestionDataWriter:
         year = int(trade_date[:4]) if dataset_enum not in metadata_datasets else 0
 
         source_ticker_col = "source_ticker"
-        handlers: dict[Dataset, Callable[[], WriteResult]] = {
+        handlers = self._build_dataset_handlers(
+            dataset=dataset,
+            dataset_enum=dataset_enum,
+            df=df,
+            year=year,
+            on_duplicate=on_duplicate,
+            source_ticker_col=source_ticker_col,
+            trade_date=trade_date,
+        )
+
+        if dataset_enum not in handlers:
+            raise ValueError(f"不支持写入数据集: {dataset}")
+
+        return handlers[dataset_enum]()
+
+    def _build_dataset_handlers(
+        self,
+        *,
+        dataset: str,
+        dataset_enum: Dataset,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+        trade_date: str,
+    ) -> dict[Dataset, Callable[[], WriteResult]]:
+        """Build the dataset-to-writer handler mapping."""
+        return {
             Dataset.ETF_DAILY: lambda: self._write_market_bars(
                 dataset,
                 dataset_enum,
@@ -259,24 +286,21 @@ class IngestionDataWriter:
             Dataset.INDEX_DAILY: lambda: self._write_index_bars(
                 dataset, df, year, on_duplicate, source_ticker_col
             ),
-            Dataset.FX_DAILY: lambda: self._write_fx_bars(
+            Dataset.FX_DAILY: lambda: self._write_instrument_code_bars(
                 dataset,
                 df,
                 year,
                 on_duplicate,
+                "fx_daily",
             ),
-            Dataset.COMMODITY_DAILY: lambda: self._write_commodity_bars(
+            Dataset.COMMODITY_DAILY: lambda: self._write_instrument_code_bars(
                 dataset,
                 df,
                 year,
                 on_duplicate,
+                "commodity_daily",
             ),
         }
-
-        if dataset_enum not in handlers:
-            raise ValueError(f"不支持写入数据集: {dataset}")
-
-        return handlers[dataset_enum]()
 
     def _write_market_bars(
         self,
@@ -362,32 +386,17 @@ class IngestionDataWriter:
 
         return _to_write_result(dataset, year, enriched_df, rows_written)
 
-    def _write_fx_bars(
+    def _write_instrument_code_bars(
         self,
         dataset: str,
         df: pl.DataFrame,
         year: int,
         on_duplicate: OnDuplicate,
+        bars_dataset: Literal["fx_daily", "commodity_daily"],
     ) -> WriteResult:
-        """Write FX daily bars data."""
+        """Write instrument code daily bars (FX or Commodity)."""
         rows_written = self._market_write_service.save_bars(
-            dataset="fx_daily",
-            df=df,
-            year=year,
-            on_duplicate=on_duplicate,
-        )
-        return _to_write_result(dataset, year, df, rows_written)
-
-    def _write_commodity_bars(
-        self,
-        dataset: str,
-        df: pl.DataFrame,
-        year: int,
-        on_duplicate: OnDuplicate,
-    ) -> WriteResult:
-        """Write Commodity daily bars data."""
-        rows_written = self._market_write_service.save_bars(
-            dataset="commodity_daily",
+            dataset=bars_dataset,
             df=df,
             year=year,
             on_duplicate=on_duplicate,
@@ -463,15 +472,26 @@ class IngestionDataWriter:
             rows_written,
         )
 
-    def _write_fundamental(
+    def _enrich_and_filter_fk_dataframe(
         self,
-        dataset: str,
-        dataset_enum: Dataset,
         df: pl.DataFrame,
+        dataset: str,
         year: int,
-    ) -> WriteResult:
-        # 解析 instrument_id（基本面数据需要有效的 instrument_id 作为外键）
-        source_ticker_col = "source_ticker"
+        source_ticker_col: str = "source_ticker",
+    ) -> pl.DataFrame | None:
+        """
+        解析 instrument_id 并过滤 null 外键记录。
+
+        Args:
+            df: 输入 DataFrame
+            dataset: 数据集名称（用于日志）
+            year: 年份（用于构造空结果）
+            source_ticker_col: 源代码列名
+
+        Returns:
+            过滤后的 DataFrame，或 None 表示所有记录均被过滤。
+
+        """
         if "instrument_id" not in df.columns:
             source_tickers = df[source_ticker_col].unique().to_list()
             instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
@@ -488,7 +508,6 @@ class IngestionDataWriter:
         else:
             enriched_df = df
 
-        # 过滤掉 instrument_id 为 null 的记录（无法写入有外键约束的表）
         total_count = len(enriched_df)
         enriched_df = enriched_df.filter(pl.col("instrument_id").is_not_null())
         filtered_count = total_count - len(enriched_df)
@@ -499,7 +518,19 @@ class IngestionDataWriter:
             )
 
         if len(enriched_df) == 0:
-            return _to_write_result(dataset, year, enriched_df, 0)
+            return None
+        return enriched_df
+
+    def _write_fundamental(
+        self,
+        dataset: str,
+        dataset_enum: Dataset,
+        df: pl.DataFrame,
+        year: int,
+    ) -> WriteResult:
+        enriched_df = self._enrich_and_filter_fk_dataframe(df, dataset, year)
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
 
         # Map dataset enum to the appropriate save method
         save_methods = {
@@ -525,36 +556,9 @@ class IngestionDataWriter:
         df: pl.DataFrame,
         year: int,
     ) -> WriteResult:
-        # 解析 instrument_id（资本面数据需要有效的 instrument_id 作为外键）
-        source_ticker_col = "source_ticker"
-        if "instrument_id" not in df.columns:
-            source_tickers = df[source_ticker_col].unique().to_list()
-            instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
-                identifiers=source_tickers,
-                source=self._source_name,
-                asof=None,
-            )
-            enriched_df = _enrich_with_instrument_id(
-                df,
-                instrument_id_mapping,
-                source_ticker_col,
-                self._source_name,
-            )
-        else:
-            enriched_df = df
-
-        # 过滤掉 instrument_id 为 null 的记录（无法写入有外键约束的表）
-        total_count = len(enriched_df)
-        enriched_df = enriched_df.filter(pl.col("instrument_id").is_not_null())
-        filtered_count = total_count - len(enriched_df)
-        if filtered_count > 0:
-            logger.warning(
-                f"Filtered {filtered_count} records with null instrument_id",
-                dataset=dataset,
-            )
-
-        if len(enriched_df) == 0:
-            return _to_write_result(dataset, year, enriched_df, 0)
+        enriched_df = self._enrich_and_filter_fk_dataframe(df, dataset, year)
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
 
         capital_dataset = cast(
             Literal[
@@ -616,12 +620,7 @@ class IngestionDataWriter:
         trade_date: str,
         asset_class: Literal["stock", "etf", "index"],
     ) -> WriteResult:
-        if asset_class == "stock":
-            file_path, checksum = self.write_stock_basic(df, trade_date)
-        elif asset_class == "etf":
-            file_path, checksum = self.write_etf_basic(df, trade_date)
-        else:  # index
-            file_path, checksum = self.write_index_basic(df, trade_date)
+        file_path, checksum = self._write_basic_impl(df, asset_class)
         return WriteResult(
             file_path=file_path,
             checksum=checksum,
@@ -630,68 +629,25 @@ class IngestionDataWriter:
             blocked=False,
         )
 
-    def write_stock_basic(self, df: pl.DataFrame, _trade_date: str) -> tuple[str, str]:
+    def _write_basic_impl(
+        self,
+        df: pl.DataFrame,
+        asset_class: Literal["stock", "etf", "index"],
+    ) -> tuple[str, str]:
         """
-        写入 stock_basic 数据到 instrument_store。
+        使用 MetadataService 批量注册证券基础信息（线程安全）。
 
         Args:
-            df: 股票基础信息数据
-            trade_date: 交易日期
+            df: 基础信息数据
+            asset_class: 资产类别
 
         Returns:
             tuple[str, str]: (file_path, checksum)
 
         """
-        # 使用 MetadataService 批量注册（线程安全）
-        file_path, checksum = self._metadata_service.register_instruments_batch(
+        return self._metadata_service.register_instruments_batch(
             df=df,
             source=self._source_name,
-            asset_class="stock",
+            asset_class=asset_class,
             source_ticker_col="source_ticker",
         )
-
-        return file_path, checksum
-
-    def write_etf_basic(self, df: pl.DataFrame, _trade_date: str) -> tuple[str, str]:
-        """
-        写入 etf_basic 数据到 instrument_store。
-
-        Args:
-            df: ETF 基础信息数据
-            trade_date: 交易日期
-
-        Returns:
-            tuple[str, str]: (file_path, checksum)
-
-        """
-        # 使用 MetadataService 批量注册（线程安全）
-        file_path, checksum = self._metadata_service.register_instruments_batch(
-            df=df,
-            source=self._source_name,
-            asset_class="etf",
-            source_ticker_col="source_ticker",
-        )
-
-        return file_path, checksum
-
-    def write_index_basic(self, df: pl.DataFrame, _trade_date: str) -> tuple[str, str]:
-        """
-        写入 index_basic 数据到 instrument_store。
-
-        Args:
-            df: 指数基础信息数据
-            trade_date: 交易日期
-
-        Returns:
-            tuple[str, str]: (file_path, checksum)
-
-        """
-        # 使用 MetadataService 批量注册（线程安全）
-        file_path, checksum = self._metadata_service.register_instruments_batch(
-            df=df,
-            source=self._source_name,
-            asset_class="index",
-            source_ticker_col="source_ticker",
-        )
-
-        return file_path, checksum

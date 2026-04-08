@@ -19,7 +19,7 @@
 | 模块 | 描述 | 主要函数 |
 |------|------|----------|
 | `adjustment.py` | 复权计算工具 | `apply_qfq_adj()`, `apply_hfq_adj()` |
-| `pit.py` | PIT 查询工具 | `parse_asof_date()`, `filter_by_knowledge_date()` |
+| `pit/` | PIT 查询包 | `parse_asof_date()`, `filter_by_knowledge_date()` |
 
 ## adjustment.py - 复权计算
 
@@ -61,12 +61,12 @@ df_adj = apply_hfq_adj(
 - 只对 `open/high/low/close` 进行复权
 - 缺失因子值使用 `1.0`（返回原始价格）
 
-## pit.py - PIT 查询
+## pit/ - PIT 查询包
 
 ### 解析日期
 
 ```python
-from ditto_data.helpers.pit import parse_asof_date
+from ditto_data.helpers.pit.dataframe import parse_asof_date
 
 # 解析 asof 参数
 dt = parse_asof_date("2024-06-30")  # str -> date
@@ -76,7 +76,7 @@ dt = parse_asof_date(date(2024, 6, 30))  # date -> date
 ### PIT 安全过滤
 
 ```python
-from ditto_data.helpers.pit import filter_by_knowledge_date
+from ditto_data.helpers.pit.dataframe import filter_by_knowledge_date
 
 # 根据 knowledge_date 过滤数据
 df_filtered = filter_by_knowledge_date(

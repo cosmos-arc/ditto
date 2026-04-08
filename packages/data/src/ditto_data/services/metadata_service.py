@@ -18,7 +18,6 @@ from ditto_data.models.metadata import InstrumentRegistration
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.services.metadata.calendar import (
     CalendarService,
-    compute_calendar_enrichment,
 )
 from ditto_data.services.metadata.instrument import (
     InstrumentService,
@@ -48,11 +47,9 @@ from ditto_data.storage.metadata.universe import (
     UniverseWriter,
 )
 
-# 向后兼容：测试文件导入 _compute_calendar_enrichment
-_compute_calendar_enrichment = compute_calendar_enrichment
 InstrumentId = _InstrumentId
 
-__all__ = ["MetadataService", "_compute_calendar_enrichment"]
+__all__ = ["MetadataService"]
 
 
 class MetadataService:

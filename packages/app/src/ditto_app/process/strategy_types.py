@@ -15,7 +15,6 @@ from typing import Protocol, runtime_checkable
 
 import orjson
 import polars as pl
-from ditto_data.services.metadata_service import MetadataService
 from ditto_engine.alpha.pipeline import StrategyInputBundle
 from ditto_engine.backtest.data_feed import Slice
 from ditto_engine.backtest.manifest import RunManifest, serialize_manifest
@@ -32,7 +31,6 @@ from ditto_app.process.backtest_serialization import serialize_report
 __all__ = [
     "RunLifecycleService",
     "StrategyInputAssembler",
-    "build_display_map",
     "enrich_record_with_symbol",
     "write_backtest_artifacts",
 ]
@@ -287,27 +285,3 @@ class StrategyInputAssembler:
             parameters=self._parameters,
             benchmark_close=slice_.benchmark_close,
         )
-
-
-# ===========================================================================
-# build_display_map — InstrumentId → standard_ticker 映射构建
-# ===========================================================================
-
-
-def build_display_map(
-    instrument_ids: list[int],
-    metadata_service: MetadataService,
-) -> dict[InstrumentId, str]:
-    """构建 InstrumentId → standard_ticker 映射。"""
-    display_map: dict[InstrumentId, str] = {}
-    for iid in instrument_ids:
-        instrument_id = InstrumentId(iid)
-        instrument = metadata_service.get_instrument(iid)
-        if instrument is not None:
-            ticker = instrument.get("ticker", str(iid))
-            exchange = instrument.get("exchange", "")
-            key = f"{ticker}.{exchange}" if exchange else str(iid)
-            display_map[instrument_id] = key
-        else:
-            display_map[instrument_id] = str(iid)
-    return display_map

@@ -9,9 +9,10 @@ from ditto_app.process.ingestion_coordinator import (
     IngestionCoordinator,
     MarketServices,
 )
+from ditto_data.errors import SourceFetchError
 from ditto_data.models import OnDuplicate
 from ditto_data.models.ingestion import IngestionLog, IngestionResult, IngestionStatus
-from ditto_data.sources.base import DataSource, SourceFetchError
+from ditto_data.sources.base import DataSource
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing
 from ditto_infra.foundation.observability.config import ObservabilityConfig
@@ -608,7 +609,7 @@ class TestIngestDate:
         mock_ingestion_log_service.get_log.return_value = None
 
         mock_source.fetch_stock_daily.side_effect = SourceFetchError(
-            "Network error", source="tushare", dataset="stock_daily"
+            "Network error", source="tushare"
         )
         mock_ingestion_log_service.save_log.return_value = IngestionLog(
             dataset="stock_daily",

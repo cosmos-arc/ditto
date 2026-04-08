@@ -30,6 +30,10 @@ class ForwardReturnService:
     :meth:`MarketService.get_etf_bars` depending on *asset_class*,
     computes the shifted ratio, and drops the trailing ``T`` dates per
     instrument (where the forward return is undefined).
+
+    .. warning::
+       此服务使用未来数据（shift(-holding_period)），仅限离线因子评估使用。
+       禁止用于任何实盘信号生成路径。
     """
 
     def __init__(self, market_service: MarketService) -> None:

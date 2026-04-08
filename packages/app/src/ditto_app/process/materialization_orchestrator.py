@@ -15,6 +15,7 @@ from uuid import uuid4
 import polars as pl
 from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_analytics.materialization import (
+    CompiledDerivedExpression,
     CompileIdentity,
     DerivedExecutionPlan,
     DerivedExecutionPlanner,
@@ -203,67 +204,14 @@ class DerivedMaterializationOrchestrator:
                 spec=spec,
                 plan=plan,
             )
-            if spec.materialization_profile == MaterializationProfile.DERIVE:
-                self._artifact_writer.write_ephemeral_result(
-                    spec=spec_record,
-                    run_id=run_id,
-                    frame=materialized_frame,
-                )
-                return self._finalize_derive_run(
-                    spec=spec,
-                    request=request,
-                    plan=plan,
-                    run=_RunIdentity(run_id, started_at),
-                    rows_written=materialized_frame.height,
-                    dependencies=compiled.analysis.dependencies,
-                )
-            time_key = spec.effective_time_keys[0]
-            partitions = self._artifact_writer.write_durable_partitions(
-                spec=spec_record,
-                time_key=time_key,
-                run_id=run_id,
-                frame=materialized_frame,
-                request_start=request.request_start,
-                request_end=request.request_end,
-                source_snapshot_id=request.source_snapshot_id,
-            )
-            self._artifact_writer.write_artifact_metadata(
-                ArtifactMetadataParams(
-                    spec=spec_record,
-                    run_id=run_id,
-                    compile_identity=asdict(compiled.compile_identity),
-                    analysis=asdict(compiled.analysis),
-                    partitions=partitions,
-                    request_start=request.request_start,
-                    request_end=request.request_end,
-                    source_snapshot_id=request.source_snapshot_id,
-                ),
-            )
-            minimal_dq_record = None
-            if self._publication_record_service is not None:
-                minimal_dq_record = build_minimal_dq_record(
-                    spec=spec,
-                    run_id=run_id,
-                    version=spec.version,
-                    frame=materialized_frame,
-                )
-                self._persist_publication_safety_records(
-                    spec=spec,
-                    spec_record=spec_record,
-                    run_id=run_id,
-                    request=request,
-                    compile_identity=compiled.compile_identity,
-                    partitions=partitions,
-                    minimal_dq_record=minimal_dq_record,
-                )
-            return self._finalize_durable_run(
+            return self._persist_materialized_data(
                 spec=spec,
+                spec_record=spec_record,
                 request=request,
                 plan=plan,
+                compiled=compiled,
                 run=_RunIdentity(run_id, started_at),
-                frame=materialized_frame,
-                partitions=partitions,
-                dependencies=compiled.analysis.dependencies,
+                materialized_frame=materialized_frame,
             )
         except Exception as exc:
             finished_at = now_iso()
@@ -321,6 +269,85 @@ class DerivedMaterializationOrchestrator:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    def _persist_materialized_data(
+        self,
+        *,
+        spec: DerivedSpec,
+        spec_record: DerivedSpecRecord,
+        request: DerivedMaterializationRequest,
+        plan: DerivedExecutionPlan,
+        compiled: CompiledDerivedExpression,
+        run: _RunIdentity,
+        materialized_frame: pl.DataFrame,
+    ) -> DerivedMaterializationResult:
+        """
+        Persist materialized data according to the spec's profile.
+
+        Handles both DERIVE (ephemeral) and DURABLE (partitioned) paths.
+        """
+        if spec.materialization_profile == MaterializationProfile.DERIVE:
+            self._artifact_writer.write_ephemeral_result(
+                spec=spec_record,
+                run_id=run.run_id,
+                frame=materialized_frame,
+            )
+            return self._finalize_derive_run(
+                spec=spec,
+                request=request,
+                plan=plan,
+                run=run,
+                rows_written=materialized_frame.height,
+                dependencies=compiled.analysis.dependencies,
+            )
+        time_key = spec.effective_time_keys[0]
+        partitions = self._artifact_writer.write_durable_partitions(
+            spec=spec_record,
+            time_key=time_key,
+            run_id=run.run_id,
+            frame=materialized_frame,
+            request_start=request.request_start,
+            request_end=request.request_end,
+            source_snapshot_id=request.source_snapshot_id,
+        )
+        self._artifact_writer.write_artifact_metadata(
+            ArtifactMetadataParams(
+                spec=spec_record,
+                run_id=run.run_id,
+                compile_identity=asdict(compiled.compile_identity),
+                analysis=asdict(compiled.analysis),
+                partitions=partitions,
+                request_start=request.request_start,
+                request_end=request.request_end,
+                source_snapshot_id=request.source_snapshot_id,
+            ),
+        )
+        minimal_dq_record = None
+        if self._publication_record_service is not None:
+            minimal_dq_record = build_minimal_dq_record(
+                spec=spec,
+                run_id=run.run_id,
+                version=spec.version,
+                frame=materialized_frame,
+            )
+            self._persist_publication_safety_records(
+                spec=spec,
+                spec_record=spec_record,
+                run_id=run.run_id,
+                request=request,
+                compile_identity=compiled.compile_identity,
+                partitions=partitions,
+                minimal_dq_record=minimal_dq_record,
+            )
+        return self._finalize_durable_run(
+            spec=spec,
+            request=request,
+            plan=plan,
+            run=run,
+            frame=materialized_frame,
+            partitions=partitions,
+            dependencies=compiled.analysis.dependencies,
+        )
 
     def _finalize_derive_run(
         self,

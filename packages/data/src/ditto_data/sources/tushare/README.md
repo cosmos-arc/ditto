@@ -29,7 +29,7 @@ settings = DataSourceSettings(tushare_token="your_token_here")
 
 ```python
 from ditto_data.config import DataSourceSettings
-from ditto_data.sources.tushare import TushareSource
+from ditto_data.sources import TushareSource
 
 # 通过 DI 注入的 Services 获取数据源（推荐）
 # source: TushareSource = container.get(TushareSource)
@@ -240,13 +240,36 @@ pixi run -e dev pytest packages/data/tests/integration/sources/tushare/test_end_
 
 ```
 tushare/
-├── __init__.py              # 导出 TushareSource
-├── client.py                # HTTP 客户端（httpx 封装）
-├── source.py                # DataSource 实现（fetch 方法）
-├── transformer.py           # 数据转换工具类（新增 Phase 1.1）
-├── http_utils.py            # HTTP 工具（响应验证、错误映射）
-├── rate_limiter.py          # 限流器
-├── IMPLEMENTATION_SUMMARY.md # HTTP 重构实施总结
+├── __init__.py              # 导出 StockTushareAdapter, TushareClient, TushareExchangeTransformer
+├── client.py                # TushareClient HTTP 客户端（httpx 封装）
+├── tushare_source.py        # DataSource 实现（fetch 方法）
+├── transformer.py           # 数据转换工具类
+├── adapters/                # 数据适配器
+│   ├── base.py              # 适配器基类
+│   ├── bond_yield.py        # 债券收益率
+│   ├── calendar.py          # 交易日历
+│   ├── capital.py           # 资本数据（融资融券/质押）
+│   ├── etf.py               # ETF 数据
+│   ├── fundamental.py       # 基本面（财报/分红/估值）
+│   ├── fx.py                # 外汇数据
+│   ├── index.py             # 指数数据
+│   ├── industry.py          # 行业分类
+│   ├── macro.py             # 宏观指标
+│   ├── metal.py             # 贵金属数据
+│   └── stock.py             # 股票数据
+├── processors/              # 数据处理器
+│   ├── column_mapping.py    # 列映射配置
+│   ├── error_handler.py     # 错误处理
+│   ├── merger.py            # 数据合并
+│   ├── transformer.py       # 数据转换
+│   └── mappings/            # 列映射定义
+│       ├── basic.py         # 基础数据映射
+│       ├── capital.py       # 资本数据映射
+│       ├── common.py        # 通用映射
+│       └── macro.py         # 宏观数据映射
+├── utils/                   # 工具
+│   ├── http_utils.py        # HTTP 工具（响应验证、错误映射）
+│   └── rate_limiter.py      # 限流器
 └── README.md                # 本文档
 ```
 
@@ -278,11 +301,13 @@ result = TushareDataTransformer.transform_daily_ohlcv(
 ```
 TushareSource.fetch_xxx()
     ↓
-TushareClient.query() 限流 → HTTP 请求 → 响应验证
+adapters/xxx  数据适配器（API 调用 + 字段映射）
     ↓
-http_utils.response_to_dataframe()  JSON → polars DataFrame
+TushareClient.query()  限流 → HTTP 请求 → 响应验证
     ↓
-source.py 转换逻辑  列重命名、类型转换、过滤
+utils/http_utils.response_to_dataframe()  JSON → polars DataFrame
+    ↓
+processors/  列映射、数据转换、合并
     ↓
 返回 polars DataFrame
 ```
@@ -309,11 +334,17 @@ source.py 转换逻辑  列重命名、类型转换、过滤
 
 ### Q4: 如何切换到其他数据源？
 
-Ditto 支持多数据源，通过 DI 注入不同的 Source 实现：
+Ditto 支持多数据源（Tushare、FRED、通达信），通过 DI 注入不同的 Source 实现：
 
 ```python
 # 通过 DI 容器获取不同的数据源
-source = container.get(AkShareSource)  # 切换到 Akshare
+from ditto_data.sources import TushareSource
+from ditto_data.sources.fred import FredSource
+from ditto_data.sources.tdx import TdxSource
+
+source = container.get(TushareSource)
+source = container.get(FredSource)
+source = container.get(TdxSource)
 ```
 
 ---
@@ -321,5 +352,6 @@ source = container.get(AkShareSource)  # 切换到 Akshare
 ## 参考资料
 
 - [Tushare 官方文档](https://tushare.pro/)
-- [HTTP 重构实施总结](./IMPLEMENTATION_SUMMARY.md)
-- [重构计划](../../../../../docs/plans/2026-01-03-tushare-http-refactor.md)
+- [Sources 层文档](../README.md)
+- 数据层设计文档：`docs/design/02_data_design.md`
+- 数据层架构规范：[`packages/data/CLAUDE.md`](../../../CLAUDE.md)

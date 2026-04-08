@@ -772,7 +772,10 @@ class QualityReconciliationService:
             dataset: 数据集标识
 
         """
-        # TODO: 实现告警发送（邮件、钉钉、微信等）
+        # TODO(TECH-DEBT): 实现告警发送（邮件、钉钉、微信等）
+        # 已有 NotificationProvider 基础设施
+        # （interfaces/registry/infra/notification.py），
+        # 待接入告警通道后实现。
         logger.warning(
             "Quality reconciliation alert",
             event="reconciliation_alert",

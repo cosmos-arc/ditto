@@ -4,11 +4,13 @@ from datetime import date
 
 import polars as pl
 from ditto_data.sources.normalization import NormalizationConfig
-from ditto_data.sources.tushare.processors.transformer import (
+from ditto_data.sources.tushare.processors.mappings import (
     ADJ_FACTOR_MAPPING,
     CALENDAR_MAPPING,
     DAILY_OHLCV_MAPPING,
     ETF_BASIC_MAPPING,
+)
+from ditto_data.sources.tushare.processors.transformer import (
     ColumnMapping,
     TushareDataTransformer,
 )

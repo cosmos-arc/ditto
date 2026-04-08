@@ -6,46 +6,9 @@ import polars as pl
 from ditto_infra.foundation import Metrics, logger
 
 from ditto_data.sources.tushare.processors.column_mapping import ColumnMapping
-
-# 重新导出所有 Mapping（保持向后兼容）
-from .mappings import (
-    ADJ_FACTOR_MAPPING,
-    BALANCE_SHEET_MAPPING,
-    CALENDAR_MAPPING,
-    CASH_FLOW_MAPPING,
-    CORPORATE_ACTIONS_MAPPING,
-    DAILY_OHLCV_MAPPING,
-    DIVIDEND_MAPPING,
-    ETF_BASIC_MAPPING,
-    FUND_ADJ_MAPPING,
-    INCOME_STATEMENT_MAPPING,
-    INDEX_BASIC_MAPPING,
-    INDEX_COMPOSITION_MAPPING,
-    MARGIN_TRADING_MAPPING,
-    PLEDGE_RATIO_MAPPING,
-    STOCK_BASIC_MAPPING,
-    STOCK_LIMIT_MAPPING,
-    VALUATION_METRICS_MAPPING,
-)
+from ditto_data.sources.tushare.processors.mappings import DAILY_OHLCV_MAPPING
 
 __all__ = [
-    "ADJ_FACTOR_MAPPING",
-    "BALANCE_SHEET_MAPPING",
-    "CALENDAR_MAPPING",
-    "CASH_FLOW_MAPPING",
-    "CORPORATE_ACTIONS_MAPPING",
-    "DAILY_OHLCV_MAPPING",
-    "DIVIDEND_MAPPING",
-    "ETF_BASIC_MAPPING",
-    "FUND_ADJ_MAPPING",
-    "INCOME_STATEMENT_MAPPING",
-    "INDEX_BASIC_MAPPING",
-    "INDEX_COMPOSITION_MAPPING",
-    "MARGIN_TRADING_MAPPING",
-    "PLEDGE_RATIO_MAPPING",
-    "STOCK_BASIC_MAPPING",
-    "STOCK_LIMIT_MAPPING",
-    "VALUATION_METRICS_MAPPING",
     "ColumnMapping",
     "TushareDataTransformer",
 ]

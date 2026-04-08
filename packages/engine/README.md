@@ -13,14 +13,13 @@
 ```
 ditto_engine/
 ├── alpha/             # Alpha 决策层（StrategySpec / Pipeline / DecisionStage / 内置 Stages / 策略模板）
-│   ├── stages/        # Universe / Signal / Scoring / Filtering / Selection / RiskLock / Trend / Regime
+│   ├── builtins/      # Universe / Signal / Scoring / Filtering / Selection / RiskLock / Trend / Regime
 │   ├── templates/     # etf_rotation / etf_trend_swing / stock_sector_rotation / stock_selection_trend
-│   └── ...            # validation.py, context.py, models.py, protocols.py, pipeline.py
+│   └── ...            # validation.py, context.py, models.py, protocols.py, pipeline.py, specs.py
 ├── execution/         # 执行层（Planner / Brokerage / TradeBuilder / Reality Model）
 ├── backtest/          # 回测引擎（EngineLoop / Manifest / Statistics / Audit / Serialization）
 ├── portfolio/         # 组合构建（WeightAllocator / ConstraintChecker / compare_reports）
 ├── accounting/        # 共享账户契约（Account / CashBook / OrderBook / Position）
-├── orchestrator/      # 交易编排抽象（TradingOrchestrator Protocol）
 ├── risk/              # 风险管理
 └── events.py          # 域事件定义
 ```
@@ -46,13 +45,13 @@ interfaces → app → engine → kernel
 
 | 模块 | 关键组件 | 说明 |
 |------|---------|------|
-| alpha | StrategyPipeline + 8 Stages + 4 Templates | 策略决策流水线 |
+| alpha | StrategyPipeline + 7 Stages + 4 Templates | 策略决策流水线 |
 | backtest | EngineLoop + PreTrade(6) + PostTrade(4) | 日历步进回测 |
 | execution | ExecutionPlanner + BacktestBrokerage + TradeBuilder | 订单执行与成交匹配 |
 | portfolio | EqualWeight / ScoreWeight / InverseVol + Constraints | 组合权重分配与约束 |
 | accounting | Account / CashBook / OrderBook / Position | 共享账户 frozen 契约 |
 
-### 内置 Stages（alpha/stages/）
+### 内置 Stages（alpha/builtins/）
 
 | Stage | 职责 |
 |-------|------|
@@ -61,7 +60,7 @@ interfaces → app → engine → kernel
 | ScoringStage | 信号 -> 评分（Mean/Rank/Percentile） |
 | FilteringStage | 条件过滤（FilterCondition） |
 | SelectionStage | Top-K 选择 |
-| RiskLockFilter | 风控锁定标的过滤 |
+| RiskLockFilter | 风控锁定标的过滤（合并入 FilteringStage） |
 | TrendFilterStage | 趋势方向过滤 |
 | RegimeStage | 市场状态检测（MA 交叉 / 波动率阈值） |
 
@@ -152,7 +151,6 @@ print(f"Max DD: {report.alpha.max_drawdown:.2%}")
 **重构**
 - Phase 4 App 层提取: engine 独立包，去除 engine/quality/engine 子模块（迁至 analytics/data）
 - 目录重命名: strategy -> alpha, engine -> alpha 下的 stages + templates
-- 新增 orchestrator 模块（TradingOrchestrator Protocol）
 - README 全面重写，反映当前模块结构
 
 ### v0.9.0 (2026-03-24)

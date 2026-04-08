@@ -10,7 +10,7 @@ from ditto_interfaces.cli.context import create_executor
 from ditto_interfaces.cli.utils.output import print_ingestion_result
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class CLIIngestOptions:
     """
     CLI 摄取选项分组.

@@ -9,11 +9,11 @@ from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
 )
-from ditto_data.sources.tushare.processors.transformer import (
+from ditto_data.sources.tushare.processors.mappings import (
     ETF_BASIC_MAPPING,
     FUND_ADJ_MAPPING,
-    TushareDataTransformer,
 )
+from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
 
 
 class ETFTushareAdapter(BaseTushareAdapter):

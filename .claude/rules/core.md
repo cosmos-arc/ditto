@@ -360,22 +360,22 @@ from ditto_infra.config import get_settings  # 应为 ditto_infra.foundation.con
 
 ```python
 # ✅ 正确
-from ditto_data import Data
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
 
 # ❌ 错误
-from ditto_data.storage.bars_store import BarsStore
+from ditto_data.storage.market import MarketReader  # 直接访问存储层
 ```
 
 ### Interfaces 层导入
 
 ```python
 # ✅ 正确
-from ditto_interfaces.api import get_hub
-from ditto_interfaces.ingestion import flows
+from ditto_interfaces.api.errors import error_handler
+from ditto_interfaces.exceptions import DittoError
 
 # ❌ 错误
-from ditto_interfaces.api.dependencies import hub
-直接导入内部实现
+from ditto_interfaces.api.dependencies import get_hub  # 直接导入内部实现
 ```
 
 ## 文档字符串
@@ -531,9 +531,9 @@ tar -tzf dist/*.whl | grep py.typed
 
 | 层级 | 职责 | 典型组件 | 禁止 |
 |------|------|----------|------|
-| **Data Store** | 数据持久化、基础查询 | SecurityStore, BarsStore | 包含业务逻辑 |
+| **Data Store** | 数据持久化、基础查询 | Reader/Writer CQRS（如 `MarketReader`, `MetadataWriter`） | 包含业务逻辑 |
 | **Data Service** | 领域封装、查询/写入契约 | MarketService, MetadataService | 直接暴露存储实现细节 |
-| **Data Runtime** | 基础设施（连接池、锁、分配器) | SQLitePool, FileLockManager, InstrumentIdAllocator | 包含业务逻辑 |
+| **Data Runtime** | 基础设施（连接池、锁、分配器) | SQLitePool, FileLockManager, InstrumentIdAllocator（均属 Infra 层） | 包含业务逻辑 |
 | **Data Source/Adapter** | 外部数据源适配与字段规范化 | TushareSource, CapitalAdapter | 包含业务编排逻辑 |
 | **Interfaces Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
  | **Interfaces Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
@@ -558,17 +558,15 @@ Interfaces Flow → Interfaces Service → App Service → Data Service → Data
 
 ```python
 # ❌ Interfaces 层禁止直接导入 Store
-from ditto_data.storage.security_store import SecurityStore
-from ditto_data.storage.bars_store import BarsStore
+from ditto_data.storage.metadata import MetadataReader
 
 # ❌ Interfaces 层禁止直接导入 Runtime
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_data.runtime.sqlite_pool import SQLitePool
+from ditto_infra.foundation.db import SQLitePool  # SQLitePool 属于 Infra 层
 
 # ✅ Interfaces 层应该使用 Service（通过 DI 获取）
-from ditto_data import Data
-from ditto_data.domains.market.market_service import MarketService
-from ditto_data.domains.metadata.metadata_service import MetadataService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
 
 # ✅ 仅 registry 模块允许导入 Store/Source 做 DI 装配
 from ditto_data.sources.tushare import TushareSource

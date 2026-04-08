@@ -14,11 +14,10 @@
 
 ```
 portfolio/
-├── allocation.py        # WeightAllocator Protocol + 内置实现
+├── allocation.py        # WeightAllocator Protocol + 内置实现 + AllocationStage
 │                        #   EqualWeightAllocator / ScoreWeightAllocator / InverseVolAllocator
-├── constraints.py       # ConstraintChecker + 内置约束
+├── constraints.py       # ConstraintChecker + 内置约束 + ConstraintStage
 │                        #   MaxWeight / MinWeight / MaxPositions
-├── stages.py            # AllocationStage / ConstraintStage (DecisionStage 适配器)
 ├── comparison.py        # compare_reports() — 回测报告比较
 └── report_views.py      # ReportView — comparison 所需最小视图
 ```

@@ -83,6 +83,7 @@ def repair_holes_flow(
         # 回补缺失数据
         result = bundle.backfill_manager.backfill_missing(
             dataset=dataset,
+            source=source,
             parallel=parallel,
         )
 

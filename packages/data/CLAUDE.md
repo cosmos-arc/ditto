@@ -12,27 +12,74 @@ ditto_data/
 │   └── pit/             # PIT（Point-in-Time）辅助
 ├── ingestion/           # 摄入服务（游标/日志/冻结/晚到数据/质量记录/发布安全）
 ├── models/              # 数据模型（枚举/市场/元数据/宏观/衍生/摄入/存储/策略等）
+│   ├── enums.py                # 枚举定义
+│   ├── common.py               # 公共模型
+│   ├── market.py               # 行情模型
+│   ├── metadata.py             # 元数据模型
+│   ├── macro.py                # 宏观模型
+│   ├── derived.py              # 衍生数据模型
+│   ├── ingestion.py            # 摄入结果模型
+│   ├── storage.py              # 存储相关模型
+│   ├── strategy.py             # 策略模型
+│   ├── strategy_run.py         # 策略运行模型
+│   ├── strategy_audit.py       # 策略审计模型
+│   ├── source_codes.py         # 数据源代码
+│   ├── publication_safety.py   # 发布安全模型
 ├── provider.py          # DataProvider Protocol 定义
 ├── quality/             # 数据质量引擎
-│   └── checkers/        # L1-L4 检查器（技术/业务/统计/跨源）
-├── query/               # 查询服务（市场/元数据查询 + Provider 路由）
+│   ├── checkers/        # L1-L4 检查器（技术/业务/统计/跨源）
+│   ├── config.py        # DQ 配置加载
+│   ├── engine.py        # 质量引擎主类
+│   ├── golden.py        # 黄金标准参考
+│   ├── report.py        # 质量报告生成
+│   ├── severity.py      # 严重级别定义
+│   └── spec.py          # 质量规格定义
+├── query/               # （空目录，查询已迁入 ditto_app.query）
 ├── runtime/             # 运行时基础设施（SQL 引擎/冻结管理/ID 分配）
 ├── scripts/             # 工具脚本
 ├── services/            # 域服务（Facade 模式）
+│   ├── ports.py         # 服务端口 Protocol
+│   ├── market_service.py         # 行情服务
+│   ├── market_write_service.py   # 行情写入服务
+│   ├── metadata_service.py       # 元数据服务
+│   ├── fundamental_service.py    # 基本面服务
+│   ├── macro_service.py          # 宏观服务
+│   ├── capital_service.py        # 资金服务
+│   ├── source_service.py         # 数据源服务
+│   ├── derived_catalog_service.py      # 衍生目录服务
+│   ├── derived_shadow_slot_service.py  # 衍生影子槽服务
+│   ├── research_catalog_service.py     # 研究目录服务
+│   ├── research_artifact_service.py    # 研究产物服务
 │   ├── audit/           # 审计服务
 │   ├── derived/         # 衍生数据服务（物化/查询/GC/并发）
 │   ├── metadata/        # 元数据子服务（日历/工具/Universe）
 │   └── strategy/        # 策略数据服务（目录/运行/产物/规则）
 ├── sources/             # 外部数据源
+│   ├── base.py          # 数据源基类
+│   ├── source.py        # 数据源注册
+│   ├── source_schema.py # 数据源 Schema 基类
+│   ├── exchange_transformers.py  # 交易所转换器
+│   ├── normalization.py # 数据标准化
 │   ├── fred/            # FRED 数据源（宏观/商品适配器）
+│   │   ├── adapters/    # 适配器（base/commodity/macro）
+│   │   ├── client.py    # FRED API 客户端
+│   │   ├── indicators.py# 指标定义
+│   │   └── fred_source.py
 │   ├── schemas/         # 数据源 Schema 定义
 │   ├── tdx/             # 通达信数据源
+│   │   ├── reader.py    # 本地文件读取
+│   │   ├── source.py    # TDX 数据源
+│   │   └── transformer.py
 │   └── tushare/         # Tushare 数据源（适配器/处理器/映射）
 │       ├── adapters/    # 数据适配器（ETF/股票/宏观/资金等）
 │       ├── processors/  # 数据处理器（列映射/合并/转换）
 │       └── utils/       # 工具（HTTP/限流）
 ├── storage/             # 存储引擎（Reader/Writer CQRS）
+│   ├── sqlite_client.py # SQLite 客户端
 │   ├── base/            # 存储基类（Parquet/SQLite/分区策略）
+│   │   ├── parquet_store.py
+│   │   ├── partition_strategy.py
+│   │   └── sqlite_store.py
 │   ├── capital/         # 资本数据（估值/融资融券/质押/指数成分）
 │   ├── factors/         # 因子存储
 │   ├── features/        # 特征存储（技术指标）

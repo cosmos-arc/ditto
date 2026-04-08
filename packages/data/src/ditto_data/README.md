@@ -23,12 +23,11 @@ ditto_data/
 ├── errors.py         # 错误类型
 ├── events.py         # 数据事件
 ├── quality/          # DQ 引擎 + 检查器
-├── query/            # 查询模型
+├── query/            # 查询模型（空，待填充）
 ├── runtime/          # 运行时支持（SQLite, PIT, Freeze）
 ├── services/         # 领域服务（7 个门面 + strategy + audit）
 ├── sources/          # 数据源适配器（Tushare, FRED, TDX）
 ├── storage/          # 存储层 — Reader/Writer CQRS，按领域组织
-├── stores/           # 遗留 store（逐步迁移中）
 └── utils/            # 通用工具
 ```
 

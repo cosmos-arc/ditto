@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ditto_app.process.backfill_manager import BackfillManager
+from ditto_app.process.cascade_orchestrator import InvalidationCascadeOrchestrator
 from ditto_app.process.ingestion_coordinator import IngestionCoordinator
-from ditto_app.process.materialization import (
+from ditto_app.process.materialization_orchestrator import (
     DerivedMaterializationOrchestrator,
-    DerivedPublicationFacade,
-    InvalidationCascadeOrchestrator,
 )
+from ditto_app.process.publication_facade import DerivedPublicationFacade
 from ditto_app.process.retry_manager import RetryManager
 from ditto_app.process.strategy_run_service import StrategyFacade
 from ditto_app.query.metadata import MetadataQueryFacade

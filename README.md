@@ -49,9 +49,9 @@
 
 ```
 interfaces → app → engine → data → infra
-interfaces → analytics → engine → kernel
+interfaces → analytics → kernel
 interfaces → data → kernel, infra
-app → data, engine, analytics, infra
+app → data, engine, analytics, kernel, infra
 engine → kernel, data.errors, data.provider (Protocol)
 analytics → kernel, data.errors, infra (logger)
 data → kernel, infra
@@ -99,7 +99,6 @@ ditto/
 │   ├── data/                    # 数据访问层
 │   │   └── src/ditto_data/
 │   │       ├── services/        # 域服务（6 Facade）
-│   │       ├── stores/          # 存储层（Reader/Writer）
 │   │       ├── sources/         # 数据源（Tushare/FRED/TDX）
 │   │       ├── models/          # 数据模型
 │   │       ├── storage/         # 存储引擎

@@ -20,6 +20,11 @@ ditto_app → ditto_infra ✅
 ditto_app 禁止 → ditto_interfaces ❌
 ```
 
+## App→Infra Scope 限制
+
+App 层仅允许使用 `ditto_infra.foundation`（缓存、配置、日志、工具），**禁止**直接使用 `ditto_infra.services`（通知等）。
+通知编排应在 Interfaces 层完成。
+
 ## CQRS 模块结构
 
 ```
@@ -37,43 +42,47 @@ ditto_app/
 │   ├── evaluation.py  # 评估查询
 │   ├── research.py    # 研究数据集查询
 │   ├── forward_return_service.py  # 前向收益率服务
+│   ├── _instrument_code_facade.py # 证券代码解析门面
 │   └── _utils.py      # 查询工具
 ├── process/            # 编排流程（可调用 query）
-│   ├── ingestion.py   # 数据摄取（re-export shim）
-│   ├── ingestion_config.py        # 摄取配置 dataclass
-│   ├── metadata_manager.py        # 元数据管理器
-│   ├── data_writer.py             # 数据写入器
-│   ├── list_date_inference.py     # 上市日期推断服务
-│   ├── result_handler.py          # 摄取结果处理器
-│   ├── _coordinator_constants.py  # 共享常量 + 指数工具函数
-│   ├── coordinator_factory.py     # create_coordinator 工厂 + re-export
-│   ├── ingestion_coordinator.py   # IngestionCoordinator 主类
-│   ├── backfill_manager.py        # BackfillManager
-│   ├── retry_manager.py           # RetryManager
-│   ├── coordinator.py             # 摄取协调器（re-export shim）
-│   ├── materialization.py  # 衍生物化（re-export shim）
-│   ├── materialization_types.py       # 物化类型定义
-│   ├── materialization_helpers.py     # 物化辅助函数
-│   ├── publication_facade.py          # 发布门面
-│   ├── cascade_orchestrator.py        # 级联编排器
-│   ├── materialization_orchestrator.py # 物化主编排器
-│   ├── quality.py     # 质量校验流程
-│   ├── strategy.py    # 策略运行（re-export shim）
-│   ├── strategy_types.py          # 策略类型定义
-│   ├── backtest_service.py        # 回测服务
-│   └── strategy_run_service.py    # 策略运行服务
+│   ├── auto_init.py                # 自动初始化
+│   ├── ingestion_config.py         # 摄取配置 dataclass
+│   ├── metadata_manager.py         # 元数据管理器
+│   ├── data_writer.py              # 数据写入器
+│   ├── list_date_inference.py      # 上市日期推断服务
+│   ├── result_handler.py           # 摄取结果处理器
+│   ├── backfill_handler.py         # 回填处理器
+│   ├── _coordinator_constants.py   # 共享常量 + 指数工具函数
+│   ├── coordinator_factory.py      # create_coordinator 工厂 + re-export
+│   ├── ingestion_coordinator.py    # IngestionCoordinator 主类
+│   ├── backfill_manager.py         # BackfillManager
+│   ├── retry_manager.py            # RetryManager
+│   ├── materialization_types.py        # 物化类型定义
+│   ├── materialization_dependencies.py # 物化依赖
+│   ├── materialization_helpers.py      # 物化辅助函数
+│   ├── publication_facade.py           # 发布门面
+│   ├── _publication_helpers.py         # 发布辅助函数
+│   ├── cascade_orchestrator.py         # 级联编排器
+│   ├── materialization_orchestrator.py  # 物化主编排器
+│   ├── certification_rules.py          # 认证规则
+│   ├── factor_orthogonalization.py     # 因子正交化
+│   ├── runtime_input_provider.py       # 运行时输入提供器
+│   ├── quality.py                # 质量校验流程
+│   ├── backtest_serialization.py  # 回测序列化
+│   ├── strategy_types.py         # 策略类型定义
+│   ├── backtest_service.py       # 回测服务
+│   └── strategy_run_service.py   # 策略运行服务
 ├── command/            # CQRS Command（纯写入）
 │   ├── ingestion.py   # 摄取命令
 │   └── strategy.py    # 策略命令
 ├── builders/           # 运行时装配（DI 构造）
-│   ├── strategy.py    # 策略构建器（re-export shim）
 │   ├── runtime_builder.py   # 运行时构建器
 │   ├── slice_builder.py     # 切片构建器
-│   └── service_factory.py   # 服务工厂
-├── backtest_serialization.py  # 回测序列化
+│   ├── service_factory.py   # 服务工厂
+│   └── _resolution.py       # 依赖解析工具
 ├── providers.py        # DI Provider 注册
 ├── config.py           # 数据集配置
-└── _reexports.py       # 共享类型 re-export
+└── types.py            # 共享类型定义
 ```
 
 ## R8 互斥规则（importlinter 强制）

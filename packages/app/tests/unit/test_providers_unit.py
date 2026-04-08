@@ -12,11 +12,11 @@ from ditto_app.builders import (
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
-from ditto_app.process.materialization import (
+from ditto_app.process.cascade_orchestrator import InvalidationCascadeOrchestrator
+from ditto_app.process.materialization_orchestrator import (
     DerivedMaterializationOrchestrator,
-    DerivedPublicationFacade,
-    InvalidationCascadeOrchestrator,
 )
+from ditto_app.process.publication_facade import DerivedPublicationFacade
 from ditto_app.process.quality import QualityService
 from ditto_app.process.strategy_run_service import StrategyFacade
 from ditto_app.providers import (

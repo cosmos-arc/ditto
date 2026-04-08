@@ -14,20 +14,6 @@ DI Provider 已下沉至各业务包：
 from __future__ import annotations
 
 # Infrastructure 层
-# Data 层（从 ditto_data.di re-export）
-from ditto_data.di import (
-    CapitalProvider,
-    DerivedProvider,
-    FundamentalProvider,
-    GoldenDatasetProvider,
-    MacroProvider,
-    MarketProvider,
-    MetadataProvider,
-    QualityProvider,
-    RuntimeProvider,
-    SourcesProvider,
-)
-
 # Contexts 层
 from .contexts import (
     IngestionBundle,
@@ -45,22 +31,12 @@ from .infra import (
 from .infra.config import DataStoreSettings
 
 __all__ = [
-    "CapitalProvider",
     "ConfigProvider",
     "DataStoreSettings",
-    "DerivedProvider",
-    "FundamentalProvider",
-    "GoldenDatasetProvider",
     "IngestionBundle",
-    "MacroProvider",
-    "MarketProvider",
     "MaterializationBundle",
-    "MetadataProvider",
     "NotificationProvider",
     "ObservabilityProvider",
-    "QualityProvider",
-    "RuntimeProvider",
-    "SourcesProvider",
     "StrategyBundle",
     "create_ingestion_bundle",
     "create_materialization_bundle",

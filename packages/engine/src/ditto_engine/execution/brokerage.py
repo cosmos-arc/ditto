@@ -15,6 +15,7 @@ from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
 
 from ditto_engine.accounting.account import Account, AccountView
+from ditto_engine.accounting.fills import FillEvent
 from ditto_engine.accounting.order_book import (
     Order,
     OrderEvent,
@@ -22,7 +23,7 @@ from ditto_engine.accounting.order_book import (
     OrderTicket,
     StateTransitionError,
 )
-from ditto_engine.execution.fills import Filled, FillEvent, NoFill
+from ditto_engine.execution.fills import Filled, NoFill
 from ditto_engine.execution.reality import BrokerageModel
 from ditto_engine.execution.reality.constants import (
     DEFAULT_COMMISSION_RATE,

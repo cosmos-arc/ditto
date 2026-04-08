@@ -5,15 +5,13 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_data.models.strategy_run import (
-    RunStatus,
-    StrategyRunRecord,
-)
+from ditto_data.models.strategy_run import StrategyRunRecord
 from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunReaderProtocol,
     StrategyRunService,
     StrategyRunWriterProtocol,
 )
+from ditto_kernel.enums import RunStatus
 
 # ---------------------------------------------------------------------------
 # Helpers

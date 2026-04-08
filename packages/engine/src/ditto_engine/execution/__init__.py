@@ -18,7 +18,6 @@ from ditto_engine.accounting.order_book import (
 from ditto_engine.execution.brokerage import BacktestBrokerage, Brokerage, ProcessInput
 from ditto_engine.execution.fills import (
     Filled,
-    FillEvent,
     FillOutcome,
     NoFill,
 )
@@ -80,7 +79,6 @@ __all__ = [
     "FeeModel",
     "FeeSchedule",
     "FifoTradeBuilder",
-    "FillEvent",
     "FillModel",
     "FillOutcome",
     "Filled",
