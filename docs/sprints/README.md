@@ -27,7 +27,7 @@ Ditto 项目的 Sprint 规划与开发文档。
 - ✅ Task 3: Domain Repositories (8 tests)
 - ✅ Task 4: DataHub Facade + SqlEngine (20 tests)
   - PR: https://github.com/cosmos-arc/ditto/pull/7
-  - 分支: `feat/datahub-facade`
+  - 分支: `feat/data-facade`
 
 **下一步**: P1 任务（ETL Pipeline + Golden Dataset 验证）
 
@@ -168,9 +168,9 @@ Ditto 项目的 Sprint 规划与开发文档。
 | 完成一个函数 | `feat(sql_engine): implement _register_views` |
 | 完成一个测试类 | `test(sql_engine): add test skeleton for SqlEngine` |
 | RED→GREEN 完成 | `feat(sql): make sql query tests pass` |
-| 重构完成 | `refactor(hub): simplify dependency injection` |
-| 修复 Bug | `fix(datahub): resolve SID allocation race condition` |
-| 类型修复 | `fix(types): add proper type hints to sql method` |
+| 重构完成 | `refactor(data): simplify dependency injection` |
+| 修复 Bug | `fix(data): resolve SID allocation race condition` |
+| 类型修复 | `fix(types): add proper type hints to query method` |
 
 ### ❌ 避免的提交方式
 
@@ -199,11 +199,11 @@ git commit -m "feat(sql_engine): implement adjustment macros (qfq, qfq_now, mark
 # 5. SQLite ATTACH
 git commit -m "feat(sql_engine): implement SQLite ATTACH on demand"
 
-# 6. DataHub Facade
-git commit -m "feat(datahub): implement DataHub facade with lazy loading"
+# 6. Data Facade
+git commit -m "feat(data): implement Data facade with lazy loading"
 
 # 7. 包导出
-git commit -m "chore(datahub): export DataHub from __init__.py"
+git commit -m "chore(data): export facade from __init__.py"
 ```
 
 ---

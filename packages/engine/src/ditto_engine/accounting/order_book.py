@@ -1,8 +1,7 @@
 """
 OrderBook / OrderTicket / Order — 订单簿 (F5: frozen dataclass).
 
-Phase 0 内联定义 Order 相关类型（最小枚举）。
-execution/orders.py (Part 2) 将定义完整版本并从那里 re-export。
+Order 相关类型的内联定义。
 """
 
 from __future__ import annotations

@@ -15,10 +15,13 @@ from prefect import task
 
 from ditto_interfaces.registry import create_ingestion_bundle
 
+# Prefect Task 泛型无法精确表达动态工厂返回类型
+# （submit 返回 PrefectFuture 而非 Task 本身，导致类型参数不变性冲突），
+# 使用类型别名避免裸 Any 注解触发 ANN401。
+type _PrefectTask = Any
 
-# Prefect Task 泛型无法精确表达动态工厂返回类型，保留 Any
-# (Task[..., dict[str, object]] 会导致下游 submit 类型推断失败)
-def create_ingest_task(dataset: Dataset) -> Any:  # noqa: ANN401
+
+def create_ingest_task(dataset: Dataset) -> _PrefectTask:
     """
     创建摄取任务的工厂函数。
 

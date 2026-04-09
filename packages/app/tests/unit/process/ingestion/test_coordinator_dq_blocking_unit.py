@@ -25,7 +25,7 @@ class TestDQBlockingBehavior:
             MarketServices,
         )
         from ditto_data.models.storage import WriteResult
-        from ditto_data.quality.spec import DQResult
+        from ditto_kernel.quality import DQResult
 
         # Mock services
         mock_metadata_service = mocker.MagicMock()
@@ -100,7 +100,7 @@ class TestDQBlockingBehavior:
         )
         from ditto_data.models.ingestion import IngestionLog, IngestionStatus
         from ditto_data.models.storage import WriteResult
-        from ditto_data.quality.spec import DQResult
+        from ditto_kernel.quality import DQResult
 
         # Mock services
         mock_metadata_service = mocker.MagicMock()

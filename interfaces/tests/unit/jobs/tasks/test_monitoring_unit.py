@@ -4,12 +4,12 @@ from collections.abc import Callable
 from typing import Any
 
 import pytest
-from ditto_data.quality.spec import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init
 from ditto_infra.foundation.observability.config import ObservabilityConfig
 from ditto_infra.foundation.observability.testing import reset_for_testing
 from ditto_interfaces.jobs.tasks.monitoring import monitor_ingestion_quality
+from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
 
 
 def _prefect_runner(entrypoint: Any) -> Callable[..., Any]:

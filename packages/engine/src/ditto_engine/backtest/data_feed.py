@@ -157,7 +157,12 @@ class ProviderBackedDataFeed:
 
     @staticmethod
     def _ensure_prev_close(df: pl.DataFrame) -> pl.DataFrame:
-        """若数据不含 prev_close，则通过 shift(1) 按标的计算。"""
+        """
+        若数据不含 prev_close，则通过 shift(1) 按标的计算。
+
+        首日（每个 instrument_id 的第一行）无历史 close，
+        fill_null(close) 用当日 close 填充，即 prev_close == close。
+        """
         if df.is_empty() or "prev_close" in df.columns:
             return df
         return df.sort(["instrument_id", "trade_date"]).with_columns(

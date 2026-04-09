@@ -50,7 +50,7 @@
 
 ### 代码风格
 - **语言**：中文回复/文档，UTF-8 编码
-- **Python**：详见 [core.md](.claude/rules/core.md)
+- **Python**：详见 [python.md](.claude/rules/python.md)
 - **类型**：禁止滥用 `# type: ignore`（详见 [noqa-ignore.md](.claude/rules/noqa-ignore.md)）
 - **TDD**：RED → GREEN → REFACTOR
 - **分支**：从 main 拉开发分支，PR 合并

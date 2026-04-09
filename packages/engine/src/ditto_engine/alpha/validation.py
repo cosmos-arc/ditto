@@ -35,40 +35,44 @@ def validate_spec_params(spec: StrategySpec) -> list[str]:
     for constraint in spec.param_constraints:
         name = constraint.name
 
-        # 检查必填参数
         if name not in params:
             errors.append(f"缺少必填参数: {name}")
             continue
 
         value = params[name]
-
-        # 类型校验
-        if constraint.dtype == "int":
-            if not isinstance(value, int) or isinstance(value, bool):
-                errors.append(
-                    f"参数 {name} 类型错误: 期望 int, 实际 {type(value).__name__}"
-                )
-                continue
-            _check_numeric_range(name, float(value), constraint, errors)
-        elif constraint.dtype == "float":
-            if not isinstance(value, (int, float)) or isinstance(value, bool):
-                errors.append(
-                    f"参数 {name} 类型错误: 期望 float, 实际 {type(value).__name__}"
-                )
-                continue
-            _check_numeric_range(name, float(value), constraint, errors)
-        elif constraint.dtype == "str":
-            if not isinstance(value, str):
-                errors.append(
-                    f"参数 {name} 类型错误: 期望 str, 实际 {type(value).__name__}"
-                )
-                continue
-            # 枚举值校验
-            if constraint.allowed_values and value not in constraint.allowed_values:
-                allowed = list(constraint.allowed_values)
-                errors.append(f"参数 {name} 值无效: '{value}' 不在允许值 {allowed} 中")
+        _validate_single_constraint(name, value, constraint, errors)
 
     return errors
+
+
+def _validate_single_constraint(
+    name: str,
+    value: object,
+    constraint: ParamConstraint,
+    errors: list[str],
+) -> None:
+    """校验单个参数约束，将错误追加到 errors 列表。"""
+    dtype = constraint.dtype
+
+    if dtype in ("int", "float"):
+        expected = int if dtype == "int" else (int, float)
+        if not isinstance(value, expected) or isinstance(value, bool):
+            errors.append(
+                f"参数 {name} 类型错误: 期望 {dtype}, 实际 {type(value).__name__}"
+            )
+            return
+        _check_numeric_range(name, float(value), constraint, errors)
+        return
+
+    if dtype == "str":
+        if not isinstance(value, str):
+            errors.append(
+                f"参数 {name} 类型错误: 期望 str, 实际 {type(value).__name__}"
+            )
+            return
+        if constraint.allowed_values and value not in constraint.allowed_values:
+            allowed = list(constraint.allowed_values)
+            errors.append(f"参数 {name} 值无效: '{value}' 不在允许值 {allowed} 中")
 
 
 def _check_numeric_range(

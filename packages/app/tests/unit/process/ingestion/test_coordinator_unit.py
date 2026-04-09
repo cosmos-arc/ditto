@@ -735,12 +735,20 @@ class TestIngestDate:
 
     def test_ingest_date_dq_blocked(
         self,
-        coordinator,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_service,
+        mock_capital_service,
+        mock_macro_service,
         mock_ingestion_log_service,
         mock_source,
-        mock_market_write_service,
+        mocker,
     ) -> None:
-        """测试 DQ 阻断时的处理。"""
+        """测试 DQ 质量检查阻断时的处理。
+
+        DQ 阻断由 quality_service.check_and_quarantine 显式触发，
+        而非由 save_bars 返回 0 行推断。
+        """
         # Arrange
         mock_ingestion_log_service.get_log.return_value = None
         source_df = pl.DataFrame(
@@ -753,10 +761,13 @@ class TestIngestDate:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        # 模拟 DQ 阻断：返回 0 表示没有行写入，被阻塞
-        # 需要重置 side_effect 并设置 return_value
-        mock_market_write_service.save_bars.side_effect = None
-        mock_market_write_service.save_bars.return_value = 0
+        # 模拟 DQ 质量检查阻断：quality_service 返回 should_block=True
+        mock_quality_service = mocker.Mock()
+        mock_quality_service.check_and_quarantine.return_value = (
+            source_df,
+            True,  # should_block=True
+        )
+
         mock_ingestion_log_service.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
@@ -766,13 +777,34 @@ class TestIngestDate:
             error_message="DQ L1 check failed: 10 errors",
         )
 
+        # 创建带 quality_service 的 coordinator
+        dq_coordinator = IngestionCoordinator(
+            metadata_service=mock_metadata_service,
+            market_services=MarketServices(
+                query=mock_market_write_service,
+                write=mock_market_write_service,
+            ),
+            fundamental_service=mock_fundamental_service,
+            capital_service=mock_capital_service,
+            macro_service=mock_macro_service,
+            source=mock_source,
+            config=IngestionCoordinatorConfig(
+                ingestion_log_service=mock_ingestion_log_service,
+                quality_service=mock_quality_service,
+            ),
+        )
+
         # Act
-        result = coordinator.ingest_date("stock_daily", "2024-12-27")
+        result = dq_coordinator.ingest_date("stock_daily", "2024-12-27")
 
         # Assert
         assert result.status == "failed"
         assert result.error == "DQ_BLOCKED"
         assert "DQ" in result.message or "check failed" in result.message
+        # 验证 DQ 质量检查被调用
+        mock_quality_service.check_and_quarantine.assert_called_once()
+        # 验证 write_data 未被调用（DQ 阻断在写入之前）
+        mock_market_write_service.save_bars.assert_not_called()
 
     def test_ingest_date_unsupported_dataset_raises_error(
         self, coordinator, mock_ingestion_log_service, mock_source

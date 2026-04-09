@@ -12,9 +12,24 @@ Ditto 共享内核 — 跨层领域原语 + Protocol 抽象 + 薄实现.
 __version__ = "0.2.0"
 
 from ditto_kernel.clock import Clock, RealtimeClock, SimulatedClock
-from ditto_kernel.enums import AssetClass, Exchange, OrderSide, RiskScope, RunStatus
+from ditto_kernel.enums import (
+    AssetClass,
+    Exchange,
+    MacroCategory,
+    MacroFrequency,
+    OrderSide,
+    RiskScope,
+    RunStatus,
+)
 from ditto_kernel.events import DomainEvent, EventBus, SimpleEventBus
+from ditto_kernel.exceptions import (
+    AmbiguousTickerError,
+    DataError,
+    IdentifierError,
+    NoIdentifierProvidedError,
+)
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_kernel.research import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
@@ -32,13 +47,20 @@ from ditto_kernel.specs import (
     MaterializationProfile,
     TimeSpec,
 )
+from ditto_kernel.types import InstrumentIngestParams
 
 __all__ = [
     "CALENDAR_TO_TIMEZONE",
     "GRAIN_TO_TIME_KEYS",
+    "AmbiguousTickerError",
     "AssetClass",
     "CalendarId",
     "Clock",
+    "DQIssue",
+    "DQLevel",
+    "DQResult",
+    "DQSeverity",
+    "DataError",
     "DerivedRole",
     "DerivedSpec",
     "DomainEvent",
@@ -46,8 +68,13 @@ __all__ = [
     "Exchange",
     "ExecutionPolicy",
     "GrainId",
+    "IdentifierError",
     "InstrumentId",
+    "InstrumentIngestParams",
+    "MacroCategory",
+    "MacroFrequency",
     "MaterializationProfile",
+    "NoIdentifierProvidedError",
     "OrderSide",
     "RealtimeClock",
     "ResearchDatasetSnapshotRecord",

@@ -1,4 +1,4 @@
-"""摄取协调器工厂 — create_coordinator + re-export."""
+"""摄取协调器工厂 — create_coordinator."""
 
 from __future__ import annotations
 
@@ -21,16 +21,6 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
 from ditto_infra.foundation import logger
 
-from ditto_app.process._coordinator_constants import (
-    EXCHANGE_PREFIX_MAP,
-    MARKET_INDEX_CODES,
-    STYLE_INDEX_CODES,
-    SUPPORTED_INSTRUMENT_DATASETS,
-    SWIndustryProvider,
-    get_all_index_codes,
-    get_default_index_codes,
-    get_sw_index_codes,
-)
 from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
 from ditto_app.process.ingestion_coordinator import (
     IngestionCoordinator,
@@ -123,15 +113,6 @@ def create_coordinator(
 
 
 __all__ = [
-    "EXCHANGE_PREFIX_MAP",
-    "MARKET_INDEX_CODES",
-    "STYLE_INDEX_CODES",
-    "SUPPORTED_INSTRUMENT_DATASETS",
     "CoordinatorServices",
-    "IngestionCoordinator",
-    "SWIndustryProvider",
     "create_coordinator",
-    "get_all_index_codes",
-    "get_default_index_codes",
-    "get_sw_index_codes",
 ]

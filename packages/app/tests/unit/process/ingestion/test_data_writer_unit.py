@@ -210,3 +210,25 @@ class TestWriteCapital:
         assert result.rows_written == 1
         assert not result.blocked
         mock_capital_service.save_pledge_ratio.assert_called_once()
+
+
+@pytest.mark.unit
+class TestToWriteResult:
+    """Test _to_write_result helper."""
+
+    def test_to_write_result_never_infers_blocked(self):
+        """_to_write_result 不应从 rows_written==0 推断 blocked。
+        blocked 只应由显式 DQ 检查设置。"""
+        from ditto_app.process.data_writer import _to_write_result
+
+        df = pl.DataFrame({"a": [1, 2, 3]})
+
+        # 零行写入 — blocked 应为 False（不是 DQ 阻断）
+        result = _to_write_result("test_ds", 2024, df, rows_written=0)
+        assert result.blocked is False
+        assert result.rows_written == 0
+
+        # 正常写入 — blocked 应为 False
+        result = _to_write_result("test_ds", 2024, df, rows_written=3)
+        assert result.blocked is False
+        assert result.rows_written == 3

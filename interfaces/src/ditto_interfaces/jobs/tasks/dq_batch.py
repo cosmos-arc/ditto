@@ -7,8 +7,8 @@ from typing import Any
 from ditto_app.process.quality import L3BatchService
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_data.models import Dataset
-from ditto_data.quality import DQIssue
 from ditto_infra.foundation import Metrics, logger
+from ditto_kernel.quality import DQIssue
 from prefect import task
 
 from ditto_interfaces.jobs.context import (

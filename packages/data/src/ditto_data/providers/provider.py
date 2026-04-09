@@ -42,12 +42,10 @@ class ServiceBackedDataProvider:
         自动将 string ticker 解析为 int instrument_id，
         然后委托给 MarketService.find_bars。
         """
-        # NOTE: asof=None 使用当前 instrument mapping。
-        # 未来支持 PIT 历史映射需扩展 BarQuery/InstrumentQuery Protocol 增加 asof 字段。
         ticker_to_id = self._metadata.resolve_instrument_ids_batch(
             identifiers=list(query.instruments),
             source="tushare",
-            asof=None,
+            asof=query.asof,
         )
         instrument_ids = [
             ticker_to_id[ticker]
@@ -84,14 +82,13 @@ class ServiceBackedDataProvider:
         instruments: tuple[str, ...],
         start: str,
         end: str,
+        asof: str | None = None,
     ) -> pl.DataFrame:
         """获取因子数据."""
-        # NOTE: asof=None 使用当前 instrument mapping。
-        # 未来支持 PIT 历史映射需扩展 BarQuery/InstrumentQuery Protocol 增加 asof 字段。
         ticker_to_id = self._metadata.resolve_instrument_ids_batch(
             identifiers=list(instruments),
             source="tushare",
-            asof=None,
+            asof=asof,
         )
         instrument_ids = tuple(
             ticker_to_id[t] for t in instruments if t in ticker_to_id

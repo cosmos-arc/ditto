@@ -81,7 +81,7 @@ class ORJSONResponse(JSONResponse):
     - 内存占用：更小
     """
 
-    def render(self, content: Any) -> bytes:  # noqa: ANN401
+    def render(self, content: object) -> bytes:
         """使用 orjson 序列化内容."""
         # 记录序列化指标
         start_time = time.monotonic()

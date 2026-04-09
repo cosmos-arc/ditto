@@ -12,7 +12,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import Any
 
 import polars as pl
 from ditto_infra.foundation import Metrics, logger, traced
@@ -20,6 +19,19 @@ from ditto_infra.foundation import Metrics, logger, traced
 from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_data.models import InstrumentIdRange
 from ditto_data.services.ports import MarketReadPorts
+from ditto_data.storage.market.commodity.bars import CommodityBarsReader
+from ditto_data.storage.market.etf.bars import EtfBarsReader
+from ditto_data.storage.market.fx.bars import FxBarsReader
+from ditto_data.storage.market.index.bars import IndexBarsReader
+from ditto_data.storage.market.stock.bars import StockBarsReader
+
+type _BarsReader = (
+    StockBarsReader
+    | EtfBarsReader
+    | IndexBarsReader
+    | FxBarsReader
+    | CommodityBarsReader
+)
 
 
 class AdjType(Enum):
@@ -321,7 +333,10 @@ class MarketService:
             end_date=end_str,
         )
 
-    def _get_bars_reader(self, asset_class: str) -> Any:  # noqa: ANN401
+    def _get_bars_reader(
+        self,
+        asset_class: str,
+    ) -> _BarsReader | None:
         """
         获取指定资产类别的 K线读取器.
 

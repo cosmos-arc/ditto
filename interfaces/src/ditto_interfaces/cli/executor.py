@@ -15,7 +15,7 @@ from typing import Any
 
 from ditto_app.process.backfill_manager import BackfillManager
 from ditto_app.process.ingestion_coordinator import IngestionCoordinator
-from ditto_data.models import InstrumentIngestParams
+from ditto_kernel import InstrumentIngestParams
 
 
 class CLIExecutor:

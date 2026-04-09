@@ -74,7 +74,12 @@ class _StubProvider:
         return self._schedule_df
 
     def get_factor(
-        self, name: str, instruments: tuple[str, ...], start: str, end: str
+        self,
+        name: str,
+        instruments: tuple[str, ...],
+        start: str,
+        end: str,
+        asof: str | None = None,
     ) -> Any:
         return pl.DataFrame()
 

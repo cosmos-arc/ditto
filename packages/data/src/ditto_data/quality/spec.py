@@ -1,20 +1,10 @@
 """DQ rule configuration models."""
 
-from dataclasses import dataclass, field
-from enum import Enum, StrEnum
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
-
-from ditto_data.quality.severity import DQSeverity
-
-
-class DQLevel(Enum):
-    """DQ check level."""
-
-    TECHNICAL = "technical"  # 技术类 - 结构约束（非空、唯一、外键）
-    BUSINESS = "business"  # 业务类 - 业务规则（OHLC、涨跌幅）
-    STATISTICAL = "statistical"  # 统计类 - 异常检测（Z-score、完整性）
 
 
 class RuleType(StrEnum):
@@ -283,62 +273,3 @@ class DQSpec(BaseModel):
 
         """
         return dataset in self.datasets
-
-
-# Result Models
-
-
-@dataclass(frozen=True)
-class DQIssue:
-    """Single DQ issue."""
-
-    level: DQLevel
-    severity: DQSeverity
-    rule_name: str
-    message: str
-    affected_rows: int = 0
-    sample_data: list[dict[str, Any]] = field(default_factory=lambda: [])
-
-
-@dataclass(frozen=True)
-class DQResult:
-    """DQ check result."""
-
-    dataset: str
-    passed: bool
-    issues: list[DQIssue] = field(default_factory=lambda: [])
-
-    @property
-    def has_errors(self) -> bool:
-        """Has ERROR severity issues."""
-        return any(i.severity == DQSeverity.ERROR for i in self.issues)
-
-    @property
-    def has_warnings(self) -> bool:
-        """Has WARNING severity issues."""
-        return any(i.severity == DQSeverity.WARNING for i in self.issues)
-
-    @property
-    def has_alerts(self) -> bool:
-        """Has ALERT severity issues."""
-        return any(i.severity == DQSeverity.ALERT for i in self.issues)
-
-    @property
-    def error_count(self) -> int:
-        """Count of ERROR issues."""
-        return sum(1 for i in self.issues if i.severity == DQSeverity.ERROR)
-
-    @property
-    def warn_count(self) -> int:
-        """Count of WARNING issues."""
-        return sum(1 for i in self.issues if i.severity == DQSeverity.WARNING)
-
-    @property
-    def alert_count(self) -> int:
-        """Count of ALERT issues."""
-        return sum(1 for i in self.issues if i.severity == DQSeverity.ALERT)
-
-    @property
-    def total_count(self) -> int:
-        """Total count of all issues."""
-        return len(self.issues)

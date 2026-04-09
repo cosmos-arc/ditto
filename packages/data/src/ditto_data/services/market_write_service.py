@@ -4,10 +4,8 @@ MarketWriteService - Market 域写入服务。
 提供市场行情数据的写入接口，包括 K线、复权因子和股票状态。
 """
 
-from __future__ import annotations
-
 from datetime import date
-from typing import Any, Literal
+from typing import Literal
 
 import polars as pl
 from ditto_infra.foundation import Metrics, logger, traced
@@ -20,6 +18,19 @@ from ditto_data.models.ingestion import (
     LateArrivalCheckResult,
 )
 from ditto_data.services.ports import MarketWritePorts
+from ditto_data.storage.market.commodity.bars import CommodityBarsWriter
+from ditto_data.storage.market.etf.bars import EtfBarsWriter
+from ditto_data.storage.market.fx.bars import FxBarsWriter
+from ditto_data.storage.market.index.bars import IndexBarsWriter
+from ditto_data.storage.market.stock.bars import StockBarsWriter
+
+type _BarsWriter = (
+    StockBarsWriter
+    | EtfBarsWriter
+    | IndexBarsWriter
+    | FxBarsWriter
+    | CommodityBarsWriter
+)
 
 
 class MarketWriteService:
@@ -114,7 +125,10 @@ class MarketWriteService:
 
         return rows_written
 
-    def _get_bars_writer(self, dataset: str) -> Any:  # noqa: ANN401
+    def _get_bars_writer(
+        self,
+        dataset: str,
+    ) -> _BarsWriter:
         """
         获取指定数据集的 K线写入器.
 

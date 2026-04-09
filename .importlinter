@@ -186,10 +186,13 @@ forbidden_modules =
     ditto_data.models.**
     ditto_data.errors.**
     ditto_data.quality.**
+    ditto_data.config.**
 # Registry 豁免（Composition Root）
 ignore_imports =
     ditto_interfaces.registry.** -> ditto_data.services.**
     ditto_interfaces.registry.** -> ditto_data.quality.**
+    ditto_interfaces.registry.** -> ditto_data.config.**
+    ditto_interfaces.jobs.context -> ditto_data.quality
 allow_indirect_imports = true
 unmatched_ignore_imports_alerting = warn
 

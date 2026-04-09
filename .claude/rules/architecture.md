@@ -53,7 +53,7 @@ paths:
 - Kernel → [packages/kernel/CLAUDE.md](../../packages/kernel/CLAUDE.md)
 - Infra → [packages/infra/CLAUDE.md](../../packages/infra/CLAUDE.md)
 - Data → [packages/data/CLAUDE.md](../../packages/data/CLAUDE.md) | [pit.md](../../.claude/rules/pit.md)
-- Engine → [packages/engine/CLAUDE.md](../../packages/engine/CLAUDE.md) | [engine.md](../../.claude/rules/engine.md)
+- Engine → [packages/engine/CLAUDE.md](../../packages/engine/CLAUDE.md)
 - Analytics → [packages/analytics/CLAUDE.md](../../packages/analytics/CLAUDE.md)
 - App → [packages/app/CLAUDE.md](../../packages/app/CLAUDE.md)
 - Interfaces → [interfaces/CLAUDE.md](../../interfaces/CLAUDE.md)

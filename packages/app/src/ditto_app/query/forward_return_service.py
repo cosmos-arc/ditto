@@ -14,6 +14,7 @@ from datetime import date, timedelta
 
 import polars as pl
 from ditto_data.services.market_service import MarketService
+from ditto_infra.foundation.config import get_environment
 
 __all__ = ["ForwardReturnService"]
 
@@ -61,7 +62,19 @@ class ForwardReturnService:
             ``pl.DataFrame[instrument_id, trade_date, forward_return]``
             with the last *holding_period* dates per instrument dropped.
 
+        Raises:
+            RuntimeError: If called in production environment.
+
         """
+        # Forward return uses look-ahead data (close[t+T]).
+        # This is intentionally restricted to development/testing.
+
+        if get_environment().is_production:
+            msg = (
+                "forward_return_service.compute() not available in "
+                "production (uses look-ahead data)"
+            )
+            raise RuntimeError(msg)
         # Fetch a wider range so that close[t+T] is available for the
         # requested end date.  We add a generous calendar buffer.
         extended_end = _extend_end_date(end, holding_period)

@@ -6,10 +6,10 @@ import pytest
 from ditto_data.models.ingestion import (
     BackfillResult,
     IngestionResult,
-    InstrumentIngestParams,
     ResultCounts,
     RetryResult,
 )
+from ditto_kernel.types import InstrumentIngestParams
 
 # ---------------------------------------------------------------------------
 # InstrumentIngestParams

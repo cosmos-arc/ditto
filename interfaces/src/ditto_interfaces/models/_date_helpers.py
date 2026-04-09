@@ -8,20 +8,18 @@ API 模型公共日期/格式化辅助工具.
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated, Any
+from typing import Annotated, Protocol
 
 from pydantic import BeforeValidator
 
 
-def parse_date(v: Any) -> date | None:  # noqa: ANN401
+def parse_date(v: str | date | None) -> date | None:
     """解析日期值，支持字符串和 date 对象."""
     if v is None:
         return None
     if isinstance(v, date):
         return v
-    if isinstance(v, str):
-        return date.fromisoformat(v)
-    raise ValueError(f"Invalid date format: {v}")
+    return date.fromisoformat(v)
 
 
 def format_float(value: float | None, decimals: int = 2) -> float | None:
@@ -44,9 +42,19 @@ def format_date(value: date | str | None) -> str | None:
 DateField = Annotated[date | None, BeforeValidator(parse_date)]
 
 
+class _DateRangeModel(Protocol):
+    """validate_date_range 所需的最小接口."""
+
+    @property
+    def start_date(self) -> date | None: ...
+
+    @property
+    def end_date(self) -> date | None: ...
+
+
 def validate_date_range(
-    self: Any,  # noqa: ANN401
-) -> Any:  # noqa: ANN401
+    self: _DateRangeModel,
+) -> _DateRangeModel:
     """
     验证日期范围: start_date <= end_date.
 

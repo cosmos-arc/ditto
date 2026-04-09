@@ -21,9 +21,12 @@ from datetime import time
 from enum import StrEnum
 from typing import Annotated, overload
 
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.errors import DatasetNotFoundError
 from ditto_data.models import Dataset
 from pydantic import BaseModel, Field
+
+__all__ = ["DataStoreSettings"]
 
 
 class TaskTier(StrEnum):

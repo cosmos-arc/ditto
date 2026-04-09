@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from ditto_data.errors import (
-    AmbiguousTickerError,
-    IdentifierNotFoundError,
-)
-from ditto_data.models.ingestion import InstrumentIngestParams
+from ditto_data.errors import IdentifierNotFoundError
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger
+from ditto_kernel import AmbiguousTickerError
+from ditto_kernel.types import InstrumentIngestParams
 
 from ditto_app.process._coordinator_constants import (
     A_SHARE_CODE_LENGTH,

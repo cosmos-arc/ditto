@@ -57,6 +57,7 @@ class TestCreateCoordinatorStringSource:
             services.source_service.get_source.assert_any_call(Source.TUSHARE)
             # 验证 IngestionCoordinator 被创建
             mock_cls.assert_called_once()
+            assert mock_cls.call_args.kwargs["source"] is mock_source
 
     def test_case_insensitive(self) -> None:
         services = _make_services()
@@ -71,7 +72,7 @@ class TestCreateCoordinatorEnumSource:
 
     def test_enum_source_creates_coordinator(self) -> None:
         services = _make_services()
-        with _patch_coordinator_init() as (_, mock_instance):
+        with _patch_coordinator_init() as (mock_cls, mock_instance):
             with create_coordinator(
                 services,
                 source_name=Source.TUSHARE,
@@ -79,6 +80,7 @@ class TestCreateCoordinatorEnumSource:
                 assert coordinator is mock_instance
 
             services.source_service.get_source.assert_any_call(Source.TUSHARE)
+            mock_cls.assert_called_once()
 
 
 class TestCreateCoordinatorInvalidSource:
@@ -88,13 +90,14 @@ class TestCreateCoordinatorInvalidSource:
         services = _make_services()
         with (
             _patch_coordinator_init() as (mock_cls, _),
-            pytest.raises(ValueError, match="Unknown source"),
+            pytest.raises(ValueError, match="Unknown source") as exc_info,
         ):
             with create_coordinator(services, source_name="invalid_source"):
                 pass
 
         # 不应创建协调器
         mock_cls.assert_not_called()
+        assert "invalid_source" in str(exc_info.value)
 
 
 class TestCreateCoordinatorFredDegradation:
@@ -127,7 +130,6 @@ class TestCreateCoordinatorFredDegradation:
 
         # FRED 可用时返回 mock
         with _patch_coordinator_init() as (mock_cls, _):
-            # 需要让 get_source 返回不同的值
             call_count = 0
             original_source = MagicMock()
 
@@ -143,5 +145,7 @@ class TestCreateCoordinatorFredDegradation:
             with create_coordinator(services, source_name="tushare"):
                 pass
 
+            assert call_count >= 2
             config = mock_cls.call_args.kwargs["config"]
             assert config.fred_source is mock_fred
+            assert isinstance(mock_fred, MagicMock)

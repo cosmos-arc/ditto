@@ -2,7 +2,7 @@
 
 import polars as pl
 from ditto_data.quality.checkers.business import BusinessChecker
-from ditto_data.quality.spec import DQLevel, DQSeverity
+from ditto_kernel.quality import DQLevel, DQSeverity
 
 
 class TestBusinessChecker:

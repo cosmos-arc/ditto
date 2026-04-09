@@ -311,7 +311,7 @@ class SafeGauge:
         """减少 Gauge 值。"""
         self._value = max(0.0, self._value - delta)
 
-    def _callback(self, options: Any) -> list[metrics.Observation]:  # noqa: ANN401
+    def _callback(self, options: object) -> list[metrics.Observation]:
         """ObservableGauge 回调函数。"""
         return [metrics.Observation(self._value, {})]
 

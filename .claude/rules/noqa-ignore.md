@@ -231,6 +231,6 @@ git grep "^global " packages/*/src interfaces/*/src
 
 ## 参考资源
 
-- [core.md](../../.claude/rules/core.md) - Python 核心规范
+- [python.md](../../.claude/rules/python.md) - Python 核心规范
 - [BasedPyright Type Guards](https://docs.basedpyright.com/)
 - [Ruff Rules](https://docs.astral.sh/ruff/rules/)

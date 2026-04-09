@@ -88,6 +88,45 @@ class TestInstrumentQuery:
             pass
 
 
+class TestBarQueryAsof:
+    """BarQuery.asof 字段测试."""
+
+    def test_get_bars_defaults_asof_to_none(self) -> None:
+        """BarQuery 未指定 asof 时应默认为 None（当前行为不变）。"""
+        query = BarQuery(
+            instruments=["000001.SZ"],
+            start="2024-01-01",
+            end="2024-12-31",
+        )
+        assert query.asof is None
+        assert query.instruments == ("000001.SZ",)
+
+    def test_get_bars_with_asof(self) -> None:
+        """BarQuery 指定 asof 后应正确存储。"""
+        query = BarQuery(
+            instruments=["000001.SZ"],
+            start="2024-01-01",
+            end="2024-12-31",
+            asof="2024-06-01",
+        )
+        assert query.asof == "2024-06-01"
+        assert query.instruments == ("000001.SZ",)
+
+    def test_get_bars_asof_with_other_params(self) -> None:
+        """BarQuery asof 应与其他参数共存。"""
+        query = BarQuery(
+            instruments=["510300.SH", "000001.SZ"],
+            start="2024-01-01",
+            end="2024-12-31",
+            frequency="weekly",
+            adj="hfq",
+            asof="2024-06-01",
+        )
+        assert query.asof == "2024-06-01"
+        assert query.frequency == "weekly"
+        assert query.adj == "hfq"
+
+
 class TestDataProviderProtocol:
     """DataProvider Protocol 一致性测试."""
 
@@ -110,6 +149,7 @@ class TestDataProviderProtocol:
                 instruments: tuple[str, ...],
                 start: str,
                 end: str,
+                asof: str | None = None,
             ) -> pl.DataFrame:
                 return pl.DataFrame()
 

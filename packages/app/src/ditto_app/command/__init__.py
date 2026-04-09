@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import Protocol, TypeVar, runtime_checkable
 
 from ditto_app.command.ingestion import (
     BackfillRangeCommand,
@@ -35,6 +35,6 @@ class CommandHandler(Protocol[C_contra]):
        路由完善后启用。
     """
 
-    def handle(self, command: C_contra) -> Any:  # noqa: ANN401
+    def handle(self, command: C_contra) -> object:
         """处理给定 command 并返回结果."""
         ...

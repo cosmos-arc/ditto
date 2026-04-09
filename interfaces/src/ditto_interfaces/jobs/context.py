@@ -14,6 +14,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
+from ditto_app.process.quality import QualityEngineProtocol
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_data.quality import QualityEngine
@@ -44,7 +45,7 @@ def create_prefect_host() -> Iterator[Any]:
 
 @contextmanager
 def create_dq_and_metadata_context() -> Iterator[
-    tuple[QualityEngine, MetadataQueryFacade, MarketQueryFacade]
+    tuple[QualityEngineProtocol, MetadataQueryFacade, MarketQueryFacade]
 ]:
     """
     创建 DQ、MetadataQueryFacade 和 MarketQueryFacade 上下文，使用 dishka 容器管理依赖.
@@ -52,7 +53,8 @@ def create_dq_and_metadata_context() -> Iterator[
     用于同时需要 QualityEngine、MetadataQueryFacade 和 MarketQueryFacade 的场景。
 
     Yields:
-        tuple: (QualityEngine, MetadataQueryFacade, MarketQueryFacade) - 容器管理的实例
+        tuple: (QualityEngineProtocol, MetadataQueryFacade, MarketQueryFacade)
+            容器管理的实例
 
     Example:
         with create_dq_and_metadata_context() as (

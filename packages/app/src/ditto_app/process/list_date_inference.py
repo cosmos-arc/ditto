@@ -158,68 +158,86 @@ class ListDateInferenceService:
         api_limit = API_LIMITS.get(asset_class, 6000)
         years_per_batch = api_limit // TRADING_DAYS_PER_YEAR
 
-        # 从当前日期往回查询，直到找到数据或到达 2010 年
         end_date = date.today()
         earliest_date: date | None = None
 
         while end_date >= EARLIEST_LIST_DATE_INFERENCE:
-            # 计算批次起始日期
             start_date = max(
                 EARLIEST_LIST_DATE_INFERENCE,
                 end_date - timedelta(days=years_per_batch * 365),
             )
 
-            try:
-                df = self._fetch_daily_data(
-                    source_ticker=source_ticker,
-                    asset_class=asset_class,
-                    start_date=start_date,
-                    end_date=end_date,
-                )
+            batch_earliest, reached_end = self._search_earliest_date_in_batch(
+                source_ticker, asset_class, start_date, end_date, api_limit
+            )
+            if batch_earliest is not None and (
+                earliest_date is None or batch_earliest < earliest_date
+            ):
+                earliest_date = batch_earliest
+            if reached_end:
+                break
 
-                if not df.is_empty() and "trade_date" in df.columns:
-                    # 先过滤出 >= 2010 年的数据，再找最早的日期
-                    filtered_df = df.filter(
-                        pl.col("trade_date") >= EARLIEST_LIST_DATE_INFERENCE
-                    )
-
-                    if not filtered_df.is_empty():
-                        batch_earliest = filtered_df.select(
-                            pl.col("trade_date").min()
-                        ).item()
-
-                        if batch_earliest is not None:
-                            # 转换为 date 类型
-                            if isinstance(batch_earliest, str):
-                                batch_earliest = date.fromisoformat(batch_earliest)
-                            elif hasattr(batch_earliest, "date"):
-                                batch_earliest = batch_earliest.date()
-
-                            if earliest_date is None or batch_earliest < earliest_date:
-                                earliest_date = batch_earliest
-
-                # 如果数据量小于限制，说明已经到达最早的数据
-                if len(df) < api_limit:
-                    break
-
-            except Exception as e:
-                msg = (
-                    f"No data found for {source_ticker} "
-                    f"in range {start_date} to {end_date}"
-                )
-                logger.debug(
-                    msg,
-                    event="list_date_inference_no_data",
-                    source_ticker=source_ticker,
-                    start_date=str(start_date),
-                    end_date=str(end_date),
-                    error=str(e),
-                )
-
-            # 移动到下一个批次
             end_date = start_date - timedelta(days=1)
 
         return earliest_date
+
+    def _search_earliest_date_in_batch(
+        self,
+        source_ticker: str,
+        asset_class: str,
+        start_date: date,
+        end_date: date,
+        api_limit: int,
+    ) -> tuple[date | None, bool]:
+        """
+        在单个批次中搜索最早的 trade_date。
+
+        Returns:
+            (earliest_date, reached_end) — 最早日期和是否到达数据末尾。
+
+        """
+        try:
+            df = self._fetch_daily_data(
+                source_ticker=source_ticker,
+                asset_class=asset_class,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        except Exception as e:
+            msg = f"No data for {source_ticker} [{start_date}..{end_date}]"
+            logger.debug(
+                msg,
+                event="list_date_inference_no_data",
+                source_ticker=source_ticker,
+                start_date=str(start_date),
+                end_date=str(end_date),
+                error=str(e),
+            )
+            return None, False
+
+        if df.is_empty() or "trade_date" not in df.columns:
+            return None, len(df) < api_limit
+
+        return self._find_earliest_trade_date(df), len(df) < api_limit
+
+    @staticmethod
+    def _find_earliest_trade_date(df: pl.DataFrame) -> date | None:
+        """从 DataFrame 中提取最早的有效 trade_date。"""
+        filtered_df = df.filter(pl.col("trade_date") >= EARLIEST_LIST_DATE_INFERENCE)
+        if filtered_df.is_empty():
+            return None
+
+        batch_earliest = filtered_df.select(pl.col("trade_date").min()).item()
+        if batch_earliest is None:
+            return None
+
+        if isinstance(batch_earliest, date):
+            return batch_earliest
+        if isinstance(batch_earliest, str):
+            return date.fromisoformat(batch_earliest)
+        if hasattr(batch_earliest, "date"):
+            return batch_earliest.date()
+        return None
 
     def _fetch_daily_data(
         self,

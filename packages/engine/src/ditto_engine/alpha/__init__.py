@@ -1,8 +1,7 @@
 """
 Alpha — 策略决策层（因子 Alpha 生成）.
 
-Phase 0: specs, models, context, protocols.
-Phase 1: pipeline, builtins, templates.
+specs, models, context, protocols, pipeline, builtins, templates.
 
 Note: 模板（ETFRotationConfig 等）从 ditto_engine.alpha.templates 导入，
 避免 portfolio ↔ alpha 循环依赖。

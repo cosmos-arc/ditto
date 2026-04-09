@@ -25,6 +25,7 @@ class BarQuery:
         end: 结束日期（ISO 格式 "YYYY-MM-DD"）
         frequency: 频率（"daily" / "weekly" / "monthly"），由实现侧验证
         adj: 复权类型（"none" / "hfq" / "qfq"），由实现侧验证
+        asof: PIT 时间点（ISO 格式 "YYYY-MM-DD"），None 表示使用当前映射
 
     """
 
@@ -33,6 +34,7 @@ class BarQuery:
     end: str
     frequency: str = "daily"
     adj: str = "none"
+    asof: str | None = None
 
     def __init__(
         self,
@@ -42,12 +44,14 @@ class BarQuery:
         end: str,
         frequency: str = "daily",
         adj: str = "none",
+        asof: str | None = None,
     ) -> None:
         object.__setattr__(self, "instruments", tuple(instruments))
         object.__setattr__(self, "start", start)
         object.__setattr__(self, "end", end)
         object.__setattr__(self, "frequency", frequency)
         object.__setattr__(self, "adj", adj)
+        object.__setattr__(self, "asof", asof)
 
 
 @dataclass(frozen=True)
@@ -90,6 +94,7 @@ class DataProvider(Protocol):
         instruments: tuple[str, ...],
         start: str,
         end: str,
+        asof: str | None = None,
     ) -> pl.DataFrame:
         """获取因子数据."""
         ...

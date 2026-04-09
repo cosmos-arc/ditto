@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ditto_app.process._coordinator_constants import SWIndustryProvider
 from ditto_app.process.backfill_manager import BackfillManager
 from ditto_app.process.backtest_service import (
     BacktestService,
@@ -15,10 +16,7 @@ from ditto_app.process.cascade_orchestrator import (
     RepairBatchResult,
 )
 from ditto_app.process.certification_rules import build_certification_checks
-from ditto_app.process.coordinator_factory import (
-    SWIndustryProvider,
-    create_coordinator,
-)
+from ditto_app.process.coordinator_factory import create_coordinator
 from ditto_app.process.data_writer import IngestionDataWriter
 from ditto_app.process.factor_orthogonalization import (
     FactorOrthogonalizationService,

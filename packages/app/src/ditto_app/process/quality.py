@@ -6,6 +6,7 @@ __all__ = [
     "ComparisonStoreProtocol",
     "InstrumentStoreProtocol",
     "L3BatchService",
+    "QualityEngineProtocol",
     "QualityReconciliationService",
     "QualityService",
     "ReconciliationResult",
@@ -19,10 +20,9 @@ from typing import Any, Literal, Protocol
 import polars as pl
 import polars.exceptions as pl_exceptions
 from ditto_data.ingestion.quality_record_service import QualityRecordService
-from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
-from ditto_data.quality.spec import DQIssue, DQResult
 from ditto_infra.foundation import logger
+from ditto_kernel.quality import DQIssue, DQResult
 
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
@@ -79,7 +79,7 @@ class QualityService:
 
     def __init__(
         self,
-        engine: QualityEngine,
+        engine: QualityEngineProtocol,
         quarantine_writer: QualityRecordService | None = None,
     ) -> None:
         """
@@ -223,7 +223,7 @@ class L3BatchService:
 
     def __init__(
         self,
-        engine: QualityEngine,
+        engine: QualityEngineProtocol,
         market_facade: MarketQueryFacade,
         metadata_facade: MetadataQueryFacade,
     ) -> None:
@@ -461,6 +461,40 @@ class L3BatchService:
 # ---------------------------------------------------------------------------
 
 
+class QualityEngineProtocol(Protocol):
+    """质量引擎协议 — 供 interfaces 层依赖注入使用。"""
+
+    def check(
+        self,
+        df: pl.DataFrame,
+        dataset: str,
+        levels: list[Literal["l1", "l2"]] | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> DQResult:
+        """执行写入时 DQ 检查。"""
+        ...
+
+    def check_cross_source(
+        self,
+        primary: pl.DataFrame,
+        secondary: pl.DataFrame,
+        dataset: str,
+        context: dict[str, Any] | None = None,
+    ) -> DQResult:
+        """执行跨源对比检查。"""
+        ...
+
+    def check_statistical(
+        self,
+        dataset: str,
+        current: pl.DataFrame,
+        historical: pl.DataFrame | None = None,
+        calendar: pl.DataFrame | None = None,
+    ) -> DQResult:
+        """执行统计类异常检查。"""
+        ...
+
+
 class InstrumentStoreProtocol(Protocol):
     """证券信息补充依赖协议."""
 
@@ -509,7 +543,7 @@ class QualityReconciliationService:
 
     def __init__(
         self,
-        engine: QualityEngine,
+        engine: QualityEngineProtocol,
         tdx_source: TdxSourceProtocol,
         comparison_store: ComparisonStoreProtocol,
         instrument_store: InstrumentStoreProtocol,
@@ -772,10 +806,9 @@ class QualityReconciliationService:
             dataset: 数据集标识
 
         """
-        # TODO(TECH-DEBT): 实现告警发送（邮件、钉钉、微信等）
-        # 已有 NotificationProvider 基础设施
-        # （interfaces/registry/infra/notification.py），
-        # 待接入告警通道后实现。
+        # TODO(TECH-DEBT): 实现告警发送（邮件、钉钉、微信等）。
+        # 告警编排应在 Interfaces 层完成（App 层禁止直接依赖 Infra services）。
+        # 方案：通过事件/结果对象通知 Interfaces 层，由其调用 NotificationProvider。
         logger.warning(
             "Quality reconciliation alert",
             event="reconciliation_alert",

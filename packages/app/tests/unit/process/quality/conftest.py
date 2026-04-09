@@ -4,8 +4,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.quality.severity import DQSeverity
-from ditto_data.quality.spec import DQIssue, DQLevel, DQResult
+from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
 from pytest_mock import MockerFixture
 
 

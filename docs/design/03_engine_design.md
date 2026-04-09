@@ -109,6 +109,7 @@ class RegimeEngine:
 
     def _calc_trend_score(self, df: pl.DataFrame) -> pl.DataFrame:
         """趋势得分：基于 MA 排列 + 斜率 + 相对位置"""
+        # WARNING: 以下为简化示例，实际使用时必须指定 closed="left" 或 shift(1) 以避免未来数据泄露
         df = df.with_columns([
             pl.col("close").rolling_mean(20).alias("ma20"),
             pl.col("close").rolling_mean(60).alias("ma60"),

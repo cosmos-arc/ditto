@@ -11,12 +11,12 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.errors import AmbiguousTickerError
 from ditto_interfaces.api.utils.identifier import (
     resolve_identifier_for_api as _resolve_identifier,
 )
 from ditto_interfaces.models.capital import to_margin_list, to_valuation_list
 from ditto_interfaces.models.common import APIResponse
+from ditto_kernel import AmbiguousTickerError
 
 
 @pytest.fixture

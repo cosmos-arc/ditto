@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_data.quality import DQResult
 from ditto_infra.foundation import Metrics, logger
+from ditto_kernel.quality import DQResult
 from prefect import task
 
 

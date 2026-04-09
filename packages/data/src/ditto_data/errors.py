@@ -2,12 +2,19 @@
 Data layer exception classes.
 
 Following design document at docs/design/02_data_design.md
+
+Note: DataError, IdentifierError are defined in ditto_kernel.exceptions and
+imported here because Data-layer subclasses (CalendarError, ValidationError, etc.)
+inherit from them. NoIdentifierProvidedError and AmbiguousTickerError have been
+moved to ditto_kernel.exceptions — import them from there directly.
 """
+
+from ditto_kernel.exceptions import DataError, IdentifierError
 
 # ---------------------------------------------------------------------------
 # Derived* error hierarchy — canonical definition (Data layer owns these
-# because Data services raise them without depending on Core).
-# Core re-exports from here via ditto_engine.errors.
+# because Data services raise them without depending on Engine).
+# Engine re-exports from here via ditto_engine.errors.
 # ---------------------------------------------------------------------------
 
 
@@ -111,32 +118,8 @@ class DerivedValidationError(DerivedError):
             )
 
 
-class DataError(Exception):
-    """Data base exception."""
-
-    def __init__(self, message: str, details: dict[str, object] | None = None) -> None:
-        """
-        Initialize Data error.
-
-        Args:
-            message: Error message.
-            details: Additional error details.
-
-        """
-        super().__init__(message)
-        self.details = details or {}
-
-
 class CalendarError(DataError):
     """Calendar-related error base class."""
-
-    pass
-
-
-class IdentifierError(DataError):
-    """Identifier-related error base class."""
-
-    pass
 
 
 class InstrumentIdNotFoundError(IdentifierError):
@@ -198,52 +181,8 @@ class IdentifierNotFoundError(IdentifierError):
         super().__init__(message, details)
 
 
-class NoIdentifierProvidedError(IdentifierError):
-    """
-    未提供任何标识符异常.
-
-    当 resolve_instrument_identifier() 未收到任何有效标识符时抛出.
-    """
-
-    pass
-
-
-class AmbiguousTickerError(IdentifierError):
-    """
-    Ticker 不唯一异常.
-
-    当裸代码（如 "000001"）匹配多个标的时抛出.
-    """
-
-    def __init__(
-        self,
-        ticker: str,
-        matches: list[dict[str, object]],
-    ) -> None:
-        """
-        初始化 AmbiguousTickerError.
-
-        Args:
-            ticker: 裸代码
-            matches: 匹配项列表，每项包含 source_ticker, instrument_id, name
-
-        """
-        self.ticker = ticker
-        self.matches = matches
-
-        def format_match(m: dict[str, object]) -> str:
-            return (
-                f"{m.get('source_ticker', '')} (ID: {m.get('instrument_id', '')}, "
-                f"名称: {m.get('name', '')})"
-            )
-
-        match_list = "\n  - ".join(format_match(m) for m in matches)
-        message = (
-            f"Ticker '{ticker}' 存在歧义, "
-            f"匹配到 {len(matches)} 个标的:\n  - {match_list}"
-        )
-        details: dict[str, object] = {"ticker": ticker, "matches": matches}
-        super().__init__(message, details)
+# NoIdentifierProvidedError and AmbiguousTickerError are now in ditto_kernel.exceptions
+# and re-exported via the top-level import.
 
 
 class TradingDateNotFoundError(CalendarError):
@@ -335,11 +274,6 @@ class SchemaValidationError(ValidationError):
 # ---------------------------------------------------------------------------
 # DataSource / Persistence error hierarchy
 # ---------------------------------------------------------------------------
-#
-# These errors were originally defined in ditto_interfaces.errors (inheriting from
-# DittoPortError).  They are re-homed here under DataError so that the app
-# layer can reference them without depending on port/interfaces.
-# The constructor API is fully compatible with the port-side originals.
 
 
 class DataSourceError(DataError):
@@ -623,7 +557,6 @@ def convert_httpx_to_network_error(
 
 
 __all__ = [
-    "AmbiguousTickerError",
     "AuthError",
     "CalendarError",
     "DataError",
@@ -641,7 +574,6 @@ __all__ = [
     "IdentifierNotFoundError",
     "InstrumentIdNotFoundError",
     "NetworkError",
-    "NoIdentifierProvidedError",
     "PartitionNotFoundError",
     "PersistenceError",
     "SchemaValidationError",

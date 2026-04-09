@@ -1,16 +1,5 @@
-"""DQ severity level enumeration."""
+"""DQ severity level enumeration — re-exported from ditto_kernel.quality."""
 
-from enum import Enum
+from ditto_kernel.quality import DQSeverity
 
-
-class DQSeverity(Enum):
-    """
-    DQ severity level.
-
-    Represents the severity level of a data quality issue.
-    Used across all layers for consistent issue classification.
-    """
-
-    ERROR = "error"
-    WARNING = "warning"
-    ALERT = "alert"
+__all__ = ["DQSeverity"]

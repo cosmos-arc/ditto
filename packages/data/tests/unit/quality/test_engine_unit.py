@@ -7,9 +7,9 @@ import pytest
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.spec import (
     DatasetRules,
-    DQResult,
     DQSpec,
 )
+from ditto_kernel.quality import DQResult
 
 
 class TestQualityEngine:

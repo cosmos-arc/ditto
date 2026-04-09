@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import date
 
 from ditto_app.query.metadata import MetadataQueryFacade
-from ditto_data.errors import AmbiguousTickerError, NoIdentifierProvidedError
 from ditto_infra.foundation import logger
+from ditto_kernel import AmbiguousTickerError, NoIdentifierProvidedError
 from fastapi import HTTPException
 
 

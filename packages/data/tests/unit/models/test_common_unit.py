@@ -3,7 +3,7 @@
 import pytest
 from ditto_data.models import Dataset, Domain
 from ditto_data.models.common import InstrumentIdRange, OnDuplicate
-from ditto_data.quality.severity import DQSeverity
+from ditto_kernel.quality import DQSeverity
 
 
 @pytest.mark.unit

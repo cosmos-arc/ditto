@@ -104,7 +104,12 @@ class TestParquetProvider:
         return pl.DataFrame()
 
     def get_factor(
-        self, name: str, instruments: tuple[str, ...], start: str, end: str
+        self,
+        name: str,
+        instruments: tuple[str, ...],
+        start: str,
+        end: str,
+        asof: str | None = None,
     ) -> pl.DataFrame:
         """ProviderBackedDataFeed 不调用此方法。"""
         return pl.DataFrame()

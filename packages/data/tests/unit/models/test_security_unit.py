@@ -141,7 +141,7 @@ class TestInstrumentRegistration:
 
     def test_json_serialization(self) -> None:
         """Test InstrumentRegistration can be serialized to JSON."""
-        import json
+        import orjson
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
@@ -152,8 +152,8 @@ class TestInstrumentRegistration:
             list_date="1999-11-10",
         )
 
-        # 使用 asdict + json.dumps 代替 model_dump_json
-        json_str = json.dumps(asdict(registration), ensure_ascii=False)
+        json_bytes = orjson.dumps(asdict(registration))
+        json_str = json_bytes.decode("utf-8")
 
         assert "600000.SH" in json_str
         assert "600000" in json_str

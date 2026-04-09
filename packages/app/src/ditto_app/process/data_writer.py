@@ -87,7 +87,7 @@ def _to_write_result(
         checksum=checksum,
         rows_written=rows_written,
         rows_total=rows_written,
-        blocked=rows_written == 0,  # 如果没有行写入，则认为被阻塞
+        blocked=False,  # blocked 仅由显式 DQ 检查设置，不从 rows_written 推断
     )
 
 
@@ -635,7 +635,7 @@ class IngestionDataWriter:
         asset_class: Literal["stock", "etf", "index"],
     ) -> tuple[str, str]:
         """
-        使用 MetadataService 批量注册证券基础信息（线程安全）。
+        使用 MetadataService 批量注册证券基础信息（幂等，依赖 PK 约束）。
 
         Args:
             df: 基础信息数据

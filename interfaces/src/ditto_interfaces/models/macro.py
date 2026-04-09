@@ -14,41 +14,35 @@ from datetime import date
 from typing import Annotated, Any, Self
 
 import polars as pl
-from ditto_data.models import MacroCategory, MacroFrequency
+from ditto_kernel import MacroCategory, MacroFrequency
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 
-def _parse_date(v: Any) -> date | None:  # noqa: ANN401
+def _parse_date(v: str | date | None) -> date | None:
     """解析日期值，支持字符串和 date 对象."""
     if v is None:
         return None
     if isinstance(v, date):
         return v
-    if isinstance(v, str):
-        return date.fromisoformat(v)
-    raise ValueError(f"Invalid date format: {v}")
+    return date.fromisoformat(v)
 
 
-def _parse_category(v: Any) -> MacroCategory | None:  # noqa: ANN401
+def _parse_category(v: str | MacroCategory | None) -> MacroCategory | None:
     """解析 MacroCategory，支持字符串和 MacroCategory 对象."""
     if v is None:
         return None
     if isinstance(v, MacroCategory):
         return v
-    if isinstance(v, str):
-        return MacroCategory(v)
-    raise ValueError(f"Invalid category: {v}")
+    return MacroCategory(v)
 
 
-def _parse_frequency(v: Any) -> MacroFrequency | None:  # noqa: ANN401
+def _parse_frequency(v: str | MacroFrequency | None) -> MacroFrequency | None:
     """解析 MacroFrequency，支持字符串和 MacroFrequency 对象."""
     if v is None:
         return None
     if isinstance(v, MacroFrequency):
         return v
-    if isinstance(v, str):
-        return MacroFrequency(v)
-    raise ValueError(f"Invalid frequency: {v}")
+    return MacroFrequency(v)
 
 
 # 支持从 JSON 字符串解析日期的类型

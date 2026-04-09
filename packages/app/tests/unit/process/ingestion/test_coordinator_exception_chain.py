@@ -10,10 +10,10 @@ from ditto_app.process.ingestion_coordinator import (
     MarketServices,
 )
 from ditto_data.errors import IdentifierNotFoundError
-from ditto_data.models.ingestion import InstrumentIngestParams
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing
 from ditto_infra.foundation.observability.config import ObservabilityConfig
+from ditto_kernel.types import InstrumentIngestParams
 
 
 @pytest.fixture(autouse=True)

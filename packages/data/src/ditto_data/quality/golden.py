@@ -85,6 +85,30 @@ class DynamicConfig(BaseModel):
     include_suspended: bool = Field(default=False, description="纳入停牌股")
 
 
+def _handle_string_ticker(item: str, tickers_set: set[str]) -> None:
+    """处理字符串类型的 ticker 条目。"""
+    ticker = item.strip()
+    if ticker:
+        tickers_set.add(ticker)
+
+
+def _handle_mapping_ticker(
+    item: Mapping[str, Any],
+    tickers_set: set[str],
+    specs: list[TickerSpec],
+) -> None:
+    """处理字典类型的 ticker 条目，尝试解析为 TickerSpec。"""
+    item_dict: dict[str, Any] = cast(dict[str, Any], item)
+    ticker_val: Any = item_dict.get("ticker", "")
+    if not (ticker_val and isinstance(ticker_val, str)):
+        return
+    tickers_set.add(ticker_val.strip())
+    try:
+        specs.append(TickerSpec(**item_dict))
+    except (TypeError, ValueError):
+        logger.debug("忽略无效的 TickerSpec: %s", repr(item))
+
+
 class GoldenDatasetSpec(BaseModel):
     """黄金数据集配置规范。"""
 
@@ -105,25 +129,17 @@ class GoldenDatasetSpec(BaseModel):
 
         for item in items:
             if isinstance(item, str):
-                ticker = item.strip()
-                if ticker:
-                    tickers_set.add(ticker)
+                _handle_string_ticker(item, tickers_set)
             elif isinstance(item, Mapping):
-                item_dict: dict[str, Any] = cast(dict[str, Any], item)
-                ticker_val: Any = item_dict.get("ticker", "")
-                if ticker_val and isinstance(ticker_val, str):
-                    tickers_set.add(ticker_val.strip())
-                    try:
-                        specs.append(TickerSpec(**item_dict))
-                    except (TypeError, ValueError):
-                        msg = repr(cast(object, item))
-                        logger.debug("忽略无效的 TickerSpec: %s", msg)
+                _handle_mapping_ticker(
+                    cast(Mapping[str, Any], item), tickers_set, specs
+                )
 
         return tickers_set, specs
 
     @model_validator(mode="before")
     @classmethod
-    def parse_tickers_data(cls, data: Any) -> Any:  # noqa: ANN401
+    def parse_tickers_data(cls, data: object) -> object:
         """
         从 tickers 字段同时解析 ticker 字符串和 TickerSpec 对象。
 

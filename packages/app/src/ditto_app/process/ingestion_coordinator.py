@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Literal, NamedTuple, cast
 
@@ -12,18 +11,8 @@ from ditto_data.errors import (
     NetworkError,
     SourceFetchError,
 )
-from ditto_data.models import (
-    FX_CODE_TO_INSTRUMENT_ID,
-    METAL_CODE_ALIASES,
-    VIX_CODE_TO_INSTRUMENT_ID,
-    Dataset,
-    DateScheduleType,
-    OnDuplicate,
-)
-from ditto_data.models.ingestion import (
-    IngestionResult,
-    InstrumentIngestParams,
-)
+from ditto_data.models import Dataset, DateScheduleType, OnDuplicate
+from ditto_data.models.ingestion import IngestionResult
 from ditto_data.models.storage import WriteResult
 from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
@@ -33,15 +22,21 @@ from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger
+from ditto_kernel.types import InstrumentIngestParams
 
+from ditto_app.process._commodity_fetcher import (
+    fetch_commodity_daily as _fetch_commodity_daily,
+)
 from ditto_app.process._coordinator_constants import (
     SUPPORTED_INSTRUMENT_DATASETS,
     get_all_index_codes,
 )
-from ditto_app.process.auto_init import resolve_identifier_with_auto_init
-from ditto_app.process.backfill_handler import (
-    BackfillContext,
+from ditto_app.process._fetch_handlers import (
+    build_daily_fetch_handlers,
+    build_instrument_fetch_handlers,
 )
+from ditto_app.process.auto_init import resolve_identifier_with_auto_init
+from ditto_app.process.backfill_handler import BackfillContext
 from ditto_app.process.backfill_handler import (
     backfill_adj_factor as _backfill_adj_factor,
 )
@@ -51,9 +46,10 @@ from ditto_app.process.list_date_inference import ListDateInferenceService
 from ditto_app.process.metadata_manager import MetadataManager
 from ditto_app.process.result_handler import IngestionResultHandler
 
-# ---------------------------------------------------------------------------
-# 模块级纯函数 — 无 self 依赖，便于测试和复用
-# ---------------------------------------------------------------------------
+__all__ = [
+    "IngestionCoordinator",
+    "MarketServices",
+]
 
 
 def _is_source_fetch_error(error: Exception) -> bool:
@@ -68,17 +64,7 @@ def _normalize_source_fetch_error(error: Exception) -> SourceFetchError:
 
 
 def _list_natural_days(start_date: str, end_date: str) -> list[str]:
-    """
-    生成自然日列表.
-
-    Args:
-        start_date: 开始日期 (YYYY-MM-DD)
-        end_date: 结束日期 (YYYY-MM-DD)
-
-    Returns:
-        日期字符串列表 (YYYY-MM-DD)
-
-    """
+    """生成自然日列表 [start_date, end_date]。"""
     start = date.fromisoformat(start_date)
     end = date.fromisoformat(end_date)
     days: list[str] = []
@@ -150,83 +136,23 @@ class IngestionCoordinator:
         self._index_codes_cache: list[str] | None = None
 
     def _fetch_commodity_daily(self, trade_date: str) -> pl.DataFrame:
-        """
-        获取商品数据（原油、贵金属、VIX）.
+        """获取商品数据（原油、贵金属、VIX），委托至 ``_commodity_fetcher``。"""
+        return _fetch_commodity_daily(
+            trade_date,
+            primary_source=self._source,
+            fred_source=self._fred_source,
+        )
 
-        数据源分配：
-        - FRED: WTI 原油、布伦特原油、VIX
-        - Tushare: 黄金、白银（FRED 数据已停止更新）
-
-        Args:
-            trade_date: 交易日期 (YYYY-MM-DD)
-
-        Returns:
-            合并后的商品数据 DataFrame
-
-        """
-        results: list[pl.DataFrame] = []
-
-        # FRED 数据：原油和 VIX（排除已停止更新的贵金属）
-        fred_codes = [
-            "COMMOD_WTI",
-            "COMMOD_BRENT",
-            *list(VIX_CODE_TO_INSTRUMENT_ID.keys()),
-        ]
-
-        if self._fred_source:
-            try:
-                fred_df = self._fred_source.fetch_commodities(
-                    codes=fred_codes,
-                    start_date=trade_date,
-                    end_date=trade_date,
-                )
-                if not fred_df.is_empty():
-                    results.append(fred_df)
-            except Exception as e:
-                logger.warning(
-                    "FRED commodity fetch failed, continuing with Tushare metals",
-                    event="fred_commodity_fetch_failed",
-                    error=str(e),
-                )
-        else:
-            logger.warning(
-                "FRED source not configured, skipping oil/VIX data",
-                event="fred_not_configured",
-            )
-
-        # Tushare 数据：贵金属（黄金、白银）
-        metal_codes = list(dict.fromkeys(METAL_CODE_ALIASES.values()))
-
-        try:
-            metal_df = self._source.fetch_metal_daily(
-                codes=metal_codes,
-                start_date=trade_date,
-                end_date=trade_date,
-            )
-            if not metal_df.is_empty():
-                results.append(metal_df)
-        except Exception as e:
-            logger.warning(
-                "Tushare metal fetch failed",
-                event="tushare_metal_fetch_failed",
-                error=str(e),
-            )
-
-        if not results:
-            return pl.DataFrame()
-        return pl.concat(results)
+    # ------------------------------------------------------------------
+    # list_date 推断 + 指数代码缓存
+    # ------------------------------------------------------------------
 
     def _run_list_date_inference(self, dataset: str) -> None:
         """
         在 basic 数据摄取后执行 list_date 推断补偿。
 
         针对 list_date 为 NULL 的证券，从历史行情数据推断上市日期。
-
-        Args:
-            dataset: 数据集名称
-
         """
-        # 仅对 basic 数据集执行推断
         asset_class_map = {
             "stock_basic": "stock",
             "etf_basic": "etf",
@@ -265,16 +191,7 @@ class IngestionCoordinator:
             )
 
     def _get_cached_index_codes(self) -> list[str]:
-        """
-        获取缓存的指数代码列表.
-
-        首次调用时从 API 获取并缓存，后续调用直接返回缓存值。
-        SW 行业指数代码不常变化，缓存可以避免每次摄取都调用 API。
-
-        Returns:
-            指数代码列表（包含市场指数、风格指数和 SW 行业指数）
-
-        """
+        """获取缓存的指数代码列表。"""
         if self._index_codes_cache is None:
             logger.debug("Caching index codes from API on first access")
             self._index_codes_cache = get_all_index_codes(
@@ -322,14 +239,7 @@ class IngestionCoordinator:
     def _check_should_skip(
         self, dataset: str, trade_date: str, force: bool
     ) -> IngestionResult | None:
-        """
-        检查是否应该跳过摄取。
-
-        Returns:
-            IngestionResult: 如果应该跳过，返回跳过结果
-            None: 如果不应该跳过
-
-        """
+        """检查是否应该跳过摄取。"""
         should_skip, skip_reason = self._metadata_manager.should_skip(
             dataset=dataset,
             trade_date=trade_date,
@@ -346,21 +256,7 @@ class IngestionCoordinator:
         return None
 
     def _is_trading_day_for_dataset(self, dataset: str, trade_date: str) -> bool:
-        """
-        检查数据集是否需要交易日验证。
-
-        对于交易日驱动数据集（market + 部分 capital），非交易日返回 False。
-        其他数据集不需要交易日验证，返回 True。
-
-        Args:
-            dataset: 数据集名称
-            trade_date: 交易日期
-
-        Returns:
-            bool: True 表示可以继续，False 表示应该跳过
-
-        """
-        # P0-2: 行情类数据集在非交易日静默跳过
+        """检查数据集是否需要交易日验证。"""
         try:
             dataset_enum = Dataset(dataset)
         except ValueError:
@@ -425,17 +321,7 @@ class IngestionCoordinator:
         context: str,
         log_tag: str,
     ) -> IngestionResult:
-        """
-        统一的 fetch 错误处理。
-
-        Args:
-            error: 捕获的异常
-            dataset: 数据集名称
-            date_identifier: 日期标识（trade_date 或 start_date）
-            context: NetworkError 上下文描述
-            log_tag: 日志事件后缀（如 "during_fetch"）
-
-        """
+        """统一的 fetch 错误处理。"""
         if isinstance(error, (httpx.NetworkError, httpx.TimeoutException)):
             logger.exception(
                 f"network_error_{log_tag}",
@@ -571,35 +457,15 @@ class IngestionCoordinator:
         end_date: str,
         force: bool = False,
     ) -> list[IngestionResult]:
-        """
-        摄取日期范围数据.
-
-        根据数据集的日期调度类型选择日期序列：
-        - TRADING_DAYS: 使用 A 股交易日历
-        - NATURAL_DAYS: 使用自然日
-        - SOURCE_DEFINED: 使用自然日（由数据源决定哪些日期有数据）
-
-        Args:
-            dataset: 数据集名称
-            start_date: 开始日期 (YYYY-MM-DD)
-            end_date: 结束日期 (YYYY-MM-DD)
-            force: 是否强制覆盖已有数据
-
-        Returns:
-            摄取结果列表
-
-        """
-        # 获取数据集的日期调度类型
+        """摄取日期范围数据，根据 date_schedule 类型选择日期序列。"""
         try:
             dataset_enum = Dataset(dataset)
         except ValueError:
-            # 未知数据集，默认使用交易日
             dataset_enum = None
 
         default_schedule = DateScheduleType.TRADING_DAYS
         schedule_type = dataset_enum.date_schedule if dataset_enum else default_schedule
 
-        # 根据调度类型获取日期列表
         match schedule_type:
             case DateScheduleType.TRADING_DAYS:
                 dates = self._metadata_service.list_trading_days(start_date, end_date)
@@ -621,38 +487,19 @@ class IngestionCoordinator:
         params: InstrumentIngestParams,
         force: bool = False,
     ) -> IngestionResult:
-        """
-        按标的 + 日期范围摄取数据.
-
-        Args:
-            dataset: 数据集名称（如 stock_daily, etf_daily）
-            params: 摄取参数（含 instrument_id/standard_ticker/ticker,
-                start_date, end_date）
-            force: 是否强制覆盖已有数据
-
-        Returns:
-            IngestionResult: 摄取结果
-
-        Raises:
-            ValueError: 不支持的数据集
-
-        """
-        # 验证数据集是否支持按标的摄取
+        """按标的 + 日期范围摄取数据。"""
         try:
             dataset_enum = Dataset(dataset)
         except ValueError as e:
             raise ValueError(f"不支持的数据集: {dataset}") from e
 
-        # 检查数据集是否在支持列表中（基于实际支持的 handler）
         if dataset_enum not in SUPPORTED_INSTRUMENT_DATASETS:
             raise ValueError(f"数据集 {dataset} 不支持按标的摄取")
 
-        # 从数据集推断资产类型
         asset_class = dataset_enum.asset_class
         if asset_class is None:
             raise ValueError(f"数据集 {dataset} 缺少 asset_class 定义")
 
-        # 解析标识符为 source_ticker
         source_ticker = resolve_identifier_with_auto_init(
             params,
             asset_class,
@@ -726,8 +573,6 @@ class IngestionCoordinator:
         if df.is_empty():
             return self._result_handler.handle_empty_data(dataset, params.start_date)
 
-        # 按标的摄取默认使用 KEEP_LAST，确保重复摄取幂等
-        # （按标的摄取没有摄取日志检查机制，因此需要依赖存储层覆盖）
         on_duplicate = OnDuplicate.KEEP_LAST
 
         try:
@@ -745,7 +590,6 @@ class IngestionCoordinator:
                 dataset, params.start_date, e
             )
 
-        # 检查 DQ 阻断
         if write_result.blocked:
             return self._result_handler.handle_dq_blocked(
                 dataset, params.start_date, write_result
@@ -760,83 +604,8 @@ class IngestionCoordinator:
         source_ticker: str,
         params: InstrumentIngestParams,
     ) -> pl.DataFrame:
-        """
-        根据数据集类型调用对应的 fetch 方法.
-
-        Args:
-            dataset_enum: 数据集枚举
-            source_ticker: 数据源代码
-            params: 摄取参数
-
-        Returns:
-            数据 DataFrame
-
-        """
-        handlers: dict[Dataset, Callable[[], pl.DataFrame]] = {
-            # Market 域
-            Dataset.STOCK_DAILY: lambda: self._source.fetch_stock_daily(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-            Dataset.ETF_DAILY: lambda: self._source.fetch_etf_daily(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-            Dataset.INDEX_DAILY: lambda: self._source.fetch_index_daily(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-            Dataset.ADJ_FACTOR: lambda: self._source.fetch_adj_factor_by_ticker(
-                ts_code=source_ticker,
-                start_date=params.start_date.replace("-", ""),
-                end_date=params.end_date.replace("-", ""),
-            ),
-            Dataset.FUND_ADJ: lambda: self._source.fetch_fund_adj(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-            # Fundamental 域
-            Dataset.BALANCE_SHEET: lambda: self._source.fetch_balance_sheet(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-            Dataset.INCOME_STATEMENT: lambda: self._source.fetch_income_statement(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-            Dataset.CASH_FLOW: lambda: self._source.fetch_cash_flow(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-            Dataset.DIVIDEND: lambda: self._source.fetch_dividend(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-            # Capital 域
-            Dataset.VALUATION_METRICS: lambda: self._source.fetch_valuation_metrics(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-            Dataset.MARGIN_TRADING: lambda: self._source.fetch_margin_trading(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-            Dataset.PLEDGE_RATIO: lambda: self._source.fetch_pledge_ratio(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            ),
-        }
+        """根据数据集类型调用对应的 fetch 方法（按标的）。"""
+        handlers = build_instrument_fetch_handlers(self._source, source_ticker, params)
 
         if dataset_enum not in handlers:
             raise ValueError(f"不支持按标的摄取的数据集: {dataset_enum.value}")
@@ -844,73 +613,23 @@ class IngestionCoordinator:
         return handlers[dataset_enum]()
 
     def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
-        """
-        根据数据集类型调用对应的 Source 方法获取数据。
-
-        使用字典映射替代动态 getattr 调用，易于扩展新数据集。
-        """
-        # 转换为枚举
+        """根据数据集类型调用对应的 Source 方法获取数据（日期级）。"""
         try:
             dataset_enum = Dataset(dataset)
         except ValueError as e:
             raise ValueError(f"不支持的数据集: {dataset}") from e
 
-        # 定义数据集获取函数映射（使用枚举作为键）
-        # 交易日历特殊处理：使用整年日期范围
-        _calendar_year = trade_date[:4]  # 从 trade_date 提取年份
-
-        handlers: dict[Dataset, Callable[[], pl.DataFrame]] = {
-            Dataset.CALENDAR: lambda y=_calendar_year: self._source.fetch_calendar(
-                f"{y}-01-01", f"{y}-12-31"
-            ),
-            Dataset.STOCK_BASIC: self._source.fetch_stock_basic,
-            Dataset.ETF_BASIC: self._source.fetch_etf_basic,
-            Dataset.STOCK_DAILY: lambda: self._source.fetch_stock_daily(trade_date),
-            Dataset.ETF_DAILY: lambda: self._source.fetch_etf_daily(trade_date),
-            Dataset.STOCK_STATUS: lambda: self._source.fetch_stock_status(trade_date),
-            Dataset.ADJ_FACTOR: lambda: self._source.fetch_adj_factor(trade_date),
-            Dataset.FUND_ADJ: lambda: self._source.fetch_fund_adj(trade_date),
-            Dataset.BALANCE_SHEET: lambda: self._source.fetch_balance_sheet(trade_date),
-            Dataset.INCOME_STATEMENT: lambda: self._source.fetch_income_statement(
-                trade_date
-            ),
-            Dataset.CASH_FLOW: lambda: self._source.fetch_cash_flow(trade_date),
-            Dataset.DIVIDEND: lambda: self._source.fetch_dividend(trade_date),
-            Dataset.VALUATION_METRICS: lambda: self._source.fetch_valuation_metrics(
-                trade_date
-            ),
-            Dataset.MARGIN_TRADING: lambda: self._source.fetch_margin_trading(
-                trade_date
-            ),
-            Dataset.PLEDGE_RATIO: lambda: self._source.fetch_pledge_ratio(trade_date),
-            Dataset.MACRO_INDICATORS: lambda: self._source.fetch_macro_indicators(
-                trade_date
-            ),
-            Dataset.CORPORATE_ACTIONS: lambda: self._source.fetch_corporate_actions(
-                trade_date
-            ),
-            Dataset.INDEX_BASIC: self._source.fetch_index_basic,
-            Dataset.INDEX_DAILY: lambda: self._source.fetch_index_daily(
-                trade_date,
-                ts_codes=self._get_cached_index_codes(),
-            ),
-            # Market 域扩展（汇率/商品）
-            Dataset.FX_DAILY: lambda: self._source.fetch_fx_daily(
-                ts_codes=list(FX_CODE_TO_INSTRUMENT_ID.keys()),
-                start_date=trade_date,
-                end_date=trade_date,
-            ),
-            Dataset.COMMODITY_DAILY: lambda: self._fetch_commodity_daily(trade_date),
-        }
+        handlers = build_daily_fetch_handlers(
+            self._source,
+            trade_date,
+            fetch_commodity_daily=self._fetch_commodity_daily,
+            get_cached_index_codes=self._get_cached_index_codes,
+        )
 
         if dataset_enum not in handlers:
             raise ValueError(f"不支持的数据集: {dataset}")
 
         return handlers[dataset_enum]()
-
-    # ------------------------------------------------------------------
-    # 智能回填 — 委托至 backfill_handler
-    # ------------------------------------------------------------------
 
     def backfill_adj_factor(
         self,
@@ -918,21 +637,7 @@ class IngestionCoordinator:
         start: str,
         end: str,
     ) -> dict[str, object]:
-        """
-        按标的智能回补复权因子空洞.
-
-        检测指定证券在 [start, end] 日期范围内的复权因子空洞，
-        仅对缺失的连续日期区间发起数据源请求，避免全量覆盖。
-
-        Args:
-            instrument_id: 证券内部 ID.
-            start: 开始日期 (YYYY-MM-DD).
-            end: 结束日期 (YYYY-MM-DD).
-
-        Returns:
-            回补结果摘要，包含 status / gap_count / filled_dates.
-
-        """
+        """按标的智能回补复权因子空洞，委托至 backfill_handler。"""
         return _backfill_adj_factor(
             instrument_id=instrument_id,
             start=start,
@@ -945,9 +650,3 @@ class IngestionCoordinator:
                 data_writer=self._data_writer,
             ),
         )
-
-
-__all__ = [
-    "IngestionCoordinator",
-    "MarketServices",
-]

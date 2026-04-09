@@ -60,10 +60,10 @@
 │   PortfolioSvc / FactorHealthSvc / HeartbeatSvc              │
 └──────────────────────────────────────────────────────────────┘
                              ▲
-                             │ 调用 Core Engine + DataHub
+                             │ 调用 Engine + Data 层
                              ▼
 ┌──────────────────────────────────────────────────────────────┐
-│   Core Engines & DataHub                                     │
+│   Engine + Data Layer                                        │
 │   - SQLite + Parquet + DuckDB 存储                           │
 │   - PIT 数据查询                                             │
 │   - 复权价动态计算                                           │
@@ -109,7 +109,6 @@
 | ├── signal | 信号管理编排 | `services/signal/` |
 | └── execution | 执行编排 | `services/execution/` |
 | **Port Layer** | 统一入口层（API/CLI/Jobs） | `interfaces/api\|cli\|jobs/` |
-| **Web UI Layer** | 前端展示与交互 | `apps/web/` |
 | **Foundation Layer** | 基础设施横切层 | `packages/infra/src/ditto_infra/foundation/` |
 | ├── config | 配置管理 | `foundation/config/` |
 | ├── observability | 可观测性 | `foundation/observability/` |
@@ -228,7 +227,7 @@ packages/
   - **concurrency**：并发控制（FileLockManager）
   - **db**：数据库连接管理（SQLitePool）
   - **version**：版本管理（Checksum、版本标识）
-- **runtime**：领域相关技术组件，依赖 datahub 模型
+- **runtime**：领域相关技术组件，依赖 data 层模型
 
 Scripts 目录：
 - **scripts**：项目脚本文件（SQL、Shell 等），与代码模块分离
@@ -312,7 +311,7 @@ Portfolio (1) ────── (N) StrategyInstance
 
 ```
 ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐
-│Scheduler│     │  Flow   │     │ DataHub │     │ Storage │
+│Scheduler│     │  Flow   │     │   Data  │     │ Storage │
 └────┬────┘     └────┬────┘     └────┬────┘     └────┬────┘
      │               │               │               │
      │ trigger daily_ingest_flow     │               │
@@ -334,7 +333,7 @@ Portfolio (1) ────── (N) StrategyInstance
 ### 5.2 回测流程（含涨跌停过滤）
 
 ```
-User → BacktestSvc → FastBacktester → DataHub
+User → BacktestSvc → FastBacktester → Data Layer
            │              │               │
            │ load_data    │               │
            │─────────────────────────────>│
@@ -412,7 +411,7 @@ RiskSvc → RiskEngine → KillSwitchSvc → SQLite
 |----------|----------|
 | **性能** | DuckDB 向量化查询 + FastBacktester |
 | **可用性** | 单机 + 定期备份 + 心跳监控 |
-| **可维护性** | 清晰分层；core 与 apps 分离；文档齐全 |
+| **可维护性** | 清晰分层；kernel + packages 架构；文档齐全 |
 | **可测试性** | 引擎与 DataService 隔离；严格对齐测试 |
 | **可扩展性** | Strategy/Factor 抽象；Portfolio 层预留 |
 | **数据完整性** | PIT 查询；复权分离存储；DQ 三层校验 |
@@ -451,20 +450,11 @@ RiskSvc → RiskEngine → KillSwitchSvc → SQLite
 | `03_engine_design.md` | 引擎层详细设计 |
 | `04_deployment_topology.md` | 部署拓扑 |
 | `05_observability.md` | 可观测性方案 |
-| `06_roadmap.md` | 路线图 |
 | `07_research_playground.md` | 研究环境使用说明 |
-| `08_risk_constitution.md` | 风险宪法 |
 | `09_data_quality_design.md` | 数据质量设计 |
 | `10_data_ingestion_scheduler_design.md` | 数据摄取任务设计 |
 
-### 架构决策记录（ADR）
-
-| ADR | 内容 |
-|-----|------|
-| [ADR 0001](../../adr/0001-project-stack-selection.md) | 技术栈选择 |
-| [ADR 0002](../../adr/0002-monorepo-structure.md) | Monorepo 结构设计 |
-| [ADR 0003](../../adr/0003-data-storage-strategy.md) | 数据存储策略 |
-| [ADR 0004](../../adr/0004-domain-layer-subdomains.md) | **Domain Layer 子领域分层定位** |
+### 架构规范
 
 ### 架构规范
 
@@ -472,7 +462,6 @@ RiskSvc → RiskEngine → KillSwitchSvc → SQLite
 |------|------|
 | [.claude/rules/architecture.md](../../.claude/rules/architecture.md) | 架构设计规范（含子领域分层标准） |
 | [.claude/rules/core.md](../../.claude/rules/core.md) | Python 核心规范 |
-| [.claude/rules/datahub.md](../../.claude/rules/datahub.md) | DataHub 架构规范 |
 
 ---
 

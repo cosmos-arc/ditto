@@ -1,9 +1,8 @@
 """
 Execution — 执行层类型定义.
 
-Phase 0: rules (三层规则), fills (FillOutcome).
-Phase 2: brokerage, trade_builder, planner, reality/.
-Phase 3: ProcessInput, MarketSnapshot (moved from backtest).
+rules (三层规则), fills (FillOutcome), brokerage, trade_builder,
+planner, reality/, ProcessInput, MarketSnapshot.
 """
 
 from ditto_engine.accounting.order_book import (

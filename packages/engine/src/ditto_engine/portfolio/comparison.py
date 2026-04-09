@@ -96,6 +96,21 @@ _LOWER_IS_BETTER: frozenset[str] = frozenset(
 )
 
 
+def _classify_delta(name: str, value: float) -> int:
+    """返回 1 (改进), -1 (退化), 0 (无变化)。"""
+    if name in _HIGHER_IS_BETTER:
+        if value > 0:
+            return 1
+        if value < 0:
+            return -1
+    elif name in _LOWER_IS_BETTER:
+        if value < 0:
+            return 1
+        if value > 0:
+            return -1
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Public function
 # ---------------------------------------------------------------------------
@@ -149,16 +164,11 @@ def compare_reports(
     }
 
     for name, value in delta_map.items():
-        if name in _HIGHER_IS_BETTER:
-            if value > 0:
-                improved.append(name)
-            elif value < 0:
-                degraded.append(name)
-        elif name in _LOWER_IS_BETTER:
-            if value < 0:
-                improved.append(name)
-            elif value > 0:
-                degraded.append(name)
+        direction = _classify_delta(name, value)
+        if direction > 0:
+            improved.append(name)
+        elif direction < 0:
+            degraded.append(name)
 
     return StrategyComparisonReport(
         baseline_run_id=baseline.run_id,

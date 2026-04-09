@@ -1,7 +1,15 @@
 """Data models for data transfer objects."""
 
 # Data 层自己的 models
-from ditto_kernel.enums import AssetClass, Exchange, OrderSide, RunStatus
+from ditto_kernel.enums import (
+    AssetClass,
+    Exchange,
+    MacroCategory,
+    MacroFrequency,
+    OrderSide,
+    RunStatus,
+)
+from ditto_kernel.types import InstrumentIngestParams
 
 from ditto_data.models.common import (
     AssetClassType,
@@ -32,14 +40,12 @@ from ditto_data.models.ingestion import (
     IngestionLog,
     IngestionResult,
     IngestionStatus,
-    InstrumentIngestParams,
     LateArrivalCheckResult,
     LateArrivalRejectedError,
     NotTradingDayError,
     ResultCounts,
     RetryResult,
 )
-from ditto_data.models.macro import MacroCategory, MacroFrequency
 from ditto_data.models.market import (
     BAR_ENRICHED_SCHEMA,
     BAR_SCHEMA,
