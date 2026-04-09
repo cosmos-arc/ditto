@@ -159,6 +159,7 @@ forbidden_modules =
 # Analytics 与 App 互斥：平行平面，互不依赖
 # App 通过 builders 层使用 Analytics（表达式编译/因子计算）
 # Analytics 禁止反向依赖 App
+# 注意：App → Analytics 方向由分层架构隐式允许（无对应 forbidden 合约）。
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:analytics-no-app-dependency]
 name = Analytics must not depend on App

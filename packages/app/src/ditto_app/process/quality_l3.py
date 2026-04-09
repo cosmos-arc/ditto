@@ -7,7 +7,7 @@ __all__ = [
 ]
 
 from datetime import datetime, timedelta
-from typing import Any, Literal
+from typing import Literal
 
 import polars as pl
 import polars.exceptions as pl_exceptions
@@ -15,6 +15,7 @@ from ditto_infra.foundation import logger
 from ditto_kernel.quality import DQIssue, DQResult
 
 from ditto_app.process.quality_protocols import QualityEngineProtocol
+from ditto_app.process.quality_types import L3CheckResult
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
 
@@ -58,7 +59,7 @@ class L3BatchService:
         trade_date: str,
         asset_class: Literal["stock", "etf", "index"] | None = None,
         market_wide: bool = False,
-    ) -> dict[str, Any]:
+    ) -> L3CheckResult:
         """
         对数据集执行 L3 检查.
 
@@ -104,7 +105,7 @@ class L3BatchService:
         error: Exception,
         *,
         is_data_error: bool,
-    ) -> dict[str, Any]:
+    ) -> L3CheckResult:
         """统一处理 L3 检查异常，记录日志并返回错误结果."""
         event_name = (
             "l3_batch_check_data_processing_failed"
@@ -118,12 +119,13 @@ class L3BatchService:
             trade_date=trade_date,
             error_type=type(error).__name__,
         )
-        return {
-            "dataset": dataset,
-            "trade_date": trade_date,
-            "passed": False,
-            "error": f"{type(error).__name__}: {error!s}",
-        }
+        return L3CheckResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            passed=False,
+            issue_count=0,
+            error=f"{type(error).__name__}: {error!s}",
+        )
 
     def _fetch_check_data(
         self,
@@ -145,7 +147,7 @@ class L3BatchService:
         dataset: str,
         trade_date: str,
         result: DQResult,
-    ) -> dict[str, Any]:
+    ) -> L3CheckResult:
         """格式化 L3 检查结果."""
         if result.issues:
             logger.warning(
@@ -163,14 +165,14 @@ class L3BatchService:
                 dataset=dataset,
             )
 
-        return {
-            "dataset": dataset,
-            "trade_date": trade_date,
-            "passed": result.passed,
-            "issue_count": len(result.issues),
-            "alert_count": result.alert_count,
-            "issues": result.issues,
-        }
+        return L3CheckResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            passed=result.passed,
+            issue_count=len(result.issues),
+            alert_count=result.alert_count,
+            issues=tuple(result.issues),
+        )
 
     def _fetch_data(
         self,
@@ -192,12 +194,14 @@ class L3BatchService:
             元组 (historical_df, current_df)
 
         """
-        # Calculate start date with buffer for weekends
+        # 计算包含周末/假日缓冲的起始日期
         trade_dt = datetime.fromisoformat(trade_date)
         start_dt = trade_dt - timedelta(days=window * _CALENDAR_BUFFER_MULTIPLIER)
         start_date = start_dt.strftime("%Y-%m-%d")
 
-        # Fetch historical data
+        # end=trade_date 包含当日数据（与 current 重叠），这是预存行为。
+        # 引擎内部使用 historical 构建参考分布时需排除 current 行。
+        # TODO: 考虑 end=trade_date 前一天以避免参考分布污染。
         historical = self._market_facade.find_bars(
             instrument_ids=None,
             start=start_date,
@@ -229,7 +233,7 @@ class L3BatchService:
             交易日历 DataFrame
 
         """
-        # Calculate start date
+        # 计算起始日期
         trade_dt = datetime.fromisoformat(trade_date)
         start_dt = trade_dt - timedelta(
             days=lookback_days * _CALENDAR_BUFFER_MULTIPLIER,

@@ -25,7 +25,11 @@ def as_object_dict(
     *,
     field_name: str,
 ) -> dict[str, object]:
-    """校验对象形态并返回 ``dict[str, object]``。"""
+    """
+    校验对象形态并返回 ``dict[str, object]``。
+
+    允许 value 为 ``None``（下游通过 ``read_optional_*`` 处理）。
+    """
     if raw_value is None:
         return {}
     if not isinstance(raw_value, dict):
@@ -98,22 +102,19 @@ def read_required_str(payload: dict[str, object], field_name: str) -> str:
     return value
 
 
-def read_optional_str(raw_value: object) -> str | None:
+def read_optional_str(raw_value: object, *, field_name: str = "字段") -> str | None:
     """读取可选字符串字段。"""
     if raw_value is None:
         return None
     if not isinstance(raw_value, str):
-        msg = "字段值必须是字符串"
+        msg = f"{field_name} 必须是字符串"
         raise ValueError(msg)
     return raw_value
 
 
 def read_str_value(raw_value: object, *, field_name: str) -> str:
-    """读取字符串值。"""
-    if not isinstance(raw_value, str) or raw_value == "":
-        msg = f"{field_name} 必须是非空字符串"
-        raise ValueError(msg)
-    return raw_value
+    """读取字符串值（委托 read_required_str，入参形式不同）."""
+    return read_required_str({field_name: raw_value}, field_name)
 
 
 def read_int(raw_value: object, *, field_name: str) -> int:

@@ -11,7 +11,9 @@ from ditto_app.builders._spec_deserializer import (
     read_int,
     read_optional_float,
     read_optional_int,
+    read_optional_str,
     read_required_str,
+    read_str_value,
 )
 
 # ---------------------------------------------------------------------------
@@ -225,3 +227,48 @@ class TestAsObjectDict:
     def test_non_str_key_rejected(self) -> None:
         with pytest.raises(ValueError):
             as_object_dict({1: "a"}, field_name="x")
+
+
+# ---------------------------------------------------------------------------
+# read_optional_str
+# ---------------------------------------------------------------------------
+
+
+class TestReadOptionalStr:
+    @pytest.mark.unit
+    def test_none_returns_none(self) -> None:
+        assert read_optional_str(None, field_name="x") is None
+
+    @pytest.mark.unit
+    def test_valid_string(self) -> None:
+        assert read_optional_str("hello", field_name="x") == "hello"
+
+    @pytest.mark.unit
+    def test_empty_string_returns_value(self) -> None:
+        assert read_optional_str("", field_name="x") == ""
+
+    @pytest.mark.unit
+    def test_non_string_raises(self) -> None:
+        with pytest.raises(ValueError, match="x 必须是字符串"):
+            read_optional_str(42, field_name="x")
+
+
+# ---------------------------------------------------------------------------
+# read_str_value
+# ---------------------------------------------------------------------------
+
+
+class TestReadStrValue:
+    @pytest.mark.unit
+    def test_valid_string(self) -> None:
+        assert read_str_value("hello", field_name="x") == "hello"
+
+    @pytest.mark.unit
+    def test_empty_string_raises(self) -> None:
+        with pytest.raises(ValueError, match="x 必须是非空字符串"):
+            read_str_value("", field_name="x")
+
+    @pytest.mark.unit
+    def test_non_string_raises(self) -> None:
+        with pytest.raises(ValueError, match="x 必须是非空字符串"):
+            read_str_value(42, field_name="x")

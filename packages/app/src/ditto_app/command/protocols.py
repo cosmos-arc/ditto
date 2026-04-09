@@ -9,6 +9,8 @@ __all__ = ["CommandHandler"]
 C_contra = TypeVar("C_contra", contravariant=True)
 
 
+# runtime_checkable 允许 isinstance() 检查，用于 DI 容器路由。
+# 注意：泛型 Protocol 的 runtime_checkable 仅检查方法是否存在，不检查参数类型。
 @runtime_checkable
 class CommandHandler(Protocol[C_contra]):
     """

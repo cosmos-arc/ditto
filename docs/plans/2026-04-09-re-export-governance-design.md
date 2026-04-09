@@ -70,7 +70,7 @@ from ditto_kernel.enums import AssetClass, Exchange
 |------|---------------------|-----------|
 | `ditto_data/models/__init__.py` | `ditto_kernel.enums` (6), `ditto_kernel.types` (1) | 0 消费者（死 re-export） |
 | `ditto_data/quality/__init__.py` | `ditto_kernel.quality` (4) | 0 消费者（死 re-export） |
-| `ditto_analytics/materialization/__init__.py` | `ditto_kernel.specs` (3) | 3 个测试文件已迁移到 `ditto_kernel.specs` |
+| `ditto_analytics/materialization/__init__.py` | `ditto_kernel.specs` (3) | 4 个测试文件已迁移到 `ditto_kernel.specs` |
 | `ditto_analytics/models/__init__.py` | `ditto_kernel.research` (4) | 0 消费者（死 re-export） |
 
 **结果**：18 个跨包 re-export 符号已消除，14/18 无消费者（死代码），3 个测试消费者已迁移。
@@ -99,8 +99,8 @@ from ditto_kernel.enums import AssetClass, Exchange
 
 | 文件 | 内联定义 | 移至 | 消费者影响 |
 |------|---------|------|-----------|
-| `ditto_analytics/factors/__init__.py` | `ALL_FACTOR_SPECS` | `_registry.py` | 0（barrel re-export 不变） |
-| `ditto_engine/execution/reality/__init__.py` | `BrokerageModel` | `_model.py` | 0（barrel re-export 不变） |
+| `ditto_analytics/factors/__init__.py` | `ALL_FACTOR_SPECS` | `factor_specs.py` | 0（barrel re-export 不变） |
+| `ditto_engine/execution/reality/__init__.py` | `BrokerageModel` | 删除（`BrokerageModel` 已在 `brokerage.py` 中定义，barrel 中的重复定义被删除） | 0（barrel re-export 不变） |
 | `ditto_app/command/__init__.py` | `CommandHandler` Protocol | `_protocols.py` | 0（barrel re-export 不变） |
 | `ditto_interfaces/registry/infra/__init__.py` | `get_infra_providers()` | `_factory.py` | 0（barrel re-export 不变） |
 | `ditto_data/di/__init__.py` | `get_data_providers()` | `_factory.py` | 0（barrel re-export 不变） |

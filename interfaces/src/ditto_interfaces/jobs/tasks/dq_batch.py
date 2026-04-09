@@ -160,19 +160,19 @@ def _execute_single_check(
         )
 
         dataset_result: dict[str, Any] = {
-            "passed": result["passed"],
-            "issue_count": result.get("issue_count", 0),
-            "alert_count": result.get("alert_count", 0),
+            "passed": result.passed,
+            "issue_count": result.issue_count,
+            "alert_count": result.alert_count,
         }
 
-        issues: list[DQIssue] = result.get("issues", [])
+        issues: list[DQIssue] = list(result.issues)
 
-        if result.get("alert_count", 0) > 0:
+        if result.alert_count > 0:
             logger.warning(
                 "L3 DQ issues found",
                 event="dq_batch_issues",
                 dataset=dataset,
-                count=result.get("issue_count", 0),
+                count=result.issue_count,
             )
 
         return dataset_result, issues

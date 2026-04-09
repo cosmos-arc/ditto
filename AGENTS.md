@@ -145,6 +145,9 @@ pixi run -e dev fmt           # 格式化
 | 文件操作用 Bash cat/sed/echo | 必须用 Read/Edit/Write |
 | SRC 内大量 `# noqa`/`# type:ignore` | 优先重构代码 |
 | `TYPE_CHECKING` 延迟导入 | 重构架构解决循环依赖 |
+| 跨包 re-export | 隐藏真实依赖（详见 python.md Re-export 规范） |
+| `__init__.py` 混合 re-export + 内联定义 | 分离到独立模块 |
+| re-export 链深度 > 2 层 | 消费者直接引用叶模块 |
 
 ---
 
@@ -232,6 +235,9 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 - 提交 secrets
 - 使用 Bash 命令进行文件读写改操作
 - `rolling_mean(20)` 不指定 `closed="left"`（详见 [pit.md](.claude/rules/pit.md)）
+- 跨包 re-export（隐藏真实依赖，详见 [python.md](.claude/rules/python.md) Re-export 规范）
+- `__init__.py` 中混合 re-export 与内联定义（必须分离到独立模块）
+- re-export 链深度超过 2 层（消费者必须直接引用叶模块）
 
 ---
 

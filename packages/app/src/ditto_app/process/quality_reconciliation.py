@@ -6,7 +6,6 @@ __all__ = [
     "QualityReconciliationService",
 ]
 
-from typing import Any
 
 import polars as pl
 from ditto_data.quality.golden import GoldenDatasetSpec
@@ -176,7 +175,7 @@ class QualityReconciliationService:
         dataset: str,
     ) -> ReconciliationResult:
         """获取辅助数据源并执行对比."""
-        tickers = primary_df["ticker"].unique().to_list()
+        tickers = primary_df["ticker"].unique().cast(pl.String).to_list()
 
         secondary_result = self._fetch_secondary(tickers, trade_date, dataset)
         if isinstance(secondary_result, ReconciliationResult):
@@ -279,11 +278,11 @@ class QualityReconciliationService:
         if not result.issues:
             return pl.DataFrame()
 
-        rows: list[dict[str, Any]] = []
+        rows: list[dict[str, object]] = []
         for issue in result.issues:
             # 每个样本是一行记录
             for sample in issue.sample_data:
-                row: dict[str, Any] = {
+                row: dict[str, object] = {
                     "dataset": dataset,
                     "ticker": sample.get("ticker", ""),
                     "trade_date": sample.get("trade_date", ""),

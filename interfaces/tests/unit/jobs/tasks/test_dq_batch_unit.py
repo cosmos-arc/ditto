@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from ditto_app.process.quality_types import L3CheckResult
 from pytest_mock import MockerFixture
 
 
@@ -231,11 +232,12 @@ class TestDqBatchCheckKnownErrorHandling:
         # 第一个成功，第二个失败
         mock_l3_service = MagicMock()
         mock_l3_service.check_dataset.side_effect = [
-            {
-                "passed": True,
-                "issue_count": 0,
-                "alert_count": 0,
-            },
+            L3CheckResult(
+                dataset="stock_daily",
+                trade_date="2024-01-15",
+                passed=True,
+                issue_count=0,
+            ),
             ValueError("第二个数据集失败"),
         ]
 

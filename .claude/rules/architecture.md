@@ -89,9 +89,9 @@ ditto_infra       → 其他层                                                 
 2. **Kernel 隔离** (`forbidden`): Kernel 禁止依赖其他业务包
 3. **Infra 隔离** (`forbidden`): Infra 禁止依赖其他层
 4. **Data 边界** (`forbidden`): Data 禁止依赖 Engine/Interfaces/App
-5. **Analytics 隔离** (`forbidden`): Analytics 禁止依赖 Data（除 errors）/Engine
+5. **Analytics 隔离** (`forbidden`): Analytics 禁止依赖 Data（除 errors）/Engine/App
 6. **Engine-Data 边界** (`forbidden`): Engine 和 Data 双向禁止互相依赖（均可依赖 Kernel）
-7. **Interfaces 边界** (`forbidden`): Interfaces 非 registry 禁止依赖 storage/runtime
+7. **Interfaces 边界** (`forbidden`): Interfaces 非 registry 禁止依赖 storage/runtime/services/models/errors/config
 8. **循环依赖** (`acyclic_siblings`): 检测包之间的循环依赖
 9. **R8 App 互斥**: 6 条 CQRS 职责隔离规则
 

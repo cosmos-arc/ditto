@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 import polars as pl
@@ -53,7 +54,10 @@ def _make_sources(
     """
     primary_source = MagicMock()
 
-    _metal = _make_metal_df() if metal_df is _UNSET else metal_df  # type: ignore[arg-type]
+    _metal: pl.DataFrame | Exception = cast(
+        "pl.DataFrame | Exception",
+        _make_metal_df() if metal_df is _UNSET else metal_df,
+    )
     if isinstance(_metal, Exception):
         primary_source.fetch_metal_daily.side_effect = _metal
     else:
@@ -63,7 +67,10 @@ def _make_sources(
         return primary_source, None
 
     fred_source = MagicMock()
-    _fred = _make_fred_df() if fred_df is _UNSET else fred_df  # type: ignore[arg-type]
+    _fred: pl.DataFrame | Exception = cast(
+        "pl.DataFrame | Exception",
+        _make_fred_df() if fred_df is _UNSET else fred_df,
+    )
     if isinstance(_fred, Exception):
         fred_source.fetch_commodities.side_effect = _fred
     else:
@@ -81,19 +88,26 @@ def _make_sources(
 class TestFetchCommodityDaily:
     """fetch_commodity_daily 双源获取逻辑测试."""
 
-    @patch(
-        "ditto_app.process._commodity_fetcher.METAL_CODE_ALIASES",
-        {
-            "COMMOD_GOLD": "XAUUSD.FXCM",
-            "COMMOD_SILVER": "XAGUSD.FXCM",
-        },
-    )
-    @patch(
-        "ditto_app.process._commodity_fetcher.VIX_CODE_TO_INSTRUMENT_ID",
-        {
-            "VIX_30D": 5_100_001,
-        },
-    )
+    @pytest.fixture(autouse=True)
+    def _patch_code_mappings(self):  # type: ignore[misc]
+        """提取重复的 @patch 装饰器为 autouse fixture."""
+        with (
+            patch(
+                "ditto_app.process._commodity_fetcher.METAL_CODE_ALIASES",
+                {
+                    "COMMOD_GOLD": "XAUUSD.FXCM",
+                    "COMMOD_SILVER": "XAGUSD.FXCM",
+                },
+            ),
+            patch(
+                "ditto_app.process._commodity_fetcher.VIX_CODE_TO_INSTRUMENT_ID",
+                {
+                    "VIX_30D": 5_100_001,
+                },
+            ),
+        ):
+            yield
+
     def test_normal_dual_source_merge(
         self,
     ) -> None:
@@ -122,19 +136,6 @@ class TestFetchCommodityDaily:
             end_date="2024-01-01",
         )
 
-    @patch(
-        "ditto_app.process._commodity_fetcher.METAL_CODE_ALIASES",
-        {
-            "COMMOD_GOLD": "XAUUSD.FXCM",
-            "COMMOD_SILVER": "XAGUSD.FXCM",
-        },
-    )
-    @patch(
-        "ditto_app.process._commodity_fetcher.VIX_CODE_TO_INSTRUMENT_ID",
-        {
-            "VIX_30D": 5_100_001,
-        },
-    )
     def test_fred_failure_degrades_to_tushare_only(
         self,
     ) -> None:
@@ -153,19 +154,6 @@ class TestFetchCommodityDaily:
         assert len(result) == 2
         assert result["instrument_id"].to_list() == [3, 4]
 
-    @patch(
-        "ditto_app.process._commodity_fetcher.METAL_CODE_ALIASES",
-        {
-            "COMMOD_GOLD": "XAUUSD.FXCM",
-            "COMMOD_SILVER": "XAGUSD.FXCM",
-        },
-    )
-    @patch(
-        "ditto_app.process._commodity_fetcher.VIX_CODE_TO_INSTRUMENT_ID",
-        {
-            "VIX_30D": 5_100_001,
-        },
-    )
     def test_tushare_failure_degrades_to_fred_only(
         self,
     ) -> None:
@@ -184,19 +172,6 @@ class TestFetchCommodityDaily:
         assert len(result) == 2
         assert result["instrument_id"].to_list() == [1, 2]
 
-    @patch(
-        "ditto_app.process._commodity_fetcher.METAL_CODE_ALIASES",
-        {
-            "COMMOD_GOLD": "XAUUSD.FXCM",
-            "COMMOD_SILVER": "XAGUSD.FXCM",
-        },
-    )
-    @patch(
-        "ditto_app.process._commodity_fetcher.VIX_CODE_TO_INSTRUMENT_ID",
-        {
-            "VIX_30D": 5_100_001,
-        },
-    )
     def test_both_sources_fail_returns_empty(
         self,
     ) -> None:
@@ -215,19 +190,6 @@ class TestFetchCommodityDaily:
         assert result.is_empty()
         assert len(result) == 0
 
-    @patch(
-        "ditto_app.process._commodity_fetcher.METAL_CODE_ALIASES",
-        {
-            "COMMOD_GOLD": "XAUUSD.FXCM",
-            "COMMOD_SILVER": "XAGUSD.FXCM",
-        },
-    )
-    @patch(
-        "ditto_app.process._commodity_fetcher.VIX_CODE_TO_INSTRUMENT_ID",
-        {
-            "VIX_30D": 5_100_001,
-        },
-    )
     def test_fred_not_configured(
         self,
     ) -> None:

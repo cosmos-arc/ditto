@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_app.process.quality import L3BatchService
+from ditto_app.process.quality import L3BatchService, L3CheckResult
 from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
 
 
@@ -11,13 +11,13 @@ from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
 class TestL3BatchServiceContract:
     """L3BatchService 返回契约测试."""
 
-    def test_check_dataset_returns_issues_field(
+    def test_check_dataset_returns_l3_check_result(
         self,
         mock_statistical_engine: MagicMock,
         mock_market_service: MagicMock,
         mock_metadata_service: MagicMock,
     ) -> None:
-        """check_dataset 返回必须包含 issues 字段."""
+        """check_dataset 返回 L3CheckResult 实例."""
         service = L3BatchService(
             engine=mock_statistical_engine,
             market_facade=mock_market_service,
@@ -29,8 +29,9 @@ class TestL3BatchServiceContract:
             trade_date="2024-01-15",
         )
 
-        assert "issues" in result
-        assert isinstance(result["issues"], list)
+        assert isinstance(result, L3CheckResult)
+        assert result.passed is True
+        assert result.issue_count == 0
 
     def test_check_dataset_returns_actual_issues(
         self,
@@ -38,7 +39,7 @@ class TestL3BatchServiceContract:
         mock_market_service: MagicMock,
         mock_metadata_service: MagicMock,
     ) -> None:
-        """check_dataset 返回实际的 issues 列表."""
+        """check_dataset 返回包含 issues 的 L3CheckResult."""
         # Arrange
         sample_issue = DQIssue(
             level=DQLevel.STATISTICAL,
@@ -67,6 +68,31 @@ class TestL3BatchServiceContract:
         )
 
         # Assert
-        assert "issues" in result
-        assert len(result["issues"]) == 1
-        assert result["issues"][0].rule_name == "zscore_outlier"
+        assert isinstance(result, L3CheckResult)
+        assert result.issue_count == 1
+        assert result.issues[0].rule_name == "zscore_outlier"
+
+    def test_check_dataset_error_returns_l3_check_result(
+        self,
+        mock_statistical_engine: MagicMock,
+        mock_market_service: MagicMock,
+        mock_metadata_service: MagicMock,
+    ) -> None:
+        """check_dataset 异常时返回 L3CheckResult（has_error=True）."""
+        mock_statistical_engine.check_statistical.side_effect = RuntimeError("boom")
+
+        service = L3BatchService(
+            engine=mock_statistical_engine,
+            market_facade=mock_market_service,
+            metadata_facade=mock_metadata_service,
+        )
+
+        result = service.check_dataset(
+            dataset="stock_daily",
+            trade_date="2024-01-15",
+        )
+
+        assert isinstance(result, L3CheckResult)
+        assert result.has_error is True
+        assert result.passed is False
+        assert "RuntimeError" in result.error

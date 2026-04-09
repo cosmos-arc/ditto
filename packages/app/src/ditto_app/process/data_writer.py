@@ -495,18 +495,18 @@ class IngestionDataWriter:
             ],
             dataset_enum.value,
         )
-        # 使用特定的 save_* 方法替代已删除的 write() 方法
-        if capital_dataset == "valuation_metrics":
-            records_written = self._capital_service.save_valuation_metrics(enriched_df)
-        elif capital_dataset == "margin_trading":
-            records_written = self._capital_service.save_margin_trading(enriched_df)
-        elif capital_dataset == "pledge_ratio":
-            records_written = self._capital_service.save_pledge_ratio(enriched_df)
-        else:
-            valid = "valuation_metrics, margin_trading, pledge_ratio"
+        capital_methods = {
+            "valuation_metrics": self._capital_service.save_valuation_metrics,
+            "margin_trading": self._capital_service.save_margin_trading,
+            "pledge_ratio": self._capital_service.save_pledge_ratio,
+        }
+        save_method = capital_methods.get(capital_dataset)
+        if save_method is None:
+            valid = ", ".join(capital_methods)
             raise ValueError(
                 f"Unknown capital_dataset: {capital_dataset}. Expected: {valid}"
             )
+        records_written = save_method(enriched_df)
         return _to_write_result(
             dataset,
             year,

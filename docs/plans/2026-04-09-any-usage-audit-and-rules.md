@@ -34,9 +34,9 @@
 
 | # | 位置 | 当前 | 应改为 | 类型 |
 |----|------|------|--------|------|
-| B1 | `infra/.../tracing.py:65` | `self._span: Any = None` | `Span \| None` | Union |
-| B2 | `infra/.../metrics.py:300` | `self._gauge: Any = None` | `Gauge \| None` | Union |
-| B3 | `infra/.../logging.py:65` | `_json_log_format: Any = _json_formatter` | `Callable[[LogRecord], str]` | 具体类型 |
+| B1 | `packages/infra/src/ditto_infra/foundation/observability/tracing.py:65` | `self._span: Any = None` | `Span \| None` | Union |
+| B2 | `packages/infra/src/ditto_infra/foundation/observability/metrics.py:300` | `self._gauge: Any = None` | `Gauge \| None` | Union |
+| B3 | `packages/infra/src/ditto_infra/foundation/observability/logging.py:65` | `_json_log_format: Any = _json_formatter` | `Callable[[LogRecord], str]` | 具体类型 |
 | B4 | `data/quality/golden.py:102` | `ticker_val: Any = item_dict.get("ticker", "")` | `str \| None` | Union |
 | B5 | `data/quality/golden.py:154` | `tickers_raw: Any = data_dict.get("tickers", [])` | `str \| list[str] \| None` | Union |
 | B6 | `data/quality/golden.py:124` | `items: list[Any]` | `list[str \| Mapping[str, Any]]` | Union |
