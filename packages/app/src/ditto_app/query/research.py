@@ -35,7 +35,7 @@ from ditto_kernel.research import (
 )
 from ditto_kernel.specs import CalendarId, GrainId
 
-from ditto_app.query._utils import now_iso
+from ditto_app.config import now_iso
 
 __all__ = ["ResearchDatasetFacade"]
 

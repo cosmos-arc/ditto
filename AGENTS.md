@@ -70,7 +70,7 @@
   ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
 
 允许的跨层依赖:
-  - interfaces 可以直接依赖 data.models/services/sources
+  - interfaces 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）
   - interfaces 可以直接依赖 infra.foundation
   - interfaces 禁止直接依赖 data.storage/runtime（仅 registry 例外）
 

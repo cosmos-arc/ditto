@@ -88,18 +88,48 @@ def mock_tdx_source(mocker: MockerFixture) -> MagicMock:
 def mock_comparison_writer(mocker: MockerFixture) -> MagicMock:
     """Mock ComparisonWriter.
 
-    提供 write_comparison 异步方法。
+    提供 write_comparison 同步方法。
     """
     writer = mocker.MagicMock()
 
-    async def write_comparison_impl(
-        trade_date: str, df: pl.DataFrame, dataset: str
-    ) -> None:
+    def write_comparison_impl(trade_date: str, df: pl.DataFrame, dataset: str) -> None:
         """模拟 write_comparison 实现."""
         pass
 
     writer.write_comparison.side_effect = write_comparison_impl
     return writer
+
+
+@pytest.fixture
+def mock_statistical_engine() -> MagicMock:
+    """Mock QualityEngine configured for statistical checks.
+
+    使用 check_statistical 方法（区别于 mock_quality_engine 的 check 方法）。
+    """
+    engine = MagicMock()
+    result = DQResult(
+        dataset="stock_daily",
+        passed=True,
+        issues=[],
+    )
+    engine.check_statistical.return_value = result
+    return engine
+
+
+@pytest.fixture
+def mock_market_service() -> MagicMock:
+    """Mock MarketService."""
+    service = MagicMock()
+    service.find_bars.return_value = pl.DataFrame()
+    return service
+
+
+@pytest.fixture
+def mock_metadata_service() -> MagicMock:
+    """Mock MetadataService."""
+    service = MagicMock()
+    service.list_calendar_range.return_value = pl.DataFrame()
+    return service
 
 
 @pytest.fixture

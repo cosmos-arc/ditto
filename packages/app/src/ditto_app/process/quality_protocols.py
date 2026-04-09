@@ -6,6 +6,7 @@ __all__ = [
     "ComparisonStoreProtocol",
     "InstrumentStoreProtocol",
     "QualityEngineProtocol",
+    "QuarantineWriterProtocol",
     "ReconciliationResult",
     "TdxSourceProtocol",
 ]
@@ -117,4 +118,19 @@ class ComparisonStoreProtocol(Protocol):
         self, trade_date: str, comparison_df: pl.DataFrame, dataset: str
     ) -> None:
         """持久化对比数据。"""
+        ...
+
+
+class QuarantineWriterProtocol(Protocol):
+    """隔离写入协议 — 供 App 层依赖注入使用。"""
+
+    def save_failed_data(
+        self,
+        dataset: str,
+        rule_id: str,
+        severity: str,
+        failed_data: pl.DataFrame,
+        trade_date: str | None = None,
+    ) -> int:
+        """持久化质量失败数据。"""
         ...

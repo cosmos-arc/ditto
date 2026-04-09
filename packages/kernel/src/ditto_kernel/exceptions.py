@@ -38,6 +38,14 @@ class NoIdentifierProvidedError(IdentifierError):
     """
 
 
+def _format_match(m: dict[str, object]) -> str:
+    """格式化单条匹配记录为可读字符串."""
+    return (
+        f"{m.get('source_ticker', '')} (ID: {m.get('instrument_id', '')}, "
+        f"名称: {m.get('name', '')})"
+    )
+
+
 class AmbiguousTickerError(IdentifierError):
     """
     Ticker 不唯一异常.
@@ -49,13 +57,7 @@ class AmbiguousTickerError(IdentifierError):
         self.ticker = ticker
         self.matches = matches
 
-        def format_match(m: dict[str, object]) -> str:
-            return (
-                f"{m.get('source_ticker', '')} (ID: {m.get('instrument_id', '')}, "
-                f"名称: {m.get('name', '')})"
-            )
-
-        match_list = "\n  - ".join(format_match(m) for m in matches)
+        match_list = "\n  - ".join(_format_match(m) for m in matches)
         message = (
             f"Ticker '{ticker}' 存在歧义, "
             f"匹配到 {len(matches)} 个标的:\n  - {match_list}"

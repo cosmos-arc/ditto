@@ -378,6 +378,52 @@ from ditto_interfaces.exceptions import DittoError
 from ditto_interfaces.api.dependencies import get_hub  # 直接导入内部实现
 ```
 
+## Re-export 规范
+
+> 详细设计见 `docs/plans/2026-04-09-re-export-governance-design.md`
+
+### 分层治理规则
+
+**第 1 层 — 包根入口**（如 `ditto_kernel/__init__.py`）：允许聚合 re-export
+- 只 re-export 外部消费者需要的符号，内部实现细节不导出
+- 每个 barrel 控制在 **≤ 30 符号**，超过则分拆为子域入口
+
+**第 2 层 — 子包聚合**（如 `ditto_data.storage.capital/__init__.py`）：有条件允许
+- 符号数 **≤ 15**
+- 仅允许内聚子域聚合（如 Reader/Writer 对），禁止跨子域聚合
+
+**第 3 层+ — 禁止聚合**：链深度最大 **2 层**，更深的 `__init__.py` 不做聚合
+
+### 绝对禁止
+
+```python
+# ❌ 跨包 re-export：任何包不得从另一个 ditto 包 re-export 符号
+# ditto_data/models/__init__.py
+from ditto_kernel.enums import AssetClass, Exchange  # 禁止
+
+# ❌ Barrel + 内联定义混合：__init__.py 不应混合 re-export 和新符号定义
+from .margin import MarginReader
+ALL_FACTOR_SPECS = {...}  # 应移到独立模块
+
+# ❌ 内部模块从自身 barrel 导入（制造隐式耦合）
+# 在 ditto_data/storage/capital/margin.py 中：
+from ditto_data.storage.capital import MarginReader  # 禁止
+
+# ✅ 正确：内部模块直接引用
+from ditto_data.storage.capital.margin import MarginReader
+```
+
+### 消费者导入路径
+
+```python
+# ✅ 需要哪个包的类型就从哪个包导入
+from ditto_kernel.enums import AssetClass, Exchange
+from ditto_kernel.types import InstrumentId
+
+# ❌ 不要通过中间包间接导入
+from ditto_data.models import AssetClass  # 跨包 re-export，依赖被隐藏
+```
+
 ## 文档字符串
 
 - 中文，符合 Google/Numpy 风格

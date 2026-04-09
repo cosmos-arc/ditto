@@ -28,7 +28,7 @@ from ditto_data.models.publication_safety import (
 from ditto_data.services import DerivedCatalogService
 from ditto_kernel.specs import DerivedSpec
 
-from ditto_app.query._utils import now_iso
+from ditto_app.config import now_iso
 
 __all__ = [
     "build_manifest_record",

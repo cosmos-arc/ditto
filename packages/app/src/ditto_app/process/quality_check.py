@@ -10,11 +10,13 @@ from typing import Any
 
 import polars as pl
 import polars.exceptions as pl_exceptions
-from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_infra.foundation import logger
 from ditto_kernel.quality import DQIssue, DQResult
 
-from ditto_app.process.quality_protocols import QualityEngineProtocol
+from ditto_app.process.quality_protocols import (
+    QualityEngineProtocol,
+    QuarantineWriterProtocol,
+)
 
 # ---------------------------------------------------------------------------
 # 写入时 DQ 检查
@@ -32,7 +34,7 @@ class QualityService:
     def __init__(
         self,
         engine: QualityEngineProtocol,
-        quarantine_writer: QualityRecordService | None = None,
+        quarantine_writer: QuarantineWriterProtocol | None = None,
     ) -> None:
         """
         初始化质量检查服务.

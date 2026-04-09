@@ -18,6 +18,8 @@ from ditto_app.process.quality_protocols import QualityEngineProtocol
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
 
+_CALENDAR_BUFFER_MULTIPLIER = 2  # 周末/假日缓冲系数
+
 # ---------------------------------------------------------------------------
 # L3 批量统计检查
 # ---------------------------------------------------------------------------
@@ -192,7 +194,7 @@ class L3BatchService:
         """
         # Calculate start date with buffer for weekends
         trade_dt = datetime.fromisoformat(trade_date)
-        start_dt = trade_dt - timedelta(days=window * 2)
+        start_dt = trade_dt - timedelta(days=window * _CALENDAR_BUFFER_MULTIPLIER)
         start_date = start_dt.strftime("%Y-%m-%d")
 
         # Fetch historical data
@@ -229,7 +231,9 @@ class L3BatchService:
         """
         # Calculate start date
         trade_dt = datetime.fromisoformat(trade_date)
-        start_dt = trade_dt - timedelta(days=lookback_days * 2)
+        start_dt = trade_dt - timedelta(
+            days=lookback_days * _CALENDAR_BUFFER_MULTIPLIER,
+        )
         start_date = start_dt.strftime("%Y-%m-%d")
 
         return self._metadata_facade.list_calendar_range(

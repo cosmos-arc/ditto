@@ -7,20 +7,6 @@ from ditto_app.process.quality import (
 )
 
 
-@pytest.fixture
-def sync_comparison_writer(mock_comparison_writer):
-    """同步版本的 ComparisonWriter mock."""
-
-    # 将异步方法包装为同步
-    async def write_comparison_impl(
-        trade_date: str, df: pl.DataFrame, dataset: str
-    ) -> None:
-        pass
-
-    mock_comparison_writer.write_comparison.side_effect = write_comparison_impl
-    return mock_comparison_writer
-
-
 @pytest.mark.unit
 class TestQualityReconciliationServiceInit:
     """测试 QualityReconciliationService 初始化."""
@@ -49,11 +35,10 @@ class TestQualityReconciliationServiceInit:
 
 
 @pytest.mark.unit
-@pytest.mark.asyncio
 class TestDailyReconciliationSuccess:
     """测试 daily_reconciliation 成功场景."""
 
-    async def test_full_reconciliation_pass(
+    def test_full_reconciliation_pass(
         self,
         mock_quality_engine,
         mock_tdx_source,
@@ -104,7 +89,7 @@ class TestDailyReconciliationSuccess:
         mock_tdx_source.fetch_stock_daily_bars.assert_called_once()
         mock_quality_engine.check_cross_source.assert_called_once()
 
-    async def test_no_secondary_data_skips(
+    def test_no_secondary_data_skips(
         self,
         mock_quality_engine,
         mock_tdx_source,
@@ -144,7 +129,7 @@ class TestDailyReconciliationSuccess:
         # 验证不会调用引擎检查
         mock_quality_engine.check_cross_source.assert_not_called()
 
-    async def test_no_issues_no_storage(
+    def test_no_issues_no_storage(
         self,
         mock_quality_engine,
         mock_tdx_source,
@@ -183,11 +168,10 @@ class TestDailyReconciliationSuccess:
 
 
 @pytest.mark.unit
-@pytest.mark.asyncio
 class TestDailyReconciliationWithIssues:
     """测试 daily_reconciliation 有问题场景."""
 
-    async def test_with_issues_stores_result(
+    def test_with_issues_stores_result(
         self,
         mock_quality_engine,
         mock_tdx_source,
@@ -229,7 +213,7 @@ class TestDailyReconciliationWithIssues:
         # 验证存储结果被调用
         mock_comparison_writer.write_comparison.assert_called_once()
 
-    async def test_with_issues_sends_alerts(
+    def test_with_issues_sends_alerts(
         self,
         mock_quality_engine,
         mock_tdx_source,
@@ -268,11 +252,10 @@ class TestDailyReconciliationWithIssues:
 
 
 @pytest.mark.unit
-@pytest.mark.asyncio
 class TestDailyReconciliationEdgeCases:
     """测试 daily_reconciliation 边界情况."""
 
-    async def test_missing_sid_column_raises(
+    def test_missing_sid_column_raises(
         self,
         mock_quality_engine,
         mock_tdx_source,
@@ -305,9 +288,10 @@ class TestDailyReconciliationEdgeCases:
         )
 
         assert result.passed is False
+        assert result.error is not None
         assert "ValueError" in result.error
 
-    async def test_enrich_with_ticker_fails(
+    def test_enrich_with_ticker_fails(
         self,
         mock_quality_engine,
         mock_tdx_source,
@@ -346,9 +330,10 @@ class TestDailyReconciliationEdgeCases:
 
         # Assert
         assert result.passed is False
+        assert result.error is not None
         assert "ValueError" in result.error
 
-    async def test_unexpected_error_returns_error_dict(
+    def test_unexpected_error_returns_error_dict(
         self,
         mock_quality_engine,
         mock_tdx_source,
@@ -388,6 +373,7 @@ class TestDailyReconciliationEdgeCases:
 
         # Assert
         assert result.passed is False
+        assert result.error is not None
         assert "RuntimeError" in result.error
 
 
@@ -487,11 +473,10 @@ class TestConvertResultToDf:
 
 
 @pytest.mark.unit
-@pytest.mark.asyncio
 class TestSendAlerts:
     """测试 _send_alerts 方法."""
 
-    async def test_alerts_logged_as_warning(
+    def test_alerts_logged_as_warning(
         self,
         mock_quality_engine,
         mock_tdx_source,

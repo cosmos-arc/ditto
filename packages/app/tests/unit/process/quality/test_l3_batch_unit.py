@@ -2,39 +2,9 @@
 
 from unittest.mock import MagicMock
 
-import polars as pl
 import pytest
 from ditto_app.process.quality import L3BatchService
 from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
-
-
-@pytest.fixture
-def mock_engine() -> MagicMock:
-    """创建 mock DQ 引擎."""
-    engine = MagicMock()
-    result = DQResult(
-        dataset="stock_daily",
-        passed=True,
-        issues=[],
-    )
-    engine.check_statistical.return_value = result
-    return engine
-
-
-@pytest.fixture
-def mock_market_service() -> MagicMock:
-    """创建 mock MarketService."""
-    service = MagicMock()
-    service.find_bars.return_value = pl.DataFrame()
-    return service
-
-
-@pytest.fixture
-def mock_metadata_service() -> MagicMock:
-    """创建 mock MetadataService."""
-    service = MagicMock()
-    service.list_calendar_range.return_value = pl.DataFrame()
-    return service
 
 
 @pytest.mark.unit
@@ -43,13 +13,13 @@ class TestL3BatchServiceContract:
 
     def test_check_dataset_returns_issues_field(
         self,
-        mock_engine: MagicMock,
+        mock_statistical_engine: MagicMock,
         mock_market_service: MagicMock,
         mock_metadata_service: MagicMock,
     ) -> None:
         """check_dataset 返回必须包含 issues 字段."""
         service = L3BatchService(
-            engine=mock_engine,
+            engine=mock_statistical_engine,
             market_facade=mock_market_service,
             metadata_facade=mock_metadata_service,
         )
@@ -64,7 +34,7 @@ class TestL3BatchServiceContract:
 
     def test_check_dataset_returns_actual_issues(
         self,
-        mock_engine: MagicMock,
+        mock_statistical_engine: MagicMock,
         mock_market_service: MagicMock,
         mock_metadata_service: MagicMock,
     ) -> None:
@@ -78,14 +48,14 @@ class TestL3BatchServiceContract:
             affected_rows=5,
             sample_data=[{"instrument_id": 1000001, "trade_date": "2024-01-15"}],
         )
-        mock_engine.check_statistical.return_value = DQResult(
+        mock_statistical_engine.check_statistical.return_value = DQResult(
             dataset="stock_daily",
             passed=True,
             issues=[sample_issue],
         )
 
         service = L3BatchService(
-            engine=mock_engine,
+            engine=mock_statistical_engine,
             market_facade=mock_market_service,
             metadata_facade=mock_metadata_service,
         )

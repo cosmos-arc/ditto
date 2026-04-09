@@ -9,7 +9,6 @@ __all__ = [
 from typing import Any
 
 import polars as pl
-import polars.exceptions as pl_exceptions
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_infra.foundation import logger
 from ditto_kernel.quality import DQResult
@@ -110,13 +109,6 @@ class QualityReconciliationService:
                 return enriched
 
             return self._execute_comparison(enriched, trade_date, dataset)
-        except (
-            ValueError,
-            KeyError,
-            pl_exceptions.ComputeError,
-            pl_exceptions.SchemaError,
-        ) as e:
-            return self._handle_reconciliation_error(trade_date, dataset, e)
         except Exception as e:
             return self._handle_reconciliation_error(trade_date, dataset, e)
 

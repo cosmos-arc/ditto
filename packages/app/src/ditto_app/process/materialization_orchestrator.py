@@ -45,6 +45,7 @@ from ditto_data.services.derived.artifact_persistence_service import (
 )
 from ditto_kernel.specs import DerivedSpec, MaterializationProfile
 
+from ditto_app.config import now_iso
 from ditto_app.process.factor_orthogonalization import (
     FactorOrthogonalizationService,
 )
@@ -62,7 +63,6 @@ from ditto_app.process.materialization_types import (
     prepare_input_frame,
 )
 from ditto_app.process.runtime_input_provider import RuntimeDerivedInputProvider
-from ditto_app.query._utils import now_iso
 
 __all__ = [
     "DerivedMaterializationOrchestrator",

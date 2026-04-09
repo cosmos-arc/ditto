@@ -16,7 +16,7 @@ Kernel 层是 **Shared Kernel — 类型 + Protocol 抽象 + 薄实现**，提�
 | # | 标准 | 说明 |
 |---|------|------|
 | 1 | 跨层使用 | 至少被 2 个业务包直接导入 |
-| 2 | 零业务行为 | 纯值对象 / 枚举 / NewType，不含方法 |
+| 2 | 零业务行为 | 纯值对象 / 枚举 / NewType。frozen dataclass 允许纯计算型 `@property`（无副作用、无 I/O、仅基于自身字段） |
 | 3 | 稳定性高 | 不会随某个子域的迭代频繁变更 |
 | 4 | 无外部依赖 | 只依赖 Python 标准库 |
 | 5 | 纯值语义 | 不含序列化、持久化关注点 |
@@ -53,7 +53,10 @@ ditto_kernel/
 ├── clock.py           # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
 ├── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
 ├── specs.py           # 衍生规格数据类（DerivedSpec / DerivedRole / TimeSpec 等，Phase 5 从 Engine 迁入）
-└── research.py        # 研究数据集记录类型（frozen dataclass × 4）
+├── research.py        # 研究数据集记录类型（frozen dataclass × 4）
+├── quality.py         # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult）
+├── exceptions.py      # 共享异常层级（DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
+└── types.py           # 共享工具类型（InstrumentIngestParams）
 ```
 
 ## 当前类型清单
@@ -77,6 +80,15 @@ ditto_kernel/
 | `ResearchDatasetSpecRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchSpineSnapshotRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchDatasetSnapshotRecord` | research.py | frozen dataclass | Data, App |
+| `DQLevel` | quality.py | `Enum`（TECHNICAL/BUSINESS/STATISTICAL） | Data, App, Interfaces |
+| `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, App, Interfaces |
+| `DQIssue` | quality.py | frozen dataclass | Data, App, Interfaces |
+| `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
+| `DataError` | exceptions.py | `Exception`（基类） | Data, App, Interfaces |
+| `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
+| `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | App |
+| `AmbiguousTickerError` | exceptions.py | `IdentifierError` | App |
+| `InstrumentIngestParams` | types.py | frozen dataclass | Data, App |
 
 ## 导入规范
 

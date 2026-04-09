@@ -82,7 +82,7 @@ ditto_infra       → 其他层                                                 
 
 使用 **Import Linter** 进行架构约束检查,配置位于 [.importlinter](../../.importlinter)。
 
-共 22 条合约（0 broken, 0 warnings）。
+共 24 条合约（0 broken, 0 warnings）。
 
 **检查类型：**
 1. **分层架构** (`layers`): Interfaces → App → Engine → Data → Infra
@@ -126,6 +126,23 @@ from ditto_data.di import get_data_providers
 from ditto_data.storage.bars_store import BarsStore  # ❌
 store = BarsStore(...)  # ❌
 ```
+
+### 跨包 Re-export 禁止
+
+**原则**：需要哪个包的类型，就从哪个包导入。跨包 re-export 隐藏真实依赖关系，使重构变得危险。
+
+```python
+# ❌ 禁止：ditto_data/models/__init__.py 中 re-export kernel 类型
+from ditto_kernel.enums import AssetClass, Exchange
+
+# ❌ 禁止：消费者通过中间包间接导入
+from ditto_data.models import AssetClass  # 看不出 AssetClass 来自 kernel
+
+# ✅ 正确：消费者直接从来源包导入
+from ditto_kernel.enums import AssetClass
+```
+
+**适用范围**：所有 ditto 内部包之间的 re-export 均被禁止。包内子模块聚合见 [python.md](../python.md) Re-export 规范。
 
 ---
 

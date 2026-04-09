@@ -37,6 +37,7 @@ from ditto_data.services import (
 from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotService
 from ditto_kernel.specs import DerivedRole, MaterializationProfile
 
+from ditto_app.config import now_iso
 from ditto_app.process._publication_helpers import (
     build_shadow_diff_report,
     build_shadow_traces,
@@ -46,7 +47,6 @@ from ditto_app.process._publication_helpers import (
     to_shadow_trace_record,
 )
 from ditto_app.process.certification_rules import build_certification_checks
-from ditto_app.query._utils import now_iso
 
 __all__ = [
     "DerivedPublicationFacade",

@@ -17,7 +17,7 @@ The registry enables:
 from __future__ import annotations
 
 from collections.abc import Iterator
-from datetime import time
+from datetime import UTC, datetime, time
 from enum import StrEnum
 from typing import Annotated, overload
 
@@ -26,7 +26,12 @@ from ditto_data.errors import DatasetNotFoundError
 from ditto_data.models import Dataset
 from pydantic import BaseModel, Field
 
-__all__ = ["DataStoreSettings"]
+__all__ = ["DataStoreSettings", "now_iso"]
+
+
+def now_iso() -> str:
+    """Return current UTC timestamp in ISO format."""
+    return datetime.now(UTC).isoformat()
 
 
 class TaskTier(StrEnum):

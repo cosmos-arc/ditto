@@ -145,6 +145,9 @@ pixi run -e dev fmt           # 格式化
 | 文件操作用 Bash cat/sed/echo | 必须用 Read/Edit/Write |
 | SRC 内大量 `# noqa`/`# type:ignore` | 优先重构代码 |
 | `TYPE_CHECKING` 延迟导入 | 重构架构解决循环依赖 |
+| 跨包 re-export | 隐藏真实依赖（详见 python.md Re-export 规范） |
+| `__init__.py` 混合 re-export + 内联定义 | 分离到独立模块 |
+| re-export 链深度 > 2 层 | 消费者直接引用叶模块 |
 
 ---
 
@@ -227,6 +230,9 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 - **使用 json**（必须用 orjson）
 - **使用 pip/poetry/conda**（必须用 pixi）
 - 使用 `TYPE_CHECKING` 延迟导入解决循环依赖（必须重构代码及架构）
+- 跨包 re-export（详见 [python.md](.claude/rules/python.md) Re-export 规范）
+- `__init__.py` 中混合 re-export 与内联定义（必须分离到独立模块）
+- re-export 链深度超过 2 层（消费者必须直接引用叶模块）
 - 跳过 basedpyright、ruff、pre-commit 检测（禁止修改相关配置、使用 --no-verify 提交）
 - 直接提交到 main 分支
 - 提交 secrets

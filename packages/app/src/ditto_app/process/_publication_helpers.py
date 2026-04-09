@@ -21,7 +21,7 @@ from ditto_data.models.publication_safety import (
     ShadowTraceRecordRecord,
 )
 
-from ditto_app.query._utils import now_iso
+from ditto_app.config import now_iso
 
 _VALUE_DIFF_TOLERANCE = 1e-12
 

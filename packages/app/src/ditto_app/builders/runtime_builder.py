@@ -59,6 +59,13 @@ __all__ = [
 ]
 
 
+_DEFAULT_COMMISSION_RATE = 0.0003
+_DEFAULT_SLIPPAGE_BPS = 5.0
+_DEFAULT_TRAILING_STOP_PCT = 0.08
+_DEFAULT_MAX_WEIGHT = 0.15
+_DEFAULT_TOP_K = 10
+
+
 # ===========================================================================
 # PublishedStrategyRuntime
 # ===========================================================================
@@ -185,11 +192,11 @@ class StrategyRuntimeBuilder:
         payload = as_object_dict(raw_value, field_name="execution.cost_model")
         return CostModelSpec(
             commission_rate=read_float(
-                payload.get("commission_rate", 0.0003),
+                payload.get("commission_rate", _DEFAULT_COMMISSION_RATE),
                 field_name="execution.cost_model.commission_rate",
             ),
             slippage_bps=read_float(
-                payload.get("slippage_bps", 5.0),
+                payload.get("slippage_bps", _DEFAULT_SLIPPAGE_BPS),
                 field_name="execution.cost_model.slippage_bps",
             ),
             impact_model=(read_optional_str(payload.get("impact_model")) or "linear"),
@@ -290,7 +297,7 @@ class StrategyRuntimeBuilder:
     def _build_etf_rotation_config(self, spec: StrategySpec) -> ETFRotationConfig:
         params = spec.params
         return ETFRotationConfig(
-            top_k=self._resolve_top_k(spec, default=10),
+            top_k=self._resolve_top_k(spec, default=_DEFAULT_TOP_K),
             scoring_method=self._resolve_scoring_method(spec, default="rank"),
             scoring_ascending=read_bool(
                 params.get("scoring_ascending", True),
@@ -331,11 +338,14 @@ class StrategyRuntimeBuilder:
                 field_name="params.trend_threshold",
             ),
             trailing_stop_pct=read_float(
-                params.get("trailing_stop_pct", 0.08),
+                params.get("trailing_stop_pct", _DEFAULT_TRAILING_STOP_PCT),
                 field_name="params.trailing_stop_pct",
             ),
             max_positions=read_int(
-                params.get("max_positions", self._resolve_top_k(spec, default=10)),
+                params.get(
+                    "max_positions",
+                    self._resolve_top_k(spec, default=_DEFAULT_TOP_K),
+                ),
                 field_name="params.max_positions",
             ),
             scoring_method=self._resolve_scoring_method(spec, default="rank"),
@@ -372,9 +382,9 @@ class StrategyRuntimeBuilder:
                 field_name="params.signal_weights",
             )
             or (1.0,),
-            top_k=self._resolve_top_k(spec, default=10),
+            top_k=self._resolve_top_k(spec, default=_DEFAULT_TOP_K),
             max_weight=read_float(
-                params.get("max_weight", 0.15),
+                params.get("max_weight", _DEFAULT_MAX_WEIGHT),
                 field_name="params.max_weight",
             ),
             allocation_method=read_optional_str(
@@ -420,7 +430,7 @@ class StrategyRuntimeBuilder:
             )
             or "equal_weight",
             max_weight=read_float(
-                params.get("max_weight", 0.15),
+                params.get("max_weight", _DEFAULT_MAX_WEIGHT),
                 field_name="params.max_weight",
             ),
             cash_target=read_float(
