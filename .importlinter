@@ -156,6 +156,19 @@ forbidden_modules =
     ditto_analytics.**
 
 # ═══════════════════════════════════════════════════════════════════
+# Analytics 与 App 互斥：平行平面，互不依赖
+# App 通过 builders 层使用 Analytics（表达式编译/因子计算）
+# Analytics 禁止反向依赖 App
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:analytics-no-app-dependency]
+name = Analytics must not depend on App
+type = forbidden
+source_modules =
+    ditto_analytics.**
+forbidden_modules =
+    ditto_app.**
+
+# ═══════════════════════════════════════════════════════════════════
 # Interfaces 层边界：禁止直接依赖 Data 存储/运行时实现
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:interfaces-boundary]

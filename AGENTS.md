@@ -65,7 +65,8 @@
 ```
 依赖层级（从高到低）:
   ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_infra
-  ditto_interfaces → ditto_analytics → ditto_engine → ditto_kernel
+  ditto_interfaces → ditto_analytics → ditto_kernel
+  ditto_app → ditto_analytics → ditto_kernel
   ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
 
 允许的跨层依赖:

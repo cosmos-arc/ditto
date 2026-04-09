@@ -26,6 +26,21 @@ from ditto_app.query._utils import now_iso
 _VALUE_DIFF_TOLERANCE = 1e-12
 
 
+def _build_combined_frame(
+    candidate_frame: pl.DataFrame,
+    baseline_frame: pl.DataFrame,
+) -> pl.DataFrame:
+    """Prepare and join candidate/baseline frames into a single comparison frame."""
+    candidate_prepared = _prepare_compare_frame(candidate_frame, "candidate")
+    baseline_prepared = _prepare_compare_frame(baseline_frame, "baseline")
+    return candidate_prepared.join(
+        baseline_prepared,
+        on=["instrument_id", "trade_date"],
+        how="full",
+        coalesce=True,
+    ).sort(["instrument_id", "trade_date"])
+
+
 def build_shadow_diff_report(
     *,
     derived_id: str,
@@ -37,14 +52,7 @@ def build_shadow_diff_report(
     baseline_manifest_hash: str,
 ) -> ShadowDiffReport:
     """Build a shadow diff report comparing candidate and baseline data frames."""
-    candidate_prepared = _prepare_compare_frame(candidate_frame, "candidate")
-    baseline_prepared = _prepare_compare_frame(baseline_frame, "baseline")
-    combined = candidate_prepared.join(
-        baseline_prepared,
-        on=["instrument_id", "trade_date"],
-        how="full",
-        coalesce=True,
-    ).sort(["instrument_id", "trade_date"])
+    combined = _build_combined_frame(candidate_frame, baseline_frame)
     schema_match = tuple(candidate_frame.columns) == tuple(baseline_frame.columns)
     diff_count = combined.filter(_value_mismatch_expr()).height
     request_count = combined.height
@@ -90,14 +98,7 @@ def build_shadow_traces(
     baseline_frame: pl.DataFrame,
 ) -> tuple[ShadowTraceRecord, ...]:
     """Build shadow trace records from the diff report and data frames."""
-    candidate_prepared = _prepare_compare_frame(candidate_frame, "candidate")
-    baseline_prepared = _prepare_compare_frame(baseline_frame, "baseline")
-    combined = candidate_prepared.join(
-        baseline_prepared,
-        on=["instrument_id", "trade_date"],
-        how="full",
-        coalesce=True,
-    ).sort(["instrument_id", "trade_date"])
+    combined = _build_combined_frame(candidate_frame, baseline_frame)
     mismatches = combined.filter(_value_mismatch_expr()).head(20)
     traces: list[ShadowTraceRecord] = []
     for row in mismatches.iter_rows(named=True):

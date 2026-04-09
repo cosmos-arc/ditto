@@ -190,21 +190,21 @@ class IngestionDataWriter:
     ) -> dict[Dataset, Callable[[], WriteResult]]:
         """Build the dataset-to-writer handler mapping."""
         return {
-            Dataset.ETF_DAILY: lambda: self._write_market_bars(
+            Dataset.ETF_DAILY: lambda: self._write_traded_bars(
                 dataset,
-                dataset_enum,
                 df,
                 year,
                 on_duplicate,
                 source_ticker_col,
+                "etf_daily",
             ),
-            Dataset.STOCK_DAILY: lambda: self._write_market_bars(
+            Dataset.STOCK_DAILY: lambda: self._write_traded_bars(
                 dataset,
-                dataset_enum,
                 df,
                 year,
                 on_duplicate,
                 source_ticker_col,
+                "stock_daily",
             ),
             Dataset.STOCK_STATUS: lambda: self._write_stock_status(
                 dataset,
@@ -283,8 +283,8 @@ class IngestionDataWriter:
             Dataset.STOCK_BASIC: lambda: self._write_basic(df, trade_date, "stock"),
             Dataset.ETF_BASIC: lambda: self._write_basic(df, trade_date, "etf"),
             Dataset.INDEX_BASIC: lambda: self._write_basic(df, trade_date, "index"),
-            Dataset.INDEX_DAILY: lambda: self._write_index_bars(
-                dataset, df, year, on_duplicate, source_ticker_col
+            Dataset.INDEX_DAILY: lambda: self._write_traded_bars(
+                dataset, df, year, on_duplicate, source_ticker_col, "index_daily"
             ),
             Dataset.FX_DAILY: lambda: self._write_instrument_code_bars(
                 dataset,
@@ -302,88 +302,43 @@ class IngestionDataWriter:
             ),
         }
 
-    def _write_market_bars(
+    def _resolve_and_enrich_instrument_id(
         self,
-        dataset: str,
-        dataset_enum: Dataset,
         df: pl.DataFrame,
-        year: int,
-        on_duplicate: OnDuplicate,
         source_ticker_col: str,
-    ) -> WriteResult:
-        # 日行情数据不包含创建证券所需的元数据字段，
-        # 使用 resolve_instrument_ids_batch 仅解析已存在的证券
+    ) -> pl.DataFrame:
+        """解析 instrument_id 并 enrich（统一入口）."""
+        if "instrument_id" in df.columns:
+            return df
         source_tickers = df[source_ticker_col].unique().to_list()
         instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
             identifiers=source_tickers,
             source=self._source_name,
             asof=None,
         )
-        enriched_df = _enrich_with_instrument_id(
-            df,
-            instrument_id_mapping,
-            source_ticker_col,
-            self._source_name,
+        return _enrich_with_instrument_id(
+            df, instrument_id_mapping, source_ticker_col, self._source_name
         )
-        bars_dataset = cast(Literal["stock_daily", "etf_daily"], dataset_enum.value)
+
+    def _write_traded_bars(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+        bars_dataset: Literal[
+            "stock_daily", "etf_daily", "index_daily", "fx_daily", "commodity_daily"
+        ],
+    ) -> WriteResult:
+        """写入行情 K 线数据（stock/etf/index 共用）."""
+        enriched_df = self._resolve_and_enrich_instrument_id(df, source_ticker_col)
         rows_written = self._market_write_service.save_bars(
             dataset=bars_dataset,
             df=enriched_df,
             year=year,
             on_duplicate=on_duplicate,
         )
-
-        return _to_write_result(
-            dataset,
-            year,
-            enriched_df,
-            rows_written,
-        )
-
-    def _write_index_bars(
-        self,
-        dataset: str,
-        df: pl.DataFrame,
-        year: int,
-        on_duplicate: OnDuplicate,
-        source_ticker_col: str,
-    ) -> WriteResult:
-        """
-        写入指数 K 线数据.
-
-        Args:
-            dataset: 数据集名称
-            df: K 线数据
-            year: 年份
-            on_duplicate: 重复数据处理策略
-            source_ticker_col: 源代码列名
-
-        Returns:
-            WriteResult: 写入结果
-
-        """
-        # 指数行情数据不包含创建证券所需的元数据字段，
-        # 使用 resolve_instrument_ids_batch 仅解析已存在的证券
-        source_tickers = df[source_ticker_col].unique().to_list()
-        instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
-            identifiers=source_tickers,
-            source=self._source_name,
-            asof=None,
-        )
-
-        # 添加 instrument_id 列
-        enriched_df = _enrich_with_instrument_id(
-            df, instrument_id_mapping, source_ticker_col, self._source_name
-        )
-
-        # 写入到 MarketWriteService
-        rows_written = self._market_write_service.save_bars(
-            dataset="index_daily",
-            df=enriched_df,
-            year=year,
-            on_duplicate=on_duplicate,
-        )
-
         return _to_write_result(dataset, year, enriched_df, rows_written)
 
     def _write_instrument_code_bars(
@@ -410,20 +365,7 @@ class IngestionDataWriter:
         year: int,
         source_ticker_col: str,
     ) -> WriteResult:
-        # 股票状态数据不包含创建证券所需的元数据字段，
-        # 使用 resolve_instrument_ids_batch 仅解析已存在的证券
-        source_tickers = df[source_ticker_col].unique().to_list()
-        instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
-            identifiers=source_tickers,
-            source=self._source_name,
-            asof=None,
-        )
-        enriched_df = _enrich_with_instrument_id(
-            df,
-            instrument_id_mapping,
-            source_ticker_col,
-            self._source_name,
-        )
+        enriched_df = self._resolve_and_enrich_instrument_id(df, source_ticker_col)
         rows_written = self._market_write_service.save_stock_status(
             df=enriched_df,
             year=year,
@@ -443,22 +385,7 @@ class IngestionDataWriter:
         on_duplicate: OnDuplicate,
         source_ticker_col: str,
     ) -> WriteResult:
-        enriched_df = df
-        if "instrument_id" not in df.columns:
-            # 复权因子数据不包含创建证券所需的元数据字段，
-            # 使用 resolve_instrument_ids_batch 仅解析已存在的证券
-            source_tickers = df[source_ticker_col].unique().to_list()
-            instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
-                identifiers=source_tickers,
-                source=self._source_name,
-                asof=None,
-            )
-            enriched_df = _enrich_with_instrument_id(
-                df,
-                instrument_id_mapping,
-                source_ticker_col,
-                self._source_name,
-            )
+        enriched_df = self._resolve_and_enrich_instrument_id(df, source_ticker_col)
 
         rows_written = self._market_write_service.save_adj_factor(
             df=enriched_df,

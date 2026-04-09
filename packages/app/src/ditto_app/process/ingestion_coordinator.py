@@ -180,7 +180,15 @@ class IngestionCoordinator:
                 asset_class=asset_class,
                 inferred_count=count,
             )
-        except Exception as e:
+        except (
+            pl.exceptions.ComputeError,
+            pl.exceptions.SchemaError,
+            ValueError,
+            KeyError,
+            TypeError,
+            httpx.NetworkError,
+            httpx.TimeoutException,
+        ) as e:
             # 推断失败不影响主流程，仅记录警告
             logger.warning(
                 f"list_date inference failed for {asset_class}",
@@ -188,6 +196,13 @@ class IngestionCoordinator:
                 dataset=dataset,
                 asset_class=asset_class,
                 error=str(e),
+            )
+        except Exception:
+            logger.exception(
+                "Unexpected error in list_date inference",
+                event="list_date_inference_error",
+                dataset=dataset,
+                asset_class=asset_class,
             )
 
     def _get_cached_index_codes(self) -> list[str]:
@@ -392,9 +407,27 @@ class IngestionCoordinator:
             write_result = self._data_writer.write_data(
                 dataset, df, trade_date, on_duplicate
             )
+        except (
+            pl.exceptions.ComputeError,
+            pl.exceptions.SchemaError,
+            ValueError,
+            KeyError,
+            TypeError,
+            OSError,
+        ) as e:
+            logger.warning(
+                "write_data_failed",
+                event="write_data_error",
+                dataset=dataset,
+                trade_date=trade_date,
+                error_type=type(e).__name__,
+                error=str(e),
+            )
+            return self._result_handler.handle_unknown_error(dataset, trade_date, e)
         except Exception as e:
             logger.exception(
-                "write_data_failed",
+                "write_data_failed_unexpected",
+                event="write_data_error",
                 dataset=dataset,
                 trade_date=trade_date,
                 error_type=type(e).__name__,
@@ -426,12 +459,21 @@ class IngestionCoordinator:
                     last_success=trade_date,
                     last_attempted=trade_date,
                 )
-            except Exception as e:
+            except (ValueError, KeyError, TypeError, OSError) as e:
                 logger.warning(
                     "cursor_update_failed",
+                    event="cursor_update_error",
                     dataset=dataset,
                     trade_date=trade_date,
+                    error_type=type(e).__name__,
                     error=str(e),
+                )
+            except Exception:
+                logger.exception(
+                    "cursor_update_failed_unexpected",
+                    event="cursor_update_error",
+                    dataset=dataset,
+                    trade_date=trade_date,
                 )
 
         # 创建冻结点（轻量级版本追踪）
@@ -442,12 +484,21 @@ class IngestionCoordinator:
                     description=f"Auto-freeze: {dataset} @ {trade_date}",
                     datasets=[dataset],
                 )
-            except Exception as e:
+            except (ValueError, KeyError, TypeError, OSError) as e:
                 logger.warning(
                     "freeze_create_failed",
+                    event="freeze_create_error",
                     dataset=dataset,
                     trade_date=trade_date,
+                    error_type=type(e).__name__,
                     error=str(e),
+                )
+            except Exception:
+                logger.exception(
+                    "freeze_create_failed_unexpected",
+                    event="freeze_create_error",
+                    dataset=dataset,
+                    trade_date=trade_date,
                 )
 
     def ingest_range(
@@ -579,9 +630,29 @@ class IngestionCoordinator:
             write_result = self._data_writer.write_data(
                 dataset, df, params.start_date, on_duplicate
             )
+        except (
+            pl.exceptions.ComputeError,
+            pl.exceptions.SchemaError,
+            ValueError,
+            KeyError,
+            TypeError,
+            OSError,
+        ) as e:
+            logger.warning(
+                "write_data_failed_by_instrument",
+                event="write_data_error_by_instrument",
+                dataset=dataset,
+                source_ticker=source_ticker,
+                error_type=type(e).__name__,
+                error=str(e),
+            )
+            return self._result_handler.handle_unknown_error(
+                dataset, params.start_date, e
+            )
         except Exception as e:
             logger.exception(
-                "write_data_failed_by_instrument",
+                "write_data_failed_by_instrument_unexpected",
+                event="write_data_error_by_instrument",
                 dataset=dataset,
                 source_ticker=source_ticker,
                 error_type=type(e).__name__,

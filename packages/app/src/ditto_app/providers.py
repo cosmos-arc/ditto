@@ -70,7 +70,7 @@ from ditto_app.process.materialization_orchestrator import (
     RuntimeDerivedInputProvider,
 )
 from ditto_app.process.publication_facade import DerivedPublicationFacade
-from ditto_app.process.quality import QualityService
+from ditto_app.process.quality import L3BatchService, QualityService
 from ditto_app.process.strategy_run_service import StrategyFacade
 
 # ---------------------------------------------------------------------------
@@ -308,6 +308,20 @@ class AppProcessProvider(Provider):
         return QualityService(
             engine=dq_engine,
             quarantine_writer=quality_record_service,
+        )
+
+    @provide
+    def l3_batch_service(
+        self,
+        dq_engine: QualityEngine,
+        market_facade: MarketQueryFacade,
+        metadata_facade: MetadataQueryFacade,
+    ) -> L3BatchService:
+        """L3 批量统计检查服务."""
+        return L3BatchService(
+            engine=dq_engine,
+            market_facade=market_facade,
+            metadata_facade=metadata_facade,
         )
 
 

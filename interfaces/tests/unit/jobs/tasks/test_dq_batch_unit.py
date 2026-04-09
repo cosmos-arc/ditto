@@ -10,6 +10,29 @@ def _prefect_runner(entrypoint):
     return getattr(entrypoint, "func", getattr(entrypoint, "fn", entrypoint))
 
 
+def _mock_container(
+    mocker: MockerFixture,
+    *,
+    l3_service: MagicMock | None = None,
+    metadata_service: MagicMock | None = None,
+    market_service: MagicMock | None = None,
+) -> MagicMock:
+    """创建 mock container，按类型返回对应 mock 对象."""
+    container = mocker.MagicMock()
+
+    def _get_side_effect(cls):
+        if cls.__name__ == "L3BatchService":
+            return l3_service
+        if cls.__name__ == "MetadataQueryFacade":
+            return metadata_service
+        if cls.__name__ == "MarketQueryFacade":
+            return market_service
+        return MagicMock()
+
+    container.get.side_effect = _get_side_effect
+    return container
+
+
 @pytest.mark.unit
 class TestDqBatchCheckKnownErrorHandling:
     """测试已知异常被正确记录到 results_by_dataset."""
@@ -29,37 +52,28 @@ class TestDqBatchCheckKnownErrorHandling:
         mock_metadata_service = MagicMock()
         mock_metadata_service.get_last_trading_day.return_value = "2024-01-15"
 
-        mock_market_service = MagicMock()
-        mock_engine = MagicMock()
-
-        # Mock L3BatchService.check_dataset 抛出已知异常
         mock_l3_service = MagicMock()
         mock_l3_service.check_dataset.side_effect = ValueError("数据格式错误")
 
-        # Mock context manager
-        mock_context = mocker.MagicMock()
-        mock_context.__enter__.return_value = (
-            mock_engine,
-            mock_metadata_service,
-            mock_market_service,
+        container = _mock_container(
+            mocker,
+            l3_service=mock_l3_service,
+            metadata_service=mock_metadata_service,
         )
+
+        mock_context = mocker.MagicMock()
+        mock_context.__enter__.return_value = container
         mock_context.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_interfaces.jobs.tasks.dq_batch.create_dq_and_metadata_context",
+            "ditto_interfaces.jobs.tasks.dq_batch.create_prefect_host",
             return_value=mock_context,
         )
-        mocker.patch(
-            "ditto_interfaces.jobs.tasks.dq_batch.L3BatchService",
-            return_value=mock_l3_service,
-        )
-        # Mock _send_dq_alert 避免副作用
         mocker.patch(
             "ditto_interfaces.jobs.tasks.dq_batch._send_dq_alert",
             return_value=None,
         )
 
-        # Import after patching
         from ditto_interfaces.jobs.tasks.dq_batch import dq_batch_check
 
         runner = _prefect_runner(dq_batch_check)
@@ -107,28 +121,22 @@ class TestDqBatchCheckKnownErrorHandling:
         mock_metadata_service = MagicMock()
         mock_metadata_service.get_last_trading_day.return_value = "2024-01-15"
 
-        mock_market_service = MagicMock()
-        mock_engine = MagicMock()
-
-        # Mock L3BatchService 抛出指定异常
         mock_l3_service = MagicMock()
         mock_l3_service.check_dataset.side_effect = exception_class(exception_msg)
 
-        mock_context = mocker.MagicMock()
-        mock_context.__enter__.return_value = (
-            mock_engine,
-            mock_metadata_service,
-            mock_market_service,
+        container = _mock_container(
+            mocker,
+            l3_service=mock_l3_service,
+            metadata_service=mock_metadata_service,
         )
+
+        mock_context = mocker.MagicMock()
+        mock_context.__enter__.return_value = container
         mock_context.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_interfaces.jobs.tasks.dq_batch.create_dq_and_metadata_context",
+            "ditto_interfaces.jobs.tasks.dq_batch.create_prefect_host",
             return_value=mock_context,
-        )
-        mocker.patch(
-            "ditto_interfaces.jobs.tasks.dq_batch.L3BatchService",
-            return_value=mock_l3_service,
         )
         mocker.patch(
             "ditto_interfaces.jobs.tasks.dq_batch._send_dq_alert",
@@ -165,27 +173,22 @@ class TestDqBatchCheckKnownErrorHandling:
         mock_metadata_service = MagicMock()
         mock_metadata_service.get_last_trading_day.return_value = "2024-01-15"
 
-        mock_market_service = MagicMock()
-        mock_engine = MagicMock()
-
         mock_l3_service = MagicMock()
         mock_l3_service.check_dataset.side_effect = RuntimeError("未知运行时错误")
 
-        mock_context = mocker.MagicMock()
-        mock_context.__enter__.return_value = (
-            mock_engine,
-            mock_metadata_service,
-            mock_market_service,
+        container = _mock_container(
+            mocker,
+            l3_service=mock_l3_service,
+            metadata_service=mock_metadata_service,
         )
+
+        mock_context = mocker.MagicMock()
+        mock_context.__enter__.return_value = container
         mock_context.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_interfaces.jobs.tasks.dq_batch.create_dq_and_metadata_context",
+            "ditto_interfaces.jobs.tasks.dq_batch.create_prefect_host",
             return_value=mock_context,
-        )
-        mocker.patch(
-            "ditto_interfaces.jobs.tasks.dq_batch.L3BatchService",
-            return_value=mock_l3_service,
         )
         mocker.patch(
             "ditto_interfaces.jobs.tasks.dq_batch._send_dq_alert",
@@ -225,9 +228,6 @@ class TestDqBatchCheckKnownErrorHandling:
         mock_metadata_service = MagicMock()
         mock_metadata_service.get_last_trading_day.return_value = "2024-01-15"
 
-        mock_market_service = MagicMock()
-        mock_engine = MagicMock()
-
         # 第一个成功，第二个失败
         mock_l3_service = MagicMock()
         mock_l3_service.check_dataset.side_effect = [
@@ -239,21 +239,19 @@ class TestDqBatchCheckKnownErrorHandling:
             ValueError("第二个数据集失败"),
         ]
 
-        mock_context = mocker.MagicMock()
-        mock_context.__enter__.return_value = (
-            mock_engine,
-            mock_metadata_service,
-            mock_market_service,
+        container = _mock_container(
+            mocker,
+            l3_service=mock_l3_service,
+            metadata_service=mock_metadata_service,
         )
+
+        mock_context = mocker.MagicMock()
+        mock_context.__enter__.return_value = container
         mock_context.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_interfaces.jobs.tasks.dq_batch.create_dq_and_metadata_context",
+            "ditto_interfaces.jobs.tasks.dq_batch.create_prefect_host",
             return_value=mock_context,
-        )
-        mocker.patch(
-            "ditto_interfaces.jobs.tasks.dq_batch.L3BatchService",
-            return_value=mock_l3_service,
         )
         mocker.patch(
             "ditto_interfaces.jobs.tasks.dq_batch._send_dq_alert",

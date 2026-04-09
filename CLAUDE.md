@@ -67,6 +67,7 @@
   ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_infra
   ditto_interfaces → ditto_analytics → ditto_kernel
   ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
+  ditto_app → ditto_analytics → ditto_kernel
 
 允许的跨层依赖:
   - interfaces 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）

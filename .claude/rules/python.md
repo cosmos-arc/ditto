@@ -499,12 +499,27 @@ tar -tzf dist/*.whl | grep py.typed
 - 生产代码中禁止"无边界 Any"：
   - 只能在 **IO/外部边界** 出现（JSON、DB 行、HTTP 响应、第三方动态对象）；
   - 进入领域逻辑前必须完成 **解析/校验/收敛**（TypedDict / dataclass / pydantic / 自定义解析器）。
-- 优先选择：
+- 优先选择（按适用场景排序）：
+  - `A | B` / `T | None`（值是几种已知类型之一）
   - `Protocol`（约束行为面）
-  - `TypedDict`（约束 JSON 结构）
+  - `TypedDict`（约束 JSON/dict 结构）
+  - `dataclass` / Pydantic（定义领域模型）
   - `TypeAlias` / `NewType`（约束领域值）
   - `Literal`（约束枚举值）
   - `overload`（约束多态签名）
+- **Any 白名单**（仅限以下场景，无需收敛）：
+  - SQL 参数/结果（`list[Any]`、`tuple[Any, ...]`）
+  - 通用缓存值（`VTTLCache[str, Any]`）
+  - 日志/指标 attributes（`dict[str, Any]`）
+  - 领域事件 payload（`DomainEvent.payload`）
+  - 第三方库适配（Prefect `Flow[Any, Any]` 等）
+  - 底层库类型不兼容（必须注释原因）
+- **Any 红线**（禁止场景）：
+  - 延迟初始化：用 `X | None` 而非 `Any = None`
+  - `.get()` 返回值：用 `str | None` 而非 `Any`
+  - Service 层对外 API 返回值：用 TypedDict/dataclass 而非 `dict[str, Any]`
+  - 有明确行为约束的参数：用 Protocol 而非 `Any`
+- 详见 `docs/plans/2026-04-09-any-usage-audit-and-rules.md`
 
 #### 3) import 与 typing 书写习惯
 - 新文件默认加：`from __future__ import annotations`

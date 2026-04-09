@@ -5,15 +5,14 @@ from __future__ import annotations
 from typing import Any
 
 from ditto_app.process.quality import L3BatchService
+from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_data.models import Dataset
 from ditto_infra.foundation import Metrics, logger
 from ditto_kernel.quality import DQIssue
 from prefect import task
 
-from ditto_interfaces.jobs.context import (
-    create_dq_and_metadata_context,
-)
+from ditto_interfaces.jobs.context import create_prefect_host
 
 _DEFAULT_DATASETS = ["etf_daily", "index_daily", "stock_daily", "adj_factor"]
 
@@ -48,15 +47,11 @@ async def dq_batch_check(
         market_wide=market_wide,
     )
 
-    with create_dq_and_metadata_context() as (engine, metadata_service, market_service):
+    with create_prefect_host() as container:
+        l3_service = container.get(L3BatchService)
+        metadata_service = container.get(MetadataQueryFacade)
         resolved_date = _resolve_trade_date(trade_date, metadata_service)
         resolved_datasets = datasets or list(_DEFAULT_DATASETS)
-
-        l3_service = L3BatchService(
-            engine=engine,
-            market_facade=market_service,
-            metadata_facade=metadata_service,
-        )
 
         all_issues, results_by_dataset = _execute_all_checks(
             l3_service, resolved_datasets, resolved_date, market_wide
@@ -302,11 +297,8 @@ def dq_completeness_check(
         完整性检查结果
 
     """
-    with create_dq_and_metadata_context() as (
-        _engine,
-        _metadata_service,
-        market_service,
-    ):
+    with create_prefect_host() as container:
+        market_service: MarketQueryFacade = container.get(MarketQueryFacade)
         # 读取实际数据（market_service 是 MarketQueryFacade）
         df = market_service.find_bars(
             start=trade_date,

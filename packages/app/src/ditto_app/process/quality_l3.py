@@ -1,0 +1,266 @@
+"""质量服务 — L3 批量统计检查."""
+
+from __future__ import annotations
+
+__all__ = [
+    "L3BatchService",
+]
+
+from datetime import datetime, timedelta
+from typing import Any, Literal
+
+import polars as pl
+import polars.exceptions as pl_exceptions
+from ditto_infra.foundation import logger
+from ditto_kernel.quality import DQIssue, DQResult
+
+from ditto_app.process.quality_protocols import QualityEngineProtocol
+from ditto_app.query.market import MarketQueryFacade
+from ditto_app.query.metadata import MetadataQueryFacade
+
+# ---------------------------------------------------------------------------
+# L3 批量统计检查
+# ---------------------------------------------------------------------------
+
+
+class L3BatchService:
+    """
+    L3 批量统计检查服务.
+
+    应用层：编排 L3 统计异常检查。
+    通过 facade 获取历史数据并注入核心引擎。
+    """
+
+    def __init__(
+        self,
+        engine: QualityEngineProtocol,
+        market_facade: MarketQueryFacade,
+        metadata_facade: MetadataQueryFacade,
+    ) -> None:
+        """
+        初始化 L3 批量检查服务.
+
+        Args:
+            engine: 质量引擎实例
+            market_facade: 行情查询 facade，用于数据访问
+            metadata_facade: 元数据查询 facade，用于数据访问
+
+        """
+        self._engine = engine
+        self._market_facade = market_facade
+        self._metadata_facade = metadata_facade
+
+    def check_dataset(
+        self,
+        dataset: str,
+        trade_date: str,
+        asset_class: Literal["stock", "etf", "index"] | None = None,
+        market_wide: bool = False,
+    ) -> dict[str, Any]:
+        """
+        对数据集执行 L3 检查.
+
+        Args:
+            dataset: 数据集标识
+            trade_date: 待检查的交易日期（YYYY-MM-DD）
+            asset_class: 资产类别，用于全市场查询
+            market_wide: 是否使用全市场查询模式
+
+        Returns:
+            检查结果摘要
+
+        """
+        logger.info(
+            "Starting L3 batch check",
+            event="l3_batch_start",
+            dataset=dataset,
+            trade_date=trade_date,
+        )
+
+        try:
+            historical, current, calendar = self._fetch_check_data(
+                trade_date,
+                asset_class,
+                market_wide,
+            )
+            result = self._engine.check_statistical(
+                dataset=dataset,
+                current=current,
+                historical=historical,
+                calendar=calendar,
+            )
+            return self._format_check_result(dataset, trade_date, result)
+        except (pl_exceptions.ComputeError, pl_exceptions.SchemaError, ValueError) as e:
+            return self._handle_check_error(dataset, trade_date, e, is_data_error=True)
+        except Exception as e:
+            return self._handle_check_error(dataset, trade_date, e, is_data_error=False)
+
+    def _handle_check_error(
+        self,
+        dataset: str,
+        trade_date: str,
+        error: Exception,
+        *,
+        is_data_error: bool,
+    ) -> dict[str, Any]:
+        """统一处理 L3 检查异常，记录日志并返回错误结果."""
+        event_name = (
+            "l3_batch_check_data_processing_failed"
+            if is_data_error
+            else "l3_batch_check_unknown_error"
+        )
+        logger.exception(
+            event_name,
+            event="l3_batch_error",
+            dataset=dataset,
+            trade_date=trade_date,
+            error_type=type(error).__name__,
+        )
+        return {
+            "dataset": dataset,
+            "trade_date": trade_date,
+            "passed": False,
+            "error": f"{type(error).__name__}: {error!s}",
+        }
+
+    def _fetch_check_data(
+        self,
+        trade_date: str,
+        asset_class: Literal["stock", "etf", "index"] | None,
+        market_wide: bool,
+    ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+        """获取 L3 检查所需的历史、当前和日历数据."""
+        historical, current = self._fetch_data(
+            trade_date=trade_date,
+            asset_class=asset_class,
+            market_wide=market_wide,
+        )
+        calendar = self._fetch_calendar(trade_date=trade_date)
+        return historical, current, calendar
+
+    def _format_check_result(
+        self,
+        dataset: str,
+        trade_date: str,
+        result: DQResult,
+    ) -> dict[str, Any]:
+        """格式化 L3 检查结果."""
+        if result.issues:
+            logger.warning(
+                "L3 issues found",
+                event="l3_batch_issues",
+                dataset=dataset,
+                count=len(result.issues),
+            )
+            if result.has_alerts:
+                self._send_alert(trade_date, dataset, result.issues)
+        else:
+            logger.info(
+                "L3 check passed",
+                event="l3_batch_passed",
+                dataset=dataset,
+            )
+
+        return {
+            "dataset": dataset,
+            "trade_date": trade_date,
+            "passed": result.passed,
+            "issue_count": len(result.issues),
+            "alert_count": result.alert_count,
+            "issues": result.issues,
+        }
+
+    def _fetch_data(
+        self,
+        trade_date: str,
+        window: int = 120,
+        asset_class: Literal["stock", "etf", "index"] | None = None,
+        market_wide: bool = False,
+    ) -> tuple[pl.DataFrame, pl.DataFrame]:
+        """
+        通过 MarketQueryFacade 获取历史和当前数据.
+
+        Args:
+            trade_date: 交易日期（YYYY-MM-DD）
+            window: 历史数据的回溯窗口（天）
+            asset_class: 资产类别过滤
+            market_wide: 全市场查询模式
+
+        Returns:
+            元组 (historical_df, current_df)
+
+        """
+        # Calculate start date with buffer for weekends
+        trade_dt = datetime.fromisoformat(trade_date)
+        start_dt = trade_dt - timedelta(days=window * 2)
+        start_date = start_dt.strftime("%Y-%m-%d")
+
+        # Fetch historical data
+        historical = self._market_facade.find_bars(
+            instrument_ids=None,
+            start=start_date,
+            end=trade_date,
+            market_wide=market_wide,
+            asset_class=asset_class,
+        )
+
+        # Fetch current data
+        current = self._market_facade.find_bars(
+            instrument_ids=None,
+            start=trade_date,
+            end=trade_date,
+            market_wide=market_wide,
+            asset_class=asset_class,
+        )
+
+        return historical, current
+
+    def _fetch_calendar(self, trade_date: str, lookback_days: int = 10) -> pl.DataFrame:
+        """
+        通过 MetadataQueryFacade 获取交易日历.
+
+        Args:
+            trade_date: 交易日期（YYYY-MM-DD）
+            lookback_days: 回溯天数
+
+        Returns:
+            交易日历 DataFrame
+
+        """
+        # Calculate start date
+        trade_dt = datetime.fromisoformat(trade_date)
+        start_dt = trade_dt - timedelta(days=lookback_days * 2)
+        start_date = start_dt.strftime("%Y-%m-%d")
+
+        return self._metadata_facade.list_calendar_range(
+            start=start_date,
+            end=trade_date,
+            only_open=True,
+        )
+
+    def _send_alert(
+        self,
+        trade_date: str,
+        dataset: str,
+        issues: list[DQIssue],
+    ) -> None:
+        """
+        发送 DQ 告警通知.
+
+        Args:
+            trade_date: 交易日期
+            dataset: 数据集名称
+            issues: DQ 问题列表
+
+        """
+        logger.warning(
+            "DQ alert notification",
+            event="dq_alert",
+            trade_date=trade_date,
+            dataset=dataset,
+            issue_count=len(issues),
+            issues=[
+                {"level": i.level.value, "rule": i.rule_name, "message": i.message}
+                for i in issues
+            ],
+        )
