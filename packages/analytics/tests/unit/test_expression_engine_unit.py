@@ -11,12 +11,10 @@ from ditto_analytics.expression import ExpressionCompiler, compute_compile_cache
 from ditto_analytics.materialization import (
     DerivedExecutionPlanner,
     DerivedMaterializationRequest,
-    DerivedRole,
     DerivedRunMode,
     DerivedRunTrigger,
-    DerivedSpec,
-    MaterializationProfile,
 )
+from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _is_non_finite(v: object) -> bool:

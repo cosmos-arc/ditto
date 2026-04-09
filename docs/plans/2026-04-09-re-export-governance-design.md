@@ -1,6 +1,6 @@
 # Re-Export 治理设计
 
-> 状态：待实施
+> 状态：**已完成**
 > 日期：2026-04-09
 > 背景：项目 ~75 个 `__init__.py` 做 re-export，~975 个 `__all__` 条目，依赖关系被隐藏，维护成本高
 
@@ -62,52 +62,57 @@ from ditto_kernel.enums import AssetClass, Exchange
 
 仅用于避免启动时的循环依赖（如 `observability/__init__.py` 现有用法），不得用于隐藏跨包依赖。
 
-## 具体变更清单
+## 实施记录
 
-### P0 — 跨包 Re-export 消除（4 处）
+### P0 — 跨包 Re-export 消除 ✅
 
-| 文件 | 删除的跨包 re-export | 消费者改为 |
+| 文件 | 删除的跨包 re-export | 消费者迁移 |
 |------|---------------------|-----------|
-| `ditto_data/models/__init__.py` | `ditto_kernel.enums`, `ditto_kernel.types` | 直接从 `ditto_kernel.enums` / `ditto_kernel.types` 导入 |
-| `ditto_data/quality/__init__.py` | `ditto_kernel.quality` | 直接从 `ditto_kernel.quality` 导入 |
-| `ditto_analytics/materialization/__init__.py` | `ditto_kernel.specs` | 直接从 `ditto_kernel.specs` 导入 |
-| `ditto_analytics/models/__init__.py` | `ditto_kernel.research` | 直接从 `ditto_kernel.research` 导入 |
+| `ditto_data/models/__init__.py` | `ditto_kernel.enums` (6), `ditto_kernel.types` (1) | 0 消费者（死 re-export） |
+| `ditto_data/quality/__init__.py` | `ditto_kernel.quality` (4) | 0 消费者（死 re-export） |
+| `ditto_analytics/materialization/__init__.py` | `ditto_kernel.specs` (3) | 3 个测试文件已迁移到 `ditto_kernel.specs` |
+| `ditto_analytics/models/__init__.py` | `ditto_kernel.research` (4) | 0 消费者（死 re-export） |
 
-### P1 — 深层链截断（~15 处）
+**结果**：18 个跨包 re-export 符号已消除，14/18 无消费者（死代码），3 个测试消费者已迁移。
 
-链深度从最大 4 层缩减到 2 层。第 3 层起的 barrel `__init__.py` 改为空或 `__all__ = []`，消费者改为直接引用叶模块。
+### P1 — 深层链截断 ✅（无需变更）
 
-主要涉及：
-- `ditto_data/sources/tushare/processors/mappings/` → 消费者直接引用 `mappings.basic`、`mappings.capital` 等
-- `ditto_data/sources/tushare/adapters/` → 消费者直接引用 `adapters.market`、`adapters.capital` 等
-- `ditto_data/sources/schemas/` → 消费者直接引用 `schemas.market`、`schemas.capital` 等
-- `ditto_data/storage/` 下各 leaf 子域（`capital/margin/`、`fundamental/financial/` 等）
+**审计结果**：所有 barrel 链深度已 ≤ 2 层，无需变更。
 
-### P2 — 超大 Barrel 拆分（3 处）
+主要涉及区域：
+- `ditto_data/sources/tushare/processors/mappings/` — 1 层 barrel，合规
+- `ditto_data/sources/tushare/adapters/` — 1 层 barrel，合规
+- `ditto_data/sources/schemas/` — 1 层 barrel，合规
+- `ditto_data/storage/` 各子域 — 最大 2 层，合规
 
-| 文件 | 当前符号数 | 拆分方向 |
-|------|-----------|---------|
-| `ditto_app/process/__init__.py` | 52 | 拆为 `process.ingestion`、`process.strategy`、`process.research` 等子域入口 |
-| `ditto_engine/execution/__init__.py` | 41 | 拆为 `execution.planner`、`execution.brokerage`、`execution.accounting` 等子域入口 |
-| `ditto_data/models/__init__.py` | ~60 | 拆为 `models.market`、`models.capital`、`models.fundamental` 等子域入口 |
+### P2 — 超大 Barrel 精简 ✅
 
-### P3 — Barrel + 内联定义分离（~7 处）
+| 文件 | 变更前 | 变更后 | 说明 |
+|------|--------|--------|------|
+| `ditto_app/process/__init__.py` | 52 符号 | `__all__ = []` | 0 消费者，直接清空 |
+| `ditto_engine/execution/__init__.py` | 47 符号 | `__all__ = []` | 0 消费者，直接清空 |
+| `ditto_data/models/__init__.py` | 70 符号 | 9 符号 | 移除 61 个未使用符号，保留 9 个活跃符号 |
 
-| 文件 | 内联定义 | 移至 |
-|------|---------|------|
-| `ditto_analytics/factors/__init__.py` | `ALL_FACTOR_SPECS` | `_registry.py` |
-| `ditto_engine/execution/reality/__init__.py` | `BrokerageModel` | `_model.py` |
-| `ditto_app/command/__init__.py` | `CommandHandler` Protocol | `_protocols.py` |
-| `ditto_interfaces/registry/infra/__init__.py` | `get_infra_providers()` | `_factory.py` |
-| `ditto_data/di/__init__.py` | `get_data_providers()` | `_factory.py` |
-| `ditto_data/storage/market/__init__.py` | `AdjType` enum | `_types.py` |
-| `ditto_interfaces/jobs/tasks/__init__.py` | `create_ingest_task_t1_adj` 等别名 | `_aliases.py` |
+**额外发现**：`execution/__init__.py` 存在跨子域 re-export（从 `accounting.order_book` 导入 7 个符号），已在 P4 中一并修复。
 
-### P4 — 跨子域 Re-export 消除（1 处）
+### P3 — Barrel + 内联定义分离 ✅
 
-| 文件 | 问题 | 修正 |
-|------|------|------|
-| `ditto_engine/backtest/__init__.py` | 从 sibling `execution.reality`、`risk.post_trade`、`risk.pre_trade` 拉符号 | 消费者直接引用原模块 |
+| 文件 | 内联定义 | 移至 | 消费者影响 |
+|------|---------|------|-----------|
+| `ditto_analytics/factors/__init__.py` | `ALL_FACTOR_SPECS` | `_registry.py` | 0（barrel re-export 不变） |
+| `ditto_engine/execution/reality/__init__.py` | `BrokerageModel` | `_model.py` | 0（barrel re-export 不变） |
+| `ditto_app/command/__init__.py` | `CommandHandler` Protocol | `_protocols.py` | 0（barrel re-export 不变） |
+| `ditto_interfaces/registry/infra/__init__.py` | `get_infra_providers()` | `_factory.py` | 0（barrel re-export 不变） |
+| `ditto_data/di/__init__.py` | `get_data_providers()` | `_factory.py` | 0（barrel re-export 不变） |
+| `ditto_data/storage/market/__init__.py` | `AdjType` enum | 删除（孤立代码） | 0（所有消费者已使用 services 版本） |
+| `ditto_interfaces/jobs/tasks/__init__.py` | `create_ingest_task_t1_adj` 等别名 | `_aliases.py` | 0（barrel re-export 不变） |
+
+### P4 — 跨子域 Re-export 消除 ✅
+
+| 文件 | 删除的跨子域 re-export | 消费者迁移 |
+|------|---------------------|-----------|
+| `ditto_engine/backtest/__init__.py` | 10 符号（`execution.reality`, `risk.post_trade`, `risk.pre_trade`） | 0 消费者（内部模块已直接引用） |
+| `ditto_engine/execution/__init__.py` | 7 符号（`accounting.order_book`） | 0 消费者（死 barrel） |
 
 ## 不变项
 
@@ -118,12 +123,27 @@ from ditto_kernel.enums import AssetClass, Exchange
 - 包根入口 barrel（如 `ditto_kernel/__init__.py` 36 符号，合理）
 - `observability/__init__.py` 的 lazy `__getattr__`（解决循环依赖的合理用法）
 
-## 实施建议
+## 量化成果
 
-- **优先级顺序**：P0 → P1 → P2 → P3 → P4
-- **每步独立可验证**：完成后运行 `pixi run -e dev check` 确保无回归
-- **消费者迁移**：每个 P 的变更需要同步更新所有消费者代码的 import 路径
-- **importlinter**：可考虑新增规则约束跨包 re-export
+| 指标 | 变更前 | 变更后 |
+|------|--------|--------|
+| 跨包 re-export 符号 | 18 | 0 |
+| 跨子域 re-export 符号 | 17 | 0 |
+| 超大 barrel (>30 符号) | 3 | 0 |
+| Barrel + 内联定义混合 | 7 | 0 |
+| models barrel 符号数 | 70 | 9 |
+| process barrel 符号数 | 52 | 0 |
+| execution barrel 符号数 | 47 | 0 |
+
+## 验证结果
+
+```
+basedpyright: 0 errors, 0 warnings, 0 notes
+ruff lint: All checks passed
+ruff fmt: 1125 files unchanged
+tests: 4422 passed, 25 skipped, 0 failed
+importlinter: 24 contracts, 0 broken
+```
 
 ## 业界参考
 

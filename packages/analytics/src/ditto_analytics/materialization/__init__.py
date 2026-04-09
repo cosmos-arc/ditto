@@ -1,7 +1,5 @@
 """Derived materialization models."""
 
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
-
 from ditto_analytics.materialization.contracts import (
     Analysis,
     AnalysisWarning,
@@ -35,14 +33,11 @@ __all__ = [
     "DerivedMaterializationRequest",
     "DerivedMaterializationResult",
     "DerivedPartition",
-    "DerivedRole",
     "DerivedRun",
     "DerivedRunMode",
     "DerivedRunStatus",
     "DerivedRunTrigger",
-    "DerivedSpec",
     "DerivedState",
     "DerivedVersion",
     "DerivedVersionStatus",
-    "MaterializationProfile",
 ]

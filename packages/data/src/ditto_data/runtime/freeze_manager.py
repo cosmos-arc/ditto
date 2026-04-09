@@ -9,7 +9,7 @@ import orjson
 from ditto_infra.foundation import logger, traced
 from ditto_infra.foundation.checksum import compute_checksum
 
-from ..models import FreezeManifest
+from ..models.storage import FreezeManifest
 
 
 class FreezeManager:

@@ -9,6 +9,7 @@ used by the Ditto quantitative engine.
 from __future__ import annotations
 
 from ditto_analytics.factors.alpha import ALPHAS
+from ditto_analytics.factors.factor_specs import ALL_FACTOR_SPECS
 from ditto_analytics.factors.fundamental import FUNDAMENTALS
 from ditto_analytics.factors.primitives import PRIMITIVES
 from ditto_analytics.factors.spec import FactorContext, FactorSpec
@@ -23,10 +24,3 @@ __all__ = [
     "FactorContext",
     "FactorSpec",
 ]
-
-ALL_FACTOR_SPECS: dict[str, FactorSpec] = {
-    **PRIMITIVES,
-    **TECHNICALS,
-    **FUNDAMENTALS,
-    **ALPHAS,
-}

@@ -5,8 +5,7 @@ from __future__ import annotations
 import pytest
 from ditto_analytics.expression import ExpressionCompiler
 from ditto_analytics.expression.diagnostics import ExpressionCompileError
-from ditto_analytics.materialization import DerivedRole, DerivedSpec
-from ditto_kernel.specs import MaterializationProfile
+from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _make_spec(expression: str) -> DerivedSpec:

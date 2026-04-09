@@ -1,18 +1,11 @@
-"""Data models for data transfer objects."""
+"""
+Data models for data transfer objects.
 
-# Data 层自己的 models
-from ditto_kernel.enums import (
-    AssetClass,
-    Exchange,
-    MacroCategory,
-    MacroFrequency,
-    OrderSide,
-    RunStatus,
-)
-from ditto_kernel.types import InstrumentIngestParams
+仅聚合外部消费者实际使用的公共符号。
+内部模块应直接引用叶模块，不应从此 barrel 导入。
+"""
 
 from ditto_data.models.common import (
-    AssetClassType,
     Dataset,
     DateScheduleType,
     Domain,
@@ -20,146 +13,20 @@ from ditto_data.models.common import (
     OnDuplicate,
     Source,
 )
-from ditto_data.models.derived import (
-    CompiledExpressionCacheRecord,
-    CompiledExpressionOperatorRecord,
-    DerivedCheckpointRecord,
-    DerivedDependencyRecord,
-    DerivedInvalidationRecord,
-    DerivedPartitionRecord,
-    DerivedRunRecord,
-    DerivedSpecRecord,
-    DerivedStateRecord,
-    DerivedVersionRecord,
-)
-from ditto_data.models.ingestion import (
-    BackfillResult,
-    DataChangedError,
-    DataLateArrivalPolicy,
-    IngestionCursor,
-    IngestionLog,
-    IngestionResult,
-    IngestionStatus,
-    LateArrivalCheckResult,
-    LateArrivalRejectedError,
-    NotTradingDayError,
-    ResultCounts,
-    RetryResult,
-)
-from ditto_data.models.market import (
-    BAR_ENRICHED_SCHEMA,
-    BAR_SCHEMA,
-    QUOTE_SCHEMA,
-)
-from ditto_data.models.metadata import (
-    CalendarDay,
-    ETFExtension,
-    IndexExtension,
-    IndustryBasic,
-    IndustryMapping,
-    InstrumentExtension,
-    InstrumentRegistration,
-    StockExtension,
-)
-from ditto_data.models.publication_safety import (
-    CertificationReportRecord,
-    CompatibilityManifestRecord,
-    DerivedMinimalDQSummaryRecord,
-    DerivedShadowSlotRecord,
-    ShadowDiffReportRecord,
-    ShadowTraceRecordRecord,
-)
 from ditto_data.models.source_codes import (
-    COMMODITY_CODE_TO_INSTRUMENT_ID,
     FX_CODE_TO_INSTRUMENT_ID,
     METAL_CODE_ALIASES,
     VIX_CODE_TO_INSTRUMENT_ID,
 )
-from ditto_data.models.storage import FreezeManifest, WriteResult, WriteStoreResult
-from ditto_data.models.strategy import (
-    ArtifactKind,
-    MarketState,
-    Signal,
-    SignalType,
-    StrategyArtifactRecord,
-    StrategySpecRecord,
-)
-from ditto_data.models.strategy_audit import (
-    AuditRecordType,
-    PreTradeDecisionPayload,
-    RiskScanPayload,
-)
-from ditto_data.models.strategy_run import StrategyRunRecord
 
 __all__ = [
-    "BAR_ENRICHED_SCHEMA",
-    "BAR_SCHEMA",
-    "COMMODITY_CODE_TO_INSTRUMENT_ID",
     "FX_CODE_TO_INSTRUMENT_ID",
     "METAL_CODE_ALIASES",
-    "QUOTE_SCHEMA",
     "VIX_CODE_TO_INSTRUMENT_ID",
-    "ArtifactKind",
-    "AssetClass",
-    "AssetClassType",
-    "AuditRecordType",
-    "BackfillResult",
-    "CalendarDay",
-    "CertificationReportRecord",
-    "CompatibilityManifestRecord",
-    "CompiledExpressionCacheRecord",
-    "CompiledExpressionOperatorRecord",
-    "DataChangedError",
-    "DataLateArrivalPolicy",
     "Dataset",
     "DateScheduleType",
-    "DerivedCheckpointRecord",
-    "DerivedDependencyRecord",
-    "DerivedInvalidationRecord",
-    "DerivedMinimalDQSummaryRecord",
-    "DerivedPartitionRecord",
-    "DerivedRunRecord",
-    "DerivedShadowSlotRecord",
-    "DerivedSpecRecord",
-    "DerivedStateRecord",
-    "DerivedVersionRecord",
     "Domain",
-    "ETFExtension",
-    "Exchange",
-    "FreezeManifest",
-    "IndexExtension",
-    "IndustryBasic",
-    "IndustryMapping",
-    "IngestionCursor",
-    "IngestionLog",
-    "IngestionResult",
-    "IngestionStatus",
-    "InstrumentExtension",
     "InstrumentIdRange",
-    "InstrumentIngestParams",
-    "InstrumentRegistration",
-    "LateArrivalCheckResult",
-    "LateArrivalRejectedError",
-    "MacroCategory",
-    "MacroFrequency",
-    "MarketState",
-    "NotTradingDayError",
     "OnDuplicate",
-    "OrderSide",
-    "PreTradeDecisionPayload",
-    "ResultCounts",
-    "RetryResult",
-    "RiskScanPayload",
-    "RunStatus",
-    "ShadowDiffReportRecord",
-    "ShadowTraceRecordRecord",
-    "Signal",
-    "SignalType",
     "Source",
-    "StockExtension",
-    "StrategyArtifactRecord",
-    "StrategyRunRecord",
-    "StrategySpecRecord",
-    "WriteResult",
-    "WriteStoreResult",
 ]
