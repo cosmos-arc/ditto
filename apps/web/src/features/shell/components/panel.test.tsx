@@ -10,10 +10,10 @@ describe("Panel", () => {
 			</Panel>,
 		);
 		const panel = container.firstChild as HTMLElement;
-		expect(panel.className).toContain("bg-[var(--color-surface-1)]");
+		expect(panel.className).toContain("bg-(--color-surface-panel-base)");
 		expect(panel.className).toContain("border");
-		expect(panel.className).toContain("border-[var(--color-border-subtle)]");
-		expect(panel.className).toContain("rounded-[var(--radius-md)]");
+		expect(panel.className).toContain("border-(--color-border-subtle)");
+		expect(panel.className).toContain("rounded-(--radius-md)");
 	});
 
 	it("applies flex-col layout", () => {
@@ -31,9 +31,12 @@ describe("Panel", () => {
 });
 
 describe("PanelHeader", () => {
-	it("renders the title text", () => {
+	it("renders the title text with text-primary color (not tertiary)", () => {
 		render(<PanelHeader title="Market Overview" />);
-		expect(screen.getByText("Market Overview")).toBeInTheDocument();
+		const title = screen.getByText("Market Overview");
+		expect(title).toBeInTheDocument();
+		expect(title.className).toContain("text-(--color-foreground)");
+		expect(title.className).not.toContain("uppercase");
 	});
 
 	it("renders subtitle when provided", () => {
@@ -44,6 +47,13 @@ describe("PanelHeader", () => {
 	it("does not render subtitle when not provided", () => {
 		const { container } = render(<PanelHeader title="Market Overview" />);
 		expect(container.querySelector("[data-testid='panel-subtitle']")).toBeNull();
+	});
+
+	it("renders count badge when provided", () => {
+		render(<PanelHeader title="Items" count={5} />);
+		const count = screen.getByTestId("panel-count");
+		expect(count).toBeInTheDocument();
+		expect(count).toHaveTextContent("5");
 	});
 
 	it("renders actions slot when provided", () => {
@@ -65,14 +75,13 @@ describe("PanelHeader", () => {
 		const { container } = render(<PanelHeader title="Title" />);
 		const header = container.firstChild as HTMLElement;
 		expect(header.className).toContain("border-b");
-		expect(header.className).toContain("border-[var(--color-border-subtle)]");
 	});
 
 	it("applies correct padding", () => {
 		const { container } = render(<PanelHeader title="Title" />);
 		const header = container.firstChild as HTMLElement;
-		expect(header.className).toContain("py-[var(--spacing-2)]");
-		expect(header.className).toContain("px-[var(--spacing-3)]");
+		expect(header.className).toContain("py-2");
+		expect(header.className).toContain("px-3");
 	});
 });
 

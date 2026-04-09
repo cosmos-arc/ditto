@@ -1,4 +1,4 @@
 import { setupWorker } from "msw/browser";
-import type { RequestHandler } from "msw";
+import { handlers } from "./handlers";
 
-export const worker = setupWorker(...([] as RequestHandler[]));
+export const worker = setupWorker(...handlers);

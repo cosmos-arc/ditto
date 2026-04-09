@@ -103,7 +103,7 @@ describe("Rail", () => {
 	it("applies background and border styles", () => {
 		const { container } = render(<Rail />);
 		const rail = container.firstChild as HTMLElement;
-		expect(rail.className).toContain("bg-[var(--color-surface-0)]");
+		expect(rail.className).toContain("bg-[var(--color-surface-app)]");
 		expect(rail.className).toContain("border-r");
 	});
 });

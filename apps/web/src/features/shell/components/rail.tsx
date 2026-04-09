@@ -18,20 +18,43 @@ function isDomainActive(domainId: DomainId, pathname: string): boolean {
 }
 
 /**
- * Placeholder icon for settings / user at the rail bottom.
+ * Settings icon for the rail bottom.
  */
-function PlaceholderIcon() {
+function SettingsIcon() {
 	return (
-		<span
-			aria-hidden="true"
-			className="block h-5 w-5 rounded-full bg-[var(--color-foreground-tertiary)]"
-		/>
+		<svg width={18} height={18} viewBox="0 0 18 18" fill="none" aria-hidden="true">
+			<path
+				d="M7.5 2.25h3l.375 1.5a5.625 5.625 0 0 1 1.5.875L14.25 4.5l1.5 2.625-1.125 1.125a5.625 5.625 0 0 1 0 1.75L15.75 11.125l-1.5 2.625-1.875-.625a5.625 5.625 0 0 1-1.5.875L10.5 15.75h-3l-.375-1.5a5.625 5.625 0 0 1-1.5-.875L3.75 13.875l-1.5-2.625L3.375 10.125a5.625 5.625 0 0 1 0-1.75L2.25 7.125l1.5-2.625 1.875.625a5.625 5.625 0 0 1 1.5-.875L7.5 2.25Z"
+				stroke="currentColor"
+				strokeWidth={1.2}
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+			<circle cx="9" cy="9" r="2.25" stroke="currentColor" strokeWidth={1.2} />
+		</svg>
+	);
+}
+
+/**
+ * User icon for the rail bottom.
+ */
+function UserIcon() {
+	return (
+		<svg width={18} height={18} viewBox="0 0 18 18" fill="none" aria-hidden="true">
+			<circle cx="9" cy="6.75" r="3" stroke="currentColor" strokeWidth={1.2} />
+			<path
+				d="M3 15.75c0-3.314 2.686-6 6-6s6 2.686 6 6"
+				stroke="currentColor"
+				strokeWidth={1.2}
+				strokeLinecap="round"
+			/>
+		</svg>
 	);
 }
 
 /**
  * Rail -- 56px left-side icon navigation bar.
- * Contains: Logo, domain navigation icons, settings/user placeholders.
+ * Contains: Logo, domain navigation icons, settings/user icons.
  */
 export function Rail() {
 	const { pathname } = useLocation();
@@ -39,7 +62,7 @@ export function Rail() {
 	return (
 		<nav
 			aria-label="主导航"
-			className="flex w-[var(--width-rail)] flex-col items-center border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-0)] py-[var(--spacing-2)] gap-[var(--spacing-1)]"
+			className="flex w-[var(--width-rail)] flex-col items-center border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-app)] py-[var(--spacing-2)] gap-[var(--spacing-1)]"
 		>
 			{/* Logo */}
 			<span
@@ -63,7 +86,7 @@ export function Rail() {
 								"relative flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] transition-colors",
 								active
 									? "bg-[var(--color-brand-50)] text-[var(--color-accent)]"
-									: "hover:bg-[var(--color-surface-1)]",
+									: "hover:bg-[var(--color-interaction-hover-subtle-bg)]",
 							].join(" ")}
 						>
 							{active && (
@@ -78,21 +101,21 @@ export function Rail() {
 				})}
 			</div>
 
-			{/* Bottom placeholders */}
+			{/* Bottom actions */}
 			<div className="flex flex-col items-center gap-[var(--spacing-1)]">
 				<button
 					type="button"
 					aria-label="设置"
-					className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] hover:bg-[var(--color-surface-1)]"
+					className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] transition-colors hover:bg-[var(--color-interaction-hover-subtle-bg)]"
 				>
-					<PlaceholderIcon />
+					<SettingsIcon />
 				</button>
 				<button
 					type="button"
 					aria-label="用户"
-					className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] hover:bg-[var(--color-surface-1)]"
+					className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] transition-colors hover:bg-[var(--color-interaction-hover-subtle-bg)]"
 				>
-					<PlaceholderIcon />
+					<UserIcon />
 				</button>
 			</div>
 		</nav>

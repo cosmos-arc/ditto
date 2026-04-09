@@ -45,6 +45,7 @@ function DecisionBanner({
 			data-slot="decision-banner"
 			className={cn(
 				"grid grid-cols-1 md:grid-cols-[5fr_4fr_3fr] gap-[var(--space-16)] py-[var(--space-12)] px-[var(--space-16)]",
+				"border-l-2 border-l-(--color-brand-500)/35",
 				className,
 			)}
 			{...props}

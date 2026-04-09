@@ -10,18 +10,17 @@ interface PanelProps extends HTMLAttributes<HTMLDivElement> {
 
 /**
  * Panel -- shell layout building block.
- * Renders a flex-column container with surface-1 background,
+ * Renders a flex-column container with surface-panel-base background,
  * subtle border, and rounded corners.
- *
- * Accepts `className` for grid-area placement or additional styling.
  */
 export function Panel({ className, children, ...rest }: PanelProps) {
 	return (
 		<div
+			data-slot="panel"
 			className={[
-				"flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-md)]",
-				"border border-[var(--color-border-subtle)]",
-				"bg-[var(--color-surface-1)]",
+				"flex min-h-0 flex-col overflow-hidden rounded-(--radius-md)",
+				"border border-(--color-border-subtle)",
+				"bg-(--color-surface-panel-base)",
 				className,
 			].join(" ")}
 			{...rest}
@@ -32,49 +31,54 @@ export function Panel({ className, children, ...rest }: PanelProps) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  PanelHeader -- title row with optional subtitle & actions slot    */
+/*  PanelHeader -- title row with optional count, subtitle & actions  */
 /* ------------------------------------------------------------------ */
 
 interface PanelHeaderProps {
 	title: string;
 	subtitle?: string;
+	count?: number;
 	actions?: ReactNode;
 }
 
 /**
  * PanelHeader -- horizontal header bar with title area (flex:1)
  * and an optional actions slot aligned to the right.
- * Separated from body by a subtle bottom border.
+ * Title uses text-primary per prototype panel-title spec.
  */
-export function PanelHeader({ title, subtitle, actions }: PanelHeaderProps) {
+export function PanelHeader({ title, subtitle, count, actions }: PanelHeaderProps) {
 	return (
 		<div
 			className={[
 				"flex shrink-0 items-center",
-				"border-b border-[var(--color-border-subtle)]",
-				"px-[var(--spacing-3)] py-[var(--spacing-2)]",
+				"border-b border-(--color-border-subtle)",
+				"px-3 py-2",
 			].join(" ")}
 		>
-			{/* Title area */}
-			<div className="flex min-w-0 flex-1 flex-col gap-[var(--spacing-0-5)]">
-				<span className="text-[var(--text-sm)] font-[var(--font-weight-medium)] text-[var(--color-foreground)]">
-					{title}
-				</span>
+			<span className="flex min-w-0 flex-1 items-baseline gap-2 text-xs font-medium text-(--color-foreground)">
+				{title}
 				{subtitle && (
 					<span
 						data-testid="panel-subtitle"
-						className="text-[var(--text-sm)] text-[var(--color-foreground-secondary)]"
+						className="font-normal text-(--color-foreground-tertiary)"
 					>
 						{subtitle}
 					</span>
 				)}
-			</div>
+				{count !== undefined && (
+					<span
+						data-testid="panel-count"
+						className="flex h-4.5 items-center bg-(--color-surface-strip) px-(--spacing-1-5) font-(--font-data) text-xs tabular-nums text-(--color-foreground-tertiary)"
+					>
+						{count}
+					</span>
+				)}
+			</span>
 
-			{/* Actions slot */}
 			{actions && (
 				<div
 					data-testid="panel-actions"
-					className="ml-[var(--spacing-2)] flex items-center gap-[var(--spacing-1)]"
+					className="ml-2 flex items-center gap-1"
 				>
 					{actions}
 				</div>
@@ -93,7 +97,6 @@ interface PanelBodyProps extends HTMLAttributes<HTMLDivElement> {
 
 /**
  * PanelBody -- flex-1 content region with overflow-y scroll.
- * Fills remaining vertical space within a Panel.
  */
 export function PanelBody({ className, children, ...rest }: PanelBodyProps) {
 	return (

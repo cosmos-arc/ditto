@@ -1,3 +1,1 @@
-import type { RequestHandler } from "msw";
-
-export const handlers: RequestHandler[] = [];
+export { handlers } from "./handlers/index";

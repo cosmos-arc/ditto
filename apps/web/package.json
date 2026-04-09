@@ -25,10 +25,13 @@
     "ag-grid-community": "^35.2.1",
     "ag-grid-react": "^35.2.1",
     "clsx": "^2.1.1",
+    "lightweight-charts": "^5.1.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-error-boundary": "^6.1.1",
-    "tailwind-merge": "^3.5.0"
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^3.5.0",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.8",

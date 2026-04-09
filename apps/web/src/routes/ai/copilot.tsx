@@ -1,14 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CopilotPage } from "@/features/ai/components/copilot-page";
 
 export const Route = createFileRoute("/ai/copilot")({
-	component: CopilotPage,
+	component: CopilotPageRoute,
 	handle: { title: "AI Copilot" },
 });
 
-function CopilotPage() {
-	return (
-		<div className="flex h-full items-center justify-center p-4 text-sm text-(--color-foreground-tertiary)">
-			AI Copilot — 占位
-		</div>
-	);
+function CopilotPageRoute() {
+	return <CopilotPage />;
 }

@@ -1,0 +1,262 @@
+import type {
+	FilterCondition,
+	MarketContextResponse,
+	ScopeStripResponse,
+	GetMarketOverviewResponse,
+	GetCrossMatrixResponse,
+	GetMacroDriversResponse,
+	GetCapitalRotationResponse,
+	RunScreenerResponse,
+	GetScreenerPresetsResponse,
+	GetScreenerColumnsResponse,
+	ASharesOverviewResponse,
+	GetMarketCalendarResponse,
+} from "@/types";
+
+export const mockMarketContext: MarketContextResponse = {
+	regime: "risk_on",
+	volatility: 18.5,
+	usdStrength: 0.72,
+	alertCount: 2,
+};
+
+export const mockScopeStrip: ScopeStripResponse = {
+	interpretation: "今日市场情绪偏暖，科技与消费板块领涨，北向资金持续流入。建议关注 AI 算力与新能源轮动机会。",
+	leadingSectors: ["科技", "消费", "新能源"],
+	laggingSectors: ["地产", "银行", "传媒"],
+	style: "growth",
+	events: [],
+};
+
+export const mockMarketOverview: GetMarketOverviewResponse = {
+	cards: [
+		{
+			name: "上证A股",
+			indexCode: "000001.SH",
+			price: 3258.36,
+			change: 28.45,
+			changePercent: 0.88,
+			breadth: 65.2,
+			driver: "北向资金净流入",
+			regimeTag: "risk_on",
+		},
+		{
+			name: "恒生指数",
+			indexCode: "HSI",
+			price: 22580.45,
+			change: 320.50,
+			changePercent: 1.44,
+			breadth: 72.1,
+			driver: "科技股反弹",
+			regimeTag: "risk_on",
+		},
+		{
+			name: "纳斯达克",
+			indexCode: "IXIC",
+			price: 18250.30,
+			change: -45.20,
+			changePercent: -0.25,
+			breadth: 48.3,
+			driver: "获利了结",
+			regimeTag: "mixed",
+		},
+		{
+			name: "标普500",
+			indexCode: "SPX",
+			price: 5425.80,
+			change: -18.25,
+			changePercent: -0.34,
+			breadth: 52.1,
+			driver: "经济数据弱于预期",
+			regimeTag: "mixed",
+		},
+		{
+			name: "黄金",
+			indexCode: "GOLD",
+			price: 2380.50,
+			change: 15.30,
+			changePercent: 0.65,
+			breadth: 0,
+			driver: "避险需求",
+			regimeTag: "risk_on",
+		},
+		{
+			name: "原油WTI",
+			indexCode: "CL",
+			price: 78.25,
+			change: -0.85,
+			changePercent: -1.07,
+			breadth: 0,
+			driver: "需求担忧",
+			regimeTag: "risk_off",
+		},
+	],
+};
+
+export const mockCrossMatrix: GetCrossMatrixResponse = {
+	rows: [
+		{ name: "上证A股", metrics: { D1: 0.88, W1: 2.15, M1: 3.42, vol: 18.5, breadth: 65.2, flow: 28.5 } },
+		{ name: "恒生指数", metrics: { D1: 1.44, W1: -0.82, M1: 5.10, vol: 22.3, breadth: 72.1, flow: 12.3 } },
+		{ name: "纳斯达克", metrics: { D1: -0.25, W1: 1.50, M1: 4.20, vol: 25.1, breadth: 48.3, flow: -5.2 } },
+		{ name: "标普500", metrics: { D1: -0.34, W1: 0.95, M1: 3.80, vol: 16.2, breadth: 52.1, flow: -2.1 } },
+		{ name: "黄金", metrics: { D1: 0.65, W1: 2.80, M1: 8.50, vol: 14.5, breadth: 0, flow: 3.2 } },
+		{ name: "原油WTI", metrics: { D1: -1.07, W1: -3.20, M1: -5.40, vol: 32.1, breadth: 0, flow: -1.8 } },
+	],
+};
+
+export const mockMacroDrivers: GetMacroDriversResponse = {
+	indicators: [
+		{ name: "DXY 美元指数", value: 104.2, change: -0.35, sparkline: [{ time: "04-01", value: 105.5 }, { time: "04-02", value: 105.1 }, { time: "04-03", value: 104.8 }, { time: "04-04", value: 104.5 }, { time: "04-05", value: 104.2 }] },
+		{ name: "US10Y 美债", value: 4.28, change: 0.02, sparkline: [{ time: "04-01", value: 4.35 }, { time: "04-02", value: 4.32 }, { time: "04-03", value: 4.30 }, { time: "04-04", value: 4.27 }, { time: "04-05", value: 4.28 }] },
+		{ name: "VIX 恐慌", value: 15.8, change: -1.2, sparkline: [{ time: "04-01", value: 18.2 }, { time: "04-02", value: 17.5 }, { time: "04-03", value: 16.8 }, { time: "04-04", value: 16.2 }, { time: "04-05", value: 15.8 }] },
+		{ name: "CN10Y 国债", value: 2.15, change: -0.03, sparkline: [{ time: "04-01", value: 2.20 }, { time: "04-02", value: 2.18 }, { time: "04-03", value: 2.17 }, { time: "04-04", value: 2.16 }, { time: "04-05", value: 2.15 }] },
+		{ name: "Gold 黄金", value: 2380.5, change: 15.3, sparkline: [{ time: "04-01", value: 2350.2 }, { time: "04-02", value: 2362.8 }, { time: "04-03", value: 2370.5 }, { time: "04-04", value: 2375.1 }, { time: "04-05", value: 2380.5 }] },
+	],
+};
+
+export const mockCapitalRotation: GetCapitalRotationResponse = {
+	sectors: [
+		{ name: "科技", inflow: 45.2, outflow: 22.1, netFlow: 23.1, rankChange: 2 },
+		{ name: "消费", inflow: 32.8, outflow: 18.5, netFlow: 14.3, rankChange: 1 },
+		{ name: "新能源", inflow: 28.6, outflow: 15.2, netFlow: 13.4, rankChange: 0 },
+		{ name: "医药", inflow: 12.3, outflow: 18.7, netFlow: -6.4, rankChange: -1 },
+		{ name: "地产", inflow: 8.5, outflow: 22.3, netFlow: -13.8, rankChange: -2 },
+		{ name: "银行", inflow: 10.2, outflow: 25.1, netFlow: -14.9, rankChange: -1 },
+	],
+};
+
+// === Screener Mock Data ===
+
+export const mockScreenerResults: RunScreenerResponse = {
+	results: [
+		{ code: "600519.SH", name: "贵州茅台", industry: "白酒", market: "A股主板", price: 1685.50, change: 12.30, changePercent: 0.74, volume: 28500, turnover: 0.32, pe: 28.5, pb: 9.2, marketCap: 21180 },
+		{ code: "300750.SZ", name: "宁德时代", industry: "新能源", market: "创业板", price: 198.80, change: -3.45, changePercent: -1.71, volume: 185000, turnover: 1.85, pe: 22.1, pb: 5.8, marketCap: 8650 },
+		{ code: "002594.SZ", name: "比亚迪", industry: "汽车", market: "A股主板", price: 265.40, change: 8.90, changePercent: 3.47, volume: 320000, turnover: 2.10, pe: 25.3, pb: 6.1, marketCap: 7720 },
+		{ code: "601318.SH", name: "中国平安", industry: "保险", market: "A股主板", price: 48.65, change: -0.35, changePercent: -0.71, volume: 520000, turnover: 0.45, pe: 8.2, pb: 1.1, marketCap: 8850 },
+		{ code: "600036.SH", name: "招商银行", industry: "银行", market: "A股主板", price: 35.20, change: 0.85, changePercent: 2.47, volume: 480000, turnover: 0.62, pe: 6.5, pb: 0.9, marketCap: 8880 },
+		{ code: "002415.SZ", name: "海康威视", industry: "安防", market: "A股主板", price: 32.15, change: -1.20, changePercent: -3.60, volume: 350000, turnover: 1.25, pe: 18.8, pb: 4.2, marketCap: 3010 },
+		{ code: "000333.SZ", name: "美的集团", industry: "家电", market: "A股主板", price: 62.30, change: 2.10, changePercent: 3.49, volume: 210000, turnover: 0.98, pe: 12.5, pb: 3.5, marketCap: 4320 },
+		{ code: "600276.SH", name: "恒瑞医药", industry: "医药", market: "A股主板", price: 45.80, change: 1.25, changePercent: 2.81, volume: 165000, turnover: 0.75, pe: 35.2, pb: 7.8, marketCap: 2920 },
+	],
+	total: 8,
+	facets: { "白酒": 1, "新能源": 1, "汽车": 1, "保险": 1, "银行": 1, "安防": 1, "家电": 1, "医药": 1 } as const,
+};
+
+export const mockScreenerPresets: GetScreenerPresetsResponse = {
+	presets: [
+		{
+			id: "preset-dividend",
+			name: "高股息",
+			builtin: true,
+			filters: [
+				{ field: "dividendYield", op: "gte", value: 3 },
+				{ field: "pe", op: "lt", value: 15 },
+			] as readonly FilterCondition[],
+		},
+		{
+			id: "preset-value",
+			name: "低估值",
+			builtin: true,
+			filters: [
+				{ field: "pe", op: "lt", value: 12 },
+				{ field: "pb", op: "lt", value: 1.5 },
+			] as readonly FilterCondition[],
+		},
+		{
+			id: "preset-growth",
+			name: "高成长",
+			builtin: true,
+			filters: [
+				{ field: "revenueGrowth", op: "gte", value: 20 },
+				{ field: "profitGrowth", op: "gte", value: 25 },
+			] as readonly FilterCondition[],
+		},
+	],
+};
+
+export const mockScreenerColumns: GetScreenerColumnsResponse = {
+	columns: [
+		{ key: "code", label: "代码", group: "基础", sortable: true, defaultVisible: true },
+		{ key: "name", label: "名称", group: "基础", sortable: true, defaultVisible: true },
+		{ key: "industry", label: "行业", group: "基础", sortable: true, defaultVisible: true },
+		{ key: "price", label: "价格", group: "行情", sortable: true, defaultVisible: true },
+		{ key: "change", label: "涨跌", group: "行情", sortable: true, defaultVisible: true },
+		{ key: "changePercent", label: "涨跌幅", group: "行情", sortable: true, defaultVisible: true },
+		{ key: "volume", label: "成交量", group: "行情", sortable: true, defaultVisible: false },
+		{ key: "turnover", label: "换手率", group: "行情", sortable: true, defaultVisible: false },
+		{ key: "pe", label: "PE", group: "估值", sortable: true, defaultVisible: true },
+		{ key: "pb", label: "PB", group: "估值", sortable: true, defaultVisible: true },
+		{ key: "marketCap", label: "市值(亿)", group: "估值", sortable: true, defaultVisible: true },
+	],
+} as const;
+
+// === A 股概览 Mock Data ===
+
+export const mockASharesOverview: ASharesOverviewResponse = {
+	summary: [
+		{ index: "上证指数", price: 3258.36, change: 28.45, changePercent: 0.88, volume: 425600000000, turnover: 0.92 },
+		{ index: "深证成指", price: 10852.18, change: 125.30, changePercent: 1.17, volume: 583200000000, turnover: 1.35 },
+		{ index: "创业板指", price: 2156.42, change: 38.65, changePercent: 1.82, volume: 285600000000, turnover: 2.15 },
+		{ index: "科创50", price: 968.55, change: 15.20, changePercent: 1.59, volume: 68500000000, turnover: 1.88 },
+		{ index: "北证50", price: 1025.30, change: -8.45, changePercent: -0.82, volume: 18200000000, turnover: 3.25 },
+	],
+	topGainers: [
+		{ index: "宁德时代", price: 218.50, change: 18.60, changePercent: 9.30, volume: 185000000000, turnover: 3.85 },
+		{ index: "比亚迪", price: 285.40, change: 22.10, changePercent: 8.39, volume: 320000000000, turnover: 2.65 },
+		{ index: "中际旭创", price: 142.80, change: 10.25, changePercent: 7.73, volume: 45600000000, turnover: 4.12 },
+		{ index: "阳光电源", price: 98.60, change: 6.80, changePercent: 7.40, volume: 32500000000, turnover: 3.50 },
+		{ index: "汇川技术", price: 68.90, change: 4.65, changePercent: 7.24, volume: 28100000000, turnover: 2.85 },
+	],
+	topLosers: [
+		{ index: "万科A", price: 8.25, change: -0.92, changePercent: -10.03, volume: 52000000000, turnover: 5.20 },
+		{ index: "中国中免", price: 72.30, change: -6.80, changePercent: -8.60, volume: 38500000000, turnover: 3.95 },
+		{ index: "海康威视", price: 30.15, change: -2.65, changePercent: -8.08, volume: 42000000000, turnover: 2.10 },
+		{ index: "保利发展", price: 9.85, change: -0.82, changePercent: -7.69, volume: 28600000000, turnover: 3.40 },
+		{ index: "牧原股份", price: 38.50, change: -2.95, changePercent: -7.12, volume: 19800000000, turnover: 2.55 },
+	],
+	sectors: [
+		{ sector: "新能源", change: 3.85, topStock: "宁德时代", topStockChange: 9.30 },
+		{ sector: "光伏", change: 3.22, topStock: "阳光电源", topStockChange: 7.40 },
+		{ sector: "人工智能", change: 2.95, topStock: "中际旭创", topStockChange: 7.73 },
+		{ sector: "半导体", change: 2.18, topStock: "北方华创", topStockChange: 5.60 },
+		{ sector: "医药生物", change: 1.52, topStock: "恒瑞医药", topStockChange: 4.20 },
+		{ sector: "消费电子", change: 1.05, topStock: "立讯精密", topStockChange: 3.85 },
+		{ sector: "白酒", change: -0.35, topStock: "迎驾贡酒", topStockChange: 2.10 },
+		{ sector: "房地产", change: -3.82, topStock: "城建发展", topStockChange: -1.50 },
+		{ sector: "银行", change: -0.95, topStock: "成都银行", topStockChange: 0.80 },
+		{ sector: "传媒", change: -1.68, topStock: "光线传媒", topStockChange: -3.20 },
+	],
+	etfMatrix: [
+		{ name: "沪深300ETF", code: "510300", price: 3.985, change: 0.028, volume: 12500000000 },
+		{ name: "中证500ETF", code: "510500", price: 5.620, change: 0.045, volume: 8500000000 },
+		{ name: "中证1000ETF", code: "560010", price: 2.185, change: 0.018, volume: 6200000000 },
+		{ name: "创业板ETF", code: "159915", price: 2.156, change: 0.035, volume: 9800000000 },
+		{ name: "科创50ETF", code: "588000", price: 0.968, change: 0.014, volume: 4500000000 },
+		{ name: "红利ETF", code: "510880", price: 3.120, change: -0.008, volume: 3800000000 },
+	],
+	northboundFlow: [
+		{ date: "2026-04-03", netBuy: 85.20, totalBuy: 520.30, totalSell: 435.10 },
+		{ date: "2026-04-02", netBuy: 42.50, totalBuy: 480.60, totalSell: 438.10 },
+		{ date: "2026-04-01", netBuy: -12.30, totalBuy: 395.20, totalSell: 407.50 },
+		{ date: "2026-03-31", netBuy: 68.90, totalBuy: 510.50, totalSell: 441.60 },
+		{ date: "2026-03-28", netBuy: 35.60, totalBuy: 460.80, totalSell: 425.20 },
+	],
+} as const;
+
+// === 市场日历 Mock Data ===
+
+export const mockMarketCalendar: GetMarketCalendarResponse = {
+	items: [
+		{ date: "2026-04-09", time: "09:30", title: "中国 3 月 CPI 同比", importance: "high", country: "中国", type: "经济数据" },
+		{ date: "2026-04-09", time: "10:00", title: "中国 3 月 PPI 同比", importance: "high", country: "中国", type: "经济数据" },
+		{ date: "2026-04-10", time: "20:30", title: "美国 3 月 CPI 同比", importance: "high", country: "美国", type: "经济数据" },
+		{ date: "2026-04-10", time: "—", title: "创业板新股: 星辰半导体", importance: "medium", country: "中国", type: "IPO" },
+		{ date: "2026-04-11", time: "—", title: "贵州茅台 2025Q1 业绩预告", importance: "high", country: "中国", type: "财报" },
+		{ date: "2026-04-11", time: "02:00", title: "美联储 FOMC 会议纪要", importance: "high", country: "美国", type: "央行决议" },
+		{ date: "2026-04-12", time: "—", title: "中国 3 月社融数据", importance: "high", country: "中国", type: "经济数据" },
+		{ date: "2026-04-12", time: "—", title: "科创板新股: 鲲鹏计算", importance: "medium", country: "中国", type: "IPO" },
+	] as const,
+	total: 8,
+	page: 1,
+	pageSize: 20,
+} as const;

@@ -1,6 +1,4 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { OpsConsoleLayout } from "@/features/shell";
-import { Placeholder } from "@/components/placeholder";
 
 export const Route = createFileRoute("/platform")({
 	component: PlatformLayout,
@@ -8,11 +6,5 @@ export const Route = createFileRoute("/platform")({
 });
 
 function PlatformLayout() {
-	return (
-		<OpsConsoleLayout
-			health={<Placeholder label="Health Strip" />}
-			main={<Outlet />}
-			detail={<Placeholder label="Detail Panel" />}
-		/>
-	)
+	return <Outlet />;
 }

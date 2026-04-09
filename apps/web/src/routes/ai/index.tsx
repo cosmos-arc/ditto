@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AiPage } from "@/features/ai/components/ai-page";
 
 export const Route = createFileRoute("/ai/")({
 	component: AIOverviewPage,
@@ -6,9 +7,5 @@ export const Route = createFileRoute("/ai/")({
 });
 
 function AIOverviewPage() {
-	return (
-		<div className="flex h-full items-center justify-center p-4 text-sm text-(--color-foreground-tertiary)">
-			AI Overview — 占位
-		</div>
-	);
+	return <AiPage />;
 }

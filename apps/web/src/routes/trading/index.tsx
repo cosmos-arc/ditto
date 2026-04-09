@@ -1,14 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { TradingPage } from "@/features/trading";
 
 export const Route = createFileRoute("/trading/")({
-	component: TradingOverviewPage,
+	component: TradingPage,
 	handle: { title: "交易总览" },
 });
-
-function TradingOverviewPage() {
-	return (
-		<div className="flex h-full items-center justify-center p-4 text-sm text-(--color-foreground-tertiary)">
-			Trading Overview — 占位
-		</div>
-	);
-}

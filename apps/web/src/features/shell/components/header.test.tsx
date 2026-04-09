@@ -83,7 +83,7 @@ describe("ShellHeader", () => {
 	it("applies background color", () => {
 		const { container } = render(<ShellHeader />);
 		const header = container.firstChild as HTMLElement;
-		expect(header.className).toContain("bg-[var(--color-surface-0)]");
+		expect(header.className).toContain("bg-[var(--color-surface-app)]");
 	});
 
 	it("has z-index for stacking context", () => {

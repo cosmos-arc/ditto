@@ -1,0 +1,142 @@
+import { describe, it, expect, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import { server } from "@/mocks/server";
+import { homeHandlers } from "@/mocks/handlers/home";
+
+import { PulseSection } from "./pulse-section";
+import { BannerSection } from "./banner-section";
+import { PriorityQueueSection } from "./priority-queue-section";
+import { MarketPulseSection } from "./market-pulse-section";
+import { GlobalAlertsSection } from "./global-alerts-section";
+import { DataHealthSection } from "./data-health-section";
+import { ResearchProgressSection } from "./research-progress-section";
+
+function createQueryClient(): QueryClient {
+	return new QueryClient({
+		defaultOptions: {
+			queries: { retry: false, refetchOnWindowFocus: false },
+		},
+	});
+}
+
+function createWrapper() {
+	const queryClient = createQueryClient();
+	return function Wrapper({ children }: { children: ReactNode }) {
+		return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+	};
+}
+
+beforeEach(() => {
+	server.use(...homeHandlers);
+});
+
+describe("PulseSection", () => {
+	it("渲染脉动薄条", async () => {
+		render(<PulseSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("盈亏")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("待处理")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("运行中")).resolves.toBeInTheDocument();
+	});
+
+	it("显示交易阶段", async () => {
+		render(<PulseSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("盘中交易")).resolves.toBeInTheDocument();
+	});
+
+	it("显示盈亏百分比", async () => {
+		render(<PulseSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("+0.82%")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("BannerSection", () => {
+	it("渲染决策横幅", async () => {
+		render(<BannerSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("总权益")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("PriorityQueueSection", () => {
+	it("渲染今日优先事项标题", async () => {
+		render(<PriorityQueueSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("今日优先事项")).resolves.toBeInTheDocument();
+	});
+
+	it("显示 5 个待处理事项", async () => {
+		render(<PriorityQueueSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("平安银行信号待复核")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("回测任务完成")).resolves.toBeInTheDocument();
+	});
+
+	it("显示跨域关注项副标题", async () => {
+		render(<PriorityQueueSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("跨域关注项")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("MarketPulseSection", () => {
+	it("渲染市场脉搏标题", async () => {
+		render(<MarketPulseSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("市场脉搏")).resolves.toBeInTheDocument();
+	});
+
+	it("显示指数列表", async () => {
+		render(<MarketPulseSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("上证指数")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("沪深300")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("GlobalAlertsSection", () => {
+	it("渲染全局预警标题", async () => {
+		render(<GlobalAlertsSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("全局预警")).resolves.toBeInTheDocument();
+	});
+
+	it("显示告警内容", async () => {
+		render(<GlobalAlertsSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("FRED 数据源连接超时")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("DataHealthSection", () => {
+	it("渲染数据健康标题", async () => {
+		render(<DataHealthSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("数据健康")).resolves.toBeInTheDocument();
+	});
+
+	it("显示数据提供者列表", async () => {
+		render(<DataHealthSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("tushare")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("MiniQMT")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("ResearchProgressSection", () => {
+	it("渲染研究进展标题", async () => {
+		render(<ResearchProgressSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("研究进展")).resolves.toBeInTheDocument();
+	});
+
+	it("显示研究动态副标题", async () => {
+		render(<ResearchProgressSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("研究动态")).resolves.toBeInTheDocument();
+	});
+});

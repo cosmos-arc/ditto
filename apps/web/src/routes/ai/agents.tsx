@@ -1,14 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AgentsPage } from "@/features/ai/components/agents-page";
 
 export const Route = createFileRoute("/ai/agents")({
-	component: AgentsPage,
+	component: AgentsPageRoute,
 	handle: { title: "Agent Console" },
 });
 
-function AgentsPage() {
-	return (
-		<div className="flex h-full items-center justify-center p-4 text-sm text-(--color-foreground-tertiary)">
-			Agent Console — 占位
-		</div>
-	);
+function AgentsPageRoute() {
+	return <AgentsPage />;
 }

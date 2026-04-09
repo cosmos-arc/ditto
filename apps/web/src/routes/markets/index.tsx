@@ -1,14 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { MarketsPage } from "@/features/markets";
 
 export const Route = createFileRoute("/markets/")({
-	component: CrossMarketPage,
+	component: MarketsPage,
 	handle: { title: "跨市场总览" },
 });
-
-function CrossMarketPage() {
-	return (
-		<div className="flex h-full items-center justify-center p-4 text-sm text-(--color-foreground-tertiary)">
-			Cross-Market — 占位
-		</div>
-	);
-}
