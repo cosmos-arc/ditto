@@ -5,3 +5,7 @@ export { StrategyPage } from "./components/strategy-page";
 export { StrategyHeader } from "./components/strategy-header";
 export { StrategyDetailPage } from "./components/strategy-detail-page";
 export { FactorBrowser } from "./components/factor-browser";
+export { StrategyOverview } from "./components/strategy-overview";
+export { StrategyFactorsView } from "./components/strategy-factors-view";
+export { StrategyEditor } from "./components/strategy-editor";
+export { StrategyInspector } from "./components/strategy-inspector";

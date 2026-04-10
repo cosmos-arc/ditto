@@ -67,3 +67,16 @@
   --color-foreground-primary: var(--color-foreground);
   --color-brand-accent: var(--color-accent);
 }
+
+/* --- 未定义 token 兼容别名（Milestone 1 基线收口） --- */
+/* 这些别名让 64 处现有引用能正常工作，后续逐步迁移到语义 token */
+:root {
+  --color-surface-hover: var(--color-interaction-hover-subtle-bg);
+  --color-surface-base: var(--color-surface-1);
+  --color-surface-elevated: var(--color-surface-2);
+  --color-brand-primary: var(--color-brand-500);
+  --color-status-success: var(--color-system-healthy);
+  --color-status-error: var(--color-system-down);
+  --color-status-warning: var(--color-risk-warning);
+  --color-border-default: var(--color-border);
+}

@@ -7,6 +7,8 @@ import { backtestHandlers } from "@/mocks/handlers/backtest";
 
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
 import { BacktestTrades } from "./backtest-trades";
+import { BacktestOverview } from "./backtest-overview";
+import { BacktestReturnsView } from "./backtest-returns-view";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -47,5 +49,41 @@ describe("BacktestTrades", () => {
 		render(<BacktestTrades jobId="bt-001" />, { wrapper: createWrapper() });
 		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
 		expect(screen.getAllByText("五粮液")).toHaveLength(2);
+	});
+});
+
+describe("BacktestOverview", () => {
+	it("渲染 NAV 曲线区域", async () => {
+		render(<BacktestOverview jobId="bt-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("净值曲线")).resolves.toBeInTheDocument();
+	});
+
+	it("渲染持仓列表", async () => {
+		render(<BacktestOverview jobId="bt-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("当前持仓")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
+	});
+
+	it("显示持仓权重", async () => {
+		render(<BacktestOverview jobId="bt-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText(/25%/)).resolves.toBeInTheDocument();
+	});
+});
+
+describe("BacktestReturnsView", () => {
+	it("渲染月度收益区域", async () => {
+		render(<BacktestReturnsView jobId="bt-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("月度收益")).resolves.toBeInTheDocument();
+	});
+
+	it("显示月度收益率数据", async () => {
+		render(<BacktestReturnsView jobId="bt-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText(/2.8%/)).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/3.5%/)).resolves.toBeInTheDocument();
+	});
+
+	it("显示基准收益", async () => {
+		render(<BacktestReturnsView jobId="bt-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("基准")).resolves.toBeInTheDocument();
 	});
 });

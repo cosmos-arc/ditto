@@ -7,6 +7,7 @@ import { researchHandlers } from "@/mocks/handlers/research";
 
 import { FactorDetailHeader } from "./factor-detail-header";
 import { FactorAnalysisView } from "./factor-analysis-view";
+import { FactorOverview } from "./factor-overview";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -55,5 +56,30 @@ describe("FactorAnalysisView", () => {
 	it("显示行业暴露数据", async () => {
 		render(<FactorAnalysisView id="f-001" />, { wrapper: createWrapper() });
 		await expect(screen.findByText("科技")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("FactorOverview", () => {
+	it("渲染因子属性区域", async () => {
+		render(<FactorOverview id="f-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("因子属性")).resolves.toBeInTheDocument();
+	});
+
+	it("显示因子元数据", async () => {
+		render(<FactorOverview id="f-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("衰减")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("换手率")).resolves.toBeInTheDocument();
+	});
+
+	it("渲染诊断检查", async () => {
+		render(<FactorOverview id="f-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("诊断检查")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("衰减测试")).resolves.toBeInTheDocument();
+	});
+
+	it("显示诊断结果", async () => {
+		render(<FactorOverview id="f-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText(/pass/)).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/warning/)).resolves.toBeInTheDocument();
 	});
 });

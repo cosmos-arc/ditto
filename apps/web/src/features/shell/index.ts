@@ -11,3 +11,16 @@ export { CommandCenterLayout } from "./layouts/command-center.layout";
 export { ObjectHubLayout } from "./layouts/object-hub.layout";
 export { OpsConsoleLayout } from "./layouts/ops-console.layout";
 export { StudioLayout } from "./layouts/studio.layout";
+export {
+	PAGE_CONTRACTS,
+	SHELL_SLOT_MAP,
+	PAGE_PATTERNS,
+	SHELL_FAMILIES,
+	PROTOTYPE_SOURCES,
+} from "./page-contracts";
+export type {
+	PageContract,
+	PagePattern,
+	ShellFamily,
+	PrototypeSource,
+} from "./page-contracts";

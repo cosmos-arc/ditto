@@ -7,6 +7,7 @@ import { instrumentsHandlers } from "@/mocks/handlers/instruments";
 
 import { InstrumentMetaStrip } from "./instrument-meta-strip";
 import { InstrumentOverview } from "./instrument-overview";
+import { InstrumentChartView } from "./instrument-chart-view";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -46,5 +47,23 @@ describe("InstrumentOverview", () => {
 	it("显示财务比率", async () => {
 		render(<InstrumentOverview id="600519.SH" />, { wrapper: createWrapper() });
 		await expect(screen.findByText("ROE")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("InstrumentChartView", () => {
+	it("渲染行情数据区域", async () => {
+		render(<InstrumentChartView id="600519.SH" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("价格走势")).resolves.toBeInTheDocument();
+	});
+
+	it("显示 K 线数据表", async () => {
+		render(<InstrumentChartView id="600519.SH" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("2026-03-10")).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/1750/)).resolves.toBeInTheDocument();
+	});
+
+	it("显示成交量", async () => {
+		render(<InstrumentChartView id="600519.SH" />, { wrapper: createWrapper() });
+		await expect(screen.findByText(/3,210,000/)).resolves.toBeInTheDocument();
 	});
 });

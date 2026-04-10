@@ -1,0 +1,58 @@
+import { useBacktestResult } from "../hooks";
+import { ContextSection } from "@/components/domain/context-section";
+import { AreaChart } from "@/components/chart/area-chart";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
+
+interface BacktestOverviewProps {
+	readonly jobId: string;
+}
+
+export function BacktestOverview({ jobId }: BacktestOverviewProps) {
+	const { data, isLoading, isError, refetch } = useBacktestResult(jobId);
+
+	if (isLoading) {
+		return <LoadingSkeleton variant="table" rows={6} />;
+	}
+
+	return (
+		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
+			{data && (
+				<div className="flex flex-col gap-[var(--section-gap)]">
+					<ContextSection title="净值曲线">
+						<AreaChart
+							data={data.navSeries.map((p) => ({
+								time: p.date,
+								value: p.nav,
+							}))}
+							height={200}
+							showAxes
+						/>
+					</ContextSection>
+
+					<ContextSection title="当前持仓" count={data.holdings.length}>
+						<div className="space-y-1">
+							{data.holdings.map((h) => (
+								<div
+									key={h.code}
+									className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								>
+									<div className="flex items-center gap-3">
+										<span className="font-medium">{h.name}</span>
+										<span className="text-xs text-(--color-foreground-tertiary)">
+											{h.code}
+										</span>
+									</div>
+									<div className="flex items-center gap-4 text-(--color-foreground-tertiary)">
+										<span>{(h.weight * 100).toFixed(0)}%</span>
+										<span>{h.shares} 股</span>
+									</div>
+								</div>
+							))}
+						</div>
+					</ContextSection>
+				</div>
+			)}
+		</DittoErrorBoundary>
+	);
+}

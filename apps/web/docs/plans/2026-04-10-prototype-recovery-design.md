@@ -361,29 +361,33 @@ token 层已经拆分完成，但运行时仍存在两套命名并存、别名�
 
 ## 8. 优先级与里程碑
 
-### Milestone 1：基线收口
+### Milestone 1：基线收口 ✅ 已完成
+
+> **完成日期**：2026-04-10
+> **产出报告**：[milestone1-baseline-report.md](./2026-04-10-milestone1-baseline-report.md)
+> **运行时源**：`src/features/shell/page-contracts.ts`（21 页合同 + 26 个测试）
 
 **目标**：建立统一完成标准，停止继续制造结构债。
 
 **产出**：
 
-- 页面合同表
-- 路由分组清单
-- prototype-backed / spec-only 清单
-- token 问题扫描清单
-- 页面验收清单
+- ✅ 页面合同表（TypeScript 运行时 + 文档）
+- ✅ 路由分组清单（Group A/B/C）
+- ✅ prototype-backed / spec-only 清单（16/5）
+- ✅ token 问题扫描清单（8 个未定义 → 0 个）
+- ✅ 页面验收清单
 
-**必须完成**：
+**已完成**：
 
-- 明确每条 route 的 pattern / shell / source / slots / states
-- 扫描并消灭未定义 token
-- 明确哪些页面不允许再用 `main-only`
+- ✅ 明确每条 route 的 pattern / shell / source / slots / states
+- ✅ 扫描并消灭未定义 token（64 处引用全部通过兼容别名修复）
+- ✅ 明确哪些页面不允许再用 `main-only`（合同表中的 requiredSlots 即约束）
 
 **完成标准**：
 
-- 合同表覆盖全部页面
-- 未定义 token 清单清零
-- `bun run check` 通过
+- ✅ 合同表覆盖全部 21 个页面
+- ✅ 未定义 token 清单清零
+- ✅ `bun run check` 通过
 
 ### Milestone 2：模式纠偏
 

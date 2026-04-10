@@ -3,7 +3,8 @@ import { ObjectHubLayout } from "@/features/shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
 import { BacktestTrades } from "./backtest-trades";
-import { AreaChart } from "@/components/chart/area-chart";
+import { BacktestOverview } from "./backtest-overview";
+import { BacktestReturnsView } from "./backtest-returns-view";
 
 export function BacktestPage() {
 	const { id } = useParams({ strict: false }) as { id: string };
@@ -23,17 +24,10 @@ export function BacktestPage() {
 				main={
 					<>
 						<TabsContent value="overview">
-							<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
-								<div className="flex h-48 items-center justify-center text-sm text-(--color-foreground-tertiary)">
-									NAV + Drawdown 双轴图 — 待图表增强
-								</div>
-								<BacktestTrades jobId={jobId} />
-							</div>
+							<BacktestOverview jobId={jobId} />
 						</TabsContent>
 						<TabsContent value="returns">
-							<div className="flex h-full items-center justify-center p-4 text-sm text-(--color-foreground-tertiary)">
-								月度收益图表 — 待实现
-							</div>
+							<BacktestReturnsView jobId={jobId} />
 						</TabsContent>
 						<TabsContent value="trades">
 							<BacktestTrades jobId={jobId} />

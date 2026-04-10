@@ -3,6 +3,7 @@ import { ObjectHubLayout } from "@/features/shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { InstrumentMetaStrip } from "./instrument-meta-strip";
 import { InstrumentOverview } from "./instrument-overview";
+import { InstrumentChartView } from "./instrument-chart-view";
 
 export function InstrumentHubPage() {
 	const { id } = useParams({ strict: false }) as { id: string };
@@ -25,9 +26,7 @@ export function InstrumentHubPage() {
 							<InstrumentOverview id={instrumentId} />
 						</TabsContent>
 						<TabsContent value="chart">
-							<div className="flex h-full items-center justify-center p-4 text-sm text-(--color-foreground-tertiary)">
-								行情图表 — 待实现
-							</div>
+							<InstrumentChartView id={instrumentId} />
 						</TabsContent>
 						<TabsContent value="fundamentals">
 							<InstrumentOverview id={instrumentId} />

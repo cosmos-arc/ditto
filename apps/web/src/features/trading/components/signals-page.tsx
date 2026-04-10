@@ -1,12 +1,18 @@
-import { CatalogLayout } from "@/features/shell";
+import { OpsConsoleLayout } from "@/features/shell";
 import { SignalsList } from "./signals-list";
+import { SignalsHealthStrip } from "./signals-health-strip";
+import { SignalDetailPanel } from "./signal-detail-panel";
+
+const DEFAULT_SIGNAL_ID = "sig-001";
 
 export function SignalsPage() {
 	return (
-		<CatalogLayout
-			main={
-				<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
-					<SignalsList />
+		<OpsConsoleLayout
+			health={<SignalsHealthStrip />}
+			main={<SignalsList />}
+			detail={
+				<div className="h-full overflow-y-auto">
+					<SignalDetailPanel signalId={DEFAULT_SIGNAL_ID} />
 				</div>
 			}
 		/>

@@ -2,6 +2,7 @@ import { useParams } from "@tanstack/react-router";
 import { ObjectHubLayout } from "@/features/shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FactorDetailHeader } from "./factor-detail-header";
+import { FactorOverview } from "./factor-overview";
 import { FactorAnalysisView } from "./factor-analysis-view";
 
 export function FactorPage() {
@@ -21,9 +22,7 @@ export function FactorPage() {
 				main={
 					<>
 						<TabsContent value="overview">
-							<div className="flex h-full items-center justify-center p-4 text-sm text-(--color-foreground-tertiary)">
-								因子概览 — 待实现
-							</div>
+							<FactorOverview id={factorId} />
 						</TabsContent>
 						<TabsContent value="analysis">
 							<FactorAnalysisView id={factorId} />

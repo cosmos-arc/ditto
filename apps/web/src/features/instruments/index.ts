@@ -5,3 +5,4 @@ export { useInstrumentFundamentals } from "./hooks/use-instrument-fundamentals";
 export { InstrumentHubPage } from "./components/instrument-hub-page";
 export { InstrumentMetaStrip } from "./components/instrument-meta-strip";
 export { InstrumentOverview } from "./components/instrument-overview";
+export { InstrumentChartView } from "./components/instrument-chart-view";

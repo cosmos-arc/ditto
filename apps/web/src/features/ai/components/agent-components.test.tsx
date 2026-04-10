@@ -7,6 +7,7 @@ import { aiHandlers } from "@/mocks/handlers/ai";
 
 import { AgentPlansList } from "./agent-plans-list";
 import { AgentFindingsList } from "./agent-findings-list";
+import { AgentInspectorPanel } from "./agent-inspector-panel";
 import { AgentsPage } from "./agents-page";
 
 function createQueryClient(): QueryClient {
@@ -38,7 +39,9 @@ describe("AgentPlansList", () => {
 	it("渲染计划列表标题", async () => {
 		render(<AgentPlansList />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("Agent 计划")).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText("Agent 计划"),
+		).resolves.toBeInTheDocument();
 	});
 
 	it("显示所有计划条目", async () => {
@@ -126,18 +129,79 @@ describe("AgentFindingsList", () => {
 	});
 });
 
-// ── AgentsPage ────────────────────────────────────────────────
+// ── AgentInspectorPanel ───────────────────────────────────────
 
-describe("AgentsPage", () => {
-	it("渲染计划列表区域", async () => {
-		render(<AgentsPage />, { wrapper: createWrapper() });
+describe("AgentInspectorPanel", () => {
+	it("无选中计划时渲染空状态", async () => {
+		render(<AgentInspectorPanel />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("Agent 计划")).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText(/选择一个计划/),
+		).resolves.toBeInTheDocument();
 	});
 
-	it("渲染发现列表区域", async () => {
+	it("选中计划时渲染计划详情", async () => {
+		render(<AgentInspectorPanel planId="plan-001" />, {
+			wrapper: createWrapper(),
+		});
+
+		await expect(
+			screen.findByText("因子池优化扫描"),
+		).resolves.toBeInTheDocument();
+	});
+
+	it("显示计划目标和约束", async () => {
+		render(<AgentInspectorPanel planId="plan-001" />, {
+			wrapper: createWrapper(),
+		});
+
+		await expect(
+			screen.findByText(/评估当前因子池中 45 个因子的有效性/),
+		).resolves.toBeInTheDocument();
+	});
+
+	it("显示相关运行状态", async () => {
+		render(<AgentInspectorPanel planId="plan-001" />, {
+			wrapper: createWrapper(),
+		});
+
+		await expect(
+			screen.findByText("因子回测"),
+		).resolves.toBeInTheDocument();
+	});
+});
+
+// ── AgentsPage — StudioLayout 集成 ──────────────────────────────
+
+describe("AgentsPage", () => {
+	it("渲染计划列表（source slot）", async () => {
 		render(<AgentsPage />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("Agent 发现")).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText("Agent 计划"),
+		).resolves.toBeInTheDocument();
+	});
+
+	it("渲染发现列表（inspector slot）", async () => {
+		render(<AgentsPage />, { wrapper: createWrapper() });
+
+		await expect(
+			screen.findByText("Agent 发现"),
+		).resolves.toBeInTheDocument();
+	});
+
+	it("三栏布局均有内容", async () => {
+		render(<AgentsPage />, { wrapper: createWrapper() });
+
+		// source slot: Agent 计划
+		await expect(
+			screen.findByText("Agent 计划"),
+		).resolves.toBeInTheDocument();
+		// main slot: 计划详情（Inspector 面板内，异步加载）
+		// "因子池优化扫描" 同时出现在 source 和 main slot
+		const planNames = await screen.findAllByText("因子池优化扫描");
+		expect(planNames.length).toBeGreaterThanOrEqual(2);
+		// inspector slot: Agent 发现
+		expect(screen.getByText("Agent 发现")).toBeInTheDocument();
 	});
 });
