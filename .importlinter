@@ -207,6 +207,7 @@ ignore_imports =
     ditto_interfaces.registry.** -> ditto_data.quality.**
     ditto_interfaces.registry.** -> ditto_data.config.**
     ditto_interfaces.jobs.context -> ditto_data.quality
+    ditto_interfaces.jobs.context -> ditto_data.quality.protocols
 allow_indirect_imports = true
 unmatched_ignore_imports_alerting = warn
 

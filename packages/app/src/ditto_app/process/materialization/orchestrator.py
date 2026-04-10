@@ -96,6 +96,42 @@ class _RunIdentity(NamedTuple):
     started_at: str
 
 
+def _make_run_record(  # noqa: PLR0913
+    *,
+    run_id: str,
+    spec: DerivedSpec,
+    request: DerivedMaterializationRequest,
+    plan: DerivedExecutionPlan,
+    status: DerivedRunStatus,
+    rows_written: int = 0,
+    partitions_written: tuple[str, ...] = (),
+    error_message: str | None = None,
+    created_at: str,
+    started_at: str,
+    finished_at: str | None = None,
+) -> DerivedRunRecord:
+    """构造 DerivedRunRecord，统一共享字段映射。"""
+    return DerivedRunRecord(
+        run_id=run_id,
+        derived_id=spec.id,
+        version=spec.version,
+        mode=request.mode.value,
+        trigger=request.trigger.value,
+        request_start=request.request_start,
+        request_end=request.request_end,
+        compute_start=plan.compute_start,
+        compute_end=plan.compute_end,
+        source_snapshot_id=request.source_snapshot_id,
+        status=status.value,
+        rows_written=rows_written,
+        partitions_written=partitions_written,
+        error_message=error_message,
+        created_at=created_at,
+        started_at=started_at,
+        finished_at=finished_at,
+    )
+
+
 # ===========================================================================
 # DerivedMaterializationOrchestrator
 # ===========================================================================
@@ -164,24 +200,14 @@ class DerivedMaterializationOrchestrator:
         run_id = f"drv-{uuid4().hex[:12]}"
         started_at = now_iso()
         self._catalog_service.save_run(
-            DerivedRunRecord(
+            _make_run_record(
                 run_id=run_id,
-                derived_id=spec.id,
-                version=spec.version,
-                mode=request.mode.value,
-                trigger=request.trigger.value,
-                request_start=request.request_start,
-                request_end=request.request_end,
-                compute_start=plan.compute_start,
-                compute_end=plan.compute_end,
-                source_snapshot_id=request.source_snapshot_id,
-                status=DerivedRunStatus.RUNNING.value,
-                rows_written=0,
-                partitions_written=(),
-                error_message=None,
+                spec=spec,
+                request=request,
+                plan=plan,
+                status=DerivedRunStatus.RUNNING,
                 created_at=started_at,
                 started_at=started_at,
-                finished_at=None,
             )
         )
         try:
@@ -218,20 +244,12 @@ class DerivedMaterializationOrchestrator:
         except Exception as exc:
             finished_at = now_iso()
             self._catalog_service.save_run(
-                DerivedRunRecord(
+                _make_run_record(
                     run_id=run_id,
-                    derived_id=spec.id,
-                    version=spec.version,
-                    mode=request.mode.value,
-                    trigger=request.trigger.value,
-                    request_start=request.request_start,
-                    request_end=request.request_end,
-                    compute_start=plan.compute_start,
-                    compute_end=plan.compute_end,
-                    source_snapshot_id=request.source_snapshot_id,
-                    status=DerivedRunStatus.FAILED.value,
-                    rows_written=0,
-                    partitions_written=(),
+                    spec=spec,
+                    request=request,
+                    plan=plan,
+                    status=DerivedRunStatus.FAILED,
                     error_message=str(exc),
                     created_at=started_at,
                     started_at=started_at,
@@ -380,21 +398,13 @@ class DerivedMaterializationOrchestrator:
             coverage_end=plan.compute_end,
         )
         self._catalog_service.save_run(
-            DerivedRunRecord(
+            _make_run_record(
                 run_id=run.run_id,
-                derived_id=spec.id,
-                version=spec.version,
-                mode=request.mode.value,
-                trigger=request.trigger.value,
-                request_start=request.request_start,
-                request_end=request.request_end,
-                compute_start=plan.compute_start,
-                compute_end=plan.compute_end,
-                source_snapshot_id=request.source_snapshot_id,
-                status=DerivedRunStatus.SUCCESS.value,
+                spec=spec,
+                request=request,
+                plan=plan,
+                status=DerivedRunStatus.SUCCESS,
                 rows_written=rows_written,
-                partitions_written=(),
-                error_message=None,
                 created_at=run.started_at,
                 started_at=run.started_at,
                 finished_at=finished_at,
@@ -476,21 +486,14 @@ class DerivedMaterializationOrchestrator:
             coverage_end=plan.compute_end,
         )
         self._catalog_service.save_run(
-            DerivedRunRecord(
+            _make_run_record(
                 run_id=run.run_id,
-                derived_id=spec.id,
-                version=spec.version,
-                mode=request.mode.value,
-                trigger=request.trigger.value,
-                request_start=request.request_start,
-                request_end=request.request_end,
-                compute_start=plan.compute_start,
-                compute_end=plan.compute_end,
-                source_snapshot_id=request.source_snapshot_id,
-                status=DerivedRunStatus.SUCCESS.value,
+                spec=spec,
+                request=request,
+                plan=plan,
+                status=DerivedRunStatus.SUCCESS,
                 rows_written=frame.height,
                 partitions_written=result.partitions_written,
-                error_message=None,
                 created_at=run.started_at,
                 started_at=run.started_at,
                 finished_at=finished_at,

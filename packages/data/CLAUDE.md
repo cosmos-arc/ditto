@@ -8,7 +8,7 @@ ditto_data/
 ├── di/                  # DI 注册（builders/sources/quality/runtime 等 Provider）
 ├── errors.py            # DataError 异常层级
 ├── events.py            # 数据事件定义
-├── helpers/             # 辅助工具（复权调整/PIT 策略与 SQL/DataFrame）
+├── helpers/             # 辅助工具（复权调整/PIT 策略与 DataFrame）
 │   └── pit/             # PIT（Point-in-Time）辅助
 ├── ingestion/           # 摄入服务（游标/日志/冻结/晚到数据/质量记录/发布安全）
 ├── models/              # 数据模型（枚举/市场/元数据/宏观/衍生/摄入/存储/策略等）
@@ -34,7 +34,6 @@ ditto_data/
 │   ├── report.py        # 质量报告生成
 │   ├── severity.py      # 严重级别定义
 │   └── spec.py          # 质量规格定义
-├── query/               # （空目录，查询已迁入 ditto_app.query）
 ├── runtime/             # 运行时基础设施（SQL 引擎/冻结管理/ID 分配）
 ├── scripts/             # 工具脚本
 ├── services/            # 域服务（Facade 模式）

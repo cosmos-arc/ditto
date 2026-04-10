@@ -73,6 +73,7 @@
   - interfaces 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）
   - interfaces 可以直接依赖 infra.foundation
   - interfaces 禁止直接依赖 data.storage/runtime（仅 registry 例外）
+  - interfaces.jobs.context 可依赖 data.quality（最小豁免，用于 Context Bundle 构建）
 
 详细约束见 .importlinter 配置
 ```

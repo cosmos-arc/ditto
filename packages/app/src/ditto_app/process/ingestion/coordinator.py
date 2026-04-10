@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Literal, NamedTuple, cast
-
-if TYPE_CHECKING:
-    pass
+from typing import Literal, NamedTuple, cast
 
 import httpx
 import polars as pl
@@ -27,6 +24,7 @@ from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger
 from ditto_kernel.types import InstrumentIngestParams
 
+from ditto_app.command.quality_check import CheckDataQualityCommand
 from ditto_app.process.ingestion.auto_init import resolve_identifier_with_auto_init
 from ditto_app.process.ingestion.backfill_handler import BackfillContext
 from ditto_app.process.ingestion.backfill_handler import (
@@ -58,6 +56,14 @@ __all__ = [
 def _is_source_fetch_error(error: Exception) -> bool:
     """Check whether exception should be treated as source fetch failure."""
     return isinstance(error, SourceFetchError)
+
+
+def _validate_dataset(dataset: str) -> Dataset:
+    """验证数据集名称并返回枚举值。"""
+    try:
+        return Dataset(dataset)
+    except ValueError as e:
+        raise ValueError(f"不支持的数据集: {dataset}") from e
 
 
 def _normalize_source_fetch_error(error: Exception) -> SourceFetchError:
@@ -238,10 +244,7 @@ class IngestionCoordinator:
         )
 
         # 验证数据集是否支持
-        try:
-            Dataset(dataset)  # 验证是否为有效的数据集
-        except ValueError as e:
-            raise ValueError(f"不支持的数据集: {dataset}") from e
+        _validate_dataset(dataset)
 
         # 检查是否应该跳过摄取
         if skip_result := self._check_should_skip(dataset, trade_date, force):
@@ -384,10 +387,6 @@ class IngestionCoordinator:
 
         # DQ 质量检查
         if self._quality_checker is not None:
-            from ditto_app.command.quality_check import (  # noqa: PLC0415
-                CheckDataQualityCommand,
-            )
-
             checked_df, should_block = self._quality_checker.handle(
                 CheckDataQualityCommand(
                     df=df,
@@ -548,10 +547,7 @@ class IngestionCoordinator:
         force: bool = False,
     ) -> IngestionResult:
         """按标的 + 日期范围摄取数据。"""
-        try:
-            dataset_enum = Dataset(dataset)
-        except ValueError as e:
-            raise ValueError(f"不支持的数据集: {dataset}") from e
+        dataset_enum = _validate_dataset(dataset)
 
         if dataset_enum not in SUPPORTED_INSTRUMENT_DATASETS:
             raise ValueError(f"数据集 {dataset} 不支持按标的摄取")
@@ -694,10 +690,7 @@ class IngestionCoordinator:
 
     def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
         """根据数据集类型调用对应的 Source 方法获取数据（日期级）。"""
-        try:
-            dataset_enum = Dataset(dataset)
-        except ValueError as e:
-            raise ValueError(f"不支持的数据集: {dataset}") from e
+        dataset_enum = _validate_dataset(dataset)
 
         handlers = build_daily_fetch_handlers(
             self._source,

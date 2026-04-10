@@ -29,7 +29,6 @@ ditto_interfaces/
 │   │   ├── ingest/    # 数据摄入命令
 │   │   ├── backfill/  # 回填命令
 │   │   └── query/     # 查询命令
-│   ├── models/        # CLI 数据模型
 │   └── utils/         # CLI 工具（identifier/output/params/validation）
 ├── jobs/              # Prefect 任务
 │   ├── context.py     # 任务上下文
@@ -105,7 +104,7 @@ ditto_interfaces/
 |--------|--------|------|
 | `services/ingestion/` | `ditto_app.process.ingestion` | 数据摄取服务 |
 | `services/ingestion/quality/` | `ditto_app.process.quality` | 质量校验服务 |
-| `services/strategy/` | `ditto_app.process.strategy` | 策略运行服务 |
+| `services/strategy/` | `ditto_app.process.execution` | 策略运行服务 |
 | `services/strategy/*.builder` | `ditto_app.builders.strategy` | 策略构建器 |
 | `services/derived/materialization*` | `ditto_app.process.materialization` | 衍生物化服务 |
 | `services/derived/query_facade*` | `ditto_app.query.derived` | 衍生查询服务 |

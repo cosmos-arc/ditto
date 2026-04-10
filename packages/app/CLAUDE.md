@@ -42,12 +42,10 @@ ditto_app/
 │   ├── evaluation.py  # 评估查询
 │   ├── research.py    # 研究数据集查询
 │   ├── forward_return_service.py  # 前向收益率服务
-│   ├── _instrument_code_facade.py # 证券代码解析门面
-│   └── _utils.py      # 查询工具
+│   └── _instrument_code_facade.py # 证券代码解析门面
 ├── command/            # Command DTO + Handler（原子写操作）
 │   ├── ingestion.py              # IngestDateCommand + IngestDateHandler
 │   ├── quality_check.py          # CheckDataQualityCommand + Handler
-│   ├── quality_l3.py             # L3BatchCheckCommand + Handler
 │   ├── quality_reconciliation.py # ReconcileSourcesCommand + Handler
 │   └── protocols.py              # CommandHandler Protocol
 ├── process/            # Process Manager（有状态长流程）
@@ -84,31 +82,27 @@ ditto_app/
 │   │   ├── strategy_types.py        # Protocol + Trigger DTO
 │   │   ├── strategy_input.py        # StrategyInputAssembler
 │   │   └── backtest_serialization.py # 回测序列化
-│   └── quality/        # 质量校验流程（向后兼容 re-export）
+│   └── quality/        # 质量巡检流程
 │       ├── __init__.py              # re-export shim
-│       ├── quality_check.py         # QualityService
-│       ├── l3_batch.py              # L3BatchService
-│       ├── reconciliation.py        # QualityReconciliationService
-│       ├── protocols.py             # QualityEngineProtocol 等
-│       └── types.py                 # L3CheckResult
+│       └── patrol.py                # QualityPatrolService（原 L3BatchService）
 ├── builders/           # 运行时装配（DI 构造）
 │   ├── runtime_builder.py   # 运行时构建器
 │   ├── slice_builder.py     # 切片构建器
 │   ├── service_factory.py   # 服务工厂
-│   └── _resolution.py       # 依赖解析工具
+│   ├── _resolution.py       # 依赖解析工具
+│   └── _spec_deserializer.py # 衍生规格反序列化
 ├── providers.py        # DI Provider 注册（4 个 Provider）
-├── config.py           # 数据集配置
-└── types.py            # 共享类型定义
+└── config.py           # 数据集配置
 ```
 
 ## DI Provider（4 个）
 
 | Provider | 职责 | 注册的服务 |
 |----------|------|-----------|
-| `AppCommandProvider` | Command Handler | CheckDataQualityHandler, L3BatchCheckHandler |
+| `AppCommandProvider` | Command Handler | CheckDataQualityHandler |
 | `AppQueryProvider` | 只读查询 | 各 QueryFacade, ForwardReturnService |
-| `AppProcessProvider` | 编排/物化/质量 | DerivedMaterializationOrchestrator, QualityService, L3BatchService |
-| `AppBuilderFactory` | 策略运行时装配 | StrategyRuntimeBuilder, BacktestRuntimeBuilder, StrategyFacade |
+| `AppProcessProvider` | 编排/物化/质量 | DerivedMaterializationOrchestrator, InvalidationCascadeOrchestrator, DerivedPublicationFacade, QualityPatrolService, SQLiteCompileCache, RuntimeDerivedInputProvider |
+| `AppBuilderFactory` | 策略运行时装配 | StrategyRuntimeBuilder, BacktestRuntimeBuilder, StrategySliceBuilder, StrategyFacade |
 
 ## R8 互斥规则（importlinter 强制）
 

@@ -54,7 +54,7 @@ ditto_kernel/
 ├── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
 ├── specs.py           # 衍生规格数据类（DerivedSpec / DerivedRole / TimeSpec 等，Phase 5 从 Engine 迁入）
 ├── research.py        # 研究数据集记录类型（frozen dataclass × 4）
-├── quality.py         # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult）
+├── quality.py         # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult / L3CheckResult / ReconciliationResult）
 ├── exceptions.py      # 共享异常层级（DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
 └── types.py           # 共享工具类型（InstrumentIngestParams）
 ```
@@ -69,7 +69,9 @@ ditto_kernel/
 | `OrderSide` | enums.py | `StrEnum`（BUY/SELL） | Data, Engine |
 | `RunStatus` | enums.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | Data |
 | `RiskScope` | enums.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Engine |
-| `DerivedRole` | specs.py | `StrEnum`（FEATURE/FACTOR/SIGNAL） | Analytics, Engine |
+| `MacroCategory` | enums.py | `StrEnum`（ECONOMIC/INTEREST_RATE/EXCHANGE_RATE/MONEY_SUPPLY/PRICES/EMPLOYMENT） | Data, App |
+| `MacroFrequency` | enums.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, App |
+| `DerivedRole` | specs.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analytics, Engine |
 | `DerivedSpec` | specs.py | frozen dataclass | Analytics, Engine |
 | `MaterializationProfile` | specs.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Engine |
 | `TimeSpec` | specs.py | frozen dataclass | Analytics, Engine |
@@ -84,6 +86,8 @@ ditto_kernel/
 | `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, App, Interfaces |
 | `DQIssue` | quality.py | frozen dataclass | Data, App, Interfaces |
 | `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
+| `L3CheckResult` | quality.py | frozen dataclass（L3 统计巡检结果） | App, Interfaces |
+| `ReconciliationResult` | quality.py | frozen dataclass（数据源对账结果） | App, Interfaces |
 | `DataError` | exceptions.py | `Exception`（基类） | Data, App, Interfaces |
 | `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
 | `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | App |

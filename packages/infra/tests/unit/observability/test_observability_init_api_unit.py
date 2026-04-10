@@ -10,10 +10,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from ditto_infra.foundation.config.environment import Environment
-from ditto_infra.foundation.observability import (
-    _ObservabilityRegistry,
-    init,
-    shutdown,
+from ditto_infra.foundation.observability import init, shutdown
+from ditto_infra.foundation.observability._registry import (
+    ObservabilityRegistry as _ObservabilityRegistry,
 )
 from ditto_infra.foundation.observability.config import ObservabilityConfig
 
@@ -26,10 +25,10 @@ class TestInitFunction:
         """每个测试前重置初始化状态."""
         _ObservabilityRegistry.reset()
 
-    @patch("ditto_infra.foundation.observability.configure_logging")
-    @patch("ditto_infra.foundation.observability.configure_tracing")
-    @patch("ditto_infra.foundation.observability.configure_metrics")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_logging")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_tracing")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_metrics")
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_init_calls_all_configure_functions(
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
@@ -40,10 +39,10 @@ class TestInitFunction:
         mock_config_tracing.assert_called_once()
         mock_config_metrics.assert_called_once()
 
-    @patch("ditto_infra.foundation.observability.configure_logging")
-    @patch("ditto_infra.foundation.observability.configure_tracing")
-    @patch("ditto_infra.foundation.observability.configure_metrics")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_logging")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_tracing")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_metrics")
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_init_sets_initialized_flag(
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
@@ -52,10 +51,10 @@ class TestInitFunction:
 
         assert _ObservabilityRegistry.is_initialized()
 
-    @patch("ditto_infra.foundation.observability.configure_logging")
-    @patch("ditto_infra.foundation.observability.configure_tracing")
-    @patch("ditto_infra.foundation.observability.configure_metrics")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_logging")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_tracing")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_metrics")
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_init_skips_if_already_initialized(
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
@@ -77,10 +76,10 @@ class TestInitFunction:
         mock_config_tracing.assert_not_called()
         mock_config_metrics.assert_not_called()
 
-    @patch("ditto_infra.foundation.observability.configure_logging")
-    @patch("ditto_infra.foundation.observability.configure_tracing")
-    @patch("ditto_infra.foundation.observability.configure_metrics")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_logging")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_tracing")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_metrics")
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_init_with_force_reinitializes(
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
@@ -102,10 +101,10 @@ class TestInitFunction:
         mock_config_tracing.assert_called_once()
         mock_config_metrics.assert_called_once()
 
-    @patch("ditto_infra.foundation.observability.configure_logging")
-    @patch("ditto_infra.foundation.observability.configure_tracing")
-    @patch("ditto_infra.foundation.observability.configure_metrics")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_logging")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_tracing")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_metrics")
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_init_normalizes_environment_aliases(
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
@@ -121,10 +120,10 @@ class TestInitFunction:
         assert mock_config_tracing.call_count == 2
         assert mock_config_metrics.call_count == 2
 
-    @patch("ditto_infra.foundation.observability.configure_logging")
-    @patch("ditto_infra.foundation.observability.configure_tracing")
-    @patch("ditto_infra.foundation.observability.configure_metrics")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_logging")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_tracing")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_metrics")
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_init_logs_initialization(
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
@@ -141,10 +140,10 @@ class TestInitFunction:
         call_args = mock_logger.info.call_args
         assert "Observability initialized" in str(call_args)
 
-    @patch("ditto_infra.foundation.observability.configure_logging")
-    @patch("ditto_infra.foundation.observability.configure_tracing")
-    @patch("ditto_infra.foundation.observability.configure_metrics")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_logging")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_tracing")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_metrics")
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_init_with_verbose_logging_false_skips_info_log(
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
@@ -159,10 +158,10 @@ class TestInitFunction:
 
         mock_logger.info.assert_not_called()
 
-    @patch("ditto_infra.foundation.observability.configure_logging")
-    @patch("ditto_infra.foundation.observability.configure_tracing")
-    @patch("ditto_infra.foundation.observability.configure_metrics")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_logging")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_tracing")
+    @patch("ditto_infra.foundation.observability._lifecycle.configure_metrics")
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_init_passes_config_parameters(
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
@@ -196,9 +195,13 @@ class TestShutdownFunction:
         """每个测试后重置状态."""
         _ObservabilityRegistry.reset()
 
-    @patch("ditto_infra.foundation.observability.otel_trace.get_tracer_provider")
-    @patch("ditto_infra.foundation.observability.otel_metrics.get_meter_provider")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch(
+        "ditto_infra.foundation.observability._lifecycle.otel_trace.get_tracer_provider"
+    )
+    @patch(
+        "ditto_infra.foundation.observability._lifecycle.otel_metrics.get_meter_provider"
+    )
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_shutdown_calls_provider_shutdown(
         self, mock_logger, mock_get_meter, mock_get_tracer
     ) -> None:
@@ -213,9 +216,13 @@ class TestShutdownFunction:
         mock_tracer_provider.shutdown.assert_called_once()
         mock_meter_provider.shutdown.assert_called_once()
 
-    @patch("ditto_infra.foundation.observability.otel_trace.get_tracer_provider")
-    @patch("ditto_infra.foundation.observability.otel_metrics.get_meter_provider")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch(
+        "ditto_infra.foundation.observability._lifecycle.otel_trace.get_tracer_provider"
+    )
+    @patch(
+        "ditto_infra.foundation.observability._lifecycle.otel_metrics.get_meter_provider"
+    )
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_shutdown_sets_initialized_false(
         self, mock_logger, mock_get_meter, mock_get_tracer
     ) -> None:
@@ -229,9 +236,13 @@ class TestShutdownFunction:
 
         assert not _ObservabilityRegistry.is_initialized()
 
-    @patch("ditto_infra.foundation.observability.otel_trace.get_tracer_provider")
-    @patch("ditto_infra.foundation.observability.otel_metrics.get_meter_provider")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch(
+        "ditto_infra.foundation.observability._lifecycle.otel_trace.get_tracer_provider"
+    )
+    @patch(
+        "ditto_infra.foundation.observability._lifecycle.otel_metrics.get_meter_provider"
+    )
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_shutdown_handles_providers_without_shutdown(
         self, mock_logger, mock_get_meter, mock_get_tracer
     ) -> None:
@@ -247,9 +258,13 @@ class TestShutdownFunction:
 
         assert not _ObservabilityRegistry.is_initialized()
 
-    @patch("ditto_infra.foundation.observability.otel_trace.get_tracer_provider")
-    @patch("ditto_infra.foundation.observability.otel_metrics.get_meter_provider")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch(
+        "ditto_infra.foundation.observability._lifecycle.otel_trace.get_tracer_provider"
+    )
+    @patch(
+        "ditto_infra.foundation.observability._lifecycle.otel_metrics.get_meter_provider"
+    )
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_shutdown_logs_exception_on_error(
         self, mock_logger, mock_get_meter, mock_get_tracer
     ) -> None:
@@ -265,9 +280,13 @@ class TestShutdownFunction:
         mock_logger.debug.assert_called()
         assert "Shutdown error" in str(mock_logger.debug.call_args)
 
-    @patch("ditto_infra.foundation.observability.otel_trace.get_tracer_provider")
-    @patch("ditto_infra.foundation.observability.otel_metrics.get_meter_provider")
-    @patch("ditto_infra.foundation.observability.logger")
+    @patch(
+        "ditto_infra.foundation.observability._lifecycle.otel_trace.get_tracer_provider"
+    )
+    @patch(
+        "ditto_infra.foundation.observability._lifecycle.otel_metrics.get_meter_provider"
+    )
+    @patch("ditto_infra.foundation.observability._lifecycle.logger")
     def test_shutdown_skips_already_shutdown_providers(
         self, mock_logger, mock_get_meter, mock_get_tracer
     ) -> None:
