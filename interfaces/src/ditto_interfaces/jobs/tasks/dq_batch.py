@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_app.process.quality import L3BatchService
+from ditto_app.process.quality import QualityPatrolService
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_data.models import Dataset
@@ -48,7 +48,7 @@ async def dq_batch_check(
     )
 
     with create_prefect_host() as container:
-        l3_service = container.get(L3BatchService)
+        l3_service = container.get(QualityPatrolService)
         metadata_service = container.get(MetadataQueryFacade)
         resolved_date = _resolve_trade_date(trade_date, metadata_service)
         resolved_datasets = datasets or list(_DEFAULT_DATASETS)
@@ -97,7 +97,7 @@ def _resolve_trade_date(
 
 
 def _execute_all_checks(
-    l3_service: L3BatchService,
+    l3_service: QualityPatrolService,
     datasets: list[str],
     trade_date: str,
     market_wide: bool,
@@ -129,7 +129,7 @@ def _execute_all_checks(
 
 
 def _execute_single_check(
-    l3_service: L3BatchService,
+    l3_service: QualityPatrolService,
     dataset: str,
     trade_date: str,
     market_wide: bool,

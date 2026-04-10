@@ -229,7 +229,7 @@ def _compute_value_statistics(frame: pl.DataFrame) -> dict[str, float]:
 
 def _compute_value_jump_rate(frame: pl.DataFrame) -> float:
     """
-    Compute the fraction of jumps exceeding 3σ in consecutive value pct_changes.
+    Compute the fraction of jumps exceeding 3sigma in consecutive value pct_changes.
 
     For each entity, compute pct_change between consecutive time-ordered rows.
     A "jump" is ``abs(pct_change) > 3 * pct_change_std`` (z-score logic).

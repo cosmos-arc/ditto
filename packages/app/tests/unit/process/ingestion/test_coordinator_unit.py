@@ -4,8 +4,8 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-from ditto_app.process.ingestion_coordinator import (
+from ditto_app.process.ingestion.config import IngestionCoordinatorConfig
+from ditto_app.process.ingestion.coordinator import (
     IngestionCoordinator,
     MarketServices,
 )
@@ -746,7 +746,7 @@ class TestIngestDate:
     ) -> None:
         """测试 DQ 质量检查阻断时的处理。
 
-        DQ 阻断由 quality_service.check_and_quarantine 显式触发，
+        DQ 阻断由 CheckDataQualityHandler.handle() 显式触发，
         而非由 save_bars 返回 0 行推断。
         """
         # Arrange
@@ -761,11 +761,13 @@ class TestIngestDate:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        # 模拟 DQ 质量检查阻断：quality_service 返回 should_block=True
-        mock_quality_service = mocker.Mock()
-        mock_quality_service.check_and_quarantine.return_value = (
+        # 模拟 DQ 质量检查阻断：CheckDataQualityHandler 返回 has_errors=True
+        from ditto_app.command.quality_check import CheckDataQualityHandler
+
+        mock_quality_checker = mocker.Mock(spec=CheckDataQualityHandler)
+        mock_quality_checker.handle.return_value = (
             source_df,
-            True,  # should_block=True
+            True,  # has_errors=True
         )
 
         mock_ingestion_log_service.save_log.return_value = IngestionLog(
@@ -777,7 +779,7 @@ class TestIngestDate:
             error_message="DQ L1 check failed: 10 errors",
         )
 
-        # 创建带 quality_service 的 coordinator
+        # 创建带 quality_checker 的 coordinator
         dq_coordinator = IngestionCoordinator(
             metadata_service=mock_metadata_service,
             market_services=MarketServices(
@@ -790,7 +792,7 @@ class TestIngestDate:
             source=mock_source,
             config=IngestionCoordinatorConfig(
                 ingestion_log_service=mock_ingestion_log_service,
-                quality_service=mock_quality_service,
+                quality_checker=mock_quality_checker,
             ),
         )
 
@@ -802,7 +804,7 @@ class TestIngestDate:
         assert result.error == "DQ_BLOCKED"
         assert "DQ" in result.message or "check failed" in result.message
         # 验证 DQ 质量检查被调用
-        mock_quality_service.check_and_quarantine.assert_called_once()
+        mock_quality_checker.handle.assert_called_once()
         # 验证 write_data 未被调用（DQ 阻断在写入之前）
         mock_market_write_service.save_bars.assert_not_called()
 

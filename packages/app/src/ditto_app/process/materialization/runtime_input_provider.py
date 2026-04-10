@@ -9,14 +9,14 @@ from ditto_data.services import DerivedCatalogService
 from ditto_data.services.derived.artifact_reader import DerivedArtifactReader
 from ditto_data.services.market_service import MarketService
 
-from ditto_app.process.materialization_dependencies import (
+from ditto_app.process.materialization.dependencies import (
     classify_dependencies,
     join_frames,
     prepare_derived_frame,
     prepare_market_frame,
     resolve_adj_type,
 )
-from ditto_app.process.materialization_types import InputContext
+from ditto_app.process.materialization.types import InputContext
 
 __all__ = [
     "RuntimeDerivedInputProvider",

@@ -1,15 +1,15 @@
-"""L3 Batch Service 返回契约测试."""
+"""QualityPatrolService 返回契约测试."""
 
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_app.process.quality import L3BatchService, L3CheckResult
-from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_app.process.quality import QualityPatrolService
+from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity, L3CheckResult
 
 
 @pytest.mark.unit
-class TestL3BatchServiceContract:
-    """L3BatchService 返回契约测试."""
+class TestQualityPatrolServiceContract:
+    """QualityPatrolService 返回契约测试."""
 
     def test_check_dataset_returns_l3_check_result(
         self,
@@ -18,7 +18,7 @@ class TestL3BatchServiceContract:
         mock_metadata_service: MagicMock,
     ) -> None:
         """check_dataset 返回 L3CheckResult 实例."""
-        service = L3BatchService(
+        service = QualityPatrolService(
             engine=mock_statistical_engine,
             market_facade=mock_market_service,
             metadata_facade=mock_metadata_service,
@@ -55,7 +55,7 @@ class TestL3BatchServiceContract:
             issues=[sample_issue],
         )
 
-        service = L3BatchService(
+        service = QualityPatrolService(
             engine=mock_statistical_engine,
             market_facade=mock_market_service,
             metadata_facade=mock_metadata_service,
@@ -81,7 +81,7 @@ class TestL3BatchServiceContract:
         """check_dataset 异常时返回 L3CheckResult（has_error=True）."""
         mock_statistical_engine.check_statistical.side_effect = RuntimeError("boom")
 
-        service = L3BatchService(
+        service = QualityPatrolService(
             engine=mock_statistical_engine,
             market_facade=mock_market_service,
             metadata_facade=mock_metadata_service,

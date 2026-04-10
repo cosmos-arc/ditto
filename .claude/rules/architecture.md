@@ -478,8 +478,8 @@ ditto_app 内部按 CQRS 职责划分为 4 个子模块，通过 importlinter R8
 ```
 ditto_app/
 ├── query/       # 只读查询（零写入）
-├── process/     # 编排流程（可调用 query）
-├── command/     # CQRS Command DTO + Handler Protocol（纯写入）
+├── process/     # Process Manager（有状态长流程，按能力域分 ingestion/materialization/execution/quality 子包）
+├── command/     # Command DTO + Handler（原子写操作）
 └── builders/    # 运行时装配（DI 构造）
 ```
 
@@ -499,7 +499,8 @@ ditto_app/
 | 方向 | 说明 |
 |------|------|
 | process → query | 编排流程可调用查询 |
-| command → process | Command 可委托 process 执行 |
+| command → process | Command Handler 委托底层 Service |
+| process → command | Process Manager 注入 Command Handler |
 | process ↔ builders | 双向允许 |
 
 **设计原则**：query 只读、command 纯写入、process 编排、builders 装配，四者职责不交叉。

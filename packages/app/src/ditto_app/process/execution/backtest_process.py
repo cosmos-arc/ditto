@@ -45,10 +45,8 @@ from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import SimpleEventBus
 from ditto_kernel.identity import InstrumentId
 
-from ditto_app.process.strategy_types import (
-    RunLifecycleService,
-    write_backtest_artifacts,
-)
+from ditto_app.process.execution.strategy_input import write_backtest_artifacts
+from ditto_app.process.execution.strategy_types import RunLifecycleService
 
 __all__ = [
     "BacktestService",

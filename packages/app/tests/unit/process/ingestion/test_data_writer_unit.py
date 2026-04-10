@@ -4,7 +4,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_app.process.data_writer import IngestionDataWriter
+from ditto_app.process.ingestion.data_writer import IngestionDataWriter
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing
 from ditto_infra.foundation.observability.config import ObservabilityConfig
@@ -219,7 +219,7 @@ class TestToWriteResult:
     def test_to_write_result_never_infers_blocked(self):
         """_to_write_result 不应从 rows_written==0 推断 blocked。
         blocked 只应由显式 DQ 检查设置。"""
-        from ditto_app.process.data_writer import _to_write_result
+        from ditto_app.process.ingestion.data_writer import _to_write_result
 
         df = pl.DataFrame({"a": [1, 2, 3]})
 

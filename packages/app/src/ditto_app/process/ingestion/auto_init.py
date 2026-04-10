@@ -9,7 +9,7 @@ from ditto_infra.foundation import logger
 from ditto_kernel import AmbiguousTickerError
 from ditto_kernel.types import InstrumentIngestParams
 
-from ditto_app.process._coordinator_constants import (
+from ditto_app.process.ingestion.coordinator_constants import (
     A_SHARE_CODE_LENGTH,
     EXCHANGE_PREFIX_MAP,
 )

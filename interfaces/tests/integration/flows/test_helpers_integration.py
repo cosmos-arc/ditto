@@ -5,8 +5,8 @@ Tests for create_ingestion_bundle context manager.
 """
 
 import pytest
-from ditto_app.process.backfill_manager import BackfillManager
-from ditto_app.process.retry_manager import RetryManager
+from ditto_app.process.ingestion.backfill_manager import BackfillManager
+from ditto_app.process.ingestion.retry_manager import RetryManager
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_interfaces.registry import IngestionBundle, create_ingestion_bundle
 

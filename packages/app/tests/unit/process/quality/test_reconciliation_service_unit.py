@@ -1,15 +1,13 @@
-"""Tests for QualityReconciliationService."""
+"""Tests for ReconcileSourcesHandler（原 QualityReconciliationService）."""
 
 import polars as pl
 import pytest
-from ditto_app.process.quality import (
-    QualityReconciliationService,
-)
+from ditto_app.command.quality_reconciliation import ReconcileSourcesHandler
 
 
 @pytest.mark.unit
-class TestQualityReconciliationServiceInit:
-    """测试 QualityReconciliationService 初始化."""
+class TestReconcileSourcesHandlerInit:
+    """测试 ReconcileSourcesHandler 初始化."""
 
     def test_init(
         self,
@@ -20,7 +18,7 @@ class TestQualityReconciliationServiceInit:
     ) -> None:
         """正常初始化."""
         # Act
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -28,15 +26,15 @@ class TestQualityReconciliationServiceInit:
         )
 
         # Assert
-        assert service._engine is mock_quality_engine
-        assert service._tdx_source is mock_tdx_source
-        assert service._comparison_store is mock_comparison_writer
-        assert service._instrument_store is mock_instrument_store
+        assert handler._engine is mock_quality_engine
+        assert handler._tdx_source is mock_tdx_source
+        assert handler._comparison_store is mock_comparison_writer
+        assert handler._instrument_store is mock_instrument_store
 
 
 @pytest.mark.unit
 class TestDailyReconciliationSuccess:
-    """测试 daily_reconciliation 成功场景."""
+    """测试 handle 成功场景."""
 
     def test_full_reconciliation_pass(
         self,
@@ -50,7 +48,7 @@ class TestDailyReconciliationSuccess:
     ) -> None:
         """完整对账流程成功."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -59,7 +57,7 @@ class TestDailyReconciliationSuccess:
 
         # Mock enrich_with_ticker 返回包含 symbol 的 DataFrame
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("ticker", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"]),
         )
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
@@ -70,11 +68,14 @@ class TestDailyReconciliationSuccess:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        result = service.daily_reconciliation(
+        from ditto_app.command.quality_reconciliation import ReconcileSourcesCommand
+
+        cmd = ReconcileSourcesCommand(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
         )
+        result = handler.handle(cmd)
 
         # Assert
         assert result.passed is True
@@ -84,7 +85,7 @@ class TestDailyReconciliationSuccess:
 
         # 验证调用链
         mock_instrument_store.enrich_with_ticker.assert_called_once_with(
-            sample_primary_df
+            sample_primary_df,
         )
         mock_tdx_source.fetch_stock_daily_bars.assert_called_once()
         mock_quality_engine.check_cross_source.assert_called_once()
@@ -99,7 +100,7 @@ class TestDailyReconciliationSuccess:
     ) -> None:
         """无辅助数据时跳过."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -107,7 +108,7 @@ class TestDailyReconciliationSuccess:
         )
 
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("ticker", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"]),
         )
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
@@ -115,11 +116,14 @@ class TestDailyReconciliationSuccess:
         mock_tdx_source.fetch_stock_daily_bars.return_value = pl.DataFrame()
 
         # Act
-        result = service.daily_reconciliation(
+        from ditto_app.command.quality_reconciliation import ReconcileSourcesCommand
+
+        cmd = ReconcileSourcesCommand(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
         )
+        result = handler.handle(cmd)
 
         # Assert
         assert result.passed is True
@@ -141,7 +145,7 @@ class TestDailyReconciliationSuccess:
     ) -> None:
         """无问题时不存储结果."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -149,18 +153,21 @@ class TestDailyReconciliationSuccess:
         )
 
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("ticker", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"]),
         )
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        result = service.daily_reconciliation(
+        from ditto_app.command.quality_reconciliation import ReconcileSourcesCommand
+
+        cmd = ReconcileSourcesCommand(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
         )
+        result = handler.handle(cmd)
 
         # Assert - 验证不存储结果
         mock_comparison_writer.write_comparison.assert_not_called()
@@ -169,7 +176,7 @@ class TestDailyReconciliationSuccess:
 
 @pytest.mark.unit
 class TestDailyReconciliationWithIssues:
-    """测试 daily_reconciliation 有问题场景."""
+    """测试 handle 有问题场景."""
 
     def test_with_issues_stores_result(
         self,
@@ -183,7 +190,7 @@ class TestDailyReconciliationWithIssues:
     ) -> None:
         """有问题时存储对比结果."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -191,7 +198,7 @@ class TestDailyReconciliationWithIssues:
         )
 
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("ticker", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"]),
         )
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
@@ -200,11 +207,14 @@ class TestDailyReconciliationWithIssues:
         )
 
         # Act
-        result = service.daily_reconciliation(
+        from ditto_app.command.quality_reconciliation import ReconcileSourcesCommand
+
+        cmd = ReconcileSourcesCommand(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
         )
+        result = handler.handle(cmd)
 
         # Assert
         assert result.passed is False
@@ -225,7 +235,7 @@ class TestDailyReconciliationWithIssues:
     ) -> None:
         """有问题时触发告警."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -233,7 +243,7 @@ class TestDailyReconciliationWithIssues:
         )
 
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("ticker", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"]),
         )
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
@@ -242,18 +252,21 @@ class TestDailyReconciliationWithIssues:
         )
 
         # Act
-        service.daily_reconciliation(
+        from ditto_app.command.quality_reconciliation import ReconcileSourcesCommand
+
+        cmd = ReconcileSourcesCommand(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
         )
+        handler.handle(cmd)
 
         # Assert - _send_alerts 应该被调用（通过验证日志）
 
 
 @pytest.mark.unit
 class TestDailyReconciliationEdgeCases:
-    """测试 daily_reconciliation 边界情况."""
+    """测试 handle 边界情况."""
 
     def test_missing_sid_column_raises(
         self,
@@ -264,7 +277,7 @@ class TestDailyReconciliationEdgeCases:
     ) -> None:
         """缺少 instrument_id 列时抛出异常."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -277,15 +290,18 @@ class TestDailyReconciliationEdgeCases:
                 "source_ticker": ["000001.SZ"],
                 "trade_date": ["20240101"],
                 "close": [10.0],
-            }
+            },
         )
 
         # Act & Assert
-        result = service.daily_reconciliation(
+        from ditto_app.command.quality_reconciliation import ReconcileSourcesCommand
+
+        cmd = ReconcileSourcesCommand(
             primary_df=df_without_sid,
             trade_date="20240101",
             dataset="stock_daily",
         )
+        result = handler.handle(cmd)
 
         assert result.passed is False
         assert result.error is not None
@@ -303,7 +319,7 @@ class TestDailyReconciliationEdgeCases:
     ) -> None:
         """Symbol 补全失败时抛出异常."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -322,11 +338,14 @@ class TestDailyReconciliationEdgeCases:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        result = service.daily_reconciliation(
+        from ditto_app.command.quality_reconciliation import ReconcileSourcesCommand
+
+        cmd = ReconcileSourcesCommand(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
         )
+        result = handler.handle(cmd)
 
         # Assert
         assert result.passed is False
@@ -344,7 +363,7 @@ class TestDailyReconciliationEdgeCases:
     ) -> None:
         """未知异常返回错误字典."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -352,7 +371,7 @@ class TestDailyReconciliationEdgeCases:
         )
 
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("ticker", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"]),
         )
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
@@ -361,15 +380,18 @@ class TestDailyReconciliationEdgeCases:
 
         # Mock 引擎抛出异常
         mock_quality_engine.check_cross_source.side_effect = RuntimeError(
-            "Unexpected error"
+            "Unexpected error",
         )
 
         # Act
-        result = service.daily_reconciliation(
+        from ditto_app.command.quality_reconciliation import ReconcileSourcesCommand
+
+        cmd = ReconcileSourcesCommand(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
         )
+        result = handler.handle(cmd)
 
         # Assert
         assert result.passed is False
@@ -391,7 +413,7 @@ class TestConvertResultToDf:
     ) -> None:
         """无问题时返回空 DataFrame."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -399,8 +421,9 @@ class TestConvertResultToDf:
         )
 
         # Act
-        result_df = service._convert_result_to_df(
-            sample_dq_result_passed, "stock_daily"
+        result_df = handler._convert_result_to_df(
+            sample_dq_result_passed,
+            "stock_daily",
         )
 
         # Assert
@@ -416,7 +439,7 @@ class TestConvertResultToDf:
     ) -> None:
         """单个问题多个样本转换为多行."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -424,8 +447,9 @@ class TestConvertResultToDf:
         )
 
         # Act
-        result_df = service._convert_result_to_df(
-            sample_dq_result_with_issues, "stock_daily"
+        result_df = handler._convert_result_to_df(
+            sample_dq_result_with_issues,
+            "stock_daily",
         )
 
         # Assert - 验证行数等于总样本数
@@ -444,7 +468,7 @@ class TestConvertResultToDf:
     ) -> None:
         """所有字段正确映射."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -452,8 +476,9 @@ class TestConvertResultToDf:
         )
 
         # Act
-        result_df = service._convert_result_to_df(
-            sample_dq_result_with_issues, "stock_daily"
+        result_df = handler._convert_result_to_df(
+            sample_dq_result_with_issues,
+            "stock_daily",
         )
 
         # Assert - 验证必需列存在
@@ -486,7 +511,7 @@ class TestSendAlerts:
     ) -> None:
         """告警记录为 warning 级别."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -494,7 +519,7 @@ class TestSendAlerts:
         )
 
         # Act - 调用 _send_alerts
-        service._send_alerts(sample_dq_result_with_issues, "20240101", "stock_daily")
+        handler._send_alerts(sample_dq_result_with_issues, "20240101", "stock_daily")
 
         # Assert - 验证方法完成（通过日志记录验证）
         # （实际验证需要检查日志输出）

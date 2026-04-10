@@ -5,7 +5,7 @@ Provides ``DerivedPublicationFacade`` for the publication lifecycle
 (shadow publish, compare, certify, promote, rollback, deprecate) and
 the ``build_certification_checks`` rule builder.
 
-Pure helper functions live in ``_publication_helpers``.
+Pure helper functions live in ``publication_helpers``.
 """
 
 from __future__ import annotations
@@ -38,7 +38,10 @@ from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotSer
 from ditto_kernel.specs import DerivedRole, MaterializationProfile
 
 from ditto_app.config import now_iso
-from ditto_app.process._publication_helpers import (
+from ditto_app.process.materialization.certification_rules import (
+    build_certification_checks,
+)
+from ditto_app.process.materialization.publication_helpers import (
     build_shadow_diff_report,
     build_shadow_traces,
     certification_payload,
@@ -46,7 +49,6 @@ from ditto_app.process._publication_helpers import (
     to_shadow_report_record,
     to_shadow_trace_record,
 )
-from ditto_app.process.certification_rules import build_certification_checks
 
 __all__ = [
     "DerivedPublicationFacade",

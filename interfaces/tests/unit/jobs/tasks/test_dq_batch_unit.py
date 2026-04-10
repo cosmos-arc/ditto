@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_app.process.quality_types import L3CheckResult
+from ditto_kernel.quality import L3CheckResult
 from pytest_mock import MockerFixture
 
 
@@ -22,7 +22,7 @@ def _mock_container(
     container = mocker.MagicMock()
 
     def _get_side_effect(cls):
-        if cls.__name__ == "L3BatchService":
+        if cls.__name__ == "QualityPatrolService":
             return l3_service
         if cls.__name__ == "MetadataQueryFacade":
             return metadata_service

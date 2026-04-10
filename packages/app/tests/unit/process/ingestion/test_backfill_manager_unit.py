@@ -1,7 +1,7 @@
 """Tests for BackfillManager."""
 
 import pytest
-from ditto_app.process.backfill_manager import BackfillManager
+from ditto_app.process.ingestion.backfill_manager import BackfillManager
 from ditto_data.models.ingestion import BackfillResult, IngestionResult
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing

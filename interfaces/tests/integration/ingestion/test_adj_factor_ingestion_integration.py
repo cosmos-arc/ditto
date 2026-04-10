@@ -12,8 +12,8 @@ class TestAdjFactorIngestion:
 
     def test_ingest_adj_factor_uses_source_ticker_column(self, mocker):
         """Test that adj_factor ingestion uses source_ticker column for ID mapping."""
-        from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-        from ditto_app.process.ingestion_coordinator import (
+        from ditto_app.process.ingestion.config import IngestionCoordinatorConfig
+        from ditto_app.process.ingestion.coordinator import (
             IngestionCoordinator,
             MarketServices,
         )
@@ -98,8 +98,8 @@ class TestAdjFactorIngestion:
 
     def test_ingest_fund_adj_uses_source_ticker_column(self, mocker):
         """Test that fund_adj ingestion uses source_ticker column for ID mapping."""
-        from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-        from ditto_app.process.ingestion_coordinator import (
+        from ditto_app.process.ingestion.config import IngestionCoordinatorConfig
+        from ditto_app.process.ingestion.coordinator import (
             IngestionCoordinator,
             MarketServices,
         )

@@ -5,10 +5,12 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_container, provide
-from ditto_app.process.materialization_orchestrator import (
+from ditto_app.process.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
-from ditto_app.process.publication_facade import DerivedPublicationFacade
+from ditto_app.process.materialization.publication_facade import (
+    DerivedPublicationFacade,
+)
 from ditto_app.query.derived import DerivedQueryFacade
 from ditto_data.di import (
     CapitalProvider,

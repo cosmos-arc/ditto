@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from ditto_app.process.strategy_run_service import StrategyFacade
+from ditto_app.process.execution.strategy_run_process import StrategyFacade
 
 from ditto_interfaces.registry.container import make_app_container
 from ditto_interfaces.registry.contexts.bundle import StrategyBundle

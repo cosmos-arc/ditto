@@ -2,9 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_app.process.quality import (
-    QualityReconciliationService,
-)
+from ditto_app.command.quality_reconciliation import ReconcileSourcesHandler
 from ditto_data.quality.golden import GoldenDatasetOptions, GoldenDatasetSpec
 
 
@@ -86,16 +84,16 @@ class TestGoldenDatasetFilter:
         )
 
     @pytest.fixture
-    def service_with_golden(
+    def handler_with_golden(
         self,
         mock_quality_engine: pytest.fixture,
         mock_tdx_source: pytest.fixture,
         mock_comparison_writer: pytest.fixture,
         mock_instrument_store: pytest.fixture,
         golden_spec: pytest.fixture,
-    ) -> QualityReconciliationService:
-        """带黄金数据集的对账服务."""
-        return QualityReconciliationService(
+    ) -> ReconcileSourcesHandler:
+        """带黄金数据集的对账 handler."""
+        return ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -104,15 +102,15 @@ class TestGoldenDatasetFilter:
         )
 
     @pytest.fixture
-    def service_without_golden(
+    def handler_without_golden(
         self,
         mock_quality_engine: pytest.fixture,
         mock_tdx_source: pytest.fixture,
         mock_comparison_writer: pytest.fixture,
         mock_instrument_store: pytest.fixture,
-    ) -> QualityReconciliationService:
-        """不带黄金数据集的对账服务."""
-        return QualityReconciliationService(
+    ) -> ReconcileSourcesHandler:
+        """不带黄金数据集的对账 handler."""
+        return ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -122,7 +120,7 @@ class TestGoldenDatasetFilter:
 
     def test_filter_applies_golden_dataset(
         self,
-        service_with_golden: QualityReconciliationService,
+        handler_with_golden: ReconcileSourcesHandler,
     ) -> None:
         """黄金数据集过滤生效."""
         df = pl.DataFrame(
@@ -130,10 +128,10 @@ class TestGoldenDatasetFilter:
                 "ticker": ["000001", "600000", "510300", "688981"],
                 "trade_date": ["20240101"] * 4,
                 "close": [10.0, 20.0, 4.0, 50.0],
-            }
+            },
         )
 
-        result = service_with_golden._apply_golden_dataset_filter(df)
+        result = handler_with_golden._apply_golden_dataset_filter(df)
 
         # 只保留 000001 和 510300
         assert result.height == 2
@@ -141,7 +139,7 @@ class TestGoldenDatasetFilter:
 
     def test_filter_disabled_when_no_config(
         self,
-        service_without_golden: QualityReconciliationService,
+        handler_without_golden: ReconcileSourcesHandler,
     ) -> None:
         """未配置不过滤."""
         df = pl.DataFrame(
@@ -149,17 +147,17 @@ class TestGoldenDatasetFilter:
                 "ticker": ["000001", "600000", "510300", "688981"],
                 "trade_date": ["20240101"] * 4,
                 "close": [10.0, 20.0, 4.0, 50.0],
-            }
+            },
         )
 
-        result = service_without_golden._apply_golden_dataset_filter(df)
+        result = handler_without_golden._apply_golden_dataset_filter(df)
 
         # 不过滤，保留所有
         assert result.height == 4
 
     def test_filter_returns_empty_when_no_match(
         self,
-        service_with_golden: QualityReconciliationService,
+        handler_with_golden: ReconcileSourcesHandler,
     ) -> None:
         """无匹配返回空."""
         df = pl.DataFrame(
@@ -167,10 +165,10 @@ class TestGoldenDatasetFilter:
                 "ticker": ["688981", "300750"],  # 不在黄金数据集中
                 "trade_date": ["20240101"] * 2,
                 "close": [50.0, 200.0],
-            }
+            },
         )
 
-        result = service_with_golden._apply_golden_dataset_filter(df)
+        result = handler_with_golden._apply_golden_dataset_filter(df)
 
         assert result.is_empty()
 
@@ -188,7 +186,7 @@ class TestGoldenDatasetFilter:
     ) -> None:
         """对账服务集成黄金数据集过滤."""
         # Arrange
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -198,7 +196,7 @@ class TestGoldenDatasetFilter:
 
         # Mock enrich_with_ticker 返回包含 ticker 的 DataFrame
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("ticker", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"]),
         )
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
@@ -209,11 +207,14 @@ class TestGoldenDatasetFilter:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        result = service.daily_reconciliation(
+        from ditto_app.command.quality_reconciliation import ReconcileSourcesCommand
+
+        cmd = ReconcileSourcesCommand(
             primary_df=sample_primary_df,
             trade_date="20240101",
             dataset="stock_daily",
         )
+        result = handler.handle(cmd)
 
         # Assert
         assert result.passed is True
@@ -240,7 +241,7 @@ class TestGoldenDatasetFilter:
             options=GoldenDatasetOptions(enabled=True),
         )
 
-        service = QualityReconciliationService(
+        handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
@@ -255,7 +256,7 @@ class TestGoldenDatasetFilter:
                 "source_ticker": ["600000.SH", "510300.SH"],
                 "trade_date": ["20240101", "20240101"],
                 "close": [20.0, 4.0],
-            }
+            },
         )
 
         # Mock enrich_with_ticker 返回 ticker
@@ -263,11 +264,14 @@ class TestGoldenDatasetFilter:
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
         # Act
-        result = service.daily_reconciliation(
+        from ditto_app.command.quality_reconciliation import ReconcileSourcesCommand
+
+        cmd = ReconcileSourcesCommand(
             primary_df=primary_df,
             trade_date="20240101",
             dataset="stock_daily",
         )
+        result = handler.handle(cmd)
 
         # Assert - 跳过对账
         assert result.passed is True

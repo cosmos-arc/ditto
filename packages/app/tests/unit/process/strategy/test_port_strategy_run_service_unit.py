@@ -7,13 +7,13 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_app.process.strategy_run_service import (
+from ditto_app.process.execution.strategy_input import StrategyInputAssembler
+from ditto_app.process.execution.strategy_run_process import (
     StrategyRunMode,
     StrategyRunResult,
     StrategyRunService,
     StrategyRunServiceConfig,
 )
-from ditto_app.process.strategy_types import StrategyInputAssembler
 from ditto_data.models.strategy import StrategyArtifactRecord
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,

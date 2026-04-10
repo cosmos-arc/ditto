@@ -14,10 +14,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from ditto_app.process.quality import QualityEngineProtocol
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_data.quality import QualityEngine
+from ditto_data.quality.protocols import QualityEngineProtocol
 
 from ditto_interfaces.registry.container import make_app_container
 

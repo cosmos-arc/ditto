@@ -5,6 +5,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ditto_app.command.quality_check import CheckDataQualityHandler
 
 from ditto_data.models import Source
 from ditto_data.services import (
@@ -21,12 +25,11 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
 from ditto_infra.foundation import logger
 
-from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-from ditto_app.process.ingestion_coordinator import (
+from ditto_app.process.ingestion.config import IngestionCoordinatorConfig
+from ditto_app.process.ingestion.coordinator import (
     IngestionCoordinator,
     MarketServices,
 )
-from ditto_app.process.quality import QualityService
 
 
 @dataclass(frozen=True)
@@ -49,7 +52,7 @@ def create_coordinator(
     source_name: str | Source,
     *,
     ingestion_cursor_service: IngestionCursorService | None = None,
-    quality_service: QualityService | None = None,
+    quality_checker: CheckDataQualityHandler | None = None,
     freeze_service: FreezeService | None = None,
 ) -> Iterator[IngestionCoordinator]:
     """
@@ -59,7 +62,7 @@ def create_coordinator(
         services: 协调器所需服务依赖.
         source_name: 数据源名称.
         ingestion_cursor_service: IngestionCursorService 实例（可选）.
-        quality_service: QualityService 实例（可选）.
+        quality_checker: CheckDataQualityHandler 实例（可选）.
         freeze_service: FreezeService 实例（可选）.
 
     Yields:
@@ -103,7 +106,7 @@ def create_coordinator(
             source_name=source_key.value,
             ingestion_log_service=services.ingestion_log_service,
             ingestion_cursor_service=ingestion_cursor_service,
-            quality_service=quality_service,
+            quality_checker=quality_checker,
             freeze_service=freeze_service,
             fred_source=fred_source,
         ),

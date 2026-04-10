@@ -34,19 +34,17 @@ from ditto_app.builders._resolution import (
     resolve_instrument_display,
 )
 from ditto_app.builders.runtime_builder import StrategyRuntimeBuilder
-from ditto_app.process.backtest_service import (
+from ditto_app.process.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
-from ditto_app.process.strategy_run_service import (
+from ditto_app.process.execution.strategy_input import StrategyInputAssembler
+from ditto_app.process.execution.strategy_run_process import (
     StrategyRunService,
     StrategyRunServiceConfig,
 )
-from ditto_app.process.strategy_types import (
-    RunLifecycleService,
-    StrategyInputAssembler,
-)
+from ditto_app.process.execution.strategy_types import RunLifecycleService
 
 __all__ = [
     "BacktestRuntimeBuilder",

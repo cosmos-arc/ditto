@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_app.process._coordinator_constants import (
+from ditto_app.process.ingestion.coordinator_constants import (
     MARKET_INDEX_CODES,
     STYLE_INDEX_CODES,
     SUPPORTED_INSTRUMENT_DATASETS,

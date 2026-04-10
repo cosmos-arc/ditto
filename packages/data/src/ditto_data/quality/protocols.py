@@ -1,4 +1,4 @@
-"""质量服务 — 协议与领域模型定义."""
+"""数据质量 Protocol 定义 — 描述 data 层质量服务的契约接口."""
 
 from __future__ import annotations
 
@@ -7,60 +7,17 @@ __all__ = [
     "InstrumentStoreProtocol",
     "QualityEngineProtocol",
     "QuarantineWriterProtocol",
-    "ReconciliationResult",
     "TdxSourceProtocol",
 ]
 
-from dataclasses import dataclass
 from typing import Any, Literal, Protocol
 
 import polars as pl
 from ditto_kernel.quality import DQResult
 
-# ---------------------------------------------------------------------------
-# 领域模型
-# ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class ReconciliationResult:
-    """对账结果（强类型）."""
-
-    trade_date: str
-    dataset: str
-    passed: bool
-    issue_count: int
-    skipped: bool = False
-    skip_reason: str | None = None
-    error: str | None = None
-
-    @property
-    def has_error(self) -> bool:
-        """是否存在异常."""
-        return self.error is not None
-
-    def to_dict(self) -> dict[str, object]:
-        """转换为字典（兼容旧代码）."""
-        result: dict[str, object] = {
-            "trade_date": self.trade_date,
-            "dataset": self.dataset,
-            "passed": self.passed,
-            "issue_count": self.issue_count,
-        }
-        if self.skipped and self.skip_reason:
-            result["skipped"] = self.skip_reason
-        if self.error:
-            result["error"] = self.error
-        return result
-
-
-# ---------------------------------------------------------------------------
-# 协议定义
-# ---------------------------------------------------------------------------
-
 
 class QualityEngineProtocol(Protocol):
-    """质量引擎协议 — 供 interfaces 层依赖注入使用。"""
+    """质量引擎协议."""
 
     def check(
         self,
@@ -69,7 +26,7 @@ class QualityEngineProtocol(Protocol):
         levels: list[Literal["l1", "l2"]] | None = None,
         context: dict[str, Any] | None = None,
     ) -> DQResult:
-        """执行写入时 DQ 检查。"""
+        """执行写入时 DQ 检查."""
         ...
 
     def check_cross_source(
@@ -79,7 +36,7 @@ class QualityEngineProtocol(Protocol):
         dataset: str,
         context: dict[str, Any] | None = None,
     ) -> DQResult:
-        """执行跨源对比检查。"""
+        """执行跨源对比检查."""
         ...
 
     def check_statistical(
@@ -89,12 +46,12 @@ class QualityEngineProtocol(Protocol):
         historical: pl.DataFrame | None = None,
         calendar: pl.DataFrame | None = None,
     ) -> DQResult:
-        """执行统计类异常检查。"""
+        """执行统计类异常检查."""
         ...
 
 
 class InstrumentStoreProtocol(Protocol):
-    """证券信息补充依赖协议."""
+    """证券信息补充协议 — instrument_id → ticker 转换."""
 
     def enrich_with_ticker(self, df: pl.DataFrame) -> pl.DataFrame:
         """从 instrument_id 添加 ticker 列."""
@@ -102,7 +59,7 @@ class InstrumentStoreProtocol(Protocol):
 
 
 class TdxSourceProtocol(Protocol):
-    """通达信数据源依赖协议."""
+    """通达信数据源协议."""
 
     def fetch_stock_daily_bars(
         self, tickers: list[str], trade_date: str
@@ -117,12 +74,12 @@ class ComparisonStoreProtocol(Protocol):
     def write_comparison(
         self, trade_date: str, comparison_df: pl.DataFrame, dataset: str
     ) -> None:
-        """持久化对比数据。"""
+        """持久化对比数据."""
         ...
 
 
 class QuarantineWriterProtocol(Protocol):
-    """隔离写入协议 — 供 App 层依赖注入使用。"""
+    """隔离写入协议."""
 
     def save_failed_data(
         self,
@@ -132,5 +89,5 @@ class QuarantineWriterProtocol(Protocol):
         failed_data: pl.DataFrame,
         trade_date: str | None = None,
     ) -> int:
-        """持久化质量失败数据。"""
+        """持久化质量失败数据."""
         ...

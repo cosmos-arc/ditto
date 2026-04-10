@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from ditto_app.process.backfill_manager import BackfillManager
-from ditto_app.process.coordinator_factory import (
+from ditto_app.command.quality_check import CheckDataQualityHandler
+from ditto_app.process.ingestion.backfill_manager import BackfillManager
+from ditto_app.process.ingestion.coordinator_factory import (
     CoordinatorServices,
     create_coordinator,
 )
-from ditto_app.process.quality import QualityService
-from ditto_app.process.retry_manager import RetryManager
+from ditto_app.process.ingestion.retry_manager import RetryManager
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_data.services import (
     FreezeService,
@@ -64,7 +64,7 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
         ingestion_log_service = container.get(IngestionLogService)
         ingestion_cursor_service = container.get(IngestionCursorService)
         exchange_transformers = container.get(ExchangeTransformers)
-        quality_service = container.get(QualityService)
+        quality_checker = container.get(CheckDataQualityHandler)
         freeze_service = container.get(FreezeService)
 
         # 创建协调器
@@ -81,7 +81,7 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
             ),
             source_name=source,
             ingestion_cursor_service=ingestion_cursor_service,
-            quality_service=quality_service,
+            quality_checker=quality_checker,
             freeze_service=freeze_service,
         ) as coordinator:
             # 创建管理器

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 import orjson
-from ditto_app.process.backtest_serialization import serialize_report
+from ditto_app.process.execution.backtest_serialization import serialize_report
 from ditto_engine.accounting.fills import FillEvent
 from ditto_engine.backtest.audit.records import PreTradeDecisionRecord, RiskScanRecord
 from ditto_engine.backtest.statistics import (

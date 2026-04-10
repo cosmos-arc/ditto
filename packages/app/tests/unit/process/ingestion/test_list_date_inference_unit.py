@@ -4,7 +4,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_app.process.list_date_inference import (
+from ditto_app.process.ingestion.list_date_inference import (
     API_LIMITS,
     EARLIEST_LIST_DATE_INFERENCE,
     ListDateInferenceService,

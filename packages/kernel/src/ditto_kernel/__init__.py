@@ -29,7 +29,14 @@ from ditto_kernel.exceptions import (
     NoIdentifierProvidedError,
 )
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_kernel.quality import (
+    DQIssue,
+    DQLevel,
+    DQResult,
+    DQSeverity,
+    L3CheckResult,
+    ReconciliationResult,
+)
 from ditto_kernel.research import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
@@ -71,12 +78,14 @@ __all__ = [
     "IdentifierError",
     "InstrumentId",
     "InstrumentIngestParams",
+    "L3CheckResult",
     "MacroCategory",
     "MacroFrequency",
     "MaterializationProfile",
     "NoIdentifierProvidedError",
     "OrderSide",
     "RealtimeClock",
+    "ReconciliationResult",
     "ResearchDatasetSnapshotRecord",
     "ResearchDatasetSpecRecord",
     "ResearchSpineSnapshotRecord",

@@ -1,8 +1,8 @@
 """
-策略运行共享类型 — Process 模块.
+策略输入组装 + 产物序列化 — Process 模块.
 
-包含所有策略相关的协议、DTO、枚举、配置以及与具体服务无关的工具类。
-BacktestService 与 StrategyRunService 共用此模块中的类型定义。
+包含 StrategyInputAssembler（从 Slice 组装 StrategyInputBundle）以及
+将 BacktestReport 产物序列化到磁盘的工具函数。
 """
 
 from __future__ import annotations
@@ -11,7 +11,6 @@ import dataclasses
 import tempfile
 from dataclasses import replace
 from pathlib import Path
-from typing import Protocol, runtime_checkable
 
 import orjson
 import polars as pl
@@ -26,46 +25,13 @@ from ditto_engine.backtest.statistics import (
 from ditto_infra.foundation.util.io import atomic_bytes_write, atomic_write
 from ditto_kernel.identity import InstrumentId
 
-from ditto_app.process.backtest_serialization import serialize_report
+from ditto_app.process.execution.backtest_serialization import serialize_report
 
 __all__ = [
-    "RunLifecycleService",
     "StrategyInputAssembler",
     "enrich_record_with_symbol",
     "write_backtest_artifacts",
 ]
-
-
-# ===========================================================================
-# RunLifecycleService — 策略运行生命周期协议
-# ===========================================================================
-
-
-@runtime_checkable
-class RunLifecycleService(Protocol):
-    """策略运行生命周期协议。"""
-
-    def create_run(
-        self,
-        run_id: str,
-        strategy_id: str,
-        strategy_version: str = "",
-        mode: str = "backtest",
-    ) -> None:
-        """创建运行记录。"""
-        ...
-
-    def mark_running(self, run_id: str) -> bool:
-        """标记运行为 running。"""
-        ...
-
-    def mark_completed(self, run_id: str) -> bool:
-        """标记运行为 completed。"""
-        ...
-
-    def mark_failed(self, run_id: str, error_message: str = "") -> bool:
-        """标记运行为 failed。"""
-        ...
 
 
 # ===========================================================================

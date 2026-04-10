@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 import pytest
-from ditto_app.process.strategy_types import StrategyInputAssembler
+from ditto_app.process.execution.strategy_input import StrategyInputAssembler
 from ditto_engine.backtest.data_feed import MarketSnapshot, Slice
 
 # ---------------------------------------------------------------------------

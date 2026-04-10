@@ -29,7 +29,7 @@ from ditto_data.models.derived import DerivedInvalidationRecord
 from ditto_data.services import DerivedCatalogService
 from ditto_infra.foundation import logger
 
-from ditto_app.process.materialization_orchestrator import (
+from ditto_app.process.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
 

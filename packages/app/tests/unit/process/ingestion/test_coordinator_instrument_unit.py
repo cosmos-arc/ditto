@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-from ditto_app.process.ingestion_coordinator import (
+from ditto_app.process.ingestion.config import IngestionCoordinatorConfig
+from ditto_app.process.ingestion.coordinator import (
     IngestionCoordinator,
     MarketServices,
 )
@@ -401,7 +401,7 @@ class TestInferExchangeSuffix:
 
     @staticmethod
     def _import():
-        from ditto_app.process.auto_init import infer_exchange_suffix
+        from ditto_app.process.ingestion.auto_init import infer_exchange_suffix
 
         return infer_exchange_suffix
 

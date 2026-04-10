@@ -5,11 +5,15 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from ditto_app.process.cascade_orchestrator import InvalidationCascadeOrchestrator
-from ditto_app.process.materialization_orchestrator import (
+from ditto_app.process.materialization.cascade_orchestrator import (
+    InvalidationCascadeOrchestrator,
+)
+from ditto_app.process.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
-from ditto_app.process.publication_facade import DerivedPublicationFacade
+from ditto_app.process.materialization.publication_facade import (
+    DerivedPublicationFacade,
+)
 from ditto_app.query.research import ResearchDatasetFacade
 
 from ditto_interfaces.registry.container import make_app_container

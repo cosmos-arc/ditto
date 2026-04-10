@@ -15,7 +15,9 @@ from ditto_analytics.materialization.models import (
     DerivedVersionStatus,
 )
 from ditto_analytics.publication_safety import CertificationStage
-from ditto_app.process.publication_facade import DerivedPublicationFacade
+from ditto_app.process.materialization.publication_facade import (
+    DerivedPublicationFacade,
+)
 from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRuntimeStores,
 )

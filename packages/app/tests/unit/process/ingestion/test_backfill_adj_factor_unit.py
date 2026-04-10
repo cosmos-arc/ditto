@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_app.process.ingestion_coordinator import (
+from ditto_app.process.ingestion.coordinator import (
     IngestionCoordinator,
     MarketServices,
 )

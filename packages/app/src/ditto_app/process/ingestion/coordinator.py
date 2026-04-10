@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Literal, NamedTuple, cast
+from typing import TYPE_CHECKING, Literal, NamedTuple, cast
+
+if TYPE_CHECKING:
+    pass
 
 import httpx
 import polars as pl
@@ -24,27 +27,27 @@ from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger
 from ditto_kernel.types import InstrumentIngestParams
 
-from ditto_app.process._commodity_fetcher import (
+from ditto_app.process.ingestion.auto_init import resolve_identifier_with_auto_init
+from ditto_app.process.ingestion.backfill_handler import BackfillContext
+from ditto_app.process.ingestion.backfill_handler import (
+    backfill_adj_factor as _backfill_adj_factor,
+)
+from ditto_app.process.ingestion.commodity_fetcher import (
     fetch_commodity_daily as _fetch_commodity_daily,
 )
-from ditto_app.process._coordinator_constants import (
+from ditto_app.process.ingestion.config import IngestionCoordinatorConfig
+from ditto_app.process.ingestion.coordinator_constants import (
     SUPPORTED_INSTRUMENT_DATASETS,
     get_all_index_codes,
 )
-from ditto_app.process._fetch_handlers import (
+from ditto_app.process.ingestion.data_writer import IngestionDataWriter
+from ditto_app.process.ingestion.fetch_handlers import (
     build_daily_fetch_handlers,
     build_instrument_fetch_handlers,
 )
-from ditto_app.process.auto_init import resolve_identifier_with_auto_init
-from ditto_app.process.backfill_handler import BackfillContext
-from ditto_app.process.backfill_handler import (
-    backfill_adj_factor as _backfill_adj_factor,
-)
-from ditto_app.process.data_writer import IngestionDataWriter
-from ditto_app.process.ingestion_config import IngestionCoordinatorConfig
-from ditto_app.process.list_date_inference import ListDateInferenceService
-from ditto_app.process.metadata_manager import MetadataManager
-from ditto_app.process.result_handler import IngestionResultHandler
+from ditto_app.process.ingestion.list_date_inference import ListDateInferenceService
+from ditto_app.process.ingestion.metadata_manager import MetadataManager
+from ditto_app.process.ingestion.result_handler import IngestionResultHandler
 
 __all__ = [
     "IngestionCoordinator",
@@ -109,7 +112,7 @@ class IngestionCoordinator:
         self._fred_source = cfg.fred_source
         self._ingestion_log_service = cfg.ingestion_log_service
         self._ingestion_cursor_service = cfg.ingestion_cursor_service
-        self._quality_service = cfg.quality_service
+        self._quality_checker = cfg.quality_checker
         self._freeze_service = cfg.freeze_service
 
         self._metadata_manager = MetadataManager(cfg.ingestion_log_service)
@@ -136,7 +139,7 @@ class IngestionCoordinator:
         self._index_codes_cache: list[str] | None = None
 
     def _fetch_commodity_daily(self, trade_date: str) -> pl.DataFrame:
-        """获取商品数据（原油、贵金属、VIX），委托至 ``_commodity_fetcher``。"""
+        """获取商品数据（原油、贵金属、VIX），委托至 ``commodity_fetcher``。"""
         return _fetch_commodity_daily(
             trade_date,
             primary_source=self._source,
@@ -380,11 +383,17 @@ class IngestionCoordinator:
             return self._result_handler.handle_empty_data(dataset, trade_date)
 
         # DQ 质量检查
-        if self._quality_service is not None:
-            checked_df, should_block = self._quality_service.check_and_quarantine(
-                df=df,
-                dataset=dataset,
-                context={"trade_date": trade_date},
+        if self._quality_checker is not None:
+            from ditto_app.command.quality_check import (  # noqa: PLC0415
+                CheckDataQualityCommand,
+            )
+
+            checked_df, should_block = self._quality_checker.handle(
+                CheckDataQualityCommand(
+                    df=df,
+                    dataset=dataset,
+                    context={"trade_date": trade_date},
+                ),
             )
             if should_block:
                 return self._result_handler.handle_dq_blocked(

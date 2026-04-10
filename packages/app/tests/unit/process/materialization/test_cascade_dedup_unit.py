@@ -10,7 +10,7 @@ from ditto_analytics.materialization import DerivedMaterializationResult
 from ditto_analytics.materialization.models import (
     DerivedRunStatus,
 )
-from ditto_app.process.cascade_orchestrator import (
+from ditto_app.process.materialization.cascade_orchestrator import (
     CascadeStatus,
     InvalidationCascadeOrchestrator,
 )

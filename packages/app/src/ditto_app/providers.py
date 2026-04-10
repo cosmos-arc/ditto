@@ -1,7 +1,8 @@
 """
 App 层 DI Provider — 应用编排服务注册。
 
-三个 Provider 按职责分离，对应 R8 互斥规则：
+四个 Provider 按职责分离，对应 R8 互斥规则：
+- AppCommandProvider: Command Handler 注册（command 模块）
 - AppQueryProvider: 只读查询服务（query 模块）
 - AppProcessProvider: 编排/物化/质量服务（process 模块）
 - AppBuilderFactory: 策略运行时装配服务（builders 模块）
@@ -62,16 +63,25 @@ from ditto_app.builders import (
 )
 
 # ---------------------------------------------------------------------------
+# App Command 层
+# ---------------------------------------------------------------------------
+from ditto_app.command.quality_check import CheckDataQualityHandler
+from ditto_app.process.execution.strategy_run_process import StrategyFacade
+
+# ---------------------------------------------------------------------------
 # App Process 层
 # ---------------------------------------------------------------------------
-from ditto_app.process.cascade_orchestrator import InvalidationCascadeOrchestrator
-from ditto_app.process.materialization_orchestrator import (
+from ditto_app.process.materialization.cascade_orchestrator import (
+    InvalidationCascadeOrchestrator,
+)
+from ditto_app.process.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
     RuntimeDerivedInputProvider,
 )
-from ditto_app.process.publication_facade import DerivedPublicationFacade
-from ditto_app.process.quality import L3BatchService, QualityService
-from ditto_app.process.strategy_run_service import StrategyFacade
+from ditto_app.process.materialization.publication_facade import (
+    DerivedPublicationFacade,
+)
+from ditto_app.process.quality import QualityPatrolService
 
 # ---------------------------------------------------------------------------
 # App Query 层
@@ -90,10 +100,34 @@ from ditto_app.query.source import SourceQueryFacade
 
 __all__ = [
     "AppBuilderFactory",
+    "AppCommandProvider",
     "AppProcessProvider",
     "AppQueryProvider",
     "get_app_providers",
 ]
+
+
+# ---------------------------------------------------------------------------
+# AppCommandProvider — Command Handler 注册
+# ---------------------------------------------------------------------------
+
+
+class AppCommandProvider(Provider):
+    """App Command 层 DI Provider — Command Handler 注册。"""
+
+    scope = Scope.APP
+
+    @provide
+    def check_data_quality_handler(
+        self,
+        dq_engine: QualityEngine,
+        quality_record_service: QualityRecordService,
+    ) -> CheckDataQualityHandler:
+        """数据质量检查 Command Handler."""
+        return CheckDataQualityHandler(
+            engine=dq_engine,
+            quarantine_writer=quality_record_service,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -299,26 +333,14 @@ class AppProcessProvider(Provider):
         )
 
     @provide
-    def quality_service(
-        self,
-        dq_engine: QualityEngine,
-        quality_record_service: QualityRecordService,
-    ) -> QualityService:
-        """写入时 DQ 质量服务."""
-        return QualityService(
-            engine=dq_engine,
-            quarantine_writer=quality_record_service,
-        )
-
-    @provide
-    def l3_batch_service(
+    def quality_patrol_service(
         self,
         dq_engine: QualityEngine,
         market_facade: MarketQueryFacade,
         metadata_facade: MetadataQueryFacade,
-    ) -> L3BatchService:
-        """L3 批量统计检查服务."""
-        return L3BatchService(
+    ) -> QualityPatrolService:
+        """质量巡检服务（原 L3 批量统计检查）."""
+        return QualityPatrolService(
             engine=dq_engine,
             market_facade=market_facade,
             metadata_facade=metadata_facade,
@@ -421,6 +443,7 @@ class AppBuilderFactory(Provider):
 def get_app_providers() -> list[Provider]:
     """返回 App 层所有 Provider。"""
     return [
+        AppCommandProvider(),
         AppQueryProvider(),
         AppProcessProvider(),
         AppBuilderFactory(),

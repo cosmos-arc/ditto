@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import orjson
 import polars as pl
 import pytest
-from ditto_app.process.strategy_types import (
+from ditto_app.process.execution.strategy_input import (
     enrich_record_with_symbol,
     write_backtest_artifacts,
 )
@@ -118,7 +118,7 @@ class TestWriteBacktestArtifacts:
             engine_version="0.2.0",
         )
 
-    @patch("ditto_app.process.strategy_types.serialize_report")
+    @patch("ditto_app.process.execution.strategy_input.serialize_report")
     def test_returns_backtest_report_path(
         self,
         mock_serialize_report: MagicMock,
@@ -136,7 +136,7 @@ class TestWriteBacktestArtifacts:
         assert "backtest_report" in result
         assert result["backtest_report"].name == "backtest_report.json"
 
-    @patch("ditto_app.process.strategy_types.serialize_report")
+    @patch("ditto_app.process.execution.strategy_input.serialize_report")
     def test_creates_output_dir_when_specified(
         self,
         mock_serialize_report: MagicMock,
@@ -153,7 +153,7 @@ class TestWriteBacktestArtifacts:
         assert output_dir.exists()
         assert (output_dir / "backtest_report.json").exists()
 
-    @patch("ditto_app.process.strategy_types.serialize_report")
+    @patch("ditto_app.process.execution.strategy_input.serialize_report")
     def test_uses_temp_dir_when_no_output_dir(
         self,
         mock_serialize_report: MagicMock,
@@ -164,14 +164,14 @@ class TestWriteBacktestArtifacts:
         mock_report.run_id = "run-xyz"
         mock_serialize_report.return_value = _mock_serialize_report()
 
-        with patch("ditto_app.process.strategy_types.tempfile") as mock_tmp:
+        with patch("ditto_app.process.execution.strategy_input.tempfile") as mock_tmp:
             mock_tmp.gettempdir.return_value = str(tmp_path)
             write_backtest_artifacts(mock_report)
 
         output_dir = tmp_path / "ditto" / "run-xyz"
         assert output_dir.exists()
 
-    @patch("ditto_app.process.strategy_types.serialize_report")
+    @patch("ditto_app.process.execution.strategy_input.serialize_report")
     def test_propagates_serialize_error(
         self,
         mock_serialize_report: MagicMock,
@@ -184,7 +184,7 @@ class TestWriteBacktestArtifacts:
         with pytest.raises(OSError, match="disk full"):
             write_backtest_artifacts(mock_report)
 
-    @patch("ditto_app.process.strategy_types.serialize_report")
+    @patch("ditto_app.process.execution.strategy_input.serialize_report")
     def test_collects_parquet_artifacts(
         self,
         mock_serialize_report: MagicMock,
@@ -202,7 +202,7 @@ class TestWriteBacktestArtifacts:
         assert "nav" in result
         assert result["nav"].name == "nav.parquet"
 
-    @patch("ditto_app.process.strategy_types.serialize_report")
+    @patch("ditto_app.process.execution.strategy_input.serialize_report")
     def test_writes_manifest_json_with_artifact_refs(
         self,
         mock_serialize_report: MagicMock,
@@ -229,7 +229,7 @@ class TestWriteBacktestArtifacts:
         assert parsed["parameter_overrides"] == ["top_k=3"]
         assert "manifest.json" in parsed["artifacts"]
 
-    @patch("ditto_app.process.strategy_types.serialize_report")
+    @patch("ditto_app.process.execution.strategy_input.serialize_report")
     def test_display_map_injects_instrument_symbol_into_risk_log(
         self,
         mock_serialize_report: MagicMock,
@@ -269,7 +269,7 @@ class TestWriteBacktestArtifacts:
         assert records[0]["instrument_id"] == 2_000_001
         assert records[0]["instrument_symbol"] == "510300.SH"
 
-    @patch("ditto_app.process.strategy_types.serialize_report")
+    @patch("ditto_app.process.execution.strategy_input.serialize_report")
     def test_no_display_map_skips_instrument_symbol(
         self,
         mock_serialize_report: MagicMock,

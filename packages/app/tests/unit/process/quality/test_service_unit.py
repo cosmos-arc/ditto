@@ -1,39 +1,48 @@
-"""Tests for QualityService."""
+"""Tests for CheckDataQualityHandler（原 QualityService 逻辑）."""
 
 import polars as pl
 import pytest
-from ditto_app.process.quality import QualityService
+from ditto_app.command.quality_check import CheckDataQualityHandler
 
 
 @pytest.mark.unit
-class TestQualityServiceInit:
-    """测试 QualityService 初始化."""
+class TestCheckDataQualityHandlerInit:
+    """测试 CheckDataQualityHandler 初始化."""
 
     def test_init(self, mock_quality_engine) -> None:
         """正常初始化."""
-        # Act
-        service = QualityService(engine=mock_quality_engine)
+        handler = CheckDataQualityHandler(engine=mock_quality_engine)
+        assert handler._engine is mock_quality_engine
 
-        # Assert
-        assert service._engine is mock_quality_engine
+    def test_init_with_quarantine_writer(
+        self, mock_quality_engine, mock_quarantine_writer
+    ) -> None:
+        """带 quarantine_writer 初始化."""
+        handler = CheckDataQualityHandler(
+            engine=mock_quality_engine, quarantine_writer=mock_quarantine_writer
+        )
+        assert handler._engine is mock_quality_engine
+        assert handler._quarantine_writer is mock_quarantine_writer
 
 
 @pytest.mark.unit
 class TestCheckAndQuarantine:
-    """测试 check_and_quarantine 方法."""
+    """测试 handle 方法（check_and_quarantine 逻辑）."""
 
     def test_no_issues_returns_original_df_and_false_block(
         self, mock_quality_engine, sample_primary_df, sample_dq_result_passed
     ) -> None:
         """无质量问题，返回原数据且不阻断."""
         # Arrange
-        service = QualityService(engine=mock_quality_engine)
+        handler = CheckDataQualityHandler(engine=mock_quality_engine)
         mock_quality_engine.check.return_value = sample_dq_result_passed
 
+        from ditto_app.command.quality_check import CheckDataQualityCommand
+
+        cmd = CheckDataQualityCommand(df=sample_primary_df, dataset="stock_daily")
+
         # Act
-        result_df, should_block = service.check_and_quarantine(
-            df=sample_primary_df, dataset="stock_daily"
-        )
+        result_df, should_block = handler.handle(cmd)
 
         # Assert
         assert result_df.equals(sample_primary_df)
@@ -55,17 +64,19 @@ class TestCheckAndQuarantine:
         # Arrange
         from ditto_kernel.quality import DQResult
 
-        service = QualityService(engine=mock_quality_engine)
+        handler = CheckDataQualityHandler(engine=mock_quality_engine)
         mock_quality_engine.check.return_value = DQResult(
             dataset="stock_daily",
             passed=True,
             issues=[sample_dq_issue_warning],
         )
 
+        from ditto_app.command.quality_check import CheckDataQualityCommand
+
+        cmd = CheckDataQualityCommand(df=sample_primary_df, dataset="stock_daily")
+
         # Act
-        result_df, should_block = service.check_and_quarantine(
-            df=sample_primary_df, dataset="stock_daily"
-        )
+        result_df, should_block = handler.handle(cmd)
 
         # Assert
         assert result_df.equals(sample_primary_df)
@@ -82,17 +93,19 @@ class TestCheckAndQuarantine:
         # Arrange
         from ditto_kernel.quality import DQResult
 
-        service = QualityService(engine=mock_quality_engine)
+        handler = CheckDataQualityHandler(engine=mock_quality_engine)
         mock_quality_engine.check.return_value = DQResult(
             dataset="stock_daily",
             passed=False,
             issues=[sample_dq_issue_error],
         )
 
+        from ditto_app.command.quality_check import CheckDataQualityCommand
+
+        cmd = CheckDataQualityCommand(df=sample_primary_df, dataset="stock_daily")
+
         # Act
-        result_df, should_block = service.check_and_quarantine(
-            df=sample_primary_df, dataset="stock_daily"
-        )
+        result_df, should_block = handler.handle(cmd)
 
         # Assert
         assert result_df.equals(sample_primary_df)
@@ -102,12 +115,14 @@ class TestCheckAndQuarantine:
         """空 DataFrame 处理."""
         # Arrange
         empty_df = pl.DataFrame()
-        service = QualityService(engine=mock_quality_engine)
+        handler = CheckDataQualityHandler(engine=mock_quality_engine)
+
+        from ditto_app.command.quality_check import CheckDataQualityCommand
+
+        cmd = CheckDataQualityCommand(df=empty_df, dataset="stock_daily")
 
         # Act
-        result_df, should_block = service.check_and_quarantine(
-            df=empty_df, dataset="stock_daily"
-        )
+        result_df, should_block = handler.handle(cmd)
 
         # Assert
         assert result_df.equals(empty_df)
@@ -119,13 +134,17 @@ class TestCheckAndQuarantine:
     ) -> None:
         """传递 context 参数给引擎."""
         # Arrange
-        service = QualityService(engine=mock_quality_engine)
+        handler = CheckDataQualityHandler(engine=mock_quality_engine)
         context = {"reference_values": [1000001, 1000002]}
 
-        # Act
-        _result_df, _should_block = service.check_and_quarantine(
+        from ditto_app.command.quality_check import CheckDataQualityCommand
+
+        cmd = CheckDataQualityCommand(
             df=sample_primary_df, dataset="stock_daily", context=context
         )
+
+        # Act
+        handler.handle(cmd)
 
         # Assert
         mock_quality_engine.check.assert_called_once_with(
@@ -148,14 +167,17 @@ class TestQuarantineData:
     ) -> None:
         """隔离数据时记录日志."""
         # Arrange
-        service = QualityService(engine=mock_quality_engine)
+        handler = CheckDataQualityHandler(engine=mock_quality_engine)
         mock_quality_engine.check.return_value = sample_dq_result_with_issues
 
-        # Act
-        service.check_and_quarantine(df=sample_primary_df, dataset="stock_daily")
+        from ditto_app.command.quality_check import CheckDataQualityCommand
 
-        # Assert - 验证 quarantine 被调用
-        # （通过验证日志记录来间接验证）
+        cmd = CheckDataQualityCommand(df=sample_primary_df, dataset="stock_daily")
+
+        # Act
+        handler.handle(cmd)
+
+        # Assert - 验证 quarantine 被调用（通过验证日志记录来间接验证）
         mock_quality_engine.check.assert_called_once()
 
     def test_quarantine_saves_failed_data(
@@ -167,13 +189,17 @@ class TestQuarantineData:
     ) -> None:
         """测试 quarantine_writer.save_failed_data 被调用."""
         # Arrange
-        service = QualityService(
+        handler = CheckDataQualityHandler(
             engine=mock_quality_engine, quarantine_writer=mock_quarantine_writer
         )
         mock_quality_engine.check.return_value = sample_dq_result_with_issues
 
+        from ditto_app.command.quality_check import CheckDataQualityCommand
+
+        cmd = CheckDataQualityCommand(df=sample_primary_df, dataset="stock_daily")
+
         # Act
-        service.check_and_quarantine(df=sample_primary_df, dataset="stock_daily")
+        handler.handle(cmd)
 
         # Assert - 验证 quarantine store 被调用
         # 每个 issue 应该调用一次 save_failed_data

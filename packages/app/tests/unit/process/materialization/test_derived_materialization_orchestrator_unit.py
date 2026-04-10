@@ -17,11 +17,11 @@ from ditto_analytics.materialization.models import (
     DerivedVersionStatus,
 )
 from ditto_analytics.publication_safety import CompatibilityManifest
-from ditto_app.process.materialization_orchestrator import (
+from ditto_app.process.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
     RuntimeDerivedInputProvider,
 )
-from ditto_app.process.materialization_types import InMemoryDerivedInputProvider
+from ditto_app.process.materialization.types import InMemoryDerivedInputProvider
 from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRuntimeStores,
 )

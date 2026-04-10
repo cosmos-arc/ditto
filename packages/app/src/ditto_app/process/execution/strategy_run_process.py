@@ -26,15 +26,13 @@ from ditto_engine.alpha.validation import validate_spec_params
 from ditto_engine.backtest.data_feed import Slice
 from ditto_engine.backtest.statistics import BacktestReport
 
-from ditto_app.process.backtest_service import (
+from ditto_app.process.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
-from ditto_app.process.strategy_types import (
-    RunLifecycleService,
-    StrategyInputAssembler,
-)
+from ditto_app.process.execution.strategy_input import StrategyInputAssembler
+from ditto_app.process.execution.strategy_types import RunLifecycleService
 
 __all__ = [
     "StrategyFacade",

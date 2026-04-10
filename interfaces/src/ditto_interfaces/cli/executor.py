@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_app.process.backfill_manager import BackfillManager
-from ditto_app.process.ingestion_coordinator import IngestionCoordinator
+from ditto_app.process.ingestion.backfill_manager import BackfillManager
+from ditto_app.process.ingestion.coordinator import IngestionCoordinator
 from ditto_kernel import InstrumentIngestParams
 
 

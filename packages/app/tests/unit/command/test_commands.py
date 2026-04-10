@@ -8,8 +8,6 @@ from ditto_app.command import (
     CommandHandler,
     IngestDateCommand,
     IngestRangeCommand,
-    RunBacktestCommand,
-    RunStrategySliceCommand,
 )
 
 
@@ -68,33 +66,6 @@ class TestBackfillRangeCommand:
             parallel=8,
         )
         assert cmd.parallel == 8
-
-
-class TestRunBacktestCommand:
-    def test_creation(self) -> None:
-        cmd = RunBacktestCommand(
-            strategy_id="etf_rotation_v1",
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 3, 31),
-        )
-        assert cmd.strategy_id == "etf_rotation_v1"
-
-    def test_frozen(self) -> None:
-        cmd = RunBacktestCommand(
-            strategy_id="test", start_date=date(2024, 1, 1), end_date=date(2024, 1, 31)
-        )
-        with pytest.raises(AttributeError):
-            cmd.strategy_id = "changed"  # type: ignore[misc]
-
-
-class TestRunStrategySliceCommand:
-    def test_creation(self) -> None:
-        cmd = RunStrategySliceCommand(
-            strategy_id="etf_rotation_v1",
-            trade_date=date(2024, 1, 15),
-        )
-        assert cmd.strategy_id == "etf_rotation_v1"
-        assert cmd.trade_date == date(2024, 1, 15)
 
 
 class TestCommandHandlerProtocol:

@@ -12,7 +12,7 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger
 
-from ditto_app.process.data_writer import IngestionDataWriter
+from ditto_app.process.ingestion.data_writer import IngestionDataWriter
 
 
 @dataclass(frozen=True)

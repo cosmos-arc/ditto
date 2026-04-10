@@ -11,17 +11,17 @@ from ditto_app.builders import (
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
-from ditto_app.process.backtest_service import (
+from ditto_app.process.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
 )
-from ditto_app.process.strategy_run_service import (
+from ditto_app.process.execution.strategy_input import StrategyInputAssembler
+from ditto_app.process.execution.strategy_run_process import (
     StrategyFacade,
     StrategyRunMode,
     StrategyRunService,
     StrategyRunServiceConfig,
 )
-from ditto_app.process.strategy_types import StrategyInputAssembler
 from ditto_data.di import RuntimeProvider
 from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.services.audit import ExecutionAuditService

@@ -10,8 +10,8 @@ from ditto_data.services import IngestionLogService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_infra.foundation import logger
 
-from ditto_app.process.ingestion_coordinator import IngestionCoordinator
-from ditto_app.process.result_handler import count_results
+from ditto_app.process.ingestion.coordinator import IngestionCoordinator
+from ditto_app.process.ingestion.result_handler import count_results
 
 
 class BackfillManager:

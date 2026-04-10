@@ -44,46 +44,71 @@ ditto_app/
 │   ├── forward_return_service.py  # 前向收益率服务
 │   ├── _instrument_code_facade.py # 证券代码解析门面
 │   └── _utils.py      # 查询工具
-├── process/            # 编排流程（可调用 query）
-│   ├── auto_init.py                # 自动初始化
-│   ├── ingestion_config.py         # 摄取配置 dataclass
-│   ├── metadata_manager.py         # 元数据管理器
-│   ├── data_writer.py              # 数据写入器
-│   ├── list_date_inference.py      # 上市日期推断服务
-│   ├── result_handler.py           # 摄取结果处理器
-│   ├── backfill_handler.py         # 回填处理器
-│   ├── _coordinator_constants.py   # 共享常量 + 指数工具函数
-│   ├── coordinator_factory.py      # create_coordinator 工厂 + re-export
-│   ├── ingestion_coordinator.py    # IngestionCoordinator 主类
-│   ├── backfill_manager.py         # BackfillManager
-│   ├── retry_manager.py            # RetryManager
-│   ├── materialization_types.py        # 物化类型定义
-│   ├── materialization_dependencies.py # 物化依赖
-│   ├── materialization_helpers.py      # 物化辅助函数
-│   ├── publication_facade.py           # 发布门面
-│   ├── _publication_helpers.py         # 发布辅助函数
-│   ├── cascade_orchestrator.py         # 级联编排器
-│   ├── materialization_orchestrator.py  # 物化主编排器
-│   ├── certification_rules.py          # 认证规则
-│   ├── factor_orthogonalization.py     # 因子正交化
-│   ├── runtime_input_provider.py       # 运行时输入提供器
-│   ├── quality.py                # 质量校验流程
-│   ├── backtest_serialization.py  # 回测序列化
-│   ├── strategy_types.py         # 策略类型定义
-│   ├── backtest_service.py       # 回测服务
-│   └── strategy_run_service.py   # 策略运行服务
-├── command/            # CQRS Command（纯写入）
-│   ├── ingestion.py   # 摄取命令
-│   └── strategy.py    # 策略命令
+├── command/            # Command DTO + Handler（原子写操作）
+│   ├── ingestion.py              # IngestDateCommand + IngestDateHandler
+│   ├── quality_check.py          # CheckDataQualityCommand + Handler
+│   ├── quality_l3.py             # L3BatchCheckCommand + Handler
+│   ├── quality_reconciliation.py # ReconcileSourcesCommand + Handler
+│   └── protocols.py              # CommandHandler Protocol
+├── process/            # Process Manager（有状态长流程）
+│   ├── ingestion/      # 数据摄取流程
+│   │   ├── coordinator.py           # IngestionCoordinator 主类
+│   │   ├── coordinator_factory.py   # create_coordinator 工厂
+│   │   ├── config.py                # 摄取配置
+│   │   ├── data_writer.py           # 数据写入器
+│   │   ├── result_handler.py        # 摄取结果处理器
+│   │   ├── metadata_manager.py      # 元数据管理器
+│   │   ├── list_date_inference.py   # 上市日期推断
+│   │   ├── auto_init.py             # 自动初始化
+│   │   ├── backfill_handler.py      # 回填处理器
+│   │   ├── backfill_manager.py      # BackfillManager
+│   │   ├── retry_manager.py         # RetryManager
+│   │   ├── range_process.py         # IngestRangeProcess + BackfillRangeProcess
+│   │   ├── commodity_fetcher.py     # 商品数据获取
+│   │   ├── coordinator_constants.py # 共享常量
+│   │   └── fetch_handlers.py        # 获取处理器构建
+│   ├── materialization/ # 因子物化流程
+│   │   ├── orchestrator.py          # DerivedMaterializationOrchestrator
+│   │   ├── cascade_orchestrator.py  # InvalidationCascadeOrchestrator
+│   │   ├── publication_facade.py    # 发布门面
+│   │   ├── types.py                 # 物化类型定义
+│   │   ├── dependencies.py          # 物化依赖
+│   │   ├── helpers.py               # 物化辅助函数
+│   │   ├── certification_rules.py   # 认证规则
+│   │   ├── factor_orthogonalization.py # 因子正交化
+│   │   ├── runtime_input_provider.py   # 运行时输入提供器
+│   │   └── publication_helpers.py   # 发布辅助函数
+│   ├── execution/      # 策略执行流程
+│   │   ├── backtest_process.py      # BacktestService
+│   │   ├── strategy_run_process.py  # StrategyRunService + StrategyFacade
+│   │   ├── strategy_types.py        # Protocol + Trigger DTO
+│   │   ├── strategy_input.py        # StrategyInputAssembler
+│   │   └── backtest_serialization.py # 回测序列化
+│   └── quality/        # 质量校验流程（向后兼容 re-export）
+│       ├── __init__.py              # re-export shim
+│       ├── quality_check.py         # QualityService
+│       ├── l3_batch.py              # L3BatchService
+│       ├── reconciliation.py        # QualityReconciliationService
+│       ├── protocols.py             # QualityEngineProtocol 等
+│       └── types.py                 # L3CheckResult
 ├── builders/           # 运行时装配（DI 构造）
 │   ├── runtime_builder.py   # 运行时构建器
 │   ├── slice_builder.py     # 切片构建器
 │   ├── service_factory.py   # 服务工厂
 │   └── _resolution.py       # 依赖解析工具
-├── providers.py        # DI Provider 注册
+├── providers.py        # DI Provider 注册（4 个 Provider）
 ├── config.py           # 数据集配置
 └── types.py            # 共享类型定义
 ```
+
+## DI Provider（4 个）
+
+| Provider | 职责 | 注册的服务 |
+|----------|------|-----------|
+| `AppCommandProvider` | Command Handler | CheckDataQualityHandler, L3BatchCheckHandler |
+| `AppQueryProvider` | 只读查询 | 各 QueryFacade, ForwardReturnService |
+| `AppProcessProvider` | 编排/物化/质量 | DerivedMaterializationOrchestrator, QualityService, L3BatchService |
+| `AppBuilderFactory` | 策略运行时装配 | StrategyRuntimeBuilder, BacktestRuntimeBuilder, StrategyFacade |
 
 ## R8 互斥规则（importlinter 强制）
 
@@ -98,6 +123,7 @@ ditto_app/
 | process → query | ✅ 允许（编排可调用查询） |
 | process ↔ builders | ✅ 允许（双向） |
 | command → process | ✅ 允许（委托执行） |
+| process → command | ✅ 允许（Process Manager 注入 Handler） |
 
 ## 测试规范
 

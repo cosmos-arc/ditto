@@ -1,9 +1,9 @@
-"""质量服务 — L3 批量统计检查."""
+"""质量巡检服务 — L3 批量统计检查."""
 
 from __future__ import annotations
 
 __all__ = [
-    "L3BatchService",
+    "QualityPatrolService",
 ]
 
 from datetime import datetime, timedelta
@@ -11,11 +11,10 @@ from typing import Literal
 
 import polars as pl
 import polars.exceptions as pl_exceptions
+from ditto_data.quality.protocols import QualityEngineProtocol
 from ditto_infra.foundation import logger
 from ditto_kernel.quality import DQIssue, DQResult
 
-from ditto_app.process.quality_protocols import QualityEngineProtocol
-from ditto_app.process.quality_types import L3CheckResult
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
 
@@ -25,10 +24,13 @@ _CALENDAR_BUFFER_MULTIPLIER = 2  # 周末/假日缓冲系数
 # L3 批量统计检查
 # ---------------------------------------------------------------------------
 
+# NOTE: L3CheckResult 临时从 ditto_kernel.quality 导入（Phase D 清理）。
+from ditto_kernel.quality import L3CheckResult  # noqa: E402
 
-class L3BatchService:
+
+class QualityPatrolService:
     """
-    L3 批量统计检查服务.
+    质量巡检服务（原 L3BatchService）.
 
     应用层：编排 L3 统计异常检查。
     通过 facade 获取历史数据并注入核心引擎。
@@ -41,7 +43,7 @@ class L3BatchService:
         metadata_facade: MetadataQueryFacade,
     ) -> None:
         """
-        初始化 L3 批量检查服务.
+        初始化质量巡检服务.
 
         Args:
             engine: 质量引擎实例

@@ -12,15 +12,21 @@ from ditto_app.builders import (
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
-from ditto_app.process.cascade_orchestrator import InvalidationCascadeOrchestrator
-from ditto_app.process.materialization_orchestrator import (
+from ditto_app.command.quality_check import CheckDataQualityHandler
+from ditto_app.process.execution.strategy_run_process import StrategyFacade
+from ditto_app.process.materialization.cascade_orchestrator import (
+    InvalidationCascadeOrchestrator,
+)
+from ditto_app.process.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
-from ditto_app.process.publication_facade import DerivedPublicationFacade
-from ditto_app.process.quality import QualityService
-from ditto_app.process.strategy_run_service import StrategyFacade
+from ditto_app.process.materialization.publication_facade import (
+    DerivedPublicationFacade,
+)
+from ditto_app.process.quality import QualityPatrolService
 from ditto_app.providers import (
     AppBuilderFactory,
+    AppCommandProvider,
     AppProcessProvider,
     AppQueryProvider,
     get_app_providers,
@@ -120,11 +126,12 @@ def _runtime_deps_provider() -> Provider:
 class TestAppProviderStructure:
     """验证 App 层 Provider 结构."""
 
-    def test_get_app_providers_returns_three_providers(self) -> None:
-        """get_app_providers() 应返回 3 个 Provider 实例."""
+    def test_get_app_providers_returns_four_providers(self) -> None:
+        """get_app_providers() 应返回 4 个 Provider 实例."""
         providers = get_app_providers()
-        assert len(providers) == 3
+        assert len(providers) == 4
         names = [type(p).__name__ for p in providers]
+        assert "AppCommandProvider" in names
         assert "AppQueryProvider" in names
         assert "AppProcessProvider" in names
         assert "AppBuilderFactory" in names
@@ -139,8 +146,17 @@ class TestAppProviderStructure:
         }
         assert expected.issubset(method_names)
 
+    def test_app_command_provider_methods(self) -> None:
+        """AppCommandProvider 应包含 1 个 provide 方法."""
+        provider = AppCommandProvider()
+        method_names = {name for name in dir(provider) if not name.startswith("_")}
+        expected = {
+            "check_data_quality_handler",
+        }
+        assert expected.issubset(method_names)
+
     def test_app_process_provider_methods(self) -> None:
-        """AppProcessProvider 应包含 5 个 provide 方法."""
+        """AppProcessProvider 应包含 provide 方法."""
         provider = AppProcessProvider()
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
@@ -149,7 +165,7 @@ class TestAppProviderStructure:
             "derived_materialization_orchestrator",
             "derived_invalidation_orchestrator",
             "derived_publication_facade",
-            "quality_service",
+            "quality_patrol_service",
         }
         assert expected.issubset(method_names)
 
@@ -216,7 +232,7 @@ class TestAppProviderIntegration:
             app_container.get(DerivedPublicationFacade),
             DerivedPublicationFacade,
         )
-        assert isinstance(app_container.get(QualityService), QualityService)
+        assert isinstance(app_container.get(QualityPatrolService), QualityPatrolService)
 
     def test_builder_services_resolved(self, app_container) -> None:
         """AppBuilderFactory 的服务应可从容器解析."""
@@ -237,3 +253,10 @@ class TestAppProviderIntegration:
             StrategyServiceFactory,
         )
         assert isinstance(app_container.get(StrategyFacade), StrategyFacade)
+
+    def test_command_services_resolved(self, app_container) -> None:
+        """AppCommandProvider 的服务应可从容器解析."""
+        assert isinstance(
+            app_container.get(CheckDataQualityHandler),
+            CheckDataQualityHandler,
+        )

@@ -13,7 +13,7 @@ from ditto_analytics.materialization import (
 from ditto_analytics.materialization.models import (
     DerivedRunStatus,
 )
-from ditto_app.process.cascade_orchestrator import (
+from ditto_app.process.materialization.cascade_orchestrator import (
     REALTIME_CASCADE_MAX_DEPTH,
     CascadeDepthExceededError,
     CascadeStatus,

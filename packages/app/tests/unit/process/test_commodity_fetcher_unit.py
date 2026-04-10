@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import polars as pl
 import pytest
-from ditto_app.process._commodity_fetcher import fetch_commodity_daily
+from ditto_app.process.ingestion.commodity_fetcher import fetch_commodity_daily
 
 _UNSET: object = object()
 
@@ -93,14 +93,14 @@ class TestFetchCommodityDaily:
         """提取重复的 @patch 装饰器为 autouse fixture."""
         with (
             patch(
-                "ditto_app.process._commodity_fetcher.METAL_CODE_ALIASES",
+                "ditto_app.process.ingestion.commodity_fetcher.METAL_CODE_ALIASES",
                 {
                     "COMMOD_GOLD": "XAUUSD.FXCM",
                     "COMMOD_SILVER": "XAGUSD.FXCM",
                 },
             ),
             patch(
-                "ditto_app.process._commodity_fetcher.VIX_CODE_TO_INSTRUMENT_ID",
+                "ditto_app.process.ingestion.commodity_fetcher.VIX_CODE_TO_INSTRUMENT_ID",
                 {
                     "VIX_30D": 5_100_001,
                 },
