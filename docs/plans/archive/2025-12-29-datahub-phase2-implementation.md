@@ -34,22 +34,22 @@
 **目标:** 实现标的池存储层，支持创建标的池和管理成分股（PIT 安全）
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/stores/universe_store.py`
-- Create: `packages/datahub/tests/unit/stores/test_universe_store.py`
-- Reference: `packages/datahub/src/ditto_datahub/stores/security_store.py` (模式参考)
-- Reference: `packages/datahub/src/ditto_datahub/stores/sqlite_client.py`
+- Create: `packages/data/src/ditto_data/stores/universe_store.py`
+- Create: `packages/data/tests/unit/stores/test_universe_store.py`
+- Reference: `packages/data/src/ditto_data/stores/security_store.py` (模式参考)
+- Reference: `packages/data/src/ditto_data/stores/sqlite_client.py`
 
 **Step 1.1: 写 UniverseStore 的基础结构测试**
 
-创建 `packages/datahub/tests/unit/stores/test_universe_store.py`:
+创建 `packages/data/tests/unit/stores/test_universe_store.py`:
 
 ```python
 """UniverseStore 单元测试."""
 
 import polars as pl
 import pytest
-from ditto_datahub.stores.universe_store import UniverseStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.universe_store import UniverseStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 @pytest.fixture
@@ -116,11 +116,11 @@ def test_create_universe(sqlite_client):
 pixi run -e dev pytest tests/unit/stores/test_universe_store.py -v
 ```
 
-Expected: `ModuleNotFoundError: No module named 'ditto_datahub.stores.universe_store'`
+Expected: `ModuleNotFoundError: No module named 'ditto_data.stores.universe_store'`
 
 **Step 1.3: 创建 UniverseStore 最小实现**
 
-创建 `packages/datahub/src/ditto_datahub/stores/universe_store.py`:
+创建 `packages/data/src/ditto_data/stores/universe_store.py`:
 
 ```python
 """Universe 标的池存储层."""
@@ -132,7 +132,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import logger
 
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class UniverseStore:
@@ -436,16 +436,16 @@ Expected: 全部 PASS
 
 **Step 1.7: 更新 stores/__init__.py 导出**
 
-编辑 `packages/datahub/src/ditto_datahub/stores/__init__.py`:
+编辑 `packages/data/src/ditto_data/stores/__init__.py`:
 
 ```python
-from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.calendar_store import CalendarStore
-from ditto_datahub.stores.pipeline_store import PipelineStore
-from ditto_datahub.stores.quarantine_store import QuarantineStore
-from ditto_datahub.stores.security_store import SecurityStore
-from ditto_datahub.stores.universe_store import UniverseStore  # 新增
+from ditto_data.stores.adj_factor_store import AdjFactorStore
+from ditto_data.stores.bars_store import BarsStore
+from ditto_data.stores.calendar_store import CalendarStore
+from ditto_data.stores.pipeline_store import PipelineStore
+from ditto_data.stores.quarantine_store import QuarantineStore
+from ditto_data.stores.security_store import SecurityStore
+from ditto_data.stores.universe_store import UniverseStore  # 新增
 
 __all__ = [
     "AdjFactorStore",
@@ -461,9 +461,9 @@ __all__ = [
 **Step 1.8: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/universe_store.py
-git add packages/datahub/src/ditto_datahub/stores/__init__.py
-git add packages/datahub/tests/unit/stores/test_universe_store.py
+git add packages/data/src/ditto_data/stores/universe_store.py
+git add packages/data/src/ditto_data/stores/__init__.py
+git add packages/data/tests/unit/stores/test_universe_store.py
 git commit -m "feat(datahub): implement UniverseStore with PIT support"
 ```
 
@@ -474,22 +474,22 @@ git commit -m "feat(datahub): implement UniverseStore with PIT support"
 **目标:** 实现标的池 Repository 层，提供领域接口和预定义标的池快捷方法
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/repositories/universe.py`
-- Create: `packages/datahub/tests/unit/repositories/test_universe_repository.py`
-- Reference: `packages/datahub/src/ditto_datahub/repositories/security.py` (模式参考)
+- Create: `packages/data/src/ditto_data/repositories/universe.py`
+- Create: `packages/data/tests/unit/repositories/test_universe_repository.py`
+- Reference: `packages/data/src/ditto_data/repositories/security.py` (模式参考)
 
 **Step 2.1: 写 UniverseRepository 测试**
 
-创建 `packages/datahub/tests/unit/repositories/test_universe_repository.py`:
+创建 `packages/data/tests/unit/repositories/test_universe_repository.py`:
 
 ```python
 """UniverseRepository 单元测试."""
 
 import polars as pl
 import pytest
-from ditto_datahub.repositories.universe import UniverseRepository
-from ditto_datahub.stores.universe_store import UniverseStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.repositories.universe import UniverseRepository
+from ditto_data.stores.universe_store import UniverseStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 @pytest.fixture
@@ -576,11 +576,11 @@ def test_get_constituents_with_symbol(universe_repo):
 pixi run -e dev pytest tests/unit/repositories/test_universe_repository.py -v
 ```
 
-Expected: `ModuleNotFoundError: No module named 'ditto_datahub.repositories.universe'`
+Expected: `ModuleNotFoundError: No module named 'ditto_data.repositories.universe'`
 
 **Step 2.3: 创建 UniverseRepository 实现**
 
-创建 `packages/datahub/src/ditto_datahub/repositories/universe.py`:
+创建 `packages/data/src/ditto_data/repositories/universe.py`:
 
 ```python
 """Universe 标的池 Repository."""
@@ -592,10 +592,10 @@ from typing import TYPE_CHECKING, Any
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.stores.universe_store import UniverseStore
+from ditto_data.stores.universe_store import UniverseStore
 
 if TYPE_CHECKING:
-    from ditto_datahub.stores.security_store import SecurityStore
+    from ditto_data.stores.security_store import SecurityStore
 
 
 class UniverseRepository:
@@ -846,14 +846,14 @@ Expected: PASS
 
 **Step 2.5: 更新 repositories/__init__.py 导出**
 
-编辑 `packages/datahub/src/ditto_datahub/repositories/__init__.py`:
+编辑 `packages/data/src/ditto_data/repositories/__init__.py`:
 
 ```python
-from ditto_datahub.repositories.bars import BarsRepository
-from ditto_datahub.repositories.calendar import CalendarRepository
-from ditto_datahub.repositories.index import IndexRepository  # 新增
-from ditto_datahub.repositories.security import SecurityRepository
-from ditto_datahub.repositories.universe import UniverseRepository  # 新增
+from ditto_data.repositories.bars import BarsRepository
+from ditto_data.repositories.calendar import CalendarRepository
+from ditto_data.repositories.index import IndexRepository  # 新增
+from ditto_data.repositories.security import SecurityRepository
+from ditto_data.repositories.universe import UniverseRepository  # 新增
 
 __all__ = [
     "BarsRepository",
@@ -867,9 +867,9 @@ __all__ = [
 **Step 2.6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/repositories/universe.py
-git add packages/datahub/src/ditto_datahub/repositories/__init__.py
-git add packages/datahub/tests/unit/repositories/test_universe_repository.py
+git add packages/data/src/ditto_data/repositories/universe.py
+git add packages/data/src/ditto_data/repositories/__init__.py
+git add packages/data/tests/unit/repositories/test_universe_repository.py
 git commit -m "feat(datahub): implement UniverseRepository with predefined pools"
 ```
 
@@ -880,20 +880,20 @@ git commit -m "feat(datahub): implement UniverseRepository with predefined pools
 **目标:** 实现指数成分股权重存储层（PIT 支持）
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/stores/index_weight_store.py`
-- Create: `packages/datahub/tests/unit/stores/test_index_weight_store.py`
+- Create: `packages/data/src/ditto_data/stores/index_weight_store.py`
+- Create: `packages/data/tests/unit/stores/test_index_weight_store.py`
 
 **Step 3.1: 写 IndexWeightStore 测试**
 
-创建 `packages/datahub/tests/unit/stores/test_index_weight_store.py`:
+创建 `packages/data/tests/unit/stores/test_index_weight_store.py`:
 
 ```python
 """IndexWeightStore 单元测试."""
 
 import polars as pl
 import pytest
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.index_weight_store import IndexWeightStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 @pytest.fixture
@@ -969,7 +969,7 @@ Expected: `ModuleNotFoundError`
 
 **Step 3.3: 创建 IndexWeightStore 实现**
 
-创建 `packages/datahub/src/ditto_datahub/stores/index_weight_store.py`:
+创建 `packages/data/src/ditto_data/stores/index_weight_store.py`:
 
 ```python
 """Index 指数成分股权重存储层."""
@@ -981,7 +981,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import logger
 
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 class IndexWeightStore:
@@ -1136,11 +1136,11 @@ pixi run -e dev pytest tests/unit/stores/test_index_weight_store.py -v
 
 **Step 3.5: 更新 stores/__init__.py 导出**
 
-编辑 `packages/datahub/src/ditto_datahub/stores/__init__.py`:
+编辑 `packages/data/src/ditto_data/stores/__init__.py`:
 
 ```python
-from ditto_datahub.stores.index_weight_store import IndexWeightStore  # 新增
-from ditto_datahub.stores.universe_store import UniverseStore
+from ditto_data.stores.index_weight_store import IndexWeightStore  # 新增
+from ditto_data.stores.universe_store import UniverseStore
 
 __all__ = [
     # ... 其他 ...
@@ -1152,9 +1152,9 @@ __all__ = [
 **Step 3.6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/index_weight_store.py
-git add packages/datahub/src/ditto_datahub/stores/__init__.py
-git add packages/datahub/tests/unit/stores/test_index_weight_store.py
+git add packages/data/src/ditto_data/stores/index_weight_store.py
+git add packages/data/src/ditto_data/stores/__init__.py
+git add packages/data/tests/unit/stores/test_index_weight_store.py
 git commit -m "feat(datahub): implement IndexWeightStore with PIT support"
 ```
 
@@ -1165,23 +1165,23 @@ git commit -m "feat(datahub): implement IndexWeightStore with PIT support"
 **目标:** 实现指数数据 Repository，提供指数日线查询和成分股查询
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/repositories/index.py`
-- Create: `packages/datahub/tests/unit/repositories/test_index_repository.py`
+- Create: `packages/data/src/ditto_data/repositories/index.py`
+- Create: `packages/data/tests/unit/repositories/test_index_repository.py`
 
 **Step 4.1: 写 IndexRepository 测试**
 
-创建 `packages/datahub/tests/unit/repositories/test_index_repository.py`:
+创建 `packages/data/tests/unit/repositories/test_index_repository.py`:
 
 ```python
 """IndexRepository 单元测试。"""
 
 import polars as pl
 import pytest
-from ditto_datahub.repositories.index import IndexRepository
-from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
-from ditto_datahub.stores.security_store import SecurityStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_data.repositories.index import IndexRepository
+from ditto_data.stores.bars_store import BarsStore
+from ditto_data.stores.index_weight_store import IndexWeightStore
+from ditto_data.stores.security_store import SecurityStore
+from ditto_data.stores.sqlite_client import SQLiteClient
 
 
 @pytest.fixture
@@ -1246,7 +1246,7 @@ Expected: `ModuleNotFoundError`
 
 **Step 4.3: 创建 IndexRepository 实现**
 
-创建 `packages/datahub/src/ditto_datahub/repositories/index.py`:
+创建 `packages/data/src/ditto_data/repositories/index.py`:
 
 ```python
 """Index 指数数据 Repository."""
@@ -1259,9 +1259,9 @@ import polars as pl
 from ditto_foundation import M, logger, traced
 
 if TYPE_CHECKING:
-    from ditto_datahub.stores.bars_store import BarsStore
-    from ditto_datahub.stores.index_weight_store import IndexWeightStore
-    from ditto_datahub.stores.security_store import SecurityStore
+    from ditto_data.stores.bars_store import BarsStore
+    from ditto_data.stores.index_weight_store import IndexWeightStore
+    from ditto_data.stores.security_store import SecurityStore
 
 
 class IndexRepository:
@@ -1449,8 +1449,8 @@ pixi run -e dev pytest tests/unit/repositories/test_index_repository.py -v
 **Step 4.5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/repositories/index.py
-git add packages/datahub/tests/unit/repositories/test_index_repository.py
+git add packages/data/src/ditto_data/repositories/index.py
+git add packages/data/tests/unit/repositories/test_index_repository.py
 git commit -m "feat(datahub): implement IndexRepository with constituents query"
 ```
 
@@ -1461,14 +1461,14 @@ git commit -m "feat(datahub): implement IndexRepository with constituents query"
 **目标:** 实现轻量级冻结点管理器（checksum 校验，不做回滚）
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
-- Create: `packages/datahub/tests/unit/runtime/test_freeze_manager.py`
-- Modify: `packages/datahub/src/ditto_datahub/types.py` (添加 FreezeManifest)
-- Modify: `packages/datahub/src/ditto_datahub/errors.py` (添加 FreezeError)
+- Create: `packages/data/src/ditto_data/runtime/freeze_manager.py`
+- Create: `packages/data/tests/unit/runtime/test_freeze_manager.py`
+- Modify: `packages/data/src/ditto_data/types.py` (添加 FreezeManifest)
+- Modify: `packages/data/src/ditto_data/errors.py` (添加 FreezeError)
 
 **Step 5.1: 先更新类型定义**
 
-编辑 `packages/datahub/src/ditto_datahub/types.py`:
+编辑 `packages/data/src/ditto_data/types.py`:
 
 ```python
 @dataclass(frozen=True)
@@ -1482,7 +1482,7 @@ class FreezeManifest:
 
 **Step 5.2: 更新异常定义**
 
-编辑 `packages/datahub/src/ditto_datahub/errors.py`:
+编辑 `packages/data/src/ditto_data/errors.py`:
 
 ```python
 class FreezeError(DataHubError):
@@ -1521,7 +1521,7 @@ class FreezeVerificationError(FreezeError):
 
 **Step 5.3: 写 FreezeManager 测试**
 
-创建 `packages/datahub/tests/unit/runtime/test_freeze_manager.py`:
+创建 `packages/data/tests/unit/runtime/test_freeze_manager.py`:
 
 ```python
 """FreezeManager 单元测试。"""
@@ -1530,9 +1530,9 @@ import json
 from pathlib import Path
 
 import pytest
-from ditto_datahub.errors import FreezeNotFoundError, FreezeVerificationError
-from ditto_datahub.runtime.freeze_manager import FreezeManager
-from ditto_datahub.types import FreezeManifest
+from ditto_data.errors import FreezeNotFoundError, FreezeVerificationError
+from ditto_data.runtime.freeze_manager import FreezeManager
+from ditto_data.types import FreezeManifest
 
 
 @pytest.fixture
@@ -1631,7 +1631,7 @@ Expected: `ModuleNotFoundError`
 
 **Step 5.5: 创建 FreezeManager 实现**
 
-创建 `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`:
+创建 `packages/data/src/ditto_data/runtime/freeze_manager.py`:
 
 ```python
 """Freeze 冻结点管理器（轻量级校验实现）。"""
@@ -1647,8 +1647,8 @@ from pathlib import Path
 import polars as pl
 from ditto_foundation import logger, span, traced
 
-from ditto_datahub.errors import FreezeNotFoundError, FreezeVerificationError
-from ditto_datahub.types import FreezeManifest
+from ditto_data.errors import FreezeNotFoundError, FreezeVerificationError
+from ditto_data.types import FreezeManifest
 
 
 class FreezeManager:
@@ -1884,10 +1884,10 @@ pixi run -e dev pytest tests/unit/runtime/test_freeze_manager.py -v
 **Step 5.7: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/runtime/freeze_manager.py
-git add packages/datahub/src/ditto_datahub/types.py
-git add packages/datahub/src/ditto_datahub/errors.py
-git add packages/datahub/tests/unit/runtime/test_freeze_manager.py
+git add packages/data/src/ditto_data/runtime/freeze_manager.py
+git add packages/data/src/ditto_data/types.py
+git add packages/data/src/ditto_data/errors.py
+git add packages/data/tests/unit/runtime/test_freeze_manager.py
 git commit -m "feat(datahub): implement FreezeManager with checksum verification"
 ```
 
@@ -1898,17 +1898,17 @@ git commit -m "feat(datahub): implement FreezeManager with checksum verification
 **目标:** 将新组件集成到 DataHub Facade
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/hub.py`
-- Create: `packages/datahub/tests/unit/test_datahub_phase2.py`
+- Modify: `packages/data/src/ditto_data/hub.py`
+- Create: `packages/data/tests/unit/test_datahub_phase2.py`
 
 **Step 6.1: 更新 DataHub hub.py**
 
-编辑 `packages/datahub/src/ditto_datahub/hub.py`，在适当位置添加以下内容：
+编辑 `packages/data/src/ditto_data/hub.py`，在适当位置添加以下内容：
 
 ```python
 # 在现有 import 后添加
-from ditto_datahub.stores.universe_store import UniverseStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
+from ditto_data.stores.universe_store import UniverseStore
+from ditto_data.stores.index_weight_store import IndexWeightStore
 ```
 
 在 `# ========================================================================` 后添加：
@@ -1921,16 +1921,16 @@ from ditto_datahub.stores.index_weight_store import IndexWeightStore
 @cached_property
 def universe_store(self) -> UniverseStore:
     """Universe data store."""
-    from ditto_datahub.stores.universe_store import UniverseStore
-    from ditto_datahub.stores.sqlite_client import SQLiteClient
+    from ditto_data.stores.universe_store import UniverseStore
+    from ditto_data.stores.sqlite_client import SQLiteClient
 
     return UniverseStore(SQLiteClient(self.sqlite_pool))
 
 @cached_property
 def index_weight_store(self) -> IndexWeightStore:
     """Index weight data store."""
-    from ditto_datahub.stores.index_weight_store import IndexWeightStore
-    from ditto_datahub.stores.sqlite_client import SQLiteClient
+    from ditto_data.stores.index_weight_store import IndexWeightStore
+    from ditto_data.stores.sqlite_client import SQLiteClient
 
     return IndexWeightStore(SQLiteClient(self.sqlite_pool))
 
@@ -1941,14 +1941,14 @@ def index_weight_store(self) -> IndexWeightStore:
 @cached_property
 def universe(self) -> UniverseRepository:
     """Universe repository."""
-    from ditto_datahub.repositories.universe import UniverseRepository
+    from ditto_data.repositories.universe import UniverseRepository
 
     return UniverseRepository(universe_store=self.universe_store)
 
 @cached_property
 def index(self) -> IndexRepository:
     """Index data repository."""
-    from ditto_datahub.repositories.index import IndexRepository
+    from ditto_data.repositories.index import IndexRepository
 
     return IndexRepository(
         bars_store=self.bars_store,
@@ -1963,7 +1963,7 @@ def index(self) -> IndexRepository:
 @cached_property
 def freeze_manager(self) -> FreezeManager:
     """Freeze point manager."""
-    from ditto_datahub.runtime.freeze_manager import FreezeManager
+    from ditto_data.runtime.freeze_manager import FreezeManager
 
     return FreezeManager(data_root=self.data_root)
 ```
@@ -2078,13 +2078,13 @@ for store_name in ("universe_store", "index_weight_store", ...):  # 添加到现
 
 **Step 6.3: 写 DataHub 集成测试**
 
-创建 `packages/datahub/tests/unit/test_datahub_phase2.py`:
+创建 `packages/data/tests/unit/test_datahub_phase2.py`:
 
 ```python
 """DataHub Phase 2 集成测试。"""
 
 import pytest
-from ditto_datahub.hub import DataHub
+from ditto_data.hub import DataHub
 
 
 @pytest.fixture
@@ -2148,8 +2148,8 @@ pixi run -e dev pytest tests/unit/test_datahub_phase2.py -v
 **Step 6.5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/hub.py
-git add packages/datahub/tests/unit/test_datahub_phase2.py
+git add packages/data/src/ditto_data/hub.py
+git add packages/data/tests/unit/test_datahub_phase2.py
 git commit -m "feat(datahub): integrate UniverseRepository, IndexRepository, FreezeManager to DataHub"
 ```
 
@@ -2182,11 +2182,11 @@ Expected: 全部通过
 **完成日期**: 2025-12-29
 
 **新增文件**: (11 个)
-- `packages/datahub/src/ditto_datahub/stores/universe_store.py`
-- `packages/datahub/src/ditto_datahub/stores/index_weight_store.py`
-- `packages/datahub/src/ditto_datahub/repositories/universe.py`
-- `packages/datahub/src/ditto_datahub/repositories/index.py`
-- `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
+- `packages/data/src/ditto_data/stores/universe_store.py`
+- `packages/data/src/ditto_data/stores/index_weight_store.py`
+- `packages/data/src/ditto_data/repositories/universe.py`
+- `packages/data/src/ditto_data/repositories/index.py`
+- `packages/data/src/ditto_data/runtime/freeze_manager.py`
 - (测试文件 6 个)
 
 **验收标准**:
@@ -2218,7 +2218,7 @@ pixi run -e dev test-unit
 pixi run -e dev pre-push-check
 
 # 检查测试覆盖率
-pixi run -e dev pytest --cov=packages/datahub/src/ditto_datahub --cov-report=term-missing
+pixi run -e dev pytest --cov=packages/data/src/ditto_data --cov-report=term-missing
 ```
 
 Expected Output:

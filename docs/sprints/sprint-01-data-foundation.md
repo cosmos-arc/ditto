@@ -143,7 +143,7 @@
 #### 任务5: Sources 层（新增）✅ 已完成
 
 **5.1 DataSource 基类** [S] ✅
-- 文件：`packages/datahub/src/ditto_datahub/sources/base.py`
+- 文件：`packages/data/src/ditto_data/sources/base.py`
 - 功能：
   - DataSource 抽象基类定义
   - DataSourceError 异常体系
@@ -172,9 +172,9 @@
 
 **5.2 Tushare 适配器完整实现** [L] ✅
 - 文件：
-  - `packages/datahub/src/ditto_datahub/sources/tushare/__init__.py`
-  - `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
-  - `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
+  - `packages/data/src/ditto_data/sources/tushare/__init__.py`
+  - `packages/data/src/ditto_data/sources/tushare/client.py`
+  - `packages/data/src/ditto_data/sources/tushare/source.py`
 - 功能：
   - **TushareClient**：
     - Token fallback 链：keyring → secrets.toml → env var
@@ -195,7 +195,7 @@
   - ✅ 限流和重试机制生效
 
 **5.3 DataHub 集成 sources** [S] ✅
-- 文件：修改 `packages/datahub/src/ditto_datahub/hub.py`
+- 文件：修改 `packages/data/src/ditto_data/hub.py`
 - 功能：
   - 添加 `@cached_property sources`
   - 返回 DataSources 实例
@@ -215,9 +215,9 @@
 
 **6.1 Prefect 基础设施** [S] ✅
 - 文件：
-  - `apps/port/pyproject.toml`（新增包）
-  - `apps/port/src/ditto_port/__init__.py`
-  - `apps/port/src/ditto_port/main.py`
+  - `interfaces/pyproject.toml`（新增包）
+  - `interfaces/src/ditto_interfaces/__init__.py`
+  - `interfaces/src/ditto_interfaces/main.py`
 - 功能：
   - FastAPI 基础应用
   - Prefect 本地 Server 启动
@@ -229,7 +229,7 @@
         "uvicorn>=0.23",
         "prefect>=3.0",
         "keyring>=25.0",
-        "ditto-data-hub",
+        "ditto-data",
     ]
     ```
 - 验收标准：
@@ -239,12 +239,12 @@
 
 **6.2 完整摄取 Flow 实现** [L] ✅
 - 文件：
-  - `apps/port/src/ditto_port/ingestion/flows/__init__.py`
-  - `apps/port/src/ditto_port/ingestion/flows/daily_ingest.py`
-  - `apps/port/src/ditto_port/ingestion/tasks/__init__.py`
-  - `apps/port/src/ditto_port/ingestion/tasks/bars.py`
-  - `apps/port/src/ditto_port/ingestion/tasks/stock.py`
-  - `apps/port/src/ditto_port/ingestion/tasks/adj_factor.py`
+  - `interfaces/src/ditto_interfaces/ingestion/flows/__init__.py`
+  - `interfaces/src/ditto_interfaces/ingestion/flows/daily_ingest.py`
+  - `interfaces/src/ditto_interfaces/ingestion/tasks/__init__.py`
+  - `interfaces/src/ditto_interfaces/ingestion/tasks/bars.py`
+  - `interfaces/src/ditto_interfaces/ingestion/tasks/stock.py`
+  - `interfaces/src/ditto_interfaces/ingestion/tasks/adj_factor.py`
 - 功能：
   - **daily_ingest_flow**：
     - 完整版本，支持 7 个摄取任务
@@ -337,12 +337,12 @@
 4. 测试 teardown 添加 `gc.collect()` 和延迟确保 Windows 释放句柄
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/stores/sqlite_client.py`
-- `packages/datahub/src/ditto_datahub/stores/security_store.py`
-- `packages/datahub/src/ditto_datahub/stores/calendar_store.py`
-- `packages/datahub/src/ditto_datahub/stores/pipeline_store.py`
-- `packages/datahub/src/ditto_datahub/hub.py`
-- `packages/datahub/tests/unit/test_hub.py`
+- `packages/data/src/ditto_data/stores/sqlite_client.py`
+- `packages/data/src/ditto_data/stores/security_store.py`
+- `packages/data/src/ditto_data/stores/calendar_store.py`
+- `packages/data/src/ditto_data/stores/pipeline_store.py`
+- `packages/data/src/ditto_data/hub.py`
+- `packages/data/tests/unit/test_hub.py`
 
 **验收**:
 - ✅ 所有测试通过（8 passed）
@@ -361,7 +361,7 @@
 - 添加 `import pandas as pd`
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
+- `packages/data/src/ditto_data/sources/tushare/client.py`
 
 **验收**:
 - ✅ Pylance 类型检查通过
@@ -382,10 +382,10 @@
 3. 支持环境变量覆盖（`DITTO_*_DIR` 优先级最高）
 
 **修改文件**:
-- `packages/foundation/src/ditto_foundation/config/paths.py` (新增)
-- `packages/foundation/src/ditto_foundation/config/settings.py`
-- `packages/foundation/src/ditto_foundation/config/__init__.py`
-- `packages/foundation/src/ditto_foundation/observability/logging.py`
+- `packages/infra/src/ditto_infra/config/paths.py` (新增)
+- `packages/infra/src/ditto_infra/config/settings.py`
+- `packages/infra/src/ditto_infra/config/__init__.py`
+- `packages/infra/src/ditto_infra/observability/logging.py`
 
 **验收**:
 - ✅ Windows 默认使用 `D:\data\ditto`
@@ -399,8 +399,8 @@
 ### 新增文件
 
 ```
-packages/datahub/
-├── src/ditto_datahub/sources/
+packages/data/
+├── src/ditto_data/sources/
 │   ├── __init__.py                 # 导出 get_source, DataSource
 │   ├── base.py                     # DataSource 基类 + 异常（8个抽象方法）
 │   ├── README.md                   # Sources 模块说明
@@ -409,10 +409,10 @@ packages/datahub/
 │       ├── client.py               # Tushare 客户端（限流、重试、keyring）
 │       └── source.py               # TushareSource 实现（7个fetch方法）
 │
-apps/port/
+interfaces/
 ├── README.md                       # Server 模块说明
 ├── pyproject.toml                  # Server 包配置
-└── src/ditto_port/
+└── src/ditto_interfaces/
     ├── __init__.py
     ├── main.py                     # FastAPI 入口 + Prefect 启动
     └── ingestion/
@@ -430,7 +430,7 @@ apps/port/
 ### 修改文件
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 └── hub.py                          # 添加 sources 属性
 ```
 

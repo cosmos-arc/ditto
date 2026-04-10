@@ -44,7 +44,7 @@ import polars as pl
 import pytest
 from unittest.mock import MagicMock, patch
 
-from ditto_datahub.models import Dataset
+from ditto_data.models import Dataset
 
 
 class TestCoordinatorIndexSupport:
@@ -116,7 +116,7 @@ handlers: dict[Dataset, Callable[[], pl.DataFrame]] = {
 def test_fetch_index_daily_calls_source() -> None:
     """验证 INDEX_DAILY 调用正确的 source 方法."""
     from ditto_port.services.ingestion.coordinator import IngestionCoordinator
-    from ditto_datahub.models import Dataset
+    from ditto_data.models import Dataset
 
     # 创建最小 mock 设置
     mock_source = MagicMock()
@@ -781,7 +781,7 @@ Phase B (P2 - CLI 补全)
 ## 参考文件
 
 - [设计文档](./2026-02-12-ingestion-coverage-design.md)
-- [Dataset 枚举](../packages/datahub/src/ditto_datahub/models/common.py)
+- [Dataset 枚举](../packages/data/src/ditto_data/models/common.py)
 - [IngestionCoordinator](../apps/port/src/ditto_port/services/ingestion/coordinator.py)
 - [IngestionDataWriter](../apps/port/src/ditto_port/services/ingestion/data_writer.py)
 - [CLI 命令工厂](../apps/port/src/ditto_port/cli/commands/factory.py)

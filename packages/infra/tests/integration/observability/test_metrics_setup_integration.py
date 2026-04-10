@@ -9,7 +9,6 @@
 import pytest
 from ditto_infra.foundation import Metrics, ObservabilityConfig, reset_for_testing
 from ditto_infra.foundation.observability.metrics import (
-    SimpleGauge,
     configure_metrics,
 )
 from opentelemetry import metrics
@@ -119,10 +118,12 @@ class TestMSetup:
         meter = configure_metrics(config)
         Metrics.setup(meter)
 
-        # Verify SimpleGauge 类型
-        assert isinstance(Metrics.data_freshness, SimpleGauge)
-        assert isinstance(Metrics.factor_ic, SimpleGauge)
-        assert isinstance(Metrics.kill_switch_level, SimpleGauge)
+        # Verify SafeGauge 类型
+        from ditto_infra.foundation.observability.metrics import SafeGauge
+
+        assert isinstance(Metrics.data_freshness, SafeGauge)
+        assert isinstance(Metrics.factor_ic, SafeGauge)
+        assert isinstance(Metrics.kill_switch_level, SafeGauge)
 
     def test_m_setup_unknown_metric_type_raises_error(self) -> None:
         """测试 Metrics.setup() 遇到未知类型抛出异常."""
@@ -173,58 +174,6 @@ class TestMSetup:
         # [REVIEW] Counter 类型
         assert isinstance(first_data_records, metrics.Counter)
         assert isinstance(second_data_records, metrics.Counter)
-
-
-@pytest.mark.integration
-class TestSimpleGaugeCreation:
-    """测试 SimpleGauge 公开 API 创建 gauge."""
-
-    def test_simple_gauge_creation(self) -> None:
-        """测试使用 SimpleGauge 创建 gauge 实例."""
-        reset_for_testing()
-        config = ObservabilityConfig(
-            pytest_running=True, assertions_enabled=True, verbose_logging=False
-        )
-        meter = configure_metrics(config)
-
-        gauge = SimpleGauge(meter, "test.gauge", "Test gauge description")
-        assert isinstance(gauge, SimpleGauge)
-
-    def test_simple_gauge_with_different_names(self) -> None:
-        """测试创建不同名称的 gauge."""
-        reset_for_testing()
-        config = ObservabilityConfig(
-            pytest_running=True, assertions_enabled=True, verbose_logging=False
-        )
-        meter = configure_metrics(config)
-
-        gauge1 = SimpleGauge(meter, "gauge.one", "Description 1")
-        gauge2 = SimpleGauge(meter, "gauge.two", "Description 2")
-
-        # 验证两个 gauge 是不同的实例
-        assert gauge1 is not gauge2
-
-    def test_simple_gauge_set_and_read(self) -> None:
-        """测试 SimpleGauge 的 set/inc/dec 操作."""
-        reset_for_testing()
-        config = ObservabilityConfig(
-            pytest_running=True, assertions_enabled=True, verbose_logging=False
-        )
-        meter = configure_metrics(config)
-
-        gauge = SimpleGauge(meter, "test.gauge.ops", "Test gauge operations")
-
-        # 测试 set 操作
-        gauge.set(10.0)
-        assert gauge._value == 10.0
-
-        # 测试 inc 操作
-        gauge.inc(5.0)
-        assert gauge._value == 15.0
-
-        # 测试 dec 操作
-        gauge.dec(3.0)
-        assert gauge._value == 12.0
 
 
 @pytest.mark.integration

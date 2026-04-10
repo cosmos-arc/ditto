@@ -341,7 +341,7 @@ WHERE volume > 1000000;  -- 无索引
 ### ILP 高速写入
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/derived/questdb_writer.py
+# packages/data/src/ditto_data/stores/derived/questdb_writer.py
 
 from questdb.ingress import Sender
 

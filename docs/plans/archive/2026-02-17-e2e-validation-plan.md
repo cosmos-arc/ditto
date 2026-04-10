@@ -407,4 +407,4 @@ tests/
 - [黄金数据集设计](../design/13_golden_dataset_design.md)
 - [测试规范](../../.claude/rules/python-test.md)
 - [PIT 安全规范](../../.claude/rules/pit.md)
-- [DataHub 架构规范](../../packages/datahub/CLAUDE.md)
+- [DataHub 架构规范](../../packages/data/CLAUDE.md)

@@ -99,21 +99,21 @@ app.include_router(portfolio.router)
 
 ### 阶段 2：DataHub 模型子目录化
 
-**目标**：将 `packages/datahub/src/ditto_datahub/models/` 按 v5 目标拆分 `market/trading/portfolio/strategy`
+**目标**：将 `packages/data/src/ditto_data/models/` 按 v5 目标拆分 `market/trading/portfolio/strategy`
 
 #### 2.1 创建子目录结构
 
 **Files**:
-- `packages/datahub/src/ditto_datahub/models/market/__init__.py`
-- `packages/datahub/src/ditto_datahub/models/market/bar.py`
-- `packages/datahub/src/ditto_datahub/models/market/quote.py`
-- `packages/datahub/src/ditto_datahub/models/trading/__init__.py`
-- `packages/datahub/src/ditto_datahub/models/trading/order.py`
-- `packages/datahub/src/ditto_datahub/models/trading/position.py`
-- `packages/datahub/src/ditto_datahub/models/portfolio/__init__.py`
-- `packages/datahub/src/ditto_datahub/models/portfolio/portfolio.py`
-- `packages/datahub/src/ditto_datahub/models/strategy/__init__.py`
-- `packages/datahub/src/ditto_datahub/models/strategy/signal.py`
+- `packages/data/src/ditto_data/models/market/__init__.py`
+- `packages/data/src/ditto_data/models/market/bar.py`
+- `packages/data/src/ditto_data/models/market/quote.py`
+- `packages/data/src/ditto_data/models/trading/__init__.py`
+- `packages/data/src/ditto_data/models/trading/order.py`
+- `packages/data/src/ditto_data/models/trading/position.py`
+- `packages/data/src/ditto_data/models/portfolio/__init__.py`
+- `packages/data/src/ditto_data/models/portfolio/portfolio.py`
+- `packages/data/src/ditto_data/models/strategy/__init__.py`
+- `packages/data/src/ditto_data/models/strategy/signal.py`
 
 **Step 1**: 提取 `BAR_SCHEMA/QUOTE_SCHEMA` 到 `market/bar.py`
 ```python
@@ -155,10 +155,10 @@ class Order:
 
 **Step 3**: 更新 `models/__init__.py` 导出
 ```python
-from ditto_datahub.models.market import BAR_SCHEMA, QUOTE_SCHEMA
-from ditto_datahub.models.trading import Order, Position
-from ditto_datahub.models.portfolio import Portfolio
-from ditto_datahub.models.strategy import Signal
+from ditto_data.models.market import BAR_SCHEMA, QUOTE_SCHEMA
+from ditto_data.models.trading import Order, Position
+from ditto_data.models.portfolio import Portfolio
+from ditto_data.models.strategy import Signal
 ```
 
 **验收**：
@@ -178,7 +178,7 @@ from ditto_datahub.models.strategy import Signal
 
 **Files**:
 - `apps/port/src/ditto_port/models/config.py`
-- `packages/datahub/src/ditto_datahub/models/common.py`
+- `packages/data/src/ditto_data/models/common.py`
 
 **Step 1**: 在 `Dataset` 枚举中新增
 ```python
@@ -214,8 +214,8 @@ DATASET_REGISTRY[Dataset.CORPORATE_ACTIONS] = create_t1_config(
 #### 3.2 扩展 DataSource ABC 与 TushareSource
 
 **Files**:
-- `packages/datahub/src/ditto_datahub/sources/base.py`
-- `packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py`
+- `packages/data/src/ditto_data/sources/base.py`
+- `packages/data/src/ditto_data/sources/tushare/tushare_source.py`
 
 **Step 1**: 在 `DataSource` ABC 新增方法
 ```python
@@ -312,7 +312,7 @@ handlers: dict[Dataset, Callable[[], WriteResult]] = {
 #### 4.1 创建 PIT 配置模块
 
 **Files**:
-- `packages/datahub/src/ditto_datahub/config/pit.py`
+- `packages/data/src/ditto_data/config/pit.py`
 - `config/development/data_store.env`
 - `config/testing/data_store.env`
 - `config/production/data_store.env`
@@ -337,7 +337,7 @@ class PITPolicy:
 
 **Step 2**: 定义数据集级策略映射
 ```python
-# packages/datahub/src/ditto_datahub/config/pit.py
+# packages/data/src/ditto_data/config/pit.py
 
 PIT_POLICIES: dict[str, PITPolicy] = {
     "stock_daily": PITPolicy(
@@ -405,9 +405,9 @@ PIT_DEFAULT_KNOWLEDGE_DELAY=1
 
 **Step 4**: 适配器读取策略
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py
+# packages/data/src/ditto_data/sources/tushare/adapters/capital.py
 
-from ditto_datahub.config.pit import PIT_POLICIES
+from ditto_data.config.pit import PIT_POLICIES
 
 def fetch_futures(self, ...) -> pl.DataFrame:
     policy = PIT_POLICIES["futures"]
@@ -436,7 +436,7 @@ def fetch_futures(self, ...) -> pl.DataFrame:
 
 **Files**:
 - `apps/port/src/ditto_port/services/ingestion/quality/service.py`
-- `packages/datahub/src/ditto_datahub/runtime/quality/quarantine_store.py`（已存在）
+- `packages/data/src/ditto_data/runtime/quality/quarantine_store.py`（已存在）
 
 **Step 1**: 实现 `QualityService._quarantine_data`
 ```python
@@ -478,7 +478,7 @@ def _quarantine_data(
 ```python
 # apps/port/src/ditto_port/registry/core.py
 
-from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
+from ditto_data.runtime.quality.quarantine_store import QuarantineStore
 
 @provide
 def quality_service(

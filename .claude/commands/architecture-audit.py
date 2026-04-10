@@ -54,9 +54,9 @@ class ArchitectureAuditor:
         print("📊 构建导入关系图...")
 
         packages_dir = self.root_dir / "packages"
-        apps_dir = self.root_dir / "apps"
+        interfaces_dir = self.root_dir / "interfaces"
 
-        for base_dir in [packages_dir, apps_dir]:
+        for base_dir in [packages_dir, interfaces_dir]:
             if not base_dir.exists():
                 continue
 
@@ -179,7 +179,7 @@ class ArchitectureAuditor:
 
             for neighbor in self.import_graph.get(node, set()):
                 # 只检查项目内部模块
-                if neighbor.startswith(("packages.", "apps.")):
+                if neighbor.startswith(("packages.", "interfaces.")):
                     dfs(neighbor, path + [node])
 
             recursion_stack.remove(node)
@@ -249,7 +249,7 @@ class ArchitectureAuditor:
         """代码分析"""
         print("🔎 运行代码分析...")
 
-        # 检查层级穿透（port 层依赖 infra 细节）
+        # 检查层级穿透（interfaces 层依赖 infra 细节）
         self._check_layer_violation()
 
         # 检查 Protocol 是否被使用
@@ -257,13 +257,13 @@ class ArchitectureAuditor:
 
     def _check_layer_violation(self) -> None:
         """检查层级穿透"""
-        # port 层模块
-        port_modules = [m for m in self.import_graph.keys() if m.startswith("apps.port.")]
+        # interfaces 层模块
+        interfaces_modules = [m for m in self.import_graph.keys() if m.startswith("interfaces.")]
 
-        for module in port_modules:
+        for module in interfaces_modules:
             for dep in self.import_graph.get(module, set()):
                 # 检查是否依赖了 stores（禁止）
-                if dep.startswith("packages.datahub.stores."):
+                if dep.startswith("packages.data.storage."):
                     self.findings.append(
                         {
                             "id": "ARCH-001",
@@ -271,8 +271,8 @@ class ArchitectureAuditor:
                             "category": "Layering",
                             "location": f"{module} -> {dep}",
                             "evidence": "应用层直接访问 Store 层",
-                            "why": "违反分层架构原则，必须通过 Accessor 访问数据",
-                            "fix": "使用 hub.xxx accessor（如 hub.bars、hub.calendar）访问",
+                            "why": "违反分层架构原则，必须通过 Service 访问数据",
+                            "fix": "使用 App 层 Service 访问数据",
                             "effort": "M",
                         }
                     )
@@ -284,7 +284,7 @@ class ArchitectureAuditor:
 
         # 搜索 Protocol 定义
         result = subprocess.run(
-            ["grep", "-r", "-n", "class.*Protocol", "packages/", "apps/"],
+            ["grep", "-r", "-n", "class.*Protocol", "packages/", "interfaces/"],
             cwd=self.root_dir,
             capture_output=True,
             text=True,
@@ -305,7 +305,7 @@ class ArchitectureAuditor:
 
                         # 检查是否被引用
                         ref_result = subprocess.run(
-                            ["grep", "-r", protocol_name, "packages/", "apps/", "--exclude=*.md"],
+                            ["grep", "-r", protocol_name, "packages/", "interfaces/", "--exclude=*.md"],
                             cwd=self.root_dir,
                             capture_output=True,
                             text=True,
@@ -351,7 +351,7 @@ class ArchitectureAuditor:
 
         for pattern, desc, severity in patterns:
             result = subprocess.run(
-                ["grep", "-r", "-n", pattern, "packages/", "apps/"],
+                ["grep", "-r", "-n", pattern, "packages/", "interfaces/"],
                 cwd=self.root_dir,
                 capture_output=True,
                 text=True,
@@ -377,7 +377,7 @@ class ArchitectureAuditor:
         forbidden = ["pandas", "sqlalchemy"]
         for module in forbidden:
             result = subprocess.run(
-                ["grep", "-r", "-n", f"import {module}", "packages/", "apps/"],
+                ["grep", "-r", "-n", f"import {module}", "packages/", "interfaces/"],
                 cwd=self.root_dir,
                 capture_output=True,
                 text=True,
@@ -399,7 +399,7 @@ class ArchitectureAuditor:
         """检查异常处理"""
         # 检查 except Exception 无日志
         result = subprocess.run(
-            ["grep", "-r", "-n", "except Exception:", "packages/", "apps/"],
+            ["grep", "-r", "-n", "except Exception:", "packages/", "interfaces/"],
             cwd=self.root_dir,
             capture_output=True,
             text=True,
@@ -435,13 +435,13 @@ class ArchitectureAuditor:
 
     def _check_business_technical_mixing(self) -> None:
         """检测业务层混用技术术语"""
-        # 检测 Port 层是否混用 SQL、Parquet 等技术术语
+        # 检测 Interfaces 层是否混用 SQL、Parquet 等技术术语
         technical_terms = ["SQL", "Parquet", "SQLite", "Database", "Table"]
         patterns = [rf"class.*{term}.*(?:Loader|Writer|Reader|Manager)" for term in technical_terms]
 
         for i, pattern in enumerate(patterns, 1):
             result = subprocess.run(
-                ["grep", "-r", "-n", "-E", pattern, "apps/port/"],
+                ["grep", "-r", "-n", "-E", pattern, "interfaces/"],
                 cwd=self.root_dir,
                 capture_output=True,
                 text=True,
@@ -456,10 +456,10 @@ class ArchitectureAuditor:
                                 "id": f"NAM-00{i}",
                                 "severity": "High",
                                 "category": "Naming",
-                                "location": f"apps/port/{parts[0]}:{parts[1]}",
+                                "location": f"interfaces/{parts[0]}:{parts[1]}",
                                 "evidence": line,
-                                "why": "Port 层不应混用技术术语，应使用业务概念",
-                                "fix": "重命名为业务术语（如 BarDataLoader），技术细节由 DataHub 处理",
+                                "why": "Interfaces 层不应混用技术术语，应使用业务概念",
+                                "fix": "重命名为业务术语（如 BarDataLoader），技术细节由 Data 层处理",
                                 "effort": "M",
                             }
                         )
@@ -477,7 +477,7 @@ class ArchitectureAuditor:
             # 检查是否存在变体
             for variant in variants:
                 result = subprocess.run(
-                    ["grep", "-r", "-l", rf"class\s+{variant}", "packages/", "apps/"],
+                    ["grep", "-r", "-l", rf"class\s+{variant}", "packages/", "interfaces/"],
                     cwd=self.root_dir,
                     capture_output=True,
                     text=True,
@@ -500,7 +500,7 @@ class ArchitectureAuditor:
         """检测命名风格一致性"""
         # 检测类名是否混用驼峰和下划线
         result = subprocess.run(
-            ["grep", "-r", "-n", r"^class [a-z]", "packages/", "apps/"],
+            ["grep", "-r", "-n", r"^class [a-z]", "packages/", "interfaces/"],
             cwd=self.root_dir,
             capture_output=True,
             text=True,
@@ -531,7 +531,7 @@ class ArchitectureAuditor:
 
         for abbr, full in non_standard_abbreviations.items():
             result = subprocess.run(
-                ["grep", "-r", "-n", rf"\b{abbr}\b", "packages/", "apps/"],
+                ["grep", "-r", "-n", rf"\b{abbr}\b", "packages/", "interfaces/"],
                 cwd=self.root_dir,
                 capture_output=True,
                 text=True,
@@ -674,64 +674,88 @@ pixi run -e dev lint
 
         # 统计各层级的模块
         layers = {
-            "apps/port": set(),
-            "packages/datahub": set(),
-            "packages/foundation": set(),
+            "interfaces": set(),
+            "packages/app": set(),
+            "packages/engine": set(),
+            "packages/analytics": set(),
+            "packages/data": set(),
+            "packages/kernel": set(),
+            "packages/infra": set(),
         }
 
-        for module, deps in self.import_graph.items():
-            if module.startswith("apps.port."):
-                layers["apps/port"].add(module)
-            elif module.startswith("packages.datahub."):
-                layers["packages/datahub"].add(module)
-            elif module.startswith("packages.foundation."):
-                layers["packages/foundation"].add(module)
+        for module, _deps in self.import_graph.items():
+            if module.startswith("interfaces."):
+                layers["interfaces"].add(module)
+            elif module.startswith("packages.app."):
+                layers["packages/app"].add(module)
+            elif module.startswith("packages.engine."):
+                layers["packages/engine"].add(module)
+            elif module.startswith("packages.analytics."):
+                layers["packages/analytics"].add(module)
+            elif module.startswith("packages.data."):
+                layers["packages/data"].add(module)
+            elif module.startswith("packages.kernel."):
+                layers["packages/kernel"].add(module)
+            elif module.startswith("packages.infra."):
+                layers["packages/infra"].add(module)
 
         # 生成层级图
         diagram += "┌─────────────────────────────────────────┐\n"
-        diagram += "│  应用层 (apps/port)                       │\n"
-        diagram += f"│  模块数: {len(layers['apps/port'])}                    │\n"
+        diagram += f"│  Interfaces 层 ({len(layers['interfaces'])} modules)              │\n"
         diagram += "└────────────────┬────────────────────────────┘\n"
         diagram += "                 │\n"
         diagram += "                 ▼\n"
         diagram += "┌─────────────────────────────────────────┐\n"
-        diagram += "│  数据访问层 (packages/datahub)            │\n"
-        diagram += f"│  模块数: {len(layers['packages/datahub'])}                    │\n"
+        diagram += f"│  App 层 ({len(layers['packages/app'])} modules)                     │\n"
         diagram += "└────────────────┬────────────────────────────┘\n"
         diagram += "                 │\n"
         diagram += "                 ▼\n"
         diagram += "┌─────────────────────────────────────────┐\n"
-        diagram += "│  基础设施层 (packages/foundation)         │\n"
-        diagram += f"│  模块数: {len(layers['packages/foundation'])}                    │\n"
+        diagram += f"│  Engine 层 ({len(layers['packages/engine'])} modules)                  │\n"
+        diagram += "└────────────────┬────────────────────────────┘\n"
+        diagram += "                 │\n"
+        diagram += "                 ▼\n"
+        diagram += "┌─────────────────────────────────────────┐\n"
+        diagram += f"│  Analytics 层 ({len(layers['packages/analytics'])} modules)              │\n"
+        diagram += "└────────────────┬────────────────────────────┘\n"
+        diagram += "                 │\n"
+        diagram += "                 ▼\n"
+        diagram += "┌─────────────────────────────────────────┐\n"
+        diagram += f"│  Data 层 ({len(layers['packages/data'])} modules)                    │\n"
+        diagram += "└────────────────┬────────────────────────────┘\n"
+        diagram += "                 │\n"
+        diagram += "                 ▼\n"
+        diagram += "┌─────────────────────────────────────────┐\n"
+        diagram += f"│  Kernel ({len(layers['packages/kernel'])}) + Infra ({len(layers['packages/infra'])})               │\n"
         diagram += "└─────────────────────────────────────────┘\n"
         diagram += "```\n\n"
 
         # 检测依赖方向
         diagram += "### 依赖方向分析\n\n"
 
-        port_deps_datahub = False
-        datahub_deps_foundation = False
-        port_deps_foundation = False
+        interfaces_deps_data = False
+        interfaces_deps_infra = False
+        data_deps_infra = False
 
         for module in self.import_graph:
-            if module.startswith("apps.port."):
+            if module.startswith("interfaces."):
                 for dep in self.import_graph[module]:
-                    if dep.startswith("packages.datahub."):
-                        port_deps_datahub = True
-                    elif dep.startswith("packages.foundation."):
-                        port_deps_foundation = True
-            elif module.startswith("packages.datahub."):
+                    if dep.startswith("packages.data."):
+                        interfaces_deps_data = True
+                    elif dep.startswith("packages.infra."):
+                        interfaces_deps_infra = True
+            elif module.startswith("packages.data."):
                 for dep in self.import_graph[module]:
-                    if dep.startswith("packages.foundation."):
-                        datahub_deps_foundation = True
+                    if dep.startswith("packages.infra."):
+                        data_deps_infra = True
 
         diagram += "| 依赖方向 | 状态 | 说明 |\n"
         diagram += "|---------|------|------|\n"
-        diagram += f"| Port → DataHub | ✅ {'符合' if port_deps_datahub else '无依赖'} | 应用层依赖数据访问层 |\n"
-        diagram += f"| Port → Foundation | ✅ {'符合' if port_deps_foundation else '无依赖'} | 应用层依赖基础设施 |\n"
-        diagram += f"| DataHub → Foundation | ✅ {'符合' if datahub_deps_foundation else '无依赖'} | 数据访问层依赖基础设施 |\n"
-        diagram += "| DataHub → Port | ❌ 禁止 | 反向依赖（架构违规）|\n"
-        diagram += "| Foundation → Others | ❌ 禁止 | 基础设施不应依赖上层 |\n"
+        diagram += f"| Interfaces → Data | ✅ {'符合' if interfaces_deps_data else '无依赖'} | 应用入口依赖数据层 |\n"
+        diagram += f"| Interfaces → Infra | ✅ {'符合' if interfaces_deps_infra else '无依赖'} | 应用入口依赖基础设施 |\n"
+        diagram += f"| Data → Infra | ✅ {'符合' if data_deps_infra else '无依赖'} | 数据层依赖基础设施 |\n"
+        diagram += "| Data → Interfaces | ❌ 禁止 | 反向依赖（架构违规）|\n"
+        diagram += "| Infra → Others | ❌ 禁止 | 基础设施不应依赖上层 |\n"
 
         return diagram
 

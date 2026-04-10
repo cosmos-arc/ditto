@@ -288,7 +288,7 @@ async def get_series_endpoint(request: SeriesDerivedRequest):
 
 ## 文件结构
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
   services/
     derived/
       __init__.py
@@ -298,7 +298,7 @@ packages/datahub/src/ditto_datahub/
         queries.py              # DerivedSeriesQuery, etc.
         results.py              # CoverageInfo
 
-apps/port/src/ditto_port/
+interfaces/src/ditto_interfaces/
   facades/
     derived/
       __init__.py

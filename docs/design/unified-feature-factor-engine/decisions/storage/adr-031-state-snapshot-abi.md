@@ -33,7 +33,7 @@ STATE 类因子（B 类）需要维护状态快照，支持：
 ## StateSnapshotStrategy 枚举
 
 ```python
-# packages/core/src/ditto_core/specs.py
+# packages/kernel/src/ditto_kernel/specs.py
 
 from enum import Enum
 
@@ -85,7 +85,7 @@ HGETALL ditto:derived:state:factor:alpha_001:snapshot:000001.SZ
 ### Python 读写
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/derived/kvrocks_state_writer.py
+# packages/data/src/ditto_data/stores/derived/kvrocks_state_writer.py
 
 import orjson
 from datetime import datetime, date
@@ -234,7 +234,7 @@ def migrate_snapshot(raw: bytes, target_ver: int) -> dict:
 ### Python 读写
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/derived/kvrocks_state_writer.py
+# packages/data/src/ditto_data/stores/derived/kvrocks_state_writer.py
 
 class KvrocksStateWriter:
     CURRENT_SCHEMA_VER = 2
@@ -333,7 +333,7 @@ class KvrocksStateWriter:
 ### 自动选择逻辑
 
 ```python
-# packages/core/src/ditto_core/specs.py
+# packages/kernel/src/ditto_kernel/specs.py
 
 class FactorSpec(BaseSpec):
     # ... 现有字段 ...
@@ -379,7 +379,7 @@ class FactorSpec(BaseSpec):
 ## FactorSpec 扩展
 
 ```python
-# packages/core/src/ditto_core/specs.py
+# packages/kernel/src/ditto_kernel/specs.py
 
 class FactorSpec(BaseSpec):
     id: str

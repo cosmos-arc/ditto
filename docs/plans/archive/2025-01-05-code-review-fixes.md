@@ -50,8 +50,8 @@
 **目标**: 添加 `DataHub.adj_factor` 属性和 `SecurityRepository.register_batch()` 方法
 
 **涉及文件**:
-- `packages/datahub/src/ditto_datahub/hub.py`
-- `packages/datahub/src/ditto_datahub/repositories/security.py`
+- `packages/data/src/ditto_data/hub.py`
+- `packages/data/src/ditto_data/repositories/security.py`
 - `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 ---
@@ -69,9 +69,9 @@
 **目标**: 重构游标表支持 `(dataset, source)` 复合主键
 
 **涉及文件**:
-- `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py`
-- `packages/datahub/src/ditto_datahub/runtime/schema.sql`
-- `packages/datahub/migrations/0002_cursor_multi_source.py` (新建)
+- `packages/data/src/ditto_data/stores/ingestion_cursor.py`
+- `packages/data/src/ditto_data/runtime/schema.sql`
+- `packages/data/migrations/0002_cursor_multi_source.py` (新建)
 - `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 **数据迁移**: 包含完整的 upgrade 和 downgrade 脚本
@@ -82,10 +82,10 @@
 **目标**: 统一到 `data_root/config/dq`，支持用户自定义覆盖
 
 **涉及文件**:
-- `packages/datahub/src/ditto_datahub/dq/engine.py`
+- `packages/data/src/ditto_data/dq/engine.py`
 - `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py`
-- `packages/datahub/scripts/init_dq_config.py` (新建)
-- `packages/datahub/README.md`
+- `packages/data/scripts/init_dq_config.py` (新建)
+- `packages/data/README.md`
 
 ---
 
@@ -93,7 +93,7 @@
 **目标**: 修复 DQ 检查未传递 context 导致 FK 检查失效
 
 **涉及文件**:
-- `packages/datahub/src/ditto_datahub/repositories/bars.py` (line 282-283)
+- `packages/data/src/ditto_data/repositories/bars.py` (line 282-283)
 
 **修改**: 传递 `context={"hub": self._hub}` 给 DQEngine
 
@@ -114,7 +114,7 @@
 
 **涉及文件**:
 - `.env.example` (line 33) - 删除 TUSHARE_TOKEN 配置
-- `packages/datahub/README.md` - 更新 token 配置说明
+- `packages/data/README.md` - 更新 token 配置说明
 - `docs/design/*.md` - 清理过时的环境变量引用
 
 **实现步骤**:
@@ -180,8 +180,8 @@
 - 所有使用 OnDuplicate.ERROR 的写入操作
 
 **涉及文件**:
-- `packages/datahub/src/ditto_datahub/stores/bars_store.py` (line 123)
-- `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` (line 174)
+- `packages/data/src/ditto_data/stores/bars_store.py` (line 123)
+- `packages/data/src/ditto_data/stores/adj_factor_store.py` (line 174)
 
 **用户决策**: 自动去重（保留第一条）
 
@@ -308,7 +308,7 @@
 - 降低了 SQL 的一致性和易用性
 
 **涉及文件**:
-- `packages/datahub/src/ditto_datahub/runtime/sql_engine.py` (line 282)
+- `packages/data/src/ditto_data/runtime/sql_engine.py` (line 282)
 
 **实现步骤**:
 
@@ -374,7 +374,7 @@
 - 可能造成混淆
 
 **涉及文件**:
-- `packages/datahub/src/ditto_datahub/runtime/schema.sql` (line 186+)
+- `packages/data/src/ditto_data/runtime/schema.sql` (line 186+)
 
 **实现步骤**:
 
@@ -416,7 +416,7 @@
 - 系统透明度
 
 **涉及文件**:
-- `packages/datahub/src/ditto_datahub/runtime/sql_engine.py` (line 48)
+- `packages/data/src/ditto_data/runtime/sql_engine.py` (line 48)
 
 **实现步骤**:
 
@@ -487,7 +487,7 @@
 
 **迁移时机**: 任务 3 实施后立即执行
 
-**迁移脚本位置**: `packages/datahub/migrations/0002_cursor_multi_source.py`
+**迁移脚本位置**: `packages/data/migrations/0002_cursor_multi_source.py`
 
 **详细步骤**:
 
@@ -580,26 +580,26 @@ CREATE TABLE ingestion_cursor_backup AS SELECT * FROM ingestion_cursor;
 ### 必须修改的核心文件（10 个）
 
 1. `apps/server/src/ditto_port/ingestion/services/security_mapper.py` - Critical 2
-2. `packages/datahub/src/ditto_datahub/repositories/security.py` - Critical 1
-3. `packages/datahub/src/ditto_datahub/hub.py` - Critical 1
-4. `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py` - High 1
-5. `packages/datahub/src/ditto_datahub/dq/engine.py` - High 2
-6. `packages/datahub/src/ditto_datahub/repositories/bars.py` - High 3
-7. `packages/datahub/src/ditto_datahub/stores/bars_store.py` - Medium 2
-8. `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` - Medium 2
-9. `packages/datahub/src/ditto_datahub/runtime/sql_engine.py` - Medium 3, Low 2
-10. `packages/datahub/src/ditto_datahub/runtime/schema.sql` - Low 1
+2. `packages/data/src/ditto_data/repositories/security.py` - Critical 1
+3. `packages/data/src/ditto_data/hub.py` - Critical 1
+4. `packages/data/src/ditto_data/stores/ingestion_cursor.py` - High 1
+5. `packages/data/src/ditto_data/dq/engine.py` - High 2
+6. `packages/data/src/ditto_data/repositories/bars.py` - High 3
+7. `packages/data/src/ditto_data/stores/bars_store.py` - Medium 2
+8. `packages/data/src/ditto_data/stores/adj_factor_store.py` - Medium 2
+9. `packages/data/src/ditto_data/runtime/sql_engine.py` - Medium 3, Low 2
+10. `packages/data/src/ditto_data/runtime/schema.sql` - Low 1
 
 ### 配置和文档文件（3 个）
 
 11. `.env.example` - Medium 1
-12. `packages/datahub/README.md` - High 2, Medium 1
+12. `packages/data/README.md` - High 2, Medium 1
 13. `docs/design/*.md` - 多处更新
 
 ### 新建文件（2 个）
 
-14. `packages/datahub/migrations/0002_cursor_multi_source.py` - High 1
-15. `packages/datahub/scripts/init_dq_config.py` - High 2
+14. `packages/data/migrations/0002_cursor_multi_source.py` - High 1
+15. `packages/data/scripts/init_dq_config.py` - High 2
 
 ---
 

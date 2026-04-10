@@ -57,7 +57,7 @@ packages/core/src/ditto_core/quality/
 ### 2.2 DataHub 层（质量存储）
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── stores/
 │   └── quarantine_store.py      # QuarantineStore - SQLite 隔离区
 ├── accessors/
@@ -226,7 +226,7 @@ class QualityEngine:
 ### 4.3 DataHub 层：TDX 数据源
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tdx/source.py
+# packages/data/src/ditto_data/sources/tdx/source.py
 
 """
 通达信数据源 - DataHub 层
@@ -257,7 +257,7 @@ class TdxSource(DataSource):
 ```
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tdx/reader.py
+# packages/data/src/ditto_data/sources/tdx/reader.py
 
 """
 通达信 .day 文件读取器
@@ -298,7 +298,7 @@ class TdxReader:
 ### 4.4 DataHub 层：对比结果存储
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/quality/comparison_store.py
+# packages/data/src/ditto_data/stores/quality/comparison_store.py
 
 """
 质量对比结果存储
@@ -353,9 +353,9 @@ class ComparisonStore:
 """
 
 from ditto_core.quality.engine import QualityEngine
-from ditto_datahub.sources.tushare import TushareSource
-from ditto_datahub.sources.tdx import TdxSource
-from ditto_datahub.stores.quality import ComparisonStore
+from ditto_data.sources.tushare import TushareSource
+from ditto_data.sources.tdx import TdxSource
+from ditto_data.stores.quality import ComparisonStore
 
 
 class QualityReconciliationService:
@@ -435,7 +435,7 @@ packages/
 │       ├── statistical.py           # ✅ 无修改
 │       └── cross_source.py          # ✅ 新增：跨源对比检查器
 │
-├── datahub/src/ditto_datahub/
+├── datahub/src/ditto_data/
 │   ├── sources/
 │   │   ├── tushare/                 # ✅ 无修改
 │   │   └── tdx/                     # ✅ 新增：通达信数据源
@@ -506,7 +506,7 @@ l3_statistical:
 ### 6.2 标的元数据配置
 
 ```python
-# packages/datahub/src/ditto_datahub/quality/config/golden_instruments.py
+# packages/data/src/ditto_data/quality/config/golden_instruments.py
 
 """
 黄金数据集标的配置
@@ -580,15 +580,15 @@ tasks:
 ```yaml
 tasks:
   - name: "创建 TdxSource"
-    file: "packages/datahub/src/ditto_datahub/sources/tdx/source.py"
+    file: "packages/data/src/ditto_data/sources/tdx/source.py"
     estimate: 4h
 
   - name: "创建 TdxReader"
-    file: "packages/datahub/src/ditto_datahub/sources/tdx/reader.py"
+    file: "packages/data/src/ditto_data/sources/tdx/reader.py"
     estimate: 6h  # .day 文件格式解析
 
   - name: "单元测试"
-    file: "packages/datahub/tests/unit/sources/tdx/test_reader.py"
+    file: "packages/data/tests/unit/sources/tdx/test_reader.py"
     estimate: 4h
 ```
 
@@ -597,15 +597,15 @@ tasks:
 ```yaml
 tasks:
   - name: "创建 ComparisonStore"
-    file: "packages/datahub/src/ditto_datahub/stores/quality/comparison_store.py"
+    file: "packages/data/src/ditto_data/stores/quality/comparison_store.py"
     estimate: 4h
 
   - name: "创建 ComparisonAccessor"
-    file: "packages/datahub/src/ditto_datahub/accessors/comparison_accessor.py"
+    file: "packages/data/src/ditto_data/accessors/comparison_accessor.py"
     estimate: 2h
 
   - name: "单元测试"
-    file: "packages/datahub/tests/unit/stores/quality/test_comparison_store.py"
+    file: "packages/data/tests/unit/stores/quality/test_comparison_store.py"
     estimate: 4h
 ```
 

@@ -190,8 +190,8 @@
 
 | 模块 | 修改内容 |
 |------|---------|
-| `packages/core` | `ShadowDiffReport` / `ShadowTraceReport` / compare 规则模型 |
-| `packages/datahub` | dual-read compare 执行器、shadow 报告持久化 |
+| `packages/kernel` | `ShadowDiffReport` / `ShadowTraceReport` / compare 规则模型 |
+| `packages/data` | dual-read compare 执行器、shadow 报告持久化 |
 | `packages/port` | shadow publish / compare / promote orchestration facade |
 
 ---

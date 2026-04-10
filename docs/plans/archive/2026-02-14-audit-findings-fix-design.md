@@ -348,7 +348,7 @@ class MetadataDbInitProvider(ConfigInitProvider):
             db_path.parent.mkdir(parents=True, exist_ok=True)
 
             # 获取 schema.sql 路径
-            schema_traversable = files("ditto_datahub.scripts") / "schema.sql"
+            schema_traversable = files("ditto_data.scripts") / "schema.sql"
             schema_path = Path(str(schema_traversable))
 
             pool = SQLitePool(str(db_path), schema_path=schema_path)
@@ -413,7 +413,7 @@ def sqlite_pool(
     # 确保父目录存在（兼容性保留，但主要由 DataRootInitProvider 处理）
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    schema_traversable = files("ditto_datahub.scripts") / "schema.sql"
+    schema_traversable = files("ditto_data.scripts") / "schema.sql"
     schema_path = Path(str(schema_traversable))
 
     # 创建 pool，但不再自动调用 init_schema()
@@ -506,7 +506,7 @@ else:
 
 ### 6.1 TushareSource 添加 close()
 
-**文件**：`packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py`
+**文件**：`packages/data/src/ditto_data/sources/tushare/tushare_source.py`
 
 **修改**：
 

@@ -13,7 +13,7 @@
 ## Task 1: 实现 check_required_columns 函数
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/runtime/dq_rules.py:79` (在 check_weight_positive 之后)
+- 修改: `packages/data/src/ditto_data/runtime/dq_rules.py:79` (在 check_weight_positive 之后)
 
 **Step 1: 添加检查函数**
 
@@ -79,7 +79,7 @@ pixi run -e dev pytest tests/unit/test_dq_rules.py -v -k adj_factor
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/runtime/dq_rules.py
+git add packages/data/src/ditto_data/runtime/dq_rules.py
 git commit -m "feat(datahub): 添加 required_columns DQ 检查器
 
 - 新增 check_required_columns 函数验证必需列存在
@@ -92,19 +92,19 @@ git commit -m "feat(datahub): 添加 required_columns DQ 检查器
 ## Task 2: 实现 TechnicalChecker._check_type()
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/dq/checkers/technical.py:141-144`
+- 修改: `packages/data/src/ditto_data/dq/checkers/technical.py:141-144`
 
 **Step 1: 先写测试**
 
-创建 `packages/datahub/tests/unit/dq/checkers/test_technical_checker.py`:
+创建 `packages/data/tests/unit/dq/checkers/test_technical_checker.py`:
 
 ```python
 """Tests for TechnicalChecker."""
 
 import polars as pl
 import pytest
-from ditto_datahub.dq.checkers.technical import TechnicalChecker
-from ditto_datahub.dq.models import DQLevel, DQSeverity
+from ditto_data.dq.checkers.technical import TechnicalChecker
+from ditto_data.dq.models import DQLevel, DQSeverity
 
 
 def test_type_check_valid():
@@ -162,7 +162,7 @@ def test_type_check_column_not_exist():
 **Step 2: 运行测试确认失败**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_technical_checker.py::test_type_check_valid -v
+pixi run -e dev pytest packages/data/tests/unit/dq/checkers/test_technical_checker.py::test_type_check_valid -v
 ```
 
 预期: PASS (检查器返回 None，即无问题)
@@ -170,7 +170,7 @@ pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_technical_ch
 **Step 3: 运行类型错误测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_technical_checker.py::test_type_check_invalid -v
+pixi run -e dev pytest packages/data/tests/unit/dq/checkers/test_technical_checker.py::test_type_check_invalid -v
 ```
 
 预期: FAIL (检查器未实现，返回 None)
@@ -219,14 +219,14 @@ def _check_type(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
 **Step 5: 运行测试验证通过**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_technical_checker.py -v
+pixi run -e dev pytest packages/data/tests/unit/dq/checkers/test_technical_checker.py -v
 ```
 
 **Step 6: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/dq/checkers/technical.py
-git add packages/datahub/tests/unit/dq/checkers/test_technical_checker.py
+git add packages/data/src/ditto_data/dq/checkers/technical.py
+git add packages/data/tests/unit/dq/checkers/test_technical_checker.py
 git commit -m "feat(datahub): 实现 type_check DQ 检查器
 
 - 实现 TechnicalChecker._check_type() 方法
@@ -240,7 +240,7 @@ git commit -m "feat(datahub): 实现 type_check DQ 检查器
 ## Task 3: 实现 TechnicalChecker._check_foreign_key()
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/dq/checkers/technical.py:130-139`
+- 修改: `packages/data/src/ditto_data/dq/checkers/technical.py:130-139`
 
 **Step 1: 先写测试**
 
@@ -313,7 +313,7 @@ def test_foreign_key_no_context():
 **Step 2: 运行测试确认失败**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_technical_checker.py::test_foreign_key_invalid -v
+pixi run -e dev pytest packages/data/tests/unit/dq/checkers/test_technical_checker.py::test_foreign_key_invalid -v
 ```
 
 **Step 3: 实现检查器**
@@ -421,14 +421,14 @@ def _check_foreign_key(
 **Step 4: 运行测试验证**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_technical_checker.py::test_foreign_key -v
+pixi run -e dev pytest packages/data/tests/unit/dq/checkers/test_technical_checker.py::test_foreign_key -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/dq/checkers/technical.py
-git add packages/datahub/tests/unit/dq/checkers/test_technical_checker.py
+git add packages/data/src/ditto_data/dq/checkers/technical.py
+git add packages/data/tests/unit/dq/checkers/test_technical_checker.py
 git commit -m "feat(datahub): 实现 foreign_key DQ 检查器
 
 - 实现 TechnicalChecker._check_foreign_key() 方法
@@ -443,11 +443,11 @@ git commit -m "feat(datahub): 实现 foreign_key DQ 检查器
 ## Task 4: 实现 StatisticalChecker._check_zscore()
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py:72-97`
+- 修改: `packages/data/src/ditto_data/dq/checkers/statistical.py:72-97`
 
 **Step 1: 先写测试**
 
-创建 `packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py`:
+创建 `packages/data/tests/unit/dq/checkers/test_statistical_checker.py`:
 
 ```python
 """Tests for StatisticalChecker."""
@@ -457,8 +457,8 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.dq.checkers.statistical import StatisticalChecker
-from ditto_datahub.dq.models import DQLevel, DQSeverity
+from ditto_data.dq.checkers.statistical import StatisticalChecker
+from ditto_data.dq.models import DQLevel, DQSeverity
 
 
 @pytest.fixture
@@ -555,7 +555,7 @@ def test_zscore_with_group_by():
 **Step 2: 运行测试确认失败**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py::test_zscore_no_anomalies -v
+pixi run -e dev pytest packages/data/tests/unit/dq/checkers/test_statistical_checker.py::test_zscore_no_anomalies -v
 ```
 
 **Step 3: 实现检查器**
@@ -679,14 +679,14 @@ def _check_zscore(
 **Step 4: 运行测试验证**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py::test_zscore -v
+pixi run -e dev pytest packages/data/tests/unit/dq/checkers/test_statistical_checker.py::test_zscore -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/dq/checkers/statistical.py
-git add packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py
+git add packages/data/src/ditto_data/dq/checkers/statistical.py
+git add packages/data/tests/unit/dq/checkers/test_statistical_checker.py
 git commit -m "feat(datahub): 实现 zscore DQ 检查器
 
 - 实现 StatisticalChecker._check_zscore() 方法
@@ -701,7 +701,7 @@ git commit -m "feat(datahub): 实现 zscore DQ 检查器
 ## Task 5: 实现 StatisticalChecker._check_completeness()
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py:99-123`
+- 修改: `packages/data/src/ditto_data/dq/checkers/statistical.py:99-123`
 
 **Step 1: 先写测试**
 
@@ -764,7 +764,7 @@ def test_completeness_missing_days(mock_hub_with_calendar):
 **Step 2: 运行测试确认失败**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py::test_completeness_missing_days -v
+pixi run -e dev pytest packages/data/tests/unit/dq/checkers/test_statistical_checker.py::test_completeness_missing_days -v
 ```
 
 **Step 3: 实现检查器**
@@ -867,14 +867,14 @@ def _check_completeness(
 **Step 4: 运行测试验证**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py::test_completeness -v
+pixi run -e dev pytest packages/data/tests/unit/dq/checkers/test_statistical_checker.py::test_completeness -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/dq/checkers/statistical.py
-git add packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py
+git add packages/data/src/ditto_data/dq/checkers/statistical.py
+git add packages/data/tests/unit/dq/checkers/test_statistical_checker.py
 git commit -m "feat(datahub): 实现 completeness DQ 检查器
 
 - 实现 StatisticalChecker._check_completeness() 方法
@@ -889,7 +889,7 @@ git commit -m "feat(datahub): 实现 completeness DQ 检查器
 ## Task 6: 更新数据摄取任务处理 knowledge_date
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
+- 修改: `packages/data/src/ditto_data/sources/tushare/source.py`
 
 **Step 1: 修改 fetch_adj_factor 方法**
 
@@ -988,13 +988,13 @@ def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
 **Step 3: 运行现有测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_source.py -v -k adj_factor
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/test_source.py -v -k adj_factor
 ```
 
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/source.py
+git add packages/data/src/ditto_data/sources/tushare/source.py
 git commit -m "feat(datahub): 为调整因子数据添加 knowledge_date 字段
 
 - 在 fetch_adj_factor 和 fetch_fund_adj 中添加 knowledge_date 列
@@ -1010,27 +1010,27 @@ git commit -m "feat(datahub): 为调整因子数据添加 knowledge_date 字段
 **Step 1: 运行所有 DQ 相关测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/dq/ -v
-pixi run -e dev pytest packages/datahub/tests/unit/runtime/test_dq_checker.py -v
+pixi run -e dev pytest packages/data/tests/unit/dq/ -v
+pixi run -e dev pytest packages/data/tests/unit/runtime/test_dq_checker.py -v
 ```
 
 **Step 2: 运行相关单元测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/ -v
-pixi run -e dev pytest packages/datahub/tests/unit/repositories/test_bars_repository.py -v -k adj
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/ -v
+pixi run -e dev pytest packages/data/tests/unit/repositories/test_bars_repository.py -v -k adj
 ```
 
 **Step 3: 运行类型检查**
 
 ```bash
-pixi run -e dev ruff check packages/datahub/src/ditto_datahub/dq/
-pixi run -e dev mypy packages/datahub/src/ditto_datahub/dq/
+pixi run -e dev ruff check packages/data/src/ditto_data/dq/
+pixi run -e dev mypy packages/data/src/ditto_data/dq/
 ```
 
 **Step 4: 更新文档**
 
-更新 `packages/datahub/README.md` 中的 DQ 功能说明：
+更新 `packages/data/README.md` 中的 DQ 功能说明：
 
 ```markdown
 ### 数据质量检查
@@ -1052,7 +1052,7 @@ pixi run -e dev mypy packages/datahub/src/ditto_datahub/dq/
 **Step 5: 最终提交**
 
 ```bash
-git add packages/datahub/README.md
+git add packages/data/README.md
 git commit -m "docs(datahub): 更新 DQ 检查器文档
 
 - 记录新增的 type_check、foreign_key、required_columns 检查器

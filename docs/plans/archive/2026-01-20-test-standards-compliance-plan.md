@@ -16,14 +16,14 @@
 ### 1. 测试失效（31 个失败）
 
 **位置**：
-- `packages/datahub/tests/unit/test_hub_unit.py`: 28 个失败
-- `packages/datahub/tests/unit/sources/test_accessor_unit.py`: 5 个失败
+- `packages/data/tests/unit/test_hub_unit.py`: 28 个失败
+- `packages/data/tests/unit/sources/test_accessor_unit.py`: 5 个失败
 
 **根本原因**：Dishka 依赖注入迁移破坏了测试 Mock
 
 ```python
 # ❌ 旧测试直接 Mock DataHub 类
-mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+mocker.patch("ditto_data.DataHub", return_value=mock_hub)
 
 # ✅ 新架构使用 Dishka 容器
 # 需要 Mock 容器中的 Provider，而非直接 Mock DataHub
@@ -44,7 +44,7 @@ mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
 **无 Marker 的主要文件**：
 | 目录 | 无 Marker 文件数 |
 |------|-----------------|
-| `packages/datahub/tests/unit` | 44 个 |
+| `packages/data/tests/unit` | 44 个 |
 | `packages/foundation/tests/unit` | 15 个 |
 | `apps/port/tests/unit` | 0 个（100% 覆盖）✅ |
 
@@ -63,8 +63,8 @@ mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
    - `apps/port/tests/unit/ingestion/flows/test_backfill_unit.py`
 
 2. `test_base_unit.py`:
-   - `packages/datahub/tests/unit/alerts/test_base_unit.py`
-   - `packages/datahub/tests/unit/sources/test_base_unit.py`
+   - `packages/data/tests/unit/alerts/test_base_unit.py`
+   - `packages/data/tests/unit/sources/test_base_unit.py`
 
 **风险**：pytest 导入冲突（虽尚未触发，但存在隐患）
 
@@ -73,7 +73,7 @@ mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
 ### 4. 假测试/宽泛断言
 
 **问题位置**：
-- `packages/datahub/tests/unit/models/test_common_unit.py:44`: `assert True`
+- `packages/data/tests/unit/models/test_common_unit.py:44`: `assert True`
 - 约 130 处 `assert xxx is not None`（部分合理，部分过于宽泛）
 
 ---
@@ -158,7 +158,7 @@ def test_something(mocker):
 
 ```python
 # ❌ 错误：尝试 Mock DataHub 类
-mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+mocker.patch("ditto_data.DataHub", return_value=mock_hub)
 
 # ✅ 正确：直接测试组件，传入 Mock 依赖
 def test_calendar_accessor():
@@ -192,8 +192,8 @@ async def test_dishka_container_integration():
 ### 1.1 分析失败测试的有效性
 
 **问题文件**：
-- [test_hub_unit.py](../packages/datahub/tests/unit/test_hub_unit.py) - 28 个失败
-- [test_accessor_unit.py](../packages/datahub/tests/unit/sources/test_accessor_unit.py) - 5 个失败
+- [test_hub_unit.py](../packages/data/tests/unit/test_hub_unit.py) - 28 个失败
+- [test_accessor_unit.py](../packages/data/tests/unit/sources/test_accessor_unit.py) - 5 个失败
 
 **重新评估策略**（用户选择）：
 1. 先检查 Dishka 迁移后，这些测试是否仍然有意义
@@ -223,9 +223,9 @@ async def test_dishka_container_integration():
 **需要添加 Marker 的文件列表**：
 | 目录 | 文件数 | Marker 类型 |
 |------|--------|------------|
-| `packages/datahub/tests/unit/` | 44 | `@pytest.mark.unit` |
+| `packages/data/tests/unit/` | 44 | `@pytest.mark.unit` |
 | `packages/foundation/tests/unit/` | 15 | `@pytest.mark.unit` |
-| `packages/datahub/tests/integration/` | 8 | `@pytest.mark.integration` |
+| `packages/data/tests/integration/` | 8 | `@pytest.mark.integration` |
 
 ---
 
@@ -316,8 +316,8 @@ repos:
 |---------|--------|------|
 | `test_backfill_unit.py` | `test_backfill_manager_unit.py` | `apps/port/tests/unit/ingestion/` |
 | `test_backfill_unit.py` | `test_backfill_flow_unit.py` | `apps/port/tests/unit/ingestion/flows/` |
-| `test_base_unit.py` | `test_alert_models_unit.py` | `packages/datahub/tests/unit/alerts/` |
-| `test_base_unit.py` | `test_source_base_unit.py` | `packages/datahub/tests/unit/sources/` |
+| `test_base_unit.py` | `test_alert_models_unit.py` | `packages/data/tests/unit/alerts/` |
+| `test_base_unit.py` | `test_source_base_unit.py` | `packages/data/tests/unit/sources/` |
 
 ### 3.2 迁移 unittest.mock 到 pytest-mock
 
@@ -327,12 +327,12 @@ repos:
 - `apps/port/tests/unit/cli/test_factory_unit.py`
 - `apps/port/tests/unit/cli/commands/*.py` (6 个)
 - `apps/port/tests/unit/jobs/flows/test_deploy_unit.py`
-- `packages/datahub/tests/` (10 个)
+- `packages/data/tests/` (10 个)
 
 ### 3.3 修复假测试和宽泛断言
 
 **需要修复的位置**：
-- `packages/datahub/tests/unit/models/test_common_unit.py:44`: `assert True`
+- `packages/data/tests/unit/models/test_common_unit.py:44`: `assert True`
 - 约 130 处 `assert xxx is not None`（需逐一评估）
 
 ---
@@ -342,7 +342,7 @@ repos:
 ### 4.1 当前状态分析
 
 **现有 CI 配置**：
-- 使用目录过滤：`pytest packages/datahub/tests/unit/`
+- 使用目录过滤：`pytest packages/data/tests/unit/`
 - 不检查 marker
 
 **目标状态**：
@@ -419,7 +419,7 @@ def test_calendar_accessor():
     # 这是集成测试，不是单元测试
 
 # ❌ 错误：不要 Mock DataHub 类
-mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+mocker.patch("ditto_data.DataHub", return_value=mock_hub)
 # 应该直接测试具体组件，而非整个容器
 ```
 
@@ -566,9 +566,9 @@ pixi run -e dev python scripts/check_pytest_markers.py
 ### 需要修改的文件
 
 **紧急修复（P0）**：
-1. [packages/datahub/tests/unit/test_hub_unit.py](../packages/datahub/tests/unit/test_hub_unit.py) - 28 个测试失败
-2. [packages/datahub/tests/unit/sources/test_accessor_unit.py](../packages/datahub/tests/unit/sources/test_accessor_unit.py) - 5 个测试失败
-3. [packages/datahub/tests/unit/models/test_common_unit.py](../packages/datahub/tests/unit/models/test_common_unit.py) - `assert True` 假测试
+1. [packages/data/tests/unit/test_hub_unit.py](../packages/data/tests/unit/test_hub_unit.py) - 28 个测试失败
+2. [packages/data/tests/unit/sources/test_accessor_unit.py](../packages/data/tests/unit/sources/test_accessor_unit.py) - 5 个测试失败
+3. [packages/data/tests/unit/models/test_common_unit.py](../packages/data/tests/unit/models/test_common_unit.py) - `assert True` 假测试
 4. 所有 67 个缺少 marker 的测试文件
 
 **规范强化（P1）**：

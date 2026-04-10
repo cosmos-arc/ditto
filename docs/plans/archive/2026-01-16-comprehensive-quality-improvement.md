@@ -41,7 +41,7 @@
 
 **解决方案**：
 ```python
-# packages/datahub/src/ditto_datahub/stores/quarantine_store.py
+# packages/data/src/ditto_data/stores/quarantine_store.py
 class QuarantineStore:
     def close(self) -> None:
         """关闭 SQLite 连接"""
@@ -58,7 +58,7 @@ class QuarantineStore:
 
 **测试文件修改**：
 ```python
-# packages/datahub/tests/unit/repositories/test_bars_repository_unit.py
+# packages/data/tests/unit/repositories/test_bars_repository_unit.py
 def teardown_method(self) -> None:
     """测试后清理"""
     if hasattr(self, 'quarantine_store'):
@@ -96,7 +96,7 @@ def teardown_method(self) -> None:
 
 **处理文件：**
 - ✅ [settings.py](packages/foundation/src/ditto_foundation/config/settings.py) - 6 处 PLC0415
-- ✅ [hub.py](packages/datahub/src/ditto_datahub/hub.py) - 30 处 PLC0415
+- ✅ [hub.py](packages/data/src/ditto_data/hub.py) - 30 处 PLC0415
 - ✅ [deploy.py](apps/port/src/ditto_port/jobs/flows/deploy.py) - 2 处 PLC0415
 
 **修改方案：**
@@ -113,10 +113,10 @@ def teardown_method(self) -> None:
 
 | 任务 | 文件 | 位置 | 优先级 | 方案 |
 |------|------|------|--------|------|
-| 2.1 | [base.py](packages/datahub/src/ditto_datahub/sources/base.py) | 363-390 | 🔴 高 | **拆分：新建 factory.py** |
-| 2.2 | [client.py](packages/datahub/src/ditto_datahub/sources/tushare/client.py) | 65 | 🔴 高 | try/except 替代 importlib |
-| 2.3 | [hub.py](packages/datahub/src/ditto_datahub/hub.py) | 70, 93, 101... | 🟡 中 | 顶层导入 + @cached_property |
-| 2.4 | [bars.py](packages/datahub/src/ditto_datahub/repositories/bars.py) | 866 | 🟡 中 | 顶层导入 |
+| 2.1 | [base.py](packages/data/src/ditto_data/sources/base.py) | 363-390 | 🔴 高 | **拆分：新建 factory.py** |
+| 2.2 | [client.py](packages/data/src/ditto_data/sources/tushare/client.py) | 65 | 🔴 高 | try/except 替代 importlib |
+| 2.3 | [hub.py](packages/data/src/ditto_data/hub.py) | 70, 93, 101... | 🟡 中 | 顶层导入 + @cached_property |
+| 2.4 | [bars.py](packages/data/src/ditto_data/repositories/bars.py) | 866 | 🟡 中 | 顶层导入 |
 | 2.5 | [deploy.py](apps/port/src/ditto_port/jobs/flows/deploy.py) | 41, 133 | 🟡 中 | 顶层导入 |
 
 #### 核心发现
@@ -133,7 +133,7 @@ def teardown_method(self) -> None:
 
 ```python
 # 新建 factory.py
-from ditto_datahub.sources.tushare.source import TushareSource
+from ditto_data.sources.tushare.source import TushareSource
 
 def get_source(name: str) -> DataSource:
     sources: dict[str, type[DataSource]] = {
@@ -150,8 +150,8 @@ def get_source(name: str) -> DataSource:
 
 ```python
 # 移除 TYPE_CHECKING，直接在顶层导入
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
-from ditto_datahub.runtime.file_lock import FileLockManager
+from ditto_data.runtime.sqlite_pool import SQLitePool
+from ditto_data.runtime.file_lock import FileLockManager
 # ... 其他导入
 
 @cached_property
@@ -352,14 +352,14 @@ def test_get_recorded_spans():
 ## 关键文件清单
 
 ### 测试修复
-- [packages/datahub/src/ditto_datahub/stores/quarantine_store.py](packages/datahub/src/ditto_datahub/stores/quarantine_store.py)
+- [packages/data/src/ditto_data/stores/quarantine_store.py](packages/data/src/ditto_data/stores/quarantine_store.py)
 
 ### Phase 2: 循环依赖解耦
-- [packages/datahub/src/ditto_datahub/hub.py](packages/datahub/src/ditto_datahub/hub.py) ⭐ 核心文件
+- [packages/data/src/ditto_data/hub.py](packages/data/src/ditto_data/hub.py) ⭐ 核心文件
 - [apps/port/src/ditto_port/jobs/flows/deploy.py](apps/port/src/ditto_port/jobs/flows/deploy.py)
-- [packages/datahub/src/ditto_datahub/repositories/bars.py](packages/datahub/src/ditto_datahub/repositories/bars.py)
-- [packages/datahub/src/ditto_datahub/sources/base.py](packages/datahub/src/ditto_datahub/sources/base.py)
-- [packages/datahub/src/ditto_datahub/sources/tushare/client.py](packages/datahub/src/ditto_datahub/sources/tushare/client.py)
+- [packages/data/src/ditto_data/repositories/bars.py](packages/data/src/ditto_data/repositories/bars.py)
+- [packages/data/src/ditto_data/sources/base.py](packages/data/src/ditto_data/sources/base.py)
+- [packages/data/src/ditto_data/sources/tushare/client.py](packages/data/src/ditto_data/sources/tushare/client.py)
 
 ### Phase 3: 类型忽略清理
 - [packages/foundation/src/ditto_foundation/util/dates.py](packages/foundation/src/ditto_foundation/util/dates.py)

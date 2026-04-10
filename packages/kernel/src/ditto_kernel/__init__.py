@@ -1,26 +1,98 @@
 """
-Ditto 共享内核 — 跨层领域原语.
+Ditto 共享内核 — 跨层领域原语 + Protocol 抽象 + 薄实现.
 
-提供跨层共享的纯类型定义（枚举、NewType、值对象）。
+提供跨层共享的纯类型定义（枚举、NewType、值对象）和系统级 Protocol 抽象。
 零业务行为、零外部依赖、零 I/O。
 
-准入标准（5 条，全部满足才可进入）：
-1. 跨层使用：至少被 2 个业务包直接导入
-2. 零业务行为：纯值对象 / 枚举 / NewType
-3. 稳定性高：不会随某个子域的迭代频繁变更
-4. 无外部依赖：只依赖 Python 标准库
-5. 纯值语义：不含序列化、持久化关注点
+准入标准（详见 packages/kernel/CLAUDE.md）：
+- 值对象：枚举 / NewType / 值对象（5 条准入标准）
+- Protocol / 薄实现：接口契约 + 系统级基础设施（5 条准入标准）
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
-from ditto_kernel.enums import AssetClass, Exchange, OrderSide, RunStatus
+from ditto_kernel.clock import Clock, RealtimeClock, SimulatedClock
+from ditto_kernel.enums import (
+    AssetClass,
+    Exchange,
+    MacroCategory,
+    MacroFrequency,
+    OrderSide,
+    RiskScope,
+    RunStatus,
+)
+from ditto_kernel.events import DomainEvent, EventBus, SimpleEventBus
+from ditto_kernel.exceptions import (
+    AmbiguousTickerError,
+    DataError,
+    IdentifierError,
+    NoIdentifierProvidedError,
+)
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.quality import (
+    DQIssue,
+    DQLevel,
+    DQResult,
+    DQSeverity,
+    L3CheckResult,
+    ReconciliationResult,
+)
+from ditto_kernel.research import (
+    ResearchDatasetSnapshotRecord,
+    ResearchDatasetSpecRecord,
+    ResearchSpineSnapshotRecord,
+    ResearchSpineSpecRecord,
+)
+from ditto_kernel.specs import (
+    CALENDAR_TO_TIMEZONE,
+    GRAIN_TO_TIME_KEYS,
+    CalendarId,
+    DerivedRole,
+    DerivedSpec,
+    ExecutionPolicy,
+    GrainId,
+    MaterializationProfile,
+    TimeSpec,
+)
+from ditto_kernel.types import InstrumentIngestParams
 
 __all__ = [
+    "CALENDAR_TO_TIMEZONE",
+    "GRAIN_TO_TIME_KEYS",
+    "AmbiguousTickerError",
     "AssetClass",
+    "CalendarId",
+    "Clock",
+    "DQIssue",
+    "DQLevel",
+    "DQResult",
+    "DQSeverity",
+    "DataError",
+    "DerivedRole",
+    "DerivedSpec",
+    "DomainEvent",
+    "EventBus",
     "Exchange",
+    "ExecutionPolicy",
+    "GrainId",
+    "IdentifierError",
     "InstrumentId",
+    "InstrumentIngestParams",
+    "L3CheckResult",
+    "MacroCategory",
+    "MacroFrequency",
+    "MaterializationProfile",
+    "NoIdentifierProvidedError",
     "OrderSide",
+    "RealtimeClock",
+    "ReconciliationResult",
+    "ResearchDatasetSnapshotRecord",
+    "ResearchDatasetSpecRecord",
+    "ResearchSpineSnapshotRecord",
+    "ResearchSpineSpecRecord",
+    "RiskScope",
     "RunStatus",
+    "SimpleEventBus",
+    "SimulatedClock",
+    "TimeSpec",
 ]

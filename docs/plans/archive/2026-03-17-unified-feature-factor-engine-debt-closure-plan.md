@@ -55,7 +55,7 @@
 
 ```
 arch-check BROKEN:
-  ditto_datahub.services.derived.compile_cache_service
+  ditto_data.services.derived.compile_cache_service
     → ditto_core.engine.expression (L22)
     → ditto_core.engine.materialization (L23)
     → ditto_core.engine.specs (L24)
@@ -67,7 +67,7 @@ DataHub 层不可导入 Core 层。`compile_cache_service` 依赖 Core 引擎内
 
 ```
 修改前:
-  packages/datahub/src/ditto_datahub/services/derived/compile_cache_service.py
+  packages/data/src/ditto_data/services/derived/compile_cache_service.py
 
 修改后:
   packages/core/src/ditto_core/engine/compile_cache.py
@@ -78,8 +78,8 @@ DataHub 层不可导入 Core 层。`compile_cache_service` 依赖 Core 引擎内
 1. `git mv` 移动文件到 `packages/core/src/ditto_core/engine/compile_cache.py`
 2. 重命名类：`SQLiteCompileCacheService` → `SQLiteCompileCache`（去掉 Service 后缀，Core 层不使用 Service 命名）
 3. 更新所有导入：
-   - `packages/datahub/src/ditto_datahub/services/derived/__init__.py`
-   - 任何引用 `from ditto_datahub.services.derived.compile_cache_service import ...` 的文件
+   - `packages/data/src/ditto_data/services/derived/__init__.py`
+   - 任何引用 `from ditto_data.services.derived.compile_cache_service import ...` 的文件
 4. 移除 `.importlinter` 中针对此文件的 `ignore_imports` 规则
 5. 更新测试文件导入
 
@@ -192,7 +192,7 @@ DataHub 层不可导入 Core 层。`compile_cache_service` 依赖 Core 引擎内
 
 ### 3.1 TD-01: TDX 批量查询 [OUT OF SCOPE]
 
-**位置**：[tdx/source.py:109](../../packages/datahub/src/ditto_datahub/sources/tdx/source.py#L109)
+**位置**：[tdx/source.py:109](../../packages/data/src/ditto_data/sources/tdx/source.py#L109)
 
 > **已转出为独立 feature，不在本技术债务计划范围内。** 将创建独立的 feature request 跟踪。
 

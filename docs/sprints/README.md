@@ -11,9 +11,9 @@ Ditto 项目的 Sprint 规划与开发文档。
 | Sprint | 阶段 | 进度 | 状态 |
 |--------|------|------|------|
 | Sprint 1 | 数据层基础架构 | ██████████ 100% | ✅ P0 完成 |
-| Sprint 2 | 数据层完善与验证 | ░░░░░░░░░░ 0% | ❌ 未开始 |
-| Sprint 3 | 核心引擎 | ░░░░░░░░░░ 0% | ❌ 未开始 |
-| Sprint 4 | 回测与风控 | ░░░░░░░░░░ 0% | ❌ 未开始 |
+| Sprint 2 | 数据层完善与验证 | — | 🔄 see git history |
+| Sprint 3 | 核心引擎 | — | 🔄 see git history |
+| Sprint 4 | 回测与风控 | — | 🔄 see git history |
 
 ## 当前进行中
 
@@ -27,7 +27,7 @@ Ditto 项目的 Sprint 规划与开发文档。
 - ✅ Task 3: Domain Repositories (8 tests)
 - ✅ Task 4: DataHub Facade + SqlEngine (20 tests)
   - PR: https://github.com/cosmos-arc/ditto/pull/7
-  - 分支: `feat/datahub-facade`
+  - 分支: `feat/data-facade`
 
 **下一步**: P1 任务（ETL Pipeline + Golden Dataset 验证）
 
@@ -134,10 +134,7 @@ Ditto 项目的 Sprint 规划与开发文档。
 
 - **Sprint 2**: [数据层完善与验证](./sprint-02-data-quality.md)
   - Week 4-8 (4-5 周)
-  - ❌ DQ 三层架构（L1/L2/L3）
-  - ❌ DataHub 完整实现（Universe/Index/Freeze/元数据）
-  - ❌ 数据摄取增强（增量/监控/告警/AkShare）
-  - ❌ 黄金数据集验证（最终验收）
+  - 🔄 see git history for current status
 
 ### Phase 1.1: 核心引擎
 - **Sprint 3**: [核心引擎实现](./sprint-03-core-engines.md)
@@ -171,9 +168,9 @@ Ditto 项目的 Sprint 规划与开发文档。
 | 完成一个函数 | `feat(sql_engine): implement _register_views` |
 | 完成一个测试类 | `test(sql_engine): add test skeleton for SqlEngine` |
 | RED→GREEN 完成 | `feat(sql): make sql query tests pass` |
-| 重构完成 | `refactor(hub): simplify dependency injection` |
-| 修复 Bug | `fix(datahub): resolve SID allocation race condition` |
-| 类型修复 | `fix(types): add proper type hints to sql method` |
+| 重构完成 | `refactor(data): simplify dependency injection` |
+| 修复 Bug | `fix(data): resolve SID allocation race condition` |
+| 类型修复 | `fix(types): add proper type hints to query method` |
 
 ### ❌ 避免的提交方式
 
@@ -202,11 +199,11 @@ git commit -m "feat(sql_engine): implement adjustment macros (qfq, qfq_now, mark
 # 5. SQLite ATTACH
 git commit -m "feat(sql_engine): implement SQLite ATTACH on demand"
 
-# 6. DataHub Facade
-git commit -m "feat(datahub): implement DataHub facade with lazy loading"
+# 6. Data Facade
+git commit -m "feat(data): implement Data facade with lazy loading"
 
 # 7. 包导出
-git commit -m "chore(datahub): export DataHub from __init__.py"
+git commit -m "chore(data): export facade from __init__.py"
 ```
 
 ---
@@ -226,7 +223,7 @@ git commit -m "chore(datahub): export DataHub from __init__.py"
 | Sprint | 文件 | 状态 |
 |--------|------|------|
 | 1 | [sprint-01-data-foundation.md](./sprint-01-data-foundation.md) | ✅ 100% P0 |
-| 2 | [sprint-02-data-quality.md](./sprint-02-data-quality.md) | ❌ 未开始 |
-| 3 | [sprint-03-core-engines.md](./sprint-03-core-engines.md) | ❌ 未开始 |
-| 4 | [sprint-04-backtest-risk.md](./sprint-04-backtest-risk.md) | ❌ 未开始 |
+| 2 | [sprint-02-data-quality.md](./sprint-02-data-quality.md) | 🔄 see git history |
+| 3 | [sprint-03-core-engines.md](./sprint-03-core-engines.md) | 🔄 see git history |
+| 4 | [sprint-04-backtest-risk.md](./sprint-04-backtest-risk.md) | 🔄 see git history |
 | - | [backlog.md](./backlog.md) | 📝 想法池 |

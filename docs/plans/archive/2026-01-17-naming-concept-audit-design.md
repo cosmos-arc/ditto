@@ -251,7 +251,7 @@ def run_architecture_audit():
 
 ### 命名与概念
 - [NAM-001] `BarData` / `KlineData` / `CandlestickData` 概念不统一
-  - 位置: `packages/datahub/src/ditto_datahub/models/`
+  - 位置: `packages/data/src/ditto_data/models/`
   - 严重度: P1
   - 建议: 统一使用 `BarData`
 

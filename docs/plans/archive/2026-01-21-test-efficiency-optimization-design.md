@@ -79,7 +79,7 @@
 **修复方案**：
 
 ```python
-# packages/datahub/tests/unit/runtime/conftest.py
+# packages/data/tests/unit/runtime/conftest.py
 
 @pytest.fixture
 def frozen_time(time_machine):
@@ -103,8 +103,8 @@ def test_individual_ttl(frozen_time) -> None:
 ```
 
 **影响文件**：
-- `packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py`
-- `packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py`
+- `packages/data/tests/unit/runtime/test_cache_ttl_unit.py`
+- `packages/data/tests/unit/runtime/test_cache_runtime_unit.py`
 
 **预期效果**：9s → 0.5s（**18x 提速**）
 
@@ -122,7 +122,7 @@ def test_individual_ttl(frozen_time) -> None:
 **修复方案**：
 
 ```python
-# packages/datahub/tests/integration/conftest.py
+# packages/data/tests/integration/conftest.py
 
 @pytest.fixture(autouse=True)
 def ensure_sqlite_cleanup():
@@ -155,7 +155,7 @@ def teardown_method(self) -> None:
 ```
 
 **影响文件**：
-- `packages/datahub/tests/integration/conftest.py`
+- `packages/data/tests/integration/conftest.py`
 - 所有使用 `SQLitePool` 的集成测试
 
 ---
@@ -226,8 +226,8 @@ def test_metrics_integration(metrics_registry):
 
 ```bash
 # 迁移边界混淆的单元测试
-mv packages/datahub/tests/unit/stores/test_bars_store_unit.py \
-   packages/datahub/tests/integration/stores/test_bars_store_integration.py
+mv packages/data/tests/unit/stores/test_bars_store_unit.py \
+   packages/data/tests/integration/stores/test_bars_store_integration.py
 ```
 
 ---
@@ -239,13 +239,13 @@ mv packages/datahub/tests/unit/stores/test_bars_store_unit.py \
 **修复方案**：
 
 ```python
-# packages/datahub/tests/integration/conftest.py
+# packages/data/tests/integration/conftest.py
 
 @pytest.fixture
 def sqlite_schema_path() -> Path:
     """获取 schema.sql 路径"""
     return Path(__file__).parent.parent.parent.parent \
-        / "src" / "ditto_datahub" / "scripts" / "schema.sql"
+        / "src" / "ditto_data" / "scripts" / "schema.sql"
 
 @pytest.fixture
 def sqlite_pool_with_schema(sqlite_schema_path: Path, tmp_path: Path) -> SQLitePool:

@@ -96,7 +96,7 @@ M.data_records.add(row_count, {"source": "tushare", "dataset": "valuation_metric
 ### 2.1 新目录结构
 
 ```
-packages/datahub/src/ditto_datahub/sources/tushare/processors/
+packages/data/src/ditto_data/sources/tushare/processors/
 ├── __init__.py
 ├── transformer.py          # TushareDataTransformer 类 + ColumnMapping 定义
 ├── error_handler.py        # (现有)

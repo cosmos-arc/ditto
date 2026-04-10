@@ -75,7 +75,7 @@ uvicorn = "*"               # 被 granian 替代
 
 ### 1. DataCache 统一缓存层（基于 cachebox）
 
-**文件**: `packages/datahub/src/ditto_datahub/runtime/cache.py`
+**文件**: `packages/data/src/ditto_data/runtime/cache.py`
 
 **核心特性**:
 - 基于 `cachebox.TTLCache` 和 `cachebox.VTTLCache`（Rust 实现）
@@ -217,7 +217,7 @@ cache.insert("key2", "value2", ttl=300)  # 300 秒
 
 ### 2. SqlEngine 增强
 
-**文件**: `packages/datahub/src/ditto_datahub/runtime/sql_engine.py`
+**文件**: `packages/data/src/ditto_data/runtime/sql_engine.py`
 
 #### 2.1 查询计划缓存
 - 标准化查询字符串（去除参数）
@@ -231,7 +231,7 @@ cache.insert("key2", "value2", ttl=300)  # 300 秒
 
 #### 2.3 PIT SQL 辅助函数
 
-**文件**: `packages/datahub/src/ditto_datahub/runtime/pit_helper.py`
+**文件**: `packages/data/src/ditto_data/runtime/pit_helper.py`
 
 ```python
 class PitHelper:
@@ -423,7 +423,7 @@ async def get_data():
 - 验收标准: 所有新指标可正常初始化和调用
 
 ### Task 4.2: DataCache 封装实现 `[S]` ✅ 已完成
-- 新增文件: `packages/datahub/src/ditto_datahub/runtime/cache.py`
+- 新增文件: `packages/data/src/ditto_data/runtime/cache.py`
 - 基于 cachebox.TTLCache 实现 DataCache 封装类
 - 实现指标集成（get/set/invalidate 中记录 M.metrics）
 - 实现缓存键管理（category:key 格式）
@@ -433,7 +433,7 @@ async def get_data():
 - 验收标准: 所有单元测试通过
 
 ### Task 4.3: DataCache 单元测试 `[S]` ✅ 已完成
-- 新增文件: `packages/datahub/tests/unit/runtime/test_cache.py`
+- 新增文件: `packages/data/tests/unit/runtime/test_cache.py`
 - 测试基本操作（get/set/invalidate/clear）
 - 测试 TTL 过期（cachebox 内置功能）
 - 测试 LRU 淘汰（cachebox 内置功能）
@@ -444,14 +444,14 @@ async def get_data():
 - 验收标准: 代码覆盖率 >= 80%（实际 84.52%）
 
 ### Task 4.4: CalendarStore 集成 DataCache `[S]` ✅ 已完成
-- 修改文件: `packages/datahub/src/ditto_datahub/stores/calendar_store.py`
+- 修改文件: `packages/data/src/ditto_data/stores/calendar_store.py`
 - 添加 DataCache 可选参数
 - get_range() 方法集成缓存
 - 保留现有 _cache_dict 内存缓存
 - 验收标准: 所有现有测试通过，缓存命中率 >= 80%
 
 ### Task 4.5: SecurityStore 集成 DataCache `[M]` ✅ 已完成
-- 修改文件: `packages/datahub/src/ditto_datahub/stores/security_store.py`
+- 修改文件: `packages/data/src/ditto_data/stores/security_store.py`
 - 添加 DataCache 可选参数
 - resolve_sid() 集成缓存（支持 PIT）
 - 移除 @lru_cache 装饰器
@@ -459,35 +459,35 @@ async def get_data():
 - 验收标准: PIT 查询缓存正确工作
 
 ### Task 4.6: SqlEngine 查询计划缓存 `[M]` ✅ 已完成
-- 修改文件: `packages/datahub/src/ditto_datahub/runtime/sql_engine.py`
+- 修改文件: `packages/data/src/ditto_data/runtime/sql_engine.py`
 - 实现 _normalize_query() 方法
 - 实现 _prepare_query() 方法（带缓存）
 - 添加 enable_plan_cache 和 plan_cache_size 参数
 - 验收标准: 查询计划缓存正常工作，缓存大小限制生效
 
 ### Task 4.7: SqlEngine 慢查询日志 `[S]` ✅ 已完成
-- 修改文件: `packages/datahub/src/ditto_datahub/runtime/sql_engine.py`
+- 修改文件: `packages/data/src/ditto_data/runtime/sql_engine.py`
 - 添加 slow_query_threshold 参数
 - 实现 _log_slow_query() 方法
 - execute() 方法集成计时和日志
 - 验收标准: 慢查询正确记录，正常查询不记录
 
 ### Task 4.8: PIT SQL 辅助函数 `[S]` ✅ 已完成
-- 新增文件: `packages/datahub/src/ditto_datahub/runtime/pit_helper.py`
+- 新增文件: `packages/data/src/ditto_data/runtime/pit_helper.py`
 - 实现 PitHelper 类（3 个静态方法）
 - SqlEngine 集成 pit_helper 属性
 - 添加 pit_query() 便捷方法
 - 验收标准: 生成的 SQL 语法正确
 
 ### Task 4.9: PIT 辅助函数单元测试 `[S]` ✅ 已完成
-- 新增文件: `packages/datahub/tests/unit/runtime/test_pit_helper.py`
+- 新增文件: `packages/data/tests/unit/runtime/test_pit_helper.py`
 - 测试 add_pit_filter()（有/无 WHERE）
 - 测试 add_pit_join()
 - 测试 wrap_pit_cte()
 - 验收标准: 代码覆盖率 >= 80%（16 个测试全部通过）
 
 ### Task 4.10: 集成测试 `[M]` 📝 延后
-- 新增文件: `packages/datahub/tests/integration/test_cache_integration.py`
+- 新增文件: `packages/data/tests/integration/test_cache_integration.py`
 - 测试日历缓存命中率
 - 测试证券存储 PIT 查询缓存
 - 测试查询计划缓存性能提升
@@ -515,25 +515,25 @@ async def get_data():
 ### 新增文件（已完成）
 | 文件 | 用途 | 状态 |
 |------|------|------|
-| `packages/datahub/src/ditto_datahub/runtime/cache.py` | DataCache 实现 | ✅ |
-| `packages/datahub/src/ditto_datahub/runtime/pit_helper.py` | PIT 辅助函数 | ✅ |
-| `packages/datahub/tests/unit/runtime/test_cache.py` | DataCache 单元测试 | ✅ |
-| `packages/datahub/tests/unit/runtime/test_pit_helper.py` | PIT 辅助测试 | ✅ |
+| `packages/data/src/ditto_data/runtime/cache.py` | DataCache 实现 | ✅ |
+| `packages/data/src/ditto_data/runtime/pit_helper.py` | PIT 辅助函数 | ✅ |
+| `packages/data/tests/unit/runtime/test_cache.py` | DataCache 单元测试 | ✅ |
+| `packages/data/tests/unit/runtime/test_pit_helper.py` | PIT 辅助测试 | ✅ |
 
 ### 延后文件
 | 文件 | 用途 | 状态 |
 |------|------|------|
-| `packages/datahub/tests/integration/test_cache_integration.py` | 集成测试 | 📝 |
+| `packages/data/tests/integration/test_cache_integration.py` | 集成测试 | 📝 |
 
 ### 修改文件（已完成）
 | 文件 | 主要修改 | 状态 |
 |------|----------|------|
 | `pixi.toml` | 依赖更新（+cachebox, +granian, +orjson, -uvicorn） | ✅ |
 | `packages/foundation/src/ditto_foundation/observability/metrics.py` | 添加缓存、SQL、JSON 指标 | ✅ |
-| `packages/datahub/src/ditto_datahub/runtime/sql_engine.py` | 查询计划缓存、慢查询日志、PIT 集成 | ✅ |
-| `packages/datahub/src/ditto_datahub/runtime/__init__.py` | 导出 DataCache, PitHelper | ✅ |
-| `packages/datahub/src/ditto_datahub/stores/calendar_store.py` | 集成 DataCache | ✅ |
-| `packages/datahub/src/ditto_datahub/stores/security_store.py` | 集成 DataCache | ✅ |
+| `packages/data/src/ditto_data/runtime/sql_engine.py` | 查询计划缓存、慢查询日志、PIT 集成 | ✅ |
+| `packages/data/src/ditto_data/runtime/__init__.py` | 导出 DataCache, PitHelper | ✅ |
+| `packages/data/src/ditto_data/stores/calendar_store.py` | 集成 DataCache | ✅ |
+| `packages/data/src/ditto_data/stores/security_store.py` | 集成 DataCache | ✅ |
 | `apps/server/src/ditto_port/main.py` | Granian + ORJSONResponse | ✅ |
 
 ## 风险与依赖（更新）

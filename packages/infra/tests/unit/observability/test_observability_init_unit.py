@@ -7,7 +7,9 @@
 """
 
 import pytest
-from ditto_infra.foundation.observability import _ObservabilityRegistry
+from ditto_infra.foundation.observability._registry import (
+    ObservabilityRegistry as _ObservabilityRegistry,
+)
 
 
 @pytest.mark.unit

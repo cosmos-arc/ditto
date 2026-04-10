@@ -12,7 +12,7 @@
 
 ### 1. IdentityStore 批量查询性能优化
 
-**文件:** `packages/datahub/src/ditto_datahub/domains/metadata/identity/identity_store.py:106-147`
+**文件:** `packages/data/src/ditto_data/domains/metadata/identity/identity_store.py:106-147`
 
 **问题:** `resolve_sids_batch()` 当前循环调用 `resolve_sid()`，存在 N+1 查询问题
 
@@ -83,8 +83,8 @@ def resolve_sids_batch(
 ### 2. Industry Stores 错误处理增强
 
 **文件:**
-- `packages/datahub/src/ditto_datahub/domains/metadata/industry/industry_basic_store.py`
-- `packages/datahub/src/ditto_datahub/domains/metadata/industry/industry_mapping_store.py`
+- `packages/data/src/ditto_data/domains/metadata/industry/industry_basic_store.py`
+- `packages/data/src/ditto_data/domains/metadata/industry/industry_mapping_store.py`
 
 **问题:** 缺少数据库连接失败、约束违反等异常处理
 
@@ -138,7 +138,7 @@ class IndustryBasicStore(SQLiteStore):
 
 ### 3. IdentityStore.register() 去重处理
 
-**文件:** `packages/datahub/src/ditto_datahub/domains/metadata/identity/identity_store.py:183-246`
+**文件:** `packages/data/src/ditto_data/domains/metadata/identity/identity_store.py:183-246`
 
 **问题:** 当前实现可能因重复注册引发异常
 
@@ -199,7 +199,7 @@ def register(
 
 ### 4. 类型标注优化
 
-**文件:** `packages/datahub/src/ditto_datahub/domains/metadata/industry/industry_basic_store.py:50`
+**文件:** `packages/data/src/ditto_data/domains/metadata/industry/industry_basic_store.py:50`
 
 **当前:**
 ```python
@@ -223,7 +223,7 @@ params: list[str | int | bool | None]
 
 ### 6. 迁移指南
 
-**文件:** `packages/datahub/README.md`
+**文件:** `packages/data/README.md`
 
 **新增章节:**
 ```markdown
@@ -234,28 +234,28 @@ params: list[str | int | bool | None]
 #### SecurityStore
 **旧导入:**
 ```python
-from ditto_datahub.stores import SecurityStore
+from ditto_data.storage import SecurityStore
 ```
 
 **新导入:**
 ```python
-from ditto_datahub.domains.metadata.security import SecurityStore
+from ditto_data.domains.metadata.security import SecurityStore
 ```
 
 #### CalendarStore
 **旧导入:**
 ```python
-from ditto_datahub.stores import CalendarStore
+from ditto_data.storage import CalendarStore
 ```
 
 **新导入:**
 ```python
-from ditto_datahub.domains.metadata.calendar import CalendarStore
+from ditto_data.domains.metadata.calendar import CalendarStore
 ```
 
 #### 使用 MetadataQueryService（推荐）
 ```python
-from ditto_datahub.domains.metadata import MetadataQueryService
+from ditto_data.domains.metadata import MetadataQueryService
 
 # 通过 DataHub 访问
 sid = datahub.metadata.resolve_sid("600000.SH", source="tushare")
@@ -267,7 +267,7 @@ df = datahub.metadata.get_securities(sids=[sid])
 
 ### 7. Calendar Store 缓存配置
 
-**文件:** `packages/datahub/src/ditto_datahub/domains/metadata/calendar/calendar_store.py`
+**文件:** `packages/data/src/ditto_data/domains/metadata/calendar/calendar_store.py`
 
 **优化:** 将缓存大小作为可配置参数
 
@@ -324,4 +324,4 @@ class CalendarStore(SQLiteStore):
 
 - **原始 PR:** https://github.com/cosmos-arc/ditto/pull/42
 - **实施计划:** [2026-01-27-datahub-phase1-metadata.md](../plans/2026-01-27-datahub-phase1-metadata.md)
-- **DataHub README:** [packages/datahub/README.md](../../packages/datahub/README.md)
+- **DataHub README:** [packages/data/README.md](../../packages/data/README.md)

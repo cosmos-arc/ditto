@@ -35,7 +35,7 @@
 
 ### C1. Port → DataHub runtime 跨层访问
 
-**现状**: `coordinator.py:27` 和 `factory.py:12` 直接导入 `ditto_datahub.runtime.freeze_manager`
+**现状**: `coordinator.py:27` 和 `factory.py:12` 直接导入 `ditto_data.runtime.freeze_manager`
 
 **方案**: 在 `datahub.services` 中创建 `freeze` facade，Port 层通过 service 间接访问
 
@@ -126,7 +126,7 @@ packages/core/src/ditto_core/engine/evaluation/metrics/
 **方案**: facade 模式拆分
 
 ```
-packages/datahub/src/ditto_datahub/services/metadata/
+packages/data/src/ditto_data/services/metadata/
 ├── __init__.py
 ├── calendar.py          # CalendarService (~200行)
 ├── instrument.py        # InstrumentService (~500行)

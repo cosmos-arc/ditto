@@ -29,7 +29,7 @@ self.client.execute("INSERT INTO security ...")  # 表不存在！
 
 #### 1. `sqlite_schema_path` (Session 级别)
 
-**文件**: `packages/datahub/tests/fixtures/database.py`
+**文件**: `packages/data/tests/fixtures/database.py`
 
 ```python
 @pytest.fixture(scope="session")
@@ -45,7 +45,7 @@ def sqlite_schema_path() -> Path:
     schema_file = (
         Path(__file__).parent.parent.parent
         / "src"
-        / "ditto_datahub"
+        / "ditto_data"
         / "scripts"
         / "schema.sql"
     )
@@ -152,10 +152,10 @@ class TestBarsAccessor:
 ### Phase 1: 创建 Fixture (15 分钟)
 
 **任务清单**:
-- [x] 创建 `packages/datahub/tests/fixtures/` 目录
-- [x] 创建 `packages/datahub/tests/conftest.py` (fixture 放在此处)
-- [x] 创建 `packages/datahub/tests/fixtures/__init__.py`
-- [x] 创建验证测试 `packages/datahub/tests/fixtures/test_database_fixtures.py`
+- [x] 创建 `packages/data/tests/fixtures/` 目录
+- [x] 创建 `packages/data/tests/conftest.py` (fixture 放在此处)
+- [x] 创建 `packages/data/tests/fixtures/__init__.py`
+- [x] 创建验证测试 `packages/data/tests/fixtures/test_database_fixtures.py`
 
 **验证**:
 ```bash
@@ -177,7 +177,7 @@ pixi run -e dev pytest tests/fixtures/test_database_fixtures.py -v
 **验证**:
 ```bash
 # 每个文件修改后立即验证
-pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/accessors/test_bars_accessor_unit.py -v
 ```
 
 ### Phase 3: 迁移中优先级文件 (20 分钟)
@@ -201,7 +201,7 @@ pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_bars_accessor_
 **完整验证**:
 ```bash
 # 运行完整单元测试
-pixi run -e dev pytest packages/datahub/tests/unit --no-cov
+pixi run -e dev pytest packages/data/tests/unit --no-cov
 
 # 实际结果 ✅
 # 939 passed in 53.71s
@@ -222,7 +222,7 @@ pixi run -e dev pytest packages/datahub/tests/unit --no-cov
 ### Fixture 验证
 
 ```python
-# packages/datahub/tests/fixtures/test_database_fixtures.py
+# packages/data/tests/fixtures/test_database_fixtures.py
 def test_sqlite_pool_creates_tables(sqlite_client: SQLiteClient):
     """验证 fixture 正确创建了所有表。"""
     result = sqlite_client.execute(
@@ -256,16 +256,16 @@ def test_sqlite_pool_has_initial_data(sqlite_client: SQLiteClient):
 
 | 文件 | 操作 |
 |------|------|
-| `packages/datahub/tests/fixtures/database.py` | 新建 |
-| `packages/datahub/tests/fixtures/__init__.py` | 新建 |
-| `packages/datahub/tests/fixtures/test_database_fixtures.py` | 新建 |
-| `packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py` | 修改 |
-| `packages/datahub/tests/unit/stores/test_calendar_store_unit.py` | 修改 |
-| `packages/datahub/tests/unit/stores/test_security_store_unit.py` | 修改 |
+| `packages/data/tests/fixtures/database.py` | 新建 |
+| `packages/data/tests/fixtures/__init__.py` | 新建 |
+| `packages/data/tests/fixtures/test_database_fixtures.py` | 新建 |
+| `packages/data/tests/unit/accessors/test_bars_accessor_unit.py` | 修改 |
+| `packages/data/tests/unit/stores/test_calendar_store_unit.py` | 修改 |
+| `packages/data/tests/unit/stores/test_security_store_unit.py` | 修改 |
 
 ## 参考信息
 
-- **Schema 文件**: `packages/datahub/src/ditto_datahub/scripts/schema.sql`
+- **Schema 文件**: `packages/data/src/ditto_data/scripts/schema.sql`
 - **SQLitePool**: `packages/foundation/src/ditto_foundation/db/sqlite_pool.py`
-- **SQLiteClient**: `packages/datahub/src/ditto_datahub/stores/sqlite_client.py`
+- **SQLiteClient**: `packages/data/src/ditto_data/stores/sqlite_client.py`
 - **Pytest Fixture 文档**: https://docs.pytest.org/en/stable/how-to/fixtures.html

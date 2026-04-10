@@ -120,7 +120,7 @@
 ### 立即修复（P1）
 
 1. **修复 DataHub HTTP 客户端测试** (1.05s → <0.5s)
-   - 文件: `packages/datahub/tests/unit/sources/tushare/test_client_unit.py`
+   - 文件: `packages/data/tests/unit/sources/tushare/test_client_unit.py`
    - 问题: 重试测试可能使用真实的 `time.sleep()`
    - 修复: 确保重试逻辑使用 Mock 时钟
 

@@ -54,7 +54,7 @@ from datetime import date
 import pytest
 import polars as pl
 from ditto_core.quality import GoldenDatasetSpec
-from ditto_datahub.sources import TushareSource, TDXSource, DataSourceSettings
+from ditto_data.sources import TushareSource, TDXSource, DataSourceSettings
 
 
 # 黄金数据集

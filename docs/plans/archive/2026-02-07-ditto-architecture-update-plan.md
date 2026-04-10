@@ -46,11 +46,11 @@ DataHub Layer: 数据访问层（模型 + 实现）
 **示例**：
 ```python
 # ✅ Core 可以使用 DataHub 的模型
-from ditto_datahub.models import Order, Position, Portfolio
+from ditto_data.models import Order, Position, Portfolio
 
 # ❌ Core 不能使用 DataHub 的 Service/Store
-from ditto_datahub.services import MarketService  # 禁止
-from ditto_datahub.stores import BarsStore  # 禁止
+from ditto_data.services import MarketService  # 禁止
+from ditto_data.stores import BarsStore  # 禁止
 ```
 
 ### 5. 目录结构

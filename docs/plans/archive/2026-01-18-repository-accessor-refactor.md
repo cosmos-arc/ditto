@@ -17,13 +17,13 @@
 
 | 当前名称 | 新名称 | 文件路径 |
 |---------|--------|----------|
-| `SourcesAccessor` | `DataSources` | `packages/datahub/src/ditto_datahub/sources/accessor.py` |
-| `BarsRepository` | `BarsAccessor` | `packages/datahub/src/ditto_datahub/repositories/bars/repository.py` |
-| `SecurityRepository` | `SecuritiesAccessor` | `packages/datahub/src/ditto_datahub/repositories/security.py` |
-| `CalendarRepository` | `CalendarAccessor` | `packages/datahub/src/ditto_datahub/repositories/calendar.py` |
-| `IndexRepository` | `IndexAccessor` | `packages/datahub/src/ditto_datahub/repositories/index.py` |
-| `UniverseRepository` | `UniverseAccessor` | `packages/datahub/src/ditto_datahub/repositories/universe.py` |
-| `AdjFactorRepository` | `AdjFactorAccessor` | `packages/datahub/src/ditto_datahub/repositories/adj_factor.py` |
+| `SourcesAccessor` | `DataSources` | `packages/data/src/ditto_data/sources/accessor.py` |
+| `BarsRepository` | `BarsAccessor` | `packages/data/src/ditto_data/repositories/bars/repository.py` |
+| `SecurityRepository` | `SecuritiesAccessor` | `packages/data/src/ditto_data/repositories/security.py` |
+| `CalendarRepository` | `CalendarAccessor` | `packages/data/src/ditto_data/repositories/calendar.py` |
+| `IndexRepository` | `IndexAccessor` | `packages/data/src/ditto_data/repositories/index.py` |
+| `UniverseRepository` | `UniverseAccessor` | `packages/data/src/ditto_data/repositories/universe.py` |
+| `AdjFactorRepository` | `AdjFactorAccessor` | `packages/data/src/ditto_data/repositories/adj_factor.py` |
 
 ---
 
@@ -31,53 +31,53 @@
 
 ### 1.1 Sources 模块
 
-**文件**: `packages/datahub/src/ditto_datahub/sources/accessor.py`
+**文件**: `packages/data/src/ditto_data/sources/accessor.py`
 - [x] 类名：`SourcesAccessor` → `DataSources`
 - [x] 文件名：`accessor.py` → `provider.py`
 - [x] 类文档字符串更新
 
-**文件**: `packages/datahub/src/ditto_datahub/sources/__init__.py`
+**文件**: `packages/data/src/ditto_data/sources/__init__.py`
 - [x] 导入语句更新
 
 ### 1.2 Repository 模块
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/bars/repository.py`
+**文件**: `packages/data/src/ditto_data/repositories/bars/repository.py`
 - [x] 类名：`BarsRepository` → `BarsAccessor`
 - [x] 类文档字符串更新
 - [x] 内部注释更新
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/security.py`
+**文件**: `packages/data/src/ditto_data/repositories/security.py`
 - [x] 类名：`SecurityRepository` → `SecuritiesAccessor`
 - [x] 类文档字符串更新
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/calendar.py`
+**文件**: `packages/data/src/ditto_data/repositories/calendar.py`
 - [x] 类名：`CalendarRepository` → `CalendarAccessor`
 - [x] 类文档字符串更新
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/index.py`
+**文件**: `packages/data/src/ditto_data/repositories/index.py`
 - [x] 类名：`IndexRepository` → `IndexAccessor`
 - [x] 类文档字符串更新
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/universe.py`
+**文件**: `packages/data/src/ditto_data/repositories/universe.py`
 - [x] 类名：`UniverseRepository` → `UniverseAccessor`
 - [x] 类文档字符串更新
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/adj_factor.py`
+**文件**: `packages/data/src/ditto_data/repositories/adj_factor.py`
 - [x] 类名：`AdjFactorRepository` → `AdjFactorAccessor`
 - [x] 类文档字符串更新
 
 ### 1.3 模块导出更新
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/__init__.py`
+**文件**: `packages/data/src/ditto_data/repositories/__init__.py`
 - [x] 更新所有导出的类名
 - [x] 更新模块文档字符串
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/bars/__init__.py`
+**文件**: `packages/data/src/ditto_data/repositories/bars/__init__.py`
 - [x] 更新导出类名
 
 ### 1.4 DataHub 门面更新
 
-**文件**: `packages/datahub/src/ditto_datahub/hub.py`
+**文件**: `packages/data/src/ditto_data/hub.py`
 - [x] 类型注解更新
 - [x] 属性文档字符串更新（保持属性名不变）
 
@@ -87,55 +87,55 @@
 
 ### 2.1 单元测试文件
 
-**文件**: `packages/datahub/tests/unit/sources/test_accessor_unit.py`
+**文件**: `packages/data/tests/unit/sources/test_accessor_unit.py`
 - [x] 文件名：`test_accessor_unit.py` → `test_provider_unit.py`
 - [x] 类名：`TestSourcesAccessor` → `TestDataSources`
 - [x] 所有导入语句更新
 
-**文件**: `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py`
+**文件**: `packages/data/tests/unit/repositories/test_bars_repository_unit.py`
 - [x] 类名：`TestBarsRepository` → `TestBarsAccessor`
 - [x] 所有导入语句更新
 - [x] 测试方法中的注释更新
 
-**文件**: `packages/datahub/tests/unit/repositories/test_security_repository_unit.py`
+**文件**: `packages/data/tests/unit/repositories/test_security_repository_unit.py`
 - [x] 类名：`TestSecurityRepository` → `TestSecuritiesAccessor`
 - [x] 所有导入语句更新
 
-**文件**: `packages/datahub/tests/unit/repositories/test_calendar_repository_unit.py`
+**文件**: `packages/data/tests/unit/repositories/test_calendar_repository_unit.py`
 - [x] 类名：`TestCalendarRepository` → `TestCalendarAccessor`
 - [x] 所有导入语句更新
 
-**文件**: `packages/datahub/tests/unit/repositories/test_universe_repository_unit.py`
+**文件**: `packages/data/tests/unit/repositories/test_universe_repository_unit.py`
 - [x] 类名：`TestUniverseRepository` → `TestUniverseAccessor`
 - [x] 所有导入语句更新
 
-**文件**: `packages/datahub/tests/unit/repositories/test_index_repository_unit.py`
+**文件**: `packages/data/tests/unit/repositories/test_index_repository_unit.py`
 - [x] 类名：`TestIndexRepository` → `TestIndexAccessor`
 - [x] 所有导入语句更新
 
-**文件**: `packages/datahub/tests/unit/repositories/test_adj_factor_repository_unit.py`
+**文件**: `packages/data/tests/unit/repositories/test_adj_factor_repository_unit.py`
 - [x] 类名：`TestAdjFactorRepository` → `TestAdjFactorAccessor`
 - [x] 所有导入语句更新
 
-**文件**: `packages/datahub/tests/unit/test_hub_unit.py`
+**文件**: `packages/data/tests/unit/test_hub_unit.py`
 - [x] 所有导入语句更新
 - [x] 测试中的注释更新
 
 ### 2.2 集成测试文件
 
-**文件**: `packages/datahub/tests/integration/runtime/test_sid_allocator_integration.py`
+**文件**: `packages/data/tests/integration/runtime/test_sid_allocator_integration.py`
 - [x] 所有导入语句更新
 
-**文件**: `packages/datahub/tests/integration/runtime/test_sql_engine_integration.py`
+**文件**: `packages/data/tests/integration/runtime/test_sql_engine_integration.py`
 - [x] 所有导入语句更新
 
-**文件**: `packages/datahub/tests/integration/runtime/test_sqlite_pool_integration.py`
+**文件**: `packages/data/tests/integration/runtime/test_sqlite_pool_integration.py`
 - [x] 所有导入语句更新
 
-**文件**: `packages/datahub/tests/integration/stores/test_calendar_store_concurrent_integration.py`
+**文件**: `packages/data/tests/integration/stores/test_calendar_store_concurrent_integration.py`
 - [x] 所有导入语句更新
 
-**文件**: `packages/datahub/tests/integration/stores/test_ingestion_log_concurrent_integration.py`
+**文件**: `packages/data/tests/integration/stores/test_ingestion_log_concurrent_integration.py`
 - [x] 所有导入语句更新
 
 ---
@@ -194,7 +194,7 @@
 
 ### 5.1 DataHub README
 
-**文件**: `packages/datahub/README.md`
+**文件**: `packages/data/README.md`
 - [x] 架构图更新（Repository 层 → Accessor 层）
 - [x] 层级表格更新
 - [x] 所有代码示例更新
@@ -203,17 +203,17 @@
 
 ### 5.2 子模块 README
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/README.md`
+**文件**: `packages/data/src/ditto_data/repositories/README.md`
 - [x] 目录说明更新（如果目录名也改）
 - [x] 所有类名引用更新
 
-**文件**: `packages/datahub/tests/unit/repositories/README.md`
+**文件**: `packages/data/tests/unit/repositories/README.md`
 - [x] 所有类名引用更新
 
-**文件**: `packages/datahub/tests/unit/sources/README.md`
+**文件**: `packages/data/tests/unit/sources/README.md`
 - [x] `SourcesAccessor` → `DataSources`
 
-**文件**: `packages/datahub/src/ditto_datahub/sources/README.md`
+**文件**: `packages/data/src/ditto_data/sources/README.md`
 - [x] 所有类名引用更新
 
 ### 5.3 规范文档
@@ -323,31 +323,31 @@ git grep -i "repository" -- "*.md"
 ### 核心实现（11 个文件）
 
 ```
-packages/datahub/src/ditto_datahub/hub.py
-packages/datahub/src/ditto_datahub/sources/accessor.py → provider.py
-packages/datahub/src/ditto_datahub/sources/__init__.py
-packages/datahub/src/ditto_datahub/repositories/__init__.py
-packages/datahub/src/ditto_datahub/repositories/bars/repository.py
-packages/datahub/src/ditto_datahub/repositories/bars/__init__.py
-packages/datahub/src/ditto_datahub/repositories/security.py
-packages/datahub/src/ditto_datahub/repositories/calendar.py
-packages/datahub/src/ditto_datahub/repositories/index.py
-packages/datahub/src/ditto_datahub/repositories/universe.py
-packages/datahub/src/ditto_datahub/repositories/adj_factor.py
+packages/data/src/ditto_data/hub.py
+packages/data/src/ditto_data/sources/accessor.py → provider.py
+packages/data/src/ditto_data/sources/__init__.py
+packages/data/src/ditto_data/repositories/__init__.py
+packages/data/src/ditto_data/repositories/bars/repository.py
+packages/data/src/ditto_data/repositories/bars/__init__.py
+packages/data/src/ditto_data/repositories/security.py
+packages/data/src/ditto_data/repositories/calendar.py
+packages/data/src/ditto_data/repositories/index.py
+packages/data/src/ditto_data/repositories/universe.py
+packages/data/src/ditto_data/repositories/adj_factor.py
 ```
 
 ### 测试文件（8+ 个文件）
 
 ```
-packages/datahub/tests/unit/sources/test_accessor_unit.py → test_provider_unit.py
-packages/datahub/tests/unit/repositories/test_bars_repository_unit.py
-packages/datahub/tests/unit/repositories/test_security_repository_unit.py
-packages/datahub/tests/unit/repositories/test_calendar_repository_unit.py
-packages/datahub/tests/unit/repositories/test_universe_repository_unit.py
-packages/datahub/tests/unit/repositories/test_index_repository_unit.py
-packages/datahub/tests/unit/repositories/test_adj_factor_repository_unit.py
-packages/datahub/tests/unit/test_hub_unit.py
-packages/datahub/tests/integration/**/*.py
+packages/data/tests/unit/sources/test_accessor_unit.py → test_provider_unit.py
+packages/data/tests/unit/repositories/test_bars_repository_unit.py
+packages/data/tests/unit/repositories/test_security_repository_unit.py
+packages/data/tests/unit/repositories/test_calendar_repository_unit.py
+packages/data/tests/unit/repositories/test_universe_repository_unit.py
+packages/data/tests/unit/repositories/test_index_repository_unit.py
+packages/data/tests/unit/repositories/test_adj_factor_repository_unit.py
+packages/data/tests/unit/test_hub_unit.py
+packages/data/tests/integration/**/*.py
 ```
 
 ### 应用层（3 个文件）
@@ -364,8 +364,8 @@ apps/port/tests/unit/conftest.py
 docs/design/*.md
 docs/sprints/*.md
 docs/plans/*.md
-packages/datahub/README.md
-packages/datahub/**/README.md
+packages/data/README.md
+packages/data/**/README.md
 .claude/rules/*.md
 packages/core/**/README.md
 ```

@@ -103,7 +103,7 @@ QuestDB 对时序聚合（SAMPLE BY）和 ASOF JOIN 有原生优化，但并非�
 ### 代码定义
 
 ```python
-# packages/core/src/ditto_core/expression/pushdown.py
+# packages/analytics/src/ditto_analytics/expression/pushdown.py
 
 from enum import Enum
 from typing import Callable
@@ -143,7 +143,7 @@ def can_pushdown(op_name: str) -> bool:
 ### 表达式到 SQL 映射
 
 ```python
-# packages/core/src/ditto_core/expression/pushdown_patterns.py
+# packages/analytics/src/ditto_analytics/expression/pushdown_patterns.py
 
 from dataclasses import dataclass
 from typing import Any
@@ -218,7 +218,7 @@ INSERT INTO pushdown_config (op_name, enabled, max_window, notes) VALUES
 ### 运行时检查
 
 ```python
-# packages/core/src/ditto_core/expression/pushdown.py
+# packages/analytics/src/ditto_analytics/expression/pushdown.py
 
 import sqlite3
 

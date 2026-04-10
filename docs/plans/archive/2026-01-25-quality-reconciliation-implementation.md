@@ -70,7 +70,7 @@
 └─────────────────────────────────────────────────────────────────┘
                               ↓ DI
 ┌─────────────────────────────────────────────────────────────────┐
-│ DataHub 层（packages/datahub）                                   │
+│ DataHub 层（packages/data）                                   │
 │ ┌─────────────────────────────────────────────────────────────┐ │
 │ │ sources/tdx/ (新增)                                         │ │
 │ │ - TdxSource: 数据源抽象                                     │ │
@@ -694,7 +694,7 @@ git commit -m "test(cross-source): add CrossSourceChecker unit tests"
 #### Task 2.1: 创建 TdxReader（.day 文件读取）`[M]`
 
 **文件:**
-- 创建: `packages/datahub/src/ditto_datahub/sources/tdx/reader.py`
+- 创建: `packages/data/src/ditto_data/sources/tdx/reader.py`
 
 **Step 1: 创建 TdxReader 类**
 
@@ -883,13 +883,13 @@ class TdxReader:
 **Step 2: 运行类型检查**
 
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tdx/reader.py
+pixi run -e dev type packages/data/src/ditto_data/sources/tdx/reader.py
 ```
 
 **Step 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tdx/reader.py
+git add packages/data/src/ditto_data/sources/tdx/reader.py
 git commit -m "feat(tdx): add TdxReader for .day file parsing"
 ```
 
@@ -898,8 +898,8 @@ git commit -m "feat(tdx): add TdxReader for .day file parsing"
 #### Task 2.2: 创建 TdxSource `[M]`
 
 **文件:**
-- 创建: `packages/datahub/src/ditto_datahub/sources/tdx/source.py`
-- 创建: `packages/datahub/src/ditto_datahub/sources/tdx/__init__.py`
+- 创建: `packages/data/src/ditto_data/sources/tdx/source.py`
+- 创建: `packages/data/src/ditto_data/sources/tdx/__init__.py`
 
 **Step 1: 创建 TdxSource**
 
@@ -911,7 +911,7 @@ git commit -m "feat(tdx): add TdxReader for .day file parsing"
 """
 
 from pathlib import Path
-from ditto_datahub.config import DataSourceSettings
+from ditto_data.config import DataSourceSettings
 from .reader import TdxReader
 
 
@@ -955,8 +955,8 @@ class TdxSource:
 ```python
 """通达信数据源."""
 
-from ditto_datahub.sources.tdx.source import TdxSource
-from ditto_datahub.sources.tdx.reader import TdxReader
+from ditto_data.sources.tdx.source import TdxSource
+from ditto_data.sources.tdx.reader import TdxReader
 
 __all__ = ["TdxSource", "TdxReader"]
 ```
@@ -964,13 +964,13 @@ __all__ = ["TdxSource", "TdxReader"]
 **Step 3: 运行类型检查**
 
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tdx/
+pixi run -e dev type packages/data/src/ditto_data/sources/tdx/
 ```
 
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tdx/
+git add packages/data/src/ditto_data/sources/tdx/
 git commit -m "feat(tdx): add TdxSource data access layer"
 ```
 
@@ -979,7 +979,7 @@ git commit -m "feat(tdx): add TdxSource data access layer"
 #### Task 2.3: TDX 单元测试 `[S]`
 
 **文件:**
-- 创建: `packages/datahub/tests/unit/sources/tdx/test_reader.py`
+- 创建: `packages/data/tests/unit/sources/tdx/test_reader.py`
 
 **Step 1: 创建测试文件**
 
@@ -990,7 +990,7 @@ from pathlib import Path
 import struct
 import polars as pl
 import pytest
-from ditto_datahub.sources.tdx import TdxReader
+from ditto_data.sources.tdx import TdxReader
 
 
 @pytest.fixture
@@ -1067,13 +1067,13 @@ class TestTdxReader:
 **Step 2: 运行测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tdx/test_reader.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tdx/test_reader.py -v
 ```
 
 **Step 3: 提交**
 
 ```bash
-git add packages/datahub/tests/unit/sources/tdx/
+git add packages/data/tests/unit/sources/tdx/
 git commit -m "test(tdx): add TdxReader unit tests"
 ```
 
@@ -1084,8 +1084,8 @@ git commit -m "test(tdx): add TdxReader unit tests"
 #### Task 3.1: 创建 ComparisonStore `[M]`
 
 **文件:**
-- 创建: `packages/datahub/src/ditto_datahub/stores/quality/comparison_store.py`
-- 创建: `packages/datahub/src/ditto_datahub/stores/quality/__init__.py`
+- 创建: `packages/data/src/ditto_data/stores/quality/comparison_store.py`
+- 创建: `packages/data/src/ditto_data/stores/quality/__init__.py`
 
 **Step 1: 创建 ComparisonStore**
 
@@ -1211,7 +1211,7 @@ class ComparisonStore:
 ```python
 """质量对比存储."""
 
-from ditto_datahub.stores.quality.comparison_store import ComparisonStore
+from ditto_data.stores.quality.comparison_store import ComparisonStore
 
 __all__ = ["ComparisonStore"]
 ```
@@ -1219,13 +1219,13 @@ __all__ = ["ComparisonStore"]
 **Step 3: 运行类型检查**
 
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/stores/quality/
+pixi run -e dev type packages/data/src/ditto_data/stores/quality/
 ```
 
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/quality/
+git add packages/data/src/ditto_data/stores/quality/
 git commit -m "feat(comparison): add ComparisonStore for cross-source results"
 ```
 
@@ -1234,7 +1234,7 @@ git commit -m "feat(comparison): add ComparisonStore for cross-source results"
 #### Task 3.2: 创建 ComparisonAccessor `[S]`
 
 **文件:**
-- 创建: `packages/datahub/src/ditto_datahub/accessors/comparison_accessor.py`
+- 创建: `packages/data/src/ditto_data/accessors/comparison_accessor.py`
 
 **Step 1: 创建 ComparisonAccessor**
 
@@ -1242,7 +1242,7 @@ git commit -m "feat(comparison): add ComparisonStore for cross-source results"
 """质量对比访问器."""
 
 from pathlib import Path
-from ditto_datahub.stores.quality import ComparisonStore
+from ditto_data.stores.quality import ComparisonStore
 
 
 class ComparisonAccessor:
@@ -1294,7 +1294,7 @@ class ComparisonAccessor:
 **Step 2: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/accessors/comparison_accessor.py
+git add packages/data/src/ditto_data/accessors/comparison_accessor.py
 git commit -m "feat(comparison): add ComparisonAccessor"
 ```
 
@@ -1303,7 +1303,7 @@ git commit -m "feat(comparison): add ComparisonAccessor"
 #### Task 3.3: 存储层单元测试 `[S]`
 
 **文件:**
-- 创建: `packages/datahub/tests/unit/stores/quality/test_comparison_store.py`
+- 创建: `packages/data/tests/unit/stores/quality/test_comparison_store.py`
 
 **Step 1: 创建测试文件**
 
@@ -1314,7 +1314,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 from ditto_core.quality.spec import DQResult, DQIssue, DQLevel, DQSeverity
-from ditto_datahub.stores.quality import ComparisonStore
+from ditto_data.stores.quality import ComparisonStore
 
 
 @pytest.fixture
@@ -1365,13 +1365,13 @@ class TestComparisonStore:
 **Step 2: 运行测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/stores/quality/test_comparison_store.py -v
+pixi run -e dev pytest packages/data/tests/unit/stores/quality/test_comparison_store.py -v
 ```
 
 **Step 3: 提交**
 
 ```bash
-git add packages/datahub/tests/unit/stores/quality/
+git add packages/data/tests/unit/stores/quality/
 git commit -m "test(comparison): add ComparisonStore unit tests"
 ```
 
@@ -1412,9 +1412,9 @@ git commit -m "test(comparison): add ComparisonStore unit tests"
 
 from loguru import logger
 from ditto_core.quality import QualityEngine
-from ditto_datahub.sources.tushare import TushareSource
-from ditto_datahub.sources.tdx import TdxSource
-from ditto_datahub.stores.quality import ComparisonStore
+from ditto_data.sources.tushare import TushareSource
+from ditto_data.sources.tdx import TdxSource
+from ditto_data.stores.quality import ComparisonStore
 
 
 class QualityReconciliationService:
@@ -1599,8 +1599,8 @@ import polars as pl
 import pytest
 from ditto_core.quality.spec import DQSpec, DatasetRules
 from ditto_core.quality import QualityEngine
-from ditto_datahub.sources.tdx import TdxSource
-from ditto_datahub.stores.quality import ComparisonStore
+from ditto_data.sources.tdx import TdxSource
+from ditto_data.stores.quality import ComparisonStore
 from ditto_port.services.quality import QualityReconciliationService
 
 

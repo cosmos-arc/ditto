@@ -95,7 +95,7 @@
 
 **DataHub (数据层)**:
 ```
-ditto_datahub/
+ditto_data/
 ├── hub.py              # Facade，统一入口
 ├── accessors/          # 业务封装层
 │   ├── bars/          # OHLCV 数据访问
@@ -199,7 +199,7 @@ ditto_foundation/
 3. **缩写使用**:
    - `vol`: 主要在 Tushare API 字段映射中
      ```python
-     # packages/datahub/src/ditto_datahub/sources/tushare/transformer.py:40
+     # packages/data/src/ditto_data/sources/tushare/transformer.py:40
      rename={"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"}
      ```
    - 这是合理的，因为 `vol` 是外部 API 的字段名
@@ -328,7 +328,7 @@ ditto_foundation/
 **建议**: 评估是否可以移除，通过更好的类型注解替代
 
 **影响文件**:
-- `packages/datahub/tests/unit/test_hub_unit.py`
+- `packages/data/tests/unit/test_hub_unit.py`
 - `packages/foundation/tests/unit/config/test_paths_unit.py`
 
 **理由**: 进一步提高类型安全性
@@ -354,7 +354,7 @@ pixi run -e dev test --integration
 
 ```bash
 # 检查层级穿透
-grep -r "from ditto_datahub\.stores\." apps/port/src --include="*.py"
+grep -r "from ditto_data\.stores\." apps/port/src --include="*.py"
 
 # 检查禁止的导入
 grep -r "import pandas\|import sqlalchemy" packages/ apps/ --include="*.py"

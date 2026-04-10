@@ -35,16 +35,16 @@ Phase 5: 调度+增强 (ING-X-1, ING-SS-2, ING-C-1, ING-C-2)    ← 依赖全部
 
 | 操作 | 文件 | 说明 |
 |------|------|------|
-| Modify | `packages/datahub/src/ditto_datahub/scripts/schema.sql` | 添加 `ingestion_cursor` 表（PK: dataset+source） |
-| Create | `packages/datahub/src/ditto_datahub/stores/runtime/ingestion/ingestion_cursor_writer.py` | SQLite UPSERT，复用 `IngestionLogWriter` 模式 |
-| Create | `packages/datahub/src/ditto_datahub/stores/runtime/ingestion/ingestion_cursor_reader.py` | `get_cursor()`, `list_cursors()`, `get_last_success()` |
-| Create | `packages/datahub/src/ditto_datahub/services/ingestion_cursor_service.py` | 组合 Reader/Writer |
-| Modify | `packages/datahub/src/ditto_datahub/stores/runtime/ingestion/__init__.py` | 导出新类 |
+| Modify | `packages/data/src/ditto_data/scripts/schema.sql` | 添加 `ingestion_cursor` 表（PK: dataset+source） |
+| Create | `packages/data/src/ditto_data/stores/runtime/ingestion/ingestion_cursor_writer.py` | SQLite UPSERT，复用 `IngestionLogWriter` 模式 |
+| Create | `packages/data/src/ditto_data/stores/runtime/ingestion/ingestion_cursor_reader.py` | `get_cursor()`, `list_cursors()`, `get_last_success()` |
+| Create | `packages/data/src/ditto_data/services/ingestion_cursor_service.py` | 组合 Reader/Writer |
+| Modify | `packages/data/src/ditto_data/stores/runtime/ingestion/__init__.py` | 导出新类 |
 | Modify | `apps/port/src/ditto_port/registry/datahub/runtime.py` | DI 注册 provider |
 | Modify | `apps/port/src/ditto_port/services/ingestion/coordinator.py` | `__init__` 接受 `IngestionCursorService`，`_fetch_and_ingest()` 成功/失败后更新 cursor |
 | Modify | `apps/port/src/ditto_port/services/ingestion/factory.py` | 传递 cursor service |
-| Create | `packages/datahub/tests/unit/stores/runtime/ingestion/test_ingestion_cursor_writer.py` | |
-| Create | `packages/datahub/tests/unit/stores/runtime/ingestion/test_ingestion_cursor_reader.py` | |
+| Create | `packages/data/tests/unit/stores/runtime/ingestion/test_ingestion_cursor_writer.py` | |
+| Create | `packages/data/tests/unit/stores/runtime/ingestion/test_ingestion_cursor_reader.py` | |
 
 ### 关键实现
 
@@ -122,9 +122,9 @@ if self._freeze_manager is not None:
 
 | 操作 | 文件 | 说明 |
 |------|------|------|
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py:402` | fields 加 `"ts_code,in_date,out_date,is_new"` |
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/processors/mappings/capital.py` | `INDEX_COMPOSITION_MAPPING` 添加 `out_date` 到 `date_columns`，添加 `computed_columns: effective_to` |
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py:411-423` | 移除 `pl.lit(None).alias("effective_to")` 硬编码，改用 mapping 产生的 `effective_to` |
+| Modify | `packages/data/src/ditto_data/sources/tushare/adapters/capital.py:402` | fields 加 `"ts_code,in_date,out_date,is_new"` |
+| Modify | `packages/data/src/ditto_data/sources/tushare/processors/mappings/capital.py` | `INDEX_COMPOSITION_MAPPING` 添加 `out_date` 到 `date_columns`，添加 `computed_columns: effective_to` |
+| Modify | `packages/data/src/ditto_data/sources/tushare/adapters/capital.py:411-423` | 移除 `pl.lit(None).alias("effective_to")` 硬编码，改用 mapping 产生的 `effective_to` |
 
 ### ING-IC-2: 指数权重 [P1, M]
 
@@ -132,8 +132,8 @@ if self._freeze_manager is not None:
 
 | 操作 | 文件 | 说明 |
 |------|------|------|
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py` | 新增 `fetch_index_weight(index_code, trade_date)` 方法，调用 Tushare `index_weight` API |
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py:398-440` | `fetch_index_composition()` 增加 `with_weight: bool = False` 参数，True 时调用 weight API 并 join |
+| Modify | `packages/data/src/ditto_data/sources/tushare/adapters/capital.py` | 新增 `fetch_index_weight(index_code, trade_date)` 方法，调用 Tushare `index_weight` API |
+| Modify | `packages/data/src/ditto_data/sources/tushare/adapters/capital.py:398-440` | `fetch_index_composition()` 增加 `with_weight: bool = False` 参数，True 时调用 weight API 并 join |
 
 **设计决策**: `with_weight=False` 默认值保持向后兼容。
 
@@ -143,8 +143,8 @@ if self._freeze_manager is not None:
 
 | 操作 | 文件 | 说明 |
 |------|------|------|
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock.py` | 新增 `fetch_adj_factor_by_ticker(ts_code, start_date, end_date)` 方法 |
-| Modify | `packages/datahub/src/ditto_datahub/sources/base.py` | DataSource ABC 添加抽象方法 |
+| Modify | `packages/data/src/ditto_data/sources/tushare/adapters/stock.py` | 新增 `fetch_adj_factor_by_ticker(ts_code, start_date, end_date)` 方法 |
+| Modify | `packages/data/src/ditto_data/sources/base.py` | DataSource ABC 添加抽象方法 |
 
 ---
 
@@ -158,9 +158,9 @@ if self._freeze_manager is not None:
 
 | 操作 | 文件 | 说明 |
 |------|------|------|
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/fundamental.py` | 扩展三个 adapter 方法的 fetch fields |
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/processors/mappings/capital.py` | 扩展 `BALANCE_SHEET_MAPPING`, `INCOME_STATEMENT_MAPPING`, `CASH_FLOW_MAPPING` |
-| Modify | `packages/datahub/src/ditto_datahub/scripts/schema.sql` | 三个 SQLite 表添加新列（ALTER TABLE ADD COLUMN） |
+| Modify | `packages/data/src/ditto_data/sources/tushare/adapters/fundamental.py` | 扩展三个 adapter 方法的 fetch fields |
+| Modify | `packages/data/src/ditto_data/sources/tushare/processors/mappings/capital.py` | 扩展 `BALANCE_SHEET_MAPPING`, `INCOME_STATEMENT_MAPPING`, `CASH_FLOW_MAPPING` |
+| Modify | `packages/data/src/ditto_data/scripts/schema.sql` | 三个 SQLite 表添加新列（ALTER TABLE ADD COLUMN） |
 
 扩展字段（Tushare API 支持）：
 - **Balance Sheet**: +inventory, fixed_assets, cash_equivalents, accounts_receivable, short_term_debt, long_term_debt, money_cap, total_share
@@ -175,7 +175,7 @@ SQLite 列新增使用 `ALTER TABLE ADD COLUMN ... DEFAULT NULL`，不影响现�
 
 | 操作 | 文件 | 说明 |
 |------|------|------|
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock.py` | `_fetch_list_status_data()` 改用 `list_date` 参数获取历史快照 |
+| Modify | `packages/data/src/ditto_data/sources/tushare/adapters/stock.py` | `_fetch_list_status_data()` 改用 `list_date` 参数获取历史快照 |
 
 **Tushare API**: `stock_basic` 支持 `list_date` 参数返回该日期的有效证券列表。Fallback: 若 API 不支持则退回当前快照。
 
@@ -185,7 +185,7 @@ SQLite 列新增使用 `ALTER TABLE ADD COLUMN ... DEFAULT NULL`，不影响现�
 
 | 操作 | 文件 | 说明 |
 |------|------|------|
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock.py` | 新增 `fetch_st_history()` 方法，使用 `namechange` API（提供 start_date, change_reason） |
+| Modify | `packages/data/src/ditto_data/sources/tushare/adapters/stock.py` | 新增 `fetch_st_history()` 方法，使用 `namechange` API（提供 start_date, change_reason） |
 
 **Tushare API**: `namechange` 返回历史名称变更记录，`change_reason` 包含 "ST"/"*ST"/"撤销ST" 等标记。可据此推算 ST 的 effective_from/to。
 
@@ -230,8 +230,8 @@ SQLite 列新增使用 `ALTER TABLE ADD COLUMN ... DEFAULT NULL`，不影响现�
 
 | 操作 | File | 说明 |
 |------|------|------|
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py` | 新增 `fetch_share_float()` + `fetch_rights_bonus()` |
-| Modify | `packages/datahub/src/ditto_datahub/sources/tushare/processors/mappings/capital.py` | 新增 `SHARE_FLOAT_MAPPING` + `RIGHTS_BONUS_MAPPING` |
+| Modify | `packages/data/src/ditto_data/sources/tushare/adapters/capital.py` | 新增 `fetch_share_float()` + `fetch_rights_bonus()` |
+| Modify | `packages/data/src/ditto_data/sources/tushare/processors/mappings/capital.py` | 新增 `SHARE_FLOAT_MAPPING` + `RIGHTS_BONUS_MAPPING` |
 | Create | 新 Store files | 股本变动和回购数据的读写 |
 
 ---
@@ -241,13 +241,13 @@ SQLite 列新增使用 `ALTER TABLE ADD COLUMN ... DEFAULT NULL`，不影响现�
 | 组件 | 位置 | 复用方式 |
 |------|------|----------|
 | `QualityService.check_and_quarantine()` | `apps/port/.../quality/service.py` | 直接注入 Coordinator |
-| `FreezeManager` | `packages/datahub/.../runtime/freeze_manager.py` | 直接注入 Coordinator |
+| `FreezeManager` | `packages/data/.../runtime/freeze_manager.py` | 直接注入 Coordinator |
 | `FileLockManager` | `packages/infra/.../concurrency/` | 审计+补充到未覆盖 Writer |
-| `ParquetStore.atomic_write()` | `packages/datahub/.../base/parquet_store.py` | 确保所有 Writer 使用 |
-| `IngestionLogWriter` 模式 | `packages/datahub/.../ingestion/ingestion_log_writer.py` | Cursor Writer 参考实现 |
-| `DQ YAML rules` (5 files) | `packages/datahub/config/dq_rules/` | 已完备，无需修改 |
-| `QuarantineWriter/Reader` | `packages/datahub/.../quality/` | 通过 QualityService 自动触发 |
-| `TushareClient` (rate limit + retry) | `packages/datahub/.../tushare/client.py` | 所有新 API 调用复用 |
+| `ParquetStore.atomic_write()` | `packages/data/.../base/parquet_store.py` | 确保所有 Writer 使用 |
+| `IngestionLogWriter` 模式 | `packages/data/.../ingestion/ingestion_log_writer.py` | Cursor Writer 参考实现 |
+| `DQ YAML rules` (5 files) | `packages/data/config/dq_rules/` | 已完备，无需修改 |
+| `QuarantineWriter/Reader` | `packages/data/.../quality/` | 通过 QualityService 自动触发 |
+| `TushareClient` (rate limit + retry) | `packages/data/.../tushare/client.py` | 所有新 API 调用复用 |
 
 ---
 

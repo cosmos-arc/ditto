@@ -22,7 +22,7 @@
 
 ### Phase 1 持久化状态
 
-> **代码变更记录（2026-03-20）**：Phase 1 实现时简化了状态机，移除了 `REGISTERED` 状态（validate 检查合并到 materialize 入口），新增了 `ARCHIVED` 状态用于已下线且无可回滚价值的版本。详见 `DerivedVersionStatus`（`packages/core/src/ditto_core/engine/materialization/models.py`）。
+> **代码变更记录（2026-03-20）**：Phase 1 实现时简化了状态机，移除了 `REGISTERED` 状态（validate 检查合并到 materialize 入口），新增了 `ARCHIVED` 状态用于已下线且无可回滚价值的版本。详见 `DerivedVersionStatus`（`packages/analytics/src/ditto_analytics/materialization/models.py`）。
 
 | 状态 | 含义 | 进入条件 |
 |------|------|---------|

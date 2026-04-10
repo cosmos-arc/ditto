@@ -274,7 +274,7 @@ win_rate_by_quantile: dict[int, float]
 
 ### 4b. INVAL-IC-2: 死信队列
 
-**文件**: [derived.py](packages/datahub/src/ditto_datahub/models/derived.py) `DerivedInvalidationRecord`
+**文件**: [derived.py](packages/data/src/ditto_data/models/derived.py) `DerivedInvalidationRecord`
 
 新增字段（有默认值）:
 ```
@@ -283,13 +283,13 @@ error_message: str | None = None
 dead_letter_at: str | None = None
 ```
 
-**文件**: [reader.py](packages/datahub/src/ditto_datahub/stores/runtime/derived_sqlite/reader.py) + [writer.py](packages/datahub/src/ditto_datahub/stores/runtime/derived_sqlite/writer.py)
+**文件**: [reader.py](packages/data/src/ditto_data/stores/runtime/derived_sqlite/reader.py) + [writer.py](packages/data/src/ditto_data/stores/runtime/derived_sqlite/writer.py)
 
 - SQLite schema 迁移: `ALTER TABLE` 新增 3 列
 - 新增 `list_dead_letter_invalidations()` 方法
 - 新增 `increment_retry_count()` + `mark_invalidation_dead_letter()` 方法
 
-**文件**: [derived_catalog_service.py](packages/datahub/src/ditto_datahub/services/derived_catalog_service.py)
+**文件**: [derived_catalog_service.py](packages/data/src/ditto_data/services/derived_catalog_service.py)
 
 代理新增的 reader/writer 方法。
 
@@ -301,11 +301,11 @@ dead_letter_at: str | None = None
 
 ### 4c. INVAL-IC-3: 优先级队列
 
-**文件**: [derived.py](packages/datahub/src/ditto_datahub/models/derived.py) `DerivedInvalidationRecord`
+**文件**: [derived.py](packages/data/src/ditto_data/models/derived.py) `DerivedInvalidationRecord`
 
 新增字段: `role: str = "factor"`
 
-**文件**: [reader.py](packages/datahub/src/ditto_datahub/stores/runtime/derived_sqlite/reader.py)
+**文件**: [reader.py](packages/data/src/ditto_data/stores/runtime/derived_sqlite/reader.py)
 
 `list_stale_invalidations()` SQL 的 `ORDER BY` 新增角色优先级:
 ```sql
@@ -344,7 +344,7 @@ ORDER BY
 
 ### 5a. INVAL-IC-4: 跨事件去重
 
-**文件**: [reader.py](packages/datahub/src/ditto_datahub/stores/runtime/derived_sqlite/reader.py)
+**文件**: [reader.py](packages/data/src/ditto_data/stores/runtime/derived_sqlite/reader.py)
 
 `list_stale_invalidations()` SQL 新增去重子查询:
 ```sql

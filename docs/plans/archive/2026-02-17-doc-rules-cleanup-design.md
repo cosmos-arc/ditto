@@ -29,7 +29,7 @@
 
 | 包/应用 | CLAUDE.md 状态 | 需要操作 |
 |---------|---------------|---------|
-| `packages/datahub/` | ✅ 已存在，内容完善 | 保持 |
+| `packages/data/` | ✅ 已存在，内容完善 | 保持 |
 | `packages/infra/` | ❌ 不存在 | 新建 |
 | `packages/core/` | ❌ 不存在 | 新建 |
 | `apps/port/` | ❌ 不存在 | 新建 |
@@ -86,7 +86,7 @@
 -- Server → [server.md](.claude/rules/server.md)
 +详细分层规范：
 +- Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
-+- DataHub → [packages/datahub/CLAUDE.md](packages/datahub/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
++- DataHub → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
 +- Core → [packages/core/CLAUDE.md](packages/core/CLAUDE.md)
 +- Port → [apps/port/CLAUDE.md](apps/port/CLAUDE.md)
 ```
@@ -203,7 +203,7 @@
 | 包/应用 | README.md | CLAUDE.md | 说明 |
 |---------|-----------|-----------|------|
 | `packages/infra/` | ❌ | ❌ → P0 创建 | 需要新建 |
-| `packages/datahub/` | ✅ | ✅ | 已完善 |
+| `packages/data/` | ✅ | ✅ | 已完善 |
 | `packages/core/` | ✅（有术语漂移） | ❌ → P0 创建 | README 中引用 `ditto-foundation` |
 | `apps/port/` | ✅ | ❌ → P0 创建 | 需要从 server.md 迁移 |
 | `apps/web/` | ✅ | ❌ | 暂无实际代码，低优先级 |
@@ -247,4 +247,4 @@
 
 - [CLAUDE.md](/.claude/CLAUDE.md) - 项目指南
 - [architecture.md](/.claude/rules/architecture.md) - 架构规范
-- [packages/datahub/CLAUDE.md](/packages/datahub/CLAUDE.md) - DataHub 规范
+- [packages/data/CLAUDE.md](/packages/data/CLAUDE.md) - DataHub 规范

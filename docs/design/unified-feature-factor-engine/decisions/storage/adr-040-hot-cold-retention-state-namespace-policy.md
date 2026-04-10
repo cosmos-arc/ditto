@@ -167,9 +167,9 @@ State family 统一采用 `ditto:derived:state:*` 前缀，区分“控制面 la
 
 | 模块 | 修改内容 |
 |------|---------|
-| `packages/core` | 增加 retention profile 配置模型 |
-| `packages/datahub` | 统一 Kvrocks key builder 与 TTL policy |
-| `packages/datahub` | 区分 artifact GC 与 hot projection cleanup |
+| `packages/kernel` | 增加 retention profile 配置模型 |
+| `packages/data` | 统一 Kvrocks key builder 与 TTL policy |
+| `packages/data` | 区分 artifact GC 与 hot projection cleanup |
 
 ---
 

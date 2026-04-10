@@ -2,7 +2,7 @@
 
 **日期**: 2026-03-23
 **状态**: Done (Wave 1 ✅, Wave 2 ✅, Wave 3 ✅, Wave 4 ✅)
-**范围**: `packages/core/src/ditto_core/` + `packages/datahub/src/ditto_datahub/`
+**范围**: `packages/core/src/ditto_core/` + `packages/data/src/ditto_data/`
 **前置文档**:
 - `docs/plans/2026-03-21-strategy-engine-system-design-v3.md`（v3 系统设计）
 - `docs/plans/2026-03-23-strategy-engine-v3-completion-analysis.md`（完成分析）
@@ -179,7 +179,7 @@ Wave 4: 文档同步 (Part 10-11)
 | 改动 | 文件 |
 |------|------|
 | 新增策略引擎模块说明 | `packages/core/CLAUDE.md` |
-| 更新包 README | `packages/core/README.md`, `packages/datahub/README.md` |
+| 更新包 README | `packages/core/README.md`, `packages/data/README.md` |
 | 更新 memory 索引 | `MEMORY.md`（新增本次 Sprint 记录） |
 
 ### Part 11: 模块 docstring

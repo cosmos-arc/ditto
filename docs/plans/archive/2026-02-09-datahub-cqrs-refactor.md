@@ -44,7 +44,7 @@
 **分支**: `refactor/datahub-cqrs-stage0-type-rename`
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/models/storage.py`
+- Modify: `packages/data/src/ditto_data/models/storage.py`
 - Update: 所有引用 `WriteResultStore` 的文件（15 个文件）
 
 **复杂度**: S
@@ -266,14 +266,14 @@ class StockBarsWriter:
 **状态**: ✅ 完成 (2026-02-10)
 
 **分析结果**:
-- 代码中无 `from ditto_datahub.domains` 引用
+- 代码中无 `from ditto_data.domains` 引用
 - `domains` 是 `stores` 的废弃别名（已标记 DeprecationWarning）
 - 所有测试已迁移到 `tests/unit/stores/`
 
 **操作**:
 1. 验证引用: ✅ 无代码引用
-2. 删除源码目录: ✅ `packages/datahub/src/ditto_datahub/domains/`
-3. 删除测试目录: ✅ `packages/datahub/tests/unit/domains/`
+2. 删除源码目录: ✅ `packages/data/src/ditto_data/domains/`
+3. 删除测试目录: ✅ `packages/data/tests/unit/domains/`
 
 **验证结果**:
 - ✅ 代码风格检查通过 (ruff)
@@ -350,7 +350,7 @@ def provide_market_service(
 ### Task 43: 更新架构文档
 
 **文件**:
-- `packages/datahub/README.md`
+- `packages/data/README.md`
 - `.claude/rules/datahub.md`
 
 ### Task 44: 移除 DataHub Facade

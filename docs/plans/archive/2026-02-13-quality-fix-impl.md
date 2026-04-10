@@ -104,7 +104,7 @@ pixi run -e dev test apps/port/tests/unit/cli/commands/ingest/ -v
 
 ### 需要修改的文件
 
-#### 1. `packages/datahub/tests/integration/runtime/test_sqlite_pool_integration.py`
+#### 1. `packages/data/tests/integration/runtime/test_sqlite_pool_integration.py`
 
 | 行号 | 修改内容 |
 |------|---------|
@@ -114,7 +114,7 @@ pixi run -e dev test apps/port/tests/unit/cli/commands/ingest/ -v
 | 203 | SQL 中的 `symbol` → `ticker` |
 | 226 | SQL 中的 `symbol` → `ticker` |
 
-#### 2. `packages/datahub/tests/integration/stores/test_security_store_integration.py`
+#### 2. `packages/data/tests/integration/stores/test_security_store_integration.py`
 
 | 行号 | 修改内容 |
 |------|---------|
@@ -124,8 +124,8 @@ pixi run -e dev test apps/port/tests/unit/cli/commands/ingest/ -v
 ### 验证
 
 ```bash
-pixi run -e dev test packages/datahub/tests/integration/runtime/test_sqlite_pool_integration.py -v
-pixi run -e dev test packages/datahub/tests/integration/stores/test_security_store_integration.py -v
+pixi run -e dev test packages/data/tests/integration/runtime/test_sqlite_pool_integration.py -v
+pixi run -e dev test packages/data/tests/integration/stores/test_security_store_integration.py -v
 ```
 
 ---
@@ -146,13 +146,13 @@ pixi run -e dev test packages/datahub/tests/integration/stores/test_security_sto
 ### 需要删除的文件
 
 ```
-packages/datahub/tests/integration/sources/test_source_schema_integration.py
+packages/data/tests/integration/sources/test_source_schema_integration.py
 ```
 
 ### 验证
 
 ```bash
-pixi run -e dev test packages/datahub/tests/integration/sources/ -v
+pixi run -e dev test packages/data/tests/integration/sources/ -v
 ```
 
 ---

@@ -77,7 +77,7 @@ sources/tushare/
 ### Step 1: 创建新目录结构
 
 ```bash
-cd packages/datahub/src/ditto_datahub/sources/tushare
+cd packages/data/src/ditto_data/sources/tushare
 mkdir -p adapters processors utils
 ```
 
@@ -93,12 +93,12 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import logger
 
-from ditto_datahub.meta.schemas import (
+from ditto_data.meta.schemas import (
     TUSHARE_LIST_STATUS_SCHEMA,
     TUSHARE_ST_SCHEMA,
     TUSHARE_SUSPEND_SCHEMA,
 )
-from ditto_datahub.sources.tushare.client import TushareClient
+from ditto_data.sources.tushare.client import TushareClient
 
 
 class StockStatusAdapter:
@@ -348,11 +348,11 @@ mv rate_limiter.py utils/rate_limiter.py
 
 **`adapters/__init__.py`**:
 ```python
-from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
-from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapter
-from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
-from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
-from ditto_datahub.sources.tushare.adapters.stock_status import StockStatusAdapter
+from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
+from ditto_data.sources.tushare.adapters.calendar import CalendarTushareAdapter
+from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
+from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+from ditto_data.sources.tushare.adapters.stock_status import StockStatusAdapter
 
 __all__ = [
     "BaseTushareAdapter",
@@ -365,11 +365,11 @@ __all__ = [
 
 **`processors/__init__.py`**:
 ```python
-from ditto_datahub.sources.tushare.processors.error_handler import (
+from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
 )
-from ditto_datahub.sources.tushare.processors.merger import StatusMerger
-from ditto_datahub.sources.tushare.processors.transformer import (
+from ditto_data.sources.tushare.processors.merger import StatusMerger
+from ditto_data.sources.tushare.processors.transformer import (
     ADJ_FACTOR_MAPPING,
     CALENDAR_MAPPING,
     DAILY_OHLCV_MAPPING,
@@ -399,11 +399,11 @@ __all__ = [
 
 **`utils/__init__.py`**:
 ```python
-from ditto_datahub.sources.tushare.utils.http_utils import (
+from ditto_data.sources.tushare.utils.http_utils import (
     DEFAULT_HEADERS,
     HTTPClientMixin,
 )
-from ditto_datahub.sources.tushare.utils.rate_limiter import (
+from ditto_data.sources.tushare.utils.rate_limiter import (
     RateLimiter,
     TokenBucketRateLimiter,
 )
@@ -438,13 +438,13 @@ rm status_merger.py
 
 ```bash
 # 类型检查
-pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/
+pixi run -e dev type packages/data/src/ditto_data/sources/tushare/
 
 # 单元测试
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/ -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/ -v
 
 # 集成测试
-pixi run -e dev pytest packages/datahub/tests/integration/sources/tushare/ -v
+pixi run -e dev pytest packages/data/tests/integration/sources/tushare/ -v
 ```
 
 ---
@@ -453,23 +453,23 @@ pixi run -e dev pytest packages/datahub/tests/integration/sources/tushare/ -v
 
 ```python
 # 之前
-from ditto_datahub.sources.tushare.base import BaseTushareAdapter
-from ditto_datahub.sources.tushare.calendar_source import CalendarTushareAdapter
-from ditto_datahub.sources.tushare.stock_source import StockTushareAdapter
-from ditto_datahub.sources.tushare.etf_source import ETFTushareAdapter
-from ditto_datahub.sources.tushare.status_merger import StockStatusMerger
-from ditto_datahub.sources.tushare.error_handler import tushare_fetch_error_handler
-from ditto_datahub.sources.tushare.transformer import TushareDataTransformer
+from ditto_data.sources.tushare.base import BaseTushareAdapter
+from ditto_data.sources.tushare.calendar_source import CalendarTushareAdapter
+from ditto_data.sources.tushare.stock_source import StockTushareAdapter
+from ditto_data.sources.tushare.etf_source import ETFTushareAdapter
+from ditto_data.sources.tushare.status_merger import StockStatusMerger
+from ditto_data.sources.tushare.error_handler import tushare_fetch_error_handler
+from ditto_data.sources.tushare.transformer import TushareDataTransformer
 
 # 之后
-from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
-from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapter
-from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
-from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
-from ditto_datahub.sources.tushare.adapters.stock_status import StockStatusAdapter
-from ditto_datahub.sources.tushare.processors.merger import StatusMerger
-from ditto_datahub.sources.tushare.processors.error_handler import tushare_fetch_error_handler
-from ditto_datahub.sources.tushare.processors.transformer import TushareDataTransformer
+from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
+from ditto_data.sources.tushare.adapters.calendar import CalendarTushareAdapter
+from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
+from ditto_data.sources.tushare.adapters.stock_status import StockStatusAdapter
+from ditto_data.sources.tushare.processors.merger import StatusMerger
+from ditto_data.sources.tushare.processors.error_handler import tushare_fetch_error_handler
+from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
 ```
 
 ---

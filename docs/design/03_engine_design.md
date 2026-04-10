@@ -109,6 +109,7 @@ class RegimeEngine:
 
     def _calc_trend_score(self, df: pl.DataFrame) -> pl.DataFrame:
         """趋势得分：基于 MA 排列 + 斜率 + 相对位置"""
+        # WARNING: 以下为简化示例，实际使用时必须指定 closed="left" 或 shift(1) 以避免未来数据泄露
         df = df.with_columns([
             pl.col("close").rolling_mean(20).alias("ma20"),
             pl.col("close").rolling_mean(60).alias("ma60"),
@@ -739,7 +740,7 @@ class FactorAnalyzer:
 
 ```python
 """
-新增文件：packages/core/ditto/strategy/base.py
+新增文件：packages/engine/src/ditto_engine/alpha/base.py
 替换：原有的简单策略抽象
 """
 
@@ -989,7 +990,7 @@ class FactorBasedStrategy(Strategy):
 
 ```python
 """
-文件：packages/core/ditto/strategy/rotation_strategy.py
+文件：packages/engine/src/ditto_engine/alpha/rotation_strategy.py
 修改：增强现有的轮动策略，使其继承新的基类
 """
 
@@ -1192,7 +1193,7 @@ class ETFRotationStrategy(RegimeAwareStrategy, FactorBasedStrategy):
 
 ```python
 """
-新文件：packages/core/ditto/strategy/defensive_strategy.py
+新文件：packages/engine/src/ditto_engine/alpha/defensive_strategy.py
 这是解决"策略单一"问题的关键
 """
 
@@ -1338,7 +1339,7 @@ class MinimumDefensiveStrategy(DefensiveStrategy):
 
 ```python
 """
-新文件：packages/core/ditto/strategy/momentum_strategy.py
+新文件：packages/engine/src/ditto_engine/alpha/momentum_strategy.py
 展示如何实现不依赖Regime的策略
 """
 
@@ -1424,7 +1425,7 @@ class MomentumStrategy(Strategy):
 
 ```python
 """
-文件：packages/core/ditto/portfolio/portfolio_manager.py
+文件：packages/engine/src/ditto_engine/portfolio/portfolio_manager.py
 增强：原有的Portfolio概念，增加多策略协调
 """
 
@@ -1710,7 +1711,7 @@ portfolio:
 
 ```python
 """
-文件：packages/core/ditto/config/strategy_config.py
+文件：packages/engine/src/ditto_engine/config/strategy_config.py
 """
 
 import yaml
@@ -2243,7 +2244,7 @@ class AlignmentTester:
 
 ```python
 """
-新文件：packages/core/ditto/backtest/walk_forward.py
+新文件：packages/engine/src/ditto_engine/backtest/walk_forward.py
 这是解决"过拟合"问题的关键
 """
 
@@ -2572,7 +2573,7 @@ class WalkForwardResult:
 
 ```python
 """
-新文件：packages/core/ditto/backtest/cost_sensitivity.py
+新文件：packages/engine/src/ditto_engine/backtest/cost_sensitivity.py
 """
 
 from dataclasses import dataclass
@@ -2770,7 +2771,7 @@ class CostSensitivityResult:
 
 ```python
 """
-新文件：packages/core/ditto/backtest/stress_test.py
+新文件：packages/engine/src/ditto_engine/backtest/stress_test.py
 """
 
 from dataclasses import dataclass
@@ -2967,7 +2968,7 @@ class SyntheticScenarioGenerator:
 
 ```python
 """
-新文件：packages/core/ditto/backtest/orchestrator.py
+新文件：packages/engine/src/ditto_engine/backtest/orchestrator.py
 统一协调各类回测任务
 """
 
@@ -3734,7 +3735,7 @@ ExecutionLog
 
 ```python
 """
-文件：packages/core/ditto/execution/cost_model.py
+文件：packages/engine/src/ditto_engine/execution/cost_model.py
 替换：原有的固定滑点模型
 """
 
@@ -3977,7 +3978,7 @@ class SimplifiedCostModel(DynamicCostModel):
 
 ```python
 """
-文件：packages/core/ditto/execution/smart_router.py
+文件：packages/engine/src/ditto_engine/execution/smart_router.py
 新增：智能订单执行
 """
 
@@ -4192,7 +4193,7 @@ class SimplifiedRouter(SmartOrderRouter):
 
 ```python
 """
-文件：packages/core/ditto/execution/execution_manager.py
+文件：packages/engine/src/ditto_engine/execution/execution_manager.py
 """
 
 from dataclasses import dataclass
@@ -4380,7 +4381,7 @@ class ExecutionManager:
 
 ```python
 """
-文件：packages/core/ditto/execution/market_data_service.py
+文件：packages/engine/src/ditto_engine/execution/market_data_service.py
 Phase 1: 使用历史数据模拟
 Phase 2: 接入实时行情
 """
@@ -4440,7 +4441,7 @@ class MarketDataService:
 
 ```python
 """
-文件：packages/core/ditto/execution/execution_analyzer.py
+文件：packages/engine/src/ditto_engine/execution/execution_analyzer.py
 """
 
 import polars as pl
@@ -4548,7 +4549,7 @@ class ExecutionAnalyzer:
 以 Python `Protocol` 形式定义执行适配器接口（仅示意，后续可细化类型）：
 
 ```python
-# packages/core/src/execution/interfaces.py
+# packages/engine/src/execution/interfaces.py
 from typing import Protocol, Iterable
 from dataclasses import dataclass
 from datetime import datetime

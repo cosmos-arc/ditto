@@ -249,7 +249,7 @@ pixi run -e dev ci
 | `packages/foundation/src/ditto_foundation/observability/tracing.py` | 核心装饰器类型注解修复 |
 | `packages/foundation/src/ditto_foundation/observability/config.py` | type:ignore 修复 + VM endpoint |
 | `packages/foundation/src/ditto_foundation/notification/channels/webhook.py` | 异常处理模式模板 |
-| `packages/datahub/src/ditto_datahub/stores/security_store.py` | Store 层异常处理 |
+| `packages/data/src/ditto_data/stores/security_store.py` | Store 层异常处理 |
 | `packages/foundation/tests/unit/observability/test_tracing_decorator_unit.py` | 测试补充模板 |
 
 ### 不应修改的文件

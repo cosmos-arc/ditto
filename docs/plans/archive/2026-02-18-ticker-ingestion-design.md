@@ -480,7 +480,7 @@ from datetime import date
 
 from prefect import flow
 
-from ditto_datahub.models import Dataset
+from ditto_data.models import Dataset
 from ditto_port.services.ingestion.coordinator import (
     IngestionCoordinator,
     TickerIngestParams,

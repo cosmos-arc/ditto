@@ -214,7 +214,7 @@ class AssetClass(StrEnum):
 
 from enum import StrEnum
 
-from ditto_datahub.models.asset_class import AssetClass
+from ditto_data.models.asset_class import AssetClass
 
 
 class Dataset(StrEnum):
@@ -415,16 +415,16 @@ def _fetch_by_dataset(
 
 | 文件 | 内容 |
 |------|------|
-| `packages/datahub/.../models/asset_class.py` | `AssetClass` 枚举 |
-| `packages/datahub/.../models/exchange.py` | exchange 转换函数 |
+| `packages/data/.../models/asset_class.py` | `AssetClass` 枚举 |
+| `packages/data/.../models/exchange.py` | exchange 转换函数 |
 | `apps/port/.../models/ingestion.py` | `InstrumentIngestParams` |
 
 ### 8.3 修改文件
 
 | 文件 | 修改内容 |
 |------|----------|
-| `packages/datahub/.../models/dataset.py` | 增加 `asset_class` 属性 |
-| `packages/datahub/.../sources/base.py` | 扩展 fetch 方法签名 |
+| `packages/data/.../models/dataset.py` | 增加 `asset_class` 属性 |
+| `packages/data/.../sources/base.py` | 扩展 fetch 方法签名 |
 | `apps/port/.../cli/commands/ingest/__init__.py` | 移除 ticker_app |
 | `apps/port/.../cli/commands/ingest/market.py` | 增加单标的参数 |
 | `apps/port/.../cli/commands/ingest/fundamental.py` | 增加单标的参数 |

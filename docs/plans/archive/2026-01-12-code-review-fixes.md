@@ -41,8 +41,8 @@
 - ✅ pre-commit 检查通过
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
-- `packages/datahub/tests/integration/runtime/test_freeze_manager_integration.py`
+- `packages/data/src/ditto_data/runtime/freeze_manager.py`
+- `packages/data/tests/integration/runtime/test_freeze_manager_integration.py`
 
 **Agent**: adb2ec3
 
@@ -70,9 +70,9 @@
 - ✅ pre-commit 检查通过
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/stores/parquet_store_base.py`
-- `packages/datahub/tests/unit/stores/test_parquet_store_base_unit.py`
-- `packages/datahub/tests/unit/stores/test_bars_store_unit.py`
+- `packages/data/src/ditto_data/stores/parquet_store_base.py`
+- `packages/data/tests/unit/stores/test_parquet_store_base_unit.py`
+- `packages/data/tests/unit/stores/test_bars_store_unit.py`
 
 **Agent**: ae9cfa8
 
@@ -95,8 +95,8 @@
 - ✅ pre-commit 检查通过
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/sources/tushare/transformer.py`
-- `packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py`
+- `packages/data/src/ditto_data/sources/tushare/transformer.py`
+- `packages/data/tests/unit/sources/tushare/test_transformer_unit.py`
 
 **Agent**: aca7a2a
 
@@ -120,8 +120,8 @@
 - ✅ pre-commit 检查通过
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/repositories/bars.py`
-- `packages/datahub/tests/unit/repositories/test_filter_failed_rows.py` (新建)
+- `packages/data/src/ditto_data/repositories/bars.py`
+- `packages/data/tests/unit/repositories/test_filter_failed_rows.py` (新建)
 
 **Agent**: aded3f5
 
@@ -143,7 +143,7 @@
 - ✅ 所有测试通过
 
 **修改文件**:
-- `packages/datahub/tests/unit/stores/test_parquet_store_base_unit.py`
+- `packages/data/tests/unit/stores/test_parquet_store_base_unit.py`
 
 ---
 

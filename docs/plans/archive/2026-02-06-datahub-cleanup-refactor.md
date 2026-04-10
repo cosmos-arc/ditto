@@ -38,7 +38,7 @@
 
 ### 1.1 更新 Accessors 文档
 
-**文件**：`packages/datahub/src/ditto_datahub/accessors/README.md`
+**文件**：`packages/data/src/ditto_data/accessors/README.md`
 
 **操作**：完全重写文档，只保留：
 - InstrumentsAccessor 的功能说明
@@ -51,14 +51,14 @@
 ### 1.2 清理测试覆盖率临时文件
 
 **文件**：
-- `packages/datahub/src/ditto_datahub/stores/*.cover`
-- `packages/datahub/src/ditto_datahub/stores/__init__.py,cover`
+- `packages/data/src/ditto_data/stores/*.cover`
+- `packages/data/src/ditto_data/stores/__init__.py,cover`
 
 **操作**：删除所有 `.cover` 文件（pytest-cov 临时生成的覆盖率文件）
 
 ### 1.3 更新 Stores 文档
 
-**文件**：`packages/datahub/src/ditto_datahub/stores/README.md`
+**文件**：`packages/data/src/ditto_data/stores/README.md`
 
 **操作**：更新文档说明：
 - stores/ 层作为基础设施的定位
@@ -181,21 +181,21 @@ stores/
 ### 需要修改的文件
 
 #### 阶段 1（文档清理）
-- [ ] `packages/datahub/src/ditto_datahub/accessors/README.md` - 完全重写
-- [ ] `packages/datahub/src/ditto_datahub/stores/README.md` - 更新
+- [ ] `packages/data/src/ditto_data/accessors/README.md` - 完全重写
+- [ ] `packages/data/src/ditto_data/stores/README.md` - 更新
 - [ ] 删除所有 `.cover` 文件
 
 #### 阶段 2（统一 Domains）
-- [ ] `packages/datahub/src/ditto_datahub/domains/features/technical/indicator_store.py` → `technical_indicator_store.py`
-- [ ] `packages/datahub/src/ditto_datahub/domains/metadata/metadata_service.py` - 合并 InstrumentsAccessor 功能
-- [ ] `packages/datahub/src/ditto_datahub/domains/metadata/universe/` - 新建目录，迁移 UniverseStore
-- [ ] `packages/datahub/src/ditto_datahub/hub.py` - 更新依赖注入
-- [ ] `packages/datahub/src/ditto_datahub/registry/datahub.py` - 更新 Provider 配置
+- [ ] `packages/data/src/ditto_data/domains/features/technical/indicator_store.py` → `technical_indicator_store.py`
+- [ ] `packages/data/src/ditto_data/domains/metadata/metadata_service.py` - 合并 InstrumentsAccessor 功能
+- [ ] `packages/data/src/ditto_data/domains/metadata/universe/` - 新建目录，迁移 UniverseStore
+- [ ] `packages/data/src/ditto_data/hub.py` - 更新依赖注入
+- [ ] `packages/data/src/ditto_data/registry/datahub.py` - 更新 Provider 配置
 
 #### 阶段 3（优化 Stores）
-- [ ] `packages/datahub/src/ditto_datahub/stores/base/parquet_store.py` - 合并 parquet_store_base 功能
-- [ ] `packages/datahub/src/ditto_datahub/stores/parquet_store_base.py` - 删除
-- [ ] `packages/datahub/src/ditto_datahub/stores/universe_store.py` - 删除（已迁移）
+- [ ] `packages/data/src/ditto_data/stores/base/parquet_store.py` - 合并 parquet_store_base 功能
+- [ ] `packages/data/src/ditto_data/stores/parquet_store_base.py` - 删除
+- [ ] `packages/data/src/ditto_data/stores/universe_store.py` - 删除（已迁移）
 - [ ] 更新所有继承 ParquetStoreBase 的 domains 层 stores
 
 ### 测试文件更新
@@ -296,7 +296,7 @@ pixi run -e dev ci
 **完成内容**:
 - 创建 `helpers/README.md` 文档，说明纯函数工具模块
 - 更新 `stores/README.md`，明确基础设施层定位
-- 更新 `packages/datahub/README.md`，说明架构变更并版本号提升至 v0.14.0
+- 更新 `packages/data/README.md`，说明架构变更并版本号提升至 v0.14.0
 
 ### ✅ 阶段 2：统一 Domains 层实现（已完成）
 

@@ -151,7 +151,7 @@ packages/
 ## 7. 目录建议（与你现有仓库兼容）
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
   domains/
     metadata/
     market/

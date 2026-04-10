@@ -35,7 +35,7 @@ description: 基于计划执行 TDD 开发
     - Skill: `python-development:python-testing-patterns`
     - Skill: `python-development:python-error-handling`
 - 4.使用`subagent-driven-development`进行subagent执行
-- 5.使用`code-simplifier:code-simplifier`进行代码简化
+- 5.使用`simplify`进行代码简化
 
 遵循 [`.claude/rules/workflow.md`](.claude/rules/workflow.md)：
 ```

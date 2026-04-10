@@ -86,7 +86,7 @@ port → datahub.stores.* ❌ (应通过 accessor/hub)
 **检查命令:**
 ```bash
 # 验证业务逻辑层无 Store 导入
-grep -r "from ditto_datahub.stores" apps/port/src --include="*.py" | grep -v "registry"
+grep -r "from ditto_data.stores" apps/port/src --include="*.py" | grep -v "registry"
 # 应返回空结果 ✅
 ```
 
@@ -119,7 +119,7 @@ grep -r "from ditto_datahub.stores" apps/port/src --include="*.py" | grep -v "re
 
 **完成的改进:**
 - ✅ Batch 1: `packages/core/src/ditto_core/quality/checkers/statistical.py` - Polars 异常精确捕获
-- ✅ Batch 2: `packages/datahub/src/ditto_datahub/sources/tushare/client.py` - keyring 和 IO 异常处理
+- ✅ Batch 2: `packages/data/src/ditto_data/sources/tushare/client.py` - keyring 和 IO 异常处理
 - ✅ Batch 3 完整: `coordinator.py`, `main.py`, `notification.py`, `manager.py`, `l3_batch_service.py`, `dq_batch.py`
 
 **改进效果:**
@@ -140,7 +140,7 @@ grep -r "from ditto_datahub.stores" apps/port/src --include="*.py" | grep -v "re
 
 #### A 类: 网络请求异常 (10 处)
 
-**位置:** `packages/datahub/src/ditto_datahub/sources/tushare/*.py`
+**位置:** `packages/data/src/ditto_data/sources/tushare/*.py`
 
 ```python
 # 修改前
@@ -165,7 +165,7 @@ except httpx.HTTPStatusError as e:
 
 #### B 类: 顶层异常处理 (8 处)
 
-**位置:** `apps/port/src/ditto_port/main.py`, `packages/datahub/src/ditto_datahub/init_providers.py`
+**位置:** `apps/port/src/ditto_port/main.py`, `packages/data/src/ditto_data/init_providers.py`
 
 ```python
 # 修改前
@@ -292,10 +292,10 @@ pixi run -e dev pyright packages/foundation/src/ditto_foundation/cache/core.py
 - 连接管理与其他 Store 保持一致
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/stores/quarantine_store.py`
-- Modify: `packages/datahub/src/ditto_datahub/scripts/schema.sql`
+- Modify: `packages/data/src/ditto_data/stores/quarantine_store.py`
+- Modify: `packages/data/src/ditto_data/scripts/schema.sql`
 - Modify: `apps/port/src/ditto_port/registry/datahub.py`
-- Modify: `packages/datahub/tests/unit/stores/test_quarantine_store_unit.py`
+- Modify: `packages/data/tests/unit/stores/test_quarantine_store_unit.py`
 - Modify: `packages/core/src/ditto_core/quality/config.py`
 
 ---
@@ -431,7 +431,7 @@ __all__: list[str] = []
 
 ### Phase 1 检查点
 
-- [ ] 无 `from ditto_datahub.stores import` 导入
+- [ ] 无 `from ditto_data.stores import` 导入
 - [ ] 所有数据访问通过 `hub.*` accessor
 - [ ] 测试覆盖率 >= 80%
 - [ ] CI 检查全部通过

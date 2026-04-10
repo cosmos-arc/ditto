@@ -2,14 +2,16 @@
 
 ## 定位
 
-Kernel 层是 **Shared Kernel（共享内核）**，提供跨层共享的领域原语。
+Kernel 层是 **Shared Kernel — 类型 + Protocol 抽象 + 薄实现**，提供跨层共享的领域原语和系统级抽象。
 
 **核心原则**：
 - 零业务行为、零外部依赖、零 I/O
-- 纯值语义：枚举、NewType、值对象
+- 值语义：枚举、NewType、值对象
+- Protocol 抽象：跨层共享的接口契约
+- 薄实现：系统级基础设施（如 SimulatedClock、SimpleEventBus）
 - 位于依赖图最底层，被所有业务包依赖
 
-## 准入标准（5 条，全部满足才可进入）
+### 值对象准入标准（5 条，全部满足才可进入）
 
 | # | 标准 | 说明 |
 |---|------|------|
@@ -19,12 +21,38 @@ Kernel 层是 **Shared Kernel（共享内核）**，提供跨层共享的领域�
 | 4 | 无外部依赖 | 只依赖 Python 标准库 |
 | 5 | 纯值语义 | 不含序列化、持久化关注点 |
 
+### Protocol / 薄实现准入标准
+
+适用于 Clock、EventBus 等 Protocol 及其薄实现类
+（SimulatedClock、RealtimeClock、SimpleEventBus）。
+
+1. **预期跨层使用**：至少被 2 个业务包消费
+   - Phase 0 定义阶段允许"预期"（在 PR 描述中声明）
+   - Phase 1 完成后验证实际消费关系
+2. **零业务逻辑**：Protocol 定义纯接口签名；薄实现不含领域逻辑
+3. **无外部依赖**：仅依赖 Python 标准库
+4. **实现体 < 30 行**：每个薄实现类的方法体总计不超过 30 行
+5. **无 I/O**：不进行文件读写、网络请求、数据库操作
+
+**薄实现豁免**：SimulatedClock / RealtimeClock / SimpleEventBus 属于系统级基础设施，
+不受"不含方法"限制，但必须满足上述 5 条。
+
+### 增长控制
+
+- 不设硬性数量上限
+- 每个新增类型必须在 PR 描述中包含 **2 行理由说明**：
+  1. 为什么这个类型属于 kernel 而非业务包
+  2. 预期被哪些业务包消费
+
 ## 模块结构
 
 ```
 ditto_kernel/
 ├── identity.py        # 共享身份类型（NewType）
-└── enums.py           # 共享枚举类型（StrEnum）
+├── enums.py           # 共享枚举类型（StrEnum）
+├── clock.py           # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
+├── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
+└── specs.py           # 衍生规格数据类（DerivedSpec / DerivedRole / TimeSpec 等，Phase 5 从 Engine 迁入）
 ```
 
 ## 当前类型清单
@@ -32,10 +60,17 @@ ditto_kernel/
 | 类型 | 模块 | 格式 | 消费者 |
 |------|------|------|--------|
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
-| `AssetClass` | enums.py | `StrEnum`（6 成员） | DataHub, Port |
-| `Exchange` | enums.py | `StrEnum`（XSHE/XSHG/XBSE） | DataHub |
-| `OrderSide` | enums.py | `StrEnum`（BUY/SELL） | DataHub, Core |
-| `RunStatus` | enums.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | DataHub |
+| `AssetClass` | enums.py | `StrEnum`（6 成员） | Data, Interfaces |
+| `Exchange` | enums.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
+| `OrderSide` | enums.py | `StrEnum`（BUY/SELL） | Data, Engine |
+| `RunStatus` | enums.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | Data |
+| `DerivedRole` | specs.py | `StrEnum`（FACTOR/FEATURE/COMPOSITE） | Analytics, Engine |
+| `DerivedSpec` | specs.py | frozen dataclass | Analytics, Engine |
+| `MaterializationProfile` | specs.py | `StrEnum`（SERIES/STATE） | Analytics, Engine |
+| `TimeSpec` | specs.py | frozen dataclass | Analytics, Engine |
+| `ExecutionPolicy` | specs.py | frozen dataclass（含默认值） | Analytics, Engine |
+| `CalendarId` | specs.py | `Literal["cn_stock"]` | Analytics |
+| `GrainId` | specs.py | `Literal["1d", "1m"]` | Analytics |
 
 ## 导入规范
 
@@ -46,9 +81,10 @@ from ditto_kernel import AssetClass, OrderSide, InstrumentId
 # ✅ 正确：从子模块导入
 from ditto_kernel.enums import AssetClass, Exchange
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.specs import DerivedSpec, DerivedRole, MaterializationProfile
 
 # ❌ 禁止：kernel 导入任何其他 ditto 包
-from ditto_datahub.models.enums import ...  # kernel 中禁止
+from ditto_data.models.enums import ...  # kernel 中禁止
 ```
 
 ## 依赖规则
@@ -56,16 +92,20 @@ from ditto_datahub.models.enums import ...  # kernel 中禁止
 ```
 ┌─────────────────────────────────────────────┐
 │  所有业务包都可以依赖 Kernel                  │
-│  port → kernel ✅                            │
-│  core → kernel ✅                            │
-│  datahub → kernel ✅                         │
+│  interfaces → kernel ✅                     │
+│  app → kernel ✅                            │
+│  engine → kernel ✅                         │
+│  analytics → kernel ✅                      │
+│  data → kernel ✅                           │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
 │  Kernel 禁止依赖其他层                       │
-│  kernel → port ❌                           │
-│  kernel → datahub ❌                        │
-│  kernel → core ❌                           │
+│  kernel → interfaces ❌                     │
+│  kernel → app ❌                            │
+│  kernel → engine ❌                         │
+│  kernel → analytics ❌                      │
+│  kernel → data ❌                           │
 │  kernel → infra ❌                          │
 └─────────────────────────────────────────────┘
 ```
@@ -76,9 +116,10 @@ from ditto_datahub.models.enums import ...  # kernel 中禁止
 |------|------|
 | `import polars` / `import orjson` 等第三方库 | 零外部依赖 |
 | pyproject.toml 声明运行时 dependencies | 零外部依赖 |
-| kernel 类型数量超过 20 个 | 控制范围，避免变成万能包 |
 | 在枚举/值对象上添加方法 | 零业务行为 |
 | 包含序列化、持久化逻辑 | 纯值语义 |
+| 薄实现类超过 30 行方法体 | 控制复杂度 |
+| Protocol / 薄实现包含 I/O | 零 I/O |
 
 ## 测试规范
 
@@ -104,15 +145,15 @@ pixi run -e dev pytest packages/kernel/tests/
 ```
 问题：这个类型应该放在 Kernel 吗？
 
-1. 是纯类型（枚举/值对象/NewType）？
+1. 是纯类型（枚举/值对象/NewType）或 Protocol/薄实现？
    YES → 继续下一个问题
    NO → ❌ 不属于 Kernel
 
-2. 至少被 2 个业务包直接导入？
+2. 至少被 2 个业务包消费（或预期被消费）？
    YES → 继续下一个问题
    NO → ❌ 放在使用最多的那个包里
 
-3. 不含方法或 I/O？
+3. 零业务逻辑、零 I/O？
    YES → 继续下一个问题
    NO → ❌ 放在对应的业务包里
 

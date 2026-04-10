@@ -448,7 +448,7 @@ Parquet 文件（按 SID 索引）
 ### 5.1 Repository 模式
 
 ```python
-# packages/datahub/src/ditto_datahub/repositories/bars.py
+# packages/data/src/ditto_data/repositories/bars.py
 
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -572,7 +572,7 @@ class IndexBarsRepository(IBarsRepository):
 ### 5.2 Transformer 层（数据转换）
 
 ```python
-# packages/datahub/src/ditto_datahub/transformers/bars.py
+# packages/data/src/ditto_data/transformers/bars.py
 
 from typing import Literal
 
@@ -677,7 +677,7 @@ class BarsTransformer:
 ### 5.3 Metadata Repository（SQLite）
 
 ```python
-# packages/datahub/src/ditto_datahub/repositories/metadata.py
+# packages/data/src/ditto_data/repositories/metadata.py
 
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -764,9 +764,9 @@ from typing import Literal
 import polars as pl
 
 from ditto_contracts.bars import BarsQuery, AdjType
-from ditto_datahub.repositories import IBarsRepository
-from ditto_datahub.transformers import BarsTransformer
-from ditto_datahub.repositories.metadata import IInstrumentRepository
+from ditto_data.repositories import IBarsRepository
+from ditto_data.transformers import BarsTransformer
+from ditto_data.repositories.metadata import IInstrumentRepository
 
 
 class DataQueryService:
@@ -936,7 +936,7 @@ from typing import Literal
 import polars as pl
 
 from ditto_contracts.bars import BarsData
-from ditto_datahub.repositories import IBarsRepository
+from ditto_data.repositories import IBarsRepository
 from ditto_core.quality import QualityEngine, QualityResult
 
 
@@ -1115,7 +1115,7 @@ ditto/
 │   │       └── ml/                     # ML 引擎
 │   │
 │   ├── datahub/                        # DataHub Layer
-│   │   └── src/ditto_datahub/
+│   │   └── src/ditto_data/
 │   │       ├── repositories/           # 仓储接口和实现
 │   │       │   ├── stock/              # 股票仓储
 │   │       │   │   ├── bars_repo.py

@@ -136,7 +136,7 @@ packages/
 │       ├── config.py                # Settings (Pydantic) + PathConfig (dataclass)
 │       └── observability.py         # ObservabilityConfig, TracingConfig
 │
-├── datahub/src/ditto_datahub/
+├── datahub/src/ditto_data/
 │   └── models/                      # 重组统一
 │       ├── __init__.py
 │       ├── common.py                # 枚举、NamedTuple (OnDuplicate, DQSeverity, SidRange)
@@ -163,7 +163,7 @@ apps/port/src/ditto_port/
 
 ```python
 # 推荐：统一从 models 导入
-from ditto_datahub.models import (
+from ditto_data.models import (
     WriteResult,
     FreezeManifest,
     OnDuplicate,
@@ -172,8 +172,8 @@ from ditto_datahub.models import (
 )
 
 # 避免：分散导入
-from ditto_datahub.types import WriteResult
-from ditto_datahub.dq.models import DQSpec
+from ditto_data.types import WriteResult
+from ditto_data.dq.models import DQSpec
 ```
 
 ## 强制约束
@@ -275,7 +275,7 @@ class BackfillResult:
 
 按以下优先级迁移：
 
-1. **packages/datahub**: 重组 `dq/models.py` → `models/quality.py`
+1. **packages/data**: 重组 `dq/models.py` → `models/quality.py`
 2. **apps/port**: 创建 `models/`，迁移分散的结果类
 3. **packages/foundation**: 可选（当前结构相对合理）
 

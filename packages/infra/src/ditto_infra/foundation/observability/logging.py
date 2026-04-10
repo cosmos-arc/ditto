@@ -20,11 +20,17 @@ def _resolve_log_dir(config: ObservabilityConfig) -> Path:
     return log_dir
 
 
-def _build_log_record(record: dict[str, Any] | Any) -> dict[str, Any]:
+def _build_log_record(record: dict[str, Any]) -> dict[str, Any]:
+    """
+    从 loguru record wrapper 构建 JSON log entry.
+
+    loguru 在运行时传递的 record 是一个 wrapper dict，
+    包含 ``"record"``（Record TypedDict）和 ``"extra"`` 键。
+    """
     rec = record["record"]
     extra = record["extra"]
 
-    log_entry = {
+    log_entry: dict[str, Any] = {
         "timestamp": datetime.fromtimestamp(rec["time"].timestamp()).isoformat(),
         "level": rec["level"].name,
         "logger": rec["name"],
@@ -46,9 +52,17 @@ def _build_log_record(record: dict[str, Any] | Any) -> dict[str, Any]:
     return log_entry
 
 
-def _json_formatter(record: dict[str, Any] | Any) -> str:
+def _json_formatter(record: dict[str, Any]) -> str:
+    """JSON 格式化函数 — 将 loguru record 转为 JSONL."""
     log_entry = _build_log_record(record)
     return orjson.dumps(log_entry).decode("utf-8") + "\n"
+
+
+# Loguru 类型桩定义 FormatFunction = Callable[[Record], str]，
+# 但运行时实际传递的 record 是一个 wrapper dict。
+# 使用 Any 类型注解使 pyright 接受任意类型，
+# 同时避免 ANN401（变量注解不在 ANN401 检查范围）。
+_json_log_format: Any = _json_formatter
 
 
 def configure_logging(config: ObservabilityConfig) -> None:
@@ -81,7 +95,7 @@ def configure_logging(config: ObservabilityConfig) -> None:
         if effective.log_format == "json":
             _logger.add(
                 sys.stdout,
-                format=_json_formatter,
+                format=_json_log_format,
                 level=effective.log_level,
                 colorize=False,
             )
@@ -95,12 +109,12 @@ def configure_logging(config: ObservabilityConfig) -> None:
 
     if effective.log_to_file:
         file_format = (
-            _json_formatter
+            _json_log_format
             if effective.log_format == "json" or config.environment.is_production
             else console_format
         )
         log_file = log_dir / (
-            "ditto.jsonl" if file_format == _json_formatter else "ditto.log"
+            "ditto.jsonl" if file_format is _json_log_format else "ditto.log"
         )
         _logger.add(
             log_file,

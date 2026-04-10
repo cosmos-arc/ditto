@@ -30,7 +30,7 @@
 
 ### 1. DataStoreSettings 定义
 
-**文件:** `packages/datahub/src/ditto_datahub/config/data_store.py`
+**文件:** `packages/data/src/ditto_data/config/data_store.py`
 
 ```python
 """数据存储配置 - 统一管理所有存储路径和引擎配置。"""
@@ -229,7 +229,7 @@ __all__ = ["DataStoreSettings", "SqlEngineConfig"]
 
 ### 2. SqlEngine 修改
 
-**文件:** `packages/datahub/src/ditto_datahub/runtime/sql_engine.py`
+**文件:** `packages/data/src/ditto_data/runtime/sql_engine.py`
 
 **关键变更:**
 - 构造函数接收 `DataStoreSettings` 而非 `data_root: Path`
@@ -237,7 +237,7 @@ __all__ = ["DataStoreSettings", "SqlEngineConfig"]
 - 性能参数从 `settings.sql_engine` 获取
 
 ```python
-from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_data.config.data_store import DataStoreSettings
 
 class SqlEngine:
     """DuckDB SQL engine - 统一配置注入。"""
@@ -290,7 +290,7 @@ class SqlEngine:
 - 删除对 `DataRootConfig` 的依赖
 
 ```python
-from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_data.config.data_store import DataStoreSettings
 
 class RuntimeProvider(Provider):
     """Runtime Layer Provider - 基础设施和运行时服务."""
@@ -306,7 +306,7 @@ class RuntimeProvider(Provider):
         db_path = settings.resolved_sqlite_path  # 唯一真源
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        schema_traversable = files("ditto_datahub.scripts") / "schema.sql"
+        schema_traversable = files("ditto_data.scripts") / "schema.sql"
         schema_path = Path(str(schema_traversable))
         pool = SQLitePool(str(db_path), schema_path=schema_path)
         pool.init_schema()
@@ -333,7 +333,7 @@ class RuntimeProvider(Provider):
 - 删除 `data_root_config()` 和 `database_settings()` 方法
 
 ```python
-from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_data.config.data_store import DataStoreSettings
 
 class ConfigProvider(Provider):
     """统一配置提供者（仅在 Port 层加载配置）。"""
@@ -425,8 +425,8 @@ def test_ingest_market_stock_help(self, runner: CliRunner, mocker: MockerFixture
 
 | 文件/类 | 说明 |
 |---------|------|
-| `packages/datahub/src/ditto_datahub/config/database.py` | `DatabaseSettings` 类 |
-| `packages/datahub/src/ditto_datahub/config/data_root.py` | `DataRootConfig` 类 |
+| `packages/data/src/ditto_data/config/database.py` | `DatabaseSettings` 类 |
+| `packages/data/src/ditto_data/config/data_root.py` | `DataRootConfig` 类 |
 | `config/{env}/database.env` | 数据库配置文件 |
 
 ---
@@ -435,10 +435,10 @@ def test_ingest_market_stock_help(self, runner: CliRunner, mocker: MockerFixture
 
 ```python
 # 之前
-from ditto_datahub.config import DataRootConfig, DatabaseSettings
+from ditto_data.config import DataRootConfig, DatabaseSettings
 
 # 之后
-from ditto_datahub.config import DataStoreSettings
+from ditto_data.config import DataStoreSettings
 ```
 
 ---
@@ -488,8 +488,8 @@ Step 12: 运行 pixi run -e dev check 验证
 ## 参考
 
 - 架构审查报告 (ARCH-001, ARCH-002, ENG-004, ENG-005)
-- [data_root.py](../packages/datahub/src/ditto_datahub/config/data_root.py)
-- [sql_engine.py](../packages/datahub/src/ditto_datahub/runtime/sql_engine.py)
+- [data_root.py](../packages/data/src/ditto_data/config/data_root.py)
+- [sql_engine.py](../packages/data/src/ditto_data/runtime/sql_engine.py)
 - [runtime.py](../apps/port/src/ditto_port/registry/datahub/runtime.py)
 
 ---
@@ -542,13 +542,13 @@ apps/port/src/ditto_port/registry/
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from ditto_datahub.services import IngestionLogService
-from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.fundamental_service import FundamentalService
-from ditto_datahub.services.macro_service import MacroService
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.source_service import SourceService
+from ditto_data.services import IngestionLogService
+from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.macro_service import MacroService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.source_service import SourceService
 
 if TYPE_CHECKING:
     from ditto_port.services.ingestion import IngestionCoordinator
@@ -584,13 +584,13 @@ class IngestionBundle:
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from ditto_datahub.services import IngestionLogService
-from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.fundamental_service import FundamentalService
-from ditto_datahub.services.macro_service import MacroService
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.source_service import SourceService
+from ditto_data.services import IngestionLogService
+from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.macro_service import MacroService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.source_service import SourceService
 
 from ditto_port.registry.container import make_app_container
 from ditto_port.registry.contexts.bundle import IngestionBundle
@@ -698,8 +698,8 @@ with create_ingestion_bundle() as bundle:
 
 ```python
 # 之前：导入 7 个服务
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.fundamental_service import FundamentalService
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.fundamental_service import FundamentalService
 # ...
 
 # 之后：只导入 Bundle
@@ -746,7 +746,7 @@ from ditto_port.registry import create_ingestion_bundle, IngestionBundle
 
 ### 1. Dataset 枚举增强
 
-**文件:** `packages/datahub/src/ditto_datahub/models/common.py`
+**文件:** `packages/data/src/ditto_data/models/common.py`
 
 ```python
 class Dataset(str, Enum):
@@ -805,7 +805,7 @@ class Dataset(str, Enum):
 from ditto_port.models.config import Dataset
 
 # 之后
-from ditto_datahub.models import Dataset
+from ditto_data.models import Dataset
 ```
 
 **保留:** `TaskTier`, `DatasetSpec` 等配置类仍在 `port/models/config.py`
@@ -820,7 +820,7 @@ dataset_asset_class = {"stock_daily": "stock", "etf_daily": "etf", ...}
 asset_class = dataset_asset_class[dataset]
 
 # 之后
-from ditto_datahub.models import Dataset
+from ditto_data.models import Dataset
 asset_class = Dataset.get_asset_class(dataset)
 ```
 
@@ -909,7 +909,7 @@ Step 27: 运行 pixi run -e dev check 验证
 
 ### 1. 新增枚举定义
 
-**文件:** `packages/datahub/src/ditto_datahub/models/macro.py`
+**文件:** `packages/data/src/ditto_data/models/macro.py`
 
 ```python
 from enum import StrEnum
@@ -936,10 +936,10 @@ class MacroFrequency(StrEnum):
 
 ### 2. 修改 MacroQuery
 
-**文件:** `packages/datahub/src/ditto_datahub/services/macro_service.py`
+**文件:** `packages/data/src/ditto_data/services/macro_service.py`
 
 ```python
-from ditto_datahub.models.macro import MacroCategory, MacroFrequency
+from ditto_data.models.macro import MacroCategory, MacroFrequency
 
 
 @dataclass(frozen=True)
@@ -967,7 +967,7 @@ class MacroQuery:
 from ditto_port.models.macro import MacroCategory, MacroFrequency
 
 # 之后
-from ditto_datahub.models.macro import MacroCategory, MacroFrequency
+from ditto_data.models.macro import MacroCategory, MacroFrequency
 
 # 删除 # type: ignore[arg-type]
 query = MacroQuery(

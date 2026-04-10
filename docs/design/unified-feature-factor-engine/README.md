@@ -8,8 +8,6 @@
 
 1. [主设计文档](./main-design.md)
 2. [ADR 决策索引](./decisions/00-index.md)
-3. [收敛计划](../../plans/2026-03-18-unified-engine-convergence-plan.md)
-4. [剩余待办](../../plans/unified-feature-factor-engine-remaining-tasks.md)
 
 如果历史评审、历史优化文档或已归档计划与上述文件冲突，以这四类文档与当前实现为准。
 
@@ -19,8 +17,6 @@
 
 1. [main-design.md](./main-design.md)
 2. [00-index.md](./decisions/00-index.md)
-3. [2026-03-18-unified-engine-convergence-plan.md](../../plans/2026-03-18-unified-engine-convergence-plan.md)
-4. [unified-feature-factor-engine-remaining-tasks.md](../../plans/unified-feature-factor-engine-remaining-tasks.md)
 
 ### 必读 ADR
 

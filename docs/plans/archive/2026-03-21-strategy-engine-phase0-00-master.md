@@ -65,7 +65,7 @@ ditto_core/
 ### DataHub 层新增
 
 ```
-ditto_datahub/
+ditto_data/
 ├── stores/metadata/
 │   ├── trading_rule_reader.py    # [Part 4] PIT 查询
 │   ├── trading_rule_writer.py    # [Part 4] PIT 写入

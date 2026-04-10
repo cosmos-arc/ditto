@@ -311,7 +311,7 @@ class SafeGauge:
         """减少 Gauge 值。"""
         self._value = max(0.0, self._value - delta)
 
-    def _callback(self, options: Any) -> list[metrics.Observation]:
+    def _callback(self, options: object) -> list[metrics.Observation]:
         """ObservableGauge 回调函数。"""
         return [metrics.Observation(self._value, {})]
 
@@ -322,34 +322,6 @@ class SafeGauge:
             [self._callback],
             description=description,
         )
-
-
-class SimpleGauge:
-    """简单 Gauge 实现（已废弃，保留向后兼容）。"""
-
-    def __init__(self, meter: metrics.Meter, name: str, description: str) -> None:
-        self._value = 0.0
-
-        def callback(options: Any) -> list[metrics.Observation]:
-            return [metrics.Observation(self._value, {})]
-
-        self._gauge = meter.create_observable_gauge(
-            name,
-            [callback],
-            description=description,
-        )
-
-    def set(self, value: float) -> None:
-        """设置 Gauge 值。"""
-        self._value = value
-
-    def inc(self, delta: float = 1.0) -> None:
-        """增加 Gauge 值。"""
-        self._value = max(0.0, self._value + delta)
-
-    def dec(self, delta: float = 1.0) -> None:
-        """减少 Gauge 值。"""
-        self._value = max(0.0, self._value - delta)
 
 
 class Metrics:
@@ -511,7 +483,6 @@ __all__ = [
     "SafeCounter",
     "SafeGauge",
     "SafeHistogram",
-    "SimpleGauge",
     "configure_metrics",
     "get_in_memory_reader",
     "reset_metrics",

@@ -936,7 +936,7 @@ class TestMetricDefinitions:
         assert isinstance(Metrics.data_update_duration, SDKHistogram)
         # data_records 应该是 Counter
         assert isinstance(Metrics.data_records, SDKCounter)
-        # data_freshness 应该是 SimpleGauge (有 set 方法)
+        # data_freshness 应该是 SafeGauge (有 set 方法)
         assert hasattr(Metrics.data_freshness, "set")
 
     def test_metric_count_matches_definitions(self) -> None:

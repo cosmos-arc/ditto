@@ -8,7 +8,7 @@
 
 <!-- 确定要做，但还没排入 Sprint 的任务 -->
 
-### [datahub] PIT 语义完整性增强（Sprint-03）
+### [data] PIT 语义完整性增强（Sprint-03）
 - **描述**: 确保 asof 参数在所有场景下正确应用
 - **变更**:
   - 复权基准已使用 asof（Sprint 1 已修复）
@@ -20,14 +20,14 @@
 
 ## 中优先级
 
-### [datahub] 数据源参数支持
+### [data] 数据源参数支持
 - **描述**: 允许 bars.get() 指定数据源
 - **变更**: `bars.get()` 添加 `source` 参数，支持 tushare/akshare
 - **影响范围**: `accessors/bars.py`
 - **预计工作量**: S
 - **关联**: Code Review #8
 
-### [datahub] 成交量复权
+### [data] 成交量复权
 - **描述**: 前复权时同时调整成交量
 - **变更**: QFQ 调整时同步调整 volume/amount
 - **影响范围**: `accessors/bars.py`
@@ -40,7 +40,7 @@
   - Grafana 集成
   - Prometheus 指标导出
   - 实时告警展示
-- **影响范围**: `apps/port/`
+- **影响范围**: `interfaces/`
 - **预计工作量**: L
 
 ## 低优先级
@@ -82,11 +82,11 @@
 
 以下任务已纳入 Sprint 2 数据层完善：
 
-### [datahub] DQ 三层架构实现
+### [data] DQ 三层架构实现
 - **状态**: ✅ 已纳入 Sprint 2 Phase 1
 - **参考**: [sprint-02-data-layer.md Phase 1](./sprint-02-data-layer.md#phase-1-dq-三层架构-10-任务-5-6-天-⭐-p0)
 
-### [datahub] DataHub Facade 完整实现
+### [data] DataHub Facade 完整实现
 - **状态**: ✅ 已纳入 Sprint 2 Phase 2
 - **参考**: [sprint-02-data-layer.md Phase 2](./sprint-02-data-layer.md#phase-2-datahub-完整实现-8-任务-4-5-天)
 

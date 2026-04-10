@@ -10,7 +10,7 @@
 
 ### 问题陈述
 
-ditto_datahub 下的 runtime 模块包含了多种组件，边界不够清晰：
+ditto_data 下的 runtime 模块包含了多种组件，边界不够清晰：
 
 1. **纯技术组件**（cache、file_lock、sqlite_pool）与领域相关技术组件混在一起
 2. foundation/config 包含了业务配置（DataSourceSettings）和未使用的配置项
@@ -152,7 +152,7 @@ ditto_foundation/
 ├── observability/
 └── util/
 
-ditto_datahub/
+ditto_data/
 ├── scripts/              # 新增：项目脚本目录
 │   └── schema.sql        # 从 runtime 移动
 ├── runtime/

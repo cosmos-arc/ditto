@@ -45,7 +45,7 @@ AdjFactorStore → 依赖 → ditto_foundation.util.io
 ### 1.4 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── stores/
 │   ├── __init__.py
 │   ├── sqlite_client.py

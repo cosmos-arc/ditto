@@ -1,6 +1,6 @@
 ---
 paths:
-  - packages/datahub/**/*.py
+  - packages/data/**/*.py
 ---
 
 # PIT (Point-in-Time) 安全规范
@@ -112,7 +112,7 @@ Signal(
 
 | ✅ 正确 | ❌ 错误 |
 |---------|---------|
-| `hub.bars.get(auto_knowledge_date=True)` | 手动计算 trade_date + 1 |
+| `service.get_bars(query)`（MarketService 自动处理 knowledge_date） | 手动计算 trade_date + 1 |
 | `@traced("data.read")` | 无追踪装饰器 |
 
 ## Polars LazyFrame 优先
@@ -150,7 +150,6 @@ pl.col("factor").rank().over("trade_date")
 | 测试类型 | 标记 | 运行命令 |
 |----------|------|----------|
 | PIT 验证 | @pytest.mark.pit | pytest -m pit |
-| 数据摄入 | @pytest.mark.ingestion | pytest -m ingestion |
 | 集成测试 | @pytest.mark.integration | pytest -m integration |
 
 ## 表达式引擎 rolling 语义

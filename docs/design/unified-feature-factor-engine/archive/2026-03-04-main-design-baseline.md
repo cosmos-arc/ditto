@@ -4,7 +4,7 @@
 
 - **状态**: 基线主设计（后续控制面与治理收敛以较新的 ADR 与整改方案为准）
 - **作者**: Codex（基于当前仓库代码与用户方案整合）
-- **适用范围**: `packages/core` + `packages/datahub` + `apps/port`
+- **适用范围**: `packages/core` + `packages/data` + `apps/port`
 - **当前配套文档**:
   - `docs/design/unified-feature-factor-engine/decisions/adr-032` ~ `adr-043`
   - `docs/plans/2026-03-13-unified-feature-factor-engine-remediation-design.md`
@@ -144,7 +144,7 @@
 ### 3.1 架构边界（必须遵守）
 
 1. 分层由 Import Linter 强约束：`Port -> Core -> DataHub -> Infra`。
-2. Core 对 DataHub 依赖受限，当前规则仅放行 `ditto_datahub.models.*`。
+2. Core 对 DataHub 依赖受限，当前规则仅放行 `ditto_data.models.*`。
 3. Port 运行路径不允许直接访问 DataHub stores/runtime（registry 装配例外）。
 
 ### 3.2 现有数据与任务结构
@@ -184,7 +184,7 @@
 3. `FeatureEngine`/`FactorEngine`：执行计划 + 标准化 + PIT 规整。
 4. `NormalizationPipeline`：`cs_rank/cs_zscore/winsorize/neutralize`。
 
-#### C. `packages/datahub`（存储与元数据层）
+#### C. `packages/data`（存储与元数据层）
 
 1. 读取 source domains 输入数据。
 2. 写入 derived domains（features/factors）。
@@ -248,7 +248,7 @@ packages/core/src/ditto_core/engine/
 建议目录：
 
 ```text
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
   services/
     derived_materialization_service.py
   stores/

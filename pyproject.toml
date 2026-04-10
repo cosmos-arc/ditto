@@ -13,7 +13,7 @@ line-length = 88
 target-version = "py312"
 
 # 指定 Ruff 需要检查的源代码和测试目录。
-src = ["packages", "apps", "scripts", "tests"]
+src = ["packages", "interfaces", "scripts"]
 
 # 全局排除不需要检查的文件和目录。
 exclude = [
@@ -72,10 +72,9 @@ select = [
 
 ignore = [
     "B008",   # 允许函数调用作为默认参数（FastAPI Depends）
-    "N803",
-    "N806",
-    "N818",
-    "ANN401", # 允许 Any 类型注解
+    "N803",   # 函数参数命名：第三方库适配（numpy 矩阵变量等）
+    "N806",   # 函数内变量命名：数学/科学计算常量（X, XtX, CONVERGENCE_TOL 等）
+    "N818",   # DittoException 基类命名是设计选择
     "RUF002", # 中文标点符号
     "RUF003", # 中文注释标点符号
     "D203",   # 与 Black 冲突
@@ -94,40 +93,23 @@ unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
 # MetadataService.__init__ - 构造器注入 16 个依赖，参数数量不可避免
-"packages/datahub/src/ditto_datahub/services/metadata_service.py" = ["PLR0913"]
+"packages/data/src/ditto_data/services/metadata_service.py" = ["PLR0913"]
 # DerivedArtifactReader.read_frame - @overload 模式下无法拆分参数
-"packages/datahub/src/ditto_datahub/services/derived/artifact_reader.py" = ["PLR0913"]
+"packages/data/src/ditto_data/services/derived/artifact_reader.py" = ["PLR0913"]
 # MarketService.list_bars - 便利方法，参数透传到 MarketBarsQuery
-"packages/datahub/src/ditto_datahub/services/market_service.py" = ["PLR0913"]
-# IndicatorMetadataWriter.upsert - CQRS upsert 写入模式
-"packages/datahub/src/ditto_datahub/stores/macro/indicator/metadata_writer.py" = ["PLR0913"]
-# MetadataStore batch_get_by_codes - 参数化查询，使用 ? 占位符
-"packages/datahub/src/ditto_datahub/domains/macro/indicator/metadata_store.py" = ["S608"]
-"packages/datahub/src/ditto_datahub/domains/features/technical/indicator_metadata_store.py" = ["S608"]
-"packages/datahub/src/ditto_datahub/domains/factors/factor_metadata_store.py" = ["S608"]
+"packages/data/src/ditto_data/services/market_service.py" = ["PLR0913"]
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
-"apps/port/src/ditto_port/services/derived/research.py" = ["S608"]
+"interfaces/src/ditto_interfaces/services/derived/research.py" = ["S608"]
+# ResearchQuery.export() - 表名来自内部枚举，非用户输入
+"packages/app/src/ditto_app/query/research.py" = ["S608"]
 # EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
-"packages/core/src/ditto_core/backtest/engine.py" = ["PLR0913"]
+"packages/engine/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
-"packages/core/src/ditto_core/portfolio/report_views.py" = ["D102"]
+"packages/engine/src/ditto_engine/portfolio/report_views.py" = ["D102"]
+# 第三方 stub 文件包含 Any 类型签名，无法修改
+"typings/**/*.pyi" = ["ANN401"]
 
-# 测试文件 - 最宽松
-"tests/**/*.py" = [
-    "PLR2004",
-    "PLR0913",
-    "S101",
-    "S106",
-    "S311",
-    "S608",
-    "ANN",
-    "D",
-    "PLC0415",
-    "C901",
-    "S105",
-    "S108",
-    "S110",
-]
+# 测试文件 - 最宽松（所有 tests/ 目录通用）
 "**/tests/**/*.py" = [
     "PLR2004",
     "PLR0913",
@@ -147,7 +129,7 @@ unfixable = []
 
 # 脚本文件
 "scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN"]
-"tests/scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN", "RUF001", "PLR0912", "PLR0915", "E501"]
+"interfaces/tests/scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN", "RUF001", "PLR0912", "PLR0915", "E501"]
 "**/cli.py" = ["T201"]
 "**/cli/*.py" = ["T201"]
 "**/main.py" = ["T201"]
@@ -159,12 +141,12 @@ unfixable = []
 "**/sources/provider.py" = ["PLC0415"]
 
 # 中文 description 中使用全角标点
-"packages/core/src/ditto_core/quality/golden.py" = ["RUF001"]
-"packages/datahub/src/ditto_datahub/sources/tushare/adapters/index.py" = ["RUF001"]
-"packages/datahub/src/ditto_datahub/sources/tushare/adapters/fundamental.py" = ["RUF001"]
+"packages/data/src/ditto_data/quality/golden.py" = ["RUF001"]
+"packages/data/src/ditto_data/sources/tushare/adapters/index.py" = ["RUF001"]
+"packages/data/src/ditto_data/sources/tushare/adapters/fundamental.py" = ["RUF001"]
 
 # E2E 测试
-"tests/e2e/*.py" = ["S101", "PLR2004", "D", "ANN", "E501"]
+"interfaces/tests/e2e/*.py" = ["S101", "PLR2004", "D", "ANN", "E501"]
 
 # --- Ruff Formatter (格式化器) 配置 ---
 [tool.ruff.format]
@@ -173,7 +155,6 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.ruff.lint.flake8-annotations]
-ignore-fully-untyped = true
 suppress-none-returning = true
 suppress-dummy-args = true
 
@@ -205,11 +186,15 @@ pythonVersion = "3.13"
 pythonPlatform = "All"
 stubPath = "typings"
 
+# 显式指定 pixi 虚拟环境，确保 VS Code 扩展和 pixi shell 都能正确定位
+venvPath = ".pixi/envs"
+venv = "dev"
+
 # 核心：standard 模式打底（比 basic 严格，比 strict 宽松）
 typeCheckingMode = "standard"
 
 # 源码目录
-include = ["packages/**/src", "apps/**/src"]
+include = ["packages/**/src", "interfaces/**/src"]
 
 # 排除目录（tests 用独立配置）
 exclude = [
@@ -229,23 +214,16 @@ ignore = [
     "tests/**",
     "**/tests/**",
     "packages/*/tests/**",
-    "apps/*/tests/**",
-    # StockAdjFactorStore and ETF stores intentionally change API to remove dataset parameter
-    # This is a domain-specific specialization that hardcodes the dataset name
-    "packages/datahub/src/ditto_datahub/domains/market/stock/adj/adj_factor_store.py",
-    "packages/datahub/src/ditto_datahub/domains/market/etf/bars/bars_store.py",
-    "packages/datahub/src/ditto_datahub/domains/market/etf/status/status_store.py",
-    "packages/datahub/src/ditto_datahub/domains/market/etf/nav/nav_store.py",
-    "packages/datahub/src/ditto_datahub/domains/market/etf/adj/adj_factor_store.py",
+    "interfaces/tests/**",
     # MarketQueryService: multi-line error message uses implicit string concatenation
-    "packages/datahub/src/ditto_datahub/domains/market/market_query_service.py",
+    # (已迁移至 services/)
 ]
 
 # ═══════════════════════════════════════════════════════════════════
 # 关键：核心目录提升到 strict 模式
 # 这些是最值钱的代码，值得最严格的检查
 # ═══════════════════════════════════════════════════════════════════
-strict = ["packages/**/src", "apps/port/**/src"]
+strict = ["packages/**/src", "interfaces/**/src"]
 
 # ═══════════════════════════════════════════════════════════════════
 # 规则微调：让 Ruff 管风格，Pyright 专注类型
@@ -274,11 +252,13 @@ reportImplicitStringConcatenation = "error"
 
 # 告诉 Pyright 源码根目录（解决 import 路径问题）
 extraPaths = [
-    "packages/core/src",
+    "packages/engine/src",
     "packages/infra/src",
     "packages/kernel/src",
-    "packages/datahub/src",
-    "apps/port/src",
+    "packages/data/src",
+    "packages/analytics/src",
+    "packages/app/src",
+    "interfaces/src",
 ]
 
 # ===================================================================
@@ -286,16 +266,18 @@ extraPaths = [
 # ===================================================================
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["packages/*/tests", "apps/*/tests"]
+testpaths = ["packages/*/tests", "interfaces/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 pythonpath = [
-    "packages/core/src",
+    "packages/engine/src",
     "packages/infra/src",
     "packages/kernel/src",
-    "packages/datahub/src",
-    "apps/port/src",
+    "packages/data/src",
+    "packages/analytics/src",
+    "packages/app/src",
+    "interfaces/src",
 ]
 
 filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
@@ -322,7 +304,7 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "--cov=packages",
-    "--cov=apps",
+    "--cov=interfaces",
     "--cov-report=html:htmlcov",
     "--cov-report=term-missing",
     "--cov-report=xml",
@@ -336,7 +318,7 @@ addopts = [
 # ===================================================================
 [tool.coverage.run]
 branch = true
-source = ["packages", "apps"]
+source = ["packages", "interfaces"]
 
 [tool.coverage.report]
 precision = 2
@@ -370,10 +352,10 @@ name = "cz_conventional_commits"
 version = "0.1.0"
 tag_format = "v$version"
 version_files = [
-    "packages/core/src/ditto_core/__init__.py:__version__",
+    "packages/engine/src/ditto_engine/__init__.py:__version__",
     "packages/infra/src/ditto_infra/__init__.py:__version__",
     "packages/kernel/src/ditto_kernel/__init__.py:__version__",
-    "packages/datahub/src/ditto_datahub/__init__.py:__version__",
+    "packages/data/src/ditto_data/__init__.py:__version__",
 ]
 update_changelog_on_bump = true
 changelog_incremental = true

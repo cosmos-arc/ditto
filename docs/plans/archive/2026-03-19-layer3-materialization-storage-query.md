@@ -20,9 +20,9 @@
 
 | 文件 | 变更 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/services/derived/artifact_reader.py` | 重构 `read_frame()` 读取路径 |
-| `packages/datahub/src/ditto_datahub/services/derived/_pruning.py` (新建) | 分区裁剪纯函数 |
-| `packages/datahub/tests/unit/services/test_derived_artifact_reader_unit.py` (新建) | 测试 |
+| `packages/data/src/ditto_data/services/derived/artifact_reader.py` | 重构 `read_frame()` 读取路径 |
+| `packages/data/src/ditto_data/services/derived/_pruning.py` (新建) | 分区裁剪纯函数 |
+| `packages/data/tests/unit/services/test_derived_artifact_reader_unit.py` (新建) | 测试 |
 
 ### MAT-M-1: 分区裁剪
 
@@ -58,8 +58,8 @@
 
 | 文件 | 变更 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/stores/runtime/derived_artifact_writer.py` | 重构写入路径 |
-| `packages/datahub/tests/unit/stores/runtime/test_derived_artifact_writer_unit.py` (新建) | 测试 |
+| `packages/data/src/ditto_data/stores/runtime/derived_artifact_writer.py` | 重构写入路径 |
+| `packages/data/tests/unit/stores/runtime/test_derived_artifact_writer_unit.py` (新建) | 测试 |
 
 ### MAT-M-5: 事务性多分区写入
 
@@ -92,11 +92,11 @@
 
 | 文件 | 变更 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/services/derived/garbage_collector.py` (新建) | GC 逻辑 |
-| `packages/datahub/src/ditto_datahub/services/derived/gc_models.py` (新建) | GC 数据模型 |
-| `packages/datahub/src/ditto_datahub/services/derived_catalog_service.py` | 新增 `gc()` 委托方法 + writer protocol 扩展 |
-| `packages/datahub/src/ditto_datahub/stores/runtime/derived_sqlite/writer.py` | 实现 delete SQL |
-| `packages/datahub/tests/unit/services/test_derived_garbage_collector_unit.py` (新建) | 测试 |
+| `packages/data/src/ditto_data/services/derived/garbage_collector.py` (新建) | GC 逻辑 |
+| `packages/data/src/ditto_data/services/derived/gc_models.py` (新建) | GC 数据模型 |
+| `packages/data/src/ditto_data/services/derived_catalog_service.py` | 新增 `gc()` 委托方法 + writer protocol 扩展 |
+| `packages/data/src/ditto_data/stores/runtime/derived_sqlite/writer.py` | 实现 delete SQL |
+| `packages/data/tests/unit/services/test_derived_garbage_collector_unit.py` (新建) | 测试 |
 
 ### MAT-M-3: 基于版本状态的 GC
 
@@ -159,8 +159,8 @@ class GcPlan:
 
 | 文件 | 变更 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/services/derived/artifact_reader.py` | 新增参数 |
-| `packages/datahub/src/ditto_datahub/stores/runtime/derived_artifact_writer.py` | 新增增量合并 |
+| `packages/data/src/ditto_data/services/derived/artifact_reader.py` | 新增参数 |
+| `packages/data/src/ditto_data/stores/runtime/derived_artifact_writer.py` | 新增增量合并 |
 | 扩展 Phase 1/2 测试文件 | 新测试 |
 
 ### MAT-M-4: 内存管理
@@ -197,10 +197,10 @@ class GcPlan:
 
 | 文件 | 变更 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/services/derived/concurrent_materializer.py` (新建) | 并发编排 |
-| `packages/datahub/src/ditto_datahub/stores/runtime/derived_artifact_writer.py` | compression 参数 |
+| `packages/data/src/ditto_data/services/derived/concurrent_materializer.py` (新建) | 并发编排 |
+| `packages/data/src/ditto_data/stores/runtime/derived_artifact_writer.py` | compression 参数 |
 | `packages/infra/src/ditto_infra/foundation/util/io.py` | `atomic_write` 新增 compression 参数 |
-| `packages/datahub/tests/unit/services/test_concurrent_materializer_unit.py` (新建) | 测试 |
+| `packages/data/tests/unit/services/test_concurrent_materializer_unit.py` (新建) | 测试 |
 
 ### MAT-M-7: 并发物化
 
@@ -235,8 +235,8 @@ class GcPlan:
 
 | 文件 | 变更 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/services/derived/query_service.py` | 新增方法 |
-| `packages/datahub/src/ditto_datahub/services/derived_catalog_service.py` | 新增 dashboard |
+| `packages/data/src/ditto_data/services/derived/query_service.py` | 新增方法 |
+| `packages/data/src/ditto_data/services/derived_catalog_service.py` | 新增 dashboard |
 | 扩展测试文件 | 新测试 |
 
 ### MAT-M-10: Query→Evaluation 适配器
@@ -266,23 +266,23 @@ class GcPlan:
 
 | 组件 | 路径 | 用途 |
 |------|------|------|
-| `YearlyPartition` | `packages/datahub/src/ditto_datahub/stores/base/partition_strategy.py` | 分区裁剪参考实现 |
+| `YearlyPartition` | `packages/data/src/ditto_data/stores/base/partition_strategy.py` | 分区裁剪参考实现 |
 | `atomic_write` / `atomic_bytes_write` | `packages/infra/src/ditto_infra/foundation/util/io.py` | 原子文件写入 |
 | `FileLockManager` | `packages/infra/src/ditto_infra/foundation/concurrency/filelock.py` | 写入并发控制 |
 | `DataCache` | `packages/infra/src/ditto_infra/foundation/cache/core.py` | 内存缓存 |
-| `UnitOfWork` | `packages/datahub/src/ditto_datahub/stores/runtime/unit_of_work.py` | SQLite 事务管理 |
-| `ParquetStore._collect_paths()` | `packages/datahub/src/ditto_datahub/stores/base/parquet_store.py:108` | 分区裁剪模式参考 |
+| `UnitOfWork` | `packages/data/src/ditto_data/stores/runtime/unit_of_work.py` | SQLite 事务管理 |
+| `ParquetStore._collect_paths()` | `packages/data/src/ditto_data/stores/base/parquet_store.py:108` | 分区裁剪模式参考 |
 
 ## 新建文件汇总
 
 ```
-packages/datahub/src/ditto_datahub/services/derived/
+packages/data/src/ditto_data/services/derived/
   _pruning.py                    # Phase 1: 分区裁剪函数
   garbage_collector.py           # Phase 3: GC 逻辑
   gc_models.py                   # Phase 3: GC 数据模型
   concurrent_materializer.py     # Phase 5: 并发物化编排
 
-packages/datahub/tests/unit/
+packages/data/tests/unit/
   services/
     test_derived_artifact_reader_unit.py   # Phase 1+4
     test_derived_garbage_collector_unit.py # Phase 3

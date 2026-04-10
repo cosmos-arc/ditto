@@ -32,7 +32,7 @@
 ### sources/ 目录结构（独立组织）
 
 ```
-packages/datahub/src/ditto_datahub/sources/
+packages/data/src/ditto_data/sources/
 ├── source_schemas.py              # SourceSchema 定义（新增）
 ├── base.py                         # DataSource 基类
 └── tushare/
@@ -58,7 +58,7 @@ packages/datahub/src/ditto_datahub/sources/
 ### domains/ 目录结构（三域并存）
 
 ```
-packages/datahub/src/ditto_datahub/domains/
+packages/data/src/ditto_data/domains/
 ├── metadata/                      # Metadata 域（已存在，需重构）
 │   ├── calendar/
 │   ├── security/
@@ -329,42 +329,42 @@ AkShareAdapter.fetch_flow_stock() -> FlowStockSourceSchema
 ### 新增文件
 
 #### SourceSchema 基础设施
-- `packages/datahub/src/ditto_datahub/sources/source_schemas.py`
+- `packages/data/src/ditto_data/sources/source_schemas.py`
 
 #### Metadata 域新增
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/industry.py`
-- `packages/datahub/src/ditto_datahub/sources/tushare/processors/industry_transformer.py`
-- `packages/datahub/src/ditto_datahub/scripts/schema/industry_tables.sql`（补充 schema）
+- `packages/data/src/ditto_data/sources/tushare/adapters/industry.py`
+- `packages/data/src/ditto_data/sources/tushare/processors/industry_transformer.py`
+- `packages/data/src/ditto_data/scripts/schema/industry_tables.sql`（补充 schema）
 
 #### Capital 域新增
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py`
-- `packages/datahub/src/ditto_datahub/sources/tushare/processors/capital_transformer.py`
-- `packages/datahub/src/ditto_datahub/domains/capital/flow/market_flow_store.py`
-- `packages/datahub/src/ditto_datahub/domains/capital/flow/stock_flow_store.py`
-- `packages/datahub/src/ditto_datahub/domains/capital/flow/industry_flow_store.py`
-- `packages/datahub/src/ditto_datahub/domains/capital/margin/margin_detail_store.py`
-- `packages/datahub/src/ditto_datahub/domains/capital/margin/margin_summary_store.py`
-- `packages/datahub/src/ditto_datahub/domains/capital/top_board/top_board_store.py`
-- `packages/datahub/src/ditto_datahub/domains/capital/limit_board/limit_board_store.py`
-- `packages/datahub/src/ditto_datahub/domains/capital/chip/chip_distribution_store.py`
-- `packages/datahub/src/ditto_datahub/domains/capital/capital_query_service.py`
+- `packages/data/src/ditto_data/sources/tushare/adapters/capital.py`
+- `packages/data/src/ditto_data/sources/tushare/processors/capital_transformer.py`
+- `packages/data/src/ditto_data/domains/capital/flow/market_flow_store.py`
+- `packages/data/src/ditto_data/domains/capital/flow/stock_flow_store.py`
+- `packages/data/src/ditto_data/domains/capital/flow/industry_flow_store.py`
+- `packages/data/src/ditto_data/domains/capital/margin/margin_detail_store.py`
+- `packages/data/src/ditto_data/domains/capital/margin/margin_summary_store.py`
+- `packages/data/src/ditto_data/domains/capital/top_board/top_board_store.py`
+- `packages/data/src/ditto_data/domains/capital/limit_board/limit_board_store.py`
+- `packages/data/src/ditto_data/domains/capital/chip/chip_distribution_store.py`
+- `packages/data/src/ditto_data/domains/capital/capital_query_service.py`
 
 ### 修改文件
 
 #### Source 层
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/base.py` - 添加可选 Schema 验证
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/calendar.py` - 添加 SourceSchema
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock.py` - 为 fetch_stock_basic() 添加 SourceSchema
-- `packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py` - 添加 Industry/Capital 域方法
-- `packages/datahub/src/ditto_datahub/sources/tushare/processors/transformer.py` - 添加 validate() 方法
+- `packages/data/src/ditto_data/sources/tushare/adapters/base.py` - 添加可选 Schema 验证
+- `packages/data/src/ditto_data/sources/tushare/adapters/calendar.py` - 添加 SourceSchema
+- `packages/data/src/ditto_data/sources/tushare/adapters/stock.py` - 为 fetch_stock_basic() 添加 SourceSchema
+- `packages/data/src/ditto_data/sources/tushare/tushare_source.py` - 添加 Industry/Capital 域方法
+- `packages/data/src/ditto_data/sources/tushare/processors/transformer.py` - 添加 validate() 方法
 
 #### Metadata 域
-- `packages/datahub/src/ditto_datahub/domains/metadata/calendar/calendar_store.py` - 可选：考虑继承 SQLiteStore
-- `packages/datahub/src/ditto_datahub/domains/metadata/security/security_store.py` - 可选：优化结构
-- `packages/datahub/src/ditto_datahub/domains/metadata/metadata_query_service.py` - 集成 Industry 相关查询
+- `packages/data/src/ditto_data/domains/metadata/calendar/calendar_store.py` - 可选：考虑继承 SQLiteStore
+- `packages/data/src/ditto_data/domains/metadata/security/security_store.py` - 可选：优化结构
+- `packages/data/src/ditto_data/domains/metadata/metadata_query_service.py` - 集成 Industry 相关查询
 
 #### Capital 域
-- `packages/datahub/src/ditto_datahub/meta/schemas.py` - 扩展 Capital 域 Schema
+- `packages/data/src/ditto_data/meta/schemas.py` - 扩展 Capital 域 Schema
 
 #### Ingestion 层（Port 应用）
 - `apps/port/src/ditto_port/models/config.py` - 扩展 Dataset 枚举和注册表
@@ -374,15 +374,15 @@ AkShareAdapter.fetch_flow_stock() -> FlowStockSourceSchema
 ### 测试文件
 
 #### 单元测试
-- `packages/datahub/tests/unit/sources/test_source_schemas.py`
-- `packages/datahub/tests/unit/sources/tushare/test_metadata_adapters.py`
-- `packages/datahub/tests/unit/sources/tushare/test_industry_adapter.py`
-- `packages/datahub/tests/unit/sources/tushare/test_capital_adapter.py`
-- `packages/datahub/tests/unit/domains/metadata/` - 更新现有测试
-- `packages/datahub/tests/unit/domains/capital/` - 新增 Capital 域测试
+- `packages/data/tests/unit/sources/test_source_schemas.py`
+- `packages/data/tests/unit/sources/tushare/test_metadata_adapters.py`
+- `packages/data/tests/unit/sources/tushare/test_industry_adapter.py`
+- `packages/data/tests/unit/sources/tushare/test_capital_adapter.py`
+- `packages/data/tests/unit/domains/metadata/` - 更新现有测试
+- `packages/data/tests/unit/domains/capital/` - 新增 Capital 域测试
 
 #### 集成测试
-- `packages/datahub/tests/integration/ingestion/test_industry_capital_ingestion.py`
+- `packages/data/tests/integration/ingestion/test_industry_capital_ingestion.py`
 
 ---
 

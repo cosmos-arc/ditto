@@ -9,7 +9,15 @@
 
 from enum import StrEnum
 
-__all__ = ["AssetClass", "Exchange", "OrderSide", "RiskScope", "RunStatus"]
+__all__ = [
+    "AssetClass",
+    "Exchange",
+    "MacroCategory",
+    "MacroFrequency",
+    "OrderSide",
+    "RiskScope",
+    "RunStatus",
+]
 
 
 class AssetClass(StrEnum):
@@ -55,7 +63,7 @@ class OrderSide(StrEnum):
     """
     订单方向枚举.
 
-    统一 DataHub `OrderSide` 和 Core `OrderDirection` 为单一名称。
+    统一 Data `OrderSide` 和 Core `OrderDirection` 为单一名称。
     """
 
     BUY = "buy"
@@ -67,6 +75,44 @@ class RiskScope(StrEnum):
 
     INSTRUMENT = "instrument"
     PORTFOLIO = "portfolio"
+
+
+class MacroCategory(StrEnum):
+    """
+    宏观指标类别枚举。
+
+    Attributes:
+        ECONOMIC: 经济指标（GDP 等）
+        INTEREST_RATE: 利率指标
+        EXCHANGE_RATE: 汇率指标
+        MONEY_SUPPLY: 货币供应量指标
+        PRICES: 价格指标（CPI、PCE 等）
+        EMPLOYMENT: 就业指标（失业率、非农等）
+
+    """
+
+    ECONOMIC = "economic"
+    INTEREST_RATE = "interest_rate"
+    EXCHANGE_RATE = "exchange_rate"
+    MONEY_SUPPLY = "money_supply"
+    PRICES = "prices"
+    EMPLOYMENT = "employment"
+
+
+class MacroFrequency(StrEnum):
+    """
+    宏观指标频率枚举。
+
+    Attributes:
+        DAILY: 日频
+        MONTHLY: 月频
+        QUARTERLY: 季频
+
+    """
+
+    DAILY = "daily"
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
 
 
 class RunStatus(StrEnum):

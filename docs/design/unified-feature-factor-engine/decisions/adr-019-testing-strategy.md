@@ -91,7 +91,7 @@ def state_store():
 ## 测试目录结构
 
 ```
-packages/core/tests/
+packages/engine/tests/
 ├── unit/
 │   ├── operators/
 │   │   ├── test_ts_functions.py      # ts_mean, ts_rank, ts_corr...

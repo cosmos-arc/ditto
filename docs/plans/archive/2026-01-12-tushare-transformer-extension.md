@@ -136,14 +136,14 @@ def transform(
 
 | 文件 | 修改内容 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/sources/tushare/transformer.py` | 扩展 ColumnMapping，实现 transform()，添加 6 个映射配置 |
-| `packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py` | 添加新功能测试 |
+| `packages/data/src/ditto_data/sources/tushare/transformer.py` | 扩展 ColumnMapping，实现 transform()，添加 6 个映射配置 |
+| `packages/data/tests/unit/sources/tushare/test_transformer_unit.py` | 添加新功能测试 |
 
 ### 简化的文件
 
 | 文件 | 简化内容 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | 6 个 fetch 方法简化，减少 ~162 行 |
+| `packages/data/src/ditto_data/sources/tushare/source.py` | 6 个 fetch 方法简化，减少 ~162 行 |
 
 ---
 
@@ -162,12 +162,12 @@ def transform(
 
 ### 单元测试
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/test_transformer_unit.py -v
 ```
 
 ### 集成测试
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_source_unit.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/test_source_unit.py -v
 ```
 
 ### 完整测试

@@ -409,8 +409,8 @@ class Container:
 
     @cached_property
     def security_store(self) -> SecurityStore:
-        from ditto_datahub.stores.security_store import SecurityStore
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
+        from ditto_data.stores.security_store import SecurityStore
+        from ditto_data.stores.sqlite_client import SQLiteClient
         # 手工传递依赖
         return SecurityStore(
             sqlite_client=SQLiteClient(self.database)
@@ -616,7 +616,7 @@ async def list_securities(
 # 15 行代码
 @cached_property
 def datahub(self) -> DataHub:
-    from ditto_datahub.hub import DataHub
+    from ditto_data.hub import DataHub
     return DataHub(
         security_store=self.security_store,
         calendar_store=self.calendar_store,

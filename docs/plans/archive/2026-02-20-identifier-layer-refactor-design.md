@@ -90,7 +90,7 @@ def infer_asset_class(dataset: str) -> str:
 ### 2.3 MetadataService 扩展
 
 ```python
-# packages/datahub/src/ditto_datahub/services/metadata_service.py
+# packages/data/src/ditto_data/services/metadata_service.py
 class MetadataService:
     """元数据服务."""
 
@@ -257,7 +257,7 @@ async def get_source_data(
 | 文件 | 修改内容 |
 |------|----------|
 | **DataHub 层** | |
-| `packages/datahub/.../metadata_service.py` | 新增 `resolve_source_ticker()` 方法 |
+| `packages/data/.../metadata_service.py` | 新增 `resolve_source_ticker()` 方法 |
 | **Port 层** | |
 | `apps/port/.../ticker_resolver.py` | 重命名 `TickerIngestParams` → `InstrumentIngestParams`，扩展字段 |
 | `apps/port/.../coordinator.py` | `ingest_by_ticker` → `ingest_by_instrument`，内部调用 `resolve_source_ticker()` |

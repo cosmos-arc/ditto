@@ -25,7 +25,7 @@
 ## 新增文件结构
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── sources/
 │   ├── metadata.py                        # 新增：摄取元数据模型
 │   ├── base.py                            # 修改：添加增量更新接口
@@ -64,7 +64,7 @@ apps/server/src/ditto_port/
 
 ### Task 3.1: 增量更新机制设计
 
-**新增文件**: `packages/datahub/src/ditto_datahub/sources/metadata.py`
+**新增文件**: `packages/data/src/ditto_data/sources/metadata.py`
 
 ```python
 from dataclasses import dataclass
@@ -85,7 +85,7 @@ class IngestionMetadata:
     last_updated_at: str
 ```
 
-**修改文件**: `packages/datahub/src/ditto_datahub/sources/base.py`
+**修改文件**: `packages/data/src/ditto_data/sources/base.py`
 
 在 DataSource 基类添加增量接口：
 ```python
@@ -100,7 +100,7 @@ def fetch_etf_daily_incremental(
     pass
 ```
 
-**新增文件**: `packages/datahub/src/ditto_datahub/stores/ingestion_metadata_store.py`
+**新增文件**: `packages/data/src/ditto_data/stores/ingestion_metadata_store.py`
 
 SQLite 存储摄取元数据，支持：
 - `get_metadata(dataset, source)` - 获取元数据
@@ -111,7 +111,7 @@ SQLite 存储摄取元数据，支持：
 
 ### Task 3.2: Tushare 增量适配
 
-**修改文件**: `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
+**修改文件**: `packages/data/src/ditto_data/sources/tushare/source.py`
 
 实现 `fetch_etf_daily_incremental()`：
 - **快速模式**: 比较 `trade_date > last_trade_date`
@@ -146,7 +146,7 @@ Prefect 任务：`monitor_ingestion_quality(trade_date, ingestion_results)`
 
 ### Task 3.4: 摄取异常告警
 
-**新增目录**: `packages/datahub/src/ditto_datahub/alerts/`
+**新增目录**: `packages/data/src/ditto_data/alerts/`
 
 | 文件 | 用途 |
 |------|------|
@@ -222,7 +222,7 @@ def scheduled_daily_ingest_flow(
 
 ### Task 1.8: Repository DQ 集成增强
 
-**修改文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
+**修改文件**: `packages/data/src/ditto_data/repositories/bars.py`
 
 **三大增强**:
 
@@ -350,11 +350,11 @@ class WriteResult:
 
 | 文件路径 | 修改内容 | 优先级 |
 |----------|----------|--------|
-| `packages/datahub/src/ditto_datahub/sources/base.py` | 添加增量更新接口 | P0 |
-| `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | 实现增量查询 | P0 |
-| `packages/datahub/src/ditto_datahub/repositories/bars.py` | DQ 集成增强 | P0 |
+| `packages/data/src/ditto_data/sources/base.py` | 添加增量更新接口 | P0 |
+| `packages/data/src/ditto_data/sources/tushare/source.py` | 实现增量查询 | P0 |
+| `packages/data/src/ditto_data/repositories/bars.py` | DQ 集成增强 | P0 |
 | `apps/server/src/ditto_port/ingestion/tasks/bars.py` | 集成增量更新 | P0 |
-| `packages/datahub/src/ditto_datahub/alerts/manager.py` | 新增告警管理器 | P0 |
+| `packages/data/src/ditto_data/alerts/manager.py` | 新增告警管理器 | P0 |
 
 ---
 
@@ -375,7 +375,7 @@ class WriteResult:
 - [ ] 集成测试覆盖关键流程
 
 ### 文档更新
-- [ ] `packages/datahub/README.md`（增量更新说明）
+- [ ] `packages/data/README.md`（增量更新说明）
 - [ ] `apps/server/README.md`（告警配置）
 - [ ] `docs/sprints/sprint-02.md`（状态更新）
 
@@ -405,24 +405,24 @@ class WriteResult:
 - Task 1.8: Repository DQ 集成增强 ✅
 
 **新增文件** (15 个):
-- `packages/datahub/src/ditto_datahub/alerts/` 目录
+- `packages/data/src/ditto_data/alerts/` 目录
   - `base.py` - AlertSender 抽象接口
   - `manager.py` - AlertManager 管理器
   - `email.py` - Email 告警
   - `telegram.py` - Telegram 告警
   - `wechat.py` - WeChat 告警
-- `packages/datahub/src/ditto_datahub/sources/metadata.py` - 摄取元数据模型
-- `packages/datahub/src/ditto_datahub/stores/ingestion_metadata_store.py` - 摄取元数据存储
+- `packages/data/src/ditto_data/sources/metadata.py` - 摄取元数据模型
+- `packages/data/src/ditto_data/stores/ingestion_metadata_store.py` - 摄取元数据存储
 - `apps/server/src/ditto_port/ingestion/tasks/monitoring.py` - 质量监控任务
 - `apps/server/src/ditto_port/ingestion/flows/scheduled_ingest.py` - 定时摄取流程
 - 测试文件 (6 个)
 
 **修改文件** (5 个):
-- `packages/datahub/src/ditto_datahub/sources/base.py` - 添加增量更新接口
-- `packages/datahub/src/ditto_datahub/sources/tushare/source.py` - 实现增量查询
-- `packages/datahub/src/ditto_datahub/repositories/bars.py` - DQ 集成增强
-- `packages/datahub/src/ditto_datahub/runtime/schema.sql` - 添加 ingestion_metadata 表
-- `packages/datahub/src/ditto_datahub/hub.py` - 集成 IngestionMetadataStore
+- `packages/data/src/ditto_data/sources/base.py` - 添加增量更新接口
+- `packages/data/src/ditto_data/sources/tushare/source.py` - 实现增量查询
+- `packages/data/src/ditto_data/repositories/bars.py` - DQ 集成增强
+- `packages/data/src/ditto_data/runtime/schema.sql` - 添加 ingestion_metadata 表
+- `packages/data/src/ditto_data/hub.py` - 集成 IngestionMetadataStore
 
 **测试覆盖**: 31 个新增测试全部通过
 

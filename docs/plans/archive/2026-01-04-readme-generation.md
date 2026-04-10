@@ -39,27 +39,27 @@
 ### 阶段 2: DataHub 关键模块（高优先级）
 
 #### 2.1 repositories/
-- `packages/datahub/src/ditto_datahub/repositories/README.md`
+- `packages/data/src/ditto_data/repositories/README.md`
   - 所有 Repository 说明（Security、Bars、Calendar、AdjFactor、Index、Universe）
   - 数据访问模式
   - PIT 查询支持
   - 并发安全机制
 
 #### 2.2 dq/（数据质量）
-- `packages/datahub/src/ditto_datahub/dq/README.md`
+- `packages/data/src/ditto_data/dq/README.md`
   - 三层检查机制（L1/L2/L3）
   - 检查器类型
   - 配置驱动设计
   - DQ 处理流程
 
-- `packages/datahub/src/ditto_datahub/dq/checkers/README.md`
+- `packages/data/src/ditto_data/dq/checkers/README.md`
   - TechnicalChecker
   - BusinessChecker
   - StatisticalChecker
 
 #### 2.3 其他重要模块
-- `packages/datahub/src/ditto_datahub/alerts/README.md` - 告警模块
-- `packages/datahub/src/ditto_datahub/utils/README.md` - 工具模块
+- `packages/data/src/ditto_data/alerts/README.md` - 告警模块
+- `packages/data/src/ditto_data/utils/README.md` - 工具模块
 
 ### 阶段 3: Web 应用（高优先级）
 
@@ -78,26 +78,26 @@
 ### 阶段 4: 测试文档（中优先级）
 
 #### 4.1 datahub 测试
-- `packages/datahub/tests/README.md` - 测试框架总览
+- `packages/data/tests/README.md` - 测试框架总览
   - pytest 配置
   - 测试标记（integration、pit、external、slow）
   - 测试工具（polars.testing、hypothesis、respx、inline-snapshot）
 
-- `packages/datahub/tests/unit/README.md` - 单元测试说明
-- `packages/datahub/tests/integration/README.md` - 集成测试说明
-- `packages/datahub/tests/integration/runtime/README.md`
-- `packages/datahub/tests/integration/sources/README.md`
-- `packages/datahub/tests/integration/stores/README.md`
+- `packages/data/tests/unit/README.md` - 单元测试说明
+- `packages/data/tests/integration/README.md` - 集成测试说明
+- `packages/data/tests/integration/runtime/README.md`
+- `packages/data/tests/integration/sources/README.md`
+- `packages/data/tests/integration/stores/README.md`
 
-- `packages/datahub/tests/unit/alerts/README.md`
-- `packages/datahub/tests/unit/dq/README.md`
-- `packages/datahub/tests/unit/dq/checkers/README.md`
-- `packages/datahub/tests/unit/meta/README.md`
-- `packages/datahub/tests/unit/repositories/README.md`
-- `packages/datahub/tests/unit/runtime/README.md`
-- `packages/datahub/tests/unit/sources/README.md`
-- `packages/datahub/tests/unit/stores/README.md`
-- `packages/datahub/tests/unit/utils/README.md`
+- `packages/data/tests/unit/alerts/README.md`
+- `packages/data/tests/unit/dq/README.md`
+- `packages/data/tests/unit/dq/checkers/README.md`
+- `packages/data/tests/unit/meta/README.md`
+- `packages/data/tests/unit/repositories/README.md`
+- `packages/data/tests/unit/runtime/README.md`
+- `packages/data/tests/unit/sources/README.md`
+- `packages/data/tests/unit/stores/README.md`
+- `packages/data/tests/unit/utils/README.md`
 
 #### 4.2 foundation 测试
 - `packages/foundation/tests/README.md`
@@ -182,8 +182,8 @@ pixi run -e dev pytest <路径>::<测试函数>
 
 ## 关键文件
 
-- 模板参考: `packages/datahub/README.md`
-- 测试文档参考: `packages/datahub/tests/integration/sources/tushare/README.md`
+- 模板参考: `packages/data/README.md`
+- 测试文档参考: `packages/data/tests/integration/sources/tushare/README.md`
 
 ## 执行记录
 

@@ -31,11 +31,11 @@ Blocker: 0 | High: 5 | Medium: 8 | Low: 6
 
 | # | 问题 | 严重度 | 位置 |
 |---|------|--------|------|
-| 1 | [ARCH-001] `tushare_source.py` 职责过重 (648 行) | High | `packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py` |
-| 2 | [ARCH-002] `accessor.py` 过于复杂 (644 行) | High | `packages/datahub/src/ditto_datahub/accessors/bars/accessor.py` |
+| 1 | [ARCH-001] `tushare_source.py` 职责过重 (648 行) | High | `packages/data/src/ditto_data/sources/tushare/tushare_source.py` |
+| 2 | [ARCH-002] `accessor.py` 过于复杂 (644 行) | High | `packages/data/src/ditto_data/accessors/bars/accessor.py` |
 | 3 | [ARCH-003] `config.py` 配置类过大 (613 行) | High | `apps/port/src/ditto_port/models/config.py` |
-| 4 | [ARCH-004] `calendar_store.py` 单文件过大 (610 行) | High | `packages/datahub/src/ditto_datahub/stores/calendar_store.py` |
-| 5 | [ARCH-005] `security_store.py` 单文件过大 (600 行) | High | `packages/datahub/src/ditto_datahub/stores/security_store.py` |
+| 4 | [ARCH-004] `calendar_store.py` 单文件过大 (610 行) | High | `packages/data/src/ditto_data/stores/calendar_store.py` |
+| 5 | [ARCH-005] `security_store.py` 单文件过大 (600 行) | High | `packages/data/src/ditto_data/stores/security_store.py` |
 
 ---
 
@@ -51,7 +51,7 @@ Blocker: 0 | High: 5 | Medium: 8 | Low: 6
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   packages/datahub                          │
+│                   packages/data                          │
 │                    (Data Access Layer)                      │
 └───────────────────────────┬─────────────────────────────────┘
                             │
@@ -92,7 +92,7 @@ Blocker: 0 | High: 5 | Medium: 8 | Low: 6
 
 **严重度**: High
 **类别**: 设计与结构
-**位置**: `packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py:1-648`
+**位置**: `packages/data/src/ditto_data/sources/tushare/tushare_source.py:1-648`
 
 **问题描述**:
 `TushareSource` 类文件达到 648 行，职责过多，违反单一职责原则。
@@ -119,7 +119,7 @@ Blocker: 0 | High: 5 | Medium: 8 | Low: 6
 
 **严重度**: High
 **类别**: 设计与结构
-**位置**: `packages/datahub/src/ditto_datahub/accessors/bars/accessor.py:1-644`
+**位置**: `packages/data/src/ditto_data/accessors/bars/accessor.py:1-644`
 
 **问题描述**:
 `BarsAccessor` 类文件达到 644 行，包含复杂的业务逻辑。
@@ -160,7 +160,7 @@ Port 层配置类达到 613 行，包含过多配置定义。
 
 **严重度**: High
 **类别**: 设计与结构
-**位置**: `packages/datahub/src/ditto_datahub/stores/calendar_store.py:1-610`
+**位置**: `packages/data/src/ditto_data/stores/calendar_store.py:1-610`
 
 **问题描述**:
 `CalendarStore` 达到 610 行。
@@ -175,7 +175,7 @@ Port 层配置类达到 613 行，包含过多配置定义。
 
 **严重度**: High
 **类别**: 设计与结构
-**位置**: `packages/datahub/src/ditto_datahub/stores/security_store.py:1-600`
+**位置**: `packages/data/src/ditto_data/stores/security_store.py:1-600`
 
 **问题描述**:
 `SecurityStore` 达到 600 行。
@@ -265,7 +265,7 @@ Port 层测试工具使用 `DatabaseManager` 命名，包含技术术语。
 
 **严重度**: Low
 **类别**: 设计与结构
-**位置**: `packages/datahub/src/ditto_datahub/runtime/pit_helper.py`
+**位置**: `packages/data/src/ditto_data/runtime/pit_helper.py`
 
 **LSP 分析**:
 ```
@@ -372,7 +372,7 @@ Port 层测试工具使用 `DatabaseManager` 命名，包含技术术语。
                                       │
                                       ▼
                         ┌─────────────────────────────┐
-                        │       packages/datahub      │
+                        │       packages/data      │
                         │  ┌─────────────────────┐    │
                         │  │   Accessors         │    │
                         │  ├─────────────────────┤    │
@@ -508,7 +508,7 @@ grep -r "from.*stores\|import.*stores" apps/port/src --include="*.py"
 |------|--------|
 | 总体 | 82.57% |
 | packages/foundation | 100% (单元), 17-28% (集成) |
-| packages/datahub | ~85% |
+| packages/data | ~85% |
 | apps/port | ~80% |
 
 ### C. 依赖合规性

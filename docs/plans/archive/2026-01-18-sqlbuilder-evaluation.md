@@ -20,7 +20,7 @@
 
 | 问题 | 位置 | 严重度 |
 |------|------|--------|
-| CalendarStore 类方法过多（23个方法，含5个SQL构建） | [calendar_store.py](../../packages/datahub/src/ditto_datahub/stores/calendar_store.py) | 🟡 Medium |
+| CalendarStore 类方法过多（23个方法，含5个SQL构建） | [calendar_store.py](../../packages/data/src/ditto_data/stores/calendar_store.py) | 🟡 Medium |
 | 动态 WHERE 子句构建模式重复 | SecurityStore, UniverseStore, QuarantineStore, IndexWeightStore | 🟡 Medium |
 | PIT 查询逻辑重复 | 多个 Store 的 query 方法 | 🟡 Medium |
 | IN 子句构建逻辑重复 | SecurityStore._build_in_clause | 🟡 Medium |
@@ -402,7 +402,7 @@ pypika = ">=0.35.16"
 #### 步骤 2：实现自研辅助函数
 
 ```python
-# packages/datahub/src/ditto_datahub/runtime/query_helpers.py
+# packages/data/src/ditto_data/runtime/query_helpers.py
 """Ditto 特定的查询辅助函数 - 与 PyPika 配合使用"""
 
 from __future__ import annotations
@@ -495,10 +495,10 @@ def get_cache_key(
 #### 步骤 3：迁移示例
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/security_store.py
+# packages/data/src/ditto_data/stores/security_store.py
 
 from pypika import Query, Table
-from ditto_datahub.runtime.query_helpers import add_pit_condition, add_in_clause_with_chunking
+from ditto_data.runtime.query_helpers import add_pit_condition, add_in_clause_with_chunking
 
 class SecurityStore:
     def query_securities(
@@ -622,11 +622,11 @@ class SecurityStore:
 
 | 文件 | SQL 构建方法数 | 迁移复杂度 |
 |------|---------------|-----------|
-| [security_store.py](../../packages/datahub/src/ditto_datahub/stores/security.py) | ~10 个方法 | 中 |
-| [universe_store.py](../../packages/datahub/src/ditto_datahub/stores/universe.py) | ~6 个方法 | 低 |
-| [quarantine_store.py](../../packages/datahub/src/ditto_datahub/stores/quarantine.py) | ~5 个方法 | 低 |
-| [index_weight_store.py](../../packages/datahub/src/ditto_datahub/stores/index_weight.py) | ~4 个方法 | 低 |
-| [calendar_store.py](../../packages/datahub/src/ditto_datahub/stores/calendar_store.py) | ~5 个方法 | 低 |
+| [security_store.py](../../packages/data/src/ditto_data/stores/security.py) | ~10 个方法 | 中 |
+| [universe_store.py](../../packages/data/src/ditto_data/stores/universe.py) | ~6 个方法 | 低 |
+| [quarantine_store.py](../../packages/data/src/ditto_data/stores/quarantine.py) | ~5 个方法 | 低 |
+| [index_weight_store.py](../../packages/data/src/ditto_data/stores/index_weight.py) | ~4 个方法 | 低 |
+| [calendar_store.py](../../packages/data/src/ditto_data/stores/calendar_store.py) | ~5 个方法 | 低 |
 | **总计** | **~30 个方法** | - |
 
 #### 迁移策略
@@ -748,11 +748,11 @@ timeit.timeit('from sqlalchemy import select, Table, MetaData', number=10000)
 ### 8.5 性能基准测试建议
 
 ```python
-# packages/datahub/tests/performance/test_query_builder_performance.py
+# packages/data/tests/performance/test_query_builder_performance.py
 
 import timeit
 from pypika import Query, Table
-from ditto_datahub.runtime.query_helpers import add_pit_condition, add_in_clause_with_chunking
+from ditto_data.runtime.query_helpers import add_pit_condition, add_in_clause_with_chunking
 
 def bench_simple_query():
     """测试简单查询构建性能."""

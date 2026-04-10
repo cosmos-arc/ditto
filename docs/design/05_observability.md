@@ -1102,7 +1102,7 @@ docker-compose down -v
 ditto_risk_kill_switch_level{strategy="etf_rotation"}
 
 # 当前回撤
-ditto_portfolio_drawdown_ratio{strategy="etf_rotation"}
+ditto_interfacesfolio_drawdown_ratio{strategy="etf_rotation"}
 
 # 数据更新 P95 耗时
 histogram_quantile(0.95,

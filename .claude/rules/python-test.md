@@ -25,9 +25,8 @@ paths:
 ## 目录结构
 
 ```
-tests/
+packages/*/tests/
 ├── conftest.py
-├── fixtures/
 ├── unit/           # 80% - 每次提交，完全 Mock，测原子功能
 └── integration/    # 20% - CI运行，测"接缝"处（DAO、HTTP Client）
 ```
@@ -43,23 +42,22 @@ tests/
 #### 目录映射规则
 
 ```
-src/ditto_infra/                         tests/unit/
+src/ditto_infra/                         packages/infra/tests/unit/
 ├── foundation/               →          ├── foundation/
 │   ├── cache/                →          │   ├── cache/
 │   ├── config/               →          │   ├── config/
 │   └── observability/        →          │   └── observability/
 
-src/ditto_datahub/                       tests/unit/
-├── alerts/                   →          ├── alerts/
-├── accessors/                →          ├── accessors/
-├── stores/                   →          ├── stores/
-├── dq/                       →          ├── dq/
-├── models/                   →          ├── models/
-└── runtime/                  →          └── runtime/
+src/ditto_data/                       packages/data/tests/unit/
+├── storage/                 →          ├── storage/
+├── services/                →          ├── services/
+├── sources/                 →          ├── sources/
+├── quality/                 →          ├── quality/
+├── models/                  →          ├── models/
+└── runtime/                 →          └── runtime/
 
-src/ditto_port/                           tests/unit/
+src/ditto_interfaces/                   interfaces/tests/unit/
 ├── cli/                      →          ├── cli/
-├── services/                 →          ├── services/
 ├── jobs/                     →          ├── jobs/
 ├── models/                   →          ├── models/
 └── registry/                 →          └── registry/
@@ -169,22 +167,18 @@ git commit -m "refactor: rename cache to caching
 ```python
 # ✅ 单元测试：所有依赖都是 Mock
 
-def test_datahub_is_trading_day_delegates_correctly(mocker):
-    """测试 DataHub 委托逻辑，不关心 Calendar 如何实现"""
+def test_data_is_trading_day_delegates_correctly(mocker):
+    """测试 MetadataService 委托逻辑，不关心底层如何实现"""
     # Mock 所有依赖
-    mock_calendar = mocker.Mock()
-    mock_calendar.is_trading_day.return_value = True
+    mock_reader = mocker.Mock()
+    mock_reader.is_trading_day.return_value = True
 
     # 直接创建被测对象
-    hub = DataHub(
-        data_root=Path("/tmp"),
-        calendar=mock_calendar,
-        # ... 其他 Mock 依赖
-    )
+    service = MetadataService(reader=mock_reader)
 
     # 验证委托逻辑
-    result = hub.is_trading_day("2024-01-02")
-    mock_calendar.is_trading_day.assert_called_once_with("2024-01-02")
+    result = service.is_trading_day("2024-01-02")
+    mock_reader.is_trading_day.assert_called_once_with("2024-01-02")
     assert result is True
 ```
 
@@ -201,21 +195,21 @@ def test_datahub_is_trading_day_delegates_correctly(mocker):
 # ✅ 集成测试：测试 DAO 与数据库的"接缝"
 
 @pytest.mark.integration
-def test_security_store_can_write_and_read_sqlite():
-    """测试 SecurityStore 能否正确写入 SQLite 数据库"""
+def test_metadata_writer_can_write_and_read_sqlite():
+    """测试 MetadataWriter 能否正确写入 SQLite 数据库"""
     # 真实 SQLite 数据库（:memory:，与真实数据隔离）
     pool = SQLitePool(":memory:", schema_path=_SCHEMA_PATH)
     pool.init_schema()
 
-    # 真实 SecurityStore
-    sqlite_client = SQLiteClient(pool)
-    store = SecurityStore(sqlite_client)
+    # 真实 Writer
+    writer = MetadataWriter(pool)
 
     # 验证"接缝"：能否写入数据库
-    store.add_security(sid=1000001, symbol="000001.SZ", source="tushare")
+    writer.write_instruments(df)
 
     # 验证"接缝"：能否读取数据库
-    df = store.get_by_sid(1000001)
+    reader = MetadataReader(pool)
+    df = reader.get_by_id(1000001)
     assert df["symbol"][0] == "000001.SZ"
 ```
 
@@ -279,7 +273,7 @@ def test_tushare_client_can_parse_api_response(respx_mock):
 |------|-----------------|----------------|
 | **DAO** | `mocker.Mock()` | 真实数据库 + 真实 SQL |
 | **HTTP Client** | `respx.mock()` | 真实 Client + Mock 响应 |
-| **DataHub** | Mock 所有 Accessor | （不测，中间层无接缝） |
+| **Data** | Mock 所有 Reader/Writer | （不测，中间层无接缝） |
 
 ### 常见误区
 
@@ -330,7 +324,7 @@ def test_facade_delegates_correctly(mocker):
 def test_cli_stock_daily_calls_ingest_function(mocker, tmp_path: Path):
     """测试 CLI 命令调用了正确的摄入函数"""
     # Mock 内部函数（验证调用，不关心结果）
-    mock_ingest = mocker.patch("ditto_port.cli.ingest.ingest_stock_daily")
+    mock_ingest = mocker.patch("ditto_interfaces.cli.ingest.ingest_stock_daily")
 
     # 执行 CLI 命令
     result = runner.invoke(
@@ -361,7 +355,7 @@ def test_cli_validates_date_format():
 @pytest.mark.integration
 def test_cli_stock_daily_result(mocker, tmp_path: Path):
     """错误：测试函数执行结果（应该是单元测试）"""
-    mock_ingest = mocker.patch("ditto_port.cli.ingest.ingest_stock_daily")
+    mock_ingest = mocker.patch("ditto_interfaces.cli.ingest.ingest_stock_daily")
     mock_ingest.return_value = 100  # ← 不要在集成测试中验证返回值
 
     result = runner.invoke(app, ["stock", "daily", "2024-01-02"])
@@ -395,20 +389,20 @@ CLI 集成测试关注点：
 
 ```
 # ❌ 错误：会导致 pytest 收集冲突
-packages/datahub/tests/unit/stores/test_pipeline_store.py
-packages/datahub/tests/integration/stores/test_pipeline_store.py
+packages/data/tests/unit/stores/test_pipeline_store.py
+packages/data/tests/integration/stores/test_pipeline_store.py
 
 # ❌ 错误：跨包同名也会冲突
 packages/infra/tests/unit/observability/test_observability_unit.py
-packages/datahub/tests/unit/stores/test_observability_unit.py
+packages/data/tests/unit/stores/test_observability_unit.py
 
 # ✅ 正确：添加层级后缀区分
-packages/datahub/tests/unit/stores/test_pipeline_store_unit.py
-packages/datahub/tests/integration/stores/test_pipeline_store_integration.py
+packages/data/tests/unit/stores/test_pipeline_store_unit.py
+packages/data/tests/integration/stores/test_pipeline_store_integration.py
 
 # ✅ 正确：添加模块前缀避免跨包冲突
 packages/infra/tests/unit/observability/test_observability_unit.py
-packages/datahub/tests/unit/stores/test_stores_observability_unit.py
+packages/data/tests/unit/stores/test_stores_observability_unit.py
 ```
 
 #### 命名规则
@@ -781,7 +775,7 @@ def test_partitioned_write(store, sample_quotes):
 **实现原理**：
 - 使用 `pytest_collection_modifyitems` hook 在测试收集时自动标记
 - 配置文件位置：
-  - DataHub: `packages/datahub/tests/conftest.py`
+  - Data: `packages/data/tests/conftest.py`
   - Infra: `packages/infra/tests/unit/conftest.py`
 
 **手动标记需求**：
@@ -806,12 +800,12 @@ def test_partitioned_write(store, sample_quotes):
 ```python
 # 单元测试 - 完全 Mock
 @pytest.mark.unit
-def test_datahub_delegates_to_calendar(mocker):
-    """测试 DataHub 的委托逻辑"""
+def test_data_delegates_to_calendar(mocker):
+    """测试 Data 的委托逻辑"""
     mock_calendar = mocker.Mock()
     mock_calendar.is_trading_day.return_value = True
 
-    hub = DataHub(calendar=mock_calendar, ...)
+    hub = Data(calendar=mock_calendar, ...)
     result = hub.is_trading_day("2024-01-02")
 
     mock_calendar.is_trading_day.assert_called_once_with("2024-01-02")
@@ -1016,8 +1010,8 @@ def check_structure(src_path, test_path, name):
 
 all_ok = True
 all_ok &= check_structure('packages/infra/src', 'packages/infra/tests/unit', 'Infra')
-all_ok &= check_structure('packages/datahub/src', 'packages/datahub/tests/unit', 'DataHub')
-all_ok &= check_structure('apps/port/src', 'apps/port/tests/unit', 'Port')
+all_ok &= check_structure('packages/data/src', 'packages/data/tests/unit', 'Data')
+all_ok &= check_structure('interfaces/src', 'interfaces/tests/unit', 'Interfaces')
 
 if all_ok:
     print('✅ 所有包目录结构一致')
@@ -1172,7 +1166,7 @@ pixi run -e dev pytest tests/integration -n 1
 **修复**: 在 `conftest.py` 中添加装饰器 mock
 
 ```python
-# apps/port/tests/unit/conftest.py
+# interfaces/tests/unit/conftest.py
 import prefect.tasks
 
 @pytest.fixture(autouse=True, scope="session")

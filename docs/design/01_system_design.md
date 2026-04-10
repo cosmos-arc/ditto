@@ -60,10 +60,10 @@
 │   PortfolioSvc / FactorHealthSvc / HeartbeatSvc              │
 └──────────────────────────────────────────────────────────────┘
                              ▲
-                             │ 调用 Core Engine + DataHub
+                             │ 调用 Engine + Data 层
                              ▼
 ┌──────────────────────────────────────────────────────────────┐
-│   Core Engines & DataHub                                     │
+│   Engine + Data Layer                                        │
 │   - SQLite + Parquet + DuckDB 存储                           │
 │   - PIT 数据查询                                             │
 │   - 复权价动态计算                                           │
@@ -88,19 +88,19 @@
 
 | 层 | 职责 | 包/目录 |
 |---|---|---|
-| **Domain Layer** | 业务逻辑、领域知识、算法模型 | `packages/core/` |
-| ├── quality | 数据质量规则（OHLC、涨跌停检测） | `core/quality/` |
-| ├── factor | 因子计算算法（RS、动量、波动率） | `core/factor/` |
-| ├── ml | ML 算法实现（训练、预测、评估） | `core/ml/` |
-| ├── risk | 风险模型（回撤检测、风险度量） | `core/risk/` |
-| ├── strategy | 策略逻辑、信号生成、执行逻辑 | `core/strategy/` |
-| ├── signal | 信号生成逻辑 | `core/strategy/signal/` |
-| └── execution | 执行逻辑（订单拆分、路由） | `core/strategy/execution/` |
-| **Infrastructure Layer** | 数据访问、存储、持久化 | `packages/datahub/` |
-| ├── stores | 数据存储（parquet、sqlite） | `datahub/stores/` |
-| ├── accessors | 业务聚合层 | `datahub/accessors/` |
-| └── sources | 外部数据源适配 | `datahub/sources/` |
-| **Application Services** | 用例编排、事务边界 | `apps/port/services/` |
+| **Domain Layer** | 业务逻辑、领域知识、算法模型 | `packages/engine/`, `packages/kernel/`, `packages/analytics/` |
+| ├── quality | 数据质量规则（OHLC、涨跌停检测） | `data/quality/` |
+| ├── factor | 因子计算算法（RS、动量、波动率） | `analytics/factors/` |
+| ├── ml | ML 算法实现（训练、预测、评估） | `kernel/ml/` |
+| ├── risk | 风险模型（回撤检测、风险度量） | `engine/risk/` |
+| ├── strategy | 策略逻辑、信号生成、执行逻辑 | `engine/alpha/` |
+| ├── signal | 信号生成逻辑 | `engine/alpha/signal/` |
+| └── execution | 执行逻辑（订单拆分、路由） | `engine/execution/` |
+| **Infrastructure Layer** | 数据访问、存储、持久化 | `packages/data/` |
+| ├── stores | 数据存储（parquet、sqlite） | `data/storage/` |
+| ├── accessors | 业务聚合层 | `data/accessors/` |
+| └── sources | 外部数据源适配 | `data/sources/` |
+| **Application Services** | 用例编排、事务边界 | `interfaces/services/` |
 | ├── ingestion | 数据摄入编排（dq 检查、存储） | `services/ingestion/` |
 | ├── factor | 因子计算编排（获取、计算、保存） | `services/factor/` |
 | ├── ml | ML 训练编排（特征工程、训练、部署） | `services/ml/` |
@@ -108,8 +108,7 @@
 | ├── trading | 交易执行编排（信号、订单、执行） | `services/trading/` |
 | ├── signal | 信号管理编排 | `services/signal/` |
 | └── execution | 执行编排 | `services/execution/` |
-| **Port Layer** | 统一入口层（API/CLI/Jobs） | `apps/port/api\|cli\|jobs/` |
-| **Web UI Layer** | 前端展示与交互 | `apps/web/` |
+| **Port Layer** | 统一入口层（API/CLI/Jobs） | `interfaces/api\|cli\|jobs/` |
 | **Foundation Layer** | 基础设施横切层 | `packages/infra/src/ditto_infra/foundation/` |
 | ├── config | 配置管理 | `foundation/config/` |
 | ├── observability | 可观测性 | `foundation/observability/` |
@@ -122,138 +121,55 @@
 ### 3.2 目录结构
 
 ```
-apps/
-  port/                      # 统一入口层（API/CLI/Jobs）
-    src/
-      ditto_port/
-        api/                 # HTTP API 入口
-          routes/            # FastAPI 路由
-        cli/                 # CLI 入口
-          commands/          # 命令实现
-          utils/             # CLI 工具
-        jobs/                # 定时任务入口
-          flows/             # Prefect Flow 定义
-          tasks/             # Prefect Task 定义
-        services/            # Application Services（用例编排）
-          ingestion/         # 数据摄入编排
-            coordinator.py   # 摄取协调器（编排 dq 检查）
-            backfill.py      # 回补管理器
-            config/          # 配置
-          factor/            # 因子计算编排
-            calculation_service.py
-          ml/                # ML 训练编排
-            training_service.py
-          risk/              # 风险监控编排
-            monitoring_service.py
-          trading/           # 交易执行编排
-            execution_service.py
-          signal/            # 信号管理编排
-            signal_service.py
-          execution/         # 执行编排
-            execution_service.py
-        main.py              # FastAPI 启动入口
-
-  web/
-    src/
-      app/                   # Next.js 页面路由
-      components/            # UI 组件
-      stores/                # Zustand 全局状态
+interfaces/                        # 应用入口层（API/CLI/Jobs）
+  src/
+    ditto_interfaces/
+      api/                     # HTTP API 入口
+        routes/                # FastAPI 路由
+      cli/                     # CLI 入口
+        commands/              # 命令实现
+        utils/                 # CLI 工具
+      jobs/                    # 定时任务入口
+        flows/                 # Prefect Flow 定义
+        tasks/                 # Prefect Task 定义
+      registry/                # DI Composition Root
+      main.py                  # FastAPI 启动入口
 
 packages/
-  core/                      # Domain Layer（业务逻辑、领域知识）
+  engine/                       # 核心引擎（alpha/portfolio/backtest/execution/risk/accounting）
     src/
-      ditto_core/
-        quality/            # 数据质量子领域
-          engine.py         # QualityEngine
-          checkers/
-            technical.py    # L1: 技术校验
-            business.py     # L2: 业务规则
-            statistical.py  # L3: 统计异常
-          models.py         # QualityResult, QualityIssue
-
-        factor/             # 因子计算子领域
-          engine.py         # FactorEngine
-          calculators/
-            momentum.py     # 动量因子
-            value.py        # 价值因子
-            volatility.py   # 波动率因子
-          models.py         # FactorResult
-
-        ml/                 # 机器学习子领域
-          engine.py         # MLEngine
-          models/
-            regressors.py   # 回归器
-            classifiers.py  # 分类器
-            feature_selectors.py
-          metrics/
-            sharpe_ratio.py
-            ic_rank.py
-
-        risk/               # 风险管理子领域
-          engine.py         # RiskEngine
-          calculators/
-            drawdown.py     # 回撤计算
-            velocity.py     # 回撤速度
-
-        strategy/           # 策略子领域
-          base.py           # 策略抽象基类
-          signal/
-            generator.py    # 信号生成
-          execution/
-            engine.py       # 执行引擎
-          portfolio/
-            manager.py      # 组合管理
-            rebalance.py    # 调仓逻辑
-
-        config/             # 配置模型
-          settings.py
-
-  datahub/                   # Infrastructure Layer（数据访问）
+      ditto_engine/
+  data/                         # 数据层（storage/sources/query/quality/ingestion）
     src/
-      ditto_datahub/
-        hub.py             # DataHub Facade
-        sources/           # 外部数据提供者
-          tushare/         # Tushare 实现
-          akshare/         # AkShare 实现
-        accessors/      # 业务聚合层
-          bars.py          # 行情数据
-          factors.py       # 因子数据
-          models.py        # ML 模型
-          orders.py        # 订单数据
-        stores/            # 数据存取层
-          bars_store.py
-          factors_store.py
-          models_store.py
-          orders_store.py
-        scripts/          # 项目脚本（SQL、Shell 等）
-          schema.sql      # 数据库初始化脚本
-        runtime/          # 运行时支持（领域相关技术组件）
-          freeze_manager.py  # 数据版本管理
-          sid_allocator.py   # SID 分配器
-          sql_engine.py      # SQL 查询引擎
-          pit_helper.py      # PIT 辅助函数
-          dq_rules.py        # 数据质量规则
-
-  infra/                    # 横切层（基础设施，含 Foundation 和 Runtime）
+      ditto_data/
+  app/                          # 应用编排层（CQRS: query/process/command/builders）
+    src/
+      ditto_app/
+  analytics/                    # 表达式编译 + 物化 + 因子 + 研究
+    src/
+      ditto_analytics/
+  kernel/                       # 共享内核（零业务依赖类型）
+    src/
+      ditto_kernel/
+  infra/                        # 基础设施
     src/
       ditto_infra/
-        foundation/       # 纯技术组件（无领域概念）
-          config/         # 配置管理
-          observability/  # 可观测性
-          util/           # 通用工具
-          cache.py        # 通用缓存
-          concurrency.py  # 并发控制
-          db/             # 数据库连接
+        foundation/             # 纯技术组件（无领域概念）
+          config/               # 配置管理
+          observability/        # 可观测性
+          util/                 # 通用工具
+          cache.py              # 通用缓存
+          concurrency.py        # 并发控制
+          db/                   # 数据库连接
             sqlite_pool.py
-          version.py      # 版本管理
-        runtime/          # 领域相关技术组件
+          version.py            # 版本管理
 ```
 
 ### 3.3 依赖关系
 
 ```
 ┌─────────────────────────────────────────────────┐
-│ Application Layer (apps/port/services/)         │
+│ Application Layer (interfaces/services/)         │
 │                                                  │
 │  IngestionService                                │
 │  FactorService                                   │
@@ -271,7 +187,7 @@ packages/
          │
          ↓ 依赖
 ┌─────────────────────────────────────────────────┐
-│ Domain Layer (packages/core/)                   │
+│ Domain Layer (packages/engine/, packages/kernel/) │
 │                                                  │
 │  quality/  factor/  ml/  risk/  strategy/       │
 │  （业务逻辑、算法、规则）                         │
@@ -279,7 +195,7 @@ packages/
          │
          ↓ 依赖
 ┌─────────────────────────────────────────────────┐
-│ Infrastructure Layer (packages/datahub/)        │
+│ Infrastructure Layer (packages/data/)        │
 │                                                  │
 │  stores/  accessors/  sources/             │
 │  （数据访问、存储、持久化）                       │
@@ -311,7 +227,7 @@ packages/
   - **concurrency**：并发控制（FileLockManager）
   - **db**：数据库连接管理（SQLitePool）
   - **version**：版本管理（Checksum、版本标识）
-- **runtime**：领域相关技术组件，依赖 datahub 模型
+- **runtime**：领域相关技术组件，依赖 data 层模型
 
 Scripts 目录：
 - **scripts**：项目脚本文件（SQL、Shell 等），与代码模块分离
@@ -395,7 +311,7 @@ Portfolio (1) ────── (N) StrategyInstance
 
 ```
 ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐
-│Scheduler│     │  Flow   │     │ DataHub │     │ Storage │
+│Scheduler│     │  Flow   │     │   Data  │     │ Storage │
 └────┬────┘     └────┬────┘     └────┬────┘     └────┬────┘
      │               │               │               │
      │ trigger daily_ingest_flow     │               │
@@ -417,7 +333,7 @@ Portfolio (1) ────── (N) StrategyInstance
 ### 5.2 回测流程（含涨跌停过滤）
 
 ```
-User → BacktestSvc → FastBacktester → DataHub
+User → BacktestSvc → FastBacktester → Data Layer
            │              │               │
            │ load_data    │               │
            │─────────────────────────────>│
@@ -495,7 +411,7 @@ RiskSvc → RiskEngine → KillSwitchSvc → SQLite
 |----------|----------|
 | **性能** | DuckDB 向量化查询 + FastBacktester |
 | **可用性** | 单机 + 定期备份 + 心跳监控 |
-| **可维护性** | 清晰分层；core 与 apps 分离；文档齐全 |
+| **可维护性** | 清晰分层；kernel + packages 架构；文档齐全 |
 | **可测试性** | 引擎与 DataService 隔离；严格对齐测试 |
 | **可扩展性** | Strategy/Factor 抽象；Portfolio 层预留 |
 | **数据完整性** | PIT 查询；复权分离存储；DQ 三层校验 |
@@ -534,20 +450,11 @@ RiskSvc → RiskEngine → KillSwitchSvc → SQLite
 | `03_engine_design.md` | 引擎层详细设计 |
 | `04_deployment_topology.md` | 部署拓扑 |
 | `05_observability.md` | 可观测性方案 |
-| `06_roadmap.md` | 路线图 |
 | `07_research_playground.md` | 研究环境使用说明 |
-| `08_risk_constitution.md` | 风险宪法 |
 | `09_data_quality_design.md` | 数据质量设计 |
 | `10_data_ingestion_scheduler_design.md` | 数据摄取任务设计 |
 
-### 架构决策记录（ADR）
-
-| ADR | 内容 |
-|-----|------|
-| [ADR 0001](../../adr/0001-project-stack-selection.md) | 技术栈选择 |
-| [ADR 0002](../../adr/0002-monorepo-structure.md) | Monorepo 结构设计 |
-| [ADR 0003](../../adr/0003-data-storage-strategy.md) | 数据存储策略 |
-| [ADR 0004](../../adr/0004-domain-layer-subdomains.md) | **Domain Layer 子领域分层定位** |
+### 架构规范
 
 ### 架构规范
 
@@ -555,7 +462,6 @@ RiskSvc → RiskEngine → KillSwitchSvc → SQLite
 |------|------|
 | [.claude/rules/architecture.md](../../.claude/rules/architecture.md) | 架构设计规范（含子领域分层标准） |
 | [.claude/rules/core.md](../../.claude/rules/core.md) | Python 核心规范 |
-| [.claude/rules/datahub.md](../../.claude/rules/datahub.md) | DataHub 架构规范 |
 
 ---
 

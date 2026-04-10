@@ -45,7 +45,7 @@ retry.py             ──→      IngestionLogAccessor   ✅
 #### 1.1 创建目录结构
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── models/                    # 新增：领域类型层
 │   ├── __init__.py
 │   ├── ingestion.py           # IngestionLog, IngestionStatus
@@ -54,8 +54,8 @@ packages/datahub/src/ditto_datahub/
 
 #### 1.2 移动 IngestionLog
 
-**从**: `packages/datahub/src/ditto_datahub/sources/metadata.py`
-**到**: `packages/datahub/src/ditto_datahub/models/ingestion.py`
+**从**: `packages/data/src/ditto_data/sources/metadata.py`
+**到**: `packages/data/src/ditto_data/models/ingestion.py`
 
 **更新导出**:
 - `sources/metadata.py`: 从 `models.ingestion` 导入并重新导出（向后兼容）
@@ -68,7 +68,7 @@ packages/datahub/src/ditto_datahub/
 | `stores/ingestion_log.py` | `from ..models.ingestion import IngestionLog, IngestionStatus` |
 | `hub.py` | `from .models.ingestion import IngestionLog, IngestionStatus` |
 | `accessors/*.py` | 统一从 models 导入 |
-| Port 层文件 | `from ditto_datahub.models import IngestionLog, IngestionStatus` |
+| Port 层文件 | `from ditto_data.models import IngestionLog, IngestionStatus` |
 | 测试文件 | 同样更新导入 |
 
 ---
@@ -79,7 +79,7 @@ packages/datahub/src/ditto_datahub/
 
 #### 2.1 创建 Accessor
 
-**文件**: `packages/datahub/src/ditto_datahub/accessors/ingestion_log.py`
+**文件**: `packages/data/src/ditto_data/accessors/ingestion_log.py`
 
 ```python
 """摄取日志访问器."""
@@ -87,8 +87,8 @@ packages/datahub/src/ditto_datahub/
 from loguru import logger
 from opentelemetry import trace
 
-from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
+from ditto_data.models.ingestion import IngestionLog, IngestionStatus
+from ditto_data.stores.ingestion_log import IngestionLogStore
 from ditto_foundation.observability.tracing import traced
 
 
@@ -229,7 +229,7 @@ class IngestionLogAccessor:
 
 #### 2.2 更新 DataHub
 
-**文件**: `packages/datahub/src/ditto_datahub/hub.py`
+**文件**: `packages/data/src/ditto_data/hub.py`
 
 ```python
 # 将现有的 ingestion_log 属性重命名为 ingestion_log_store
@@ -274,8 +274,8 @@ __all__ = [
 **改动**:
 ```python
 # 删除
-# from ditto_datahub.stores.calendar_store import CalendarStore
-# from ditto_datahub.stores.ingestion_log import IngestionLogStore
+# from ditto_data.stores.calendar_store import CalendarStore
+# from ditto_data.stores.ingestion_log import IngestionLogStore
 
 # 修改构造函数签名
 def __init__(
@@ -306,10 +306,10 @@ def __init__(
 **改动**:
 ```python
 # 删除
-# from ditto_datahub.stores.ingestion_log import IngestionLogStore
+# from ditto_data.stores.ingestion_log import IngestionLogStore
 
 # 修改导入（从 models 导入类型）
-from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
+from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 
 # 修改构造函数
 def __init__(self, hub: DataHub) -> None:  # 改为使用 DataHub
@@ -328,7 +328,7 @@ def __init__(self, hub: DataHub) -> None:  # 改为使用 DataHub
 **改动**:
 ```python
 # 删除
-# from ditto_datahub.stores.ingestion_log import IngestionLogStore
+# from ditto_data.stores.ingestion_log import IngestionLogStore
 
 # 修改构造函数
 def __init__(
@@ -355,19 +355,19 @@ def __init__(
 
 | 文件 | 行数估算 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/models/__init__.py` | ~10 |
-| `packages/datahub/src/ditto_datahub/models/ingestion.py` | ~60 |
-| `packages/datahub/src/ditto_datahub/models/common.py` | ~10（预留） |
-| `packages/datahub/src/ditto_datahub/accessors/ingestion_log.py` | ~150 |
+| `packages/data/src/ditto_data/models/__init__.py` | ~10 |
+| `packages/data/src/ditto_data/models/ingestion.py` | ~60 |
+| `packages/data/src/ditto_data/models/common.py` | ~10（预留） |
+| `packages/data/src/ditto_data/accessors/ingestion_log.py` | ~150 |
 
 ### 修改文件
 
 | 文件 | 改动类型 | 说明 |
 |------|----------|------|
-| `packages/datahub/src/ditto_datahub/sources/metadata.py` | 修改 | 从 models 导入并重新导出 |
-| `packages/datahub/src/ditto_datahub/stores/ingestion_log.py` | 修改 | 更新导入 |
-| `packages/datahub/src/ditto_datahub/hub.py` | 修改 | 重命名属性 + 新增 Accessor |
-| `packages/datahub/src/ditto_datahub/accessors/__init__.py` | 修改 | 导出新 Accessor |
+| `packages/data/src/ditto_data/sources/metadata.py` | 修改 | 从 models 导入并重新导出 |
+| `packages/data/src/ditto_data/stores/ingestion_log.py` | 修改 | 更新导入 |
+| `packages/data/src/ditto_data/hub.py` | 修改 | 重命名属性 + 新增 Accessor |
+| `packages/data/src/ditto_data/accessors/__init__.py` | 修改 | 导出新 Accessor |
 | `apps/port/src/ditto_port/services/ingestion/backfill.py` | 修改 | 使用 Accessor |
 | `apps/port/src/ditto_port/services/ingestion/metadata.py` | 修改 | 使用 Accessor |
 | `apps/port/src/ditto_port/services/ingestion/retry.py` | 修改 | 使用 Accessor |
@@ -376,8 +376,8 @@ def __init__(
 
 | 文件 | 改动类型 |
 |------|----------|
-| `packages/datahub/tests/unit/stores/test_ingestion_log_store_unit.py` | 更新导入 |
-| `packages/datahub/tests/integration/stores/test_ingestion_log_concurrent_integration.py` | 更新导入 |
+| `packages/data/tests/unit/stores/test_ingestion_log_store_unit.py` | 更新导入 |
+| `packages/data/tests/integration/stores/test_ingestion_log_concurrent_integration.py` | 更新导入 |
 | `apps/port/tests/unit/ingestion/test_metadata_unit.py` | 更新导入 + Mock |
 | `apps/port/tests/unit/ingestion/test_coordinator_unit.py` | 更新导入 |
 | `apps/port/tests/unit/ingestion/test_backfill_unit.py` | 更新导入 + Mock |
@@ -405,7 +405,7 @@ pixi run -e dev fmt --check
 
 ```bash
 # DataHub 单元测试
-pixi run -e dev test packages/datahub/tests/unit/ -k "ingestion_log"
+pixi run -e dev test packages/data/tests/unit/ -k "ingestion_log"
 
 # Port 层单元测试
 pixi run -e dev test apps/port/tests/unit/ingestion/ -v
@@ -484,9 +484,9 @@ grep -r "from.*models.*ingestion" apps/port/src/
 - `d906f4a` - refactor: 将 DataHub.ingestion_log 改为返回 Accessor
 
 **文件变更**:
-- 新增: `packages/datahub/src/ditto_datahub/accessors/ingestion_log.py`
-- 修改: `packages/datahub/src/ditto_datahub/accessors/__init__.py`
-- 修改: `packages/datahub/src/ditto_datahub/hub.py`
+- 新增: `packages/data/src/ditto_data/accessors/ingestion_log.py`
+- 修改: `packages/data/src/ditto_data/accessors/__init__.py`
+- 修改: `packages/data/src/ditto_data/hub.py`
 
 #### Phase 3: 修复 Port 层跨层依赖 ✅
 
@@ -504,7 +504,7 @@ grep -r "from.*models.*ingestion" apps/port/src/
 - 修改: `apps/port/src/ditto_port/jobs/flows/backfill.py`
 - 修改: `apps/port/src/ditto_port/jobs/flows/repair.py`
 - 修改: `apps/port/src/ditto_port/cli/executor.py`
-- 修改: `packages/datahub/src/ditto_datahub/accessors/calendar.py`（添加 `get_first_trading_day()`）
+- 修改: `packages/data/src/ditto_data/accessors/calendar.py`（添加 `get_first_trading_day()`）
 - 修改: 所有相关测试文件
 
 #### Phase 4: 验证 ✅
@@ -547,7 +547,7 @@ retry.py             ──→      DataHub.ingestion_log ✅
 ### 影响范围
 
 **新增文件**: 1 个
-- `packages/datahub/src/ditto_datahub/accessors/ingestion_log.py`
+- `packages/data/src/ditto_data/accessors/ingestion_log.py`
 
 **修改文件**: 15+ 个
 - DataHub 层: 3 个文件

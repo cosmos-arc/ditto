@@ -54,7 +54,7 @@
 ## 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/domains/market/
+packages/data/src/ditto_data/domains/market/
 ├── __init__.py
 ├── stock/
 │   ├── __init__.py
@@ -81,18 +81,18 @@ packages/datahub/src/ditto_datahub/domains/market/
 ## 任务 1: 创建 Market 域目录结构
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/__init__.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/stock/__init__.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/etf/__init__.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/index/__init__.py`
+- 新建: `packages/data/src/ditto_data/domains/market/__init__.py`
+- 新建: `packages/data/src/ditto_data/domains/market/stock/__init__.py`
+- 新建: `packages/data/src/ditto_data/domains/market/etf/__init__.py`
+- 新建: `packages/data/src/ditto_data/domains/market/index/__init__.py`
 
 **步骤 1: 创建域级 __init__.py**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/__init__.py
+# packages/data/src/ditto_data/domains/market/__init__.py
 """Market 域 - 市场数据访问."""
 
-from ditto_datahub.domains.market.market_query_service import MarketQueryService
+from ditto_data.domains.market.market_query_service import MarketQueryService
 
 __all__ = ["MarketQueryService"]
 ```
@@ -100,20 +100,20 @@ __all__ = ["MarketQueryService"]
 **步骤 2: 创建子域 __init__.py**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/stock/__init__.py
+# packages/data/src/ditto_data/domains/market/stock/__init__.py
 """Stock 子域 - 股票市场数据."""
 
-# packages/datahub/src/ditto_datahub/domains/market/etf/__init__.py
+# packages/data/src/ditto_data/domains/market/etf/__init__.py
 """ETF 子域 - ETF 市场数据."""
 
-# packages/datahub/src/ditto_datahub/domains/market/index/__init__.py
+# packages/data/src/ditto_data/domains/market/index/__init__.py
 """Index 子域 - 指数市场数据."""
 ```
 
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/market/
+git add packages/data/src/ditto_data/domains/market/
 git commit -m "feat(datahub): create Market domain directory structure"
 ```
 
@@ -122,14 +122,14 @@ git commit -m "feat(datahub): create Market domain directory structure"
 ## 任务 2: 迁移 Stock Bars 到 Market 域
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/stock/bars/bars_store.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/stock/bars/models.py`
-- 修改: `packages/datahub/src/ditto_datahub/stores/bars_store.py` (添加弃用警告)
+- 新建: `packages/data/src/ditto_data/domains/market/stock/bars/bars_store.py`
+- 新建: `packages/data/src/ditto_data/domains/market/stock/bars/models.py`
+- 修改: `packages/data/src/ditto_data/stores/bars_store.py` (添加弃用警告)
 
 **步骤 1: 定义数据模型**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/stock/bars/models.py
+# packages/data/src/ditto_data/domains/market/stock/bars/models.py
 """Stock bars 数据模型."""
 
 from __future__ import annotations
@@ -163,7 +163,7 @@ class StockBarsQuery:
 **步骤 2: 迁移 StockBarsStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/stock/bars/bars_store.py
+# packages/data/src/ditto_data/domains/market/stock/bars/bars_store.py
 """
 StockBarsStore for stock OHLCV data.
 
@@ -178,8 +178,8 @@ from typing import Any
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.domains.market.stock.bars.models import AdjType, StockBarsQuery
-from ditto_datahub.stores.base.parquet_store import ParquetStore
+from ditto_data.domains.market.stock.bars.models import AdjType, StockBarsQuery
+from ditto_data.stores.base.parquet_store import ParquetStore
 
 
 class StockBarsStore(ParquetStore):
@@ -258,29 +258,29 @@ class StockBarsStore(ParquetStore):
 **步骤 3: 在旧位置添加弃用警告**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/bars_store.py
+# packages/data/src/ditto_data/stores/bars_store.py
 """
 BarsStore for market bars data.
 
 ⚠️ DEPRECATED: 此模块已迁移到 domains/market/ 下的子域
 
 请使用新的导入路径：
-    from ditto_datahub.domains.market.stock.bars import StockBarsStore
-    from ditto_datahub.domains.market.etf.bars import EtfBarsStore
-    from ditto_datahub.domains.market.index.bars import IndexBarsStore
+    from ditto_data.domains.market.stock.bars import StockBarsStore
+    from ditto_data.domains.market.etf.bars import EtfBarsStore
+    from ditto_data.domains.market.index.bars import IndexBarsStore
 """
 
 import warnings
 
 warnings.warn(
-    "BarsStore 已迁移到 ditto_datahub.domains.market.*.bars",
+    "BarsStore 已迁移到 ditto_data.domains.market.*.bars",
     DeprecationWarning,
     stacklevel=2,
 )
 
-from ditto_datahub.domains.market.stock.bars.bars_store import StockBarsStore
-from ditto_datahub.domains.market.etf.bars.bars_store import EtfBarsStore
-from ditto_datahub.domains.market.index.bars.bars_store import IndexBarsStore
+from ditto_data.domains.market.stock.bars.bars_store import StockBarsStore
+from ditto_data.domains.market.etf.bars.bars_store import EtfBarsStore
+from ditto_data.domains.market.index.bars.bars_store import IndexBarsStore
 
 __all__ = ["StockBarsStore", "EtfBarsStore", "IndexBarsStore"]
 ```
@@ -288,8 +288,8 @@ __all__ = ["StockBarsStore", "EtfBarsStore", "IndexBarsStore"]
 **步骤 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/market/stock/bars/
-git add packages/datahub/src/ditto_datahub/stores/bars_store.py
+git add packages/data/src/ditto_data/domains/market/stock/bars/
+git add packages/data/src/ditto_data/stores/bars_store.py
 git commit -m "refactor(datahub): migrate StockBars to domains/market/stock/bars/"
 ```
 
@@ -298,13 +298,13 @@ git commit -m "refactor(datahub): migrate StockBars to domains/market/stock/bars
 ## 任务 3: 迁移 Stock Status 到 Market 域
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/stock/status/status_store.py`
-- 修改: `packages/datahub/src/ditto_datahub/stores/stock_status_store.py`
+- 新建: `packages/data/src/ditto_data/domains/market/stock/status/status_store.py`
+- 修改: `packages/data/src/ditto_data/stores/stock_status_store.py`
 
 **步骤 1: 迁移 StockStatusStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/stock/status/status_store.py
+# packages/data/src/ditto_data/domains/market/stock/status/status_store.py
 """
 StockStatusStore for stock status data.
 
@@ -318,7 +318,7 @@ from pathlib import Path
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.stores.base.parquet_store import ParquetStore
+from ditto_data.stores.base.parquet_store import ParquetStore
 
 
 class StockStatusStore(ParquetStore):
@@ -346,8 +346,8 @@ class StockStatusStore(ParquetStore):
 **步骤 2: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/market/stock/status/
-git add packages/datahub/src/ditto_datahub/stores/stock_status_store.py
+git add packages/data/src/ditto_data/domains/market/stock/status/
+git add packages/data/src/ditto_data/stores/stock_status_store.py
 git commit -m "refactor(datahub): migrate StockStatus to domains/market/stock/status/"
 ```
 
@@ -356,13 +356,13 @@ git commit -m "refactor(datahub): migrate StockStatus to domains/market/stock/st
 ## 任务 4: 迁移 Stock AdjFactor 到 Market 域
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/stock/adj/adj_factor_store.py`
-- 修改: `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py`
+- 新建: `packages/data/src/ditto_data/domains/market/stock/adj/adj_factor_store.py`
+- 修改: `packages/data/src/ditto_data/stores/adj_factor_store.py`
 
 **步骤 1: 迁移 AdjFactorStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/stock/adj/adj_factor_store.py
+# packages/data/src/ditto_data/domains/market/stock/adj/adj_factor_store.py
 """
 StockAdjFactorStore for stock adjustment factors.
 
@@ -376,7 +376,7 @@ from pathlib import Path
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.stores.base.parquet_store import ParquetStore
+from ditto_data.stores.base.parquet_store import ParquetStore
 
 
 class StockAdjFactorStore(ParquetStore):
@@ -404,8 +404,8 @@ class StockAdjFactorStore(ParquetStore):
 **步骤 2: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/market/stock/adj/
-git add packages/datahub/src/ditto_datahub/stores/adj_factor_store.py
+git add packages/data/src/ditto_data/domains/market/stock/adj/
+git add packages/data/src/ditto_data/stores/adj_factor_store.py
 git commit -m "refactor(datahub): migrate StockAdjFactor to domains/market/stock/adj/"
 ```
 
@@ -414,15 +414,15 @@ git commit -m "refactor(datahub): migrate StockAdjFactor to domains/market/stock
 ## 任务 5: 实现 ETF 相关 Store
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/etf/bars/bars_store.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/etf/status/status_store.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/etf/nav/nav_store.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/etf/adj/adj_factor_store.py`
+- 新建: `packages/data/src/ditto_data/domains/market/etf/bars/bars_store.py`
+- 新建: `packages/data/src/ditto_data/domains/market/etf/status/status_store.py`
+- 新建: `packages/data/src/ditto_data/domains/market/etf/nav/nav_store.py`
+- 新建: `packages/data/src/ditto_data/domains/market/etf/adj/adj_factor_store.py`
 
 **步骤 1: 实现 EtfBarsStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/etf/bars/bars_store.py
+# packages/data/src/ditto_data/domains/market/etf/bars/bars_store.py
 """
 EtfBarsStore for ETF OHLCV data.
 
@@ -437,7 +437,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import traced
 
-from ditto_datahub.stores.base.parquet_store import ParquetStore
+from ditto_data.stores.base.parquet_store import ParquetStore
 
 
 class EtfBarsStore(ParquetStore):
@@ -489,7 +489,7 @@ class EtfBarsStore(ParquetStore):
 **步骤 2: 实现 EtfStatusStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/etf/status/status_store.py
+# packages/data/src/ditto_data/domains/market/etf/status/status_store.py
 """
 EtfStatusStore for ETF status data.
 
@@ -503,7 +503,7 @@ from pathlib import Path
 import polars as pl
 from ditto_foundation import traced
 
-from ditto_datahub.stores.base.parquet_store import ParquetStore
+from ditto_data.stores.base.parquet_store import ParquetStore
 
 
 class EtfStatusStore(ParquetStore):
@@ -523,7 +523,7 @@ class EtfStatusStore(ParquetStore):
 **步骤 3: 实现 EtfNavStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/etf/nav/nav_store.py
+# packages/data/src/ditto_data/domains/market/etf/nav/nav_store.py
 """
 EtfNavStore for ETF net asset value data.
 
@@ -538,7 +538,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import traced
 
-from ditto_datahub.stores.base.parquet_store import ParquetStore
+from ditto_data.stores.base.parquet_store import ParquetStore
 
 
 class EtfNavStore(ParquetStore):
@@ -590,7 +590,7 @@ class EtfNavStore(ParquetStore):
 **步骤 4: 实现 EtfAdjFactorStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/etf/adj/adj_factor_store.py
+# packages/data/src/ditto_data/domains/market/etf/adj/adj_factor_store.py
 """
 EtfAdjFactorStore for ETF adjustment factors.
 
@@ -604,7 +604,7 @@ from pathlib import Path
 import polars as pl
 from ditto_foundation import traced
 
-from ditto_datahub.stores.base.parquet_store import ParquetStore
+from ditto_data.stores.base.parquet_store import ParquetStore
 
 
 class EtfAdjFactorStore(ParquetStore):
@@ -624,7 +624,7 @@ class EtfAdjFactorStore(ParquetStore):
 **步骤 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/market/etf/
+git add packages/data/src/ditto_data/domains/market/etf/
 git commit -m "feat(datahub): implement ETF domain stores (Bars, Status, Nav, AdjFactor)"
 ```
 
@@ -633,13 +633,13 @@ git commit -m "feat(datahub): implement ETF domain stores (Bars, Status, Nav, Ad
 ## 任务 6: 实现 Index 相关 Store
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/index/bars/bars_store.py`
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/index/constituent/constituent_store.py`
+- 新建: `packages/data/src/ditto_data/domains/market/index/bars/bars_store.py`
+- 新建: `packages/data/src/ditto_data/domains/market/index/constituent/constituent_store.py`
 
 **步骤 1: 实现 IndexBarsStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/index/bars/bars_store.py
+# packages/data/src/ditto_data/domains/market/index/bars/bars_store.py
 """
 IndexBarsStore for index OHLCV data.
 
@@ -654,7 +654,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import traced
 
-from ditto_datahub.stores.base.parquet_store import ParquetStore
+from ditto_data.stores.base.parquet_store import ParquetStore
 
 
 class IndexBarsStore(ParquetStore):
@@ -706,7 +706,7 @@ class IndexBarsStore(ParquetStore):
 **步骤 2: 实现 IndexConstituentStore**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/index/constituent/constituent_store.py
+# packages/data/src/ditto_data/domains/market/index/constituent/constituent_store.py
 """
 IndexConstituentStore for index constituent data.
 
@@ -721,7 +721,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import traced
 
-from ditto_datahub.stores.base.sqlite_store import SQLiteStore
+from ditto_data.stores.base.sqlite_store import SQLiteStore
 
 
 class IndexConstituentStore(SQLiteStore):
@@ -769,7 +769,7 @@ class IndexConstituentStore(SQLiteStore):
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/market/index/
+git add packages/data/src/ditto_data/domains/market/index/
 git commit -m "feat(datahub): implement Index domain stores (Bars, Constituent)"
 ```
 
@@ -778,12 +778,12 @@ git commit -m "feat(datahub): implement Index domain stores (Bars, Constituent)"
 ## 任务 7: 实现 MarketQueryService
 
 **文件:**
-- 新建: `packages/datahub/src/ditto_datahub/domains/market/market_query_service.py`
+- 新建: `packages/data/src/ditto_data/domains/market/market_query_service.py`
 
 **步骤 1: 实现 MarketQueryService**
 
 ```python
-# packages/datahub/src/ditto_datahub/domains/market/market_query_service.py
+# packages/data/src/ditto_data/domains/market/market_query_service.py
 """
 MarketQueryService - Market 域统一查询入口。
 
@@ -800,15 +800,15 @@ from typing import Any, Literal
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.domains.market.stock.bars.bars_store import StockBarsStore
-from ditto_datahub.domains.market.stock.status.status_store import StockStatusStore
-from ditto_datahub.domains.market.stock.adj.adj_factor_store import StockAdjFactorStore
-from ditto_datahub.domains.market.etf.bars.bars_store import EtfBarsStore
-from ditto_datahub.domains.market.etf.status.status_store import EtfStatusStore
-from ditto_datahub.domains.market.etf.nav.nav_store import EtfNavStore
-from ditto_datahub.domains.market.etf.adj.adj_factor_store import EtfAdjFactorStore
-from ditto_datahub.domains.market.index.bars.bars_store import IndexBarsStore
-from ditto_datahub.domains.market.index.constituent.constituent_store import IndexConstituentStore
+from ditto_data.domains.market.stock.bars.bars_store import StockBarsStore
+from ditto_data.domains.market.stock.status.status_store import StockStatusStore
+from ditto_data.domains.market.stock.adj.adj_factor_store import StockAdjFactorStore
+from ditto_data.domains.market.etf.bars.bars_store import EtfBarsStore
+from ditto_data.domains.market.etf.status.status_store import EtfStatusStore
+from ditto_data.domains.market.etf.nav.nav_store import EtfNavStore
+from ditto_data.domains.market.etf.adj.adj_factor_store import EtfAdjFactorStore
+from ditto_data.domains.market.index.bars.bars_store import IndexBarsStore
+from ditto_data.domains.market.index.constituent.constituent_store import IndexConstituentStore
 
 
 class AdjType(Enum):
@@ -988,7 +988,7 @@ class MarketQueryService:
 **步骤 2: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/domains/market/market_query_service.py
+git add packages/data/src/ditto_data/domains/market/market_query_service.py
 git commit -m "feat(datahub): implement MarketQueryService"
 ```
 
@@ -997,15 +997,15 @@ git commit -m "feat(datahub): implement MarketQueryService"
 ## 任务 8: 更新 DataHub 集成
 
 **文件:**
-- 修改: `packages/datahub/src/ditto_datahub/hub.py`
-- 修改: `packages/datahub/src/ditto_datahub/init_providers.py`
+- 修改: `packages/data/src/ditto_data/hub.py`
+- 修改: `packages/data/src/ditto_data/init_providers.py`
 
 **步骤 1: 更新 DataHub**
 
 ```python
-# packages/datahub/src/ditto_datahub/hub.py
+# packages/data/src/ditto_data/hub.py
 
-from ditto_datahub.domains.market import MarketQueryService
+from ditto_data.domains.market import MarketQueryService
 
 class DataHub:
     def __init__(
@@ -1025,10 +1025,10 @@ class DataHub:
 **步骤 2: 更新 Provider**
 
 ```python
-# packages/datahub/src/ditto_datahub/init_providers.py
+# packages/data/src/ditto_data/init_providers.py
 
-from ditto_datahub.domains.market import MarketQueryService
-from ditto_datahub.domains.market.stock.bars.bars_store import StockBarsStore
+from ditto_data.domains.market import MarketQueryService
+from ditto_data.domains.market.stock.bars.bars_store import StockBarsStore
 # ... 导入其他 Market Store ...
 
 class DataHubProvider(Provider):
@@ -1058,8 +1058,8 @@ class DataHubProvider(Provider):
 **步骤 3: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/hub.py
-git add packages/datahub/src/ditto_datahub/init_providers.py
+git add packages/data/src/ditto_data/hub.py
+git add packages/data/src/ditto_data/init_providers.py
 git commit -m "refactor(datahub): integrate MarketQueryService into DataHub"
 ```
 
@@ -1068,20 +1068,20 @@ git commit -m "refactor(datahub): integrate MarketQueryService into DataHub"
 ## 任务 9: 清理和文档更新
 
 **文件:**
-- 删除: `packages/datahub/src/ditto_datahub/accessors/bars_accessor.py`
-- 修改: `packages/datahub/README.md`
+- 删除: `packages/data/src/ditto_data/accessors/bars_accessor.py`
+- 修改: `packages/data/README.md`
 
 **步骤 1: 删除旧 Accessor**
 
 ```bash
-git rm packages/datahub/src/ditto_datahub/accessors/bars_accessor.py
+git rm packages/data/src/ditto_data/accessors/bars_accessor.py
 ```
 
 **步骤 2: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/accessors/
-git add packages/datahub/README.md
+git add packages/data/src/ditto_data/accessors/
+git add packages/data/README.md
 git commit -m "refactor(datahub): remove BarsAccessor and update documentation"
 ```
 
@@ -1178,9 +1178,9 @@ class BarsStore(ParquetStoreBase):
 **优先级：** 低（当前实现已满足功能，重构风险 > 收益）
 
 **参考位置：**
-- `packages/datahub/src/ditto_datahub/domains/market/stock/bars/bars_store.py`
-- `packages/datahub/src/ditto_datahub/domains/market/etf/bars/bars_store.py`
-- `packages/datahub/src/ditto_datahub/domains/market/index/bars/bars_store.py`
+- `packages/data/src/ditto_data/domains/market/stock/bars/bars_store.py`
+- `packages/data/src/ditto_data/domains/market/etf/bars/bars_store.py`
+- `packages/data/src/ditto_data/domains/market/index/bars/bars_store.py`
 
 ---
 

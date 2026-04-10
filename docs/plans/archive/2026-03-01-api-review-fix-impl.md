@@ -20,8 +20,8 @@ Date: 2026-03-01
 | `apps/port/src/ditto_port/models/commodity.py` | `CommodityQuery.symbols` → `CommodityQuery.commodity_codes`<br>` `CommodityBar.symbol` → `CommodityBar.commodity_code` |
 | `apps/port/src/ditto_port/api/routes/commodity.py` | `query.symbols` → `query.commodity_codes`<br>` 变量命名更新 |
 
-| `packages/datahub/src/ditto_datahub/sources/tushare/adapters/fx.py` | `FX_CODE_TO_INSTRUMENT_ID` 命名更新（如需要） |
-| `packages/datahub/src/ditto_datahub/sources/fred/adapters/commodity.py` | `COMMODITY_CODE_TO_INSTRUMENT_ID` 命名更新（如需要） |
+| `packages/data/src/ditto_data/sources/tushare/adapters/fx.py` | `FX_CODE_TO_INSTRUMENT_ID` 命名更新（如需要） |
+| `packages/data/src/ditto_data/sources/fred/adapters/commodity.py` | `COMMODITY_CODE_TO_INSTRUMENT_ID` 命名更新（如需要） |
 
 **测试**:
 - 更新 `tests/unit/models/test_fx_models.py`
@@ -82,9 +82,9 @@ if query.currency_pairs:
 **文件变更**:
 | 文件 | 变更 |
 |-----|-----|
-| `packages/datahub/src/ditto_datahub/services/market_service.py` | `MarketBarsQuery` 添加 `limit` 字段 |
-| `packages/datahub/src/ditto_datahub/services/market_service.py` | `list_bars()` 添加 `limit` 参数 |
-| `packages/datahub/src/ditto_datahub/services/market_service.py` | `_load_bars_core()` 添加 `limit` 参数并在读取后应用 `df.head(limit)` |
+| `packages/data/src/ditto_data/services/market_service.py` | `MarketBarsQuery` 添加 `limit` 字段 |
+| `packages/data/src/ditto_data/services/market_service.py` | `list_bars()` 添加 `limit` 参数 |
+| `packages/data/src/ditto_data/services/market_service.py` | `_load_bars_core()` 添加 `limit` 参数并在读取后应用 `df.head(limit)` |
 | `apps/port/src/ditto_port/api/routes/fx.py` | 传递 `limit` 参数，移除内存切片 |
 | `apps/port/src/ditto_port/api/routes/commodity.py` | 传递 `limit` 参数，移除内存切片 |
 | `apps/port/src/ditto_port/api/routes/market.py` | 传递 `limit` 参数，移除内存切片 |
@@ -163,7 +163,7 @@ def _load_bars_core(
 **文件变更**:
 | 文件 | 变更 |
 |-----|-----|
-| `packages/datahub/src/ditto_datahub/sources/tushare/adapters/bond_yield.py` | 在 `_parse_trade_date()` 中添加浮点数校验 |
+| `packages/data/src/ditto_data/sources/tushare/adapters/bond_yield.py` | 在 `_parse_trade_date()` 中添加浮点数校验 |
 
 **实现代码**:
 ```python

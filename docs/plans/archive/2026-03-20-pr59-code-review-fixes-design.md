@@ -8,7 +8,7 @@
 
 **修复**: 在 `enrich_calendar` 中，额外查出 unenriched 边界日期的 1 个已丰富行（各 1 行），合并后传给纯函数，但只 upsert unenriched 行的结果。
 
-**文件**: `packages/datahub/src/ditto_datahub/services/metadata_service.py`
+**文件**: `packages/data/src/ditto_data/services/metadata_service.py`
 
 ## Issue #2: `hydrate_spec` 缺失 `execution_policy` / `time_spec` (score: 85)
 
@@ -24,7 +24,7 @@
 
 **修复**: 删除 `TYPE_CHECKING` guard，改为顶层直接导入。
 
-**文件**: `packages/datahub/src/ditto_datahub/services/derived/artifact_persistence_service.py`
+**文件**: `packages/data/src/ditto_data/services/derived/artifact_persistence_service.py`
 
 ## Issue #4: `availability_time` 在 CS amplification 中丢失 (score: 50)
 

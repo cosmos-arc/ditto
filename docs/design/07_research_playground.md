@@ -385,7 +385,7 @@ if __name__ == "__main__":
    │
    │ 明确接口、参数、验收标准
    ▼
-4. 实现生产代码 (packages/core/)
+4. 实现生产代码 (packages/engine/, packages/analytics/)
    │
    │ 按规格书实现
    ▼

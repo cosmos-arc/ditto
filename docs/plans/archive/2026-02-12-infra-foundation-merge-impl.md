@@ -243,10 +243,10 @@ find packages/infra/src -name "*.py" -exec sed -i \
 **Step 2: 更新 datahub 导入**
 
 ```bash
-find packages/datahub/src -name "*.py" -exec sed -i \
+find packages/data/src -name "*.py" -exec sed -i \
   's/from ditto_foundation\./from ditto_infra.foundation./g' {} \;
 
-find packages/datahub/src -name "*.py" -exec sed -i \
+find packages/data/src -name "*.py" -exec sed -i \
   's/import ditto_foundation\./import ditto_infra.foundation./g' {} \;
 ```
 
@@ -311,10 +311,10 @@ find packages/infra/tests -name "*.py" -exec sed -i \
 **Step 2: 更新 datahub 测试导入**
 
 ```bash
-find packages/datahub/tests -name "*.py" -exec sed -i \
+find packages/data/tests -name "*.py" -exec sed -i \
   's/from ditto_foundation\./from ditto_infra.foundation./g' {} \;
 
-find packages/datahub/tests -name "*.py" -exec sed -i \
+find packages/data/tests -name "*.py" -exec sed -i \
   's/import ditto_foundation\./import ditto_infra.foundation./g' {} \;
 ```
 

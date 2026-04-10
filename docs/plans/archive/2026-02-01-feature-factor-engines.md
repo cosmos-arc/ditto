@@ -598,8 +598,8 @@ import polars as pl
 from ditto_foundation import logger, traced
 
 if TYPE_CHECKING:
-    from ditto_datahub.domains.features import FeatureService
-    from ditto_datahub.domains.market import MarketService
+    from ditto_data.domains.features import FeatureService
+    from ditto_data.domains.market import MarketService
 
 
 @dataclass(frozen=True)
@@ -1307,9 +1307,9 @@ from ditto_foundation import logger, traced
 
 if TYPE_CHECKING:
     from ditto_core.factors.types import FactorSpec
-    from ditto_datahub.domains.factors import FactorService
-    from ditto_datahub.domains.features import FeatureService
-    from ditto_datahub.domains.market import MarketService
+    from ditto_data.domains.factors import FactorService
+    from ditto_data.domains.features import FeatureService
+    from ditto_data.domains.market import MarketService
 
 
 @dataclass(frozen=True)

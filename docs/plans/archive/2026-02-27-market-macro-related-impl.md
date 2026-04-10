@@ -17,16 +17,16 @@
 ### Task 1.1: 扩展 FRED 利率指标定义
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/fred/indicators.py:43-128`
+- Modify: `packages/data/src/ditto_data/sources/fred/indicators.py:43-128`
 
 **Step 1: Write the failing test**
 
 ```python
-# packages/datahub/tests/unit/sources/fred/test_indicators.py
+# packages/data/tests/unit/sources/fred/test_indicators.py
 
 def test_rate_indicators_exist() -> None:
     """测试美国利率指标定义存在."""
-    from ditto_datahub.sources.fred.indicators import get_fred_indicator
+    from ditto_data.sources.fred.indicators import get_fred_indicator
 
     # 美国国债收益率
     assert get_fred_indicator("US_BOND_YIELD_1Y") is not None
@@ -45,7 +45,7 @@ def test_rate_indicators_exist() -> None:
 
 def test_commodity_indicators_exist() -> None:
     """测试大宗商品指标定义存在."""
-    from ditto_datahub.sources.fred.indicators import get_fred_indicator
+    from ditto_data.sources.fred.indicators import get_fred_indicator
 
     # 能源
     assert get_fred_indicator("COMMOD_WTI") is not None
@@ -58,7 +58,7 @@ def test_commodity_indicators_exist() -> None:
 
 def test_vix_indicators_exist() -> None:
     """测试 VIX 指标定义存在."""
-    from ditto_datahub.sources.fred.indicators import get_fred_indicator
+    from ditto_data.sources.fred.indicators import get_fred_indicator
 
     assert get_fred_indicator("VIX_30D") is not None
     assert get_fred_indicator("VIX_9D") is not None
@@ -67,7 +67,7 @@ def test_vix_indicators_exist() -> None:
 **Step 2: Run test to verify it fails**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/fred/test_indicators.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/fred/test_indicators.py -v
 ```
 Expected: FAIL with "None" (indicators not found)
 
@@ -235,14 +235,14 @@ CategoryType = Literal[
 **Step 4: Run test to verify it passes**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/fred/test_indicators.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/fred/test_indicators.py -v
 ```
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/fred/indicators.py packages/datahub/tests/unit/sources/fred/test_indicators.py
+git add packages/data/src/ditto_data/sources/fred/indicators.py packages/data/tests/unit/sources/fred/test_indicators.py
 git commit -m "feat(datahub): 新增 FRED 利率/商品/VIX 指标定义
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -253,16 +253,16 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ### Task 1.2: 扩展 Tushare 利率指标定义
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/processors/mappings/macro.py:43-145`
+- Modify: `packages/data/src/ditto_data/sources/tushare/processors/mappings/macro.py:43-145`
 
 **Step 1: Write the failing test**
 
 ```python
-# packages/datahub/tests/unit/sources/tushare/test_macro_indicators.py
+# packages/data/tests/unit/sources/tushare/test_macro_indicators.py
 
 def test_cn_rate_indicators_exist() -> None:
     """测试中国利率指标定义存在."""
-    from ditto_datahub.sources.tushare.processors.mappings.macro import (
+    from ditto_data.sources.tushare.processors.mappings.macro import (
         get_tushare_macro_indicator,
     )
 
@@ -286,7 +286,7 @@ def test_cn_rate_indicators_exist() -> None:
 **Step 2: Run test to verify it fails**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_macro_indicators.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/test_macro_indicators.py -v
 ```
 Expected: FAIL
 
@@ -459,14 +459,14 @@ category: Literal[
 **Step 4: Run test to verify it passes**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_macro_indicators.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/test_macro_indicators.py -v
 ```
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/processors/mappings/macro.py packages/datahub/tests/unit/sources/tushare/test_macro_indicators.py
+git add packages/data/src/ditto_data/sources/tushare/processors/mappings/macro.py packages/data/tests/unit/sources/tushare/test_macro_indicators.py
 git commit -m "feat(datahub): 新增 Tushare 利率指标定义 (Shibor/LPR/Libor/Hibor)
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -479,17 +479,17 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ### Task 2.1: 验证利率数据摄取（复用现有 Macro 流程）
 
 **Files:**
-- Test: `packages/datahub/tests/integration/sources/fred/test_rate_ingestion.py`
+- Test: `packages/data/tests/integration/sources/fred/test_rate_ingestion.py`
 
 **Step 1: Write integration test**
 
 ```python
-# packages/datahub/tests/integration/sources/fred/test_rate_ingestion.py
+# packages/data/tests/integration/sources/fred/test_rate_ingestion.py
 
 import polars as pl
 import pytest
 
-from ditto_datahub.sources.fred.adapters.macro import MacroFredAdapter
+from ditto_data.sources.fred.adapters.macro import MacroFredAdapter
 
 
 @pytest.mark.skipif(
@@ -519,14 +519,14 @@ class TestFredRateIngestion:
 **Step 2: Run test**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/integration/sources/fred/test_rate_ingestion.py -v
+pixi run -e dev pytest packages/data/tests/integration/sources/fred/test_rate_ingestion.py -v
 ```
 Expected: PASS (FRED 适配器已支持通用指标获取)
 
 **Step 3: Commit**
 
 ```bash
-git add packages/datahub/tests/integration/sources/fred/test_rate_ingestion.py
+git add packages/data/tests/integration/sources/fred/test_rate_ingestion.py
 git commit -m "test(datahub): 新增 FRED 利率数据摄取集成测试
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -539,17 +539,17 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ### Task 3.1: 创建汇率数据 Schema
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/sources/schemas/fx_schemas.py`
-- Test: `packages/datahub/tests/unit/sources/schemas/test_fx_schemas.py`
+- Create: `packages/data/src/ditto_data/sources/schemas/fx_schemas.py`
+- Test: `packages/data/tests/unit/sources/schemas/test_fx_schemas.py`
 
 **Step 1: Write the failing test**
 
 ```python
-# packages/datahub/tests/unit/sources/schemas/test_fx_schemas.py
+# packages/data/tests/unit/sources/schemas/test_fx_schemas.py
 
 def test_fx_source_schema_exists() -> None:
     """测试汇率源数据 Schema 存在."""
-    from ditto_datahub.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
+    from ditto_data.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
 
     assert FX_SOURCE_SCHEMA.dataset == "fx_daily"
     assert "instrument_id" in FX_SOURCE_SCHEMA.schema
@@ -563,19 +563,19 @@ def test_fx_source_schema_exists() -> None:
 **Step 2: Run test to verify it fails**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/schemas/test_fx_schemas.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/schemas/test_fx_schemas.py -v
 ```
 Expected: FAIL
 
 **Step 3: Write implementation**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/schemas/fx_schemas.py
+# packages/data/src/ditto_data/sources/schemas/fx_schemas.py
 """FX (Foreign Exchange) SourceSchema definitions."""
 
 import polars as pl
 
-from ditto_datahub.sources.source_schema import SourceSchema
+from ditto_data.sources.source_schema import SourceSchema
 
 __all__ = ["FX_SOURCE_SCHEMA"]
 
@@ -597,14 +597,14 @@ FX_SOURCE_SCHEMA = SourceSchema(
 **Step 4: Run test to verify it passes**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/schemas/test_fx_schemas.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/schemas/test_fx_schemas.py -v
 ```
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/schemas/fx_schemas.py packages/datahub/tests/unit/sources/schemas/test_fx_schemas.py
+git add packages/data/src/ditto_data/sources/schemas/fx_schemas.py packages/data/tests/unit/sources/schemas/test_fx_schemas.py
 git commit -m "feat(datahub): 新增汇率数据 Schema 定义
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -615,25 +615,25 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ### Task 3.2: 创建 Tushare 汇率适配器
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/sources/tushare/adapters/fx.py`
-- Test: `packages/datahub/tests/unit/sources/tushare/adapters/test_fx.py`
+- Create: `packages/data/src/ditto_data/sources/tushare/adapters/fx.py`
+- Test: `packages/data/tests/unit/sources/tushare/adapters/test_fx.py`
 
 **Step 1: Write the failing test**
 
 ```python
-# packages/datahub/tests/unit/sources/tushare/adapters/test_fx.py
+# packages/data/tests/unit/sources/tushare/adapters/test_fx.py
 
 import polars as pl
 import pytest
 from unittest.mock import MagicMock, patch
 
-from ditto_datahub.sources.tushare.adapters.fx import FxTushareAdapter
+from ditto_data.sources.tushare.adapters.fx import FxTushareAdapter
 
 
 class TestFxTushareAdapter:
     """汇率适配器单元测试."""
 
-    @patch("ditto_datahub.sources.tushare.adapters.fx.TushareClient")
+    @patch("ditto_data.sources.tushare.adapters.fx.TushareClient")
     def test_fetch_fx_daily(self, mock_client_class: MagicMock) -> None:
         """测试获取汇率日线数据."""
         # 准备模拟数据
@@ -664,14 +664,14 @@ class TestFxTushareAdapter:
 **Step 2: Run test to verify it fails**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/adapters/test_fx.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/adapters/test_fx.py -v
 ```
 Expected: FAIL
 
 **Step 3: Write implementation**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/adapters/fx.py
+# packages/data/src/ditto_data/sources/tushare/adapters/fx.py
 """Tushare FX (Foreign Exchange) data adapter."""
 
 from __future__ import annotations
@@ -679,9 +679,9 @@ from __future__ import annotations
 import polars as pl
 from ditto_infra.foundation import traced
 
-from ditto_datahub.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
-from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
-from ditto_datahub.sources.tushare.processors.error_handler import (
+from ditto_data.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
+from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
+from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
 )
 
@@ -776,14 +776,14 @@ __all__ = ["FxTushareAdapter", "FX_CODE_TO_INSTRUMENT_ID"]
 **Step 4: Run test to verify it passes**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/adapters/test_fx.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/adapters/test_fx.py -v
 ```
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/adapters/fx.py packages/datahub/tests/unit/sources/tushare/adapters/test_fx.py
+git add packages/data/src/ditto_data/sources/tushare/adapters/fx.py packages/data/tests/unit/sources/tushare/adapters/test_fx.py
 git commit -m "feat(datahub): 新增 Tushare 汇率数据适配器
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -794,22 +794,22 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ### Task 3.3: 创建汇率数据存储
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/stores/market/fx/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/fx/fx_writer.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/fx/fx_reader.py`
-- Test: `packages/datahub/tests/unit/stores/market/fx/test_fx_store.py`
+- Create: `packages/data/src/ditto_data/stores/market/fx/__init__.py`
+- Create: `packages/data/src/ditto_data/stores/market/fx/fx_writer.py`
+- Create: `packages/data/src/ditto_data/stores/market/fx/fx_reader.py`
+- Test: `packages/data/tests/unit/stores/market/fx/test_fx_store.py`
 
 **Step 1: Write the failing test**
 
 ```python
-# packages/datahub/tests/unit/stores/market/fx/test_fx_store.py
+# packages/data/tests/unit/stores/market/fx/test_fx_store.py
 
 import polars as pl
 import pytest
 from pathlib import Path
 import tempfile
 
-from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
+from ditto_data.stores.market.fx.bars import FxBarsReader, FxBarsWriter
 
 
 class TestFxStore:
@@ -842,23 +842,23 @@ class TestFxStore:
 **Step 2: Run test to verify it fails**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/stores/market/fx/test_fx_store.py -v
+pixi run -e dev pytest packages/data/tests/unit/stores/market/fx/test_fx_store.py -v
 ```
 Expected: FAIL
 
 **Step 3: Write implementation**
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/market/fx/__init__.py
+# packages/data/src/ditto_data/stores/market/fx/__init__.py
 """FX (Foreign Exchange) store module."""
 
-from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
+from ditto_data.stores.market.fx.bars import FxBarsReader, FxBarsWriter
 
 __all__ = ["FxBarsReader", "FxBarsWriter"]
 ```
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/market/fx/fx_writer.py
+# packages/data/src/ditto_data/stores/market/fx/fx_writer.py
 """FX bars data writer."""
 
 from __future__ import annotations
@@ -867,10 +867,10 @@ from pathlib import Path
 
 import polars as pl
 
-from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.storage import WriteStoreResult
-from ditto_datahub.stores.base import ParquetStore, YearlyPartition
-from ditto_datahub.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
+from ditto_data.models import OnDuplicate
+from ditto_data.models.storage import WriteStoreResult
+from ditto_data.stores.base import ParquetStore, YearlyPartition
+from ditto_data.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
 
 
 class FxBarsWriter:
@@ -907,7 +907,7 @@ __all__ = ["FxBarsWriter"]
 ```
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/market/fx/fx_reader.py
+# packages/data/src/ditto_data/stores/market/fx/fx_reader.py
 """FX bars data reader."""
 
 from __future__ import annotations
@@ -916,7 +916,7 @@ from pathlib import Path
 
 import polars as pl
 
-from ditto_datahub.stores.base import ParquetStore, YearlyPartition
+from ditto_data.stores.base import ParquetStore, YearlyPartition
 
 
 class FxBarsReader:
@@ -947,14 +947,14 @@ __all__ = ["FxBarsReader"]
 **Step 4: Run test to verify it passes**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/stores/market/fx/test_fx_store.py -v
+pixi run -e dev pytest packages/data/tests/unit/stores/market/fx/test_fx_store.py -v
 ```
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/market/fx/ packages/datahub/tests/unit/stores/market/fx/
+git add packages/data/src/ditto_data/stores/market/fx/ packages/data/tests/unit/stores/market/fx/
 git commit -m "feat(datahub): 新增汇率数据存储层
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -967,17 +967,17 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ### Task 4.1: 创建商品数据 Schema
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/sources/schemas/commodity_schemas.py`
-- Test: `packages/datahub/tests/unit/sources/schemas/test_commodity_schemas.py`
+- Create: `packages/data/src/ditto_data/sources/schemas/commodity_schemas.py`
+- Test: `packages/data/tests/unit/sources/schemas/test_commodity_schemas.py`
 
 **Step 1: Write the failing test**
 
 ```python
-# packages/datahub/tests/unit/sources/schemas/test_commodity_schemas.py
+# packages/data/tests/unit/sources/schemas/test_commodity_schemas.py
 
 def test_commodity_source_schema_exists() -> None:
     """测试商品源数据 Schema 存在."""
-    from ditto_datahub.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
+    from ditto_data.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
 
     assert COMMODITY_SOURCE_SCHEMA.dataset == "commodity_daily"
     assert "instrument_id" in COMMODITY_SOURCE_SCHEMA.schema
@@ -988,19 +988,19 @@ def test_commodity_source_schema_exists() -> None:
 **Step 2: Run test to verify it fails**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/schemas/test_commodity_schemas.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/schemas/test_commodity_schemas.py -v
 ```
 Expected: FAIL
 
 **Step 3: Write implementation**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/schemas/commodity_schemas.py
+# packages/data/src/ditto_data/sources/schemas/commodity_schemas.py
 """Commodity SourceSchema definitions."""
 
 import polars as pl
 
-from ditto_datahub.sources.source_schema import SourceSchema
+from ditto_data.sources.source_schema import SourceSchema
 
 __all__ = ["COMMODITY_SOURCE_SCHEMA"]
 
@@ -1022,14 +1022,14 @@ COMMODITY_SOURCE_SCHEMA = SourceSchema(
 **Step 4: Run test to verify it passes**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/schemas/test_commodity_schemas.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/schemas/test_commodity_schemas.py -v
 ```
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/schemas/commodity_schemas.py packages/datahub/tests/unit/sources/schemas/test_commodity_schemas.py
+git add packages/data/src/ditto_data/sources/schemas/commodity_schemas.py packages/data/tests/unit/sources/schemas/test_commodity_schemas.py
 git commit -m "feat(datahub): 新增商品数据 Schema 定义
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -1040,25 +1040,25 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ### Task 4.2: 创建 FRED 商品适配器
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/sources/fred/adapters/commodity.py`
-- Test: `packages/datahub/tests/unit/sources/fred/adapters/test_commodity.py`
+- Create: `packages/data/src/ditto_data/sources/fred/adapters/commodity.py`
+- Test: `packages/data/tests/unit/sources/fred/adapters/test_commodity.py`
 
 **Step 1: Write the failing test**
 
 ```python
-# packages/datahub/tests/unit/sources/fred/adapters/test_commodity.py
+# packages/data/tests/unit/sources/fred/adapters/test_commodity.py
 
 import polars as pl
 import pytest
 from unittest.mock import MagicMock, patch
 
-from ditto_datahub.sources.fred.adapters.commodity import CommodityFredAdapter
+from ditto_data.sources.fred.adapters.commodity import CommodityFredAdapter
 
 
 class TestCommodityFredAdapter:
     """FRED 商品适配器单元测试."""
 
-    @patch("ditto_datahub.sources.fred.adapters.commodity.FredClient")
+    @patch("ditto_data.sources.fred.adapters.commodity.FredClient")
     def test_fetch_wti(self, mock_client_class: MagicMock) -> None:
         """测试获取 WTI 原油数据."""
         mock_client = MagicMock()
@@ -1085,23 +1085,23 @@ class TestCommodityFredAdapter:
 **Step 2: Run test to verify it fails**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/fred/adapters/test_commodity.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/fred/adapters/test_commodity.py -v
 ```
 Expected: FAIL
 
 **Step 3: Write implementation**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/fred/adapters/commodity.py
+# packages/data/src/ditto_data/sources/fred/adapters/commodity.py
 """FRED commodity data adapter."""
 
 from __future__ import annotations
 
 import polars as pl
 
-from ditto_datahub.sources.fred.client import FredClient
-from ditto_datahub.sources.fred.indicators import get_fred_indicator
-from ditto_datahub.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
+from ditto_data.sources.fred.client import FredClient
+from ditto_data.sources.fred.indicators import get_fred_indicator
+from ditto_data.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
 
 
 # 商品代码映射到 instrument_id
@@ -1199,14 +1199,14 @@ __all__ = ["CommodityFredAdapter", "COMMODITY_CODE_TO_INSTRUMENT_ID"]
 **Step 4: Run test to verify it passes**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/sources/fred/adapters/test_commodity.py -v
+pixi run -e dev pytest packages/data/tests/unit/sources/fred/adapters/test_commodity.py -v
 ```
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/fred/adapters/commodity.py packages/datahub/tests/unit/sources/fred/adapters/test_commodity.py
+git add packages/data/src/ditto_data/sources/fred/adapters/commodity.py packages/data/tests/unit/sources/fred/adapters/test_commodity.py
 git commit -m "feat(datahub): 新增 FRED 商品数据适配器
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -1217,17 +1217,17 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ### Task 4.3: 创建商品数据存储
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/stores/market/commodity/__init__.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/commodity/commodity_writer.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/market/commodity/commodity_reader.py`
-- Test: `packages/datahub/tests/unit/stores/market/commodity/test_commodity_store.py`
+- Create: `packages/data/src/ditto_data/stores/market/commodity/__init__.py`
+- Create: `packages/data/src/ditto_data/stores/market/commodity/commodity_writer.py`
+- Create: `packages/data/src/ditto_data/stores/market/commodity/commodity_reader.py`
+- Test: `packages/data/tests/unit/stores/market/commodity/test_commodity_store.py`
 
 参考 Task 3.3 的实现模式，创建商品存储层。
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/stores/market/commodity/ packages/datahub/tests/unit/stores/market/commodity/
+git add packages/data/src/ditto_data/stores/market/commodity/ packages/data/tests/unit/stores/market/commodity/
 git commit -m "feat(datahub): 新增商品数据存储层
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"

@@ -2,7 +2,7 @@
 
 > 日期：2026-02-07
 > 状态：提案（可直接作为下一阶段实施蓝图）
-> 适用范围：Ditto 全系统（`apps/port` + `packages/core` + `packages/datahub` + `packages/foundation`）
+> 适用范围：Ditto 全系统（`apps/port` + `packages/core` + `packages/data` + `packages/foundation`）
 > 命名约束：本文不使用 `silver/gold` 命名体系
 
 ---
@@ -42,7 +42,7 @@
 └──────────────────────────────────────────────────────────────┘
                            ↓
 ┌──────────────────────────────────────────────────────────────┐
-│                    数据平台 (packages/datahub)               │
+│                    数据平台 (packages/data)               │
 │  数据接入、标准化、主题存储、衍生产物、PIT/版本能力            │
 └──────────────────────────────────────────────────────────────┘
                            ↓
@@ -274,7 +274,7 @@ class MarketWriteService:
 packages/
   foundation/
   datahub/
-    src/ditto_datahub/
+    src/ditto_data/
       domains/
         metadata/
         market/

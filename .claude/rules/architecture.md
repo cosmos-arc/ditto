@@ -11,24 +11,30 @@ paths:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                       apps/port (应用服务层)                     │
+│                       interfaces (应用边界层)                       │
 │                              │                                  │
-│                              ├──→ packages/core (领域层)         │
+│                              ├──→ packages/app (应用编排层)          │
+│                              │         │                        │
+│                              │         ├──→ packages/analytics (分析层) │
+│                              │         │         │                │
+│                              │         │         └──→ ditto_kernel     │
+│                              │         │                        │
+│                              ├──→ packages/engine (领域层)         │
 │                              │         │                        │
 │                              │         └──→ ditto_kernel         │
 │                              │                                  │
-│                              ├──→ packages/datahub (数据服务层)  │
+│                              ├──→ packages/data (数据服务层)        │
 │                              │         │                        │
-│                              │         └──→ ditto_kernel         │
-│                              │         └──→ packages/infra       │
+│                              │         └──> ditto_kernel         │
+│                              │         └──> packages/infra         │
 │                              │                                  │
-│                              └──→ ditto_kernel                  │
-│                              └──→ packages/infra               │
+│                              └──> ditto_kernel                      │
+│                              └──> packages/infra                   │
 └─────────────────────────────────────────────────────────────────┘
               ↑                     ↑
               │                     │
      ditto_kernel ◄─────────────────┘
-     (共享内核 — 领域原语，零逻辑，零外部依赖)
+     (共享内核 — 领域原语，零逻辑,零外部依赖)
 ```
 
 **各层定位**：
@@ -36,48 +42,60 @@ paths:
 | 层 | 包 | 职责 | 类比 |
 |----|-----|------|------|
 | **共享内核** | `ditto_kernel` | 领域原语：枚举、值对象、NewType | DDD Shared Kernel |
-| **领域层** | `ditto_core` | 业务决策：引擎、策略、回测、风险、质量 | DDD Domain Service |
-| **数据服务层** | `ditto_datahub` | 统一查询：存储、数据源、领域感知的数据编排 | DDD Rich Repository |
-| **应用服务层** | `ditto_port` | 编排协调：组合 Core 行为 + DataHub 数据服务 | DDD Application Service |
-| **基础设施层** | `ditto_infra` | 技术设施：配置、日志、缓存、数据库连接池 | Technical Infrastructure |
+| **领域层** | `ditto_engine` | 业务决策:引擎、策略、回测、风险、质量 | DDD Domain Service |
+| **分析层** | `ditto_analytics` | 因子表达式编译、物化计划、因子计算、评估、研究 | Analysis Layer |
+| **数据服务层** | `ditto_data` | 统一查询:存储、数据源、领域感知的数据编排 | DDD Rich Repository |
+| **应用编排层** | `ditto_app` | Use Case 编排（CQRS: query/process/command/builders） | Application Layer |
+| **应用边界层** | `ditto_interfaces` | HTTP API/CLI/Jobs/DI Composition Root | Application Boundary |
+| **基础设施层** | `ditto_infra` | 技术设施:配置、日志、缓存、数据库连接池 | Technical Infrastructure |
 
 **详细分层规范**：
-- Kernel → [docs/plans/2026-03-24-shared-kernel-and-model-governance-design.md](../../docs/plans/2026-03-24-shared-kernel-and-model-governance-design.md)
+- Kernel → [packages/kernel/CLAUDE.md](../../packages/kernel/CLAUDE.md)
 - Infra → [packages/infra/CLAUDE.md](../../packages/infra/CLAUDE.md)
-- DataHub → [packages/datahub/CLAUDE.md](../../packages/datahub/CLAUDE.md)
-- Core → [packages/core/CLAUDE.md](../../packages/core/CLAUDE.md)
-- Port → [apps/port/CLAUDE.md](../../apps/port/CLAUDE.md)
+- Data → [packages/data/CLAUDE.md](../../packages/data/CLAUDE.md) | [pit.md](../../.claude/rules/pit.md)
+- Engine → [packages/engine/CLAUDE.md](../../packages/engine/CLAUDE.md)
+- Analytics → [packages/analytics/CLAUDE.md](../../packages/analytics/CLAUDE.md)
+- App → [packages/app/CLAUDE.md](../../packages/app/CLAUDE.md)
+- Interfaces → [interfaces/CLAUDE.md](../../interfaces/CLAUDE.md)
 
 ### 依赖规则
 
 ```
-ditto_port      → ditto_core, ditto_datahub, ditto_kernel, ditto_infra  ✅
-ditto_core      → ditto_kernel                                            ✅
-ditto_datahub   → ditto_kernel, ditto_infra                               ✅
-ditto_kernel    → (无业务依赖)                                             ✅
-ditto_infra     → (无业务依赖)                                             ✅
-ditto_core      → ditto_datahub                                           ❌
-ditto_datahub   → ditto_core                                              ❌
-ditto_datahub   → ditto_port                                              ❌
-ditto_infra     → 其他层                                                  ❌
+ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_infra
+ditto_interfaces → ditto_analytics → ditto_kernel
+ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
+ditto_app → ditto_engine, ditto_data, ditto_analytics, ditto_kernel, ditto_infra
+ditto_engine      → ditto_kernel                                            ✅
+ditto_analytics   → ditto_kernel, ditto_data.errors, ditto_infra.foundation ✅
+ditto_data        → ditto_kernel, ditto_infra                              ✅
+ditto_kernel      → (无业务依赖)                                             ✅
+ditto_infra       → (无业务依赖)                                             ✅
+ditto_engine      → ditto_data (仅 errors/provider)                        ❌ (beyond)
+ditto_data        → ditto_engine                                            ❌
+ditto_data        → ditto_interfaces                                        ❌
+ditto_infra       → 其他层                                                  ❌
 ```
 
 ### v5 强制边界（CI 门禁）
 
-以下规则由 `pixi run -e dev arch-check` 强制执行，违反即 CI 失败：
+以下规则由 `pixi run -e dev arch-check` 强制执行，违反即 CI 失败:
 
-使用 **Import Linter** 进行架构约束检查，配置位于 [.importlinter](../../.importlinter)。
+使用 **Import Linter** 进行架构约束检查,配置位于 [.importlinter](../../.importlinter)。
+
+共 24 条合约（0 broken, 0 warnings）。
 
 **检查类型：**
-1. **分层架构** (`layers`): Port → Core → DataHub → Infra
+1. **分层架构** (`layers`): Interfaces → App → Engine → Data → Infra
 2. **Kernel 隔离** (`forbidden`): Kernel 禁止依赖其他业务包
 3. **Infra 隔离** (`forbidden`): Infra 禁止依赖其他层
-4. **DataHub 边界** (`forbidden`): DataHub 禁止依赖 Core/Port
-5. **Core-DataHub 边界** (`forbidden`): Core 和 DataHub 双向禁止互相依赖（均可依赖 Kernel）
-6. **Port 边界** (`forbidden`): Port 非 registry 禁止依赖 stores/runtime
-7. **循环依赖** (`acyclic_siblings`): 检测包之间的循环依赖
+4. **Data 边界** (`forbidden`): Data 禁止依赖 Engine/Interfaces/App
+5. **Analytics 隔离** (`forbidden`): Analytics 禁止依赖 Data（除 errors）/Engine/App
+6. **Engine-Data 边界** (`forbidden`): Engine 和 Data 双向禁止互相依赖（均可依赖 Kernel）
+7. **Interfaces 边界** (`forbidden`): Interfaces 非 registry 禁止依赖 storage/runtime/services/models/errors/config
+8. **循环依赖** (`acyclic_siblings`): 检测包之间的循环依赖
+9. **R8 App 互斥**: 6 条 CQRS 职责隔离规则
 
-**运行检查：**
+**运行检查:**
 ```bash
 pixi run -e dev arch-check      # 完整检查
 lint-imports --contract layered-architecture  # 单独检查分层
@@ -90,30 +108,41 @@ lint-imports --contract acyclic-packages       # 单独检查循环依赖
 
 | ❌ 禁止 | ✅ 正确 |
 |--------|--------|
-| port → Store (直接访问存储) | port → DataHub Service → Store |
-| port → Source (直接访问数据源) | 仅 `port/registry` 做 DI 装配，业务路径走 Service |
-| datahub → core (数据层依赖核心) | core → kernel, datahub → kernel |
-| core → datahub (核心依赖数据) | port 编排 core + datahub |
+| interfaces → Store (直接访问存储) | interfaces → App Service → Data Service → Store |
+| interfaces → Source (直接访问数据源) | 仅 `interfaces/registry` 做 DI 装配，业务路径走 App Service |
+| data → engine (数据层依赖核心) | engine → kernel, data → kernel |
+| engine → data (核心依赖数据，除 errors/provider) | App 编排 engine + data |
 
-**v5 更新（2026-02-08）**：
-- ✅ Port 层业务代码统一调用 DataHub Service
-- ✅ `apps/port/src/ditto_port/registry/**` 可导入 stores/sources 仅用于 DI 构造
-- ❌ Port 运行路径禁止直接调用 Store/Source 业务方法
-
-**正确的访问模式**：
+**正确的访问模式**:
 ```python
-# ✅ 正确：Port 通过 DataHub Service 调用
-bars = hub.market.get_bars(query)
-calendar = hub.metadata.get_trading_days(start, end)
+# ✅ 正确: Interfaces 通过 App 层调用
+from ditto_app.query import MarketQueryFacade
+bars = facade.get_bars(query)
 
-# ✅ 正确：registry 仅负责 DI 装配
-def provide_sqlite_client(pool: SQLitePool) -> SQLiteClient:
-    return SQLiteClient(pool)
+# ✅ 正确: registry 负责 DI 装配（Composition Root）
+from ditto_data.di import get_data_providers
 
-# ❌ 错误：直接访问 store（即使技术上可行）
-from ditto_datahub.stores.bars_store import BarsStore  # ❌
+# ❌ 错误: 直接访问 store（即使技术上可行）
+from ditto_data.storage.bars_store import BarsStore  # ❌
 store = BarsStore(...)  # ❌
 ```
+
+### 跨包 Re-export 禁止
+
+**原则**：需要哪个包的类型，就从哪个包导入。跨包 re-export 隐藏真实依赖关系，使重构变得危险。
+
+```python
+# ❌ 禁止：ditto_data/models/__init__.py 中 re-export kernel 类型
+from ditto_kernel.enums import AssetClass, Exchange
+
+# ❌ 禁止：消费者通过中间包间接导入
+from ditto_data.models import AssetClass  # 看不出 AssetClass 来自 kernel
+
+# ✅ 正确：消费者直接从来源包导入
+from ditto_kernel.enums import AssetClass
+```
+
+**适用范围**：所有 ditto 内部包之间的 re-export 均被禁止。包内子模块聚合见 [python.md](../python.md) Re-export 规范。
 
 ---
 
@@ -121,9 +150,9 @@ store = BarsStore(...)  # ❌
 
 ### 核心判断原则：业务决策 vs 数据服务
 
-架构中最重要的区分不是"有没有领域知识"，而是"代码在做业务决策还是数据服务"：
+架构中最重要的区分不是"有没有领域知识"，而是"代码在做业务决策还是数据服务":
 
-| 维度 | 业务决策（Core） | 数据服务（DataHub） |
+| 维度 | 业务决策（Engine） | 数据服务（Data） |
 |------|-----------------|-------------------|
 | 回答的问题 | **"该不该做"** | **"数据怎么查/怎么算"** |
 | 典型行为 | 策略评估、交易决策、风险判断 | 复权计算、PIT 过滤、前向收益率、Universe 过滤 |
@@ -149,7 +178,7 @@ store = BarsStore(...)  # ❌
 - 不允许 `import polars` / `import orjson` 等第三方库
 - pyproject.toml 不声明运行时依赖
 
-#### ditto_core（领域层）
+#### ditto_engine（领域层）
 
 **做什么**：业务决策和领域行为 — 引擎执行、策略评估、风险判断、组合优化。
 
@@ -157,14 +186,29 @@ store = BarsStore(...)  # ❌
 - 纯领域算法（回测引擎、策略 Pipeline、质量检查）
 - 业务规则（交易规则、风险约束、组合约束）
 - 领域模型（富领域对象，带行为和状态机）
-- Protocol 定义（供 Port 层做依赖注入）
+- Protocol 定义（供上层做依赖注入）
 
 **不可以做的**：
-- 数据查询和存储（这是 DataHub 的职责）
+- 数据查询和存储（这是 Data 的职责）
 - I/O 操作（文件读写、网络请求）
-- 应用编排（这是 Port 的职责）
+- 应用编排（这是 App/Interfaces 的职责）
 
-#### ditto_datahub（数据服务层 — Rich Data Service）
+#### ditto_analytics（分析层）
+
+**做什么**：因子表达式编译、物化计划、因子计算、评估指标、研究数据集。
+
+**可以做的**：
+- 表达式编译（词法 → AST → 代码生成 → 编译缓存）
+- 因子计算（技术/基本面/Alpha 因子）
+- 评估指标（IC、因子分析、组合分析、尾部风险）
+- 研究数据集（领域模型）
+
+**不可以做的**：
+- 数据查询/存储（依赖 Data.errors 仅限错误类型）
+- 业务决策（交易决策、风险判断）
+- I/O 操作
+
+#### ditto_data（数据服务层 — Rich Data Service）
 
 **做什么**：统一的数据查询、存储、数据源接入，以及**领域感知的数据编排**。
 
@@ -175,6 +219,7 @@ store = BarsStore(...)  # ❌
 - 领域感知的过滤（流动性过滤、上市天数过滤、Universe 筛选）
 - 数据编排（多源合并、缺失值处理、标识符解析）
 - 数据质量策略（晚到数据检测、入库校验）
+- DI Provider 注册（`ditto_data.di.get_data_providers`）
 
 **不可以做的**：
 - 业务决策（是否交易、风险敞口判断、策略信号生成）
@@ -182,22 +227,36 @@ store = BarsStore(...)  # ❌
 - 交易执行（下单、撮合、组合优化）
 - 工作流决策（何时重算、何时告警）
 
-**设计依据**：DataHub 是 Rich Repository 模式的实现。Eric Evans 定义 Repository 为"mediates between the domain and data mapping layers, acting like an in-memory domain object collection" — 明确允许 Repository 包含查找逻辑和数据转换。QuantConnect LEAN 的 `SecurityService` 同样包含领域感知的数据处理逻辑。
+**设计依据**：Data 是 Rich Repository 模式的实现。Eric Evans 定义 Repository 为"mediates between the domain and data mapping layers, acting like an in-memory domain object collection" — 明确允许 Repository 包含查找逻辑和数据转换。
 
-#### ditto_port（应用服务层）
+#### ditto_app（应用编排层 — CQRS）
 
-**做什么**：编排 Core 和 DataHub，提供应用入口（CLI、API、Jobs）。
+**做什么**：Use Case 编排，协调 Engine（领域计算）+ Data（数据服务）。
 
 **核心职责**：
-- 从 DataHub 获取数据 → 交给 Core 做业务计算 → 结果写回 DataHub
+- 从 Data 获取数据 → 交给 Engine 做业务计算 → 结果写回 Data
+- CQRS 分离： query（只读）、process（编排）、command（写入）、builders（DI 构造）
 - DTO ↔ Domain Model 的显式映射
-- DI 容器（Dishka Provider）组装
-- 工作流协调（Prefect Flows、CLI 命令）
 
 **不可以做的**：
-- 业务计算（应委托给 Core）
-- 数据查询编排（应委托给 DataHub Service）
-- 直接访问 Store/Source（仅 registry 可用于 DI 构造）
+- 业务计算（应委托给 Engine）
+- 数据查询编排（应委托给 Data Service）
+- 直接访问 Store/Source（通过 Data DI）
+
+#### ditto_interfaces（应用边界层）
+
+**做什么**：HTTP API、CLI 命令、Prefect 任务调度、DI Composition Root。
+
+**核心职责**：
+- HTTP 路由（FastAPI）
+- CLI 命令入口
+- Prefect Flow/Task 编排
+- DI 容器组装（Composition Root）
+- **纯编排层，不包含业务逻辑**
+
+**不可以做的**：
+- 业务计算（应委托给 App/Engine）
+- 直接数据访问（应通过 App 层或 registry DI）
 
 ---
 
@@ -212,17 +271,23 @@ store = BarsStore(...)  # ❌
 
 2. 是业务决策或领域行为？
    （策略评估、交易决策、风险判断、引擎执行）
-   YES → ditto_core
+   YES → ditto_engine
 
 3. 是数据查询、存储或领域感知的数据编排？
    （复权、PIT 过滤、前向收益率、Universe 过滤）
-   YES → ditto_datahub
+   YES → ditto_data
 
-4. 是应用编排或工作流协调？
-   （组合 Core + DataHub、DTO 映射、CLI/API/Jobs）
-   YES → ditto_port
+4. 是分析计算（表达式编译、因子计算、评估指标）？
+   YES → ditto_analytics
 
-5. 是技术基础设施？
+5. 是应用编排或工作流协调？
+   （组合 Engine +Data、DTO 映射、CQRS）
+   YES → ditto_app
+
+6. 是应用入口（API/CLI/Jobs/DI 装配）？
+   YES → ditto_interfaces
+
+7. 是技术基础设施？
    （日志、配置、缓存、数据库连接池）
    YES → ditto_infra
 ```
@@ -324,8 +389,8 @@ def get_source(name: str) -> DataSource:
 **验证**：`grep -r "from.*base import" tushare/` → 无反向导入 → **不是循环依赖**
 
 **解决**：
-1. 拆分：`base.py`（接口）+ `factory.py`（工厂）
-2. 顶层导入：`from tushare.source import TushareSource`
+1. 拆分： `base.py`（接口）+ `factory.py`（工厂）
+2. 顶层导入: `from tushare.source import TushareSource`
 
 ---
 
@@ -337,51 +402,52 @@ def get_source(name: str) -> DataSource:
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/core/src/ditto_core/quality/` | 检查规则算法（OHLC、涨跌停、成交量异常） |
-| **Data Service** | `packages/datahub/` | DQ 结果持久化、数据质量元数据管理 |
-| **Application** | `apps/port/src/ditto_port/services/ingestion/` | 编排 dq 检查流程 |
+| **Domain** | `packages/data/src/ditto_data/quality/` | 检查规则算法（OHLC、涨跌停、成交量异常） |
+| **Data Service** | `packages/data/` | DQ 结果持久化、数据质量元数据管理 |
+| **Application** | `packages/app/src/ditto_app/process/` | 编排 dq 检查流程 |
 
 **关键点**：
 - ✅ dq 是量化业务规则（如 OHLC 一致性是金融知识），不是通用技术约束
 - ✅ dq 配置文件（YAML）定义业务规则
-- ❌ 不是"技术约束"，而是"领域知识"
+- ❌ 不是"技术约束"而是"领域知识"
 
 #### Factor（因子计算）
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/core/src/ditto_core/engine/` | 因子表达式编译、物化计划 |
-| **Data Service** | `packages/datahub/` | 因子数据查询、存储、前向收益率计算 |
-| **Application** | `apps/port/src/ditto_port/services/derived/` | 编排计算流程 |
+| **Domain** | `packages/engine/src/ditto_engine/alpha/` | 因子表达式编译、物化计划 |
+| **Analysis** | `packages/analytics/` | 因子表达式编译、评估指标、研究数据集 |
+| **Data Service** | `packages/data/` | 因子数据查询、存储 |
+| **Application** | `packages/app/src/ditto_app/query/` | 编排计算流程 |
 
 **关键点**：
-- 表达式编译在 Core（纯领域算法）
-- 前向收益率在 DataHub（数据服务/物化视图）
-- 编排流程在 Port
+- 表达式编译在 Analytics（知识密集分析计算）
+- 前向收益率在 App.query（依赖 MarketService）
+- 编排流程在 App
 
 #### Risk（风险管理）
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/core/src/ditto_core/backtest/` | 风险检查（PreTrade/PostTrade） |
-| **Application** | `apps/port/src/ditto_port/services/strategy/` | 风险编排（注入到回测流程） |
-| **Data Service** | `packages/datahub/` | 风险审计记录持久化 |
+| **Domain** | `packages/engine/src/ditto_engine/backtest/` | 风险检查（PreTrade/PostTrade） |
+| **Application** | `packages/app/src/ditto_app/process/` | 风险编排（注入到回测流程） |
+| **Data Service** | `packages/data/` | 风险审计记录持久化 |
 
-#### Strategy（策略）
+#### Alpha（Alpha 决策层，原 Strategy）
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/core/src/ditto_core/strategy/` | 策略 Pipeline、信号生成、模板 |
-| **Application** | `apps/port/src/ditto_port/services/strategy/` | 策略运行编排、输入组装、结果持久化 |
-| **Data Service** | `packages/datahub/` | 策略定义存储、运行记录存储、产物持久化 |
+| **Domain** | `packages/engine/src/ditto_engine/alpha/` | Alpha Pipeline、信号生成、模板 |
+| **Application** | `packages/app/src/ditto_app/process/` | Alpha 运行编排、输入组装、结果持久化 |
+| **Data Service** | `packages/data/` | Alpha 定义存储、运行记录存储、产物持久化 |
 
 #### Execution（执行）
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **Domain** | `packages/core/src/ditto_core/execution/` | 执行计划、撮合模型、交易规则 |
-| **Application** | `apps/port/src/ditto_port/services/strategy/` | 执行编排（注入到回测流程） |
-| **Data Service** | `packages/datahub/` | 执行审计记录持久化 |
+| **Domain** | `packages/engine/src/ditto_engine/execution/` | 执行计划、撮合模型、交易规则 |
+| **Application** | `packages/app/src/ditto_app/process/` | 执行编排（注入到回测流程） |
+| **Data Service** | `packages/data/` | 执行审计记录持久化 |
 
 ### 实施检查清单
 
@@ -390,13 +456,51 @@ def get_source(name: str) -> DataSource:
 | 问题 | 回答 Yes → 归属 | 回答 No → 归属 |
 |------|----------------|---------------|
 | 是跨层共享的纯类型？ | ditto_kernel（检查准入标准） | 继续下一个问题 |
-| 是业务决策或领域行为？ | ditto_core | 继续下一个问题 |
-| 是数据查询、存储或数据编排？ | ditto_datahub | 继续下一个问题 |
-| 是应用编排或工作流？ | ditto_port | 继续下一个问题 |
+| 是业务决策或领域行为？ | ditto_engine | 继续下一个问题 |
+| 是分析计算（编译、因子、评估）？ | ditto_analytics | 继续下一个问题 |
+| 是数据查询、存储或数据编排？ | ditto_data | 继续下一个问题 |
+| 是应用编排或工作流？ | ditto_app | 继续下一个问题 |
+| 是应用入口（API/CLI/Jobs/DI）？ | ditto_interfaces | 继续下一个问题 |
 | 是技术基础设施？ | ditto_infra | 重新审视设计 |
 
 **禁止重复实现**：
 - ❌ Application Layer 重复实现 Domain Layer 已有的业务逻辑
-- ❌ Domain Layer 直接访问存储（应通过 DataHub Service）
-- ❌ DataHub 包含业务决策逻辑（应委托给 Core）
+- ❌ Domain Layer 直接访问存储（应通过 Data Service）
+- ❌ Data 包含业务决策逻辑（应委托给 Engine）
 - ❌ 多个地方重复实现相同的业务规则
+
+---
+
+## R8 App 内部互斥矩阵
+
+ditto_app 内部按 CQRS 职责划分为 4 个子模块，通过 importlinter R8 规则强制互斥：
+
+```
+ditto_app/
+├── query/       # 只读查询（零写入）
+├── process/     # Process Manager（有状态长流程，按能力域分 ingestion/materialization/execution/quality 子包）
+├── command/     # Command DTO + Handler（原子写操作）
+└── builders/    # 运行时装配（DI 构造）
+```
+
+### 互斥规则
+
+| 方向 | 规则 | 状态 |
+|------|------|------|
+| query → process | r8-query-no-process | ✅ |
+| query → builders | r8-query-no-builders | ✅ |
+| query → command | r8-query-no-command | ✅ |
+| builders → query | r8-builders-no-query | ✅ |
+| command → query | r8-command-no-query | ✅ |
+| command → builders | r8-command-no-builders | ✅ |
+
+### 允许的依赖
+
+| 方向 | 说明 |
+|------|------|
+| process → query | 编排流程可调用查询 |
+| command → process | Command Handler 委托底层 Service |
+| process → command | Process Manager 注入 Command Handler |
+| process ↔ builders | 双向允许 |
+
+**设计原则**：query 只读、command 纯写入、process 编排、builders 装配，四者职责不交叉。

@@ -170,7 +170,7 @@
 **核心思想**：`DATASET_REGISTRY` 作为单一配置源
 
 ```python
-# apps/port/src/ditto_port/ingestion/config/datasets.py
+# interfaces/src/ditto_interfaces/ingestion/config/datasets.py
 
 class Dataset(str, Enum):
     """数据集枚举"""
@@ -229,7 +229,7 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        Server (apps/port)                                  │
+│                        Server (interfaces/)                                  │
 │                                                                              │
 │   职责：应用层编排                                                           │
 │   - Prefect Flows：任务编排、调度、依赖管理                                   │
@@ -245,7 +245,7 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
                                     │ 调用
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                      DataHub (packages/ditto-data-hub)                       │
+│                      DataHub (packages/ditto-data)                            │
 │                                                                              │
 │   职责：统一数据入口                                                         │
 │   - Sources：轻量无状态数据源适配（只获取数据）                              │
@@ -473,66 +473,52 @@ daily_ingestion_flow
 ## 5. 代码结构（更新）
 
 ```
-apps/
-  server/
-    pyproject.toml
+interfaces/
+  pyproject.toml
 
-    src/
-      ditto_port/
+  src/
+    ditto_interfaces/
+      __init__.py
+      main.py                     # FastAPI 入口
+
+      # ============ API 层 ============
+      api/
         __init__.py
-        main.py                     # FastAPI 入口
+        router.py                 # 主路由
+        health.py                 # 健康检查（含 Prefect 状态）
+        ingestion.py              # 摄取触发 API
 
-        # ============ API 层 ============
-        api/
+      # ============ 数据摄取模块 ============
+      jobs/
+        __init__.py
+
+        # Prefect Flows（编排层）
+        flows/
           __init__.py
-          router.py                 # 主路由
-          health.py                 # 健康检查（含 Prefect 状态）
-          ingestion.py              # 摄取触发 API
+          daily.py                # 每日增量 Flow (T0→T1→T3)
+          backfill.py             # 全量回补 Flow
+          repair.py               # 空洞修补 + 重试 Flow (T2)
+          quality.py              # 独立 DQC Flow (T3)
 
-        # ============ 数据摄取模块 ============
-        ingestion/
+        # Prefect Tasks（轻量 wrapper）
+        tasks/
           __init__.py
+          t0_meta.py              # T0: 日历、标的
+          t1_bars.py              # T1: 行情摄取
+          t1_adj_factor.py        # T1: 复权因子
+          t3_quality.py           # T3: DQC 检查
 
-          # Ingestion Service 层（新增）
-          services/
-            __init__.py
-            coordinator.py          # IngestionCoordinator
-            metadata.py             # MetadataManager
-            backfill.py             # BackfillManager
-            retry.py                # RetryManager
+        # 调度配置
+        schedules.py              # Prefect Deployment 定义
+        hooks.py                  # Flow/Task 状态变化钩子（告警）
 
-          # Config（新增）
-          config/
-            __init__.py
-            datasets.py             # DATASET_REGISTRY
+      # ============ 部署脚本 ============
+      deploy.py                   # Prefect 部署脚本
 
-          # Prefect Flows（编排层）
-          flows/
-            __init__.py
-            daily.py                # 每日增量 Flow (T0→T1→T3)
-            backfill.py             # 全量回补 Flow
-            repair.py               # 空洞修补 + 重试 Flow (T2)
-            quality.py              # 独立 DQC Flow (T3)
-
-          # Prefect Tasks（轻量 wrapper）
-          tasks/
-            __init__.py
-            t0_meta.py              # T0: 日历、标的
-            t1_bars.py              # T1: 行情摄取
-            t1_adj_factor.py        # T1: 复权因子
-            t3_quality.py           # T3: DQC 检查
-
-          # 调度配置
-          schedules.py              # Prefect Deployment 定义
-          hooks.py                  # Flow/Task 状态变化钩子（告警）
-
-        # ============ 部署脚本 ============
-        deploy.py                   # Prefect 部署脚本
-
-        # ============ 其他服务 ============
-        services/
-          __init__.py
-          notification.py           # 告警通知（钉钉/Telegram）
+      # ============ 其他服务 ============
+      services/
+        __init__.py
+        notification.py           # 告警通知（钉钉/Telegram）
 ```
 
 **关键变化**：
@@ -557,12 +543,12 @@ from typing import Literal
 from prefect import flow, get_run_logger
 from prefect.futures import wait
 
-from ditto_port.ingestion.config.datasets import (
+from ditto_interfaces.ingestion.config.datasets import (
     Dataset,
     TaskTier,
     DATASET_REGISTRY,
 )
-from ditto_port.ingestion.tasks import (
+from ditto_interfaces.ingestion.tasks import (
     ingest_calendar,
     ingest_etf_basic,
     ingest_stock_basic,
@@ -570,9 +556,9 @@ from ditto_port.ingestion.tasks import (
     ingest_stock_daily,
     ingest_adj_factor,
 )
-from ditto_port.ingestion.tasks.t0_meta import check_trading_day
-from ditto_port.ingestion.tasks.t3_quality import run_quality_checks
-from ditto_port.ingestion.hooks import on_flow_failure
+from ditto_interfaces.ingestion.tasks.t0_meta import check_trading_day
+from ditto_interfaces.ingestion.tasks.t3_quality import run_quality_checks
+from ditto_interfaces.ingestion.hooks import on_flow_failure
 
 
 # Task 注册表
@@ -694,9 +680,9 @@ def daily_ingestion_flow(
 from datetime import date
 from prefect import flow, get_run_logger
 
-from ditto_port.ingestion.config.datasets import Dataset
-from ditto_port.ingestion.tasks import backfill_chunk
-from ditto_datahub import DataHub
+from ditto_interfaces.ingestion.config.datasets import Dataset
+from ditto_interfaces.ingestion.tasks import backfill_chunk
+from ditto_data import DataHub
 
 
 @task(name="backfill_chunk")
@@ -712,7 +698,7 @@ def backfill_chunk(
 
     hub = DataHub(data_root=data_root)
     try:
-        from ditto_port.ingestion.services.backfill import BackfillManager
+        from ditto_interfaces.ingestion.services.backfill import BackfillManager
 
         manager = BackfillManager(hub, source)
         result = manager.backfill_dates(
@@ -802,9 +788,9 @@ def backfill_flow(
 from datetime import date, timedelta
 from prefect import flow, get_run_logger
 
-from ditto_port.ingestion.config.datasets import Dataset, DATASET_REGISTRY
-from ditto_port.ingestion.services.retry import RetryManager
-from ditto_datahub import DataHub
+from ditto_interfaces.ingestion.config.datasets import Dataset, DATASET_REGISTRY
+from ditto_interfaces.ingestion.services.retry import RetryManager
+from ditto_data import DataHub
 
 
 @flow(name="repair_holes")
@@ -852,7 +838,7 @@ def repair_holes_flow(
             return {"dataset": dataset.value, "holes_found": 0, "repaired": 0}
 
         # 触发回补
-        from ditto_port.ingestion.flows.backfill import backfill_chunk
+        from ditto_interfaces.ingestion.flows.backfill import backfill_chunk
 
         sorted_holes = sorted(holes)
         result = backfill_chunk(
@@ -885,7 +871,7 @@ def retry_failed_flow(
 
     hub = DataHub(data_root=data_root)
     try:
-        from ditto_port.ingestion.services.retry import RetryManager
+        from ditto_interfaces.ingestion.services.retry import RetryManager
 
         manager = RetryManager(hub, source)
 
@@ -976,9 +962,9 @@ from typing import Any
 from prefect import task, get_run_logger
 from prefect.tasks import exponential_backoff
 
-from ditto_port.ingestion.config.datasets import Dataset, DATASET_REGISTRY
-from ditto_port.ingestion.services.coordinator import IngestionCoordinator
-from ditto_datahub import DataHub
+from ditto_interfaces.ingestion.config.datasets import Dataset, DATASET_REGISTRY
+from ditto_interfaces.ingestion.services.coordinator import IngestionCoordinator
+from ditto_data import DataHub
 
 
 def create_ingest_task(dataset: Dataset):
@@ -1060,7 +1046,7 @@ ingest_adj_factor = create_ingest_task(Dataset.ADJ_FACTOR)
 from datetime import date
 from prefect import task, get_run_logger
 
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 
 @task(
@@ -1109,7 +1095,7 @@ def ingest_calendar(
     hub = DataHub(data_root=data_root)
     try:
         # 日历是全量更新，不需要 trade_date 参数
-        from ditto_port.ingestion.services.coordinator import IngestionCoordinator
+        from ditto_interfaces.ingestion.services.coordinator import IngestionCoordinator
 
         coordinator = IngestionCoordinator(hub, source)
         result = coordinator.ingest_calendar()
@@ -1128,10 +1114,10 @@ def ingest_calendar(
 from prefect import serve
 from prefect.client.schemas.schedules import CronSchedule
 
-from ditto_port.ingestion.flows.daily import daily_ingestion_flow
-from ditto_port.ingestion.flows.backfill import backfill_flow
-from ditto_port.ingestion.flows.repair import daily_repair_flow, retry_failed_flow
-from ditto_port.ingestion.flows.quality import standalone_quality_flow
+from ditto_interfaces.ingestion.flows.daily import daily_ingestion_flow
+from ditto_interfaces.ingestion.flows.backfill import backfill_flow
+from ditto_interfaces.ingestion.flows.repair import daily_repair_flow, retry_failed_flow
+from ditto_interfaces.ingestion.flows.quality import standalone_quality_flow
 
 
 def deploy():
@@ -1273,7 +1259,7 @@ async def send_notification(message: str):
 ## 9. FastAPI 集成
 
 ```python
-# apps/port/src/ditto_port/main.py
+# interfaces/src/ditto_interfaces/main.py
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI

@@ -73,7 +73,7 @@ def get_settings() -> Settings:
 
 **策略**: 创建协议接口消除 Repository 循环依赖
 
-**创建文件**: `packages/datahub/src/ditto_datahub/repositories/protocols.py`
+**创建文件**: `packages/data/src/ditto_data/repositories/protocols.py`
 
 ```python
 from typing import Protocol
@@ -85,12 +85,12 @@ class BarsAccessor(Protocol):
 ```
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/repositories/adj_factor.py` (使用协议)
-- `packages/datahub/src/ditto_datahub/repositories/bars.py` (实现协议)
-- `packages/datahub/src/ditto_datahub/hub.py` (注入依赖)
-- `packages/datahub/src/ditto_datahub/sources/base.py` (移除延迟导入)
+- `packages/data/src/ditto_data/repositories/adj_factor.py` (使用协议)
+- `packages/data/src/ditto_data/repositories/bars.py` (实现协议)
+- `packages/data/src/ditto_data/hub.py` (注入依赖)
+- `packages/data/src/ditto_data/sources/base.py` (移除延迟导入)
 
-**验证**: `pixi run -e dev test --unit packages/datahub`
+**验证**: `pixi run -e dev test --unit packages/data`
 
 ---
 
@@ -117,7 +117,7 @@ class BarsAccessor(Protocol):
 **创建参数对象**:
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/pipeline_store.py
+# packages/data/src/ditto_data/stores/pipeline_store.py
 @dataclass(frozen=True)
 class PipelineRunParams:
     """Pipeline 运行参数。"""
@@ -129,15 +129,15 @@ class PipelineRunParams:
 ```
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/stores/pipeline_store.py` (3 处)
-- `packages/datahub/src/ditto_datahub/stores/security_store.py` (1 处)
-- `packages/datahub/src/ditto_datahub/repositories/security.py` (1 处)
+- `packages/data/src/ditto_data/stores/pipeline_store.py` (3 处)
+- `packages/data/src/ditto_data/stores/security_store.py` (1 处)
+- `packages/data/src/ditto_data/repositories/security.py` (1 处)
 - `apps/port/src/ditto_port/services/ingestion/coordinator.py` (2 处 - 拆分函数)
 - `apps/port/src/ditto_port/services/ingestion/config/datasets.py` (1 处 - Builder 模式)
 - `apps/port/src/ditto_port/jobs/flows/backfill.py` (1 处)
 - `packages/foundation/src/ditto_foundation/config/paths.py` (1 处)
 
-**验证**: `pixi run -e dev test --unit packages/datahub apps/port`
+**验证**: `pixi run -e dev test --unit packages/data apps/port`
 
 ---
 
@@ -171,15 +171,15 @@ query = f"SELECT * FROM {table}"  # noqa: S608
 ```
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/stores/sqlite_client.py`
-- `packages/datahub/src/ditto_datahub/stores/security_store.py` (2 处)
-- `packages/datahub/src/ditto_datahub/stores/pipeline_store.py`
-- `packages/datahub/src/ditto_datahub/dq/checkers/technical.py`
-- `packages/datahub/src/ditto_datahub/repositories/universe.py`
-- `packages/datahub/src/ditto_datahub/runtime/pit_helper.py` (2 处)
-- `packages/datahub/src/ditto_datahub/runtime/sql_engine.py`
+- `packages/data/src/ditto_data/stores/sqlite_client.py`
+- `packages/data/src/ditto_data/stores/security_store.py` (2 处)
+- `packages/data/src/ditto_data/stores/pipeline_store.py`
+- `packages/data/src/ditto_data/dq/checkers/technical.py`
+- `packages/data/src/ditto_data/repositories/universe.py`
+- `packages/data/src/ditto_data/runtime/pit_helper.py` (2 处)
+- `packages/data/src/ditto_data/runtime/sql_engine.py`
 
-**验证**: `pixi run -e dev lint packages/datahub/src`
+**验证**: `pixi run -e dev lint packages/data/src`
 
 ---
 
@@ -192,7 +192,7 @@ query = f"SELECT * FROM {table}"  # noqa: S608
 ```toml
 [tool.ruff.lint.per-file-ignores]
 # 移除以下豁免（通过重构解决）:
-# "packages/datahub/src/ditto_datahub/hub.py" = ["PLC0415"]
+# "packages/data/src/ditto_data/hub.py" = ["PLC0415"]
 # "packages/foundation/src/ditto_foundation/config/settings.py" = ["PLC0415"]
 # "apps/port/src/ditto_port/jobs/flows/deploy.py" = ["PLC0415"]
 
@@ -246,20 +246,20 @@ git grep "global " packages/*/src apps/*/src  # 应该为空
 
 **创建** (新文件):
 1. `packages/foundation/src/ditto_foundation/config/manager.py`
-2. `packages/datahub/src/ditto_datahub/repositories/protocols.py`
+2. `packages/data/src/ditto_data/repositories/protocols.py`
 3. `typings/prefect/__init__.pyi`
 
 **修改** (核心重构):
 1. `packages/foundation/src/ditto_foundation/config/settings.py`
 2. `packages/foundation/src/ditto_foundation/config/paths.py`
 3. `packages/foundation/src/ditto_foundation/observability/metrics.py`
-4. `packages/datahub/src/ditto_datahub/stores/pipeline_store.py`
-5. `packages/datahub/src/ditto_datahub/hub.py`
+4. `packages/data/src/ditto_data/stores/pipeline_store.py`
+5. `packages/data/src/ditto_data/hub.py`
 
 **修改** (复杂度):
 1. `apps/port/src/ditto_port/services/ingestion/coordinator.py`
 2. `apps/port/src/ditto_port/services/ingestion/config/datasets.py`
-3. `packages/datahub/src/ditto_datahub/repositories/security.py`
+3. `packages/data/src/ditto_data/repositories/security.py`
 
 ---
 

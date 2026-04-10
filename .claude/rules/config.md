@@ -75,9 +75,9 @@ config/
 | 包 | 位置 | 包含配置 |
 |---|------|----------|
 | `ditto_infra` | `foundation/config/settings.py` | `Settings`, `SystemSettings`, `ObservabilitySettings` |
-| `ditto_datahub` | `config/data_store.py` | `DataStoreSettings`, `FileStorageSettings` |
-| `ditto_datahub` | `config/data_source.py` | `DataSourceSettings` |
-| `ditto_core` | `quality/config.py` | `DQSettings` |
+| `ditto_data` | `config/data_store.py` | `DataStoreSettings`, `FileStorageSettings` |
+| `ditto_data` | `config/data_source.py` | `DataSourceSettings` |
+| `ditto_data` | `quality/config.py` | `DQSettings` |
 
 ### 禁止事项
 
@@ -105,16 +105,16 @@ config/
 |------|------|------|
 | `get_environment()` | 获取运行时环境 | `infra/foundation/config/environment.py` |
 | `ConfigLoader` | 定位配置文件路径 | `infra/foundation/config/loader.py` |
-| `load_env_file()` | 加载 .env 文件 | `port/config/loader.py` |
-| `ConfigProvider` | DI 装配 | `port/registry/infra/config.py` |
+| `load_env_file()` | 加载 .env 文件 | `interfaces/config/loader.py` |
+| `ConfigProvider` | DI 装配 | `interfaces/registry/infra/config.py` |
 
 ### 配置加载位置约束
 
-**核心原则**：配置仅在 **Port 层** 加载，其他层通过 DI 获取。
+**核心原则**：配置仅在 **Interfaces 层** 加载，其他层通过 DI 获取。
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  apps/port/registry/infra/config.py（唯一加载点）          │
+│  interfaces/registry/infra/config.py（唯一加载点）              │
 │                                                            │
 │  @provide                                                  │
 │  def settings(self, loader: ConfigLoader) -> Settings:    │
@@ -125,7 +125,7 @@ config/
           │ DI 注入
           ▼
 ┌────────────────────────────────────────────────────────────┐
-│  packages/datahub/   packages/core/   packages/infra/      │
+│  packages/data/   packages/engine/   packages/infra/      │
 │  （通过构造函数/方法参数获取配置，禁止自己加载）           │
 └────────────────────────────────────────────────────────────┘
 ```
@@ -282,7 +282,7 @@ settings.data_root = Path("/other")  # frozen dataclass 也不允许
 
 | ❌ 禁止 | ✅ 正确 | 原因 |
 |---------|---------|------|
-| 非 Port 层加载配置 | Port 层加载 + DI 注入 | 单一职责、可测试性 |
+| 非 Interfaces 层加载配置 | Interfaces 层加载 + DI 注入 | 单一职责、可测试性 |
 | 模型内读取 `os.environ` | 通过 `load_env_file()` 传入 | 配置来源可追溯 |
 | 使用 `BaseSettings` | 使用纯 `BaseModel` | 显式加载、可控 |
 | 硬编码路径 | 使用 `DataStoreSettings` 属性 | 唯一真源 |

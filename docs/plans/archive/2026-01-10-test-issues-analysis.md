@@ -345,14 +345,14 @@ env:
 #### 优先级P0（核心数据访问层）（**✅ 已达标**）
 
 **实际覆盖率（2026-01-10 验证）:**
-1. `packages/datahub/src/ditto_datahub/repositories/bars.py` - **99.76%** ✅ (计划显示 14.15% ❌)
-2. `packages/datahub/src/ditto_datahub/stores/bars_store.py` - **100%** ✅ (计划显示 15.04% ❌)
-3. `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` - **100%** ✅ (计划显示 14.85% ❌)
+1. `packages/data/src/ditto_data/repositories/bars.py` - **99.76%** ✅ (计划显示 14.15% ❌)
+2. `packages/data/src/ditto_data/stores/bars_store.py` - **100%** ✅ (计划显示 15.04% ❌)
+3. `packages/data/src/ditto_data/stores/adj_factor_store.py` - **100%** ✅ (计划显示 14.85% ❌)
 
 **测试文件:**
-- `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py` - ✅ 完善
-- `packages/datahub/tests/unit/stores/test_bars_store_unit.py` - ✅ 完善
-- `packages/datahub/tests/unit/stores/test_adj_factor_store_unit.py` - ✅ 完善
+- `packages/data/tests/unit/repositories/test_bars_repository_unit.py` - ✅ 完善
+- `packages/data/tests/unit/stores/test_bars_store_unit.py` - ✅ 完善
+- `packages/data/tests/unit/stores/test_adj_factor_store_unit.py` - ✅ 完善
 
 **结论**: Phase 5 的目标已经在现有测试中达成，无需额外补充测试。
 
@@ -374,8 +374,8 @@ env:
 #### 优先级P2（运行时组件）
 
 **目标文件：**
-1. [`packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`](../packages/datahub/src/ditto_datahub/runtime/freeze_manager.py) - 14.61% → 80%
-2. [`packages/datahub/src/ditto_datahub/stores/parquet_store_base.py`](../packages/datahub/src/ditto_datahub/stores/parquet_store_base.py) - 16.84% → 80%
+1. [`packages/data/src/ditto_data/runtime/freeze_manager.py`](../packages/data/src/ditto_data/runtime/freeze_manager.py) - 14.61% → 80%
+2. [`packages/data/src/ditto_data/stores/parquet_store_base.py`](../packages/data/src/ditto_data/stores/parquet_store_base.py) - 16.84% → 80%
 
 ---
 
@@ -430,12 +430,12 @@ pixi run -e dev pre-commit-run
 
 | 优先级 | 文件 | 当前覆盖率 | 目标 |
 |--------|------|-----------|------|
-| P0 | `packages/datahub/src/ditto_datahub/repositories/bars.py` | 14.15% | 80% |
-| P0 | `packages/datahub/src/ditto_datahub/stores/bars_store.py` | 15.04% | 80% |
-| P0 | `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` | 14.85% | 80% |
+| P0 | `packages/data/src/ditto_data/repositories/bars.py` | 14.15% | 80% |
+| P0 | `packages/data/src/ditto_data/stores/bars_store.py` | 15.04% | 80% |
+| P0 | `packages/data/src/ditto_data/stores/adj_factor_store.py` | 14.85% | 80% |
 | P1 | `apps/server/src/ditto_port/ingestion/tasks/monitoring.py` | 11.29% | 80% |
 | P1 | `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py` | 15.12% | 80% |
-| P2 | `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py` | 14.61% | 80% |
+| P2 | `packages/data/src/ditto_data/runtime/freeze_manager.py` | 14.61% | 80% |
 
 ---
 

@@ -16,8 +16,8 @@ from ditto_infra.foundation import (
     span,
     traced,
 )
-from ditto_infra.foundation.observability import configure_tracing
 from ditto_infra.foundation.observability.tracing import (
+    configure_tracing,
     get_span_id,
     get_trace_id,
 )

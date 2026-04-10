@@ -8,8 +8,8 @@ implementation: .claude/commands/architecture-audit.py
 
 ## 审计范围
 
-- `packages/` - foundation、datahub、core
-- `apps/` - port、web
+- `packages/` - kernel、data、infra、engine、analytics、app
+- `interfaces/` - API/CLI/Jobs + DI Composition Root
 - `tests/` - 单元测试、集成测试、fixtures
 
 ## 执行步骤
@@ -48,13 +48,15 @@ pixi run -e dev test --integration
   ```bash
   pixi run -e dev python .claude/scripts/lsp_pyright.py symbols <file>
   ```
-- 从 port 层出发，检查是否存在**真正的层级穿透**：
+- 从 app 层出发，检查是否存在**真正的层级穿透**：
 
 **层级穿透定义**（注意：Foundation 是横切层，可跨层访问）：
-- ❌ port → Store（应通过 Repository）
-- ❌ port → Source（应通过 Repository/Service）
-- ✅ port → foundation（**允许**，横切层）
-- ✅ port → datahub → foundation（正常依赖链）
+- ❌ interfaces → data storage/runtime（应通过 Service）
+- ❌ engine → data（beyond errors/provider）
+- ❌ engine → infra
+- ✅ interfaces → data services/sources（允许）
+- ✅ interfaces → infra foundation（允许，横切层）
+- ✅ app → data → infra（正常依赖链）
 
 **工程实践检查**：
 - 使用 `symbols` 识别类规模（>300行）、方法数量（>15个）

@@ -426,7 +426,7 @@ _paths = _PathsRegistry.instance
 
 **需要移除的代码**:
 ```python
-# packages/datahub/src/ditto_datahub/hub.py
+# packages/data/src/ditto_data/hub.py
 
 # 移除：
 # - close() 方法（约 20 行）
@@ -438,7 +438,7 @@ _paths = _PathsRegistry.instance
 
 **需要修改的测试**:
 ```python
-# packages/datahub/tests/unit/test_hub_unit.py
+# packages/data/tests/unit/test_hub_unit.py
 
 # 新增独立的 sqlite_pool fixture
 @pytest.fixture
@@ -478,11 +478,11 @@ def datahub_with_dependencies(
 
 ```bash
 # 高优先级清理
-packages/datahub/src/ditto_datahub/sources/__init__.py
-packages/datahub/src/ditto_datahub/models/storage.py
-packages/datahub/tests/unit/stores/test_parquet_store_base_unit.py
+packages/data/src/ditto_data/sources/__init__.py
+packages/data/src/ditto_data/models/storage.py
+packages/data/tests/unit/stores/test_parquet_store_base_unit.py
 apps/port/src/ditto_port/jobs/__init__.py
-packages/datahub/src/ditto_datahub/scripts/__init__.py
+packages/data/src/ditto_data/scripts/__init__.py
 packages/foundation/src/ditto_foundation/config/paths.py
 
 # TYPE_CHECKING 清理（httpx 是核心依赖）
@@ -510,12 +510,12 @@ packages/foundation/tests/unit/notification/test_telegram_sender_unit.py  # 新�
 
 ```bash
 # 用户确认：移除 DataHub.close()，符合 DI 原则
-packages/datahub/src/ditto_datahub/hub.py  # 移除 close()、_closed、atexit、__exit__、_cleanup_on_exit
-packages/datahub/tests/unit/test_hub_unit.py  # 新增 sqlite_pool fixture，修改 datahub_with_dependencies
+packages/data/src/ditto_data/hub.py  # 移除 close()、_closed、atexit、__exit__、_cleanup_on_exit
+packages/data/tests/unit/test_hub_unit.py  # 新增 sqlite_pool fixture，修改 datahub_with_dependencies
 
 # 用户确认：统一 TushareAdapter 架构
-packages/datahub/src/ditto_datahub/sources/tushare/adapters/base.py
-packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock_status.py
+packages/data/src/ditto_data/sources/tushare/adapters/base.py
+packages/data/src/ditto_data/sources/tushare/adapters/stock_status.py
 ```
 
 ---

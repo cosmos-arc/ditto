@@ -131,7 +131,7 @@ apps/port/services/strategy/
 
 - [x] **T-6: ExecutionAuditService（SQLite）** `[M]` ✅
   - 验收: DataHub `services/audit/execution_audit_service.py` 实现；SQLite 表 `execution_audit` 建表 + 读写；`save_risk_log(run_id, records)` + `save_pre_trade_log(run_id, records)` + `query(run_id, record_type?, date_range?)` 方法；orjson 序列化 payload；`StrategyArtifactService` 无耦合
-  - 文件: `packages/datahub/src/ditto_datahub/services/audit/execution_audit_service.py`（新文件）, `packages/datahub/src/ditto_datahub/services/audit/__init__.py`（新文件）
+  - 文件: `packages/data/src/ditto_data/services/audit/execution_audit_service.py`（新文件）, `packages/data/src/ditto_data/services/audit/__init__.py`（新文件）
   - 测试: 单元测试（CRUD + 查询过滤）；集成测试（SQLite 写入 + 读取验证）
   - 风险: Schema 变更（+1 级 PIT）；需要数据库 migration 路径
   - 依赖: T-1（RiskScanRecord 类型已升级）, T-2（BacktestReport 已含审计字段）

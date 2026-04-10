@@ -38,7 +38,7 @@ default_config_dir = (
 
 **实际路径**：
 - `config/default/dq_rules/` ✅
-- `packages/datahub/config/dq_rules/` ✅
+- `packages/data/config/dq_rules/` ✅
 
 **影响**：DQ 规则完全不加载，数据质量检查退化为空校验。
 

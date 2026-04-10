@@ -689,8 +689,8 @@ Fixes ENG-001"
 ### Task 3.1: 修改 TushareClient 接收 DataSourceSettings
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/client.py:112-163`
-- Test: `packages/datahub/tests/sources/tushare/test_client.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/client.py:112-163`
+- Test: `packages/data/tests/sources/tushare/test_client.py`
 
 **Context:**
 当前 TushareClient 硬编码 URL 和 timeout。需要从 DataSourceSettings 读取配置。
@@ -698,18 +698,18 @@ Fixes ENG-001"
 **Step 1: 查看现有测试**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/sources/tushare/test_client.py -v
+pixi run -e dev pytest packages/data/tests/sources/tushare/test_client.py -v
 ```
 
 **Step 2: 添加配置测试**
 
 ```python
-# packages/datahub/tests/sources/tushare/test_client.py
+# packages/data/tests/sources/tushare/test_client.py
 
 import pytest
 from unittest.mock import patch, Mock
-from ditto_datahub.config.data_source import DataSourceSettings
-from ditto_datahub.sources.tushare.client import TushareClient
+from ditto_data.config.data_source import DataSourceSettings
+from ditto_data.sources.tushare.client import TushareClient
 
 
 def test_tushare_client_uses_settings_config(monkeypatch):
@@ -728,7 +728,7 @@ def test_tushare_client_uses_settings_config(monkeypatch):
     assert settings.tushare_token == "test_token_123"
 
     # Mock _get_tushare_token to avoid real token lookup
-    with patch("ditto_datahub.sources.tushare.client._get_tushare_token", return_value="test_token"):
+    with patch("ditto_data.sources.tushare.client._get_tushare_token", return_value="test_token"):
         client = TushareClient(settings=settings)
 
         # 验证 HTTP client 使用了配置的 URL 和 timeout
@@ -738,7 +738,7 @@ def test_tushare_client_uses_settings_config(monkeypatch):
 
 def test_tushare_client_defaults_when_settings_not_provided():
     """Test that TushareClient uses defaults when no settings provided."""
-    with patch("ditto_datahub.sources.tushare.client._get_tushare_token", return_value="test_token"):
+    with patch("ditto_data.sources.tushare.client._get_tushare_token", return_value="test_token"):
         client = TushareClient()
 
         # 验证使用默认值
@@ -749,10 +749,10 @@ def test_tushare_client_defaults_when_settings_not_provided():
 **Step 3: 实现修复**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/client.py
+# packages/data/src/ditto_data/sources/tushare/client.py
 
 # 在文件顶部添加导入
-from ditto_datahub.config.data_source import DataSourceSettings
+from ditto_data.config.data_source import DataSourceSettings
 
 # 修改 __init__ 方法签名和实现
 class TushareClient:
@@ -822,14 +822,14 @@ class TushareClient:
 **Step 4: 运行测试验证**
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/sources/tushare/test_client.py -v
+pixi run -e dev pytest packages/data/tests/sources/tushare/test_client.py -v
 ```
 
 **Step 5: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/client.py
-git add packages/datahub/tests/sources/tushare/test_client.py
+git add packages/data/src/ditto_data/sources/tushare/client.py
+git add packages/data/tests/sources/tushare/test_client.py
 git commit -m "feat(datahub): TushareClient supports DataSourceSettings
 
 - Add settings parameter to TusharseClient.__init__
@@ -845,22 +845,22 @@ Fixes ARCH-002"
 ### Task 3.2: 更新 DI 容器配置
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/init_providers.py`
+- Modify: `packages/data/src/ditto_data/init_providers.py`
 - Modify: `apps/port/src/ditto_port/registry/datahub.py`
 
 **Step 1: 查看当前 DI 配置**
 
 ```bash
-grep -n "TushareClient\|tushare_client" packages/datahub/src/ditto_datahub/init_providers.py
+grep -n "TushareClient\|tushare_client" packages/data/src/ditto_data/init_providers.py
 grep -n "TushareClient\|tushare" apps/port/src/ditto_port/registry/datahub.py
 ```
 
 **Step 2: 更新 datahub init_providers**
 
 ```python
-# packages/datahub/src/ditto_datahub/init_providers.py
+# packages/data/src/ditto_data/init_providers.py
 
-from ditto_datahub.config.data_source import DataSourceSettings
+from ditto_data.config.data_source import DataSourceSettings
 from dishka import Provider, provide
 
 class DataSourceProvider(Provider):
@@ -883,13 +883,13 @@ class DataSourceProvider(Provider):
 **Step 3: 验证类型检查**
 
 ```bash
-pixi run -e dev type packages/datahub/src/ditto_datahub/init_providers.py
+pixi run -e dev type packages/data/src/ditto_data/init_providers.py
 ```
 
 **Step 4: 提交**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/init_providers.py
+git add packages/data/src/ditto_data/init_providers.py
 git commit -m "feat(datahub): add DataSourceSettings to DI container"
 ```
 

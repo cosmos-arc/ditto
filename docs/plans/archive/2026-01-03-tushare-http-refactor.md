@@ -56,10 +56,10 @@
 ### 1.3 影响范围分析
 
 **需要修改的文件**（4 个核心文件）：
-1. `packages/datahub/src/ditto_datahub/sources/tushare/client.py` - 完全重写
-2. `packages/datahub/src/ditto_datahub/sources/tushare/source.py` - 修改 7 个 fetch 方法
-3. `packages/datahub/tests/unit/sources/tushare/test_client.py` - 完全重写
-4. `packages/datahub/tests/unit/sources/tushare/test_source.py` - 修改 mock 策略
+1. `packages/data/src/ditto_data/sources/tushare/client.py` - 完全重写
+2. `packages/data/src/ditto_data/sources/tushare/source.py` - 修改 7 个 fetch 方法
+3. `packages/data/tests/unit/sources/tushare/test_client.py` - 完全重写
+4. `packages/data/tests/unit/sources/tushare/test_source.py` - 修改 mock 策略
 
 **不需要修改的文件**：
 - `rate_limiter.py` - 完全保留
@@ -638,11 +638,11 @@ assert_frame_equal(result, expected)
 **目标**：清理 pixi 配置和导入
 
 **修改文件**：
-1. `packages/datahub/pyproject.toml`
+1. `packages/data/pyproject.toml`
    - 移除 `tushare` 依赖
    - 添加 `httpx` 依赖（如果未存在）
 
-2. `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
+2. `packages/data/src/ditto_data/sources/tushare/client.py`
    - 移除 `import tushare as ts`
    - 移除 `from ts.pro_api import pro_api`
 
@@ -655,10 +655,10 @@ assert_frame_equal(result, expected)
 pixi run -e dev install
 
 # 2. 运行测试
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/
 
 # 3. 验证无 pandas 导入
-pixi run -e dev python -c "import ditto_datahub; assert 'pandas' not in dir()"
+pixi run -e dev python -c "import ditto_data; assert 'pandas' not in dir()"
 ```
 
 **依赖**：Task 4.4
@@ -783,16 +783,16 @@ def test_end_to_end_tushare_ingestion():
 
 ```bash
 # 1. 类型检查通过
-pixi run -e dev mypy packages/datahub/src/ditto_datahub/sources/tushare/
+pixi run -e dev mypy packages/data/src/ditto_data/sources/tushare/
 
 # 2. 代码规范检查通过
-pixi run -e dev ruff check packages/datahub/src/ditto_datahub/sources/tushare/
+pixi run -e dev ruff check packages/data/src/ditto_data/sources/tushare/
 
 # 3. 测试覆盖率 >= 80%
-pixi run -e dev pytest --cov packages/datahub/tests/unit/sources/tushare/
+pixi run -e dev pytest --cov packages/data/tests/unit/sources/tushare/
 
 # 4. 所有测试通过
-pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/ -v
+pixi run -e dev pytest packages/data/tests/unit/sources/tushare/ -v
 ```
 
 ### 5.3 依赖清理验收
@@ -967,10 +967,10 @@ def query(self, api_name: str, fields: str, **params) -> pl.DataFrame:
 
 | 文件 | 用途 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/sources/base.py` | 错误类定义 |
-| `packages/datahub/src/ditto_datahub/sources/tushare/rate_limiter.py` | 限流器 |
-| `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | Source 实现 |
-| `packages/datahub/tests/unit/sources/tushare/` | 测试文件 |
+| `packages/data/src/ditto_data/sources/base.py` | 错误类定义 |
+| `packages/data/src/ditto_data/sources/tushare/rate_limiter.py` | 限流器 |
+| `packages/data/src/ditto_data/sources/tushare/source.py` | Source 实现 |
+| `packages/data/tests/unit/sources/tushare/` | 测试文件 |
 
 ---
 
@@ -1040,11 +1040,11 @@ def query(self, api_name: str, fields: str, **params) -> pl.DataFrame:
 
 实施本计划时，最关键的 5 个文件：
 
-- **[client.py](packages/datahub/src/ditto_datahub/sources/tushare/client.py)** - 核心重构目标，完全重写 HTTP 客户端逻辑
-- **[source.py](packages/datahub/src/ditto_datahub/sources/tushare/source.py)** - 修改 7 个 fetch 方法的数据转换逻辑
-- **[base.py](packages/datahub/src/ditto_datahub/sources/base.py)** - 错误类定义，参考现有错误体系进行 HTTP 错误映射
-- **[test_client.py](packages/datahub/tests/unit/sources/tushare/test_client.py)** - 完全重写，使用 respx 替代 pandas mock
-- **[test_source.py](packages/datahub/tests/unit/sources/tushare/test_source.py)** - 重构所有测试用例，适配 HTTP 实现和 polars 断言
+- **[client.py](packages/data/src/ditto_data/sources/tushare/client.py)** - 核心重构目标，完全重写 HTTP 客户端逻辑
+- **[source.py](packages/data/src/ditto_data/sources/tushare/source.py)** - 修改 7 个 fetch 方法的数据转换逻辑
+- **[base.py](packages/data/src/ditto_data/sources/base.py)** - 错误类定义，参考现有错误体系进行 HTTP 错误映射
+- **[test_client.py](packages/data/tests/unit/sources/tushare/test_client.py)** - 完全重写，使用 respx 替代 pandas mock
+- **[test_source.py](packages/data/tests/unit/sources/tushare/test_source.py)** - 重构所有测试用例，适配 HTTP 实现和 polars 断言
 
 ---
 
@@ -1090,15 +1090,15 @@ def query(self, api_name: str, fields: str, **params) -> pl.DataFrame:
 
 ### 新增文件
 
-- `packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py` - HTTP 工具函数
-- `packages/datahub/tests/integration/sources/tushare/test_end_to_end.py` - 端到端集成测试
+- `packages/data/src/ditto_data/sources/tushare/http_utils.py` - HTTP 工具函数
+- `packages/data/tests/integration/sources/tushare/test_end_to_end.py` - 端到端集成测试
 
 ### 修改文件
 
-- `packages/datahub/src/ditto_datahub/sources/tushare/client.py` - 完全重写
-- `packages/datahub/src/ditto_datahub/sources/tushare/source.py` - 修改所有 fetch 方法
-- `packages/datahub/tests/unit/sources/tushare/test_client.py` - 完全重写
-- `packages/datahub/tests/unit/sources/tushare/test_source.py` - 完全重写
+- `packages/data/src/ditto_data/sources/tushare/client.py` - 完全重写
+- `packages/data/src/ditto_data/sources/tushare/source.py` - 修改所有 fetch 方法
+- `packages/data/tests/unit/sources/tushare/test_client.py` - 完全重写
+- `packages/data/tests/unit/sources/tushare/test_source.py` - 完全重写
 - `pixi.toml` - 移除 tushare 依赖
 
 ### 验收确认

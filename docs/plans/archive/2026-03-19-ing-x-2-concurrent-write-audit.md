@@ -47,7 +47,7 @@ def atomic_write(df: pl.DataFrame, path: Path, fsync: bool = True) -> None:
 - Provides cross-process file-based locks
 - Used exclusively by `MarketService` via `self._file_lock.acquire(lock_name, timeout=60.0)`
 
-### `ParquetStore` (`packages/datahub/src/ditto_datahub/stores/base/parquet_store.py`)
+### `ParquetStore` (`packages/data/src/ditto_data/stores/base/parquet_store.py`)
 
 - Base class for all Parquet year-partitioned writers
 - Uses `atomic_write()` for both `write()` and `delete()` operations
@@ -62,7 +62,7 @@ def atomic_write(df: pl.DataFrame, path: Path, fsync: bool = True) -> None:
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/services/market_service.py` |
+| File: | `packages/data/src/ditto_data/services/market_service.py` |
 | FileLock? | **YES** |
 | atomic_write? | YES (via ParquetStore) |
 | Storage backend | Parquet (year-partitioned) |
@@ -87,7 +87,7 @@ def atomic_write(df: pl.DataFrame, path: Path, fsync: bool = True) -> None:
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/services/fundamental_service.py` |
+| File: | `packages/data/src/ditto_data/services/fundamental_service.py` |
 | FileLock? | No (not needed) |
 | atomic_write? | N/A |
 | Storage backend | **SQLite** (via SQLiteClient) |
@@ -102,7 +102,7 @@ def atomic_write(df: pl.DataFrame, path: Path, fsync: bool = True) -> None:
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/services/capital_service.py` |
+| File: | `packages/data/src/ditto_data/services/capital_service.py` |
 | FileLock? | No (not needed) |
 | atomic_write? | N/A |
 | Storage backend | **SQLite** (via SQLiteClient) |
@@ -117,7 +117,7 @@ def atomic_write(df: pl.DataFrame, path: Path, fsync: bool = True) -> None:
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/services/metadata_service.py` |
+| File: | `packages/data/src/ditto_data/services/metadata_service.py` |
 | FileLock? | No (not needed) |
 | atomic_write? | N/A |
 | Storage backend | **SQLite** (via SQLiteClient) |
@@ -134,7 +134,7 @@ All underlying writers (CalendarWriter, InstrumentWriter, UniverseWriter, Indust
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/stores/factors/factor_writer.py` |
+| File: | `packages/data/src/ditto_data/stores/factors/factor_writer.py` |
 | FileLock? | **NO** |
 | atomic_write? | YES (via custom _FactorParquetStore) |
 | Storage backend | Parquet (`factors/factors_narrow/YYYY.parquet`) |
@@ -148,7 +148,7 @@ All underlying writers (CalendarWriter, InstrumentWriter, UniverseWriter, Indust
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/stores/features/technical/technical_indicator_writer.py` |
+| File: | `packages/data/src/ditto_data/stores/features/technical/technical_indicator_writer.py` |
 | FileLock? | **NO** |
 | atomic_write? | YES (via custom _TechnicalIndicatorParquetStore) |
 | Storage backend | Parquet (`features/technical/indicators_narrow/YYYY.parquet`) |
@@ -162,7 +162,7 @@ All underlying writers (CalendarWriter, InstrumentWriter, UniverseWriter, Indust
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/stores/market/etf/nav/nav_writer.py` |
+| File: | `packages/data/src/ditto_data/stores/market/etf/nav/nav_writer.py` |
 | FileLock? | **NO** |
 | atomic_write? | YES (via ParquetStore) |
 | Storage backend | Parquet (`market/etf/nav/YYYY.parquet`) |
@@ -176,7 +176,7 @@ All underlying writers (CalendarWriter, InstrumentWriter, UniverseWriter, Indust
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/stores/market/etf/status/status_writer.py` |
+| File: | `packages/data/src/ditto_data/stores/market/etf/status/status_writer.py` |
 | FileLock? | **NO** |
 | atomic_write? | YES (via ParquetStore) |
 | Storage backend | Parquet (`market/etf/status/YYYY.parquet`) |
@@ -190,7 +190,7 @@ All underlying writers (CalendarWriter, InstrumentWriter, UniverseWriter, Indust
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/stores/market/etf/adj/adj_factor_writer.py` |
+| File: | `packages/data/src/ditto_data/stores/market/etf/adj/adj_factor_writer.py` |
 | FileLock? | **NO** |
 | atomic_write? | YES (via ParquetStore) |
 | Storage backend | Parquet (`market/etf/adj/YYYY.parquet`) |
@@ -204,7 +204,7 @@ All underlying writers (CalendarWriter, InstrumentWriter, UniverseWriter, Indust
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/services/research_artifact_service.py` |
+| File: | `packages/data/src/ditto_data/services/research_artifact_service.py` |
 | FileLock? | **NO** |
 | atomic_write? | **NO** (uses `frame.write_parquet(path)` directly) |
 | Storage backend | Parquet (user-controlled paths) |
@@ -217,7 +217,7 @@ All underlying writers (CalendarWriter, InstrumentWriter, UniverseWriter, Indust
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/stores/runtime/derived_artifact_writer.py` |
+| File: | `packages/data/src/ditto_data/stores/runtime/derived_artifact_writer.py` |
 | FileLock? | **NO** |
 | atomic_write? | **PARTIAL** (manual temp-replace in `write_durable_partitions`, none in `write_ephemeral_result`) |
 | Storage backend | Parquet (per derived ID + version) |
@@ -235,7 +235,7 @@ All underlying writers (CalendarWriter, InstrumentWriter, UniverseWriter, Indust
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/stores/runtime/quality/comparison_writer.py` |
+| File: | `packages/data/src/ditto_data/stores/runtime/quality/comparison_writer.py` |
 | FileLock? | **NO** |
 | atomic_write? | **NO** (uses `df.write_parquet(file_path)` directly) |
 | Storage backend | Parquet (`quarantine/quality_comparison/year=YYYY/month=MM/{dataset}/{trade_date}.parquet`) |
@@ -261,7 +261,7 @@ All underlying writers (CalendarWriter, InstrumentWriter, UniverseWriter, Indust
 
 | Property | Value |
 |----------|-------|
-| File: | `packages/datahub/src/ditto_datahub/stores/market/index/constituent/constituent_writer.py` |
+| File: | `packages/data/src/ditto_data/stores/market/index/constituent/constituent_writer.py` |
 | FileLock? | No (not needed) |
 | atomic_write? | N/A |
 | Storage backend | **SQLite** (`market/index/constituent.db`) |
@@ -362,16 +362,16 @@ A more robust long-term approach would be to integrate optional FileLock into `P
 |-----------|---------------|
 | atomic_write | `packages/infra/src/ditto_infra/foundation/util/io.py` |
 | FileLockManager | `packages/infra/src/ditto_infra/foundation/concurrency/filelock.py` |
-| ParquetStore | `packages/datahub/src/ditto_datahub/stores/base/parquet_store.py` |
-| MarketService | `packages/datahub/src/ditto_datahub/services/market_service.py` |
-| FundamentalService | `packages/datahub/src/ditto_datahub/services/fundamental_service.py` |
-| CapitalService | `packages/datahub/src/ditto_datahub/services/capital_service.py` |
-| MetadataService | `packages/datahub/src/ditto_datahub/services/metadata_service.py` |
-| FactorWriter | `packages/datahub/src/ditto_datahub/stores/factors/factor_writer.py` |
-| TechnicalIndicatorWriter | `packages/datahub/src/ditto_datahub/stores/features/technical/technical_indicator_writer.py` |
-| EtfNavWriter | `packages/datahub/src/ditto_datahub/stores/market/etf/nav/nav_writer.py` |
-| EtfStatusWriter | `packages/datahub/src/ditto_datahub/stores/market/etf/status/status_writer.py` |
-| EtfAdjFactorWriter | `packages/datahub/src/ditto_datahub/stores/market/etf/adj/adj_factor_writer.py` |
-| ResearchArtifactService | `packages/datahub/src/ditto_datahub/services/research_artifact_service.py` |
-| DerivedArtifactWriter | `packages/datahub/src/ditto_datahub/stores/runtime/derived_artifact_writer.py` |
-| ComparisonWriter | `packages/datahub/src/ditto_datahub/stores/runtime/quality/comparison_writer.py` |
+| ParquetStore | `packages/data/src/ditto_data/stores/base/parquet_store.py` |
+| MarketService | `packages/data/src/ditto_data/services/market_service.py` |
+| FundamentalService | `packages/data/src/ditto_data/services/fundamental_service.py` |
+| CapitalService | `packages/data/src/ditto_data/services/capital_service.py` |
+| MetadataService | `packages/data/src/ditto_data/services/metadata_service.py` |
+| FactorWriter | `packages/data/src/ditto_data/stores/factors/factor_writer.py` |
+| TechnicalIndicatorWriter | `packages/data/src/ditto_data/stores/features/technical/technical_indicator_writer.py` |
+| EtfNavWriter | `packages/data/src/ditto_data/stores/market/etf/nav/nav_writer.py` |
+| EtfStatusWriter | `packages/data/src/ditto_data/stores/market/etf/status/status_writer.py` |
+| EtfAdjFactorWriter | `packages/data/src/ditto_data/stores/market/etf/adj/adj_factor_writer.py` |
+| ResearchArtifactService | `packages/data/src/ditto_data/services/research_artifact_service.py` |
+| DerivedArtifactWriter | `packages/data/src/ditto_data/stores/runtime/derived_artifact_writer.py` |
+| ComparisonWriter | `packages/data/src/ditto_data/stores/runtime/quality/comparison_writer.py` |

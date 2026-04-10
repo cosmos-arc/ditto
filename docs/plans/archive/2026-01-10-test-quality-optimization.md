@@ -32,17 +32,17 @@
 - **差距**: 需要提升约37个百分点
 
 **低覆盖率模块**:
-- `packages/datahub/src/ditto_datahub/errors.py` - 异常类定义
-- `packages/datahub/src/ditto_datahub/hub.py` - DataHub 门面类
+- `packages/data/src/ditto_data/errors.py` - 异常类定义
+- `packages/data/src/ditto_data/hub.py` - DataHub 门面类
 
 ### 2. 测试基础设施问题
 
 #### 2.1 import 冲突（2对文件）
 ```
-packages/datahub/tests/unit/stores/test_pipeline_store.py
-packages/datahub/tests/integration/stores/test_pipeline_store.py
-packages/datahub/tests/unit/stores/test_quarantine_store.py
-packages/datahub/tests/integration/stores/test_quarantine_store.py
+packages/data/tests/unit/stores/test_pipeline_store.py
+packages/data/tests/integration/stores/test_pipeline_store.py
+packages/data/tests/unit/stores/test_quarantine_store.py
+packages/data/tests/integration/stores/test_quarantine_store.py
 ```
 
 #### 2.2 测试文件命名规范问题（约80个文件）
@@ -61,7 +61,7 @@ packages/datahub/tests/integration/stores/test_quarantine_store.py
 
 **Unit 测试（约56个文件需要添加 `_unit` 后缀）**:
 ```
-packages/datahub/tests/unit/
+packages/data/tests/unit/
 ├── test_errors.py → test_errors_unit.py
 ├── test_hub.py → test_hub_unit.py
 ├── alerts/test_base.py → test_base_unit.py
@@ -135,7 +135,7 @@ apps/server/tests/unit/
 
 **Integration 测试（约16个文件需要添加 `_integration` 后缀）**:
 ```
-packages/datahub/tests/integration/
+packages/data/tests/integration/
 ├── runtime/test_freeze_manager.py → test_freeze_manager_integration.py
 ├── runtime/test_freeze_manager_checksum.py → test_freeze_manager_checksum_integration.py
 ├── runtime/test_sid_allocator.py → test_sid_allocator_integration.py
@@ -164,7 +164,7 @@ tests/integration/test_observability_e2e.py → tests/e2e/test_observability_e2e
 
 #### 2.3 假测试（1个文件）
 ```
-packages/datahub/tests/unit/stores/test_sqlite_client.py:367
+packages/data/tests/unit/stores/test_sqlite_client.py:367
     assert True  # If we get here, close() worked
 ```
 
@@ -179,18 +179,18 @@ apps/server/tests/unit/ingestion/test_coordinator.py
 apps/server/tests/unit/ingestion/test_metadata.py
 apps/server/tests/unit/ingestion/flows/test_backfill.py
 apps/server/tests/unit/ingestion/flows/test_daily.py
-packages/datahub/tests/unit/dq/test_engine.py
-packages/datahub/tests/unit/dq/checkers/test_technical.py
-packages/datahub/tests/unit/dq/checkers/test_statistical.py
+packages/data/tests/unit/dq/test_engine.py
+packages/data/tests/unit/dq/checkers/test_technical.py
+packages/data/tests/unit/dq/checkers/test_statistical.py
 apps/server/tests/unit/ingestion/tasks/test_task_factory.py
-packages/datahub/tests/integration/runtime/test_freeze_manager_checksum.py
+packages/data/tests/integration/runtime/test_freeze_manager_checksum.py
 apps/server/tests/unit/ingestion/test_backfill.py
-packages/datahub/tests/unit/repositories/test_index_repository.py
-packages/datahub/tests/unit/repositories/test_bars_repository.py
+packages/data/tests/unit/repositories/test_index_repository.py
+packages/data/tests/unit/repositories/test_bars_repository.py
 apps/server/tests/integration/ingestion/test_adj_factor_ingestion.py
 apps/server/tests/integration/ingestion/test_coordinator_dq_blocking.py
 apps/server/tests/unit/ingestion/tasks/test_dq_batch.py
-packages/datahub/tests/unit/repositories/test_universe_repository.py
+packages/data/tests/unit/repositories/test_universe_repository.py
 apps/server/tests/integration/ingestion/flows/test_deploy.py
 apps/server/tests/integration/ingestion/flows/test_repair.py
 apps/server/tests/integration/ingestion/flows/test_backfill.py
@@ -245,7 +245,7 @@ apps/server/tests/unit/ingestion/test_retry.py
 # rename_tests.sh - 批量重命名测试文件以符合命名规范
 
 # Unit 测试添加 _unit 后缀
-for file in $(find packages/datahub/tests/unit -name "test_*.py" -not -name "*_unit.py"); do
+for file in $(find packages/data/tests/unit -name "test_*.py" -not -name "*_unit.py"); do
     dir=$(dirname "$file")
     base=$(basename "$file" .py)
     new_name="${base}_unit.py"
@@ -254,7 +254,7 @@ for file in $(find packages/datahub/tests/unit -name "test_*.py" -not -name "*_u
 done
 
 # Integration 测试添加 _integration 后缀
-for file in $(find packages/datahub/tests/integration -name "test_*.py" -not -name "*_integration.py"); do
+for file in $(find packages/data/tests/integration -name "test_*.py" -not -name "*_integration.py"); do
     dir=$(dirname "$file")
     base=$(basename "$file" .py)
     new_name="${base}_integration.py"
@@ -315,7 +315,7 @@ find . -name "*.py" -type f -exec sed -i 's/test_\([a-z_]*\)\.py/test_\1_unit.py
 ```
 
 #### Task 1.3: 修复假测试
-- **文件**: `packages/datahub/tests/unit/stores/test_sqlite_client_unit.py:367`
+- **文件**: `packages/data/tests/unit/stores/test_sqlite_client_unit.py:367`
 - **问题**: `assert True` 无效断言
 - **修复**: 添加实际验证逻辑或删除该测试
 
@@ -329,13 +329,13 @@ find . -name "*.py" -type f -exec sed -i 's/test_\([a-z_]*\)\.py/test_\1_unit.py
 ### Phase 2: 提升覆盖率到80%（核心）
 
 #### Task 2.1: 为 errors.py 补充测试
-创建 `packages/datahub/tests/unit/test_errors.py`：
+创建 `packages/data/tests/unit/test_errors.py`：
 
 ```python
 """测试 DataHub 异常类"""
 
 import pytest
-from ditto_datahub.errors import (
+from ditto_data.errors import (
     DataHubError,
     SidNotFoundError,
     TradingDateNotFoundError,
@@ -374,15 +374,15 @@ class TestSidNotFoundError:
 ```
 
 #### Task 2.2: 为 hub.py 补充测试
-扩展 `packages/datahub/tests/unit/test_hub.py`：
+扩展 `packages/data/tests/unit/test_hub.py`：
 
 ```python
 """测试 DataHub 门面类"""
 
 import pytest
 from pathlib import Path
-from ditto_datahub.hub import DataHub
-from ditto_datahub.errors import SidNotFoundError
+from ditto_data.hub import DataHub
+from ditto_data.errors import SidNotFoundError
 
 
 class TestDataHubInit:
@@ -451,21 +451,21 @@ class TestDataHubConvenienceMethods:
 |---|------|------|---------|
 | 1 | `apps/server/tests/unit/ingestion/test_coordinator_unit.py` | ✅ | 42 passed |
 | 2 | `apps/server/tests/unit/ingestion/test_metadata_unit.py` | ✅ | 20 passed |
-| 3 | `packages/datahub/tests/unit/dq/test_engine_unit.py` | ✅ | 21 passed |
+| 3 | `packages/data/tests/unit/dq/test_engine_unit.py` | ✅ | 21 passed |
 | 4 | `apps/server/tests/unit/ingestion/test_security_mapper_unit.py` | ✅ | 20 passed |
 | 5 | `apps/server/tests/unit/ingestion/flows/test_backfill_unit.py` | ✅ | 15 passed |
 | 6 | `apps/server/tests/unit/ingestion/flows/test_daily_unit.py` | ✅ | 18 passed |
-| 7 | `packages/datahub/tests/unit/dq/checkers/test_technical_unit.py` | ✅ | 27 passed |
-| 8 | `packages/datahub/tests/unit/dq/checkers/test_statistical_unit.py` | ✅ | 23 passed |
+| 7 | `packages/data/tests/unit/dq/checkers/test_technical_unit.py` | ✅ | 27 passed |
+| 8 | `packages/data/tests/unit/dq/checkers/test_statistical_unit.py` | ✅ | 23 passed |
 | 9 | `apps/server/tests/unit/ingestion/tasks/test_task_factory_unit.py` | ✅ | 22 passed |
 | 10 | `apps/server/tests/unit/ingestion/tasks/test_dq_batch_unit.py` | ✅ | 5 passed |
 | 11 | `apps/server/tests/unit/ingestion/test_backfill_unit.py` | ✅ | 11 passed |
 | 12 | `apps/server/tests/unit/ingestion/test_retry_unit.py` | ✅ | 12 passed |
-| 13 | `packages/datahub/tests/unit/repositories/test_index_repository_unit.py` | ✅ | 13 passed |
-| 14 | `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py` | ✅ | 32 passed |
-| 15 | `packages/datahub/tests/unit/repositories/test_universe_repository_unit.py` | ✅ | 18 passed |
-| 16 | `packages/datahub/tests/integration/runtime/test_freeze_manager_checksum_integration.py` | ✅ | 6 passed |
-| 17 | `packages/datahub/tests/integration/stores/test_pipeline_store_integration.py` | ✅ | 30 passed |
+| 13 | `packages/data/tests/unit/repositories/test_index_repository_unit.py` | ✅ | 13 passed |
+| 14 | `packages/data/tests/unit/repositories/test_bars_repository_unit.py` | ✅ | 32 passed |
+| 15 | `packages/data/tests/unit/repositories/test_universe_repository_unit.py` | ✅ | 18 passed |
+| 16 | `packages/data/tests/integration/runtime/test_freeze_manager_checksum_integration.py` | ✅ | 6 passed |
+| 17 | `packages/data/tests/integration/stores/test_pipeline_store_integration.py` | ✅ | 30 passed |
 | 18 | `apps/server/tests/integration/ingestion/test_adj_factor_ingestion_integration.py` | ✅ | 2 passed (预存在失败) |
 | 19 | `apps/server/tests/integration/ingestion/test_coordinator_dq_blocking_integration.py` | ✅ | 3 passed |
 | 20 | `apps/server/tests/integration/ingestion/flows/test_deploy_integration.py` | ✅ | 4 passed (1 skipped) |
@@ -511,11 +511,11 @@ def test_something(mocker):
 |--------|------|------|
 | P0 | `apps/server/tests/unit/ingestion/test_coordinator.py` | 核心协调器 |
 | P0 | `apps/server/tests/unit/ingestion/test_metadata.py` | 元数据管理 |
-| P0 | `packages/datahub/tests/unit/dq/test_engine.py` | DQ 引擎 |
+| P0 | `packages/data/tests/unit/dq/test_engine.py` | DQ 引擎 |
 | P1 | `apps/server/tests/unit/ingestion/flows/*.py` | 摄入流程 |
-| P1 | `packages/datahub/tests/unit/dq/checkers/*.py` | DQ 检查器 |
+| P1 | `packages/data/tests/unit/dq/checkers/*.py` | DQ 检查器 |
 | P2 | `apps/server/tests/integration/ingestion/*.py` | 集成测试 |
-| P2 | `packages/datahub/tests/unit/repositories/*.py` | 仓库测试 |
+| P2 | `packages/data/tests/unit/repositories/*.py` | 仓库测试 |
 
 #### Task 3.2: 更新代码审查检查清单
 - [ ] 无 `from unittest.mock import` 导入
@@ -676,21 +676,21 @@ async def test_async_endpoint():
 | 文件 | 修改内容 |
 |------|---------|
 | `pyproject.toml:396` | 取消注释并发测试配置 |
-| `packages/datahub/tests/unit/stores/test_sqlite_client.py:367` | 修复假测试 |
+| `packages/data/tests/unit/stores/test_sqlite_client.py:367` | 修复假测试 |
 | **22个文件** | 迁移 unittest.mock → pytest-mock |
 
 ### 需要重命名的文件
 | 原文件 | 新文件 |
 |--------|--------|
-| `packages/datahub/tests/unit/stores/test_pipeline_store.py` | `test_pipeline_store_unit.py` |
-| `packages/datahub/tests/unit/stores/test_quarantine_store.py` | `test_quarantine_store_unit.py` |
+| `packages/data/tests/unit/stores/test_pipeline_store.py` | `test_pipeline_store_unit.py` |
+| `packages/data/tests/unit/stores/test_quarantine_store.py` | `test_quarantine_store_unit.py` |
 
 ### 需要创建的文件
 | 文件 | 目的 |
 |------|------|
-| `packages/datahub/tests/unit/test_errors.py` | 测试异常类 |
-| `packages/datahub/tests/unit/test_hub.py` | 测试 DataHub 门面 |
-| `packages/datahub/tests/unit/async/` | 异步测试目录 |
+| `packages/data/tests/unit/test_errors.py` | 测试异常类 |
+| `packages/data/tests/unit/test_hub.py` | 测试 DataHub 门面 |
+| `packages/data/tests/unit/async/` | 异步测试目录 |
 
 ---
 

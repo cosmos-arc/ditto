@@ -301,7 +301,7 @@ class MarketService:
 
 ```python
 # port/cli/commands/index.py
-from ditto_datahub.models import Dataset
+from ditto_data.models import Dataset
 
 app = typer.Typer(help="指数数据摄取命令")
 
@@ -358,7 +358,7 @@ def daily(
 
 ## 8. 参考
 
-- [Dataset 枚举定义](../packages/datahub/src/ditto_datahub/models/common.py)
+- [Dataset 枚举定义](../packages/data/src/ditto_data/models/common.py)
 - [摄取任务注册表](../apps/port/src/ditto_port/models/config.py)
-- [MarketService](../packages/datahub/src/ditto_datahub/services/market_service.py)
+- [MarketService](../packages/data/src/ditto_data/services/market_service.py)
 - [IngestionCoordinator](../apps/port/src/ditto_port/services/ingestion/coordinator.py)

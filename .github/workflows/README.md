@@ -18,7 +18,7 @@ Ditto 项目使用分层的 CI/CD 策略，将快速反馈的单元测试与耗�
 |------|----------|------|------|
 | `ci.yml` | PR 到 main, push 到 main | 单元测试 + 代码质量检查 | ~5 分钟 |
 | `ci-integration.yml` | 手动触发, 定时, CI 成功后 | 集成测试（含 observability 服务） | ~15 分钟 |
-| `deploy.yml` | CI 成功后, Release 发布 | 部署到 staging/production | ~10 分钟 |
+| `deploy.yml.disabled` | CI 成功后, Release 发布 | 部署到 staging/production | ~10 分钟 | **规划中 (planned)** |
 
 ---
 
@@ -79,14 +79,14 @@ changes (变更检测)
 ```bash
 pytest -m "integration" \
   --cov=packages \
-  --cov=apps \
+  --cov=interfaces \
   --cov-report=xml:coverage-integration.xml \
   --junitxml=junit-integration.xml
 ```
 
 ---
 
-## deploy.yml - 持续部署
+## deploy.yml - 持续部署（规划中，尚未实现）
 
 ### 部署流程
 
@@ -171,9 +171,6 @@ pixi run ci-check
 | `e2e` | 端到端测试 | 本地 + CI 集成工作流 |
 | `slow` | 耗时测试（>30s） | 本地 + CI 集成工作流 |
 | `unit` | 单元测试（无外部依赖） | 本地 + CI 主工作流 |
-| `smoke` | 冒烟测试 | 本地 + CI |
-| `benchmark` | 性能测试 | 本地 |
-
 ---
 
 ## 常见问题

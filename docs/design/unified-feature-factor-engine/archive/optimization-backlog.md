@@ -130,7 +130,7 @@ class DerivedSpec(BaseModel):
 **涉及文件**：
 - 已新增: `docs/design/unified-feature-factor-engine/decisions/adr-033-derived-query-architecture.md`
 - 待新增: `apps/port/src/ditto_port/facades/derived/`
-- 待新增: `packages/datahub/src/ditto_datahub/services/derived/`
+- 待新增: `packages/data/src/ditto_data/services/derived/`
 
 ---
 
@@ -279,7 +279,7 @@ class DerivedSpec(BaseModel):
 
 **涉及文件**：
 - 已新增: `docs/design/unified-feature-factor-engine/decisions/core/adr-034-publication-lifecycle.md`
-- 待新增: `packages/datahub/src/ditto_datahub/services/derived/publication_service.py`
+- 待新增: `packages/data/src/ditto_data/services/derived/publication_service.py`
 
 ---
 
@@ -620,7 +620,7 @@ class BaseTradingCalendar(ABC):
 | `packages/core/src/ditto_core/engine/specs.py` | DerivedSpec 模型 | P0-1 |
 | `packages/core/src/ditto_core/engine/cache/` | 表达式缓存 | P1-1 |
 | `packages/core/src/ditto_core/engine/gates/` | 质量门禁 | P1-7 |
-| `packages/datahub/src/ditto_datahub/services/derived/` | Derived 查询实现 | P0-2 |
+| `packages/data/src/ditto_data/services/derived/` | Derived 查询实现 | P0-2 |
 | `apps/port/src/ditto_port/facades/derived/` | Derived 查询 Facade | P0-2 |
 | `tests/golden/operators/` | 黄金数据集 | P1-4 |
 | `tests/benchmarks/` | 性能基准 | P1-8 |

@@ -58,16 +58,20 @@ from ditto_infra.config import ...  # 应为 ditto_infra.foundation.config
 ```
 ┌─────────────────────────────────────┐
 │  所有层都可以访问 Infra（foundation）│
-│  port → infra ✅                    │
-│  datahub → infra ✅                 │
-│  core → infra ✅                    │
+│  interfaces → infra ✅             │
+│  app → infra ✅                    │
+│  engine → infra ❌                 │
+│  analytics → infra ✅              │
+│  data → infra ✅                   │
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
 │  Infra 禁止依赖其他层               │
-│  infra → port ❌                    │
-│  infra → datahub ❌                 │
-│  infra → core ❌                    │
+│  infra → interfaces ❌             │
+│  infra → app ❌                    │
+│  infra → engine ❌                 │
+│  infra → analytics ❌              │
+│  infra → data ❌                   │
 └─────────────────────────────────────┘
 ```
 
@@ -89,7 +93,7 @@ env = os.getenv("ENVIRONMENT")  # 绕过统一入口
 
 ### 配置加载位置
 
-配置仅在 **Port 层** 加载，其他层通过 DI 获取。详见 [config.md](/.claude/rules/config.md)。
+配置仅在 **Interfaces 层** 加载，其他层通过 DI 获取。详见 [config.md](/.claude/rules/config.md)。
 
 ## 测试规范
 

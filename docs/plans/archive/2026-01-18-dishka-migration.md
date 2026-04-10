@@ -82,7 +82,7 @@ apps/port/          ← 容器在这里（Composition Root）
   ├── providers/    ← Provider 定义
   └── main.py       ← 容器初始化
 
-packages/datahub/   ← 纯粹领域逻辑，不依赖 dishka
+packages/data/   ← 纯粹领域逻辑，不依赖 dishka
 packages/core/      ← 纯粹领域逻辑，不依赖 dishka
 packages/foundation/ ← 基础设施，不依赖 dishka
 ```
@@ -207,8 +207,8 @@ def test_security_store(test_container):
   - 使用内存数据库 mock
   - 使用 MockObservability
 - **文件**:
-  - `packages/datahub/tests/conftest.py`
-  - `packages/datahub/tests/unit/conftest.py`
+  - `packages/data/tests/conftest.py`
+  - `packages/data/tests/unit/conftest.py`
 
 #### Task 4.2: 迁移单元测试 `[L]`
 - **描述**: 更新现有单元测试使用 TestContainer
@@ -217,7 +217,7 @@ def test_security_store(test_container):
   - 移除 `mocker.patch`（大部分）
   - 测试覆盖率保持 >= 80%
 - **文件**:
-  - `packages/datahub/tests/unit/test_*.py`
+  - `packages/data/tests/unit/test_*.py`
   - 涉及 ~50 个测试文件
 
 #### Task 4.3: 迁移集成测试 `[M]`
@@ -226,7 +226,7 @@ def test_security_store(test_container):
   - 集成测试使用真实 DataHub Provider
   - 测试数据库独立隔离
 - **文件**:
-  - `packages/datahub/tests/integration/`
+  - `packages/data/tests/integration/`
 
 ---
 
@@ -340,9 +340,9 @@ Phase 5: 文档规范 (0.5 天)
 | **应用（port 端）** | `apps/port/src/ditto_port/providers/sources.py` | 新建 |
 | **应用（port 端）** | `apps/port/src/ditto_port/main.py` | 重构 |
 | **应用（port 端）** | `apps/port/src/ditto_port/api/routes/*.py` | 重构 |
-| **数据层** | `packages/datahub/src/ditto_datahub/hub.py` | 重构 |
-| **测试** | `packages/datahub/tests/conftest.py` | 重构 |
-| **测试** | `packages/datahub/tests/unit/conftest.py` | 重构 |
+| **数据层** | `packages/data/src/ditto_data/hub.py` | 重构 |
+| **测试** | `packages/data/tests/conftest.py` | 重构 |
+| **测试** | `packages/data/tests/unit/conftest.py` | 重构 |
 | **文档** | `.claude/rules/core.md` | 编辑 |
 | **文档** | `.claude/rules/python-test.md` | 编辑 |
 | **文档** | `docs/design/04_deployment_topology.md` | 编辑 |
@@ -354,28 +354,28 @@ Phase 5: 文档规范 (0.5 天)
 以下文件通过 port 端 Provider 中的类型注解自动注入，无需修改：
 
 **Store 层（~10 个）**：
-- `packages/datahub/src/ditto_datahub/stores/security_store.py`
-- `packages/datahub/src/ditto_datahub/stores/calendar_store.py`
-- `packages/datahub/src/ditto_datahub/stores/bars_store.py`
-- `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py`
-- `packages/datahub/src/ditto_datahub/stores/universe_store.py`
-- `packages/datahub/src/ditto_datahub/stores/index_weight_store.py`
-- `packages/datahub/src/ditto_datahub/stores/ingestion_log.py`
-- `packages/datahub/src/ditto_datahub/stores/quarantine_store.py`
-- `packages/datahub/src/ditto_datahub/stores/stock_status_store.py`
-- `packages/datahub/src/ditto_datahub/stores/parquet_store_base.py`
+- `packages/data/src/ditto_data/stores/security_store.py`
+- `packages/data/src/ditto_data/stores/calendar_store.py`
+- `packages/data/src/ditto_data/stores/bars_store.py`
+- `packages/data/src/ditto_data/stores/adj_factor_store.py`
+- `packages/data/src/ditto_data/stores/universe_store.py`
+- `packages/data/src/ditto_data/stores/index_weight_store.py`
+- `packages/data/src/ditto_data/stores/ingestion_log.py`
+- `packages/data/src/ditto_data/stores/quarantine_store.py`
+- `packages/data/src/ditto_data/stores/stock_status_store.py`
+- `packages/data/src/ditto_data/stores/parquet_store_base.py`
 
 **Repository 层（~6 个）**：
-- `packages/datahub/src/ditto_datahub/repositories/security.py`
-- `packages/datahub/src/ditto_datahub/repositories/calendar.py`
-- `packages/datahub/src/ditto_datahub/repositories/bars/repository.py`
-- `packages/datahub/src/ditto_datahub/repositories/adj_factor.py`
-- `packages/datahub/src/ditto_datahub/repositories/universe.py`
-- `packages/datahub/src/ditto_datahub/repositories/index.py`
+- `packages/data/src/ditto_data/repositories/security.py`
+- `packages/data/src/ditto_data/repositories/calendar.py`
+- `packages/data/src/ditto_data/repositories/bars/repository.py`
+- `packages/data/src/ditto_data/repositories/adj_factor.py`
+- `packages/data/src/ditto_data/repositories/universe.py`
+- `packages/data/src/ditto_data/repositories/index.py`
 
 **数据源层（~2 个）**：
-- `packages/datahub/src/ditto_datahub/sources/provider.py`
-- `packages/datahub/src/ditto_datahub/sources/tushare.py`
+- `packages/data/src/ditto_data/sources/provider.py`
+- `packages/data/src/ditto_data/sources/tushare.py`
 
 **核心原则**：
 - ✅ **apps/port/** - Composition Root，容器在这里

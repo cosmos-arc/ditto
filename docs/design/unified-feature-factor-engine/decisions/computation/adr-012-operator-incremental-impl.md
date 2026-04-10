@@ -20,7 +20,7 @@
 延续 ADR-006 的决策，算子的增量计算逻辑通过**独立状态管理模块**实现：
 
 ```
-packages/core/src/ditto_core/
+packages/kernel/src/ditto_kernel/
 ├── expression/                 # 表达式引擎（纯计算）
 │   ├── engine.py
 │   └── operators.py

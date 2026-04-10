@@ -21,19 +21,19 @@
 ### Task 1.1: 扩展 FX Schema 添加 trade_date_utc
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/schemas/fx_schemas.py`
-- Test: `packages/datahub/tests/unit/sources/schemas/test_fx_schemas.py`
+- Modify: `packages/data/src/ditto_data/sources/schemas/fx_schemas.py`
+- Test: `packages/data/tests/unit/sources/schemas/test_fx_schemas.py`
 
 **Step 1: 扩展 FX_SOURCE_SCHEMA**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/schemas/fx_schemas.py
+# packages/data/src/ditto_data/sources/schemas/fx_schemas.py
 
 """FX (Foreign Exchange) SourceSchema definitions."""
 
 import polars as pl
 
-from ditto_datahub.sources.source_schema import SourceSchema
+from ditto_data.sources.source_schema import SourceSchema
 
 __all__ = ["FX_SOURCE_SCHEMA"]
 
@@ -56,13 +56,13 @@ FX_SOURCE_SCHEMA = SourceSchema(
 **Step 2: 添加单元测试**
 
 ```python
-# packages/datahub/tests/unit/sources/schemas/test_fx_schemas.py
+# packages/data/tests/unit/sources/schemas/test_fx_schemas.py
 
 """Unit tests for FX schemas."""
 
 import polars as pl
 
-from ditto_datahub.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
+from ditto_data.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
 
 
 def test_fx_schema_has_trade_date_utc():
@@ -79,13 +79,13 @@ def test_fx_schema_key_columns():
 **Step 3: 运行测试验证**
 
 ```bash
-pixi run -e dev test packages/datahub/tests/unit/sources/schemas/test_fx_schemas.py -v
+pixi run -e dev test packages/data/tests/unit/sources/schemas/test_fx_schemas.py -v
 ```
 
 **Step 4: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/schemas/fx_schemas.py packages/datahub/tests/unit/sources/schemas/test_fx_schemas.py
+git add packages/data/src/ditto_data/sources/schemas/fx_schemas.py packages/data/tests/unit/sources/schemas/test_fx_schemas.py
 git commit -m "feat(schema): add trade_date_utc to FX_SOURCE_SCHEMA"
 ```
 
@@ -94,19 +94,19 @@ git commit -m "feat(schema): add trade_date_utc to FX_SOURCE_SCHEMA"
 ### Task 1.2: 扩展 Commodity Schema 添加 trade_date_utc
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/schemas/commodity_schemas.py`
-- Test: `packages/datahub/tests/unit/sources/schemas/test_commodity_schemas.py`
+- Modify: `packages/data/src/ditto_data/sources/schemas/commodity_schemas.py`
+- Test: `packages/data/tests/unit/sources/schemas/test_commodity_schemas.py`
 
 **Step 1: 扩展 COMMODITY_SOURCE_SCHEMA**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/schemas/commodity_schemas.py
+# packages/data/src/ditto_data/sources/schemas/commodity_schemas.py
 
 """Commodity SourceSchema definitions."""
 
 import polars as pl
 
-from ditto_datahub.sources.source_schema import SourceSchema
+from ditto_data.sources.source_schema import SourceSchema
 
 __all__ = ["COMMODITY_SOURCE_SCHEMA"]
 
@@ -129,13 +129,13 @@ COMMODITY_SOURCE_SCHEMA = SourceSchema(
 **Step 2: 添加单元测试**
 
 ```python
-# packages/datahub/tests/unit/sources/schemas/test_commodity_schemas.py
+# packages/data/tests/unit/sources/schemas/test_commodity_schemas.py
 
 """Unit tests for Commodity schemas."""
 
 import polars as pl
 
-from ditto_datahub.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
+from ditto_data.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
 
 
 def test_commodity_schema_has_trade_date_utc():
@@ -152,13 +152,13 @@ def test_commodity_schema_key_columns():
 **Step 3: 运行测试验证**
 
 ```bash
-pixi run -e dev test packages/datahub/tests/unit/sources/schemas/test_commodity_schemas.py -v
+pixi run -e dev test packages/data/tests/unit/sources/schemas/test_commodity_schemas.py -v
 ```
 
 **Step 4: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/schemas/commodity_schemas.py packages/datahub/tests/unit/sources/schemas/test_commodity_schemas.py
+git add packages/data/src/ditto_data/sources/schemas/commodity_schemas.py packages/data/tests/unit/sources/schemas/test_commodity_schemas.py
 git commit -m "feat(schema): add trade_date_utc to COMMODITY_SOURCE_SCHEMA"
 ```
 
@@ -169,13 +169,13 @@ git commit -m "feat(schema): add trade_date_utc to COMMODITY_SOURCE_SCHEMA"
 ### Task 2.1: 创建时区转换工具模块
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/utils/timezone_utils.py`
-- Test: `packages/datahub/tests/unit/utils/test_timezone_utils.py`
+- Create: `packages/data/src/ditto_data/utils/timezone_utils.py`
+- Test: `packages/data/tests/unit/utils/test_timezone_utils.py`
 
 **Step 1: 创建时区转换工具**
 
 ```python
-# packages/datahub/src/ditto_datahub/utils/timezone_utils.py
+# packages/data/src/ditto_data/utils/timezone_utils.py
 
 """Timezone utility functions for cross-market data handling.
 
@@ -274,11 +274,11 @@ def get_fred_query_date(beijing_trade_date: str) -> str:
 **Step 2: 创建 `__init__.py`（如果不存在）**
 
 ```python
-# packages/datahub/src/ditto_datahub/utils/__init__.py
+# packages/data/src/ditto_data/utils/__init__.py
 
 """DataHub utility modules."""
 
-from ditto_datahub.utils.timezone_utils import (
+from ditto_data.utils.timezone_utils import (
     MARKET_TIMEZONE_MAP,
     convert_to_utc_midnight,
     get_fred_query_date,
@@ -294,7 +294,7 @@ __all__ = [
 **Step 3: 添加单元测试**
 
 ```python
-# packages/datahub/tests/unit/utils/test_timezone_utils.py
+# packages/data/tests/unit/utils/test_timezone_utils.py
 
 """Unit tests for timezone utilities."""
 
@@ -302,7 +302,7 @@ from datetime import date, datetime
 
 import pytest
 
-from ditto_datahub.utils.timezone_utils import (
+from ditto_data.utils.timezone_utils import (
     convert_to_utc_midnight,
     get_fred_query_date,
     MARKET_TIMEZONE_MAP,
@@ -366,13 +366,13 @@ class TestGetFredQueryDate:
 **Step 4: 运行测试**
 
 ```bash
-pixi run -e dev test packages/datahub/tests/unit/utils/test_timezone_utils.py -v
+pixi run -e dev test packages/data/tests/unit/utils/test_timezone_utils.py -v
 ```
 
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/utils/timezone_utils.py packages/datahub/src/ditto_datahub/utils/__init__.py packages/datahub/tests/unit/utils/test_timezone_utils.py
+git add packages/data/src/ditto_data/utils/timezone_utils.py packages/data/src/ditto_data/utils/__init__.py packages/data/tests/unit/utils/test_timezone_utils.py
 git commit -m "feat(utils): add timezone conversion utilities for cross-market data"
 ```
 
@@ -383,8 +383,8 @@ git commit -m "feat(utils): add timezone conversion utilities for cross-market d
 ### Task 3.1: 更新 FRED Commodity Adapter 添加日期转换
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/fred/adapters/commodity.py`
-- Test: `packages/datahub/tests/unit/sources/fred/adapters/test_commodity.py`
+- Modify: `packages/data/src/ditto_data/sources/fred/adapters/commodity.py`
+- Test: `packages/data/tests/unit/sources/fred/adapters/test_commodity.py`
 
 **Step 1: 更新 CommodityFredAdapter**
 
@@ -393,10 +393,10 @@ git commit -m "feat(utils): add timezone conversion utilities for cross-market d
 2. 添加 `trade_date_utc` 字段
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/fred/adapters/commodity.py
+# packages/data/src/ditto_data/sources/fred/adapters/commodity.py
 # 在文件顶部添加导入
 from datetime import datetime
-from ditto_datahub.utils.timezone_utils import (
+from ditto_data.utils.timezone_utils import (
     convert_to_utc_midnight,
     get_fred_query_date,
 )
@@ -479,7 +479,7 @@ def fetch_commodities(
 **Step 2: 更新单元测试**
 
 ```python
-# packages/datahub/tests/unit/sources/fred/adapters/test_commodity.py
+# packages/data/tests/unit/sources/fred/adapters/test_commodity.py
 # 添加测试用例
 
 def test_fetch_commodities_includes_trade_date_utc(mock_fred_client):
@@ -489,7 +489,7 @@ def test_fetch_commodities_includes_trade_date_utc(mock_fred_client):
 
     import polars as pl
 
-    from ditto_datahub.sources.fred.adapters.commodity import CommodityFredAdapter
+    from ditto_data.sources.fred.adapters.commodity import CommodityFredAdapter
 
     # 模拟 FRED 客户端返回
     mock_df = pl.DataFrame({
@@ -516,13 +516,13 @@ def test_fetch_commodities_includes_trade_date_utc(mock_fred_client):
 **Step 3: 运行测试**
 
 ```bash
-pixi run -e dev test packages/datahub/tests/unit/sources/fred/adapters/test_commodity.py -v
+pixi run -e dev test packages/data/tests/unit/sources/fred/adapters/test_commodity.py -v
 ```
 
 **Step 4: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/fred/adapters/commodity.py packages/datahub/tests/unit/sources/fred/adapters/test_commodity.py
+git add packages/data/src/ditto_data/sources/fred/adapters/commodity.py packages/data/tests/unit/sources/fred/adapters/test_commodity.py
 git commit -m "feat(fred): add date conversion and trade_date_utc to CommodityFredAdapter"
 ```
 
@@ -531,17 +531,17 @@ git commit -m "feat(fred): add date conversion and trade_date_utc to CommodityFr
 ### Task 3.2: 更新 Tushare FX Adapter 添加 UTC 时间戳
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/tushare/adapters/fx.py`
-- Test: `packages/datahub/tests/unit/sources/tushare/adapters/test_fx_adapter.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/adapters/fx.py`
+- Test: `packages/data/tests/unit/sources/tushare/adapters/test_fx_adapter.py`
 
 **Step 1: 更新 FxTushareAdapter**
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/adapters/fx.py
+# packages/data/src/ditto_data/sources/tushare/adapters/fx.py
 # 添加导入
 from datetime import datetime
 
-from ditto_datahub.utils.timezone_utils import convert_to_utc_midnight
+from ditto_data.utils.timezone_utils import convert_to_utc_midnight
 
 # 修改 fetch_fx_daily 方法
 @traced("source.tushare.fetch_fx_daily")
@@ -630,13 +630,13 @@ def fetch_fx_daily(
 **Step 3: 运行测试**
 
 ```bash
-pixi run -e dev test packages/datahub/tests/unit/sources/tushare/adapters/test_fx_adapter.py -v
+pixi run -e dev test packages/data/tests/unit/sources/tushare/adapters/test_fx_adapter.py -v
 ```
 
 **Step 4: Commit**
 
 ```bash
-git add packages/datahub/src/ditto_datahub/sources/tushare/adapters/fx.py packages/datahub/tests/unit/sources/tushare/adapters/test_fx_adapter.py
+git add packages/data/src/ditto_data/sources/tushare/adapters/fx.py packages/data/tests/unit/sources/tushare/adapters/test_fx_adapter.py
 git commit -m "feat(tushare): add trade_date_utc to FxTushareAdapter"
 ```
 
@@ -647,7 +647,7 @@ git commit -m "feat(tushare): add trade_date_utc to FxTushareAdapter"
 ### Task 4.1: 添加 FX 和 Commodity 数据源方法
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/sources/source.py`
+- Modify: `packages/data/src/ditto_data/sources/source.py`
 
 **Step 1: 添加 FX 和 Commodity fetch 方法**
 
@@ -687,8 +687,8 @@ Dataset.COMMODITY_DAILY: lambda: self._source.fetch_commodities(
 **Step 2: 导入必要的映射**
 
 ```python
-from ditto_datahub.sources.fred.adapters.commodity import COMMODITY_CODE_TO_INSTRUMENT_ID
-from ditto_datahub.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
+from ditto_data.sources.fred.adapters.commodity import COMMODITY_CODE_TO_INSTRUMENT_ID
+from ditto_data.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
 ```
 
 **Step 3: 运行测试**
@@ -710,8 +710,8 @@ git commit -m "feat(coordinator): add FX_DAILY and COMMODITY_DAILY ingestion sup
 ### Task 5.1: 更新 FxBarsWriter 和 CommodityBarsWriter
 
 **Files:**
-- Modify: `packages/datahub/src/ditto_datahub/stores/market/fx/fx_writer.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/market/commodity/commodity_writer.py`
+- Modify: `packages/data/src/ditto_data/stores/market/fx/fx_writer.py`
+- Modify: `packages/data/src/ditto_data/stores/market/commodity/commodity_writer.py`
 
 **Step 1: 确保 Writer 支持 trade_date_utc 字段**
 

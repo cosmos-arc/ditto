@@ -167,15 +167,15 @@
 **Core 层可以使用的 DataHub 内容**：
 ```python
 # ✅ Core 可以使用 DataHub 的模型
-from ditto_datahub.models import Order, Position, Portfolio
-from ditto_datahub.models.market import BAR_SCHEMA, QUOTE_SCHEMA
+from ditto_data.models import Order, Position, Portfolio
+from ditto_data.models.market import BAR_SCHEMA, QUOTE_SCHEMA
 ```
 
 **Core 层禁止使用的内容**：
 ```python
 # ❌ Core 不能使用 DataHub 的 Service/Store
-from ditto_datahub.services import MarketService  # 禁止
-from ditto_datahub.stores import BarsStore  # 禁止
+from ditto_data.services import MarketService  # 禁止
+from ditto_data.stores import BarsStore  # 禁止
 ```
 
 **强制措施**：
@@ -429,7 +429,7 @@ partitions = strategy.get_partitions_from_filters("2023-01-01", "2024-12-31")  #
 
 ### 3.4 SQLite 建表脚本
 
-SQLite 数据库的建表脚本位于 `packages/datahub/src/ditto_datahub/scripts/schema.sql`：
+SQLite 数据库的建表脚本位于 `packages/data/src/ditto_data/scripts/schema.sql`：
 
 ```sql
 -- ============================================================
@@ -1604,7 +1604,7 @@ Port 层直接注入 DataHub 的 Service，使用 Query 对象：
 ```python
 # apps/port/api/routes/market.py
 
-from ditto_datahub.services.market_service import MarketService, BarsQuery
+from ditto_data.services.market_service import MarketService, BarsQuery
 
 router = APIRouter(prefix="/api/v1/market")
 
@@ -1771,7 +1771,7 @@ async def export_bars(
 # apps/port/api/routes/market.py
 
 from fastapi import APIRouter, Depends
-from ditto_datahub.services.market_service import MarketService, MarketBarsQuery
+from ditto_data.services.market_service import MarketService, MarketBarsQuery
 from ditto_port.registry import get_market_service
 
 router = APIRouter(prefix="/api/v1/market")
@@ -1819,7 +1819,7 @@ async def export_bars(
 ### 12.2 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── models/                # 模型层（新增）
 │   ├── __init__.py
 │   │
@@ -1854,7 +1854,7 @@ packages/datahub/src/ditto_datahub/
 ### 12.3 Schema 定义示例（市场数据）
 
 ```python
-# packages/datahub/src/ditto_datahub/models/market/bar.py
+# packages/data/src/ditto_data/models/market/bar.py
 
 """K线数据 Schema 定义"""
 
@@ -1883,7 +1883,7 @@ BAR_ENRICHED_SCHEMA = {
 ### 12.4 模型定义示例（交易数据）
 
 ```python
-# packages/datahub/src/ditto_datahub/models/trading/order.py
+# packages/data/src/ditto_data/models/trading/order.py
 
 """订单模型定义"""
 
@@ -1942,7 +1942,7 @@ class Order:
 ### 12.5 模型定义示例（组合数据）
 
 ```python
-# packages/datahub/src/ditto_datahub/models/portfolio/position.py
+# packages/data/src/ditto_data/models/portfolio/position.py
 
 """持仓模型定义"""
 
@@ -2050,7 +2050,7 @@ ditto/
 │   │           └── spec.py            # DQ 配置
 │   │
 │   ├── datahub/                       # DataHub Layer（数据访问层）
-│   │   └── src/ditto_datahub/
+│   │   └── src/ditto_data/
 │   │       ├── config/                # 配置
 │   │       │   ├── data_root.py       # DataRootConfig
 │   │       │   └── data_source.py     # DataSourceSettings
@@ -2359,7 +2359,7 @@ instrument_id | trade_date | factor_id | factor_class | factor_family | exposure
 复权计算使用纯函数实现，无状态、无类、可组合：
 
 ```python
-# packages/datahub/src/ditto_datahub/services/adjustment.py
+# packages/data/src/ditto_data/services/adjustment.py
 
 """复权计算服务（纯函数）"""
 
@@ -2456,8 +2456,8 @@ def apply_hfq(
 ### 15.2 使用示例
 
 ```python
-from ditto_datahub.services.adjustment import apply_qfq
-from ditto_datahub.services.pit import filter_as_of
+from ditto_data.services.adjustment import apply_qfq
+from ditto_data.services.pit import filter_as_of
 
 # 1. 读取原始数据和因子
 bars = stock_bars_reader.get_bars(instrument_ids=[1000001, 1000002], start_date=..., end_date=...)
@@ -2471,7 +2471,7 @@ bars_qfq = apply_qfq(bars, adj_factors, as_of=as_of_date)
 ### 15.3 PIT 辅助函数
 
 ```python
-# packages/datahub/src/ditto_datahub/services/pit.py
+# packages/data/src/ditto_data/services/pit.py
 
 """PIT（Point-in-Time）辅助函数"""
 
@@ -2589,7 +2589,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.config import DataRootConfig, DataSourceSettings
+from ditto_data.config import DataRootConfig, DataSourceSettings
 from ditto_foundation.config import ConfigLoader, Environment
 
 __all__ = ["ConfigProvider"]
@@ -2652,11 +2652,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.config.data_root import DataRootConfig
-from ditto_datahub.stores.market.stock.bars import StockBarsStore
-from ditto_datahub.stores.market.stock.status import StockStatusStore
-from ditto_datahub.stores.market.stock.adj import StockAdjFactorStore
-from ditto_datahub.stores.metadata.instrument import InstrumentStore
+from ditto_data.config.data_root import DataRootConfig
+from ditto_data.stores.market.stock.bars import StockBarsStore
+from ditto_data.stores.market.stock.status import StockStatusStore
+from ditto_data.stores.market.stock.adj import StockAdjFactorStore
+from ditto_data.stores.metadata.instrument import InstrumentStore
 
 __all__ = ["DomainServiceProvider"]
 
@@ -2722,9 +2722,9 @@ from typing import TYPE_CHECKING
 from dishka import Provider, Scope, provide
 
 if TYPE_CHECKING:
-    from ditto_datahub.services.market_service import MarketService
-    from ditto_datahub.services.metadata_service import MetadataService
-    from ditto_datahub import DataHub
+    from ditto_data.services.market_service import MarketService
+    from ditto_data.services.metadata_service import MetadataService
+    from ditto_data import DataHub
 
 __all__ = ["DataHubProvider"]
 
@@ -2780,7 +2780,7 @@ class DataHubProvider(Provider):
         所有依赖通过 Provider 注入，DataHub 不再使用 @cached_property.
         移除了 Accessor 层，直接使用 Domain Services.
         """
-        from ditto_datahub import DataHub
+        from ditto_data import DataHub
 
         # 创建 DataHub 并注入所有依赖
         hub = DataHub(
@@ -2800,7 +2800,7 @@ class DataHubProvider(Provider):
 from fastapi import APIRouter, Depends
 from dishka import AsyncContainer
 
-from ditto_datahub.services.market_service import MarketService, BarsQuery
+from ditto_data.services.market_service import MarketService, BarsQuery
 
 router = APIRouter(prefix="/api/v1/market")
 

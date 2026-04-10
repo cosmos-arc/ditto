@@ -13,7 +13,7 @@
 
 - 已存在的 `docs/design/unified-feature-factor-engine/` 主设计与 ADR
 - 2026-03-10 后修订的 QuestDB / 微批 / 在线边界方案
-- 当前仓库 `packages/datahub/` 与 `apps/port/` 的真实实现方式
+- 当前仓库 `packages/data/` 与 `apps/port/` 的真实实现方式
 
 本轮讨论后，已经形成一个较清晰的方向：
 

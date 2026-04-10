@@ -97,7 +97,7 @@
 ## 监控服务
 
 ```python
-# packages/core/src/ditto_core/derived/monitoring.py
+# packages/analytics/src/ditto_analytics/derived/monitoring.py
 
 class DerivedMonitor:
     """因子系统监控服务"""

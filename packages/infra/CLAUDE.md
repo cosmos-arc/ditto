@@ -58,18 +58,32 @@ from ditto_infra.config import ...  # 应为 ditto_infra.foundation.config
 ```
 ┌─────────────────────────────────────┐
 │  所有层都可以访问 Infra（foundation）│
-│  port → infra ✅                    │
-│  datahub → infra ✅                 │
-│  core → infra ✅                    │
+│  interfaces → infra ✅             │
+│  app → infra ✅                    │
+│  engine → infra ❌                 │
+│  analytics → infra ✅              │
+│  data → infra ✅                   │
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
 │  Infra 禁止依赖其他层               │
-│  infra → port ❌                    │
-│  infra → datahub ❌                 │
-│  infra → core ❌                    │
+│  infra → interfaces ❌             │
+│  infra → app ❌                    │
+│  infra → engine ❌                 │
+│  infra → analytics ❌              │
+│  infra → data ❌                   │
 └─────────────────────────────────────┘
 ```
+
+## 各层 Infra Scope 限制
+
+| 层 | 允许范围 | 说明 |
+|----|---------|------|
+| interfaces | `foundation` + `services` | 完整访问（Composition Root） |
+| app | 仅 `foundation` | 禁止直接使用 `services`（通知等编排走 interfaces） |
+| data | 仅 `foundation` | 存储通过 foundation.db / foundation.util |
+| analytics | 仅 `foundation` | 配置、日志等基础能力 |
+| engine | 禁止 | 不依赖 infra |
 
 ## 配置规范
 
@@ -89,7 +103,7 @@ env = os.getenv("ENVIRONMENT")  # 绕过统一入口
 
 ### 配置加载位置
 
-配置仅在 **Port 层** 加载，其他层通过 DI 获取。详见 [config.md](/.claude/rules/config.md)。
+配置仅在 **Interfaces 层** 加载，其他层通过 DI 获取。详见 [config.md](/.claude/rules/config.md)。
 
 ## 测试规范
 
@@ -100,7 +114,14 @@ packages/infra/
 ├── src/ditto_infra/
 └── tests/
     ├── unit/           # 单元测试
-    │   └── foundation/
+    │   ├── cache/
+    │   ├── checksum/
+    │   ├── concurrency/
+    │   ├── config/
+    │   ├── db/
+    │   ├── notification/
+    │   ├── observability/
+    │   └── util/
     └── integration/    # 集成测试
 ```
 

@@ -49,8 +49,8 @@
 ### 问题 1.1：真实 `time.sleep()` 导致测试慢
 
 **影响文件**：
-- [packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py](packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py)
-- [packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py](packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py)
+- [packages/data/tests/unit/runtime/test_cache_ttl_unit.py](packages/data/tests/unit/runtime/test_cache_ttl_unit.py)
+- [packages/data/tests/unit/runtime/test_cache_runtime_unit.py](packages/data/tests/unit/runtime/test_cache_runtime_unit.py)
 
 **问题代码**：
 ```python
@@ -100,8 +100,8 @@ def test_individual_ttl(fake_time):  # ✅ 注入 fake_time fixture
 ```
 
 **修复文件清单**：
-1. `packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py` (3 个测试)
-2. `packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py` (1 个测试)
+1. `packages/data/tests/unit/runtime/test_cache_ttl_unit.py` (3 个测试)
+2. `packages/data/tests/unit/runtime/test_cache_runtime_unit.py` (1 个测试)
 3. 确保所有使用 `time.sleep()` 的测试都使用 `time_machine.move_to()` 或 `fake_time` fixture
 
 **预期效果**：
@@ -153,7 +153,7 @@ def teardown_method(self) -> None:
 **或者使用 autouse fixture**（更优雅）：
 
 ```python
-# packages/datahub/tests/integration/conftest.py
+# packages/data/tests/integration/conftest.py
 @pytest.fixture(autouse=True)
 def ensure_sqlite_cleanup():
     """确保 SQLite 连接在测试后正确关闭"""
@@ -163,8 +163,8 @@ def ensure_sqlite_cleanup():
 ```
 
 **影响文件**：
-1. [packages/datahub/tests/integration/runtime/test_sql_engine_injection_integration.py](packages/datahub/tests/integration/runtime/test_sql_engine_injection_integration.py)
-2. [packages/datahub/tests/integration/runtime/test_sql_engine_integration.py](packages/datahub/tests/integration/runtime/test_sql_engine_integration.py)
+1. [packages/data/tests/integration/runtime/test_sql_engine_injection_integration.py](packages/data/tests/integration/runtime/test_sql_engine_injection_integration.py)
+2. [packages/data/tests/integration/runtime/test_sql_engine_integration.py](packages/data/tests/integration/runtime/test_sql_engine_integration.py)
 3. 所有使用 `SQLitePool` 的集成测试
 
 ---
@@ -223,7 +223,7 @@ def test_metrics_integration():
 
 ### 问题 2.1：`test_bars_store_unit.py` 边界混淆
 
-**文件**：[packages/datahub/tests/unit/stores/test_bars_store_unit.py](packages/datahub/tests/unit/stores/test_bars_store_unit.py)
+**文件**：[packages/data/tests/unit/stores/test_bars_store_unit.py](packages/data/tests/unit/stores/test_bars_store_unit.py)
 
 **问题描述**：
 - 标记为单元测试（`@pytest.mark.unit`）
@@ -254,8 +254,8 @@ class TestBarsStore:
 
 ```bash
 # 1. 移动文件
-mv packages/datahub/tests/unit/stores/test_bars_store_unit.py \
-   packages/datahub/tests/integration/stores/test_bars_store_integration.py
+mv packages/data/tests/unit/stores/test_bars_store_unit.py \
+   packages/data/tests/integration/stores/test_bars_store_integration.py
 
 # 2. 更新文件名
 ```
@@ -294,7 +294,7 @@ class TestBarsStore:
 
 ### 问题 2.2：`test_sql_engine_injection_integration.py` Schema 初始化失败
 
-**文件**：[packages/datahub/tests/integration/runtime/test_sql_engine_injection_integration.py](packages/datahub/tests/integration/runtime/test_sql_engine_injection_integration.py)
+**文件**：[packages/data/tests/integration/runtime/test_sql_engine_injection_integration.py](packages/data/tests/integration/runtime/test_sql_engine_injection_integration.py)
 
 **问题描述**：未提供 `schema_path`，导致 `init_schema()` 跳过表初始化
 
@@ -322,7 +322,7 @@ def setup_method(self) -> None:
 
     # ✅ 使用 fixture 或显式提供 schema_path
     schema_path = Path(__file__).parent.parent.parent.parent \
-        / "src" / "ditto_datahub" / "scripts" / "schema.sql"
+        / "src" / "ditto_data" / "scripts" / "schema.sql"
 
     self.pool = SQLitePool(str(db_path), schema_path=schema_path)
     self.pool.init_schema()
@@ -331,7 +331,7 @@ def setup_method(self) -> None:
 **或者创建共享 fixture**（更好）：
 
 ```python
-# packages/datahub/tests/integration/conftest.py
+# packages/data/tests/integration/conftest.py
 @pytest.fixture
 def sqlite_pool_with_schema(sqlite_schema_path: Path, tmp_path: Path) -> SQLitePool:
     """创建已初始化 schema 的 SQLite 连接池（集成测试专用）"""
@@ -579,7 +579,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 ```bash
 # 运行单个测试并分析耗时
 pixi run -e dev pytest \
-  packages/datahub/tests/unit/sources/tushare/test_source_unit.py::TestTushareSourceCalendar::test_fetch_calendar_api_error_raises \
+  packages/data/tests/unit/sources/tushare/test_source_unit.py::TestTushareSourceCalendar::test_fetch_calendar_api_error_raises \
   --durations=10 -vv --tb=short
 ```
 
@@ -698,7 +698,7 @@ python_functions = ["test_*"]
 pythonpath = [
     "packages/core/src",
     "packages/foundation/src",
-    "packages/datahub/src",
+    "packages/data/src",
     "apps/port/src",
 ]
 

@@ -28,7 +28,7 @@
 
 ### 决策 1：dq（数据质量）是 Domain Layer
 
-**定位**：`packages/core/src/ditto_core/quality/`
+**定位**：`packages/data/src/ditto_data/quality/`
 
 **理由**：
 
@@ -50,7 +50,7 @@
 **组件**：
 
 ```
-packages/core/src/ditto_core/quality/
+packages/data/src/ditto_data/quality/
 ├── __init__.py
 ├── engine.py              # QualityEngine
 ├── checkers/
@@ -86,7 +86,7 @@ class IngestionService:
 
 `ml/models` 中的 "models" 指 **ML 算法实现**，不是数据模型（ORM、DTO）。
 
-**定位**：`packages/core/src/ditto_core/ml/models/`
+**定位**：`packages/kernel/src/ditto_kernel/ml/models/`
 
 **理由**：
 
@@ -108,7 +108,7 @@ class IngestionService:
 **组件**：
 
 ```
-packages/core/src/ditto_core/ml/
+packages/kernel/src/ditto_kernel/ml/
 ├── __init__.py
 ├── engine.py              # MLEngine（训练、预测、评估）
 ├── models/
@@ -149,9 +149,9 @@ class MLTrainingService:
 
 **问题：这个组件属于哪一层？**
 
-1. ✅ 是否是**业务逻辑/规则**？ → **Domain Layer** (`packages/core/`)
-2. ✅ 是否是**用例编排**？ → **Application Layer** (`apps/port/services/`)
-3. ✅ 是否是**数据访问**？ → **Infrastructure Layer** (`packages/datahub/`)
+1. ✅ 是否是**业务逻辑/规则**？ → **Domain Layer** (`packages/engine/`, `packages/kernel/`)
+2. ✅ 是否是**用例编排**？ → **Application Layer** (`interfaces/services/`)
+3. ✅ 是否是**数据访问**？ → **Infrastructure Layer** (`packages/data/`)
 
 **完整映射表**：
 
@@ -201,11 +201,11 @@ class MLTrainingService:
 ```
 Application Layer
     ↓ 依赖
-Domain Layer (packages/core/)
+Domain Layer (packages/engine/, packages/kernel/)
     ↓ 依赖
-Infrastructure Layer (packages/datahub/)
+Infrastructure Layer (packages/data/)
     ↓ 依赖
-Foundation Layer (packages/foundation/)
+Foundation Layer (packages/infra/)
 ```
 
 **允许的依赖**：
@@ -234,15 +234,15 @@ Foundation Layer (packages/foundation/)
 ### 需要调整的部分
 
 1. **重构 dq 模块**：
-   - 从 `packages/datahub/src/ditto_datahub/dq/`
-   - 移至 `packages/core/src/ditto_core/quality/`
+   - 从 `packages/data/src/ditto_data/dq/`
+   - 移至 `packages/data/src/ditto_data/quality/`
 
 2. **更新依赖关系**：
    - `datahub.repositories` 移除 dq 依赖
    - `port.services` 添加 `core.quality` 依赖
 
 3. **更新配置路径**：
-   - 从 `packages/datahub/config/dq/`
+   - 从 `packages/data/config/dq/`
    - 移至 `data_root/config/dq/`
 
 4. **更新文档**：
@@ -261,7 +261,7 @@ Foundation Layer (packages/foundation/)
 
 ### Phase 2: 代码重构（后续）
 
-1. 创建 `packages/core/src/ditto_core/quality/`
+1. 创建 `packages/data/src/ditto_data/quality/`
 2. 移动 dq 代码
 3. 更新导入语句
 4. 更新测试

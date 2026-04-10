@@ -12,7 +12,7 @@
 
 | 模块 | 错误数 | 占比 |
 |------|--------|------|
-| packages/datahub | 73 | 63% |
+| packages/data | 73 | 63% |
 | apps/port | 33 | 28% |
 | packages/foundation | 10 | 9% |
 | packages/core | 0 | 0% |
@@ -78,19 +78,19 @@ pixi run -e dev pyright packages/foundation/src/ditto_foundation/observability/_
 **状态**: 已完成（2026-01-14）
 
 **文件** (13 个):
-1. [packages/datahub/src/ditto_datahub/alerts/wechat.py](../packages/datahub/src/ditto_datahub/alerts/wechat.py)
-2. [packages/datahub/src/ditto_datahub/dq/report.py](../packages/datahub/src/ditto_datahub/dq/report.py)
-3. [packages/datahub/src/ditto_datahub/dq/engine.py](../packages/datahub/src/ditto_datahub/dq/engine.py)
-4. [packages/datahub/src/ditto_datahub/repositories/bars.py](../packages/datahub/src/ditto_datahub/repositories/bars.py)
-5. [packages/datahub/src/ditto_datahub/repositories/calendar.py](../packages/datahub/src/ditto_datahub/repositories/calendar.py)
-6. [packages/datahub/src/ditto_datahub/repositories/index.py](../packages/datahub/src/ditto_datahub/repositories/index.py)
-7. [packages/datahub/src/ditto_datahub/repositories/security.py](../packages/datahub/src/ditto_datahub/repositories/security.py)
-8. [packages/datahub/src/ditto_datahub/repositories/universe.py](../packages/datahub/src/ditto_datahub/repositories/universe.py)
-9. [packages/datahub/src/ditto_datahub/sources/tushare/client.py](../packages/datahub/src/ditto_datahub/sources/tushare/client.py)
-10. [packages/datahub/src/ditto_datahub/runtime/pit_helper.py](../packages/datahub/src/ditto_datahub/runtime/pit_helper.py)
-11. [packages/datahub/src/ditto_datahub/stores/parquet_store_base.py](../packages/datahub/src/ditto_datahub/stores/parquet_store_base.py)
-12. [packages/datahub/src/ditto_datahub/stores/security_store.py](../packages/datahub/src/ditto_datahub/stores/security_store.py)
-13. [packages/datahub/src/ditto_datahub/runtime/sql_engine.py](../packages/datahub/src/ditto_datahub/runtime/sql_engine.py)
+1. [packages/data/src/ditto_data/alerts/wechat.py](../packages/data/src/ditto_data/alerts/wechat.py)
+2. [packages/data/src/ditto_data/dq/report.py](../packages/data/src/ditto_data/dq/report.py)
+3. [packages/data/src/ditto_data/dq/engine.py](../packages/data/src/ditto_data/dq/engine.py)
+4. [packages/data/src/ditto_data/repositories/bars.py](../packages/data/src/ditto_data/repositories/bars.py)
+5. [packages/data/src/ditto_data/repositories/calendar.py](../packages/data/src/ditto_data/repositories/calendar.py)
+6. [packages/data/src/ditto_data/repositories/index.py](../packages/data/src/ditto_data/repositories/index.py)
+7. [packages/data/src/ditto_data/repositories/security.py](../packages/data/src/ditto_data/repositories/security.py)
+8. [packages/data/src/ditto_data/repositories/universe.py](../packages/data/src/ditto_data/repositories/universe.py)
+9. [packages/data/src/ditto_data/sources/tushare/client.py](../packages/data/src/ditto_data/sources/tushare/client.py)
+10. [packages/data/src/ditto_data/runtime/pit_helper.py](../packages/data/src/ditto_data/runtime/pit_helper.py)
+11. [packages/data/src/ditto_data/stores/parquet_store_base.py](../packages/data/src/ditto_data/stores/parquet_store_base.py)
+12. [packages/data/src/ditto_data/stores/security_store.py](../packages/data/src/ditto_data/stores/security_store.py)
+13. [packages/data/src/ditto_data/runtime/sql_engine.py](../packages/data/src/ditto_data/runtime/sql_engine.py)
 
 **修复策略**:
 - **Unused Import**: 直接删除未使用的导入
@@ -104,7 +104,7 @@ pixi run -e dev pyright packages/foundation/src/ditto_foundation/observability/_
 
 **验证命令**:
 ```bash
-pixi run -e dev pyright packages/datahub/src 2>&1 | tail -1
+pixi run -e dev pyright packages/data/src 2>&1 | tail -1
 ```
 
 ---
@@ -116,13 +116,13 @@ pixi run -e dev pyright packages/datahub/src 2>&1 | tail -1
 **状态**: 已完成（2026-01-14）
 
 **文件** (7 个):
-1. [packages/datahub/src/ditto_datahub/dq/models.py](../packages/datahub/src/ditto_datahub/dq/models.py) - 5 个错误
-2. [packages/datahub/src/ditto_datahub/dq/checkers/business.py](../packages/datahub/src/ditto_datahub/dq/checkers/business.py) - 7 个错误
-3. [packages/datahub/src/ditto_datahub/runtime/freeze_manager.py](../packages/datahub/src/ditto_datahub/runtime/freeze_manager.py) - 11 个错误
-4. [packages/datahub/src/ditto_datahub/sources/tushare/transformer.py](../packages/datahub/src/ditto_datahub/sources/tushare/transformer.py) - 11 个错误
-5. [packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py](../packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py)
-6. [packages/datahub/src/ditto_datahub/stores/security_store.py](../packages/datahub/src/ditto_datahub/stores/security_store.py)
-7. [packages/datahub/src/ditto_datahub/types.py](../packages/datahub/src/ditto_datahub/types.py)
+1. [packages/data/src/ditto_data/dq/models.py](../packages/data/src/ditto_data/dq/models.py) - 5 个错误
+2. [packages/data/src/ditto_data/dq/checkers/business.py](../packages/data/src/ditto_data/dq/checkers/business.py) - 7 个错误
+3. [packages/data/src/ditto_data/runtime/freeze_manager.py](../packages/data/src/ditto_data/runtime/freeze_manager.py) - 11 个错误
+4. [packages/data/src/ditto_data/sources/tushare/transformer.py](../packages/data/src/ditto_data/sources/tushare/transformer.py) - 11 个错误
+5. [packages/data/src/ditto_data/sources/tushare/http_utils.py](../packages/data/src/ditto_data/sources/tushare/http_utils.py)
+6. [packages/data/src/ditto_data/stores/security_store.py](../packages/data/src/ditto_data/stores/security_store.py)
+7. [packages/data/src/ditto_data/types.py](../packages/data/src/ditto_data/types.py)
 
 **修复策略**:
 - **Unknown Variable Type**: 添加显式类型注解
@@ -261,7 +261,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 | [dates.py:40](packages/foundation/src/ditto_foundation/util/dates.py#L40) | `unnecessary-isinstance` | 运行时防御性编程需要 isinstance 检查，即使类型收窄后不必要 |
 | [dates.py:44](packages/foundation/src/ditto_foundation/util/dates.py#L44) | `unreachable` | 类型层面认为不可达，但运行时可达（非 date/datetime/str 类型） |
 | [testing.py:30](packages/foundation/src/ditto_foundation/observability/testing.py#L30) | `unknown-item-type` | OpenTelemetry stub 返回未知类型 `ReadOnlySpan` |
-| [sqlite_pool.py:45](packages/datahub/src/ditto_datahub/runtime/sqlite_pool.py#L45) | `no-any-return` | `threading.local()` 内部使用 `Any` 类型（stdlib 限制） |
+| [sqlite_pool.py:45](packages/data/src/ditto_data/runtime/sqlite_pool.py#L45) | `no-any-return` | `threading.local()` 内部使用 `Any` 类型（stdlib 限制） |
 | [dq_batch.py:168](apps/port/src/ditto_port/jobs/tasks/dq_batch.py#L168) | `attr-defined` | 动态指标 `M.dq_batch_checks` 是运行时动态创建的 |
 | [dq_batch.py:171](apps/port/src/ditto_port/jobs/tasks/dq_batch.py#L171) | `attr-defined` | 动态指标 `M.dq_batch_issues` 是运行时动态创建的 |
 | [dq_batch.py:174](apps/port/src/ditto_port/jobs/tasks/dq_batch.py#L174) | `attr-defined` | 动态指标 `M.dq_batch_alerts` 是运行时动态创建的 |
@@ -294,7 +294,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 |------|--------|-----------|
 | apps/port | 9 文件 | 22 处 |
 | packages/foundation | 4 文件 | 13 处 |
-| packages/datahub | 0 文件 | 0 处 |
+| packages/data | 0 文件 | 0 处 |
 
 **无法消除的原因**:
 1. **`noqa: PLC0415` (23 处)**: Prefect Flow/Task 装饰器执行时需要函数定义，必须在函数内导入
@@ -339,17 +339,17 @@ from concurrent.futures import Future, ThreadPoolExecutor
    - `apps/port/tests/unit/ingestion/test_config_unit.py`: S108 × 2
 
 3. **CLI 工具**:
-   - `packages/datahub/src/ditto_datahub/cli/init_dq_config.py`: 添加 `# noqa: T201` × 10
+   - `packages/data/src/ditto_data/cli/init_dq_config.py`: 添加 `# noqa: T201` × 10
    - `apps/port/src/ditto_port/jobs/flows/deploy.py`: 改用 `logger.info()` × 2
 
 4. **类型优化**:
    - `packages/foundation/src/ditto_foundation/util/dates.py`: 使用 `assert_type()` 消除 2 处 `type: ignore`
    - `packages/foundation/src/ditto_foundation/observability/testing.py`: 添加完整的 OpenTelemetry stub 类型定义，消除 1 处 `type: ignore`
-   - `packages/datahub/src/ditto_datahub/runtime/sqlite_pool.py`: 使用 `cast()` 消除 1 处 `type: ignore[no-any-return]`
+   - `packages/data/src/ditto_data/runtime/sqlite_pool.py`: 使用 `cast()` 消除 1 处 `type: ignore[no-any-return]`
    - `apps/port/src/ditto_port/jobs/tasks/dq_batch.py`: 在 `metrics.py` 中添加 DQ 指标静态定义，消除 3 处 `type: ignore[attr-defined]`
 
 5. **CLI 工具优化**:
-   - `packages/datahub/src/ditto_datahub/cli/init_dq_config.py`: 使用 `MIN_ARGS` 常量消除魔法数字
+   - `packages/data/src/ditto_data/cli/init_dq_config.py`: 使用 `MIN_ARGS` 常量消除魔法数字
 
 6. **延迟导入优化**:
    - `packages/foundation/src/ditto_foundation/observability/logging.py`: 添加 `# noqa: PLC0415` 注释
@@ -371,7 +371,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 pixi run -e dev pyright
 
 # 2. 按模块检查
-pixi run -e dev pyright packages/datahub/src
+pixi run -e dev pyright packages/data/src
 pixi run -e dev pyright packages/foundation/src
 pixi run -e dev pyright apps/port/src
 
@@ -394,10 +394,10 @@ pixi run -e dev ci-check
 
 | 文件 | 错误数 | 优先级 | 批次 |
 |------|--------|--------|------|
-| [freeze_manager.py](../packages/datahub/src/ditto_datahub/runtime/freeze_manager.py) | 11 | 高 | 2 |
-| [transformer.py](../packages/datahub/src/ditto_datahub/sources/tushare/transformer.py) | 11 | 高 | 2 |
+| [freeze_manager.py](../packages/data/src/ditto_data/runtime/freeze_manager.py) | 11 | 高 | 2 |
+| [transformer.py](../packages/data/src/ditto_data/sources/tushare/transformer.py) | 11 | 高 | 2 |
 | [backfill.py](../apps/port/src/ditto_port/services/ingestion/backfill.py) | 14 | 高 | 4 |
-| [business.py](../packages/datahub/src/ditto_datahub/dq/checkers/business.py) | 7 | 中 | 2 |
+| [business.py](../packages/data/src/ditto_data/dq/checkers/business.py) | 7 | 中 | 2 |
 | [dq_batch.py](../apps/port/src/ditto_port/jobs/tasks/dq_batch.py) | 9 | 中 | 4 |
 
 ---

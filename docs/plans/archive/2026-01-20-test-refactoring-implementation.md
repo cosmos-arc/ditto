@@ -72,21 +72,21 @@ Expected: 新文件存在
 **问题:** `test_end_to_end_integration.py` 应为 `test_tushare_api_integration.py`
 
 **Files:**
-- Rename: `packages/datahub/tests/integration/sources/tushare/test_end_to_end_integration.py` → `packages/datahub/tests/integration/sources/tushare/test_tushare_api_integration.py`
+- Rename: `packages/data/tests/integration/sources/tushare/test_end_to_end_integration.py` → `packages/data/tests/integration/sources/tushare/test_tushare_api_integration.py`
 
 **Step 1: 检查源文件存在**
 
-Run: `ls packages/datahub/tests/integration/sources/tushare/test_end_to_end_integration.py`
+Run: `ls packages/data/tests/integration/sources/tushare/test_end_to_end_integration.py`
 Expected: 文件存在
 
 **Step 2: 使用 git mv 重命名**
 
-Run: `git mv packages/datahub/tests/integration/sources/tushare/test_end_to_end_integration.py packages/datahub/tests/integration/sources/tushare/test_tushare_api_integration.py`
+Run: `git mv packages/data/tests/integration/sources/tushare/test_end_to_end_integration.py packages/data/tests/integration/sources/tushare/test_tushare_api_integration.py`
 Expected: 文件已重命名
 
 **Step 3: 验证重命名**
 
-Run: `ls packages/datahub/tests/integration/sources/tushare/test_tushare_api_integration.py`
+Run: `ls packages/data/tests/integration/sources/tushare/test_tushare_api_integration.py`
 Expected: 新文件存在
 
 ---
@@ -170,39 +170,39 @@ Expected: 所有文件已重命名
 **问题:** DataHub 测试文件缺少 `_unit` 后缀或位置不对
 
 **Files:**
-- Rename: `packages/datahub/tests/unit/runtime/test_freeze_manager_collect_checksums.py` → `test_freeze_manager_collect_checksums_unit.py`
-- Rename: `packages/datahub/tests/unit/accessors/test_filter_failed_rows.py` → `test_filter_failed_rows_unit.py`
-- Move+Rename: `packages/datahub/tests/test_models_common.py` → `packages/datahub/tests/unit/models/test_models_common_unit.py`
-- Move+Rename: `packages/datahub/tests/test_models_quality.py` → `packages/datahub/tests/unit/models/test_models_quality_unit.py`
+- Rename: `packages/data/tests/unit/runtime/test_freeze_manager_collect_checksums.py` → `test_freeze_manager_collect_checksums_unit.py`
+- Rename: `packages/data/tests/unit/accessors/test_filter_failed_rows.py` → `test_filter_failed_rows_unit.py`
+- Move+Rename: `packages/data/tests/test_models_common.py` → `packages/data/tests/unit/models/test_models_common_unit.py`
+- Move+Rename: `packages/data/tests/test_models_quality.py` → `packages/data/tests/unit/models/test_models_quality_unit.py`
 
 **Step 1: 创建 models 测试目录**
 
-Run: `mkdir -p packages/datahub/tests/unit/models/`
+Run: `mkdir -p packages/data/tests/unit/models/`
 Expected: 目录已创建
 
 **Step 2: 重命名 test_freeze_manager_collect_checksums.py**
 
-Run: `git mv packages/datahub/tests/unit/runtime/test_freeze_manager_collect_checksums.py packages/datahub/tests/unit/runtime/test_freeze_manager_collect_checksums_unit.py`
+Run: `git mv packages/data/tests/unit/runtime/test_freeze_manager_collect_checksums.py packages/data/tests/unit/runtime/test_freeze_manager_collect_checksums_unit.py`
 Expected: 文件已重命名
 
 **Step 3: 重命名 test_filter_failed_rows.py**
 
-Run: `git mv packages/datahub/tests/unit/accessors/test_filter_failed_rows.py packages/datahub/tests/unit/accessors/test_filter_failed_rows_unit.py`
+Run: `git mv packages/data/tests/unit/accessors/test_filter_failed_rows.py packages/data/tests/unit/accessors/test_filter_failed_rows_unit.py`
 Expected: 文件已重命名
 
 **Step 4: 移动并重命名 test_models_common.py**
 
-Run: `git mv packages/datahub/tests/test_models_common.py packages/datahub/tests/unit/models/test_models_common_unit.py`
+Run: `git mv packages/data/tests/test_models_common.py packages/data/tests/unit/models/test_models_common_unit.py`
 Expected: 文件已移动并重命名
 
 **Step 5: 移动并重命名 test_models_quality.py**
 
-Run: `git mv packages/datahub/tests/test_models_quality.py packages/datahub/tests/unit/models/test_models_quality_unit.py`
+Run: `git mv packages/data/tests/test_models_quality.py packages/data/tests/unit/models/test_models_quality_unit.py`
 Expected: 文件已移动并重命名
 
 **Step 6: 验证所有重命名**
 
-Run: `ls packages/datahub/tests/unit/runtime/ && ls packages/datahub/tests/unit/accessors/ && ls packages/datahub/tests/unit/models/`
+Run: `ls packages/data/tests/unit/runtime/ && ls packages/data/tests/unit/accessors/ && ls packages/data/tests/unit/models/`
 Expected: 所有文件已正确重命名
 
 ---
@@ -312,27 +312,27 @@ Expected: 文件已移动，mark 已修改
 **问题:** QuarantineStore 有两个测试文件测试相同功能
 
 **Files:**
-- Delete: `packages/datahub/tests/integration/stores/test_quarantine_store_integration.py`
-- Keep: `packages/datahub/tests/unit/stores/test_quarantine_store_unit.py`
+- Delete: `packages/data/tests/integration/stores/test_quarantine_store_integration.py`
+- Keep: `packages/data/tests/unit/stores/test_quarantine_store_unit.py`
 
 **Step 1: 检查两个文件是否存在**
 
-Run: `ls packages/datahub/tests/integration/stores/test_quarantine_store_integration.py && ls packages/datahub/tests/unit/stores/test_quarantine_store_unit.py`
+Run: `ls packages/data/tests/integration/stores/test_quarantine_store_integration.py && ls packages/data/tests/unit/stores/test_quarantine_store_unit.py`
 Expected: 两个文件都存在
 
 **Step 2: 读取集成测试文件内容**
 
-Run: `Read packages/datahub/tests/integration/stores/test_quarantine_store_integration.py`
+Run: `Read packages/data/tests/integration/stores/test_quarantine_store_integration.py`
 Expected: 读取文件内容，确认测试内容
 
 **Step 3: 删除集成测试文件**
 
-Run: `rm packages/datahub/tests/integration/stores/test_quarantine_store_integration.py`
+Run: `rm packages/data/tests/integration/stores/test_quarantine_store_integration.py`
 Expected: 文件已删除
 
 **Step 4: 验证删除**
 
-Run: `ls packages/datahub/tests/integration/stores/test_quarantine_store_integration.py 2>&1`
+Run: `ls packages/data/tests/integration/stores/test_quarantine_store_integration.py 2>&1`
 Expected: "No such file or directory"
 
 ---
@@ -342,22 +342,22 @@ Expected: "No such file or directory"
 **问题:** `test_models_common_unit.py` 和 `test_common_unit.py` 测试同一个模块
 
 **Files:**
-- Delete: `packages/datahub/tests/unit/models/test_models_common_unit.py`
-- Keep: `packages/datahub/tests/unit/models/test_common_unit.py`
+- Delete: `packages/data/tests/unit/models/test_models_common_unit.py`
+- Keep: `packages/data/tests/unit/models/test_common_unit.py`
 
 **Step 1: 检查两个文件是否存在**
 
-Run: `ls packages/datahub/tests/unit/models/test_models_common_unit.py && ls packages/datahub/tests/unit/models/test_common_unit.py`
+Run: `ls packages/data/tests/unit/models/test_models_common_unit.py && ls packages/data/tests/unit/models/test_common_unit.py`
 Expected: 两个文件都存在
 
 **Step 2: 读取 test_models_common_unit.py 内容**
 
-Run: `Read packages/datahub/tests/unit/models/test_models_common_unit.py`
+Run: `Read packages/data/tests/unit/models/test_models_common_unit.py`
 Expected: 读取文件内容，确认测试内容
 
 **Step 3: 读取 test_common_unit.py 内容**
 
-Run: `Read packages/datahub/tests/unit/models/test_common_unit.py`
+Run: `Read packages/data/tests/unit/models/test_common_unit.py`
 Expected: 读取文件内容
 
 **Step 4: 合并测试内容（如果需要）**
@@ -366,12 +366,12 @@ Expected: 读取文件内容
 
 **Step 5: 删除重复文件**
 
-Run: `rm packages/datahub/tests/unit/models/test_models_common_unit.py`
+Run: `rm packages/data/tests/unit/models/test_models_common_unit.py`
 Expected: 文件已删除
 
 **Step 6: 验证删除**
 
-Run: `ls packages/datahub/tests/unit/models/test_models_common_unit.py 2>&1`
+Run: `ls packages/data/tests/unit/models/test_models_common_unit.py 2>&1`
 Expected: "No such file or directory"
 
 ---
@@ -563,28 +563,28 @@ Expected: 目录和文件已创建
 ### Task 3.2: 补充 DataHub Bars 测试
 
 **Files:**
-- Create: `packages/datahub/tests/unit/accessors/bars/test_accessor_unit.py`
-- Create: `packages/datahub/tests/unit/accessors/bars/test_dq_filters_unit.py`
+- Create: `packages/data/tests/unit/accessors/bars/test_accessor_unit.py`
+- Create: `packages/data/tests/unit/accessors/bars/test_dq_filters_unit.py`
 
 **Step 1: 读取 accessor.py 源码**
 
-Run: `Read packages/datahub/src/ditto_datahub/accessors/bars/accessor.py`
+Run: `Read packages/data/src/ditto_data/accessors/bars/accessor.py`
 Expected: 读取源码，理解需要测试的功能
 
 **Step 2: 创建 test_accessor_unit.py**
 
-Run: `Write packages/datahub/tests/unit/accessors/bars/test_accessor_unit.py`
+Run: `Write packages/data/tests/unit/accessors/bars/test_accessor_unit.py`
 Content: 添加单元测试，使用 Mock 所有依赖
 Expected: 文件已创建
 
 **Step 3: 读取 dq_filters.py 源码**
 
-Run: `Read packages/datahub/src/ditto_datahub/accessors/bars/dq_filters.py`
+Run: `Read packages/data/src/ditto_data/accessors/bars/dq_filters.py`
 Expected: 读取源码
 
 **Step 4: 创建 test_dq_filters_unit.py**
 
-Run: `Write packages/datahub/tests/unit/accessors/bars/test_dq_filters_unit.py`
+Run: `Write packages/data/tests/unit/accessors/bars/test_dq_filters_unit.py`
 Content: 添加单元测试
 Expected: 文件已创建
 
@@ -593,28 +593,28 @@ Expected: 文件已创建
 ### Task 3.3: 补充 DataHub Alerts 测试
 
 **Files:**
-- Create: `packages/datahub/tests/unit/alerts/test_email_unit.py`
-- Create: `packages/datahub/tests/unit/alerts/test_telegram_unit.py`
+- Create: `packages/data/tests/unit/alerts/test_email_unit.py`
+- Create: `packages/data/tests/unit/alerts/test_telegram_unit.py`
 
 **Step 1: 读取 email.py 源码**
 
-Run: `Read packages/datahub/src/ditto_datahub/alerts/email.py`
+Run: `Read packages/data/src/ditto_data/alerts/email.py`
 Expected: 读取源码
 
 **Step 2: 创建 test_email_unit.py**
 
-Run: `Write packages/datahub/tests/unit/alerts/test_email_unit.py`
+Run: `Write packages/data/tests/unit/alerts/test_email_unit.py`
 Content: 添加单元测试，Mock HTTP 客户端
 Expected: 文件已创建
 
 **Step 3: 读取 telegram.py 源码**
 
-Run: `Read packages/datahub/src/ditto_datahub/alerts/telegram.py`
+Run: `Read packages/data/src/ditto_data/alerts/telegram.py`
 Expected: 读取源码
 
 **Step 4: 创建 test_telegram_unit.py**
 
-Run: `Write packages/datahub/tests/unit/alerts/test_telegram_unit.py`
+Run: `Write packages/data/tests/unit/alerts/test_telegram_unit.py`
 Content: 添加单元测试
 Expected: 文件已创建
 
@@ -623,40 +623,40 @@ Expected: 文件已创建
 ### Task 3.4: 补充 DataHub Models 测试
 
 **Files:**
-- Create: `packages/datahub/tests/unit/models/test_ingestion_unit.py`
-- Create: `packages/datahub/tests/unit/models/test_security_unit.py`
-- Create: `packages/datahub/tests/unit/models/test_storage_unit.py`
+- Create: `packages/data/tests/unit/models/test_ingestion_unit.py`
+- Create: `packages/data/tests/unit/models/test_security_unit.py`
+- Create: `packages/data/tests/unit/models/test_storage_unit.py`
 
 **Step 1: 读取 ingestion.py 源码**
 
-Run: `Read packages/datahub/src/ditto_datahub/models/ingestion.py`
+Run: `Read packages/data/src/ditto_data/models/ingestion.py`
 Expected: 读取源码
 
 **Step 2: 创建 test_ingestion_unit.py**
 
-Run: `Write packages/datahub/tests/unit/models/test_ingestion_unit.py`
+Run: `Write packages/data/tests/unit/models/test_ingestion_unit.py`
 Content: 添加单元测试
 Expected: 文件已创建
 
 **Step 3: 读取 security.py 源码**
 
-Run: `Read packages/datahub/src/ditto_datahub/models/security.py`
+Run: `Read packages/data/src/ditto_data/models/security.py`
 Expected: 读取源码
 
 **Step 4: 创建 test_security_unit.py**
 
-Run: `Write packages/datahub/tests/unit/models/test_security_unit.py`
+Run: `Write packages/data/tests/unit/models/test_security_unit.py`
 Content: 添加单元测试
 Expected: 文件已创建
 
 **Step 5: 读取 storage.py 源码**
 
-Run: `Read packages/datahub/src/ditto_datahub/models/storage.py`
+Run: `Read packages/data/src/ditto_data/models/storage.py`
 Expected: 读取源码
 
 **Step 6: 创建 test_storage_unit.py**
 
-Run: `Write packages/datahub/tests/unit/models/test_storage_unit.py`
+Run: `Write packages/data/tests/unit/models/test_storage_unit.py`
 Content: 添加单元测试
 Expected: 文件已创建
 
@@ -665,28 +665,28 @@ Expected: 文件已创建
 ### Task 3.5: 补充 DataHub Runtime 测试
 
 **Files:**
-- Create: `packages/datahub/tests/unit/runtime/test_sid_allocator_unit.py`
-- Create: `packages/datahub/tests/unit/runtime/test_sql_engine_unit.py`
+- Create: `packages/data/tests/unit/runtime/test_sid_allocator_unit.py`
+- Create: `packages/data/tests/unit/runtime/test_sql_engine_unit.py`
 
 **Step 1: 读取 sid_allocator.py 源码**
 
-Run: `Read packages/datahub/src/ditto_datahub/runtime/sid_allocator.py`
+Run: `Read packages/data/src/ditto_data/runtime/sid_allocator.py`
 Expected: 读取源码
 
 **Step 2: 创建 test_sid_allocator_unit.py**
 
-Run: `Write packages/datahub/tests/unit/runtime/test_sid_allocator_unit.py`
+Run: `Write packages/data/tests/unit/runtime/test_sid_allocator_unit.py`
 Content: 添加单元测试，包含 SQL 注入防护测试
 Expected: 文件已创建
 
 **Step 3: 读取 sql_engine.py 源码**
 
-Run: `Read packages/datahub/src/ditto_datahub/runtime/sql_engine.py`
+Run: `Read packages/data/src/ditto_data/runtime/sql_engine.py`
 Expected: 读取源码
 
 **Step 4: 创建 test_sql_engine_unit.py**
 
-Run: `Write packages/datahub/tests/unit/runtime/test_sql_engine_unit.py`
+Run: `Write packages/data/tests/unit/runtime/test_sql_engine_unit.py`
 Content: 添加单元测试
 Expected: 文件已创建
 
@@ -696,7 +696,7 @@ Expected: 文件已创建
 
 **Step 1: 运行新增测试**
 
-Run: `pixi run -e dev pytest packages/core/tests/unit/ packages/datahub/tests/unit/ -v`
+Run: `pixi run -e dev pytest packages/core/tests/unit/ packages/data/tests/unit/ -v`
 Expected: 新增测试通过
 
 **Step 2: 运行完整测试套件**

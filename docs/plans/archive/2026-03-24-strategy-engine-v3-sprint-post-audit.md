@@ -22,8 +22,8 @@ v3 设计文档的 37 项修订（R1-R12, F1-F6, S1-S5, B1-B4, P1-P5）全部落
 | 文件 | 类型 | 行数 | 说明 |
 |------|------|------|------|
 | `packages/core/src/ditto_core/backtest/engine.py` | 源码 | +38 | TradeBuilder 接入 + audit 记录 + flush 未平仓交易 |
-| `packages/datahub/src/ditto_datahub/models/strategy.py` | 源码 | +25 | `ArtifactKind` 枚举 + `StrategyArtifactRecord.artifact_type` 类型化 |
-| `packages/datahub/src/ditto_datahub/models/__init__.py` | 源码 | +3 | 导出 `ArtifactKind` |
+| `packages/data/src/ditto_data/models/strategy.py` | 源码 | +25 | `ArtifactKind` 枚举 + `StrategyArtifactRecord.artifact_type` 类型化 |
+| `packages/data/src/ditto_data/models/__init__.py` | 源码 | +3 | 导出 `ArtifactKind` |
 | `apps/port/src/ditto_port/services/strategy/backtest_service.py` | 源码 | ±4 | `artifact_type` 改用 `ArtifactKind` 枚举 |
 | `apps/port/src/ditto_port/services/strategy/input_assembler.py` | 源码 | +9 | `valid_until` 信号过期检查 |
 | `apps/port/src/ditto_port/services/strategy/strategy_run_service.py` | 源码 | +23 | `spec` 参数 + `validate_spec_params` 运行时校验 |
@@ -52,8 +52,8 @@ v3 设计文档的 37 项修订（R1-R12, F1-F6, S1-S5, B1-B4, P1-P5）全部落
 > **问题**: `StrategySpecRecord` 和 `StrategyArtifactRecord` 定义在 `models/strategy.py` 的 `__all__` 中，但 `models/__init__.py` 未导出。外部使用方需 `from models.strategy import` 而非 `from models import`。
 
 - [ ] Task: 在 `models/__init__.py` 中导出 `StrategySpecRecord`, `StrategyArtifactRecord` `[S]`
-  - 验收: `from ditto_datahub.models import StrategySpecRecord, StrategyArtifactRecord` 可用
-  - 文件: `packages/datahub/src/ditto_datahub/models/__init__.py`
+  - 验收: `from ditto_data.models import StrategySpecRecord, StrategyArtifactRecord` 可用
+  - 文件: `packages/data/src/ditto_data/models/__init__.py`
   - 测试: 无需新增测试（现有导入已覆盖）
 
 ---
@@ -101,19 +101,19 @@ v3 设计文档的 37 项修订（R1-R12, F1-F6, S1-S5, B1-B4, P1-P5）全部落
     - `save_spec` / `get_spec` / `list_specs` / `list_versions` / `publish_spec` 全链路
     - 重复 save 覆盖、不存在的 get 返回 None
   - 文件:
-    - `packages/datahub/src/ditto_datahub/stores/metadata/strategy_spec_store.py` (新建)
-    - `packages/datahub/tests/unit/stores/metadata/test_strategy_spec_store_unit.py` (新建)
+    - `packages/data/src/ditto_data/stores/metadata/strategy_spec_store.py` (新建)
+    - `packages/data/tests/unit/stores/metadata/test_strategy_spec_store_unit.py` (新建)
 
 - [ ] Task: SQLite strategy_artifact 表 + Reader/Writer 实现 `[M]`
   - 验收:
     - `save_artifact` / `get_artifact` / `list_artifacts` / `list_by_strategy` / `archive_artifact` 全链路
   - 文件:
-    - `packages/datahub/src/ditto_datahub/stores/metadata/strategy_artifact_store.py` (新建)
-    - `packages/datahub/tests/unit/stores/metadata/test_strategy_artifact_store_unit.py` (新建)
+    - `packages/data/src/ditto_data/stores/metadata/strategy_artifact_store.py` (新建)
+    - `packages/data/tests/unit/stores/metadata/test_strategy_artifact_store_unit.py` (新建)
 
 - [ ] Task: StrategyCatalogService + StrategyArtifactService 接入真实存储 `[S]`
   - 验收: 构造时传入 SQLite Reader/Writer，功能与 mock 测试一致
-  - 文件: `packages/datahub/src/ditto_datahub/services/strategy/` (无改动，Protocol 已支持)
+  - 文件: `packages/data/src/ditto_data/services/strategy/` (无改动，Protocol 已支持)
   - 测试: 更新现有 service 测试，用真实 SQLite 替代 mock
 
 ---
@@ -135,18 +135,18 @@ v3 设计文档的 37 项修订（R1-R12, F1-F6, S1-S5, B1-B4, P1-P5）全部落
     - 写入 3 个版本规则 → 查询 as_of_date 返回正确版本
     - 边界: effective_to=None（永久有效）、重叠区间
   - 文件:
-    - `packages/datahub/src/ditto_datahub/stores/metadata/trading_rule_store.py` (新建，替代 V1 内存)
-    - `packages/datahub/tests/unit/stores/metadata/test_trading_rule_store_unit.py` (新建)
+    - `packages/data/src/ditto_data/stores/metadata/trading_rule_store.py` (新建，替代 V1 内存)
+    - `packages/data/tests/unit/stores/metadata/test_trading_rule_store_unit.py` (新建)
 
 - [ ] Task: FeeSchedule SQLite 存储 + PIT 查询 `[M]`
   - 验收: 同 TradingRule
   - 文件:
-    - `packages/datahub/src/ditto_datahub/stores/metadata/fee_schedule_store.py` (新建)
-    - `packages/datahub/tests/unit/stores/metadata/test_fee_schedule_store_unit.py` (新建)
+    - `packages/data/src/ditto_data/stores/metadata/fee_schedule_store.py` (新建)
+    - `packages/data/tests/unit/stores/metadata/test_fee_schedule_store_unit.py` (新建)
 
 - [ ] Task: InstrumentRuleProvider 接入真实存储 `[S]`
   - 验收: 构造时传入 SQLite Reader，`get_rules()` 返回正确三层规则
-  - 文件: `packages/datahub/src/ditto_datahub/services/strategy/instrument_rule_provider.py`
+  - 文件: `packages/data/src/ditto_data/services/strategy/instrument_rule_provider.py`
   - 测试: 更新 `test_instrument_rule_provider_unit.py`
 
 ---

@@ -36,8 +36,8 @@ markers = [
 
 | 目录/模块 | 测试数量 | 耗时 | 平均耗时/测试 | 类型判定 |
 |----------|---------|------|--------------|---------|
-| `packages/datahub/tests/unit/stores/` | 207 | 9.93s | 0.048s | ✅ 单元测试 |
-| `packages/datahub/tests/unit/sources/tushare/` | 42 | 2.88s | 0.069s | ⚠️ 混合 (5个失败) |
+| `packages/data/tests/unit/stores/` | 207 | 9.93s | 0.048s | ✅ 单元测试 |
+| `packages/data/tests/unit/sources/tushare/` | 42 | 2.88s | 0.069s | ⚠️ 混合 (5个失败) |
 | `apps/server/tests/unit/ingestion/test_coordinator.py` | 16 | ~1.5s | ~0.09s | ✅ 单元测试 |
 | `apps/server/tests/unit/ingestion/test_backfill.py` | 9 | ~1s | ~0.11s | ✅ 单元测试 |
 | `apps/server/tests/unit/ingestion/test_retry.py` | 12 | ~1.5s | ~0.12s | ✅ 单元测试 |
@@ -153,7 +153,7 @@ def mock_prefect_server():
 
 ### 优先级 3: 修复 tushare source 测试
 
-**修改文件**: `packages/datahub/tests/unit/sources/tushare/test_source.py`
+**修改文件**: `packages/data/tests/unit/sources/tushare/test_source.py`
 
 **问题**: 5 个测试失败，因为 `DataSource.ingest_date()` 已被移除
 
@@ -204,7 +204,7 @@ pytest
 
 2. **运行验证**
    ```bash
-   pytest packages/datahub/tests/unit/sources/tushare/
+   pytest packages/data/tests/unit/sources/tushare/
    ```
 
 ### 阶段 3: CI/CD 脚本更新 (30分钟)
@@ -239,7 +239,7 @@ pytest
   - test_repair.py
   - test_deploy.py
 
-- `packages/datahub/tests/unit/stores/*` → `packages/datahub/tests/integration/stores/`
+- `packages/data/tests/unit/stores/*` → `packages/data/tests/integration/stores/`
   - test_adj_factor_store.py
   - test_bars_store.py
   - test_calendar_store.py
@@ -253,7 +253,7 @@ pytest
   - test_stock_status_store.py
   - test_universe_store.py
 
-- `packages/datahub/tests/unit/runtime/*` → `packages/datahub/tests/integration/runtime/`
+- `packages/data/tests/unit/runtime/*` → `packages/data/tests/integration/runtime/`
   - test_freeze_manager.py
   - test_freeze_manager_checksum.py
   - test_sid_allocator.py
@@ -265,11 +265,11 @@ pytest
 
 创建了 conftest.py 文件，为 `tests/integration/` 目录下的所有测试自动添加 `@pytest.mark.integration` marker：
 - `apps/server/tests/integration/conftest.py`
-- `packages/datahub/tests/integration/conftest.py`
+- `packages/data/tests/integration/conftest.py`
 
 #### 3. 删除废弃测试
 
-- `packages/datahub/tests/unit/sources/tushare/test_source.py` 中的 `TestTushareSourceIngestDate` 类已删除
+- `packages/data/tests/unit/sources/tushare/test_source.py` 中的 `TestTushareSourceIngestDate` 类已删除
 
 #### 4. 修复代码规范问题
 
@@ -343,7 +343,7 @@ pytest -m integration  # ~116 秒
 - `apps/server/tests/unit/ingestion/flows/test_deploy.py`
 
 ### 需要删除废弃测试的文件:
-- `packages/datahub/tests/unit/sources/tushare/test_source.py`
+- `packages/data/tests/unit/sources/tushare/test_source.py`
 
 ### 配置文件:
 - `pyproject.toml` - pytest markers (已配置，无需修改)

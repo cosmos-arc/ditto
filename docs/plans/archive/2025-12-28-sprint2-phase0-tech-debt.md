@@ -90,8 +90,8 @@ Phase 0 的核心功能已完整实现，本次工作主要是**补充专项测�
 ## 关键文件路径
 
 ```
-packages/datahub/src/ditto_datahub/repositories/bars.py:368-472
-packages/datahub/tests/unit/repositories/test_bars_repository.py
-packages/datahub/tests/test_adj_factor_store.py
+packages/data/src/ditto_data/repositories/bars.py:368-472
+packages/data/tests/unit/repositories/test_bars_repository.py
+packages/data/tests/test_adj_factor_store.py
 docs/sprints/sprint-02-data-quality.md
 ```

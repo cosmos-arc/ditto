@@ -28,7 +28,7 @@
 
 > 提供 ingestionlog 的 repo，source 的依赖目前不是有 provider 嘛，直接通过 provider 代理
 
-**当前已有 DataSources** ([hub.py:228](packages/datahub/src/ditto_datahub/hub.py#L228)):
+**当前已有 DataSources** ([hub.py:228](packages/data/src/ditto_data/hub.py#L228)):
 ```python
 @cached_property
 def sources(self) -> DataSources:
@@ -41,12 +41,12 @@ def sources(self) -> DataSources:
 #### 方案 A：创建 IngestionLogAccessor（推荐）
 
 ```python
-# packages/datahub/src/ditto_datahub/accessors/ingestion_log.py
+# packages/data/src/ditto_data/accessors/ingestion_log.py
 
 from typing import Literal
 
-from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
+from ditto_data.sources.metadata import IngestionLog, IngestionStatus
+from ditto_data.stores.ingestion_log import IngestionLogStore
 from ditto_foundation import logger
 
 
@@ -173,7 +173,7 @@ class IngestionLogAccessor:
 #### DataHub 修改
 
 ```python
-# packages/datahub/src/ditto_datahub/hub.py
+# packages/data/src/ditto_data/hub.py
 
 @cached_property
 def ingestion_log(self) -> IngestionLogAccessor:
@@ -191,7 +191,7 @@ def ingestion_log(self) -> IngestionLogAccessor:
 
 **新的分层结构**：
 ```
-packages/datahub/
+packages/data/
 ├── models/                    # 新增：领域类型层
 │   ├── __init__.py
 │   ├── ingestion.py           # IngestionLog, IngestionStatus
@@ -206,7 +206,7 @@ packages/datahub/
 ```
 
 **迁移计划**：
-1. 创建 `packages/datahub/src/ditto_datahub/models/` 目录
+1. 创建 `packages/data/src/ditto_data/models/` 目录
 2. 移动 `IngestionLog`, `IngestionStatus` 到 `models.ingestion`
 3. 更新所有引用：
    - `sources.metadata` → `models.ingestion`
@@ -270,7 +270,7 @@ def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
 **最终实现方式**：使用字典映射（而非 match/case）
 
 ```python
-# packages/datahub/src/ditto_datahub/models/common.py
+# packages/data/src/ditto_data/models/common.py
 class Dataset(str, Enum):
     """支持的数据集类型。"""
     STOCK_BASIC = "stock_basic"
@@ -299,9 +299,9 @@ def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
 ```
 
 **改动文件**：
-- ✅ `packages/datahub/src/ditto_datahub/models/common.py` - 新增 Dataset 枚举
-- ✅ `packages/datahub/src/ditto_datahub/models/__init__.py` - 导出 Dataset
-- ✅ `packages/datahub/tests/unit/models/test_common_unit.py` - 新增测试
+- ✅ `packages/data/src/ditto_data/models/common.py` - 新增 Dataset 枚举
+- ✅ `packages/data/src/ditto_data/models/__init__.py` - 导出 Dataset
+- ✅ `packages/data/tests/unit/models/test_common_unit.py` - 新增测试
 - ✅ `apps/port/src/ditto_port/services/ingestion/coordinator.py` - 重构 _fetch_data
 - ✅ 移除 `_DATASET_METHODS` 字典和动态 getattr 调用
 
@@ -467,7 +467,7 @@ def _resolve_sids(
 
 **提取方案**：创建通用的标识符解析工具
 ```python
-# packages/datahub/src/ditto_datahub/repositories/common/identifier.py
+# packages/data/src/ditto_data/repositories/common/identifier.py
 
 def resolve_sids(
     sids: list[int] | None,
@@ -560,10 +560,10 @@ with self._file_lock.acquire(lock_name, timeout=60.0):
 
 **提取方案**：创建通用的写入上下文管理器
 ```python
-# packages/datahub/src/ditto_datahub/runtime/write_guard.py
+# packages/data/src/ditto_data/runtime/write_guard.py
 
 from contextlib import contextmanager
-from ditto_datahub.runtime.file_lock import FileLockManager
+from ditto_data.runtime.file_lock import FileLockManager
 from ditto_foundation import logger
 
 @contextmanager
@@ -616,7 +616,7 @@ def write_with_lock(
 
 #### 2. 复权计算 → adjustment.py（✅ 已完成）
 ```python
-# packages/datahub/src/ditto_datahub/repositories/bars/adjustment.py
+# packages/data/src/ditto_data/repositories/bars/adjustment.py
 """
 复权计算纯函数模块。
 
@@ -634,7 +634,7 @@ def write_with_lock(
 
 #### 3. DQ 过滤函数 → dq_filters.py（✅ 已完成）
 ```python
-# packages/datahub/src/ditto_datahub/repositories/bars/dq_filters.py
+# packages/data/src/ditto_data/repositories/bars/dq_filters.py
 """
 DQ 违规数据过滤函数。
 
@@ -686,7 +686,7 @@ DQ 违规数据过滤函数。
 ### 5.2 实施顺序
 
 1. **P0 - 创建 models 包**
-   - 创建 `packages/datahub/src/ditto_datahub/models/` 目录
+   - 创建 `packages/data/src/ditto_data/models/` 目录
    - 移动 `IngestionLog`, `IngestionStatus` 到 `models.ingestion`
    - 创建 `IngestionLogAccessor`
    - 更新 DataHub
@@ -731,26 +731,26 @@ pixi run -e dev ci
 
 | 文件 | 用途 |
 |------|------|
-| `packages/datahub/src/ditto_datahub/models/__init__.py` | 领域类型包 |
-| `packages/datahub/src/ditto_datahub/models/ingestion.py` | IngestionLog, IngestionStatus |
-| `packages/datahub/src/ditto_datahub/accessors/ingestion_log.py` | IngestionLogAccessor |
+| `packages/data/src/ditto_data/models/__init__.py` | 领域类型包 |
+| `packages/data/src/ditto_data/models/ingestion.py` | IngestionLog, IngestionStatus |
+| `packages/data/src/ditto_data/accessors/ingestion_log.py` | IngestionLogAccessor |
 | `packages/foundation/src/ditto_foundation/logging/context.py` | log_operation, log_event |
 | `packages/foundation/src/ditto_foundation/metrics/tracking.py` | track_metrics 装饰器 |
-| `packages/datahub/src/ditto_datahub/runtime/write_guard.py` | write_with_lock |
-| `packages/datahub/src/ditto_datahub/repositories/common/identifier.py` | resolve_sids |
-| `packages/datahub/src/ditto_datahub/repositories/bars/adjustment.py` | 复权计算 |
-| `packages/datahub/src/ditto_datahub/repositories/bars/asset_class.py` | 资产类别检测 |
-| `packages/datahub/src/ditto_datahub/repositories/bars/dq_filters.py` | DQ 过滤函数 |
+| `packages/data/src/ditto_data/runtime/write_guard.py` | write_with_lock |
+| `packages/data/src/ditto_data/repositories/common/identifier.py` | resolve_sids |
+| `packages/data/src/ditto_data/repositories/bars/adjustment.py` | 复权计算 |
+| `packages/data/src/ditto_data/repositories/bars/asset_class.py` | 资产类别检测 |
+| `packages/data/src/ditto_data/repositories/bars/dq_filters.py` | DQ 过滤函数 |
 
 ### 6.2 需要修改的文件
 
 | 文件 | 修改内容 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/hub.py` | 添加 ingestion_log |
+| `packages/data/src/ditto_data/hub.py` | 添加 ingestion_log |
 | `apps/port/src/ditto_port/services/ingestion/coordinator.py` | match/case 重构 |
 | `apps/port/src/ditto_port/services/ingestion/metadata.py` | 使用 models.ingestion |
 | `apps/port/src/ditto_port/services/ingestion/backfill.py` | 使用 Accessor |
 | `apps/port/src/ditto_port/services/ingestion/retry.py` | 使用 Repository |
-| `packages/datahub/src/ditto_datahub/accessors/bars.py` | 重构提取共用函数 |
-| `packages/datahub/src/ditto_datahub/stores/ingestion_log.py` | 使用 models.ingestion |
-| `packages/datahub/src/ditto_datahub/sources/metadata.py` | 迁移到 models.ingestion |
+| `packages/data/src/ditto_data/accessors/bars.py` | 重构提取共用函数 |
+| `packages/data/src/ditto_data/stores/ingestion_log.py` | 使用 models.ingestion |
+| `packages/data/src/ditto_data/sources/metadata.py` | 迁移到 models.ingestion |

@@ -489,7 +489,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.config import DataRootConfig
+from ditto_data.config import DataRootConfig
 from ditto_infra.foundation.config.settings import Settings
 from ditto_infra.foundation.observability import init, shutdown
 from ditto_infra.foundation.observability.config import ObservabilityConfig

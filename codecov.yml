@@ -20,18 +20,13 @@ coverage:
   flags:
     core-strategy:
       paths:
-        - packages/core/src/ditto_core/strategy/
-        - packages/core/src/ditto_core/portfolio/
+        - packages/engine/src/ditto_engine/alpha/
+        - packages/engine/src/ditto_engine/portfolio/
       target: 90%
 
-    core-engine:
+    data:
       paths:
-        - packages/core/src/ditto_core/engine/
-      target: 85%
-
-    datahub:
-      paths:
-        - packages/datahub/src/
+        - packages/data/src/
       target: 85%
 
     infra:
@@ -41,7 +36,7 @@ coverage:
 
     server:
       paths:
-        - apps/port/src/
+        - interfaces/src/
       target: 80%
 
 ignore:

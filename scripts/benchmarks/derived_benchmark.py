@@ -172,6 +172,7 @@ def _run_materialize_workload(frame: pl.DataFrame) -> pl.DataFrame:
         .with_columns(
             pl.col("return_1d")
             .shift(1)
+            # PIT 安全: shift(1) 保证窗口使用 [T-5, T-1] 范围
             .rolling_mean(window_size=5, min_samples=3)
             .over("instrument_id")
             .fill_null(0.0)

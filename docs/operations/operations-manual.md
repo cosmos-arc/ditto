@@ -25,29 +25,29 @@
 
 | 应用 | 入口文件 | 用途 |
 |------|----------|------|
-| **API Server** | [main.py](../apps/port/src/ditto_port/main.py) | REST API 服务（FastAPI + Granian） |
-| **CLI** | [cli/main.py](../apps/port/src/ditto_port/cli/main.py) | 命令行工具 |
-| **Prefect Flows** | [jobs/flows/](../apps/port/src/ditto_port/jobs/flows/) | 数据摄取编排 |
+| **API Server** | [main.py](../interfaces/src/ditto_interfaces/main.py) | REST API 服务（FastAPI + Granian） |
+| **CLI** | [cli/main.py](../interfaces/src/ditto_interfaces/cli/main.py) | 命令行工具 |
+| **Prefect Flows** | [jobs/flows/](../interfaces/src/ditto_interfaces/jobs/flows/) | 数据摄取编排 |
 
 ### 1.2 Prefect Flows 列表
 
 | Flow | 文件 | 功能 |
 |------|------|------|
-| `daily_ingestion_flow` | [daily.py](../apps/port/src/ditto_port/jobs/flows/daily.py) | 每日增量摄取（T0→T1→T3） |
-| `backfill_flow` | [backfill.py](../apps/port/src/ditto_port/jobs/flows/backfill.py) | 全量数据回补 |
-| `backfill_missing_flow` | [backfill.py](../apps/port/src/ditto_port/jobs/flows/backfill.py) | 回补缺失数据 |
-| `daily_repair_flow` | [repair.py](../apps/port/src/ditto_port/jobs/flows/repair.py) | 每日修补流程 |
-| `repair_holes_flow` | [repair.py](../apps/port/src/ditto_port/jobs/flows/repair.py) | 修补数据空洞 |
-| `retry_failed_flow` | [repair.py](../apps/port/src/ditto_port/jobs/flows/repair.py) | 重试失败任务 |
+| `daily_ingestion_flow` | [daily.py](../interfaces/src/ditto_interfaces/jobs/flows/daily.py) | 每日增量摄取（T0→T1→T3） |
+| `backfill_flow` | [backfill.py](../interfaces/src/ditto_interfaces/jobs/flows/backfill.py) | 全量数据回补 |
+| `backfill_missing_flow` | [backfill.py](../interfaces/src/ditto_interfaces/jobs/flows/backfill.py) | 回补缺失数据 |
+| `daily_repair_flow` | [repair.py](../interfaces/src/ditto_interfaces/jobs/flows/repair.py) | 每日修补流程 |
+| `repair_holes_flow` | [repair.py](../interfaces/src/ditto_interfaces/jobs/flows/repair.py) | 修补数据空洞 |
+| `retry_failed_flow` | [repair.py](../interfaces/src/ditto_interfaces/jobs/flows/repair.py) | 重试失败任务 |
 
 ### 1.3 包结构
 
 ```
 ditto/
 ├── packages/infra/         # 基础设施层（配置、日志、路径、Runtime）
-├── packages/datahub/       # 数据访问层（存储、数据源）
-├── packages/core/          # 核心引擎层（DQ、业务逻辑）
-└── apps/port/              # 应用层（API、CLI、Flows）
+├── packages/data/       # 数据访问层（存储、数据源）
+├── packages/engine/          # 核心引擎层（DQ、业务逻辑）
+└── interfaces/              # 应用层（API、CLI、Flows）
 ```
 
 ### 1.4 双层环境架构
@@ -154,12 +154,12 @@ config/
 |--------|------|----------|----------|
 | `SystemSettings` | 字段名（大小写不敏感） | `system.env` | [settings.py:12-33](../packages/infra/src/ditto_infra/foundation/config/settings.py) |
 | `ObservabilitySettings` | 字段名（大小写不敏感） | `observability.env` | [settings.py:36-76](../packages/infra/src/ditto_infra/foundation/config/settings.py) |
-| `DataRootConfig` | 字段名（大小写不敏感） | `data_store.env` | [data_root.py:10-170](../packages/datahub/src/ditto_datahub/config/data_root.py) |
-| `DatabaseSettings` | 字段名（大小写不敏感） | `database.env` | [database.py:10-31](../packages/datahub/src/ditto_datahub/config/database.py) |
-| `DataSourceSettings` | 字段名（大小写不敏感） | `data_source.env` | [data_source.py:7-34](../packages/datahub/src/ditto_datahub/config/data_source.py) |
-| `DQSettings` | 字段名（大小写不敏感） | `dq.env` | [config.py:9-100](../packages/core/src/ditto_core/quality/config.py) |
+| `DataRootConfig` | 字段名（大小写不敏感） | `data_store.env` | [data_root.py:10-170](../packages/data/src/ditto_data/config/data_root.py) |
+| `DatabaseSettings` | 字段名（大小写不敏感） | `database.env` | [database.py:10-31](../packages/data/src/ditto_data/config/database.py) |
+| `DataSourceSettings` | 字段名（大小写不敏感） | `data_source.env` | [data_source.py:7-34](../packages/data/src/ditto_data/config/data_source.py) |
+| `DQSettings` | 字段名（大小写不敏感） | `dq.env` | [config.py:9-100](../packages/engine/src/ditto_engine/quality/config.py) |
 | `NotificationSettings` | 字段名（大小写不敏感） | `notification.env` | [config.py:1-45](../packages/infra/src/ditto_infra/foundation/notification/config.py) |
-| `FileStorageSettings` | 由 `DataRootConfig` 派生 | `data_store.env` | [storage.py:1-26](../packages/datahub/src/ditto_datahub/config/storage.py) |
+| `FileStorageSettings` | 由 `DataRootConfig` 派生 | `data_store.env` | [storage.py:1-26](../packages/data/src/ditto_data/config/storage.py) |
 
 ---
 
@@ -332,8 +332,8 @@ Token 仅来自 `data_source.env`，由应用层注入，不读取环境变量/K
 | **手动触发 Flow** | `prefect deployment run "daily-ingestion/daily-ingestion-scheduled"` |
 | **查看 Flow 日志** | `prefect flow-run logs <run-id>` |
 | **取消运行** | `prefect flow-run cancel <run-id>` |
-| **部署所有 Flows** | `python -m ditto_port.jobs.flows.deploy` |
-| **列出可用 Flows** | `python -m ditto_port.jobs.flows.deploy list` |
+| **部署所有 Flows** | `python -m ditto_interfaces.jobs.flows.deploy` |
+| **列出可用 Flows** | `python -m ditto_interfaces.jobs.flows.deploy list` |
 
 ### 7.5 配置文件管理
 

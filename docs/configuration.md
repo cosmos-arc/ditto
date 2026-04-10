@@ -52,10 +52,10 @@ Ditto 配置系统采用**分层架构**设计，支持多环境配置、路径�
 |------|--------|------|
 | 环境管理 | `ditto_infra.foundation.config` | 环境检测、配置加载 |
 | 系统配置 | `ditto_infra.foundation.config.settings` | SystemSettings, ObservabilitySettings |
-| 存储配置 | `ditto_datahub.config.data_store` | DataStoreSettings |
-| 数据源配置 | `ditto_datahub.config.data_source` | DataSourceSettings |
+| 存储配置 | `ditto_data.config.data_store` | DataStoreSettings |
+| 数据源配置 | `ditto_data.config.data_source` | DataSourceSettings |
 | 通知配置 | `ditto_infra.services.notification.config` | NotificationSettings |
-| 质量配置 | `ditto_core.quality.config` | DQSettings |
+| 质量配置 | `ditto_data.quality.config` | DQSettings |
 
 ---
 
@@ -120,8 +120,8 @@ print(f'当前环境: {get_environment().value}')
 # 查看数据目录
 pixi run -e dev python -c "
 from dishka import make_container
-from ditto_port.registry.infra.config import ConfigProvider
-from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_interfaces.registry.infra.config import ConfigProvider
+from ditto_data.config.data_store import DataStoreSettings
 import os
 os.environ['ENVIRONMENT'] = 'development'
 container = make_container(ConfigProvider())
@@ -330,7 +330,7 @@ SQL_ENGINE__PLAN_CACHE_SIZE=1000
 1. **定义配置模型**（在对应包的 `config/` 目录）
 
 ```python
-# packages/datahub/src/ditto_datahub/config/data_store.py
+# packages/data/src/ditto_data/config/data_store.py
 class DataStoreSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -347,7 +347,7 @@ NEW_OPTION=my_value
 3. **在 ConfigProvider 中加载**（如果需要新配置文件）
 
 ```python
-# apps/port/src/ditto_port/registry/infra/config.py
+# interfaces/src/ditto_interfaces/registry/infra/config.py
 @provide
 def new_settings(self, config_loader: ConfigLoader) -> NewSettings:
     values = load_env_file(config_loader, "new_config")
@@ -409,8 +409,8 @@ print(get_environment())
 # 查看完整配置（需要 DI 容器）
 pixi run -e dev python -c "
 from dishka import make_container
-from ditto_port.registry.infra.config import ConfigProvider
-from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_interfaces.registry.infra.config import ConfigProvider
+from ditto_data.config.data_store import DataStoreSettings
 import os
 os.environ['ENVIRONMENT'] = 'development'
 c = make_container(ConfigProvider())
@@ -546,7 +546,7 @@ pixi run -e dev python -c "
 import os
 os.environ['ENVIRONMENT'] = 'development'
 from dishka import make_container
-from ditto_port.registry.infra.config import ConfigProvider
+from ditto_interfaces.registry.infra.config import ConfigProvider
 from ditto_infra.foundation.config.settings import Settings
 
 c = make_container(ConfigProvider())
@@ -578,16 +578,16 @@ c.close()
 |------|------|---------|
 | `SystemSettings` | `ditto_infra/foundation/config/settings.py` | `system.env` |
 | `ObservabilitySettings` | `ditto_infra/foundation/config/settings.py` | `observability.env` |
-| `DataStoreSettings` | `ditto_datahub/config/data_store.py` | `data_store.env` |
-| `DataSourceSettings` | `ditto_datahub/config/data_source.py` | `data_source.env` |
-| `FileStorageSettings` | `ditto_datahub/config/` | 派生自 `DataStoreSettings` |
-| `DQSettings` | `ditto_core/quality/config/` | `dq.env` |
+| `DataStoreSettings` | `ditto_data/config/data_store.py` | `data_store.env` |
+| `DataSourceSettings` | `ditto_data/config/data_source.py` | `data_source.env` |
+| `FileStorageSettings` | `ditto_data/config/` | 派生自 `DataStoreSettings` |
+| `DQSettings` | `ditto_data/quality/config/` | `dq.env` |
 | `NotificationSettings` | `ditto_infra/services/notification/config.py` | `notification.env` |
 
 ### 相关文档
 
 - [架构设计规范](/.claude/rules/architecture.md)
-- [Python 核心规范](/.claude/rules/core.md)
+- [Python 核心规范](/.claude/rules/python.md)
 - [配置系统规范](/.claude/rules/config.md)
 - [CLAUDE.md - 配置系统规范](/CLAUDE.md)
 - [运维手册](/docs/ops-manual.md)

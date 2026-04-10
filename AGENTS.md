@@ -50,7 +50,7 @@
 
 ### 代码风格
 - **语言**：中文回复/文档，UTF-8 编码
-- **Python**：详见 [core.md](.claude/rules/core.md)
+- **Python**：详见 [python.md](.claude/rules/python.md)
 - **类型**：禁止滥用 `# type: ignore`（详见 [noqa-ignore.md](.claude/rules/noqa-ignore.md)）
 - **TDD**：RED → GREEN → REFACTOR
 - **分支**：从 main 拉开发分支，PR 合并
@@ -64,12 +64,15 @@
 ### 架构原则
 ```
 依赖层级（从高到低）:
-  ditto_port → ditto_core → ditto_datahub → ditto_infra
+  ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_infra
+  ditto_interfaces → ditto_analytics → ditto_kernel
+  ditto_app → ditto_analytics → ditto_kernel
+  ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
 
 允许的跨层依赖:
-  - port 可以直接依赖 datahub.models/services/sources
-  - port 可以直接依赖 infra.foundation
-  - port 禁止直接依赖 datahub.stores/runtime（仅 registry 例外）
+  - interfaces 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）
+  - interfaces 可以直接依赖 infra.foundation
+  - interfaces 禁止直接依赖 data.storage/runtime（仅 registry 例外）
 
 详细约束见 .importlinter 配置
 ```
@@ -80,9 +83,12 @@
 
 详细分层规范：
 - Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
-- DataHub → [packages/datahub/CLAUDE.md](packages/datahub/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
-- Core → [packages/core/CLAUDE.md](packages/core/CLAUDE.md)
-- Port → [apps/port/CLAUDE.md](apps/port/CLAUDE.md)
+- Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
+- Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
+- Engine → [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md)
+- Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
+- App → [packages/app/CLAUDE.md](packages/app/CLAUDE.md)
+- Interfaces → [interfaces/CLAUDE.md](interfaces/CLAUDE.md)
 
 ### 允许的依赖（严格限制）
 
@@ -139,6 +145,9 @@ pixi run -e dev fmt           # 格式化
 | 文件操作用 Bash cat/sed/echo | 必须用 Read/Edit/Write |
 | SRC 内大量 `# noqa`/`# type:ignore` | 优先重构代码 |
 | `TYPE_CHECKING` 延迟导入 | 重构架构解决循环依赖 |
+| 跨包 re-export | 隐藏真实依赖（详见 python.md Re-export 规范） |
+| `__init__.py` 混合 re-export + 内联定义 | 分离到独立模块 |
+| re-export 链深度 > 2 层 | 消费者直接引用叶模块 |
 
 ---
 
@@ -226,6 +235,9 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 - 提交 secrets
 - 使用 Bash 命令进行文件读写改操作
 - `rolling_mean(20)` 不指定 `closed="left"`（详见 [pit.md](.claude/rules/pit.md)）
+- 跨包 re-export（隐藏真实依赖，详见 [python.md](.claude/rules/python.md) Re-export 规范）
+- `__init__.py` 中混合 re-export 与内联定义（必须分离到独立模块）
+- re-export 链深度超过 2 层（消费者必须直接引用叶模块）
 
 ---
 
@@ -237,11 +249,12 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 ditto/
 ├── packages/           # 核心包
 │   ├── infra/        # 基础设施
-│   ├── datahub/       # 数据访问层
-│   └── core/          # 核心引擎
-├── apps/              # 应用
-│   ├── port/          # Server 应用
-│   └── web/           # Web 应用
+│   ├── kernel/       # 共享内核（零业务行为类型）
+│   ├── data/          # 数据访问层
+│   ├── analytics/     # 表达式编译 + 物化 + 因子 + 研究
+│   ├── app/           # 应用编排层（CQRS: query/process/command/builders）
+│   └── engine/        # 核心引擎（alpha/portfolio/execution/accounting/backtest/orchestrator）
+├── interfaces/        # 应用入口（API/CLI/Jobs + DI Composition Root）
 ├── config/            # 环境配置（按环境分组）
 │   ├── development/
 │   ├── testing/

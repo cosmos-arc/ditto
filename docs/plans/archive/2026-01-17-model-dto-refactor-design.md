@@ -152,11 +152,11 @@ class WriteOptions(BaseModel):
 
 ### 变更清单
 
-#### DataHub 层（packages/datahub）
+#### DataHub 层（packages/data）
 
 | 操作 | 源位置 | 目标位置 | 说明 |
 |------|--------|----------|------|
-| 创建目录 | - | `packages/datahub/src/ditto_datahub/models/` | 新建 models 包 |
+| 创建目录 | - | `packages/data/src/ditto_data/models/` | 新建 models 包 |
 | 迁移枚举 | `types.py` | `models/common.py` | `OnDuplicate`, `DQSeverity`, `SidRange` |
 | 迁移存储模型 | `types.py` | `models/storage.py` | `WriteResult`, `WriteResultStore`, `FreezeManifest` |
 | 迁移 DQ 配置 | `dq/models.py` | `models/quality.py` | `DQConfig` → `DQSpec`, `DQResult`, `DQIssue` |
@@ -176,7 +176,7 @@ class WriteOptions(BaseModel):
 ### 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── models/                      # 新建
 │   ├── __init__.py             # 统一导出
 │   ├── common.py               # 枚举、NamedTuple
@@ -318,7 +318,7 @@ class BackfillResult:
 - ✅ pyright 类型检查通过（0 errors, 0 warnings）
 - ✅ ruff 代码检查通过
 
-**注意**：由于项目中预先存在的循环导入问题（`ditto_datahub.hub` ↔ `ditto_datahub.dq.engine`），部分单元测试无法运行。该问题已在 git commit f1283da 中记录，不属于本次重构引入。
+**注意**：由于项目中预先存在的循环导入问题（`ditto_data.hub` ↔ `ditto_data.dq.engine`），部分单元测试无法运行。该问题已在 git commit f1283da 中记录，不属于本次重构引入。
 
 ---
 
@@ -331,11 +331,11 @@ class BackfillResult:
 ### 操作清单
 
 1. **移除 DeprecationWarning 兼容层**
-   - `packages/datahub/src/ditto_datahub/types.py`
+   - `packages/data/src/ditto_data/types.py`
    - `apps/port/src/ditto_port/common/types.py`
 
 2. **删除空的旧文件**（如适用）
-   - `packages/datahub/src/ditto_datahub/dq/models.py`（如果已迁移）
+   - `packages/data/src/ditto_data/dq/models.py`（如果已迁移）
 
 3. **验证导入**
    - 确保所有文件从 `models/` 导入
@@ -356,10 +356,10 @@ class BackfillResult:
 ### 变更摘要
 
 **文件删除：**
-- ✅ 删除 `packages/datahub/src/ditto_datahub/dq/models.py`
+- ✅ 删除 `packages/data/src/ditto_data/dq/models.py`
 
 **导入更新：**
-- ✅ 更新所有测试文件导入：`from ditto_datahub.dq.models import` → `from ditto_datahub.models import`
+- ✅ 更新所有测试文件导入：`from ditto_data.dq.models import` → `from ditto_data.models import`
 - ✅ 更新 `apps/port/src/ditto_port/jobs/tasks/monitoring.py` 导入
 - ✅ 更新所有 `DQConfig` → `DQSpec` 引用
 

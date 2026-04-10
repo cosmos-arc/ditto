@@ -91,7 +91,7 @@
 ### 2.2 目录结构
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── stores/
 │   ├── __init__.py
 │   ├── base_store.py                    # Store 基类
@@ -326,9 +326,9 @@ from typing import Any
 import polars as pl
 from pydantic import BaseModel
 
-from ditto_datahub.stores.base_store import BaseStore
-from ditto_datahub.stores.parquet.partition_strategy import PartitionStrategy
-from ditto_datahub.stores.parquet.compression import CompressionStrategy
+from ditto_data.stores.base_store import BaseStore
+from ditto_data.stores.parquet.partition_strategy import PartitionStrategy
+from ditto_data.stores.parquet.compression import CompressionStrategy
 
 
 class ParquetStoreConfig(BaseModel):
@@ -784,9 +784,9 @@ import polars as pl
 import sqlite3
 from contextlib import asynccontextmanager
 
-from ditto_datahub.stores.base_store import BaseStore
-from ditto_datahub.stores.sqlite.connection_pool import ConnectionPool
-from ditto_datahub.stores.sqlite.schema import TableSchema
+from ditto_data.stores.base_store import BaseStore
+from ditto_data.stores.sqlite.connection_pool import ConnectionPool
+from ditto_data.stores.sqlite.schema import TableSchema
 
 
 class SQLiteStoreConfig(BaseModel):
@@ -1218,9 +1218,9 @@ from pathlib import Path
 from typing import date
 import polars as pl
 
-from ditto_datahub.stores.parquet.parquet_store import ParquetStore, ParquetStoreConfig
-from ditto_datahub.stores.parquet.partition_strategy import YearlyPartition
-from ditto_datahub.stores.parquet.compression import CompressionStrategy, CompressionType
+from ditto_data.stores.parquet.parquet_store import ParquetStore, ParquetStoreConfig
+from ditto_data.stores.parquet.partition_strategy import YearlyPartition
+from ditto_data.stores.parquet.compression import CompressionStrategy, CompressionType
 
 
 class BarsStore(ParquetStore):
@@ -1371,8 +1371,8 @@ from pathlib import Path
 from typing import Any
 import polars as pl
 
-from ditto_datahub.stores.sqlite.sqlite_store import SQLiteStore, SQLiteStoreConfig
-from ditto_datahub.stores.sqlite.schema import TableSchema, ColumnDef, ColumnType, IndexDef
+from ditto_data.stores.sqlite.sqlite_store import SQLiteStore, SQLiteStoreConfig
+from ditto_data.stores.sqlite.schema import TableSchema, ColumnDef, ColumnType, IndexDef
 
 
 class SecuritySchema(TableSchema):
@@ -1469,8 +1469,8 @@ from pathlib import Path
 from typing import Literal
 import polars as pl
 
-from ditto_datahub.stores.sqlite.sqlite_store import SQLiteStore
-from ditto_datahub.stores.sqlite.schema import TableSchema, ColumnDef, ColumnType, IndexDef
+from ditto_data.stores.sqlite.sqlite_store import SQLiteStore
+from ditto_data.stores.sqlite.schema import TableSchema, ColumnDef, ColumnType, IndexDef
 
 
 class IdentitySchema(TableSchema):
@@ -1655,7 +1655,7 @@ from pathlib import Path
 import polars as pl
 from datetime import date
 
-from ditto_datahub.domains.market.stock.bars.bars_store import BarsStore
+from ditto_data.domains.market.stock.bars.bars_store import BarsStore
 
 
 @pytest.fixture
@@ -1735,9 +1735,9 @@ from pathlib import Path
 import polars as pl
 from datetime import date
 
-from ditto_datahub.domains.market.stock.bars.bars_store import BarsStore
-from ditto_datahub.domains.metadata.security.security_store import SecurityStore
-from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
+from ditto_data.domains.market.stock.bars.bars_store import BarsStore
+from ditto_data.domains.metadata.security.security_store import SecurityStore
+from ditto_data.domains.metadata.identity.identity_store import IdentityStore
 
 
 @pytest.mark.asyncio

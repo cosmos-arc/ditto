@@ -42,7 +42,7 @@
 
 **目录结构**：
 ```
-packages/datahub/src/ditto_datahub/domains/fundamental/
+packages/data/src/ditto_data/domains/fundamental/
 ├── financial/           # 财务报表子域（计划中）
 │   ├── balance_sheet_store.py
 │   ├── income_statement_store.py
@@ -73,7 +73,7 @@ packages/datahub/src/ditto_datahub/domains/fundamental/
 
 **目录结构**：
 ```
-packages/datahub/src/ditto_datahub/domains/capital/
+packages/data/src/ditto_data/domains/capital/
 ├── margin/              # 融资融券子域
 │   └── margin_trading_store.py
 ├── pledge/              # 股权质押子域
@@ -112,8 +112,8 @@ packages/datahub/src/ditto_datahub/domains/capital/
 ```python
 """Forecast 子域 - 业绩预告/快报数据。"""
 
-from ditto_datahub.domains.fundamental.forecast.express_store import ExpressStore
-from ditto_datahub.domains.fundamental.forecast.forecast_store import ForecastStore
+from ditto_data.domains.fundamental.forecast.express_store import ExpressStore
+from ditto_data.domains.fundamental.forecast.forecast_store import ForecastStore
 
 __all__ = ["ExpressStore", "ForecastStore"]
 ```
@@ -179,23 +179,23 @@ __all__ = ["ExpressStore", "ForecastStore"]
 1. **导入语句更新**：
    ```python
    # 旧
-   from ditto_datahub.domains.capital import CapitalStore
-   from ditto_datahub.domains.capital.capital_store import BalanceSheetStore
+   from ditto_data.domains.capital import CapitalStore
+   from ditto_data.domains.capital.capital_store import BalanceSheetStore
 
    # 新
-   from ditto_datahub.domains.capital import CapitalStore
-   from ditto_datahub.domains.fundamental import FundamentalStore
+   from ditto_data.domains.capital import CapitalStore
+   from ditto_data.domains.fundamental import FundamentalStore
    ```
 
 2. **Service 名称更新**：
    ```python
    # 旧
-   from ditto_datahub.domains.market import MarketQueryService
-   from ditto_datahub.domains.metadata import MetadataQueryService
+   from ditto_data.domains.market import MarketQueryService
+   from ditto_data.domains.metadata import MetadataQueryService
 
    # 新
-   from ditto_datahub.domains.market import MarketService
-   from ditto_datahub.domains.metadata import MetadataService
+   from ditto_data.domains.market import MarketService
+   from ditto_data.domains.metadata import MetadataService
    ```
 
 3. **测试文件更新**：
@@ -203,7 +203,7 @@ __all__ = ["ExpressStore", "ForecastStore"]
    - 新增 `test_fundamental_service_unit.py` - Fundamental 域单元测试
 
 4. **文档更新**：
-   - `packages/datahub/README.md` - 更新城架构说明
+   - `packages/data/README.md` - 更新城架构说明
    - `docs/design/2026-01-26-datahub-complete-redesign.md` - 标记版本差异
 
 ---
@@ -249,7 +249,7 @@ __all__ = ["ExpressStore", "ForecastStore"]
 ## 相关文档
 
 - [架构规范](../../.claude/rules/architecture.md)
-- [DataHub README](../../packages/datahub/README.md)
+- [DataHub README](../../packages/data/README.md)
 - [域重构实施计划](../../plans/2026-01-30-domain-restructure-fundamental-capital.md)
 - [ADR 0004: Domain Layer 子领域分层定位](0004-domain-layer-subdomains.md)
 

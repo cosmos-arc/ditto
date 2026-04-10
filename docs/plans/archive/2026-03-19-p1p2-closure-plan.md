@@ -24,8 +24,8 @@
 3. 对 CSI 300/500/1000 三个指数批量执行
 
 **文件**:
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — 新增 `sync_index_universe()`
-- `packages/datahub/tests/unit/services/test_metadata_service_universe.py` — 测试
+- `packages/data/src/ditto_data/services/metadata_service.py` — 新增 `sync_index_universe()`
+- `packages/data/tests/unit/services/test_metadata_service_universe.py` — 测试
 
 **复杂度**: S
 
@@ -42,7 +42,7 @@
 **文件**:
 - `apps/port/src/ditto_port/services/ingestion/coordinator.py` — 新增回填方法
 - `apps/port/src/ditto_port/cli/commands/ingest/` — 新增 CLI 命令
-- `packages/datahub/src/ditto_datahub/services/market_service.py` — 新增 `backfill_adj_factor()`
+- `packages/data/src/ditto_data/services/market_service.py` — 新增 `backfill_adj_factor()`
 
 **复杂度**: M
 
@@ -53,8 +53,8 @@
 **方案**: Tushare `daily_basic` API 已包含 `roe` 字段，在 `VALUATION_METRICS_MAPPING` 中增加映射。
 
 **文件**:
-- `packages/datahub/src/ditto_datahub/sources/tushare/processors/mappings/capital.py` — VALUATION_METRICS_MAPPING 加 `roe`
-- `packages/datahub/src/ditto_datahub/models/metadata.py` — StockExtension 加 `roe` 字段（如需要）
+- `packages/data/src/ditto_data/sources/tushare/processors/mappings/capital.py` — VALUATION_METRICS_MAPPING 加 `roe`
+- `packages/data/src/ditto_data/models/metadata.py` — StockExtension 加 `roe` 字段（如需要）
 
 **复杂度**: S
 
@@ -68,9 +68,9 @@
 3. 提供 `get_st_status(instrument_id, asof_date)` PIT 查询
 
 **文件**:
-- `packages/datahub/src/ditto_datahub/stores/market/stock/status/status_writer.py` — 新增方法
-- `packages/datahub/src/ditto_datahub/stores/market/stock/status/status_reader.py` — PIT 查询
-- `packages/datahub/scripts/schema.sql` — 新表
+- `packages/data/src/ditto_data/stores/market/stock/status/status_writer.py` — 新增方法
+- `packages/data/src/ditto_data/stores/market/stock/status/status_reader.py` — PIT 查询
+- `packages/data/scripts/schema.sql` — 新表
 
 **复杂度**: M
 
@@ -84,8 +84,8 @@
 3. 在 `MarketService` 写入路径中检查策略
 
 **文件**:
-- `packages/datahub/src/ditto_datahub/models/derived.py` 或新建 policy model — LateArrivalPolicy 定义
-- `packages/datahub/src/ditto_datahub/services/market_service.py` — 写入检查
+- `packages/data/src/ditto_data/models/derived.py` 或新建 policy model — LateArrivalPolicy 定义
+- `packages/data/src/ditto_data/services/market_service.py` — 写入检查
 - 测试文件
 
 **复杂度**: M
@@ -100,8 +100,8 @@
 3. `QueryService` 暴露 `query_streaming()` 方法
 
 **文件**:
-- `packages/datahub/src/ditto_datahub/services/derived/artifact_reader.py` — lazy streaming
-- `packages/datahub/src/ditto_datahub/services/derived/query_service.py` — 流式查询 API
+- `packages/data/src/ditto_data/services/derived/artifact_reader.py` — lazy streaming
+- `packages/data/src/ditto_data/services/derived/query_service.py` — 流式查询 API
 
 **复杂度**: M
 
@@ -189,7 +189,7 @@
 
 **方案**: 在 MetadataService 新增 `universe_intersection()`, `universe_union()`, `universe_subtract()`。
 
-**文件**: `packages/datahub/src/ditto_datahub/services/metadata_service.py`
+**文件**: `packages/data/src/ditto_data/services/metadata_service.py`
 
 **复杂度**: S
 
@@ -199,7 +199,7 @@
 
 **方案**: 在研究数据集导出方法中增加 `format="parquet|csv|feather"` 参数。
 
-**文件**: `packages/datahub/src/ditto_datahub/services/research_artifact_service.py`
+**文件**: `packages/data/src/ditto_data/services/research_artifact_service.py`
 
 **复杂度**: S
 
@@ -209,7 +209,7 @@
 
 **方案**: 写入临时文件后 `os.replace()` 原子重命名。
 
-**文件**: `packages/datahub/src/ditto_datahub/stores/runtime/derived_artifact_writer.py`
+**文件**: `packages/data/src/ditto_data/stores/runtime/derived_artifact_writer.py`
 
 **复杂度**: S
 
@@ -219,7 +219,7 @@
 
 **方案**: 在 CapitalTushareAdapter 中增加 `fetch_share_buyback()` 和 `fetch_rights_issue()` 方法。
 
-**文件**: `packages/datahub/src/ditto_datahub/sources/tushare/adapters/capital.py`
+**文件**: `packages/data/src/ditto_data/sources/tushare/adapters/capital.py`
 
 **复杂度**: S
 

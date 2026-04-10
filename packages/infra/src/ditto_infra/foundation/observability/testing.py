@@ -12,7 +12,7 @@ from . import metrics, tracing
 def reset_for_testing() -> None:
     """重置所有可观测性状态（测试用）."""
     # 先调用 shutdown 清理资源
-    from ditto_infra.foundation import shutdown  # noqa: PLC0415 - avoid circular import
+    from ditto_infra.foundation import shutdown  # noqa: PLC0415
 
     try:
         shutdown()

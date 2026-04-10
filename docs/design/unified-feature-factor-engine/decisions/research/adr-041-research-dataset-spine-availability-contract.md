@@ -223,8 +223,8 @@ class DatasetSnapshot(BaseModel):
 
 | 模块 | 修改内容 |
 |------|---------|
-| `packages/core` | 新增 `SpineSpec`、`ResearchDatasetSpec`、`DatasetSnapshot` 模型 |
-| `packages/datahub` | 提供 left-preserving PIT join 与 dataset snapshot manifest 写入 |
+| `packages/kernel` | 新增 `SpineSpec`、`ResearchDatasetSpec`、`DatasetSnapshot` 模型 |
+| `packages/data` | 提供 left-preserving PIT join 与 dataset snapshot manifest 写入 |
 | `packages/port` | 增加 research dataset build facade / API（如后续需要） |
 
 ---

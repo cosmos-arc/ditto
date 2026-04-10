@@ -298,22 +298,22 @@ Ditto 系统共有 **8 个 Store 类**，管理 **11 个主要数据集**，分�
 ## 七、相关文件
 
 ### Store 实现
-- `packages/datahub/src/ditto_datahub/stores/bars_store.py`
-- `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py`
-- `packages/datahub/src/ditto_datahub/stores/stock_status_store.py`
-- `packages/datahub/src/ditto_datahub/stores/calendar_store.py`
-- `packages/datahub/src/ditto_datahub/stores/security_store.py`
-- `packages/datahub/src/ditto_datahub/stores/universe_store.py`
-- `packages/datahub/src/ditto_datahub/stores/index_weight_store.py`
-- `packages/datahub/src/ditto_datahub/stores/ingestion_log_store.py`
-- `packages/datahub/src/ditto_datahub/stores/quarantine_store.py`
+- `packages/data/src/ditto_data/stores/bars_store.py`
+- `packages/data/src/ditto_data/stores/adj_factor_store.py`
+- `packages/data/src/ditto_data/stores/stock_status_store.py`
+- `packages/data/src/ditto_data/stores/calendar_store.py`
+- `packages/data/src/ditto_data/stores/security_store.py`
+- `packages/data/src/ditto_data/stores/universe_store.py`
+- `packages/data/src/ditto_data/stores/index_weight_store.py`
+- `packages/data/src/ditto_data/stores/ingestion_log_store.py`
+- `packages/data/src/ditto_data/stores/quarantine_store.py`
 
 ### Accessor 实现
-- `packages/datahub/src/ditto_datahub/accessors/bars_accessor.py`
-- `packages/datahub/src/ditto_datahub/accessors/adj_factor_accessor.py`
-- `packages/datahub/src/ditto_datahub/accessors/calendar_accessor.py`
-- `packages/datahub/src/ditto_datahub/accessors/security_accessor.py`
-- `packages/datahub/src/ditto_datahub/accessors/universe_accessor.py`
-- `packages/datahub/src/ditto_datahub/accessors/index_accessor.py`
-- `packages/datahub/src/ditto_datahub/accessors/ingestion_log_accessor.py`
-- `packages/datahub/src/ditto_datahub/accessors/quarantine_accessor.py`
+- `packages/data/src/ditto_data/accessors/bars_accessor.py`
+- `packages/data/src/ditto_data/accessors/adj_factor_accessor.py`
+- `packages/data/src/ditto_data/accessors/calendar_accessor.py`
+- `packages/data/src/ditto_data/accessors/security_accessor.py`
+- `packages/data/src/ditto_data/accessors/universe_accessor.py`
+- `packages/data/src/ditto_data/accessors/index_accessor.py`
+- `packages/data/src/ditto_data/accessors/ingestion_log_accessor.py`
+- `packages/data/src/ditto_data/accessors/quarantine_accessor.py`

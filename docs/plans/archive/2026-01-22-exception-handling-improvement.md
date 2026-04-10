@@ -51,7 +51,7 @@
 **实现示例**:
 
 ```python
-# packages/datahub/src/ditto_datahub/sources/tushare/client.py
+# packages/data/src/ditto_data/sources/tushare/client.py
 
 # 修改前
 try:

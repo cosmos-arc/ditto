@@ -73,8 +73,8 @@ def test_exception_chain_preserved_on_register_error():
 
 ### 修改范围
 
-1. `packages/datahub/src/ditto_datahub/services/ports.py` - 新增 `CapitalReadPorts`/`CapitalWritePorts`
-2. `packages/datahub/src/ditto_datahub/services/capital_service.py` - 重构为使用 Ports
+1. `packages/data/src/ditto_data/services/ports.py` - 新增 `CapitalReadPorts`/`CapitalWritePorts`
+2. `packages/data/src/ditto_data/services/capital_service.py` - 重构为使用 Ports
 3. `apps/port/src/ditto_port/registry/datahub/capital.py` - 使用 Ports 组装
 
 ### 设计方案
@@ -82,7 +82,7 @@ def test_exception_chain_preserved_on_register_error():
 #### Step 1: 新增 CapitalPorts 定义
 
 ```python
-# packages/datahub/src/ditto_datahub/services/ports.py
+# packages/data/src/ditto_data/services/ports.py
 
 @dataclass
 class CapitalReadPorts:
@@ -127,9 +127,9 @@ class CapitalWritePorts:
 #### Step 2: 重构 CapitalService
 
 ```python
-# packages/datahub/src/ditto_datahub/services/capital_service.py
+# packages/data/src/ditto_data/services/capital_service.py
 
-from ditto_datahub.services.ports import CapitalReadPorts, CapitalWritePorts
+from ditto_data.services.ports import CapitalReadPorts, CapitalWritePorts
 
 
 class CapitalService:
@@ -161,7 +161,7 @@ class CapitalService:
 ```python
 # apps/port/src/ditto_port/registry/datahub/capital.py
 
-from ditto_datahub.services.ports import CapitalReadPorts, CapitalWritePorts
+from ditto_data.services.ports import CapitalReadPorts, CapitalWritePorts
 
 
 class CapitalProvider(Provider):

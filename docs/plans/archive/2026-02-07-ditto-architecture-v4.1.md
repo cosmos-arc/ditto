@@ -246,7 +246,7 @@ class IBarsWriter(ABC):
 ### 1.3 Repository 实现读写分离
 
 ```python
-# packages/datahub/src/ditto_datahub/repositories/bars.py
+# packages/data/src/ditto_data/repositories/bars.py
 
 class StockBarsReader(IBarsReader):
     """股票 K线读取器（只读）"""
@@ -378,9 +378,9 @@ import polars as pl
 
 from ditto_contracts.bars import BarsQuery, AdjType
 from ditto_core.market.adjustment import AdjustmentEngine   # Domain!
-from ditto_datahub.repositories import IBarsReader
-from ditto_datahub.repositories.metadata import IInstrumentReader
-from ditto_datahub.repositories.status import IStatusReader
+from ditto_data.repositories import IBarsReader
+from ditto_data.repositories.metadata import IInstrumentReader
+from ditto_data.repositories.status import IStatusReader
 
 
 class DataQueryService:
@@ -569,8 +569,8 @@ import polars as pl
 
 from ditto_contracts.bars import BarsData
 from ditto_core.quality import QualityEngine
-from ditto_datahub.repositories import IBarsWriter
-from ditto_datahub.repositories.metadata import IInstrumentWriter
+from ditto_data.repositories import IBarsWriter
+from ditto_data.repositories.metadata import IInstrumentWriter
 
 
 class DataWriteService:
@@ -705,7 +705,7 @@ class DataWriteService:
 ### 5.1 读写分离
 
 ```python
-# packages/datahub/src/ditto_datahub/repositories/metadata/instrument.py
+# packages/data/src/ditto_data/repositories/metadata/instrument.py
 
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -804,7 +804,7 @@ ditto/
 │   │       └── ml/
 │   │
 │   ├── datahub/                        # DataHub Layer
-│   │   └── src/ditto_datahub/
+│   │   └── src/ditto_data/
 │   │       ├── repositories/           # 仓储（CQRS 读写分离）
 │   │       │   ├── stock/              # 股票仓储
 │   │       │   │   ├── bars_reader.py  # ✅ 只读

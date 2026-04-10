@@ -192,7 +192,7 @@ def compute_value_factor(df: pd.DataFrame) -> pd.Series:
 ### 3.1 目录结构设计
 
 ```
-packages/datahub/src/ditto_datahub/
+packages/data/src/ditto_data/
 ├── hub.py                      # 统一入口（保持不变）
 │
 ├── domains/                    # 新增：数据域分层
@@ -1140,8 +1140,8 @@ CREATE TABLE feature_lineage (
 
 ```python
 from prefect import flow, task
-from ditto_datahub.sources import TushareSource
-from ditto_datahub.domains.raw.market.bars_store import BarsStore
+from ditto_data.sources import TushareSource
+from ditto_data.domains.raw.market.bars_store import BarsStore
 from ditto_observability.dq import DQEngine
 
 @flow(name="daily_data_ingestion")
@@ -1179,8 +1179,8 @@ async def ingest_daily_data(trade_date: date):
 ### 15.3 阶段 2：特征计算（新增）
 
 ```python
-from ditto_datahub.domains.feature.technical import FeatureEngine
-from ditto_datahub.meta.feature_registry import FeatureRegistry
+from ditto_data.domains.feature.technical import FeatureEngine
+from ditto_data.meta.feature_registry import FeatureRegistry
 
 @flow(name="daily_feature_computation")
 async def compute_features(trade_date: date):
@@ -1226,8 +1226,8 @@ async def compute_features(trade_date: date):
 ### 15.4 阶段 3：因子计算（新增）
 
 ```python
-from ditto_datahub.domains.factor.style import FactorEngine
-from ditto_datahub.meta.factor_registry import FactorRegistry
+from ditto_data.domains.factor.style import FactorEngine
+from ditto_data.meta.factor_registry import FactorRegistry
 
 @flow(name="daily_factor_computation")
 async def compute_factors(trade_date: date):
@@ -1607,7 +1607,7 @@ Deployment.build_from_flow(
 ```
 packages/
 ├── datahub/
-│   └── src/ditto_datahub/
+│   └── src/ditto_data/
 │       ├── sources/
 │       │   ├── tushare/              # 主数据源
 │       │   └── tdx/                 # 对账数据源（新增）

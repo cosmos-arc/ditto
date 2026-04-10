@@ -101,7 +101,7 @@ class DerivedVersionStatus(StrEnum):
 | `apps/port/src/ditto_port/services/derived/publication.py:235` | `target_status=DerivedVersionStatus.PUBLISHED` |
 | `apps/port/src/ditto_port/services/derived/publication.py:255` | `status=DerivedVersionStatus.PUBLISHED` |
 | `apps/port/src/ditto_port/services/derived/publication.py:298` | `status=DerivedVersionStatus.DEPRECATED` |
-| `packages/datahub/src/ditto_datahub/stores/runtime/derived_catalog/*.py` | 更新查询条件 |
+| `packages/data/src/ditto_data/stores/runtime/derived_catalog/*.py` | 更新查询条件 |
 
 **数据清理**：
 
@@ -142,7 +142,7 @@ def write_version(self, record: DerivedVersionRecord) -> None:
 **修复方案**：引入 `UnitOfWork` 模式
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/runtime/unit_of_work.py
+# packages/data/src/ditto_data/stores/runtime/unit_of_work.py
 
 class AtomicWriter(Protocol):
     """原子写入器协议"""
@@ -185,7 +185,7 @@ class UnitOfWork:
 **实现 - 文件系统原子写入器**：
 
 ```python
-# packages/datahub/src/ditto_datahub/stores/runtime/file_atomic_writer.py
+# packages/data/src/ditto_data/stores/runtime/file_atomic_writer.py
 
 class FileAtomicWriter:
     """基于文件系统的原子写入器"""
@@ -228,7 +228,7 @@ class FileAtomicWriter:
 **测试用例**：
 
 ```python
-# packages/datahub/tests/unit/stores/runtime/test_unit_of_work_unit.py
+# packages/data/tests/unit/stores/runtime/test_unit_of_work_unit.py
 
 def test_commit_persists_all_operations():
     writer = MockAtomicWriter()
@@ -657,7 +657,7 @@ class DerivedMaterializationService:
 
 ```python
 # 1. DataHub 层 - ArtifactWriter
-# packages/datahub/src/ditto_datahub/stores/runtime/derived_artifact_writer.py
+# packages/data/src/ditto_data/stores/runtime/derived_artifact_writer.py
 
 @dataclass(frozen=True)
 class PartitionInfo:
@@ -797,7 +797,7 @@ version = primary_online or self._resolve_active_version(derived_id)
 **修复方案**：引入显式版本解析策略
 
 ```python
-# packages/datahub/src/ditto_datahub/services/derived/artifact_reader.py
+# packages/data/src/ditto_data/services/derived/artifact_reader.py
 
 class VersionResolutionStrategy(StrEnum):
     """版本解析策略"""
@@ -934,7 +934,7 @@ class InMemoryDerivedInputProvider:
 
 **当前位置**：`apps/port/src/ditto_port/services/derived/compile_cache.py`
 
-**目标位置**：`packages/datahub/src/ditto_datahub/services/derived/compile_cache_service.py`
+**目标位置**：`packages/data/src/ditto_data/services/derived/compile_cache_service.py`
 
 **理由**：
 - 编译缓存是持久化能力，属于 DataHub 层
@@ -1432,7 +1432,7 @@ Day 4-5: 增量计算补全
 **修复方案**：定义接口预留 + RuntimeMode 消费
 
 ```python
-# packages/datahub/src/ditto_datahub/services/hot_layer/__init__.py
+# packages/data/src/ditto_data/services/hot_layer/__init__.py
 
 class HotLayerReader(Protocol):
     """热层读取协议（QuestDB）"""

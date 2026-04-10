@@ -137,7 +137,7 @@ class CodeSizeChecker:
         # 扫描目录
         src_dirs = [
             Path.cwd() / "packages" / "foundation" / "src",
-            Path.cwd() / "packages" / "datahub" / "src",
+            Path.cwd() / "packages" / "data" / "src",
             Path.cwd() / "packages" / "core" / "src",
             Path.cwd() / "apps" / "port" / "src",
         ]

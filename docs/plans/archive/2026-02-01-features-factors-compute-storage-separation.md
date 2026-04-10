@@ -238,7 +238,7 @@ import polars as pl
 from ditto_foundation import logger, traced
 
 from ditto_core.feature.calculator import FeatureCalculator
-from ditto_datahub.domains.features import FeatureQuery, FeatureService
+from ditto_data.domains.features import FeatureQuery, FeatureService
 
 
 class FeatureEngine:
@@ -513,7 +513,7 @@ import polars as pl
 from ditto_foundation import logger, traced
 
 from ditto_core.factor.calculator import FactorCalculator
-from ditto_datahub.domains.factors import FactorQuery, FactorService
+from ditto_data.domains.factors import FactorQuery, FactorService
 
 
 class FactorEngine:
@@ -670,7 +670,7 @@ from pathlib import Path
 from ditto_foundation import logger, traced
 
 from ditto_core.feature.engine import FeatureEngine
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 
 class FeatureCalculationService:
@@ -767,7 +767,7 @@ class FeatureCalculationService:
 from ditto_foundation import logger, traced
 
 from ditto_core.factor.engine import FactorEngine
-from ditto_datahub import DataHub
+from ditto_data import DataHub
 
 
 class FactorCalculationService:

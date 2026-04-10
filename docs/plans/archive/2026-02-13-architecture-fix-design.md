@@ -200,7 +200,7 @@ app.include_router(macro.router, prefix="/api/v1")         # ← 新增
 
 ```python
 # service.py (Port 层)
-from ditto_datahub.stores.runtime.quality import QuarantineWriter  # ← 直接依赖 Store
+from ditto_data.stores.runtime.quality import QuarantineWriter  # ← 直接依赖 Store
 
 class QualityService:
     def __init__(
@@ -212,7 +212,7 @@ class QualityService:
 ```
 
 **架构违规**:
-- `ditto_port.services` 直接依赖 `ditto_datahub.stores`
+- `ditto_port.services` 直接依赖 `ditto_data.stores`
 - 违反 `Port → DataHub Service → DataHub Store` 分层原则
 - 通过 `.importlinter:96` 的 `ignore_imports` 绕过检查
 
@@ -238,7 +238,7 @@ class QualityRecordService:
 
 ```python
 # Before
-from ditto_datahub.stores.runtime.quality import QuarantineWriter
+from ditto_data.stores.runtime.quality import QuarantineWriter
 
 class QualityService:
     def __init__(
@@ -249,7 +249,7 @@ class QualityService:
         self._quarantine_writer = quarantine_writer
 
 # After
-from ditto_datahub.services import QualityRecordService
+from ditto_data.services import QualityRecordService
 
 class QualityService:
     def __init__(
@@ -284,7 +284,7 @@ class QualityService:
 
 **严重度**: 🟡 Medium
 **类别**: 资源管理 / 限流准确性
-**位置**: [tushare_source.py:47-53](packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py#L47-L53)
+**位置**: [tushare_source.py:47-53](packages/data/src/ditto_data/sources/tushare/tushare_source.py#L47-L53)
 
 #### 问题分析
 

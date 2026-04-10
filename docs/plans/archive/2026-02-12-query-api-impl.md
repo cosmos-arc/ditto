@@ -701,7 +701,7 @@ pixi run -e dev pytest apps/port/tests/integration/api/test_metadata_router_unit
 from typing import Any
 
 from fastapi import APIRouter, Depends
-from ditto_datahub.services.metadata_service import MetadataService
+from ditto_data.services.metadata_service import MetadataService
 
 from ditto_port.api.models.common import APIResponse
 from ditto_port.api.models.metadata import Instrument
@@ -1252,7 +1252,7 @@ pixi run -e dev pytest apps/port/tests/integration/api/test_market_router_unit.p
 from typing import Any
 
 from fastapi import APIRouter, Depends
-from ditto_datahub.services.market_service import MarketService
+from ditto_data.services.market_service import MarketService
 
 from ditto_port.api.errors import DateRangeError
 from ditto_port.api.models.market import BarsRequest

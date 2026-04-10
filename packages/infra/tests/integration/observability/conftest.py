@@ -7,9 +7,9 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
 
 import pytest
+from opentelemetry.metrics import Meter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
@@ -17,9 +17,6 @@ from opentelemetry.sdk.resources import Resource
 
 # 集成测试串行执行，避免全局状态污染
 pytestmark = pytest.mark.serial
-
-if TYPE_CHECKING:
-    from opentelemetry.metrics import Meter
 
 
 @pytest.fixture(autouse=True)

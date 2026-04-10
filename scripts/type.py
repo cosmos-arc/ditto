@@ -3,9 +3,11 @@
 pixi type 命令包装脚本
 
 简化类型检查命令，支持参数驱动：
-- pixi run type          # 默认：源码类型检查（strict + warnings）
-- pixi run type --tests  # 测试代码类型检查（basic 模式）
-- pixi run type --all    # 源码 + 测试全部检查
+- pixi run type              # 默认：源码增量类型检查（strict + warnings）
+- pixi run type --clean      # 源码全量检查（清除缓存后 strict + warnings）
+- pixi run type --tests      # 测试代码类型检查（basic 模式）
+- pixi run type --all        # 源码 + 测试全部检查
+- pixi run type --all --clean # 全量清除缓存后检查所有
 """
 
 import shutil
@@ -16,17 +18,20 @@ from pathlib import Path
 
 def clear_pyright_cache() -> None:
     """清除 basedpyright/pyright 缓存以确保类型检查准确。"""
-    cache_dir = Path.cwd() / ".pyright_cache"
-    if cache_dir.exists():
-        shutil.rmtree(cache_dir, ignore_errors=True)
+    for name in (".pyright_cache", ".basedpyright"):
+        cache_dir = Path.cwd() / name
+        if cache_dir.exists():
+            shutil.rmtree(cache_dir, ignore_errors=True)
 
 
 def main() -> int:
     """主函数"""
     args = sys.argv[1:]
 
-    # 清除缓存以确保类型检查准确
-    clear_pyright_cache()
+    # 仅在 --clean 时清除缓存，启用增量检查加速日常开发
+    if "--clean" in args:
+        clear_pyright_cache()
+        args = [a for a in args if a != "--clean"]
 
     has_tests = "--tests" in args
     has_all = "--all" in args

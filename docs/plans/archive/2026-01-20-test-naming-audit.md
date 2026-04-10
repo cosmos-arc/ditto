@@ -13,7 +13,7 @@
 | 包/应用 | 单元测试 | 集成测试 | 合计 |
 |--------|---------|---------|------|
 | **apps/port** | 37 | 10 | 47 |
-| **packages/datahub** | 76 | 13 | 89 |
+| **packages/data** | 76 | 13 | 89 |
 | **packages/foundation** | 23 | 0 | 23 |
 | **packages/core** | 0 | 0 | 0 (空) |
 | **总计** | **136** | **23** | **159** |
@@ -65,12 +65,12 @@ tests/
 
 ```
 # ❌ 错误：会导致 pytest 收集冲突
-packages/datahub/tests/unit/stores/test_pipeline_store.py
-packages/datahub/tests/integration/stores/test_pipeline_store.py
+packages/data/tests/unit/stores/test_pipeline_store.py
+packages/data/tests/integration/stores/test_pipeline_store.py
 
 # ✅ 正确：添加层级后缀区分
-packages/datahub/tests/unit/stores/test_pipeline_store_unit.py
-packages/datahub/tests/integration/stores/test_pipeline_store_integration.py
+packages/data/tests/unit/stores/test_pipeline_store_unit.py
+packages/data/tests/integration/stores/test_pipeline_store_integration.py
 ```
 
 ### 测试分类原则
@@ -145,7 +145,7 @@ d:\code\quant\ditto\
 │   ├── integration/ (空，仅有 __init__.py)
 │   └── unit/ (空，仅有 __init__.py)
 │
-├── packages/datahub/tests/
+├── packages/data/tests/
 │   ├── fixtures/
 │   │   └── dq/
 │   │       └── rules/
@@ -300,10 +300,10 @@ d:\code\quant\ditto\
 
 | 文件路径 | 当前名称 | 问题 | 建议名称 |
 |---------|---------|------|----------|
-| `packages/datahub/tests/unit/dq/checkers/` | `test_business_unit.py` | 模块名与类名不完全匹配 | `test_business_checker_unit.py` |
-| `packages/datahub/tests/unit/dq/checkers/` | `test_technical_unit.py` | 模块名与类名不完全匹配 | `test_technical_checker_unit.py` |
-| `packages/datahub/tests/unit/dq/checkers/` | `test_statistical_unit.py` | 模块名与类名不完全匹配 | `test_statistical_checker_unit.py` |
-| `packages/datahub/tests/unit/meta/` | `test_schemas_unit.py` | 模块名不够具体 | `test_schema_definitions_unit.py` |
+| `packages/data/tests/unit/dq/checkers/` | `test_business_unit.py` | 模块名与类名不完全匹配 | `test_business_checker_unit.py` |
+| `packages/data/tests/unit/dq/checkers/` | `test_technical_unit.py` | 模块名与类名不完全匹配 | `test_technical_checker_unit.py` |
+| `packages/data/tests/unit/dq/checkers/` | `test_statistical_unit.py` | 模块名与类名不完全匹配 | `test_statistical_checker_unit.py` |
+| `packages/data/tests/unit/meta/` | `test_schemas_unit.py` | 模块名不够具体 | `test_schema_definitions_unit.py` |
 
 **影响分析**：
 - 这些文件名虽然包含 `_unit` 后缀，但模块名称与被测类名不完全匹配
@@ -345,10 +345,10 @@ d:\code\quant\ditto\
 apps/port/tests/conftest.py
 apps/port/tests/integration/conftest.py
 apps/port/tests/unit/conftest.py
-packages/datahub/tests/conftest.py
-packages/datahub/tests/integration/conftest.py
-packages/datahub/tests/unit/conftest.py
-packages/datahub/tests/unit/stores/conftest.py
+packages/data/tests/conftest.py
+packages/data/tests/integration/conftest.py
+packages/data/tests/unit/conftest.py
+packages/data/tests/unit/stores/conftest.py
 packages/foundation/tests/unit/conftest.py
 ```
 
@@ -407,93 +407,93 @@ packages/foundation/tests/unit/conftest.py
 | [apps/port/tests/unit/test_main_unit.py](../apps/port/tests/unit/test_main_unit.py) |
 | [apps/port/tests/unit/test_middleware_unit.py](../apps/port/tests/unit/test_middleware_unit.py) |
 
-### packages/datahub（89 个测试文件）
+### packages/data（89 个测试文件）
 
 #### 集成测试（13 个）
 
 | 文件路径 |
 |---------|
-| [packages/datahub/tests/integration/runtime/test_freeze_manager_checksum_integration.py](../packages/datahub/tests/integration/runtime/test_freeze_manager_checksum_integration.py) |
-| [packages/datahub/tests/integration/runtime/test_freeze_manager_integration.py](../packages/datahub/tests/integration/runtime/test_freeze_manager_integration.py) |
-| [packages/datahub/tests/integration/runtime/test_sid_allocator_integration.py](../packages/datahub/tests/integration/runtime/test_sid_allocator_integration.py) |
-| [packages/datahub/tests/integration/runtime/test_sql_engine_injection_integration.py](../packages/datahub/tests/integration/runtime/test_sql_engine_injection_integration.py) |
-| [packages/datahub/tests/integration/runtime/test_sql_engine_integration.py](../packages/datahub/tests/integration/runtime/test_sql_engine_integration.py) |
-| [packages/datahub/tests/integration/runtime/test_sqlite_pool_integration.py](../packages/datahub/tests/integration/runtime/test_sqlite_pool_integration.py) |
-| [packages/datahub/tests/integration/sources/tushare/test_tushare_api_integration.py](../packages/datahub/tests/integration/sources/tushare/test_tushare_api_integration.py) |
-| [packages/datahub/tests/integration/stores/test_adj_factor_store_integration.py](../packages/datahub/tests/integration/stores/test_adj_factor_store_integration.py) |
-| [packages/datahub/tests/integration/stores/test_bars_store_integration.py](../packages/datahub/tests/integration/stores/test_bars_store_integration.py) |
-| [packages/datahub/tests/integration/stores/test_calendar_store_concurrent_integration.py](../packages/datahub/tests/integration/stores/test_calendar_store_concurrent_integration.py) |
-| [packages/datahub/tests/integration/stores/test_ingestion_log_concurrent_integration.py](../packages/datahub/tests/integration/stores/test_ingestion_log_concurrent_integration.py) |
-| [packages/datahub/tests/integration/stores/test_ingestion_log_store_integration.py](../packages/datahub/tests/integration/stores/test_ingestion_log_store_integration.py) |
-| [packages/datahub/tests/integration/stores/test_security_store_integration.py](../packages/datahub/tests/integration/stores/test_security_store_integration.py) |
-| [packages/datahub/tests/integration/stores/test_universe_store_integration.py](../packages/datahub/tests/integration/stores/test_universe_store_integration.py) |
+| [packages/data/tests/integration/runtime/test_freeze_manager_checksum_integration.py](../packages/data/tests/integration/runtime/test_freeze_manager_checksum_integration.py) |
+| [packages/data/tests/integration/runtime/test_freeze_manager_integration.py](../packages/data/tests/integration/runtime/test_freeze_manager_integration.py) |
+| [packages/data/tests/integration/runtime/test_sid_allocator_integration.py](../packages/data/tests/integration/runtime/test_sid_allocator_integration.py) |
+| [packages/data/tests/integration/runtime/test_sql_engine_injection_integration.py](../packages/data/tests/integration/runtime/test_sql_engine_injection_integration.py) |
+| [packages/data/tests/integration/runtime/test_sql_engine_integration.py](../packages/data/tests/integration/runtime/test_sql_engine_integration.py) |
+| [packages/data/tests/integration/runtime/test_sqlite_pool_integration.py](../packages/data/tests/integration/runtime/test_sqlite_pool_integration.py) |
+| [packages/data/tests/integration/sources/tushare/test_tushare_api_integration.py](../packages/data/tests/integration/sources/tushare/test_tushare_api_integration.py) |
+| [packages/data/tests/integration/stores/test_adj_factor_store_integration.py](../packages/data/tests/integration/stores/test_adj_factor_store_integration.py) |
+| [packages/data/tests/integration/stores/test_bars_store_integration.py](../packages/data/tests/integration/stores/test_bars_store_integration.py) |
+| [packages/data/tests/integration/stores/test_calendar_store_concurrent_integration.py](../packages/data/tests/integration/stores/test_calendar_store_concurrent_integration.py) |
+| [packages/data/tests/integration/stores/test_ingestion_log_concurrent_integration.py](../packages/data/tests/integration/stores/test_ingestion_log_concurrent_integration.py) |
+| [packages/data/tests/integration/stores/test_ingestion_log_store_integration.py](../packages/data/tests/integration/stores/test_ingestion_log_store_integration.py) |
+| [packages/data/tests/integration/stores/test_security_store_integration.py](../packages/data/tests/integration/stores/test_security_store_integration.py) |
+| [packages/data/tests/integration/stores/test_universe_store_integration.py](../packages/data/tests/integration/stores/test_universe_store_integration.py) |
 
 #### 单元测试（76 个）
 
 | 文件路径 | 状态 |
 |---------|------|
-| [packages/datahub/tests/unit/accessors/bars/test_accessor_unit.py](../packages/datahub/tests/unit/accessors/bars/test_accessor_unit.py) | ✅ |
-| [packages/datahub/tests/unit/accessors/bars/test_adjustment_unit.py](../packages/datahub/tests/unit/accessors/bars/test_adjustment_unit.py) | ✅ |
-| [packages/datahub/tests/unit/accessors/bars/test_dq_filters_unit.py](../packages/datahub/tests/unit/accessors/bars/test_dq_filters_unit.py) | ✅ |
-| [packages/datahub/tests/unit/accessors/test_adj_factor_accessor_unit.py](../packages/datahub/tests/unit/accessors/test_adj_factor_accessor_unit.py) | ✅ |
-| [packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py](../packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py) | ✅ |
-| [packages/datahub/tests/unit/accessors/test_calendar_accessor_unit.py](../packages/datahub/tests/unit/accessors/test_calendar_accessor_unit.py) | ✅ |
-| [packages/datahub/tests/unit/accessors/test_filter_failed_rows_unit.py](../packages/datahub/tests/unit/accessors/test_filter_failed_rows_unit.py) | ✅ |
-| [packages/datahub/tests/unit/accessors/test_index_accessor_unit.py](../packages/datahub/tests/unit/accessors/test_index_accessor_unit.py) | ✅ |
-| [packages/datahub/tests/unit/accessors/test_ingestion_log_accessor_unit.py](../packages/datahub/tests/unit/accessors/test_ingestion_log_accessor_unit.py) | ✅ |
-| [packages/datahub/tests/unit/accessors/test_security_accessor_unit.py](../packages/datahub/tests/unit/accessors/test_security_accessor_unit.py) | ✅ |
-| [packages/datahub/tests/unit/accessors/test_universe_accessor_unit.py](../packages/datahub/tests/unit/accessors/test_universe_accessor_unit.py) | ✅ |
-| [packages/datahub/tests/unit/alerts/test_base_unit.py](../packages/datahub/tests/unit/alerts/test_base_unit.py) | ✅ |
-| [packages/datahub/tests/unit/alerts/test_email_unit.py](../packages/datahub/tests/unit/alerts/test_email_unit.py) | ✅ |
-| [packages/datahub/tests/unit/alerts/test_manager_unit.py](../packages/datahub/tests/unit/alerts/test_manager_unit.py) | ✅ |
-| [packages/datahub/tests/unit/alerts/test_telegram_unit.py](../packages/datahub/tests/unit/alerts/test_telegram_unit.py) | ✅ |
-| [packages/datahub/tests/unit/datahub/test_datahub_observability_unit.py](../packages/datahub/tests/unit/datahub/test_datahub_observability_unit.py) | ✅ |
-| [packages/datahub/tests/unit/dq/checkers/test_business_unit.py](../packages/datahub/tests/unit/dq/checkers/test_business_unit.py) | ⚠️ 建议改为 `test_business_checker_unit.py` |
-| [packages/datahub/tests/unit/dq/checkers/test_statistical_property_unit.py](../packages/datahub/tests/unit/dq/checkers/test_statistical_property_unit.py) | ✅ |
-| [packages/datahub/tests/unit/dq/checkers/test_statistical_unit.py](../packages/datahub/tests/unit/dq/checkers/test_statistical_unit.py) | ⚠️ 建议改为 `test_statistical_checker_unit.py` |
-| [packages/datahub/tests/unit/dq/checkers/test_technical_unit.py](../packages/datahub/tests/unit/dq/checkers/test_technical_unit.py) | ⚠️ 建议改为 `test_technical_checker_unit.py` |
-| [packages/datahub/tests/unit/dq/test_config_loading_unit.py](../packages/datahub/tests/unit/dq/test_config_loading_unit.py) | ✅ |
-| [packages/datahub/tests/unit/dq/test_engine_unit.py](../packages/datahub/tests/unit/dq/test_engine_unit.py) | ✅ |
-| [packages/datahub/tests/unit/dq/test_init_dq_config_unit.py](../packages/datahub/tests/unit/dq/test_init_dq_config_unit.py) | ✅ |
-| [packages/datahub/tests/unit/dq/test_models_unit.py](../packages/datahub/tests/unit/dq/test_models_unit.py) | ✅ |
-| [packages/datahub/tests/unit/dq/test_report_unit.py](../packages/datahub/tests/unit/dq/test_report_unit.py) | ✅ |
-| [packages/datahub/tests/unit/dq/test_result_unit.py](../packages/datahub/tests/unit/dq/test_result_unit.py) | ✅ |
-| [packages/datahub/tests/unit/meta/test_schema_validator_unit.py](../packages/datahub/tests/unit/meta/test_schema_validator_unit.py) | ✅ |
-| [packages/datahub/tests/unit/meta/test_schemas_unit.py](../packages/datahub/tests/unit/meta/test_schemas_unit.py) | ⚠️ 建议改为 `test_schema_definitions_unit.py` |
-| [packages/datahub/tests/unit/models/test_common_unit.py](../packages/datahub/tests/unit/models/test_common_unit.py) | ✅ |
-| [packages/datahub/tests/unit/models/test_ingestion_unit.py](../packages/datahub/tests/unit/models/test_ingestion_unit.py) | ✅ |
-| [packages/datahub/tests/unit/models/test_models_quality_unit.py](../packages/datahub/tests/unit/models/test_models_quality_unit.py) | ✅ |
-| [packages/datahub/tests/unit/models/test_security_unit.py](../packages/datahub/tests/unit/models/test_security_unit.py) | ✅ |
-| [packages/datahub/tests/unit/models/test_storage_unit.py](../packages/datahub/tests/unit/models/test_storage_unit.py) | ✅ |
-| [packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py](../packages/datahub/tests/unit/runtime/test_cache_runtime_unit.py) | ✅ |
-| [packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py](../packages/datahub/tests/unit/runtime/test_cache_ttl_unit.py) | ✅ |
-| [packages/datahub/tests/unit/runtime/test_fake_time_unit.py](../packages/datahub/tests/unit/runtime/test_fake_time_unit.py) | ✅ |
-| [packages/datahub/tests/unit/runtime/test_freeze_manager_collect_checksums_unit.py](../packages/datahub/tests/unit/runtime/test_freeze_manager_collect_checksums_unit.py) | ✅ |
-| [packages/datahub/tests/unit/runtime/test_pit_helper_property_unit.py](../packages/datahub/tests/unit/runtime/test_pit_helper_property_unit.py) | ✅ |
-| [packages/datahub/tests/unit/runtime/test_pit_helper_unit.py](../packages/datahub/tests/unit/runtime/test_pit_helper_unit.py) | ✅ |
-| [packages/datahub/tests/unit/runtime/test_sid_allocator_unit.py](../packages/datahub/tests/unit/runtime/test_sid_allocator_unit.py) | ✅ |
-| [packages/datahub/tests/unit/runtime/test_sql_engine_unit.py](../packages/datahub/tests/unit/runtime/test_sql_engine_unit.py) | ✅ |
-| [packages/datahub/tests/unit/sources/test_accessor_unit.py](../packages/datahub/tests/unit/sources/test_accessor_unit.py) | ✅ |
-| [packages/datahub/tests/unit/sources/test_base_unit.py](../packages/datahub/tests/unit/sources/test_base_unit.py) | ✅ |
-| [packages/datahub/tests/unit/sources/tushare/test_client_unit.py](../packages/datahub/tests/unit/sources/tushare/test_client_unit.py) | ✅ |
-| [packages/datahub/tests/unit/sources/tushare/test_http_utils_unit.py](../packages/datahub/tests/unit/sources/tushare/test_http_utils_unit.py) | ✅ |
-| [packages/datahub/tests/unit/sources/tushare/test_rate_limiter_unit.py](../packages/datahub/tests/unit/sources/tushare/test_rate_limiter_unit.py) | ✅ |
-| [packages/datahub/tests/unit/sources/tushare/test_source_unit.py](../packages/datahub/tests/unit/sources/tushare/test_source_unit.py) | ✅ |
-| [packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py](../packages/datahub/tests/unit/sources/tushare/test_transformer_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_adj_factor_store_unit.py](../packages/datahub/tests/unit/stores/test_adj_factor_store_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_bars_store_unit.py](../packages/datahub/tests/unit/stores/test_bars_store_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_calendar_store_unit.py](../packages/datahub/tests/unit/stores/test_calendar_store_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_index_weight_store_unit.py](../packages/datahub/tests/unit/stores/test_index_weight_store_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_ingestion_log_store_unit.py](../packages/datahub/tests/unit/stores/test_ingestion_log_store_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_parquet_store_base_unit.py](../packages/datahub/tests/unit/stores/test_parquet_store_base_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_quarantine_store_unit.py](../packages/datahub/tests/unit/stores/test_quarantine_store_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_security_store_unit.py](../packages/datahub/tests/unit/stores/test_security_store_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_sqlite_client_unit.py](../packages/datahub/tests/unit/stores/test_sqlite_client_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_stock_status_store_unit.py](../packages/datahub/tests/unit/stores/test_stock_status_store_unit.py) | ✅ |
-| [packages/datahub/tests/unit/stores/test_universe_store_unit.py](../packages/datahub/tests/unit/stores/test_universe_store_unit.py) | ✅ |
-| [packages/datahub/tests/unit/test_errors_unit.py](../packages/datahub/tests/unit/test_errors_unit.py) | ✅ |
-| [packages/datahub/tests/unit/test_hub_unit.py](../packages/datahub/tests/unit/test_hub_unit.py) | ✅ |
-| [packages/datahub/tests/unit/utils/test_date_utils_unit.py](../packages/datahub/tests/unit/utils/test_date_utils_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/bars/test_accessor_unit.py](../packages/data/tests/unit/accessors/bars/test_accessor_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/bars/test_adjustment_unit.py](../packages/data/tests/unit/accessors/bars/test_adjustment_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/bars/test_dq_filters_unit.py](../packages/data/tests/unit/accessors/bars/test_dq_filters_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/test_adj_factor_accessor_unit.py](../packages/data/tests/unit/accessors/test_adj_factor_accessor_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/test_bars_accessor_unit.py](../packages/data/tests/unit/accessors/test_bars_accessor_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/test_calendar_accessor_unit.py](../packages/data/tests/unit/accessors/test_calendar_accessor_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/test_filter_failed_rows_unit.py](../packages/data/tests/unit/accessors/test_filter_failed_rows_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/test_index_accessor_unit.py](../packages/data/tests/unit/accessors/test_index_accessor_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/test_ingestion_log_accessor_unit.py](../packages/data/tests/unit/accessors/test_ingestion_log_accessor_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/test_security_accessor_unit.py](../packages/data/tests/unit/accessors/test_security_accessor_unit.py) | ✅ |
+| [packages/data/tests/unit/accessors/test_universe_accessor_unit.py](../packages/data/tests/unit/accessors/test_universe_accessor_unit.py) | ✅ |
+| [packages/data/tests/unit/alerts/test_base_unit.py](../packages/data/tests/unit/alerts/test_base_unit.py) | ✅ |
+| [packages/data/tests/unit/alerts/test_email_unit.py](../packages/data/tests/unit/alerts/test_email_unit.py) | ✅ |
+| [packages/data/tests/unit/alerts/test_manager_unit.py](../packages/data/tests/unit/alerts/test_manager_unit.py) | ✅ |
+| [packages/data/tests/unit/alerts/test_telegram_unit.py](../packages/data/tests/unit/alerts/test_telegram_unit.py) | ✅ |
+| [packages/data/tests/unit/datahub/test_datahub_observability_unit.py](../packages/data/tests/unit/datahub/test_datahub_observability_unit.py) | ✅ |
+| [packages/data/tests/unit/dq/checkers/test_business_unit.py](../packages/data/tests/unit/dq/checkers/test_business_unit.py) | ⚠️ 建议改为 `test_business_checker_unit.py` |
+| [packages/data/tests/unit/dq/checkers/test_statistical_property_unit.py](../packages/data/tests/unit/dq/checkers/test_statistical_property_unit.py) | ✅ |
+| [packages/data/tests/unit/dq/checkers/test_statistical_unit.py](../packages/data/tests/unit/dq/checkers/test_statistical_unit.py) | ⚠️ 建议改为 `test_statistical_checker_unit.py` |
+| [packages/data/tests/unit/dq/checkers/test_technical_unit.py](../packages/data/tests/unit/dq/checkers/test_technical_unit.py) | ⚠️ 建议改为 `test_technical_checker_unit.py` |
+| [packages/data/tests/unit/dq/test_config_loading_unit.py](../packages/data/tests/unit/dq/test_config_loading_unit.py) | ✅ |
+| [packages/data/tests/unit/dq/test_engine_unit.py](../packages/data/tests/unit/dq/test_engine_unit.py) | ✅ |
+| [packages/data/tests/unit/dq/test_init_dq_config_unit.py](../packages/data/tests/unit/dq/test_init_dq_config_unit.py) | ✅ |
+| [packages/data/tests/unit/dq/test_models_unit.py](../packages/data/tests/unit/dq/test_models_unit.py) | ✅ |
+| [packages/data/tests/unit/dq/test_report_unit.py](../packages/data/tests/unit/dq/test_report_unit.py) | ✅ |
+| [packages/data/tests/unit/dq/test_result_unit.py](../packages/data/tests/unit/dq/test_result_unit.py) | ✅ |
+| [packages/data/tests/unit/meta/test_schema_validator_unit.py](../packages/data/tests/unit/meta/test_schema_validator_unit.py) | ✅ |
+| [packages/data/tests/unit/meta/test_schemas_unit.py](../packages/data/tests/unit/meta/test_schemas_unit.py) | ⚠️ 建议改为 `test_schema_definitions_unit.py` |
+| [packages/data/tests/unit/models/test_common_unit.py](../packages/data/tests/unit/models/test_common_unit.py) | ✅ |
+| [packages/data/tests/unit/models/test_ingestion_unit.py](../packages/data/tests/unit/models/test_ingestion_unit.py) | ✅ |
+| [packages/data/tests/unit/models/test_models_quality_unit.py](../packages/data/tests/unit/models/test_models_quality_unit.py) | ✅ |
+| [packages/data/tests/unit/models/test_security_unit.py](../packages/data/tests/unit/models/test_security_unit.py) | ✅ |
+| [packages/data/tests/unit/models/test_storage_unit.py](../packages/data/tests/unit/models/test_storage_unit.py) | ✅ |
+| [packages/data/tests/unit/runtime/test_cache_runtime_unit.py](../packages/data/tests/unit/runtime/test_cache_runtime_unit.py) | ✅ |
+| [packages/data/tests/unit/runtime/test_cache_ttl_unit.py](../packages/data/tests/unit/runtime/test_cache_ttl_unit.py) | ✅ |
+| [packages/data/tests/unit/runtime/test_fake_time_unit.py](../packages/data/tests/unit/runtime/test_fake_time_unit.py) | ✅ |
+| [packages/data/tests/unit/runtime/test_freeze_manager_collect_checksums_unit.py](../packages/data/tests/unit/runtime/test_freeze_manager_collect_checksums_unit.py) | ✅ |
+| [packages/data/tests/unit/runtime/test_pit_helper_property_unit.py](../packages/data/tests/unit/runtime/test_pit_helper_property_unit.py) | ✅ |
+| [packages/data/tests/unit/runtime/test_pit_helper_unit.py](../packages/data/tests/unit/runtime/test_pit_helper_unit.py) | ✅ |
+| [packages/data/tests/unit/runtime/test_sid_allocator_unit.py](../packages/data/tests/unit/runtime/test_sid_allocator_unit.py) | ✅ |
+| [packages/data/tests/unit/runtime/test_sql_engine_unit.py](../packages/data/tests/unit/runtime/test_sql_engine_unit.py) | ✅ |
+| [packages/data/tests/unit/sources/test_accessor_unit.py](../packages/data/tests/unit/sources/test_accessor_unit.py) | ✅ |
+| [packages/data/tests/unit/sources/test_base_unit.py](../packages/data/tests/unit/sources/test_base_unit.py) | ✅ |
+| [packages/data/tests/unit/sources/tushare/test_client_unit.py](../packages/data/tests/unit/sources/tushare/test_client_unit.py) | ✅ |
+| [packages/data/tests/unit/sources/tushare/test_http_utils_unit.py](../packages/data/tests/unit/sources/tushare/test_http_utils_unit.py) | ✅ |
+| [packages/data/tests/unit/sources/tushare/test_rate_limiter_unit.py](../packages/data/tests/unit/sources/tushare/test_rate_limiter_unit.py) | ✅ |
+| [packages/data/tests/unit/sources/tushare/test_source_unit.py](../packages/data/tests/unit/sources/tushare/test_source_unit.py) | ✅ |
+| [packages/data/tests/unit/sources/tushare/test_transformer_unit.py](../packages/data/tests/unit/sources/tushare/test_transformer_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_adj_factor_store_unit.py](../packages/data/tests/unit/stores/test_adj_factor_store_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_bars_store_unit.py](../packages/data/tests/unit/stores/test_bars_store_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_calendar_store_unit.py](../packages/data/tests/unit/stores/test_calendar_store_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_index_weight_store_unit.py](../packages/data/tests/unit/stores/test_index_weight_store_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_ingestion_log_store_unit.py](../packages/data/tests/unit/stores/test_ingestion_log_store_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_parquet_store_base_unit.py](../packages/data/tests/unit/stores/test_parquet_store_base_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_quarantine_store_unit.py](../packages/data/tests/unit/stores/test_quarantine_store_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_security_store_unit.py](../packages/data/tests/unit/stores/test_security_store_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_sqlite_client_unit.py](../packages/data/tests/unit/stores/test_sqlite_client_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_stock_status_store_unit.py](../packages/data/tests/unit/stores/test_stock_status_store_unit.py) | ✅ |
+| [packages/data/tests/unit/stores/test_universe_store_unit.py](../packages/data/tests/unit/stores/test_universe_store_unit.py) | ✅ |
+| [packages/data/tests/unit/test_errors_unit.py](../packages/data/tests/unit/test_errors_unit.py) | ✅ |
+| [packages/data/tests/unit/test_hub_unit.py](../packages/data/tests/unit/test_hub_unit.py) | ✅ |
+| [packages/data/tests/unit/utils/test_date_utils_unit.py](../packages/data/tests/unit/utils/test_date_utils_unit.py) | ✅ |
 
 ### packages/foundation（23 个测试文件，全部为单元测试）
 

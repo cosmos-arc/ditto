@@ -52,8 +52,8 @@
 | `ConfigInitCoordinator` | `packages/foundation/src/ditto_foundation/config/initializer.py` | 配置初始化协调器 | ~315 行 |
 | `AppInitializer` | `packages/foundation/src/ditto_foundation/app_initializer.py` | 应用初始化 | ~190 行 |
 | `Observability.init()` | `packages/foundation/src/ditto_foundation/observability/__init__.py` | 可观测性初始化 | ~150 行 |
-| `DQConfigProvider` | `packages/datahub/src/ditto_datahub/init_providers.py` | DQ 配置提供者 | ~155 行 |
-| `DatabaseSchemaProvider` | `packages/datahub/src/ditto_datahub/init_providers.py` | 数据库 Schema 提供者 | ~85 行 |
+| `DQConfigProvider` | `packages/data/src/ditto_data/init_providers.py` | DQ 配置提供者 | ~155 行 |
+| `DatabaseSchemaProvider` | `packages/data/src/ditto_data/init_providers.py` | 数据库 Schema 提供者 | ~85 行 |
 | **总计** | | | **~895 行** |
 
 ### 2.2 现有架构特点
@@ -335,8 +335,8 @@ class Container:
     @cached_property
     def security_store(self) -> "SecurityStore":
         """证券元数据存储"""
-        from ditto_datahub.stores.security_store import SecurityStore
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
+        from ditto_data.stores.security_store import SecurityStore
+        from ditto_data.stores.sqlite_client import SQLiteClient
 
         return SecurityStore(
             sqlite_client=SQLiteClient(self.database),
@@ -345,8 +345,8 @@ class Container:
     @cached_property
     def calendar_store(self) -> "CalendarStore":
         """日历存储"""
-        from ditto_datahub.stores.calendar_store import CalendarStore
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
+        from ditto_data.stores.calendar_store import CalendarStore
+        from ditto_data.stores.sqlite_client import SQLiteClient
 
         return CalendarStore(
             sqlite_client=SQLiteClient(self.database),
@@ -355,7 +355,7 @@ class Container:
     @cached_property
     def sql_engine(self) -> "SqlEngine":
         """SQL 引擎"""
-        from ditto_datahub.runtime.sql_engine import SqlEngine
+        from ditto_data.runtime.sql_engine import SqlEngine
 
         return SqlEngine(
             data_root=Path(self.config.file_storage.data_root),
@@ -366,7 +366,7 @@ class Container:
     @cached_property
     def dq_engine(self) -> "DQEngine":
         """数据质量引擎"""
-        from ditto_datahub.dq.engine import DQEngine
+        from ditto_data.dq.engine import DQEngine
 
         return DQEngine(
             data_root=Path(self.config.file_storage.data_root),
@@ -375,7 +375,7 @@ class Container:
     @cached_property
     def datahub(self) -> "DataHub":
         """数据访问门面"""
-        from ditto_datahub.hub import DataHub
+        from ditto_data.hub import DataHub
 
         return DataHub(
             security_store=self.security_store,

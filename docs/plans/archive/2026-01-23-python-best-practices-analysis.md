@@ -30,8 +30,8 @@
 **问题描述**：源代码和测试代码中大量使用 `except Exception`，可能掩盖关键错误
 
 **影响文件**（约20+处）：
-- `packages/datahub/src/ditto_datahub/init_providers.py:98`
-- `packages/datahub/src/ditto_datahub/stores/security_store.py:586`
+- `packages/data/src/ditto_data/init_providers.py:98`
+- `packages/data/src/ditto_data/stores/security_store.py:586`
 - `packages/foundation/src/ditto_foundation/observability/__init__.py:172`
 - `packages/foundation/src/ditto_foundation/notification/channels/*.py`（webhook, telegram, email）
 
@@ -65,7 +65,7 @@ except Exception as e:
 | 文件 | 行号 | 问题 |
 |------|------|------|
 | `packages/foundation/src/ditto_foundation/observability/tracing.py` | 76 | `__exit__` 参数使用 `Any` |
-| `packages/datahub/src/ditto_datahub/stores/stock_status_store.py` | 206 | `span_ctx: Any` |
+| `packages/data/src/ditto_data/stores/stock_status_store.py` | 206 | `span_ctx: Any` |
 
 **改进方案**：
 ```python
@@ -111,7 +111,7 @@ def __exit__(
 | 文件 | 硬编码内容 |
 |------|-----------|
 | `packages/foundation/src/ditto_foundation/observability/config.py:26` | `vm_endpoint: str = "http://localhost:8428/..."` |
-| `packages/datahub/src/ditto_datahub/config/data_source.py:16` | `http_base_url: str = Field(default="http://api.tushare.pro")` |
+| `packages/data/src/ditto_data/config/data_source.py:16` | `http_base_url: str = Field(default="http://api.tushare.pro")` |
 | `packages/foundation/src/ditto_foundation/notification/channels/telegram.py:35` | API URL 拼接 |
 
 **改进方案**：
@@ -135,7 +135,7 @@ class ObservabilityConfig:
 
 | 文件 | 当前 | 建议 |
 |------|------|------|
-| `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py:12` | `from ..models import FreezeManifest` | `from ditto_datahub.models import FreezeManifest` |
+| `packages/data/src/ditto_data/runtime/freeze_manager.py:12` | `from ..models import FreezeManifest` | `from ditto_data.models import FreezeManifest` |
 
 #### 6. 复杂度警告（noqa）
 
@@ -270,8 +270,8 @@ class DataWriterFactory:
 ### 需要修复的文件
 
 **P0 - 异常处理**：
-- `packages/datahub/src/ditto_datahub/init_providers.py`
-- `packages/datahub/src/ditto_datahub/stores/security_store.py`
+- `packages/data/src/ditto_data/init_providers.py`
+- `packages/data/src/ditto_data/stores/security_store.py`
 - `packages/foundation/src/ditto_foundation/observability/__init__.py`
 - `packages/foundation/src/ditto_foundation/notification/channels/webhook.py`
 - `packages/foundation/src/ditto_foundation/notification/channels/telegram.py`
@@ -283,7 +283,7 @@ class DataWriterFactory:
 
 **P1 - 配置管理**：
 - `packages/foundation/src/ditto_foundation/observability/config.py`
-- `packages/datahub/src/ditto_datahub/config/data_source.py`
+- `packages/data/src/ditto_data/config/data_source.py`
 
 **P1 - 复杂度**：
 - `apps/port/src/ditto_port/jobs/tasks/dq_batch.py`
@@ -376,7 +376,7 @@ def send(self, message: NotificationMessage) -> NotificationResult:
 
 **1.2.2 配置初始化异常处理**
 
-位置：`packages/datahub/src/ditto_datahub/init_providers.py:98`
+位置：`packages/data/src/ditto_data/init_providers.py:98`
 
 ```python
 # ❌ 当前
@@ -404,7 +404,7 @@ except Exception as e:
 
 **1.2.3 数据库操作异常处理**
 
-位置：`packages/datahub/src/ditto_datahub/stores/security_store.py:586`
+位置：`packages/data/src/ditto_data/stores/security_store.py:586`
 
 ```python
 # ❌ 当前
@@ -520,7 +520,7 @@ def traced(
 
 **2.1.3 Span 上下文类型**
 
-位置：`packages/datahub/src/ditto_datahub/stores/stock_status_store.py:206`
+位置：`packages/data/src/ditto_data/stores/stock_status_store.py:206`
 
 ```python
 # ❌ 当前
@@ -625,7 +625,7 @@ def _resolve(
 
 **2.2.2 测试代码中的 type:ignore**
 
-位置：`packages/datahub/tests/unit/test_hub_unit.py:374, 415, 457`
+位置：`packages/data/tests/unit/test_hub_unit.py:374, 415, 457`
 
 ```python
 # ❌ 当前 - 访问私有属性

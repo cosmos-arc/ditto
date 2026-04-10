@@ -115,7 +115,7 @@ jobs:
           pixi run -e dev pytest \
             -m "integration" \
             --cov=packages \
-            --cov=apps \
+            --cov=interfaces \
             --cov-report=xml:coverage-integration.xml \
             --cov-report=term-missing \
             --junitxml=junit-integration.xml \

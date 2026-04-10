@@ -28,7 +28,7 @@
    - `ResearchDatasetFacade.build(...)` 已冻结 artifact 路径与上游 source snapshot ids
    - 已新增 research SQLite store unit test，并补充 research facade 契约测试
 2. `Task 1` 验证结果：
-   - `pixi run -e dev pytest -n0 --no-cov packages/core/tests/unit/engine/test_research_unit.py packages/datahub/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py apps/port/tests/unit/services/derived/test_research_dataset_facade_unit.py -v`
+   - `pixi run -e dev pytest -n0 --no-cov packages/core/tests/unit/engine/test_research_unit.py packages/data/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py apps/port/tests/unit/services/derived/test_research_dataset_facade_unit.py -v`
      - 结果：`9 passed`
    - `pixi run -e dev ruff check ...`
      - 结果：`All checks passed!`
@@ -71,7 +71,7 @@
      - `value` 存在、至少有可计算行、且不含 `NaN`
    - 语义上已避免把正常 warm-up 边界 `null` 误判成失败
 6. `Task 3` 验证结果：
-   - `pixi run -e dev pytest -n0 --no-cov packages/datahub/tests/unit/stores/runtime/publication_safety/test_minimal_dq_store_unit.py packages/datahub/tests/unit/services/test_derived_materialization_service_unit.py packages/datahub/tests/unit/services/test_publication_safety_record_service.py apps/port/tests/unit/services/derived/test_publication_facade_unit.py apps/port/tests/registry/test_derived_provider_unit.py -v`
+   - `pixi run -e dev pytest -n0 --no-cov packages/data/tests/unit/stores/runtime/publication_safety/test_minimal_dq_store_unit.py packages/data/tests/unit/services/test_derived_materialization_service_unit.py packages/data/tests/unit/services/test_publication_safety_record_service.py apps/port/tests/unit/services/derived/test_publication_facade_unit.py apps/port/tests/registry/test_derived_provider_unit.py -v`
      - 结果：`22 passed`
    - `pixi run -e dev ruff check ...`
      - 结果：`All checks passed!`
@@ -90,7 +90,7 @@
      - `offline_dataset_reproducibility`
    - `CertificationPack.check_names` 已反映第一批 role/profile pack 语义，不再只是占位壳
 8. `Task 4` 验证结果：
-   - `pixi run -e dev pytest -n0 --no-cov apps/port/tests/unit/services/derived/test_publication_facade_unit.py packages/datahub/tests/unit/services/test_publication_safety_record_service.py apps/port/tests/registry/test_derived_provider_unit.py -v`
+   - `pixi run -e dev pytest -n0 --no-cov apps/port/tests/unit/services/derived/test_publication_facade_unit.py packages/data/tests/unit/services/test_publication_safety_record_service.py apps/port/tests/registry/test_derived_provider_unit.py -v`
      - 结果：`16 passed`
    - `pixi run -e dev ruff check apps/port/src/ditto_port/services/derived/publication.py apps/port/src/ditto_port/services/derived/publication_rules.py apps/port/tests/unit/services/derived/test_publication_facade_unit.py`
      - 结果：`All checks passed!`
@@ -121,15 +121,15 @@
      - `materialize -> manifest -> shadow compare -> certify -> promote`
    - 其中 `research dataset integration` 为前序阶段已落地，本阶段将其纳入专项回归并与另外三条链路一起收口
 12. `Task 6` 验证结果：
-   - `pixi run -e dev pytest -n0 --no-cov packages/datahub/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py apps/port/tests/integration/flows/test_derived_materialization_query_repair_integration.py apps/port/tests/integration/flows/test_research_dataset_integration.py apps/port/tests/integration/flows/test_derived_publication_integration.py -v`
+   - `pixi run -e dev pytest -n0 --no-cov packages/data/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py apps/port/tests/integration/flows/test_derived_materialization_query_repair_integration.py apps/port/tests/integration/flows/test_research_dataset_integration.py apps/port/tests/integration/flows/test_derived_publication_integration.py -v`
      - 结果：`4 passed`
-   - `pixi run -e dev ruff check --fix packages/datahub/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py apps/port/tests/integration/flows/test_derived_materialization_query_repair_integration.py apps/port/tests/integration/flows/test_research_dataset_integration.py apps/port/tests/integration/flows/test_derived_publication_integration.py`
+   - `pixi run -e dev ruff check --fix packages/data/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py apps/port/tests/integration/flows/test_derived_materialization_query_repair_integration.py apps/port/tests/integration/flows/test_research_dataset_integration.py apps/port/tests/integration/flows/test_derived_publication_integration.py`
      - 结果：`All checks passed!`
-   - `pixi run -e dev basedpyright packages/datahub/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py apps/port/tests/integration/flows/test_derived_materialization_query_repair_integration.py apps/port/tests/integration/flows/test_research_dataset_integration.py apps/port/tests/integration/flows/test_derived_publication_integration.py`
+   - `pixi run -e dev basedpyright packages/data/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py apps/port/tests/integration/flows/test_derived_materialization_query_repair_integration.py apps/port/tests/integration/flows/test_research_dataset_integration.py apps/port/tests/integration/flows/test_derived_publication_integration.py`
      - 结果：`0 errors, 0 warnings, 0 notes`
    - 扩面回归备注：
      - `pixi run -e dev pytest apps/port/tests/integration/flows -m integration -v` 暴露既有 `Prefect ephemeral server` 启动失败，集中在 `test_helpers_integration.py`，不属于本阶段新增链路
-     - `pixi run -e dev pytest packages/datahub/tests/integration/runtime -m integration -v` 暴露既有 `sql_engine` / `sql_engine_injection` runtime integration 失败；本阶段新增的 `legacy migration query` 用例已通过
+     - `pixi run -e dev pytest packages/data/tests/integration/runtime -m integration -v` 暴露既有 `sql_engine` / `sql_engine_injection` runtime integration 失败；本阶段新增的 `legacy migration query` 用例已通过
 13. `Task 7: 进入 Phase 6 硬化` 已完成：
    - 已新增 `scripts/benchmarks/derived_benchmark.py`，固化 `query / materialize / shadow_compare` 三类 synthetic benchmark harness 与 regression budget
    - 已新增 `packages/core/tests/benchmarks/test_derived_benchmarks.py`，覆盖 workload 定义、budget 约束与 `S` 规模 smoke benchmark
@@ -169,7 +169,7 @@
 ### 当前仍未封板
 
 1. 当前 certification pack 已具备第一批 role/profile 规则，但还不是完整治理体系。
-2. `apps/port/tests/integration/flows` 与 `packages/datahub/tests/integration/runtime` 目录级回归仍有既有失败，主要集中在 `Prefect ephemeral server` 与 `sql_engine` 链路。
+2. `apps/port/tests/integration/flows` 与 `packages/data/tests/integration/runtime` 目录级回归仍有既有失败，主要集中在 `Prefect ephemeral server` 与 `sql_engine` 链路。
 3. research 已有标准 build flow，但 CLI/API/schedule 出口仍未落地。
 4. Phase 6 的第一阶段 benchmark / SLO baseline 已落地，但 `retention / rebuild / DR / housekeeping` 尚未开始。
 5. publication 侧仍缺更完整的 operator-facing summary / sample audit summary。
@@ -245,14 +245,14 @@
 
 **Files:**
 - Modify: `packages/core/src/ditto_core/engine/research.py`
-- Modify: `packages/datahub/src/ditto_datahub/models/research.py`
-- Modify: `packages/datahub/src/ditto_datahub/scripts/schema.sql`
-- Modify: `packages/datahub/src/ditto_datahub/stores/runtime/research_sqlite/reader.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/runtime/research_sqlite/writer.py`
+- Modify: `packages/data/src/ditto_data/models/research.py`
+- Modify: `packages/data/src/ditto_data/scripts/schema.sql`
+- Modify: `packages/data/src/ditto_data/stores/runtime/research_sqlite/reader.py`
+- Modify: `packages/data/src/ditto_data/stores/runtime/research_sqlite/writer.py`
 - Modify: `apps/port/src/ditto_port/services/derived/research.py`
 - Test: `packages/core/tests/unit/engine/test_research_unit.py`
 - Test: `apps/port/tests/unit/services/derived/test_research_dataset_facade_unit.py`
-- Create: `packages/datahub/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py`
+- Create: `packages/data/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py`
 
 **Step 1: Write the failing tests**
 
@@ -271,7 +271,7 @@ Run:
 ```bash
 pixi run -e dev pytest -n0 --no-cov \
   packages/core/tests/unit/engine/test_research_unit.py \
-  packages/datahub/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py \
+  packages/data/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py \
   apps/port/tests/unit/services/derived/test_research_dataset_facade_unit.py -v
 ```
 
@@ -303,8 +303,8 @@ Run the same pytest command, then:
 ```bash
 pixi run -e dev basedpyright \
   packages/core/src/ditto_core/engine/research.py \
-  packages/datahub/src/ditto_datahub/models/research.py \
-  packages/datahub/src/ditto_datahub/stores/runtime/research_sqlite \
+  packages/data/src/ditto_data/models/research.py \
+  packages/data/src/ditto_data/stores/runtime/research_sqlite \
   apps/port/src/ditto_port/services/derived/research.py
 ```
 
@@ -314,12 +314,12 @@ Expected: PASS，且类型检查无告警。
 
 ```bash
 git add packages/core/src/ditto_core/engine/research.py \
-  packages/datahub/src/ditto_datahub/models/research.py \
-  packages/datahub/src/ditto_datahub/scripts/schema.sql \
-  packages/datahub/src/ditto_datahub/stores/runtime/research_sqlite \
+  packages/data/src/ditto_data/models/research.py \
+  packages/data/src/ditto_data/scripts/schema.sql \
+  packages/data/src/ditto_data/stores/runtime/research_sqlite \
   apps/port/src/ditto_port/services/derived/research.py \
   packages/core/tests/unit/engine/test_research_unit.py \
-  packages/datahub/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py \
+  packages/data/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py \
   apps/port/tests/unit/services/derived/test_research_dataset_facade_unit.py
 git commit -m "feat: align research snapshot contract with adr 041"
 ```
@@ -395,15 +395,15 @@ git commit -m "feat: add research dataset build flow"
 
 **Files:**
 - Modify: `packages/core/src/ditto_core/engine/publication_safety.py`
-- Modify: `packages/datahub/src/ditto_datahub/models/publication_safety.py`
-- Modify: `packages/datahub/src/ditto_datahub/services/publication_safety_record_service.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/minimal_dq_reader.py`
-- Create: `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/minimal_dq_writer.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/runtime/publication_safety/__init__.py`
+- Modify: `packages/data/src/ditto_data/models/publication_safety.py`
+- Modify: `packages/data/src/ditto_data/services/publication_safety_record_service.py`
+- Create: `packages/data/src/ditto_data/stores/runtime/publication_safety/minimal_dq_reader.py`
+- Create: `packages/data/src/ditto_data/stores/runtime/publication_safety/minimal_dq_writer.py`
+- Modify: `packages/data/src/ditto_data/stores/runtime/publication_safety/__init__.py`
 - Modify: `apps/port/src/ditto_port/registry/datahub/runtime.py`
 - Modify: `apps/port/src/ditto_port/services/derived/materialization.py`
-- Test: `packages/datahub/tests/unit/services/test_derived_materialization_service_unit.py`
-- Create: `packages/datahub/tests/unit/stores/runtime/publication_safety/test_minimal_dq_store_unit.py`
+- Test: `packages/data/tests/unit/services/test_derived_materialization_service_unit.py`
+- Create: `packages/data/tests/unit/stores/runtime/publication_safety/test_minimal_dq_store_unit.py`
 
 **Step 1: Write the failing tests**
 
@@ -418,8 +418,8 @@ Run:
 
 ```bash
 pixi run -e dev pytest -n0 --no-cov \
-  packages/datahub/tests/unit/stores/runtime/publication_safety/test_minimal_dq_store_unit.py \
-  packages/datahub/tests/unit/services/test_derived_materialization_service_unit.py -v
+  packages/data/tests/unit/stores/runtime/publication_safety/test_minimal_dq_store_unit.py \
+  packages/data/tests/unit/services/test_derived_materialization_service_unit.py -v
 ```
 
 Expected: FAIL，提示缺少 DQ summary 模型与持久化。
@@ -442,8 +442,8 @@ Run the same pytest command, then:
 ```bash
 pixi run -e dev basedpyright \
   packages/core/src/ditto_core/engine/publication_safety.py \
-  packages/datahub/src/ditto_datahub/models/publication_safety.py \
-  packages/datahub/src/ditto_datahub/stores/runtime/publication_safety \
+  packages/data/src/ditto_data/models/publication_safety.py \
+  packages/data/src/ditto_data/stores/runtime/publication_safety \
   apps/port/src/ditto_port/services/derived/materialization.py
 ```
 
@@ -453,13 +453,13 @@ Expected: PASS。
 
 ```bash
 git add packages/core/src/ditto_core/engine/publication_safety.py \
-  packages/datahub/src/ditto_datahub/models/publication_safety.py \
-  packages/datahub/src/ditto_datahub/services/publication_safety_record_service.py \
-  packages/datahub/src/ditto_datahub/stores/runtime/publication_safety \
+  packages/data/src/ditto_data/models/publication_safety.py \
+  packages/data/src/ditto_data/services/publication_safety_record_service.py \
+  packages/data/src/ditto_data/stores/runtime/publication_safety \
   apps/port/src/ditto_port/registry/datahub/runtime.py \
   apps/port/src/ditto_port/services/derived/materialization.py \
-  packages/datahub/tests/unit/stores/runtime/publication_safety/test_minimal_dq_store_unit.py \
-  packages/datahub/tests/unit/services/test_derived_materialization_service_unit.py
+  packages/data/tests/unit/stores/runtime/publication_safety/test_minimal_dq_store_unit.py \
+  packages/data/tests/unit/services/test_derived_materialization_service_unit.py
 git commit -m "feat: persist derived minimal dq summary"
 ```
 
@@ -597,7 +597,7 @@ git commit -m "feat: complete publication lifecycle operations"
 ### Task 6: 补齐四条专项 Integration Tests
 
 **Files:**
-- Create: `packages/datahub/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py`
+- Create: `packages/data/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py`
 - Create: `apps/port/tests/integration/flows/test_derived_materialization_query_repair_integration.py`
 - Create: `apps/port/tests/integration/flows/test_research_dataset_integration.py`
 - Create: `apps/port/tests/integration/flows/test_derived_publication_integration.py`
@@ -615,7 +615,7 @@ Run:
 
 ```bash
 pixi run -e dev pytest -n0 --no-cov \
-  packages/datahub/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py \
+  packages/data/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py \
   apps/port/tests/integration/flows/test_derived_materialization_query_repair_integration.py \
   apps/port/tests/integration/flows/test_research_dataset_integration.py \
   apps/port/tests/integration/flows/test_derived_publication_integration.py -v
@@ -638,7 +638,7 @@ Run the same pytest command, then:
 
 ```bash
 pixi run -e dev pytest apps/port/tests/integration/flows -m integration -v
-pixi run -e dev pytest packages/datahub/tests/integration/runtime -m integration -v
+pixi run -e dev pytest packages/data/tests/integration/runtime -m integration -v
 ```
 
 Expected: PASS。
@@ -646,7 +646,7 @@ Expected: PASS。
 **Step 5: Commit**
 
 ```bash
-git add packages/datahub/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py \
+git add packages/data/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py \
   apps/port/tests/integration/flows/test_derived_materialization_query_repair_integration.py \
   apps/port/tests/integration/flows/test_research_dataset_integration.py \
   apps/port/tests/integration/flows/test_derived_publication_integration.py
@@ -717,7 +717,7 @@ git commit -m "perf: add derived engine benchmark and slo baseline"
 ```bash
 pixi run -e dev pytest -n0 --no-cov \
   packages/core/tests/unit/engine/test_research_unit.py \
-  packages/datahub/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py \
+  packages/data/tests/unit/stores/runtime/research_sqlite/test_research_catalog_store_unit.py \
   apps/port/tests/unit/services/derived/test_research_dataset_facade_unit.py \
   apps/port/tests/unit/jobs/flows/test_research_flows_unit.py -v
 ```
@@ -731,8 +731,8 @@ pixi run -e dev pytest -n0 --no-cov \
 
 ```bash
 pixi run -e dev pytest -n0 --no-cov \
-  packages/datahub/tests/unit/services/test_derived_materialization_service_unit.py \
-  packages/datahub/tests/unit/stores/runtime/publication_safety/test_minimal_dq_store_unit.py \
+  packages/data/tests/unit/services/test_derived_materialization_service_unit.py \
+  packages/data/tests/unit/stores/runtime/publication_safety/test_minimal_dq_store_unit.py \
   apps/port/tests/unit/services/derived/test_publication_facade_unit.py -v
 ```
 
@@ -752,7 +752,7 @@ pixi run -e dev pytest -n0 --no-cov \
   apps/port/tests/unit/jobs/flows/test_materialization_flows_unit.py \
   apps/port/tests/integration/flows/test_derived_publication_integration.py \
   apps/port/tests/integration/flows/test_derived_materialization_query_repair_integration.py \
-  packages/datahub/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py -v
+  packages/data/tests/integration/runtime/test_legacy_derived_catalog_migration_query_integration.py -v
 ```
 
 执行进度（2026-03-14）：

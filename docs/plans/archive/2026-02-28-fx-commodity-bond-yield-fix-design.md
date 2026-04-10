@@ -16,7 +16,7 @@
 
 #### 1.1 创建 FX Store 层
 
-创建 `packages/datahub/src/ditto_datahub/stores/market/fx/` 目录：
+创建 `packages/data/src/ditto_data/stores/market/fx/` 目录：
 - `bars.py` - FxBarsReader/Writer（参考 IndexBarsReader/Writer 实现）
 - `__init__.py`
 
@@ -24,7 +24,7 @@
 
 #### 1.2 创建 Commodity Store 层
 
-创建 `packages/datahub/src/ditto_datahub/stores/market/commodity/` 目录：
+创建 `packages/data/src/ditto_data/stores/market/commodity/` 目录：
 - `bars.py` - CommodityBarsReader/Writer
 - `__init__.py`
 
@@ -32,7 +32,7 @@
 
 #### 1.3 扩展 MarketService
 
-在 `packages/datahub/src/ditto_datahub/services/market_service.py` 中：
+在 `packages/data/src/ditto_data/services/market_service.py` 中：
 - 添加 `fx_bars_reader/writer` 和 `commodity_bars_reader/writer` 依赖
 - 扩展 `save_bars()` 支持 `fx_daily` 和 `commodity_daily`
 - 扩展 `find_bars()` 支持 `asset_class="fx"` 和 `asset_class="commodity"`
@@ -71,7 +71,7 @@ app.include_router(commodity.router, prefix="/api/v1")
 
 ### 第三部分：High - 国债收益率异常值
 
-修改 `packages/datahub/src/ditto_datahub/sources/tushare/adapters/bond_yield.py` 的 `_parse_row` 方法：
+修改 `packages/data/src/ditto_data/sources/tushare/adapters/bond_yield.py` 的 `_parse_row` 方法：
 
 ```python
 # 修改前（错误）
@@ -125,17 +125,17 @@ except (TypeError, ValueError):
 ## 文件变更清单
 
 ### 新增文件
-- `packages/datahub/src/ditto_datahub/stores/market/fx/__init__.py`
-- `packages/datahub/src/ditto_datahub/stores/market/fx/bars.py`
-- `packages/datahub/src/ditto_datahub/stores/market/commodity/__init__.py`
-- `packages/datahub/src/ditto_datahub/stores/market/commodity/bars.py`
-- `packages/datahub/tests/unit/stores/market/fx/test_bars.py`
-- `packages/datahub/tests/unit/stores/market/commodity/test_bars.py`
+- `packages/data/src/ditto_data/stores/market/fx/__init__.py`
+- `packages/data/src/ditto_data/stores/market/fx/bars.py`
+- `packages/data/src/ditto_data/stores/market/commodity/__init__.py`
+- `packages/data/src/ditto_data/stores/market/commodity/bars.py`
+- `packages/data/tests/unit/stores/market/fx/test_bars.py`
+- `packages/data/tests/unit/stores/market/commodity/test_bars.py`
 
 ### 修改文件
-- `packages/datahub/src/ditto_datahub/models/common.py` - 扩展 InstrumentIdRange
-- `packages/datahub/src/ditto_datahub/services/market_service.py` - 支持 fx/commodity
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/bond_yield.py` - 异常值处理
+- `packages/data/src/ditto_data/models/common.py` - 扩展 InstrumentIdRange
+- `packages/data/src/ditto_data/services/market_service.py` - 支持 fx/commodity
+- `packages/data/src/ditto_data/sources/tushare/adapters/bond_yield.py` - 异常值处理
 - `apps/port/src/ditto_port/services/ingestion/data_writer.py` - 添加 handlers
 - `apps/port/src/ditto_port/services/ingestion/coordinator.py` - FRED 配置错误
 - `apps/port/src/ditto_port/api/main.py` - 挂载路由

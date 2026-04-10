@@ -53,10 +53,10 @@ Phase 4 (P2):
 **缺口**: META-MD-1 | **依赖**: 无
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/models/metadata.py` — InstrumentRegistration 添加 `delist_date: str | None = None`
-- `packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_writer.py:87-102` — INSERT SQL 添加 delist_date
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock.py:76,105` — fields 添加 delist_date
-- `packages/datahub/src/ditto_datahub/sources/tushare/processors/mappings/basic.py:43-57` — STOCK_BASIC_MAPPING 添加 delist_date 到 date_columns 和 output_columns
+- `packages/data/src/ditto_data/models/metadata.py` — InstrumentRegistration 添加 `delist_date: str | None = None`
+- `packages/data/src/ditto_data/stores/metadata/instrument/instrument_writer.py:87-102` — INSERT SQL 添加 delist_date
+- `packages/data/src/ditto_data/sources/tushare/adapters/stock.py:76,105` — fields 添加 delist_date
+- `packages/data/src/ditto_data/sources/tushare/processors/mappings/basic.py:43-57` — STOCK_BASIC_MAPPING 添加 delist_date 到 date_columns 和 output_columns
 
 **实现**:
 1. `InstrumentRegistration` 在 `list_date` 后添加 `delist_date: str | None = None`
@@ -74,7 +74,7 @@ Phase 4 (P2):
 **缺口**: META-CL-2 | **依赖**: 无
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — 新增 `enrich_calendar()` 方法
+- `packages/data/src/ditto_data/services/metadata_service.py` — 新增 `enrich_calendar()` 方法
 
 **实现**:
 1. 新增纯函数 `_compute_calendar_enrichment(days: list[dict]) -> list[dict]`：
@@ -93,7 +93,7 @@ Phase 4 (P2):
 **缺口**: META-MD-2, META-MD-3 | **依赖**: 无
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — 新增 `get_stock_status()` 方法
+- `packages/data/src/ditto_data/services/metadata_service.py` — 新增 `get_stock_status()` 方法
 - DI 容器可选注入 StockStatusReader（或通过构造函数参数）
 
 **实现**:
@@ -113,8 +113,8 @@ Phase 4 (P2):
 **缺口**: META-MD-4 | **依赖**: T01
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/stores/metadata/instrument/instrument_reader.py` — `find_securities()` SQL 添加日期过滤
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — `find_securities()` 添加 `min_list_days` 参数
+- `packages/data/src/ditto_data/stores/metadata/instrument/instrument_reader.py` — `find_securities()` SQL 添加日期过滤
+- `packages/data/src/ditto_data/services/metadata_service.py` — `find_securities()` 添加 `min_list_days` 参数
 
 **实现**:
 1. `InstrumentReader.find_securities()` 添加 `min_list_days: int | None = None` 参数
@@ -130,11 +130,11 @@ Phase 4 (P2):
 **缺口**: META-CL-1 | **依赖**: 无
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/scripts/schema.sql` — trading_calendar 添加 `is_half_day BOOLEAN DEFAULT FALSE`
-- `packages/datahub/src/ditto_datahub/models/metadata.py` — CalendarDay 添加 `is_half_day: bool = False`
-- `packages/datahub/src/ditto_datahub/stores/metadata/calendar/calendar_writer.py` — upsert 包含 is_half_day
-- `packages/datahub/src/ditto_datahub/stores/metadata/calendar/calendar_reader.py` — 读取 is_half_day
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — `compute_half_days()` 方法
+- `packages/data/src/ditto_data/scripts/schema.sql` — trading_calendar 添加 `is_half_day BOOLEAN DEFAULT FALSE`
+- `packages/data/src/ditto_data/models/metadata.py` — CalendarDay 添加 `is_half_day: bool = False`
+- `packages/data/src/ditto_data/stores/metadata/calendar/calendar_writer.py` — upsert 包含 is_half_day
+- `packages/data/src/ditto_data/stores/metadata/calendar/calendar_reader.py` — 读取 is_half_day
+- `packages/data/src/ditto_data/services/metadata_service.py` — `compute_half_days()` 方法
 
 **实现**:
 1. CalendarDay 添加 `is_half_day: bool = False`
@@ -151,7 +151,7 @@ Phase 4 (P2):
 **缺口**: META-IN-1 | **依赖**: 无
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/industry.py` — `fetch_sw_industry()` 和 `fetch_sw_industry_concepts()` 扩展 level=3
+- `packages/data/src/ditto_data/sources/tushare/adapters/industry.py` — `fetch_sw_industry()` 和 `fetch_sw_industry_concepts()` 扩展 level=3
 
 **实现**:
 1. `fetch_sw_industry(level=3)` — Tushare `index_classify` API 已支持 `src="SW2021"` + `level="3"`，现有代码直接可用，更新 docstring
@@ -167,10 +167,10 @@ Phase 4 (P2):
 **缺口**: META-IN-2 | **依赖**: 无
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/scripts/schema.sql` — industry_basic 添加 `source TEXT DEFAULT 'sw'`
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/industry.py` — 新增 `fetch_csrc_industry()` 方法
-- `packages/datahub/src/ditto_datahub/stores/metadata/industry/industry_reader.py` — `get_all()` 添加 source 过滤
-- `packages/datahub/src/ditto_datahub/stores/metadata/industry/industry_mapping_writer.py` — source 参数化
+- `packages/data/src/ditto_data/scripts/schema.sql` — industry_basic 添加 `source TEXT DEFAULT 'sw'`
+- `packages/data/src/ditto_data/sources/tushare/adapters/industry.py` — 新增 `fetch_csrc_industry()` 方法
+- `packages/data/src/ditto_data/stores/metadata/industry/industry_reader.py` — `get_all()` 添加 source 过滤
+- `packages/data/src/ditto_data/stores/metadata/industry/industry_mapping_writer.py` — source 参数化
 
 **实现**:
 1. schema.sql industry_basic 表添加 `source TEXT DEFAULT 'sw'` 列
@@ -187,7 +187,7 @@ Phase 4 (P2):
 **缺口**: META-UV-2 | **依赖**: 无
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — 新增 `get_filtered_universe()` 方法
+- `packages/data/src/ditto_data/services/metadata_service.py` — 新增 `get_filtered_universe()` 方法
 
 **实现**:
 1. `get_filtered_universe(universe_id, asof, min_avg_volume=None, min_avg_turnover=None, lookback=20)`:
@@ -206,8 +206,8 @@ Phase 4 (P2):
 **缺口**: META-UV-3, META-UV-5 | **依赖**: 无
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/stores/metadata/universe/universe_writer.py` — 新增 `replace_constituents()`
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — 新增集合运算方法
+- `packages/data/src/ditto_data/stores/metadata/universe/universe_writer.py` — 新增 `replace_constituents()`
+- `packages/data/src/ditto_data/services/metadata_service.py` — 新增集合运算方法
 
 **实现**:
 1. `UniverseWriter.replace_constituents(universe_id, records, effective_date)`:
@@ -248,7 +248,7 @@ Phase 4 (P2):
 **缺口**: META-CL-2 (自动化部分) | **依赖**: T02
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — 新增 `auto_enrich_calendar()` 方法
+- `packages/data/src/ditto_data/services/metadata_service.py` — 新增 `auto_enrich_calendar()` 方法
 
 **实现**:
 1. 读取 `prev_trade_date IS NULL` 的交易日行
@@ -265,10 +265,10 @@ Phase 4 (P2):
 **缺口**: META-MD-5 | **依赖**: 无
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/scripts/schema.sql` — 新建 `instrument_name_history` 表
-- 新建 `packages/datahub/src/ditto_datahub/stores/metadata/instrument/name_history_reader.py`
-- 新建 `packages/datahub/src/ditto_datahub/stores/metadata/instrument/name_history_writer.py`
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — 新增 `get_stock_name(instrument_id, asof)`
+- `packages/data/src/ditto_data/scripts/schema.sql` — 新建 `instrument_name_history` 表
+- 新建 `packages/data/src/ditto_data/stores/metadata/instrument/name_history_reader.py`
+- 新建 `packages/data/src/ditto_data/stores/metadata/instrument/name_history_writer.py`
+- `packages/data/src/ditto_data/services/metadata_service.py` — 新增 `get_stock_name(instrument_id, asof)`
 
 **实现**:
 1. 表: `(instrument_id INTEGER, old_name TEXT, new_name TEXT, changed_date DATE, PRIMARY KEY (instrument_id, changed_date))`
@@ -285,9 +285,9 @@ Phase 4 (P2):
 **缺口**: META-CL-3, META-CL-4 | **依赖**: T05
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/scripts/schema.sql` — 添加 `exchange TEXT DEFAULT 'SSE'`, `is_special BOOLEAN DEFAULT FALSE`
-- `packages/datahub/src/ditto_datahub/models/metadata.py` — CalendarDay 添加字段
-- `packages/datahub/src/ditto_datahub/sources/tushare/adapters/calendar.py` — 支持 exchange 参数
+- `packages/data/src/ditto_data/scripts/schema.sql` — 添加 `exchange TEXT DEFAULT 'SSE'`, `is_special BOOLEAN DEFAULT FALSE`
+- `packages/data/src/ditto_data/models/metadata.py` — CalendarDay 添加字段
+- `packages/data/src/ditto_data/sources/tushare/adapters/calendar.py` — 支持 exchange 参数
 - Reader/Writer 适配
 
 **实现**:
@@ -304,8 +304,8 @@ Phase 4 (P2):
 **缺口**: META-IN-3, META-IN-4 | **依赖**: T06, T07
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/stores/metadata/industry/industry_mapping_reader.py` — 新增多级查询方法
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — 新增 `get_stock_industries_all_levels()`
+- `packages/data/src/ditto_data/stores/metadata/industry/industry_mapping_reader.py` — 新增多级查询方法
+- `packages/data/src/ditto_data/services/metadata_service.py` — 新增 `get_stock_industries_all_levels()`
 
 **实现**:
 1. `get_stock_industries_all_levels(instrument_id, asof, source="sw") -> list[dict]`:
@@ -323,9 +323,9 @@ Phase 4 (P2):
 **缺口**: META-UV-4 | **依赖**: 无
 
 **修改文件**:
-- `packages/datahub/src/ditto_datahub/scripts/schema.sql` — 新建 `universe_rebalance` 表
+- `packages/data/src/ditto_data/scripts/schema.sql` — 新建 `universe_rebalance` 表
 - 新建 Reader
-- `packages/datahub/src/ditto_datahub/services/metadata_service.py` — 新增方法
+- `packages/data/src/ditto_data/services/metadata_service.py` — 新增方法
 
 **实现**:
 1. 表: `(universe_id TEXT, rebalance_date DATE, description TEXT, PRIMARY KEY (universe_id, rebalance_date))`

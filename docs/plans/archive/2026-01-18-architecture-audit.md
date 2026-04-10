@@ -71,7 +71,7 @@
                            │ 依赖
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  packages/datahub                           │
+│                  packages/data                           │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │  DataHub (统一Facade)                                  │ │
 │  │  ├─ Accessor层: 6个业务封装                            │ │
@@ -119,8 +119,8 @@
 **Evidence**:
 ```python
 # ❌ 当前做法
-from ditto_datahub.stores.calendar_store import CalendarStore
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
+from ditto_data.stores.calendar_store import CalendarStore
+from ditto_data.stores.ingestion_log import IngestionLogStore
 ```
 
 **Why it matters**:
@@ -133,7 +133,7 @@ from ditto_datahub.stores.ingestion_log import IngestionLogStore
 **方案A: 创建 IngestionLogAccessor（推荐）**
 ```python
 # ✅ 创建 Accessor 层
-# packages/datahub/src/ditto_datahub/accessors/ingestion_log.py
+# packages/data/src/ditto_data/accessors/ingestion_log.py
 class IngestionLogAccessor:
     """摄取日志访问器."""
     def __init__(self, log_store: IngestionLogStore) -> None:
@@ -168,7 +168,7 @@ calendar_store = hub.calendar_store  # 通过 DataHub 访问
 
 **Severity**: 🟡 Medium
 **Category**: Naming
-**Location**: `packages/datahub/src/ditto_datahub/repositories/security.py:15`
+**Location**: `packages/data/src/ditto_data/repositories/security.py:15`
 
 **Evidence**:
 ```python
@@ -294,18 +294,18 @@ class ObservabilityConfig:
 
 **Severity**: 🟡 Medium
 **Category**: Layering
-**Location**: `packages/datahub/src/ditto_datahub/sources/metadata.py`
+**Location**: `packages/data/src/ditto_data/sources/metadata.py`
 
 **Evidence**:
 ```python
 # ❌ 当前：IngestionLog 定义在 sources 层
-# packages/datahub/src/ditto_datahub/sources/metadata.py
+# packages/data/src/ditto_data/sources/metadata.py
 class IngestionLog(TypedDict):
     ...
 
 # ❌ Port 层直接导入 sources 层
 # apps/port/src/ditto_port/services/ingestion/metadata.py
-from ditto_datahub.sources.metadata import IngestionLog
+from ditto_data.sources.metadata import IngestionLog
 ```
 
 **Why it matters**:
@@ -317,7 +317,7 @@ from ditto_datahub.sources.metadata import IngestionLog
 
 **创建 models 层（领域类型层）**
 ```
-packages/datahub/
+packages/data/
 ├── models/                    # 新增：领域类型层
 │   ├── __init__.py
 │   ├── ingestion.py           # IngestionLog, IngestionStatus
@@ -330,7 +330,7 @@ packages/datahub/
 ```
 
 **迁移步骤**：
-1. 创建 `packages/datahub/src/ditto_datahub/models/` 目录
+1. 创建 `packages/data/src/ditto_data/models/` 目录
 2. 移动 `IngestionLog`, `IngestionStatus` 到 `models.ingestion`
 3. 创建 `IngestionLogAccessor`（详见 ARCH-001）
 4. 更新所有引用：
@@ -347,7 +347,7 @@ packages/datahub/
 
 **Severity**: 🟠 High
 **Category**: SRP / Complexity
-**Location**: `packages/datahub/src/ditto_datahub/repositories/bars/repository.py`
+**Location**: `packages/data/src/ditto_data/repositories/bars/repository.py`
 
 **Evidence**:
 ```python
@@ -416,7 +416,7 @@ class BarsAccessor:
 
 **Severity**: 🟠 High
 **Category**: Duplication
-**Location**: `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
+**Location**: `packages/data/src/ditto_data/sources/tushare/source.py`
 
 **Evidence**:
 ```python
@@ -475,7 +475,7 @@ class TushareSource(DataSource):
 
 **Severity**: 🟠 High
 **Category**: Typing
-**Location**: `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py:20`
+**Location**: `packages/data/src/ditto_data/dq/checkers/statistical.py:20`
 
 **Evidence**:
 ```python
@@ -640,7 +640,7 @@ METRIC_DEFINITIONS = load_metric_definitions(get_paths().config_subdir("metrics.
 
 **Severity**: 🟡 Medium
 **Category**: Complexity
-**Location**: `packages/datahub/src/ditto_datahub/stores/calendar_store.py`
+**Location**: `packages/data/src/ditto_data/stores/calendar_store.py`
 
 **Evidence**:
 ```python
@@ -913,7 +913,7 @@ with self._file_lock.acquire(lock_name, timeout=60.0):
 
 **提取标识符解析工具**:
 ```python
-# packages/datahub/src/ditto_datahub/repositories/common/identifier.py
+# packages/data/src/ditto_data/repositories/common/identifier.py
 def resolve_sids(
     sids: list[int] | None,
     src_codes: list[str] | None,
@@ -954,7 +954,7 @@ def track_metrics(dataset: str, operation: str):
 
 **提取写入锁上下文管理器**:
 ```python
-# packages/datahub/src/ditto_datahub/runtime/write_guard.py
+# packages/data/src/ditto_data/runtime/write_guard.py
 @contextmanager
 def write_with_lock(
     file_lock: FileLockManager,
@@ -1042,9 +1042,9 @@ METRICS_ENABLED=true
 **目标**: 修复 ARCH-001（跨层访问）和 ARCH-004（模型位置不当）
 
 **改动范围**:
-- 新建 `packages/datahub/src/ditto_datahub/models/` 目录
-- 新建 `packages/datahub/src/ditto_datahub/accessors/ingestion_log.py`
-- 更新 `packages/datahub/src/ditto_datahub/hub.py`
+- 新建 `packages/data/src/ditto_data/models/` 目录
+- 新建 `packages/data/src/ditto_data/accessors/ingestion_log.py`
+- 更新 `packages/data/src/ditto_data/hub.py`
 - 更新所有引用 `IngestionLog` 的文件
 
 **修改内容**:
@@ -1133,8 +1133,8 @@ TRACING_SAMPLE_RATE=0.1
 **目标**: 修复 ENG-003（`hub: Any` 类型滥用）
 
 **改动范围**:
-- `packages/datahub/src/ditto_datahub/dq/checkers/`
-- 新建 `packages/datahub/src/ditto_datahub/protocols.py`
+- `packages/data/src/ditto_data/dq/checkers/`
+- 新建 `packages/data/src/ditto_data/protocols.py`
 
 **修改内容**:
 1. 定义 `DataHubProtocol` 协议
@@ -1153,8 +1153,8 @@ TRACING_SAMPLE_RATE=0.1
 **目标**: 修复 ENG-004（过宽异常捕获）
 
 **改动范围**:
-- `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
-- `packages/datahub/src/ditto_datahub/stores/bars_store.py`
+- `packages/data/src/ditto_data/sources/tushare/source.py`
+- `packages/data/src/ditto_data/stores/bars_store.py`
 
 **修改内容**:
 1. 定义明确的异常列表
@@ -1173,8 +1173,8 @@ TRACING_SAMPLE_RATE=0.1
 **目标**: 修复 ENG-001（BarsAccessor 819行职责过重）
 
 **改动范围**:
-- `packages/datahub/src/ditto_datahub/repositories/bars/`
-- `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py`
+- `packages/data/src/ditto_data/repositories/bars/`
+- `packages/data/tests/unit/repositories/test_bars_repository_unit.py`
 
 **修改内容**:
 1. 创建 `BarsIdentifierResolver` 类
@@ -1208,7 +1208,7 @@ TRACING_SAMPLE_RATE=0.1
 **目标**: 修复 ENG-002（重复fetch方法）
 
 **改动范围**:
-- `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
+- `packages/data/src/ditto_data/sources/tushare/source.py`
 
 **修改内容**:
 使用模板方法模式统一fetch逻辑
@@ -1221,9 +1221,9 @@ TRACING_SAMPLE_RATE=0.1
 **目标**: 修复 ARCH-002（SecuritiesAccessor 命名）
 
 **改动范围**:
-- `packages/datahub/src/ditto_datahub/repositories/security.py`
-- `packages/datahub/src/ditto_datahub/hub.py`
-- `packages/datahub/tests/unit/repositories/test_security_repository_unit.py`
+- `packages/data/src/ditto_data/repositories/security.py`
+- `packages/data/src/ditto_data/hub.py`
+- `packages/data/tests/unit/repositories/test_security_repository_unit.py`
 - 相关文档
 
 **工作量**: <1小时
@@ -1236,8 +1236,8 @@ TRACING_SAMPLE_RATE=0.1
 **改动范围**:
 - 新建 `packages/foundation/src/ditto_foundation/logging/context.py`
 - 新建 `packages/foundation/src/ditto_foundation/metrics/tracking.py`
-- 新建 `packages/datahub/src/ditto_datahub/repositories/common/identifier.py`
-- 新建 `packages/datahub/src/ditto_datahub/runtime/write_guard.py`
+- 新建 `packages/data/src/ditto_data/repositories/common/identifier.py`
+- 新建 `packages/data/src/ditto_data/runtime/write_guard.py`
 - 更新所有 Repository 类使用新工具
 
 **修改内容**:
@@ -1256,7 +1256,7 @@ TRACING_SAMPLE_RATE=0.1
 **目标**: 修复 ENG-007（日期归一化重复）
 
 **改动范围**:
-- 新建 `packages/datahub/src/ditto_datahub/util/date_normalizer.py`
+- 新建 `packages/data/src/ditto_data/util/date_normalizer.py`
 - 更新所有Store类
 
 **工作量**: 1天
@@ -1278,8 +1278,8 @@ TRACING_SAMPLE_RATE=0.1
 **目标**: 修复 ENG-008（测试文件过大）
 
 **改动范围**:
-- `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py`
-- `packages/datahub/tests/unit/sources/tushare/test_source_unit.py`
+- `packages/data/tests/unit/repositories/test_bars_repository_unit.py`
+- `packages/data/tests/unit/sources/tushare/test_source_unit.py`
 - `apps/port/tests/unit/ingestion/test_coordinator_unit.py`
 
 **工作量**: 2-3天
