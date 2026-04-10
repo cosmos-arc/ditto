@@ -1,6 +1,7 @@
 import { useHomePulse } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 /**
  * PulseSection — thin operational status strip.
@@ -29,41 +30,43 @@ export function PulseSection() {
 				onRetry: () => void refetch(),
 			}}
 		>
-			<div className="flex h-[var(--density-strip-height)] items-center gap-4 overflow-hidden bg-(--color-surface-strip) px-4 text-[10px] text-(--color-foreground-tertiary)">
-				{/* 1. Time + Status */}
-				<div className="flex items-center gap-1 whitespace-nowrap">
-					<span className="inline-block size-1.5 animate-pulse rounded-full bg-(--color-system-healthy-fg)" />
-					<span className="font-(--font-data)">{data?.date ?? "—"}</span>
-					<span>·</span>
-					<span>{data?.session === "continuous" ? "盘中交易" : data?.session === "pre" ? "盘前" : "已收盘"}</span>
+			<ScrollReveal>
+				<div data-slot="pulse-strip" className="flex items-center gap-4 overflow-hidden bg-(--color-surface-strip) px-4 text-[10px] text-(--color-foreground-tertiary) h-[calc(var(--density-strip-height)-4px)]">
+					{/* 1. Time + Status */}
+					<div className="flex items-center gap-1 whitespace-nowrap">
+						<span className="inline-block size-1.5 rounded-full bg-(--color-system-healthy-fg) animate-[dot-live-pulse_3s_ease-in-out_infinite]" />
+						<span className="font-data">{data?.date ?? "—"}</span>
+						<span>·</span>
+						<span>{data?.session === "continuous" ? "盘中交易" : data?.session === "pre" ? "盘前" : "已收盘"}</span>
+					</div>
+
+					<PulseSeparator />
+
+					{/* 2. PnL */}
+					<div className="flex items-center gap-1 whitespace-nowrap">
+						<span>盈亏</span>
+						<span className={`font-data ${isPositive ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}>
+							{isPositive ? "+" : ""}{data?.pnlPercent ?? 0}%
+						</span>
+					</div>
+
+					<PulseSeparator />
+
+					{/* 3. Pending */}
+					<div className="flex items-center gap-1 whitespace-nowrap">
+						<span>待处理</span>
+						<span className="font-data text-(--color-foreground-secondary)">{data?.pendingActions ?? 0}</span>
+					</div>
+
+					<PulseSeparator />
+
+					{/* 4. Running jobs */}
+					<div className="flex items-center gap-1 whitespace-nowrap">
+						<span>运行中</span>
+						<span className="font-data text-(--color-foreground-secondary)">{data?.runningJobs ?? 0}</span>
+					</div>
 				</div>
-
-				<PulseSeparator />
-
-				{/* 2. PnL */}
-				<div className="flex items-center gap-1 whitespace-nowrap">
-					<span>盈亏</span>
-					<span className={`font-(--font-data) ${isPositive ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}>
-						{isPositive ? "+" : ""}{data?.pnlPercent ?? 0}%
-					</span>
-				</div>
-
-				<PulseSeparator />
-
-				{/* 3. Pending */}
-				<div className="flex items-center gap-1 whitespace-nowrap">
-					<span>待处理</span>
-					<span className="font-(--font-data) text-(--color-foreground-secondary)">{data?.pendingActions ?? 0}</span>
-				</div>
-
-				<PulseSeparator />
-
-				{/* 4. Running jobs */}
-				<div className="flex items-center gap-1 whitespace-nowrap">
-					<span>运行中</span>
-					<span className="font-(--font-data) text-(--color-foreground-secondary)">{data?.runningJobs ?? 0}</span>
-				</div>
-			</div>
+			</ScrollReveal>
 		</DittoErrorBoundary>
 	);
 }

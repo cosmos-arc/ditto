@@ -6,22 +6,29 @@ import { MacroDriversBar } from "./macro-drivers-bar";
 import { CapitalRotationTable } from "./capital-rotation-table";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { ContextBar, ContextBarItem, ContextBarSep } from "@/components/indicator/context-bar";
+import { ContextSection } from "@/components/domain/context-section";
 
-function ContextBar() {
+function MarketContextBar() {
 	const { data, isLoading, isError, refetch } = useMarketContext();
 
 	if (isLoading) return <LoadingSkeleton variant="metric" className="h-8" />;
 
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			<div className="flex items-center gap-4 px-4 py-2 text-xs">
-				<span>市态: <strong>{data?.regime ?? "—"}</strong></span>
-				<span>波动: <strong>{data?.volatility ?? "—"}%</strong></span>
-				<span>美元: <strong>{data?.usdStrength ?? "—"}</strong></span>
+			<ContextBar>
+				<ContextBarItem label="市态" value={data?.regime ?? "—"} />
+				<ContextBarSep />
+				<ContextBarItem label="波动" value={`${data?.volatility ?? "—"}%`} />
+				<ContextBarSep />
+				<ContextBarItem label="美元" value={data?.usdStrength ?? "—"} />
 				{data && data.alertCount > 0 && (
-					<span className="text-(--color-status-warning)">{data.alertCount} 预警</span>
+					<>
+						<ContextBarSep />
+						<ContextBarItem label="预警" value={data.alertCount} color="down" />
+					</>
 				)}
-			</div>
+			</ContextBar>
 		</DittoErrorBoundary>
 	);
 }
@@ -41,15 +48,95 @@ const MOCK_FLOWS = [
 	{ sector: "新能源", flow: "-8.5亿", dir: "down" as const },
 ];
 
+const MOCK_SCOPE_TEXT =
+	"A股三大指数集体收涨，沪指涨0.85%报3,285点。北向资金净流入12.3亿，科技板块领涨。市场风险偏好持续回升，建议关注动量因子表现。";
+
+const CORRELATION_LABELS = ["沪深300", "创业板", "恒生", "标普500"] as const;
+
+const CORRELATION_MATRIX: ReadonlyArray<ReadonlyArray<number>> = [
+	[1.00, 0.85, 0.62, 0.35],
+	[0.85, 1.00, 0.55, 0.28],
+	[0.62, 0.55, 1.00, 0.45],
+	[0.35, 0.28, 0.45, 1.00],
+];
+
+function correlationCellClass(value: number): string {
+	if (value >= 0.7) return "bg-(--color-accent)/15 text-(--color-accent) accent";
+	if (value >= 0.4) return "bg-(--color-accent)/8 text-(--color-foreground-secondary) moderate";
+	return "bg-(--color-surface-1) text-(--color-foreground-muted) muted";
+}
+
+function ScopeStrip() {
+	return (
+		<div
+			data-slot="scope-strip"
+			data-testid="scope-strip"
+			className="rounded-(--radius-sm) border-l-2 border-l-(--color-accent) bg-(--color-surface-1) px-3 py-2"
+		>
+			<span className="mb-1 block text-xs font-medium uppercase tracking-wide text-(--color-foreground-tertiary)">
+				今日解读
+			</span>
+			<p className="text-base leading-relaxed text-(--color-foreground-secondary)">
+				{MOCK_SCOPE_TEXT}
+			</p>
+		</div>
+	);
+}
+
+function CrossMarketMatrix() {
+	return (
+		<ContextSection title="跨市场相关性">
+			<div
+				data-slot="cross-market-matrix"
+				data-testid="cross-market-matrix"
+				className="overflow-x-auto pb-2"
+			>
+				<table className="w-full table-fixed border-collapse text-sm">
+					<thead>
+						<tr>
+							<th className="p-1.5 text-left font-medium text-(--color-foreground-muted)" aria-label="行标签" />
+							{CORRELATION_LABELS.map((label) => (
+								<th key={label} className="p-1.5 text-center font-medium text-(--color-foreground-tertiary)">
+									{label}
+								</th>
+							))}
+						</tr>
+					</thead>
+					<tbody>
+						{CORRELATION_MATRIX.map((row, rowIdx) => (
+							<tr key={CORRELATION_LABELS[rowIdx]}>
+								<td className="p-1.5 font-medium text-(--color-foreground-tertiary)">
+									{CORRELATION_LABELS[rowIdx]}
+								</td>
+								{row.map((value, colIdx) => (
+									<td
+										key={`${rowIdx}-${colIdx}`}
+										data-testid={`corr-${rowIdx}-${colIdx}`}
+										className={`rounded-(--radius-sm) p-1.5 text-center font-data tabular-nums ${correlationCellClass(value)}`}
+									>
+										{value.toFixed(2)}
+									</td>
+								))}
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+		</ContextSection>
+	);
+}
+
 export function MarketsPage() {
 	return (
 		<AnalyticalLayout
-			strip={<ContextBar />}
+			strip={<MarketContextBar />}
 			main={
 				<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
 					<MarketCardGrid />
+					<ScopeStrip />
 					<MacroDriversBar />
 					<CapitalRotationTable />
+					<CrossMarketMatrix />
 				</div>
 			}
 			activity={
@@ -75,7 +162,7 @@ export function MarketsPage() {
 									<span className="min-w-0 flex-1 truncate text-xs text-(--color-foreground)">
 										{event.text}
 									</span>
-									<span className="shrink-0 text-[10px] tabular-nums text-(--color-foreground-muted)">
+									<span className="shrink-0 font-data text-[10px] tabular-nums text-(--color-foreground-muted)">
 										{event.time}
 									</span>
 								</div>
@@ -98,7 +185,7 @@ export function MarketsPage() {
 										{item.sector}
 									</span>
 									<span
-										className={`font-(--font-data) text-xs tabular-nums ${item.dir === "up" ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}
+										className={`font-data text-xs tabular-nums ${item.dir === "up" ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}
 									>
 										{item.flow}
 									</span>

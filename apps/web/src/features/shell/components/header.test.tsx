@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ShellHeader } from "./header";
 
-// Mock TanStack Router's useMatches
+// Mock TanStack Router's useMatches and useRouter
 const mockUseMatches = vi.fn().mockReturnValue([]);
+const mockRoutesById: Record<string, { options?: { handle?: { title?: string } } }> = {};
+
 vi.mock("@tanstack/react-router", async () => {
 	const actual =
 		await vi.importActual<typeof import("@tanstack/react-router")>(
@@ -12,12 +14,17 @@ vi.mock("@tanstack/react-router", async () => {
 	return {
 		...actual,
 		useMatches: () => mockUseMatches(),
+		useRouter: () => ({ routesById: mockRoutesById }),
 	};
 });
 
 describe("ShellHeader", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		// Reset routes by id
+		for (const key of Object.keys(mockRoutesById)) {
+			delete mockRoutesById[key];
+		}
 	});
 
 	it("renders the header container with correct height class", () => {
@@ -27,30 +34,31 @@ describe("ShellHeader", () => {
 	});
 
 	it("shows title text derived from route handle", () => {
-		mockUseMatches.mockReturnValue([
-			{ handle: { title: "市场" } },
-		]);
+		mockRoutesById["/markets"] = { options: { handle: { title: "市场" } } };
+		mockUseMatches.mockReturnValue([{ routeId: "/markets" }]);
 		render(<ShellHeader />);
 		expect(screen.getByText("市场")).toBeInTheDocument();
 	});
 
 	it("shows no title when route handle has no title", () => {
-		mockUseMatches.mockReturnValue([{ handle: {} }]);
+		mockRoutesById["/x"] = { options: { handle: {} } };
+		mockUseMatches.mockReturnValue([{ routeId: "/x" }]);
 		render(<ShellHeader />);
-		// The title element should exist but be empty or absent
 		expect(screen.queryByRole("heading")).not.toBeInTheDocument();
 	});
 
 	it("shows no title when no route matches have handle", () => {
-		mockUseMatches.mockReturnValue([{ id: "root" }]);
+		mockUseMatches.mockReturnValue([{ routeId: "/unknown" }]);
 		render(<ShellHeader />);
 		expect(screen.queryByRole("heading")).not.toBeInTheDocument();
 	});
 
 	it("picks the last match with a title (most specific route)", () => {
+		mockRoutesById["/trading"] = { options: { handle: { title: "交易" } } };
+		mockRoutesById["/trading/orders"] = { options: { handle: { title: "订单管理" } } };
 		mockUseMatches.mockReturnValue([
-			{ handle: { title: "交易" } },
-			{ handle: { title: "订单管理" } },
+			{ routeId: "/trading" },
+			{ routeId: "/trading/orders" },
 		]);
 		render(<ShellHeader />);
 		expect(screen.getByText("订单管理")).toBeInTheDocument();
@@ -83,7 +91,7 @@ describe("ShellHeader", () => {
 	it("applies background color", () => {
 		const { container } = render(<ShellHeader />);
 		const header = container.firstChild as HTMLElement;
-		expect(header.className).toContain("bg-[var(--color-surface-app)]");
+		expect(header.className).toContain("bg-(--color-surface-frosted)");
 	});
 
 	it("has z-index for stacking context", () => {

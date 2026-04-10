@@ -53,7 +53,7 @@ function MarketCard({
 			role={onClick ? "button" : undefined}
 			tabIndex={onClick ? 0 : undefined}
 			className={cn(
-				"flex flex-col gap-[var(--space-8)] p-[var(--space-12)] rounded-(--radius-6) border border-(--color-border-subtle) bg-(--color-surface-2) transition-colors duration-120 hover:bg-(--color-surface-3) hover:border-(--color-border-default)",
+				"flex flex-col gap-2 p-3 rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-2) transition-colors duration-120 hover:bg-(--color-surface-3)",
 				onClick && "cursor-pointer",
 				className,
 			)}
@@ -61,7 +61,7 @@ function MarketCard({
 		>
 			{/* Top row: name + regime */}
 			<div className="flex items-center justify-between">
-				<span className="text-(--font-size-12) font-medium text-(--color-foreground-primary)">
+				<span className="text-sm font-medium text-(--color-foreground-primary)">
 					{name}
 				</span>
 				<StatusBadge
@@ -72,7 +72,7 @@ function MarketCard({
 			</div>
 
 			{/* Index + change */}
-			<div className="flex items-baseline gap-[var(--space-6)]">
+			<div className="flex items-baseline gap-1.5">
 				<span className="font-data text-[24px] font-semibold tabular-nums text-(--color-foreground-primary)">
 					{index}
 				</span>
@@ -97,7 +97,7 @@ function MarketCard({
 			)}
 
 			{/* Judgment */}
-			<p className="text-(--font-size-12) text-(--color-foreground-tertiary) leading-normal">
+			<p className="text-sm text-(--color-foreground-tertiary) leading-normal">
 				{judgment}
 			</p>
 		</div>

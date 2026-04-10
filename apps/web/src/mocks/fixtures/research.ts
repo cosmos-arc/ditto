@@ -17,11 +17,11 @@ export const mockResearchPulse: ResearchPulseResponse = {
 
 export const mockFactors: GetFactorsResponse = {
 	items: [
-		{ id: "f-001", name: "动量因子", family: "技术面", ic: 0.052, ir: 0.85, decay: 5, turnover: 0.32, coverage: 0.92, healthStatus: "completed", lastUpdated: "2026-04-08T09:00:00Z" },
-		{ id: "f-002", name: "价值因子", family: "基本面", ic: 0.041, ir: 0.72, decay: 10, turnover: 0.18, coverage: 0.88, healthStatus: "completed", lastUpdated: "2026-04-08T09:00:00Z" },
-		{ id: "f-003", name: "波动率因子", family: "风险面", ic: 0.038, ir: 0.65, decay: 3, turnover: 0.45, coverage: 0.95, healthStatus: "running", lastUpdated: "2026-04-08T08:30:00Z" },
-		{ id: "f-004", name: "情绪因子", family: "另类", ic: 0.025, ir: 0.42, decay: 7, turnover: 0.55, coverage: 0.78, healthStatus: "warning", lastUpdated: "2026-04-07T20:00:00Z" },
-		{ id: "f-005", name: "北向资金因子", family: "资金流", ic: 0.015, ir: 0.30, decay: 2, turnover: 0.60, coverage: 0.70, healthStatus: "failed", lastUpdated: "2026-04-07T18:00:00Z" },
+		{ id: "f-001", name: "动量因子", family: "技术面", ic: 0.052, ir: 0.85, decay: 5, turnover: 0.32, coverage: 0.92, healthStatus: "completed", lastUpdated: "2026-04-08T09:00:00Z", sharpe: 1.85, universe: "全A" },
+		{ id: "f-002", name: "价值因子", family: "基本面", ic: 0.041, ir: 0.72, decay: 10, turnover: 0.18, coverage: 0.88, healthStatus: "completed", lastUpdated: "2026-04-08T09:00:00Z", sharpe: 1.42, universe: "沪深300" },
+		{ id: "f-003", name: "波动率因子", family: "风险面", ic: 0.038, ir: 0.65, decay: 3, turnover: 0.45, coverage: 0.95, healthStatus: "running", lastUpdated: "2026-04-08T08:30:00Z", sharpe: 0.95, universe: "中证500" },
+		{ id: "f-004", name: "情绪因子", family: "另类", ic: 0.025, ir: 0.42, decay: 7, turnover: 0.55, coverage: 0.78, healthStatus: "warning", lastUpdated: "2026-04-07T20:00:00Z", sharpe: 0.68, universe: "全A" },
+		{ id: "f-005", name: "北向资金因子", family: "资金流", ic: 0.015, ir: 0.30, decay: 2, turnover: 0.60, coverage: 0.70, healthStatus: "failed", lastUpdated: "2026-04-07T18:00:00Z", sharpe: 0.45, universe: "沪股通" },
 	],
 	total: 42,
 	page: 1,

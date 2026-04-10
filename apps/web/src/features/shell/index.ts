@@ -3,6 +3,8 @@ export { NoiseLayer } from "./components/noise-layer";
 export { Panel, PanelBody, PanelHeader } from "./components/panel";
 export { Rail } from "./components/rail";
 export { ShellHeader } from "./components/header";
+export { StatusBar } from "./components/status-bar";
+export { ThemeSwitcher } from "./components/theme-switcher";
 export { AnalyticalLayout } from "./layouts/analytical.layout";
 export { CatalogLayout } from "./layouts/catalog.layout";
 export { CommandCenterLayout } from "./layouts/command-center.layout";

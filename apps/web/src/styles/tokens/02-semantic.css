@@ -15,6 +15,7 @@
   --color-surface-strip:             oklch(0.180 0.005 253);
   --color-surface-overlay:           var(--color-surface-4);
   --color-surface-modal:             var(--color-surface-5);
+  --color-surface-frosted:           oklch(0.155 0.005 253 / 0.8);
 
   /* 文本层级 */
   --color-foreground:           oklch(0.935 0.005 253);
@@ -32,10 +33,17 @@
   --color-accent:    var(--color-brand-500);
   --color-accent-fg: oklch(0.995 0.002 253);
 
-  /* 签名色 — Brass */
+  /* 签名色 — Brass (Graphite Studio 品牌标识) */
   --color-brass-500: oklch(72% 0.08 74);
   --color-brass-400: oklch(78% 0.06 74);
   --color-brass-300: oklch(84% 0.04 74);
+
+  /* 签名色别名（对齐原型 --brand-signature-*） */
+  --color-signature-fg:     oklch(72% 0.08 74);
+  --color-signature-muted:  oklch(78% 0.06 74);
+  --color-signature-line:   oklch(78% 0.06 74);
+  --color-signature-subtle: oklch(72% 0.08 74 / 0.08);
+  --color-signature-glow:   oklch(72% 0.08 74 / 0.60);
 
   /* 代码 */
   --color-code-bg: oklch(0.155 0.005 253);
@@ -54,4 +62,8 @@
 
   /* 毛玻璃 */
   --blur-frosted: 12px;
+
+  /* --- 兼容别名 --- */
+  --color-foreground-primary: var(--color-foreground);
+  --color-brand-accent: var(--color-accent);
 }

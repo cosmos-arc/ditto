@@ -13,7 +13,7 @@ function FilterToolbar({
 		<div
 			data-slot="filter-toolbar"
 			className={cn(
-				"flex items-center gap-[var(--space-6)] bg-(--color-surface-1) border-b border-(--color-border-subtle) px-[var(--space-12)]",
+				"flex items-center gap-1.5 bg-(--color-surface-1) border-b border-(--color-border-subtle) px-3",
 				className,
 			)}
 			{...props}

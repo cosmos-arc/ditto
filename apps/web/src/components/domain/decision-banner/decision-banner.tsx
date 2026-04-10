@@ -43,15 +43,16 @@ function DecisionBanner({
 	return (
 		<div
 			data-slot="decision-banner"
+			data-testid="decision-banner"
 			className={cn(
-				"grid grid-cols-1 md:grid-cols-[5fr_4fr_3fr] gap-[var(--space-16)] py-[var(--space-12)] px-[var(--space-16)]",
-				"border-l-2 border-l-(--color-brand-500)/35",
+				"grid grid-cols-1 md:grid-cols-[5fr_4fr_3fr] gap-4 py-3 px-4",
+				"border-l-2 border-l-[color-mix(in_oklch,var(--color-accent)_35%,transparent)]",
 				className,
 			)}
 			{...props}
 		>
 			{/* Primary column */}
-			<div data-slot="decision-primary" className="flex flex-col gap-[var(--space-8)]">
+			<div data-slot="decision-primary" className="flex flex-col gap-2">
 				<Metric
 					label={primary.label}
 					value={primary.value}
@@ -65,21 +66,21 @@ function DecisionBanner({
 			{/* Judgment column */}
 			<div
 				data-slot="decision-judgment"
-				className="flex flex-col gap-[var(--space-12)] md:border-l md:border-(--color-border-subtle) md:pl-[var(--space-16)]"
+				className="flex flex-col gap-3 md:border-l md:border-(--color-border-subtle) md:pl-4"
 			>
-				<div className="flex items-center gap-[var(--space-8)]">
+				<div className="flex items-center gap-2">
 					{judgment.regime && (
 						<StatusBadge label={judgment.regime.label} variant={judgment.regime.variant} size="sm" />
 					)}
 				</div>
-				<p className="text-(--font-size-14) font-semibold text-(--color-foreground-primary) leading-relaxed">
+				<p className="[font-size:var(--text-md)] font-semibold text-(--color-foreground) leading-relaxed">
 					{judgment.text}
 				</p>
 				{judgment.metrics.length > 0 && (
-					<div className="flex flex-wrap gap-[var(--space-12)]">
+					<div className="flex flex-wrap gap-3">
 						{judgment.metrics.map((metric) => (
 							<div key={metric.label} className="flex flex-col gap-px">
-								<span className="text-(--font-size-10) text-(--color-foreground-tertiary)">
+								<span className="text-[var(--text-xs)] text-(--color-foreground-tertiary)">
 									{metric.label}
 								</span>
 								<Metric
@@ -99,15 +100,16 @@ function DecisionBanner({
 			{actions && actions.length > 0 && (
 				<div
 					data-slot="decision-actions"
-					className="flex flex-col items-end gap-[var(--space-8)] md:border-l md:border-(--color-border-subtle) md:pl-[var(--space-16)]"
+					className="flex flex-col items-end gap-2 md:border-l md:border-(--color-border-subtle) md:pl-4"
 				>
-					<div className="flex flex-col items-end gap-[var(--space-8)]">
+					<div className="flex flex-col items-end gap-2">
 						{actions.map((action) => (
 							<Button
 								key={action.label}
-								variant={action.variant === "ghost" ? "ghost" : action.variant === "secondary" ? "outline" : "default"}
+								variant={action.variant === "ghost" ? "ghost" : "outline"}
 								size="sm"
 								onClick={action.onClick}
+								className={action.variant === "primary" ? "border-(--color-accent) text-(--color-accent) hover:bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)]" : action.variant === "secondary" ? "opacity-70" : undefined}
 							>
 								{action.label}
 							</Button>

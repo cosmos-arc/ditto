@@ -36,14 +36,14 @@ function Drawer({
 				style={{ width, maxWidth: width }}
 			>
 				<SheetHeader className="flex-row items-center justify-between border-b border-(--color-border-subtle) px-4 py-3 mb-3 space-y-0">
-					<SheetTitle className="text-(--font-size-14) text-(--color-foreground-primary)">
+					<SheetTitle className="text-md text-(--color-foreground-primary)">
 						{title}
 					</SheetTitle>
 				</SheetHeader>
 
 				<div
 					data-slot="drawer-body"
-					className="flex-1 overflow-y-auto px-4 text-(--font-size-12) text-(--color-foreground-secondary) leading-relaxed"
+					className="flex-1 overflow-y-auto px-4 text-sm text-(--color-foreground-secondary) leading-relaxed"
 				>
 					{children}
 				</div>

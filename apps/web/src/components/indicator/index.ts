@@ -9,3 +9,6 @@ export type { ScopeStripProps } from "./scope-strip";
 
 export { Drawer } from "./overlay";
 export type { DrawerProps } from "./overlay";
+
+export { ContextBar, ContextBarItem, ContextBarSep } from "./context-bar";
+export type { ContextBarProps, ContextBarItemProps, ItemColor } from "./context-bar";

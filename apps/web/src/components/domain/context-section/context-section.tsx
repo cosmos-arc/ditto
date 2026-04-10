@@ -38,15 +38,16 @@ function ContextSection({
 				{/* Header */}
 				<CollapsibleTrigger
 					data-slot="context-section-header"
-					className="flex items-center justify-between py-[var(--space-8)] px-[var(--space-12)] shrink-0 cursor-pointer select-none hover:bg-(--color-surface-2) transition-colors duration-120 rounded-sm"
+					className="flex items-center justify-between shrink-0 cursor-pointer select-none hover:bg-(--color-surface-2) transition-colors duration-120 rounded-sm py-2 px-3"
 				>
-					<span className="text-(--font-size-12) font-medium text-(--color-foreground-tertiary) uppercase tracking-wide">
+					<span className="text-sm font-medium text-(--color-foreground-tertiary) uppercase tracking-[0.04em]">
 						{title}
 					</span>
 
-					<div className="flex items-center gap-[var(--space-8)]">
+					<div className="flex items-center gap-2">
 						{count !== undefined && (
-							<span className="text-(--font-size-10) text-(--color-foreground-tertiary) font-data">
+							<span className="font-data text-xs text-(--color-foreground-tertiary) bg-(--color-surface-strip) rounded-[var(--radius-sm)] flex items-center px-1.5 h-[18px]"
+							>
 								{count}
 							</span>
 						)}
@@ -70,7 +71,8 @@ function ContextSection({
 				<CollapsibleContent>
 					<div
 						data-slot="context-section-body"
-						className="flex-1 overflow-y-auto px-[var(--space-12)]"
+						className="flex-1 overflow-y-auto"
+							className="px-3"
 					>
 						{children}
 					</div>

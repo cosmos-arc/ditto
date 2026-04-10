@@ -30,7 +30,7 @@ function AlertRow({
 			data-severity={severity}
 			data-testid="alert-row"
 			className={cn(
-				"flex items-center gap-[var(--space-8)] border-b border-(--color-border-subtle) last:border-b-0 py-[var(--density-cell-padding-y)] px-[var(--space-12)] transition-colors duration-120 hover:bg-(--color-surface-2)",
+				"flex items-center gap-2 border-b border-(--color-border-subtle) last:border-b-0 py-[var(--density-cell-padding-y)] px-3 transition-colors duration-120 hover:bg-(--color-surface-2)",
 				onClick && "cursor-pointer",
 				className,
 			)}

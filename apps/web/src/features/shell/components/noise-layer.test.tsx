@@ -68,7 +68,7 @@ describe("NoiseLayer", () => {
 		const rightBar = container.querySelector('[data-testid="noise-right-light"]') as HTMLElement;
 
 		// Both bars should reference the brand color in their gradient
-		expect(topBar.className).toContain("brand-500");
-		expect(rightBar.className).toContain("brand-500");
+		expect(topBar.className).toContain("color-accent");
+		expect(rightBar.className).toContain("color-accent");
 	});
 });

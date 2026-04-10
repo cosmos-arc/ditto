@@ -28,13 +28,13 @@ export function NoiseLayer() {
 			{/* Top ambient light bar — brand glow from top edge */}
 			<div
 				data-testid="noise-top-light"
-				className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-brand-500/5 to-transparent"
+				className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-b from-[color-mix(in_oklch,var(--color-accent)_10%,transparent)] to-transparent"
 			/>
 
 			{/* Right ambient light bar — brand glow from right edge */}
 			<div
 				data-testid="noise-right-light"
-				className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-brand-500/5 to-transparent"
+				className="absolute inset-y-0 right-0 w-px bg-linear-to-l from-[color-mix(in_oklch,var(--color-accent)_18%,transparent)] to-transparent"
 			/>
 		</div>
 	);

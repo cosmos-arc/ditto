@@ -59,28 +59,28 @@ function Timeline({
 				<div
 					key={item.id}
 					data-slot="timeline-item"
-					className="flex gap-[var(--space-8)] py-[var(--space-8)] px-[var(--space-12)] border-b border-(--color-border-subtle) last:border-b-0"
+					className="flex gap-2 py-2 px-3 border-b border-(--color-border-subtle) last:border-b-0"
 				>
 					{/* Time + severity dot */}
-					<div className="flex items-center gap-[var(--space-4)] min-w-[50px] shrink-0">
+					<div className="flex items-center gap-1 min-w-[50px] shrink-0">
 						{item.severity && (
 							<StatusDot
 								variant={SEVERITY_DOT_MAP[item.severity]}
 								size="sm"
 							/>
 						)}
-						<span className="font-data text-(--font-size-12) text-(--color-foreground-tertiary) tabular-nums">
+						<span className="font-data text-sm text-(--color-foreground-tertiary) tabular-nums">
 							{item.time}
 						</span>
 					</div>
 
 					{/* Body */}
 					<div className="flex flex-col gap-0.5 min-w-0">
-						<span className="text-(--font-size-12) text-(--color-foreground-secondary) leading-snug">
+						<span className="text-sm text-(--color-foreground-secondary) leading-snug">
 							{item.title}
 						</span>
 						{item.description && (
-							<span className="text-(--font-size-10) text-(--color-foreground-tertiary)">
+							<span className="text-xs text-(--color-foreground-tertiary)">
 								{item.description}
 							</span>
 						)}
@@ -93,7 +93,7 @@ function Timeline({
 								variant={STATUS_DOT_MAP[item.status]}
 								size="sm"
 							/>
-							<span className="text-(--font-size-10) text-(--color-foreground-tertiary)">
+							<span className="text-xs text-(--color-foreground-tertiary)">
 								{STATUS_LABELS[item.status]}
 							</span>
 						</div>

@@ -4,7 +4,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function BannerSection() {
-	const { data, isLoading, isError, refetch } = useDecisionBanner();
+	const { data, isLoading, refetch } = useDecisionBanner();
 
 	if (isLoading) {
 		return <LoadingSkeleton variant="panel" />;
@@ -24,6 +24,7 @@ export function BannerSection() {
 						value: `¥${((data.totalEquity ?? 0) / 10000).toFixed(1)}万`,
 						sub: `${data.dailyPnl >= 0 ? "+" : ""}${data.dailyPnl}`,
 						trend: data.dailyPnl >= 0 ? "up" : "down",
+						sparkline: data.equitySparkline,
 					}}
 					judgment={{
 						text: data.suggestion,
@@ -33,8 +34,15 @@ export function BannerSection() {
 						},
 						metrics: [
 							{ label: "风控使用率", value: `${data.riskUtilization}%` },
+							{ label: "杠杆率", value: `${data.leverage}x` },
+							{ label: "最大回撤", value: `${data.maxDrawdown}%`, trend: "down" },
+							{ label: "IVIX", value: `${data.ivix}`, trend: "down" },
 						],
 					}}
+					actions={[
+						{ label: "执行调仓", variant: "primary" },
+						{ label: "查看详情", variant: "secondary" },
+					]}
 				/>
 			)}
 		</DittoErrorBoundary>

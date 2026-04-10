@@ -44,6 +44,11 @@ export type DecisionBannerResponse = {
 	readonly dailyPnl: number;
 	readonly dailyPnlPercent: number;
 	readonly riskUtilization: number;
+	readonly leverage: number;
+	readonly maxDrawdown: number;
+	readonly ivix: number;
+	readonly northboundFlow: number;
+	readonly equitySparkline: readonly number[];
 	readonly marketRegime: MarketRegime;
 	readonly regimeType: string;
 	readonly suggestion: string;

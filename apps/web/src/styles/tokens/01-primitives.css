@@ -42,6 +42,7 @@
   --spacing-1:   4px;
   --spacing-1-5: 6px;
   --spacing-2:   8px;
+  --spacing-2-5: 10px;
   --spacing-3:   12px;
   --spacing-4:   16px;
   --spacing-5:   20px;
@@ -100,12 +101,11 @@
     -apple-system,
     sans-serif;
   --font-data:
-    "Inter",
-    "Noto Sans SC Variable",
-    "Source Han Sans SC",
-    "PingFang SC",
-    system-ui,
-    sans-serif;
+    "JetBrains Mono",
+    ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
   --font-code:
     "Geist Mono",
     "JetBrains Mono",
@@ -118,4 +118,17 @@
   --line-height-compact: 1.25;
   --line-height-normal:  1.45;
   --line-height-relaxed: 1.60;
+}
+
+/* --- 兼容别名（组件旧命名 → 实际 token） --- */
+:root {
+  --space-6: var(--spacing-1-5);     /* 6px */
+  --space-8: var(--spacing-2);       /* 8px */
+  --space-10: var(--spacing-2-5);    /* 10px */
+  --space-12: var(--spacing-3);      /* 12px */
+  --space-16: var(--spacing-4);      /* 16px */
+  --font-size-10: var(--text-xs);    /* 10px */
+  --font-size-12: var(--text-sm);    /* 12px */
+  --font-size-13: var(--text-base);  /* 13px */
+  --font-size-14: var(--text-md);    /* 14px */
 }

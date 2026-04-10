@@ -19,7 +19,7 @@ function FilterChip({
 			data-active={active}
 			type="button"
 			className={cn(
-				"inline-flex items-center gap-1.5 text-(--font-size-12) py-[var(--space-2)] px-[var(--space-8)] rounded-(--radius-4) border transition-colors duration-120",
+				"inline-flex items-center gap-1.5 text-sm py-2 px-2 rounded-(--radius-4) border transition-colors duration-120",
 				active
 					? "border-(--color-brand-accent) bg-(--color-brand-accent) text-white"
 					: "border-(--color-border-subtle) bg-transparent text-(--color-foreground-secondary) hover:border-(--color-border-default) hover:bg-(--color-interaction-hover-subtle-bg)",
@@ -29,7 +29,7 @@ function FilterChip({
 		>
 			{label}
 			{count !== undefined && (
-				<span className="text-(--font-size-10) tabular-nums">
+				<span className="text-xs tabular-nums">
 					{count}
 				</span>
 			)}

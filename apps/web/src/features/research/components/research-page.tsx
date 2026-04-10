@@ -4,6 +4,7 @@ import { ResearchPulseStrip } from "./research-pulse-strip";
 import { FactorTable } from "./factor-table";
 import { RecentRuns } from "./recent-runs";
 import { ExperimentQueue } from "./experiment-queue";
+import { AnalysisBand } from "./analysis-band";
 
 export function ResearchPage() {
 	return (
@@ -46,13 +47,7 @@ export function ResearchPage() {
 			}
 			analysis={
 				<Panel>
-					<PanelHeader title="IC 趋势" />
-					<PanelBody className="flex items-center justify-center p-6">
-						<div className="text-center text-xs text-(--color-foreground-tertiary)">
-							<p>因子 IC 趋势和因子相关性分析</p>
-							<p className="mt-1">图表组件待实现</p>
-						</div>
-					</PanelBody>
+					<AnalysisBand />
 				</Panel>
 			}
 		/>

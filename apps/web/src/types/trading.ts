@@ -160,6 +160,7 @@ export type Position = {
 	readonly pnlPercent: number;
 	readonly weight: number;
 	readonly frozenQty: number;
+	readonly sparkline7d?: readonly number[];
 };
 
 export type GetPositionsResponse = {

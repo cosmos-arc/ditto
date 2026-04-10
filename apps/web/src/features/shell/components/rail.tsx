@@ -67,7 +67,7 @@ export function Rail() {
 			{/* Logo */}
 			<span
 				aria-hidden="true"
-				className="flex h-8 w-8 items-center justify-center text-[var(--text-2xl)] font-bold text-[var(--color-accent)] select-none"
+				className="flex h-8 w-8 items-center justify-center text-md font-semibold text-(--color-accent) select-none"
 			>
 				D
 			</span>
@@ -83,16 +83,16 @@ export function Rail() {
 							to={domain.path}
 							aria-label={domain.label}
 							className={[
-								"relative flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] transition-colors",
+								"relative flex h-9 w-9 items-center justify-center rounded-(--radius-md) text-(--color-foreground-tertiary) transition-colors",
 								active
-									? "bg-[var(--color-brand-50)] text-[var(--color-accent)]"
-									: "hover:bg-[var(--color-interaction-hover-subtle-bg)]",
+									? "bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)] text-(--color-accent)"
+									: "hover:bg-(--color-interaction-hover-subtle-bg)",
 							].join(" ")}
 						>
 							{active && (
 								<span
 									aria-hidden="true"
-									className="absolute left-0 top-1/2 h-5 -translate-x-2 -translate-y-1/2 w-[3px] rounded-r-sm bg-[var(--color-accent)]"
+									className="absolute left-0 top-1/2 h-5 -translate-x-2 -translate-y-1/2 w-[3px] rounded-r-sm bg-[var(--color-accent)] shadow-[0_0_6px_var(--color-accent)]"
 								/>
 							)}
 							<DomainIcon domainId={domain.id} />

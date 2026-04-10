@@ -98,6 +98,8 @@ export type Factor = {
 	readonly coverage: number;
 	readonly healthStatus: RunStatus;
 	readonly lastUpdated: string;
+	readonly sharpe?: number;
+	readonly universe?: string;
 };
 
 export type GetFactorsResponse = PaginatedResponse<Factor>;

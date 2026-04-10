@@ -39,13 +39,25 @@ const metricVariants = cva("flex", {
 /* ── Value size map ── */
 
 const VALUE_SIZE_CLASS: Record<string, string> = {
-	sm: "text-[14px]",
-	md: "text-[16px]",
-	lg: "text-[24px]",
+	sm: "text-md",
+	md: "text-lg",
+	lg: "text-3xl",
 };
 
 /** Equity variant always uses 24px value regardless of size prop. */
-const EQUITY_VALUE_CLASS = "text-[24px]";
+const EQUITY_VALUE_CLASS = "text-3xl";
+
+function valueSizeClass(variant: string | null | undefined, size: string | null | undefined): string {
+	if (variant === "equity") return EQUITY_VALUE_CLASS;
+	if (variant === "strip") return "text-sm";
+	return VALUE_SIZE_CLASS[size ?? "md"];
+}
+
+function sparklineColor(trend: TrendDirection | undefined): "up" | "down" | "neutral" {
+	if (trend === "up") return "up";
+	if (trend === "down") return "down";
+	return "neutral";
+}
 
 /* ── Props ── */
 
@@ -90,8 +102,8 @@ function Metric({
 			{/* Label */}
 			<span
 				className={cn(
-					"font-(--font-body) text-[10px] text-(--color-foreground-tertiary)",
-					variant !== "strip" && "uppercase",
+					"font-(--font-body) text-xs text-(--color-foreground-tertiary)",
+					variant !== "strip" && "uppercase tracking-wide",
 				)}
 			>
 				{label}
@@ -102,11 +114,7 @@ function Metric({
 				<span
 					className={cn(
 						"tabular-nums leading-none",
-						variant === "equity"
-							? EQUITY_VALUE_CLASS
-							: variant === "strip"
-								? "text-[12px]"
-								: VALUE_SIZE_CLASS[size ?? "md"],
+						valueSizeClass(variant, size),
 						variant === "strip" ? "font-medium" : "font-semibold",
 						"font-data",
 						valueColorClass,
@@ -117,7 +125,7 @@ function Metric({
 				{sparkline && sparkline.length > 0 && (
 					<Sparkline
 						data={sparkline}
-						color={trend === "up" ? "up" : trend === "down" ? "down" : "neutral"}
+						color={sparklineColor(trend)}
 						width={48}
 						height={20}
 					/>
@@ -130,7 +138,7 @@ function Metric({
 					{subItems.map((item) => (
 						<span
 							key={item}
-							className="text-[10px] text-(--color-foreground-tertiary) font-(--font-body) leading-none"
+							className="text-xs text-(--color-foreground-tertiary) font-(--font-body) leading-none"
 						>
 							{item}
 						</span>

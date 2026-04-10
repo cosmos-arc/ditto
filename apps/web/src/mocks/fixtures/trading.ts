@@ -57,6 +57,7 @@ export const mockPositions: readonly Position[] = [
 		pnlPercent: 7.38,
 		weight: 0.08,
 		frozenQty: 0,
+		sparkline7d: [11.0, 11.2, 11.5, 11.3, 11.8, 12.0, 12.08],
 	},
 	{
 		code: "600519.SH",
@@ -69,6 +70,7 @@ export const mockPositions: readonly Position[] = [
 		pnlPercent: 4.49,
 		weight: 0.23,
 		frozenQty: 0,
+		sparkline7d: [1700, 1720, 1690, 1740, 1730, 1750, 1755.5],
 	},
 	{
 		code: "300750.SZ",
@@ -81,6 +83,7 @@ export const mockPositions: readonly Position[] = [
 		pnlPercent: 8.1,
 		weight: 0.11,
 		frozenQty: 0,
+		sparkline7d: [190, 195, 200, 198, 205, 208, 210.8],
 	},
 	{
 		code: "000858.SZ",
@@ -93,6 +96,7 @@ export const mockPositions: readonly Position[] = [
 		pnlPercent: 4.84,
 		weight: 0.14,
 		frozenQty: 0,
+		sparkline7d: [136, 137, 139, 140, 142, 144, 145.2],
 	},
 	{
 		code: "601318.SH",
@@ -105,6 +109,7 @@ export const mockPositions: readonly Position[] = [
 		pnlPercent: 6.54,
 		weight: 0.09,
 		frozenQty: 1000,
+		sparkline7d: [41, 42, 43, 42.5, 44, 45, 45.6],
 	},
 ] as const;
 

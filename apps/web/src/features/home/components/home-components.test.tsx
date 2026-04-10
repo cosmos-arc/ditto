@@ -60,6 +60,30 @@ describe("BannerSection", () => {
 
 		await expect(screen.findByText("总权益")).resolves.toBeInTheDocument();
 	});
+
+	it("显示 CTA 操作按钮", async () => {
+		render(<BannerSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("执行调仓")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("查看详情")).resolves.toBeInTheDocument();
+	});
+
+	it("显示 4 个 KPI 指标", async () => {
+		render(<BannerSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("风控使用率")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("杠杆率")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("最大回撤")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("IVIX")).resolves.toBeInTheDocument();
+	});
+
+	it("显示权益 sparkline", async () => {
+		render(<BannerSection />, { wrapper: createWrapper() });
+
+		const banner = await screen.findByTestId("decision-banner");
+		const svg = banner.querySelector("svg");
+		expect(svg).toBeInTheDocument();
+	});
 });
 
 describe("PriorityQueueSection", () => {

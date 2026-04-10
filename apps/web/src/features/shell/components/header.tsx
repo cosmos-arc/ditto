@@ -1,13 +1,20 @@
-import { useMatches } from "@tanstack/react-router";
+import { useMatches, useRouter } from "@tanstack/react-router";
+import { ThemeSwitcher } from "./theme-switcher";
 
 /**
  * Resolves the page title from route matches.
  * Uses the last match that provides a `handle.title` property,
  * which corresponds to the most specific (deepest) route.
  */
-function resolveTitle(matches: readonly { handle?: { title?: string } }[]): string | undefined {
+function resolveTitle(matches: readonly { routeId?: string }[]): string | undefined {
+	const router = useRouter();
 	for (let i = matches.length - 1; i >= 0; i--) {
-		const title = matches[i]?.handle?.title;
+		const routeId = matches[i]?.routeId;
+		if (!routeId) continue;
+		// Access route options via router's route tree
+		const route = (router as unknown as { routesById?: Record<string, { options?: { handle?: { title?: string } } }> }).routesById?.[routeId]
+			?? (router as unknown as { routeTree?: { children?: Array<{ id?: string; options?: { handle?: { title?: string } } }> } }).routeTree?.children?.find(r => r.id === routeId);
+		const title = route?.options?.handle?.title;
 		if (title) return title;
 	}
 	return undefined;
@@ -24,13 +31,13 @@ export function ShellHeader() {
 	return (
 		<header
 			className={[
-				"flex h-[var(--height-header)] items-center border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-app)] px-[var(--spacing-4)] gap-[var(--spacing-4)]",
-				"z-5",
+				"flex h-[var(--height-header)] items-center border-b border-[var(--color-border-subtle)] bg-(--color-surface-frosted) backdrop-blur-(--blur-frosted) px-[var(--spacing-4)] gap-[var(--spacing-4)]",
+				"z-5 relative after:absolute after:bottom-0 after:inset-x-0 after:h-px after:bg-linear-to-r after:from-transparent after:via-[color-mix(in_oklch,var(--color-signature-line)_25%,transparent)] after:to-transparent",
 			].join(" ")}
 		>
 			{/* Page title */}
 			{title && (
-				<h1 className="whitespace-nowrap text-[var(--text-lg)] font-[var(--font-weight-semibold)] text-[var(--color-foreground)]">
+				<h1 className="relative whitespace-nowrap text-lg font-semibold text-(--color-foreground) after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-2/5 after:bg-linear-to-r after:from-(--color-accent) after:via-(--color-signature-fg) after:to-transparent after:rounded-[1px]">
 					{title}
 				</h1>
 			)}
@@ -96,11 +103,14 @@ export function ShellHeader() {
 					<span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--color-red-400)]" />
 				</button>
 
+				{/* Theme & Density switcher */}
+				<ThemeSwitcher />
+
 				{/* User avatar */}
 				<button
 					type="button"
 					aria-label="用户头像"
-					className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-accent)] text-xs font-[var(--font-weight-semibold)] text-[var(--color-accent-fg)]"
+					className="flex h-7 w-7 items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)] text-sm font-medium text-(--color-accent)"
 				>
 					C
 				</button>

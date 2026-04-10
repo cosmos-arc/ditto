@@ -41,10 +41,14 @@ export function HomePage() {
 				</div>
 			}
 			sidebar={
-				<div className="flex flex-col overflow-y-auto overflow-x-hidden border-l border-(--color-border-subtle)">
+				<div data-slot="sidebar-rail" className="flex flex-col overflow-y-auto overflow-x-hidden border-l border-(--color-border-subtle)">
 					<MarketPulseSection />
-					<GlobalAlertsSection />
-					<DataHealthSection />
+					<div className="border-t border-(--color-border-subtle)">
+						<GlobalAlertsSection />
+					</div>
+					<div className="border-t border-(--color-border-subtle)">
+						<DataHealthSection />
+					</div>
 				</div>
 			}
 		/>

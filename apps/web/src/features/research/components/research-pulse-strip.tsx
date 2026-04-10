@@ -8,7 +8,7 @@ export function ResearchPulseStrip() {
 
 	if (isLoading) {
 		return (
-			<div className="flex gap-3 px-4 py-2">
+			<div data-slot="session-strip" className="flex gap-3 px-4 py-2">
 				{Array.from({ length: 4 }).map((_, i) => (
 					<LoadingSkeleton key={i} variant="metric" className="flex-1" />
 				))}
@@ -18,7 +18,7 @@ export function ResearchPulseStrip() {
 
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			<div className="flex gap-3 px-4 py-2">
+			<div data-slot="session-strip" className="flex gap-3 px-4 py-2">
 				<Metric
 					variant="strip"
 					label="活跃因子"

@@ -2,6 +2,7 @@ import { usePendingActions } from "../hooks";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 const PRIORITY_BAR_COLOR: Record<string, string> = {
 	critical: "bg-(--color-risk-high-fg)",
@@ -61,45 +62,48 @@ export function PriorityQueueSection() {
 					}}
 				>
 					{data && (
-						<div className="flex flex-col">
-							{data.actions.map((action) => (
-								<div
-									key={action.id}
-									className="flex gap-0 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
-								>
-									{/* Priority bar */}
+						<ScrollReveal>
+							<div className="flex flex-col">
+								{data.actions.map((action) => (
 									<div
-										className={`w-0.5 shrink-0 ${PRIORITY_BAR_COLOR[action.priority] ?? "bg-(--color-foreground-disabled)"}`}
-									/>
+										key={action.id}
+										data-slot="queue-item"
+										className="flex gap-0 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+									>
+										{/* Priority bar */}
+										<div
+											className={`w-0.5 shrink-0 ${PRIORITY_BAR_COLOR[action.priority] ?? "bg-(--color-foreground-disabled)"}`}
+										/>
 
-									{/* Body */}
-									<div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3">
-										<div className="flex items-center gap-1.5">
-											<span className="truncate text-xs font-medium text-(--color-foreground)">
-												{action.title}
+										{/* Body */}
+										<div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3">
+											<div className="flex items-center gap-1.5">
+												<span className="truncate text-(length:--text-sm) font-medium text-(--color-foreground)">
+													{action.title}
+												</span>
+												<span className={`shrink-0 rounded-[var(--radius-sm)] px-1.5 text-[10px] ${BADGE_COLOR[action.badge.type] ?? "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)"}`}>
+													{action.badge.label}
+												</span>
+											</div>
+											<span className="text-xs text-(--color-foreground-secondary)">
+												{action.meta}
 											</span>
-											<span className={`shrink-0 rounded-[var(--radius-sm)] px-1.5 text-[10px] ${BADGE_COLOR[action.badge.type] ?? "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)"}`}>
-												{action.badge.label}
-											</span>
-										</div>
-										<span className="text-xs text-(--color-foreground-tertiary)">
-											{action.meta}
-										</span>
-										<div className="flex items-center justify-between pt-0.5">
-											<span className="text-xs tabular-nums text-(--color-foreground-muted)">
-												{action.domain} · {formatTime(action.time)}
-											</span>
-											<button
-												type="button"
-												className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-[var(--radius-sm)] px-1.5 py-0.5"
-											>
-												查看详情
-											</button>
+											<div className="flex items-center justify-between pt-0.5">
+												<span className="text-xs tabular-nums text-(--color-foreground-muted)">
+													{action.domain} · {formatTime(action.time)}
+												</span>
+												<button
+													type="button"
+													className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-[var(--radius-sm)] px-1.5 py-0.5"
+												>
+													查看详情
+												</button>
+											</div>
 										</div>
 									</div>
-								</div>
-							))}
-						</div>
+								))}
+							</div>
+						</ScrollReveal>
 					)}
 				</DittoErrorBoundary>
 			</PanelBody>

@@ -17,17 +17,10 @@
 @import "./themes/light.css";
 @import "./themes/market-intl.css";
 
-/* ══════════════════════════════════════════════
- * Base Styles
- * ══════════════════════════════════════════════ */
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* Tailwind v4 Preflight 已包含 * { box-sizing/margin/padding/border } reset
+ * ❌ 勿在此添加自定义 reset — unlayered CSS 会覆盖 @layer utilities 中的
+ *    spacing utilities (p-3, py-3, px-4, gap-4 等)
+ */
 
 html {
   height: 100%;
@@ -104,4 +97,178 @@ body {
 @keyframes dot-critical-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+/* ── Live status dot: opacity pulse (matches prototype) ── */
+@keyframes dot-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ── Entry & feedback animations ── */
+/* value-flash / conclusion-appear / tab-reveal share the same keyframes;
+   consumers pick semantic name via animation-name alias */
+@keyframes reveal-up {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Scroll reveal entrance ── */
+.reveal-up {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.reveal-up.is-visible {
+  animation: reveal-up 400ms ease-out forwards;
+}
+
+@keyframes status-breathe {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* ── Focus-visible ring system ── */
+[data-slot="panel"] button:focus-visible,
+[data-slot="rail"] button:focus-visible,
+[data-slot="header"] button:focus-visible,
+[data-slot="decision-banner"] button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1.5px var(--color-accent), 0 0 0 4px oklch(from var(--color-accent) l c h / 0.25);
+  border-radius: var(--radius-sm);
+}
+
+/* ══════════════════════════════════════════════
+ * Phase 5 — Stagger entrance
+ * ══════════════════════════════════════════════ */
+
+.reveal-up.stagger-1 { animation-delay: 60ms; }
+.reveal-up.stagger-2 { animation-delay: 120ms; }
+
+/* ── Market card hover: inset accent glow ── */
+[data-slot="market-card"] {
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+[data-slot="market-card"]:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-accent) 20%, transparent);
+}
+
+/* ── Queue item hover: negative-margin expansion ── */
+[data-slot="queue-item"] {
+  transition:
+    margin var(--duration-fast) var(--ease-out),
+    padding var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+[data-slot="queue-item"]:hover {
+  margin-left: calc(var(--spacing-1) * -1);
+  margin-right: calc(var(--spacing-1) * -1);
+  padding-left: calc(var(--spacing-3) + var(--spacing-1));
+  padding-right: calc(var(--spacing-3) + var(--spacing-1));
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 4px oklch(0 0 0 / 0.12);
+}
+
+/* ── Context section hover: subtle accent glow ── */
+[data-slot="context-section"] {
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+[data-slot="context-section"]:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-accent) 12%, transparent);
+}
+
+/* ── Context section: dual-line separator via sidebar divide ── */
+[data-slot="sidebar-rail"] > [data-slot="collapsible"] + [data-slot="collapsible"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: color-mix(in oklch, var(--color-foreground) 3%, transparent);
+  pointer-events: none;
+}
+
+/* ── Data typography: monospace + tabular alignment ── */
+.font-data {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ── Positions summary: header accent border ── */
+[data-slot="positions-summary"] thead tr {
+  border-bottom: 2px solid color-mix(in oklch, var(--color-accent) 35%, transparent);
+}
+
+/* ── Missing keyframes from prototype ── */
+@keyframes value-flash {
+  0%   { opacity: 0.85; transform: translateY(0.5px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes task-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.88; }
+}
+
+@keyframes conclusion-appear {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tab-reveal {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Active / pressed micro-feedback ── */
+[data-slot="decision-banner"] button:active {
+  transform: scale(0.97);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+[data-slot="queue-item"]:active {
+  background: var(--color-interaction-hover-strong-bg);
+}
+
+/* ── Queue item hover: negative-margin expansion (per prototype) ── */
+[data-slot="queue-item"]:hover {
+  margin-left: calc(var(--spacing-1) * -1);
+  margin-right: calc(var(--spacing-1) * -1);
+  padding-left: calc(var(--spacing-3) + var(--spacing-1));
+  padding-right: calc(var(--spacing-3) + var(--spacing-1));
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 4px oklch(0 0 0 / 0.12);
+}
+
+/* ── Pulse strip / Context bar brand glow ── */
+[data-slot="pulse-strip"],
+[data-slot="session-strip"],
+[data-slot="context-bar"] {
+  position: relative;
+  border-bottom: 1px solid color-mix(in oklch, var(--color-accent) 8%, var(--color-border-subtle));
+  box-shadow: 0 1px 4px -1px color-mix(in oklch, var(--color-accent) 6%, transparent);
+}
+
+/* ── Pulse item hover micro-feedback (per prototype) ── */
+[data-slot="pulse-strip"] > div {
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-default);
+}
+[data-slot="pulse-strip"] > div:hover {
+  background: var(--color-interaction-hover-subtle-bg);
+}
+
+/* ── Decision banner brand left border ── */
+[data-slot="decision-banner"] {
+  border-left: 2px solid color-mix(in oklch, var(--color-accent) 35%, transparent);
+}
+
+/* ── Respect reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

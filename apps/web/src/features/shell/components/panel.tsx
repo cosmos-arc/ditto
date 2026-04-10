@@ -1,4 +1,5 @@
 import type { ReactNode, HTMLAttributes } from "react";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 /* ------------------------------------------------------------------ */
 /*  Panel -- flex-col container with surface background & border      */
@@ -68,7 +69,7 @@ export function PanelHeader({ title, subtitle, count, actions }: PanelHeaderProp
 				{count !== undefined && (
 					<span
 						data-testid="panel-count"
-						className="flex h-4.5 items-center bg-(--color-surface-strip) px-(--spacing-1-5) font-(--font-data) text-xs tabular-nums text-(--color-foreground-tertiary)"
+						className="flex h-4.5 items-center bg-(--color-surface-strip) px-(--spacing-1-5) font-data text-xs tabular-nums text-(--color-foreground-tertiary)"
 					>
 						{count}
 					</span>
@@ -97,14 +98,22 @@ interface PanelBodyProps extends HTMLAttributes<HTMLDivElement> {
 
 /**
  * PanelBody -- flex-1 content region with overflow-y scroll.
+ * Applies scroll-reveal entrance animation to content.
  */
 export function PanelBody({ className, children, ...rest }: PanelBodyProps) {
+	const { ref, isVisible } = useScrollReveal();
+
 	return (
 		<div
+			ref={ref}
 			className={[
 				"flex-1 overflow-y-auto overflow-x-hidden",
+				"reveal-up",
+				isVisible && "is-visible",
 				className,
-			].join(" ")}
+			]
+				.filter(Boolean)
+				.join(" ")}
 			{...rest}
 		>
 			{children}

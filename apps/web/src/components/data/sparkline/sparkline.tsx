@@ -1,3 +1,4 @@
+import { useId, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_WIDTH = 48;
@@ -23,41 +24,67 @@ const COLOR_MAP: Record<SparklineColor, string> = {
 	neutral: "var(--color-foreground-muted)",
 };
 
-/** Convert data values to SVG polyline points string. */
+interface Point {
+	readonly x: number;
+	readonly y: number;
+}
+
+/** Normalize data to SVG coordinate points. */
 function toPoints(
 	data: readonly number[],
 	width: number,
 	height: number,
-): string {
+): Point[] {
 	const len = data.length;
-	if (len < 2) return "";
+	if (len < 2) return [];
 
 	const min = Math.min(...data);
 	const max = Math.max(...data);
 	const range = max - min || 1;
 
-	return data
-		.map((value, i) => {
-			const x = (i / (len - 1)) * width;
-			const y = (1 - (value - min) / range) * height;
-			return `${x},${y}`;
-		})
-		.join(" ");
+	return data.map((value, i) => ({
+		x: (i / (len - 1)) * width,
+		y: (1 - (value - min) / range) * height,
+	}));
 }
 
-/** Build polygon points for gradient fill: polyline points + bottom-right + bottom-left corners. */
-function toPolygonPoints(points: string, height: number): string {
-	if (!points) return "";
-	const firstX = points.slice(0, points.indexOf(","));
-	const lastX = points.slice(points.lastIndexOf(",") + 1);
-	return `${points} ${lastX},${height} ${firstX},${height}`;
+/** Convert points to SVG path using Catmull-Rom to cubic Bezier interpolation. */
+function catmullRomPath(pts: readonly Point[]): string {
+	if (pts.length < 2) return "";
+	if (pts.length === 2) {
+		return `M${pts[0].x},${pts[0].y} L${pts[1].x},${pts[1].y}`;
+	}
+
+	let d = `M${pts[0].x},${pts[0].y}`;
+
+	for (let i = 0; i < pts.length - 1; i++) {
+		const p0 = pts[Math.max(0, i - 1)];
+		const p1 = pts[i];
+		const p2 = pts[i + 1];
+		const p3 = pts[Math.min(pts.length - 1, i + 2)];
+
+		const cp1x = p1.x + (p2.x - p0.x) / 6;
+		const cp1y = p1.y + (p2.y - p0.y) / 6;
+		const cp2x = p2.x - (p3.x - p1.x) / 6;
+		const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+		d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+	}
+
+	return d;
+}
+
+/** Build area fill path from pre-computed stroke path + bottom closure. */
+function toAreaPath(strokeD: string, pts: readonly Point[], height: number): string {
+	if (!strokeD || pts.length < 2) return "";
+	return `${strokeD} L${pts[pts.length - 1].x},${height} L${pts[0].x},${height} Z`;
 }
 
 /**
  * Sparkline -- SVG mini line chart for embedding in Metric cards and grid cells.
  *
- * Renders a normalized polyline from numeric data with optional gradient fill
- * and entry animation. Color maps to semantic CSS variables for market
+ * Renders a Catmull-Rom smoothed path from numeric data with optional gradient
+ * fill and entry animation. Color maps to semantic CSS variables for market
  * up/down/neutral states.
  */
 export function Sparkline({
@@ -70,12 +97,18 @@ export function Sparkline({
 	height = DEFAULT_HEIGHT,
 	className,
 }: SparklineProps) {
+	const uid = useId();
+	const gradientId = `sparkline-grad-${uid}`;
 	const strokeColor = COLOR_MAP[color];
 	const canDraw = data.length >= 2;
 
-	const points = canDraw ? toPoints(data, width, height) : "";
-	const polygonPoints = canDraw ? toPolygonPoints(points, height) : "";
-	const gradientId = "sparkline-gradient";
+	const { strokeD, areaD } = useMemo(() => {
+		if (!canDraw) return { strokeD: "", areaD: "" };
+		const pts = toPoints(data, width, height);
+		const stroke = catmullRomPath(pts);
+		const area = gradient ? toAreaPath(stroke, pts, height) : "";
+		return { strokeD: stroke, areaD: area };
+	}, [canDraw, data, width, height, gradient]);
 
 	return (
 		<svg
@@ -97,16 +130,18 @@ export function Sparkline({
 					</linearGradient>
 				</defs>
 			)}
-			{gradient && canDraw && (
-				<polygon
-					points={polygonPoints}
+			{gradient && areaD && (
+				<path
+					data-part="area"
+					d={areaD}
 					fill={`url(#${gradientId})`}
 					stroke="none"
 				/>
 			)}
 			{canDraw && (
-				<polyline
-					points={points}
+				<path
+					data-part="stroke"
+					d={strokeD}
 					fill="none"
 					stroke={strokeColor}
 					strokeWidth={strokeWidth}

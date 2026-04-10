@@ -44,7 +44,7 @@ describe("Metric", () => {
 		// Vertical layout: flex-col
 		const label = screen.getByText("PnL");
 		expect(label.className).toContain("uppercase");
-		expect(label.className).toContain("text-[10px]");
+		expect(label.className).toContain("text-xs");
 	});
 
 	it("renders variant=standard with semibold value", () => {
@@ -62,7 +62,7 @@ describe("Metric", () => {
 
 		// Horizontal layout: flex-row
 		const label = screen.getByText("Vol");
-		expect(label.className).toContain("text-[10px]");
+		expect(label.className).toContain("text-xs");
 
 		const value = screen.getByText("1,234");
 		expect(value.className).toContain("font-medium");
@@ -76,7 +76,7 @@ describe("Metric", () => {
 		expect(root).toHaveAttribute("data-variant", "equity");
 
 		const value = screen.getByText("102,400");
-		expect(value.className).toContain("text-[24px]");
+		expect(value.className).toContain("text-3xl");
 		expect(value.className).toContain("font-semibold");
 	});
 
@@ -101,7 +101,7 @@ describe("Metric", () => {
 		expect(root).toHaveAttribute("data-size", "sm");
 
 		const value = screen.getByText("1");
-		expect(value.className).toContain("text-[14px]");
+		expect(value.className).toContain("text-md");
 	});
 
 	it("renders size=md with value at 16px", () => {
@@ -110,7 +110,7 @@ describe("Metric", () => {
 		expect(root).toHaveAttribute("data-size", "md");
 
 		const value = screen.getByText("1");
-		expect(value.className).toContain("text-[16px]");
+		expect(value.className).toContain("text-lg");
 	});
 
 	it("renders size=lg with value at 24px", () => {
@@ -119,7 +119,7 @@ describe("Metric", () => {
 		expect(root).toHaveAttribute("data-size", "lg");
 
 		const value = screen.getByText("1");
-		expect(value.className).toContain("text-[24px]");
+		expect(value.className).toContain("text-3xl");
 	});
 
 	it("defaults size to md", () => {
@@ -201,6 +201,6 @@ describe("Metric", () => {
 	it("renders sub with small font size for standard variant", () => {
 		render(<Metric label="A" value={1} sub="info" variant="standard" />);
 		const sub = screen.getByText("info");
-		expect(sub.className).toContain("text-[10px]");
+		expect(sub.className).toContain("text-xs");
 	});
 });
