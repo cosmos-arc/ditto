@@ -1,0 +1,545 @@
+{
+  "capturedAt": "2026-04-11T15:21:09.976Z",
+  "route": "/markets",
+  "resolvedRoute": "/markets",
+  "name": "markets",
+  "prototypeFile": "page-cross-market.html",
+  "urls": {
+    "react": "http://localhost:5173/markets",
+    "prototype": "http://localhost:8889/page-cross-market.html"
+  },
+  "viewport": {
+    "width": 1536,
+    "height": 900
+  },
+  "prototype": {
+    "rail": {
+      "selector": ".shell-rail",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 56,
+        "height": 900,
+        "top": 0,
+        "right": 56,
+        "bottom": 900,
+        "left": 0
+      },
+      "styles": {
+        "display": "flex",
+        "position": "sticky",
+        "width": "56px",
+        "height": "900px",
+        "padding": "8px 0px",
+        "gap": "4px",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "19.5px",
+        "borderRadius": "0px",
+        "borderWidth": "0px 1px 0px 0px",
+        "backgroundColor": "oklch(0.155 0.005 253)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "header": {
+      "selector": ".shell-header, .studio-header, .object-header",
+      "rect": {
+        "x": 56,
+        "y": 0,
+        "width": 1480,
+        "height": 68,
+        "top": 0,
+        "right": 1536,
+        "bottom": 68,
+        "left": 56
+      },
+      "styles": {
+        "display": "flex",
+        "position": "sticky",
+        "width": "1480px",
+        "height": "68px",
+        "padding": "0px 16px",
+        "gap": "16px",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "19.5px",
+        "borderRadius": "0px",
+        "borderWidth": "0px 0px 1px",
+        "backgroundColor": "oklch(0.155 0.005 253 / 0.85)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "status": {
+      "selector": ".status-bar",
+      "rect": {
+        "x": 56,
+        "y": 876,
+        "width": 1480,
+        "height": 24,
+        "top": 876,
+        "right": 1536,
+        "bottom": 900,
+        "left": 56
+      },
+      "styles": {
+        "display": "flex",
+        "position": "fixed",
+        "width": "1480px",
+        "height": "24px",
+        "padding": "0px 8px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "10px",
+        "lineHeight": "15px",
+        "borderRadius": "0px",
+        "borderWidth": "1px 0px 0px",
+        "backgroundColor": "oklch(0.155 0.005 253 / 0.9)",
+        "color": "oklch(0.49 0.006 253)"
+      }
+    },
+    "shell": {
+      "selector": ".shell-radar",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 1536,
+        "height": 900,
+        "top": 0,
+        "right": 1536,
+        "bottom": 900,
+        "left": 0
+      },
+      "styles": {
+        "display": "flex",
+        "position": "static",
+        "width": "1536px",
+        "height": "900px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "19.5px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "oklch(0.155 0.005 253)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "body": {
+      "selector": ".shell-body",
+      "rect": {
+        "x": 56,
+        "y": 0,
+        "width": 1480,
+        "height": 1676.8,
+        "top": 0,
+        "right": 1536,
+        "bottom": 1676.8,
+        "left": 56
+      },
+      "styles": {
+        "display": "flex",
+        "position": "relative",
+        "width": "1480px",
+        "height": "1676.8px",
+        "padding": "0px 0px 24px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "19.5px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "context": {
+      "selector": ".context-bar",
+      "rect": {
+        "x": 56,
+        "y": 68,
+        "width": 1480,
+        "height": 25,
+        "top": 68,
+        "right": 1536,
+        "bottom": 93,
+        "left": 56
+      },
+      "styles": {
+        "display": "flex",
+        "position": "sticky",
+        "width": "1480px",
+        "height": "25px",
+        "padding": "0px 16px",
+        "gap": "16px",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "12px",
+        "lineHeight": "18px",
+        "borderRadius": "0px",
+        "borderWidth": "0px 0px 1px",
+        "backgroundColor": "oklch(0.155 0.005 253 / 0.8)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "strip": {
+      "selector": ".scope-strip",
+      "rect": {
+        "x": 56,
+        "y": 93,
+        "width": 1480,
+        "height": 37,
+        "top": 93,
+        "right": 1536,
+        "bottom": 130,
+        "left": 56
+      },
+      "styles": {
+        "display": "flex",
+        "position": "sticky",
+        "width": "1480px",
+        "height": "37px",
+        "padding": "6px 16px",
+        "gap": "16px",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "12px",
+        "lineHeight": "18px",
+        "borderRadius": "0px",
+        "borderWidth": "0px 0px 1px",
+        "backgroundColor": "oklch(0.155 0.005 253 / 0.8)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "main": null,
+    "matrix": null
+  },
+  "react": {
+    "shell": {
+      "selector": "#root > div",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 1536,
+        "height": 900,
+        "top": 0,
+        "right": 1536,
+        "bottom": 900,
+        "left": 0
+      },
+      "styles": {
+        "display": "grid",
+        "position": "relative",
+        "width": "1536px",
+        "height": "900px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "68px 832px",
+        "gridTemplateColumns": "56px 1480px",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "rail": {
+      "selector": "nav[aria-label='主导航']",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 56,
+        "height": 900,
+        "top": 0,
+        "right": 56,
+        "bottom": 900,
+        "left": 0
+      },
+      "styles": {
+        "display": "flex",
+        "position": "static",
+        "width": "56px",
+        "height": "900px",
+        "padding": "8px 0px",
+        "gap": "4px",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px 1px 0px 0px",
+        "backgroundColor": "oklch(0.155 0.005 253)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "header": {
+      "selector": "header",
+      "rect": {
+        "x": 56,
+        "y": 0,
+        "width": 1480,
+        "height": 68,
+        "top": 0,
+        "right": 1536,
+        "bottom": 68,
+        "left": 56
+      },
+      "styles": {
+        "display": "flex",
+        "position": "relative",
+        "width": "1480px",
+        "height": "68px",
+        "padding": "0px 16px",
+        "gap": "16px",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px 0px 1px",
+        "backgroundColor": "oklch(0.155 0.005 253 / 0.8)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "content": {
+      "selector": "#root > div > div:nth-child(3)",
+      "rect": {
+        "x": 56,
+        "y": 68,
+        "width": 1480,
+        "height": 832,
+        "top": 68,
+        "right": 1536,
+        "bottom": 900,
+        "left": 56
+      },
+      "styles": {
+        "display": "block",
+        "position": "relative",
+        "width": "1480px",
+        "height": "832px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "layout": {
+      "selector": "#root > div > div:nth-child(3) > div",
+      "rect": {
+        "x": 56,
+        "y": 68,
+        "width": 1480,
+        "height": 832,
+        "top": 68,
+        "right": 1536,
+        "bottom": 900,
+        "left": 56
+      },
+      "styles": {
+        "display": "flex",
+        "position": "static",
+        "width": "1480px",
+        "height": "832px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "status": null,
+    "contextBar": {
+      "selector": "[data-slot='context-bar']",
+      "rect": {
+        "x": 56,
+        "y": 68,
+        "width": 1480,
+        "height": 32,
+        "top": 68,
+        "right": 1536,
+        "bottom": 100,
+        "left": 56
+      },
+      "styles": {
+        "display": "block",
+        "position": "relative",
+        "width": "1480px",
+        "height": "32px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px 0px 1px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "scopeStrip": {
+      "selector": "[data-slot='scope-strip']",
+      "rect": {
+        "x": 56,
+        "y": 100,
+        "width": 1480,
+        "height": 54.45,
+        "top": 100,
+        "right": 1536,
+        "bottom": 154.45,
+        "left": 56
+      },
+      "styles": {
+        "display": "block",
+        "position": "sticky",
+        "width": "1480px",
+        "height": "54.4531px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "main": {
+      "selector": "[data-slot='main']",
+      "rect": {
+        "x": 56,
+        "y": 154.45,
+        "width": 1180,
+        "height": 921.53,
+        "top": 154.45,
+        "right": 1236,
+        "bottom": 1075.98,
+        "left": 56
+      },
+      "styles": {
+        "display": "block",
+        "position": "static",
+        "width": "1180px",
+        "height": "921.531px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "rightRail": {
+      "selector": "[data-slot='right-rail']",
+      "rect": {
+        "x": 1236,
+        "y": 154.45,
+        "width": 300,
+        "height": 372.61,
+        "top": 154.45,
+        "right": 1536,
+        "bottom": 527.06,
+        "left": 1236
+      },
+      "styles": {
+        "display": "block",
+        "position": "sticky",
+        "width": "300px",
+        "height": "372.609px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px 0px 0px 1px",
+        "backgroundColor": "oklch(0.185 0.005 253)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "matrix": {
+      "selector": "[data-slot='cross-market-matrix']",
+      "rect": {
+        "x": 84,
+        "y": 906.28,
+        "width": 1124,
+        "height": 153.7,
+        "top": 906.28,
+        "right": 1208,
+        "bottom": 1059.98,
+        "left": 84
+      },
+      "styles": {
+        "display": "block",
+        "position": "static",
+        "width": "1124px",
+        "height": "153.703px",
+        "padding": "0px 0px 8px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    }
+  },
+  "warnings": {
+    "targets": [
+      "prototype target \"body\" has no matching react target",
+      "prototype target \"context\" has no matching react target",
+      "prototype target \"strip\" has no matching react target",
+      "react target \"content\" has no matching prototype target",
+      "react target \"layout\" has no matching prototype target",
+      "react target \"contextBar\" has no matching prototype target",
+      "react target \"scopeStrip\" has no matching prototype target",
+      "react target \"rightRail\" has no matching prototype target"
+    ],
+    "prototype": [
+      "Missing selector \"main\": .radar-main, .main-grid",
+      "Missing selector \"matrix\": .market-matrix, .cross-market-matrix",
+      "requestfailed stylesheet https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap: net::ERR_TIMED_OUT",
+      "console error: Failed to load resource: net::ERR_TIMED_OUT"
+    ],
+    "react": [
+      "Missing selector \"status\": [data-slot='status-bar']",
+      "requestfailed stylesheet https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap: net::ERR_TIMED_OUT",
+      "console error: Failed to load resource: net::ERR_TIMED_OUT",
+      "requestfailed stylesheet https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap: net::ERR_TIMED_OUT",
+      "console error: Failed to load resource: net::ERR_TIMED_OUT",
+      "console error: Error: <path> attribute d: Expected number, \"M0,NaN C5,NaN 20,Na…\".",
+      "console error: Error: <path> attribute d: Expected number, \"M0,NaN C5,NaN 20,Na…\".",
+      "console error: Error: <path> attribute d: Expected number, \"M0,NaN C5,NaN 20,Na…\".",
+      "console error: Error: <path> attribute d: Expected number, \"M0,NaN C5,NaN 20,Na…\".",
+      "console error: Error: <path> attribute d: Expected number, \"M0,NaN C5,NaN 20,Na…\"."
+    ]
+  }
+}

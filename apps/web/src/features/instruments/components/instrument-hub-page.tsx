@@ -10,7 +10,7 @@ export function InstrumentHubPage() {
 	const instrumentId = id ?? "";
 
 	return (
-		<Tabs defaultValue="overview">
+		<Tabs defaultValue="overview" className="h-full">
 			<ObjectHubLayout
 				meta={<InstrumentMetaStrip id={instrumentId} />}
 				tabs={

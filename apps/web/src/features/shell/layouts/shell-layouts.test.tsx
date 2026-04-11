@@ -387,7 +387,7 @@ describe("StudioLayout", () => {
 			"grid-cols-[var(--width-studio-source)_1fr_var(--width-studio-inspector)]",
 		);
 		expect(root.className).toContain(
-			"grid-rows-[auto_1fr_var(--height-status-bar)]",
+			"grid-rows-[1fr_auto]",
 		);
 	});
 

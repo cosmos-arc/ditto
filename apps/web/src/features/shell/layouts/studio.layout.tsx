@@ -22,7 +22,7 @@ export function StudioLayout({
 			className={[
 				"grid h-full w-full overflow-hidden",
 				"grid-cols-[var(--width-studio-source)_1fr_var(--width-studio-inspector)]",
-				"grid-rows-[auto_1fr_var(--height-status-bar)]",
+				"grid-rows-[1fr_auto]",
 				'[grid-template-areas:"sources_main_inspector""logs_logs_logs"]',
 			].join(" ")}
 		>
