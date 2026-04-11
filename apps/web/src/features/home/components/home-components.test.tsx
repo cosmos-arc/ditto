@@ -124,6 +124,16 @@ describe("HomePage", () => {
 		expect(primary).not.toHaveClass("max-h-[66%]");
 		expect(secondary).toBeInTheDocument();
 	});
+
+	it("不渲染为了填充几何的占位内容", async () => {
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("今日优先事项")).resolves.toBeInTheDocument();
+		expect(screen.queryByText("自定义工作区 — 即将推出")).not.toBeInTheDocument();
+		expect(
+			screen.queryByText(/拖拽配置个性化工作区布局/),
+		).not.toBeInTheDocument();
+	});
 });
 
 describe("PriorityQueueSection", () => {

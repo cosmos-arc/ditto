@@ -1,10 +1,10 @@
 # Visual Audit: home
 
 - Route: `/`
-- React URL: http://127.0.0.1:5178/
+- React URL: http://127.0.0.1:5176/
 - Prototype URL: http://127.0.0.1:8766/page-home.html
 - Viewport: 1536x900
-- Captured: 2026-04-11T07:36:59.581Z
+- Captured: 2026-04-11T07:42:23.368Z
 
 ## Target Rect Deltas
 

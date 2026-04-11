@@ -27,10 +27,7 @@ export function HomePage() {
 					<div data-slot="home-primary" className="flex min-h-0 basis-[507px] flex-none flex-col gap-3 overflow-hidden">
 						<BannerSection />
 						<PriorityQueueSection />
-						<div className="flex h-[142px] flex-none flex-col justify-center gap-1 rounded-(--radius-md) border border-dashed border-(--color-border-subtle) px-4 text-(--color-foreground-tertiary)">
-							<span className="text-xs font-medium text-(--color-foreground-secondary)">自定义工作区 — 即将推出</span>
-							<span className="text-xs">拖拽配置个性化工作区布局，按需组合持仓概览、关注列表、快捷入口等模块</span>
-						</div>
+						<div aria-hidden="true" className="h-[142px] flex-none" />
 					</div>
 
 					{/* shell-secondary: Research + Findings side by side */}

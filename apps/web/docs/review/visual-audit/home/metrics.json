@@ -1,11 +1,11 @@
 {
-  "capturedAt": "2026-04-11T07:36:59.581Z",
+  "capturedAt": "2026-04-11T07:42:23.368Z",
   "route": "/",
   "resolvedRoute": "/",
   "name": "home",
   "prototypeFile": "page-home.html",
   "urls": {
-    "react": "http://127.0.0.1:5178/",
+    "react": "http://127.0.0.1:5176/",
     "prototype": "http://127.0.0.1:8766/page-home.html"
   },
   "viewport": {
