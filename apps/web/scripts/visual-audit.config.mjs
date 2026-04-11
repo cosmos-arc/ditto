@@ -19,6 +19,8 @@ export const PROTOTYPE_NORMALIZE_CSS = `
   }
 `;
 
+/* ── React selectors using data-slot (stable across DOM changes) ── */
+
 const REACT_APP_TARGETS = {
 	shell: "#root > div",
 	rail: "nav[aria-label='主导航']",
@@ -28,53 +30,71 @@ const REACT_APP_TARGETS = {
 	status: "[data-slot='status-bar']",
 };
 
+const COMMAND_CENTER_REACT_TARGETS = {
+	...REACT_APP_TARGETS,
+	strip: "[data-slot='pulse']",
+	main: "[data-slot='main']",
+	sidebar: "[data-slot='sidebar']",
+	statusSlot: "[data-slot='status']",
+};
+
+const ANALYTICAL_REACT_TARGETS = {
+	...REACT_APP_TARGETS,
+	strip: "[data-slot='strip']",
+	banner: "[data-slot='banner']",
+	main: "[data-slot='main']",
+	activity: "[data-slot='activity']",
+	analysis: "[data-slot='analysis']",
+};
+
+const RADAR_REACT_TARGETS = {
+	...REACT_APP_TARGETS,
+	contextBar: "[data-slot='context-bar']",
+	scopeStrip: "[data-slot='scope-strip']",
+	main: "[data-slot='main']",
+	rightRail: "[data-slot='right-rail']",
+};
+
+const CATALOG_REACT_TARGETS = {
+	...REACT_APP_TARGETS,
+	toolbar: "[data-slot='toolbar']",
+	main: "[data-slot='main']",
+	detail: "[data-slot='detail']",
+	filter: "[data-slot='filter-toolbar']",
+};
+
+const OPS_REACT_TARGETS = {
+	...REACT_APP_TARGETS,
+	health: "[data-slot='health']",
+	main: "[data-slot='main']",
+	detail: "[data-slot='detail']",
+};
+
+const STUDIO_REACT_TARGETS = {
+	...REACT_APP_TARGETS,
+	source: "[data-slot='source']",
+	main: "[data-slot='main']",
+	inspector: "[data-slot='inspector']",
+	logs: "[data-slot='logs']",
+};
+
+const OBJECT_REACT_TARGETS = {
+	...REACT_APP_TARGETS,
+	meta: "[data-slot='meta']",
+	tabs: "[data-slot='tabs']",
+	main: "[data-slot='main']",
+	bottom: "[data-slot='bottom']",
+};
+
+/* ── Prototype selectors (CSS class-based from HTML files) ── */
+
 const PROTOTYPE_APP_TARGETS = {
 	rail: ".shell-rail",
 	header: ".shell-header, .studio-header, .object-header",
 	status: ".status-bar",
 };
 
-const ANALYTICAL_REACT_TARGETS = {
-	...REACT_APP_TARGETS,
-	strip: "#root > div > div:nth-child(3) > div > div:nth-child(1)",
-	main: "#root > div > div:nth-child(3) > div > div:nth-child(2)",
-	activity: "#root > div > div:nth-child(3) > div > div:nth-child(3)",
-	analysis: "#root > div > div:nth-child(3) > div > div:nth-child(4)",
-	session: "[data-slot='session-strip']",
-	scope: "[data-slot='scope-strip']",
-};
-
-const CATALOG_REACT_TARGETS = {
-	...REACT_APP_TARGETS,
-	toolbar: "#root > div > div:nth-child(3) > div > div:nth-child(1)",
-	main: "#root > div > div:nth-child(3) > div > div:nth-child(2)",
-	detail: "#root > div > div:nth-child(3) > div > div:nth-child(3)",
-	filter: "[data-slot='filter-toolbar']",
-	table: "[data-slot='data-table']",
-};
-
-const OPS_REACT_TARGETS = {
-	...REACT_APP_TARGETS,
-	health: "#root > div > div:nth-child(3) > div > div:nth-child(1)",
-	main: "#root > div > div:nth-child(3) > div > div:nth-child(2)",
-	detail: "#root > div > div:nth-child(3) > div > div:nth-child(3)",
-};
-
-const STUDIO_REACT_TARGETS = {
-	...REACT_APP_TARGETS,
-	source: "#root > div > div:nth-child(3) > div > div:nth-child(1)",
-	main: "#root > div > div:nth-child(3) > div > div:nth-child(2)",
-	inspector: "#root > div > div:nth-child(3) > div > div:nth-child(3)",
-	logs: "#root > div > div:nth-child(3) > div > div:nth-child(4)",
-};
-
-const OBJECT_REACT_TARGETS = {
-	...REACT_APP_TARGETS,
-	meta: "#root > div > div:nth-child(3) > div > div:nth-child(1)",
-	tabs: "#root > div > div:nth-child(3) > div > div:nth-child(2)",
-	main: "#root > div > div:nth-child(3) > div > div:nth-child(3)",
-	bottom: "#root > div > div:nth-child(3) > div > div:nth-child(4)",
-};
+/* ── Page configs ── */
 
 export const VISUAL_AUDIT_PAGES = [
 	{
@@ -96,9 +116,9 @@ export const VISUAL_AUDIT_PAGES = [
 			rail: "nav[aria-label='主导航']",
 			header: "header",
 			status: "[data-slot='status-bar']",
-			strip: "[data-slot='pulse-strip']",
-			main: "[data-slot='home-main']",
-			sidebar: "[data-slot='sidebar-rail']",
+			strip: "[data-slot='pulse']",
+			main: "[data-slot='main']",
+			sidebar: "[data-slot='sidebar']",
 			decision: "[data-slot='decision-banner']",
 			queue: "[data-testid='priority-queue']",
 			secondary: "[data-slot='home-secondary']",
@@ -149,13 +169,7 @@ export const VISUAL_AUDIT_PAGES = [
 			queue: ".queue-panel, .agent-queue",
 			inspector: ".ai-inspector, .inspector-panel",
 		},
-		reactTargets: {
-			...REACT_APP_TARGETS,
-			layout: "#root > div > div:nth-child(3) > div",
-			strip: "[data-slot='session-strip']",
-			main: "#root > div > div:nth-child(3) > div > div:nth-child(2)",
-			sidebar: "#root > div > div:nth-child(3) > div > div:nth-child(3)",
-		},
+		reactTargets: COMMAND_CENTER_REACT_TARGETS,
 	},
 	{
 		route: "/markets",
@@ -171,7 +185,7 @@ export const VISUAL_AUDIT_PAGES = [
 			matrix: ".market-matrix, .cross-market-matrix",
 		},
 		reactTargets: {
-			...ANALYTICAL_REACT_TARGETS,
+			...RADAR_REACT_TARGETS,
 			matrix: "[data-slot='cross-market-matrix']",
 		},
 	},
@@ -186,10 +200,7 @@ export const VISUAL_AUDIT_PAGES = [
 			main: ".main-grid, .research-main",
 			analysis: ".analysis-band",
 		},
-		reactTargets: {
-			...ANALYTICAL_REACT_TARGETS,
-			analysis: "[data-slot='analysis-band']",
-		},
+		reactTargets: ANALYTICAL_REACT_TARGETS,
 	},
 	{
 		route: "/trading/signals",

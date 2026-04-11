@@ -24,9 +24,9 @@ export function OpsConsoleLayout({
 				'[grid-template-areas:"health_health""main_detail"]',
 			].join(" ")}
 		>
-			{health && <div className="min-h-0 overflow-hidden [grid-area:health]">{health}</div>}
-			<div className="min-h-0 overflow-hidden [grid-area:main]">{main}</div>
-			{detail && <div className="min-h-0 overflow-hidden [grid-area:detail]">{detail}</div>}
+			{health && <div className="min-h-0 overflow-hidden [grid-area:health]" data-slot="health">{health}</div>}
+			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">{main}</div>
+			{detail && <div className="min-h-0 overflow-hidden [grid-area:detail]" data-slot="detail">{detail}</div>}
 		</div>
 	);
 }

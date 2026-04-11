@@ -26,12 +26,12 @@ export function StudioLayout({
 				'[grid-template-areas:"sources_main_inspector""logs_logs_logs"]',
 			].join(" ")}
 		>
-			{source && <div className="min-h-0 overflow-hidden [grid-area:sources]">{source}</div>}
-			<div className="min-h-0 overflow-hidden [grid-area:main]">{main}</div>
+			{source && <div className="min-h-0 overflow-hidden [grid-area:sources]" data-slot="source">{source}</div>}
+			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">{main}</div>
 			{inspector && (
-				<div className="min-h-0 overflow-hidden [grid-area:inspector]">{inspector}</div>
+				<div className="min-h-0 overflow-hidden [grid-area:inspector]" data-slot="inspector">{inspector}</div>
 			)}
-			{logs && <div className="min-h-0 overflow-hidden [grid-area:logs]">{logs}</div>}
+			{logs && <div className="min-h-0 overflow-hidden [grid-area:logs]" data-slot="logs">{logs}</div>}
 		</div>
 	);
 }

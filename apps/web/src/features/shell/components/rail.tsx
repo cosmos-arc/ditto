@@ -62,7 +62,7 @@ export function Rail() {
 	return (
 		<nav
 			aria-label="主导航"
-			className="flex w-[var(--width-rail)] flex-col items-center border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-app)] py-[var(--spacing-2)] gap-[var(--spacing-1)]"
+			className="flex h-full w-(--width-rail) flex-col items-center border-r border-(--color-border-subtle) bg-(--color-surface-app) py-2 gap-1"
 		>
 			{/* Logo */}
 			<span
@@ -73,7 +73,7 @@ export function Rail() {
 			</span>
 
 			{/* Domain navigation icons */}
-			<div className="flex flex-1 flex-col items-center gap-[var(--spacing-1)]">
+			<div className="flex flex-1 flex-col items-center gap-1">
 				{DOMAINS.map((domain) => {
 					const active = isDomainActive(domain.id, pathname);
 
@@ -92,7 +92,7 @@ export function Rail() {
 							{active && (
 								<span
 									aria-hidden="true"
-									className="absolute left-0 top-1/2 h-5 -translate-x-2 -translate-y-1/2 w-[3px] rounded-r-sm bg-[var(--color-accent)] shadow-[0_0_6px_var(--color-accent)]"
+									className="absolute left-0 top-1/2 h-5 w-0.75 -translate-x-2 -translate-y-1/2 rounded-r-sm bg-(--color-accent) shadow-[0_0_6px_var(--color-accent)]"
 								/>
 							)}
 							<DomainIcon domainId={domain.id} />
@@ -102,18 +102,18 @@ export function Rail() {
 			</div>
 
 			{/* Bottom actions */}
-			<div className="flex flex-col items-center gap-[var(--spacing-1)]">
+			<div className="flex flex-col items-center gap-1">
 				<button
 					type="button"
 					aria-label="设置"
-					className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] transition-colors hover:bg-[var(--color-interaction-hover-subtle-bg)]"
+					className="flex h-9 w-9 items-center justify-center rounded-(--radius-md) text-(--color-foreground-tertiary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 				>
 					<SettingsIcon />
 				</button>
 				<button
 					type="button"
 					aria-label="用户"
-					className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] transition-colors hover:bg-[var(--color-interaction-hover-subtle-bg)]"
+					className="flex h-9 w-9 items-center justify-center rounded-(--radius-md) text-(--color-foreground-tertiary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 				>
 					<UserIcon />
 				</button>

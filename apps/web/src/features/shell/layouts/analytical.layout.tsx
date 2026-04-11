@@ -36,21 +36,21 @@ export function AnalyticalLayout({
 			].join(" ")}
 		>
 			{strip && (
-				<div className="min-h-0 overflow-hidden [grid-area:strip]">
+				<div className="min-h-0 overflow-hidden [grid-area:strip]" data-slot="strip">
 					{strip}
 				</div>
 			)}
 			{banner && (
-				<div className="overflow-hidden [grid-area:banner]">{banner}</div>
+				<div className="overflow-hidden [grid-area:banner]" data-slot="banner">{banner}</div>
 			)}
-			<div className="min-h-0 overflow-hidden [grid-area:main]">{main}</div>
+			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">{main}</div>
 			{activity && (
-				<div className="min-h-0 overflow-hidden [grid-area:activity]">
+				<div className="min-h-0 overflow-hidden [grid-area:activity]" data-slot="activity">
 					{activity}
 				</div>
 			)}
 			{analysis && (
-				<div className="min-h-0 overflow-hidden [grid-area:analysis]">
+				<div className="min-h-0 overflow-hidden [grid-area:analysis]" data-slot="analysis">
 					{analysis}
 				</div>
 			)}

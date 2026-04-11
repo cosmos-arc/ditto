@@ -34,16 +34,16 @@ export function CommandCenterLayout({
 				areas,
 			].join(" ")}
 		>
-			{pulse && <div className="[grid-area:pulse]">{pulse}</div>}
-			<div className="min-h-0 overflow-hidden [grid-area:main]">
+			{pulse && <div className="[grid-area:pulse]" data-slot="pulse">{pulse}</div>}
+			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">
 				{main}
 			</div>
 			{sidebar && (
-				<div className="min-h-0 overflow-hidden [grid-area:sidebar]">
+				<div className="min-h-0 overflow-hidden [grid-area:sidebar]" data-slot="sidebar">
 					{sidebar}
 				</div>
 			)}
-			{status && <div className="[grid-area:status]">{status}</div>}
+			{status && <div className="[grid-area:status]" data-slot="status">{status}</div>}
 		</div>
 	);
 }

@@ -35,7 +35,7 @@ describe("Rail", () => {
 	it("renders the rail container with correct width class", () => {
 		const { container } = render(<Rail />);
 		const rail = container.firstChild as HTMLElement;
-		expect(rail.className).toContain("w-[var(--width-rail)]");
+		expect(rail.className).toContain("w-(--width-rail)");
 	});
 
 	it("renders the logo 'D' at the top", () => {
@@ -103,7 +103,7 @@ describe("Rail", () => {
 	it("applies background and border styles", () => {
 		const { container } = render(<Rail />);
 		const rail = container.firstChild as HTMLElement;
-		expect(rail.className).toContain("bg-[var(--color-surface-app)]");
+		expect(rail.className).toContain("bg-(--color-surface-app)");
 		expect(rail.className).toContain("border-r");
 	});
 });

@@ -26,10 +26,10 @@ export function ObjectHubLayout({
 				'[grid-template-areas:"meta""tabs""main""bottom"]',
 			].join(" ")}
 		>
-			{meta && <div className="min-h-0 overflow-hidden [grid-area:meta]">{meta}</div>}
-			{tabs && <div className="min-h-0 overflow-hidden [grid-area:tabs]">{tabs}</div>}
-			<div className="min-h-0 overflow-hidden [grid-area:main]">{main}</div>
-			{bottom && <div className="min-h-0 overflow-hidden [grid-area:bottom]">{bottom}</div>}
+			{meta && <div className="min-h-0 overflow-hidden [grid-area:meta]" data-slot="meta">{meta}</div>}
+			{tabs && <div className="min-h-0 overflow-hidden [grid-area:tabs]" data-slot="tabs">{tabs}</div>}
+			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">{main}</div>
+			{bottom && <div className="min-h-0 overflow-hidden [grid-area:bottom]" data-slot="bottom">{bottom}</div>}
 		</div>
 	);
 }
