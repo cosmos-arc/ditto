@@ -31,7 +31,7 @@ export const mockDecisionBanner: DecisionBannerResponse = {
 	equitySparkline: [156.0, 156.8, 157.2, 157.5, 157.8, 158.0],
 	marketRegime: "risk_on",
 	regimeType: "震荡偏强 — 多数板块资金净流入",
-	suggestion: "当前市场环境下建议维持多头配置，关注消费与科技板块轮动机会。风控指标正常，可适度加仓至 70% 敞口。",
+	suggestion: "波动回落，北向转暖，但局部拥挤。",
 };
 
 export const mockPendingActions: readonly PendingAction[] = [

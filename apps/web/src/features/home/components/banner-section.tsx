@@ -4,8 +4,6 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { Panel } from "@/features/shell/components/panel";
 
-const PROTOTYPE_JUDGMENT_TEXT = "波动回落，北向转暖，但局部拥挤。";
-
 export function BannerSection() {
 	const { data, isLoading, refetch } = useDecisionBanner();
 
@@ -44,7 +42,7 @@ export function BannerSection() {
 							sparkline: data.equitySparkline,
 						}}
 						judgment={{
-							text: PROTOTYPE_JUDGMENT_TEXT,
+							text: data.suggestion,
 							regime: {
 								label: data.regimeType,
 								variant: data.marketRegime === "risk_on" ? "regime-on" : "regime-off",

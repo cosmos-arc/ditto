@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { server } from "@/mocks/server";
 import { homeHandlers } from "@/mocks/handlers/home";
+import { mockDecisionBanner } from "@/mocks/fixtures/home";
 
 import { PulseSection } from "./pulse-section";
 import { BannerSection } from "./banner-section";
@@ -96,17 +97,12 @@ describe("BannerSection", () => {
 		expect(svg).toBeInTheDocument();
 	});
 
-	it("使用原型节奏的短判断文案", async () => {
+	it("渲染响应中的判断文案", async () => {
 		render(<BannerSection />, { wrapper: createWrapper() });
 
 		await expect(
-			screen.findByText("波动回落，北向转暖，但局部拥挤。"),
+			screen.findByText(mockDecisionBanner.suggestion),
 		).resolves.toBeInTheDocument();
-		expect(
-			screen.queryByText(
-				"当前市场环境下建议维持多头配置，关注消费与科技板块轮动机会。风控指标正常，可适度加仓至 70% 敞口。",
-			),
-		).not.toBeInTheDocument();
 	});
 });
 
