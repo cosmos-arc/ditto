@@ -1,12 +1,12 @@
 {
-  "capturedAt": "2026-04-11T07:19:19.783Z",
-  "route": "/",
-  "resolvedRoute": "/",
-  "name": "home",
-  "prototypeFile": "page-home.html",
+  "capturedAt": "2026-04-11T07:19:42.367Z",
+  "route": "/ai",
+  "resolvedRoute": "/ai",
+  "name": "ai",
+  "prototypeFile": "page-ai-overview.html",
   "urls": {
-    "react": "http://127.0.0.1:5176/",
-    "prototype": "http://127.0.0.1:8766/page-home.html"
+    "react": "http://127.0.0.1:5176/ai",
+    "prototype": "http://127.0.0.1:8766/page-ai-overview.html"
   },
   "viewport": {
     "width": 1536,
@@ -19,17 +19,17 @@
         "x": 0,
         "y": 0,
         "width": 56,
-        "height": 900,
+        "height": 876,
         "top": 0,
         "right": 56,
-        "bottom": 900,
+        "bottom": 876,
         "left": 0
       },
       "styles": {
         "display": "flex",
         "position": "relative",
         "width": "56px",
-        "height": "900px",
+        "height": "876px",
         "padding": "8px 0px",
         "gap": "4px",
         "gridTemplateRows": "none",
@@ -66,14 +66,42 @@
         "fontSize": "13px",
         "lineHeight": "19.5px",
         "borderRadius": "0px",
-        "borderWidth": "0px 0px 1px",
+        "borderWidth": "0px",
         "backgroundColor": "oklch(0.155 0.005 253 / 0.85)",
         "color": "oklch(0.935 0.005 253)"
       }
     },
-    "status": null,
+    "status": {
+      "selector": ".status-bar",
+      "rect": {
+        "x": 56,
+        "y": 852,
+        "width": 1480,
+        "height": 24,
+        "top": 852,
+        "right": 1536,
+        "bottom": 876,
+        "left": 56
+      },
+      "styles": {
+        "display": "flex",
+        "position": "relative",
+        "width": "1480px",
+        "height": "24px",
+        "padding": "0px 8px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "12px",
+        "lineHeight": "18px",
+        "borderRadius": "0px",
+        "borderWidth": "1px 0px 0px",
+        "backgroundColor": "oklch(0.155 0.005 253)",
+        "color": "oklch(0.61 0.01 253)"
+      }
+    },
     "shell": {
-      "selector": ".shell-home",
+      "selector": ".ai-shell",
       "rect": {
         "x": 0,
         "y": 0,
@@ -86,12 +114,12 @@
       },
       "styles": {
         "display": "grid",
-        "position": "static",
+        "position": "relative",
         "width": "1536px",
         "height": "900px",
-        "padding": "0px",
+        "padding": "0px 0px 24px",
         "gap": "normal",
-        "gridTemplateRows": "68px 32px 800px",
+        "gridTemplateRows": "68px 32px 752px 24px",
         "gridTemplateColumns": "56px 1160px 320px",
         "fontSize": "13px",
         "lineHeight": "19.5px",
@@ -102,7 +130,7 @@
       }
     },
     "strip": {
-      "selector": ".shell-pulse",
+      "selector": ".ai-pulse",
       "rect": {
         "x": 56,
         "y": 68,
@@ -131,24 +159,24 @@
       }
     },
     "main": {
-      "selector": ".shell-main",
+      "selector": ".ai-main",
       "rect": {
         "x": 56,
         "y": 100,
         "width": 1160,
-        "height": 800,
+        "height": 752,
         "top": 100,
         "right": 1216,
-        "bottom": 900,
+        "bottom": 852,
         "left": 56
       },
       "styles": {
         "display": "flex",
         "position": "relative",
         "width": "1160px",
-        "height": "800px",
+        "height": "752px",
         "padding": "16px",
-        "gap": "24px",
+        "gap": "16px",
         "gridTemplateRows": "none",
         "gridTemplateColumns": "none",
         "fontSize": "13px",
@@ -159,122 +187,8 @@
         "color": "oklch(0.935 0.005 253)"
       }
     },
-    "sidebar": {
-      "selector": ".shell-sidebar",
-      "rect": {
-        "x": 1216,
-        "y": 100,
-        "width": 320,
-        "height": 800,
-        "top": 100,
-        "right": 1536,
-        "bottom": 900,
-        "left": 1216
-      },
-      "styles": {
-        "display": "block",
-        "position": "relative",
-        "width": "320px",
-        "height": "800px",
-        "padding": "0px",
-        "gap": "normal",
-        "gridTemplateRows": "none",
-        "gridTemplateColumns": "none",
-        "fontSize": "13px",
-        "lineHeight": "19.5px",
-        "borderRadius": "0px",
-        "borderWidth": "0px 0px 0px 1px",
-        "backgroundColor": "rgba(0, 0, 0, 0)",
-        "color": "oklch(0.935 0.005 253)"
-      }
-    },
-    "decision": {
-      "selector": ".decision-banner",
-      "rect": {
-        "x": 73,
-        "y": 117,
-        "width": 1126,
-        "height": 147.39,
-        "top": 117,
-        "right": 1199,
-        "bottom": 264.39,
-        "left": 73
-      },
-      "styles": {
-        "display": "grid",
-        "position": "static",
-        "width": "1126px",
-        "height": "147.391px",
-        "padding": "12px 16px",
-        "gap": "16px",
-        "gridTemplateRows": "123.391px",
-        "gridTemplateColumns": "441.656px 353.344px 265px",
-        "fontSize": "13px",
-        "lineHeight": "19.5px",
-        "borderRadius": "0px",
-        "borderWidth": "0px 0px 0px 2px",
-        "backgroundColor": "rgba(0, 0, 0, 0)",
-        "color": "oklch(0.935 0.005 253)"
-      }
-    },
-    "queue": {
-      "selector": ".panel-grow",
-      "rect": {
-        "x": 72,
-        "y": 277.39,
-        "width": 1128,
-        "height": 191.48,
-        "top": 277.39,
-        "right": 1200,
-        "bottom": 468.88,
-        "left": 72
-      },
-      "styles": {
-        "display": "flex",
-        "position": "relative",
-        "width": "1128px",
-        "height": "191.484px",
-        "padding": "0px",
-        "gap": "normal",
-        "gridTemplateRows": "none",
-        "gridTemplateColumns": "none",
-        "fontSize": "13px",
-        "lineHeight": "19.5px",
-        "borderRadius": "8px",
-        "borderWidth": "1px",
-        "backgroundColor": "oklch(0.185 0.005 253)",
-        "color": "oklch(0.935 0.005 253)"
-      }
-    },
-    "secondary": {
-      "selector": ".shell-secondary",
-      "rect": {
-        "x": 72,
-        "y": 646.88,
-        "width": 1128,
-        "height": 237.13,
-        "top": 646.88,
-        "right": 1200,
-        "bottom": 884,
-        "left": 72
-      },
-      "styles": {
-        "display": "grid",
-        "position": "static",
-        "width": "1128px",
-        "height": "237.125px",
-        "padding": "0px",
-        "gap": "16px",
-        "gridTemplateRows": "237.125px",
-        "gridTemplateColumns": "556px 556px",
-        "fontSize": "13px",
-        "lineHeight": "19.5px",
-        "borderRadius": "0px",
-        "borderWidth": "0px",
-        "backgroundColor": "rgba(0, 0, 0, 0)",
-        "color": "oklch(0.935 0.005 253)"
-      }
-    }
+    "queue": null,
+    "inspector": null
   },
   "react": {
     "shell": {
@@ -303,151 +217,6 @@
         "borderRadius": "0px",
         "borderWidth": "0px",
         "backgroundColor": "rgba(0, 0, 0, 0)",
-        "color": "oklch(0.935 0.005 253)"
-      }
-    },
-    "layout": {
-      "selector": "#root > div > div:nth-child(3) > div",
-      "rect": {
-        "x": 56,
-        "y": 68,
-        "width": 1480,
-        "height": 832,
-        "top": 68,
-        "right": 1536,
-        "bottom": 900,
-        "left": 56
-      },
-      "styles": {
-        "display": "grid",
-        "position": "static",
-        "width": "1480px",
-        "height": "832px",
-        "padding": "0px",
-        "gap": "normal",
-        "gridTemplateRows": "28px 804px",
-        "gridTemplateColumns": "1160px 320px",
-        "fontSize": "13px",
-        "lineHeight": "18.85px",
-        "borderRadius": "0px",
-        "borderWidth": "0px",
-        "backgroundColor": "rgba(0, 0, 0, 0)",
-        "color": "oklch(0.935 0.005 253)"
-      }
-    },
-    "strip": {
-      "selector": "[data-slot='pulse-strip']",
-      "rect": {
-        "x": 56,
-        "y": 68,
-        "width": 1480,
-        "height": 28,
-        "top": 68,
-        "right": 1536,
-        "bottom": 96,
-        "left": 56
-      },
-      "styles": {
-        "display": "flex",
-        "position": "relative",
-        "width": "1480px",
-        "height": "28px",
-        "padding": "0px 16px",
-        "gap": "16px",
-        "gridTemplateRows": "none",
-        "gridTemplateColumns": "none",
-        "fontSize": "10px",
-        "lineHeight": "13.3333px",
-        "borderRadius": "0px",
-        "borderWidth": "0px 0px 1px",
-        "backgroundColor": "oklch(0.18 0.005 253)",
-        "color": "oklch(0.55 0.01 253)"
-      }
-    },
-    "sidebar": {
-      "selector": "[data-slot='sidebar-rail']",
-      "rect": {
-        "x": 1216,
-        "y": 96,
-        "width": 320,
-        "height": 441.13,
-        "top": 96,
-        "right": 1536,
-        "bottom": 537.13,
-        "left": 1216
-      },
-      "styles": {
-        "display": "flex",
-        "position": "static",
-        "width": "320px",
-        "height": "441.125px",
-        "padding": "0px",
-        "gap": "normal",
-        "gridTemplateRows": "none",
-        "gridTemplateColumns": "none",
-        "fontSize": "13px",
-        "lineHeight": "18.85px",
-        "borderRadius": "0px",
-        "borderWidth": "0px 0px 0px 1px",
-        "backgroundColor": "rgba(0, 0, 0, 0)",
-        "color": "oklch(0.935 0.005 253)"
-      }
-    },
-    "decision": {
-      "selector": "[data-slot='decision-banner']",
-      "rect": {
-        "x": 72,
-        "y": 112,
-        "width": 1128,
-        "height": 215.55,
-        "top": 112,
-        "right": 1200,
-        "bottom": 327.55,
-        "left": 72
-      },
-      "styles": {
-        "display": "grid",
-        "position": "static",
-        "width": "1128px",
-        "height": "215.547px",
-        "padding": "12px 16px",
-        "gap": "16px",
-        "gridTemplateRows": "191.547px",
-        "gridTemplateColumns": "442.5px 354px 265.5px",
-        "fontSize": "13px",
-        "lineHeight": "18.85px",
-        "borderRadius": "0px",
-        "borderWidth": "0px 0px 0px 2px",
-        "backgroundColor": "rgba(0, 0, 0, 0)",
-        "color": "oklch(0.935 0.005 253)"
-      }
-    },
-    "queue": {
-      "selector": "[data-slot='panel']",
-      "rect": {
-        "x": 72,
-        "y": 339.55,
-        "width": 1128,
-        "height": 281.97,
-        "top": 339.55,
-        "right": 1200,
-        "bottom": 621.52,
-        "left": 72
-      },
-      "styles": {
-        "display": "flex",
-        "position": "static",
-        "width": "1128px",
-        "height": "281.969px",
-        "padding": "0px",
-        "gap": "normal",
-        "gridTemplateRows": "none",
-        "gridTemplateColumns": "none",
-        "fontSize": "13px",
-        "lineHeight": "18.85px",
-        "borderRadius": "8px",
-        "borderWidth": "1px",
-        "backgroundColor": "oklch(0.185 0.005 253)",
         "color": "oklch(0.935 0.005 253)"
       }
     },
@@ -538,22 +307,167 @@
         "color": "oklch(0.935 0.005 253)"
       }
     },
-    "status": null
+    "layout": {
+      "selector": "#root > div > div:nth-child(3) > div",
+      "rect": {
+        "x": 56,
+        "y": 68,
+        "width": 1480,
+        "height": 832,
+        "top": 68,
+        "right": 1536,
+        "bottom": 900,
+        "left": 56
+      },
+      "styles": {
+        "display": "grid",
+        "position": "static",
+        "width": "1480px",
+        "height": "832px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "85.2031px 722.797px 24px",
+        "gridTemplateColumns": "1160px 320px",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "status": {
+      "selector": "[data-slot='status-bar']",
+      "rect": {
+        "x": 56,
+        "y": 876,
+        "width": 1480,
+        "height": 24,
+        "top": 876,
+        "right": 1536,
+        "bottom": 900,
+        "left": 56
+      },
+      "styles": {
+        "display": "flex",
+        "position": "static",
+        "width": "1480px",
+        "height": "24px",
+        "padding": "0px 12px",
+        "gap": "16px",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "10px",
+        "lineHeight": "13.3333px",
+        "borderRadius": "0px",
+        "borderWidth": "1px 0px 0px",
+        "backgroundColor": "oklch(0.155 0.005 253)",
+        "color": "oklch(0.55 0.01 253)"
+      }
+    },
+    "strip": {
+      "selector": "[data-slot='session-strip']",
+      "rect": {
+        "x": 56,
+        "y": 68,
+        "width": 1480,
+        "height": 85.2,
+        "top": 68,
+        "right": 1536,
+        "bottom": 153.2,
+        "left": 56
+      },
+      "styles": {
+        "display": "grid",
+        "position": "relative",
+        "width": "1480px",
+        "height": "85.2031px",
+        "padding": "16px",
+        "gap": "12px",
+        "gridTemplateRows": "52.2031px",
+        "gridTemplateColumns": "474.656px 474.672px 474.656px",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px 0px 1px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "main": {
+      "selector": "#root > div > div:nth-child(3) > div > div:nth-child(2)",
+      "rect": {
+        "x": 56,
+        "y": 153.2,
+        "width": 1160,
+        "height": 722.8,
+        "top": 153.2,
+        "right": 1216,
+        "bottom": 876,
+        "left": 56
+      },
+      "styles": {
+        "display": "block",
+        "position": "static",
+        "width": "1160px",
+        "height": "722.797px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    },
+    "sidebar": {
+      "selector": "#root > div > div:nth-child(3) > div > div:nth-child(3)",
+      "rect": {
+        "x": 56,
+        "y": 876,
+        "width": 1480,
+        "height": 24,
+        "top": 876,
+        "right": 1536,
+        "bottom": 900,
+        "left": 56
+      },
+      "styles": {
+        "display": "block",
+        "position": "static",
+        "width": "1480px",
+        "height": "24px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
+        "fontSize": "13px",
+        "lineHeight": "18.85px",
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.935 0.005 253)"
+      }
+    }
   },
   "warnings": {
     "targets": [
-      "prototype target \"main\" has no matching react target",
-      "prototype target \"secondary\" has no matching react target",
+      "prototype target \"queue\" has no matching react target",
+      "prototype target \"inspector\" has no matching react target",
+      "react target \"content\" has no matching prototype target",
       "react target \"layout\" has no matching prototype target",
-      "react target \"content\" has no matching prototype target"
+      "react target \"sidebar\" has no matching prototype target"
     ],
     "prototype": [
-      "Missing selector \"status\": .status-bar",
+      "Missing selector \"queue\": .queue-panel, .agent-queue",
+      "Missing selector \"inspector\": .ai-inspector, .inspector-panel",
       "requestfailed stylesheet https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap: net::ERR_TIMED_OUT",
       "console error: Failed to load resource: net::ERR_TIMED_OUT"
     ],
     "react": [
-      "Missing selector \"status\": [data-slot='status-bar']",
       "requestfailed stylesheet https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap: net::ERR_TIMED_OUT",
       "console error: Failed to load resource: net::ERR_TIMED_OUT",
       "requestfailed stylesheet https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap: net::ERR_TIMED_OUT",

@@ -68,7 +68,7 @@ describe("AppShell", () => {
 		const shell = container.firstChild as HTMLElement;
 		expect(shell.className).toContain("grid");
 		expect(shell.className).toContain("grid-cols-[var(--width-rail)_1fr]");
-		expect(shell.className).toContain("grid-rows-[var(--height-header)_1fr_var(--height-status-bar)]");
+		expect(shell.className).toContain("grid-rows-[var(--height-header)_1fr]");
 	});
 
 	it("has overflow-hidden to prevent scrolling on the shell", () => {
@@ -93,8 +93,10 @@ describe("AppShell", () => {
 		expect(shell.className).toContain("relative");
 	});
 
-	it("renders StatusBar at the bottom", () => {
-		render(<AppShell>content</AppShell>);
-		expect(screen.getByText("LIVE")).toBeInTheDocument();
+	it("does not reserve a global status row by default", () => {
+		const { container } = render(<AppShell>content</AppShell>);
+		const shell = container.firstElementChild;
+		expect(shell?.className).toContain("grid-rows-[var(--height-header)_1fr]");
+		expect(screen.queryByText("LIVE")).not.toBeInTheDocument();
 	});
 });
