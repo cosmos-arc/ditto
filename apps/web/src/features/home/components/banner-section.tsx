@@ -2,6 +2,9 @@ import { DecisionBanner } from "@/components/domain/decision-banner";
 import { useDecisionBanner } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { Panel } from "@/features/shell/components/panel";
+
+const PROTOTYPE_JUDGMENT_TEXT = "波动回落，北向转暖，但局部拥挤。";
 
 export function BannerSection() {
 	const { data, isLoading, refetch } = useDecisionBanner();
@@ -18,33 +21,48 @@ export function BannerSection() {
 			}}
 		>
 			{data && (
-				<DecisionBanner
-					primary={{
-						label: "总权益",
-						value: `¥${((data.totalEquity ?? 0) / 10000).toFixed(1)}万`,
-						sub: `${data.dailyPnl >= 0 ? "+" : ""}${data.dailyPnl}`,
-						trend: data.dailyPnl >= 0 ? "up" : "down",
-						sparkline: data.equitySparkline,
-					}}
-					judgment={{
-						text: data.suggestion,
-						regime: {
-							label: data.regimeType,
-							variant: data.marketRegime === "risk_on" ? "regime-on" : "regime-off",
-						},
-						metrics: [
-							{ label: "杠杆率", value: `${data.leverage}x` },
-							{ label: "回撤", value: `${data.maxDrawdown}%`, trend: "down" },
-							{ label: "IVIX", value: `${data.ivix}`, trend: "down" },
-							{ label: "北向资金", value: "+12.4 亿", trend: "up" as const },
-						],
-					}}
-					actions={[
-						{ label: "查看信号总览", variant: "primary" as const },
-						{ label: "进入研究", variant: "secondary" as const },
-						{ label: "查看风控", variant: "ghost" as const },
-					]}
-				/>
+				<Panel className="flex-none">
+					<DecisionBanner
+						className={[
+							"items-center",
+							"min-h-[147px]",
+							"[&_[data-slot=decision-judgment]]:gap-2",
+							"[&_[data-slot=decision-judgment]>div:first-child]:hidden",
+							"[&_[data-slot=decision-judgment]>p]:text-sm",
+							"[&_[data-slot=decision-judgment]>p]:leading-snug",
+							"[&_[data-slot=decision-actions]]:flex-row",
+							"[&_[data-slot=decision-actions]]:items-center",
+							"[&_[data-slot=decision-actions]>span]:mb-0",
+							"[&_[data-slot=decision-actions]>div]:flex-row",
+							"[&_[data-slot=decision-actions]>div]:items-center",
+						].join(" ")}
+						primary={{
+							label: "总权益",
+							value: `¥${((data.totalEquity ?? 0) / 10000).toFixed(1)}万`,
+							sub: `${data.dailyPnl >= 0 ? "+" : ""}${data.dailyPnl}`,
+							trend: data.dailyPnl >= 0 ? "up" : "down",
+							sparkline: data.equitySparkline,
+						}}
+						judgment={{
+							text: PROTOTYPE_JUDGMENT_TEXT,
+							regime: {
+								label: data.regimeType,
+								variant: data.marketRegime === "risk_on" ? "regime-on" : "regime-off",
+							},
+							metrics: [
+								{ label: "杠杆率", value: `${data.leverage}x` },
+								{ label: "回撤", value: `${data.maxDrawdown}%`, trend: "down" },
+								{ label: "IVIX", value: `${data.ivix}`, trend: "down" },
+								{ label: "北向资金", value: "+12.4 亿", trend: "up" as const },
+							],
+						}}
+						actions={[
+							{ label: "查看信号总览", variant: "primary" as const },
+							{ label: "进入研究", variant: "secondary" as const },
+							{ label: "查看风控", variant: "ghost" as const },
+						]}
+					/>
+				</Panel>
 			)}
 		</DittoErrorBoundary>
 	);

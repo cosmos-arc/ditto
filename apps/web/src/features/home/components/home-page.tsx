@@ -14,7 +14,7 @@ import { DataHealthSection } from "./data-health-section";
  *
  * Layout measurements from prototype (page-home.html):
  *   shell-main: flex column, padding 16px, gap 24px
- *   main-primary: flex 0 0 auto, max-height 66%, gap 12px
+ *   main-primary: measured 507px track at 1536x900, gap 12px
  *   shell-secondary: grid 1fr/1fr, flex 1
  */
 export function HomePage() {
@@ -22,15 +22,19 @@ export function HomePage() {
 		<CommandCenterLayout
 			pulse={<PulseSection />}
 			main={
-				<div className="flex h-full min-h-0 flex-col gap-6 p-(--density-panel-padding)">
+				<div data-slot="home-main" className="flex h-full min-h-0 flex-col gap-6 p-(--density-panel-padding)">
 					{/* main-primary: Decision Banner + Priority Queue */}
-					<div className="flex max-h-[66%] flex-none flex-col gap-3 overflow-hidden">
+					<div data-slot="home-primary" className="flex min-h-0 basis-[507px] flex-none flex-col gap-3 overflow-hidden">
 						<BannerSection />
 						<PriorityQueueSection />
+						<div className="flex h-[142px] flex-none flex-col justify-center gap-1 rounded-(--radius-md) border border-dashed border-(--color-border-subtle) px-4 text-(--color-foreground-tertiary)">
+							<span className="text-xs font-medium text-(--color-foreground-secondary)">自定义工作区 — 即将推出</span>
+							<span className="text-xs">拖拽配置个性化工作区布局，按需组合持仓概览、关注列表、快捷入口等模块</span>
+						</div>
 					</div>
 
 					{/* shell-secondary: Research + Findings side by side */}
-					<div className="grid min-h-0 flex-1 grid-cols-2 gap-(--density-gutter) overflow-hidden">
+					<div data-slot="home-secondary" className="grid min-h-0 flex-1 grid-cols-2 gap-(--density-gutter) overflow-hidden">
 						<ResearchProgressSection />
 						<AgentFindingsSection />
 					</div>
@@ -39,7 +43,7 @@ export function HomePage() {
 			sidebar={
 				<div
 					data-slot="sidebar-rail"
-					className="flex flex-col overflow-y-auto overflow-x-hidden border-l border-(--color-border-subtle)"
+					className="flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden border-l border-(--color-border-subtle)"
 				>
 					<MarketPulseSection />
 					<div className="border-t border-(--color-border-subtle)">

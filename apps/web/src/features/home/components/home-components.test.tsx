@@ -12,6 +12,7 @@ import { MarketPulseSection } from "./market-pulse-section";
 import { GlobalAlertsSection } from "./global-alerts-section";
 import { DataHealthSection } from "./data-health-section";
 import { ResearchProgressSection } from "./research-progress-section";
+import { HomePage } from "./home-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -52,6 +53,15 @@ describe("PulseSection", () => {
 
 		await expect(screen.findByText("+0.82%")).resolves.toBeInTheDocument();
 	});
+
+	it("使用原型 32px 脉动条高度", async () => {
+		render(<PulseSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("盈亏")).resolves.toBeInTheDocument();
+		const strip = document.querySelector("[data-slot='pulse-strip']");
+		expect(strip).toHaveClass("h-[var(--density-strip-height)]");
+		expect(strip).not.toHaveClass("h-[calc(var(--density-strip-height)-4px)]");
+	});
 });
 
 describe("BannerSection", () => {
@@ -84,6 +94,35 @@ describe("BannerSection", () => {
 		const banner = await screen.findByTestId("decision-banner");
 		const svg = banner.querySelector("svg");
 		expect(svg).toBeInTheDocument();
+	});
+
+	it("使用原型节奏的短判断文案", async () => {
+		render(<BannerSection />, { wrapper: createWrapper() });
+
+		await expect(
+			screen.findByText("波动回落，北向转暖，但局部拥挤。"),
+		).resolves.toBeInTheDocument();
+		expect(
+			screen.queryByText(
+				"当前市场环境下建议维持多头配置，关注消费与科技板块轮动机会。风控指标正常，可适度加仓至 70% 敞口。",
+			),
+		).not.toBeInTheDocument();
+	});
+});
+
+describe("HomePage", () => {
+	it("暴露 Home 主区和次级区审计目标并移除猜测高度", async () => {
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("今日优先事项")).resolves.toBeInTheDocument();
+		const main = document.querySelector("[data-slot='home-main']");
+		const primary = document.querySelector("[data-slot='home-primary']");
+		const secondary = document.querySelector("[data-slot='home-secondary']");
+
+		expect(main).toBeInTheDocument();
+		expect(primary).toBeInTheDocument();
+		expect(primary).not.toHaveClass("max-h-[66%]");
+		expect(secondary).toBeInTheDocument();
 	});
 });
 

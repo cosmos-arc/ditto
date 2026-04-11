@@ -31,7 +31,7 @@ export function PulseSection() {
 			}}
 		>
 			<ScrollReveal>
-				<div data-slot="pulse-strip" className="flex items-center gap-4 overflow-hidden bg-(--color-surface-strip) px-4 text-xs text-(--color-foreground-tertiary) h-[calc(var(--density-strip-height)-4px)]">
+				<div data-slot="pulse-strip" className="flex h-[var(--density-strip-height)] items-center gap-4 overflow-hidden bg-(--color-surface-strip) px-4 text-xs text-(--color-foreground-tertiary)">
 					{/* 1. Time + Status */}
 					<div className="flex items-center gap-1 whitespace-nowrap">
 						<span className="inline-block size-1.5 rounded-full bg-(--color-system-healthy-fg) animate-[dot-live-pulse_3s_ease-in-out_infinite]" />

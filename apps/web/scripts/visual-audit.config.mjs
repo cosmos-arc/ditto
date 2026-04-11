@@ -93,12 +93,15 @@ export const VISUAL_AUDIT_PAGES = [
 		},
 		reactTargets: {
 			shell: "#root > div",
-			layout: "#root > div > div:nth-child(3) > div",
+			rail: "nav[aria-label='主导航']",
+			header: "header",
+			status: "[data-slot='status-bar']",
 			strip: "[data-slot='pulse-strip']",
+			main: "[data-slot='home-main']",
 			sidebar: "[data-slot='sidebar-rail']",
 			decision: "[data-slot='decision-banner']",
-			queue: "[data-slot='panel']",
-			...REACT_APP_TARGETS,
+			queue: "[data-testid='priority-queue']",
+			secondary: "[data-slot='home-secondary']",
 		},
 	},
 	{
