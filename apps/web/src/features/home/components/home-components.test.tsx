@@ -133,6 +133,10 @@ describe("HomePage", () => {
 		expect(
 			screen.queryByText(/拖拽配置个性化工作区布局/),
 		).not.toBeInTheDocument();
+
+		const primary = document.querySelector("[data-slot='home-primary']");
+		expect(primary).toBeInTheDocument();
+		expect(primary?.querySelector(":scope > [aria-hidden='true']")).toBeNull();
 	});
 });
 

@@ -27,7 +27,6 @@ export function HomePage() {
 					<div data-slot="home-primary" className="flex min-h-0 basis-[507px] flex-none flex-col gap-3 overflow-hidden">
 						<BannerSection />
 						<PriorityQueueSection />
-						<div aria-hidden="true" className="h-[142px] flex-none" />
 					</div>
 
 					{/* shell-secondary: Research + Findings side by side */}

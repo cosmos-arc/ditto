@@ -4,7 +4,7 @@
 - React URL: http://127.0.0.1:5176/
 - Prototype URL: http://127.0.0.1:8766/page-home.html
 - Viewport: 1536x900
-- Captured: 2026-04-11T07:42:23.368Z
+- Captured: 2026-04-11T07:47:18.355Z
 
 ## Target Rect Deltas
 
