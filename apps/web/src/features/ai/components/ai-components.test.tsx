@@ -169,4 +169,10 @@ describe("AiPage", () => {
 			screen.findByText("Copilot 会话"),
 		).resolves.toBeInTheDocument();
 	});
+
+	it("渲染页面自有状态栏", async () => {
+		render(<AiPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("LIVE")).resolves.toBeInTheDocument();
+	});
 });

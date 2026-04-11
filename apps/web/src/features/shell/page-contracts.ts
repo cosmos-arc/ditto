@@ -101,7 +101,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		shellFamily: "command-center",
 		prototypeSource: "prototype-backed",
 		prototypeRef: "docs/designs/specs/prototypes/page-ai-overview.html",
-		requiredSlots: ["pulse", "main"],
+		requiredSlots: ["pulse", "main", "sidebar"],
 		requiredStates: [...UNIVERSAL_STATES, "no-agents", "has-pending"],
 	},
 

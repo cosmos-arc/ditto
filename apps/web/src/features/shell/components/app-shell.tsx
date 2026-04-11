@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { Rail } from "./rail";
 import { ShellHeader } from "./header";
 import { NoiseLayer } from "./noise-layer";
-import { StatusBar } from "./status-bar";
 
 interface AppShellProps {
 	children: ReactNode;
@@ -11,8 +10,8 @@ interface AppShellProps {
 /**
  * AppShell -- global layout container.
  *
- * 2-column, 3-row grid: Rail | Content.
- * Header spans full width above Content, StatusBar at bottom.
+ * 2-column, 2-row grid: Rail | Content.
+ * Header spans full width above Content.
  * NoiseLayer overlays as a decorative atmosphere.
  */
 export function AppShell({ children }: AppShellProps) {
@@ -21,10 +20,10 @@ export function AppShell({ children }: AppShellProps) {
 			className={
 				"relative grid h-screen w-screen overflow-hidden " +
 				"grid-cols-[var(--width-rail)_1fr] " +
-				"grid-rows-[var(--height-header)_1fr_var(--height-status-bar)]"
+				"grid-rows-[var(--height-header)_1fr]"
 			}
 		>
-			<div className="row-span-3">
+			<div className="row-span-2">
 				<Rail />
 			</div>
 			<div className="col-start-2">
@@ -32,9 +31,6 @@ export function AppShell({ children }: AppShellProps) {
 			</div>
 			<div className="relative col-start-2 row-start-2 min-h-0 overflow-hidden">
 				{children}
-			</div>
-			<div className="col-start-2 row-start-3">
-				<StatusBar />
 			</div>
 			<NoiseLayer />
 		</div>

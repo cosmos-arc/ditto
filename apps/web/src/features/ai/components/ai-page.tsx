@@ -1,4 +1,4 @@
-import { CommandCenterLayout } from "@/features/shell";
+import { CommandCenterLayout, StatusBar } from "@/features/shell";
 import { AiPulseStrip } from "./ai-pulse-strip";
 import { AgentQuickView } from "./agent-quick-view";
 import { CopilotQuickView } from "./copilot-quick-view";
@@ -13,6 +13,7 @@ export function AiPage() {
 					<CopilotQuickView />
 				</div>
 			}
+			status={<StatusBar />}
 		/>
 	);
 }

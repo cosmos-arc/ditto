@@ -39,11 +39,13 @@ describe("CommandCenterLayout", () => {
 				pulse={<span>Pulse</span>}
 				main={<span>Main</span>}
 				sidebar={<span>Sidebar</span>}
+				status={<span>Status</span>}
 			/>,
 		);
 		expect(screen.getByText("Pulse")).toBeInTheDocument();
 		expect(screen.getByText("Main")).toBeInTheDocument();
 		expect(screen.getByText("Sidebar")).toBeInTheDocument();
+		expect(screen.getByText("Status")).toBeInTheDocument();
 	});
 
 	it("omits optional slots when not provided", () => {
@@ -53,6 +55,7 @@ describe("CommandCenterLayout", () => {
 		expect(screen.getByText("Main")).toBeInTheDocument();
 		expect(screen.queryByText("Pulse")).not.toBeInTheDocument();
 		expect(screen.queryByText("Sidebar")).not.toBeInTheDocument();
+		expect(screen.queryByText("Status")).not.toBeInTheDocument();
 	});
 
 	it("applies grid layout classes", () => {
@@ -64,12 +67,25 @@ describe("CommandCenterLayout", () => {
 		expect(root.className).toContain("grid-rows-[auto_1fr]");
 	});
 
+	it("uses a status row only when status is provided", () => {
+		const { container } = render(
+			<CommandCenterLayout main={<span>Main</span>} status={<span>Status</span>} />,
+		);
+		const root = expectGridRoot(container);
+		expect(root.className).toContain("grid-rows-[auto_1fr_var(--height-status-bar)]");
+		expect(root.className).toContain(
+			'[grid-template-areas:"pulse_pulse""main_sidebar""status_status"]',
+		);
+		expect(screen.getByText("Status")).toBeInTheDocument();
+	});
+
 	it("assigns correct grid-area to each slot", () => {
 		const { container } = render(
 			<CommandCenterLayout
 				pulse={<span>Pulse</span>}
 				main={<span>Main</span>}
 				sidebar={<span>Sidebar</span>}
+				status={<span>Status</span>}
 			/>,
 		);
 		const children = container.querySelectorAll(":scope > div > *");
@@ -79,6 +95,7 @@ describe("CommandCenterLayout", () => {
 		expect(areas.some((c) => c.includes("[grid-area:pulse]"))).toBe(true);
 		expect(areas.some((c) => c.includes("[grid-area:main]"))).toBe(true);
 		expect(areas.some((c) => c.includes("[grid-area:sidebar]"))).toBe(true);
+		expect(areas.some((c) => c.includes("[grid-area:status]"))).toBe(true);
 	});
 });
 

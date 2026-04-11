@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { server } from "@/mocks/server";
 import { homeHandlers } from "@/mocks/handlers/home";
+import { mockDecisionBanner } from "@/mocks/fixtures/home";
 
 import { PulseSection } from "./pulse-section";
 import { BannerSection } from "./banner-section";
@@ -12,6 +13,7 @@ import { MarketPulseSection } from "./market-pulse-section";
 import { GlobalAlertsSection } from "./global-alerts-section";
 import { DataHealthSection } from "./data-health-section";
 import { ResearchProgressSection } from "./research-progress-section";
+import { HomePage } from "./home-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -52,6 +54,15 @@ describe("PulseSection", () => {
 
 		await expect(screen.findByText("+0.82%")).resolves.toBeInTheDocument();
 	});
+
+	it("使用原型 32px 脉动条高度", async () => {
+		render(<PulseSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("盈亏")).resolves.toBeInTheDocument();
+		const strip = document.querySelector("[data-slot='pulse-strip']");
+		expect(strip).toHaveClass("h-[var(--density-strip-height)]");
+		expect(strip).not.toHaveClass("h-[calc(var(--density-strip-height)-4px)]");
+	});
 });
 
 describe("BannerSection", () => {
@@ -84,6 +95,44 @@ describe("BannerSection", () => {
 		const banner = await screen.findByTestId("decision-banner");
 		const svg = banner.querySelector("svg");
 		expect(svg).toBeInTheDocument();
+	});
+
+	it("渲染响应中的判断文案", async () => {
+		render(<BannerSection />, { wrapper: createWrapper() });
+
+		await expect(
+			screen.findByText(mockDecisionBanner.suggestion),
+		).resolves.toBeInTheDocument();
+	});
+});
+
+describe("HomePage", () => {
+	it("暴露 Home 主区和次级区审计目标并移除猜测高度", async () => {
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("今日优先事项")).resolves.toBeInTheDocument();
+		const main = document.querySelector("[data-slot='home-main']");
+		const primary = document.querySelector("[data-slot='home-primary']");
+		const secondary = document.querySelector("[data-slot='home-secondary']");
+
+		expect(main).toBeInTheDocument();
+		expect(primary).toBeInTheDocument();
+		expect(primary).not.toHaveClass("max-h-[66%]");
+		expect(secondary).toBeInTheDocument();
+	});
+
+	it("不渲染为了填充几何的占位内容", async () => {
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("今日优先事项")).resolves.toBeInTheDocument();
+		expect(screen.queryByText("自定义工作区 — 即将推出")).not.toBeInTheDocument();
+		expect(
+			screen.queryByText(/拖拽配置个性化工作区布局/),
+		).not.toBeInTheDocument();
+
+		const primary = document.querySelector("[data-slot='home-primary']");
+		expect(primary).toBeInTheDocument();
+		expect(primary?.querySelector(":scope > [aria-hidden='true']")).toBeNull();
 	});
 });
 

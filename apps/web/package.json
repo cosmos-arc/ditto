@@ -13,7 +13,8 @@
     "type": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "visual:audit": "bun scripts/visual-audit.mjs"
   },
   "dependencies": {
     "@fontsource-variable/noto-sans-sc": "^5.2.10",
@@ -24,8 +25,10 @@
     "@tanstack/react-router": "^1.168.4",
     "ag-grid-community": "^35.2.1",
     "ag-grid-react": "^35.2.1",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lightweight-charts": "^5.1.0",
+    "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-error-boundary": "^6.1.1",
