@@ -4,12 +4,17 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium } from "playwright";
 import {
+	parseArgs,
+	renderReport,
+	resolvePages,
+	USAGE,
+	validateTargetKeyParity,
+} from "./visual-audit-core.mjs";
+import {
 	PROTOTYPE_NORMALIZE_CSS,
 	VISUAL_AUDIT_PAGES,
 } from "./visual-audit.config.mjs";
 
-const DEFAULT_VIEWPORT = { width: 1536, height: 900 };
-const DEFAULT_OUT_DIR = "docs/review/visual-audit";
 const STYLE_PROPS = [
 	"display",
 	"position",
@@ -27,83 +32,8 @@ const STYLE_PROPS = [
 	"color",
 ];
 
-function parseArgs(argv) {
-	const options = {
-		all: false,
-		outDir: DEFAULT_OUT_DIR,
-		viewport: DEFAULT_VIEWPORT,
-	};
-
-	for (let index = 0; index < argv.length; index += 1) {
-		const arg = argv[index];
-		if (arg === "--all") {
-			options.all = true;
-			continue;
-		}
-
-		const next = argv[index + 1];
-		if (!next) {
-			throw new Error(`Missing value for ${arg}`);
-		}
-
-		if (arg === "--route") {
-			options.route = next;
-		} else if (arg === "--react-base") {
-			options.reactBase = next;
-		} else if (arg === "--prototype-base") {
-			options.prototypeBase = next;
-		} else if (arg === "--viewport") {
-			options.viewport = parseViewport(next);
-		} else if (arg === "--out-dir") {
-			options.outDir = next;
-		} else {
-			throw new Error(`Unknown option: ${arg}`);
-		}
-		index += 1;
-	}
-
-	if (!options.reactBase) {
-		throw new Error("Missing required --react-base");
-	}
-	if (!options.prototypeBase) {
-		throw new Error("Missing required --prototype-base");
-	}
-	if (options.all === Boolean(options.route)) {
-		throw new Error("Pass exactly one of --route <route> or --all");
-	}
-
-	return options;
-}
-
-function parseViewport(value) {
-	const match = value.match(/^(\d+)x(\d+)$/);
-	if (!match) {
-		throw new Error(`Invalid --viewport "${value}". Expected WIDTHxHEIGHT.`);
-	}
-
-	return {
-		width: Number.parseInt(match[1], 10),
-		height: Number.parseInt(match[2], 10),
-	};
-}
-
 function trimTrailingSlash(value) {
 	return value.replace(/\/+$/, "");
-}
-
-function resolvePages(options) {
-	if (options.all) {
-		return VISUAL_AUDIT_PAGES;
-	}
-
-	const page = VISUAL_AUDIT_PAGES.find(
-		(item) => item.route === options.route || item.resolvedRoute === options.route,
-	);
-	if (!page) {
-		const knownRoutes = VISUAL_AUDIT_PAGES.map((item) => item.route).join(", ");
-		throw new Error(`Unknown route "${options.route}". Known routes: ${knownRoutes}`);
-	}
-	return [page];
 }
 
 function buildUrls(config, options) {
@@ -114,6 +44,42 @@ function buildUrls(config, options) {
 	return {
 		react: `${reactBase}${reactPath}`,
 		prototype: `${prototypeBase}/${config.prototype}`,
+	};
+}
+
+function createPageIssueCollector(page) {
+	const issues = [];
+
+	page.on("requestfailed", (request) => {
+		const failure = request.failure();
+		issues.push(
+			`requestfailed ${request.resourceType()} ${request.url()}: ${failure?.errorText ?? "unknown failure"}`,
+		);
+	});
+	page.on("response", (response) => {
+		const request = response.request();
+		if (request.resourceType() === "document" || response.ok()) {
+			return;
+		}
+		issues.push(
+			`response ${response.status()} ${request.resourceType()} ${response.url()}`,
+		);
+	});
+	page.on("pageerror", (error) => {
+		issues.push(`pageerror: ${error.message}`);
+	});
+	page.on("console", (message) => {
+		if (message.type() !== "error") {
+			return;
+		}
+		const text = message.text().trim();
+		if (text) {
+			issues.push(`console error: ${text}`);
+		}
+	});
+
+	return {
+		issues,
 	};
 }
 
@@ -176,6 +142,9 @@ async function auditPage(browser, config, options) {
 
 	const prototypePage = await browser.newPage({ viewport: options.viewport });
 	const reactPage = await browser.newPage({ viewport: options.viewport });
+	const prototypeIssues = createPageIssueCollector(prototypePage);
+	const reactIssues = createPageIssueCollector(reactPage);
+	const targetWarnings = validateTargetKeyParity(config);
 
 	try {
 		await openPage(prototypePage, urls.prototype);
@@ -210,8 +179,9 @@ async function auditPage(browser, config, options) {
 			prototype: prototype.metrics,
 			react: react.metrics,
 			warnings: {
-				prototype: prototype.warnings,
-				react: react.warnings,
+				targets: targetWarnings,
+				prototype: [...prototype.warnings, ...prototypeIssues.issues],
+				react: [...react.warnings, ...reactIssues.issues],
 			},
 		};
 
@@ -230,7 +200,10 @@ async function auditPage(browser, config, options) {
 			name: config.name,
 			route: config.route,
 			outDir: routeOutDir,
-			warnings: prototype.warnings.length + react.warnings.length,
+			warnings:
+				metrics.warnings.targets.length +
+				metrics.warnings.prototype.length +
+				metrics.warnings.react.length,
 		};
 	} finally {
 		await prototypePage.close();
@@ -238,86 +211,13 @@ async function auditPage(browser, config, options) {
 	}
 }
 
-function renderReport(metrics) {
-	const names = [
-		...new Set([
-			...Object.keys(metrics.prototype),
-			...Object.keys(metrics.react),
-		]),
-	];
-	const lines = [
-		`# Visual Audit: ${metrics.name}`,
-		"",
-		`- Route: \`${metrics.route}\``,
-		`- React URL: ${metrics.urls.react}`,
-		`- Prototype URL: ${metrics.urls.prototype}`,
-		`- Viewport: ${metrics.viewport.width}x${metrics.viewport.height}`,
-		`- Captured: ${metrics.capturedAt}`,
-		"",
-		"## Target Rect Deltas",
-		"",
-		"| Target | Prototype | React | Δx | Δy | Δw | Δh |",
-		"| --- | --- | --- | ---: | ---: | ---: | ---: |",
-	];
-
-	for (const name of names) {
-		const prototype = metrics.prototype[name];
-		const react = metrics.react[name];
-		const delta = buildRectDelta(prototype?.rect, react?.rect);
-		lines.push(
-			[
-				`| ${name}`,
-				formatRect(prototype?.rect),
-				formatRect(react?.rect),
-				delta ? formatNumber(delta.x) : "n/a",
-				delta ? formatNumber(delta.y) : "n/a",
-				delta ? formatNumber(delta.width) : "n/a",
-				delta ? formatNumber(delta.height) : "n/a",
-			].join(" | ") + " |",
-		);
-	}
-
-	const warnings = [
-		...metrics.warnings.prototype.map((warning) => `prototype: ${warning}`),
-		...metrics.warnings.react.map((warning) => `react: ${warning}`),
-	];
-
-	lines.push("", "## Warnings", "");
-	if (warnings.length === 0) {
-		lines.push("No missing target selectors.");
-	} else {
-		for (const warning of warnings) {
-			lines.push(`- ${warning}`);
-		}
-	}
-
-	lines.push("");
-	return `${lines.join("\n")}`;
-}
-
-function buildRectDelta(prototype, react) {
-	if (!prototype || !react) return null;
-
-	return {
-		x: react.x - prototype.x,
-		y: react.y - prototype.y,
-		width: react.width - prototype.width,
-		height: react.height - prototype.height,
-	};
-}
-
-function formatRect(rect) {
-	if (!rect) return "missing";
-	return `${formatNumber(rect.x)}, ${formatNumber(rect.y)}, ${formatNumber(rect.width)}x${formatNumber(rect.height)}`;
-}
-
-function formatNumber(value) {
-	return Number.isInteger(value) ? `${value}` : value.toFixed(2);
-}
-
 async function main() {
 	const options = parseArgs(process.argv.slice(2));
-	const pages = resolvePages(options);
+	if (options.help) {
+		console.log(USAGE);
+		return;
+	}
+	const pages = resolvePages(options, VISUAL_AUDIT_PAGES);
 	const browser = await chromium.launch();
 
 	try {

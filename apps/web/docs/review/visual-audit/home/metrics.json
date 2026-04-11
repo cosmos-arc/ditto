@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-04-11T02:24:26.983Z",
+  "capturedAt": "2026-04-11T02:40:18.806Z",
   "route": "/",
   "resolvedRoute": "/",
   "name": "home",
@@ -569,9 +569,22 @@
     }
   },
   "warnings": {
-    "prototype": [
-      "Missing selector \"status\": .status-bar"
+    "targets": [
+      "prototype target \"main\" has no matching react target",
+      "prototype target \"secondary\" has no matching react target",
+      "react target \"layout\" has no matching prototype target",
+      "react target \"content\" has no matching prototype target"
     ],
-    "react": []
+    "prototype": [
+      "Missing selector \"status\": .status-bar",
+      "requestfailed stylesheet https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap: net::ERR_TIMED_OUT",
+      "console error: Failed to load resource: net::ERR_TIMED_OUT"
+    ],
+    "react": [
+      "requestfailed stylesheet https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap: net::ERR_TIMED_OUT",
+      "console error: Failed to load resource: net::ERR_TIMED_OUT",
+      "requestfailed stylesheet https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap: net::ERR_TIMED_OUT",
+      "console error: Failed to load resource: net::ERR_TIMED_OUT"
+    ]
   }
 }

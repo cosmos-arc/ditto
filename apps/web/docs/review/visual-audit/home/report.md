@@ -4,7 +4,7 @@
 - React URL: http://127.0.0.1:5176/
 - Prototype URL: http://127.0.0.1:8766/page-home.html
 - Viewport: 1536x900
-- Captured: 2026-04-11T02:24:26.983Z
+- Captured: 2026-04-11T02:40:18.806Z
 
 ## Target Rect Deltas
 
@@ -25,4 +25,14 @@
 
 ## Warnings
 
+- targets: prototype target "main" has no matching react target
+- targets: prototype target "secondary" has no matching react target
+- targets: react target "layout" has no matching prototype target
+- targets: react target "content" has no matching prototype target
 - prototype: Missing selector "status": .status-bar
+- prototype: requestfailed stylesheet https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap: net::ERR_TIMED_OUT
+- prototype: console error: Failed to load resource: net::ERR_TIMED_OUT
+- react: requestfailed stylesheet https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap: net::ERR_TIMED_OUT
+- react: console error: Failed to load resource: net::ERR_TIMED_OUT
+- react: requestfailed stylesheet https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap: net::ERR_TIMED_OUT
+- react: console error: Failed to load resource: net::ERR_TIMED_OUT
