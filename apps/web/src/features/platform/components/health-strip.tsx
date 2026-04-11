@@ -8,7 +8,7 @@ export function HealthStrip() {
 
 	if (isLoading) {
 		return (
-			<div className="flex gap-3 px-4 py-2">
+			<div className="flex h-9 items-center gap-3 px-4 py-1.5">
 				{Array.from({ length: 4 }).map((_, i) => (
 					<LoadingSkeleton key={i} variant="metric" className="flex-1" />
 				))}
@@ -23,7 +23,7 @@ export function HealthStrip() {
 				onRetry: () => void refetch(),
 			}}
 		>
-			<div className="flex gap-3 px-4 py-2">
+			<div className="flex h-9 items-center gap-3 px-4 py-1.5">
 				<Metric
 					variant="strip"
 					label="数据新鲜度"

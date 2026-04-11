@@ -1,4 +1,5 @@
 import { AnalyticalLayout } from "@/features/shell";
+import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { RegimeCurrentView } from "./regime-current-view";
 import { RegimeHistoryList } from "./regime-history-list";
 import { RegimeStrategyImpact } from "./regime-strategy-impact";
@@ -7,13 +8,18 @@ export function RegimePage() {
 	return (
 		<AnalyticalLayout
 			main={
-				<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)] overflow-y-auto h-full">
+				<div className="flex h-full flex-col gap-(--section-gap) overflow-y-auto p-(--density-panel-padding)">
 					<RegimeCurrentView />
-					<div className="grid grid-cols-2 gap-[var(--density-gutter)]">
-						<RegimeHistoryList />
-						<RegimeStrategyImpact />
-					</div>
+					<RegimeHistoryList />
 				</div>
+			}
+			activity={
+				<Panel>
+					<PanelHeader title="策略影响" />
+					<PanelBody className="p-3">
+						<RegimeStrategyImpact />
+					</PanelBody>
+				</Panel>
 			}
 		/>
 	);

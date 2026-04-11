@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { server } from "@/mocks/server";
@@ -8,6 +9,8 @@ import { aiHandlers } from "@/mocks/handlers/ai";
 import { AiPulseStrip } from "./ai-pulse-strip";
 import { AgentQuickView } from "./agent-quick-view";
 import { CopilotQuickView } from "./copilot-quick-view";
+import { AiContextSidebar } from "./ai-context-sidebar";
+import { AiMainContent } from "./ai-main-content";
 import { AiPage } from "./ai-page";
 
 function createQueryClient(): QueryClient {
@@ -36,24 +39,33 @@ beforeEach(() => {
 // ── AiPulseStrip ──────────────────────────────────────────────
 
 describe("AiPulseStrip", () => {
-	it("渲染 3 个脉动指标卡片", async () => {
+	it("renders as 32px pulse-strip slot", async () => {
 		render(<AiPulseStrip />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("运行中计划")).resolves.toBeInTheDocument();
+		const strip = await screen.findByTestId("pulse-strip");
+		expect(strip).toHaveAttribute("data-slot", "pulse-strip");
+	});
+
+	it("shows inline ticker metrics", async () => {
+		render(<AiPulseStrip />, { wrapper: createWrapper() });
+
 		await expect(
-			screen.findByText("待审批"),
+			screen.findByText(/3 个运行中计划/),
 		).resolves.toBeInTheDocument();
 		await expect(
-			screen.findByText("Copilot 会话"),
+			screen.findByText(/2 项待审批/),
+		).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText(/5 个 Copilot 会话/),
 		).resolves.toBeInTheDocument();
 	});
 
-	it("显示脉动数值", async () => {
+	it("renders action link", async () => {
 		render(<AiPulseStrip />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("3")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("2")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("5")).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText("查看全部"),
+		).resolves.toBeInTheDocument();
 	});
 });
 
@@ -147,22 +159,147 @@ describe("CopilotQuickView", () => {
 	});
 });
 
+// ── AiContextSidebar ──────────────────────────────────────────
+
+describe("AiContextSidebar", () => {
+	it("renders sidebar-rail slot", () => {
+		render(<AiContextSidebar />);
+
+		expect(screen.getByTestId("sidebar-rail")).toHaveAttribute(
+			"data-slot",
+			"sidebar-rail",
+		);
+	});
+
+	it("renders all 6 context sections", () => {
+		render(<AiContextSidebar />);
+
+		expect(screen.getByText("AI 状态概览")).toBeInTheDocument();
+		expect(screen.getByText("置信度分布")).toBeInTheDocument();
+		expect(screen.getByText("AI 预警")).toBeInTheDocument();
+		expect(screen.getByText("资源用量")).toBeInTheDocument();
+		expect(screen.getByText("活动轨迹")).toBeInTheDocument();
+		expect(screen.getByText("快捷导航")).toBeInTheDocument();
+	});
+
+	it("shows status overview metrics", () => {
+		render(<AiContextSidebar />);
+
+		expect(screen.getByText("Agent Plans 今日")).toBeInTheDocument();
+		expect(screen.getByText("Copilot 本周对话")).toBeInTheDocument();
+		expect(screen.getByText("待审批")).toBeInTheDocument();
+	});
+
+	it("shows AI alerts with severity", () => {
+		render(<AiContextSidebar />);
+
+		expect(
+			screen.getByText("情绪 Alpha v2 IC 持续衰减"),
+		).toBeInTheDocument();
+		expect(
+			screen.getByText("Tushare API 接近频率上限"),
+		).toBeInTheDocument();
+	});
+
+	it("shows resource usage metrics", () => {
+		render(<AiContextSidebar />);
+
+		expect(screen.getByText("API 调用")).toBeInTheDocument();
+		expect(screen.getByText("GPU 使用")).toBeInTheDocument();
+	});
+
+	it("shows activity timeline entries", () => {
+		render(<AiContextSidebar />);
+
+		expect(
+			screen.getByText("行业轮动扫描 — Q1 季报因子验证"),
+		).toBeInTheDocument();
+		expect(screen.getByText("价值因子 Q1 回测完成")).toBeInTheDocument();
+	});
+
+	it("shows quick navigation links", () => {
+		render(<AiContextSidebar />);
+
+		expect(screen.getByText(/Agent 管理中心/)).toBeInTheDocument();
+		expect(screen.getByText(/Copilot 对话/)).toBeInTheDocument();
+	});
+});
+
+// ── AiMainContent ─────────────────────────────────────────────
+
+describe("AiMainContent", () => {
+	it("renders tab navigation with 4 tabs", () => {
+		render(<AiMainContent />, { wrapper: createWrapper() });
+
+		expect(screen.getByRole("tab", { name: "Overview" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Agents" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Copilot" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Settings" })).toBeInTheDocument();
+	});
+
+	it("shows Overview tab as active by default", () => {
+		render(<AiMainContent />, { wrapper: createWrapper() });
+
+		const overviewTab = screen.getByRole("tab", { name: "Overview" });
+		expect(overviewTab).toHaveAttribute("aria-selected", "true");
+	});
+
+	it("shows Agent and Copilot quick views on Overview tab", async () => {
+		render(<AiMainContent />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("Agent 计划")).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText("Copilot 会话"),
+		).resolves.toBeInTheDocument();
+	});
+
+	it("renders actions bar with 4 actions", () => {
+		render(<AiMainContent />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("新建计划")).toBeInTheDocument();
+		expect(screen.getByText("审批队列")).toBeInTheDocument();
+		expect(screen.getByText("开始会话")).toBeInTheDocument();
+	});
+
+	it("switches to Agents tab on click", async () => {
+		const user = userEvent.setup();
+		render(<AiMainContent />, { wrapper: createWrapper() });
+
+		const agentsTab = screen.getByRole("tab", { name: "Agents" });
+		await user.click(agentsTab);
+
+		expect(agentsTab).toHaveAttribute("aria-selected", "true");
+	});
+
+	it("switches to Copilot tab on click", async () => {
+		const user = userEvent.setup();
+		render(<AiMainContent />, { wrapper: createWrapper() });
+
+		const copilotTab = screen.getByRole("tab", { name: "Copilot" });
+		await user.click(copilotTab);
+
+		expect(copilotTab).toHaveAttribute("aria-selected", "true");
+	});
+});
+
 // ── AiPage ────────────────────────────────────────────────────
 
 describe("AiPage", () => {
-	it("渲染脉动指标区域", async () => {
+	it("renders pulse strip ticker", async () => {
 		render(<AiPage />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("运行中计划")).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText(/个运行中计划/),
+		).resolves.toBeInTheDocument();
 	});
 
-	it("渲染 Agent 快览区域", async () => {
+	it("renders Agent quick view", async () => {
 		render(<AiPage />, { wrapper: createWrapper() });
 
 		await expect(screen.findByText("Agent 计划")).resolves.toBeInTheDocument();
 	});
 
-	it("渲染 Copilot 快览区域", async () => {
+	it("renders Copilot quick view", async () => {
 		render(<AiPage />, { wrapper: createWrapper() });
 
 		await expect(
@@ -170,7 +307,7 @@ describe("AiPage", () => {
 		).resolves.toBeInTheDocument();
 	});
 
-	it("渲染页面自有状态栏", async () => {
+	it("renders page-owned status bar", async () => {
 		render(<AiPage />, { wrapper: createWrapper() });
 
 		await expect(screen.findByText("LIVE")).resolves.toBeInTheDocument();

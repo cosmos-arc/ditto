@@ -1,16 +1,30 @@
-import { Metric } from "@/components/data/metric";
 import { useAiPulse } from "../hooks";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+
+function Separator() {
+	return (
+		<span
+			className="h-3 w-px bg-(--color-border-subtle)"
+			aria-hidden="true"
+		/>
+	);
+}
 
 export function AiPulseStrip() {
 	const { data, isLoading, isError, refetch } = useAiPulse();
 
 	if (isLoading) {
 		return (
-			<div data-slot="session-strip" className="grid grid-cols-3 gap-3 p-4">
+			<div
+				data-slot="pulse-strip"
+				data-testid="pulse-strip"
+				className="flex items-center h-8 px-4 gap-4 bg-(--color-surface-strip) border-b border-(--color-border-subtle)"
+			>
 				{Array.from({ length: 3 }).map((_, i) => (
-					<LoadingSkeleton key={i} variant="metric" />
+					<div
+						key={i}
+						className="h-3 w-24 animate-pulse rounded bg-(--color-surface-2)"
+					/>
 				))}
 			</div>
 		);
@@ -23,22 +37,30 @@ export function AiPulseStrip() {
 				onRetry: () => void refetch(),
 			}}
 		>
-			<div data-slot="session-strip" className="grid grid-cols-3 gap-3 p-4">
-				<Metric
-					label="运行中计划"
-					value={data?.runningPlans ?? "—"}
-					sub="活跃执行"
-				/>
-				<Metric
-					label="待审批"
-					value={data?.pendingApprovals ?? "—"}
-					sub="等待确认"
-				/>
-				<Metric
-					label="Copilot 会话"
-					value={data?.activeCopilotSessions ?? "—"}
-					sub="进行中对话"
-				/>
+			<div
+				data-slot="pulse-strip"
+				data-testid="pulse-strip"
+				className="flex items-center h-8 px-4 gap-4 bg-(--color-surface-strip) border-b border-(--color-border-subtle)"
+			>
+				<span className="flex items-center gap-1.5 text-xs text-(--color-foreground-secondary)">
+					<span className="size-1.5 rounded-full bg-(--color-accent) animate-pulse" />
+					{data?.runningPlans ?? "—"} 个运行中计划
+				</span>
+				<Separator />
+				<span className="text-xs text-(--color-foreground-secondary)">
+					{data?.pendingApprovals ?? "—"} 项待审批
+				</span>
+				<Separator />
+				<span className="text-xs text-(--color-foreground-secondary)">
+					{data?.activeCopilotSessions ?? "—"} 个 Copilot 会话
+				</span>
+				<div className="flex-1" />
+				<a
+					href="/ai/agents"
+					className="text-xs text-(--color-accent) hover:underline"
+				>
+					查看全部
+				</a>
 			</div>
 		</DittoErrorBoundary>
 	);

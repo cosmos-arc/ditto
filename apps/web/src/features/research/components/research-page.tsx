@@ -11,12 +11,12 @@ export function ResearchPage() {
 		<AnalyticalLayout
 			strip={<ResearchPulseStrip />}
 			main={
-				<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
+				<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
 					<FactorTable />
 				</div>
 			}
 			activity={
-				<div className="flex flex-col gap-[var(--density-gutter)]">
+				<div className="flex flex-col gap-(--density-gutter)">
 					<Panel className="flex-1">
 						<PanelHeader
 							title="最近运行"

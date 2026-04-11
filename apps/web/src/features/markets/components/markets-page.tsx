@@ -1,4 +1,4 @@
-import { AnalyticalLayout } from "@/features/shell";
+import { RadarLayout } from "@/features/shell";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { useMarketContext } from "../hooks";
 import { MarketCardGrid } from "./market-card-grid";
@@ -8,6 +8,8 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { ContextBar, ContextBarItem, ContextBarSep } from "@/components/indicator/context-bar";
 import { ContextSection } from "@/components/domain/context-section";
+
+/* ── Context Bar ── */
 
 function MarketContextBar() {
 	const { data, isLoading, isError, refetch } = useMarketContext();
@@ -32,6 +34,8 @@ function MarketContextBar() {
 		</DittoErrorBoundary>
 	);
 }
+
+/* ── Mock Data ── */
 
 const MOCK_EVENTS = [
 	{ text: "科技板块资金净流入 +12.3 亿", time: "5分钟前", severity: "up" as const },
@@ -66,6 +70,8 @@ function correlationCellClass(value: number): string {
 	return "bg-(--color-surface-1) text-(--color-foreground-muted) muted";
 }
 
+/* ── Scope Strip (extracted to own slot) ── */
+
 function ScopeStrip() {
 	return (
 		<div
@@ -82,6 +88,8 @@ function ScopeStrip() {
 		</div>
 	);
 }
+
+/* ── Cross-Market Matrix ── */
 
 function CrossMarketMatrix() {
 	return (
@@ -126,75 +134,83 @@ function CrossMarketMatrix() {
 	);
 }
 
+/* ── Right Rail ── */
+
+function MarketRightRail() {
+	return (
+		<div className="flex flex-col">
+			<Panel>
+				<PanelHeader
+					title="市场事件"
+					actions={
+						<button type="button" className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-(--radius-sm) px-1.5 py-0.5">
+							查看全部 →
+						</button>
+					}
+				/>
+				<PanelBody className="p-3">
+					<div className="flex flex-col gap-1">
+						{MOCK_EVENTS.map((event, i) => (
+							<div
+								key={i}
+								className="flex items-center justify-between rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+							>
+								<span
+									className={`inline-block size-1.5 shrink-0 rounded-full ${event.severity === "up" ? "bg-(--color-market-up-fg)" : event.severity === "down" ? "bg-(--color-market-down-fg)" : "bg-(--color-foreground-muted)"}`}
+								/>
+								<span className="min-w-0 flex-1 truncate text-xs text-(--color-foreground)">
+									{event.text}
+								</span>
+								<span className="shrink-0 font-data text-xs tabular-nums text-(--color-foreground-muted)">
+									{event.time}
+								</span>
+							</div>
+						))}
+					</div>
+				</PanelBody>
+			</Panel>
+			<Panel>
+				<PanelHeader title="资金流向" />
+				<PanelBody className="p-3">
+					<div className="flex flex-col gap-1">
+						{MOCK_FLOWS.map((item) => (
+							<div
+								key={item.sector}
+								className="flex items-center justify-between rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+							>
+								<span className="text-xs text-(--color-foreground-secondary)">
+									{item.sector}
+								</span>
+								<span
+									className={`font-data text-xs tabular-nums ${item.dir === "up" ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}
+								>
+									{item.flow}
+								</span>
+							</div>
+						))}
+					</div>
+				</PanelBody>
+			</Panel>
+		</div>
+	);
+}
+
+/* ── Page ── */
+
 export function MarketsPage() {
 	return (
-		<AnalyticalLayout
-			strip={<MarketContextBar />}
+		<RadarLayout
+			contextBar={<MarketContextBar />}
+			scopeStrip={<ScopeStrip />}
 			main={
-				<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
+				<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
 					<MarketCardGrid />
-					<ScopeStrip />
 					<MacroDriversBar />
 					<CapitalRotationTable />
 					<CrossMarketMatrix />
 				</div>
 			}
-			activity={
-				<Panel>
-					<PanelHeader
-						title="市场事件"
-						actions={
-							<button type="button" className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-(--radius-sm) px-1.5 py-0.5">
-								查看全部 →
-							</button>
-						}
-					/>
-					<PanelBody className="p-3">
-						<div className="flex flex-col gap-1">
-							{MOCK_EVENTS.map((event, i) => (
-								<div
-									key={i}
-									className="flex items-center justify-between rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
-								>
-									<span
-										className={`inline-block size-1.5 shrink-0 rounded-full ${event.severity === "up" ? "bg-(--color-market-up-fg)" : event.severity === "down" ? "bg-(--color-market-down-fg)" : "bg-(--color-foreground-muted)"}`}
-									/>
-									<span className="min-w-0 flex-1 truncate text-xs text-(--color-foreground)">
-										{event.text}
-									</span>
-									<span className="shrink-0 font-data text-xs tabular-nums text-(--color-foreground-muted)">
-										{event.time}
-									</span>
-								</div>
-							))}
-						</div>
-					</PanelBody>
-				</Panel>
-			}
-			analysis={
-				<Panel>
-					<PanelHeader title="资金流向" />
-					<PanelBody className="p-3">
-						<div className="flex flex-col gap-1">
-							{MOCK_FLOWS.map((item) => (
-								<div
-									key={item.sector}
-									className="flex items-center justify-between rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
-								>
-									<span className="text-xs text-(--color-foreground-secondary)">
-										{item.sector}
-									</span>
-									<span
-										className={`font-data text-xs tabular-nums ${item.dir === "up" ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}
-									>
-										{item.flow}
-									</span>
-								</div>
-							))}
-						</div>
-					</PanelBody>
-				</Panel>
-			}
+			rightRail={<MarketRightRail />}
 		/>
 	);
 }

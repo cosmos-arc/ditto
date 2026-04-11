@@ -6,6 +6,7 @@ import { server } from "@/mocks/server";
 import { marketsHandlers } from "@/mocks/handlers/markets";
 
 import { ASharesOverview } from "./a-shares-overview";
+import { ASharesPage } from "./a-shares-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -34,5 +35,19 @@ describe("ASharesOverview", () => {
 		render(<ASharesOverview />, { wrapper: createWrapper() });
 
 		await expect(screen.findByText("新能源")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("ASharesPage", () => {
+	it("渲染 activity 面板", async () => {
+		render(<ASharesPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("市场快照")).resolves.toBeInTheDocument();
+	});
+
+	it("渲染指数概览内容", async () => {
+		render(<ASharesPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("上证指数")).resolves.toBeInTheDocument();
 	});
 });

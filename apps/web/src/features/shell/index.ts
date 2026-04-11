@@ -10,6 +10,7 @@ export { CatalogLayout } from "./layouts/catalog.layout";
 export { CommandCenterLayout } from "./layouts/command-center.layout";
 export { ObjectHubLayout } from "./layouts/object-hub.layout";
 export { OpsConsoleLayout } from "./layouts/ops-console.layout";
+export { RadarLayout } from "./layouts/radar.layout";
 export { StudioLayout } from "./layouts/studio.layout";
 export {
 	PAGE_CONTRACTS,
