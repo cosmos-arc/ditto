@@ -150,7 +150,7 @@
 | Route | 工程轨 | Pattern | Shell | Slots | States | Token | 无占位 |
 |-------|--------|---------|-------|-------|--------|-------|--------|
 | `/` | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
-| `/ai` | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
+| `/ai` | ✅ | ✅ | ✅ | ⚠️ 缺sidebar（合同已更新，待 Task 5 实现） | — | ✅ | — |
 | `/markets` | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
 | `/markets/intelligence` | ✅ | ✅ | ✅ | ⚠️ main-only | — | ✅ | — |
 | `/markets/a-shares` | ✅ | ✅ | ✅ | ⚠️ main-only | — | ✅ | — |
