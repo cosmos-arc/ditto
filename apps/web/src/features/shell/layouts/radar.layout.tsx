@@ -6,7 +6,8 @@ interface RadarLayoutProps {
 	main: ReactNode;
 	rightRail?: ReactNode;
 	tabBand?: ReactNode;
-	statusBar?: ReactNode;
+	/** Optional extra class names for the root flex container */
+	className?: string;
 }
 
 /**
@@ -14,6 +15,7 @@ interface RadarLayoutProps {
  * Single-page scroll with sticky context-bar, scope-strip, and right-rail.
  * Unlike grid-locked layouts (AnalyticalLayout, CommandCenterLayout),
  * uses flex-based vertical scrolling with sticky positioning.
+ * StatusBar is no longer a slot — it uses position:fixed (see status-bar.tsx).
  */
 export function RadarLayout({
 	contextBar,
@@ -21,13 +23,13 @@ export function RadarLayout({
 	main,
 	rightRail,
 	tabBand,
-	statusBar,
+	className,
 }: RadarLayoutProps) {
 	const hasContextBar = Boolean(contextBar);
 	const offsets = buildStickyOffsets(hasContextBar);
 
 	return (
-		<div className="flex h-full w-full flex-col overflow-y-auto">
+		<div className={`flex h-full w-full flex-col overflow-y-auto ${className ?? ""}`.trim()}>
 			{contextBar && (
 				<div
 					className="sticky top-0 z-15 h-8 shrink-0 overflow-hidden"
@@ -53,7 +55,6 @@ export function RadarLayout({
 				)}
 			</div>
 			{tabBand && <div data-slot="tab-band">{tabBand}</div>}
-			{statusBar && <div data-slot="status-bar">{statusBar}</div>}
 		</div>
 	);
 }

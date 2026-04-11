@@ -40,13 +40,11 @@ describe("CommandCenterLayout", () => {
 				pulse={<span>Pulse</span>}
 				main={<span>Main</span>}
 				sidebar={<span>Sidebar</span>}
-				status={<span>Status</span>}
 			/>,
 		);
 		expect(screen.getByText("Pulse")).toBeInTheDocument();
 		expect(screen.getByText("Main")).toBeInTheDocument();
 		expect(screen.getByText("Sidebar")).toBeInTheDocument();
-		expect(screen.getByText("Status")).toBeInTheDocument();
 	});
 
 	it("omits optional slots when not provided", () => {
@@ -56,7 +54,6 @@ describe("CommandCenterLayout", () => {
 		expect(screen.getByText("Main")).toBeInTheDocument();
 		expect(screen.queryByText("Pulse")).not.toBeInTheDocument();
 		expect(screen.queryByText("Sidebar")).not.toBeInTheDocument();
-		expect(screen.queryByText("Status")).not.toBeInTheDocument();
 	});
 
 	it("applies grid layout classes", () => {
@@ -68,16 +65,15 @@ describe("CommandCenterLayout", () => {
 		expect(root.className).toContain("grid-rows-[auto_1fr]");
 	});
 
-	it("uses a status row only when status is provided", () => {
+	it("applies className prop to root", () => {
 		const { container } = render(
-			<CommandCenterLayout main={<span>Main</span>} status={<span>Status</span>} />,
+			<CommandCenterLayout
+				main={<span>Main</span>}
+				className="pb-(--height-status-bar)"
+			/>,
 		);
-		const root = expectGridRoot(container);
-		expect(root.className).toContain("grid-rows-[auto_1fr_var(--height-status-bar)]");
-		expect(root.className).toContain(
-			'[grid-template-areas:"pulse_pulse""main_sidebar""status_status"]',
-		);
-		expect(screen.getByText("Status")).toBeInTheDocument();
+		const root = container.firstChild as HTMLElement;
+		expect(root.className).toContain("pb-(--height-status-bar)");
 	});
 
 	it("assigns correct grid-area to each slot", () => {
@@ -86,7 +82,6 @@ describe("CommandCenterLayout", () => {
 				pulse={<span>Pulse</span>}
 				main={<span>Main</span>}
 				sidebar={<span>Sidebar</span>}
-				status={<span>Status</span>}
 			/>,
 		);
 		const children = container.querySelectorAll(":scope > div > *");
@@ -96,7 +91,6 @@ describe("CommandCenterLayout", () => {
 		expect(areas.some((c) => c.includes("[grid-area:pulse]"))).toBe(true);
 		expect(areas.some((c) => c.includes("[grid-area:main]"))).toBe(true);
 		expect(areas.some((c) => c.includes("[grid-area:sidebar]"))).toBe(true);
-		expect(areas.some((c) => c.includes("[grid-area:status]"))).toBe(true);
 	});
 });
 
@@ -409,6 +403,42 @@ describe("StudioLayout", () => {
 		expect(areas.some((c) => c.includes("[grid-area:inspector]"))).toBe(true);
 		expect(areas.some((c) => c.includes("[grid-area:logs]"))).toBe(true);
 	});
+
+		it("renders modes slot when provided", () => {
+			render(
+				<StudioLayout
+					modes={<span>Modes</span>}
+					main={<span>Main</span>}
+				/>,
+			);
+			expect(screen.getByText("Modes")).toBeInTheDocument();
+		});
+
+		it("applies modes grid row when modes is provided", () => {
+			const { container } = render(
+				<StudioLayout
+					modes={<span>Modes</span>}
+					main={<span>Main</span>}
+				/>,
+			);
+			const root = expectGridRoot(container);
+			expect(root.className).toContain("grid-rows-[auto_1fr_auto]");
+			expect(root.className).toContain(
+				'[grid-template-areas:"modes_modes_modes""sources_main_inspector""logs_logs_logs"]',
+			);
+		});
+
+		it("assigns grid-area:modes to modes slot", () => {
+			const { container } = render(
+				<StudioLayout
+					modes={<span>Modes</span>}
+					main={<span>Main</span>}
+				/>,
+			);
+			const modesEl = container.querySelector("[data-slot='modes']");
+			expect(modesEl).toBeTruthy();
+			expect(modesEl?.className).toContain("[grid-area:modes]");
+		});
 });
 
 /* ------------------------------------------------------------------ */
@@ -488,7 +518,6 @@ describe("RadarLayout", () => {
 				main={<span>Main</span>}
 				rightRail={<span>RightRail</span>}
 				tabBand={<span>TabBand</span>}
-				statusBar={<span>Status</span>}
 			/>,
 		);
 		expect(screen.getByText("ContextBar")).toBeInTheDocument();
@@ -496,7 +525,6 @@ describe("RadarLayout", () => {
 		expect(screen.getByText("Main")).toBeInTheDocument();
 		expect(screen.getByText("RightRail")).toBeInTheDocument();
 		expect(screen.getByText("TabBand")).toBeInTheDocument();
-		expect(screen.getByText("Status")).toBeInTheDocument();
 	});
 
 	it("omits optional slots when not provided", () => {
@@ -506,7 +534,6 @@ describe("RadarLayout", () => {
 		expect(screen.queryByText("ScopeStrip")).not.toBeInTheDocument();
 		expect(screen.queryByText("RightRail")).not.toBeInTheDocument();
 		expect(screen.queryByText("TabBand")).not.toBeInTheDocument();
-		expect(screen.queryByText("Status")).not.toBeInTheDocument();
 	});
 
 	it("applies flex scroll layout classes", () => {
@@ -607,7 +634,6 @@ describe("RadarLayout", () => {
 				main={<span>Main</span>}
 				rightRail={<span>Rail</span>}
 				tabBand={<span>Tabs</span>}
-				statusBar={<span>Status</span>}
 			/>,
 		);
 		expect(
@@ -624,9 +650,6 @@ describe("RadarLayout", () => {
 		).toBeTruthy();
 		expect(
 			container.querySelector("[data-slot='tab-band']"),
-		).toBeTruthy();
-		expect(
-			container.querySelector("[data-slot='status-bar']"),
 		).toBeTruthy();
 	});
 });

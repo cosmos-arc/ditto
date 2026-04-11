@@ -4,6 +4,8 @@ interface CatalogLayoutProps {
 	toolbar?: ReactNode;
 	main: ReactNode;
 	detail?: ReactNode;
+	/** Optional extra class names for the root grid container */
+	className?: string;
 }
 
 /**
@@ -14,6 +16,7 @@ export function CatalogLayout({
 	toolbar,
 	main,
 	detail,
+	className,
 }: CatalogLayoutProps) {
 	return (
 		<div
@@ -22,6 +25,7 @@ export function CatalogLayout({
 				"grid-cols-[1fr_var(--width-catalog-detail)]",
 				"grid-rows-[auto_1fr]",
 				'[grid-template-areas:"toolbar_toolbar""main_detail"]',
+				className,
 			].join(" ")}
 		>
 			{toolbar && <div className="min-h-0 overflow-hidden [grid-area:toolbar]" data-slot="toolbar">{toolbar}</div>}

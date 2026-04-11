@@ -6,6 +6,8 @@ interface AnalyticalLayoutProps {
 	main: ReactNode;
 	activity?: ReactNode;
 	analysis?: ReactNode;
+	/** Optional extra class names for the root grid container */
+	className?: string;
 }
 
 /**
@@ -19,6 +21,7 @@ export function AnalyticalLayout({
 	main,
 	activity,
 	analysis,
+	className,
 }: AnalyticalLayoutProps) {
 	const hasBanner = Boolean(banner);
 	const hasAnalysis = Boolean(analysis);
@@ -33,6 +36,7 @@ export function AnalyticalLayout({
 				"grid-cols-[1fr_var(--width-activity)]",
 				rows,
 				areas,
+				className,
 			].join(" ")}
 		>
 			{strip && (

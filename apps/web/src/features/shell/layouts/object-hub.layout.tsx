@@ -5,6 +5,8 @@ interface ObjectHubLayoutProps {
 	tabs?: ReactNode;
 	main: ReactNode;
 	bottom?: ReactNode;
+	/** Optional extra class names for the root grid container */
+	className?: string;
 }
 
 /**
@@ -16,6 +18,7 @@ export function ObjectHubLayout({
 	tabs,
 	main,
 	bottom,
+	className,
 }: ObjectHubLayoutProps) {
 	return (
 		<div
@@ -24,6 +27,7 @@ export function ObjectHubLayout({
 				"grid-cols-1",
 				"grid-rows-[auto_auto_1fr_auto]",
 				'[grid-template-areas:"meta""tabs""main""bottom"]',
+				className,
 			].join(" ")}
 		>
 			{meta && <div className="min-h-0 overflow-hidden [grid-area:meta]" data-slot="meta">{meta}</div>}

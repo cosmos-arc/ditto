@@ -4,34 +4,30 @@ interface CommandCenterLayoutProps {
 	pulse?: ReactNode;
 	main: ReactNode;
 	sidebar?: ReactNode;
-	status?: ReactNode;
+	/** Optional extra class names for the root grid container */
+	className?: string;
 }
 
 /**
  * CommandCenterLayout — command-center pages.
- * Grid: pulse strip (full width) + main/sidebar + optional page-owned status row.
+ * Grid: pulse strip (full width) + main/sidebar.
+ * StatusBar is no longer a grid slot — it uses position:fixed (see status-bar.tsx).
  * min-h-0 + overflow-hidden on grid-area divs ensures grid track constraints are respected.
  */
 export function CommandCenterLayout({
 	pulse,
 	main,
 	sidebar,
-	status,
+	className,
 }: CommandCenterLayoutProps) {
-	const rows = status
-		? "grid-rows-[auto_1fr_var(--height-status-bar)]"
-		: "grid-rows-[auto_1fr]";
-	const areas = status
-		? '[grid-template-areas:"pulse_pulse""main_sidebar""status_status"]'
-		: '[grid-template-areas:"pulse_pulse""main_sidebar"]';
-
 	return (
 		<div
 			className={[
 				"grid h-full w-full overflow-hidden",
 				"grid-cols-[1fr_var(--width-sidebar)]",
-				rows,
-				areas,
+				"grid-rows-[auto_1fr]",
+				'[grid-template-areas:"pulse_pulse""main_sidebar"]',
+				className,
 			].join(" ")}
 		>
 			{pulse && <div className="[grid-area:pulse]" data-slot="pulse">{pulse}</div>}
@@ -43,7 +39,6 @@ export function CommandCenterLayout({
 					{sidebar}
 				</div>
 			)}
-			{status && <div className="[grid-area:status]" data-slot="status">{status}</div>}
 		</div>
 	);
 }

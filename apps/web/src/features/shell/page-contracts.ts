@@ -70,6 +70,12 @@ export interface PageContract {
 	requiredSlots: string[];
 	/** 页面必须覆盖的 UI 状态列表 */
 	requiredStates: string[];
+	/**
+	 * 原型是否包含 StatusBar。
+	 * 若为 true，页面渲染 `<StatusBar />`（fixed 定位）
+	 * 并给布局根容器加 `pb-(--height-status-bar)` 防止内容被遮挡。
+	 */
+	hasStatusBar?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -94,6 +100,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeRef: "docs/designs/specs/prototypes/page-home.html",
 		requiredSlots: ["pulse", "main", "sidebar"],
 		requiredStates: [...UNIVERSAL_STATES, "no-alerts", "has-critical"],
+		// home prototype has NO status bar
 	},
 	{
 		route: "/ai",
@@ -103,6 +110,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeRef: "docs/designs/specs/prototypes/page-ai-overview.html",
 		requiredSlots: ["pulse", "main", "sidebar"],
 		requiredStates: [...UNIVERSAL_STATES, "no-agents", "has-pending"],
+		hasStatusBar: true,
 	},
 
 	// 02 Analytical Overview Workspace
@@ -114,6 +122,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeRef: "docs/designs/specs/prototypes/page-cross-market.html",
 		requiredSlots: ["strip", "main", "activity", "analysis"],
 		requiredStates: [...UNIVERSAL_STATES],
+		hasStatusBar: true,
 	},
 	{
 		route: "/markets/intelligence",
@@ -124,6 +133,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 			"docs/designs/specs/prototypes/page-markets-intelligence.html",
 		requiredSlots: ["strip", "main", "activity"],
 		requiredStates: [...UNIVERSAL_STATES],
+		hasStatusBar: true,
 	},
 	{
 		route: "/research",
@@ -133,6 +143,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeRef: "docs/designs/specs/prototypes/page-research.html",
 		requiredSlots: ["strip", "main", "activity", "analysis"],
 		requiredStates: [...UNIVERSAL_STATES],
+		// research prototype has NO status bar
 	},
 	{
 		route: "/research/regime",
@@ -142,6 +153,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeRef: "docs/designs/specs/prototypes/page-regime-monitor.html",
 		requiredSlots: ["strip", "main", "activity", "analysis"],
 		requiredStates: [...UNIVERSAL_STATES],
+		hasStatusBar: true,
 	},
 	{
 		route: "/trading",
@@ -152,6 +164,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 			"docs/designs/specs/prototypes/page-trading-overview.html",
 		requiredSlots: ["strip", "main", "activity", "analysis"],
 		requiredStates: [...UNIVERSAL_STATES],
+		hasStatusBar: true,
 	},
 	{
 		route: "/trading/risk",
@@ -161,6 +174,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeRef: "docs/designs/specs/prototypes/page-risk-center.html",
 		requiredSlots: ["strip", "main", "activity", "analysis"],
 		requiredStates: [...UNIVERSAL_STATES],
+		hasStatusBar: true,
 	},
 
 	// 03 Catalog / Screener Workspace
@@ -173,6 +187,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 			"docs/designs/specs/prototypes/page-markets-screener.html",
 		requiredSlots: ["toolbar", "main", "detail"],
 		requiredStates: [...UNIVERSAL_STATES, "selected-row"],
+		// screener prototype has NO status bar
 	},
 
 	// 04 Object Hub
@@ -184,6 +199,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeRef: "docs/designs/specs/prototypes/page-instrument-hub.html",
 		requiredSlots: ["meta", "tabs", "main"],
 		requiredStates: [...UNIVERSAL_STATES, "not-found"],
+		hasStatusBar: true,
 	},
 
 	// 05 Studio / Builder
@@ -196,6 +212,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 			"docs/designs/specs/prototypes/page-strategy-studio.html",
 		requiredSlots: ["source", "main", "inspector"],
 		requiredStates: [...UNIVERSAL_STATES, "no-session", "running"],
+		hasStatusBar: true,
 	},
 	{
 		route: "/ai/copilot",
@@ -205,6 +222,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeRef: "docs/designs/specs/prototypes/page-ai-copilot.html",
 		requiredSlots: ["source", "main", "inspector"],
 		requiredStates: [...UNIVERSAL_STATES, "no-session", "chatting"],
+		hasStatusBar: true,
 	},
 	{
 		route: "/ai/agents",
@@ -214,6 +232,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeRef: "docs/designs/specs/prototypes/page-agent-console.html",
 		requiredSlots: ["source", "main", "inspector"],
 		requiredStates: [...UNIVERSAL_STATES, "no-agents", "agent-running"],
+		hasStatusBar: true,
 	},
 
 	// 06 Queue / Ops Console
@@ -229,6 +248,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 			"selected-row",
 			"sheet-open",
 		],
+		hasStatusBar: true,
 	},
 
 	// 07 Ledger / Execution Console
@@ -244,6 +264,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 			"selected-row",
 			"order-active",
 		],
+		hasStatusBar: true,
 	},
 
 	// 06 Queue / Ops Console
@@ -255,6 +276,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeRef: "docs/designs/specs/prototypes/page-platform.html",
 		requiredSlots: ["health", "main", "detail"],
 		requiredStates: [...UNIVERSAL_STATES, "pipeline-running"],
+		hasStatusBar: true,
 	},
 
 	/* ── Group B: Spec-only ────────────────────────────────────────── */

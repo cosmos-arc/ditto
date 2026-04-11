@@ -9,8 +9,10 @@ function formatTime(date: Date): string {
 /**
  * StatusBar -- VS Code-style bottom status bar.
  *
- * Displays LIVE indicator, connection status, latency, current time, and shortcut hint.
- * Self-contained with internal state for the clock.
+ * Fixed-positioned overlay floating outside the grid, matching prototype architecture.
+ * Each page decides whether to render it via page-contracts `hasStatusBar`.
+ * Pages that use StatusBar must add `pb-[var(--height-status-bar)]` to their layout root
+ * to prevent content from being hidden behind the bar.
  */
 export function StatusBar() {
 	const [time, setTime] = useState(() => formatTime(new Date()));
@@ -25,7 +27,11 @@ export function StatusBar() {
 	return (
 		<div
 			data-slot="status-bar"
+			role="status"
+			aria-label="系统状态"
 			className={
+				"fixed bottom-0 right-0 z-50 " +
+				"left-(--width-rail) " +
 				"flex items-center gap-4 px-3 " +
 				"h-[var(--height-status-bar)] " +
 				"bg-(--color-surface-0) border-t border-(--color-border-subtle) " +

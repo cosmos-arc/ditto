@@ -5,11 +5,14 @@ import { AiContextSidebar } from "./ai-context-sidebar";
 
 export function AiPage() {
 	return (
-		<CommandCenterLayout
-			pulse={<AiPulseStrip />}
-			main={<AiMainContent />}
-			sidebar={<AiContextSidebar />}
-			status={<StatusBar />}
-		/>
+		<>
+			<CommandCenterLayout
+				className="pb-(--height-status-bar)"
+				pulse={<AiPulseStrip />}
+				main={<AiMainContent />}
+				sidebar={<AiContextSidebar />}
+			/>
+			<StatusBar />
+		</>
 	);
 }

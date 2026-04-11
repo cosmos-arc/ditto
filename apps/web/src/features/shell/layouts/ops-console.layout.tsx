@@ -4,6 +4,8 @@ interface OpsConsoleLayoutProps {
 	health?: ReactNode;
 	main: ReactNode;
 	detail?: ReactNode;
+	/** Optional extra class names for the root grid container */
+	className?: string;
 }
 
 /**
@@ -14,6 +16,7 @@ export function OpsConsoleLayout({
 	health,
 	main,
 	detail,
+	className,
 }: OpsConsoleLayoutProps) {
 	return (
 		<div
@@ -22,6 +25,7 @@ export function OpsConsoleLayout({
 				"grid-cols-[1fr_var(--width-ops-detail)]",
 				"grid-rows-[auto_1fr]",
 				'[grid-template-areas:"health_health""main_detail"]',
+				className,
 			].join(" ")}
 		>
 			{health && <div className="min-h-0 overflow-hidden [grid-area:health]" data-slot="health">{health}</div>}
