@@ -8,6 +8,7 @@ from enum import StrEnum
 import polars as pl
 
 from ditto_engine.alpha.context import StrategyContext
+from ditto_engine.alpha.frame import FrameCol, validate_frame
 
 __all__ = ["ScoringMethod", "ScoringStage"]
 
@@ -44,6 +45,7 @@ class ScoringStage:
         context: StrategyContext,
     ) -> pl.DataFrame:
         """根据 method 转换 signal 为 score。"""
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
         if self.input_column not in frame.columns:
             return frame.with_columns(
                 pl.lit(None, dtype=pl.Float64).alias(self.output_column),

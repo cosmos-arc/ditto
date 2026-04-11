@@ -1,15 +1,14 @@
 """
-EngineLoop — 回测引擎主循环 + 配置/结果模型.
+EngineLoop -- 回测引擎主循环 + 配置/结果模型.
 
-V1 每日循环:
-  1. 获取 Slice (DataFeed)
-  2. 获取账户快照 (Brokerage)
-  3. PostTrade 风控 (组合扫描 → RiskLock)
-  4. 策略 Pipeline → TargetPortfolio
-  5. ExecutionPlanner → ExecutionPlan (含 locked_instruments)
-  6. PreTrade 校验 → 过滤/resize 订单
-  7. 提交订单 (Brokerage)
-  8. 处理成交 (Brokerage.process_pending)
+V1 每日循环 (通过 TradingStep chain 编排):
+  1. DataFetchStep: 获取 Slice + 账户快照 + 清除锁定
+  2. RiskScanStep: PostTrade 风控扫描 + 锁管理
+  3. StrategyStep: 策略 Pipeline -> TargetPortfolio (仅调仓日)
+  4. PlanningStep: ExecutionPlanner -> ExecutionPlan (仅调仓日)
+  5. PreTradeStep: PreTrade 校验 + 订单提交 (仅调仓日)
+  6. ExecutionStep: 订单成交处理
+  7. AuditStep: 审计记录 (账户快照 + 成交 + 已平仓交易)
 """
 
 from __future__ import annotations
@@ -21,11 +20,10 @@ from enum import StrEnum
 
 import polars as pl
 from ditto_kernel.clock import Clock
-from ditto_kernel.events import DomainEvent, EventBus
+from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
 
 from ditto_engine.accounting.account import AccountView
-from ditto_engine.accounting.buying_power import CashAccountBuyingPower
 from ditto_engine.accounting.fills import FillEvent
 from ditto_engine.accounting.order_book import Order
 from ditto_engine.alpha.context import StrategyContext
@@ -37,35 +35,28 @@ from ditto_engine.backtest.manifest import (
     RunMode,
     hash_config,
 )
-from ditto_engine.backtest.statistics import (
-    ExecutionAuditCollector,
-    PreTradeDecisionRecord,
-    RiskScanRecord,
+from ditto_engine.backtest.statistics import ExecutionAuditCollector
+from ditto_engine.backtest.steps import (
+    AuditStep,
+    DataFetchStep,
+    ExecutionStep,
+    PlanningStep,
+    PreTradeStep,
+    RiskScanStep,
+    StepContext,
+    StrategyStep,
 )
-from ditto_engine.events import (
-    OrderFilled,
-    OrderSubmitted,
-    RiskGuardTriggered,
-)
-from ditto_engine.execution.brokerage import Brokerage, ProcessInput
+from ditto_engine.execution.brokerage import Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner
 from ditto_engine.execution.reality import FeeModel
-from ditto_engine.execution.rules import InstrumentRuleProvider, InstrumentRules
+from ditto_engine.execution.rules import InstrumentRuleProvider
 from ditto_engine.execution.trade_builder import (
     FifoTradeBuilder,
     FlatToFlatTradeBuilder,
     TradeMatchingMethod,
 )
-from ditto_engine.risk.post_trade import (
-    PostTradeRiskGuard,
-    RiskActionType,
-    RiskScope,
-)
-from ditto_engine.risk.pre_trade import (
-    CompositePreTradeCheck,
-    Decision,
-    PreTradeContext,
-)
+from ditto_engine.risk.post_trade import PostTradeRiskGuard
+from ditto_engine.risk.pre_trade import CompositePreTradeCheck
 
 __all__ = [
     "EngineConfig",
@@ -96,7 +87,7 @@ class EngineMode(StrEnum):
 @dataclass(frozen=True)
 class EngineConfig:
     """
-    引擎配置 — frozen, 运行前确定.
+    引擎配置 -- frozen, 运行前确定.
 
     Attributes:
         start_date: 起始日期 (YYYY-MM-DD)
@@ -136,7 +127,7 @@ class EngineConfig:
 @dataclass
 class EngineResult:
     """
-    引擎运行结果 — 可变, 运行过程中累积.
+    引擎运行结果 -- 可变, 运行过程中累积.
 
     Attributes:
         run_id: 运行唯一 ID
@@ -168,7 +159,7 @@ class EngineResult:
 @dataclass(frozen=True)
 class EngineOptions:
     """
-    引擎可选组件 — 将可选依赖打包以减少构造参数数量。
+    引擎可选组件 -- 将可选依赖打包以减少构造参数数量。
 
     Attributes:
         clock: 统一时间抽象 (必需, 用于事件时间戳和步进推进)
@@ -195,7 +186,11 @@ class EngineOptions:
 
 class EngineLoop:
     """
-    回测引擎主循环 — 编排每日执行流程.
+    回测引擎主循环 -- 通过 TradingStep chain 编排每日执行流程.
+
+    Step Chain:
+      DataFetchStep -> RiskScanStep -> StrategyStep -> PlanningStep
+      -> PreTradeStep -> ExecutionStep -> AuditStep
 
     Parameters
     ----------
@@ -232,19 +227,77 @@ class EngineLoop:
         self._audit_collector = options.audit_collector
         self._event_bus = options.event_bus
 
+        # 跨日可变状态
         self._fills: list[FillEvent] = []
         self._orders: list[Order] = []
+
         self._strategy_context = StrategyContext()
         self._rule_ref_collector = RuleRefCollector()
         self._trading_days: tuple[str, ...] = ()
         self._input_instruments: set[InstrumentId] = set()
 
-        # TradeBuilder — 根据 config.trade_matching 创建成交匹配器
+        # TradeBuilder -- 根据 config.trade_matching 创建成交匹配器
         if config.trade_matching == TradeMatchingMethod.FLAT_TO_FLAT:
             self._trade_builder = FlatToFlatTradeBuilder()
         else:
             self._trade_builder = FifoTradeBuilder()
         self._recorded_trade_ids: set[str] = set()
+
+        # 构建 Step chain
+        self._steps = self._build_steps()
+
+    def _build_steps(self) -> tuple[object, ...]:
+        """构建 TradingStep chain。"""
+        return (
+            DataFetchStep(
+                data_feed=self._data_feed,
+                clock=self._clock,
+                brokerage=self._brokerage,
+                strategy_context=self._strategy_context,
+                input_instruments=self._input_instruments,
+            ),
+            RiskScanStep(
+                post_trade_guard=self._post_trade_guard,
+                audit_collector=self._audit_collector,
+                event_bus=self._event_bus,
+                strategy_context=self._strategy_context,
+                clock=self._clock,
+            ),
+            StrategyStep(
+                pipeline=self._pipeline,
+                strategy_context=self._strategy_context,
+                strategy_id=self._config.strategy_id,
+                strategy_run_id=self._config.strategy_run_id,
+                input_bundle_builder=lambda ctx: self._build_input_bundle(
+                    ctx.date,
+                    ctx.slice_,  # type: ignore[arg-type]
+                ),
+            ),
+            PlanningStep(
+                planner=self._planner,
+                rule_provider=self._rule_provider,
+                rule_ref_collector=self._rule_ref_collector,
+                strategy_context=self._strategy_context,
+            ),
+            PreTradeStep(
+                pre_trade_check=self._pre_trade_check,
+                brokerage=self._brokerage,
+                fee_model=self._fee_model,  # type: ignore[arg-type]
+                event_bus=self._event_bus,
+                clock=self._clock,
+            ),
+            ExecutionStep(
+                brokerage=self._brokerage,
+                event_bus=self._event_bus,
+                clock=self._clock,
+            ),
+            AuditStep(
+                audit_collector=self._audit_collector,
+                brokerage=self._brokerage,
+                trade_builder=self._trade_builder,
+                recorded_trade_ids=self._recorded_trade_ids,
+            ),
+        )
 
     # -- public ---------------------------------------------------------------
 
@@ -265,14 +318,14 @@ class EngineLoop:
 
         account_view = self._brokerage.get_account()
 
-        # flush 未平仓交易 — 回测结束时记录剩余开仓交易
+        # flush 未平仓交易 -- 回测结束时记录剩余开仓交易
         if self._audit_collector is not None:
             for trade in self._trade_builder.flush():
                 if trade.trade_id not in self._recorded_trade_ids:
                     self._audit_collector.record_closed_trade(trade)
                     self._recorded_trade_ids.add(trade.trade_id)
 
-        # 构建运行清单 — 真实治理字段
+        # 构建运行清单 -- 真实治理字段
         input_refs = tuple(sorted(self._input_instruments))
         config_hash = hash_config(
             start_date=self._config.start_date,
@@ -306,228 +359,71 @@ class EngineLoop:
             manifest=manifest,
         )
 
-    # -- event helpers --------------------------------------------------------
-
-    def _publish_event(self, event: DomainEvent) -> None:
-        """发布域事件到 EventBus（如果已配置）."""
-        if self._event_bus is not None:
-            self._event_bus.publish(event)
-
     # -- internals ------------------------------------------------------------
 
-    def _step(self, date: str) -> None:
-        """执行单日步骤。"""
-        slice_ = self._data_feed.get_slice(date)
-        self._clock.advance_to(slice_.step_time)
-        account_view = self._brokerage.get_account()
-
-        # 收集输入标的 — 用于 manifest input_refs
-        self._input_instruments.update(slice_.bars.keys())
-
-        # 每日清除到期锁定 — cooldown 未到期的锁定保留
-        self._strategy_context.clear_locks(date)
-
-        # PostTrade 风控扫描 — 在 Pipeline 前执行
-        if self._post_trade_guard is not None:
-            risk_actions = self._post_trade_guard.scan(account_view, slice_)
-            # 审计日志：记录风控扫描结果
-            if self._audit_collector is not None and risk_actions:
-                self._audit_collector.record_risk_scan(
-                    date,
-                    tuple(
-                        RiskScanRecord(
-                            trade_date=date,
-                            rule_id=action.rule_id,
-                            instrument_id=action.instrument_id,
-                            scope=action.scope,
-                            severity=action.severity,
-                            action_taken=action.action_type,
-                            detail=action.detail,
-                            current_value=action.current_value,
-                            threshold=action.threshold,
-                        )
-                        for action in risk_actions
-                    ),
-                )
-            for action in risk_actions:
-                if (
-                    action.action_type
-                    in (RiskActionType.REDUCE_POSITION, RiskActionType.LIQUIDATE)
-                    and action.scope == RiskScope.INSTRUMENT
-                    and action.instrument_id is not None
-                ):
-                    self._strategy_context.lock_instrument(
-                        action.instrument_id,
-                        action.detail,
-                        cooldown_until=action.cooldown_until_date,
-                    )
-                # 发布 RiskGuardTriggered 事件
-                self._publish_event(
-                    RiskGuardTriggered(
-                        rule_name=action.rule_id,
-                        severity=action.severity.value,
-                        details={"instrument_id": action.instrument_id},
-                        timestamp=self._clock.now(),
-                    ),
-                )
-
-        if self._is_rebalance_day(date):
-            input_bundle = self._build_input_bundle(date, slice_)
-            target = self._pipeline.run(self._strategy_context, input_bundle)
-
-            # 获取三层规则 — 传给 Planner 用于涨跌停/lot_size 检查
-            rules = self._fetch_rules(date, slice_)
-
-            # 收集规则引用 — RuleRefCollector first_observed (F3)
-            self._rule_ref_collector.observe(date, rules)
-
-            plan = self._planner.plan(
-                target=target,
-                account_view=account_view,
-                trade_date=date,
-                market_snapshots=slice_.bars,
-                rules=rules,
-                locked_instruments=self._strategy_context.get_locked_instruments(),
-            )
-
-            # PreTrade 校验循环 — 逐单检查, 滚动更新 context (F1)
-            pre_trade_context = self._build_pre_trade_context(
-                account_view,
-                slice_,
-                rules,
-            )
-            pre_trade_decisions = self._run_pre_trade_checks(
-                date,
-                plan.orders,
-                pre_trade_context,
-            )
-
-            # 审计日志：批量记录 PreTrade 决策
-            if self._audit_collector is not None and pre_trade_decisions:
-                self._audit_collector.record_pre_trade_decisions(
-                    date,
-                    tuple(pre_trade_decisions),
-                )
-
-        # 处理成交
-        process_input = self._build_process_input(date, slice_)
-        step_fills = self._brokerage.process_pending(process_input)
-        self._fills.extend(step_fills)
-
-        # 发布 OrderFilled 事件
-        for fill in step_fills:
-            self._publish_event(
-                OrderFilled(
-                    order_id=fill.order_id,
-                    fill_price=fill.fill_price,
-                    filled_quantity=fill.filled_quantity,
-                    fee=fill.fee,
-                    timestamp=self._clock.now(),
-                ),
-            )
-
-        # ── 审计记录（R3: 使用成交后快照） ──
-        self._record_step_audit(date, step_fills)
-
-    def _record_step_audit(self, date: str, step_fills: tuple[FillEvent, ...]) -> None:
-        """记录单步审计数据: account_view + fills + closed_trades。"""
-        if self._audit_collector is None:
-            return
-        account_view = self._brokerage.get_account()
-        self._audit_collector.record_account_view(date, account_view)
-        for fill in step_fills:
-            self._audit_collector.record_fill(fill)
-        # 通过 TradeBuilder 匹配成交 -> 记录已平仓交易
-        for fill in step_fills:
-            self._trade_builder.on_fill(fill, account_view)
-        for trade in self._trade_builder.get_closed_trades():
-            if trade.trade_id not in self._recorded_trade_ids:
-                self._audit_collector.record_closed_trade(trade)
-                self._recorded_trade_ids.add(trade.trade_id)
-
-    def _run_pre_trade_checks(
-        self,
-        date: str,
-        orders: tuple[Order, ...],
-        pre_trade_context: PreTradeContext,
-    ) -> list[PreTradeDecisionRecord]:
+    def _build_input_bundle(self, date: str, slice_: Slice) -> StrategyInputBundle:
         """
-        执行 PreTrade 校验循环，返回审计决策记录.
+        构建 StrategyInputBundle -- 子类可覆盖以注入自定义列.
 
-        逐单检查, 滚动更新 context (F1)。
+        默认实现从 slice_.bars 提取 instrument_id / OHLCV / signal_value。
         """
-        _decision_map = {
-            Decision.ACCEPT: "accepted",
-            Decision.REJECT: "rejected",
-            Decision.RESIZE: "resized",
-        }
-        decisions: list[PreTradeDecisionRecord] = []
-
-        for order in orders:
-            result = self._pre_trade_check.check_order(order, pre_trade_context)
-
-            # 计算最终数量
-            if result.decision == Decision.REJECT:
-                final_qty = 0
-            elif result.resized_quantity is not None:
-                final_qty = result.resized_quantity
-            else:
-                final_qty = order.quantity
-
-            # 审计记录
-            decisions.append(
-                PreTradeDecisionRecord(
-                    trade_date=date,
-                    order_id=order.order_id,
-                    instrument_id=order.instrument_id,
-                    direction=order.direction.value,
-                    original_quantity=order.quantity,
-                    final_quantity=final_qty,
-                    decision=_decision_map.get(result.decision, result.decision),
-                    reason=result.reason,
-                    check_sequence=result.triggered_checks,
-                ),
-            )
-
-            if result.decision == Decision.REJECT:
-                continue
-
-            final_order = (
-                order.with_quantity(result.resized_quantity)
-                if result.resized_quantity is not None
-                else order
-            )
-            self._brokerage.place_order(final_order)
-            self._orders.append(final_order)
-
-            # 发布 OrderSubmitted 事件
-            self._publish_event(
-                OrderSubmitted(
-                    order_id=final_order.order_id,
-                    instrument_id=final_order.instrument_id,
-                    side=final_order.direction.value,
-                    quantity=final_order.quantity,
-                    timestamp=self._clock.now(),
-                ),
-            )
-
-            # F1: 更新滚动上下文
-            pre_trade_context = pre_trade_context.with_order_accepted(
-                final_order,
-            )
-
-        return decisions
-
-    def _fetch_rules(
-        self,
-        date: str,
-        slice_: Slice,
-    ) -> dict[InstrumentId, InstrumentRules] | None:
-        """通过 RuleProvider 获取三层规则，无 provider 返回 None。"""
-        if self._rule_provider is None:
-            return None
         instrument_ids = list(slice_.bars.keys())
-        return self._rule_provider.get_rules(date, instrument_ids)
+
+        instruments = pl.DataFrame({"instrument_id": instrument_ids})
+
+        market_rows: list[dict[str, object]] = []
+        signal_rows: list[dict[str, object]] = []
+        for iid, bar in slice_.bars.items():
+            market_rows.append(
+                {
+                    "instrument_id": iid,
+                    "open": bar.open,
+                    "high": bar.high,
+                    "low": bar.low,
+                    "close": bar.close,
+                    "volume": bar.volume,
+                },
+            )
+            signal_rows.append(
+                {
+                    "instrument_id": iid,
+                    "signal_value": (
+                        (bar.close / bar.prev_close - 1.0) if bar.prev_close else 0.0
+                    ),
+                },
+            )
+
+        return StrategyInputBundle(
+            trade_date=date,
+            strategy_id=self._config.strategy_id,
+            run_id=self._config.strategy_run_id,
+            instruments=instruments,
+            market_data=pl.DataFrame(market_rows),
+            signal_values=pl.DataFrame(signal_rows),
+            benchmark_close=slice_.benchmark_close,
+        )
+
+    def _step(self, date: str) -> None:
+        """执行单日步骤 -- 通过 Step chain 编排。"""
+        is_rebalance = self._is_rebalance_day(date)
+        ctx = StepContext(date=date, is_rebalance_day=is_rebalance)
+
+        # 执行 Step chain
+        for step in self._steps:
+            result = step.execute(ctx)  # type: ignore[union-attr]
+            if not result.success:  # type: ignore[attr-defined]
+                break
+
+        # 累积跨日结果
+        self._fills.extend(ctx.step_fills)
+        self._orders.extend(ctx.step_orders)
+
+        # 审计日志: 批量记录 PreTrade 决策
+        if self._audit_collector is not None and ctx.pre_trade_decisions:
+            self._audit_collector.record_pre_trade_decisions(
+                date,
+                tuple(ctx.pre_trade_decisions),  # type: ignore[arg-type]
+            )
 
     def _is_rebalance_day(self, date: str) -> bool:
         """
@@ -556,76 +452,3 @@ class EngineLoop:
             return not self._trading_days[idx - 1].startswith(month_prefix)
 
         return True
-
-    def _build_pre_trade_context(
-        self,
-        account_view: AccountView,
-        slice_: Slice,
-        rules: dict[InstrumentId, InstrumentRules] | None,
-    ) -> PreTradeContext:
-        """构建 PreTrade 校验上下文 (V3)。"""
-        if self._fee_model is None:
-            raise RuntimeError("fee_model is required for PreTrade")
-        return PreTradeContext(
-            account_view=account_view,
-            rules=rules or {},
-            market_snapshots=slice_.bars,
-            fee_model=self._fee_model,
-            buying_power_model=CashAccountBuyingPower(),
-            pending_tickets=account_view.order_book.get_pending(),
-        )
-
-    def _build_input_bundle(
-        self,
-        date: str,
-        slice_: Slice,
-    ) -> StrategyInputBundle:
-        """
-        从 Slice 构建 StrategyInputBundle.
-
-        V1: 从 bars 构建 market_data + signal_values (momentum signal).
-        """
-        instrument_ids = list(slice_.bars.keys())
-        instruments = pl.DataFrame(
-            {"instrument_id": instrument_ids},
-        )
-
-        market_rows: list[dict[str, object]] = []
-        signal_rows: list[dict[str, object]] = []
-        for iid, bar in slice_.bars.items():
-            market_rows.append(
-                {
-                    "instrument_id": iid,
-                    "open": bar.open,
-                    "high": bar.high,
-                    "low": bar.low,
-                    "close": bar.close,
-                    "volume": bar.volume,
-                }
-            )
-            signal_rows.append(
-                {
-                    "instrument_id": iid,
-                    "signal_value": (
-                        (bar.close / bar.prev_close - 1.0) if bar.prev_close else 0.0
-                    ),
-                }
-            )
-
-        return StrategyInputBundle(
-            trade_date=date,
-            strategy_id=self._config.strategy_id,
-            run_id=self._config.strategy_run_id,
-            instruments=instruments,
-            market_data=pl.DataFrame(market_rows),
-            signal_values=pl.DataFrame(signal_rows),
-            benchmark_close=slice_.benchmark_close,
-        )
-
-    def _build_process_input(self, date: str, slice_: Slice) -> ProcessInput:
-        """将 Slice 转换为 ProcessInput (Brokerage.process_pending 输入)。"""
-        return ProcessInput(
-            step_time=slice_.step_time,
-            trade_date=date,
-            bars=slice_.bars,
-        )

@@ -7,8 +7,9 @@ from typing import Protocol
 import polars as pl
 
 from ditto_engine.alpha.context import StrategyContext
+from ditto_engine.alpha.frame import FrameCol
 
-__all__ = ["DecisionFrame", "DecisionStage"]
+__all__ = ["DecisionFrame", "DecisionStage", "FrameCol"]
 
 type DecisionFrame = pl.DataFrame
 

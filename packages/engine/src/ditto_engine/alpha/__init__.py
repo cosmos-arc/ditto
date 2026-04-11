@@ -22,6 +22,7 @@ from ditto_engine.alpha.builtins import (
     UniverseStage,
 )
 from ditto_engine.alpha.context import StrategyContext
+from ditto_engine.alpha.frame import FrameCol, validate_frame
 from ditto_engine.alpha.models import (
     RebalancePlan,
     SignalSnapshot,
@@ -49,6 +50,7 @@ __all__ = [
     "ExecutionSpec",
     "FilterCondition",
     "FilteringStage",
+    "FrameCol",
     "ParamConstraint",
     "RebalancePlan",
     "RegimeLabel",
@@ -72,4 +74,5 @@ __all__ = [
     "TargetPortfolio",
     "TrendFilterStage",
     "UniverseStage",
+    "validate_frame",
 ]

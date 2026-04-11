@@ -12,10 +12,12 @@ from ditto_engine.backtest.engine import (
     EngineResult,
 )
 from ditto_engine.backtest.manifest import (
+    InputRef,
     RuleRef,
     RuleRefCollector,
     RunManifest,
     RunMode,
+    hash_spec,
     serialize_manifest,
 )
 from ditto_engine.backtest.statistics import (
@@ -37,6 +39,7 @@ __all__ = [
     "EngineMode",
     "EngineResult",
     "ExecutionAuditCollector",
+    "InputRef",
     "PortfolioStatistics",
     "ProviderBackedDataFeed",
     "RuleRef",
@@ -45,5 +48,6 @@ __all__ = [
     "RunMode",
     "Slice",
     "TradeStatistics",
+    "hash_spec",
     "serialize_manifest",
 ]

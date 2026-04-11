@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import polars as pl
 
 from ditto_engine.alpha.context import StrategyContext
+from ditto_engine.alpha.frame import FrameCol, validate_frame
 
 __all__ = ["SignalStage"]
 
@@ -36,6 +37,7 @@ class SignalStage:
         context: StrategyContext,
     ) -> pl.DataFrame:
         """处理信号列。"""
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
         if self.source_column is not None:
             return frame.with_columns(
                 pl.col(self.source_column).alias(self.signal_column),

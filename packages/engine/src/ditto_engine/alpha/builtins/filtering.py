@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import polars as pl
 
 from ditto_engine.alpha.context import StrategyContext
+from ditto_engine.alpha.frame import FrameCol, validate_frame
 
 __all__ = ["FilterCondition", "FilteringStage", "RiskLockFilter", "TrendFilterStage"]
 
@@ -52,6 +53,7 @@ class FilteringStage:
         context: StrategyContext,
     ) -> pl.DataFrame:
         """逐条件过滤 frame。"""
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
         if not self.conditions:
             return frame
 
@@ -83,6 +85,7 @@ class RiskLockFilter:
         context: StrategyContext,
     ) -> pl.DataFrame:
         """过滤被锁定的标的，无锁定时原样返回。"""
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
         locked = context.risk_locked_instruments
         if not locked:
             return frame
@@ -113,6 +116,7 @@ class TrendFilterStage:
         context: StrategyContext,
     ) -> pl.DataFrame:
         """按方向和阈值过滤标的。"""
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
         col = pl.col(self.signal_column)
 
         if self.direction == "long":

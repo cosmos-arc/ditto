@@ -8,6 +8,7 @@ from enum import StrEnum
 import polars as pl
 
 from ditto_engine.alpha.context import StrategyContext
+from ditto_engine.alpha.frame import FrameCol, validate_frame
 
 __all__ = ["RegimeLabel", "RegimeMethod", "RegimeStage"]
 
@@ -61,6 +62,7 @@ class RegimeStage:
         context: StrategyContext,
     ) -> pl.DataFrame:
         """根据 method 检测市场状态并附加 regime 列。"""
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
         if self.method == RegimeMethod.MA_CROSS:
             return self._process_ma_cross(frame)
         # RegimeMethod.VOLATILITY_THRESHOLD
