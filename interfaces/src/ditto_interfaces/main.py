@@ -32,6 +32,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ditto_interfaces.api.routes import (
+    backtest,
     capital,
     commodity,
     fundamental,
@@ -42,6 +43,8 @@ from ditto_interfaces.api.routes import (
     metadata,
     portfolio,
     source,
+    strategy,
+    trade,
 )
 from ditto_interfaces.exceptions import DittoException
 from ditto_interfaces.middleware import (
@@ -186,6 +189,7 @@ app.add_middleware(
 )
 
 # 挂载业务路由
+app.include_router(backtest.router, prefix="/api/v1")
 app.include_router(capital.router, prefix="/api/v1")
 app.include_router(commodity.router, prefix="/api/v1")
 app.include_router(fundamental.router, prefix="/api/v1")
@@ -196,6 +200,8 @@ app.include_router(market.router, prefix="/api/v1")
 app.include_router(metadata.router, prefix="/api/v1")
 app.include_router(portfolio.router, prefix="/api/v1")
 app.include_router(source.router, prefix="/api/v1")
+app.include_router(strategy.router, prefix="/api/v1")
+app.include_router(trade.router, prefix="/api/v1")
 
 # 调试路由： 条件注册（仅非生产环境）
 env = get_environment()

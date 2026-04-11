@@ -111,6 +111,7 @@ class TestBacktestRunWithLifecycle:
             strategy_id="momentum-etf",
             strategy_version="",
             mode="backtest",
+            parent_run_id="",
         )
         mock_run_service.mark_running.assert_called_once_with("run-001")
         mock_run_service.mark_completed.assert_called_once_with("run-001")
@@ -140,6 +141,7 @@ class TestBacktestRunWithLifecycle:
             strategy_id="momentum-etf",
             strategy_version="2026.03",
             mode="backtest",
+            parent_run_id="",
         )
 
     @patch(BUILD_REPORT_PATH)

@@ -19,6 +19,7 @@ from ditto_infra.foundation import SQLitePool, logger, traced
 from ditto_data.models.strategy_audit import (
     PreTradeDecisionPayload,
     RiskScanPayload,
+    TradeFillPayload,
 )
 
 __all__ = [
@@ -185,6 +186,50 @@ class ExecutionAuditService:
         )
         return count
 
+    @traced("audit.save_trade_fill_log")
+    def save_trade_fill_log(
+        self,
+        run_id: str,
+        records: tuple[TradeFillPayload, ...],
+    ) -> int:
+        """
+        批量保存成交审计记录.
+
+        Args:
+            run_id: 回测运行 ID.
+            records: TradeFillPayload 不可变元组.
+
+        Returns:
+            成功插入的记录数.
+
+        """
+        if not records:
+            return 0
+        conn = self._pool.get_connection()
+        count = 0
+        for rec in records:
+            payload = self._serialize_record(rec)
+            conn.execute(
+                _INSERT_SQL,
+                (
+                    run_id,
+                    rec.trade_date,
+                    "trade_fill",
+                    rec.instrument_id,
+                    "instrument",
+                    payload,
+                ),
+            )
+            count += 1
+        self._pool.commit()
+        logger.debug(
+            "trade fill records saved",
+            event="audit_trade_fill_save",
+            run_id=run_id,
+            count=count,
+        )
+        return count
+
     @traced("audit.query")
     def query(
         self,
@@ -236,7 +281,7 @@ class ExecutionAuditService:
 
     @staticmethod
     def _serialize_record(
-        record: RiskScanPayload | PreTradeDecisionPayload,
+        record: RiskScanPayload | PreTradeDecisionPayload | TradeFillPayload,
     ) -> str:
         """将 frozen dataclass 序列化为 orjson 字符串。"""
         return orjson.dumps(dataclasses.asdict(record)).decode("utf-8")

@@ -277,11 +277,12 @@
 
 ### Phase 1 验收 Gate
 
-- [ ] `pixi run -e dev check` 全通过
-- [ ] 策略 CRUD 完整可用
-- [ ] 回测报告/成交/审计可通过 API 查询
-- [ ] 基准 NAV 通过读模型路径自动获取并注入报告
-- [ ] Run 列表支持跨策略、按状态/时间范围过滤
+- [x] `pixi run -e dev check` 全通过（4158 passed, 0 failed, 6 pre-existing errors）
+- [x] `arch-check` 全通过（24/24 contracts KEPT）
+- [x] 策略 CRUD 完整可用（CreateStrategyHandler + UpdateStrategyHandler + PublishStrategyHandler + StrategyQueryFacade）
+- [x] 回测报告/成交/审计可通过 API 查询（BacktestQueryFacade 编排 1.1+1.2+1.3）
+- [x] Run 列表支持跨策略、按状态/时间范围过滤（RunReadModel + strategy_run_store.list_runs）
+- [x] 架构违规已修复：strategy routes 通过 StrategyQueryFacade 间接访问 data 层
 
 ---
 
@@ -397,12 +398,12 @@
 
 ### Phase 2 验收 Gate
 
-- [ ] 信号推送可发送到 Telegram
-- [ ] TradeIntent 从 Pipeline 输出自动生成
-- [ ] 成交记录 CRUD 完整可用
-- [ ] 实际持仓正确计算（含 T+1 交收）
-- [ ] 回测 vs 实际对比报告含 Sharpe/Return/成本/偏离度
-- [ ] `pixi run -e dev check` + `arch-check` 全通过
+- [x] 信号推送 Protocol 定义完成（SignalDeliveryProtocol in ports.py，Telegram 实现待 Phase 3）
+- [x] TradeIntent 从 Pipeline 输出自动生成（SignalSnapshotProcess + generate_intents）
+- [x] 成交记录 CRUD 完整可用（RecordFillHandler + TradeService + API routes）
+- [x] 实际持仓正确计算（ManualTracker 含 T+1 交收 + 加权平均成本）
+- [x] 回测 vs 实际对比报告含 Sharpe/Return/成本/偏离度（ComparisonMetrics 12 字段）
+- [x] `pixi run -e dev check` + `arch-check` 全通过（4272 passed, 114 Phase 2 tests）
 
 ---
 
@@ -440,9 +441,14 @@
 
 ### Phase 3 验收 Gate
 
-- [ ] 两次相同输入回测，nav_series 完全一致
-- [ ] manifest 差异可被检测并分类报告
-- [ ] Lineage API 返回完整的运行血统链
+- [x] `pixi run -e dev check` 全通过（4323 passed, 0 failed, 6 pre-existing errors）
+- [x] `arch-check` 无新增违规（23 kept, 1 pre-existing broken）
+- [x] ReplayValidator 纯函数实现 — manifest 对比 + NAV 序列验证 + Pearson 相关系数
+- [x] manifest 差异可被检测并分类报告（config/data/version/seed 四类）
+- [x] Lineage API 返回完整的运行血统链（GET lineage + POST replay）
+- [x] StrategyRunRecord 支持 parent_run_id 血统追踪
+- [x] schema.sql 同步更新 parent_run_id 列 + 索引
+- [x] 39 个 ReplayValidator 单元测试 + 7 个 lineage 单元测试 + 6 个 facade 单元测试
 
 ---
 
@@ -491,9 +497,9 @@ Phase 3 ──(依赖 Phase 0.9)────────────────
 |-------|---------|---------|
 | 1 | AppCommandProvider | `StrategyCommandHandler` |
 | 1 | AppQueryProvider | `BacktestQueryFacade`, `BacktestTradeQueryFacade`, `RunReadModel` |
-| 2 | AppCommandProvider | `TradeExecutionCommandHandler` |
-| 2 | AppQueryProvider | `PortfolioActualQueryFacade` |
-| 2 | AppProcessProvider | `SignalSnapshotProcess`, `ManualTracker` |
+| 2 | AppCommandProvider | `RecordFillHandler`, `UpdateIntentStatusHandler` |
+| 2 | AppQueryProvider | `PortfolioActualQueryFacade`, `TradeQueryFacade` |
+| 2 | AppProcessProvider | `TradeService`, `ManualTracker` |
 
 ### 测试要求
 

@@ -28,6 +28,23 @@ class StrategyRunReaderProtocol(Protocol):
         """按策略 ID 列出运行记录."""
         ...
 
+    def list_runs(
+        self,
+        *,
+        strategy_id: str | None = None,
+        status: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[StrategyRunRecord]:
+        """跨策略运行记录查询，支持多维度过滤."""
+        ...
+
+    def list_by_parent(self, parent_run_id: str) -> list[StrategyRunRecord]:
+        """列出指定运行的所有重放记录."""
+        ...
+
 
 @runtime_checkable
 class StrategyRunWriterProtocol(Protocol):
@@ -64,6 +81,7 @@ class StrategyRunService:
         strategy_id: str,
         strategy_version: str = "",
         mode: str = "backtest",
+        parent_run_id: str = "",
     ) -> None:
         """创建运行记录 (初始状态 pending)."""
         record = StrategyRunRecord(
@@ -73,6 +91,7 @@ class StrategyRunService:
             mode=mode,
             status=RunStatus.PENDING,
             started_at=_utc_now(),
+            parent_run_id=parent_run_id,
         )
         self._writer.save(record)
 
@@ -95,6 +114,55 @@ class StrategyRunService:
     def list_by_strategy(self, strategy_id: str) -> list[StrategyRunRecord]:
         """按策略 ID 列出运行记录."""
         return self._reader.list_by_strategy(strategy_id)
+
+    def list_runs(
+        self,
+        *,
+        strategy_id: str | None = None,
+        status: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[StrategyRunRecord]:
+        """跨策略运行记录查询，支持多维度过滤."""
+        return self._reader.list_runs(
+            strategy_id=strategy_id,
+            status=status,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            offset=offset,
+        )
+
+    def get_lineage(self, run_id: str) -> list[StrategyRunRecord]:
+        """
+        获取运行血统链 — 从当前运行追溯到原始运行.
+
+        返回列表按时间正序排列: [原始运行, ..., 当前运行].
+        如果运行不存在，返回空列表.
+        """
+        chain: list[StrategyRunRecord] = []
+        visited: set[str] = set()
+        current_id = run_id
+
+        while current_id:
+            if current_id in visited:
+                break  # 防止循环
+            visited.add(current_id)
+            record = self._reader.get(current_id)
+            if record is None:
+                break
+            chain.append(record)
+            current_id = record.parent_run_id
+
+        # 反转为正序（原始运行在前）
+        chain.reverse()
+        return chain
+
+    def list_replays(self, run_id: str) -> list[StrategyRunRecord]:
+        """列出指定运行的所有直接重放记录."""
+        return self._reader.list_by_parent(run_id)
 
 
 def _utc_now() -> str:

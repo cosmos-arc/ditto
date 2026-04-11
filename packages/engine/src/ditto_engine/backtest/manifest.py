@@ -197,6 +197,12 @@ def hash_spec(
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
+def hash_universe(instrument_ids: set[InstrumentId]) -> str:
+    """对 universe (sorted instrument IDs) 做 SHA-256, 返回前 16 位 hex。"""
+    payload = ",".join(str(i) for i in sorted(instrument_ids))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
 # ---------------------------------------------------------------------------
 # RuleRefCollector
 # ---------------------------------------------------------------------------

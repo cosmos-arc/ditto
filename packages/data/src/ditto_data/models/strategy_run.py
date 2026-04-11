@@ -25,6 +25,7 @@ class StrategyRunRecord:
         started_at: 开始时间 (RFC3339).
         completed_at: 完成时间 (RFC3339).
         error_message: 错误信息.
+        parent_run_id: 父运行 ID（空字符串表示原始运行，非空表示重放）.
 
     """
 
@@ -36,6 +37,7 @@ class StrategyRunRecord:
     started_at: str = ""
     completed_at: str = ""
     error_message: str = ""
+    parent_run_id: str = ""
 
 
 __all__ = ["StrategyRunRecord"]

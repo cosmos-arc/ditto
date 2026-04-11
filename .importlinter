@@ -345,9 +345,4 @@ ancestors =
     ditto_app
     ditto_interfaces
 depth = 10
-# CQRS 设计允许 process ↔ command 双向依赖：
-#   process → command: Process Manager 导入 Command DTO（如 IngestRangeProcess → IngestDateCommand）
-#   command → process: Command Handler TYPE_CHECKING 导入底层 Service（如 CheckDataQualityHandler → QualityService）
-ignore_imports =
-    ditto_app.process.ingestion.range_process -> ditto_app.command.ingestion
 unmatched_ignore_imports_alerting = warn

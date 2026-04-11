@@ -8,17 +8,17 @@ from typing import TYPE_CHECKING
 
 from ditto_data.models.ingestion import IngestionResult
 
+from ditto_app.contracts import IngestDateCommand
+
 if TYPE_CHECKING:
     from ditto_app.process.ingestion.coordinator import IngestionCoordinator
 
 
-@dataclass(frozen=True)
-class IngestDateCommand:
-    """单日入库命令."""
-
-    dataset: str
-    trade_date: date
-    force: bool = False
+__all__ = [
+    "BackfillRangeCommand",
+    "IngestDateHandler",
+    "IngestRangeCommand",
+]
 
 
 @dataclass(frozen=True)

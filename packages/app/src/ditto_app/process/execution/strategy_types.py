@@ -33,6 +33,8 @@ class RunLifecycleService(Protocol):
         strategy_id: str,
         strategy_version: str = "",
         mode: str = "backtest",
+        *,
+        parent_run_id: str = "",
     ) -> None:
         """创建运行记录。"""
         ...

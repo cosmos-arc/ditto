@@ -15,11 +15,11 @@ from typing import TYPE_CHECKING
 from ditto_data.models.ingestion import BackfillResult, IngestionResult
 from ditto_infra.foundation import logger
 
-from ditto_app.command.ingestion import IngestDateCommand
+from ditto_app.contracts import IngestDateCommand
 
 if TYPE_CHECKING:
-    from ditto_app.command.ingestion import IngestDateHandler
     from ditto_app.process.ingestion.backfill_manager import BackfillManager
+    from ditto_app.process.ingestion.ports import IngestDateHandlerProtocol
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +61,7 @@ class IngestRangeProcess:
     当 ``parallel > 1`` 时可使用线程池并行执行（当前为串行实现）。
     """
 
-    def __init__(self, handler: IngestDateHandler) -> None:
+    def __init__(self, handler: IngestDateHandlerProtocol) -> None:
         self._handler = handler
 
     def run(self, trigger: IngestRangeTrigger) -> list[IngestionResult]:

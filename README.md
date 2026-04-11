@@ -1,6 +1,6 @@
 # Ditto: 量化投资系统
 
-**版本**: v0.10.0 | **更新**: 2026-04-04 | **状态**: Phase 4 App 层提取完成
+**版本**: v0.12.1 | **更新**: 2026-04-11 | **状态**: V1 Sprint 8 项偏差修复完成
 
 ## 概要
 
@@ -18,6 +18,10 @@
 - **衍生数据** — 物化编排 + 发布安全（Shadow Diff / Certification）
 - **任务调度** — Prefect 3（摄取/回填/修补/物化/发布）
 - **CLI** — Typer 命令行（ditto init/ingest/backfill/query）
+- **策略 API** — FastAPI 路由（策略 CRUD + 发布 + 回测结果查询 + 成交审计）
+- **人工执行闭环** — 信号快照 → 交易意图 → 成交录入 → 实际持仓/P&L → 回测vs实际对比
+- **交易 API** — FastAPI 路由（意图查询/成交录入/持仓查询/P&L 汇总/信号查询/对比报告）
+- **T+1 交收日历** — 交易日历注入 + settlement_date 自动计算 + 持仓冻结逻辑
 
 ## 架构
 
@@ -197,6 +201,11 @@ pixi run -e dev arch-check       # 分层依赖检查
 - **Phase 0.5** — 数据质量验证 (done)
 - **Phase 1** — 策略引擎：Pipeline + Stage + 4 模板 (done)
 - **Phase 2** — 回测闭环：EngineLoop + PreTrade/PostTrade + Reality Model (done)
+- **V1 Sprint Phase 0** — EngineLoop StepChain + DecisionFrame 保护 + RunManifest 丰富化 (done)
+- **V1 Sprint Phase 1** — 策略/回测 API 闭环 (done)
+- **V1 Sprint Phase 2** — 人工执行闭环 (done)
+- **V1 Sprint 修复** — 8 项偏差修复: Position UPSERT/T+1 日历/基准 NAV/Comparison API/Signal API/分页/乐观锁/settlement_date (done)
+- **V1 Sprint Phase 3** — Run Lineage / Replayability（规划中）
 - **Phase 3** — 实盘接入：BrokerAdapter / 纸面交易（规划中）
 - **Phase 4** — App 层提取：CQRS 编排 + DI builders + engine 独立包 (done)
 - **Phase 5** — ML 增强：因子权重学习 / 多策略组合（远期规划）
@@ -229,6 +238,36 @@ pixi run -e dev arch-check       # 分层依赖检查
 - [interfaces/CLAUDE.md](interfaces/CLAUDE.md) — Interfaces 层规范
 
 ## 变更记录
+
+### v0.12.1 (2026-04-11)
+**V1 Sprint 8 项偏差修复**
+- F1: Position UPSERT — INSERT OR REPLACE 消除 UNIQUE 冲突
+- F2: T+1 日历注入 — MetadataService 加载交易日历到 ManualTracker
+- F3: 基准 NAV — BacktestQueryFacade 提取 benchmark_return + benchmark 端点
+- F4: Comparison API — ComparisonQueryFacade + GET /trade/comparison（12 指标）
+- F5: settlement_date — DTO 增加 settlement_date + RecordFillHandler 自动计算
+- F6: Signal API — SignalQueryFacade + GET /trade/signals/latest + /trade/signals/{date}/intents
+- F7: Run 分页 — limit/offset 下沉至 SQL 层，移除 Python 切片
+- F8: 乐观锁 — UpdateStrategyHandler 版本校验防并发覆盖
+- 架构: ComparisonMetrics 移至 query 层消除 R8 违规（23/24 contracts kept）
+- 4353 测试通过，0 类型错误
+
+### v0.12.0 (2026-04-11)
+**V1 Sprint Phase 2 人工执行闭环完成**
+- 信号快照 + 交易意图推导（SignalSnapshotProcess + generate_intents）
+- 人工成交录入 + 状态管理（RecordFillHandler + UpdateIntentStatusHandler）
+- 实际持仓聚合（ManualTracker — T+1 交收 + 加权平均成本 + 已实现/未实现 P&L）
+- 回测 vs 实际对比（ComparisonMetrics — Sharpe/Return/成本/跟踪误差 12 指标）
+- 交易 API 路由（/trade/intents, /trade/fills, /trade/positions, /trade/pnl）
+- 共享 DTO 迁移至 ditto_app.types（解决 R8 互斥规则 query↔process 冲突）
+- DI 注册 6 个新 Provider 方法（TradeService, ManualTracker, handlers, facades）
+- 114 个新测试，4272 全通过
+
+### v0.11.0 (2026-04-11)
+**V1 Sprint Phase 1 回测闭环基础完成**
+- 策略 CRUD API（CreateStrategyHandler + UpdateStrategyHandler + PublishStrategyHandler）
+- 回测查询 API（BacktestQueryFacade + BacktestTradeQueryFacade + RunReadModel）
+- 审计扩展（trade_fill record_type + ExecutionAuditService）
 
 ### v0.10.0 (2026-04-04)
 **Phase 4 App 层提取完成**

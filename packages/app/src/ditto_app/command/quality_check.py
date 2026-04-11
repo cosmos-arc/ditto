@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
-
 import polars as pl
 import polars.exceptions as pl_exceptions
 from ditto_data.quality import QualityEngine
@@ -12,14 +9,11 @@ from ditto_data.services import QualityRecordService
 from ditto_infra.foundation import logger
 from ditto_kernel.quality import DQIssue, DQResult
 
+from ditto_app.contracts import CheckDataQualityCommand
 
-@dataclass(frozen=True)
-class CheckDataQualityCommand:
-    """数据质量检查命令."""
-
-    df: pl.DataFrame
-    dataset: str
-    context: dict[str, Any] | None = None
+__all__ = [
+    "CheckDataQualityHandler",
+]
 
 
 class CheckDataQualityHandler:

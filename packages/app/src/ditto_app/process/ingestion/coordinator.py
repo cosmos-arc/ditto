@@ -24,7 +24,7 @@ from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger
 from ditto_kernel.types import InstrumentIngestParams
 
-from ditto_app.command.quality_check import CheckDataQualityCommand
+from ditto_app.contracts import CheckDataQualityCommand
 from ditto_app.process.ingestion.auto_init import resolve_identifier_with_auto_init
 from ditto_app.process.ingestion.backfill_handler import BackfillContext
 from ditto_app.process.ingestion.backfill_handler import (

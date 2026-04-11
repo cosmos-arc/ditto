@@ -1,0 +1,421 @@
+"""TradeCommandHandler 单元测试 — 成交录入命令处理."""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock
+
+import pytest
+from ditto_data.models.trade import (
+    ManualExecutionFillRecord,
+    TradeIntentRecord,
+)
+
+
+def _make_trade_service() -> MagicMock:
+    """构建 TradeService mock，包含成交录入所需公开方法."""
+    return MagicMock(
+        spec=[
+            "get_intent",
+            "save_fill",
+            "update_intent_status",
+            "list_fills",
+            "save_position",
+        ],
+    )
+
+
+def _make_manual_tracker() -> MagicMock:
+    """构建 ManualTracker mock，暴露 compute_positions + compute_settlement_date."""
+    return MagicMock(spec=["compute_positions", "compute_settlement_date"])
+
+
+def _make_intent_record(**overrides: object) -> TradeIntentRecord:
+    """构建测试用 TradeIntentRecord."""
+    defaults: dict[str, object] = {
+        "intent_id": "intent-001",
+        "strategy_id": "strat-alpha",
+        "signal_date": "2026-04-10",
+        "instrument_id": 510050,
+        "direction": "buy",
+        "target_weight": 0.3,
+        "current_weight": 0.1,
+        "delta_weight": 0.2,
+        "quantity": 1000,
+        "status": "pending",
+        "created_at": "2026-04-10T09:30:00Z",
+    }
+    defaults.update(overrides)
+    return TradeIntentRecord(**defaults)  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# RecordFillHandler
+# ---------------------------------------------------------------------------
+
+
+class TestRecordFillHandler:
+    """RecordFillHandler — 录入人工成交."""
+
+    def test_handle_saves_fill_and_updates_intent(self) -> None:
+        """成功录入 → fill 持久化 + intent 状态更新为 filled."""
+        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
+        from ditto_app.process.execution.types import (
+            ManualExecutionFill,
+        )
+
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+
+        intent = _make_intent_record()
+        service.get_intent.return_value = intent
+
+        # list_fills 返回空列表 + 新 fill 的 record
+        new_fill_record = ManualExecutionFillRecord(
+            fill_id="fill-001",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=1000,
+            fill_price=4.15,
+            fee=5.0,
+        )
+        service.list_fills.return_value = [new_fill_record]
+
+        tracker.compute_positions.return_value = []
+        tracker.compute_settlement_date.return_value = "2026-04-14"
+
+        handler = RecordFillHandler(
+            trade_service=service,
+            manual_tracker=tracker,
+        )
+
+        cmd = RecordFillCommand(
+            fill_id="fill-001",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=1000,
+            fill_price=4.15,
+            fee=5.0,
+        )
+
+        result = handler.handle(cmd)
+
+        # 验证返回 ManualExecutionFill DTO
+        assert isinstance(result, ManualExecutionFill)
+        assert result.fill_id == "fill-001"
+        assert result.intent_id == "intent-001"
+        assert result.quantity == 1000
+        assert result.fill_price == 4.15
+
+        # 验证 save_fill 被调用
+        service.save_fill.assert_called_once()
+        saved_record = service.save_fill.call_args[0][0]
+        assert isinstance(saved_record, ManualExecutionFillRecord)
+        assert saved_record.fill_id == "fill-001"
+
+        # 验证 intent 状态更新为 filled
+        service.update_intent_status.assert_called_once_with(
+            "intent-001",
+            "filled",
+        )
+
+        # 验证 tracker 被调用
+        tracker.compute_positions.assert_called_once()
+
+    def test_handle_raises_on_missing_intent(self) -> None:
+        """intent 不存在 → ValueError."""
+        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
+
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+        service.get_intent.return_value = None
+
+        handler = RecordFillHandler(
+            trade_service=service,
+            manual_tracker=tracker,
+        )
+
+        cmd = RecordFillCommand(
+            fill_id="fill-002",
+            intent_id="intent-missing",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=500,
+            fill_price=4.10,
+            fee=2.5,
+        )
+
+        with pytest.raises(ValueError, match="Intent not found: intent-missing"):
+            handler.handle(cmd)
+
+        # 验证无副作用
+        service.save_fill.assert_not_called()
+        service.update_intent_status.assert_not_called()
+
+    def test_handle_with_default_values(self) -> None:
+        """带默认值 → fee/slippage/notes 正确传递."""
+        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
+
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+
+        service.get_intent.return_value = _make_intent_record()
+        service.list_fills.return_value = []
+        tracker.compute_positions.return_value = []
+        tracker.compute_settlement_date.return_value = "2026-04-14"
+
+        handler = RecordFillHandler(
+            trade_service=service,
+            manual_tracker=tracker,
+        )
+
+        cmd = RecordFillCommand(
+            fill_id="fill-003",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=200,
+            fill_price=4.20,
+            # fee, slippage, notes 使用默认值
+        )
+
+        result = handler.handle(cmd)
+
+        assert result.fee == 0.0
+        assert result.slippage == 0.0
+        assert result.notes == ""
+
+        # 验证 save_fill 传递的 record 也包含默认值
+        saved_record = service.save_fill.call_args[0][0]
+        assert saved_record.fee == 0.0
+        assert saved_record.slippage == 0.0
+        assert saved_record.notes == ""
+
+    def test_handle_triggers_tracker_recomputation(self) -> None:
+        """录入成交后触发 ManualTracker 重新聚合持仓并持久化."""
+        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
+        from ditto_app.process.execution.types import ActualPositionSnapshot
+
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+
+        service.get_intent.return_value = _make_intent_record()
+        service.list_fills.return_value = []
+
+        # tracker 返回一个持仓快照
+        snapshot = ActualPositionSnapshot(
+            snapshot_id="snap-001",
+            strategy_id="strat-alpha",
+            snapshot_date="2026-04-11",
+            instrument_id=510050,
+            quantity=1000,
+            available_quantity=0,
+            average_cost=4.15,
+            market_value=0.0,
+            unrealized_pnl=0.0,
+            realized_pnl=0.0,
+            total_fees=5.0,
+        )
+        tracker.compute_positions.return_value = [snapshot]
+        tracker.compute_settlement_date.return_value = "2026-04-14"
+
+        handler = RecordFillHandler(
+            trade_service=service,
+            manual_tracker=tracker,
+        )
+
+        cmd = RecordFillCommand(
+            fill_id="fill-004",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=1000,
+            fill_price=4.15,
+            fee=5.0,
+        )
+
+        handler.handle(cmd)
+
+        # 验证 tracker 使用正确的参数调用
+        tracker.compute_positions.assert_called_once()
+        call_kwargs = tracker.compute_positions.call_args
+        assert call_kwargs[1]["strategy_id"] == "strat-alpha"
+        assert call_kwargs[1]["snapshot_date"] == "2026-04-11"
+
+        # 验证持仓被持久化
+        service.save_position.assert_called_once()
+        saved_pos = service.save_position.call_args[0][0]
+        assert saved_pos.snapshot_id == "snap-001"
+        assert saved_pos.quantity == 1000
+
+    def test_handle_computes_settlement_date(self) -> None:
+        """handler 调用 compute_settlement_date 并将结果传入 DTO."""
+        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
+
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+
+        service.get_intent.return_value = _make_intent_record()
+        service.list_fills.return_value = []
+        tracker.compute_positions.return_value = []
+        tracker.compute_settlement_date.return_value = "2026-04-14"
+
+        handler = RecordFillHandler(
+            trade_service=service,
+            manual_tracker=tracker,
+        )
+
+        cmd = RecordFillCommand(
+            fill_id="fill-005",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=1000,
+            fill_price=4.15,
+            fee=5.0,
+        )
+
+        result = handler.handle(cmd)
+
+        # 验证调用了 compute_settlement_date 并传入 trade_date
+        tracker.compute_settlement_date.assert_called_once_with("2026-04-11")
+
+        # 验证返回 DTO 的 settlement_date 正确
+        assert result.settlement_date == "2026-04-14"
+
+        # 验证持久化的 record 也包含 settlement_date
+        saved_record = service.save_fill.call_args[0][0]
+        assert saved_record.settlement_date == "2026-04-14"
+
+    def test_handle_settlement_date_fallback(self) -> None:
+        """tracker 返回空日历时 settlement_date fallback 到 trade_date."""
+        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
+
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+
+        service.get_intent.return_value = _make_intent_record()
+        service.list_fills.return_value = []
+        tracker.compute_positions.return_value = []
+        # 空日历 → compute_settlement_date 返回 trade_date 本身
+        tracker.compute_settlement_date.return_value = "2026-04-11"
+
+        handler = RecordFillHandler(
+            trade_service=service,
+            manual_tracker=tracker,
+        )
+
+        cmd = RecordFillCommand(
+            fill_id="fill-006",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=500,
+            fill_price=4.10,
+        )
+
+        result = handler.handle(cmd)
+
+        # fallback: settlement_date 等于 trade_date
+        assert result.settlement_date == "2026-04-11"
+
+        saved_record = service.save_fill.call_args[0][0]
+        assert saved_record.settlement_date == "2026-04-11"
+
+
+# ---------------------------------------------------------------------------
+# UpdateIntentStatusHandler
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateIntentStatusHandler:
+    """UpdateIntentStatusHandler — 更新交易意图状态."""
+
+    def test_handle_updates_status(self) -> None:
+        """成功更新意图状态."""
+        from ditto_app.command.trade import (
+            UpdateIntentStatusCommand,
+            UpdateIntentStatusHandler,
+        )
+
+        service = _make_trade_service()
+        service.get_intent.return_value = _make_intent_record()
+
+        handler = UpdateIntentStatusHandler(trade_service=service)
+        cmd = UpdateIntentStatusCommand(
+            intent_id="intent-001",
+            status="cancelled",
+        )
+
+        result = handler.handle(cmd)
+
+        assert result is True
+        service.update_intent_status.assert_called_once_with(
+            "intent-001",
+            "cancelled",
+        )
+
+    def test_handle_raises_on_missing_intent(self) -> None:
+        """intent 不存在 → ValueError."""
+        from ditto_app.command.trade import (
+            UpdateIntentStatusCommand,
+            UpdateIntentStatusHandler,
+        )
+
+        service = _make_trade_service()
+        service.get_intent.return_value = None
+
+        handler = UpdateIntentStatusHandler(trade_service=service)
+        cmd = UpdateIntentStatusCommand(
+            intent_id="intent-missing",
+            status="cancelled",
+        )
+
+        with pytest.raises(ValueError, match="Intent not found: intent-missing"):
+            handler.handle(cmd)
+
+        service.update_intent_status.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Protocol conformance
+# ---------------------------------------------------------------------------
+
+
+class TestTradeCommandProtocolConformance:
+    """所有 Trade Handler 满足 CommandHandler Protocol."""
+
+    def test_record_fill_handler_satisfies_protocol(self) -> None:
+        from ditto_app.command.protocols import CommandHandler
+        from ditto_app.command.trade import RecordFillHandler
+
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+        handler = RecordFillHandler(
+            trade_service=service,
+            manual_tracker=tracker,
+        )
+        assert isinstance(handler, CommandHandler)
+
+    def test_update_intent_status_handler_satisfies_protocol(self) -> None:
+        from ditto_app.command.protocols import CommandHandler
+        from ditto_app.command.trade import UpdateIntentStatusHandler
+
+        service = _make_trade_service()
+        handler = UpdateIntentStatusHandler(trade_service=service)
+        assert isinstance(handler, CommandHandler)

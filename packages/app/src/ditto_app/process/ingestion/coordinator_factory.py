@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ditto_app.command.quality_check import CheckDataQualityHandler
+    from ditto_app.process.ingestion.ports import QualityCheckerProtocol
 
 from ditto_data.models import Source
 from ditto_data.services import (
@@ -52,7 +52,7 @@ def create_coordinator(
     source_name: str | Source,
     *,
     ingestion_cursor_service: IngestionCursorService | None = None,
-    quality_checker: CheckDataQualityHandler | None = None,
+    quality_checker: QualityCheckerProtocol | None = None,
     freeze_service: FreezeService | None = None,
 ) -> Iterator[IngestionCoordinator]:
     """
@@ -62,7 +62,7 @@ def create_coordinator(
         services: 协调器所需服务依赖.
         source_name: 数据源名称.
         ingestion_cursor_service: IngestionCursorService 实例（可选）.
-        quality_checker: CheckDataQualityHandler 实例（可选）.
+        quality_checker: QualityCheckerProtocol 实例（可选）.
         freeze_service: FreezeService 实例（可选）.
 
     Yields:

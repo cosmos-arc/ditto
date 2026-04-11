@@ -6,9 +6,9 @@ import pytest
 from ditto_app.command import (
     BackfillRangeCommand,
     CommandHandler,
-    IngestDateCommand,
     IngestRangeCommand,
 )
+from ditto_app.contracts import IngestDateCommand
 
 
 class TestIngestDateCommand:

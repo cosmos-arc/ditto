@@ -82,6 +82,7 @@ class BacktestServiceConfig:
     strategy_id: str = "default"
     strategy_version: str = ""
     run_id: str = ""
+    parent_run_id: str = ""
     start_date: str = ""
     end_date: str = ""
     initial_cash: float = 1_000_000.0
@@ -185,6 +186,7 @@ class BacktestService:
                 strategy_id=self._config.strategy_id,
                 strategy_version=self._config.strategy_version,
                 mode="backtest",
+                parent_run_id=self._config.parent_run_id,
             )
             run_svc.mark_running(run_id)
 

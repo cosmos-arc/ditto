@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS strategy_run (
     status            TEXT NOT NULL DEFAULT 'pending',
     started_at        TEXT NOT NULL DEFAULT '',
     completed_at      TEXT NOT NULL DEFAULT '',
-    error_message     TEXT NOT NULL DEFAULT ''
+    error_message     TEXT NOT NULL DEFAULT '',
+    parent_run_id     TEXT NOT NULL DEFAULT ''
 );
 """
 
@@ -42,23 +43,28 @@ _CREATE_INDEX_STATUS = (
     "CREATE INDEX IF NOT EXISTS idx_strategy_run_status ON strategy_run(status);"
 )
 
+_CREATE_INDEX_PARENT_RUN_ID = (
+    "CREATE INDEX IF NOT EXISTS idx_strategy_run_parent_run_id "
+    "ON strategy_run(parent_run_id);"
+)
+
 _UPSERT_SQL = """
 INSERT OR REPLACE INTO strategy_run (
     run_id, strategy_id, strategy_version, mode,
-    status, started_at, completed_at, error_message
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    status, started_at, completed_at, error_message, parent_run_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 _GET_SQL = """
 SELECT run_id, strategy_id, strategy_version, mode,
-       status, started_at, completed_at, error_message
+       status, started_at, completed_at, error_message, parent_run_id
 FROM strategy_run
 WHERE run_id = ?
 """
 
 _LIST_BY_STRATEGY_SQL = """
 SELECT run_id, strategy_id, strategy_version, mode,
-       status, started_at, completed_at, error_message
+       status, started_at, completed_at, error_message, parent_run_id
 FROM strategy_run
 WHERE strategy_id = ?
 ORDER BY started_at DESC, run_id DESC
@@ -76,6 +82,20 @@ SET status = ?, completed_at = ?, error_message = ?
 WHERE run_id = ?
 """
 
+_LIST_RUNS_BASE_SQL = """
+SELECT run_id, strategy_id, strategy_version, mode,
+       status, started_at, completed_at, error_message, parent_run_id
+FROM strategy_run
+"""
+
+_LIST_BY_PARENT_SQL = """
+SELECT run_id, strategy_id, strategy_version, mode,
+       status, started_at, completed_at, error_message, parent_run_id
+FROM strategy_run
+WHERE parent_run_id = ?
+ORDER BY started_at ASC, run_id ASC
+"""
+
 
 def _row_to_record(row: sqlite3.Row) -> StrategyRunRecord:
     """Convert a sqlite3.Row-like object to StrategyRunRecord."""
@@ -88,7 +108,8 @@ def _row_to_record(row: sqlite3.Row) -> StrategyRunRecord:
         status=str(data["status"]),
         started_at=str(data["started_at"]),
         completed_at=str(data["completed_at"]),
-        error_message=str(data["error_message"]),
+        error_message=str(data.get("error_message", "")),
+        parent_run_id=str(data.get("parent_run_id", "")),
     )
 
 
@@ -103,7 +124,10 @@ class SQLiteStrategyRunWriter:
         """Create strategy_run table and indexes (idempotent)."""
         conn = self._pool.get_connection()
         conn.executescript(
-            _CREATE_TABLE + _CREATE_INDEX_STRATEGY_ID + _CREATE_INDEX_STATUS,
+            _CREATE_TABLE
+            + _CREATE_INDEX_STRATEGY_ID
+            + _CREATE_INDEX_STATUS
+            + _CREATE_INDEX_PARENT_RUN_ID,
         )
         self._pool.commit()
         logger.debug(
@@ -126,6 +150,7 @@ class SQLiteStrategyRunWriter:
                 record.started_at,
                 record.completed_at,
                 record.error_message,
+                record.parent_run_id,
             ),
         )
         self._pool.commit()
@@ -178,7 +203,10 @@ class SQLiteStrategyRunReader:
         """Create strategy_run table and indexes (idempotent)."""
         conn = self._pool.get_connection()
         conn.executescript(
-            _CREATE_TABLE + _CREATE_INDEX_STRATEGY_ID + _CREATE_INDEX_STATUS,
+            _CREATE_TABLE
+            + _CREATE_INDEX_STRATEGY_ID
+            + _CREATE_INDEX_STATUS
+            + _CREATE_INDEX_PARENT_RUN_ID,
         )
         self._pool.commit()
         logger.debug(
@@ -200,6 +228,58 @@ class SQLiteStrategyRunReader:
         """List all runs for a given strategy_id ordered by started_at DESC."""
         conn = self._pool.get_connection()
         rows = conn.execute(_LIST_BY_STRATEGY_SQL, (strategy_id,)).fetchall()
+        return [_row_to_record(row) for row in rows]
+
+    @traced("store.strategy_run_reader.list_runs")
+    def list_runs(
+        self,
+        *,
+        strategy_id: str | None = None,
+        status: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[StrategyRunRecord]:
+        """跨策略运行记录查询，支持多维度过滤与分页."""
+        conditions: list[str] = []
+        params: list[str | int] = []
+
+        if strategy_id is not None:
+            conditions.append("strategy_id = ?")
+            params.append(strategy_id)
+        if status is not None:
+            conditions.append("status = ?")
+            params.append(status)
+        if start_date is not None:
+            conditions.append("started_at >= ?")
+            params.append(start_date)
+        if end_date is not None:
+            conditions.append("started_at <= ?")
+            params.append(end_date)
+
+        where = ""
+        if conditions:
+            where = " WHERE " + " AND ".join(conditions)
+
+        sql = _LIST_RUNS_BASE_SQL + where + " ORDER BY started_at DESC, run_id DESC"
+
+        if limit is not None:
+            sql += " LIMIT ?"
+            params.append(limit)
+        if offset is not None and limit is not None:
+            sql += " OFFSET ?"
+            params.append(offset)
+
+        conn = self._pool.get_connection()
+        rows = conn.execute(sql, params).fetchall()
+        return [_row_to_record(row) for row in rows]
+
+    @traced("store.strategy_run_reader.list_by_parent")
+    def list_by_parent(self, parent_run_id: str) -> list[StrategyRunRecord]:
+        """列出指定运行的所有重放记录."""
+        conn = self._pool.get_connection()
+        rows = conn.execute(_LIST_BY_PARENT_SQL, (parent_run_id,)).fetchall()
         return [_row_to_record(row) for row in rows]
 
 

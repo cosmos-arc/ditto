@@ -37,7 +37,7 @@ class TestCheckAndQuarantine:
         handler = CheckDataQualityHandler(engine=mock_quality_engine)
         mock_quality_engine.check.return_value = sample_dq_result_passed
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=sample_primary_df, dataset="stock_daily")
 
@@ -71,7 +71,7 @@ class TestCheckAndQuarantine:
             issues=[sample_dq_issue_warning],
         )
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=sample_primary_df, dataset="stock_daily")
 
@@ -100,7 +100,7 @@ class TestCheckAndQuarantine:
             issues=[sample_dq_issue_error],
         )
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=sample_primary_df, dataset="stock_daily")
 
@@ -117,7 +117,7 @@ class TestCheckAndQuarantine:
         empty_df = pl.DataFrame()
         handler = CheckDataQualityHandler(engine=mock_quality_engine)
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=empty_df, dataset="stock_daily")
 
@@ -137,7 +137,7 @@ class TestCheckAndQuarantine:
         handler = CheckDataQualityHandler(engine=mock_quality_engine)
         context = {"reference_values": [1000001, 1000002]}
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(
             df=sample_primary_df, dataset="stock_daily", context=context
@@ -170,7 +170,7 @@ class TestQuarantineData:
         handler = CheckDataQualityHandler(engine=mock_quality_engine)
         mock_quality_engine.check.return_value = sample_dq_result_with_issues
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=sample_primary_df, dataset="stock_daily")
 
@@ -194,7 +194,7 @@ class TestQuarantineData:
         )
         mock_quality_engine.check.return_value = sample_dq_result_with_issues
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=sample_primary_df, dataset="stock_daily")
 

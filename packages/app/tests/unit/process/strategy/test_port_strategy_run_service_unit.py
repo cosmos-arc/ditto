@@ -284,6 +284,7 @@ class TestRecommendationMode:
             strategy_id="momentum-etf",
             strategy_version="2026.03",
             mode="recommendation",
+            parent_run_id="",
         )
         mock_run_service.mark_running.assert_called_once_with("run-001")
         mock_run_service.mark_completed.assert_called_once_with("run-001")
@@ -343,6 +344,7 @@ class TestRecommendationMode:
             strategy_id="momentum-etf",
             strategy_version="",
             mode="recommendation",
+            parent_run_id="",
         )
         mock_run_service.mark_running.assert_called_once_with("run-001")
         mock_run_service.mark_failed.assert_called_once_with(

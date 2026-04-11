@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ditto_interfaces.api.routes import (
+    backtest,
     capital,
     commodity,
     fundamental,
@@ -13,9 +14,12 @@ from ditto_interfaces.api.routes import (
     metadata,
     portfolio,
     source,
+    strategy,
+    trade,
 )
 
 __all__ = [
+    "backtest",
     "capital",
     "commodity",
     "fundamental",
@@ -26,4 +30,6 @@ __all__ = [
     "metadata",
     "portfolio",
     "source",
+    "strategy",
+    "trade",
 ]

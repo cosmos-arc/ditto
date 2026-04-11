@@ -217,3 +217,181 @@ class TestStrategyRunServiceLifecycle:
 
         assert len(result) == 2
         mock_reader.list_by_strategy.assert_called_once_with("momentum-etf")
+
+
+# ---------------------------------------------------------------------------
+# Tests: StrategyRunService — Lineage
+# ---------------------------------------------------------------------------
+
+
+class TestStrategyRunServiceLineage:
+    """测试 StrategyRunService 血统查询方法."""
+
+    def test_get_lineage_single_run(self) -> None:
+        """get_lineage() 原始运行返回长度 1 的链."""
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        record = _make_record(run_id="run-001", parent_run_id="")
+        mock_reader.get.return_value = record
+        service = _make_service(reader=mock_reader)
+
+        result = service.get_lineage("run-001")
+
+        assert len(result) == 1
+        assert result[0].run_id == "run-001"
+
+    def test_get_lineage_chain_depth_2(self) -> None:
+        """get_lineage() 追溯两级 — run-002 → run-001."""
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        original = _make_record(run_id="run-001", parent_run_id="")
+        replay = _make_record(run_id="run-002", parent_run_id="run-001")
+
+        def _get(run_id: str) -> StrategyRunRecord | None:
+            return {"run-001": original, "run-002": replay}.get(run_id)
+
+        mock_reader.get.side_effect = _get
+        service = _make_service(reader=mock_reader)
+
+        result = service.get_lineage("run-002")
+
+        assert len(result) == 2
+        assert result[0].run_id == "run-001"
+        assert result[1].run_id == "run-002"
+
+    def test_get_lineage_not_found(self) -> None:
+        """get_lineage() 运行不存在返回空列表."""
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        mock_reader.get.return_value = None
+        service = _make_service(reader=mock_reader)
+
+        result = service.get_lineage("nonexistent")
+
+        assert result == []
+
+    def test_get_lineage_breaks_cycle(self) -> None:
+        """get_lineage() 检测循环并中断."""
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        record_a = _make_record(run_id="run-a", parent_run_id="run-b")
+        record_b = _make_record(run_id="run-b", parent_run_id="run-a")
+
+        def _get(run_id: str) -> StrategyRunRecord | None:
+            return {"run-a": record_a, "run-b": record_b}.get(run_id)
+
+        mock_reader.get.side_effect = _get
+        service = _make_service(reader=mock_reader)
+
+        result = service.get_lineage("run-a")
+
+        assert len(result) == 2
+
+    def test_list_replays(self) -> None:
+        """list_replays() 返回指定运行的直接重放."""
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        replays = [
+            _make_record(run_id="run-002", parent_run_id="run-001"),
+        ]
+        mock_reader.list_by_parent.return_value = replays
+        service = _make_service(reader=mock_reader)
+
+        result = service.list_replays("run-001")
+
+        assert len(result) == 1
+        mock_reader.list_by_parent.assert_called_once_with("run-001")
+
+    def test_create_run_with_parent(self) -> None:
+        """create_run() 带 parent_run_id 正确保存."""
+        mock_writer = MagicMock(spec=StrategyRunWriterProtocol)
+        service = _make_service(writer=mock_writer)
+
+        service.create_run(
+            run_id="run-002",
+            strategy_id="strat-a",
+            parent_run_id="run-001",
+        )
+
+        record = mock_writer.save.call_args[0][0]
+        assert record.parent_run_id == "run-001"
+
+
+# ---------------------------------------------------------------------------
+# Tests: StrategyRunService — list_runs 分页
+# ---------------------------------------------------------------------------
+
+
+class TestStrategyRunServiceListRunsPagination:
+    """测试 StrategyRunService.list_runs 分页参数透传."""
+
+    def test_list_runs_with_limit(self) -> None:
+        """list_runs(limit=2) 透传 limit 给 reader."""
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        records = [_make_record(run_id=f"run-{i:03d}") for i in range(5)]
+        mock_reader.list_runs.return_value = records[:2]
+        service = _make_service(reader=mock_reader)
+
+        result = service.list_runs(limit=2)
+
+        assert len(result) == 2
+        mock_reader.list_runs.assert_called_once_with(
+            strategy_id=None,
+            status=None,
+            start_date=None,
+            end_date=None,
+            limit=2,
+            offset=None,
+        )
+
+    def test_list_runs_with_offset(self) -> None:
+        """list_runs(offset=3) 透传 offset 给 reader."""
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        records = [_make_record(run_id=f"run-{i:03d}") for i in range(5)]
+        mock_reader.list_runs.return_value = records[3:]
+        service = _make_service(reader=mock_reader)
+
+        result = service.list_runs(offset=3)
+
+        assert len(result) == 2
+        mock_reader.list_runs.assert_called_once_with(
+            strategy_id=None,
+            status=None,
+            start_date=None,
+            end_date=None,
+            limit=None,
+            offset=3,
+        )
+
+    def test_list_runs_with_limit_and_offset(self) -> None:
+        """list_runs(limit=2, offset=1) 组合透传."""
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        records = [_make_record(run_id=f"run-{i:03d}") for i in range(5)]
+        mock_reader.list_runs.return_value = records[1:3]
+        service = _make_service(reader=mock_reader)
+
+        result = service.list_runs(limit=2, offset=1)
+
+        assert len(result) == 2
+        mock_reader.list_runs.assert_called_once_with(
+            strategy_id=None,
+            status=None,
+            start_date=None,
+            end_date=None,
+            limit=2,
+            offset=1,
+        )
+
+    def test_list_runs_default_no_pagination(self) -> None:
+        """list_runs() 无分页参数时 limit/offset 均为 None."""
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        records = [_make_record(run_id=f"run-{i:03d}") for i in range(5)]
+        mock_reader.list_runs.return_value = records
+        service = _make_service(reader=mock_reader)
+
+        result = service.list_runs()
+
+        assert len(result) == 5
+        mock_reader.list_runs.assert_called_once_with(
+            strategy_id=None,
+            status=None,
+            start_date=None,
+            end_date=None,
+            limit=None,
+            offset=None,
+        )

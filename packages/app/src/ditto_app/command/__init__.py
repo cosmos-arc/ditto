@@ -4,28 +4,32 @@ from __future__ import annotations
 
 from ditto_app.command.ingestion import (
     BackfillRangeCommand,
-    IngestDateCommand,
     IngestDateHandler,
     IngestRangeCommand,
 )
 from ditto_app.command.protocols import CommandHandler
-from ditto_app.command.quality_check import (
-    CheckDataQualityCommand,
-    CheckDataQualityHandler,
-)
+from ditto_app.command.quality_check import CheckDataQualityHandler
 from ditto_app.command.quality_reconciliation import (
     ReconcileSourcesCommand,
     ReconcileSourcesHandler,
 )
+from ditto_app.command.trade import (
+    RecordFillCommand,
+    RecordFillHandler,
+    UpdateIntentStatusCommand,
+    UpdateIntentStatusHandler,
+)
 
 __all__ = [
     "BackfillRangeCommand",
-    "CheckDataQualityCommand",
     "CheckDataQualityHandler",
     "CommandHandler",
-    "IngestDateCommand",
     "IngestDateHandler",
     "IngestRangeCommand",
     "ReconcileSourcesCommand",
     "ReconcileSourcesHandler",
+    "RecordFillCommand",
+    "RecordFillHandler",
+    "UpdateIntentStatusCommand",
+    "UpdateIntentStatusHandler",
 ]

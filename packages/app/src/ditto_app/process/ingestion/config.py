@@ -15,7 +15,7 @@ from ditto_data.sources.base import DataSource
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from ditto_app.command.quality_check import CheckDataQualityHandler
+    from ditto_app.process.ingestion.ports import QualityCheckerProtocol
 
 
 class IngestionConfig(BaseModel):
@@ -38,6 +38,6 @@ class IngestionCoordinatorConfig:
     source_name: str = "tushare"
     ingestion_log_service: IngestionLogService | None = None
     ingestion_cursor_service: IngestionCursorService | None = None
-    quality_checker: CheckDataQualityHandler | None = None
+    quality_checker: QualityCheckerProtocol | None = None
     freeze_service: FreezeService | None = None
     fred_source: DataSource | None = None

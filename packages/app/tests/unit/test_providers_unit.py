@@ -109,7 +109,20 @@ def _runtime_deps_provider() -> Provider:
 
         @provide
         def metadata_service(self) -> MetadataService:
-            return MagicMock(spec=MetadataService)
+            svc = MagicMock(spec=MetadataService)
+            svc.list_trading_days.return_value = [
+                "2026-04-06",
+                "2026-04-07",
+                "2026-04-08",
+                "2026-04-09",
+                "2026-04-10",
+                "2026-04-13",
+                "2026-04-14",
+                "2026-04-15",
+                "2026-04-16",
+                "2026-04-17",
+            ]
+            return svc
 
         @provide
         def market_service(self) -> MarketService:
@@ -260,3 +273,12 @@ class TestAppProviderIntegration:
             app_container.get(CheckDataQualityHandler),
             CheckDataQualityHandler,
         )
+
+    def test_manual_tracker_receives_trading_calendar(self, app_container) -> None:
+        """ManualTracker 应从 MetadataService 加载交易日历（非空 tuple）."""
+        from ditto_app.process.execution.manual_tracker import ManualTracker
+
+        tracker = app_container.get(ManualTracker)
+        assert isinstance(tracker, ManualTracker)
+        assert isinstance(tracker._calendar, tuple)
+        assert len(tracker._calendar) > 0

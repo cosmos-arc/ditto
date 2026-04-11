@@ -51,6 +51,7 @@ from ditto_data.services.strategy.strategy_catalog_service import (
 from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunService as StrategyRunLifecycleService,
 )
+from ditto_data.services.trade_service import TradeService
 
 # ---------------------------------------------------------------------------
 # App Builder 层
@@ -66,6 +67,17 @@ from ditto_app.builders import (
 # App Command 层
 # ---------------------------------------------------------------------------
 from ditto_app.command.quality_check import CheckDataQualityHandler
+from ditto_app.command.strategy import (
+    CreateStrategyHandler,
+    PublishStrategyHandler,
+    UpdateStrategyHandler,
+)
+from ditto_app.command.trade import (
+    RecordFillHandler,
+    UpdateIntentStatusHandler,
+)
+from ditto_app.process.execution.manual_tracker import ManualTracker
+from ditto_app.process.execution.replay_process import ReplayProcess  # noqa: RUF100
 from ditto_app.process.execution.strategy_run_process import StrategyFacade
 
 # ---------------------------------------------------------------------------
@@ -86,17 +98,26 @@ from ditto_app.process.quality import QualityPatrolService
 # ---------------------------------------------------------------------------
 # App Query 层
 # ---------------------------------------------------------------------------
+from ditto_app.query.backtest import BacktestQueryFacade
+from ditto_app.query.backtest_trade import BacktestTradeQueryFacade
 from ditto_app.query.capital import CapitalQueryFacade
 from ditto_app.query.commodity import CommodityQueryFacade
+from ditto_app.query.comparison import ComparisonQueryFacade
 from ditto_app.query.derived import DerivedQueryFacade
 from ditto_app.query.forward_return_service import ForwardReturnService
 from ditto_app.query.fundamental import FundamentalQueryFacade
 from ditto_app.query.fx import FXQueryFacade
+from ditto_app.query.lineage import LineageQueryFacade  # noqa: RUF100
 from ditto_app.query.macro import MacroQueryFacade
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
 from ditto_app.query.research import ResearchDatasetFacade
+from ditto_app.query.run import RunReadModel
+from ditto_app.query.signal import SignalQueryFacade
 from ditto_app.query.source import SourceQueryFacade
+from ditto_app.query.strategy import StrategyQueryFacade
+from ditto_app.query.trade import TradeQueryFacade
 
 __all__ = [
     "AppBuilderFactory",
@@ -128,6 +149,50 @@ class AppCommandProvider(Provider):
             engine=dq_engine,
             quarantine_writer=quality_record_service,
         )
+
+    @provide
+    def create_strategy_handler(
+        self,
+        catalog_service: StrategyCatalogService,
+    ) -> CreateStrategyHandler:
+        """创建策略 Command Handler."""
+        return CreateStrategyHandler(catalog_service=catalog_service)
+
+    @provide
+    def update_strategy_handler(
+        self,
+        catalog_service: StrategyCatalogService,
+    ) -> UpdateStrategyHandler:
+        """更新策略 Command Handler."""
+        return UpdateStrategyHandler(catalog_service=catalog_service)
+
+    @provide
+    def publish_strategy_handler(
+        self,
+        catalog_service: StrategyCatalogService,
+    ) -> PublishStrategyHandler:
+        """发布策略 Command Handler."""
+        return PublishStrategyHandler(catalog_service=catalog_service)
+
+    @provide
+    def record_fill_handler(
+        self,
+        trade_service: TradeService,
+        manual_tracker: ManualTracker,
+    ) -> RecordFillHandler:
+        """录入人工成交 Command Handler."""
+        return RecordFillHandler(
+            trade_service=trade_service,
+            manual_tracker=manual_tracker,
+        )
+
+    @provide
+    def update_intent_status_handler(
+        self,
+        trade_service: TradeService,
+    ) -> UpdateIntentStatusHandler:
+        """更新交易意图状态 Command Handler."""
+        return UpdateIntentStatusHandler(trade_service=trade_service)
 
 
 # ---------------------------------------------------------------------------
@@ -246,6 +311,90 @@ class AppQueryProvider(Provider):
         """商品查询 facade — 隐藏 Commodity/VIX 映射和资产类别."""
         return CommodityQueryFacade(market_service=market_service)
 
+    @provide
+    def backtest_trade_query_facade(
+        self,
+        artifact_service: StrategyArtifactService,
+    ) -> BacktestTradeQueryFacade:
+        """回测成交查询 facade."""
+        return BacktestTradeQueryFacade(artifact_service=artifact_service)
+
+    @provide
+    def run_read_model(
+        self,
+        run_service: StrategyRunLifecycleService,
+    ) -> RunReadModel:
+        """回测运行读模型."""
+        return RunReadModel(run_service=run_service)
+
+    @provide
+    def strategy_query_facade(
+        self,
+        catalog_service: StrategyCatalogService,
+    ) -> StrategyQueryFacade:
+        """策略只读查询 facade — 封装 StrategyCatalogService."""
+        return StrategyQueryFacade(catalog_service=catalog_service)
+
+    @provide
+    def backtest_query_facade(
+        self,
+        trade_facade: BacktestTradeQueryFacade,
+        run_model: RunReadModel,
+        audit_service: ExecutionAuditService,
+        artifact_service: StrategyArtifactService,
+    ) -> BacktestQueryFacade:
+        """回测统一查询门面."""
+        return BacktestQueryFacade(
+            trade_facade=trade_facade,
+            run_model=run_model,
+            audit_service=audit_service,
+            artifact_service=artifact_service,
+        )
+
+    @provide
+    def trade_query_facade(
+        self,
+        trade_service: TradeService,
+    ) -> TradeQueryFacade:
+        """交易意图查询 facade — 封装 TradeService."""
+        return TradeQueryFacade(trade_service=trade_service)
+
+    @provide
+    def portfolio_actual_query_facade(
+        self,
+        trade_service: TradeService,
+    ) -> PortfolioActualQueryFacade:
+        """实际组合查询 facade — 封装 TradeService 的持仓/成交/P&L 查询."""
+        return PortfolioActualQueryFacade(trade_service=trade_service)
+
+    @provide
+    def lineage_query_facade(
+        self,
+        run_service: StrategyRunLifecycleService,
+    ) -> LineageQueryFacade:
+        """运行血统查询 facade — 提供 lineage chain 查询."""
+        return LineageQueryFacade(run_service=run_service)
+
+    @provide
+    def signal_query_facade(
+        self,
+        trade_service: TradeService,
+    ) -> SignalQueryFacade:
+        """信号查询 facade — 封装 TradeService 的意图查询."""
+        return SignalQueryFacade(trade_service=trade_service)
+
+    @provide
+    def comparison_query_facade(
+        self,
+        backtest_facade: BacktestQueryFacade,
+        actual_facade: PortfolioActualQueryFacade,
+    ) -> ComparisonQueryFacade:
+        """回测 vs 实际对比查询 facade."""
+        return ComparisonQueryFacade(
+            backtest_facade=backtest_facade,
+            actual_facade=actual_facade,
+        )
+
 
 # ---------------------------------------------------------------------------
 # AppProcessProvider — 编排/物化/质量服务
@@ -344,6 +493,35 @@ class AppProcessProvider(Provider):
             engine=dq_engine,
             market_facade=market_facade,
             metadata_facade=metadata_facade,
+        )
+
+    @provide
+    def trade_service(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> TradeService:
+        """交易闭环 CRUD 服务."""
+        return TradeService(client=sqlite_client)
+
+    @provide
+    def manual_tracker(
+        self,
+        metadata_service: MetadataService,
+    ) -> ManualTracker:
+        """人工持仓聚合追踪器 — 注入交易日历以支持 T+1 冻结逻辑."""
+        trading_days = metadata_service.list_trading_days("2020-01-01", "2030-12-31")
+        return ManualTracker(trading_calendar=tuple(trading_days))
+
+    @provide
+    def replay_process(
+        self,
+        strategy_facade: StrategyFacade,
+        artifact_service: StrategyArtifactService,
+    ) -> ReplayProcess:
+        """回测重放编排 — 从原始运行恢复配置并重新执行."""
+        return ReplayProcess(
+            strategy_facade=strategy_facade,
+            artifact_service=artifact_service,
         )
 
 

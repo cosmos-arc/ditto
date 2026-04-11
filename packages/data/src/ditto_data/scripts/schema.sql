@@ -268,12 +268,15 @@ CREATE TABLE IF NOT EXISTS strategy_run (
     status            TEXT NOT NULL DEFAULT 'pending',
     started_at        TEXT NOT NULL DEFAULT '',
     completed_at      TEXT NOT NULL DEFAULT '',
-    error_message     TEXT NOT NULL DEFAULT ''
+    error_message     TEXT NOT NULL DEFAULT '',
+    parent_run_id     TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_strategy_run_strategy_id
     ON strategy_run(strategy_id);
 CREATE INDEX IF NOT EXISTS idx_strategy_run_status
     ON strategy_run(status);
+CREATE INDEX IF NOT EXISTS idx_strategy_run_parent_run_id
+    ON strategy_run(parent_run_id);
 
 -- 指数成分股权重（PIT support）
 CREATE TABLE IF NOT EXISTS index_weight (

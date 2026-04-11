@@ -34,6 +34,8 @@ from ditto_engine.backtest.manifest import (
     RunManifest,
     RunMode,
     hash_config,
+    hash_spec,
+    hash_universe,
 )
 from ditto_engine.backtest.statistics import ExecutionAuditCollector
 from ditto_engine.backtest.steps import (
@@ -45,6 +47,7 @@ from ditto_engine.backtest.steps import (
     RiskScanStep,
     StepContext,
     StrategyStep,
+    TradingStep,
 )
 from ditto_engine.execution.brokerage import Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner
@@ -246,7 +249,7 @@ class EngineLoop:
         # 构建 Step chain
         self._steps = self._build_steps()
 
-    def _build_steps(self) -> tuple[object, ...]:
+    def _build_steps(self) -> tuple[TradingStep, ...]:
         """构建 TradingStep chain。"""
         return (
             DataFetchStep(
@@ -335,6 +338,11 @@ class EngineLoop:
             rebalance_freq=self._config.rebalance_freq,
             engine_version=self._config.engine_version,
         )
+        spec_hash = hash_spec(
+            strategy_id=self._config.strategy_id,
+            strategy_version=self._config.strategy_version,
+            rebalance_freq=self._config.rebalance_freq,
+        )
         manifest = RunManifest(
             run_id=run_id,
             strategy_id=self._config.strategy_id,
@@ -345,6 +353,8 @@ class EngineLoop:
             rule_refs=self._rule_ref_collector.rule_refs,
             config_hash=config_hash,
             engine_version=self._config.engine_version,
+            spec_hash=spec_hash,
+            universe_hash=hash_universe(self._input_instruments),
             created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         )
 
@@ -410,8 +420,8 @@ class EngineLoop:
 
         # 执行 Step chain
         for step in self._steps:
-            result = step.execute(ctx)  # type: ignore[union-attr]
-            if not result.success:  # type: ignore[attr-defined]
+            result = step.execute(ctx)
+            if not result.success:
                 break
 
         # 累积跨日结果
