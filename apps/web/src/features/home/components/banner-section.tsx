@@ -33,15 +33,16 @@ export function BannerSection() {
 							variant: data.marketRegime === "risk_on" ? "regime-on" : "regime-off",
 						},
 						metrics: [
-							{ label: "风控使用率", value: `${data.riskUtilization}%` },
 							{ label: "杠杆率", value: `${data.leverage}x` },
-							{ label: "最大回撤", value: `${data.maxDrawdown}%`, trend: "down" },
+							{ label: "回撤", value: `${data.maxDrawdown}%`, trend: "down" },
 							{ label: "IVIX", value: `${data.ivix}`, trend: "down" },
+							{ label: "北向资金", value: "+12.4 亿", trend: "up" as const },
 						],
 					}}
 					actions={[
-						{ label: "执行调仓", variant: "primary" },
-						{ label: "查看详情", variant: "secondary" },
+						{ label: "查看信号总览", variant: "primary" as const },
+						{ label: "进入研究", variant: "secondary" as const },
+						{ label: "查看风控", variant: "ghost" as const },
 					]}
 				/>
 			)}

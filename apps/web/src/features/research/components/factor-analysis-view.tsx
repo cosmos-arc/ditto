@@ -23,7 +23,7 @@ export function FactorAnalysisView({ id }: FactorAnalysisViewProps) {
 							{data.icTimeSeries.map((point) => (
 								<div
 									key={point.date}
-									className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+									className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<span className="text-(--color-foreground-tertiary)">
 										{point.date}
@@ -40,7 +40,7 @@ export function FactorAnalysisView({ id }: FactorAnalysisViewProps) {
 							{data.sectorExposure.map((item) => (
 								<div
 									key={item.sector}
-									className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+									className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<span className="font-medium">{item.sector}</span>
 									<span

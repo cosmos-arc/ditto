@@ -134,7 +134,7 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 										"rounded-(--radius-sm) px-3 py-1.5 text-(length:--text-sm) font-medium",
 										"border border-(--color-border-subtle)",
 										action.enabled
-											? "bg-(--color-surface-panel-base) text-(--color-foreground) hover:bg-(--color-surface-hover)"
+											? "bg-(--color-surface-panel-base) text-(--color-foreground) hover:bg-(--color-interaction-hover-subtle-bg)"
 											: "text-(--color-foreground-tertiary) opacity-50",
 									].join(" ")}
 								>

@@ -17,7 +17,7 @@ export function ScreenerResults() {
 						{data.results.map((item) => (
 							<div
 								key={item.code}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-3">
 									<span className="font-medium">{item.name}</span>
@@ -29,8 +29,8 @@ export function ScreenerResults() {
 									<span
 										className={
 											item.changePercent >= 0
-												? "text-(--color-status-success)"
-												: "text-(--color-status-error)"
+												? "text-(--color-system-healthy)"
+												: "text-(--color-system-down)"
 										}
 									>
 										{item.changePercent >= 0 ? "+" : ""}
@@ -40,7 +40,7 @@ export function ScreenerResults() {
 									<span>市值 {item.marketCap.toLocaleString()}亿</span>
 									<button
 										type="button"
-										className="rounded border border-(--color-border-subtle) px-2 py-0.5 text-xs transition-colors hover:bg-(--color-surface-hover)"
+										className="rounded border border-(--color-border-subtle) px-2 py-0.5 text-xs transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 										onClick={() => toggleSelect(item.code)}
 									>
 										{selectedIds.includes(item.code) ? "已选" : "对比"}

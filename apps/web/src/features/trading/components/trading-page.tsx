@@ -147,7 +147,7 @@ function OrdersPanel() {
 						className="flex items-center gap-2 rounded-(--radius-sm) px-2 py-1.5 hover:bg-(--color-interaction-hover-subtle-bg)"
 					>
 						<span
-							className={`shrink-0 rounded-(--radius-sm) px-1 py-px text-[10px] font-semibold ${
+							className={`shrink-0 rounded-(--radius-sm) px-1 py-px text-xs font-semibold ${
 								order.side === "buy"
 									? "bg-(--color-market-up-bg) text-(--color-market-up-fg)"
 									: "bg-(--color-market-down-bg) text-(--color-market-down-fg)"
@@ -158,13 +158,13 @@ function OrdersPanel() {
 						<span className="flex-1 truncate text-xs font-medium text-(--color-foreground)">
 							{order.name}
 						</span>
-						<span className="font-data text-[10px] tabular-nums text-(--color-foreground-tertiary)">
+						<span className="font-data text-xs tabular-nums text-(--color-foreground-tertiary)">
 							{order.qty}股
 						</span>
-						<span className="font-data text-[10px] tabular-nums text-(--color-foreground-secondary)">
+						<span className="font-data text-xs tabular-nums text-(--color-foreground-secondary)">
 							@{order.price.toFixed(2)}
 						</span>
-						<span className="font-data text-[10px] tabular-nums text-(--color-foreground-muted)">
+						<span className="font-data text-xs tabular-nums text-(--color-foreground-muted)">
 							{order.time}
 						</span>
 					</div>
@@ -219,14 +219,14 @@ export function TradingPage() {
 									<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 										<div className="flex items-center gap-2">
 											<span className="text-xs font-medium text-(--color-foreground)">{signal.name}</span>
-											<span className={`text-[10px] font-medium ${DIRECTION_COLOR[signal.direction]}`}>
+											<span className={`text-xs font-medium ${DIRECTION_COLOR[signal.direction]}`}>
 												{DIRECTION_LABEL[signal.direction]}
 											</span>
 										</div>
-										<span className="text-[10px] text-(--color-foreground-tertiary)">{signal.reason}</span>
+										<span className="text-xs text-(--color-foreground-tertiary)">{signal.reason}</span>
 										<div className="flex items-center gap-2">
-											<span className="font-data text-[10px] tabular-nums text-(--color-foreground-muted)">{signal.time}</span>
-											<span className={`font-data text-[10px] tabular-nums ${confidenceColor(signal.confidence)}`}>
+											<span className="font-data text-xs tabular-nums text-(--color-foreground-muted)">{signal.time}</span>
+											<span className={`font-data text-xs tabular-nums ${confidenceColor(signal.confidence)}`}>
 												置信度 {signal.confidence}%
 											</span>
 										</div>

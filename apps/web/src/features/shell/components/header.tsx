@@ -67,7 +67,7 @@ export function ShellHeader() {
 							strokeLinecap="round"
 						/>
 					</svg>
-					<kbd className="hidden text-[10px] text-[var(--color-foreground-muted)] sm:inline">
+					<kbd className="hidden text-xs text-[var(--color-foreground-muted)] sm:inline">
 						⌘K
 					</kbd>
 				</button>

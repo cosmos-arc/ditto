@@ -56,7 +56,7 @@ export function FactorOverview({ id }: FactorOverviewProps) {
 									["coverage", data.factor.coverage],
 								] as const
 							).map(([key, value]) => (
-								<div key={key} className="flex justify-between hover:bg-(--color-surface-hover) rounded px-2 py-1">
+								<div key={key} className="flex justify-between hover:bg-(--color-interaction-hover-subtle-bg) rounded px-2 py-1">
 									<dt className="text-(--color-foreground-tertiary)">
 										{ATTR_LABELS[key]}
 									</dt>
@@ -88,7 +88,7 @@ export function FactorOverview({ id }: FactorOverviewProps) {
 							{data.diagnostics.map((diag) => (
 								<li
 									key={diag.name}
-									className="flex items-center justify-between hover:bg-(--color-surface-hover) rounded px-2 py-1"
+									className="flex items-center justify-between hover:bg-(--color-interaction-hover-subtle-bg) rounded px-2 py-1"
 								>
 									<span className="flex items-center gap-2">
 										<span

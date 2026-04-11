@@ -26,10 +26,10 @@ export function AnalyticalLayout({
 				'[grid-template-areas:"strip_strip""main_activity""analysis_activity"]',
 			].join(" ")}
 		>
-			{strip && <div className="[grid-area:strip]">{strip}</div>}
-			<div className="[grid-area:main]">{main}</div>
-			{activity && <div className="[grid-area:activity]">{activity}</div>}
-			{analysis && <div className="[grid-area:analysis]">{analysis}</div>}
+			{strip && <div className="min-h-0 overflow-hidden [grid-area:strip]">{strip}</div>}
+			<div className="min-h-0 overflow-hidden [grid-area:main]">{main}</div>
+			{activity && <div className="min-h-0 overflow-hidden [grid-area:activity]">{activity}</div>}
+			{analysis && <div className="min-h-0 overflow-hidden [grid-area:analysis]">{analysis}</div>}
 		</div>
 	);
 }

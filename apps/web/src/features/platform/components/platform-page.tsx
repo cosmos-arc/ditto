@@ -55,9 +55,9 @@ export function PlatformPage() {
 										</span>
 										<div className="flex min-w-0 flex-1 flex-col">
 											<span className="text-xs text-(--color-foreground)">{task.name}</span>
-											<span className="text-[10px] text-(--color-foreground-muted)">{task.meta}</span>
+											<span className="text-xs text-(--color-foreground-muted)">{task.meta}</span>
 										</div>
-										<span className={`shrink-0 text-[10px] ${task.status === "failed" ? "text-(--color-system-down-fg)" : "text-(--color-foreground-muted)"}`}>
+										<span className={`shrink-0 text-xs ${task.status === "failed" ? "text-(--color-system-down-fg)" : "text-(--color-foreground-muted)"}`}>
 											{task.detail}
 										</span>
 									</div>
@@ -99,7 +99,7 @@ export function PlatformPage() {
 										key={`${evt.time}-${evt.text}`}
 										className="flex items-center gap-2 rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 									>
-										<span className="shrink-0 text-[10px] tabular-nums text-(--color-foreground-muted)">{evt.time}</span>
+										<span className="shrink-0 text-xs tabular-nums text-(--color-foreground-muted)">{evt.time}</span>
 										<span className="min-w-0 flex-1 truncate text-xs text-(--color-foreground-secondary)">{evt.text}</span>
 									</div>
 								))}

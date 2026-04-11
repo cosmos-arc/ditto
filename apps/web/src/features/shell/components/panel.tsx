@@ -22,6 +22,8 @@ export function Panel({ className, children, ...rest }: PanelProps) {
 				"flex min-h-0 flex-col overflow-hidden rounded-(--radius-md)",
 				"border border-(--color-border-subtle)",
 				"bg-(--color-surface-panel-base)",
+				"transition-shadow duration-200",
+				"hover:shadow-[0_0_0_1px_color-mix(in_oklch,var(--color-accent)_6%,transparent),0_1px_3px_color-mix(in_oklch,var(--color-accent)_3%,transparent)]",
 				className,
 			].join(" ")}
 			{...rest}

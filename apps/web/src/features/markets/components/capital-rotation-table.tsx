@@ -19,12 +19,12 @@ export function CapitalRotationTable() {
 						{data.sectors.map((sector) => (
 							<div
 								key={sector.name}
-								className="rounded-md px-3 py-2 transition-colors hover:bg-(--color-surface-hover)"
+								className="rounded-md px-3 py-2 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center justify-between text-sm">
 									<span className="font-medium">{sector.name}</span>
 									<div className="flex items-center gap-4 text-(--color-foreground-tertiary)">
-										<span className={cn(NUMERIC, "text-(--color-status-success)")}>
+										<span className={cn(NUMERIC, "text-(--color-system-healthy)")}>
 											+{sector.netFlow.toFixed(1)}亿
 										</span>
 										<span className={NUMERIC}>
@@ -37,8 +37,8 @@ export function CapitalRotationTable() {
 											<span
 												className={cn(
 													sector.rankChange > 0
-														? "text-(--color-status-success)"
-														: "text-(--color-status-error)",
+														? "text-(--color-system-healthy)"
+														: "text-(--color-system-down)",
 												)}
 											>
 												{sector.rankChange > 0 ? "↑" : "↓"}

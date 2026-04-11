@@ -25,7 +25,7 @@ function StrategyOverviewContent({ id }: StrategyOverviewProps) {
 					{data.pipeline.nodes.map((node) => (
 						<li
 							key={node.id}
-							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-surface-hover) rounded-sm"
+							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
 						>
 							<span>{node.name}</span>
 							<span className="text-(--color-foreground-tertiary) text-sm">
@@ -41,7 +41,7 @@ function StrategyOverviewContent({ id }: StrategyOverviewProps) {
 					{Object.entries(data.weightConfig).map(([factor, weight]) => (
 						<li
 							key={factor}
-							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-surface-hover) rounded-sm"
+							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
 						>
 							<span>{factor}</span>
 							<span className="text-(--color-foreground-tertiary)">
@@ -57,7 +57,7 @@ function StrategyOverviewContent({ id }: StrategyOverviewProps) {
 					{data.riskRules.map((rule) => (
 						<li
 							key={rule.name}
-							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-surface-hover) rounded-sm"
+							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
 						>
 							<span>{rule.name}</span>
 							<span

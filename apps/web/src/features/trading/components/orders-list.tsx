@@ -28,7 +28,7 @@ export function OrdersList() {
 						{data.items.map((order) => (
 							<div
 								key={order.id}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-3">
 									<StatusBadge

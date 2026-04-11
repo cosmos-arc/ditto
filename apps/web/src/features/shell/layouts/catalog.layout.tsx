@@ -24,9 +24,9 @@ export function CatalogLayout({
 				'[grid-template-areas:"toolbar_toolbar""main_detail"]',
 			].join(" ")}
 		>
-			{toolbar && <div className="[grid-area:toolbar]">{toolbar}</div>}
-			<div className="[grid-area:main]">{main}</div>
-			{detail && <div className="[grid-area:detail]">{detail}</div>}
+			{toolbar && <div className="min-h-0 overflow-hidden [grid-area:toolbar]">{toolbar}</div>}
+			<div className="min-h-0 overflow-hidden [grid-area:main]">{main}</div>
+			{detail && <div className="min-h-0 overflow-hidden [grid-area:detail]">{detail}</div>}
 		</div>
 	);
 }

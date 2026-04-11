@@ -64,17 +64,18 @@ describe("BannerSection", () => {
 	it("显示 CTA 操作按钮", async () => {
 		render(<BannerSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("执行调仓")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("查看详情")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("查看信号总览")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("进入研究")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("查看风控")).resolves.toBeInTheDocument();
 	});
 
 	it("显示 4 个 KPI 指标", async () => {
 		render(<BannerSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("风控使用率")).resolves.toBeInTheDocument();
 		await expect(screen.findByText("杠杆率")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("最大回撤")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("回撤")).resolves.toBeInTheDocument();
 		await expect(screen.findByText("IVIX")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("北向资金")).resolves.toBeInTheDocument();
 	});
 
 	it("显示权益 sparkline", async () => {

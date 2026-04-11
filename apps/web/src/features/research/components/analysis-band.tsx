@@ -164,7 +164,7 @@ export function AnalysisBand() {
 								"px-3 py-1.5 rounded-md text-xs transition-colors",
 								isActive
 									? "bg-(--color-surface-2) text-(--color-foreground) font-medium"
-									: "text-(--color-foreground-tertiary) hover:bg-(--color-surface-hover)",
+									: "text-(--color-foreground-tertiary) hover:bg-(--color-interaction-hover-subtle-bg)",
 							].join(" ")}
 							onClick={() => setActiveTab(tab.id)}
 						>

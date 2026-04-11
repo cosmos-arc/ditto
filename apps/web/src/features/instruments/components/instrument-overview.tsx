@@ -20,7 +20,7 @@ export function InstrumentOverview({ id }: InstrumentOverviewProps) {
 							{data.income.map((stmt) => (
 								<div
 									key={stmt.period}
-									className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+									className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<span className="font-medium">{stmt.period}</span>
 									<div className="flex gap-4 text-(--color-foreground-tertiary)">

@@ -81,7 +81,7 @@ export function PriorityQueueSection() {
 												<span className="truncate text-(length:--text-sm) font-medium text-(--color-foreground)">
 													{action.title}
 												</span>
-												<span className={`shrink-0 rounded-[var(--radius-sm)] px-1.5 text-[10px] ${BADGE_COLOR[action.badge.type] ?? "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)"}`}>
+												<span className={`shrink-0 rounded-[var(--radius-sm)] px-1.5 text-xs ${BADGE_COLOR[action.badge.type] ?? "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)"}`}>
 													{action.badge.label}
 												</span>
 											</div>

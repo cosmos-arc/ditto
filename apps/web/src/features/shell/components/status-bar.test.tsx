@@ -69,7 +69,7 @@ describe("StatusBar", () => {
 	it("uses small text size", () => {
 		const { container } = render(<StatusBar />);
 		const bar = container.firstChild as HTMLElement;
-		expect(bar.className).toContain("text-[10px]");
+		expect(bar.className).toContain("text-xs");
 	});
 
 	it("has a spacer that pushes time and shortcut to the right", () => {

@@ -40,10 +40,10 @@ export function CopilotSessionList() {
 						{data.sessions.map((session) => (
 							<div
 								key={session.id}
-								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center justify-between">
-									<span className="text-(--color-foreground-primary)">
+									<span className="text-(--color-foreground)">
 										{session.title}
 									</span>
 									<StatusBadge

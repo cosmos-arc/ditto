@@ -40,7 +40,7 @@ export function AgentFindingsSection() {
 									className="rounded-[var(--radius-sm)] px-2 py-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<div className="flex items-center gap-1.5">
-										<span className={`shrink-0 rounded-[var(--radius-sm)] px-1.5 text-[10px] ${SIGNAL_BADGE[signal.action] ?? ""}`}>
+										<span className={`shrink-0 rounded-[var(--radius-sm)] px-1.5 text-xs ${SIGNAL_BADGE[signal.action] ?? ""}`}>
 											{signal.action}
 										</span>
 										<span className="text-xs text-(--color-foreground)">

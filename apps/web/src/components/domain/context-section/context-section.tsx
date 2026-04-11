@@ -30,7 +30,8 @@ function ContextSection({
 			<div
 				data-slot="context-section"
 				className={cn(
-					"flex flex-col min-h-0",
+					"flex flex-col min-h-0 transition-colors duration-200",
+					"hover:bg-[color-mix(in_oklch,var(--color-accent)_2%,var(--color-surface-panel-base))]",
 					className,
 				)}
 				{...props}
@@ -71,8 +72,7 @@ function ContextSection({
 				<CollapsibleContent>
 					<div
 						data-slot="context-section-body"
-						className="flex-1 overflow-y-auto"
-							className="px-3"
+						className="flex-1 overflow-y-auto px-3"
 					>
 						{children}
 					</div>

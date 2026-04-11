@@ -27,7 +27,7 @@ function StrategyFactorsViewContent({ id }: StrategyFactorsViewProps) {
 						return (
 							<li
 								key={factor}
-								className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-surface-hover) rounded-sm"
+								className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
 							>
 								<span>{factor}</span>
 								<span className="text-(--color-foreground-tertiary)">

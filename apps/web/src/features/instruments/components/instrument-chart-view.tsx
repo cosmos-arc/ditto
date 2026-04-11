@@ -42,7 +42,7 @@ export function InstrumentChartView({ id }: InstrumentChartViewProps) {
 				</div>
 
 				{/* Latest bar */}
-				<div className="grid grid-cols-6 gap-(--section-gap) py-1.5 text-sm hover:bg-(--color-surface-hover) transition-colors">
+				<div className="grid grid-cols-6 gap-(--section-gap) py-1.5 text-sm hover:bg-(--color-interaction-hover-subtle-bg) transition-colors">
 					<span>{firstBar.time}</span>
 					<span>{firstBar.open.toFixed(1)}</span>
 					<span>{firstBar.high.toFixed(1)}</span>

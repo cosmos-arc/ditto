@@ -29,7 +29,7 @@ export function StatusBar() {
 				"flex items-center gap-4 px-3 " +
 				"h-[var(--height-status-bar)] " +
 				"bg-(--color-surface-0) border-t border-(--color-border-subtle) " +
-				"text-[10px] text-(--color-foreground-tertiary)"
+				"text-xs text-(--color-foreground-tertiary)"
 			}
 		>
 			<span className="flex items-center gap-1.5">

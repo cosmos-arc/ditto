@@ -25,7 +25,7 @@ export function BacktestTrades({ jobId }: BacktestTradesProps) {
 						{data.trades.map((trade) => (
 							<div
 								key={trade.id}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-3">
 									<StatusBadge
@@ -42,8 +42,8 @@ export function BacktestTrades({ jobId }: BacktestTradesProps) {
 									<span
 										className={
 											trade.pnl >= 0
-												? "text-(--color-status-success)"
-												: "text-(--color-status-error)"
+												? "text-(--color-system-healthy)"
+												: "text-(--color-system-down)"
 										}
 									>
 										{trade.pnl >= 0 ? "+" : ""}

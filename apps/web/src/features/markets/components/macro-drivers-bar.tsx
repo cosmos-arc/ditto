@@ -16,7 +16,7 @@ export function MacroDriversBar() {
 						{data.indicators.map((indicator) => (
 							<div
 								key={indicator.name}
-								className="flex flex-1 flex-col items-center gap-1 rounded-md bg-(--color-surface-base) p-2"
+								className="flex flex-1 flex-col items-center gap-1 rounded-md bg-(--color-surface-1) p-2"
 							>
 								<span className="text-xs text-(--color-foreground-tertiary)">
 									{indicator.name}
@@ -27,8 +27,8 @@ export function MacroDriversBar() {
 								<span
 									className={
 										indicator.change >= 0
-											? "text-(--color-status-success)"
-											: "text-(--color-status-error)"
+											? "text-(--color-system-healthy)"
+											: "text-(--color-system-down)"
 									}
 								>
 									{indicator.change >= 0 ? "+" : ""}
@@ -38,8 +38,8 @@ export function MacroDriversBar() {
 									data={indicator.sparkline}
 									color={
 										indicator.change >= 0
-											? "var(--color-status-success)"
-											: "var(--color-status-error)"
+											? "var(--color-system-healthy)"
+											: "var(--color-system-down)"
 									}
 									width={120}
 									height={32}

@@ -5,7 +5,7 @@ export function ASharesPage() {
 	return (
 		<AnalyticalLayout
 			main={
-				<div className="p-4 overflow-y-auto h-full">
+				<div className="p-[var(--density-panel-padding)] overflow-y-auto h-full">
 					<ASharesOverview />
 				</div>
 			}

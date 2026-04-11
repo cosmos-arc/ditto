@@ -22,18 +22,18 @@ function StrategyInspectorContent({ id }: StrategyInspectorProps) {
 		<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
 			<ContextSection title="策略参数">
 				<ul className="flex flex-col gap-[var(--section-gap)]">
-					<li className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-surface-hover) rounded-sm">
+					<li className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm">
 						<span>股票池</span>
 						<span className="text-(--color-foreground-tertiary)">{data.universe}</span>
 					</li>
-					<li className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-surface-hover) rounded-sm">
+					<li className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm">
 						<span>模式</span>
 						<span className="text-(--color-foreground-tertiary)">{data.mode}</span>
 					</li>
 					{data.factors.map((factor) => (
 						<li
 							key={factor}
-							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-surface-hover) rounded-sm"
+							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
 						>
 							<span>{factor}</span>
 							<span className="text-(--color-foreground-tertiary)">因子</span>

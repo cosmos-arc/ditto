@@ -40,7 +40,7 @@ export function MarketCalendarList() {
 						<span
 							className={`text-xs font-medium shrink-0 px-2 py-0.5 rounded-full ${
 								item.importance === "high"
-									? "bg-(--color-status-warning)/10 text-(--color-status-warning)"
+									? "bg-(--color-risk-warning)/10 text-(--color-risk-warning)"
 									: "bg-(--color-surface-2) text-(--color-foreground-tertiary)"
 							}`}
 						>

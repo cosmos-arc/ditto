@@ -53,10 +53,10 @@ export function AgentFindingsList() {
 						{data.items.map((finding) => (
 							<div
 								key={finding.id}
-								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-start justify-between gap-2">
-									<p className="text-(--color-foreground-primary)">
+									<p className="text-(--color-foreground)">
 										{finding.text}
 									</p>
 								</div>

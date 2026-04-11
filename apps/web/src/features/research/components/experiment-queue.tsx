@@ -39,7 +39,7 @@ export function ExperimentQueue() {
 						{experimentsData.items.map((exp) => (
 							<div
 								key={exp.id}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-2">
 									<StatusBadge
@@ -67,7 +67,7 @@ export function ExperimentQueue() {
 						{reviewData.items.map((item) => (
 							<div
 								key={item.id}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-2">
 									<StatusBadge

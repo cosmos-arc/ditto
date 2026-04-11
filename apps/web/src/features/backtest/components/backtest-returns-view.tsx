@@ -29,7 +29,7 @@ export function BacktestReturnsView({ jobId }: BacktestReturnsViewProps) {
 						{data.monthlyReturns.map((mr) => (
 							<div
 								key={mr.month}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<span className="font-medium">{mr.month}</span>
 								<div className="flex items-center gap-4">

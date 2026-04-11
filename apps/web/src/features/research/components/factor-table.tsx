@@ -117,7 +117,7 @@ const COLUMNS: readonly ColumnDef<Factor>[] = [
 		width: "20%",
 		accessor: (row) => (
 			<div className="flex items-center gap-2">
-				<span className="font-medium text-(--color-foreground-primary)">
+				<span className="font-medium text-(--color-foreground)">
 					{row.name}
 				</span>
 				<span className="text-xs text-(--color-foreground-tertiary)">
@@ -205,7 +205,7 @@ const COLUMNS: readonly ColumnDef<Factor>[] = [
 					data-trend={trend}
 					className={cn("inline-flex items-center gap-1 font-data tabular-nums", SHARPE_COLOR[trend])}
 				>
-					<span className="text-[10px]">{SHARPE_ARROW[trend]}</span>
+					<span className="text-xs">{SHARPE_ARROW[trend]}</span>
 					{sharpe.toFixed(2)}
 				</span>
 			);

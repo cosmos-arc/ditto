@@ -162,7 +162,7 @@ export function MarketsPage() {
 									<span className="min-w-0 flex-1 truncate text-xs text-(--color-foreground)">
 										{event.text}
 									</span>
-									<span className="shrink-0 font-data text-[10px] tabular-nums text-(--color-foreground-muted)">
+									<span className="shrink-0 font-data text-xs tabular-nums text-(--color-foreground-muted)">
 										{event.time}
 									</span>
 								</div>

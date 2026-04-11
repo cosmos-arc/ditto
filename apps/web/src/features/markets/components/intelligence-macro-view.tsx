@@ -53,7 +53,7 @@ export function IntelligenceMacroView() {
 										</span>
 									</div>
 									<span
-										className={`text-xs font-data shrink-0 ${ev.importance === "high" ? "text-(--color-status-warning)" : "text-(--color-foreground-tertiary)"}`}
+										className={`text-xs font-data shrink-0 ${ev.importance === "high" ? "text-(--color-risk-warning)" : "text-(--color-foreground-tertiary)"}`}
 									>
 										{ev.importance === "high" ? "高" : "中"}
 									</span>

@@ -74,7 +74,7 @@ export function ResearchProgressSection() {
 										<p className="text-xs text-(--color-foreground)">
 											{finding.text}
 										</p>
-										<span className="text-[10px] tabular-nums text-(--color-foreground-muted)">
+										<span className="text-xs tabular-nums text-(--color-foreground-muted)">
 											{finding.source} · {formatTime(new Date().toISOString())}
 										</span>
 									</div>

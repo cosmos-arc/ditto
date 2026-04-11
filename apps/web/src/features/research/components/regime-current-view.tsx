@@ -55,7 +55,7 @@ export function RegimeCurrentView() {
 									<span className="text-sm font-data text-(--color-foreground)">
 										{ind.value}
 									</span>
-									<span className="text-[10px] text-(--color-foreground-tertiary)">
+									<span className="text-xs text-(--color-foreground-tertiary)">
 										{ind.description}
 									</span>
 								</div>

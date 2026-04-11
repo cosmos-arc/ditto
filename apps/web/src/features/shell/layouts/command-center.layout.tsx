@@ -9,6 +9,7 @@ interface CommandCenterLayoutProps {
 /**
  * CommandCenterLayout — Home page (/).
  * Grid: pulse strip (full width) + main/sidebar.
+ * min-h-0 + overflow-hidden on grid-area divs ensures grid track constraints are respected.
  */
 export function CommandCenterLayout({
 	pulse,
@@ -25,8 +26,14 @@ export function CommandCenterLayout({
 			].join(" ")}
 		>
 			{pulse && <div className="[grid-area:pulse]">{pulse}</div>}
-			<div className="[grid-area:main]">{main}</div>
-			{sidebar && <div className="[grid-area:sidebar]">{sidebar}</div>}
+			<div className="min-h-0 overflow-hidden [grid-area:main]">
+				{main}
+			</div>
+			{sidebar && (
+				<div className="min-h-0 overflow-hidden [grid-area:sidebar]">
+					{sidebar}
+				</div>
+			)}
 		</div>
 	);
 }

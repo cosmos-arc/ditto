@@ -40,10 +40,10 @@ export function AgentPlansList() {
 						{data.items.map((plan) => (
 							<div
 								key={plan.id}
-								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center justify-between">
-									<span className="font-medium text-(--color-foreground-primary)">
+									<span className="font-medium text-(--color-foreground)">
 										{plan.name}
 									</span>
 									<StatusBadge
@@ -59,7 +59,7 @@ export function AgentPlansList() {
 									{plan.scope.map((item) => (
 										<span
 											key={item}
-											className="rounded bg-(--color-surface-3) px-1.5 py-0.5 text-[10px] text-(--color-foreground-tertiary)"
+											className="rounded bg-(--color-surface-3) px-1.5 py-0.5 text-xs text-(--color-foreground-tertiary)"
 										>
 											{item}
 										</span>

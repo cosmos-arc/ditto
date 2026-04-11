@@ -40,7 +40,7 @@ export function StrategyHeader({ id }: StrategyHeaderProps) {
 						{data.factors.map((f) => (
 							<span
 								key={f}
-								className="rounded-full bg-(--color-surface-base) px-2 py-0.5 text-xs text-(--color-foreground-secondary)"
+								className="rounded-full bg-(--color-surface-1) px-2 py-0.5 text-xs text-(--color-foreground-secondary)"
 							>
 								{f}
 							</span>

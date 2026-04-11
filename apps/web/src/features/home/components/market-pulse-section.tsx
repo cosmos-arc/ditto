@@ -20,16 +20,16 @@ export function MarketPulseSection() {
 						{data.indices.slice(0, 4).map((index) => (
 							<div
 								key={index.code}
-								className="flex items-center justify-between rounded-[var(--radius-sm)] px-2 py-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+								className="flex items-center justify-between rounded-[var(--radius-sm)] px-2 py-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg) border-b border-dashed border-(--color-border-subtle) last:border-b-0"
 							>
-								<span className="text-[10px] text-(--color-foreground-tertiary) uppercase tracking-[0.02em]">
+								<span className="text-xs text-(--color-foreground-tertiary) uppercase tracking-[0.02em]">
 									{index.name}
 								</span>
 								<span
 									className={`font-data text-xs tabular-nums ${index.dir === "up" ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}
 								>
 									{index.price.toLocaleString()}
-									<span className="ml-1.5 text-[10px]">
+									<span className="ml-1.5 text-xs">
 										{index.change >= 0 ? "+" : ""}{index.changePercent.toFixed(2)}%
 									</span>
 								</span>

@@ -39,10 +39,10 @@ export function AgentQuickView() {
 							{data.plans.map((plan) => (
 								<div
 									key={plan.id}
-									className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+									className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<div className="flex items-center justify-between">
-										<span className="text-(--color-foreground-primary)">
+										<span className="text-(--color-foreground)">
 											{plan.name}
 										</span>
 										<StatusBadge
@@ -73,9 +73,9 @@ export function AgentQuickView() {
 						{data.recentFindings.map((finding) => (
 							<div
 								key={finding.id}
-								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
-								<p className="text-(--color-foreground-primary)">
+								<p className="text-(--color-foreground)">
 									{finding.text}
 								</p>
 								<div className="mt-1 text-xs text-(--color-foreground-tertiary)">

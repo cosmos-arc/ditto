@@ -32,9 +32,9 @@ export function FindingsAndHealthSection() {
 							{findingsData.findings.map((finding, i) => (
 								<div
 									key={`${finding.source}-${i}`}
-									className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+									className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
-									<p className="text-(--color-foreground-primary)">{finding.text}</p>
+									<p className="text-(--color-foreground)">{finding.text}</p>
 									<div className="mt-1 flex items-center gap-2 text-xs text-(--color-foreground-tertiary)">
 										<span>{finding.source}</span>
 										<StatusBadge
@@ -59,7 +59,7 @@ export function FindingsAndHealthSection() {
 						{healthData.providers.map((provider) => (
 							<div
 								key={provider.label}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-2">
 									<span className="font-medium">{provider.label}</span>

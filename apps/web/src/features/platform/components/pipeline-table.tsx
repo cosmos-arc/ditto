@@ -38,7 +38,7 @@ export function PipelineTable() {
 						{data.items.map((pipeline) => (
 							<div
 								key={pipeline.id}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-3">
 									<span className="font-medium">{pipeline.name}</span>
@@ -52,7 +52,7 @@ export function PipelineTable() {
 									<span>{pipeline.recordsProcessed.toLocaleString()} 条</span>
 									<span>{pipeline.duration}s</span>
 									{pipeline.errorCount > 0 && (
-										<span className="text-(--color-status-error)">
+										<span className="text-(--color-system-down)">
 											{pipeline.errorCount} 错误
 										</span>
 									)}

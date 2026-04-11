@@ -41,10 +41,10 @@ export function CopilotQuickView() {
 							{data.sessions.map((session) => (
 								<div
 									key={session.id}
-									className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+									className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<div className="flex items-center justify-between">
-										<span className="text-(--color-foreground-primary)">
+										<span className="text-(--color-foreground)">
 											{session.title}
 										</span>
 										<StatusBadge
@@ -73,9 +73,9 @@ export function CopilotQuickView() {
 						{data.recentOutputs.map((output) => (
 							<div
 								key={output.id}
-								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
-								<p className="text-(--color-foreground-primary)">
+								<p className="text-(--color-foreground)">
 									{output.summary}
 								</p>
 								<div className="mt-1 text-xs text-(--color-foreground-tertiary)">

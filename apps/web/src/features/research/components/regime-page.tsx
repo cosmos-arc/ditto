@@ -9,7 +9,7 @@ export function RegimePage() {
 			main={
 				<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)] overflow-y-auto h-full">
 					<RegimeCurrentView />
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-2 gap-[var(--density-gutter)]">
 						<RegimeHistoryList />
 						<RegimeStrategyImpact />
 					</div>

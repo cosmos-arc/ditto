@@ -55,7 +55,7 @@ export function AlertsAndIndicesSection() {
 						{indicesData.indices.map((index) => (
 							<div
 								key={index.code}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-surface-hover)"
+								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-2">
 									<span className="font-medium">{index.name}</span>
@@ -68,8 +68,8 @@ export function AlertsAndIndicesSection() {
 									<span
 										className={
 											index.dir === "up"
-												? "text-(--color-status-success)"
-												: "text-(--color-status-error)"
+												? "text-(--color-system-healthy)"
+												: "text-(--color-system-down)"
 										}
 									>
 										{index.change >= 0 ? "+" : ""}

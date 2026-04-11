@@ -31,7 +31,7 @@ export function PulseSection() {
 			}}
 		>
 			<ScrollReveal>
-				<div data-slot="pulse-strip" className="flex items-center gap-4 overflow-hidden bg-(--color-surface-strip) px-4 text-[10px] text-(--color-foreground-tertiary) h-[calc(var(--density-strip-height)-4px)]">
+				<div data-slot="pulse-strip" className="flex items-center gap-4 overflow-hidden bg-(--color-surface-strip) px-4 text-xs text-(--color-foreground-tertiary) h-[calc(var(--density-strip-height)-4px)]">
 					{/* 1. Time + Status */}
 					<div className="flex items-center gap-1 whitespace-nowrap">
 						<span className="inline-block size-1.5 rounded-full bg-(--color-system-healthy-fg) animate-[dot-live-pulse_3s_ease-in-out_infinite]" />
@@ -52,17 +52,26 @@ export function PulseSection() {
 
 					<PulseSeparator />
 
-					{/* 3. Pending */}
+					{/* 3. Risk — 风险等级 */}
 					<div className="flex items-center gap-1 whitespace-nowrap">
-						<span>待处理</span>
-						<span className="font-data text-(--color-foreground-secondary)">{data?.pendingActions ?? 0}</span>
+						<span>风险</span>
+						<span className="font-data text-(--color-risk-high-fg)">中等</span>
 					</div>
 
 					<PulseSeparator />
 
-					{/* 4. Running jobs */}
+					{/* 4. Regime — 市场环境 */}
 					<div className="flex items-center gap-1 whitespace-nowrap">
-						<span>运行中</span>
+						<span className="rounded-[var(--radius-sm)] bg-(--color-surface-strip) px-1.5 py-px text-(--color-foreground-secondary)">温和风险偏好</span>
+					</div>
+
+					<PulseSeparator />
+
+					{/* 5. Pending + Jobs */}
+					<div className="flex items-center gap-1 whitespace-nowrap">
+						<span>待处理</span>
+						<span className="font-data text-(--color-foreground-secondary)">{data?.pendingActions ?? 0}</span>
+						<span className="ml-2">运行中</span>
 						<span className="font-data text-(--color-foreground-secondary)">{data?.runningJobs ?? 0}</span>
 					</div>
 				</div>

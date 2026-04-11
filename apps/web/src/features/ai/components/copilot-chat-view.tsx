@@ -43,8 +43,8 @@ function MessageBubble({
 				<div
 					className={
 						isUser
-							? "mt-1 rounded-lg rounded-tr-sm bg-(--color-surface-3) px-3 py-2 text-sm text-(--color-foreground-primary)"
-							: "mt-1 rounded-lg rounded-tl-sm bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-foreground-primary)"
+							? "mt-1 rounded-lg rounded-tr-sm bg-(--color-surface-3) px-3 py-2 text-sm text-(--color-foreground)"
+							: "mt-1 rounded-lg rounded-tl-sm bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-foreground)"
 					}
 				>
 					{content.split("\n").map((line, i) => (
