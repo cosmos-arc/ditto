@@ -12,7 +12,7 @@
 | # | Route | Page Pattern | Shell Family | Source | Required Slots | Required States |
 |---|-------|-------------|-------------|--------|---------------|-----------------|
 | 1 | `/` | global-command-center | command-center | prototype-backed | pulse, main, sidebar | loading, empty, error, stale, no-alerts, has-critical |
-| 2 | `/ai` | global-command-center | command-center | prototype-backed | pulse, main | loading, empty, error, stale, no-agents, has-pending |
+| 2 | `/ai` | global-command-center | command-center | prototype-backed | pulse, main, sidebar | loading, empty, error, stale, no-agents, has-pending |
 | 3 | `/markets` | analytical-overview | analytical | prototype-backed | strip, main, activity, analysis | loading, empty, error, stale |
 | 4 | `/markets/intelligence` | analytical-overview | analytical | prototype-backed | strip, main, activity | loading, empty, error, stale |
 | 5 | `/markets/a-shares` | analytical-overview | analytical | spec-only | strip, main, activity | loading, empty, error, stale |
@@ -68,13 +68,13 @@
 | `/research/factors/$id` | Spec §06 |
 | `/strategies/$id` | Strategy Studio spec 隐含 |
 
-### Group C：模式纠偏组（3 页，优先级最高）
+### Group C：模式纠偏组（3 页，结构已纠正，待 pixel audit）
 
-| Route | 当前错误 Pattern | 正确 Pattern | 当前 Layout | 正确 Shell |
-|-------|-----------------|-------------|-------------|-----------|
-| `/trading/signals` | catalog-screener | queue-ops-console | CatalogLayout | OpsConsoleLayout |
-| `/trading/orders` | catalog-screener | ledger-execution-console | CatalogLayout | OpsConsoleLayout |
-| `/ai/agents` | catalog-screener | studio-builder | CatalogLayout | StudioLayout |
+| Route | Pattern | Shell | 结构状态 | 后续验收 |
+|-------|---------|-------|---------|---------|
+| `/trading/signals` | queue-ops-console | ops-console | 已纠正 | 待 pixel audit |
+| `/trading/orders` | ledger-execution-console | ops-console | 已纠正 | 待 pixel audit |
+| `/ai/agents` | studio-builder | studio | 已纠正 | 待 pixel audit |
 
 ---
 
@@ -150,7 +150,7 @@
 | Route | 工程轨 | Pattern | Shell | Slots | States | Token | 无占位 |
 |-------|--------|---------|-------|-------|--------|-------|--------|
 | `/` | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
-| `/ai` | ✅ | ✅ | ✅ | ⚠️ 缺sidebar | — | ✅ | — |
+| `/ai` | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
 | `/markets` | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
 | `/markets/intelligence` | ✅ | ✅ | ✅ | ⚠️ main-only | — | ✅ | — |
 | `/markets/a-shares` | ✅ | ✅ | ✅ | ⚠️ main-only | — | ✅ | — |
@@ -162,17 +162,17 @@
 | `/research/backtest/$id` | ✅ | ✅ | ✅ | ⚠️ | — | ✅ | — |
 | `/research/factors/$id` | ✅ | ✅ | ✅ | ⚠️ | — | ✅ | — |
 | `/trading` | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
-| `/trading/signals` | ✅ | ❌ 错用catalog | ❌ | ⚠️ main-only | — | ✅ | — |
-| `/trading/orders` | ✅ | ❌ 错用catalog | ❌ | ⚠️ main-only | — | ✅ | — |
+| `/trading/signals` | ✅ | ✅ | ✅ | 结构已纠正，待 pixel audit | — | ✅ | — |
+| `/trading/orders` | ✅ | ✅ | ✅ | 结构已纠正，待 pixel audit | — | ✅ | — |
 | `/trading/risk` | ✅ | ✅ | ✅ | ⚠️ main-only | — | ✅ | — |
 | `/ai/copilot` | ✅ | ✅ | ✅ | ⚠️ | — | ✅ | — |
-| `/ai/agents` | ✅ | ❌ 错用catalog | ❌ | ⚠️ main-only | — | ✅ | — |
+| `/ai/agents` | ✅ | ✅ | ✅ | 结构已纠正，待 pixel audit | — | ✅ | — |
 | `/instruments/$id` | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
 | `/strategies/$id` | ✅ | ✅ | ✅ | ⚠️ | — | ✅ | — |
 | `/platform` | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
 
 > ⚠️ = 需在后续 Milestone 中补齐
-> ❌ = 模式错位，需在 Milestone 2 纠正
+> 结构已纠正，待 pixel audit = Pattern / Shell / Slot 结构已对齐合同，仍需后续视觉审计确认像素级还原度
 
 ---
 

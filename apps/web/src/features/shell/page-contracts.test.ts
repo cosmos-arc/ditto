@@ -259,6 +259,14 @@ describe("Spec compliance — pattern alignment per 11_ditto_page_pattern_librar
 		const contract = PAGE_CONTRACTS.find((c) => c.route === "/ai");
 		expect(contract?.pagePattern).toBe("global-command-center");
 	});
+
+	it("/ai follows the page-ai-overview prototype slot contract", () => {
+		const contract = PAGE_CONTRACTS.find((c) => c.route === "/ai");
+		expect(contract?.prototypeRef).toBe(
+			"docs/designs/specs/prototypes/page-ai-overview.html",
+		);
+		expect(contract?.requiredSlots).toEqual(["pulse", "main", "sidebar"]);
+	});
 });
 
 /* ------------------------------------------------------------------ */
