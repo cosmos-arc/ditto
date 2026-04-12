@@ -383,9 +383,9 @@
 ### 2.7 API 路由 — 成交/持仓/对比 `[L]`
 
 **验收**:
-- 信号与意图: `GET /api/v1/signals/latest`, `GET /api/v1/signals/{id}/intents`
-- 成交记录: `POST/GET/PUT/DELETE /api/v1/trades`
-- 实际持仓与对比: `GET /api/v1/portfolio/actual`, `GET /api/v1/portfolio/actual/pnl`, `GET /api/v1/portfolio/comparison`
+- 交易意图: `GET /api/v1/trade/intents`, `PUT /api/v1/trade/intents/{id}/status`
+- 成交记录: `POST /api/v1/trade/fills`, `GET /api/v1/trade/fills`
+- 信号/持仓/对比: `GET /api/v1/trade/signals/latest`, `GET /api/v1/trade/positions`, `GET /api/v1/trade/pnl`, `GET /api/v1/trade/comparison`
 - DI 注册完整
 - `pixi run -e dev check` + `arch-check` 全通过
 
