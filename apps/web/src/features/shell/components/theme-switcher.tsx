@@ -72,7 +72,7 @@ export function ThemeSwitcher() {
 								: "text-(--color-foreground-tertiary) hover:text-(--color-foreground-secondary)",
 						].join(" ")}
 					>
-						{opt.value === "light" ? <SunIcon /> : <MoonIcon />}
+						{opt.value === "light" ? "亮" : "暗"}
 					</button>
 				))}
 			</div>
@@ -80,42 +80,3 @@ export function ThemeSwitcher() {
 	);
 }
 
-function SunIcon() {
-	return (
-		<svg
-			width={12}
-			height={12}
-			viewBox="0 0 12 12"
-			fill="none"
-			aria-hidden="true"
-		>
-			<circle cx="6" cy="6" r="2.5" stroke="currentColor" strokeWidth={1.2} />
-			<path
-				d="M6 1v1M6 10v1M1 6h1M10 6h1M2.5 2.5l.7.7M8.8 8.8l.7.7M2.5 9.5l.7-.7M8.8 3.2l.7-.7"
-				stroke="currentColor"
-				strokeWidth={1.2}
-				strokeLinecap="round"
-			/>
-		</svg>
-	);
-}
-
-function MoonIcon() {
-	return (
-		<svg
-			width={12}
-			height={12}
-			viewBox="0 0 12 12"
-			fill="none"
-			aria-hidden="true"
-		>
-			<path
-				d="M6.5 1.5a4.5 4.5 0 1 0 4 6.5A3.5 3.5 0 0 1 6.5 1.5Z"
-				stroke="currentColor"
-				strokeWidth={1.2}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-		</svg>
-	);
-}

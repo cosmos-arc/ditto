@@ -30,9 +30,10 @@ export function ShellHeader() {
 
 	return (
 		<header
+			data-slot="header"
 			className={[
 				"flex h-[var(--height-header)] items-center border-b border-[var(--color-border-subtle)] bg-(--color-surface-frosted) backdrop-blur-(--blur-frosted) px-[var(--spacing-4)] gap-[var(--spacing-4)]",
-				"z-5 relative after:absolute after:bottom-0 after:inset-x-0 after:h-px after:bg-linear-to-r after:from-transparent after:via-[color-mix(in_oklch,var(--color-signature-line)_25%,transparent)] after:to-transparent",
+				"z-5 relative after:absolute after:bottom-0 after:inset-x-0 after:h-px",
 			].join(" ")}
 		>
 			{/* Page title */}
@@ -56,17 +57,14 @@ export function ShellHeader() {
 					<svg
 						width={14}
 						height={14}
-						viewBox="0 0 14 14"
+						viewBox="0 0 20 20"
 						fill="none"
 						aria-hidden="true"
 					>
-						<path
-							d="M6 11A5 5 0 1 0 6 1a5 5 0 0 0 0 10ZM10 10l3 3"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-						/>
+						<circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth={1.5} />
+						<path d="M13 13l4 4" stroke="currentColor" strokeWidth={1.5} />
 					</svg>
+					<span className="text-xs text-[var(--color-foreground-muted)] sm:inline">搜索...</span>
 					<kbd className="hidden text-xs text-[var(--color-foreground-muted)] sm:inline">
 						⌘K
 					</kbd>
@@ -81,26 +79,51 @@ export function ShellHeader() {
 					<svg
 						width={16}
 						height={16}
-						viewBox="0 0 16 16"
+						viewBox="0 0 20 20"
 						fill="none"
 						aria-hidden="true"
 					>
 						<path
-							d="M8 1.5a4.5 4.5 0 0 0-4.5 4.5v3l-1 2h11l-1-2V6A4.5 4.5 0 0 0 8 1.5Z"
+							d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"
 							stroke="currentColor"
-							strokeWidth={1.2}
+							strokeWidth={1.5}
 							strokeLinecap="round"
 							strokeLinejoin="round"
 						/>
 						<path
-							d="M6.5 13a1.5 1.5 0 0 0 3 0"
+							d="M8 16a2 2 0 004 0"
 							stroke="currentColor"
-							strokeWidth={1.2}
+							strokeWidth={1.5}
 							strokeLinecap="round"
 						/>
 					</svg>
 					{/* Unread badge */}
 					<span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--color-red-400)]" />
+				</button>
+
+				{/* Help button */}
+				<button
+					type="button"
+					aria-label="Help"
+					title="Help"
+					className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] transition-colors hover:bg-[var(--color-interaction-hover-subtle-bg)]"
+				>
+					<svg
+						width={16}
+						height={16}
+						viewBox="0 0 20 20"
+						fill="none"
+						aria-hidden="true"
+					>
+						<circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth={1.5} />
+						<path
+							d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"
+							stroke="currentColor"
+							strokeWidth={1.5}
+							strokeLinecap="round"
+							strokeLinejoin="round"
+						/>
+					</svg>
 				</button>
 
 				{/* Theme & Density switcher */}
