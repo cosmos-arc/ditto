@@ -52,7 +52,7 @@ describe("PulseSection", () => {
 	it("显示盈亏百分比", async () => {
 		render(<PulseSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("+0.82%")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("+0.34%")).resolves.toBeInTheDocument();
 	});
 
 	it("使用原型 32px 脉动条高度", async () => {
@@ -146,8 +146,8 @@ describe("PriorityQueueSection", () => {
 	it("显示 5 个待处理事项", async () => {
 		render(<PriorityQueueSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("平安银行信号待复核")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("回测任务完成")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("贵州茅台（600519）出现卖出信号")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("行业集中度超限 — 科技板块 > 35%")).resolves.toBeInTheDocument();
 	});
 
 	it("显示跨域关注项副标题", async () => {
@@ -164,11 +164,10 @@ describe("MarketPulseSection", () => {
 		await expect(screen.findByText("市场脉搏")).resolves.toBeInTheDocument();
 	});
 
-	it("显示指数列表", async () => {
+	it("显示市场脉搏标题（indices 待迁移为 MarketPulseMetric）", async () => {
 		render(<MarketPulseSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("上证指数")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("沪深300")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("市场脉搏")).resolves.toBeInTheDocument();
 	});
 });
 
@@ -182,7 +181,7 @@ describe("GlobalAlertsSection", () => {
 	it("显示告警内容", async () => {
 		render(<GlobalAlertsSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("FRED 数据源连接超时")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("组合 VaR 突破 95% 分位")).resolves.toBeInTheDocument();
 	});
 });
 
@@ -196,8 +195,8 @@ describe("DataHealthSection", () => {
 	it("显示数据提供者列表", async () => {
 		render(<DataHealthSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("tushare")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("MiniQMT")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("行情数据")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("期权链")).resolves.toBeInTheDocument();
 	});
 });
 

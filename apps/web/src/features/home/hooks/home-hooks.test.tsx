@@ -39,7 +39,7 @@ describe("useHomePulse", () => {
 
 		expect(result.current.data).toBeDefined();
 		expect(result.current.data?.session).toBe("continuous");
-		expect(result.current.data?.pendingActions).toBe(5);
+		expect(result.current.data?.pendingActions).toBe(2);
 	});
 });
 
@@ -52,8 +52,8 @@ describe("useDecisionBanner", () => {
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
 		expect(result.current.data).toBeDefined();
-		expect(result.current.data?.marketRegime).toBe("risk_on");
-		expect(result.current.data?.totalEquity).toBe(1580000);
+		expect(result.current.data?.marketRegime).toBe("mixed");
+		expect(result.current.data?.totalEquity).toBe(25432180);
 		expect(result.current.data?.suggestion.length).toBeGreaterThan(0);
 	});
 });
@@ -73,7 +73,7 @@ describe("usePendingActions", () => {
 });
 
 describe("useRecentSignals", () => {
-	it("返回近期信号列表", async () => {
+	it("返回近期信号列表（空）", async () => {
 		const { result } = renderHook(() => useRecentSignals(), {
 			wrapper: createWrapper(),
 		});
@@ -81,6 +81,6 @@ describe("useRecentSignals", () => {
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
 		expect(result.current.data).toBeDefined();
-		expect(result.current.data?.signals).toHaveLength(3);
+		expect(result.current.data?.signals).toHaveLength(0);
 	});
 });

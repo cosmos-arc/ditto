@@ -14,8 +14,8 @@ describe("homeHandlers", () => {
 
 		expect(res.status).toBe(200);
 		expect(data.session).toBe("continuous");
-		expect(data.pendingActions).toBe(5);
-		expect(data.pnlToday).toBe(12580.5);
+		expect(data.pendingActions).toBe(2);
+		expect(data.pnlToday).toBe(86472.5);
 	});
 
 	it("GET /api/home/decision-banner 返回决策横幅", async () => {
@@ -23,8 +23,8 @@ describe("homeHandlers", () => {
 		const data = (await res.json()) as typeof mockDecisionBanner;
 
 		expect(res.status).toBe(200);
-		expect(data.marketRegime).toBe("risk_on");
-		expect(data.totalEquity).toBe(1580000);
+		expect(data.marketRegime).toBe("mixed");
+		expect(data.totalEquity).toBe(25432180);
 		expect(typeof data.suggestion).toBe("string");
 		expect(data.suggestion.length).toBeGreaterThan(0);
 	});
@@ -46,13 +46,12 @@ describe("homeHandlers", () => {
 		expect(data.alerts.length).toBeGreaterThan(0);
 	});
 
-	it("GET /api/home/signals/recent 返回近期信号", async () => {
+	it("GET /api/home/signals/recent 返回近期信号（空）", async () => {
 		const res = await fetch("/api/home/signals/recent");
 		const data = await res.json();
 
 		expect(res.status).toBe(200);
-		expect(data.signals).toHaveLength(3);
-		expect(["BUY", "SELL", "HOLD"]).toContain(data.signals[0]?.action);
+		expect(data.signals).toHaveLength(0);
 	});
 
 	it("GET /api/home/agent-findings 返回 Agent 发现", async () => {
@@ -72,13 +71,11 @@ describe("homeHandlers", () => {
 		expect(data.providers.length).toBeGreaterThan(0);
 	});
 
-	it("GET /api/market/indices 返回市场指数", async () => {
+	it("GET /api/market/indices 返回市场指数（空）", async () => {
 		const res = await fetch("/api/market/indices");
 		const data = await res.json();
 
 		expect(res.status).toBe(200);
-		expect(data.indices).toHaveLength(6);
-		expect(data.indices[0]?.name).toBe("上证指数");
-		expect(data.indices[0]?.dir).toBe("up");
+		expect(data.indices).toHaveLength(0);
 	});
 });

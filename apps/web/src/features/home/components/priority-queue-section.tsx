@@ -13,27 +13,22 @@ const PRIORITY_BAR_COLOR: Record<string, string> = {
 
 const BADGE_COLOR: Record<string, string> = {
 	signal: "bg-(--color-brand-500)/10 text-(--color-brand-400)",
+	trading: "bg-(--color-brand-500)/10 text-(--color-brand-400)",
+	risk: "bg-(--color-risk-high-fg)/10 text-(--color-risk-high-fg)",
+	research: "bg-(--color-system-healthy-fg)/10 text-(--color-system-healthy-fg)",
+	platform: "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)",
+	data: "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)",
+	priority: "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)",
 	backtest: "bg-(--color-system-healthy-fg)/10 text-(--color-system-healthy-fg)",
 	alert: "bg-(--color-risk-high-fg)/10 text-(--color-risk-high-fg)",
 	factor: "bg-(--color-system-degraded-fg)/10 text-(--color-system-degraded-fg)",
 	resource: "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)",
 };
 
-function formatTime(isoString: string): string {
-	const date = new Date(isoString);
-	const now = new Date();
-	const diffMs = now.getTime() - date.getTime();
-	const diffMin = Math.floor(diffMs / 60000);
-	if (diffMin < 60) return `${diffMin}分钟前`;
-	const diffHr = Math.floor(diffMin / 60);
-	if (diffHr < 24) return `${diffHr}小时前`;
-	return `${Math.floor(diffHr / 24)}天前`;
-}
-
 /**
  * PriorityQueueSection — "今日优先事项" panel.
  * Matches prototype .panel with .queue-item rows.
- * Each item has: colored priority bar | title+reason | footer (source + time)
+ * Each item has: colored priority bar | title+badges | meta | footer (domain + time)
  */
 export function PriorityQueueSection() {
 	const { data, isLoading, isError, refetch } = usePendingActions();
@@ -81,16 +76,21 @@ export function PriorityQueueSection() {
 												<span className="truncate text-(length:--text-sm) font-medium text-(--color-foreground)">
 													{action.title}
 												</span>
-												<span className={`shrink-0 rounded-[var(--radius-sm)] px-1.5 text-xs ${BADGE_COLOR[action.badge.type] ?? "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)"}`}>
-													{action.badge.label}
-												</span>
+												{action.badges.map((b) => (
+													<span
+														key={b.label}
+														className={`shrink-0 rounded-[var(--radius-sm)] px-1.5 text-xs ${BADGE_COLOR[b.type] ?? "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)"}`}
+													>
+														{b.label}
+													</span>
+												))}
 											</div>
 											<span className="text-xs text-(--color-foreground-secondary)">
 												{action.meta}
 											</span>
 											<div className="flex items-center justify-between pt-0.5">
 												<span className="text-xs tabular-nums text-(--color-foreground-muted)">
-													{action.domain} · {formatTime(action.time)}
+													{action.domain} · {action.time}
 												</span>
 												<button
 													type="button"

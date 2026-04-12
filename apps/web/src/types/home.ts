@@ -67,7 +67,7 @@ export type PendingAction = {
 	readonly title: string;
 	readonly meta: string;
 	readonly time: string;
-	readonly badge: ActionBadge;
+	readonly badges: readonly ActionBadge[];
 	readonly domain: "trading" | "research" | "platform";
 };
 
@@ -106,6 +106,8 @@ export type AgentFinding = {
 	readonly text: string;
 	readonly source: string;
 	readonly icon: "insight" | "warning" | "info";
+	readonly summary?: string;
+	readonly time?: string;
 };
 
 export type GetAgentFindingsResponse = {
@@ -136,4 +138,12 @@ export type MarketIndex = {
 
 export type GetMarketIndicesResponse = {
 	readonly indices: readonly MarketIndex[];
+};
+
+/** 市场脉搏指标 */
+export type MarketPulseMetric = {
+	readonly label: string;
+	readonly value: string;
+	readonly change: string;
+	readonly sparkline?: readonly number[];
 };

@@ -69,6 +69,7 @@ export type {
 	HomeAlert,
 	HomePulseResponse,
 	MarketIndex,
+	MarketPulseMetric,
 	PendingAction,
 	RecentSignal,
 } from "./home";

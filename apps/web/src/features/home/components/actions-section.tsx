@@ -4,11 +4,6 @@ import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
-function formatTime(isoString: string): string {
-	const date = new Date(isoString);
-	return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-}
-
 const PRIORITY_VARIANT: Record<string, "critical" | "warning" | "default"> = {
 	critical: "critical",
 	high: "warning",
@@ -36,16 +31,19 @@ export function ActionsSection() {
 								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-3">
-									<StatusBadge
-										variant={PRIORITY_VARIANT[action.priority] ?? "default"}
-										label={action.badge.label}
-										size="sm"
-									/>
+									{action.badges.map((b) => (
+										<StatusBadge
+											key={b.label}
+											variant={PRIORITY_VARIANT[action.priority] ?? "default"}
+											label={b.label}
+											size="sm"
+										/>
+									))}
 									<span className="font-medium">{action.title}</span>
 								</div>
 								<div className="flex items-center gap-3 text-(--color-foreground-tertiary)">
 									<span className="max-w-48 truncate">{action.meta}</span>
-									<span>{formatTime(action.time)}</span>
+									<span>{action.time}</span>
 								</div>
 							</div>
 						))}
