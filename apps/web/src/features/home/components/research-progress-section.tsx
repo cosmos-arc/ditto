@@ -9,15 +9,6 @@ const ICON_COLOR: Record<string, string> = {
 	info: "text-(--color-brand-500)",
 };
 
-function formatTime(isoString: string): string {
-	const date = new Date(isoString);
-	const now = new Date();
-	const diffMs = now.getTime() - date.getTime();
-	const diffHr = Math.floor(diffMs / 3600000);
-	if (diffHr < 24) return `${diffHr}小时前`;
-	return `${Math.floor(diffHr / 24)}天前`;
-}
-
 /**
  * ResearchProgressSection — "研究进展" secondary panel.
  * Matches prototype .secondary-panel with .research-item rows.
@@ -72,10 +63,10 @@ export function ResearchProgressSection() {
 									</span>
 									<div className="min-w-0 flex-1">
 										<p className="text-xs text-(--color-foreground)">
-											{finding.text}
+											{finding.summary ?? finding.text}
 										</p>
 										<span className="text-xs tabular-nums text-(--color-foreground-muted)">
-											{finding.source} · {formatTime(new Date().toISOString())}
+											{finding.time ?? finding.source}
 										</span>
 									</div>
 								</div>

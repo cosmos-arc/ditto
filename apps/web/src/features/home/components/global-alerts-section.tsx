@@ -4,11 +4,6 @@ import { AlertRow } from "@/components/indicator/alert-row/alert-row";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
-function formatTime(isoString: string): string {
-	const date = new Date(isoString);
-	return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-}
-
 /**
  * GlobalAlertsSection — sidebar "全局预警" section.
  * Matches prototype .context-section with .alert-row items.
@@ -37,7 +32,7 @@ export function GlobalAlertsSection() {
 								key={alert.id}
 								severity={alert.severity}
 								title={alert.title}
-								time={formatTime(alert.time)}
+								time={alert.time}
 							/>
 						))}
 					</div>

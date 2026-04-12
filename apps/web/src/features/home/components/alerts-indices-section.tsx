@@ -5,11 +5,6 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import type { TrendDirection } from "@/types";
 
-function formatTime(isoString: string): string {
-	const date = new Date(isoString);
-	return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-}
-
 export function AlertsAndIndicesSection() {
 	const {
 		data: alertsData,
@@ -40,7 +35,7 @@ export function AlertsAndIndicesSection() {
 									key={alert.id}
 									severity={alert.severity}
 									title={alert.title}
-									time={formatTime(alert.time)}
+									time={alert.time}
 								/>
 							))}
 						</div>
