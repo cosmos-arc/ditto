@@ -60,14 +60,15 @@ class TestRunStatus:
     """RunStatus 枚举测试."""
 
     def test_members(self) -> None:
-        """应包含 4 个成员."""
-        assert len(RunStatus) == 4
+        """应包含 5 个成员."""
+        assert len(RunStatus) == 5
 
     def test_values(self) -> None:
         assert RunStatus.PENDING == "pending"
         assert RunStatus.RUNNING == "running"
         assert RunStatus.COMPLETED == "completed"
         assert RunStatus.FAILED == "failed"
+        assert RunStatus.CANCELLED == "cancelled"
 
 
 class TestRiskScope:

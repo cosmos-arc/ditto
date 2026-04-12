@@ -3,18 +3,33 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_app.command.backtest import (
+    BacktestRunCommand,
+    BacktestRunHandler,
+    BacktestRunResult,
+    CancelRunHandler,
+    CostConfig,
+    RetryRunHandler,
+)
 from ditto_app.process.execution.replay_process import ReplayProcess
 from ditto_app.query.backtest import BacktestQueryFacade
 from ditto_app.query.lineage import LineageQueryFacade
+from ditto_kernel.enums import RunStatus
 from fastapi import APIRouter, HTTPException, Query
 
+from ditto_interfaces.jobs.flows.backtest import run_backtest_flow
 from ditto_interfaces.models.backtest import (
     AuditRecordResponse,
+    BacktestRunTriggerResponse,
     BenchmarkNavResponse,
+    CancelRunResponse,
+    CreateBacktestRunRequest,
+    RetryRunResponse,
     RunResponse,
     TradeResponse,
     to_audit_record_response,
@@ -29,6 +44,140 @@ from ditto_interfaces.models.lineage import (
 )
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
+
+
+def _to_cost_config(body: CreateBacktestRunRequest) -> CostConfig | None:
+    """将 API CostConfigRequest 转换为 App 层 CostConfig."""
+    cfg = body.cost_config
+    if cfg is None:
+        return None
+    return CostConfig(
+        commission_rate=cfg.commission_rate,
+        commission_min=cfg.commission_min,
+        stamp_duty_rate=cfg.stamp_duty_rate,
+        slippage_bps=cfg.slippage_bps,
+        impact_model=cfg.impact_model,
+    )
+
+
+def _build_flow_params(
+    command: BacktestRunCommand,
+    result: BacktestRunResult,
+) -> dict[str, object]:
+    """从 command 和 result 构建 flow 参数（可序列化跨进程边界）."""
+    params: dict[str, object] = {
+        "run_id": result.run_id,
+        "strategy_id": result.strategy_id,
+        "start_date": command.start_date,
+        "end_date": command.end_date,
+        "initial_cash": command.initial_cash,
+        "parameter_overrides": command.parameter_overrides,
+    }
+    if result.cost_config is not None:
+        params["cost_config"] = dataclasses.asdict(result.cost_config)
+    return params
+
+
+def _submit_flow(params: dict[str, object]) -> None:
+    """同步提交 Prefect flow（在 executor 线程中运行）."""
+    _prefect_fn = getattr(run_backtest_flow, "func", run_backtest_flow)
+    _prefect_fn(**params)  # type: ignore[reportCallIssue]
+
+
+# ---------------------------------------------------------------------------
+# Trigger
+# ---------------------------------------------------------------------------
+
+
+@router.post("/runs", status_code=202, response_model=BacktestRunTriggerResponse)
+@inject
+async def trigger_backtest(
+    body: CreateBacktestRunRequest,
+    handler: Annotated[BacktestRunHandler, FromComponent()],
+) -> BacktestRunTriggerResponse:
+    """触发回测 — 校验参数 + 创建记录 + 后台提交 flow，返回 202 Accepted."""
+    command = BacktestRunCommand(
+        strategy_id=body.strategy_id,
+        start_date=body.start_date,
+        end_date=body.end_date,
+        initial_cash=body.initial_cash,
+        parameter_overrides=tuple(body.parameter_overrides),
+        cost_config=_to_cost_config(body),
+    )
+
+    try:
+        result = await asyncio.to_thread(handler.handle, command)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # 后台提交 flow（不阻塞响应）
+    flow_params = _build_flow_params(command, result)
+    asyncio.get_event_loop().run_in_executor(None, _submit_flow, flow_params)
+
+    return BacktestRunTriggerResponse(
+        run_id=result.run_id,
+        strategy_id=result.strategy_id,
+        status=result.status,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cancel / Retry
+# ---------------------------------------------------------------------------
+
+
+@router.post("/runs/{run_id}/cancel", response_model=CancelRunResponse)
+@inject
+async def cancel_run(
+    run_id: str,
+    handler: Annotated[CancelRunHandler, FromComponent()],
+) -> CancelRunResponse:
+    """取消回测运行 — 检查 status in {pending, running}，更新为 cancelled."""
+    try:
+        await asyncio.to_thread(handler.handle, run_id)
+    except ValueError as exc:
+        if "not found" in str(exc):
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    return CancelRunResponse(run_id=run_id, status=RunStatus.CANCELLED)
+
+
+@router.post("/runs/{run_id}/retry", status_code=202, response_model=RetryRunResponse)
+@inject
+async def retry_run(
+    run_id: str,
+    facade: Annotated[BacktestQueryFacade, FromComponent()],
+    handler: Annotated[RetryRunHandler, FromComponent()],
+) -> RetryRunResponse:
+    """重试回测运行 — 检查 status in {failed, cancelled}，创建新 Run 并提交 flow."""
+    try:
+        new_run_id = await asyncio.to_thread(handler.handle, run_id)
+    except ValueError as exc:
+        if "not found" in str(exc):
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    # 获取 strategy_id 用于 flow 提交
+    record = await asyncio.to_thread(facade.get_run, new_run_id)
+
+    # 后台提交 flow（不阻塞响应）
+    flow_params: dict[str, object] = {
+        "run_id": new_run_id,
+        "strategy_id": record.strategy_id if record else "",
+    }
+    asyncio.get_event_loop().run_in_executor(None, _submit_flow, flow_params)
+
+    return RetryRunResponse(
+        run_id=new_run_id,
+        parent_run_id=run_id,
+        status=RunStatus.PENDING,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Query
+# ---------------------------------------------------------------------------
 
 
 @router.get("/runs", response_model=APIResponse[list[RunResponse]])

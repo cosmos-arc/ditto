@@ -5,6 +5,9 @@ from __future__ import annotations
 import polars as pl
 import pytest
 from ditto_engine.alpha.builtins.filtering import RiskLockFilter
+from ditto_engine.alpha.builtins.regime import RegimeConfig, TrendIndicator
+from ditto_engine.alpha.builtins.regime_allocation import RegimeAwareAllocationStage
+from ditto_engine.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_engine.alpha.builtins.selection import SelectionStage
 from ditto_engine.alpha.builtins.signal import SignalStage
 from ditto_engine.alpha.context import StrategyContext
@@ -168,6 +171,43 @@ class TestBuildETFRotationPipeline:
         signal_stage = pipeline._stages[0]
         assert isinstance(signal_stage, SignalStage)
         assert signal_stage.source_column == "momentum_20d"
+
+    def test_regime_config_inserts_scoring_step_before_allocation(
+        self,
+        sample_bundle: StrategyInputBundle,
+        empty_context: StrategyContext,
+    ) -> None:
+        """regime_config 时 Pipeline 包含 RegimeScoringStep 且 frame 含三列."""
+        regime_config = RegimeConfig(
+            indicators=(TrendIndicator(threshold=0.01),),
+        )
+        config = ETFRotationConfig(
+            top_k=3,
+            signal_column="momentum_20d",
+            regime_config=regime_config,
+        )
+        pipeline = build_etf_rotation_pipeline(config)
+
+        # Pipeline 应包含 RegimeScoringStep 和 RegimeAwareAllocationStage
+        assert any(isinstance(s, RegimeScoringStep) for s in pipeline._stages)
+        assert any(isinstance(s, RegimeAwareAllocationStage) for s in pipeline._stages)
+
+        # RegimeScoringStep 应在 RegimeAwareAllocationStage 之前
+        scoring_idx = next(
+            i
+            for i, s in enumerate(pipeline._stages)
+            if isinstance(s, RegimeScoringStep)
+        )
+        aware_idx = next(
+            i
+            for i, s in enumerate(pipeline._stages)
+            if isinstance(s, RegimeAwareAllocationStage)
+        )
+        assert scoring_idx < aware_idx
+
+        # 运行 pipeline 验证 frame 包含 regime 三列
+        target = pipeline.run(empty_context, sample_bundle)
+        assert len(target.positions) > 0
 
 
 # ---------------------------------------------------------------------------

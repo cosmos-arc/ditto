@@ -92,6 +92,41 @@ class UniverseWriter:
             universe_id=universe_id,
         )
 
+    @traced("data.universe_delete")
+    def delete_universe(self, universe_id: str) -> None:
+        """
+        删除证券域及其所有成分股.
+
+        Args:
+            universe_id: 证券域唯一标识符
+
+        """
+        logger.info(
+            "Deleting universe",
+            event="universe_delete_start",
+            universe_id=universe_id,
+        )
+
+        self._client.execute(
+            "DELETE FROM universe_constituent WHERE universe_id = ?",
+            [universe_id],
+        )
+        self._client.execute(
+            "DELETE FROM universe WHERE universe_id = ?",
+            [universe_id],
+        )
+        self._client.commit()
+
+        # 失效缓存
+        self._cache.invalidate_pattern("universe:*")
+        self._cache.invalidate_pattern("universe:constituents:*")
+
+        logger.info(
+            "Universe deleted successfully",
+            event="universe_delete_complete",
+            universe_id=universe_id,
+        )
+
     @traced("data.universe_add_constituents")
     def add_constituents(
         self,

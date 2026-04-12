@@ -38,6 +38,10 @@ class StrategyRunRecord:
     completed_at: str = ""
     error_message: str = ""
     parent_run_id: str = ""
+    progress_pct: float = 0.0
+    current_step: str = ""
+    completed_days: int = 0
+    total_days: int = 0
 
 
 __all__ = ["StrategyRunRecord"]

@@ -269,7 +269,11 @@ CREATE TABLE IF NOT EXISTS strategy_run (
     started_at        TEXT NOT NULL DEFAULT '',
     completed_at      TEXT NOT NULL DEFAULT '',
     error_message     TEXT NOT NULL DEFAULT '',
-    parent_run_id     TEXT NOT NULL DEFAULT ''
+    parent_run_id     TEXT NOT NULL DEFAULT '',
+    progress_pct      REAL NOT NULL DEFAULT 0.0,
+    current_step      TEXT NOT NULL DEFAULT '',
+    completed_days    INTEGER NOT NULL DEFAULT 0,
+    total_days        INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_strategy_run_strategy_id
     ON strategy_run(strategy_id);
@@ -724,3 +728,9 @@ CREATE TABLE IF NOT EXISTS research_dataset_snapshot (
 );
 CREATE INDEX IF NOT EXISTS idx_research_dataset_snapshot_lookup
     ON research_dataset_snapshot(dataset_id, created_at DESC);
+
+-- ============ Migrations ============
+-- Migration: V2 — strategy_run 增量字段
+ALTER TABLE strategy_run ADD COLUMN config_json TEXT NOT NULL DEFAULT '';
+-- 未来新增列在此追加，如:
+-- ALTER TABLE strategy_run ADD COLUMN new_column TEXT NOT NULL DEFAULT '';

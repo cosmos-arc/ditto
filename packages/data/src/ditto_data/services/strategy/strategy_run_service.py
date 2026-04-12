@@ -107,6 +107,10 @@ class StrategyRunService:
         """标记为失败."""
         return self._writer.update_status(run_id, RunStatus.FAILED, error_message)
 
+    def mark_cancelled(self, run_id: str) -> bool:
+        """标记为已取消."""
+        return self._writer.update_status(run_id, RunStatus.CANCELLED)
+
     def get_run(self, run_id: str) -> StrategyRunRecord | None:
         """获取运行记录."""
         return self._reader.get(run_id)

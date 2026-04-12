@@ -5,13 +5,13 @@
 引擎运行 → 报告生成 → 审计日志持久化 → 策略产物持久化。
 """
 
-from __future__ import annotations
-
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+import polars as pl
 from ditto_data.models.strategy import ArtifactKind, StrategyArtifactRecord
 from ditto_data.models.strategy_audit import (
     PreTradeDecisionPayload,
@@ -21,7 +21,7 @@ from ditto_data.services.audit import ExecutionAuditService
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_engine.alpha.pipeline import StrategyPipeline
+from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_engine.backtest.audit import ExecutionAuditCollector
 from ditto_engine.backtest.data_feed import DataFeed
 from ditto_engine.backtest.engine import (
@@ -35,6 +35,7 @@ from ditto_engine.backtest.statistics import (
     BacktestReport,
     build_report,
 )
+from ditto_engine.backtest.steps import StepContext
 from ditto_engine.execution.brokerage import Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner
 from ditto_engine.execution.reality import FeeModel
@@ -45,6 +46,10 @@ from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import SimpleEventBus
 from ditto_kernel.identity import InstrumentId
 
+from ditto_app.process.execution.factor_bridge import (
+    CompiledExpressions,
+    FactorBridge,
+)
 from ditto_app.process.execution.strategy_input import write_backtest_artifacts
 from ditto_app.process.execution.strategy_types import RunLifecycleService
 
@@ -105,6 +110,7 @@ class BacktestServiceOptions:
         artifact_service: 策略产物持久化服务
         artifact_dir: 回测产物序列化输出目录 (None = 使用默认临时目录)
         run_service: 策略运行生命周期服务 (None = 跳过生命周期管理)
+        compiled_expressions: 编译后的因子表达式 (None = 使用默认信号)
 
     """
 
@@ -116,6 +122,7 @@ class BacktestServiceOptions:
     artifact_dir: str | None = None
     display_map: dict[InstrumentId, str] | None = None
     run_service: RunLifecycleService | None = None
+    compiled_expressions: CompiledExpressions | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +230,14 @@ class BacktestService:
             initial=datetime(_start.year, _start.month, _start.day, tzinfo=UTC),
         )
 
+        # 构建自定义 input_bundle_builder (含因子信号注入)
+        compiled = self._options.compiled_expressions
+        input_bundle_builder = (
+            self._build_factor_aware_bundle_builder(compiled)
+            if compiled is not None
+            else None
+        )
+
         # 构建 EngineOptions (注入 clock + event_bus + audit_collector)
         options = EngineOptions(
             clock=clock,
@@ -231,6 +246,7 @@ class BacktestService:
             rule_provider=self._options.rule_provider,
             post_trade_guard=self._options.post_trade_guard,
             audit_collector=collector,
+            input_bundle_builder=input_bundle_builder,
         )
 
         # 构造并运行 EngineLoop
@@ -260,6 +276,55 @@ class BacktestService:
             run_svc.mark_completed(run_id)
 
         return report
+
+    def _build_factor_aware_bundle_builder(
+        self,
+        compiled: CompiledExpressions,
+    ) -> Callable[[StepContext], StrategyInputBundle]:
+        """构建含因子信号注入的 input_bundle_builder."""
+        run_id = self._config.run_id or uuid.uuid4().hex[:8]
+        strategy_id = self._config.strategy_id
+        bridge = FactorBridge()
+
+        def _build_factor_bundle(
+            ctx: StepContext,
+        ) -> StrategyInputBundle:
+            slice_ = ctx.slice_
+            if slice_ is None:
+                msg = "slice_ required"
+                raise ValueError(msg)
+            bars = slice_.bars
+            instrument_ids = list(bars.keys())
+
+            instruments = pl.DataFrame({"instrument_id": instrument_ids})
+
+            market_rows: list[dict[str, object]] = []
+            for iid, bar in bars.items():
+                market_rows.append(
+                    {
+                        "instrument_id": iid,
+                        "open": bar.open,
+                        "high": bar.high,
+                        "low": bar.low,
+                        "close": bar.close,
+                        "volume": bar.volume,
+                    },
+                )
+            market_data = pl.DataFrame(market_rows)
+
+            signal_values = bridge.compute_signals(market_data, compiled)
+
+            return StrategyInputBundle(
+                trade_date=ctx.date,
+                strategy_id=strategy_id,
+                run_id=run_id,
+                instruments=instruments,
+                market_data=market_data,
+                signal_values=signal_values,
+                benchmark_close=getattr(slice_, "benchmark_close", None),
+            )
+
+        return _build_factor_bundle
 
     def _resolve_run_id(self) -> str:
         """在进入生命周期编排前固化 run_id。"""

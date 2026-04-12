@@ -1,7 +1,5 @@
 """已发布策略 Spec 的运行时装配器."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, replace
 
 from ditto_data.models.strategy import StrategySpecRecord
@@ -52,6 +50,10 @@ from ditto_app.builders._spec_deserializer import (
     read_required_str,
     read_str_value,
 )
+from ditto_app.process.execution.factor_bridge import (
+    CompiledExpressions,
+    FactorBridge,
+)
 
 __all__ = [
     "PublishedStrategyRuntime",
@@ -78,6 +80,7 @@ class PublishedStrategyRuntime:
     record: StrategySpecRecord
     spec: StrategySpec
     pipeline: StrategyPipeline
+    compiled_expressions: CompiledExpressions | None = None
 
 
 # ===========================================================================
@@ -113,7 +116,13 @@ class StrategyRuntimeBuilder:
 
         spec = self._deserialize_strategy_spec(record)
         pipeline = self._build_pipeline(spec)
-        return PublishedStrategyRuntime(record=record, spec=spec, pipeline=pipeline)
+        compiled = self._compile_signal_expressions(spec)
+        return PublishedStrategyRuntime(
+            record=record,
+            spec=spec,
+            pipeline=pipeline,
+            compiled_expressions=compiled,
+        )
 
     # ------------------------------------------------------------------
     # Deserialization
@@ -153,6 +162,14 @@ class StrategyRuntimeBuilder:
                 )
             ),
             tags=as_str_tuple(payload.get("tags"), field_name="tags") or record.tags,
+            signal_expressions=as_str_tuple(
+                payload.get("signal_expressions"),
+                field_name="signal_expressions",
+            ),
+            signal_weights=as_float_tuple(
+                payload.get("signal_weights"),
+                field_name="signal_weights",
+            ),
         )
         return self._inject_template_constraints(spec)
 
@@ -269,6 +286,23 @@ class StrategyRuntimeBuilder:
                 param_constraints=get_sector_rotation_param_constraints(),
             )
         return spec
+
+    # ------------------------------------------------------------------
+    # Signal expression compilation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _compile_signal_expressions(
+        spec: StrategySpec,
+    ) -> CompiledExpressions | None:
+        """若 spec 包含 signal_expressions 则编译并返回，否则返回 None。"""
+        if not spec.signal_expressions:
+            return None
+        bridge = FactorBridge()
+        return bridge.compile_and_validate(
+            expressions=spec.signal_expressions,
+            weights=spec.signal_weights or (1.0,) * len(spec.signal_expressions),
+        )
 
     # ------------------------------------------------------------------
     # Pipeline construction

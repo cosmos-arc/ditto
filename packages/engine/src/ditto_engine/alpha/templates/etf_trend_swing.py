@@ -2,7 +2,8 @@
 etf_trend_swing 策略模板 -- ETF 趋势追踪的标准 Pipeline.
 
 标准流程:
-  Signal -> TrendFilter -> Score -> RiskLockFilter -> Select -> Allocate -> TrailingStop
+  Signal -> TrendFilter -> Score -> RiskLockFilter
+  -> Select -> Allocate -> [Regime] -> TrailingStop
 
 提供:
 - ETFTrendSwingConfig: 策略模板运行时配置
@@ -17,6 +18,11 @@ from dataclasses import dataclass
 import polars as pl
 
 from ditto_engine.alpha.builtins.filtering import RiskLockFilter, TrendFilterStage
+from ditto_engine.alpha.builtins.regime import RegimeConfig
+from ditto_engine.alpha.builtins.regime_allocation import (
+    RegimeAwareAllocationStage,
+)
+from ditto_engine.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_engine.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_engine.alpha.builtins.selection import SelectionStage
 from ditto_engine.alpha.builtins.signal import SignalStage
@@ -129,6 +135,7 @@ class ETFTrendSwingConfig:
         allocation_method: 分配方式 (``"equal_weight"`` / ``"inverse_vol"``)。
         cash_target: 目标现金比例。
         signal_column: 信号源列名。
+        regime_config: Regime 评分配置（None = 不使用 regime 缩放）。
 
     """
 
@@ -141,6 +148,7 @@ class ETFTrendSwingConfig:
     allocation_method: str = "equal_weight"
     cash_target: float = 0.0
     signal_column: str = "signal_value"
+    regime_config: RegimeConfig | None = None
 
 
 def build_etf_trend_swing_pipeline(
@@ -151,7 +159,7 @@ def build_etf_trend_swing_pipeline(
 
     流程:
       Signal -> TrendFilter -> Score -> RiskLockFilter ->
-      Select -> Allocate -> TrailingStop
+      Select -> Allocate -> [Regime] -> TrailingStop
 
     Args:
         config: 运行时配置。
@@ -183,6 +191,11 @@ def build_etf_trend_swing_pipeline(
     else:
         allocator = EqualWeightAllocator(cash_target=config.cash_target)
     stages.append(AllocationStage(allocator=allocator))
+
+    # Regime-aware allocation (optional, post-allocate)
+    if config.regime_config is not None:
+        stages.append(RegimeScoringStep(config.regime_config))
+        stages.append(RegimeAwareAllocationStage())
 
     # Trailing Stop (post-allocation)
     if config.trailing_stop_pct > 0:

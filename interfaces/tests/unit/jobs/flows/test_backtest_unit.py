@@ -1,0 +1,399 @@
+"""
+Unit tests for backtest async flow.
+
+Tests that the flow delegates lifecycle management to BacktestService
+and correctly computes total_return from BacktestReport.
+"""
+
+from __future__ import annotations
+
+from unittest.mock import Mock, patch
+
+import pytest
+from ditto_interfaces.jobs.flows.backtest import (
+    _compute_total_return,
+    run_backtest_flow,
+)
+from pytest_mock import MockerFixture
+
+
+def _prefect_runner(entrypoint):
+    """Extract the underlying function from a Prefect-decorated entrypoint."""
+    return getattr(entrypoint, "func", getattr(entrypoint, "fn", entrypoint))
+
+
+RUNNER = _prefect_runner(run_backtest_flow)
+
+
+@pytest.fixture
+def mock_report() -> Mock:
+    """Mock BacktestReport with initial_cash=1M and final_nav=1.1M."""
+    report = Mock()
+    report.initial_cash = 1_000_000.0
+    report.final_nav = 1_100_000.0
+    return report
+
+
+@pytest.fixture
+def mock_facade(mock_report: Mock) -> Mock:
+    """Mock StrategyFacade."""
+    facade = Mock()
+    facade.run_backtest_from_catalog.return_value = mock_report
+    return facade
+
+
+@pytest.fixture
+def mock_run_service() -> Mock:
+    """Mock RunLifecycleService."""
+    return Mock()
+
+
+@pytest.fixture(autouse=True)
+def mock_create_strategy_bundle(
+    mocker: MockerFixture,
+    mock_facade: Mock,
+    mock_run_service: Mock,
+) -> None:
+    """Replace create_strategy_bundle with mock DI bundle."""
+    mock_bundle = Mock()
+    mock_bundle.strategy_facade = mock_facade
+    mock_bundle.run_service = mock_run_service
+
+    mock_ctx = mocker.Mock()
+    mock_ctx.__enter__ = Mock(return_value=mock_bundle)
+    mock_ctx.__exit__ = Mock(return_value=False)
+
+    mocker.patch(
+        "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
+        return_value=mock_ctx,
+    )
+
+
+class TestRunBacktestFlow:
+    """Tests for run_backtest_flow delegation to BacktestService."""
+
+    def test_successful_flow_returns_completed(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Successful backtest returns completed status with total_return."""
+        result = RUNNER(
+            run_id="run-001",
+            strategy_id="momentum-etf",
+            start_date="2025-01-01",
+            end_date="2025-03-31",
+        )
+
+        assert result["run_id"] == "run-001"
+        assert result["status"] == "completed"
+        assert result["total_return"] == pytest.approx(0.1)
+
+    def test_passes_config_to_facade(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Flow passes correct BacktestServiceConfig to facade."""
+        RUNNER(
+            run_id="run-003",
+            strategy_id="my-strategy",
+            start_date="2025-01-01",
+            end_date="2025-06-30",
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        config = call_kwargs.kwargs.get("config") or call_kwargs[1].get("config")
+        assert config is not None
+        assert config.strategy_id == "my-strategy"
+        assert config.run_id == "run-003"
+        assert config.start_date == "2025-01-01"
+        assert config.end_date == "2025-06-30"
+
+    def test_passes_run_service_via_options(
+        self,
+        mock_facade: Mock,
+        mock_run_service: Mock,
+    ) -> None:
+        """Flow passes run_service through BacktestServiceOptions."""
+        RUNNER(
+            run_id="run-004",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        options = call_kwargs.kwargs.get("options") or call_kwargs[1].get("options")
+        assert options is not None
+        assert options.run_service is mock_run_service
+
+    def test_failed_flow_propagates_exception(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Failed backtest propagates exception (BacktestService handles lifecycle)."""
+        mock_facade.run_backtest_from_catalog.side_effect = RuntimeError("engine crash")
+
+        with pytest.raises(RuntimeError, match="engine crash"):
+            RUNNER(
+                run_id="run-002",
+                strategy_id="momentum-etf",
+                start_date="2025-01-01",
+                end_date="2025-03-31",
+            )
+
+    def test_none_run_service_still_executes(
+        self,
+        mock_facade: Mock,
+        mock_run_service: Mock,
+    ) -> None:
+        """When run_service is None, backtest still executes."""
+        mock_run_service.mark_running.side_effect = AttributeError("None")
+
+        # Reset the mock to None
+        mock_run_service.mark_running.reset_mock()
+        mock_run_service.mark_running.side_effect = None
+
+        result = RUNNER(
+            run_id="run-005",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+        )
+
+        mock_facade.run_backtest_from_catalog.assert_called_once()
+        assert result["status"] == "completed"
+
+
+class TestComputeTotalReturn:
+    """Tests for _compute_total_return helper."""
+
+    def test_positive_return(self) -> None:
+        """Normal positive return."""
+        report = Mock(initial_cash=1_000_000.0, final_nav=1_200_000.0)
+        assert _compute_total_return(report) == pytest.approx(0.2)
+
+    def test_negative_return(self) -> None:
+        """Negative return (loss)."""
+        report = Mock(initial_cash=1_000_000.0, final_nav=800_000.0)
+        assert _compute_total_return(report) == pytest.approx(-0.2)
+
+    def test_zero_initial_cash(self) -> None:
+        """Zero initial cash returns 0.0 to avoid division by zero."""
+        report = Mock(initial_cash=0.0, final_nav=100_000.0)
+        assert _compute_total_return(report) == 0.0
+
+
+class TestRunBacktestFlowStateMachine:
+    """Tests for run_backtest_flow state machine via run_writer."""
+
+    def test_running_status_on_start(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Flow 开始时调用 writer.update_status(run_id, 'running')."""
+        mock_writer = Mock()
+
+        # 创建自定义 mock bundle context，包含 run_writer
+        mock_bundle = Mock()
+        mock_bundle.strategy_facade = mock_facade
+        mock_bundle.run_service = Mock()
+        mock_bundle.run_writer = mock_writer
+
+        mock_ctx = Mock()
+        mock_ctx.__enter__ = Mock(return_value=mock_bundle)
+        mock_ctx.__exit__ = Mock(return_value=False)
+
+        with patch(
+            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
+            return_value=mock_ctx,
+        ):
+            RUNNER(
+                run_id="run-sm-001",
+                strategy_id="test",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+            )
+
+        mock_writer.update_status.assert_any_call("run-sm-001", "running")
+
+    def test_completed_status_on_success(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Flow 成功完成时调用 writer.update_status(run_id, 'completed')."""
+        mock_writer = Mock()
+
+        mock_bundle = Mock()
+        mock_bundle.strategy_facade = mock_facade
+        mock_bundle.run_service = Mock()
+        mock_bundle.run_writer = mock_writer
+
+        mock_ctx = Mock()
+        mock_ctx.__enter__ = Mock(return_value=mock_bundle)
+        mock_ctx.__exit__ = Mock(return_value=False)
+
+        with patch(
+            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
+            return_value=mock_ctx,
+        ):
+            result = RUNNER(
+                run_id="run-sm-002",
+                strategy_id="test",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+            )
+
+        mock_writer.update_status.assert_any_call("run-sm-002", "running")
+        mock_writer.update_status.assert_any_call("run-sm-002", "completed")
+        assert result["status"] == "completed"
+
+    def test_failed_status_on_exception(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Flow 异常时调用 writer.update_status(run_id, 'failed', error_message=...)."""
+        mock_writer = Mock()
+        mock_facade.run_backtest_from_catalog.side_effect = RuntimeError("engine crash")
+
+        mock_bundle = Mock()
+        mock_bundle.strategy_facade = mock_facade
+        mock_bundle.run_service = Mock()
+        mock_bundle.run_writer = mock_writer
+
+        mock_ctx = Mock()
+        mock_ctx.__enter__ = Mock(return_value=mock_bundle)
+        mock_ctx.__exit__ = Mock(return_value=False)
+
+        with patch(
+            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
+            return_value=mock_ctx,
+        ):
+            with pytest.raises(RuntimeError, match="engine crash"):
+                RUNNER(
+                    run_id="run-sm-003",
+                    strategy_id="test",
+                    start_date="2025-01-01",
+                    end_date="2025-01-31",
+                )
+
+        mock_writer.update_status.assert_any_call("run-sm-003", "running")
+        mock_writer.update_status.assert_any_call(
+            "run-sm-003",
+            "failed",
+            error_message="engine crash",
+        )
+
+    def test_no_writer_still_executes(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """run_writer 为 None 时回测仍正常执行."""
+        mock_bundle = Mock()
+        mock_bundle.strategy_facade = mock_facade
+        mock_bundle.run_service = Mock()
+        mock_bundle.run_writer = None
+
+        mock_ctx = Mock()
+        mock_ctx.__enter__ = Mock(return_value=mock_bundle)
+        mock_ctx.__exit__ = Mock(return_value=False)
+
+        with patch(
+            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
+            return_value=mock_ctx,
+        ):
+            result = RUNNER(
+                run_id="run-sm-004",
+                strategy_id="test",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+            )
+
+        mock_facade.run_backtest_from_catalog.assert_called_once()
+        assert result["status"] == "completed"
+
+    def test_status_transition_order(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """状态转换顺序: running → completed（running 先于 completed）."""
+        mock_writer = Mock()
+        call_order: list[str] = []
+
+        def record_call(run_id: str, status: str, **kwargs: object) -> bool:
+            call_order.append(status)
+            return True
+
+        mock_writer.update_status.side_effect = record_call
+
+        mock_bundle = Mock()
+        mock_bundle.strategy_facade = mock_facade
+        mock_bundle.run_service = Mock()
+        mock_bundle.run_writer = mock_writer
+
+        mock_ctx = Mock()
+        mock_ctx.__enter__ = Mock(return_value=mock_bundle)
+        mock_ctx.__exit__ = Mock(return_value=False)
+
+        with patch(
+            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
+            return_value=mock_ctx,
+        ):
+            RUNNER(
+                run_id="run-sm-005",
+                strategy_id="test",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+            )
+
+        assert call_order == ["running", "completed"]
+
+
+class TestRunBacktestFlowCostConfig:
+    """Tests for run_backtest_flow cost_config FeeModel injection."""
+
+    def test_no_cost_config_options_fee_model_is_default(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """无 cost_config 时 options.fee_model 为 AShareFeeModel 默认实例."""
+        from ditto_engine.execution.reality.fee import AShareFeeModel
+
+        RUNNER(
+            run_id="run-010",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        options = call_kwargs.kwargs.get("options") or call_kwargs[1].get("options")
+        assert options is not None
+        assert isinstance(options.fee_model, AShareFeeModel)
+
+    def test_with_cost_config_options_has_fee_model(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """有 cost_config 时 options.fee_model 为非 None 的 FeeModel."""
+        cost_dict = {
+            "commission_rate": 0.0005,
+            "commission_min": 10.0,
+            "stamp_duty_rate": 0.002,
+            "slippage_bps": 3.0,
+            "impact_model": "none",
+        }
+        RUNNER(
+            run_id="run-011",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+            cost_config=cost_dict,
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        options = call_kwargs.kwargs.get("options") or call_kwargs[1].get("options")
+        assert options is not None
+        assert options.fee_model is not None
+        # OverrideFeeModel 满足 FeeModel Protocol
+        assert callable(options.fee_model.calculate)
+        assert callable(options.fee_model.estimate)

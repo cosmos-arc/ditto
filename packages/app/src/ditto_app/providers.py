@@ -66,6 +66,11 @@ from ditto_app.builders import (
 # ---------------------------------------------------------------------------
 # App Command 层
 # ---------------------------------------------------------------------------
+from ditto_app.command.backtest import (
+    BacktestRunHandler,
+    CancelRunHandler,
+    RetryRunHandler,
+)
 from ditto_app.command.quality_check import CheckDataQualityHandler
 from ditto_app.command.strategy import (
     CreateStrategyHandler,
@@ -76,6 +81,12 @@ from ditto_app.command.trade import (
     RecordFillHandler,
     UpdateIntentStatusHandler,
 )
+from ditto_app.command.universe import (
+    CreateCustomUniverseHandler,
+    DeleteCustomUniverseHandler,
+    UpdateCustomUniverseHandler,
+)
+from ditto_app.process.execution.factor_bridge import FactorBridge
 from ditto_app.process.execution.manual_tracker import ManualTracker
 from ditto_app.process.execution.replay_process import ReplayProcess  # noqa: RUF100
 from ditto_app.process.execution.strategy_run_process import StrategyFacade
@@ -118,6 +129,7 @@ from ditto_app.query.signal import SignalQueryFacade
 from ditto_app.query.source import SourceQueryFacade
 from ditto_app.query.strategy import StrategyQueryFacade
 from ditto_app.query.trade import TradeQueryFacade
+from ditto_app.query.universe import UniverseQueryFacade
 
 __all__ = [
     "AppBuilderFactory",
@@ -193,6 +205,60 @@ class AppCommandProvider(Provider):
     ) -> UpdateIntentStatusHandler:
         """更新交易意图状态 Command Handler."""
         return UpdateIntentStatusHandler(trade_service=trade_service)
+
+    @provide
+    def backtest_run_handler(
+        self,
+        catalog_service: StrategyCatalogService,
+        run_service: StrategyRunLifecycleService,
+        factor_bridge: FactorBridge,
+    ) -> BacktestRunHandler:
+        """回测触发 Command Handler."""
+        return BacktestRunHandler(
+            catalog_service=catalog_service,
+            run_service=run_service,
+            factor_bridge=factor_bridge,
+        )
+
+    @provide
+    def cancel_run_handler(
+        self,
+        run_service: StrategyRunLifecycleService,
+    ) -> CancelRunHandler:
+        """取消运行 Command Handler."""
+        return CancelRunHandler(run_service=run_service)
+
+    @provide
+    def retry_run_handler(
+        self,
+        run_service: StrategyRunLifecycleService,
+    ) -> RetryRunHandler:
+        """重试运行 Command Handler."""
+        return RetryRunHandler(run_service=run_service)
+
+    @provide
+    def create_custom_universe_handler(
+        self,
+        metadata_service: MetadataService,
+    ) -> CreateCustomUniverseHandler:
+        """创建自定义 Universe Command Handler."""
+        return CreateCustomUniverseHandler(metadata_service=metadata_service)
+
+    @provide
+    def update_custom_universe_handler(
+        self,
+        metadata_service: MetadataService,
+    ) -> UpdateCustomUniverseHandler:
+        """更新自定义 Universe Command Handler."""
+        return UpdateCustomUniverseHandler(metadata_service=metadata_service)
+
+    @provide
+    def delete_custom_universe_handler(
+        self,
+        metadata_service: MetadataService,
+    ) -> DeleteCustomUniverseHandler:
+        """删除自定义 Universe Command Handler."""
+        return DeleteCustomUniverseHandler(metadata_service=metadata_service)
 
 
 # ---------------------------------------------------------------------------
@@ -395,6 +461,14 @@ class AppQueryProvider(Provider):
             actual_facade=actual_facade,
         )
 
+    @provide
+    def universe_query_facade(
+        self,
+        metadata_service: MetadataService,
+    ) -> UniverseQueryFacade:
+        """Universe 只读查询 facade — 封装 MetadataService universe 方法."""
+        return UniverseQueryFacade(metadata_service=metadata_service)
+
 
 # ---------------------------------------------------------------------------
 # AppProcessProvider — 编排/物化/质量服务
@@ -523,6 +597,11 @@ class AppProcessProvider(Provider):
             strategy_facade=strategy_facade,
             artifact_service=artifact_service,
         )
+
+    @provide
+    def factor_bridge(self) -> FactorBridge:
+        """因子桥接 — 字符串表达式 → 编译 → 信号计算."""
+        return FactorBridge()
 
 
 # ---------------------------------------------------------------------------

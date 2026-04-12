@@ -24,6 +24,10 @@ class RunResponse(BaseModel):
     error_message: str = ""
     parent_run_id: str = ""
     benchmark_return: float | None = None
+    progress_pct: float = 0.0
+    current_step: str = ""
+    completed_days: int = 0
+    total_days: int = 0
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -83,6 +87,10 @@ def to_run_response(record: Any) -> RunResponse:  # noqa: ANN401
         completed_at=record.completed_at,
         error_message=record.error_message,
         parent_run_id=getattr(record, "parent_run_id", ""),
+        progress_pct=getattr(record, "progress_pct", 0.0),
+        current_step=getattr(record, "current_step", ""),
+        completed_days=getattr(record, "completed_days", 0),
+        total_days=getattr(record, "total_days", 0),
     )
 
 
@@ -134,9 +142,71 @@ class BenchmarkNavResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class CostConfigRequest(BaseModel):
+    """成本模型配置请求 — A 股标准费率默认值."""
+
+    commission_rate: float = Field(default=0.0003, ge=0, description="佣金费率")
+    commission_min: float = Field(default=5.0, ge=0, description="最低佣金(元)")
+    stamp_duty_rate: float = Field(default=0.001, ge=0, description="印花税税率(卖出)")
+    slippage_bps: float = Field(default=1.0, ge=0, description="滑点(bps)")
+    impact_model: str = Field(default="none", description="冲击成本模型")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class CreateBacktestRunRequest(BaseModel):
+    """创建回测运行请求."""
+
+    strategy_id: str = Field(..., min_length=1, description="策略 ID")
+    start_date: str = Field(..., min_length=1, description="起始日期 (YYYY-MM-DD)")
+    end_date: str = Field(..., min_length=1, description="结束日期 (YYYY-MM-DD)")
+    initial_cash: float = Field(default=1_000_000.0, gt=0, description="初始资金")
+    parameter_overrides: list[str] = Field(default_factory=list, description="参数覆盖")
+    cost_config: CostConfigRequest | None = Field(
+        default=None,
+        description="成本模型配置",
+    )
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class BacktestRunTriggerResponse(BaseModel):
+    """回测触发响应."""
+
+    run_id: str
+    strategy_id: str
+    status: str = "pending"
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class CancelRunResponse(BaseModel):
+    """取消运行响应."""
+
+    run_id: str
+    status: str = "cancelled"
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class RetryRunResponse(BaseModel):
+    """重试运行响应."""
+
+    run_id: str
+    parent_run_id: str
+    status: str = "pending"
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 __all__ = [
     "AuditRecordResponse",
+    "BacktestRunTriggerResponse",
     "BenchmarkNavResponse",
+    "CancelRunResponse",
+    "CostConfigRequest",
+    "CreateBacktestRunRequest",
+    "RetryRunResponse",
     "RunResponse",
     "RunsQueryParams",
     "TradeResponse",

@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from ditto_app.command.backtest import (
+    BacktestRunCommand,
+    BacktestRunHandler,
+    BacktestRunResult,
+    CostConfig,
+)
 from ditto_app.command.ingestion import (
     BackfillRangeCommand,
     IngestDateHandler,
@@ -19,17 +25,35 @@ from ditto_app.command.trade import (
     UpdateIntentStatusCommand,
     UpdateIntentStatusHandler,
 )
+from ditto_app.command.universe import (
+    CreateCustomUniverseCommand,
+    CreateCustomUniverseHandler,
+    DeleteCustomUniverseCommand,
+    DeleteCustomUniverseHandler,
+    UpdateCustomUniverseCommand,
+    UpdateCustomUniverseHandler,
+)
 
 __all__ = [
     "BackfillRangeCommand",
+    "BacktestRunCommand",
+    "BacktestRunHandler",
+    "BacktestRunResult",
     "CheckDataQualityHandler",
     "CommandHandler",
+    "CostConfig",
+    "CreateCustomUniverseCommand",
+    "CreateCustomUniverseHandler",
+    "DeleteCustomUniverseCommand",
+    "DeleteCustomUniverseHandler",
     "IngestDateHandler",
     "IngestRangeCommand",
     "ReconcileSourcesCommand",
     "ReconcileSourcesHandler",
     "RecordFillCommand",
     "RecordFillHandler",
+    "UpdateCustomUniverseCommand",
+    "UpdateCustomUniverseHandler",
     "UpdateIntentStatusCommand",
     "UpdateIntentStatusHandler",
 ]

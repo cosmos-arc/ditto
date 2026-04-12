@@ -162,3 +162,5 @@ class StrategySpec:
     params: dict[str, object] = field(default_factory=dict)
     param_constraints: tuple[ParamConstraint, ...] = ()
     tags: tuple[str, ...] = ()
+    signal_expressions: tuple[str, ...] = ()
+    signal_weights: tuple[float, ...] = ()

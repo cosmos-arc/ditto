@@ -13,6 +13,9 @@ from ditto_engine.alpha.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
 )
+from ditto_engine.alpha.builtins.regime import RegimeConfig, TrendIndicator
+from ditto_engine.alpha.builtins.regime_allocation import RegimeAwareAllocationStage
+from ditto_engine.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_engine.alpha.builtins.scoring import ScoringStage
 from ditto_engine.alpha.builtins.selection import SelectionStage
 from ditto_engine.alpha.context import StrategyContext
@@ -474,6 +477,31 @@ class TestPipelineE2E:
         # All weights should be <= 0.15
         for weight in target.positions.values():
             assert weight <= 0.15
+
+    def test_regime_config_inserts_scoring_step(
+        self,
+    ) -> None:
+        """有 regime_config 时 Pipeline 包含 RegimeScoringStep 和 RegimeAware."""
+        regime_config = RegimeConfig(
+            indicators=(TrendIndicator(threshold=0.01),),
+        )
+        config = StockSelectionTrendConfig(regime_config=regime_config)
+        pipeline = build_stock_selection_trend_pipeline(config)
+
+        assert any(isinstance(s, RegimeScoringStep) for s in pipeline._stages)
+        assert any(isinstance(s, RegimeAwareAllocationStage) for s in pipeline._stages)
+
+        scoring_idx = next(
+            i
+            for i, s in enumerate(pipeline._stages)
+            if isinstance(s, RegimeScoringStep)
+        )
+        aware_idx = next(
+            i
+            for i, s in enumerate(pipeline._stages)
+            if isinstance(s, RegimeAwareAllocationStage)
+        )
+        assert scoring_idx < aware_idx
 
 
 # ---------------------------------------------------------------------------

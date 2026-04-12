@@ -3,6 +3,7 @@ etf_rotation 策略模板 -- ETF 动量轮动的标准 Pipeline.
 
 标准流程:
   Signal -> Score -> RiskLockFilter -> Select -> Allocate -> Constraint
+  (可选: Allocate 之后插入 RegimeAwareAllocationStage)
 """
 
 from __future__ import annotations
@@ -10,6 +11,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ditto_engine.alpha.builtins.filtering import RiskLockFilter
+from ditto_engine.alpha.builtins.regime import RegimeConfig
+from ditto_engine.alpha.builtins.regime_allocation import (
+    RegimeAwareAllocationStage,
+)
+from ditto_engine.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_engine.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_engine.alpha.builtins.selection import SelectionStage
 from ditto_engine.alpha.builtins.signal import SignalStage
@@ -46,6 +52,7 @@ class ETFRotationConfig:
         signal_column: 信号源列名。
         max_weight: 单标的权重上限（None = 不限制）。
         max_positions: 最大持仓数量（None = 不限制）。
+        regime_config: Regime 评分配置（None = 不使用 regime 缩放）。
 
     """
 
@@ -57,6 +64,7 @@ class ETFRotationConfig:
     signal_column: str = "signal_value"
     max_weight: float | None = None
     max_positions: int | None = None
+    regime_config: RegimeConfig | None = None
 
 
 def build_etf_rotation_pipeline(
@@ -66,7 +74,7 @@ def build_etf_rotation_pipeline(
     组装 etf_rotation 的标准 Pipeline.
 
     标准流程:
-      Signal -> Score -> RiskLockFilter -> Select -> Allocate -> Constraint
+      Signal -> Score -> RiskLockFilter -> Select -> Allocate -> [Regime] -> Constraint
 
     Args:
         config: 运行时配置。
@@ -90,6 +98,11 @@ def build_etf_rotation_pipeline(
     else:
         allocator = EqualWeightAllocator(cash_target=config.cash_target)
     stages.append(AllocationStage(allocator=allocator))
+
+    # Regime-aware allocation (optional, post-allocate)
+    if config.regime_config is not None:
+        stages.append(RegimeScoringStep(config.regime_config))
+        stages.append(RegimeAwareAllocationStage())
 
     # Constraints
     if config.max_weight is not None or config.max_positions is not None:

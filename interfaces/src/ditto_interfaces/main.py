@@ -45,6 +45,7 @@ from ditto_interfaces.api.routes import (
     source,
     strategy,
     trade,
+    universe,
 )
 from ditto_interfaces.exceptions import DittoException
 from ditto_interfaces.middleware import (
@@ -202,6 +203,7 @@ app.include_router(portfolio.router, prefix="/api/v1")
 app.include_router(source.router, prefix="/api/v1")
 app.include_router(strategy.router, prefix="/api/v1")
 app.include_router(trade.router, prefix="/api/v1")
+app.include_router(universe.router, prefix="/api/v1")
 
 # 调试路由： 条件注册（仅非生产环境）
 env = get_environment()

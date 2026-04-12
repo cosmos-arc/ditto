@@ -14,6 +14,7 @@ V1 每日循环 (通过 TradingStep chain 编排):
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -171,6 +172,8 @@ class EngineOptions:
         post_trade_guard: PostTrade 风控扫描器 (None = 跳过 PostTrade)
         audit_collector: 审计收集器 (None = 不记录审计日志)
         event_bus: 事件总线 (None = 不发布域事件)
+        input_bundle_builder: 自定义 input bundle 构建器
+            (None = 使用默认构建器)
 
     """
 
@@ -180,6 +183,7 @@ class EngineOptions:
     post_trade_guard: PostTradeRiskGuard | None = None
     audit_collector: ExecutionAuditCollector | None = None
     event_bus: EventBus | None = None
+    input_bundle_builder: Callable[[StepContext], StrategyInputBundle] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +233,7 @@ class EngineLoop:
         self._post_trade_guard = options.post_trade_guard
         self._audit_collector = options.audit_collector
         self._event_bus = options.event_bus
+        self._input_bundle_builder = options.input_bundle_builder
 
         # 跨日可变状态
         self._fills: list[FillEvent] = []
@@ -271,7 +276,9 @@ class EngineLoop:
                 strategy_context=self._strategy_context,
                 strategy_id=self._config.strategy_id,
                 strategy_run_id=self._config.strategy_run_id,
-                input_bundle_builder=lambda ctx: self._build_input_bundle(
+                input_bundle_builder=self._input_bundle_builder
+                if self._input_bundle_builder is not None
+                else lambda ctx: self._build_input_bundle(
                     ctx.date,
                     ctx.slice_,  # type: ignore[arg-type]
                 ),

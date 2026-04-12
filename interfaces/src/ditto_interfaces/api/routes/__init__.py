@@ -16,6 +16,7 @@ from ditto_interfaces.api.routes import (
     source,
     strategy,
     trade,
+    universe,
 )
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "source",
     "strategy",
     "trade",
+    "universe",
 ]

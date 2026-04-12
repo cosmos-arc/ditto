@@ -3,7 +3,7 @@ stock_sector_rotation 策略模板 -- 行业轮动 + 行业内选股的两层 Pi
 
 标准流程:
   SectorSignal -> SectorScoreAndSelect -> IntraSectorSelect -> RiskLockFilter ->
-  SectorWeight -> Constraint(max_weight) -> FinalFilter(non-sector)
+  SectorWeight -> [Regime] -> Constraint(max_weight) -> FinalFilter(non-sector)
 
 提供:
 - StockSectorRotationConfig: 策略模板运行时配置
@@ -28,6 +28,11 @@ from dataclasses import dataclass
 import polars as pl
 
 from ditto_engine.alpha.builtins.filtering import RiskLockFilter
+from ditto_engine.alpha.builtins.regime import RegimeConfig
+from ditto_engine.alpha.builtins.regime_allocation import (
+    RegimeAwareAllocationStage,
+)
+from ditto_engine.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.alpha.pipeline import StrategyPipeline
 from ditto_engine.alpha.protocols import DecisionStage
@@ -72,6 +77,7 @@ class StockSectorRotationConfig:
         max_weight: 单标的最大权重。
         cash_target: 目标现金比例。
         rebalance_freq: 调仓频率 (``"daily"`` / ``"weekly"`` / ``"monthly"``)。
+        regime_config: Regime 评分配置（None = 不使用 regime 缩放）。
 
     """
 
@@ -84,6 +90,7 @@ class StockSectorRotationConfig:
     max_weight: float = 0.15
     cash_target: float = 0.0
     rebalance_freq: str = "daily"
+    regime_config: RegimeConfig | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +204,7 @@ def get_param_constraints() -> tuple[ParamConstraint, ...]:
 @dataclass(frozen=True)
 class SectorSignalStage:
     """
-    计算行业动量信号 — 对行业 ETF 行提取信号值.
+    计算行业动量信号 -- 对行业 ETF 行提取信号值.
 
     将行业 ETF 的 sector_signal_column 值复制到 sector_signal 列，
     个股行的 sector_signal 设为 null。
@@ -536,7 +543,7 @@ def build_stock_sector_rotation_pipeline(
 
     流程:
       SectorSignal -> SectorScoreAndSelect -> IntraSectorSelect ->
-      RiskLockFilter -> SectorWeight -> Constraint(max_weight) ->
+      RiskLockFilter -> SectorWeight -> [Regime] -> Constraint(max_weight) ->
       FinalStockFilter
 
     Args:
@@ -562,6 +569,11 @@ def build_stock_sector_rotation_pipeline(
             cash_target=config.cash_target,
         ),
     ]
+
+    # Regime-aware allocation (optional, post-weight)
+    if config.regime_config is not None:
+        stages.append(RegimeScoringStep(config.regime_config))
+        stages.append(RegimeAwareAllocationStage())
 
     # Constraint: MaxWeightConstraint (always present)
     constraint_list: list[Constraint] = [

@@ -30,7 +30,11 @@ CREATE TABLE IF NOT EXISTS strategy_run (
     started_at        TEXT NOT NULL DEFAULT '',
     completed_at      TEXT NOT NULL DEFAULT '',
     error_message     TEXT NOT NULL DEFAULT '',
-    parent_run_id     TEXT NOT NULL DEFAULT ''
+    parent_run_id     TEXT NOT NULL DEFAULT '',
+    progress_pct      REAL NOT NULL DEFAULT 0.0,
+    current_step      TEXT NOT NULL DEFAULT '',
+    completed_days    INTEGER NOT NULL DEFAULT 0,
+    total_days        INTEGER NOT NULL DEFAULT 0
 );
 """
 
@@ -48,23 +52,56 @@ _CREATE_INDEX_PARENT_RUN_ID = (
     "ON strategy_run(parent_run_id);"
 )
 
+# ---------------------------------------------------------------------------
+# Incremental migration definitions
+# ---------------------------------------------------------------------------
+# Each tuple: (column_name, alter_sql)
+# _run_migrations() uses PRAGMA table_info to skip already-applied columns.
+# ---------------------------------------------------------------------------
+
+_MIGRATIONS: list[tuple[str, str]] = [
+    (
+        "progress_pct",
+        "ALTER TABLE strategy_run ADD COLUMN progress_pct REAL NOT NULL DEFAULT 0.0",
+    ),
+    (
+        "current_step",
+        "ALTER TABLE strategy_run ADD COLUMN current_step TEXT NOT NULL DEFAULT ''",
+    ),
+    (
+        "completed_days",
+        "ALTER TABLE strategy_run ADD COLUMN completed_days INTEGER NOT NULL DEFAULT 0",
+    ),
+    (
+        "total_days",
+        "ALTER TABLE strategy_run ADD COLUMN total_days INTEGER NOT NULL DEFAULT 0",
+    ),
+    (
+        "config_json",
+        "ALTER TABLE strategy_run ADD COLUMN config_json TEXT NOT NULL DEFAULT ''",
+    ),
+]
+
 _UPSERT_SQL = """
 INSERT OR REPLACE INTO strategy_run (
     run_id, strategy_id, strategy_version, mode,
-    status, started_at, completed_at, error_message, parent_run_id
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    status, started_at, completed_at, error_message, parent_run_id,
+    progress_pct, current_step, completed_days, total_days
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 _GET_SQL = """
 SELECT run_id, strategy_id, strategy_version, mode,
-       status, started_at, completed_at, error_message, parent_run_id
+       status, started_at, completed_at, error_message, parent_run_id,
+       progress_pct, current_step, completed_days, total_days
 FROM strategy_run
 WHERE run_id = ?
 """
 
 _LIST_BY_STRATEGY_SQL = """
 SELECT run_id, strategy_id, strategy_version, mode,
-       status, started_at, completed_at, error_message, parent_run_id
+       status, started_at, completed_at, error_message, parent_run_id,
+       progress_pct, current_step, completed_days, total_days
 FROM strategy_run
 WHERE strategy_id = ?
 ORDER BY started_at DESC, run_id DESC
@@ -84,17 +121,45 @@ WHERE run_id = ?
 
 _LIST_RUNS_BASE_SQL = """
 SELECT run_id, strategy_id, strategy_version, mode,
-       status, started_at, completed_at, error_message, parent_run_id
+       status, started_at, completed_at, error_message, parent_run_id,
+       progress_pct, current_step, completed_days, total_days
 FROM strategy_run
 """
 
 _LIST_BY_PARENT_SQL = """
 SELECT run_id, strategy_id, strategy_version, mode,
-       status, started_at, completed_at, error_message, parent_run_id
+       status, started_at, completed_at, error_message, parent_run_id,
+       progress_pct, current_step, completed_days, total_days
 FROM strategy_run
 WHERE parent_run_id = ?
 ORDER BY started_at ASC, run_id ASC
 """
+
+_UPDATE_PROGRESS_SQL = """
+UPDATE strategy_run
+SET progress_pct = ?, current_step = ?, completed_days = ?, total_days = ?
+WHERE run_id = ?
+"""
+
+
+def _run_migrations(conn: sqlite3.Connection) -> None:
+    """
+    Apply incremental ALTER TABLE migrations (idempotent).
+
+    Uses PRAGMA table_info to detect existing columns and skips
+    already-applied migrations.
+    """
+    existing = {
+        row[1] for row in conn.execute("PRAGMA table_info(strategy_run)").fetchall()
+    }
+    for col_name, alter_sql in _MIGRATIONS:
+        if col_name not in existing:
+            conn.execute(alter_sql)
+            logger.debug(
+                "Migration applied",
+                event="strategy_run_migration_applied",
+                column=col_name,
+            )
 
 
 def _row_to_record(row: sqlite3.Row) -> StrategyRunRecord:
@@ -110,6 +175,10 @@ def _row_to_record(row: sqlite3.Row) -> StrategyRunRecord:
         completed_at=str(data["completed_at"]),
         error_message=str(data.get("error_message", "")),
         parent_run_id=str(data.get("parent_run_id", "")),
+        progress_pct=float(data.get("progress_pct", 0.0)),
+        current_step=str(data.get("current_step", "")),
+        completed_days=int(data.get("completed_days", 0)),
+        total_days=int(data.get("total_days", 0)),
     )
 
 
@@ -121,7 +190,7 @@ class SQLiteStrategyRunWriter:
 
     @traced("store.strategy_run_writer.init_schema")
     def init_schema(self) -> None:
-        """Create strategy_run table and indexes (idempotent)."""
+        """Create strategy_run table, indexes, and run migrations (idempotent)."""
         conn = self._pool.get_connection()
         conn.executescript(
             _CREATE_TABLE
@@ -129,6 +198,7 @@ class SQLiteStrategyRunWriter:
             + _CREATE_INDEX_STATUS
             + _CREATE_INDEX_PARENT_RUN_ID,
         )
+        _run_migrations(conn)
         self._pool.commit()
         logger.debug(
             "strategy_run schema initialized",
@@ -151,6 +221,10 @@ class SQLiteStrategyRunWriter:
                 record.completed_at,
                 record.error_message,
                 record.parent_run_id,
+                record.progress_pct,
+                record.current_step,
+                record.completed_days,
+                record.total_days,
             ),
         )
         self._pool.commit()
@@ -191,6 +265,34 @@ class SQLiteStrategyRunWriter:
         )
         return updated > 0
 
+    @traced("store.strategy_run_writer.update_progress")
+    def update_progress(
+        self,
+        run_id: str,
+        *,
+        progress_pct: float = 0.0,
+        current_step: str = "",
+        completed_days: int = 0,
+        total_days: int = 0,
+    ) -> bool:
+        """Update run progress fields. Returns True if found."""
+        conn = self._pool.get_connection()
+        cursor = conn.execute(
+            _UPDATE_PROGRESS_SQL,
+            (progress_pct, current_step, completed_days, total_days, run_id),
+        )
+        self._pool.commit()
+        updated = cursor.rowcount
+        logger.debug(
+            "strategy_run progress updated",
+            event="strategy_run_progress_update",
+            run_id=run_id,
+            progress_pct=progress_pct,
+            current_step=current_step,
+            updated=updated,
+        )
+        return updated > 0
+
 
 class SQLiteStrategyRunReader:
     """SQLite-backed reader implementing StrategyRunReaderProtocol."""
@@ -200,7 +302,7 @@ class SQLiteStrategyRunReader:
 
     @traced("store.strategy_run_reader.init_schema")
     def init_schema(self) -> None:
-        """Create strategy_run table and indexes (idempotent)."""
+        """Create strategy_run table, indexes, and run migrations (idempotent)."""
         conn = self._pool.get_connection()
         conn.executescript(
             _CREATE_TABLE
@@ -208,6 +310,7 @@ class SQLiteStrategyRunReader:
             + _CREATE_INDEX_STATUS
             + _CREATE_INDEX_PARENT_RUN_ID,
         )
+        _run_migrations(conn)
         self._pool.commit()
         logger.debug(
             "strategy_run schema initialized",
