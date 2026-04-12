@@ -1,18 +1,21 @@
 /**
- * NoiseLayer -- decorative overlay providing the Graphite Studio visual atmosphere.
+ * NoiseLayer -- decorative overlay for Graphite Studio atmosphere.
  *
- * Renders three non-interactive layers:
- * 1. SVG feTurbulence noise texture at very low opacity (~0.018)
- * 2. Top ambient light bar (brand-500 gradient fading down)
- * 3. Right ambient light bar (brand-500 gradient fading left)
+ * Two non-interactive layers:
+ * 1. SVG feTurbulence noise texture (opacity ~0.018)
+ * 2. Top ambient light bar (horizontal brand glow along top edge)
+ *
+ * Note: Right ambient light bar has been moved to the Rail component
+ * to match prototype structure where it sits inside the rail nav element.
  */
 export function NoiseLayer() {
 	return (
 		<div
 			aria-hidden="true"
-			className="pointer-events-none absolute inset-0 z-50"
+			data-slot="noise-layer"
+			className="pointer-events-none absolute inset-0 z-0"
 		>
-			{/* Noise texture — SVG feTurbulence filter */}
+			{/* Noise texture -- SVG feTurbulence filter */}
 			<svg
 				className="h-full w-full"
 				opacity="0.018"
@@ -25,16 +28,14 @@ export function NoiseLayer() {
 				<rect width="100%" height="100%" filter="url(#noise-filter)" />
 			</svg>
 
-			{/* Top ambient light bar — brand glow from top edge */}
+			{/* Top ambient light bar -- horizontal 90deg brand glow along top edge */}
 			<div
 				data-testid="noise-top-light"
-				className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-b from-[color-mix(in_oklch,var(--color-accent)_10%,transparent)] to-transparent"
-			/>
-
-			{/* Right ambient light bar — brand glow from right edge */}
-			<div
-				data-testid="noise-right-light"
-				className="absolute inset-y-0 right-0 w-px bg-linear-to-l from-[color-mix(in_oklch,var(--color-accent)_18%,transparent)] to-transparent"
+				className="absolute inset-x-0 top-0 h-[1.5px]"
+				style={{
+					backgroundImage:
+						"linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--color-accent) 10%, transparent) 20%, color-mix(in oklch, var(--color-accent) 18%, transparent) 50%, color-mix(in oklch, var(--color-accent) 10%, transparent) 80%, transparent 100%)",
+				}}
 			/>
 		</div>
 	);

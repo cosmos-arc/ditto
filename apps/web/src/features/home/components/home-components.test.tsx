@@ -164,10 +164,30 @@ describe("MarketPulseSection", () => {
 		await expect(screen.findByText("市场脉搏")).resolves.toBeInTheDocument();
 	});
 
-	it("显示市场脉搏标题（indices 待迁移为 MarketPulseMetric）", async () => {
+	it("显示 4 个市场脉搏指标", async () => {
 		render(<MarketPulseSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("市场脉搏")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("沪深300")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("波动率")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("涨跌比")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("北向资金")).resolves.toBeInTheDocument();
+	});
+
+	it("显示指标值和变化", async () => {
+		render(<MarketPulseSection />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("3,432")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("+0.82%")).resolves.toBeInTheDocument();
+	});
+
+	it("为带数据的指标渲染 sparkline 图表", async () => {
+		render(<MarketPulseSection />, { wrapper: createWrapper() });
+
+		// 沪深300 有 sparkline 数据
+		await expect(screen.findByText("沪深300")).resolves.toBeInTheDocument();
+		const sparklines = document.querySelectorAll("[data-slot='sparkline']");
+		// 4 个指标中有 3 个有 sparkline 数据
+		expect(sparklines.length).toBeGreaterThanOrEqual(3);
 	});
 });
 

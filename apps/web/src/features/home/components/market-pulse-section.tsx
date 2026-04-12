@@ -1,15 +1,31 @@
-import { useMarketIndices } from "../hooks";
+import { useMarketPulseMetrics } from "../hooks";
 import { ContextSection } from "@/components/domain/context-section";
+import { Sparkline } from "@/components/data/sparkline";
+import type { SparklineColor } from "@/components/data/sparkline";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
+/** Derive sparkline color from the change string. */
+function changeToColor(change: string): SparklineColor {
+	if (change.startsWith("+")) return "up";
+	if (change.startsWith("-")) return "down";
+	return "neutral";
+}
+
+/** Map change string + direction to a CSS text color class. */
+function changeTextColor(change: string): string {
+	if (change.startsWith("+")) return "text-(--color-market-up-fg)";
+	if (change.startsWith("-")) return "text-(--color-market-down-fg)";
+	return "text-(--color-foreground-tertiary)";
+}
+
 /**
- * MarketPulseSection — sidebar "市场脉搏" section.
- * Matches prototype .context-section with .pulse-metric items.
- * Shows market index values with up/down indicators.
+ * MarketPulseSection -- sidebar "市场脉搏" section.
+ * Matches prototype .pulse-metric items: label + value/change + optional sparkline.
+ * Consumes MarketPulseMetric mock data (4 metrics with inline sparklines).
  */
 export function MarketPulseSection() {
-	const { data, isLoading } = useMarketIndices();
+	const { data, isLoading } = useMarketPulseMetrics();
 
 	return (
 		<ContextSection title="市场脉搏" defaultOpen>
@@ -17,21 +33,29 @@ export function MarketPulseSection() {
 			{data && (
 				<ScrollReveal>
 					<div className="flex flex-col gap-1">
-						{data.indices.slice(0, 4).map((index) => (
+						{data.metrics.map((metric) => (
 							<div
-								key={index.code}
+								key={metric.label}
 								className="flex items-center justify-between rounded-[var(--radius-sm)] px-2 py-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg) border-b border-dashed border-(--color-border-subtle) last:border-b-0"
 							>
 								<span className="text-xs text-(--color-foreground-tertiary) uppercase tracking-[0.02em]">
-									{index.name}
+									{metric.label}
 								</span>
 								<span
-									className={`font-data text-xs tabular-nums ${index.dir === "up" ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}
+									className={`flex items-center gap-1.5 font-data text-xs tabular-nums ${changeTextColor(metric.change)}`}
 								>
-									{index.price.toLocaleString()}
-									<span className="ml-1.5 text-xs">
-										{index.change >= 0 ? "+" : ""}{index.changePercent.toFixed(2)}%
-									</span>
+									{metric.value}
+									{metric.change && (
+										<span>{metric.change}</span>
+									)}
+									{metric.sparkline && metric.sparkline.length >= 2 && (
+										<Sparkline
+											data={metric.sparkline}
+											color={changeToColor(metric.change)}
+											width={48}
+											height={16}
+										/>
+									)}
 								</span>
 							</div>
 						))}

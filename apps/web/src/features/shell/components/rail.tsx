@@ -42,14 +42,9 @@ function SettingsIcon() {
  */
 function UserIcon() {
 	return (
-		<svg width={18} height={18} viewBox="0 0 18 18" fill="none" aria-hidden="true">
-			<circle cx="9" cy="6.75" r="3" stroke="currentColor" strokeWidth={1.2} />
-			<path
-				d="M3 15.75c0-3.314 2.686-6 6-6s6 2.686 6 6"
-				stroke="currentColor"
-				strokeWidth={1.2}
-				strokeLinecap="round"
-			/>
+		<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+			<circle cx="10" cy="7.5" r="3.5" />
+			<path d="M3 18c0-3.866 3.134-7 7-7s7 3.134 7 7" strokeLinecap="round" />
 		</svg>
 	);
 }
@@ -57,6 +52,8 @@ function UserIcon() {
 /**
  * Rail -- 56px left-side icon navigation bar.
  * Contains: Logo, domain navigation icons, settings/user icons.
+ * Right ambient light bar is rendered as the last child (moved from NoiseLayer
+ * to match prototype structure).
  */
 export function Rail() {
 	const { pathname } = useLocation();
@@ -64,7 +61,7 @@ export function Rail() {
 	return (
 		<nav
 			aria-label="主导航"
-			className="flex h-full w-(--width-rail) flex-col items-center border-r border-(--color-border-subtle) bg-(--color-surface-app) py-2 gap-1"
+			className="relative flex h-full w-(--width-rail) flex-col items-center border-r border-(--color-border-subtle) bg-(--color-surface-app) py-2 gap-1"
 		>
 			{/* Logo */}
 			<span
@@ -120,6 +117,17 @@ export function Rail() {
 					<UserIcon />
 				</button>
 			</div>
+
+			{/* Right ambient light bar -- vertical brand glow along right edge of rail */}
+			<div
+				aria-hidden="true"
+				data-testid="rail-right-light"
+				className="absolute inset-y-0 -right-px w-px"
+				style={{
+					backgroundImage:
+						"linear-gradient(to bottom, transparent 0%, color-mix(in oklch, var(--color-accent) 12%, transparent) 20%, color-mix(in oklch, var(--color-accent) 20%, transparent) 50%, color-mix(in oklch, var(--color-accent) 12%, transparent) 80%, transparent 100%)",
+				}}
+			/>
 		</nav>
 	);
 }

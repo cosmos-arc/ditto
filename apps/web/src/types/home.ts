@@ -23,6 +23,8 @@ export type GetAgentFindingsRequest = undefined;
 
 export type GetDataHealthRequest = undefined;
 
+export type GetMarketPulseMetricsRequest = undefined;
+
 export type GetMarketIndicesRequest = undefined;
 
 // === Response Types ===
@@ -146,4 +148,8 @@ export type MarketPulseMetric = {
 	readonly value: string;
 	readonly change: string;
 	readonly sparkline?: readonly number[];
+};
+
+export type GetMarketPulseMetricsResponse = {
+	readonly metrics: readonly MarketPulseMetric[];
 };

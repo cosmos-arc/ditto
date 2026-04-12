@@ -6,6 +6,7 @@ import {
 	mockHomeAlerts,
 	mockHomePulse,
 	mockMarketIndices,
+	mockMarketPulseMetrics,
 	mockPendingActions,
 	mockRecentSignals,
 } from "../fixtures/home";
@@ -41,5 +42,9 @@ export const homeHandlers: RequestHandler[] = [
 
 	http.get("/api/market/indices", () => {
 		return HttpResponse.json({ indices: mockMarketIndices });
+	}),
+
+	http.get("/api/home/pulse-metrics", () => {
+		return HttpResponse.json({ metrics: mockMarketPulseMetrics });
 	}),
 ];

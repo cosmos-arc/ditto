@@ -63,6 +63,8 @@ export type {
 	GetDecisionBannerRequest,
 	GetHomeAlertsResponse,
 	GetHomePulseRequest,
+	GetMarketPulseMetricsRequest,
+	GetMarketPulseMetricsResponse,
 	GetMarketIndicesResponse,
 	GetPendingActionsResponse,
 	GetRecentSignalsResponse,

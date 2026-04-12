@@ -32,3 +32,20 @@
   --color-status-error: oklch(65% 0.20 25);
   --color-status-warning: oklch(75% 0.15 85);
 }
+
+/* Light mode — reduce visual effect intensity (per prototype) */
+[data-theme="light"] [data-slot="noise-layer"] [data-testid="noise-top-light"] {
+  opacity: 0.4;
+}
+
+[data-theme="light"] [data-testid="rail-right-light"] {
+  opacity: 0.4;
+}
+
+[data-theme="light"] [data-slot="noise-layer"] svg {
+  opacity: 0.008;
+}
+
+[data-theme="light"] [data-slot="home-primary"]::before {
+  opacity: 0.3;
+}
