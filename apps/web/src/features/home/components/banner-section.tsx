@@ -35,9 +35,9 @@ export function BannerSection() {
 							"[&_[data-slot=decision-actions]>div]:items-center",
 						].join(" ")}
 						primary={{
-							label: "总权益",
-							value: `¥${((data.totalEquity ?? 0) / 10000).toFixed(1)}万`,
-							sub: `${data.dailyPnl >= 0 ? "+" : ""}${data.dailyPnl}`,
+							label: "今日盈亏",
+							value: `${data.dailyPnl >= 0 ? "+" : ""}¥${data.dailyPnl.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`,
+							sub: "较昨日 +¥21,400",
 							trend: data.dailyPnl >= 0 ? "up" : "down",
 							sparkline: data.equitySparkline,
 						}}

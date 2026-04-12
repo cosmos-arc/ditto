@@ -69,7 +69,7 @@ describe("BannerSection", () => {
 	it("渲染决策横幅", async () => {
 		render(<BannerSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("总权益")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("今日盈亏")).resolves.toBeInTheDocument();
 	});
 
 	it("显示 CTA 操作按钮", async () => {
