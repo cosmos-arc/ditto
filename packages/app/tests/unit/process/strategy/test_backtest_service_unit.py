@@ -940,6 +940,7 @@ class TestRunServiceLifecycle:
         mock_build_report.return_value = fake_report
 
         mock_run_svc = MagicMock()
+        mock_run_svc.get_run.return_value = None  # 不存在 → 应创建
         config = _make_service_config(run_id="lifecycle-001")
         options = BacktestServiceOptions(run_service=mock_run_svc)
         service = BacktestService(
@@ -964,6 +965,43 @@ class TestRunServiceLifecycle:
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch("ditto_app.process.execution.backtest_process.build_report")
+    def test_lifecycle_skips_create_run_when_record_exists(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """当 run record 已存在时 (API 预创建)，跳过 create_run (R4)."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_run_svc = MagicMock()
+        # 模拟 API 预创建的 run record（含 config_json）
+        existing_record = MagicMock()
+        existing_record.config_json = '{"cost_config": {"slippage_bps": 3.0}}'
+        mock_run_svc.get_run.return_value = existing_record
+
+        config = _make_service_config(run_id="r4-existing-001")
+        options = BacktestServiceOptions(run_service=mock_run_svc)
+        service = BacktestService(
+            config=config,
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=options,
+        )
+        service.run()
+
+        # 预创建记录存在 → create_run 不应被调用
+        mock_run_svc.create_run.assert_not_called()
+        mock_run_svc.get_run.assert_called_once_with("r4-existing-001")
+        mock_run_svc.mark_running.assert_called_once_with("r4-existing-001")
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_app.process.execution.backtest_process.build_report")
     def test_lifecycle_mark_completed_on_success(
         self,
         mock_build_report: MagicMock,
@@ -976,6 +1014,7 @@ class TestRunServiceLifecycle:
         mock_build_report.return_value = fake_report
 
         mock_run_svc = MagicMock()
+        mock_run_svc.get_run.return_value = None  # 不存在 → 应创建
         config = _make_service_config(run_id="lifecycle-002")
         options = BacktestServiceOptions(run_service=mock_run_svc)
         service = BacktestService(
@@ -999,6 +1038,7 @@ class TestRunServiceLifecycle:
     ) -> None:
         """引擎运行异常时，mark_failed 被调用且异常被重新抛出."""
         mock_run_svc = MagicMock()
+        mock_run_svc.get_run.return_value = None  # 不存在 → 应创建
         config = _make_service_config(run_id="lifecycle-003")
         options = BacktestServiceOptions(run_service=mock_run_svc)
         service = BacktestService(
@@ -1053,6 +1093,7 @@ class TestRunServiceLifecycle:
         mock_build_report.return_value = fake_report
 
         mock_run_svc = MagicMock()
+        mock_run_svc.get_run.return_value = None  # 不存在 → 应创建
         config = _make_service_config(
             run_id="retry-002",
             parent_run_id="original-001",  # type: ignore[arg-type]

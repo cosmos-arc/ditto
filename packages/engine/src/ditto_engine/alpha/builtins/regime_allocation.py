@@ -56,6 +56,7 @@ class RegimeAwareAllocationStage:
             self.regime_score_column not in frame.columns
             or self.regime_label_column not in frame.columns
             or "weight" not in frame.columns
+            or "position_ratio" not in frame.columns
         ):
             return frame
 

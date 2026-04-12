@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from ditto_app.process.execution.manual_tracker import ManualTracker
 from ditto_app.types import ManualExecutionFill
 
 # ---------------------------------------------------------------------------
@@ -65,7 +66,6 @@ class TestComputeSettlementDate:
 
     def test_t_plus_1_standard(self) -> None:
         """T+1 标准场景: 周四买入 → 周五交收."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         result = tracker.compute_settlement_date("2026-04-09", cycle=1)
@@ -73,7 +73,6 @@ class TestComputeSettlementDate:
 
     def test_t_plus_1_cross_weekend(self) -> None:
         """T+1 跨周末: 周五买入 → 周一交收."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         result = tracker.compute_settlement_date("2026-04-10", cycle=1)
@@ -81,7 +80,6 @@ class TestComputeSettlementDate:
 
     def test_t_plus_2(self) -> None:
         """T+2 场景: 周四买入 → 下周一交收."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         result = tracker.compute_settlement_date("2026-04-09", cycle=2)
@@ -89,7 +87,6 @@ class TestComputeSettlementDate:
 
     def test_empty_calendar_returns_same_date(self) -> None:
         """空日历时返回原交易日期."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=())
         result = tracker.compute_settlement_date("2026-04-10", cycle=1)
@@ -106,7 +103,6 @@ class TestComputePositionsEmpty:
 
     def test_empty_fills_returns_empty_list(self) -> None:
         """无 fill 记录时返回空列表."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         result = tracker.compute_positions(
@@ -122,7 +118,6 @@ class TestComputePositionsSingleBuy:
 
     def test_single_buy_quantity_and_cost(self) -> None:
         """单笔买入: quantity=1000, avg_cost=1.5, total_fees=5.0."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -156,7 +151,6 @@ class TestComputePositionsSingleBuy:
 
     def test_single_buy_t_plus_1_available_quantity_zero(self) -> None:
         """买入当天 T+1 交收: available_quantity=0."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -179,7 +173,6 @@ class TestComputePositionsSingleBuy:
 
     def test_single_buy_next_day_available_quantity(self) -> None:
         """买入次日: available_quantity=1000 (T+1 交收完成)."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -206,7 +199,6 @@ class TestComputePositionsBuyAndSell:
 
     def test_buy_then_sell_reduces_quantity(self) -> None:
         """买入 1000 后卖出 500: quantity=500."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -243,7 +235,6 @@ class TestComputePositionsBuyAndSell:
 
     def test_buy_then_sell_realized_pnl(self) -> None:
         """卖出时计算已实现盈亏: (2.0 - 1.5) * 500 = 250.0."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -277,7 +268,6 @@ class TestComputePositionsBuyAndSell:
 
     def test_sell_more_than_held_raises_error(self) -> None:
         """卖出数量超过持仓时抛出 ValueError."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -307,7 +297,6 @@ class TestComputePositionsBuyAndSell:
 
     def test_fully_closed_position_excluded(self) -> None:
         """全部平仓后 (quantity=0) 不出现在结果中."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -345,7 +334,6 @@ class TestComputePositionsMultipleBuys:
 
     def test_weighted_average_cost(self) -> None:
         """两笔买入: 加权平均成本 = (1.5*1000 + 2.0*500) / 1500 = 1.6667."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -382,7 +370,6 @@ class TestComputePositionsMultipleBuys:
 
     def test_three_buys_weighted_average(self) -> None:
         """三笔买入的加权平均成本."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -432,7 +419,6 @@ class TestComputePositionsTPlusOne:
 
     def test_buy_same_day_frozen(self) -> None:
         """买入当天 available=0（冻结）."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -454,7 +440,6 @@ class TestComputePositionsTPlusOne:
 
     def test_buy_previous_day_settled(self) -> None:
         """T-1 日买入, T 日已交收: available=quantity."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -476,7 +461,6 @@ class TestComputePositionsTPlusOne:
 
     def test_mixed_buy_dates_partial_available(self) -> None:
         """T-1 买入 500 + T 日买入 500: available=500 (T-1 已交收, T 日冻结)."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -511,7 +495,6 @@ class TestComputePositionsTPlusOne:
 
     def test_sell_does_not_affect_available_for_remaining(self) -> None:
         """卖出后剩余持仓的 available 不受卖出影响."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -548,7 +531,6 @@ class TestComputePositionsTPlusOne:
 
     def test_buy_cross_weekend_settlement(self) -> None:
         """周五买入, 下周一交收: 周五 available=0, 周一 available=qty."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -584,7 +566,6 @@ class TestComputePositionsMultiInstrument:
 
     def test_two_instruments_independent(self) -> None:
         """两个标的各自独立计算持仓."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -628,7 +609,6 @@ class TestComputePositionsMultiInstrument:
 
     def test_fills_filtered_by_strategy_id(self) -> None:
         """只聚合指定 strategy_id 的 fills."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -668,7 +648,6 @@ class TestComputePositionsUnrealizedPnl:
 
     def test_unrealized_pnl_with_market_price(self) -> None:
         """有 market_price 时计算 unrealized_pnl."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -697,7 +676,6 @@ class TestComputePositionsUnrealizedPnl:
 
     def test_unrealized_pnl_without_market_price(self) -> None:
         """无 market_price 时 unrealized_pnl=0, market_value=0."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -723,7 +701,6 @@ class TestComputePositionsUnrealizedPnl:
 
     def test_unrealized_pnl_partial_market_price(self) -> None:
         """market_prices 只包含部分标的."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -767,7 +744,6 @@ class TestComputePositionsUnrealizedPnl:
 
     def test_unrealized_pnl_negative(self) -> None:
         """市价低于成本时 unrealized_pnl 为负."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -797,7 +773,6 @@ class TestComputePositionsComplexScenario:
 
     def test_full_trading_scenario(self) -> None:
         """完整交易场景: 多笔买卖 + T+1 + 市价."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -885,7 +860,6 @@ class TestComputePositionsComplexScenario:
 
     def test_snapshot_id_is_deterministic(self) -> None:
         """相同输入生成一致的 snapshot_id (确定性 UUID)."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -917,7 +891,6 @@ class TestComputePositionsPITCutoff:
 
     def test_future_fills_excluded_from_snapshot(self) -> None:
         """snapshot_date 之后的 fills 被截断, 不影响历史快照."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -957,7 +930,6 @@ class TestComputePositionsPITCutoff:
 
     def test_future_fills_excluded_same_instrument_multiple_days(self) -> None:
         """多日 fills 场景: snapshot_date 正好截断中间某日."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -1004,7 +976,6 @@ class TestComputePositionsPITCutoff:
 
     def test_all_fills_future_returns_empty(self) -> None:
         """所有 fills 都在 snapshot_date 之后 → 返回空列表."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -1032,7 +1003,6 @@ class TestComputePositionsPITEdgeCases:
 
     def test_snapshot_date_equals_trade_date_included(self) -> None:
         """snapshot_date == trade_date 的 fill 被计入（<= 截断）."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -1069,7 +1039,6 @@ class TestComputePositionsPITEdgeCases:
 
     def test_future_sell_not_reflected_in_earlier_snapshot(self) -> None:
         """未来卖出不影响更早快照的持仓量和已实现盈亏."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -1108,7 +1077,6 @@ class TestComputePositionsPITEdgeCases:
 
     def test_future_buy_not_reflected_in_earlier_snapshot(self) -> None:
         """未来买入不影响更早快照的持仓量."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -1148,7 +1116,6 @@ class TestComputePositionsPITEdgeCases:
 
     def test_pit_truncation_across_strategies(self) -> None:
         """PIT 截断不受其他策略影响：不同策略的未来 fills 不参与."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -1200,7 +1167,6 @@ class TestComputePositionsPITEdgeCases:
 
     def test_pit_with_empty_fills_returns_empty(self) -> None:
         """空 fills 列表在任何 snapshot_date 都返回空."""
-        from ditto_app.process.execution.manual_tracker import ManualTracker
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         result = tracker.compute_positions(

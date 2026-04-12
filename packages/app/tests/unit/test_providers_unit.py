@@ -42,6 +42,7 @@ from ditto_data.di import (
     MetadataProvider,
     QualityProvider,
     RuntimeProvider,
+    TradeProvider,
 )
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -221,6 +222,7 @@ class TestAppProviderIntegration:
             FundamentalProvider(),
             MacroProvider(),
             DerivedProvider(),
+            TradeProvider(),
             *get_app_providers(),
             _runtime_deps_provider(),
         )

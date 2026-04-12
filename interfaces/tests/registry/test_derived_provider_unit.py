@@ -21,6 +21,7 @@ from ditto_data.di import (
     MetadataProvider,
     QualityProvider,
     RuntimeProvider,
+    TradeProvider,
     get_data_providers,
 )
 from ditto_data.services import DerivedQueryService
@@ -62,6 +63,7 @@ def _make_full_container():
         FundamentalProvider(),
         MacroProvider(),
         DerivedProvider(),
+        TradeProvider(),
         *get_app_providers(),
     )
 

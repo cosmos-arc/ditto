@@ -24,6 +24,7 @@ from ditto_interfaces.jobs.flows import (
     repair_holes_flow,
     retry_failed_flow,
 )
+from ditto_interfaces.jobs.flows.backtest import run_backtest_flow
 
 # ---------------------------------------------------------------------------
 # Cron 调度定义
@@ -71,6 +72,7 @@ def _get_flow(name: str) -> Flow[Any, Any]:
         "retry_failed_flow": retry_failed_flow,
         "backfill_flow": backfill_flow,
         "repair_holes_flow": repair_holes_flow,
+        "run_backtest_flow": run_backtest_flow,
     }
 
     if name not in flow_map:
@@ -152,6 +154,13 @@ def _get_flow_configs() -> list[FlowDeploymentConfig]:
             parameters={"dataset": "stock_daily"},
             tags=["production", "repair", "manual"],
         ),
+        FlowDeploymentConfig(
+            flow=lambda: _get_flow("run_backtest_flow"),
+            deployment_name="backtest-prod",
+            description="异步回测执行 (R3 — Prefect Worker 调度)",
+            parameters={},
+            tags=["backtest", "manual"],
+        ),
     ]
 
 
@@ -174,6 +183,7 @@ def deploy_all_flows(
     3. 部署重试失败流程（手动触发）
     4. 部署全量回补流程（手动触发）
     5. 部署修补空洞流程（手动触发）
+    6. 部署异步回测流程（手动触发，R3）
 
     注意: Prefect 3.x 移除了 Deployment API，改用 flow.deploy()。
 

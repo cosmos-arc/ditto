@@ -2,24 +2,19 @@
 ComparisonReport — 回测 vs 实际对比计算（BacktestReport 版）.
 
 提供 compute_comparison 函数，从 BacktestReport 对象计算对比指标。
-ComparisonMetrics 数据类和 compute_comparison_from_raw 已移至 query 层，
-本模块通过 re-export 保持向后兼容。
 """
 
 from __future__ import annotations
 
 from ditto_engine.backtest.statistics import BacktestReport
 
-from ditto_app.query.comparison import (
-    ComparisonMetrics,
-    compute_comparison_from_raw,
-)
+from ditto_app.query.comparison import ComparisonMetrics, compute_comparison_from_raw
 from ditto_app.types import (
     ActualPositionSnapshot,
     ManualExecutionFill,
 )
 
-__all__ = ["ComparisonMetrics", "compute_comparison", "compute_comparison_from_raw"]
+__all__ = ["compute_comparison"]
 
 
 def compute_comparison(

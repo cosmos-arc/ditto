@@ -7,17 +7,34 @@ Tests:
 3. CostConfigRequest parameter validation
 4. CreateBacktestRunRequest with optional cost_config
 5. Body → Command cost_config mapping
+6. TestClient end-to-end: POST /runs cost_config → handler receives CostConfig
 """
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
-from ditto_app.command.backtest import BacktestRunCommand, CostConfig
+from dishka import Provider, Scope, make_async_container, provide
+from dishka.integrations.fastapi import setup_dishka
+from ditto_app.command.backtest import (
+    BacktestRunCommand,
+    BacktestRunHandler,
+    CostConfig,
+)
+from ditto_app.process.execution.strategy_types import RunLifecycleService
+from ditto_interfaces.api.routes.backtest import router
 from ditto_interfaces.models.backtest import (
     CostConfigRequest,
     CreateBacktestRunRequest,
 )
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from pydantic import ValidationError
+
+# ---------------------------------------------------------------------------
+# Model-level tests
+# ---------------------------------------------------------------------------
 
 
 class TestCostConfigRequestDefaults:
@@ -77,7 +94,7 @@ class TestCostConfigRequestCustom:
         assert cfg.impact_model == "none"
 
     def test_extra_fields_ignored(self) -> None:
-        """extra="ignore" 忽略多余字段."""
+        """extra=\"ignore\" 忽略多余字段."""
         cfg = CostConfigRequest(unknown_field="value")  # type: ignore[call-arg]
         assert cfg.commission_rate == 0.0003
 
@@ -159,10 +176,10 @@ class TestCreateBacktestRunWithCostConfig:
 
 
 class TestCostConfigMapping:
-    """Tests for cost_config request → command mapping."""
+    """Tests for cost_config request -> command mapping."""
 
     def test_cost_config_to_command_none(self) -> None:
-        """cost_config=None → command.cost_config=None."""
+        """cost_config=None -> command.cost_config=None."""
         body = CreateBacktestRunRequest(
             strategy_id="test",
             start_date="2025-01-01",
@@ -194,7 +211,7 @@ class TestCostConfigMapping:
         )
         cost_cfg = body.cost_config
         assert cost_cfg is not None
-        # 模拟 route 层转换: CostConfigRequest → CostConfig
+        # 模拟 route 层转换: CostConfigRequest -> CostConfig
         command = BacktestRunCommand(
             strategy_id=body.strategy_id,
             start_date=body.start_date,
@@ -215,3 +232,231 @@ class TestCostConfigMapping:
         assert command.cost_config.stamp_duty_rate == 0.002
         assert command.cost_config.slippage_bps == 3.0
         assert command.cost_config.impact_model == "linear"
+
+
+# ---------------------------------------------------------------------------
+# TestClient end-to-end: POST /runs with cost_config
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_run_handler() -> MagicMock:
+    return MagicMock(spec=BacktestRunHandler)
+
+
+@pytest.fixture
+def mock_run_service() -> MagicMock:
+    return MagicMock(spec=RunLifecycleService)
+
+
+@pytest.fixture
+def app(
+    mock_run_handler: MagicMock,
+    mock_run_service: MagicMock,
+) -> FastAPI:
+    """构建测试 FastAPI 应用，注入 mock DI 容器."""
+    app = FastAPI()
+
+    class TestProvider(Provider):
+        scope = Scope.APP
+
+        @provide
+        def run_handler(self) -> BacktestRunHandler:
+            return mock_run_handler
+
+        @provide
+        def run_lifecycle_service(self) -> RunLifecycleService:
+            return mock_run_service
+
+    container = make_async_container(TestProvider())
+    setup_dishka(container=container, app=app)
+    app.include_router(router, prefix="/api/v1")
+    return app
+
+
+@pytest.fixture
+def client(app: FastAPI) -> TestClient:
+    return TestClient(app)
+
+
+class TestTriggerBacktestCostConfigRoute:
+    """TestClient 端到端测试: POST /api/v1/backtests/runs cost_config 映射."""
+
+    def test_trigger_without_cost_config_handler_receives_none(
+        self,
+        client: TestClient,
+        mock_run_handler: MagicMock,
+    ) -> None:
+        """无 cost_config 时 handler 收到 cost_config=None 的 command."""
+        mock_run_handler.handle.return_value = MagicMock(
+            run_id="run-001",
+            strategy_id="test",
+            status="pending",
+            cost_config=None,
+        )
+        resp = client.post(
+            "/api/v1/backtests/runs",
+            json={
+                "strategy_id": "test",
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-31",
+            },
+        )
+        assert resp.status_code == 202
+
+        # 验证 handler.handle 被调用，且 command.cost_config 为 None
+        mock_run_handler.handle.assert_called_once()
+        command = mock_run_handler.handle.call_args.args[0]
+        assert command.cost_config is None
+
+    def test_trigger_with_custom_cost_config_handler_receives_values(
+        self,
+        client: TestClient,
+        mock_run_handler: MagicMock,
+    ) -> None:
+        """自定义 cost_config 正确透传到 handler command."""
+        mock_run_handler.handle.return_value = MagicMock(
+            run_id="run-002",
+            strategy_id="test",
+            status="pending",
+            cost_config=CostConfig(
+                commission_rate=0.0005,
+                commission_min=10.0,
+                stamp_duty_rate=0.002,
+                slippage_bps=3.0,
+                impact_model="linear",
+            ),
+        )
+        resp = client.post(
+            "/api/v1/backtests/runs",
+            json={
+                "strategy_id": "test",
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-31",
+                "cost_config": {
+                    "commission_rate": 0.0005,
+                    "commission_min": 10.0,
+                    "stamp_duty_rate": 0.002,
+                    "slippage_bps": 3.0,
+                    "impact_model": "linear",
+                },
+            },
+        )
+        assert resp.status_code == 202
+
+        # 验证 handler 收到正确的 CostConfig
+        mock_run_handler.handle.assert_called_once()
+        command = mock_run_handler.handle.call_args.args[0]
+        assert command.cost_config is not None
+        assert command.cost_config.commission_rate == 0.0005
+        assert command.cost_config.commission_min == 10.0
+        assert command.cost_config.stamp_duty_rate == 0.002
+        assert command.cost_config.slippage_bps == 3.0
+        assert command.cost_config.impact_model == "linear"
+
+    def test_trigger_with_default_cost_config_object_handler_receives_defaults(
+        self,
+        client: TestClient,
+        mock_run_handler: MagicMock,
+    ) -> None:
+        """显式传入默认 cost_config 对象，handler 收到 A 股标准费率."""
+        mock_run_handler.handle.return_value = MagicMock(
+            run_id="run-003",
+            strategy_id="test",
+            status="pending",
+            cost_config=CostConfig(),
+        )
+        resp = client.post(
+            "/api/v1/backtests/runs",
+            json={
+                "strategy_id": "test",
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-31",
+                "cost_config": {},
+            },
+        )
+        assert resp.status_code == 202
+
+        mock_run_handler.handle.assert_called_once()
+        command = mock_run_handler.handle.call_args.args[0]
+        assert command.cost_config is not None
+        assert command.cost_config.commission_rate == 0.0003
+        assert command.cost_config.commission_min == 5.0
+        assert command.cost_config.stamp_duty_rate == 0.001
+        assert command.cost_config.slippage_bps == 1.0
+        assert command.cost_config.impact_model == "none"
+
+    def test_trigger_with_partial_cost_config(
+        self,
+        client: TestClient,
+        mock_run_handler: MagicMock,
+    ) -> None:
+        """部分覆盖 cost_config，其余字段保持默认."""
+        mock_run_handler.handle.return_value = MagicMock(
+            run_id="run-004",
+            strategy_id="test",
+            status="pending",
+            cost_config=CostConfig(slippage_bps=5.0),
+        )
+        resp = client.post(
+            "/api/v1/backtests/runs",
+            json={
+                "strategy_id": "test",
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-31",
+                "cost_config": {
+                    "slippage_bps": 5.0,
+                },
+            },
+        )
+        assert resp.status_code == 202
+
+        mock_run_handler.handle.assert_called_once()
+        command = mock_run_handler.handle.call_args.args[0]
+        assert command.cost_config is not None
+        assert command.cost_config.slippage_bps == 5.0
+        # 未覆盖的字段保持默认
+        assert command.cost_config.commission_rate == 0.0003
+        assert command.cost_config.commission_min == 5.0
+        assert command.cost_config.stamp_duty_rate == 0.001
+
+    def test_trigger_with_zero_cost_config(
+        self,
+        client: TestClient,
+        mock_run_handler: MagicMock,
+    ) -> None:
+        """零值 cost_config 合法，handler 收到零费率."""
+        mock_run_handler.handle.return_value = MagicMock(
+            run_id="run-005",
+            strategy_id="test",
+            status="pending",
+            cost_config=CostConfig(
+                commission_rate=0.0,
+                commission_min=0.0,
+                stamp_duty_rate=0.0,
+                slippage_bps=0.0,
+            ),
+        )
+        resp = client.post(
+            "/api/v1/backtests/runs",
+            json={
+                "strategy_id": "test",
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-31",
+                "cost_config": {
+                    "commission_rate": 0.0,
+                    "commission_min": 0.0,
+                    "stamp_duty_rate": 0.0,
+                    "slippage_bps": 0.0,
+                },
+            },
+        )
+        assert resp.status_code == 202
+
+        mock_run_handler.handle.assert_called_once()
+        command = mock_run_handler.handle.call_args.args[0]
+        assert command.cost_config is not None
+        assert command.cost_config.commission_rate == 0.0
+        assert command.cost_config.commission_min == 0.0
+        assert command.cost_config.stamp_duty_rate == 0.0
+        assert command.cost_config.slippage_bps == 0.0

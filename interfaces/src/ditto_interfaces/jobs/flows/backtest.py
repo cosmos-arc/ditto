@@ -12,12 +12,11 @@ from ditto_app.process.execution.backtest_process import (
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
-from ditto_app.process.execution.fee_override import build_fee_model
-from ditto_engine.backtest.statistics import BacktestReport
-from ditto_engine.execution.reality.constants import (
-    DEFAULT_COMMISSION_RATE,
-    DEFAULT_MIN_COMMISSION,
+from ditto_app.process.execution.fee_override import (
+    build_fee_model,
+    build_slippage_model,
 )
+from ditto_engine.backtest.statistics import BacktestReport
 from prefect import flow
 
 from ditto_interfaces.registry.contexts.strategy import create_strategy_bundle
@@ -60,6 +59,7 @@ def run_backtest_flow(
     """
     cost_cfg = _deserialize_cost_config(cost_config)
     fee_model = build_fee_model(cost_cfg)
+    slippage_model = build_slippage_model(cost_cfg)
 
     config = BacktestServiceConfig(
         strategy_id=strategy_id,
@@ -79,6 +79,7 @@ def run_backtest_flow(
             options = BacktestServiceOptions(
                 run_service=bundle.run_service,
                 fee_model=fee_model,
+                slippage_model=slippage_model,
             )
 
             report: BacktestReport = bundle.strategy_facade.run_backtest_from_catalog(
@@ -108,12 +109,13 @@ def _deserialize_cost_config(
     """将 dict 反序列化为 CostConfig dataclass."""
     if raw is None:
         return None
+    defaults = CostConfig()
     return CostConfig(
-        commission_rate=_get_float(raw, "commission_rate", DEFAULT_COMMISSION_RATE),
-        commission_min=_get_float(raw, "commission_min", DEFAULT_MIN_COMMISSION),
-        stamp_duty_rate=_get_float(raw, "stamp_duty_rate", 0.001),
-        slippage_bps=_get_float(raw, "slippage_bps", 1.0),
-        impact_model=_get_str(raw, "impact_model", "none"),
+        commission_rate=_get_float(raw, "commission_rate", defaults.commission_rate),
+        commission_min=_get_float(raw, "commission_min", defaults.commission_min),
+        stamp_duty_rate=_get_float(raw, "stamp_duty_rate", defaults.stamp_duty_rate),
+        slippage_bps=_get_float(raw, "slippage_bps", defaults.slippage_bps),
+        impact_model=_get_str(raw, "impact_model", defaults.impact_model),
     )
 
 

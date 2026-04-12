@@ -111,6 +111,23 @@ class TestRegimeAwareAllocationStage:
         result = stage.process(frame, empty_context)
         assert result["weight"][0] == pytest.approx(0.5)
 
+    def test_missing_position_ratio_column(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """缺失 position_ratio 列 → 不缩放（weight 不变）."""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [10],
+                "weight": [0.5],
+                "regime_score": [80.0],
+                "regime_label": [RegimeLabel.BULL],
+            },
+        )
+        stage = RegimeAwareAllocationStage()
+        result = stage.process(frame, empty_context)
+        assert result["weight"][0] == pytest.approx(0.5)
+
     def test_missing_weight_column(self, empty_context: StrategyContext) -> None:
         """缺失 weight 列 → 不变."""
         frame = pl.DataFrame(

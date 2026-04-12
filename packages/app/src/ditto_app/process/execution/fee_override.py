@@ -2,6 +2,7 @@
 OverrideFeeModel — 使用 CostConfig 费率覆盖 FeeSchedule 对应字段.
 
 build_fee_model 工厂: CostConfig | None → FeeModel
+build_slippage_model 工厂: CostConfig | None → SlippageModel
 """
 
 from __future__ import annotations
@@ -11,11 +12,15 @@ from dataclasses import dataclass
 
 from ditto_engine.accounting.order_book import Order
 from ditto_engine.execution.reality.fee import AShareFeeModel, FeeModel
+from ditto_engine.execution.reality.slippage import (
+    FixedBpsSlippage,
+    VolumeShareSlippage,
+)
 from ditto_engine.execution.rules import FeeSchedule
 
 from ditto_app.contracts import CostConfig
 
-__all__ = ["OverrideFeeModel", "build_fee_model"]
+__all__ = ["OverrideFeeModel", "build_fee_model", "build_slippage_model"]
 
 
 @dataclass(frozen=True)
@@ -73,3 +78,24 @@ def build_fee_model(cost_config: CostConfig | None) -> FeeModel:
         _min_commission=cost_config.commission_min,
         _stamp_duty_rate=cost_config.stamp_duty_rate,
     )
+
+
+def build_slippage_model(
+    cost_config: CostConfig | None,
+) -> FixedBpsSlippage | VolumeShareSlippage:
+    """
+    根据 CostConfig 构建 SlippageModel.
+
+    - cost_config=None 或 impact_model='none' → FixedBpsSlippage
+    - impact_model='volume_share' → VolumeShareSlippage
+    - 其他 → ValueError
+    """
+    if cost_config is None or cost_config.impact_model == "none":
+        return FixedBpsSlippage(bps=cost_config.slippage_bps if cost_config else 2.0)
+    if cost_config.impact_model == "volume_share":
+        return VolumeShareSlippage(
+            base_bps=cost_config.slippage_bps,
+            impact_factor=0.1,
+        )
+    msg = f"Unknown impact model: {cost_config.impact_model}"
+    raise ValueError(msg)

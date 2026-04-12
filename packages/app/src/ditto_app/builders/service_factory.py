@@ -22,6 +22,7 @@ from ditto_engine.backtest.data_feed import (
 from ditto_engine.execution.brokerage import BacktestBrokerage, Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner, SimpleExecutionPlanner
 from ditto_engine.execution.reality import BrokerageModel, FeeModel, SimpleFeeModel
+from ditto_engine.execution.reality.slippage import FixedBpsSlippage, SlippageModel
 from ditto_engine.risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -101,13 +102,16 @@ class BacktestRuntimeBuilder:
         config: BacktestServiceConfig,
         version: int | None = None,
         source: str = "tushare",
+        fee_model: FeeModel | None = None,
+        slippage_model: SlippageModel | None = None,
     ) -> PublishedBacktestRuntime:
         """从 published strategy catalog 构造回测运行时。"""
         runtime = self._strategy_runtime_builder.build_published_runtime(
             config.strategy_id,
             version,
         )
-        fee_model = SimpleFeeModel()
+        resolved_fee_model = fee_model or SimpleFeeModel()
+        resolved_slippage = slippage_model or FixedBpsSlippage()
         brokerage = BacktestBrokerage(
             account=Account(
                 cash=CashBook(
@@ -116,7 +120,10 @@ class BacktestRuntimeBuilder:
                     frozen=0.0,
                 )
             ),
-            model=BrokerageModel(fee_model=fee_model),
+            model=BrokerageModel(
+                fee_model=resolved_fee_model,
+                slippage_model=resolved_slippage,
+            ),
         )
         benchmark_id = resolve_benchmark(
             runtime.spec.benchmark,
@@ -161,7 +168,7 @@ class BacktestRuntimeBuilder:
             ),
             data_feed=data_feed,
             display_map=display_map,
-            fee_model=fee_model,
+            fee_model=resolved_fee_model,
             config=resolved_config,
             compiled_expressions=runtime.compiled_expressions,
         )
@@ -274,12 +281,14 @@ class StrategyServiceFactory:
         resolved_version = version
         if resolved_version is None:
             resolved_version = self._parse_catalog_version(config.strategy_version)
+        resolved_options = options or BacktestServiceOptions()
         runtime = self._backtest_runtime_builder.build_published_runtime(
             config=config,
             version=resolved_version,
             source=source,
+            fee_model=resolved_options.fee_model,
+            slippage_model=resolved_options.slippage_model,
         )
-        resolved_options = options or BacktestServiceOptions()
         if resolved_options.fee_model is None:
             resolved_options = replace(
                 resolved_options,
@@ -336,8 +345,10 @@ class StrategyServiceFactory:
             )
         return BacktestServiceOptions(
             fee_model=options.fee_model,
+            slippage_model=options.slippage_model,
             rule_provider=options.rule_provider,
             post_trade_guard=options.post_trade_guard,
+            compiled_expressions=options.compiled_expressions,
             audit_service=options.audit_service or self._audit_service,
             artifact_service=options.artifact_service or self._artifact_service,
             artifact_dir=options.artifact_dir,

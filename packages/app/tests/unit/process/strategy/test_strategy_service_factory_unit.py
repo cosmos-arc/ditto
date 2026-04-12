@@ -12,6 +12,7 @@ from ditto_app.builders import (
 from ditto_app.process.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
+    BacktestServiceOptions,
 )
 from ditto_app.process.execution.strategy_types import RunLifecycleService
 from ditto_data.models.strategy import StrategySpecRecord
@@ -104,23 +105,15 @@ class TestStrategyServiceFactory:
         assert service._pre_trade_check is runtime.pre_trade_check
         assert service._data_feed is runtime.data_feed
         assert service._options.fee_model is runtime.fee_model
-        runtime_builder.build_published_runtime.assert_called_once_with(
-            config=BacktestServiceConfig(
-                strategy_id="momentum-etf",
-                start_date="2026-01-01",
-                end_date="2026-03-01",
-                initial_cash=1_000_000.0,
-            ),
-            version=4,
-            source="tushare",
-        )
+        call_kwargs = runtime_builder.build_published_runtime.call_args.kwargs
+        assert call_kwargs["config"].strategy_id == "momentum-etf"
+        assert call_kwargs["version"] == 4
+        assert call_kwargs["source"] == "tushare"
+        assert call_kwargs["fee_model"] is None
+        assert call_kwargs["slippage_model"] is None
 
     def test_build_backtest_options_preserves_display_map(self) -> None:
         """_build_backtest_options 保留调用方传入的 display_map。"""
-        from ditto_app.process.execution.backtest_process import (
-            BacktestServiceOptions,
-        )
-
         factory = StrategyServiceFactory(
             audit_service=MagicMock(spec=ExecutionAuditService),
             artifact_service=MagicMock(spec=StrategyArtifactService),
@@ -130,6 +123,18 @@ class TestStrategyServiceFactory:
         options = BacktestServiceOptions(display_map=display_map)
         result = factory._build_backtest_options(options)
         assert result.display_map is display_map
+
+    def test_build_backtest_options_preserves_compiled_expressions(self) -> None:
+        """_build_backtest_options 保留调用方传入的 compiled_expressions (R2)."""
+        factory = StrategyServiceFactory(
+            audit_service=MagicMock(spec=ExecutionAuditService),
+            artifact_service=MagicMock(spec=StrategyArtifactService),
+            run_service=MagicMock(spec=RunLifecycleService),
+        )
+        compiled = MagicMock(name="compiled_expressions")
+        options = BacktestServiceOptions(compiled_expressions=compiled)
+        result = factory._build_backtest_options(options)
+        assert result.compiled_expressions is compiled
 
     def test_build_backtest_service_from_catalog_injects_display_map(self) -> None:
         """catalog-backed 路径自动从 runtime.display_map 注入 display_map。"""
@@ -160,3 +165,101 @@ class TestStrategyServiceFactory:
         )
 
         assert service._options.display_map == test_display_map
+
+    def test_build_backtest_options_preserves_slippage_model(self) -> None:
+        """_build_backtest_options 保留调用方传入的 slippage_model (R6)."""
+        from ditto_engine.execution.reality.slippage import FixedBpsSlippage
+
+        factory = StrategyServiceFactory(
+            audit_service=MagicMock(spec=ExecutionAuditService),
+            artifact_service=MagicMock(spec=StrategyArtifactService),
+            run_service=MagicMock(spec=RunLifecycleService),
+        )
+        slippage = FixedBpsSlippage(bps=5.0)
+        options = BacktestServiceOptions(slippage_model=slippage)
+        result = factory._build_backtest_options(options)
+        assert result.slippage_model is slippage
+
+
+class TestBuildPublishedRuntimeCostModels:
+    """build_published_runtime 接受自定义 fee_model / slippage_model (R6)."""
+
+    def test_custom_fee_model_passed_to_brokerage(self) -> None:
+        """自定义 fee_model 传入 BrokerageModel。"""
+        from ditto_engine.execution.reality import AShareFeeModel
+
+        runtime = _make_runtime()
+        runtime_builder = MagicMock(spec=BacktestRuntimeBuilder)
+        runtime_builder.build_published_runtime.return_value = runtime
+        factory = StrategyServiceFactory(
+            audit_service=MagicMock(spec=ExecutionAuditService),
+            artifact_service=MagicMock(spec=StrategyArtifactService),
+            run_service=MagicMock(spec=RunLifecycleService),
+            backtest_runtime_builder=runtime_builder,
+        )
+
+        custom_fee = AShareFeeModel()
+        service = factory.build_backtest_service_from_catalog(
+            config=BacktestServiceConfig(
+                strategy_id="momentum-etf",
+                start_date="2026-01-01",
+                end_date="2026-03-01",
+                initial_cash=1_000_000.0,
+            ),
+            version=4,
+            options=BacktestServiceOptions(fee_model=custom_fee),
+        )
+
+        assert service._options.fee_model is custom_fee
+
+    def test_default_fee_model_from_runtime_when_not_provided(self) -> None:
+        """未提供 fee_model 时使用 runtime 默认值。"""
+        runtime = _make_runtime()
+        runtime_builder = MagicMock(spec=BacktestRuntimeBuilder)
+        runtime_builder.build_published_runtime.return_value = runtime
+        factory = StrategyServiceFactory(
+            audit_service=MagicMock(spec=ExecutionAuditService),
+            artifact_service=MagicMock(spec=StrategyArtifactService),
+            run_service=MagicMock(spec=RunLifecycleService),
+            backtest_runtime_builder=runtime_builder,
+        )
+
+        service = factory.build_backtest_service_from_catalog(
+            config=BacktestServiceConfig(
+                strategy_id="momentum-etf",
+                start_date="2026-01-01",
+                end_date="2026-03-01",
+                initial_cash=1_000_000.0,
+            ),
+            version=4,
+        )
+
+        assert service._options.fee_model is runtime.fee_model
+
+    def test_build_published_runtime_accepts_slippage_model(self) -> None:
+        """build_published_runtime 接受 slippage_model 参数。"""
+        from ditto_engine.execution.reality.slippage import FixedBpsSlippage
+
+        runtime = _make_runtime()
+        runtime_builder = MagicMock(spec=BacktestRuntimeBuilder)
+        runtime_builder.build_published_runtime.return_value = runtime
+        factory = StrategyServiceFactory(
+            audit_service=MagicMock(spec=ExecutionAuditService),
+            artifact_service=MagicMock(spec=StrategyArtifactService),
+            run_service=MagicMock(spec=RunLifecycleService),
+            backtest_runtime_builder=runtime_builder,
+        )
+
+        custom_slippage = FixedBpsSlippage(bps=5.0)
+        service = factory.build_backtest_service_from_catalog(
+            config=BacktestServiceConfig(
+                strategy_id="momentum-etf",
+                start_date="2026-01-01",
+                end_date="2026-03-01",
+                initial_cash=1_000_000.0,
+            ),
+            version=4,
+            options=BacktestServiceOptions(slippage_model=custom_slippage),
+        )
+
+        assert service._options.slippage_model is custom_slippage

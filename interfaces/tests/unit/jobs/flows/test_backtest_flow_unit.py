@@ -7,7 +7,7 @@ and correctly computes total_return from BacktestReport.
 
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 from ditto_interfaces.jobs.flows.backtest import (
@@ -48,18 +48,30 @@ def mock_run_service() -> Mock:
     return Mock()
 
 
+@pytest.fixture
+def mock_run_writer() -> Mock | None:
+    """Mock run_writer — 默认 None.
+
+    个别测试可 override 此 fixture 注入自定义 Mock，
+    或保持 None（表示无 run_writer）。
+    """
+    return None
+
+
 @pytest.fixture(autouse=True)
 def mock_create_strategy_bundle(
     mocker: MockerFixture,
     mock_facade: Mock,
     mock_run_service: Mock,
+    mock_run_writer: Mock | None,
 ) -> None:
     """Replace create_strategy_bundle with mock DI bundle."""
     mock_bundle = Mock()
     mock_bundle.strategy_facade = mock_facade
     mock_bundle.run_service = mock_run_service
+    mock_bundle.run_writer = mock_run_writer
 
-    mock_ctx = mocker.Mock()
+    mock_ctx = Mock()
     mock_ctx.__enter__ = Mock(return_value=mock_bundle)
     mock_ctx.__exit__ = Mock(return_value=False)
 
@@ -184,100 +196,67 @@ class TestComputeTotalReturn:
 
 
 class TestRunBacktestFlowStateMachine:
-    """Tests for run_backtest_flow state machine via run_writer."""
+    """Tests for run_backtest_flow state machine via run_writer.
+
+    所有测试通过 mock_run_writer fixture 注入自定义 Mock，
+    由 autouse fixture 统一创建 bundle context，消除 with patch(...) 混用。
+    """
+
+    @pytest.fixture
+    def mock_run_writer(self) -> Mock:
+        """状态机测试注入带有 update_status 的 mock writer."""
+        return Mock()
 
     def test_running_status_on_start(
         self,
         mock_facade: Mock,
+        mock_run_writer: Mock,
     ) -> None:
         """Flow 开始时调用 writer.update_status(run_id, 'running')."""
-        mock_writer = Mock()
+        RUNNER(
+            run_id="run-sm-001",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+        )
 
-        # 创建自定义 mock bundle context，包含 run_writer
-        mock_bundle = Mock()
-        mock_bundle.strategy_facade = mock_facade
-        mock_bundle.run_service = Mock()
-        mock_bundle.run_writer = mock_writer
-
-        mock_ctx = Mock()
-        mock_ctx.__enter__ = Mock(return_value=mock_bundle)
-        mock_ctx.__exit__ = Mock(return_value=False)
-
-        with patch(
-            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
-            return_value=mock_ctx,
-        ):
-            RUNNER(
-                run_id="run-sm-001",
-                strategy_id="test",
-                start_date="2025-01-01",
-                end_date="2025-01-31",
-            )
-
-        mock_writer.update_status.assert_any_call("run-sm-001", "running")
+        mock_run_writer.update_status.assert_any_call("run-sm-001", "running")
 
     def test_completed_status_on_success(
         self,
         mock_facade: Mock,
+        mock_run_writer: Mock,
     ) -> None:
         """Flow 成功完成时调用 writer.update_status(run_id, 'completed')."""
-        mock_writer = Mock()
+        result = RUNNER(
+            run_id="run-sm-002",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+        )
 
-        mock_bundle = Mock()
-        mock_bundle.strategy_facade = mock_facade
-        mock_bundle.run_service = Mock()
-        mock_bundle.run_writer = mock_writer
-
-        mock_ctx = Mock()
-        mock_ctx.__enter__ = Mock(return_value=mock_bundle)
-        mock_ctx.__exit__ = Mock(return_value=False)
-
-        with patch(
-            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
-            return_value=mock_ctx,
-        ):
-            result = RUNNER(
-                run_id="run-sm-002",
-                strategy_id="test",
-                start_date="2025-01-01",
-                end_date="2025-01-31",
-            )
-
-        mock_writer.update_status.assert_any_call("run-sm-002", "running")
-        mock_writer.update_status.assert_any_call("run-sm-002", "completed")
+        mock_run_writer.update_status.assert_any_call("run-sm-002", "running")
+        mock_run_writer.update_status.assert_any_call("run-sm-002", "completed")
         assert result["status"] == "completed"
 
     def test_failed_status_on_exception(
         self,
         mock_facade: Mock,
+        mock_run_writer: Mock,
     ) -> None:
         """Flow 异常时调用 writer.update_status(run_id, 'failed', error_message=...)."""
-        mock_writer = Mock()
         mock_facade.run_backtest_from_catalog.side_effect = RuntimeError("engine crash")
 
-        mock_bundle = Mock()
-        mock_bundle.strategy_facade = mock_facade
-        mock_bundle.run_service = Mock()
-        mock_bundle.run_writer = mock_writer
+        with pytest.raises(RuntimeError, match="engine crash"):
+            RUNNER(
+                run_id="run-sm-003",
+                strategy_id="test",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+            )
 
-        mock_ctx = Mock()
-        mock_ctx.__enter__ = Mock(return_value=mock_bundle)
-        mock_ctx.__exit__ = Mock(return_value=False)
-
-        with patch(
-            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
-            return_value=mock_ctx,
-        ):
-            with pytest.raises(RuntimeError, match="engine crash"):
-                RUNNER(
-                    run_id="run-sm-003",
-                    strategy_id="test",
-                    start_date="2025-01-01",
-                    end_date="2025-01-31",
-                )
-
-        mock_writer.update_status.assert_any_call("run-sm-003", "running")
-        mock_writer.update_status.assert_any_call(
+        mock_run_writer.update_status.assert_any_call("run-sm-003", "running")
+        mock_run_writer.update_status.assert_any_call(
             "run-sm-003",
             "failed",
             error_message="engine crash",
@@ -287,26 +266,18 @@ class TestRunBacktestFlowStateMachine:
         self,
         mock_facade: Mock,
     ) -> None:
-        """run_writer 为 None 时回测仍正常执行."""
-        mock_bundle = Mock()
-        mock_bundle.strategy_facade = mock_facade
-        mock_bundle.run_service = Mock()
-        mock_bundle.run_writer = None
+        """run_writer 为 None 时回测仍正常执行.
 
-        mock_ctx = Mock()
-        mock_ctx.__enter__ = Mock(return_value=mock_bundle)
-        mock_ctx.__exit__ = Mock(return_value=False)
-
-        with patch(
-            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
-            return_value=mock_ctx,
-        ):
-            result = RUNNER(
-                run_id="run-sm-004",
-                strategy_id="test",
-                start_date="2025-01-01",
-                end_date="2025-01-31",
-            )
+        此测试不 override mock_run_writer fixture，因此使用默认的 None。
+        注意: 此方法不接受 mock_run_writer 参数，autouse fixture 将使用
+        模块级 fixture（返回 None）而非类级 fixture。
+        """
+        result = RUNNER(
+            run_id="run-sm-004",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+        )
 
         mock_facade.run_backtest_from_catalog.assert_called_once()
         assert result["status"] == "completed"
@@ -314,36 +285,23 @@ class TestRunBacktestFlowStateMachine:
     def test_status_transition_order(
         self,
         mock_facade: Mock,
+        mock_run_writer: Mock,
     ) -> None:
-        """状态转换顺序: running → completed（running 先于 completed）."""
-        mock_writer = Mock()
+        """状态转换顺序: running -> completed（running 先于 completed）."""
         call_order: list[str] = []
 
         def record_call(run_id: str, status: str, **kwargs: object) -> bool:
             call_order.append(status)
             return True
 
-        mock_writer.update_status.side_effect = record_call
+        mock_run_writer.update_status.side_effect = record_call
 
-        mock_bundle = Mock()
-        mock_bundle.strategy_facade = mock_facade
-        mock_bundle.run_service = Mock()
-        mock_bundle.run_writer = mock_writer
-
-        mock_ctx = Mock()
-        mock_ctx.__enter__ = Mock(return_value=mock_bundle)
-        mock_ctx.__exit__ = Mock(return_value=False)
-
-        with patch(
-            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
-            return_value=mock_ctx,
-        ):
-            RUNNER(
-                run_id="run-sm-005",
-                strategy_id="test",
-                start_date="2025-01-01",
-                end_date="2025-01-31",
-            )
+        RUNNER(
+            run_id="run-sm-005",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+        )
 
         assert call_order == ["running", "completed"]
 
@@ -397,3 +355,48 @@ class TestRunBacktestFlowCostConfig:
         # OverrideFeeModel 满足 FeeModel Protocol
         assert callable(options.fee_model.calculate)
         assert callable(options.fee_model.estimate)
+
+    def test_no_cost_config_options_slippage_model_is_default(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """无 cost_config 时 options.slippage_model 为 FixedBpsSlippage 默认实例."""
+        from ditto_engine.execution.reality.slippage import FixedBpsSlippage
+
+        RUNNER(
+            run_id="run-012",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        options = call_kwargs.kwargs.get("options") or call_kwargs[1].get("options")
+        assert options is not None
+        assert isinstance(options.slippage_model, FixedBpsSlippage)
+
+    def test_with_cost_config_slippage_model_uses_custom_bps(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """有 cost_config 且 impact_model='none' 时 slippage_model 使用自定义 bps."""
+        cost_dict = {
+            "commission_rate": 0.0003,
+            "commission_min": 5.0,
+            "stamp_duty_rate": 0.001,
+            "slippage_bps": 5.0,
+            "impact_model": "none",
+        }
+        RUNNER(
+            run_id="run-013",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+            cost_config=cost_dict,
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        options = call_kwargs.kwargs.get("options") or call_kwargs[1].get("options")
+        assert options is not None
+        assert options.slippage_model is not None
+        assert callable(options.slippage_model.estimate)

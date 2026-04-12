@@ -38,7 +38,7 @@ from ditto_engine.backtest.statistics import (
 from ditto_engine.backtest.steps import StepContext
 from ditto_engine.execution.brokerage import Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner
-from ditto_engine.execution.reality import FeeModel
+from ditto_engine.execution.reality import FeeModel, SlippageModel
 from ditto_engine.execution.rules import InstrumentRuleProvider
 from ditto_engine.risk.post_trade import PostTradeRiskGuard
 from ditto_engine.risk.pre_trade import CompositePreTradeCheck
@@ -104,6 +104,7 @@ class BacktestServiceOptions:
 
     Attributes:
         fee_model: 手续费模型 (用于 PreTrade 估算)
+        slippage_model: 滑点模型 (None = 引擎默认)
         rule_provider: 三层规则提供者 (用于 Planner 涨跌停/lot_size 检查)
         post_trade_guard: PostTrade 风控扫描器
         audit_service: 审计日志持久化服务
@@ -115,6 +116,7 @@ class BacktestServiceOptions:
     """
 
     fee_model: FeeModel | None = None
+    slippage_model: SlippageModel | None = None
     rule_provider: InstrumentRuleProvider | None = None
     post_trade_guard: PostTradeRiskGuard | None = None
     audit_service: ExecutionAuditService | None = None
@@ -186,15 +188,17 @@ class BacktestService:
         run_id = self._resolve_run_id()
         run_svc = self._options.run_service
 
-        # 1. (可选) 创建运行记录
+        # 1. (可选) 创建运行记录（get_or_create 语义，保留 API 预写入的 config_json）
         if run_svc is not None:
-            run_svc.create_run(
-                run_id=run_id,
-                strategy_id=self._config.strategy_id,
-                strategy_version=self._config.strategy_version,
-                mode="backtest",
-                parent_run_id=self._config.parent_run_id,
-            )
+            existing = run_svc.get_run(run_id)
+            if existing is None:
+                run_svc.create_run(
+                    run_id=run_id,
+                    strategy_id=self._config.strategy_id,
+                    strategy_version=self._config.strategy_version,
+                    mode="backtest",
+                    parent_run_id=self._config.parent_run_id,
+                )
             run_svc.mark_running(run_id)
 
         try:

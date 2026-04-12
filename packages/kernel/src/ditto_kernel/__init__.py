@@ -29,6 +29,7 @@ from ditto_kernel.exceptions import (
     NoIdentifierProvidedError,
 )
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.math import pearson_correlation
 from ditto_kernel.quality import (
     DQIssue,
     DQLevel,
@@ -95,4 +96,5 @@ __all__ = [
     "SimpleEventBus",
     "SimulatedClock",
     "TimeSpec",
+    "pearson_correlation",
 ]

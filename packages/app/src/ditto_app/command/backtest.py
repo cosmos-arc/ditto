@@ -16,7 +16,6 @@ import orjson
 from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_data.services.strategy.strategy_run_service import StrategyRunService
 from ditto_kernel.enums import RunStatus
 
 from ditto_app.contracts import CostConfig
@@ -200,7 +199,7 @@ class CancelRunHandler:
 
     """
 
-    def __init__(self, *, run_service: StrategyRunService) -> None:
+    def __init__(self, *, run_service: RunLifecycleService) -> None:
         self._run_service = run_service
 
     def handle(self, run_id: str) -> None:
@@ -233,7 +232,7 @@ class RetryRunHandler:
 
     """
 
-    def __init__(self, *, run_service: StrategyRunService) -> None:
+    def __init__(self, *, run_service: RunLifecycleService) -> None:
         self._run_service = run_service
 
     def handle(self, run_id: str) -> str:

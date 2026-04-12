@@ -1,5 +1,5 @@
 """
-OverrideFeeModel + build_fee_model 工厂单元测试.
+OverrideFeeModel + build_fee_model + build_slippage_model 工厂单元测试.
 
 测试用例:
 1. build_fee_model(None) 返回 AShareFeeModel
@@ -7,6 +7,7 @@ OverrideFeeModel + build_fee_model 工厂单元测试.
 3. 买卖方向差异 — 卖出有印花税，买入无
 4. Protocol 兼容性 — OverrideFeeModel 满足 FeeModel Protocol
 5. min_commission 生效 — 小额交易使用 min_commission 而非 rate*amount
+6. build_slippage_model 工厂 — None/none/volume_share/未知模型
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from ditto_app.command.backtest import CostConfig
 from ditto_app.process.execution.fee_override import (
     OverrideFeeModel,
     build_fee_model,
+    build_slippage_model,
 )
 from ditto_engine.accounting.order_book import Order
 from ditto_engine.execution.reality.fee import AShareFeeModel
@@ -292,3 +294,44 @@ class TestMinCommissionEffect:
             fee_schedule=_DEFAULT_SCHEDULE,
         )
         assert result == pytest.approx(20.01)
+
+
+# ---------------------------------------------------------------------------
+# Test: build_slippage_model 工厂
+# ---------------------------------------------------------------------------
+
+
+class TestBuildSlippageModel:
+    """build_slippage_model 工厂函数测试。"""
+
+    def test_none_returns_default_fixed_bps(self) -> None:
+        """cost_config=None 返回 FixedBpsSlippage 默认 2.0 bps."""
+        from ditto_engine.execution.reality.slippage import FixedBpsSlippage
+
+        model = build_slippage_model(None)
+        assert isinstance(model, FixedBpsSlippage)
+        assert model.bps == 2.0
+
+    def test_impact_model_none_returns_fixed_bps_with_custom_bps(self) -> None:
+        """impact_model='none' 使用 cost_config.slippage_bps."""
+        from ditto_engine.execution.reality.slippage import FixedBpsSlippage
+
+        cost_config = CostConfig(slippage_bps=5.0, impact_model="none")
+        model = build_slippage_model(cost_config)
+        assert isinstance(model, FixedBpsSlippage)
+        assert model.bps == 5.0
+
+    def test_impact_model_volume_share(self) -> None:
+        """impact_model='volume_share' 返回 VolumeShareSlippage."""
+        from ditto_engine.execution.reality.slippage import VolumeShareSlippage
+
+        cost_config = CostConfig(slippage_bps=3.0, impact_model="volume_share")
+        model = build_slippage_model(cost_config)
+        assert isinstance(model, VolumeShareSlippage)
+        assert model.base_bps == 3.0
+
+    def test_unknown_impact_model_raises(self) -> None:
+        """未知 impact_model 抛出 ValueError."""
+        cost_config = CostConfig(impact_model="unknown_model")
+        with pytest.raises(ValueError, match="Unknown impact model"):
+            build_slippage_model(cost_config)

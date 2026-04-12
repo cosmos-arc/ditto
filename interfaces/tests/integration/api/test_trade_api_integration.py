@@ -1,6 +1,16 @@
 """Trade API 集成测试 — FastAPI TestClient + mock 依赖.
 
-覆盖所有 9 个 trade 端点的路由注册 + DI 注入正确性.
+覆盖所有 9 个 trade 端点的路由注册 + DI 注入正确性:
+
+正面场景 (11 tests):
+  - ListIntents, UpdateIntentStatus, RecordFill, ListFills
+  - ListPositions, ComputePnl, LatestSignals, SignalIntentsByDate
+  - Comparison (含 not_found)
+
+负面场景 (Phase 4.8):
+  - TestMissingRequiredParams: 8 个端点缺少必需参数 → 422
+  - TestInvalidRequestBody: 6 个无效请求体 → 422
+  - TestBusinessRuleErrors: 5 个业务规则违反 → 500
 """
 
 from __future__ import annotations
@@ -24,7 +34,8 @@ from ditto_app.types import (
     TradeIntent,
 )
 from ditto_interfaces.api.routes.trade import router
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 # ---------------------------------------------------------------------------
@@ -99,6 +110,14 @@ def app(
         @provide
         def status_handler(self) -> UpdateIntentStatusHandler:
             return mock_status_handler
+
+    @app.exception_handler(ValueError)
+    async def value_error_handler(request: Request, exc: ValueError):
+        return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+    @app.exception_handler(Exception)
+    async def general_error_handler(request: Request, exc: Exception):
+        return JSONResponse(status_code=500, content={"detail": str(exc)})
 
     container = make_async_container(TestProvider())
     setup_dishka(container=container, app=app)
@@ -239,7 +258,7 @@ class TestRecordFill:
             },
         )
         assert resp.status_code == 200
-        assert resp.json()["fill_id"] == "fill-001"
+        assert resp.json()["data"]["fill_id"] == "fill-001"
 
 
 @pytest.mark.integration
@@ -289,7 +308,7 @@ class TestComputePnl:
             params={"strategy_id": "strat-a", "snapshot_date": "2024-01-16"},
         )
         assert resp.status_code == 200
-        body = resp.json()
+        body = resp.json()["data"]
         assert body["net_pnl"] == 40.0
 
 
@@ -363,3 +382,239 @@ class TestComparison:
             params={"strategy_id": "strat-a", "run_id": "run-999"},
         )
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Tests: Error Scenarios (Phase 4.8)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestMissingRequiredParams:
+    """缺少必需参数 → 422 Unprocessable Entity."""
+
+    def test_list_intents_missing_strategy_id(
+        self, client: TC, mock_trade_facade: MC
+    ) -> None:
+        """list_intents 缺少 strategy_id → 422."""
+        resp = client.get("/api/v1/trade/intents")
+        assert resp.status_code == 422
+
+    def test_list_fills_missing_strategy_id(
+        self, client: TC, mock_portfolio_facade: MC
+    ) -> None:
+        """list_fills 缺少 strategy_id → 422."""
+        resp = client.get("/api/v1/trade/fills")
+        assert resp.status_code == 422
+
+    def test_list_positions_missing_strategy_id(
+        self, client: TC, mock_portfolio_facade: MC
+    ) -> None:
+        """list_positions 缺少 strategy_id → 422."""
+        resp = client.get("/api/v1/trade/positions")
+        assert resp.status_code == 422
+
+    def test_compute_pnl_missing_params(
+        self, client: TC, mock_portfolio_facade: MC
+    ) -> None:
+        """compute_pnl 缺少 strategy_id 和 snapshot_date → 422."""
+        resp = client.get("/api/v1/trade/pnl")
+        assert resp.status_code == 422
+
+    def test_compute_pnl_missing_snapshot_date(
+        self, client: TC, mock_portfolio_facade: MC
+    ) -> None:
+        """compute_pnl 缺少 snapshot_date → 422."""
+        resp = client.get(
+            "/api/v1/trade/pnl",
+            params={"strategy_id": "strat-a"},
+        )
+        assert resp.status_code == 422
+
+    def test_comparison_missing_params(
+        self, client: TC, mock_comparison_facade: MC
+    ) -> None:
+        """comparison 缺少 strategy_id 和 run_id → 422."""
+        resp = client.get("/api/v1/trade/comparison")
+        assert resp.status_code == 422
+
+    def test_signals_latest_missing_strategy_id(
+        self, client: TC, mock_signal_facade: MC
+    ) -> None:
+        """signals/latest 缺少 strategy_id → 422."""
+        resp = client.get("/api/v1/trade/signals/latest")
+        assert resp.status_code == 422
+
+    def test_signal_intents_missing_strategy_id(
+        self, client: TC, mock_signal_facade: MC
+    ) -> None:
+        """signals/{date}/intents 缺少 strategy_id → 422."""
+        resp = client.get("/api/v1/trade/signals/2024-01-15/intents")
+        assert resp.status_code == 422
+
+
+@pytest.mark.integration
+class TestInvalidRequestBody:
+    """无效请求体 → 422 Unprocessable Entity."""
+
+    def test_record_fill_missing_required_fields(self, client: TC) -> None:
+        """record_fill 缺少必需字段 → 422."""
+        resp = client.post(
+            "/api/v1/trade/fills",
+            json={"fill_id": "fill-001"},  # 缺少大量必需字段
+        )
+        assert resp.status_code == 422
+
+    def test_record_fill_empty_body(self, client: TC) -> None:
+        """record_fill 空请求体 → 422."""
+        resp = client.post("/api/v1/trade/fills", json={})
+        assert resp.status_code == 422
+
+    def test_record_fill_invalid_direction(self, client: TC) -> None:
+        """record_fill direction 不在 buy/sell 枚举中 → 422."""
+        resp = client.post(
+            "/api/v1/trade/fills",
+            json={
+                "fill_id": "fill-001",
+                "intent_id": "int-001",
+                "strategy_id": "strat-a",
+                "trade_date": "2024-01-16",
+                "instrument_id": 510300,
+                "direction": "hold",
+                "quantity": 1000,
+                "fill_price": 4.12,
+            },
+        )
+        assert resp.status_code == 422
+
+    def test_record_fill_invalid_quantity_type(self, client: TC) -> None:
+        """record_fill quantity 为字符串 → 422 (strict mode)."""
+        resp = client.post(
+            "/api/v1/trade/fills",
+            json={
+                "fill_id": "fill-001",
+                "intent_id": "int-001",
+                "strategy_id": "strat-a",
+                "trade_date": "2024-01-16",
+                "instrument_id": 510300,
+                "direction": "buy",
+                "quantity": "one thousand",
+                "fill_price": 4.12,
+            },
+        )
+        assert resp.status_code == 422
+
+    def test_update_status_invalid_value(self, client: TC) -> None:
+        """update_intent_status status 不在有效枚举中 → 422."""
+        resp = client.put(
+            "/api/v1/trade/intents/int-001/status",
+            json={"status": "executing"},
+        )
+        assert resp.status_code == 422
+
+    def test_update_status_empty_body(self, client: TC) -> None:
+        """update_intent_status 空请求体 → 422."""
+        resp = client.put(
+            "/api/v1/trade/intents/int-001/status",
+            json={},
+        )
+        assert resp.status_code == 422
+
+
+@pytest.mark.integration
+class TestBusinessRuleErrors:
+    """业务规则违反 → 正确的 4xx HTTP 状态码 (M2).
+
+    - not found → 404
+    - transition → 409
+    - 其他 ValueError → 400
+    """
+
+    def test_update_status_intent_not_found(
+        self, client: TC, mock_status_handler: MC
+    ) -> None:
+        """更新不存在的 intent 状态 → 404."""
+        mock_status_handler.handle.side_effect = ValueError("Intent not found: int-999")
+        resp = client.put(
+            "/api/v1/trade/intents/int-999/status",
+            json={"status": "cancelled"},
+        )
+        assert resp.status_code == 404
+
+    def test_update_status_invalid_transition(
+        self, client: TC, mock_status_handler: MC
+    ) -> None:
+        """非法状态转换 (filled → pending) → 409."""
+        mock_status_handler.handle.side_effect = ValueError(
+            "Invalid transition: 'filled' -> 'pending'"
+        )
+        resp = client.put(
+            "/api/v1/trade/intents/int-001/status",
+            json={"status": "pending"},
+        )
+        assert resp.status_code == 409
+
+    def test_record_fill_intent_not_found(
+        self, client: TC, mock_fill_handler: MC
+    ) -> None:
+        """录入成交时 intent 不存在 → 404."""
+        mock_fill_handler.handle.side_effect = ValueError("Intent not found: int-999")
+        resp = client.post(
+            "/api/v1/trade/fills",
+            json={
+                "fill_id": "fill-001",
+                "intent_id": "int-999",
+                "strategy_id": "strat-a",
+                "trade_date": "2024-01-16",
+                "instrument_id": 510300,
+                "direction": "buy",
+                "quantity": 1000,
+                "fill_price": 4.12,
+            },
+        )
+        assert resp.status_code == 404
+
+    def test_record_fill_strategy_mismatch(
+        self, client: TC, mock_fill_handler: MC
+    ) -> None:
+        """录入成交时 strategy_id 不匹配 → 400."""
+        mock_fill_handler.handle.side_effect = ValueError(
+            "Strategy mismatch: intent=strat-a, command=strat-b"
+        )
+        resp = client.post(
+            "/api/v1/trade/fills",
+            json={
+                "fill_id": "fill-002",
+                "intent_id": "int-001",
+                "strategy_id": "strat-b",
+                "trade_date": "2024-01-16",
+                "instrument_id": 510300,
+                "direction": "buy",
+                "quantity": 1000,
+                "fill_price": 4.12,
+            },
+        )
+        assert resp.status_code == 400
+
+    def test_record_fill_already_filled(
+        self, client: TC, mock_fill_handler: MC
+    ) -> None:
+        """对已成交的 intent 录入成交 → 400."""
+        mock_fill_handler.handle.side_effect = ValueError(
+            "Intent int-001 status is 'filled',"
+            " expected 'pending' or 'partially_filled'"
+        )
+        resp = client.post(
+            "/api/v1/trade/fills",
+            json={
+                "fill_id": "fill-003",
+                "intent_id": "int-001",
+                "strategy_id": "strat-a",
+                "trade_date": "2024-01-16",
+                "instrument_id": 510300,
+                "direction": "buy",
+                "quantity": 1000,
+                "fill_price": 4.12,
+            },
+        )
+        assert resp.status_code == 400

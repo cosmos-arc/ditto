@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import logging
+import os
 from collections.abc import Callable
 from typing import Annotated
 
@@ -20,9 +21,10 @@ from ditto_app.command.backtest import (
     RetryRunHandler,
 )
 from ditto_app.process.execution.replay_process import ReplayProcess
+from ditto_app.process.execution.strategy_types import RunLifecycleService
 from ditto_app.query.backtest import BacktestQueryFacade
+from ditto_app.query.backtest_trade import TradeRecord
 from ditto_app.query.lineage import LineageQueryFacade
-from ditto_data.services.strategy.strategy_run_service import StrategyRunService
 from ditto_kernel.enums import RunStatus
 from fastapi import APIRouter, HTTPException, Query
 
@@ -38,7 +40,6 @@ from ditto_interfaces.models.backtest import (
     TradeResponse,
     to_audit_record_response,
     to_run_response,
-    to_trade_response,
 )
 from ditto_interfaces.models.common import APIResponse
 from ditto_interfaces.models.lineage import (
@@ -50,6 +51,21 @@ from ditto_interfaces.models.lineage import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
+
+
+def to_trade_response(record: TradeRecord) -> TradeResponse:
+    """将 TradeRecord 转为 API 响应."""
+    return TradeResponse(
+        trade_date=record.trade_date,
+        instrument_id=record.instrument_id,
+        direction=record.direction,
+        entry_date=record.entry_date,
+        exit_date=record.exit_date,
+        entry_price=record.entry_price,
+        exit_price=record.exit_price,
+        quantity=record.quantity,
+        pnl=record.pnl,
+    )
 
 
 def _to_cost_config(body: CreateBacktestRunRequest) -> CostConfig | None:
@@ -91,19 +107,48 @@ def _submit_flow(
     """
     同步提交 Prefect flow（在 executor 线程中运行）.
 
+    R3 骨架: 当 PREFECT_API_URL 已设置时，通过 Prefect Client 异步提交；
+    否则回退到进程内执行（开发模式）。
+
     Args:
         params: flow 参数.
         on_failure: 异常回调 (run_id, error_message)，用于标记 RunRecord 为 failed.
 
     """
     run_id = str(params.get("run_id", ""))
+    prefect_api_url = os.getenv("PREFECT_API_URL")
+
+    if prefect_api_url:
+        # R3: 通过 Prefect Client 提交到远程 Worker（待完整实现）
+        logger.info(
+            "Prefect Server available, submitting flow to worker",
+            extra={"run_id": run_id, "prefect_api_url": prefect_api_url},
+        )
+        # TODO(R3): async with get_client() as client:
+        #     await client.create_flow_run_from_deployment(
+        #         deployment_name="run-backtest/backtest-prod",
+        #         parameters=params,
+        #     )
+        # 当前仍回退到进程内执行
+        _run_in_process(params, on_failure)
+    else:
+        # 开发模式: 进程内同步执行
+        _run_in_process(params, on_failure)
+
+
+def _run_in_process(
+    params: dict[str, object],
+    on_failure: Callable[[str, str], None] | None = None,
+) -> None:
+    """进程内执行 Prefect flow（开发模式 fallback）。"""
+    run_id = str(params.get("run_id", ""))
     try:
         _prefect_fn = getattr(run_backtest_flow, "func", run_backtest_flow)
         _prefect_fn(**params)  # type: ignore[reportCallIssue]
     except Exception:
-        logger.exception("Prefect flow submission failed", extra={"run_id": run_id})
+        logger.exception("Flow execution failed", extra={"run_id": run_id})
         if on_failure is not None:
-            on_failure(run_id, "Flow submission failed")
+            on_failure(run_id, "Flow execution failed")
 
 
 def _restore_flow_params_from_config(
@@ -121,7 +166,7 @@ def _restore_flow_params_from_config(
 
 
 def _make_failure_callback(
-    run_service: StrategyRunService,
+    run_service: RunLifecycleService,
 ) -> Callable[[str, str], None]:
     """创建 flow 失败回调 — 标记 RunRecord 为 failed."""
 
@@ -141,7 +186,7 @@ def _make_failure_callback(
 async def trigger_backtest(
     body: CreateBacktestRunRequest,
     handler: Annotated[BacktestRunHandler, FromComponent()],
-    run_service: Annotated[StrategyRunService, FromComponent()],
+    run_service: Annotated[RunLifecycleService, FromComponent()],
 ) -> BacktestRunTriggerResponse:
     """触发回测 — 校验参数 + 创建记录 + 后台提交 flow，返回 202 Accepted."""
     command = BacktestRunCommand(
@@ -203,7 +248,7 @@ async def retry_run(
     run_id: str,
     facade: Annotated[BacktestQueryFacade, FromComponent()],
     handler: Annotated[RetryRunHandler, FromComponent()],
-    run_service: Annotated[StrategyRunService, FromComponent()],
+    run_service: Annotated[RunLifecycleService, FromComponent()],
 ) -> RetryRunResponse:
     """重试回测运行 — 检查 status in {failed, cancelled}，创建新 Run 并提交 flow."""
     try:

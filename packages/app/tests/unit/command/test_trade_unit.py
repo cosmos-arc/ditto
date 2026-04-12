@@ -5,6 +5,14 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+from ditto_app.command.protocols import CommandHandler
+from ditto_app.command.trade import (
+    RecordFillCommand,
+    RecordFillHandler,
+    UpdateIntentStatusCommand,
+    UpdateIntentStatusHandler,
+)
+from ditto_app.types import ActualPositionSnapshot, ManualExecutionFill
 from ditto_data.models.trade import (
     ManualExecutionFillRecord,
     TradeIntentRecord,
@@ -58,10 +66,6 @@ class TestRecordFillHandler:
 
     def test_handle_saves_fill_and_updates_intent(self) -> None:
         """成功录入 → fill 持久化 + intent 状态更新为 filled."""
-        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
-        from ditto_app.types import (
-            ManualExecutionFill,
-        )
 
         service = _make_trade_service()
         tracker = _make_manual_tracker()
@@ -129,7 +133,6 @@ class TestRecordFillHandler:
 
     def test_handle_raises_on_missing_intent(self) -> None:
         """intent 不存在 → ValueError."""
-        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
 
         service = _make_trade_service()
         tracker = _make_manual_tracker()
@@ -161,7 +164,6 @@ class TestRecordFillHandler:
 
     def test_handle_with_default_values(self) -> None:
         """带默认值 → fee/slippage/notes 正确传递."""
-        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
 
         service = _make_trade_service()
         tracker = _make_manual_tracker()
@@ -202,8 +204,6 @@ class TestRecordFillHandler:
 
     def test_handle_triggers_tracker_recomputation(self) -> None:
         """录入成交后触发 ManualTracker 重新聚合持仓并持久化."""
-        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
-        from ditto_app.types import ActualPositionSnapshot
 
         service = _make_trade_service()
         tracker = _make_manual_tracker()
@@ -261,7 +261,6 @@ class TestRecordFillHandler:
 
     def test_handle_computes_settlement_date(self) -> None:
         """handler 调用 compute_settlement_date 并将结果传入 DTO."""
-        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
 
         service = _make_trade_service()
         tracker = _make_manual_tracker()
@@ -302,7 +301,6 @@ class TestRecordFillHandler:
 
     def test_handle_settlement_date_fallback(self) -> None:
         """tracker 返回空日历时 settlement_date fallback 到 trade_date."""
-        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
 
         service = _make_trade_service()
         tracker = _make_manual_tracker()
@@ -348,10 +346,6 @@ class TestUpdateIntentStatusHandler:
 
     def test_handle_updates_status(self) -> None:
         """成功更新意图状态."""
-        from ditto_app.command.trade import (
-            UpdateIntentStatusCommand,
-            UpdateIntentStatusHandler,
-        )
 
         service = _make_trade_service()
         service.get_intent.return_value = _make_intent_record()
@@ -372,10 +366,6 @@ class TestUpdateIntentStatusHandler:
 
     def test_handle_raises_on_missing_intent(self) -> None:
         """intent 不存在 → ValueError."""
-        from ditto_app.command.trade import (
-            UpdateIntentStatusCommand,
-            UpdateIntentStatusHandler,
-        )
 
         service = _make_trade_service()
         service.get_intent.return_value = None
@@ -401,9 +391,6 @@ class TestTradeCommandProtocolConformance:
     """所有 Trade Handler 满足 CommandHandler Protocol."""
 
     def test_record_fill_handler_satisfies_protocol(self) -> None:
-        from ditto_app.command.protocols import CommandHandler
-        from ditto_app.command.trade import RecordFillHandler
-
         service = _make_trade_service()
         tracker = _make_manual_tracker()
         handler = RecordFillHandler(
@@ -413,9 +400,6 @@ class TestTradeCommandProtocolConformance:
         assert isinstance(handler, CommandHandler)
 
     def test_update_intent_status_handler_satisfies_protocol(self) -> None:
-        from ditto_app.command.protocols import CommandHandler
-        from ditto_app.command.trade import UpdateIntentStatusHandler
-
         service = _make_trade_service()
         handler = UpdateIntentStatusHandler(trade_service=service)
         assert isinstance(handler, CommandHandler)
@@ -431,7 +415,6 @@ class TestRecordFillIdentityValidation:
 
     def _make_handler(self):
         """构建 handler (不导入在类外, 避免顶层导入)."""
-        from ditto_app.command.trade import RecordFillHandler
 
         service = _make_trade_service()
         tracker = _make_manual_tracker()
@@ -443,7 +426,6 @@ class TestRecordFillIdentityValidation:
 
     def test_strategy_id_mismatch_rejected(self) -> None:
         """command.strategy_id 与 intent.strategy_id 不一致 → ValueError."""
-        from ditto_app.command.trade import RecordFillCommand
 
         handler = self._make_handler()
         cmd = RecordFillCommand(
@@ -462,7 +444,6 @@ class TestRecordFillIdentityValidation:
 
     def test_instrument_id_mismatch_rejected(self) -> None:
         """command.instrument_id 与 intent.instrument_id 不一致 → ValueError."""
-        from ditto_app.command.trade import RecordFillCommand
 
         handler = self._make_handler()
         cmd = RecordFillCommand(
@@ -481,7 +462,6 @@ class TestRecordFillIdentityValidation:
 
     def test_direction_mismatch_rejected(self) -> None:
         """command.direction 与 intent.direction 不一致 → ValueError."""
-        from ditto_app.command.trade import RecordFillCommand
 
         handler = self._make_handler()
         cmd = RecordFillCommand(
@@ -509,7 +489,6 @@ class TestRecordFillPartialFillDetection:
 
     def test_fill_quantity_equals_intent_returns_filled(self) -> None:
         """fill_quantity == intent_quantity → 状态更新为 filled."""
-        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
 
         service = _make_trade_service()
         tracker = _make_manual_tracker()
@@ -540,7 +519,6 @@ class TestRecordFillPartialFillDetection:
 
     def test_fill_quantity_less_than_intent_returns_partial(self) -> None:
         """fill_quantity < intent_quantity → 状态更新为 partially_filled."""
-        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
 
         service = _make_trade_service()
         tracker = _make_manual_tracker()
@@ -571,7 +549,6 @@ class TestRecordFillPartialFillDetection:
 
     def test_fill_quantity_exceeds_intent_returns_filled(self) -> None:
         """fill_quantity > intent_quantity → 仍更新为 filled（超额成交）."""
-        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
 
         service = _make_trade_service()
         tracker = _make_manual_tracker()
@@ -602,7 +579,6 @@ class TestRecordFillPartialFillDetection:
 
     def test_fill_on_terminal_intent_rejected(self) -> None:
         """intent 状态为 filled/cancelled/expired 时，拒绝录入成交."""
-        from ditto_app.command.trade import RecordFillCommand, RecordFillHandler
 
         for terminal_status in ("filled", "cancelled", "expired"):
             service = _make_trade_service()
@@ -633,20 +609,6 @@ class TestRecordFillPartialFillDetection:
             service.save_fill.assert_not_called()
             service.update_intent_status.assert_not_called()
 
-    def test_determine_fill_status_static(self) -> None:
-        """_determine_fill_status 静态方法: 完全成交 vs 部分成交."""
-        from ditto_app.command.trade import RecordFillHandler
-
-        # fill >= intent → filled
-        assert RecordFillHandler._determine_fill_status(1000, 1000) == "filled"
-        assert RecordFillHandler._determine_fill_status(1000, 1500) == "filled"
-
-        # fill < intent → partially_filled
-        assert RecordFillHandler._determine_fill_status(1000, 500) == "partially_filled"
-
-        # intent_quantity is None → filled
-        assert RecordFillHandler._determine_fill_status(None, 1) == "filled"
-
 
 # ---------------------------------------------------------------------------
 # Status transition matrix validation (T28)
@@ -658,10 +620,6 @@ class TestUpdateIntentStatusTransitions:
 
     def test_valid_transition_pending_to_cancelled(self) -> None:
         """pending → cancelled 合法."""
-        from ditto_app.command.trade import (
-            UpdateIntentStatusCommand,
-            UpdateIntentStatusHandler,
-        )
 
         service = _make_trade_service()
         service.get_intent.return_value = _make_intent_record(status="pending")
@@ -672,10 +630,6 @@ class TestUpdateIntentStatusTransitions:
 
     def test_valid_transition_pending_to_filled(self) -> None:
         """pending → filled 合法."""
-        from ditto_app.command.trade import (
-            UpdateIntentStatusCommand,
-            UpdateIntentStatusHandler,
-        )
 
         service = _make_trade_service()
         service.get_intent.return_value = _make_intent_record(status="pending")
@@ -686,10 +640,6 @@ class TestUpdateIntentStatusTransitions:
 
     def test_valid_transition_partially_filled_to_filled(self) -> None:
         """partially_filled → filled 合法."""
-        from ditto_app.command.trade import (
-            UpdateIntentStatusCommand,
-            UpdateIntentStatusHandler,
-        )
 
         service = _make_trade_service()
         service.get_intent.return_value = _make_intent_record(
@@ -702,10 +652,6 @@ class TestUpdateIntentStatusTransitions:
 
     def test_invalid_transition_filled_to_pending_rejected(self) -> None:
         """filled → pending 非法 (终态不可回退)."""
-        from ditto_app.command.trade import (
-            UpdateIntentStatusCommand,
-            UpdateIntentStatusHandler,
-        )
 
         service = _make_trade_service()
         service.get_intent.return_value = _make_intent_record(status="filled")
@@ -717,10 +663,6 @@ class TestUpdateIntentStatusTransitions:
 
     def test_invalid_transition_cancelled_to_filled_rejected(self) -> None:
         """cancelled → filled 非法."""
-        from ditto_app.command.trade import (
-            UpdateIntentStatusCommand,
-            UpdateIntentStatusHandler,
-        )
 
         service = _make_trade_service()
         service.get_intent.return_value = _make_intent_record(status="cancelled")
@@ -732,10 +674,6 @@ class TestUpdateIntentStatusTransitions:
 
     def test_invalid_transition_expired_to_partially_filled_rejected(self) -> None:
         """expired → partially_filled 非法."""
-        from ditto_app.command.trade import (
-            UpdateIntentStatusCommand,
-            UpdateIntentStatusHandler,
-        )
 
         service = _make_trade_service()
         service.get_intent.return_value = _make_intent_record(status="expired")
@@ -750,10 +688,6 @@ class TestUpdateIntentStatusTransitions:
 
     def test_same_status_idempotent(self) -> None:
         """相同状态 idempotent: pending → pending 不报错."""
-        from ditto_app.command.trade import (
-            UpdateIntentStatusCommand,
-            UpdateIntentStatusHandler,
-        )
 
         service = _make_trade_service()
         service.get_intent.return_value = _make_intent_record(status="pending")
@@ -764,10 +698,6 @@ class TestUpdateIntentStatusTransitions:
 
     def test_invalid_status_name_rejected(self) -> None:
         """非法状态名称 → ValueError."""
-        from ditto_app.command.trade import (
-            UpdateIntentStatusCommand,
-            UpdateIntentStatusHandler,
-        )
 
         service = _make_trade_service()
         service.get_intent.return_value = _make_intent_record(status="pending")

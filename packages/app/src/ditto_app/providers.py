@@ -90,6 +90,7 @@ from ditto_app.process.execution.factor_bridge import FactorBridge
 from ditto_app.process.execution.manual_tracker import ManualTracker
 from ditto_app.process.execution.replay_process import ReplayProcess  # noqa: RUF100
 from ditto_app.process.execution.strategy_run_process import StrategyFacade
+from ditto_app.process.execution.strategy_types import RunLifecycleService
 
 # ---------------------------------------------------------------------------
 # App Process 层
@@ -235,6 +236,14 @@ class AppCommandProvider(Provider):
     ) -> RetryRunHandler:
         """重试运行 Command Handler."""
         return RetryRunHandler(run_service=run_service)
+
+    @provide
+    def run_lifecycle_service(
+        self,
+        run_service: StrategyRunLifecycleService,
+    ) -> RunLifecycleService:
+        """RunLifecycleService Protocol 绑定 — 路由层通过此协议解耦 data 层."""
+        return run_service
 
     @provide
     def create_custom_universe_handler(

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import orjson
-from ditto_app.query.backtest_trade import TradeRecord
 from ditto_data.models.strategy_run import StrategyRunRecord
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -103,21 +102,6 @@ def to_run_response(record: StrategyRunRecord) -> RunResponse:
     )
 
 
-def to_trade_response(record: TradeRecord) -> TradeResponse:
-    """将 TradeRecord 转为 API 响应."""
-    return TradeResponse(
-        trade_date=record.trade_date,
-        instrument_id=record.instrument_id,
-        direction=record.direction,
-        entry_date=record.entry_date,
-        exit_date=record.exit_date,
-        entry_price=record.entry_price,
-        exit_price=record.exit_price,
-        quantity=record.quantity,
-        pnl=record.pnl,
-    )
-
-
 def _parse_payload(raw: object) -> dict[str, Any]:
     """解析审计 payload 字段."""
     if isinstance(raw, str):
@@ -174,7 +158,10 @@ class CostConfigRequest(BaseModel):
         ge=0,
         description="滑点(bps)",
     )
-    impact_model: str = Field(default="none", description="冲击成本模型")
+    impact_model: Literal["none", "linear", "square_root"] = Field(
+        default="none",
+        description="冲击成本模型",
+    )
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -237,5 +224,4 @@ __all__ = [
     "TradeResponse",
     "to_audit_record_response",
     "to_run_response",
-    "to_trade_response",
 ]

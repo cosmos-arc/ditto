@@ -1,210 +1,281 @@
-"""
-Unit tests for cancel / retry endpoint logic.
+"""Unit tests for cancel / retry route endpoints.
 
-Tests status guard, record-not-found, and response mapping.
-Route handler logic is tested at model-level — mirroring
-test_backtest_trigger_unit.py pattern.
+Tests use FastAPI TestClient + Dishka mock DI to exercise the actual
+route handlers end-to-end.
+
+Coverage:
+  - Cancel: status guards (pending/running allowed, completed/failed/cancelled rejected)
+  - Cancel: not found → 404
+  - Retry: status guards (failed/cancelled allowed, running/completed/pending rejected)
+  - Retry: not found → 404
+  - Response field validation
 """
 
 from __future__ import annotations
 
-from ditto_data.models.strategy_run import StrategyRunRecord
-from ditto_interfaces.models.backtest import (
-    CancelRunResponse,
-    RetryRunResponse,
-    to_run_response,
+from unittest.mock import MagicMock
+
+import pytest
+from dishka import Provider, Scope, make_async_container, provide
+from dishka.integrations.fastapi import setup_dishka
+from ditto_app.command.backtest import (
+    CancelRunHandler,
+    RetryRunHandler,
 )
-from ditto_kernel.enums import RunStatus
-from fastapi import HTTPException
+from ditto_app.process.execution.strategy_types import RunLifecycleService
+from ditto_app.query.backtest import BacktestQueryFacade
+from ditto_interfaces.api.routes.backtest import router
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Fixtures
 # ---------------------------------------------------------------------------
 
 
-def _make_record(
-    run_id: str = "run001",
-    strategy_id: str = "momentum-etf",
-    status: str = RunStatus.RUNNING,
-    parent_run_id: str = "",
-) -> StrategyRunRecord:
-    """创建测试用 StrategyRunRecord."""
-    return StrategyRunRecord(
-        run_id=run_id,
-        strategy_id=strategy_id,
-        status=status,
-        parent_run_id=parent_run_id,
-    )
+@pytest.fixture
+def mock_cancel_handler() -> MagicMock:
+    return MagicMock(spec=CancelRunHandler)
+
+
+@pytest.fixture
+def mock_retry_handler() -> MagicMock:
+    return MagicMock(spec=RetryRunHandler)
+
+
+@pytest.fixture
+def mock_query_facade() -> MagicMock:
+    return MagicMock(spec=BacktestQueryFacade)
+
+
+@pytest.fixture
+def mock_run_service() -> MagicMock:
+    return MagicMock(spec=RunLifecycleService)
+
+
+@pytest.fixture
+def app(
+    mock_cancel_handler: MagicMock,
+    mock_retry_handler: MagicMock,
+    mock_query_facade: MagicMock,
+    mock_run_service: MagicMock,
+) -> FastAPI:
+    """构建测试 FastAPI 应用，注入 mock DI 容器."""
+    app = FastAPI()
+
+    class TestProvider(Provider):
+        scope = Scope.APP
+
+        @provide
+        def cancel_handler(self) -> CancelRunHandler:
+            return mock_cancel_handler
+
+        @provide
+        def retry_handler(self) -> RetryRunHandler:
+            return mock_retry_handler
+
+        @provide
+        def backtest_query_facade(self) -> BacktestQueryFacade:
+            return mock_query_facade
+
+        @provide
+        def run_lifecycle_service(self) -> RunLifecycleService:
+            return mock_run_service
+
+    container = make_async_container(TestProvider())
+    setup_dishka(container=container, app=app)
+    app.include_router(router, prefix="/api/v1")
+    return app
+
+
+@pytest.fixture
+def client(app: FastAPI) -> TestClient:
+    return TestClient(app)
 
 
 # ---------------------------------------------------------------------------
-# Cancel: status guard
+# Cancel: status guards
 # ---------------------------------------------------------------------------
 
 
 class TestCancelStatusGuard:
     """Cancel 端点 — 状态前置校验."""
 
-    def test_cancel_running_is_allowed(self) -> None:
-        """status=running → 允许取消."""
-        record = _make_record(status=RunStatus.RUNNING)
-        # 模拟 endpoint 逻辑
-        allowed = record.status in (RunStatus.PENDING, RunStatus.RUNNING)
-        assert allowed is True
+    def test_cancel_running_succeeds(
+        self,
+        client: TestClient,
+        mock_cancel_handler: MagicMock,
+    ) -> None:
+        """status=running → 200, handler.handle 被调用."""
+        mock_cancel_handler.handle.return_value = None
+        resp = client.post("/api/v1/backtests/runs/run001/cancel")
+        assert resp.status_code == 200
+        mock_cancel_handler.handle.assert_called_once_with("run001")
+        body = resp.json()
+        assert body["run_id"] == "run001"
+        assert body["status"] == "cancelled"
 
-    def test_cancel_pending_is_allowed(self) -> None:
-        """status=pending → 允许取消."""
-        record = _make_record(status=RunStatus.PENDING)
-        allowed = record.status in (RunStatus.PENDING, RunStatus.RUNNING)
-        assert allowed is True
+    def test_cancel_pending_succeeds(
+        self,
+        client: TestClient,
+        mock_cancel_handler: MagicMock,
+    ) -> None:
+        """status=pending → 200."""
+        mock_cancel_handler.handle.return_value = None
+        resp = client.post("/api/v1/backtests/runs/run002/cancel")
+        assert resp.status_code == 200
 
-    def test_cancel_completed_rejected(self) -> None:
+    def test_cancel_completed_rejected(
+        self,
+        client: TestClient,
+        mock_cancel_handler: MagicMock,
+    ) -> None:
         """status=completed → 409 Conflict."""
-        record = _make_record(status=RunStatus.COMPLETED)
-        allowed = record.status in (RunStatus.PENDING, RunStatus.RUNNING)
-        assert allowed is False
-        http_exc = HTTPException(
-            status_code=409,
-            detail="Cannot cancel run in 'completed' status",
+        mock_cancel_handler.handle.side_effect = ValueError(
+            "Cannot cancel run in 'completed' status"
         )
-        assert http_exc.status_code == 409
+        resp = client.post("/api/v1/backtests/runs/run003/cancel")
+        assert resp.status_code == 409
+        assert "completed" in resp.json()["detail"]
 
-    def test_cancel_failed_rejected(self) -> None:
+    def test_cancel_failed_rejected(
+        self,
+        client: TestClient,
+        mock_cancel_handler: MagicMock,
+    ) -> None:
         """status=failed → 409 Conflict."""
-        record = _make_record(status=RunStatus.FAILED)
-        allowed = record.status in (RunStatus.PENDING, RunStatus.RUNNING)
-        assert allowed is False
+        mock_cancel_handler.handle.side_effect = ValueError(
+            "Cannot cancel run in 'failed' status"
+        )
+        resp = client.post("/api/v1/backtests/runs/run004/cancel")
+        assert resp.status_code == 409
+        assert "failed" in resp.json()["detail"]
 
-    def test_cancel_cancelled_rejected(self) -> None:
+    def test_cancel_already_cancelled_rejected(
+        self,
+        client: TestClient,
+        mock_cancel_handler: MagicMock,
+    ) -> None:
         """status=cancelled → 409 Conflict."""
-        record = _make_record(status=RunStatus.CANCELLED)
-        allowed = record.status in (RunStatus.PENDING, RunStatus.RUNNING)
-        assert allowed is False
+        mock_cancel_handler.handle.side_effect = ValueError(
+            "Cannot cancel run in 'cancelled' status"
+        )
+        resp = client.post("/api/v1/backtests/runs/run005/cancel")
+        assert resp.status_code == 409
 
 
 # ---------------------------------------------------------------------------
-# Cancel: response mapping
+# Cancel: not found
 # ---------------------------------------------------------------------------
 
 
-class TestCancelResponseMapping:
-    """Cancel 成功 → CancelRunResponse 映射."""
+class TestCancelNotFound:
+    """Cancel 端点 — run_id 不存在 → 404."""
 
-    def test_cancel_response_fields(self) -> None:
-        """取消成功后返回 CancelRunResponse."""
-        record = _make_record(run_id="run001", status=RunStatus.RUNNING)
-        response = CancelRunResponse(run_id=record.run_id, status="cancelled")
-        assert response.run_id == "run001"
-        assert response.status == "cancelled"
+    def test_cancel_not_found(
+        self,
+        client: TestClient,
+        mock_cancel_handler: MagicMock,
+    ) -> None:
+        """取消不存在的 run → 404."""
+        mock_cancel_handler.handle.side_effect = ValueError("Run not found: missing")
+        resp = client.post("/api/v1/backtests/runs/missing/cancel")
+        assert resp.status_code == 404
+        assert "not found" in resp.json()["detail"].lower()
 
 
 # ---------------------------------------------------------------------------
-# Retry: status guard
+# Retry: status guards
 # ---------------------------------------------------------------------------
 
 
 class TestRetryStatusGuard:
     """Retry 端点 — 状态前置校验."""
 
-    def test_retry_failed_is_allowed(self) -> None:
-        """status=failed → 允许重试."""
-        record = _make_record(status=RunStatus.FAILED)
-        allowed = record.status in (RunStatus.FAILED, RunStatus.CANCELLED)
-        assert allowed is True
+    def test_retry_failed_succeeds(
+        self,
+        client: TestClient,
+        mock_retry_handler: MagicMock,
+        mock_query_facade: MagicMock,
+    ) -> None:
+        """status=failed → 202, handler 返回新 run_id."""
+        mock_retry_handler.handle.return_value = "run002"
+        mock_query_facade.get_run.return_value = None
+        resp = client.post("/api/v1/backtests/runs/run001/retry")
+        assert resp.status_code == 202
+        mock_retry_handler.handle.assert_called_once_with("run001")
+        body = resp.json()
+        assert body["run_id"] == "run002"
+        assert body["parent_run_id"] == "run001"
+        assert body["status"] == "pending"
 
-    def test_retry_cancelled_is_allowed(self) -> None:
-        """status=cancelled → 允许重试."""
-        record = _make_record(status=RunStatus.CANCELLED)
-        allowed = record.status in (RunStatus.FAILED, RunStatus.CANCELLED)
-        assert allowed is True
+    def test_retry_cancelled_succeeds(
+        self,
+        client: TestClient,
+        mock_retry_handler: MagicMock,
+        mock_query_facade: MagicMock,
+    ) -> None:
+        """status=cancelled → 202."""
+        mock_retry_handler.handle.return_value = "run003"
+        mock_query_facade.get_run.return_value = None
+        resp = client.post("/api/v1/backtests/runs/run002/retry")
+        assert resp.status_code == 202
+        body = resp.json()
+        assert body["run_id"] == "run003"
 
-    def test_retry_running_rejected(self) -> None:
+    def test_retry_running_rejected(
+        self,
+        client: TestClient,
+        mock_retry_handler: MagicMock,
+    ) -> None:
         """status=running → 409 Conflict."""
-        record = _make_record(status=RunStatus.RUNNING)
-        allowed = record.status in (RunStatus.FAILED, RunStatus.CANCELLED)
-        assert allowed is False
-        http_exc = HTTPException(
-            status_code=409,
-            detail="Cannot retry run in 'running' status",
+        mock_retry_handler.handle.side_effect = ValueError(
+            "Cannot retry run in 'running' status"
         )
-        assert http_exc.status_code == 409
+        resp = client.post("/api/v1/backtests/runs/run003/retry")
+        assert resp.status_code == 409
+        assert "running" in resp.json()["detail"]
 
-    def test_retry_completed_rejected(self) -> None:
+    def test_retry_completed_rejected(
+        self,
+        client: TestClient,
+        mock_retry_handler: MagicMock,
+    ) -> None:
         """status=completed → 409 Conflict."""
-        record = _make_record(status=RunStatus.COMPLETED)
-        allowed = record.status in (RunStatus.FAILED, RunStatus.CANCELLED)
-        assert allowed is False
+        mock_retry_handler.handle.side_effect = ValueError(
+            "Cannot retry run in 'completed' status"
+        )
+        resp = client.post("/api/v1/backtests/runs/run004/retry")
+        assert resp.status_code == 409
 
-    def test_retry_pending_rejected(self) -> None:
+    def test_retry_pending_rejected(
+        self,
+        client: TestClient,
+        mock_retry_handler: MagicMock,
+    ) -> None:
         """status=pending → 409 Conflict."""
-        record = _make_record(status=RunStatus.PENDING)
-        allowed = record.status in (RunStatus.FAILED, RunStatus.CANCELLED)
-        assert allowed is False
-
-
-# ---------------------------------------------------------------------------
-# Retry: response mapping
-# ---------------------------------------------------------------------------
-
-
-class TestRetryResponseMapping:
-    """Retry 成功 → RetryRunResponse 映射."""
-
-    def test_retry_response_fields(self) -> None:
-        """重试成功后返回 RetryRunResponse（含 parent_run_id）."""
-        original = _make_record(run_id="run001", status=RunStatus.FAILED)
-        new_run_id = "run002"
-        response = RetryRunResponse(
-            run_id=new_run_id,
-            parent_run_id=original.run_id,
-            status=RunStatus.PENDING,
+        mock_retry_handler.handle.side_effect = ValueError(
+            "Cannot retry run in 'pending' status"
         )
-        assert response.run_id == "run002"
-        assert response.parent_run_id == "run001"
-        assert response.status == RunStatus.PENDING
+        resp = client.post("/api/v1/backtests/runs/run005/retry")
+        assert resp.status_code == 409
 
 
 # ---------------------------------------------------------------------------
-# Not found: 404
+# Retry: not found
 # ---------------------------------------------------------------------------
 
 
-class TestNotFound:
-    """run_id 不存在 → 404."""
+class TestRetryNotFound:
+    """Retry 端点 — run_id 不存在 → 404."""
 
-    def test_cancel_not_found(self) -> None:
-        """取消时 run_id 不存在 → 404."""
-        record: StrategyRunRecord | None = None
-        if record is None:
-            http_exc = HTTPException(status_code=404, detail="Run not found: missing")
-            assert http_exc.status_code == 404
-            assert "not found" in http_exc.detail.lower()
-
-    def test_retry_not_found(self) -> None:
-        """重试时 run_id 不存在 → 404."""
-        record: StrategyRunRecord | None = None
-        if record is None:
-            http_exc = HTTPException(status_code=404, detail="Run not found: missing")
-            assert http_exc.status_code == 404
-            assert "not found" in http_exc.detail.lower()
-
-
-# ---------------------------------------------------------------------------
-# Record → RunResponse mapping (reused by cancel)
-# ---------------------------------------------------------------------------
-
-
-class TestToRunResponseMapping:
-    """StrategyRunRecord → RunResponse 转换验证."""
-
-    def test_record_with_all_fields(self) -> None:
-        """完整字段映射."""
-        record = _make_record(
-            run_id="run001",
-            strategy_id="momentum-etf",
-            status=RunStatus.CANCELLED,
-        )
-        response = to_run_response(record)
-        assert response.run_id == "run001"
-        assert response.strategy_id == "momentum-etf"
-        assert response.status == RunStatus.CANCELLED
+    def test_retry_not_found(
+        self,
+        client: TestClient,
+        mock_retry_handler: MagicMock,
+    ) -> None:
+        """重试不存在的 run → 404."""
+        mock_retry_handler.handle.side_effect = ValueError("Run not found: missing")
+        resp = client.post("/api/v1/backtests/runs/missing/retry")
+        assert resp.status_code == 404
+        assert "not found" in resp.json()["detail"].lower()

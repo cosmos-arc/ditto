@@ -179,7 +179,7 @@ class TestComparisonMetrics:
 
     def test_construction(self) -> None:
         """基本构造."""
-        from ditto_app.process.execution.comparison import ComparisonMetrics
+        from ditto_app.query.comparison import ComparisonMetrics
 
         metrics = ComparisonMetrics(
             backtest_return=10.0,
@@ -202,7 +202,7 @@ class TestComparisonMetrics:
 
     def test_frozen(self) -> None:
         """frozen dataclass 不可变."""
-        from ditto_app.process.execution.comparison import ComparisonMetrics
+        from ditto_app.query.comparison import ComparisonMetrics
 
         metrics = ComparisonMetrics(
             backtest_return=10.0,

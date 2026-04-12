@@ -10,7 +10,6 @@ from ditto_interfaces.models.backtest import (
     TradeResponse,
     to_audit_record_response,
     to_run_response,
-    to_trade_response,
 )
 from ditto_interfaces.models.capital import (
     Margin,
@@ -89,11 +88,6 @@ from ditto_interfaces.models.trade import (
     RecordFillRequest,
     TradeIntentResponse,
     UpdateIntentStatusRequest,
-    to_comparison_response,
-    to_fill_response,
-    to_intent_response,
-    to_pnl_response,
-    to_position_response,
 )
 
 __all__ = [
@@ -144,12 +138,10 @@ __all__ = [
     "to_bar_list",
     "to_commodity_bar",
     "to_commodity_bar_list",
-    "to_comparison_response",
     "to_corporate_action",
     "to_corporate_action_list",
     "to_dividend",
     "to_dividend_list",
-    "to_fill_response",
     "to_financial",
     "to_financial_list",
     "to_fx_bar",
@@ -158,14 +150,10 @@ __all__ = [
     "to_indicator_list",
     "to_instrument",
     "to_instrument_list",
-    "to_intent_response",
     "to_margin",
     "to_margin_list",
-    "to_pnl_response",
-    "to_position_response",
     "to_run_response",
     "to_strategy_response",
-    "to_trade_response",
     "to_valuation",
     "to_valuation_list",
 ]

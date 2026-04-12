@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from ditto_engine.backtest.replay import pearson_correlation
+from ditto_kernel.math import pearson_correlation
 
 from ditto_app.query.backtest import BacktestQueryFacade
 from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade

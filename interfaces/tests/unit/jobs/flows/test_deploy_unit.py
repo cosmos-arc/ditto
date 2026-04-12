@@ -38,7 +38,7 @@ class TestGetFlowConfigs:
         """测试返回配置列表。"""
         configs = _get_flow_configs()
         assert isinstance(configs, list)
-        assert len(configs) == 5
+        assert len(configs) == 6
 
     def test_get_flow_configs_contains_all_flows(self):
         """测试包含所有 flow 配置。"""
@@ -50,6 +50,7 @@ class TestGetFlowConfigs:
             "retry-failed-prod",
             "backfill-prod",
             "repair-holes-prod",
+            "backtest-prod",
         ]
         assert deployment_names == expected
 
@@ -106,6 +107,7 @@ class TestScheduleAssignment:
         assert config_map["retry-failed-prod"].schedule is None
         assert config_map["backfill-prod"].schedule is None
         assert config_map["repair-holes-prod"].schedule is None
+        assert config_map["backtest-prod"].schedule is None
 
 
 @pytest.mark.unit

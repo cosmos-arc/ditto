@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Protocol, runtime_checkable
 
+from ditto_data.models.strategy_run import StrategyRunRecord
+
 __all__ = [
     "BacktestTrigger",
     "RunLifecycleService",
@@ -50,6 +52,14 @@ class RunLifecycleService(Protocol):
 
     def mark_failed(self, run_id: str, error_message: str = "") -> bool:
         """标记运行为 failed。"""
+        ...
+
+    def mark_cancelled(self, run_id: str) -> bool:
+        """标记运行为 cancelled。"""
+        ...
+
+    def get_run(self, run_id: str) -> StrategyRunRecord | None:
+        """获取运行记录。"""
         ...
 
 

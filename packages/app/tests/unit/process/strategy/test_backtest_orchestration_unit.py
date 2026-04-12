@@ -102,6 +102,7 @@ class TestBacktestRunWithLifecycle:
         mock_loop.run.return_value.run_id = "run-001"
 
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None
         service = _make_service(run_service=mock_run_service)
         service.run()
 
@@ -129,6 +130,7 @@ class TestBacktestRunWithLifecycle:
         MockEngineLoop.return_value.run.return_value.run_id = "run-001"
 
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None
         service = _make_service(
             config=_make_service_config(strategy_version="2026.03"),
             run_service=mock_run_service,
@@ -157,6 +159,7 @@ class TestBacktestRunWithLifecycle:
         MockEngineLoop.return_value.run.return_value.run_id = "run-001"
 
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None
         service = _make_service(run_service=mock_run_service)
 
         with pytest.raises(RuntimeError, match="engine crash"):
@@ -183,6 +186,7 @@ class TestBacktestRunWithLifecycle:
         mock_loop.run.return_value.run_id = "generated-run"
 
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None
         service = _make_service(
             config=_make_service_config(run_id=""),
             run_service=mock_run_service,
@@ -210,6 +214,7 @@ class TestBacktestRunWithLifecycle:
         MockEngineLoop.return_value.run.return_value.run_id = "generated-run"
 
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None
         service = _make_service(
             config=_make_service_config(run_id=""),
             run_service=mock_run_service,

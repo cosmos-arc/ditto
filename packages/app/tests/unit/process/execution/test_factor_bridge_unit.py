@@ -90,6 +90,29 @@ class TestCompileAndValidate:
         assert result.expressions[1].derived_id == "signal_1"
         assert result.expressions[0].version == 1
 
+    def test_compiled_expressions_expr_is_polars_expr(self) -> None:
+        """编译结果的 expr 字段是可执行的 pl.Expr，且 analysis 已填充."""
+        bridge = FactorBridge()
+        result = bridge.compile_and_validate(
+            expressions=("close",),
+            weights=(1.0,),
+        )
+
+        compiled_expr = result.expressions[0]
+        # expr 必须是 pl.Expr 实例，且可以在 DataFrame 上执行
+        assert isinstance(compiled_expr.expr, pl.Expr)
+
+        # 验证 expr 可以在真实 DataFrame 上求值
+        df = pl.DataFrame({"close": [1.0, 2.0, 3.0]})
+        computed = df.select(compiled_expr.expr.alias("result"))
+        assert "result" in computed.columns
+        assert computed.height == 3
+
+        # analysis 字段已填充
+        assert compiled_expr.analysis is not None
+        assert isinstance(compiled_expr.analysis.dependencies, tuple)
+        assert "close" in compiled_expr.analysis.dependencies
+
     def test_syntax_error_raises_value_error(self) -> None:
         """语法错误的表达式抛出 ValueError."""
         bridge = FactorBridge()
@@ -302,6 +325,25 @@ class TestComputeSignals:
 
         assert result.height == 5
         assert "signal_value" in result.columns
+
+    def test_all_weights_zero_returns_zero_signals(
+        self,
+        sample_df: pl.DataFrame,
+    ) -> None:
+        """所有权重为零时，signal_value 全部为零."""
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("close", "volume"),
+            weights=(0.0, 0.0),
+        )
+
+        result = bridge.compute_signals(sample_df, compiled)
+
+        assert result.height == 5
+        assert "instrument_id" in result.columns
+        assert "signal_value" in result.columns
+        signal_values = result["signal_value"].to_list()
+        assert all(v == 0.0 for v in signal_values)
 
     def test_result_preserves_instrument_ids(self, sample_df: pl.DataFrame) -> None:
         """结果保留所有 instrument_id."""

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Annotated
 
 from dishka import FromComponent
@@ -13,10 +14,11 @@ from ditto_app.command.trade import (
     UpdateIntentStatusCommand,
     UpdateIntentStatusHandler,
 )
-from ditto_app.query.comparison import ComparisonQueryFacade
-from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
+from ditto_app.query.comparison import ComparisonMetrics, ComparisonQueryFacade
+from ditto_app.query.portfolio_actual import PnlSummary, PortfolioActualQueryFacade
 from ditto_app.query.signal import SignalQueryFacade  # noqa: RUF100
 from ditto_app.query.trade import TradeQueryFacade
+from ditto_app.types import ActualPositionSnapshot, ManualExecutionFill, TradeIntent
 from fastapi import APIRouter, HTTPException, Query
 
 from ditto_interfaces.models.common import APIResponse
@@ -28,14 +30,105 @@ from ditto_interfaces.models.trade import (
     RecordFillRequest,
     TradeIntentResponse,
     UpdateIntentStatusRequest,
-    to_comparison_response,
-    to_fill_response,
-    to_intent_response,
-    to_pnl_response,
-    to_position_response,
 )
 
 router = APIRouter(prefix="/trade", tags=["trade"])
+
+_logger = logging.getLogger(__name__)
+
+
+def _map_trade_error(exc: ValueError) -> int:
+    """将 Trade 业务 ValueError 映射为 HTTP 状态码."""
+    msg = str(exc).lower()
+    if "not found" in msg:
+        return 404
+    if "transition" in msg:
+        return 409
+    return 400
+
+
+# ---------------------------------------------------------------------------
+# Response Mappers (DTO → API Response)
+# ---------------------------------------------------------------------------
+
+
+def to_intent_response(dto: TradeIntent) -> TradeIntentResponse:
+    """将 TradeIntent DTO 转为 API 响应."""
+    return TradeIntentResponse(
+        intent_id=dto.intent_id,
+        strategy_id=dto.strategy_id,
+        signal_date=dto.signal_date,
+        instrument_id=dto.instrument_id,
+        direction=dto.direction,
+        target_weight=dto.target_weight,
+        current_weight=dto.current_weight,
+        delta_weight=dto.delta_weight,
+        quantity=dto.quantity,
+        status=dto.status,
+    )
+
+
+def to_fill_response(dto: ManualExecutionFill) -> FillResponse:
+    """将 ManualExecutionFill DTO 转为 API 响应."""
+    return FillResponse(
+        fill_id=dto.fill_id,
+        intent_id=dto.intent_id,
+        strategy_id=dto.strategy_id,
+        trade_date=dto.trade_date,
+        instrument_id=dto.instrument_id,
+        direction=dto.direction,
+        quantity=dto.quantity,
+        fill_price=dto.fill_price,
+        fee=dto.fee,
+        slippage=dto.slippage,
+        notes=dto.notes,
+        settlement_date=dto.settlement_date,
+    )
+
+
+def to_position_response(dto: ActualPositionSnapshot) -> PositionSnapshotResponse:
+    """将 ActualPositionSnapshot DTO 转为 API 响应."""
+    return PositionSnapshotResponse(
+        snapshot_id=dto.snapshot_id,
+        strategy_id=dto.strategy_id,
+        snapshot_date=dto.snapshot_date,
+        instrument_id=dto.instrument_id,
+        quantity=dto.quantity,
+        available_quantity=dto.available_quantity,
+        average_cost=dto.average_cost,
+        market_value=dto.market_value,
+        unrealized_pnl=dto.unrealized_pnl,
+        realized_pnl=dto.realized_pnl,
+        total_fees=dto.total_fees,
+    )
+
+
+def to_pnl_response(summary: PnlSummary) -> PnlSummaryResponse:
+    """将 PnlSummary 转为 API 响应."""
+    return PnlSummaryResponse(
+        total_realized_pnl=summary.total_realized_pnl,
+        total_unrealized_pnl=summary.total_unrealized_pnl,
+        total_fees=summary.total_fees,
+        net_pnl=summary.net_pnl,
+    )
+
+
+def to_comparison_response(metrics: ComparisonMetrics) -> ComparisonMetricsResponse:
+    """将 ComparisonMetrics 转为 API 响应."""
+    return ComparisonMetricsResponse(
+        backtest_return=metrics.backtest_return,
+        actual_return=metrics.actual_return,
+        return_diff=metrics.return_diff,
+        return_diff_bps=metrics.return_diff_bps,
+        backtest_sharpe=metrics.backtest_sharpe,
+        actual_sharpe=metrics.actual_sharpe,
+        backtest_total_cost=metrics.backtest_total_cost,
+        actual_total_cost=metrics.actual_total_cost,
+        cost_drag_bps=metrics.cost_drag_bps,
+        nav_correlation=metrics.nav_correlation,
+        max_nav_diff_bps=metrics.max_nav_diff_bps,
+        avg_daily_tracking_error_bps=metrics.avg_daily_tracking_error_bps,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -73,7 +166,10 @@ async def update_intent_status(
         intent_id=intent_id,
         status=request.status,
     )
-    result = await asyncio.to_thread(handler.handle, cmd)
+    try:
+        result = await asyncio.to_thread(handler.handle, cmd)
+    except ValueError as exc:
+        raise HTTPException(status_code=_map_trade_error(exc), detail=str(exc)) from exc
     return APIResponse(data=result)
 
 
@@ -82,12 +178,12 @@ async def update_intent_status(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/fills", response_model=FillResponse)
+@router.post("/fills", response_model=APIResponse[FillResponse])
 @inject
 async def record_fill(
     request: RecordFillRequest,
     handler: Annotated[RecordFillHandler, FromComponent()],
-) -> FillResponse:
+) -> APIResponse[FillResponse]:
     """录入人工成交."""
     cmd = RecordFillCommand(
         fill_id=request.fill_id,
@@ -102,8 +198,11 @@ async def record_fill(
         slippage=request.slippage,
         notes=request.notes,
     )
-    fill = await asyncio.to_thread(handler.handle, cmd)
-    return to_fill_response(fill)
+    try:
+        fill = await asyncio.to_thread(handler.handle, cmd)
+    except ValueError as exc:
+        raise HTTPException(status_code=_map_trade_error(exc), detail=str(exc)) from exc
+    return APIResponse(data=to_fill_response(fill))
 
 
 @router.get("/fills", response_model=APIResponse[list[FillResponse]])
@@ -150,20 +249,20 @@ async def list_positions(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/pnl", response_model=PnlSummaryResponse)
+@router.get("/pnl", response_model=APIResponse[PnlSummaryResponse])
 @inject
 async def compute_pnl(
     facade: Annotated[PortfolioActualQueryFacade, FromComponent()],
     strategy_id: str = Query(..., description="策略 ID"),
     snapshot_date: str = Query(..., description="快照日期"),
-) -> PnlSummaryResponse:
+) -> APIResponse[PnlSummaryResponse]:
     """计算 P&L 汇总."""
     summary = await asyncio.to_thread(
         facade.compute_pnl,
         strategy_id=strategy_id,
         snapshot_date=snapshot_date,
     )
-    return to_pnl_response(summary)
+    return APIResponse(data=to_pnl_response(summary))
 
 
 # ---------------------------------------------------------------------------

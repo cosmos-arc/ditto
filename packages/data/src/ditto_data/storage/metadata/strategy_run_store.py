@@ -111,13 +111,19 @@ ORDER BY started_at DESC, run_id DESC
 _UPDATE_RUNNING_SQL = """
 UPDATE strategy_run
 SET status = ?
-WHERE run_id = ?
+WHERE run_id = ? AND status NOT IN ('cancelled', 'completed', 'failed')
 """
 
 _UPDATE_TERMINAL_SQL = """
 UPDATE strategy_run
 SET status = ?, completed_at = ?, error_message = ?
-WHERE run_id = ?
+WHERE run_id = ? AND status NOT IN ('cancelled', 'completed', 'failed')
+"""
+
+_UPDATE_CANCELLED_SQL = """
+UPDATE strategy_run
+SET status = 'cancelled', completed_at = ?
+WHERE run_id = ? AND status IN ('pending', 'running')
 """
 
 _LIST_RUNS_BASE_SQL = """
@@ -247,7 +253,12 @@ class SQLiteStrategyRunWriter:
     ) -> bool:
         """Update run status and terminal metadata. Returns True if found."""
         conn = self._pool.get_connection()
-        if status in ("completed", "failed"):
+        if status == "cancelled":
+            cursor = conn.execute(
+                _UPDATE_CANCELLED_SQL,
+                (_utc_now(), run_id),
+            )
+        elif status in ("completed", "failed"):
             cursor = conn.execute(
                 _UPDATE_TERMINAL_SQL,
                 (status, _utc_now(), error_message, run_id),

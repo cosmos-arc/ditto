@@ -11,9 +11,10 @@ Phase 3.1 — Run Lineage / Replayability.
 
 from __future__ import annotations
 
-import math
 from collections.abc import Sequence
 from dataclasses import dataclass
+
+from ditto_kernel.math import pearson_correlation
 
 from ditto_engine.backtest.manifest import (
     InputRef,
@@ -317,29 +318,3 @@ def _compare_input_ref_details(
         diffs.append("input_ref_details: count mismatch")
 
     return diffs
-
-
-def pearson_correlation(x: list[float], y: list[float]) -> float:
-    """计算 Pearson 相关系数。"""
-    n = len(x)
-    if n <= 1:
-        return 1.0
-
-    mean_x = sum(x) / n
-    mean_y = sum(y) / n
-
-    cov = 0.0
-    var_x = 0.0
-    var_y = 0.0
-    for xi, yi in zip(x, y, strict=False):
-        dx = xi - mean_x
-        dy = yi - mean_y
-        cov += dx * dy
-        var_x += dx * dx
-        var_y += dy * dy
-
-    # 零方差（常量序列）→ 完全相关
-    if var_x == 0.0 or var_y == 0.0:
-        return 1.0 if math.isclose(var_x, var_y, abs_tol=1e-12) else 0.0
-
-    return cov / math.sqrt(var_x * var_y)
