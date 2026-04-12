@@ -22,15 +22,17 @@ function isDomainActive(domainId: DomainId, pathname: string): boolean {
  */
 function SettingsIcon() {
 	return (
-		<svg width={18} height={18} viewBox="0 0 18 18" fill="none" aria-hidden="true">
-			<path
-				d="M7.5 2.25h3l.375 1.5a5.625 5.625 0 0 1 1.5.875L14.25 4.5l1.5 2.625-1.125 1.125a5.625 5.625 0 0 1 0 1.75L15.75 11.125l-1.5 2.625-1.875-.625a5.625 5.625 0 0 1-1.5.875L10.5 15.75h-3l-.375-1.5a5.625 5.625 0 0 1-1.5-.875L3.75 13.875l-1.5-2.625L3.375 10.125a5.625 5.625 0 0 1 0-1.75L2.25 7.125l1.5-2.625 1.875.625a5.625 5.625 0 0 1 1.5-.875L7.5 2.25Z"
-				stroke="currentColor"
-				strokeWidth={1.2}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			<circle cx="9" cy="9" r="2.25" stroke="currentColor" strokeWidth={1.2} />
+		<svg
+			width={18}
+			height={18}
+			viewBox="0 0 20 20"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth={1.5}
+			aria-hidden="true"
+		>
+			<circle cx="10" cy="10" r="2.5" />
+			<path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5" />
 		</svg>
 	);
 }
