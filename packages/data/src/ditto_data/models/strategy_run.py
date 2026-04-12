@@ -42,6 +42,7 @@ class StrategyRunRecord:
     current_step: str = ""
     completed_days: int = 0
     total_days: int = 0
+    config_json: str = ""
 
 
 __all__ = ["StrategyRunRecord"]

@@ -40,7 +40,7 @@ V1 Sprint Phase 0-3 已全部完成：
 | R1 | Regime 未集成到策略模板 | RegimeStage 存在但无实际仓位调节 |
 | R2 | 因子表达式未桥接到策略 | 回测无法使用因子引擎 |
 | R3 | 无 API 回测触发器 | 策略→回测链路断裂 |
-| R4 | 信号推送未实现 | 人工执行缺少通知环节 |
+| R4 | 信号推送未实现 | 人工执行缺少通知环节 <!-- V1-Status: 设计完成，实现推迟至 V1.1。V1 Sprint 清理了 `ditto_interfaces/services/telegram_signal.py`（过早实现，缺少 DeliveryRouter 抽象） --> |
 | R5 | Universe 管理 API 缺失 | 策略无法指定股票池 |
 | R6 | 成本模型不可配置 | 回测成本参数硬编码 |
 | R7 | 数据链路未验证 | 端到端流程可能因数据缺口中断 |
@@ -504,6 +504,11 @@ class ProgressCallback(Protocol):
 ---
 
 ## 6. R4: 全渠道信号推送
+
+> **V1 实施状态（2026-04-12）**: 设计保留，**实现推迟至 V1.1**。
+> V1 Sprint 清理了 `ditto_interfaces/services/telegram_signal.py`（过早的单一通道实现，
+> 缺少 DeliveryRouter 抽象层）。当前 V1 仅保留 API-only 模式（信号存 DB，
+> 用户通过 API 查询）。DeliveryRouter + Telegram/Email/Webhook 通道待 V1.1 实现。
 
 ### 6.1 架构
 

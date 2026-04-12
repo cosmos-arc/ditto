@@ -37,7 +37,7 @@ class UpdateStrategyCommand:
     strategy_id: str
     name: str
     spec_json: dict[str, object]
-    version: int = 1
+    version: int | None = None
     tags: tuple[str, ...] = ()
 
 
@@ -84,10 +84,15 @@ class UpdateStrategyHandler:
             msg = f"Strategy not found: {command.strategy_id}"
             raise ValueError(msg)
 
-        if existing.version != command.version:
+        # version=None 时自动使用当前版本（跳过乐观锁）
+        effective_version = (
+            command.version if command.version is not None else existing.version
+        )
+
+        if existing.version != effective_version:
             msg = (
                 f"Version conflict for strategy {command.strategy_id}: "
-                f"expected {existing.version}, got {command.version}"
+                f"expected {existing.version}, got {effective_version}"
             )
             raise ValueError(msg)
 

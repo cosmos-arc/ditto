@@ -19,7 +19,7 @@ import uuid
 from ditto_engine.execution.targets import TargetPortfolioLike
 
 from ditto_app.process.execution.ports import PositionReader, SignalDeliveryProtocol
-from ditto_app.process.execution.types import TradeIntent
+from ditto_app.types import TradeIntent
 
 __all__ = ["SignalSnapshotProcess"]
 

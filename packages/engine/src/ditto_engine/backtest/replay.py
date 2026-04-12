@@ -25,6 +25,7 @@ __all__ = [
     "NavComparison",
     "ReplayValidationResult",
     "ReplayValidator",
+    "pearson_correlation",
 ]
 
 
@@ -236,7 +237,7 @@ class ReplayValidator:
         mean_diff_bps = sum(bps_values) / n
 
         # Pearson 相关系数
-        correlation = _pearson_correlation(list(original), list(replay))
+        correlation = pearson_correlation(list(original), list(replay))
 
         return NavComparison(
             correlation=correlation,
@@ -318,7 +319,7 @@ def _compare_input_ref_details(
     return diffs
 
 
-def _pearson_correlation(x: list[float], y: list[float]) -> float:
+def pearson_correlation(x: list[float], y: list[float]) -> float:
     """计算 Pearson 相关系数。"""
     n = len(x)
     if n <= 1:

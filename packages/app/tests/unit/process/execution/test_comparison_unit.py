@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_app.process.execution.types import (
+from ditto_app.types import (
     ActualPositionSnapshot,
     ManualExecutionFill,
 )

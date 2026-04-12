@@ -14,6 +14,10 @@ from ditto_app.process.execution.backtest_process import (
 )
 from ditto_app.process.execution.fee_override import build_fee_model
 from ditto_engine.backtest.statistics import BacktestReport
+from ditto_engine.execution.reality.constants import (
+    DEFAULT_COMMISSION_RATE,
+    DEFAULT_MIN_COMMISSION,
+)
 from prefect import flow
 
 from ditto_interfaces.registry.contexts.strategy import create_strategy_bundle
@@ -105,8 +109,8 @@ def _deserialize_cost_config(
     if raw is None:
         return None
     return CostConfig(
-        commission_rate=_get_float(raw, "commission_rate", 0.0003),
-        commission_min=_get_float(raw, "commission_min", 5.0),
+        commission_rate=_get_float(raw, "commission_rate", DEFAULT_COMMISSION_RATE),
+        commission_min=_get_float(raw, "commission_min", DEFAULT_MIN_COMMISSION),
         stamp_duty_rate=_get_float(raw, "stamp_duty_rate", 0.001),
         slippage_bps=_get_float(raw, "slippage_bps", 1.0),
         impact_model=_get_str(raw, "impact_model", "none"),

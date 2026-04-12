@@ -85,6 +85,7 @@ async def update_strategy(
         strategy_id=strategy_id,
         name=request.name,
         spec_json=request.spec_json,
+        version=request.version,
         tags=tuple(request.tags),
     )
     record = await asyncio.to_thread(handler.handle, cmd)

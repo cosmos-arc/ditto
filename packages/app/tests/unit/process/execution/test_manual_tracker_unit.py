@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from ditto_app.process.execution.types import ManualExecutionFill
+from ditto_app.types import ManualExecutionFill
 
 # ---------------------------------------------------------------------------
 # 辅助函数
@@ -910,3 +910,303 @@ class TestComputePositionsComplexScenario:
         )
 
         assert result1[0].snapshot_id == result2[0].snapshot_id
+
+
+class TestComputePositionsPITCutoff:
+    """ManualTracker.compute_positions — PIT 截断 (未来 fills 不计入)."""
+
+    def test_future_fills_excluded_from_snapshot(self) -> None:
+        """snapshot_date 之后的 fills 被截断, 不影响历史快照."""
+        from ditto_app.process.execution.manual_tracker import ManualTracker
+
+        tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
+        fills = [
+            # 4/8 买入 1000
+            _make_fill(
+                fill_id="fill-1",
+                trade_date="2026-04-08",
+                instrument_id=1,
+                direction="buy",
+                quantity=1000,
+                fill_price=1.5,
+                fee=5.0,
+            ),
+            # 4/10 卖出 500 (未来成交)
+            _make_fill(
+                fill_id="fill-2",
+                trade_date="2026-04-10",
+                instrument_id=1,
+                direction="sell",
+                quantity=500,
+                fill_price=2.0,
+                fee=3.0,
+            ),
+        ]
+        # 以 4/8 为快照日期 → 只有 fill-1 计入
+        result = tracker.compute_positions(
+            fills=fills,
+            strategy_id="strat-1",
+            snapshot_date="2026-04-08",
+        )
+
+        assert len(result) == 1
+        pos = result[0]
+        assert pos.quantity == 1000
+        assert pos.realized_pnl == pytest.approx(0.0)
+        assert pos.total_fees == pytest.approx(5.0)
+
+    def test_future_fills_excluded_same_instrument_multiple_days(self) -> None:
+        """多日 fills 场景: snapshot_date 正好截断中间某日."""
+        from ditto_app.process.execution.manual_tracker import ManualTracker
+
+        tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
+        fills = [
+            _make_fill(
+                fill_id="fill-1",
+                trade_date="2026-04-08",
+                instrument_id=1,
+                direction="buy",
+                quantity=1000,
+                fill_price=1.5,
+                fee=5.0,
+            ),
+            _make_fill(
+                fill_id="fill-2",
+                trade_date="2026-04-09",
+                instrument_id=1,
+                direction="buy",
+                quantity=500,
+                fill_price=2.0,
+                fee=3.0,
+            ),
+            _make_fill(
+                fill_id="fill-3",
+                trade_date="2026-04-10",
+                instrument_id=1,
+                direction="sell",
+                quantity=200,
+                fill_price=2.5,
+                fee=2.0,
+            ),
+        ]
+        # 以 4/9 为快照日期 → fill-1 + fill-2 计入, fill-3 被截断
+        result = tracker.compute_positions(
+            fills=fills,
+            strategy_id="strat-1",
+            snapshot_date="2026-04-09",
+        )
+
+        assert len(result) == 1
+        pos = result[0]
+        assert pos.quantity == 1500
+        assert pos.realized_pnl == pytest.approx(0.0)
+        assert pos.total_fees == pytest.approx(8.0)
+
+    def test_all_fills_future_returns_empty(self) -> None:
+        """所有 fills 都在 snapshot_date 之后 → 返回空列表."""
+        from ditto_app.process.execution.manual_tracker import ManualTracker
+
+        tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
+        fills = [
+            _make_fill(
+                fill_id="fill-1",
+                trade_date="2026-04-10",
+                instrument_id=1,
+                direction="buy",
+                quantity=1000,
+                fill_price=1.5,
+                fee=5.0,
+            ),
+        ]
+        result = tracker.compute_positions(
+            fills=fills,
+            strategy_id="strat-1",
+            snapshot_date="2026-04-08",
+        )
+
+        assert result == []
+
+
+class TestComputePositionsPITEdgeCases:
+    """ManualTracker.compute_positions — PIT 截断边界场景."""
+
+    def test_snapshot_date_equals_trade_date_included(self) -> None:
+        """snapshot_date == trade_date 的 fill 被计入（<= 截断）."""
+        from ditto_app.process.execution.manual_tracker import ManualTracker
+
+        tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
+        fills = [
+            _make_fill(
+                fill_id="fill-1",
+                trade_date="2026-04-10",
+                instrument_id=1,
+                direction="buy",
+                quantity=1000,
+                fill_price=1.5,
+                fee=5.0,
+            ),
+            _make_fill(
+                fill_id="fill-2",
+                trade_date="2026-04-11",
+                instrument_id=1,
+                direction="buy",
+                quantity=500,
+                fill_price=1.6,
+                fee=3.0,
+            ),
+        ]
+        # snapshot_date = fill-1 的日期 → fill-1 计入, fill-2 被截断
+        result = tracker.compute_positions(
+            fills=fills,
+            strategy_id="strat-1",
+            snapshot_date="2026-04-10",
+        )
+
+        assert len(result) == 1
+        pos = result[0]
+        assert pos.quantity == 1000
+        assert pos.total_fees == pytest.approx(5.0)
+
+    def test_future_sell_not_reflected_in_earlier_snapshot(self) -> None:
+        """未来卖出不影响更早快照的持仓量和已实现盈亏."""
+        from ditto_app.process.execution.manual_tracker import ManualTracker
+
+        tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
+        fills = [
+            # 买入 1000 @ 1.5
+            _make_fill(
+                fill_id="fill-1",
+                trade_date="2026-04-08",
+                instrument_id=1,
+                direction="buy",
+                quantity=1000,
+                fill_price=1.5,
+                fee=5.0,
+            ),
+            # 4/10 卖出 500 @ 2.0 (未来)
+            _make_fill(
+                fill_id="fill-2",
+                trade_date="2026-04-10",
+                instrument_id=1,
+                direction="sell",
+                quantity=500,
+                fill_price=2.0,
+                fee=3.0,
+            ),
+        ]
+        # 以 4/9 快照 → 卖出被截断, 持仓=1000, 已实现盈亏=0
+        result = tracker.compute_positions(
+            fills=fills,
+            strategy_id="strat-1",
+            snapshot_date="2026-04-09",
+        )
+
+        assert len(result) == 1
+        pos = result[0]
+        assert pos.quantity == 1000
+        assert pos.realized_pnl == pytest.approx(0.0)
+
+    def test_future_buy_not_reflected_in_earlier_snapshot(self) -> None:
+        """未来买入不影响更早快照的持仓量."""
+        from ditto_app.process.execution.manual_tracker import ManualTracker
+
+        tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
+        fills = [
+            # 买入 500 @ 1.5
+            _make_fill(
+                fill_id="fill-1",
+                trade_date="2026-04-08",
+                instrument_id=1,
+                direction="buy",
+                quantity=500,
+                fill_price=1.5,
+                fee=5.0,
+            ),
+            # 4/10 买入 500 @ 2.0 (未来)
+            _make_fill(
+                fill_id="fill-2",
+                trade_date="2026-04-10",
+                instrument_id=1,
+                direction="buy",
+                quantity=500,
+                fill_price=2.0,
+                fee=3.0,
+            ),
+        ]
+        # 以 4/9 快照 → 第二笔买入被截断, 持仓=500
+        result = tracker.compute_positions(
+            fills=fills,
+            strategy_id="strat-1",
+            snapshot_date="2026-04-09",
+        )
+
+        assert len(result) == 1
+        pos = result[0]
+        assert pos.quantity == 500
+        assert pos.average_cost == pytest.approx(1.5)
+        assert pos.total_fees == pytest.approx(5.0)
+
+    def test_pit_truncation_across_strategies(self) -> None:
+        """PIT 截断不受其他策略影响：不同策略的未来 fills 不参与."""
+        from ditto_app.process.execution.manual_tracker import ManualTracker
+
+        tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
+        fills = [
+            _make_fill(
+                fill_id="fill-1",
+                strategy_id="strat-1",
+                trade_date="2026-04-08",
+                instrument_id=1,
+                direction="buy",
+                quantity=1000,
+                fill_price=1.5,
+                fee=5.0,
+            ),
+            # 同策略未来 fill
+            _make_fill(
+                fill_id="fill-2",
+                strategy_id="strat-1",
+                trade_date="2026-04-10",
+                instrument_id=1,
+                direction="sell",
+                quantity=500,
+                fill_price=2.0,
+                fee=3.0,
+            ),
+            # 不同策略的同期 fill (不影响 strat-1)
+            _make_fill(
+                fill_id="fill-3",
+                strategy_id="strat-2",
+                trade_date="2026-04-09",
+                instrument_id=1,
+                direction="buy",
+                quantity=300,
+                fill_price=1.8,
+                fee=2.0,
+            ),
+        ]
+        # strat-1 以 4/9 快照
+        result = tracker.compute_positions(
+            fills=fills,
+            strategy_id="strat-1",
+            snapshot_date="2026-04-09",
+        )
+
+        assert len(result) == 1
+        pos = result[0]
+        assert pos.quantity == 1000
+        assert pos.strategy_id == "strat-1"
+        assert pos.realized_pnl == pytest.approx(0.0)
+
+    def test_pit_with_empty_fills_returns_empty(self) -> None:
+        """空 fills 列表在任何 snapshot_date 都返回空."""
+        from ditto_app.process.execution.manual_tracker import ManualTracker
+
+        tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
+        result = tracker.compute_positions(
+            fills=[],
+            strategy_id="strat-1",
+            snapshot_date="2026-04-10",
+        )
+
+        assert result == []

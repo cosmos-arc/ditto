@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Literal
 
+from ditto_app.query.comparison import ComparisonMetrics
+from ditto_app.query.portfolio_actual import PnlSummary
+from ditto_app.types import ActualPositionSnapshot, ManualExecutionFill, TradeIntent
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -15,7 +18,7 @@ class RecordFillRequest(BaseModel):
     strategy_id: str = Field(description="策略 ID")
     trade_date: str = Field(description="成交日期 (YYYY-MM-DD)")
     instrument_id: int = Field(description="标的 ID")
-    direction: str = Field(description="方向 (buy/sell)")
+    direction: Literal["buy", "sell"] = Field(description="方向 (buy/sell)")
     quantity: int = Field(description="成交数量")
     fill_price: float = Field(description="成交价格")
     fee: float = Field(default=0.0, description="手续费")
@@ -28,7 +31,9 @@ class RecordFillRequest(BaseModel):
 class UpdateIntentStatusRequest(BaseModel):
     """更新意图状态请求."""
 
-    status: str = Field(description="新状态")
+    status: Literal["pending", "filled", "partially_filled", "cancelled", "expired"] = (
+        Field(description="新状态")
+    )
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -98,7 +103,7 @@ class PnlSummaryResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
-def to_intent_response(dto: Any) -> TradeIntentResponse:  # noqa: ANN401
+def to_intent_response(dto: TradeIntent) -> TradeIntentResponse:
     """将 TradeIntent DTO 转为 API 响应."""
     return TradeIntentResponse(
         intent_id=dto.intent_id,
@@ -114,7 +119,7 @@ def to_intent_response(dto: Any) -> TradeIntentResponse:  # noqa: ANN401
     )
 
 
-def to_fill_response(dto: Any) -> FillResponse:  # noqa: ANN401
+def to_fill_response(dto: ManualExecutionFill) -> FillResponse:
     """将 ManualExecutionFill DTO 转为 API 响应."""
     return FillResponse(
         fill_id=dto.fill_id,
@@ -132,7 +137,7 @@ def to_fill_response(dto: Any) -> FillResponse:  # noqa: ANN401
     )
 
 
-def to_position_response(dto: Any) -> PositionSnapshotResponse:  # noqa: ANN401
+def to_position_response(dto: ActualPositionSnapshot) -> PositionSnapshotResponse:
     """将 ActualPositionSnapshot DTO 转为 API 响应."""
     return PositionSnapshotResponse(
         snapshot_id=dto.snapshot_id,
@@ -168,7 +173,7 @@ class ComparisonMetricsResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
-def to_pnl_response(summary: Any) -> PnlSummaryResponse:  # noqa: ANN401
+def to_pnl_response(summary: PnlSummary) -> PnlSummaryResponse:
     """将 PnlSummary 转为 API 响应."""
     return PnlSummaryResponse(
         total_realized_pnl=summary.total_realized_pnl,
@@ -178,9 +183,7 @@ def to_pnl_response(summary: Any) -> PnlSummaryResponse:  # noqa: ANN401
     )
 
 
-def to_comparison_response(
-    metrics: Any,  # noqa: ANN401
-) -> ComparisonMetricsResponse:
+def to_comparison_response(metrics: ComparisonMetrics) -> ComparisonMetricsResponse:
     """将 ComparisonMetrics 转为 API 响应."""
     return ComparisonMetricsResponse(
         backtest_return=metrics.backtest_return,

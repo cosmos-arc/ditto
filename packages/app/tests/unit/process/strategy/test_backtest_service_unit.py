@@ -705,3 +705,369 @@ class TestWithoutPersistence:
         assert result is fake_report
         mock_engine_run.assert_called_once()
         mock_build_report.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Tests: _build_factor_aware_bundle_builder (T27)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildFactorAwareBundleBuilder:
+    """测试 _build_factor_aware_bundle_builder — 因子信号注入构建器."""
+
+    def _make_compiled_expressions(
+        self,
+        expressions: list[object] | None = None,
+        weights: tuple[float, ...] = (1.0,),
+    ) -> MagicMock:
+        """构建 CompiledExpressions mock (含 expressions 列表或空)."""
+        compiled = MagicMock()
+        compiled.expressions = expressions or []
+        compiled.weights = weights
+        return compiled
+
+    def _make_step_context(
+        self,
+        date: str = "2026-04-10",
+    ) -> MagicMock:
+        """构建 StepContext mock (含 bars slice)."""
+        from ditto_engine.backtest.data_feed import Slice
+
+        iid1 = InstrumentId(510050)
+        iid2 = InstrumentId(159915)
+        bar1 = MagicMock(
+            open=4.1,
+            high=4.2,
+            low=4.0,
+            close=4.15,
+            volume=1_000_000,
+        )
+        bar2 = MagicMock(
+            open=0.8,
+            high=0.85,
+            low=0.78,
+            close=0.82,
+            volume=2_000_000,
+        )
+        mock_slice = MagicMock(spec=Slice)
+        mock_slice.bars = {iid1: bar1, iid2: bar2}
+        mock_slice.benchmark_close = 3000.0
+
+        from ditto_engine.backtest.steps import StepContext
+
+        ctx = StepContext(date=date, is_rebalance_day=True)
+        ctx.slice_ = mock_slice
+        return ctx
+
+    def test_compiled_nonempty_returns_bundle_builder(self) -> None:
+        """compiled_expressions 非空 → 返回可调用的 bundle_builder."""
+        import polars as pl
+        from ditto_analytics.materialization.contracts import (
+            Analysis,
+            CompiledDerivedExpression,
+            CompileIdentity,
+        )
+        from ditto_app.process.execution.factor_bridge import CompiledExpressions
+
+        # 构建真实的 CompiledDerivedExpression（简单的 close 列）
+        compiled_expr = CompiledDerivedExpression(
+            derived_id="signal_0",
+            version=1,
+            expr=pl.col("close"),
+            analysis=Analysis(
+                dependencies=("close",),
+                operator_names=(),
+                lookback=0,
+                requires_full_day=False,
+                scope="instrument",
+            ),
+            compile_identity=CompileIdentity(
+                compile_input_hash="h1",
+                operator_fingerprint="f1",
+                compiler_fingerprint="cf1",
+                cache_key="ck1",
+                engine_codegen_version="v1",
+                analysis_version="av1",
+                polars_version="pv1",
+                expr_serialization_format="polars",
+            ),
+        )
+        compiled = CompiledExpressions(
+            expressions=(compiled_expr,),
+            weights=(1.0,),
+        )
+
+        config = _make_service_config(
+            strategy_id="factor-strat",
+            run_id="run-factor-001",
+        )
+        service = _make_minimal_service(config=config)
+        builder = service._build_factor_aware_bundle_builder(compiled)
+
+        # builder 是可调用的
+        assert callable(builder)
+
+        # 调用 builder 返回 StrategyInputBundle
+        ctx = self._make_step_context()
+        bundle = builder(ctx)
+
+        from ditto_engine.alpha.pipeline import StrategyInputBundle
+
+        assert isinstance(bundle, StrategyInputBundle)
+        assert bundle.trade_date == "2026-04-10"
+        assert bundle.strategy_id == "factor-strat"
+        assert bundle.run_id == "run-factor-001"
+        assert bundle.benchmark_close == 3000.0
+        # instruments 和 market_data 包含 2 个标的
+        assert bundle.instruments.height == 2
+        assert bundle.market_data.height == 2
+        # signal_values 包含 instrument_id + signal_value 列
+        assert "instrument_id" in bundle.signal_values.columns
+        assert "signal_value" in bundle.signal_values.columns
+        assert bundle.signal_values.height == 2
+
+    def test_compiled_empty_expressions_skips_builder(self) -> None:
+        """空 expressions 元组时 builder 可构建但信号为空."""
+        compiled = self._make_compiled_expressions(expressions=[], weights=())
+
+        config = _make_service_config(strategy_id="empty-strat", run_id="run-empty")
+        service = _make_minimal_service(config=config)
+
+        # 空 expressions 仍返回 builder（FactorBridge 处理空 DataFrame 时返回空信号）
+        builder = service._build_factor_aware_bundle_builder(compiled)
+        assert callable(builder)
+
+        # 但实际调用 FactorBridge.compute_signals 时信号为空
+        ctx = self._make_step_context()
+        bundle = builder(ctx)
+
+        from ditto_engine.alpha.pipeline import StrategyInputBundle
+
+        assert isinstance(bundle, StrategyInputBundle)
+        assert bundle.signal_values.height == 2  # FactorBridge 处理 empty exprs
+
+    def test_compilation_failure_propagates_error(self) -> None:
+        """当 FactorBridge.compute_signals 因无效表达式抛异常时，builder 传播异常."""
+        import polars as pl
+        from ditto_analytics.materialization.contracts import (
+            Analysis,
+            CompiledDerivedExpression,
+            CompileIdentity,
+        )
+        from ditto_app.process.execution.factor_bridge import CompiledExpressions
+
+        # 构建一个引用不存在列的表达式，会在 rank 阶段抛出 ColumnNotFoundError
+        compiled_expr = CompiledDerivedExpression(
+            derived_id="signal_0",
+            version=1,
+            expr=pl.col("nonexistent_column"),
+            analysis=Analysis(
+                dependencies=("nonexistent_column",),
+                operator_names=(),
+                lookback=0,
+                requires_full_day=False,
+                scope="instrument",
+            ),
+            compile_identity=CompileIdentity(
+                compile_input_hash="h1",
+                operator_fingerprint="f1",
+                compiler_fingerprint="cf1",
+                cache_key="ck1",
+                engine_codegen_version="v1",
+                analysis_version="av1",
+                polars_version="pv1",
+                expr_serialization_format="polars",
+            ),
+        )
+        compiled = CompiledExpressions(
+            expressions=(compiled_expr,),
+            weights=(1.0,),
+        )
+
+        config = _make_service_config(strategy_id="error-strat", run_id="run-error")
+        service = _make_minimal_service(config=config)
+        builder = service._build_factor_aware_bundle_builder(compiled)
+
+        ctx = self._make_step_context()
+
+        # compute_signals 内部 rank 阶段因列不存在而抛出异常
+        with pytest.raises(pl.exceptions.ColumnNotFoundError):
+            builder(ctx)
+
+    def test_builder_raises_on_missing_slice(self) -> None:
+        """StepContext.slice_ 为 None 时，builder 抛出 ValueError."""
+        from ditto_app.process.execution.factor_bridge import CompiledExpressions
+
+        compiled = self._make_compiled_expressions(
+            expressions=[],
+            weights=(),
+        )
+        compiled.__class__ = CompiledExpressions  # type: ignore[assignment]
+
+        config = _make_service_config(strategy_id="test-strat", run_id="run-test")
+        service = _make_minimal_service(config=config)
+        builder = service._build_factor_aware_bundle_builder(compiled)
+
+        # 构建 slice_ 为 None 的 StepContext
+        from ditto_engine.backtest.steps import StepContext
+
+        ctx = StepContext(date="2026-04-10", is_rebalance_day=True)
+        ctx.slice_ = None
+
+        with pytest.raises(ValueError, match="slice_ required"):
+            builder(ctx)
+
+
+# ---------------------------------------------------------------------------
+# Tests: run_service lifecycle (T31)
+# ---------------------------------------------------------------------------
+
+
+class TestRunServiceLifecycle:
+    """测试 BacktestService 与 RunLifecycleService 的交互。"""
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_app.process.execution.backtest_process.build_report")
+    def test_lifecycle_create_then_running_on_start(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """run_service 提供时，create_run 和 mark_running 在引擎运行前被调用."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_run_svc = MagicMock()
+        config = _make_service_config(run_id="lifecycle-001")
+        options = BacktestServiceOptions(run_service=mock_run_svc)
+        service = BacktestService(
+            config=config,
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=options,
+        )
+        service.run()
+
+        mock_run_svc.create_run.assert_called_once_with(
+            run_id="lifecycle-001",
+            strategy_id="momentum-etf",
+            strategy_version="",
+            mode="backtest",
+            parent_run_id="",
+        )
+        mock_run_svc.mark_running.assert_called_once_with("lifecycle-001")
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_app.process.execution.backtest_process.build_report")
+    def test_lifecycle_mark_completed_on_success(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """引擎成功完成后，mark_completed 被调用."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_run_svc = MagicMock()
+        config = _make_service_config(run_id="lifecycle-002")
+        options = BacktestServiceOptions(run_service=mock_run_svc)
+        service = BacktestService(
+            config=config,
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=options,
+        )
+        service.run()
+
+        mock_run_svc.mark_completed.assert_called_once_with("lifecycle-002")
+        mock_run_svc.mark_failed.assert_not_called()
+
+    @patch.object(EngineLoop, "run", side_effect=RuntimeError("engine crash"))
+    def test_lifecycle_mark_failed_on_engine_error(
+        self,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """引擎运行异常时，mark_failed 被调用且异常被重新抛出."""
+        mock_run_svc = MagicMock()
+        config = _make_service_config(run_id="lifecycle-003")
+        options = BacktestServiceOptions(run_service=mock_run_svc)
+        service = BacktestService(
+            config=config,
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=options,
+        )
+
+        with pytest.raises(RuntimeError, match="engine crash"):
+            service.run()
+
+        mock_run_svc.mark_failed.assert_called_once_with(
+            "lifecycle-003",
+            "engine crash",
+        )
+        mock_run_svc.mark_completed.assert_not_called()
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_app.process.execution.backtest_process.build_report")
+    def test_lifecycle_not_called_when_run_service_none(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """run_service 为 None 时，生命周期方法不被调用."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        service = _make_minimal_service()
+        # run_service defaults to None
+        result = service.run()
+
+        assert result is fake_report
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_app.process.execution.backtest_process.build_report")
+    def test_lifecycle_parent_run_id_propagated(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """parent_run_id 正确传递到 create_run."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_run_svc = MagicMock()
+        config = _make_service_config(
+            run_id="retry-002",
+            parent_run_id="original-001",  # type: ignore[arg-type]
+        )
+        options = BacktestServiceOptions(run_service=mock_run_svc)
+        service = BacktestService(
+            config=config,
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=options,
+        )
+        service.run()
+
+        call_kwargs = mock_run_svc.create_run.call_args.kwargs
+        assert call_kwargs["parent_run_id"] == "original-001"

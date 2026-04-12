@@ -35,12 +35,14 @@ from ditto_engine.alpha.templates import (
 from ditto_engine.alpha.templates import (
     validate_config as validate_stock_selection_config,
 )
+from ditto_engine.execution.reality.constants import DEFAULT_COMMISSION_RATE
 
 from ditto_app.builders._spec_deserializer import (
     as_float_tuple,
     as_object_dict,
     as_sequence,
     as_str_tuple,
+    deserialize_regime_config,
     read_bool,
     read_float,
     read_int,
@@ -61,7 +63,6 @@ __all__ = [
 ]
 
 
-_DEFAULT_COMMISSION_RATE = 0.0003
 _DEFAULT_SLIPPAGE_BPS = 5.0
 _DEFAULT_TRAILING_STOP_PCT = 0.08
 _DEFAULT_MAX_WEIGHT = 0.15
@@ -209,7 +210,7 @@ class StrategyRuntimeBuilder:
         payload = as_object_dict(raw_value, field_name="execution.cost_model")
         return CostModelSpec(
             commission_rate=read_float(
-                payload.get("commission_rate", _DEFAULT_COMMISSION_RATE),
+                payload.get("commission_rate", DEFAULT_COMMISSION_RATE),
                 field_name="execution.cost_model.commission_rate",
             ),
             slippage_bps=read_float(
@@ -355,6 +356,7 @@ class StrategyRuntimeBuilder:
                 params.get("max_positions"),
                 field_name="params.max_positions",
             ),
+            regime_config=deserialize_regime_config(params.get("regime_config")),
         )
 
     def _build_etf_trend_swing_config(
@@ -397,6 +399,7 @@ class StrategyRuntimeBuilder:
             ),
             signal_column=read_optional_str(params.get("signal_column"))
             or "signal_value",
+            regime_config=deserialize_regime_config(params.get("regime_config")),
         )
 
     def _build_stock_selection_trend_config(
@@ -435,6 +438,7 @@ class StrategyRuntimeBuilder:
             ),
             rebalance_freq=read_optional_str(params.get("rebalance_freq"))
             or self._resolve_rebalance_frequency(spec.execution.frequency),
+            regime_config=deserialize_regime_config(params.get("regime_config")),
         )
 
     def _build_stock_sector_rotation_config(
@@ -473,6 +477,7 @@ class StrategyRuntimeBuilder:
             ),
             rebalance_freq=read_optional_str(params.get("rebalance_freq"))
             or self._resolve_rebalance_frequency(spec.execution.frequency),
+            regime_config=deserialize_regime_config(params.get("regime_config")),
         )
 
     # ------------------------------------------------------------------

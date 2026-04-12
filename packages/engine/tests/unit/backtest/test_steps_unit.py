@@ -312,6 +312,7 @@ class TestDataFetchStep:
             brokerage=Mock(get_account=Mock(return_value=account_view)),
             strategy_context=StrategyContext(),
             input_instruments=set(),
+            bar_fingerprints={},
         )
 
         ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
@@ -337,6 +338,7 @@ class TestDataFetchStep:
             brokerage=Mock(get_account=Mock(return_value=_make_account_view())),
             strategy_context=StrategyContext(),
             input_instruments=set(),
+            bar_fingerprints={},
         )
 
         ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
@@ -359,6 +361,7 @@ class TestDataFetchStep:
             brokerage=Mock(get_account=Mock(return_value=_make_account_view())),
             strategy_context=StrategyContext(),
             input_instruments=input_instruments,
+            bar_fingerprints={},
         )
 
         ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
@@ -380,6 +383,7 @@ class TestDataFetchStep:
             brokerage=Mock(get_account=Mock(return_value=_make_account_view())),
             strategy_context=strategy_context,
             input_instruments=set(),
+            bar_fingerprints={},
         )
 
         # 锁在 2026-02-28 到期，2026-03-01 清除
@@ -402,6 +406,7 @@ class TestDataFetchStep:
             brokerage=Mock(get_account=Mock(return_value=_make_account_view())),
             strategy_context=strategy_context,
             input_instruments=set(),
+            bar_fingerprints={},
         )
 
         ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
@@ -418,6 +423,7 @@ class TestDataFetchStep:
             brokerage=Mock(get_account=Mock(return_value=_make_account_view())),
             strategy_context=StrategyContext(),
             input_instruments=set(),
+            bar_fingerprints={},
         )
         ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
         result = step.execute(ctx)

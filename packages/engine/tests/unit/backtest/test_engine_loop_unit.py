@@ -751,3 +751,187 @@ class TestIsRebalanceDay:
         config = replace(_make_config(), rebalance_freq="quarterly")
         loop = _make_engine_loop(config=config)
         assert loop._is_rebalance_day("2026-03-01") is True
+
+
+# ---------------------------------------------------------------------------
+# T10: StepChain 失败日志 + skipped_dates
+# ---------------------------------------------------------------------------
+
+
+class TestStepChainFailureLogging:
+    """Step 失败时记录 warning 日志 + 累积 skipped_dates."""
+
+    def test_step_failure_records_skipped_date(self) -> None:
+        """某个 Step 失败 → 该日期出现在 skipped_dates."""
+        from ditto_engine.backtest.steps import StepResult
+
+        config = _make_config()
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = [_make_slice(d) for d in DAYS]
+
+        pipeline = Mock()
+        planner = Mock()
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        fee_model = Mock()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+        )
+
+        # 让第二个 trading day 的 DataFetchStep 失败
+        call_count = 0
+
+        def _mock_execute(ctx: object) -> StepResult:
+            nonlocal call_count
+            call_count += 1
+            # 第二次调用（对应第二天）失败
+            if call_count == 2:
+                return StepResult.fail("data fetch error")
+            return StepResult.ok()
+
+        # 替换 steps 的 execute 方法
+        mock_step = Mock()
+        mock_step.execute = _mock_execute
+        loop._steps = (mock_step,)
+
+        result = loop.run()
+
+        assert result.skipped_dates == ("2026-03-02",)
+
+    def test_all_steps_succeed_no_skipped_dates(self) -> None:
+        """所有 Step 成功 → skipped_dates 为空."""
+        config = _make_config()
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = [_make_slice(d) for d in DAYS]
+
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+        planner = Mock()
+        plan = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+        planner.plan.return_value = plan
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        fee_model = Mock()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+        )
+
+        result = loop.run()
+
+        assert result.skipped_dates == ()
+
+    def test_step_failure_logs_warning(self) -> None:
+        """Step 失败时 logger.warning 被调用."""
+        from unittest.mock import patch
+
+        from ditto_engine.backtest.steps import StepResult
+
+        config = _make_config()
+        data_feed = Mock()
+        data_feed.trading_days.return_value = ["2026-03-01"]
+        data_feed.get_slice.return_value = _make_slice("2026-03-01")
+
+        pipeline = Mock()
+        planner = Mock()
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        fee_model = Mock()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+        )
+
+        # 让 step 失败
+        mock_step = Mock()
+        mock_step.execute.return_value = StepResult.fail("test error msg")
+        loop._steps = (mock_step,)
+
+        with patch("ditto_engine.backtest.engine.logger") as mock_logger:
+            result = loop.run()
+
+        assert result.skipped_dates == ("2026-03-01",)
+        # _step 中的 warning: logger.warning(
+        #   "Step {} failed on {}: {}", step_name, date, errors)
+        step_warning_call = mock_logger.warning.call_args_list[0]
+        # args: ("Step {} failed on {}: {}", step_name, date, errors)
+        assert step_warning_call[0][2] == "2026-03-01"
+        assert "test error msg" in step_warning_call[0][3]
+        # run 结尾的 skipped_dates 摘要
+        summary_call = mock_logger.warning.call_args_list[-1]
+        assert summary_call[0][0] == "StepChain skipped {} date(s): {}"
+
+    def test_multiple_failures_all_recorded(self) -> None:
+        """多个日期失败 → 全部出现在 skipped_dates."""
+        from ditto_engine.backtest.steps import StepResult
+
+        config = _make_config()
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = [_make_slice(d) for d in DAYS]
+
+        pipeline = Mock()
+        planner = Mock()
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        fee_model = Mock()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+        )
+
+        # 让所有 step 失败
+        mock_step = Mock()
+        mock_step.execute.return_value = StepResult.fail("always fail")
+        loop._steps = (mock_step,)
+
+        result = loop.run()
+
+        assert result.skipped_dates == tuple(DAYS)

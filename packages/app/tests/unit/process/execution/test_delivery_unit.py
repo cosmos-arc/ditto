@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from ditto_app.process.execution.delivery import DeliveryRouter, NotificationPort
-from ditto_app.process.execution.types import TradeIntent
+from ditto_app.types import TradeIntent
 
 
 def _make_intent(

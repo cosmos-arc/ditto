@@ -16,7 +16,7 @@ from __future__ import annotations
 import uuid
 from itertools import groupby
 
-from ditto_app.process.execution.types import (
+from ditto_app.types import (
     ActualPositionSnapshot,
     ManualExecutionFill,
 )
@@ -67,8 +67,12 @@ class ManualTracker:
           3. 仅返回 quantity != 0 的持仓
 
         """
-        # 1. 过滤策略 + 按标的分组
-        filtered = [f for f in fills if f.strategy_id == strategy_id]
+        # 1. PIT 截断: 仅保留 snapshot_date 及之前的成交 + 过滤策略 + 按标的分组
+        filtered = [
+            f
+            for f in fills
+            if f.strategy_id == strategy_id and f.trade_date <= snapshot_date
+        ]
         if not filtered:
             return []
 

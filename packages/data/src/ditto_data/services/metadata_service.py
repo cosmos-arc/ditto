@@ -381,6 +381,37 @@ class MetadataService:
         """从指数成分数据同步到标的池。委托到 UniverseService."""
         return self._universe.sync_index_universe(index_code, asof_date)
 
+    # ============ Universe CRUD（→ reader/writer） ============
+
+    def create_universe(
+        self,
+        universe_id: str,
+        name: str,
+        description: str | None = None,
+        universe_type: str = "custom",
+        source_ref: str | None = None,
+    ) -> None:
+        """创建新的证券域."""
+        self._universe_writer.create_universe(
+            universe_id=universe_id,
+            name=name,
+            description=description,
+            universe_type=universe_type,
+            source_ref=source_ref,
+        )
+
+    def delete_universe(self, universe_id: str) -> None:
+        """删除证券域及其所有成分股."""
+        self._universe_writer.delete_universe(universe_id)
+
+    def get_universe_detail(self, universe_id: str) -> dict[str, Any] | None:
+        """获取证券域定义。不存在时返回 None."""
+        return self._universe_reader.get_universe(universe_id)
+
+    def list_universes_df(self, universe_type: str | None = None) -> pl.DataFrame:
+        """列出所有证券域。可选按类型过滤."""
+        return self._universe_reader.list_universes(universe_type)
+
     # ============ 证券注册（→ InstrumentService） ============
 
     def register_instrument(self, registration: InstrumentRegistration) -> int:

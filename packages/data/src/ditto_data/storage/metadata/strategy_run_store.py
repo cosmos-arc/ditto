@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS strategy_run (
     progress_pct      REAL NOT NULL DEFAULT 0.0,
     current_step      TEXT NOT NULL DEFAULT '',
     completed_days    INTEGER NOT NULL DEFAULT 0,
-    total_days        INTEGER NOT NULL DEFAULT 0
+    total_days        INTEGER NOT NULL DEFAULT 0,
+    config_json       TEXT NOT NULL DEFAULT ''
 );
 """
 
@@ -86,14 +87,14 @@ _UPSERT_SQL = """
 INSERT OR REPLACE INTO strategy_run (
     run_id, strategy_id, strategy_version, mode,
     status, started_at, completed_at, error_message, parent_run_id,
-    progress_pct, current_step, completed_days, total_days
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    progress_pct, current_step, completed_days, total_days, config_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 _GET_SQL = """
 SELECT run_id, strategy_id, strategy_version, mode,
        status, started_at, completed_at, error_message, parent_run_id,
-       progress_pct, current_step, completed_days, total_days
+       progress_pct, current_step, completed_days, total_days, config_json
 FROM strategy_run
 WHERE run_id = ?
 """
@@ -101,7 +102,7 @@ WHERE run_id = ?
 _LIST_BY_STRATEGY_SQL = """
 SELECT run_id, strategy_id, strategy_version, mode,
        status, started_at, completed_at, error_message, parent_run_id,
-       progress_pct, current_step, completed_days, total_days
+       progress_pct, current_step, completed_days, total_days, config_json
 FROM strategy_run
 WHERE strategy_id = ?
 ORDER BY started_at DESC, run_id DESC
@@ -122,14 +123,14 @@ WHERE run_id = ?
 _LIST_RUNS_BASE_SQL = """
 SELECT run_id, strategy_id, strategy_version, mode,
        status, started_at, completed_at, error_message, parent_run_id,
-       progress_pct, current_step, completed_days, total_days
+       progress_pct, current_step, completed_days, total_days, config_json
 FROM strategy_run
 """
 
 _LIST_BY_PARENT_SQL = """
 SELECT run_id, strategy_id, strategy_version, mode,
        status, started_at, completed_at, error_message, parent_run_id,
-       progress_pct, current_step, completed_days, total_days
+       progress_pct, current_step, completed_days, total_days, config_json
 FROM strategy_run
 WHERE parent_run_id = ?
 ORDER BY started_at ASC, run_id ASC
@@ -179,6 +180,7 @@ def _row_to_record(row: sqlite3.Row) -> StrategyRunRecord:
         current_step=str(data.get("current_step", "")),
         completed_days=int(data.get("completed_days", 0)),
         total_days=int(data.get("total_days", 0)),
+        config_json=str(data.get("config_json", "")),
     )
 
 
@@ -225,6 +227,7 @@ class SQLiteStrategyRunWriter:
                 record.current_step,
                 record.completed_days,
                 record.total_days,
+                record.config_json,
             ),
         )
         self._pool.commit()

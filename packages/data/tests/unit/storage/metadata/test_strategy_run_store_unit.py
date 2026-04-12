@@ -299,7 +299,8 @@ class TestSchemaMigration:
                     started_at        TEXT NOT NULL DEFAULT '',
                     completed_at      TEXT NOT NULL DEFAULT '',
                     error_message     TEXT NOT NULL DEFAULT '',
-                    parent_run_id     TEXT NOT NULL DEFAULT ''
+                    parent_run_id     TEXT NOT NULL DEFAULT '',
+                    config_json       TEXT NOT NULL DEFAULT ''
                 );
                 """
             )

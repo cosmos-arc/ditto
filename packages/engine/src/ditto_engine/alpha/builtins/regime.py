@@ -321,6 +321,11 @@ class MomentumIndicator:
     计算 close 列的 N 日涨幅，然后返回该涨幅作为分位值。
     缺失列 → 返回 0.5
 
+    Limitations:
+        - 仅基于单品种 close 价格，不依赖横截面排名
+        - 当 lookback 内数据不足时返回 default_regime (NEUTRAL)
+        - 不区分上涨/下跌动量的不对称性
+
     Attributes:
         name: 指标名称。
         weight: 指标权重。

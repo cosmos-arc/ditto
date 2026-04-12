@@ -6,9 +6,18 @@ from typing import Any, cast
 
 import orjson
 from ditto_app.query.backtest_trade import TradeRecord
+from ditto_data.models.strategy_run import StrategyRunRecord
 from pydantic import BaseModel, ConfigDict, Field
 
 from ditto_interfaces.models._date_helpers import DateField
+
+# Re-export for internal use — avoids repeated literal magic numbers.
+# Commission defaults mirror ditto_engine.execution.reality.constants.
+# Stamp duty / slippage are A-share standard rates not yet centralized there.
+_DEFAULT_COMMISSION_RATE: float = 0.0003
+_DEFAULT_COMMISSION_MIN: float = 5.0
+_DEFAULT_STAMP_DUTY_RATE: float = 0.001
+_DEFAULT_SLIPPAGE_BPS: float = 1.0
 
 
 class RunResponse(BaseModel):
@@ -75,7 +84,7 @@ class AuditRecordResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
-def to_run_response(record: Any) -> RunResponse:  # noqa: ANN401
+def to_run_response(record: StrategyRunRecord) -> RunResponse:
     """将 StrategyRunRecord 转为 API 响应."""
     return RunResponse(
         run_id=record.run_id,
@@ -109,7 +118,7 @@ def to_trade_response(record: TradeRecord) -> TradeResponse:
     )
 
 
-def _parse_payload(raw: Any) -> dict[str, Any]:  # noqa: ANN401
+def _parse_payload(raw: object) -> dict[str, Any]:
     """解析审计 payload 字段."""
     if isinstance(raw, str):
         return orjson.loads(raw)
@@ -145,10 +154,26 @@ class BenchmarkNavResponse(BaseModel):
 class CostConfigRequest(BaseModel):
     """成本模型配置请求 — A 股标准费率默认值."""
 
-    commission_rate: float = Field(default=0.0003, ge=0, description="佣金费率")
-    commission_min: float = Field(default=5.0, ge=0, description="最低佣金(元)")
-    stamp_duty_rate: float = Field(default=0.001, ge=0, description="印花税税率(卖出)")
-    slippage_bps: float = Field(default=1.0, ge=0, description="滑点(bps)")
+    commission_rate: float = Field(
+        default=_DEFAULT_COMMISSION_RATE,
+        ge=0,
+        description="佣金费率",
+    )
+    commission_min: float = Field(
+        default=_DEFAULT_COMMISSION_MIN,
+        ge=0,
+        description="最低佣金(元)",
+    )
+    stamp_duty_rate: float = Field(
+        default=_DEFAULT_STAMP_DUTY_RATE,
+        ge=0,
+        description="印花税税率(卖出)",
+    )
+    slippage_bps: float = Field(
+        default=_DEFAULT_SLIPPAGE_BPS,
+        ge=0,
+        description="滑点(bps)",
+    )
     impact_model: str = Field(default="none", description="冲击成本模型")
 
     model_config = ConfigDict(strict=True, extra="ignore")

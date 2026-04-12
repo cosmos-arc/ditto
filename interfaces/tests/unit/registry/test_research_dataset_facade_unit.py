@@ -22,6 +22,7 @@ from ditto_data.di import (
     MarketProvider,
     MetadataProvider,
     RuntimeProvider,
+    TradeProvider,
 )
 from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_data.services import DerivedCatalogService, ResearchCatalogService
@@ -71,6 +72,7 @@ def _make_container(*, monkeypatch, tmp_path: Path):
         DerivedProvider(),
         FundamentalProvider(),
         MacroProvider(),
+        TradeProvider(),
         AppQueryProvider(),
     )
 

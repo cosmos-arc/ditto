@@ -13,7 +13,7 @@ from ditto_engine.accounting.order_book import Order
 from ditto_engine.execution.reality.fee import AShareFeeModel, FeeModel
 from ditto_engine.execution.rules import FeeSchedule
 
-from ditto_app.command.backtest import CostConfig
+from ditto_app.contracts import CostConfig
 
 __all__ = ["OverrideFeeModel", "build_fee_model"]
 

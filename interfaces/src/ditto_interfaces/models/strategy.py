@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ditto_data.models.strategy import StrategySpecRecord
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -24,6 +25,7 @@ class UpdateStrategyRequest(BaseModel):
     name: str = Field(description="策略名称")
     spec_json: dict[str, Any] = Field(description="策略定义 JSON")
     tags: list[str] = Field(default_factory=list, description="标签")
+    version: int | None = Field(default=None, description="版本号(乐观锁)")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -51,7 +53,7 @@ class StrategyResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
-def to_strategy_response(record: Any) -> StrategyResponse:  # noqa: ANN401
+def to_strategy_response(record: StrategySpecRecord) -> StrategyResponse:
     """将 StrategySpecRecord 转为 API 响应."""
     return StrategyResponse(
         strategy_id=record.strategy_id,

@@ -13,6 +13,8 @@ V1 每日循环 (通过 TradingStep chain 编排):
 
 from __future__ import annotations
 
+import hashlib
+import importlib.metadata
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -23,6 +25,7 @@ import polars as pl
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
+from loguru import logger
 
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.accounting.fills import FillEvent
@@ -31,6 +34,7 @@ from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_engine.backtest.data_feed import DataFeed, Slice
 from ditto_engine.backtest.manifest import (
+    InputRef,
     RuleRefCollector,
     RunManifest,
     RunMode,
@@ -142,6 +146,7 @@ class EngineResult:
         fills: 所有成交事件
         account_view: 最终账户快照
         manifest: 运行清单 (None = 未启用 RuleRefCollector)
+        skipped_dates: Step 失败被跳过的日期
 
     """
 
@@ -153,6 +158,7 @@ class EngineResult:
     fills: list[FillEvent] = field(default_factory=list)
     account_view: AccountView | None = None
     manifest: RunManifest | None = None
+    skipped_dates: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -174,6 +180,7 @@ class EngineOptions:
         event_bus: 事件总线 (None = 不发布域事件)
         input_bundle_builder: 自定义 input bundle 构建器
             (None = 使用默认构建器)
+        random_seed: 随机种子（用于可复现性，默认 42）
 
     """
 
@@ -184,6 +191,33 @@ class EngineOptions:
     audit_collector: ExecutionAuditCollector | None = None
     event_bus: EventBus | None = None
     input_bundle_builder: Callable[[StepContext], StrategyInputBundle] | None = None
+    random_seed: int = 42
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _require_slice(slice_: Slice | None) -> Slice:
+    """断言 slice_ 非 None — 用于 lambda 中类型收窄."""
+    if slice_ is None:
+        msg = "slice_ required"
+        raise ValueError(msg)
+    return slice_
+
+
+def _collect_dependency_versions() -> tuple[str, ...]:
+    """收集当前运行环境的依赖版本（用于可复现性审计）."""
+    packages = ("polars", "ditto-engine")
+    versions: list[str] = []
+    for pkg in sorted(packages):
+        try:
+            ver = importlib.metadata.version(pkg)
+        except importlib.metadata.PackageNotFoundError:
+            ver = "unknown"
+        versions.append(f"{pkg}=={ver}")
+    return tuple(versions)
 
 
 # ---------------------------------------------------------------------------
@@ -234,6 +268,7 @@ class EngineLoop:
         self._audit_collector = options.audit_collector
         self._event_bus = options.event_bus
         self._input_bundle_builder = options.input_bundle_builder
+        self._random_seed = options.random_seed
 
         # 跨日可变状态
         self._fills: list[FillEvent] = []
@@ -243,6 +278,7 @@ class EngineLoop:
         self._rule_ref_collector = RuleRefCollector()
         self._trading_days: tuple[str, ...] = ()
         self._input_instruments: set[InstrumentId] = set()
+        self._bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]] = {}
 
         # TradeBuilder -- 根据 config.trade_matching 创建成交匹配器
         if config.trade_matching == TradeMatchingMethod.FLAT_TO_FLAT:
@@ -263,6 +299,7 @@ class EngineLoop:
                 brokerage=self._brokerage,
                 strategy_context=self._strategy_context,
                 input_instruments=self._input_instruments,
+                bar_fingerprints=self._bar_fingerprints,
             ),
             RiskScanStep(
                 post_trade_guard=self._post_trade_guard,
@@ -280,7 +317,7 @@ class EngineLoop:
                 if self._input_bundle_builder is not None
                 else lambda ctx: self._build_input_bundle(
                     ctx.date,
-                    ctx.slice_,  # type: ignore[arg-type]
+                    _require_slice(ctx.slice_),
                 ),
             ),
             PlanningStep(
@@ -292,7 +329,7 @@ class EngineLoop:
             PreTradeStep(
                 pre_trade_check=self._pre_trade_check,
                 brokerage=self._brokerage,
-                fee_model=self._fee_model,  # type: ignore[arg-type]
+                fee_model=self._fee_model,
                 event_bus=self._event_bus,
                 clock=self._clock,
             ),
@@ -323,8 +360,17 @@ class EngineLoop:
         start = days[0] if days else self._config.start_date
         end = days[-1] if days else self._config.end_date
 
+        skipped: list[str] = []
         for date in days:
-            self._step(date)
+            if not self._step(date):
+                skipped.append(date)
+
+        if skipped:
+            logger.warning(
+                "StepChain skipped {} date(s): {}",
+                len(skipped),
+                skipped,
+            )
 
         account_view = self._brokerage.get_account()
 
@@ -350,18 +396,22 @@ class EngineLoop:
             strategy_version=self._config.strategy_version,
             rebalance_freq=self._config.rebalance_freq,
         )
+        input_ref_details = self._build_input_ref_details()
         manifest = RunManifest(
             run_id=run_id,
             strategy_id=self._config.strategy_id,
             strategy_version=self._config.strategy_version,
             mode=RunMode.BACKTEST,
             input_refs=input_refs,
+            input_ref_details=input_ref_details,
             parameter_overrides=self._config.parameter_overrides,
             rule_refs=self._rule_ref_collector.rule_refs,
             config_hash=config_hash,
             engine_version=self._config.engine_version,
             spec_hash=spec_hash,
             universe_hash=hash_universe(self._input_instruments),
+            dependency_versions=_collect_dependency_versions(),
+            random_seed=self._random_seed,
             created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         )
 
@@ -374,6 +424,7 @@ class EngineLoop:
             fills=list(self._fills),
             account_view=account_view,
             manifest=manifest,
+            skipped_dates=tuple(skipped),
         )
 
     # -- internals ------------------------------------------------------------
@@ -420,8 +471,38 @@ class EngineLoop:
             benchmark_close=slice_.benchmark_close,
         )
 
-    def _step(self, date: str) -> None:
-        """执行单日步骤 -- 通过 Step chain 编排。"""
+    def _build_input_ref_details(self) -> tuple[InputRef, ...]:
+        """
+        从 _bar_fingerprints 构建 InputRef 列表.
+
+        对每个 instrument 的 sorted (date, close) 元组列表计算 SHA-256 哈希,
+        生成 InputRef(instrument_id, data_hash, date_range, source).
+        """
+        refs: list[InputRef] = []
+        for iid in sorted(self._bar_fingerprints.keys()):
+            entries = self._bar_fingerprints[iid]
+            sorted_entries = sorted(entries, key=lambda t: t[0])
+            payload = ",".join(f"{d}:{c}" for d, c in sorted_entries)
+            data_hash = (
+                "sha256:"
+                + hashlib.sha256(
+                    payload.encode("utf-8"),
+                ).hexdigest()[:16]
+            )
+            dates = [d for d, _ in sorted_entries]
+            date_range = (dates[0], dates[-1]) if dates else ("", "")
+            refs.append(
+                InputRef(
+                    instrument_id=iid,
+                    data_hash=data_hash,
+                    date_range=date_range,
+                    source="backtest:data_feed",
+                ),
+            )
+        return tuple(refs)
+
+    def _step(self, date: str) -> bool:
+        """执行单日步骤 -- 通过 Step chain 编排。返回 False 表示某 step 失败。"""
         is_rebalance = self._is_rebalance_day(date)
         ctx = StepContext(date=date, is_rebalance_day=is_rebalance)
 
@@ -429,7 +510,15 @@ class EngineLoop:
         for step in self._steps:
             result = step.execute(ctx)
             if not result.success:
-                break
+                step_name = type(step).__name__
+                errors = "; ".join(result.errors) if result.errors else "unknown"
+                logger.warning(
+                    "Step {} failed on {}: {}",
+                    step_name,
+                    date,
+                    errors,
+                )
+                return False
 
         # 累积跨日结果
         self._fills.extend(ctx.step_fills)
@@ -439,8 +528,10 @@ class EngineLoop:
         if self._audit_collector is not None and ctx.pre_trade_decisions:
             self._audit_collector.record_pre_trade_decisions(
                 date,
-                tuple(ctx.pre_trade_decisions),  # type: ignore[arg-type]
+                tuple(ctx.pre_trade_decisions),
             )
+
+        return True
 
     def _is_rebalance_day(self, date: str) -> bool:
         """

@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from ditto_engine.backtest.statistics import BacktestReport
 
-from ditto_app.process.execution.types import (
-    ActualPositionSnapshot,
-    ManualExecutionFill,
-)
 from ditto_app.query.comparison import (
     ComparisonMetrics,
     compute_comparison_from_raw,
+)
+from ditto_app.types import (
+    ActualPositionSnapshot,
+    ManualExecutionFill,
 )
 
 __all__ = ["ComparisonMetrics", "compute_comparison", "compute_comparison_from_raw"]

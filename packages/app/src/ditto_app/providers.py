@@ -570,14 +570,6 @@ class AppProcessProvider(Provider):
         )
 
     @provide
-    def trade_service(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> TradeService:
-        """交易闭环 CRUD 服务."""
-        return TradeService(client=sqlite_client)
-
-    @provide
     def manual_tracker(
         self,
         metadata_service: MetadataService,

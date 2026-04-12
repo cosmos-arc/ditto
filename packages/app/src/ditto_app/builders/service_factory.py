@@ -39,6 +39,7 @@ from ditto_app.process.execution.backtest_process import (
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
+from ditto_app.process.execution.factor_bridge import CompiledExpressions
 from ditto_app.process.execution.strategy_input import StrategyInputAssembler
 from ditto_app.process.execution.strategy_run_process import (
     StrategyRunService,
@@ -72,6 +73,7 @@ class PublishedBacktestRuntime:
     display_map: dict[InstrumentId, str]
     fee_model: FeeModel
     config: BacktestServiceConfig
+    compiled_expressions: CompiledExpressions | None = None
 
 
 # ===========================================================================
@@ -161,6 +163,7 @@ class BacktestRuntimeBuilder:
             display_map=display_map,
             fee_model=fee_model,
             config=resolved_config,
+            compiled_expressions=runtime.compiled_expressions,
         )
 
 
@@ -286,6 +289,11 @@ class StrategyServiceFactory:
             resolved_options = replace(
                 resolved_options,
                 display_map=runtime.display_map,
+            )
+        if resolved_options.compiled_expressions is None:
+            resolved_options = replace(
+                resolved_options,
+                compiled_expressions=runtime.compiled_expressions,
             )
         return self.build_backtest_service(
             config=runtime.config,

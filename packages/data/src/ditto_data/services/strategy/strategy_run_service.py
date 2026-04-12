@@ -82,6 +82,7 @@ class StrategyRunService:
         strategy_version: str = "",
         mode: str = "backtest",
         parent_run_id: str = "",
+        config_json: str = "",
     ) -> None:
         """创建运行记录 (初始状态 pending)."""
         record = StrategyRunRecord(
@@ -92,6 +93,7 @@ class StrategyRunService:
             status=RunStatus.PENDING,
             started_at=_utc_now(),
             parent_run_id=parent_run_id,
+            config_json=config_json,
         )
         self._writer.save(record)
 

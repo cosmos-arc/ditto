@@ -273,7 +273,8 @@ CREATE TABLE IF NOT EXISTS strategy_run (
     progress_pct      REAL NOT NULL DEFAULT 0.0,
     current_step      TEXT NOT NULL DEFAULT '',
     completed_days    INTEGER NOT NULL DEFAULT 0,
-    total_days        INTEGER NOT NULL DEFAULT 0
+    total_days        INTEGER NOT NULL DEFAULT 0,
+    config_json       TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_strategy_run_strategy_id
     ON strategy_run(strategy_id);
@@ -729,8 +730,60 @@ CREATE TABLE IF NOT EXISTS research_dataset_snapshot (
 CREATE INDEX IF NOT EXISTS idx_research_dataset_snapshot_lookup
     ON research_dataset_snapshot(dataset_id, created_at DESC);
 
--- ============ Migrations ============
--- Migration: V2 — strategy_run 增量字段
-ALTER TABLE strategy_run ADD COLUMN config_json TEXT NOT NULL DEFAULT '';
--- 未来新增列在此追加，如:
--- ALTER TABLE strategy_run ADD COLUMN new_column TEXT NOT NULL DEFAULT '';
+-- ============ 交易闭环表 ============
+
+CREATE TABLE IF NOT EXISTS trade_intents (
+    intent_id      TEXT PRIMARY KEY,
+    strategy_id    TEXT    NOT NULL,
+    signal_date    TEXT    NOT NULL,
+    instrument_id  INTEGER NOT NULL,
+    direction      TEXT    NOT NULL,
+    target_weight  REAL    NOT NULL,
+    current_weight REAL    NOT NULL,
+    delta_weight   REAL    NOT NULL,
+    quantity       INTEGER,
+    status         TEXT    NOT NULL DEFAULT 'pending',
+    created_at     TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_trade_intents_strategy_date
+    ON trade_intents(strategy_id, signal_date);
+CREATE INDEX IF NOT EXISTS idx_trade_intents_status ON trade_intents(status);
+
+CREATE TABLE IF NOT EXISTS execution_fills (
+    fill_id        TEXT PRIMARY KEY,
+    intent_id      TEXT    NOT NULL,
+    strategy_id    TEXT    NOT NULL,
+    trade_date     TEXT    NOT NULL,
+    instrument_id  INTEGER NOT NULL,
+    direction      TEXT    NOT NULL,
+    quantity       INTEGER NOT NULL,
+    fill_price     REAL    NOT NULL,
+    fee            REAL    NOT NULL,
+    slippage       REAL    NOT NULL DEFAULT 0.0,
+    notes          TEXT    NOT NULL DEFAULT '',
+    settlement_date TEXT   NOT NULL DEFAULT '',
+    created_at     TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_execution_fills_strategy_date
+    ON execution_fills(strategy_id, trade_date);
+CREATE INDEX IF NOT EXISTS idx_execution_fills_intent
+    ON execution_fills(intent_id);
+
+CREATE TABLE IF NOT EXISTS actual_positions (
+    snapshot_id       TEXT PRIMARY KEY,
+    strategy_id       TEXT    NOT NULL,
+    snapshot_date     TEXT    NOT NULL,
+    instrument_id     INTEGER NOT NULL,
+    quantity          INTEGER NOT NULL,
+    available_quantity INTEGER NOT NULL,
+    average_cost      REAL    NOT NULL,
+    market_value      REAL    NOT NULL,
+    unrealized_pnl    REAL    NOT NULL,
+    realized_pnl      REAL    NOT NULL,
+    total_fees        REAL    NOT NULL,
+    created_at        TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_actual_positions_strategy_date
+    ON actual_positions(strategy_id, snapshot_date);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_actual_positions_strategy_instrument_date
+    ON actual_positions(strategy_id, instrument_id, snapshot_date);

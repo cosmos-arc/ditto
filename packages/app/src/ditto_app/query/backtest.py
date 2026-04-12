@@ -7,13 +7,13 @@ from typing import Any
 
 import orjson
 import polars as pl
-from ditto_data.models.strategy import StrategyArtifactRecord
 from ditto_data.models.strategy_run import StrategyRunRecord
 from ditto_data.services.audit.execution_audit_service import ExecutionAuditService
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
 
+from ditto_app.query._artifact_utils import find_artifact
 from ditto_app.query.backtest_trade import BacktestTradeQueryFacade, TradeRecord
 from ditto_app.query.run import RunReadModel
 
@@ -121,7 +121,7 @@ class BacktestQueryFacade:
         if run is None:
             return None
 
-        record = self._find_artifact(run_id)
+        record = find_artifact(self._artifact_service, run_id)
         if record is None:
             return None
 
@@ -137,7 +137,7 @@ class BacktestQueryFacade:
 
     def get_nav_series(self, run_id: str) -> list[dict[str, object]]:
         """获取回测 NAV 序列 (从 nav.parquet)."""
-        record = self._find_artifact(run_id)
+        record = find_artifact(self._artifact_service, run_id)
         if record is None:
             return []
 
@@ -174,16 +174,4 @@ class BacktestQueryFacade:
 
     def get_benchmark_nav_series(self, run_id: str) -> list[tuple[str, float]] | None:
         """基准 NAV 序列（当前未持久化，始终返回 None）."""
-        return None
-
-    # ------------------------------------------------------------------
-    # 内部辅助
-    # ------------------------------------------------------------------
-
-    def _find_artifact(self, run_id: str) -> StrategyArtifactRecord | None:
-        """从产物列表中查找匹配 run_id 的第一条记录."""
-        artifacts = self._artifact_service.list_artifacts()
-        for record in artifacts:
-            if record.run_id == run_id:
-                return record
         return None

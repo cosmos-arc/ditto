@@ -14,8 +14,7 @@ class TestListUniverses:
     def test_returns_list_of_dicts(self) -> None:
         """list_universes 返回字典列表."""
         service = MagicMock()
-        service._universe_reader = MagicMock()
-        service._universe_reader.list_universes.return_value = pl.DataFrame(
+        service.list_universes_df.return_value = pl.DataFrame(
             {"universe_id": ["csi300", "csi500"], "name": ["沪深300", "中证500"]},
         )
         facade = UniverseQueryFacade(metadata_service=service)
@@ -27,19 +26,17 @@ class TestListUniverses:
     def test_empty_result(self) -> None:
         """空结果返回空列表."""
         service = MagicMock()
-        service._universe_reader = MagicMock()
-        service._universe_reader.list_universes.return_value = pl.DataFrame()
+        service.list_universes_df.return_value = pl.DataFrame()
         facade = UniverseQueryFacade(metadata_service=service)
         assert facade.list_universes() == []
 
     def test_type_filter_passed(self) -> None:
         """universe_type 过滤器正确透传."""
         service = MagicMock()
-        service._universe_reader = MagicMock()
-        service._universe_reader.list_universes.return_value = pl.DataFrame()
+        service.list_universes_df.return_value = pl.DataFrame()
         facade = UniverseQueryFacade(metadata_service=service)
         facade.list_universes(universe_type="custom")
-        service._universe_reader.list_universes.assert_called_once_with("custom")
+        service.list_universes_df.assert_called_once_with("custom")
 
 
 class TestGetUniverseDetail:
@@ -48,8 +45,7 @@ class TestGetUniverseDetail:
     def test_existing_universe(self) -> None:
         """存在的 universe 返回字典."""
         service = MagicMock()
-        service._universe_reader = MagicMock()
-        service._universe_reader.get_universe.return_value = {
+        service.get_universe_detail.return_value = {
             "universe_id": "csi300",
             "name": "沪深300",
             "universe_type": "index",
@@ -62,8 +58,7 @@ class TestGetUniverseDetail:
     def test_nonexistent_universe(self) -> None:
         """不存在的 universe 返回 None."""
         service = MagicMock()
-        service._universe_reader = MagicMock()
-        service._universe_reader.get_universe.return_value = None
+        service.get_universe_detail.return_value = None
         facade = UniverseQueryFacade(metadata_service=service)
         assert facade.get_universe_detail("missing") is None
 

@@ -35,6 +35,7 @@ class RunLifecycleService(Protocol):
         mode: str = "backtest",
         *,
         parent_run_id: str = "",
+        config_json: str = "",
     ) -> None:
         """创建运行记录。"""
         ...

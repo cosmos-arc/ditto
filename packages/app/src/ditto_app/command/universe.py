@@ -50,14 +50,14 @@ class CreateCustomUniverseHandler:
 
     def handle(self, command: CreateCustomUniverseCommand) -> dict[str, Any]:
         """创建自定义 universe 并返回详情."""
-        self._service._universe_writer.create_universe(  # pyright: ignore[reportPrivateUsage]
+        self._service.create_universe(
             universe_id=command.universe_id,
             name=command.name,
             description=command.description,
             universe_type="custom",
             source_ref=None,
         )
-        detail = self._service._universe_reader.get_universe(command.universe_id)  # pyright: ignore[reportPrivateUsage]
+        detail = self._service.get_universe_detail(command.universe_id)
         return (
             detail
             if detail is not None
@@ -76,26 +76,19 @@ class UpdateCustomUniverseHandler:
 
     def handle(self, command: UpdateCustomUniverseCommand) -> dict[str, Any]:
         """更新自定义 universe 元数据."""
-        existing = self._service._universe_reader.get_universe(  # pyright: ignore[reportPrivateUsage]
-            command.universe_id,
-        )
+        existing = self._service.get_universe_detail(command.universe_id)
         if existing is None:
             msg = f"Universe not found: {command.universe_id}"
             raise ValueError(msg)
         # UniverseWriter 没有直接 update 方法，重建实现
-        self._service._universe_writer.create_universe(  # pyright: ignore[reportPrivateUsage]
+        self._service.create_universe(
             universe_id=command.universe_id,
             name=command.name,
             description=command.description,
             universe_type=existing.get("universe_type", "custom"),
             source_ref=existing.get("source_ref"),
         )
-        return (
-            self._service._universe_reader.get_universe(  # pyright: ignore[reportPrivateUsage]
-                command.universe_id,
-            )
-            or existing
-        )
+        return self._service.get_universe_detail(command.universe_id) or existing
 
 
 class DeleteCustomUniverseHandler:
@@ -106,9 +99,7 @@ class DeleteCustomUniverseHandler:
 
     def handle(self, command: DeleteCustomUniverseCommand) -> bool:
         """删除自定义 universe（预设 universe 不可删除）."""
-        existing = self._service._universe_reader.get_universe(  # pyright: ignore[reportPrivateUsage]
-            command.universe_id,
-        )
+        existing = self._service.get_universe_detail(command.universe_id)
         if existing is None:
             msg = f"Universe not found: {command.universe_id}"
             raise ValueError(msg)
@@ -119,7 +110,5 @@ class DeleteCustomUniverseHandler:
                 f" '{command.universe_id}' (type={universe_type})"
             )
             raise ValueError(msg)
-        self._service._universe_writer.delete_universe(  # pyright: ignore[reportPrivateUsage]
-            command.universe_id,
-        )
+        self._service.delete_universe(command.universe_id)
         return True

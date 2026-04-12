@@ -4,11 +4,21 @@ from __future__ import annotations
 
 from typing import cast
 
+from ditto_engine.alpha.builtins.regime import (
+    BreadthIndicator,
+    MomentumIndicator,
+    RegimeConfig,
+    RegimeIndicator,
+    TrendIndicator,
+    VolatilityIndicator,
+)
+
 __all__ = [
     "as_float_tuple",
     "as_object_dict",
     "as_sequence",
     "as_str_tuple",
+    "deserialize_regime_config",
     "read_bool",
     "read_float",
     "read_int",
@@ -18,6 +28,83 @@ __all__ = [
     "read_required_str",
     "read_str_value",
 ]
+
+# ---------------------------------------------------------------------------
+# Regime indicator type dispatch
+# ---------------------------------------------------------------------------
+
+_INDICATOR_TYPES: dict[str, type[RegimeIndicator]] = {
+    "trend": TrendIndicator,
+    "volatility": VolatilityIndicator,
+    "breadth": BreadthIndicator,
+    "momentum": MomentumIndicator,
+}
+
+
+def deserialize_regime_config(
+    raw_value: object,
+    *,
+    field_name: str = "regime_config",
+) -> RegimeConfig | None:
+    """
+    从 JSON dict 反序列化 RegimeConfig.
+
+    期望格式::
+
+        {
+            "indicators": [{"type": "trend", "weight": 1.0, ...}, ...],
+            "bull_threshold": 0.65,
+            "bear_threshold": 0.35,
+            ...
+        }
+
+    Returns:
+        RegimeConfig 或 None（当 raw_value 为 None 时）。
+
+    """
+    if raw_value is None:
+        return None
+
+    raw = as_object_dict(raw_value, field_name=field_name)
+
+    # 反序列化 indicators 数组
+    raw_indicators = as_sequence(
+        raw.get("indicators", ()), field_name=f"{field_name}.indicators"
+    )
+    indicators: list[RegimeIndicator] = []
+    for idx, raw_ind in enumerate(raw_indicators):
+        ind_dict = as_object_dict(raw_ind, field_name=f"{field_name}.indicators[{idx}]")
+        ind_type = read_str_value(
+            ind_dict.get("type", ""), field_name=f"{field_name}.indicators[{idx}].type"
+        )
+        cls = _INDICATOR_TYPES.get(ind_type)
+        if cls is None:
+            msg = f"Unknown regime indicator type: {ind_type}"
+            raise ValueError(msg)
+        # 构造指标实例（过滤掉 type 字段，其余作为 kwargs）
+        kwargs = {k: v for k, v in ind_dict.items() if k != "type"}
+        indicators.append(cls(**kwargs))
+
+    return RegimeConfig(
+        indicators=tuple(indicators),
+        bull_threshold=read_float(
+            raw.get("bull_threshold", 0.65), field_name=f"{field_name}.bull_threshold"
+        ),
+        bear_threshold=read_float(
+            raw.get("bear_threshold", 0.35), field_name=f"{field_name}.bear_threshold"
+        ),
+        position_mapping=str(raw.get("position_mapping", "stepped")),
+        bull_position=read_float(
+            raw.get("bull_position", 1.0), field_name=f"{field_name}.bull_position"
+        ),
+        neutral_position=read_float(
+            raw.get("neutral_position", 0.7),
+            field_name=f"{field_name}.neutral_position",
+        ),
+        bear_position=read_float(
+            raw.get("bear_position", 0.3), field_name=f"{field_name}.bear_position"
+        ),
+    )
 
 
 def as_object_dict(

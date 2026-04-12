@@ -41,6 +41,8 @@ from ditto_engine.execution.brokerage import Brokerage, ProcessInput
 from ditto_engine.execution.planner import ExecutionPlan, ExecutionPlanner
 from ditto_engine.execution.reality import FeeModel
 from ditto_engine.execution.rules import InstrumentRuleProvider, InstrumentRules
+from ditto_engine.execution.targets import TargetPortfolioLike
+from ditto_engine.execution.trade_builder import TradeBuilder
 from ditto_engine.risk.post_trade import (
     PostTradeRiskGuard,
     RiskActionType,
@@ -138,14 +140,14 @@ class StepContext:
     # -- Step outputs (set by steps, read by subsequent steps) --
     slice_: Slice | None = None
     account_view: AccountView | None = None
-    target_portfolio: object | None = None
+    target_portfolio: TargetPortfolioLike | None = None
     execution_plan: ExecutionPlan | None = None
     rules: dict[InstrumentId, InstrumentRules] | None = None
 
     # -- Daily accumulators (appended by steps) --
     step_orders: list[Order] = field(default_factory=list)
     step_fills: list[FillEvent] = field(default_factory=list)
-    pre_trade_decisions: list[object] = field(default_factory=list)
+    pre_trade_decisions: list[PreTradeDecisionRecord] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +183,7 @@ class DataFetchStep:
       3. brokerage.get_account() -> AccountView
       4. input_instruments.update(slice.bars.keys())
       5. strategy_context.clear_locks(date)
+      6. bar_fingerprints 累积 (date, close) 用于数据指纹
 
     执行后 ctx.slice_ 和 ctx.account_view 被设置。
     """
@@ -192,12 +195,14 @@ class DataFetchStep:
         brokerage: Brokerage,
         strategy_context: StrategyContext,
         input_instruments: set[InstrumentId],
+        bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]],
     ) -> None:
         self._data_feed = data_feed
         self._clock = clock
         self._brokerage = brokerage
         self._strategy_context = strategy_context
         self._input_instruments = input_instruments
+        self._bar_fingerprints = bar_fingerprints
 
     def execute(self, ctx: StepContext) -> StepResult:
         """获取当日数据并设置到 StepContext。"""
@@ -207,6 +212,12 @@ class DataFetchStep:
 
         # 收集输入标的 -- 用于 RunManifest input_refs
         self._input_instruments.update(slice_.bars.keys())
+
+        # 累积 bar 数据指纹 -- (date, close) per instrument
+        for iid, bar in slice_.bars.items():
+            if iid not in self._bar_fingerprints:
+                self._bar_fingerprints[iid] = []
+            self._bar_fingerprints[iid].append((ctx.date, bar.close))
 
         # 每日清除到期锁定 -- cooldown 未到期的锁定保留
         self._strategy_context.clear_locks(ctx.date)
@@ -459,7 +470,7 @@ class PlanningStep:
 
         # 生成执行计划
         plan = self._planner.plan(
-            target=ctx.target_portfolio,  # type: ignore[arg-type]
+            target=ctx.target_portfolio,
             account_view=ctx.account_view,
             trade_date=ctx.date,
             market_snapshots=ctx.slice_.bars,
@@ -478,7 +489,11 @@ class PlanningStep:
         """通过 RuleProvider 获取三层规则，无 provider 返回 None。"""
         if self._rule_provider is None:
             return None
-        instrument_ids = list(ctx.slice_.bars.keys())  # type: ignore[union-attr]
+        slice_ = ctx.slice_
+        if slice_ is None:  # guarded by execute() -- unreachable in practice
+            msg = "slice_ required"
+            raise ValueError(msg)
+        instrument_ids = list(slice_.bars.keys())
         return self._rule_provider.get_rules(ctx.date, instrument_ids)
 
 
@@ -511,7 +526,7 @@ class PreTradeStep:
         self,
         pre_trade_check: CompositePreTradeCheck,
         brokerage: Brokerage,
-        fee_model: FeeModel,
+        fee_model: FeeModel | None,
         event_bus: EventBus | None,
         clock: Clock,
     ) -> None:
@@ -595,13 +610,20 @@ class PreTradeStep:
 
     def _build_pre_trade_context(self, ctx: StepContext) -> PreTradeContext:
         """构建 PreTrade 校验上下文。"""
+        # Narrowing: execute() guards ensure non-None
+        account_view = ctx.account_view
+        slice_ = ctx.slice_
+        if account_view is None or slice_ is None:
+            msg = "account_view and slice_ required"
+            raise ValueError(msg)
+
         return PreTradeContext(
-            account_view=ctx.account_view,  # type: ignore[arg-type]
+            account_view=account_view,
             rules=ctx.rules or {},
-            market_snapshots=ctx.slice_.bars,  # type: ignore[union-attr]
+            market_snapshots=slice_.bars,
             fee_model=self._fee_model,
             buying_power_model=CashAccountBuyingPower(),
-            pending_tickets=ctx.account_view.order_book.get_pending(),  # type: ignore[union-attr]
+            pending_tickets=account_view.order_book.get_pending(),
         )
 
     def _check_order(
@@ -710,7 +732,7 @@ class AuditStep:
         self,
         audit_collector: ExecutionAuditCollector | None,
         brokerage: Brokerage,
-        trade_builder: object,
+        trade_builder: TradeBuilder,
         recorded_trade_ids: set[str],
     ) -> None:
         self._audit_collector = audit_collector
@@ -730,16 +752,14 @@ class AuditStep:
         self._audit_collector.record_account_view(ctx.date, account_view)
 
         # 记录每个 fill + 传给 trade_builder
-        on_fill = self._trade_builder.on_fill  # type: ignore[union-attr]
         for fill in ctx.step_fills:
             self._audit_collector.record_fill(fill)
-            on_fill(fill, account_view)
+            self._trade_builder.on_fill(fill, account_view)
 
         # 记录已平仓交易（去重）
-        get_closed = self._trade_builder.get_closed_trades  # type: ignore[union-attr]
-        for trade in get_closed():  # type: ignore[no-any]
-            if trade.trade_id not in self._recorded_trade_ids:  # type: ignore[union-attr]
-                self._audit_collector.record_closed_trade(trade)  # type: ignore[arg-type]
-                self._recorded_trade_ids.add(trade.trade_id)  # type: ignore[union-attr]
+        for trade in self._trade_builder.get_closed_trades():
+            if trade.trade_id not in self._recorded_trade_ids:
+                self._audit_collector.record_closed_trade(trade)
+                self._recorded_trade_ids.add(trade.trade_id)
 
         return StepResult.ok()

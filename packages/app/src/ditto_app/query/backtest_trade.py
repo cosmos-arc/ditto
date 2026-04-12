@@ -6,10 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import polars as pl
-from ditto_data.models.strategy import StrategyArtifactRecord
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
+
+from ditto_app.query._artifact_utils import find_artifact
 
 __all__ = ["BacktestTradeQueryFacade", "TradeRecord"]
 
@@ -86,7 +87,7 @@ class BacktestTradeQueryFacade:
             TradeRecord 列表，找不到时返回空列表
 
         """
-        record = self._find_artifact(run_id)
+        record = find_artifact(self._service, run_id)
         if record is None:
             return []
 
@@ -98,14 +99,6 @@ class BacktestTradeQueryFacade:
         df = self._apply_date_filters(df, start_date, end_date)
         df = self._apply_pagination(df, limit, offset)
         return _df_to_trade_records(df)
-
-    def _find_artifact(self, run_id: str) -> StrategyArtifactRecord | None:
-        """从产物列表中查找匹配 run_id 的第一条记录."""
-        artifacts = self._service.list_artifacts()
-        for record in artifacts:
-            if record.run_id == run_id:
-                return record
-        return None
 
     @staticmethod
     def _apply_date_filters(

@@ -21,6 +21,7 @@ from ditto_engine.backtest.statistics import BacktestReport
 
 from ditto_app.process.execution.backtest_process import BacktestServiceConfig
 from ditto_app.process.execution.strategy_run_process import StrategyFacade
+from ditto_app.query._artifact_utils import find_artifact
 
 __all__ = ["ReplayProcess", "ReplayResult"]
 
@@ -129,12 +130,11 @@ class ReplayProcess:
 
     def _find_artifact_dir(self, run_id: str) -> Path:
         """查找运行对应的 artifact 目录."""
-        artifacts = self._artifact_service.list_artifacts()
-        for record in artifacts:
-            if record.run_id == run_id:
-                return Path(record.file_path)
-        msg = f"Artifact directory not found for run: {run_id}"
-        raise FileNotFoundError(msg)
+        record = find_artifact(self._artifact_service, run_id)
+        if record is None:
+            msg = f"Artifact directory not found for run: {run_id}"
+            raise FileNotFoundError(msg)
+        return Path(record.file_path)
 
     @staticmethod
     def _load_manifest(artifact_dir: Path) -> RunManifest:

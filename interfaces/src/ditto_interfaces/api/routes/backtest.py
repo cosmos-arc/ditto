@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import logging
+from collections.abc import Callable
 from typing import Annotated
 
+import orjson as _orjson
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_app.command.backtest import (
@@ -19,6 +22,7 @@ from ditto_app.command.backtest import (
 from ditto_app.process.execution.replay_process import ReplayProcess
 from ditto_app.query.backtest import BacktestQueryFacade
 from ditto_app.query.lineage import LineageQueryFacade
+from ditto_data.services.strategy.strategy_run_service import StrategyRunService
 from ditto_kernel.enums import RunStatus
 from fastapi import APIRouter, HTTPException, Query
 
@@ -42,6 +46,8 @@ from ditto_interfaces.models.lineage import (
     ManifestDiffResponse,
     ReplayResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
 
@@ -78,10 +84,51 @@ def _build_flow_params(
     return params
 
 
-def _submit_flow(params: dict[str, object]) -> None:
-    """同步提交 Prefect flow（在 executor 线程中运行）."""
-    _prefect_fn = getattr(run_backtest_flow, "func", run_backtest_flow)
-    _prefect_fn(**params)  # type: ignore[reportCallIssue]
+def _submit_flow(
+    params: dict[str, object],
+    on_failure: Callable[[str, str], None] | None = None,
+) -> None:
+    """
+    同步提交 Prefect flow（在 executor 线程中运行）.
+
+    Args:
+        params: flow 参数.
+        on_failure: 异常回调 (run_id, error_message)，用于标记 RunRecord 为 failed.
+
+    """
+    run_id = str(params.get("run_id", ""))
+    try:
+        _prefect_fn = getattr(run_backtest_flow, "func", run_backtest_flow)
+        _prefect_fn(**params)  # type: ignore[reportCallIssue]
+    except Exception:
+        logger.exception("Prefect flow submission failed", extra={"run_id": run_id})
+        if on_failure is not None:
+            on_failure(run_id, "Flow submission failed")
+
+
+def _restore_flow_params_from_config(
+    config_json: str,
+) -> dict[str, object]:
+    """从 config_json 反序列化回测参数."""
+    config = _orjson.loads(config_json)
+    params: dict[str, object] = {}
+    for key in ("start_date", "end_date", "initial_cash", "parameter_overrides"):
+        if key in config:
+            params[key] = config[key]
+    if "cost_config" in config:
+        params["cost_config"] = config["cost_config"]
+    return params
+
+
+def _make_failure_callback(
+    run_service: StrategyRunService,
+) -> Callable[[str, str], None]:
+    """创建 flow 失败回调 — 标记 RunRecord 为 failed."""
+
+    def _on_failure(run_id: str, error_message: str) -> None:
+        run_service.mark_failed(run_id, error_message)
+
+    return _on_failure
 
 
 # ---------------------------------------------------------------------------
@@ -94,6 +141,7 @@ def _submit_flow(params: dict[str, object]) -> None:
 async def trigger_backtest(
     body: CreateBacktestRunRequest,
     handler: Annotated[BacktestRunHandler, FromComponent()],
+    run_service: Annotated[StrategyRunService, FromComponent()],
 ) -> BacktestRunTriggerResponse:
     """触发回测 — 校验参数 + 创建记录 + 后台提交 flow，返回 202 Accepted."""
     command = BacktestRunCommand(
@@ -112,7 +160,13 @@ async def trigger_backtest(
 
     # 后台提交 flow（不阻塞响应）
     flow_params = _build_flow_params(command, result)
-    asyncio.get_event_loop().run_in_executor(None, _submit_flow, flow_params)
+    on_failure = _make_failure_callback(run_service)
+    asyncio.get_running_loop().run_in_executor(
+        None,
+        _submit_flow,
+        flow_params,
+        on_failure,
+    )
 
     return BacktestRunTriggerResponse(
         run_id=result.run_id,
@@ -149,6 +203,7 @@ async def retry_run(
     run_id: str,
     facade: Annotated[BacktestQueryFacade, FromComponent()],
     handler: Annotated[RetryRunHandler, FromComponent()],
+    run_service: Annotated[StrategyRunService, FromComponent()],
 ) -> RetryRunResponse:
     """重试回测运行 — 检查 status in {failed, cancelled}，创建新 Run 并提交 flow."""
     try:
@@ -158,7 +213,7 @@ async def retry_run(
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
-    # 获取 strategy_id 用于 flow 提交
+    # 获取 strategy_id + config_json 用于 flow 提交
     record = await asyncio.to_thread(facade.get_run, new_run_id)
 
     # 后台提交 flow（不阻塞响应）
@@ -166,7 +221,16 @@ async def retry_run(
         "run_id": new_run_id,
         "strategy_id": record.strategy_id if record else "",
     }
-    asyncio.get_event_loop().run_in_executor(None, _submit_flow, flow_params)
+    # 从 config_json 恢复回测参数（start_date, end_date, initial_cash 等）
+    if record is not None and record.config_json:
+        flow_params.update(_restore_flow_params_from_config(record.config_json))
+    on_failure = _make_failure_callback(run_service)
+    asyncio.get_running_loop().run_in_executor(
+        None,
+        _submit_flow,
+        flow_params,
+        on_failure,
+    )
 
     return RetryRunResponse(
         run_id=new_run_id,

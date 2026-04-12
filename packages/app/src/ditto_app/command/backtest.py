@@ -12,12 +12,14 @@ import uuid
 from dataclasses import dataclass
 from datetime import date
 
+import orjson
 from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from ditto_data.services.strategy.strategy_run_service import StrategyRunService
 from ditto_kernel.enums import RunStatus
 
+from ditto_app.contracts import CostConfig
 from ditto_app.process.execution.factor_bridge import FactorBridge
 from ditto_app.process.execution.strategy_types import RunLifecycleService
 
@@ -29,17 +31,6 @@ __all__ = [
     "CostConfig",
     "RetryRunHandler",
 ]
-
-
-@dataclass(frozen=True)
-class CostConfig:
-    """成本模型配置 — A 股标准费率默认值."""
-
-    commission_rate: float = 0.0003
-    commission_min: float = 5.0
-    stamp_duty_rate: float = 0.001
-    slippage_bps: float = 1.0
-    impact_model: str = "none"
 
 
 @dataclass(frozen=True)
@@ -118,12 +109,30 @@ class BacktestRunHandler:
         if signal_expressions:
             self._factor_bridge.compile_and_validate(signal_expressions, signal_weights)
 
-        # 4. 创建 RunRecord
+        # 4. 序列化回测配置为 config_json
+        config_data: dict[str, object] = {
+            "start_date": command.start_date,
+            "end_date": command.end_date,
+            "initial_cash": command.initial_cash,
+            "parameter_overrides": list(command.parameter_overrides),
+        }
+        if command.cost_config is not None:
+            config_data["cost_config"] = {
+                "commission_rate": command.cost_config.commission_rate,
+                "commission_min": command.cost_config.commission_min,
+                "stamp_duty_rate": command.cost_config.stamp_duty_rate,
+                "slippage_bps": command.cost_config.slippage_bps,
+                "impact_model": command.cost_config.impact_model,
+            }
+        config_json = orjson.dumps(config_data).decode("utf-8")
+
+        # 5. 创建 RunRecord
         run_id = uuid.uuid4().hex[:8]
         self._run_service.create_run(
             run_id=run_id,
             strategy_id=command.strategy_id,
             mode="backtest",
+            config_json=config_json,
         )
 
         return BacktestRunResult(
@@ -254,5 +263,6 @@ class RetryRunHandler:
             strategy_version=record.strategy_version,
             mode=record.mode,
             parent_run_id=run_id,
+            config_json=record.config_json,
         )
         return new_run_id

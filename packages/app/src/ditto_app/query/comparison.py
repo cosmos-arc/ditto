@@ -11,6 +11,8 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
+from ditto_engine.backtest.replay import pearson_correlation
+
 from ditto_app.query.backtest import BacktestQueryFacade
 from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
 from ditto_app.types import ManualExecutionFill
@@ -297,21 +299,7 @@ def _compute_nav_correlation(
 
     x = [bt_dict[d] for d in common_dates]
     y = [actual_dict[d] for d in common_dates]
-    return _pearson_correlation(x, y)
-
-
-def _pearson_correlation(x: list[float], y: list[float]) -> float:
-    """计算 Pearson 相关系数."""
-    n = len(x)
-    if n < _MIN_PAIRED_POINTS:
-        return 0.0
-    mean_x = sum(x) / n
-    mean_y = sum(y) / n
-    cov = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(x, y, strict=True))
-    var_x = sum((xi - mean_x) ** 2 for xi in x)
-    var_y = sum((yi - mean_y) ** 2 for yi in y)
-    denom = math.sqrt(var_x * var_y)
-    return cov / denom if denom > 0 else 0.0
+    return pearson_correlation(x, y)
 
 
 def _compute_max_nav_diff_bps(
