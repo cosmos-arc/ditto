@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 const sizeClasses = {
 	sm: "w-[6px] h-[6px]",
-	md: "w-[8px] h-[8px]",
+	md: "w-[6px] h-[6px]",
 	lg: "w-[10px] h-[10px]",
 } as const;
 
@@ -50,7 +50,7 @@ function StatusDot({
 			data-size={size}
 			className={cn(
 				statusDotVariants({ size, variant }),
-				isLivePulse && "animate-[dot-pulse_2s_ease-in-out_infinite]",
+				isLivePulse && "animate-[dot-pulse_3s_ease-in-out_infinite]",
 				className,
 			)}
 		/>

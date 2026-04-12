@@ -48,7 +48,7 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-surface-0);
 }
 ::-webkit-scrollbar-thumb {
   background: var(--color-scrollbar);
@@ -60,8 +60,8 @@ body {
 
 /* ── Animations ── */
 @keyframes dot-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.4); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 @keyframes skeleton-shimmer {
@@ -167,16 +167,27 @@ body {
   border-radius: var(--radius-sm);
   box-shadow: 0 1px 4px oklch(0 0 0 / 0.12);
 }
-
-/* ── Context section hover: subtle accent glow ── */
-[data-slot="context-section"] {
+/* Priority bar micro-glow on hover (per prototype) */
+[data-slot="queue-item"]:hover > div:first-child {
   transition: box-shadow var(--duration-fast) var(--ease-out);
+  box-shadow: 0 0 6px 1px oklch(0 0 0 / 0.3);
 }
-[data-slot="context-section"]:hover {
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-accent) 12%, transparent);
+
+/* ── Secondary panel child hover (per prototype) ── */
+[data-slot="home-secondary"] > * {
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+[data-slot="home-secondary"] > *:hover {
+  border-color: color-mix(in oklch, var(--color-accent) 10%, transparent);
+  box-shadow: 0 1px 4px -1px color-mix(in oklch, var(--color-accent) 4%, transparent);
 }
 
 /* ── Context section: dual-line separator via sidebar divide ── */
+[data-slot="sidebar-rail"] > [data-slot="collapsible"] {
+  position: relative;
+}
 [data-slot="sidebar-rail"] > [data-slot="collapsible"] + [data-slot="collapsible"]::before {
   content: '';
   position: absolute;
@@ -186,6 +197,16 @@ body {
   height: 1px;
   background: color-mix(in oklch, var(--color-foreground) 3%, transparent);
   pointer-events: none;
+}
+
+/* ── Status badge hover glow (per prototype) ── */
+[data-slot="status-badge"] {
+  transition:
+    box-shadow var(--duration-normal) var(--ease-default),
+    transform var(--duration-fast) var(--ease-out);
+}
+[data-slot="status-badge"]:hover {
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-foreground-secondary) 12%, transparent);
 }
 
 /* ── Data typography: monospace + tabular alignment ── */
@@ -231,16 +252,6 @@ body {
   background: var(--color-interaction-hover-strong-bg);
 }
 
-/* ── Queue item hover: negative-margin expansion (per prototype) ── */
-[data-slot="queue-item"]:hover {
-  margin-left: calc(var(--spacing-1) * -1);
-  margin-right: calc(var(--spacing-1) * -1);
-  padding-left: calc(var(--spacing-3) + var(--spacing-1));
-  padding-right: calc(var(--spacing-3) + var(--spacing-1));
-  border-radius: var(--radius-sm);
-  box-shadow: 0 1px 4px oklch(0 0 0 / 0.12);
-}
-
 /* ── Pulse strip / Context bar brand glow ── */
 [data-slot="pulse-strip"],
 [data-slot="session-strip"],
@@ -264,6 +275,30 @@ body {
   border-left: 2px solid color-mix(in oklch, var(--color-accent) 35%, transparent);
 }
 
+/* ── Home main-primary ambient glow (per prototype) ── */
+[data-slot="home-primary"] {
+  position: relative;
+}
+[data-slot="home-primary"]::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  left: 20%;
+  right: 20%;
+  height: 80px;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--color-accent) 3%, transparent) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+[data-slot="home-primary"] > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* ── Respect reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -271,4 +306,16 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── Header accent line: 5-stop gradient (per prototype) ── */
+[data-slot="header"]::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-signature-line) 15%,
+    var(--color-signature-line) 25%,
+    color-mix(in oklch, var(--color-signature-line) 15%, transparent) 60%,
+    transparent 100%
+  );
 }

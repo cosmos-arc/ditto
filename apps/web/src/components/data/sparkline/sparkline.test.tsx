@@ -118,14 +118,15 @@ describe("Sparkline", () => {
 		expect(d).toMatch(/^M[\d.]+,[\d.]+ L[\d.]+,[\d.]+$/);
 	});
 
-	it("uses smooth curves for 3+ data points (Catmull-Rom)", () => {
+	it("uses straight line segments for 3+ data points", () => {
 		render(<Sparkline data={[0, 5, 3, 8, 2]} />);
 		const svg = screen.getByRole("img", { hidden: true });
 		const path = svg.querySelector("path[data-part='stroke']");
 		expect(path).toBeInTheDocument();
-		// Catmull-Rom path should contain C (cubic Bezier) commands
+		// Straight-line path should contain L (lineTo) commands, not C (cubic Bezier)
 		const d = path?.getAttribute("d") ?? "";
-		expect(d).toContain("C");
+		expect(d).toContain("L");
+		expect(d).not.toContain("C");
 	});
 
 	it("maps data values to correct SVG coordinate space", () => {

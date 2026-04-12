@@ -71,7 +71,7 @@ export function PanelHeader({ title, subtitle, count, actions }: PanelHeaderProp
 				{count !== undefined && (
 					<span
 						data-testid="panel-count"
-						className="flex h-4.5 items-center bg-(--color-surface-strip) px-(--spacing-1-5) font-data text-xs tabular-nums text-(--color-foreground-tertiary)"
+						className="flex h-4.5 items-center rounded-(--radius-sm) bg-(--color-surface-strip) px-(--spacing-1-5) font-data text-xs tabular-nums text-(--color-foreground-tertiary)"
 					>
 						{count}
 					</span>

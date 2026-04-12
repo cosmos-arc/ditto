@@ -23,7 +23,7 @@ describe("StatusDot", () => {
 		expect(dot.classList.contains("rounded-full")).toBe(true);
 	});
 
-	it("renders with default size md (8px)", () => {
+	it("renders with default size md (6px)", () => {
 		const { container } = render(<StatusDot />);
 		const dot = container.firstElementChild as HTMLElement;
 		expect(dot).toHaveAttribute("data-size", "md");
@@ -33,7 +33,7 @@ describe("StatusDot", () => {
 
 	it.each([
 		["sm", "6px"],
-		["md", "8px"],
+		["md", "6px"],
 		["lg", "10px"],
 	] as const)("applies correct size for size=%s", (size, expectedWidth) => {
 		const { container } = render(<StatusDot size={size} />);
@@ -68,7 +68,7 @@ describe("StatusDot", () => {
 	it("applies pulse animation when variant=live and pulse=true", () => {
 		const { container } = render(<StatusDot variant="live" pulse />);
 		const dot = container.firstElementChild as HTMLElement;
-		expect(dot.classList.contains("animate-[dot-pulse_2s_ease-in-out_infinite]")).toBe(true);
+		expect(dot.classList.contains("animate-[dot-pulse_3s_ease-in-out_infinite]")).toBe(true);
 	});
 
 	it("does not apply pulse animation when variant=live and pulse=false", () => {

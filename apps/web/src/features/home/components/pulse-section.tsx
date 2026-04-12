@@ -62,7 +62,7 @@ export function PulseSection() {
 
 					{/* 4. Regime — 市场环境 */}
 					<div className="flex items-center gap-1 whitespace-nowrap">
-						<span className="rounded-[var(--radius-sm)] bg-(--color-surface-strip) px-1.5 py-px text-(--color-foreground-secondary)">温和风险偏好</span>
+						<span className="rounded-[10px] bg-(--color-surface-strip) px-2 py-px text-xs tracking-[0.02em] text-(--color-foreground-secondary)">温和风险偏好</span>
 					</div>
 
 					<PulseSeparator />
