@@ -51,12 +51,12 @@ const BG_COLOR_MAP: Record<BadgeVariant, string> = {
 };
 
 const sizeClasses = {
-	sm: "text-xs gap-1",
-	md: "text-sm gap-1.5",
+	sm: "text-xs gap-1 px-2 py-px rounded-[10px] tracking-[0.2px]",
+	md: "text-sm gap-1.5 px-2 py-0.5 rounded-[10px] tracking-[0.2px]",
 } as const;
 
 const statusBadgeVariants = cva(
-	"inline-flex items-center rounded-full px-2 py-0.5 font-medium",
+	"inline-flex items-center font-medium",
 	{
 		variants: {
 			size: sizeClasses,

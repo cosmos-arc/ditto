@@ -1,4 +1,4 @@
-import { AnalyticalLayout } from "@/features/shell";
+import { AnalyticalLayout, StatusBar } from "@/features/shell";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { IntelligenceFlowView } from "./intelligence-flow-view";
 import { IntelligenceMacroView } from "./intelligence-macro-view";
@@ -6,7 +6,16 @@ import { IntelligenceFundamentalsView } from "./intelligence-fundamentals-view";
 
 export function IntelligencePage() {
 	return (
+		<>
 		<AnalyticalLayout
+			className="pb-(--height-status-bar)"
+			strip={
+				<div className="flex items-center gap-2 border-b border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
+					<span className="text-xs font-medium text-(--color-foreground-tertiary)">市场智能</span>
+					<span className="text-xs text-(--color-foreground-muted)">|</span>
+					<span className="text-xs text-(--color-foreground-secondary)">实时资金流向 + 宏观指标追踪</span>
+				</div>
+			}
 			main={
 				<div className="flex h-full flex-col gap-(--section-gap) overflow-y-auto p-(--density-panel-padding)">
 					<IntelligenceFlowView />
@@ -27,6 +36,13 @@ export function IntelligencePage() {
 					</PanelBody>
 				</Panel>
 			}
+			analysis={
+				<div className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
+					<span className="text-xs text-(--color-foreground-tertiary)">市场分析 · 待实现</span>
+				</div>
+			}
 		/>
+		<StatusBar />
+		</>
 	);
 }

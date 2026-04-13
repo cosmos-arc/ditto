@@ -4,90 +4,26 @@
  * Sans-dominant, compact, clean hue-253 elevation steps
  * ───────────────────────────────────────────── */
 
+/* All semantic tokens (surface, text, border, brand, domain, interaction)
+ * are defined in src/styles/design-tokens/ — the Single Source of Truth.
+ * This file only contains prototype-specific tokens not in the SSOT. */
+
 :root {
-  /* ── Typography — Inter + Noto Sans SC (CN) / JetBrains Mono (code & data) ── */
-  --font-family-ui:      'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
-  --font-family-numeric: 'JetBrains Mono', monospace;
-  --font-family-code:    'JetBrains Mono', monospace;
+  /* ── Typography — 4-role system ── */
+  --font-family-ui:      'Inter', 'Noto Sans SC Variable', 'Source Han Sans SC', 'PingFang SC', system-ui, -apple-system, sans-serif;
+  --font-family-heading: 'Geist Sans', 'Inter', 'Noto Sans SC Variable', 'Source Han Sans SC', 'PingFang SC', system-ui, -apple-system, sans-serif;
+  --font-family-numeric: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-family-code:    'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
 
-  /* ── Surface Elevation — Neutral graphite, pure gray steps ── */
-  --surface-app:               oklch(0.155 0.005 253);
-  --surface-panel-base:        oklch(0.185 0.005 253);
-  --surface-panel-elevated:    oklch(0.215 0.006 253);
-  --surface-strip:             oklch(0.180 0.005 253);
-  --surface-overlay:           oklch(0.260 0.008 253);
-  --surface-modal:             oklch(0.300 0.010 253);
-
-  /* ── Text Hierarchy — Clean, bright primaries ── */
-  --text-primary:              oklch(0.935 0.005 253);
-  --text-secondary:            oklch(0.610 0.010 253);
-  --text-tertiary:             oklch(0.550 0.010 253);
-  --text-disabled:             oklch(0.340 0.008 253);
-  --text-inverse:              oklch(0.155 0.005 253);
-
-  /* ── Border — Minimal, consistent ── */
-  --border-subtle:             oklch(0.245 0.008 253);
-  --border-default:            oklch(0.310 0.010 253);
-  --border-strong:             oklch(0.420 0.012 253);
-
-  /* ── Brand Accent — derived from --brand-500 primitive ── */
-  --brand-accent:              var(--brand-500);
-  --brand-accent-hover:        var(--brand-400);
-  --brand-accent-subtle:       oklch(from var(--brand-500) l c h / 0.10);
-  --brand-signature-glow:      oklch(from var(--brand-signature-fg) l c h / 0.60);
-
-  /* ── Market Colors — style-specific overrides (region logic in tokens-domain.css) ── */
-  --market-flat-fg:    oklch(0.530 0.010 253);
-  --market-strong-fg:  oklch(0.680 0.180 18);    /* red hue ~18 (CN: 涨/强势) */
-  --market-weak-fg:    oklch(0.700 0.140 155);   /* green hue ~155 (CN: 跌/弱势) */
-
-  /* ── Domain Overrides — Teal/Coral harmonized ── */
-  --risk-critical-fg:  oklch(0.680 0.180 18);
-  --risk-critical-bg:  oklch(0.680 0.180 18 / 0.12);
-  --risk-high-fg:      oklch(0.740 0.160 55);
-  --risk-high-bg:      oklch(0.740 0.160 55 / 0.10);
-
-  --system-healthy-fg: oklch(0.680 0.120 155);
-  --system-healthy-bg: oklch(0.680 0.120 155 / 0.10);
-  --system-degraded-fg:oklch(0.770 0.140 80);
-  --system-down-fg:    oklch(0.680 0.180 18);
-  --system-down-bg:    oklch(0.680 0.180 18 / 0.15);
-
-  --execution-pending-fg: oklch(0.770 0.140 80);
-  --execution-pending-bg: oklch(0.770 0.140 80 / 0.10);
-  --execution-filled-fg:  oklch(0.680 0.120 155);
-
-  --agent-running-fg:    var(--brand-500);
-  --agent-running-bg:    oklch(from var(--brand-500) l c h / 0.12);
-
-  --data-quality-delayed-fg: oklch(0.770 0.140 80);
-  --data-quality-delayed-bg: oklch(0.770 0.140 80 / 0.10);
-  --data-quality-missing-fg: oklch(0.670 0.170 20);
-
-  /* ── Interaction — derived from --brand-500 ── */
-  --interaction-focus-ring:   oklch(from var(--brand-500) l c h / 0.40);
-  --interaction-focus-border: oklch(from var(--brand-500) l c h / 0.70);
-  --interaction-hover-subtle-bg: oklch(1 0 0 / 0.05);
-  --interaction-hover-strong-bg: oklch(1 0 0 / 0.08);
-  --interaction-selected-bg:  oklch(from var(--brand-500) l c h / 0.10);
-  --interaction-selected-border: oklch(from var(--brand-500) l c h / 0.25);
-
-  /* ── Code / Mono ── */
-  --code-bg:        oklch(0.155 0.005 253);
-  --code-text:      oklch(0.830 0.010 253);
-  --code-border:    oklch(0.245 0.008 253);
-
-  /* ── Scrollbar ── */
-  --scrollbar-track:        oklch(0.155 0.005 253);
-  --scrollbar-thumb:        oklch(0.310 0.010 253);
-  --scrollbar-thumb-hover:  oklch(0.370 0.012 253);
+  /* ── Brand Signature Glow (prototype-only) ── */
+  --brand-signature-glow: oklch(from var(--brand-signature-fg) l c h / 0.60);
 
   /* ── Instrument Hub — Domain-specific structural tokens ── */
   --sparkline-width:        48px;    /* metric-card inline sparkline */
   --sparkline-height:       20px;
   --flow-bar-height:        6px;     /* capital flow indicator bar */
   --context-count-height:   18px;    /* sidebar section count badge */
-  --timeline-bottom-max-h:  160px;   /* bottom timeline max scrollable height — tighter for rhythm */
+  --timeline-bottom-max-h:  160px;   /* bottom timeline max scrollable height */
   --note-input-min-h:       60px;    /* note textarea minimum height */
   --btn-icon-size:          14px;    /* icon size inside buttons */
   --meta-sep-height:        12px;    /* meta strip separator height */
@@ -95,60 +31,14 @@
   --status-bar-height:      1.5rem;  /* fixed status bar height */
 
   /* ── Rhythm Tokens — differentiated section gaps ── */
-  --rhythm-merge-gap:        0px;       /* metrics-chart: visual fusion */
-  --rhythm-section-gap:      var(--space-12); /* chart-flow: standard density */
-  --rhythm-breath-gap:       var(--space-16); /* major section transitions */
+  --rhythm-merge-gap:        0px;
+  --rhythm-section-gap:      var(--space-12);
+  --rhythm-breath-gap:       var(--space-16);
 
   /* ── Signal / Status Dot ── */
-  --signal-dot-size:         6px;      /* signal indicator dot */
-  --timeline-marker-size:    11px;     /* timeline event marker */
-  --timeline-marker-offset-top: 3px;   /* marker vertical alignment */
-  --timeline-line-left:      5px;      /* timeline connector line left offset */
-  --timeline-line-top:       18px;     /* timeline connector line start */
-}
-
-/* ── Light Mode Override — Graphite Studio ── */
-[data-theme="light"] {
-  /* Surface — pure white graphite steps */
-  --surface-app:               oklch(0.988 0.001 253);
-  --surface-panel-base:        oklch(0.958 0.003 253);
-  --surface-panel-elevated:    oklch(0.932 0.005 253);
-  --surface-strip:             oklch(0.958 0.003 253);
-  --surface-overlay:           oklch(0.995 0.000 0);
-  --surface-modal:             oklch(0.998 0.000 0);
-
-  /* Text — dark graphite */
-  --text-primary:              oklch(0.148 0.010 253);
-  --text-secondary:            oklch(0.395 0.012 253);
-  --text-tertiary:             oklch(0.545 0.008 253);
-  --text-disabled:             oklch(0.740 0.006 253);
-  --text-inverse:              oklch(0.958 0.003 253);
-
-  /* Border */
-  --border-subtle:             oklch(0.878 0.006 253);
-  --border-default:            oklch(0.775 0.010 253);
-  --border-strong:             oklch(0.645 0.008 253);
-
-  /* Brand accent — derived from --brand-500 (light primitives in tokens-base.css) */
-  --brand-accent:              var(--brand-500);
-  --brand-accent-hover:        var(--brand-400);
-  --brand-accent-subtle:       oklch(from var(--brand-500) l c h / 0.07);
-
-  /* Interaction — derived from --brand-500 */
-  --interaction-focus-ring:    oklch(from var(--brand-500) l c h / 0.35);
-  --interaction-focus-border:  var(--brand-500);
-  --interaction-hover-subtle-bg: oklch(0 0 0 / 0.04);
-  --interaction-hover-strong-bg: oklch(0 0 0 / 0.07);
-  --interaction-selected-bg:   oklch(from var(--brand-500) l c h / 0.08);
-  --interaction-selected-border: oklch(from var(--brand-500) l c h / 0.20);
-
-  /* Code */
-  --code-bg:        oklch(0.938 0.003 253);
-  --code-text:      oklch(0.195 0.010 253);
-  --code-border:    oklch(0.878 0.006 253);
-
-  /* Scrollbar */
-  --scrollbar-track:        oklch(0.938 0.003 253);
-  --scrollbar-thumb:        oklch(0.775 0.010 253);
-  --scrollbar-thumb-hover:  oklch(0.645 0.008 253);
+  --signal-dot-size:         6px;
+  --timeline-marker-size:    11px;
+  --timeline-marker-offset-top: 3px;
+  --timeline-line-left:      5px;
+  --timeline-line-top:       18px;
 }

@@ -171,18 +171,10 @@ describe("AgentInspectorPanel", () => {
 	});
 });
 
-// ── AgentsPage — StudioLayout 集成 ──────────────────────────────
+// ── AgentsPage — OpsConsoleLayout 集成 ──────────────────────────
 
 describe("AgentsPage", () => {
-	it("渲染计划列表（source slot）", async () => {
-		render(<AgentsPage />, { wrapper: createWrapper() });
-
-		await expect(
-			screen.findByText("Agent 计划"),
-		).resolves.toBeInTheDocument();
-	});
-
-	it("渲染发现列表（inspector slot）", async () => {
+	it("渲染 Agent 发现列表（detail slot）", async () => {
 		render(<AgentsPage />, { wrapper: createWrapper() });
 
 		await expect(
@@ -190,18 +182,14 @@ describe("AgentsPage", () => {
 		).resolves.toBeInTheDocument();
 	});
 
-	it("三栏布局均有内容", async () => {
+	it("主面板和详情面板均有内容", async () => {
 		render(<AgentsPage />, { wrapper: createWrapper() });
 
-		// source slot: Agent 计划
+		// main slot: Agent Inspector（异步加载）
 		await expect(
-			screen.findByText("Agent 计划"),
+			screen.findByText("因子池优化扫描"),
 		).resolves.toBeInTheDocument();
-		// main slot: 计划详情（Inspector 面板内，异步加载）
-		// "因子池优化扫描" 同时出现在 source 和 main slot
-		const planNames = await screen.findAllByText("因子池优化扫描");
-		expect(planNames.length).toBeGreaterThanOrEqual(2);
-		// inspector slot: Agent 发现
+		// detail slot: Agent 发现
 		expect(screen.getByText("Agent 发现")).toBeInTheDocument();
 	});
 });

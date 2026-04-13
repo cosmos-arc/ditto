@@ -127,12 +127,12 @@ describe("AnalyticalLayout", () => {
 		expect(screen.queryByText("Analysis")).not.toBeInTheDocument();
 	});
 
-	it("applies grid layout without banner or analysis", () => {
+	it("applies single-column grid without activity", () => {
 		const { container } = render(
 			<AnalyticalLayout main={<span>Main</span>} />,
 		);
 		const root = expectGridRoot(container);
-		expect(root.className).toContain("grid-cols-[1fr_var(--width-activity)]");
+		expect(root.className).toContain("grid-cols-[1fr]");
 		expect(root.className).toContain("grid-rows-[auto_1fr]");
 	});
 

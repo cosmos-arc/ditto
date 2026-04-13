@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-factor-analysis
+  Edition: v1
+  Generated: 2026-04-12
+
+  Tabs: 4 (radio tab system)
+  - fact-ic (IC) [covered]
+  - fact-returns (收益) [covered]
+  - fact-dist (分布与相关) [covered]
+  - fact-turnover (换手) [covered]
+
+  Overlays: 4
+  - overlay-add-backtest (Sheet: 加入回测) [covered]
+  - overlay-add-experiment (Sheet: 加入实验) [covered]
+  - overlay-ai-analysis (Sheet: AI 解读) [covered]
+  - overlay-diagnostic-detail (Modal: 2x2 诊断详情) [covered]
+
+  State Variants: 5 components × multi-state
+  - factor-header: default[covered] loading[covered] failed[covered]
+  - kpi-strip: default[covered] loading[covered] empty[covered] failed[covered]
+  - ic-series: default[covered] loading[covered] empty[covered] failed[covered]
+  - diagnostics-2x2: default[covered] loading[covered] empty[covered] failed[covered]
+  - stats-table: default[covered] loading[covered] empty[covered] failed[covered]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>动量 (20D) — 因子分析 — Ditto</title>
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="shared/fonts.css">
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> component -> data-viz -> style) -->
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+
+  <!-- State Toggle System -->
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    /* ══════════════════════════════════════════════
+     * Object Hub Shell — Factor Analysis Page
+     * ══════════════════════════════════════════════ */
+
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    .skip-link {
+      position: absolute; left: -9999px; top: 0; z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    .btn:focus-visible,
+    .hub-tab:focus-visible,
+    .header-action-btn:focus-visible,
+    .meta-chip:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow 150ms ease-out;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Shell Hub Layout
+     * ══════════════════════════════════════════════ */
+    .shell-hub {
+      display: grid;
+      grid-template-columns: var(--shell-rail-width) 1fr;
+      grid-template-rows: var(--shell-header-height) auto auto 1fr auto;
+      grid-template-areas:
+        "rail  header"
+        "rail  meta"
+        "rail  tabs"
+        "rail  main"
+        "rail  bottom";
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+      padding-bottom: 1.5rem;
+      box-sizing: border-box;
+    }
+
+    .shell-hub::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none; z-index: 0;
+    }
+    .shell-hub::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1.5px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
+        transparent 100%);
+      pointer-events: none; z-index: 2;
+    }
+    .shell-hub > * { position: relative; z-index: 1; }
+
+    /* ══════════════════════════════════════════════
+     * Header
+     * ══════════════════════════════════════════════ */
+    .shell-hub .shell-header {
+      grid-area: header;
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: none;
+      position: relative;
+    }
+    .shell-hub .shell-header::after {
+      content: '';
+      position: absolute; bottom: -1px; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
+        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
+        transparent 100%);
+      pointer-events: none;
+    }
+
+    .object-header {
+      display: flex; align-items: center; gap: var(--space-12);
+      flex: 1; min-width: 0;
+    }
+    .object-identity {
+      display: flex; flex-direction: column; gap: var(--space-2); min-width: 0;
+    }
+    .object-name-row {
+      display: flex; align-items: baseline; gap: var(--space-8);
+    }
+    .object-name {
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary); white-space: nowrap;
+    }
+    .object-code {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+    }
+    .object-status {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      font-size: var(--font-size-12); font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4); white-space: nowrap;
+    }
+    .object-status.active {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+    }
+    .object-status-dot {
+      width: var(--status-dot-size); height: var(--status-dot-size);
+      border-radius: 50%; flex-shrink: 0;
+    }
+    .object-status.active .object-status-dot {
+      background: var(--system-healthy-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.6; }
+    }
+
+    .header-ctas {
+      display: flex; align-items: center; gap: var(--space-6); flex-shrink: 0;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      height: var(--btn-height); padding: 0 var(--btn-padding-x);
+      font-family: var(--font-family-ui);
+      font-size: var(--btn-font-size); font-weight: var(--font-weight-medium);
+      border: 1px solid var(--border-default);
+      border-radius: var(--btn-radius);
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary); cursor: pointer; white-space: nowrap;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+    .btn.btn-primary {
+      background: var(--brand-accent); border-color: var(--brand-accent); color: var(--text-inverse);
+    }
+    .btn.btn-primary:hover {
+      background: var(--brand-accent-hover); border-color: var(--brand-accent-hover);
+    }
+    .btn svg { width: var(--btn-icon-size); height: var(--btn-icon-size); flex-shrink: 0; }
+
+    /* ══════════════════════════════════════════════
+     * Meta Strip
+     * ══════════════════════════════════════════════ */
+    .hub-meta {
+      grid-area: meta;
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: center;
+      padding: 0 var(--space-16); gap: var(--space-8);
+      height: var(--density-strip-height); overflow: hidden;
+    }
+    .meta-chip {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      font-size: var(--font-size-12); color: var(--text-secondary);
+      padding: 0 var(--space-8); white-space: nowrap; cursor: default;
+      border-radius: var(--radius-3);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .meta-chip:hover { background: var(--interaction-hover-subtle-bg); }
+    .meta-chip-label { color: var(--text-tertiary); }
+    .meta-chip-value { font-weight: var(--font-weight-medium); color: var(--text-secondary); }
+    .meta-chip-value.numeric { font-family: var(--font-family-numeric); }
+    .meta-separator { width: 1px; height: var(--meta-sep-height); background: var(--border-subtle); flex-shrink: 0; }
+    .meta-tag {
+      display: inline-flex; align-items: center;
+      font-size: var(--font-size-10); font-weight: var(--font-weight-medium);
+      padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary); white-space: nowrap;
+    }
+    .meta-tag.brand {
+      background: var(--brand-accent-subtle); color: var(--brand-accent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Tab Band
+     * ══════════════════════════════════════════════ */
+    .hub-tabs {
+      grid-area: tabs;
+      background: var(--surface-app);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: center;
+      padding: 0 var(--space-16); gap: 0;
+      position: relative;
+    }
+    .hub-tabs::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 1px; background: var(--overlay-2); pointer-events: none;
+    }
+    .hub-tab {
+      font-size: var(--tab-font-size); font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--tab-underline-padding-x) var(--tab-pill-padding-x);
+      cursor: pointer;
+      border-bottom: var(--tab-indicator-width) solid transparent;
+      border-radius: var(--tab-pill-radius) var(--tab-pill-radius) 0 0;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      display: flex; align-items: baseline; gap: var(--space-4);
+      position: relative; user-select: none;
+    }
+    .hub-tab:hover { color: var(--text-secondary); background: var(--interaction-hover-subtle-bg); }
+    .hub-tab.active { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+    .hub-tab {
+      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .hub-tab:nth-child(1) { animation-delay: 30ms; }
+    .hub-tab:nth-child(2) { animation-delay: 60ms; }
+    .hub-tab:nth-child(3) { animation-delay: 90ms; }
+    .hub-tab:nth-child(4) { animation-delay: 120ms; }
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Main Content Area
+     * ══════════════════════════════════════════════ */
+    .hub-main {
+      grid-area: main;
+      display: grid;
+      grid-template-columns: 1fr var(--shell-detail-width);
+      gap: var(--rhythm-breath-gap);
+      padding: var(--density-gutter);
+      overflow: hidden; min-height: 0;
+    }
+    .hub-object-view {
+      display: flex; flex-direction: column; gap: 0;
+      overflow: hidden; min-height: 0;
+    }
+
+    /* ── KPI Strip ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-12);
+      flex-shrink: 0;
+    }
+    .metric-card {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: var(--space-10) var(--space-12);
+      display: flex; flex-direction: column; gap: var(--space-4);
+      position: relative; overflow: hidden;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .metric-card:hover {
+      border-color: var(--border-default);
+      background: var(--surface-panel-elevated);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12), 0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
+    }
+    .metric-card::after {
+      content: ''; position: absolute; inset: 0; border-radius: inherit; opacity: 0;
+      background: radial-gradient(ellipse at top right, color-mix(in oklch, var(--brand-accent) 4%, transparent) 0%, transparent 60%);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard); pointer-events: none;
+    }
+    .metric-card:hover::after { opacity: 1; }
+    .metric-label { font-size: var(--font-size-12); color: var(--text-tertiary); }
+    .metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16); font-weight: var(--font-weight-semibold);
+      color: var(--text-primary); font-variant-numeric: tabular-nums;
+    }
+    .metric-change {
+      display: inline-flex; font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-3); align-self: flex-start;
+    }
+    .metric-change.up {
+      color: var(--market-up-fg);
+      background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
+    }
+    .metric-change.down {
+      color: var(--market-down-fg);
+      background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
+    }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      flex: 1; min-height: 0;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .panel-header {
+      display: flex; align-items: center;
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+    .panel-title {
+      font-size: var(--font-size-12); font-weight: var(--font-weight-medium);
+      color: var(--text-secondary); flex: 1;
+    }
+    .panel-body { flex: 1; overflow: auto; padding: var(--space-10) var(--space-12); }
+
+    /* ── 2x2 Diagnostics Grid ── */
+    .diagnostics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: var(--rhythm-breath-gap);
+      flex: 1; min-height: 0;
+    }
+    .diagnostics-grid .panel { cursor: pointer; }
+    .diagnostics-grid .panel:hover { border-color: var(--border-default); }
+
+    /* ── Table ── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-12); }
+    .data-table th {
+      text-align: left; padding: var(--space-4) var(--space-6);
+      color: var(--text-tertiary); font-weight: var(--font-weight-medium);
+      border-bottom: 1px solid var(--border-subtle); white-space: nowrap;
+    }
+    .data-table td {
+      padding: var(--space-6); border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary);
+    }
+    .data-table tr:hover td { background: var(--interaction-hover-subtle-bg); }
+    .data-table .numeric { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; }
+
+    /* ── Status Badge ── */
+    .status-badge {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      font-size: var(--font-size-10); font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-3); white-space: nowrap;
+    }
+    .status-badge.success { color: var(--system-healthy-fg); background: var(--system-healthy-bg); }
+    .status-badge.warning { color: var(--system-degraded-fg); background: var(--system-degraded-bg); }
+    .status-badge.error { color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 8%, transparent); }
+    .status-badge.neutral { color: var(--text-tertiary); background: var(--interaction-hover-subtle-bg); }
+
+    /* ── Sidebar ── */
+    .hub-sidebar {
+      border-left: 1px solid var(--border-subtle);
+      display: flex; flex-direction: column;
+      overflow: hidden; min-height: 0;
+    }
+    .sidebar-section {
+      border-bottom: 1px solid var(--border-subtle);
+      padding: var(--space-10) var(--space-12);
+    }
+    .sidebar-section:last-child { border-bottom: none; flex: 1; }
+    .sidebar-title {
+      font-size: var(--font-size-12); font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary); margin-bottom: var(--space-8);
+    }
+
+    /* ── Tab Panels ── */
+    .tab-panels { display: contents; }
+    .tab-panel {
+      display: none; flex-direction: column;
+      height: 100%; overflow: hidden; min-height: 0;
+    }
+    @keyframes tab-panel-enter {
+      from { opacity: 0; transform: translateY(3px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .tab-group:has(#fact-ic:checked) [data-panel="fact-ic"],
+    .tab-group:has(#fact-returns:checked) [data-panel="fact-returns"],
+    .tab-group:has(#fact-dist:checked) [data-panel="fact-dist"],
+    .tab-group:has(#fact-turnover:checked) [data-panel="fact-turnover"] {
+      display: flex;
+      animation: tab-panel-enter 180ms var(--motion-easing-emphasis) both;
+    }
+    .tab-group:has(#fact-ic:checked) [for="fact-ic"],
+    .tab-group:has(#fact-returns:checked) [for="fact-returns"],
+    .tab-group:has(#fact-dist:checked) [for="fact-dist"],
+    .tab-group:has(#fact-turnover:checked) [for="fact-turnover"] {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Bottom Area
+     * ══════════════════════════════════════════════ */
+    .hub-bottom {
+      grid-area: bottom;
+      background: var(--surface-strip);
+      border-top: 1px solid var(--border-subtle);
+      display: flex; align-items: center;
+      padding: 0 var(--space-16); gap: var(--space-12);
+      height: var(--density-strip-height); overflow: hidden; flex-shrink: 0;
+    }
+    .bottom-item {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      font-size: var(--font-size-12); color: var(--text-secondary); white-space: nowrap;
+    }
+    .bottom-item-label { color: var(--text-tertiary); }
+    .bottom-item-value { font-weight: var(--font-weight-medium); font-family: var(--font-family-numeric); }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation
+     * ══════════════════════════════════════════════ */
+    :root:has(#overlay-add-backtest:checked)
+      [data-overlay="overlay-add-backtest"] { display: flex; }
+    :root:has(#overlay-add-experiment:checked)
+      [data-overlay="overlay-add-experiment"] { display: flex; }
+    :root:has(#overlay-ai-analysis:checked)
+      [data-overlay="overlay-ai-analysis"] { display: flex; }
+    :root:has(#overlay-diagnostic-detail:checked)
+      [data-overlay="overlay-diagnostic-detail"] { display: flex; }
+
+    /* ══════════════════════════════════════════════
+     * Chart placeholder (SVG)
+     * ══════════════════════════════════════════════ */
+    .sparkline-placeholder {
+      width: 80px; height: 28px; opacity: 0.5;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .metric-card:hover .sparkline-placeholder { opacity: 0.8; }
+
+    /* ── Inline stats row ── */
+    .stats-row {
+      display: flex; gap: var(--space-12);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .stats-row:last-child { border-bottom: none; }
+    .stat-item { flex: 1; }
+    .stat-label { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2); }
+    .stat-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14); font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+
+  <!-- ═══ Zone Navigation Radios ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label">Graphite Studio — Factor Analysis · Compact · 动量</div>
+
+  <div class="shell-hub">
+    <!-- ══════════════════════════════════════════════
+         Rail
+         ══════════════════════════════════════════════ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="研究" title="研究">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="AI" title="AI">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ══════════════════════════════════════════════
+         Factor Header
+         ══════════════════════════════════════════════ -->
+    <header class="shell-header">
+      <div class="object-header" role="banner">
+        <div class="object-identity">
+          <div class="object-name-row">
+            <span class="object-name">动量 (20D)</span>
+            <span class="object-code">动量因子 · 日频</span>
+            <span class="object-status active" role="status" aria-label="活跃">
+              <span class="object-status-dot"></span>
+              活跃
+            </span>
+          </div>
+        </div>
+        <div class="spacer"></div>
+
+        <div class="header-actions" role="toolbar" aria-label="页面操作">
+          <div class="theme-switcher">
+            <div class="switcher-group" role="group" aria-label="密度">
+              <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+            </div>
+            <div class="switcher-sep"></div>
+            <div class="switcher-group" role="group" aria-label="主题">
+              <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.5 10.5a7.5 7.5 0 11-5-7.1A7.5 7.5 0 0017.5 10.5z"/></svg>
+              </button>
+              <button class="switcher-btn" data-set-theme="light" aria-pressed="false">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3.5"/><path d="M10 2v2m0 12v2m-8-8h2m12 0h2m-2.5-5.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="meta-sep-line"></div>
+          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg>
+            <span class="badge-dot"></span>
+          </div>
+          <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">陈</div>
+        </div>
+
+        <div class="header-ctas">
+          <label for="overlay-add-backtest" class="btn btn-primary cursor-pointer" aria-label="加入回测">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            加入回测
+          </label>
+          <label for="overlay-add-experiment" class="btn cursor-pointer" aria-label="加入实验">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2v10m5-5H5"/><circle cx="10" cy="10" r="7" stroke-dasharray="3 2"/></svg>
+            加入实验
+          </label>
+          <label for="overlay-ai-analysis" class="btn cursor-pointer" aria-label="AI 解读">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+            AI 解读
+          </label>
+        </div>
+      </div>
+    </header>
+
+    <!-- ══════════════════════════════════════════════
+         Meta Strip
+         ══════════════════════════════════════════════ -->
+    <div class="hub-meta" role="complementary" aria-label="因子元信息">
+      <div class="meta-chip">
+        <span class="meta-chip-label">家族</span>
+        <span class="meta-chip-value">动量</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">频率</span>
+        <span class="meta-chip-value">日频</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">Universe</span>
+        <span class="meta-chip-value numeric">沪深300</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">数据区间</span>
+        <span class="meta-chip-value numeric">2020-01 → 2026-04</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-tag">动量</span>
+        <span class="meta-tag brand">量价</span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         Tab Band
+         ══════════════════════════════════════════════ -->
+    <div class="tab-group" data-tab-group="fact">
+      <div class="hub-tabs" role="tablist" aria-label="因子分析导航" data-tabs="fact-tabs">
+        <input type="radio" name="fact" id="fact-ic" checked class="tab-radio sr-only">
+        <label for="fact-ic" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-ic">IC</label>
+        <input type="radio" name="fact" id="fact-returns" class="tab-radio sr-only">
+        <label for="fact-returns" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-returns">收益</label>
+        <input type="radio" name="fact" id="fact-dist" class="tab-radio sr-only">
+        <label for="fact-dist" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-dist">分布与相关</label>
+        <input type="radio" name="fact" id="fact-turnover" class="tab-radio sr-only">
+        <label for="fact-turnover" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-turnover">换手</label>
+      </div>
+
+      <div class="tab-panels" id="main-content">
+
+        <!-- ══════════════════════════════════════════════
+             Tab 1: IC (信息系数)
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="fact-ic" data-tab-panel="fact-ic">
+          <div class="hub-main">
+            <div class="hub-object-view">
+
+              <!-- KPI Strip: 5 metrics -->
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <span class="metric-label">IC 均值</span>
+                  <span class="metric-value">0.082</span>
+                  <span class="metric-change up">▲ +0.012</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">IC IR</span>
+                  <span class="metric-value">1.45</span>
+                  <span class="metric-change up">▲ +0.08</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">IC 衰减</span>
+                  <span class="metric-value">5.2D</span>
+                  <span class="metric-change down">▲ +0.3D</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">换手率</span>
+                  <span class="metric-value">0.35</span>
+                  <span class="metric-change up">▲ +0.02</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">覆盖率</span>
+                  <span class="metric-value">92.3%</span>
+                  <span class="metric-change up">▲ +0.5%</span>
+                </div>
+              </div>
+
+              <!-- 2x2 Diagnostics -->
+              <div class="diagnostics-grid" style="margin-top: var(--rhythm-merge-gap);">
+
+                <!-- Quadrant 1: IC 时间序列 -->
+                <div class="panel" aria-label="IC 时间序列图（点击放大）">
+                  <div class="panel-header">
+                    <span class="panel-title">IC 时间序列</span>
+                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">日频 · 250D</span>
+                  </div>
+                  <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 280 100" style="width: 100%; opacity: 0.8;">
+                      <defs>
+                        <linearGradient id="ic-area" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.12"/>
+                          <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
+                        </linearGradient>
+                      </defs>
+                      <line x1="0" y1="50" x2="280" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                      <line x1="0" y1="25" x2="280" y2="25" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
+                      <line x1="0" y1="75" x2="280" y2="75" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
+                      <path d="M0 55 L10 48 L20 52 L30 42 L40 38 L50 45 L60 35 L70 30 L80 40 L90 28 L100 32 L110 25 L120 35 L130 30 L140 22 L150 28 L160 20 L170 25 L180 32 L190 28 L200 22 L210 18 L220 25 L230 20 L240 15 L250 22 L260 18 L270 20 L280 15" fill="none" stroke="var(--brand-accent)" stroke-width="1.2"/>
+                      <path d="M0 55 L10 48 L20 52 L30 42 L40 38 L50 45 L60 35 L70 30 L80 40 L90 28 L100 32 L110 25 L120 35 L130 30 L140 22 L150 28 L160 20 L170 25 L180 32 L190 28 L200 22 L210 18 L220 25 L230 20 L240 15 L250 22 L260 18 L270 20 L280 15 L280 100 L0 100 Z" fill="url(#ic-area)"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Quadrant 2: IC 分位数分布 -->
+                <div class="panel" aria-label="IC 分位数分布（点击放大）">
+                  <div class="panel-header">
+                    <span class="panel-title">IC 分位数分布</span>
+                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q1-Q5 分组</span>
+                  </div>
+                  <div class="panel-body" style="display: flex; align-items: flex-end; justify-content: center; gap: var(--space-8); padding-bottom: var(--space-16);">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
+                      <div style="width: 32px; height: 55px; background: color-mix(in oklch, var(--market-down-fg) 70%, transparent); border-radius: var(--radius-2);"></div>
+                      <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q1</span>
+                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--market-down-fg);">-0.042</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
+                      <div style="width: 32px; height: 38px; background: color-mix(in oklch, var(--market-down-fg) 40%, transparent); border-radius: var(--radius-2);"></div>
+                      <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q2</span>
+                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--text-tertiary);">-0.008</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
+                      <div style="width: 32px; height: 22px; background: var(--border-subtle); border-radius: var(--radius-2);"></div>
+                      <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q3</span>
+                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--text-tertiary);">+0.001</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
+                      <div style="width: 32px; height: 45px; background: color-mix(in oklch, var(--market-up-fg) 40%, transparent); border-radius: var(--radius-2);"></div>
+                      <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q4</span>
+                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--market-up-fg);">+0.035</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
+                      <div style="width: 32px; height: 72px; background: color-mix(in oklch, var(--market-up-fg) 70%, transparent); border-radius: var(--radius-2);"></div>
+                      <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q5</span>
+                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--market-up-fg);">+0.078</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Quadrant 3: IC 滚动窗口 -->
+                <div class="panel" aria-label="IC 滚动窗口分析（点击放大）">
+                  <div class="panel-header">
+                    <span class="panel-title">IC 滚动窗口</span>
+                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">60D / 120D / 250D</span>
+                  </div>
+                  <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 280 100" style="width: 100%; opacity: 0.8;">
+                      <line x1="0" y1="50" x2="280" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                      <!-- 250D line (blue) -->
+                      <path d="M0 60 L20 58 L40 55 L60 52 L80 48 L100 45 L120 42 L140 40 L160 38 L180 36 L200 34 L220 32 L240 30 L260 28 L280 26" fill="none" stroke="var(--brand-accent)" stroke-width="1.2"/>
+                      <!-- 120D line (muted) -->
+                      <path d="M0 55 L20 52 L40 48 L60 50 L80 45 L100 42 L120 38 L140 42 L160 36 L180 34 L200 30 L220 28 L240 32 L260 26 L280 24" fill="none" stroke="var(--text-tertiary)" stroke-width="0.8" stroke-dasharray="3"/>
+                      <!-- 60D line (muted) -->
+                      <path d="M0 50 L20 42 L40 55 L60 38 L80 48 L100 35 L120 52 L140 40 L160 45 L180 32 L200 48 L220 36 L240 42 L260 30 L280 38" fill="none" stroke="color-mix(in oklch, var(--text-tertiary) 60%, transparent)" stroke-width="0.8" stroke-dasharray="2"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Quadrant 4: IC 统计摘要 -->
+                <div class="panel" aria-label="IC 统计摘要（点击放大）">
+                  <div class="panel-header">
+                    <span class="panel-title">IC 统计摘要</span>
+                  </div>
+                  <div class="panel-body">
+                    <div class="stats-row">
+                      <div class="stat-item">
+                        <div class="stat-label">IC 均值</div>
+                        <div class="stat-value" style="color: var(--market-up-fg);">0.082</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">IC 标准差</div>
+                        <div class="stat-value">0.057</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">IC IR</div>
+                        <div class="stat-value" style="color: var(--market-up-fg);">1.45</div>
+                      </div>
+                    </div>
+                    <div class="stats-row">
+                      <div class="stat-item">
+                        <div class="stat-label">IC > 0 占比</div>
+                        <div class="stat-value">62.8%</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">IC 偏度</div>
+                        <div class="stat-value">0.23</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">IC 峰度</div>
+                        <div class="stat-value">3.42</div>
+                      </div>
+                    </div>
+                    <div class="stats-row">
+                      <div class="stat-item">
+                        <div class="stat-label">Rank IC</div>
+                        <div class="stat-value" style="color: var(--market-up-fg);">0.091</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">Rank IC IR</div>
+                        <div class="stat-value" style="color: var(--market-up-fg);">1.62</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">单调性 t 值</div>
+                        <div class="stat-value">8.75</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div><!-- /diagnostics-grid -->
+
+            </div>
+
+            <!-- Sidebar -->
+            <div class="hub-sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">因子概要</div>
+                <div style="display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12);">
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-tertiary);">家族</span>
+                    <span style="color: var(--text-secondary);">动量</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-tertiary);">频率</span>
+                    <span style="color: var(--text-secondary);">日频</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-tertiary);">Universe</span>
+                    <span style="color: var(--text-secondary);">沪深300</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-tertiary);">数据区间</span>
+                    <span style="color: var(--text-secondary); font-family: var(--font-family-numeric);">2020-01 → 2026-04</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">相关因子</div>
+                <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: var(--font-size-12); color: var(--text-secondary);">动量 (60D)</span>
+                    <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-up-fg);">0.075</span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: var(--font-size-12); color: var(--text-secondary);">反转 (5D)</span>
+                    <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-up-fg);">0.054</span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: var(--font-size-12); color: var(--text-secondary);">波动率</span>
+                    <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-down-fg);">-0.031</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">预处理管道</div>
+                <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+                  <div style="display: flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-12);">
+                    <span class="status-badge success" style="font-size: 10px;">1</span>
+                    <span style="color: var(--text-secondary);">去极值</span>
+                    <span style="color: var(--text-tertiary);">· MAD 法</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-12);">
+                    <span class="status-badge success" style="font-size: 10px;">2</span>
+                    <span style="color: var(--text-secondary);">标准化</span>
+                    <span style="color: var(--text-tertiary);">· Z-Score</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-12);">
+                    <span class="status-badge success" style="font-size: 10px;">3</span>
+                    <span style="color: var(--text-secondary);">中性化</span>
+                    <span style="color: var(--text-tertiary);">· 行业中性</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             Tab 2: 收益 (Returns)
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="fact-returns" data-tab-panel="fact-returns">
+          <div class="hub-main">
+            <div class="hub-object-view">
+
+              <!-- Factor Group Returns -->
+              <div class="panel" style="flex: 1;">
+                <div class="panel-header" style="justify-content: space-between;">
+                  <span class="panel-title">因子分组收益</span>
+                  <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">5 分组 · 月度调仓</span>
+                </div>
+                <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
+                  <svg viewBox="0 0 400 120" style="width: 100%; opacity: 0.8;">
+                    <defs>
+                      <linearGradient id="ret-q5" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.1"/>
+                        <stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    <line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                    <!-- Q1 (worst) -->
+                    <path d="M0 70 L40 72 L80 75 L120 78 L160 76 L200 80 L240 82 L280 85 L320 84 L360 88 L400 90" fill="none" stroke="var(--market-down-fg)" stroke-width="0.8" opacity="0.6"/>
+                    <!-- Q3 (middle) -->
+                    <path d="M0 58 L40 56 L80 55 L120 54 L160 56 L200 53 L240 52 L280 50 L320 51 L360 49 L400 48" fill="none" stroke="var(--text-tertiary)" stroke-width="0.8" stroke-dasharray="3"/>
+                    <!-- Q5 (best) -->
+                    <path d="M0 50 L40 45 L80 42 L120 38 L160 40 L200 35 L240 32 L280 28 L320 30 L360 25 L400 22" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5"/>
+                    <path d="M0 50 L40 45 L80 42 L120 38 L160 40 L200 35 L240 32 L280 28 L320 30 L360 25 L400 22 L400 120 L0 120 Z" fill="url(#ret-q5)"/>
+                    <!-- Long-short -->
+                    <path d="M0 60 L40 55 L80 48 L120 42 L160 44 L200 38 L240 35 L280 30 L320 32 L360 28 L400 24" fill="none" stroke="var(--brand-accent)" stroke-width="1.2" stroke-dasharray="4"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Monthly Return Heatmap -->
+              <div class="panel" style="flex-shrink: 0;">
+                <div class="panel-header">
+                  <span class="panel-title">月度收益热力图（多空）</span>
+                </div>
+                <div class="panel-body">
+                  <table class="data-table" style="font-size: var(--font-size-10);">
+                    <thead>
+                      <tr>
+                        <th></th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style="color: var(--text-tertiary);">2024</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);">+2.1</td>
+                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 8%, transparent);">-0.8</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 12%, transparent);">+3.2</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);">+1.5</td>
+                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 4%, transparent);">-0.3</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 10%, transparent);">+2.8</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 4%, transparent);">+1.1</td>
+                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 12%, transparent);">-1.5</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);">+2.0</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 14%, transparent);">+3.5</td>
+                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);">-0.9</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 5%, transparent);">+1.2</td>
+                      </tr>
+                      <tr>
+                        <td style="color: var(--text-tertiary);">2025</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 10%, transparent);">+2.5</td>
+                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);">-1.2</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);">+2.0</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 16%, transparent);">+4.1</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);">+1.8</td>
+                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 8%, transparent);">-1.0</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 12%, transparent);">+3.0</td>
+                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 4%, transparent);">-0.5</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 7%, transparent);">+1.6</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 9%, transparent);">+2.2</td>
+                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 11%, transparent);">+2.8</td>
+                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 3%, transparent);">-0.2</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Return Stats Table -->
+              <div class="panel" style="flex-shrink: 0;">
+                <div class="panel-header">
+                  <span class="panel-title">收益统计</span>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr><th>分组</th><th class="numeric">年化收益</th><th class="numeric">年化波动</th><th class="numeric">Sharpe</th><th class="numeric">最大回撤</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Q1 (最差)</td><td class="numeric" style="color: var(--market-down-fg);">-8.2%</td><td class="numeric">22.1%</td><td class="numeric">-0.37</td><td class="numeric">-32.5%</td></tr>
+                    <tr><td>Q2</td><td class="numeric" style="color: var(--market-down-fg);">-2.1%</td><td class="numeric">18.5%</td><td class="numeric">-0.11</td><td class="numeric">-25.8%</td></tr>
+                    <tr><td>Q3</td><td class="numeric">+4.8%</td><td class="numeric">16.2%</td><td class="numeric">0.30</td><td class="numeric">-18.2%</td></tr>
+                    <tr><td>Q4</td><td class="numeric" style="color: var(--market-up-fg);">+12.5%</td><td class="numeric">17.8%</td><td class="numeric">0.70</td><td class="numeric">-15.6%</td></tr>
+                    <tr><td>Q5 (最佳)</td><td class="numeric" style="color: var(--market-up-fg);">+22.1%</td><td class="numeric">19.5%</td><td class="numeric">1.13</td><td class="numeric">-14.2%</td></tr>
+                    <tr style="border-top: 2px solid var(--border-subtle);"><td style="font-weight: var(--font-weight-medium); color: var(--text-primary);">多空 (Q5-Q1)</td><td class="numeric" style="color: var(--market-up-fg); font-weight: var(--font-weight-semibold);">+30.3%</td><td class="numeric">12.8%</td><td class="numeric" style="color: var(--market-up-fg);">2.37</td><td class="numeric">-11.5%</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            <div class="hub-sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">分组配置</div>
+                <div style="font-size: var(--font-size-12); color: var(--text-secondary);">5 分组 · 等权</div>
+                <div style="font-size: var(--font-size-12); color: var(--text-tertiary); margin-top: var(--space-4);">月度调仓 · T+1 执行</div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">收益稳定性</div>
+                <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
+                    <span style="color: var(--text-tertiary);">月度胜率</span>
+                    <span style="color: var(--market-up-fg); font-family: var(--font-family-numeric);">68.2%</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
+                    <span style="color: var(--text-tertiary);">季度胜率</span>
+                    <span style="color: var(--market-up-fg); font-family: var(--font-family-numeric);">75.0%</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
+                    <span style="color: var(--text-tertiary);">年度胜率</span>
+                    <span style="color: var(--market-up-fg); font-family: var(--font-family-numeric);">100%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             Tab 3: 分布与相关
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="fact-dist" data-tab-panel="fact-dist">
+          <div class="hub-main">
+            <div class="hub-object-view">
+
+              <div class="diagnostics-grid">
+                <!-- Factor Value Distribution -->
+                <div class="panel">
+                  <div class="panel-header">
+                    <span class="panel-title">因子值分布</span>
+                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">正态拟合叠加</span>
+                  </div>
+                  <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 280 100" style="width: 100%; opacity: 0.8;">
+                      <line x1="0" y1="80" x2="280" y2="80" stroke="var(--border-subtle)" stroke-width="0.5"/>
+                      <!-- Histogram bars -->
+                      <rect x="20" y="72" width="15" height="8" fill="color-mix(in oklch, var(--brand-accent) 30%, transparent)" rx="1"/>
+                      <rect x="38" y="60" width="15" height="20" fill="color-mix(in oklch, var(--brand-accent) 40%, transparent)" rx="1"/>
+                      <rect x="56" y="42" width="15" height="38" fill="color-mix(in oklch, var(--brand-accent) 50%, transparent)" rx="1"/>
+                      <rect x="74" y="25" width="15" height="55" fill="color-mix(in oklch, var(--brand-accent) 60%, transparent)" rx="1"/>
+                      <rect x="92" y="15" width="15" height="65" fill="color-mix(in oklch, var(--brand-accent) 70%, transparent)" rx="1"/>
+                      <rect x="110" y="10" width="15" height="70" fill="color-mix(in oklch, var(--brand-accent) 75%, transparent)" rx="1"/>
+                      <rect x="128" y="18" width="15" height="62" fill="color-mix(in oklch, var(--brand-accent) 65%, transparent)" rx="1"/>
+                      <rect x="146" y="30" width="15" height="50" fill="color-mix(in oklch, var(--brand-accent) 55%, transparent)" rx="1"/>
+                      <rect x="164" y="45" width="15" height="35" fill="color-mix(in oklch, var(--brand-accent) 45%, transparent)" rx="1"/>
+                      <rect x="182" y="58" width="15" height="22" fill="color-mix(in oklch, var(--brand-accent) 35%, transparent)" rx="1"/>
+                      <rect x="200" y="68" width="15" height="12" fill="color-mix(in oklch, var(--brand-accent) 30%, transparent)" rx="1"/>
+                      <!-- Normal fit curve -->
+                      <path d="M20 75 Q60 68 92 15 Q110 8 128 15 Q160 68 200 75" fill="none" stroke="var(--brand-accent)" stroke-width="1.5" opacity="0.8"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Correlation Matrix -->
+                <div class="panel">
+                  <div class="panel-header">
+                    <span class="panel-title">因子相关性矩阵</span>
+                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">|corr| > 0.3 高亮</span>
+                  </div>
+                  <div class="panel-body">
+                    <table class="data-table" style="font-size: var(--font-size-10);">
+                      <thead>
+                        <tr><th></th><th>动量20D</th><th>动量60D</th><th>反转5D</th><th>波动率</th><th>换手率</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td style="color: var(--text-primary); font-weight: var(--font-weight-medium);">动量20D</td>
+                          <td class="numeric" style="background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent);">1.00</td>
+                          <td class="numeric" style="background: color-mix(in oklch, var(--market-up-fg) 10%, transparent); color: var(--market-up-fg);">0.72</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">-0.15</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">-0.08</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">0.12</td>
+                        </tr>
+                        <tr>
+                          <td style="color: var(--text-primary);">动量60D</td>
+                          <td class="numeric" style="background: color-mix(in oklch, var(--market-up-fg) 10%, transparent); color: var(--market-up-fg);">0.72</td>
+                          <td class="numeric" style="background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent);">1.00</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">-0.22</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">-0.11</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">0.18</td>
+                        </tr>
+                        <tr>
+                          <td style="color: var(--text-primary);">反转5D</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">-0.15</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">-0.22</td>
+                          <td class="numeric" style="background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent);">1.00</td>
+                          <td class="numeric" style="color: var(--market-down-fg);">-0.35</td>
+                          <td class="numeric" style="color: var(--market-up-fg);">0.42</td>
+                        </tr>
+                        <tr>
+                          <td style="color: var(--text-primary);">波动率</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">-0.08</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">-0.11</td>
+                          <td class="numeric" style="color: var(--market-down-fg);">-0.35</td>
+                          <td class="numeric" style="background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent);">1.00</td>
+                          <td class="numeric" style="color: var(--market-up-fg);">0.55</td>
+                        </tr>
+                        <tr>
+                          <td style="color: var(--text-primary);">换手率</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">0.12</td>
+                          <td class="numeric" style="color: var(--text-tertiary);">0.18</td>
+                          <td class="numeric" style="color: var(--market-up-fg);">0.42</td>
+                          <td class="numeric" style="color: var(--market-up-fg);">0.55</td>
+                          <td class="numeric" style="background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent);">1.00</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Factor-Return Scatter -->
+                <div class="panel">
+                  <div class="panel-header">
+                    <span class="panel-title">因子-收益散点图</span>
+                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">回归线叠加</span>
+                  </div>
+                  <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 280 100" style="width: 100%; opacity: 0.8;">
+                      <line x1="0" y1="50" x2="280" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                      <line x1="0" y1="25" x2="280" y2="25" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
+                      <line x1="0" y1="75" x2="280" y2="75" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
+                      <line x1="140" y1="0" x2="140" y2="100" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                      <!-- Scatter dots -->
+                      <circle cx="35" cy="65" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="55" cy="58" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="70" cy="50" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="90" cy="42" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="105" cy="48" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="120" cy="35" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="135" cy="38" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="155" cy="30" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="170" cy="25" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="185" cy="28" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="200" cy="22" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="220" cy="18" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="240" cy="15" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="255" cy="12" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <!-- Regression line -->
+                      <line x1="25" y1="68" x2="265" y2="10" stroke="var(--brand-accent)" stroke-width="1.5" opacity="0.8"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Decay Analysis -->
+                <div class="panel">
+                  <div class="panel-header">
+                    <span class="panel-title">衰减分析</span>
+                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">IC 半衰期</span>
+                  </div>
+                  <div class="panel-body">
+                    <div style="display: flex; flex-direction: column; gap: var(--space-10);">
+                      <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">IC 半衰期</span>
+                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">5.2 天</span>
+                      </div>
+                      <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">IC 衰减至 50%</span>
+                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary);">T+3</span>
+                      </div>
+                      <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">IC 衰减至 0</span>
+                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary);">T+8</span>
+                      </div>
+                      <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">建议调仓频率</span>
+                        <span style="font-size: var(--font-size-12); color: var(--market-up-fg);">周度</span>
+                      </div>
+                    </div>
+                    <svg viewBox="0 0 280 50" style="width: 100%; margin-top: var(--space-8); opacity: 0.8;">
+                      <path d="M0 8 L40 12 L80 18 L120 25 L160 32 L200 38 L240 42 L280 45" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/>
+                      <line x1="0" y1="25" x2="280" y2="25" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="3"/>
+                      <text x="130" y="22" fill="var(--text-tertiary)" font-size="8">50%</text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="hub-sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">分布特征</div>
+                <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
+                    <span style="color: var(--text-tertiary);">偏度</span>
+                    <span style="font-family: var(--font-family-numeric); color: var(--text-secondary);">0.15</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
+                    <span style="color: var(--text-tertiary);">峰度</span>
+                    <span style="font-family: var(--font-family-numeric); color: var(--text-secondary);">3.28</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
+                    <span style="color: var(--text-tertiary);">JB 正态检验</span>
+                    <span style="font-size: var(--font-size-12); color: var(--system-degraded-fg);">拒绝</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             Tab 4: 换手 (Turnover)
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="fact-turnover" data-tab-panel="fact-turnover">
+          <div class="hub-main">
+            <div class="hub-object-view">
+
+              <!-- Turnover Time Series -->
+              <div class="panel" style="flex: 1;">
+                <div class="panel-header" style="justify-content: space-between;">
+                  <span class="panel-title">换手率时间序列</span>
+                  <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">日频</span>
+                </div>
+                <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
+                  <svg viewBox="0 0 400 120" style="width: 100%; opacity: 0.8;">
+                    <defs>
+                      <linearGradient id="turnover-area" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.12"/>
+                        <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    <line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                    <path d="M0 45 L20 48 L40 42 L60 50 L80 55 L100 40 L120 35 L140 45 L160 50 L180 42 L200 38 L220 45 L240 50 L260 40 L280 35 L300 42 L320 48 L340 38 L360 42 L380 35 L400 38" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/>
+                    <path d="M0 45 L20 48 L40 42 L60 50 L80 55 L100 40 L120 35 L140 45 L160 50 L180 42 L200 38 L220 45 L240 50 L260 40 L280 35 L300 42 L320 48 L340 38 L360 42 L380 35 L400 38 L400 120 L0 120 Z" fill="url(#turnover-area)"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Turnover Breakdown -->
+              <div class="panel" style="flex-shrink: 0;">
+                <div class="panel-header">
+                  <span class="panel-title">换手率分解</span>
+                </div>
+                <div class="panel-body">
+                  <div style="display: flex; flex-direction: column; gap: var(--space-10);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: var(--font-size-12); color: var(--text-secondary);">进入换手</span>
+                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">0.22</span>
+                    </div>
+                    <div style="height: 6px; border-radius: 3px; background: var(--interaction-hover-subtle-bg); width: 100%;">
+                      <div style="height: 6px; border-radius: 3px; background: var(--brand-accent); width: 63%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: var(--font-size-12); color: var(--text-secondary);">退出换手</span>
+                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">0.13</span>
+                    </div>
+                    <div style="height: 6px; border-radius: 3px; background: var(--interaction-hover-subtle-bg); width: 100%;">
+                      <div style="height: 6px; border-radius: 3px; background: var(--text-tertiary); width: 37%;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Holding Stability -->
+              <div class="panel" style="flex-shrink: 0;">
+                <div class="panel-header">
+                  <span class="panel-title">持仓稳定性</span>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr><th>指标</th><th class="numeric">值</th><th>评价</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td style="color: var(--text-primary);">平均持仓周期</td><td class="numeric">18.5 天</td><td><span class="status-badge success">良好</span></td></tr>
+                    <tr><td style="color: var(--text-primary);">30D 持仓留存率</td><td class="numeric">72.3%</td><td><span class="status-badge success">良好</span></td></tr>
+                    <tr><td style="color: var(--text-primary);">换手成本估算</td><td class="numeric">0.42%/年</td><td><span class="status-badge success">可控</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            <div class="hub-sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">频率切换</div>
+                <div style="font-size: var(--font-size-12); color: var(--text-tertiary);">当前：日频</div>
+                <div style="margin-top: var(--space-4); font-size: var(--font-size-12); color: var(--text-tertiary);">可切换：周频 / 月频</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-panels -->
+    </div><!-- /tab-group -->
+
+    <!-- ══════════════════════════════════════════════
+         Bottom Area
+         ══════════════════════════════════════════════ -->
+    <div class="hub-bottom">
+      <div class="bottom-item">
+        <span class="bottom-item-label">数据区间</span>
+        <span class="bottom-item-value">2020-01 → 2026-04</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="bottom-item">
+        <span class="bottom-item-label">最后更新</span>
+        <span class="bottom-item-value">2026-04-11 15:00</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="bottom-item">
+        <span class="bottom-item-label">数据质量</span>
+        <span class="bottom-item-value" style="color: var(--system-healthy-fg);">正常</span>
+      </div>
+    </div>
+
+  </div><!-- /shell-hub -->
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       Zone 2: States Gallery
+       ══════════════════════════════════════════════ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-grid">
+
+      <!-- Group: Factor Header -->
+      <div class="gallery-group" data-component="factor-header">
+        <div class="gallery-group__label">因子标题</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">因子标题 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">因子标题 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">因子信息加载失败</div>
+                  <div class="state-error-desc">无法获取因子元数据</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: KPI Strip -->
+      <div class="gallery-group" data-component="kpi-strip">
+        <div class="gallery-group__label">KPI 指标条</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">KPI · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">KPI · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📊</div>
+                  <div class="state-empty-title">暂无 KPI 数据</div>
+                  <div class="state-empty-desc">因子计算完成后将在此显示</div>
+                  <button class="state-empty-cta">重新计算</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">KPI · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">KPI 加载失败</div>
+                  <div class="state-error-desc">因子指标数据获取失败</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: IC Series -->
+      <div class="gallery-group" data-component="ic-series">
+        <div class="gallery-group__label">IC 时间序列</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">IC 序列 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">IC 序列 · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📈</div>
+                  <div class="state-empty-title">暂无 IC 数据</div>
+                  <div class="state-empty-desc">请确认因子已正确计算</div>
+                  <button class="state-empty-cta">重新计算 IC</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">IC 序列 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">IC 数据加载失败</div>
+                  <div class="state-error-desc">信息系数计算结果获取失败</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: 2x2 Diagnostics -->
+      <div class="gallery-group" data-component="diagnostics-2x2">
+        <div class="gallery-group__label">2x2 诊断面板</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">诊断 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">诊断 · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">🔬</div>
+                  <div class="state-empty-title">暂无诊断数据</div>
+                  <div class="state-empty-desc">因子分析完成后将自动生成</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">诊断 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">诊断数据加载失败</div>
+                  <div class="state-error-desc">请检查因子引擎状态</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: Stats Table -->
+      <div class="gallery-group" data-component="stats-table">
+        <div class="gallery-group__label">统计表格</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">统计 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">统计 · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📋</div>
+                  <div class="state-empty-title">暂无统计数据</div>
+                  <div class="state-empty-desc">因子统计将在计算完成后生成</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">统计 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">统计数据加载失败</div>
+                  <div class="state-error-desc">统计计算结果获取失败</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       Zone 3: Overlays Gallery
+       ══════════════════════════════════════════════ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-group" data-component="overlays">
+        <div class="gallery-group__label">弹层设计</div>
+        <div class="gallery-cards">
+
+          <!-- Overlay 1: Add to Backtest (Sheet) -->
+          <div class="gallery-card">
+            <div class="gallery-card__label">加入回测 (Sheet)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-sheet" role="dialog" aria-label="加入回测">
+                <div class="overlay-header">
+                  <span class="overlay-title">加入回测</span>
+                </div>
+                <div class="overlay-body">
+                  <h4>目标回测</h4>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">回测选择</span>
+                    <span class="overlay-field-value">新建回测</span>
+                  </div>
+                  <h4>权重配置</h4>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">因子权重</span>
+                    <span class="overlay-field-value numeric">0.20</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">排名方式</span>
+                    <span class="overlay-field-value">等权</span>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">确认加入</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 2: Add to Experiment (Sheet) -->
+          <div class="gallery-card">
+            <div class="gallery-card__label">加入实验 (Sheet)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-sheet" role="dialog" aria-label="加入实验">
+                <div class="overlay-header">
+                  <span class="overlay-title">加入实验</span>
+                </div>
+                <div class="overlay-body">
+                  <h4>目标实验</h4>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">实验选择</span>
+                    <span class="overlay-field-value">新建实验</span>
+                  </div>
+                  <h4>变量角色</h4>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">角色分配</span>
+                    <span class="overlay-field-value">实验组</span>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">确认加入</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 3: AI Analysis (Sheet) -->
+          <div class="gallery-card">
+            <div class="gallery-card__label">AI 解读 (Sheet)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-sheet" role="dialog" aria-label="AI 解读">
+                <div class="overlay-header">
+                  <span class="overlay-title">AI 因子解读</span>
+                </div>
+                <div class="overlay-body">
+                  <h4>解读维度</h4>
+                  <div style="display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-10);">
+                    <span class="meta-tag brand" style="cursor: pointer;">IC 分析</span>
+                    <span class="meta-tag" style="cursor: pointer;">收益分析</span>
+                    <span class="meta-tag" style="cursor: pointer;">风险分析</span>
+                    <span class="meta-tag" style="cursor: pointer;">综合评估</span>
+                  </div>
+                  <h4>附加上下文</h4>
+                  <textarea placeholder="可选：补充分析背景或关注点..." class="form-textarea" style="width: 100%; min-height: 60px;"></textarea>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">发送解读</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 4: Diagnostic Detail (Modal) -->
+          <div class="gallery-card">
+            <div class="gallery-card__label">2x2 诊断详情 (Modal)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-modal" role="dialog" aria-label="2x2 诊断详情">
+                <div class="overlay-header">
+                  <span class="overlay-title">IC 时间序列 · 详情</span>
+                </div>
+                <div class="overlay-body">
+                  <p style="font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-8);">
+                    IC 均值 <strong style="color: var(--text-primary);">0.082</strong> · IR <strong style="color: var(--text-primary);">1.45</strong> · 正占比 <strong style="color: var(--text-primary);">62.8%</strong>
+                  </p>
+                  <table class="data-table">
+                    <thead><tr><th>时段</th><th class="numeric">IC 均值</th><th class="numeric">IC IR</th><th class="numeric">正占比</th></tr></thead>
+                    <tbody>
+                      <tr><td>最近 60D</td><td class="numeric" style="color: var(--market-up-fg);">0.095</td><td class="numeric">1.82</td><td class="numeric">68.3%</td></tr>
+                      <tr><td>最近 120D</td><td class="numeric" style="color: var(--market-up-fg);">0.088</td><td class="numeric">1.62</td><td class="numeric">65.0%</td></tr>
+                      <tr><td>最近 250D</td><td class="numeric" style="color: var(--market-up-fg);">0.082</td><td class="numeric">1.45</td><td class="numeric">62.8%</td></tr>
+                      <tr><td>全样本</td><td class="numeric" style="color: var(--market-up-fg);">0.078</td><td class="numeric">1.38</td><td class="numeric">61.2%</td></tr>
+                    </tbody>
+                  </table>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn" style="background: var(--surface-panel-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);">导出 CSV</button>
+                    <button class="overlay-btn overlay-btn-primary">关闭</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-add-backtest" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-add-experiment" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-ai-analysis" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-diagnostic-detail" class="overlay-radio sr-only">
+
+  <!-- Scripts -->
+  <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
+</body>
+</html>

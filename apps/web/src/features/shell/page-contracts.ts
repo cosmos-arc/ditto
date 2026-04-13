@@ -32,6 +32,7 @@ export const SHELL_FAMILIES = [
 	"object-hub",
 	"studio",
 	"ops-console",
+	"radar",
 ] as const;
 
 /** 原型来源类型 */
@@ -45,6 +46,7 @@ export const SHELL_SLOT_MAP: Record<ShellFamily, string[]> = {
 	"object-hub": ["meta", "tabs", "main", "bottom"],
 	studio: ["source", "main", "inspector", "logs"],
 	"ops-console": ["health", "main", "detail"],
+	radar: ["strip", "main", "right-rail", "tab-band"],
 };
 
 /* ------------------------------------------------------------------ */
@@ -131,7 +133,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeSource: "prototype-backed",
 		prototypeRef:
 			"docs/designs/specs/prototypes/page-markets-intelligence.html",
-		requiredSlots: ["strip", "main", "activity"],
+		requiredSlots: ["strip", "main", "activity", "analysis"],
 		requiredStates: [...UNIVERSAL_STATES],
 		hasStatusBar: true,
 	},
@@ -172,7 +174,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		shellFamily: "analytical",
 		prototypeSource: "prototype-backed",
 		prototypeRef: "docs/designs/specs/prototypes/page-risk-center.html",
-		requiredSlots: ["strip", "main", "activity", "analysis"],
+		requiredSlots: ["strip", "main", "analysis"],
 		requiredStates: [...UNIVERSAL_STATES],
 		hasStatusBar: true,
 	},
@@ -197,7 +199,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		shellFamily: "object-hub",
 		prototypeSource: "prototype-backed",
 		prototypeRef: "docs/designs/specs/prototypes/page-instrument-hub.html",
-		requiredSlots: ["meta", "tabs", "main"],
+		requiredSlots: ["meta", "tabs", "main", "bottom"],
 		requiredStates: [...UNIVERSAL_STATES, "not-found"],
 		hasStatusBar: true,
 	},
@@ -226,11 +228,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 	},
 	{
 		route: "/ai/agents",
-		pagePattern: "studio-builder",
-		shellFamily: "studio",
+		pagePattern: "queue-ops-console",
+		shellFamily: "ops-console",
 		prototypeSource: "prototype-backed",
 		prototypeRef: "docs/designs/specs/prototypes/page-agent-console.html",
-		requiredSlots: ["source", "main", "inspector"],
+		requiredSlots: ["main", "detail"],
 		requiredStates: [...UNIVERSAL_STATES, "no-agents", "agent-running"],
 		hasStatusBar: true,
 	},
@@ -279,50 +281,57 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		hasStatusBar: true,
 	},
 
-	/* ── Group B: Spec-only ────────────────────────────────────────── */
+	/* ── Group B: Prototype-backed (v1 batch) ──────────────────────── */
 
-	// 02 Analytical Overview (spec-only)
+	// 02 Analytical Overview — Radar Variant (prototype-backed)
 	{
 		route: "/markets/a-shares",
 		pagePattern: "analytical-overview",
-		shellFamily: "analytical",
-		prototypeSource: "spec-only",
-		requiredSlots: ["strip", "main", "activity"],
+		shellFamily: "radar",
+		prototypeSource: "prototype-backed",
+			prototypeRef: "docs/designs/specs/prototypes/page-a-shares.html",
+		requiredSlots: ["strip", "main", "right-rail", "tab-band"],
 		requiredStates: [...UNIVERSAL_STATES],
 	},
 
-	// 03 Catalog / Screener (spec-only)
+	// 03 Catalog / Screener (prototype-backed)
 	{
 		route: "/markets/calendar",
 		pagePattern: "catalog-screener",
 		shellFamily: "catalog",
-		prototypeSource: "spec-only",
+		prototypeSource: "prototype-backed",
+			prototypeRef: "docs/designs/specs/prototypes/page-markets-calendar.html",
 		requiredSlots: ["toolbar", "main"],
 		requiredStates: [...UNIVERSAL_STATES],
 	},
 
-	// 04 Object Hub (spec-only)
+	// 04 Object Hub — Backtest Result (prototype-backed)
 	{
 		route: "/research/backtest/$id",
 		pagePattern: "object-hub",
 		shellFamily: "object-hub",
-		prototypeSource: "spec-only",
+		prototypeSource: "prototype-backed",
+			prototypeRef: "docs/designs/specs/prototypes/page-backtest-result.html",
 		requiredSlots: ["meta", "tabs", "main"],
 		requiredStates: [...UNIVERSAL_STATES, "not-found"],
 	},
+	// 05 Object Hub — Factor Analysis (prototype-backed)
 	{
 		route: "/research/factors/$id",
 		pagePattern: "object-hub",
 		shellFamily: "object-hub",
-		prototypeSource: "spec-only",
+		prototypeSource: "prototype-backed",
+			prototypeRef: "docs/designs/specs/prototypes/page-factor-analysis.html",
 		requiredSlots: ["meta", "tabs", "main"],
 		requiredStates: [...UNIVERSAL_STATES, "not-found"],
 	},
+	// 06 Object Hub — Strategy Detail (prototype-backed)
 	{
 		route: "/strategies/$id",
 		pagePattern: "object-hub",
 		shellFamily: "object-hub",
-		prototypeSource: "spec-only",
+		prototypeSource: "prototype-backed",
+			prototypeRef: "docs/designs/specs/prototypes/page-strategies-detail.html",
 		requiredSlots: ["meta", "tabs", "main"],
 		requiredStates: [...UNIVERSAL_STATES, "not-found"],
 	},

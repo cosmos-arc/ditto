@@ -1,7 +1,15 @@
 /* 国际市场色覆盖（绿涨红跌） */
+/* 注意：共享 token（design-tokens/tokens-domain.css）已包含 [data-market-region="intl"] 覆盖
+ * 此文件保留 React 专用的 Tailwind namespace 别名覆盖 */
 [data-market-region="intl"] {
-  --color-market-up:         oklch(70% 0.16 155);
-  --color-market-down:       oklch(65% 0.20 25);
-  --color-market-limit-up:   oklch(55% 0.14 155);
-  --color-market-limit-down: oklch(70% 0.22 25);
+  --color-market-up:         var(--market-up-fg);
+  --color-market-down:       var(--market-down-fg);
+  --color-market-up-fg:      var(--market-up-fg);
+  --color-market-down-fg:    var(--market-down-fg);
+  --color-market-up-bg:      var(--market-up-bg);
+  --color-market-down-bg:    var(--market-down-bg);
+  --color-market-limit-up:   var(--market-weak-fg);
+  --color-market-limit-down: var(--market-strong-fg);
+  --color-signal-buy:        var(--market-up-fg);
+  --color-signal-sell:       var(--market-down-fg);
 }

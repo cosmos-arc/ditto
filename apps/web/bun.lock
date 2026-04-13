@@ -7,6 +7,8 @@
         "@fontsource-variable/noto-sans-sc": "^5.2.10",
         "@fontsource/geist-mono": "^5.2.7",
         "@fontsource/geist-sans": "^5.2.5",
+        "@fontsource/inter": "^5.2.8",
+        "@fontsource/jetbrains-mono": "^5.2.8",
         "@radix-ui/react-dialog": "^1.1.15",
         "@tanstack/react-query": "^5.95.2",
         "@tanstack/react-router": "^1.168.4",
@@ -39,7 +41,9 @@
         "jsdom": "^29.0.1",
         "msw": "^2.12.14",
         "openapi-typescript": "^7.13.0",
+        "pixelmatch": "^7.1.0",
         "playwright": "^1.59.1",
+        "pngjs": "^7.0.0",
         "tailwindcss": "^4.2.2",
         "typescript": "~6.0.2",
         "vite": "^8.0.2",
@@ -203,6 +207,10 @@
     "@fontsource/geist-mono": ["@fontsource/geist-mono@5.2.7", "https://registry.npmmirror.com/@fontsource/geist-mono/-/geist-mono-5.2.7.tgz", {}, "sha512-xVPVFISJg/K0VVd+aQN0Y7X/sw9hUcJPyDWFJ5GpyU3bHELhoRsJkPSRSHXW32mOi0xZCUQDOaPj1sqIFJ1FGg=="],
 
     "@fontsource/geist-sans": ["@fontsource/geist-sans@5.2.5", "https://registry.npmmirror.com/@fontsource/geist-sans/-/geist-sans-5.2.5.tgz", {}, "sha512-anllOHyJbElRs9fV15TeDRqAeb1IKm4bSknPl6ZMoyPTx1BBy7logudcUwpNjmQLkzn4Q0JGQLRCUKJYoyST6A=="],
+
+    "@fontsource/inter": ["@fontsource/inter@5.2.8", "https://registry.npmmirror.com/@fontsource/inter/-/inter-5.2.8.tgz", {}, "sha512-P6r5WnJoKiNVV+zvW2xM13gNdFhAEpQ9dQJHt3naLvfg+LkF2ldgSLiF4T41lf1SQCM9QmkqPTn4TH568IRagg=="],
+
+    "@fontsource/jetbrains-mono": ["@fontsource/jetbrains-mono@5.2.8", "https://registry.npmmirror.com/@fontsource/jetbrains-mono/-/jetbrains-mono-5.2.8.tgz", {}, "sha512-6w8/SG4kqvIMu7xd7wt6x3idn1Qux3p9N62s6G3rfldOUYHpWcc2FKrqf+Vo44jRvqWj2oAtTHrZXEP23oSKwQ=="],
 
     "@inquirer/ansi": ["@inquirer/ansi@1.0.2", "https://registry.npmmirror.com/@inquirer/ansi/-/ansi-1.0.2.tgz", {}, "sha512-S8qNSZiYzFd0wAcyG5AXCvUHC5Sr7xpZ9wZ2py9XR88jUz8wooStVx5M6dRzczbBWjic9NP7+rY0Xi7qqK/aMQ=="],
 
@@ -820,11 +828,15 @@
 
     "picomatch": ["picomatch@4.0.4", "https://registry.npmmirror.com/picomatch/-/picomatch-4.0.4.tgz", {}, "sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A=="],
 
+    "pixelmatch": ["pixelmatch@7.1.0", "https://registry.npmmirror.com/pixelmatch/-/pixelmatch-7.1.0.tgz", { "dependencies": { "pngjs": "^7.0.0" }, "bin": { "pixelmatch": "bin/pixelmatch" } }, "sha512-1wrVzJ2STrpmONHKBy228LM1b84msXDUoAzVEl0R8Mz4Ce6EPr+IVtxm8+yvrqLYMHswREkjYFaMxnyGnaY3Ng=="],
+
     "playwright": ["playwright@1.59.1", "https://registry.npmmirror.com/playwright/-/playwright-1.59.1.tgz", { "dependencies": { "playwright-core": "1.59.1" }, "optionalDependencies": { "fsevents": "2.3.2" }, "bin": { "playwright": "cli.js" } }, "sha512-C8oWjPR3F81yljW9o5OxcWzfh6avkVwDD2VYdwIGqTkl+OGFISgypqzfu7dOe4QNLL2aqcWBmI3PMtLIK233lw=="],
 
     "playwright-core": ["playwright-core@1.59.1", "https://registry.npmmirror.com/playwright-core/-/playwright-core-1.59.1.tgz", { "bin": { "playwright-core": "cli.js" } }, "sha512-HBV/RJg81z5BiiZ9yPzIiClYV/QMsDCKUyogwH9p3MCP6IYjUFu/MActgYAvK0oWyV9NlwM3GLBjADyWgydVyg=="],
 
     "pluralize": ["pluralize@8.0.0", "https://registry.npmmirror.com/pluralize/-/pluralize-8.0.0.tgz", {}, "sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA=="],
+
+    "pngjs": ["pngjs@7.0.0", "https://registry.npmmirror.com/pngjs/-/pngjs-7.0.0.tgz", {}, "sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow=="],
 
     "postcss": ["postcss@8.5.8", "https://registry.npmmirror.com/postcss/-/postcss-8.5.8.tgz", { "dependencies": { "nanoid": "^3.3.11", "picocolors": "^1.1.1", "source-map-js": "^1.2.1" } }, "sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg=="],
 

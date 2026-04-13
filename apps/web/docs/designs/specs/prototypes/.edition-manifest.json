@@ -63,7 +63,7 @@
     {
       "id": "home",
       "file": "page-home.html",
-      "status": "v5-done",
+      "status": "implemented",
       "score": 9.2,
       "styleAnchor": "platform",
       "rounds": 3,
@@ -81,6 +81,22 @@
         "overlays": 4,
         "stateVariants": 8,
         "coveragePercent": 100
+      },
+      "implementation": {
+        "implementedAt": "2026-04-13",
+        "L1_token": "PASS (0 violations)",
+        "L2_layout": "PASS (all structural 0px, content deltas <0.74px)",
+        "L2_style": "PASS (only non-visual border/zIndex diffs remain)",
+        "L3_pixel_raw": "3.08% @ threshold 0.2, 2.04% @ 0.3, 1.67% @ 0.35",
+        "L3_pixel_analysis": "text AA from HTML DOM structure diffs, not layout/content. Chromium channel confirms engine-agnostic.",
+        "L3_pixel_ceiling": "~3% (browser rendering limit for cross-HTML pixel comparison)",
+        "compositeScore": 9.96,
+        "iterateRounds": 1,
+        "protoDeviations": [],
+        "newComponents": [],
+        "modifiedComponents": ["noise-layer.tsx", "globals.css"],
+        "tests": "970 passing",
+        "engineeringCheck": "PASS (biome + tsc + 970 tests)"
       }
     },
     {
@@ -437,6 +453,81 @@
         "tabs": 4,
         "overlays": 4,
         "stateVariants": 6,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "strategies-detail",
+      "file": "page-strategies-detail.html",
+      "status": "v1-new",
+      "score": null,
+      "styleAnchor": null,
+      "rounds": 0,
+      "createdAt": "2026-04-12",
+      "stateCoverage": {
+        "tabs": 5,
+        "overlays": 5,
+        "stateVariants": 12,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "factor-analysis",
+      "file": "page-factor-analysis.html",
+      "status": "v1-new",
+      "score": null,
+      "styleAnchor": null,
+      "rounds": 0,
+      "createdAt": "2026-04-12",
+      "stateCoverage": {
+        "tabs": 4,
+        "overlays": 4,
+        "stateVariants": 10,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "backtest-result",
+      "file": "page-backtest-result.html",
+      "status": "v1-new",
+      "score": null,
+      "styleAnchor": null,
+      "rounds": 0,
+      "createdAt": "2026-04-12",
+      "stateCoverage": {
+        "tabs": 6,
+        "overlays": 4,
+        "stateVariants": 11,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "markets-calendar",
+      "file": "page-markets-calendar.html",
+      "status": "v1-new",
+      "score": null,
+      "styleAnchor": null,
+      "rounds": 0,
+      "createdAt": "2026-04-12",
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 3,
+        "stateVariants": 7,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "a-shares",
+      "file": "page-a-shares.html",
+      "status": "v1-new",
+      "score": null,
+      "styleAnchor": "cross-market",
+      "rounds": 0,
+      "createdAt": "2026-04-12",
+      "stateCoverage": {
+        "tabs": 4,
+        "overlays": 4,
+        "stateVariants": 7,
         "coveragePercent": 100
       }
     },

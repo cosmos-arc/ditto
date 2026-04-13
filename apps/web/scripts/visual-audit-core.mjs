@@ -117,6 +117,24 @@ export function validateTargetKeyParity(config) {
 	return warnings;
 }
 
+/**
+ * Properties to skip when reporting style diffs.
+ * These are structural/layout props already covered by the Rect Deltas table,
+ * or props that are expected to differ between prototype HTML and React (e.g. fontFamily).
+ */
+const SKIP_DIFF_PROPS = new Set([
+	"display",
+	"position",
+	"width",
+	"height",
+	"padding",
+	"gap",
+	"gridTemplateRows",
+	"gridTemplateColumns",
+	"lineHeight",
+	"fontFamily",
+]);
+
 export function renderReport(metrics) {
 	const names = [
 		...new Set([
@@ -135,7 +153,7 @@ export function renderReport(metrics) {
 		"",
 		"## Target Rect Deltas",
 		"",
-		"| Target | Prototype | React | Δx | Δy | Δw | Δh |",
+		"| Target | Prototype | React | \u0394x | \u0394y | \u0394w | \u0394h |",
 		"| --- | --- | --- | ---: | ---: | ---: | ---: |",
 	];
 
@@ -154,6 +172,32 @@ export function renderReport(metrics) {
 				delta ? formatNumber(delta.height) : "n/a",
 			].join(" | ") + " |",
 		);
+	}
+
+	// Style diffs between prototype and React
+	const styleDiffs = buildStyleDiffs(names, metrics.prototype, metrics.react);
+	if (styleDiffs.length > 0) {
+		lines.push("", "## Style Diffs", "");
+		lines.push("| Target | Property | Prototype | React |");
+		lines.push("| --- | --- | --- | --- |");
+		for (const diff of styleDiffs) {
+			lines.push(
+				`| ${diff.target} | \`${diff.prop}\` | ${diff.prototype} | ${diff.react} |`,
+			);
+		}
+	}
+
+	// Pseudo-element diffs
+	const pseudoDiffs = buildPseudoDiffs(names, metrics.prototype, metrics.react);
+	if (pseudoDiffs.length > 0) {
+		lines.push("", "## Pseudo-element Style Diffs", "");
+		lines.push("| Target | Pseudo | Property | Prototype | React |");
+		lines.push("| --- | --- | --- | --- | --- |");
+		for (const diff of pseudoDiffs) {
+			lines.push(
+				`| ${diff.target} | ${diff.pseudo} | \`${diff.prop}\` | ${diff.prototype} | ${diff.react} |`,
+			);
+		}
 	}
 
 	const warnings = [
@@ -175,6 +219,74 @@ export function renderReport(metrics) {
 	return `${lines.join("\n")}`;
 }
 
+function buildStyleDiffs(names, prototypeMetrics, reactMetrics) {
+	const diffs = [];
+
+	for (const name of names) {
+		const proto = prototypeMetrics[name];
+		const react = reactMetrics[name];
+		if (!proto?.styles || !react?.styles) continue;
+
+		for (const [prop, protoValue] of Object.entries(proto.styles)) {
+			if (SKIP_DIFF_PROPS.has(prop)) continue;
+			const reactValue = react.styles[prop];
+			if (protoValue !== reactValue) {
+				diffs.push({
+					target: name,
+					prop,
+					prototype: truncate(protoValue),
+					react: truncate(reactValue),
+				});
+			}
+		}
+	}
+
+	return diffs;
+}
+
+function buildPseudoDiffs(names, prototypeMetrics, reactMetrics) {
+	const diffs = [];
+
+	for (const name of names) {
+		const proto = prototypeMetrics[name];
+		const react = reactMetrics[name];
+		if (!proto?.pseudoStyles || !react?.pseudoStyles) continue;
+
+		for (const pseudo of ["::before", "::after"]) {
+			const protoPseudo = proto.pseudoStyles[pseudo];
+			const reactPseudo = react.pseudoStyles[pseudo];
+			if (!protoPseudo && !reactPseudo) continue;
+
+			// If only one side has the pseudo-element, note the mismatch
+			if (!protoPseudo || !reactPseudo) {
+				diffs.push({
+					target: name,
+					pseudo,
+					prop: "(existence)",
+					prototype: protoPseudo ? "present" : "absent",
+					react: reactPseudo ? "present" : "absent",
+				});
+				continue;
+			}
+
+			for (const [prop, protoValue] of Object.entries(protoPseudo)) {
+				const reactValue = reactPseudo[prop];
+				if (protoValue !== reactValue) {
+					diffs.push({
+						target: name,
+						pseudo,
+						prop,
+						prototype: truncate(protoValue),
+						react: truncate(reactValue),
+					});
+				}
+			}
+		}
+	}
+
+	return diffs;
+}
+
 function buildRectDelta(prototype, react) {
 	if (!prototype || !react) return null;
 
@@ -193,4 +305,10 @@ function formatRect(rect) {
 
 function formatNumber(value) {
 	return Number.isInteger(value) ? `${value}` : value.toFixed(2);
+}
+
+function truncate(value) {
+	if (!value) return value;
+	const str = String(value);
+	return str.length > 80 ? `${str.slice(0, 77)}...` : str;
 }

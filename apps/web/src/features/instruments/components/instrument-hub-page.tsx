@@ -1,5 +1,5 @@
 import { useParams } from "@tanstack/react-router";
-import { ObjectHubLayout } from "@/features/shell";
+import { ObjectHubLayout, StatusBar } from "@/features/shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { InstrumentMetaStrip } from "./instrument-meta-strip";
 import { InstrumentOverview } from "./instrument-overview";
@@ -10,8 +10,10 @@ export function InstrumentHubPage() {
 	const instrumentId = id ?? "";
 
 	return (
+		<>
 		<Tabs defaultValue="overview" className="h-full">
 			<ObjectHubLayout
+				className="pb-(--height-status-bar)"
 				meta={<InstrumentMetaStrip id={instrumentId} />}
 				tabs={
 					<TabsList>
@@ -33,7 +35,14 @@ export function InstrumentHubPage() {
 						</TabsContent>
 					</>
 				}
+				bottom={
+					<div className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
+						<span className="text-xs text-(--color-foreground-tertiary)">价格走势 · 待实现</span>
+					</div>
+				}
 			/>
 		</Tabs>
+		<StatusBar />
+		</>
 	);
 }

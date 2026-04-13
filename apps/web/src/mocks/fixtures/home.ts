@@ -18,6 +18,8 @@ export const mockHomePulse: HomePulseResponse = {
 	runningJobs: 3,
 	pnlToday: 86472.5,
 	pnlPercent: 0.34,
+	riskLevel: "中等",
+	regimeType: "温和风险偏好",
 };
 
 export const mockDecisionBanner: DecisionBannerResponse = {

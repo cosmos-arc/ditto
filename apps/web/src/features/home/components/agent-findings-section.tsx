@@ -1,25 +1,24 @@
-import { useRecentSignals } from "../hooks";
+import { useAgentFindings } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
-const SIGNAL_BADGE: Record<string, string> = {
-	BUY: "bg-(--color-market-up-fg)/10 text-(--color-market-up-fg)",
-	SELL: "bg-(--color-market-down-fg)/10 text-(--color-market-down-fg)",
-	HOLD: "bg-(--color-foreground-muted)/10 text-(--color-foreground-muted)",
+const FINDING_ICON_CLASS: Record<string, string> = {
+	insight: "text-(--color-brand-500)",
+	warning: "text-(--color-risk-warning)",
+	info: "text-(--color-foreground-tertiary)",
 };
 
 /**
  * AgentFindingsSection — "Agent 洞察" findings feed.
  * Matches prototype .findings-feed with .finding-item rows.
- * Reuses recent signals data for now.
  */
 export function AgentFindingsSection() {
-	const { data, isLoading, isError, refetch } = useRecentSignals();
+	const { data, isLoading, refetch } = useAgentFindings();
 
 	return (
 		<div className="flex min-h-0 flex-col overflow-hidden">
 			<div className="flex items-center justify-between border-b border-(--color-border-subtle) px-3 py-2">
-				<span className="text-xs font-medium text-(--color-foreground)">
+				<span className="text-sm font-medium text-(--color-foreground)">
 					Agent 洞察
 					<span className="ml-2 font-normal text-(--color-foreground-tertiary)">关联分析</span>
 				</span>
@@ -34,21 +33,21 @@ export function AgentFindingsSection() {
 				>
 					{data && (
 						<div className="flex flex-col gap-1">
-							{data.signals.map((signal, i) => (
+							{data.findings.map((finding, i) => (
 								<div
-									key={`${signal.ticker}-${i}`}
-									className="rounded-[var(--radius-sm)] px-2 py-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+									key={`${finding.source}-${i}`}
+									className="rounded-[4px] p-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<div className="flex items-center gap-1.5">
-										<span className={`shrink-0 rounded-[var(--radius-sm)] px-1.5 text-xs ${SIGNAL_BADGE[signal.action] ?? ""}`}>
-											{signal.action}
+										<span className={`shrink-0 text-xs ${FINDING_ICON_CLASS[finding.icon] ?? "text-(--color-foreground-tertiary)"}`}>
+											{finding.icon === "insight" ? "💡" : finding.icon === "warning" ? "⚠" : "ℹ"}
 										</span>
 										<span className="text-xs text-(--color-foreground)">
-											{signal.ticker}
+											{finding.summary ?? finding.source}
 										</span>
 									</div>
 									<p className="mt-0.5 text-xs text-(--color-foreground-tertiary)">
-										{signal.strategy} · 置信度 {signal.confidence}%
+										{finding.text}
 									</p>
 								</div>
 							))}

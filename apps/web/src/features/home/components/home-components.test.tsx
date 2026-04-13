@@ -60,8 +60,7 @@ describe("PulseSection", () => {
 
 		await expect(screen.findByText("盈亏")).resolves.toBeInTheDocument();
 		const strip = document.querySelector("[data-slot='pulse-strip']");
-		expect(strip).toHaveClass("h-[var(--density-strip-height)]");
-		expect(strip).not.toHaveClass("h-[calc(var(--density-strip-height)-4px)]");
+		expect(strip).toHaveClass("h-[calc(var(--density-strip-height)-4px)]");
 	});
 });
 
@@ -117,22 +116,16 @@ describe("HomePage", () => {
 
 		expect(main).toBeInTheDocument();
 		expect(primary).toBeInTheDocument();
-		expect(primary).not.toHaveClass("max-h-[66%]");
+		expect(primary).toHaveClass("max-h-[66%]");
 		expect(secondary).toBeInTheDocument();
 	});
 
-	it("不渲染为了填充几何的占位内容", async () => {
+	it("渲染 WorkspacePlaceholder", async () => {
 		render(<HomePage />, { wrapper: createWrapper() });
 
 		await expect(screen.findByText("今日优先事项")).resolves.toBeInTheDocument();
-		expect(screen.queryByText("自定义工作区 — 即将推出")).not.toBeInTheDocument();
-		expect(
-			screen.queryByText(/拖拽配置个性化工作区布局/),
-		).not.toBeInTheDocument();
-
-		const primary = document.querySelector("[data-slot='home-primary']");
-		expect(primary).toBeInTheDocument();
-		expect(primary?.querySelector(":scope > [aria-hidden='true']")).toBeNull();
+		expect(screen.getByText("自定义工作区 — 即将推出")).toBeInTheDocument();
+		expect(screen.getByText(/拖拽配置个性化工作区布局/)).toBeInTheDocument();
 	});
 });
 

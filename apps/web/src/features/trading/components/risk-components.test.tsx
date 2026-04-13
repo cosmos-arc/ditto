@@ -79,8 +79,6 @@ describe("RiskPage", () => {
 	it("渲染风控中心布局", async () => {
 		render(<RiskPage />, { wrapper: createWrapper() });
 		await expect(screen.findByText("敞口概览")).resolves.toBeInTheDocument();
-		const alerts = await screen.findAllByText("风控告警");
-		expect(alerts.length).toBeGreaterThanOrEqual(1);
 		await expect(screen.findByText("VaR(95%)")).resolves.toBeInTheDocument();
 	});
 });

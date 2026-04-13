@@ -2575,6 +2575,147 @@ Global Command Center（轻量变体）
 
 ---
 
+## 18. Strategy Detail
+
+> **路由**：`/strategies/$id`
+> **Pattern**: Object Hub（对象详情页）
+
+### 页面目标
+
+围绕单策略形成完整对象中心——查看策略配置、追踪表现、管理版本、关联信号与回测。
+
+### 页面角色
+
+Object Hub
+
+### 与 Strategy Studio (§7) 的关系
+
+- Strategy Studio = **编辑器**（创建/修改策略配置）
+- Strategy Detail = **查看器**（查看策略详情、表现、历史、关联产物）
+
+### 主工作面
+
+当前 tab 对应的策略详情视图
+
+### 辅工作面
+
+KPI Strip / Meta Strip / Bottom Area
+
+### 默认 tab
+
+概览 → 配置 → 回测历史 → 信号 → 版本
+
+### 核心区块
+
+- Strategy Header（名称 / 类型 / 状态 / 版本号 / 操作按钮）
+- Meta Strip（创建时间 / 最后修改 / 因子数量 / Universe 规模 / 风控规则数）
+- Tabs（概览 / 配置 / 回测历史 / 信号 / 版本）
+- Main Content（tab-specific）
+- Bottom Area（关联标的池 / 最近信号 / 风控事件）
+
+### 主 CTA
+
+- 编辑策略（跳转 Strategy Studio）
+- 提交回测
+- 复制策略
+- 删除策略
+
+### 主要跳转
+
+- 编辑 → `/research/strategy-studio?id=$id`
+- 回测行 → `/research/backtest/$id`
+- 信号行 → `/trading/signals`
+- 版本 diff → 对比视图
+
+### Wireframe
+
+```
+┌ Rail ┬───────────────────────────────────────────────────────────────┐
+│      │ Strategy Header: name/type/status/version/actions            │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ Meta Strip: created / modified / factors / universe / rules  │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ Tabs: overview | config | backtests | signals | versions     │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ Main Content (tab-specific)                                   │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ Bottom: related universe / recent signals / risk events      │
+└──────┴───────────────────────────────────────────────────────────────┘
+```
+
+### Tab Content Sections
+
+#### Tab: 概览（默认）
+- **子模块**: KPI Strip（Sharpe/年化收益/最大回撤/胜率/换手率）、策略状态摘要（活跃因子数/Universe 规模/风控状态/最近运行时间）、最近表现趋势（迷你净值曲线 30D）、关联回测 Top3（最近 3 次回测摘要卡片）
+- **数据字段**: KPI 指标（来源: 最新回测结果）、策略配置元数据（来源: Strategy Store）、净值曲线（来源: 回测引擎）、回测摘要（来源: 回测引擎）
+- **交互说明**: KPI 卡片点击跳转对应回测详情；趋势图支持悬停查看数值；回测摘要卡片点击跳转完整回测结果页
+
+#### Tab: 配置
+- **子模块**: 因子配置（因子列表/名称/家族/权重/预处理步骤）、Universe 配置（标的池名称/数量/筛选条件）、权重分配（模式标签 + Top10 分布柱状图）、风控规则（规则名/阈值/当前值/状态）
+- **数据字段**: 因子列表（来源: Factor Library + Strategy Config）、Universe 配置（来源: Universe Service）、权重分配（来源: Strategy Config）、风控规则（来源: Risk Rules Store）
+- **交互说明**: 因子行悬停显示 KPI 摘要卡片；右上角"编辑"按钮跳转 Strategy Studio（Context Transfer: `?id=$id&tab=config`）；权重柱状图支持点击展开完整分配表
+
+#### Tab: 回测历史
+- **子模块**: 回测列表（名称/版本/区间/Sharpe/年化收益/MDD/状态/时间）、内嵌 Compare 视图（净值叠加图 + 指标对比表 + 配置差异摘要）
+- **数据字段**: 回测列表（来源: Backtest Engine）、净值序列（来源: Backtest Engine）、指标对比（来源: Backtest Engine）、配置差异（来源: Strategy Version Diff）
+- **交互说明**: 勾选 2-5 个回测自动展开 Compare 面板；净值叠加图各版本颜色区分；指标对比表标注最优 ★；点击行跳转 `/research/backtest/$id`；支持按状态/时间/Sharpe 排序筛选
+
+#### Tab: 信号
+- **子模块**: 信号统计（四状态计数 badge: 待复核/已确认/已忽略/已转订单）、信号列表（时间/标的/方向/置信度/状态/来源）
+- **数据字段**: 信号列表（来源: Signal Engine，筛选 strategy_id=$id）、信号状态分布（来源: Signal Engine 聚合）
+- **交互说明**: 点击信号跳转 `/trading/signals` 并定位到该信号；按状态筛选；查看全部跳转 Signals Inbox
+
+#### Tab: 版本
+- **子模块**: 版本时间线（版本号/修改时间/修改人/变更摘要）、版本对比（选择两版本展示配置 diff: 因子变化/权重变化/规则变化）
+- **数据字段**: 版本历史（来源: Strategy Version Store）、配置 diff（来源: Version Diff Engine）
+- **交互说明**: 点击版本展开完整配置快照；选择两版本触发 inline diff 视图；支持版本回滚（确认 Modal）
+
+### Overlay Registry
+
+#### Overlay: 编辑策略 — 跳转
+- **触发条件**: 用户点击"编辑"按钮
+- **内容结构**: 跳转 `/research/strategy-studio?id=$id`（Context Transfer）
+- **关闭行为**: 不适用（页面跳转）
+
+#### Overlay: 复制策略 — Modal
+- **触发条件**: 用户点击"复制"按钮
+- **内容结构**: 新策略名称输入 + 描述输入 + [取消] [确认复制]
+- **关闭行为**: 点击遮罩 / ESC / 确认后自动关闭 + 跳转到新策略页
+
+#### Overlay: 删除策略 — Modal（破坏性操作）
+- **触发条件**: 用户点击"删除"按钮
+- **内容结构**: 警告图标 + "确认删除策略 [名称] 及其所有版本和回测记录？" + [取消] [确认删除]
+- **关闭行为**: 点击遮罩 / ESC / 取消按钮 / 确认删除后跳转到 Research Workspace
+
+#### Overlay: 提交回测 — Sheet（右侧）
+- **触发条件**: 用户点击"提交回测"按钮
+- **内容结构**: 回测区间（起始/结束日期）+ 初始资金 + 基准指数 + 交易成本配置（印花税/佣金/滑点/冲击成本）+ 调仓频率 + [取消] [提交回测]
+- **关闭行为**: 点击遮罩 / ESC / 提交后自动关闭 + Toast "回测已提交"
+
+#### Overlay: 版本回滚确认 — Modal（破坏性操作）
+- **触发条件**: 用户点击版本的"回滚"按钮
+- **内容结构**: "确认回滚到版本 v{N}？当前版本配置将被覆盖。" + 版本对比摘要 + [取消] [确认回滚]
+- **关闭行为**: 点击遮罩 / ESC / 确认后自动关闭 + Toast "已回滚到 v{N}"
+
+### Component × State Matrix
+
+| 组件 | default | loading | empty | failed | stale |
+|------|---------|---------|-------|--------|-------|
+| Strategy Header | 策略名称/类型/状态/版本 | 标题 skeleton | — | "策略信息加载失败" + 重试 | 状态旁黄色圆点 |
+| Meta Strip | 因子数/Universe 规模/规则数 | 条目 skeleton | — | — | 黄色边框 |
+| KPI Strip | 5 个指标卡片 | skeleton × 5 | "暂无回测数据" + 提交回测 CTA | "KPI 加载失败" + 重试 | 指标值黄色闪烁 |
+| 配置 Tab: 因子列表 | 因子行 + 权重 + 预处理标签 | 行 skeleton × 8 | "未配置因子" + 编辑 CTA | 错误 + 重试 | 黄色边框 |
+| 配置 Tab: 权重分配 | 柱状图 + 模式标签 | 图表 skeleton | "请先配置 Universe" | 错误 + 重试 | 黄色边框 |
+| 配置 Tab: 风控规则 | 规则列表 + 阈值 + 状态 | 行 skeleton | "未配置风控规则" | 错误 + 重试 | 规则状态灰色 |
+| 回测 Tab: 列表 | 回测行 + 状态色标 | 行 skeleton × 10 | "暂无回测记录" + 提交回测 CTA | 错误 + 重试 | 黄色边框 |
+| 回测 Tab: Compare | 净值叠加图 + 对比表 | 图表/表 skeleton | "勾选 2+ 回测展开对比" | "对比渲染失败" + 重试 | 黄色边框 |
+| 信号 Tab: 统计 | 四状态计数 badge | badge skeleton | "暂无信号产出" | 错误 + 重试 | — |
+| 信号 Tab: 列表 | 信号行 + 状态 | 行 skeleton × 10 | "暂无信号" + 查看全部 CTA | 错误 + 重试 | 黄色边框 |
+| 版本 Tab: 时间线 | 版本行 + 变更摘要 | 行 skeleton × 5 | "暂无版本记录" | 错误 + 重试 | — |
+| 版本 Tab: Diff | 配置差异高亮 | diff skeleton | "选择两个版本查看差异" | 错误 + 重试 | — |
+
+---
+
 ## 页面优先级
 
 ### 第一批先设计
@@ -2601,6 +2742,11 @@ Global Command Center（轻量变体）
 - Agent Console
 
 ## Changelog
+
+### 2026-04-12 — v1.2 Strategy Detail 新增
+
+- **[新增]** §18 Strategy Detail 蓝图（对象详情页，策略配置/回测历史/信号/版本管理）
+- **[说明]** 填补 spec-only 页面中唯一缺失的蓝图，支撑 5 个 spec-only 页面原型创建
 
 ### 2026-03-31 — v1.1 页面模板补全
 

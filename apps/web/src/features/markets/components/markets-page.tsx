@@ -1,4 +1,4 @@
-import { RadarLayout } from "@/features/shell";
+import { RadarLayout, StatusBar } from "@/features/shell";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { useMarketContext } from "../hooks";
 import { MarketCardGrid } from "./market-card-grid";
@@ -199,7 +199,9 @@ function MarketRightRail() {
 
 export function MarketsPage() {
 	return (
+		<>
 		<RadarLayout
+			className="pb-(--height-status-bar)"
 			contextBar={<MarketContextBar />}
 			scopeStrip={<ScopeStrip />}
 			main={
@@ -212,5 +214,7 @@ export function MarketsPage() {
 			}
 			rightRail={<MarketRightRail />}
 		/>
+		<StatusBar />
+		</>
 	);
 }

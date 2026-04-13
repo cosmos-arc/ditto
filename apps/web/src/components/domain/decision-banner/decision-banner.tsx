@@ -83,7 +83,7 @@ function DecisionBanner({
 							<div className="flex gap-3">
 								{judgment.metrics.slice(0, 2).map((metric) => (
 									<div key={metric.label} className="flex flex-col gap-px">
-										<span className="text-[var(--text-xs)] text-(--color-foreground-tertiary)">
+										<span className="text-sm text-(--color-foreground-tertiary)">
 											{metric.label}
 										</span>
 										<Metric
@@ -102,7 +102,7 @@ function DecisionBanner({
 							<div className="flex gap-3">
 								{judgment.metrics.slice(2).map((metric) => (
 									<div key={metric.label} className="flex flex-col gap-px">
-										<span className="text-[var(--text-xs)] text-(--color-foreground-tertiary)">
+										<span className="text-sm text-(--color-foreground-tertiary)">
 											{metric.label}
 										</span>
 										<Metric
@@ -126,7 +126,7 @@ function DecisionBanner({
 					data-slot="decision-actions"
 					className="flex flex-col items-end gap-2 md:border-l md:border-(--color-border-subtle) md:pl-4"
 				>
-					<span className="text-xs text-(--color-foreground-tertiary) mb-1">下一步</span>
+					<span className="text-sm text-(--color-foreground-tertiary) mb-1">下一步</span>
 					<div className="flex flex-col items-end gap-2">
 						{actions.map((action) => (
 							<Button

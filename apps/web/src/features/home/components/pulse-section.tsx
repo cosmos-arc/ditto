@@ -5,15 +5,15 @@ import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 /**
  * PulseSection — thin operational status strip.
- * Matches prototype .shell-pulse: 32px height, surface-strip bg,
- * 10px font, horizontal flex with separators.
+ * Matches prototype .shell-pulse: calc(density-strip-height - 4px),
+ * surface-strip bg, 10px font on items, horizontal flex with separators.
  */
 export function PulseSection() {
 	const { data, isLoading, isError, refetch } = useHomePulse();
 
 	if (isLoading) {
 		return (
-			<div className="flex h-[var(--density-strip-height)] items-center gap-4 bg-(--color-surface-strip) px-4">
+			<div className="flex h-[calc(var(--density-strip-height)-4px)] items-center gap-4 bg-(--color-surface-strip) px-4">
 				{Array.from({ length: 3 }).map((_, i) => (
 					<LoadingSkeleton key={i} variant="metric" className="h-4 w-24" />
 				))}
@@ -31,9 +31,9 @@ export function PulseSection() {
 			}}
 		>
 			<ScrollReveal>
-				<div data-slot="pulse-strip" className="flex h-[var(--density-strip-height)] items-center gap-4 overflow-hidden bg-(--color-surface-strip) px-4 text-xs text-(--color-foreground-tertiary)">
+				<div data-slot="pulse-strip" className="flex h-[calc(var(--density-strip-height)-4px)] items-center gap-4 overflow-hidden bg-(--color-surface-strip) px-4 text-xs text-(--color-foreground-tertiary)">
 					{/* 1. Time + Status */}
-					<div className="flex items-center gap-1 whitespace-nowrap">
+					<div className="flex items-center gap-1 whitespace-nowrap rounded-[4px] px-1 py-0.5">
 						<span className="inline-block size-1.5 rounded-full bg-(--color-system-healthy-fg) animate-[dot-live-pulse_3s_ease-in-out_infinite]" />
 						<span className="font-data">{data?.date ?? "—"}</span>
 						<span>·</span>
@@ -43,7 +43,7 @@ export function PulseSection() {
 					<PulseSeparator />
 
 					{/* 2. PnL */}
-					<div className="flex items-center gap-1 whitespace-nowrap">
+					<div className="flex items-center gap-1 whitespace-nowrap rounded-[4px] px-1 py-0.5">
 						<span>盈亏</span>
 						<span className={`font-data ${isPositive ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}>
 							{isPositive ? "+" : ""}{data?.pnlPercent ?? 0}%
@@ -53,22 +53,22 @@ export function PulseSection() {
 					<PulseSeparator />
 
 					{/* 3. Risk — 风险等级 */}
-					<div className="flex items-center gap-1 whitespace-nowrap">
+					<div className="flex items-center gap-1 whitespace-nowrap rounded-[4px] px-1 py-0.5">
 						<span>风险</span>
-						<span className="font-data text-(--color-risk-high-fg)">中等</span>
+						<span className="font-data text-(--color-risk-high-fg)">{data?.riskLevel ?? "—"}</span>
 					</div>
 
 					<PulseSeparator />
 
 					{/* 4. Regime — 市场环境 */}
-					<div className="flex items-center gap-1 whitespace-nowrap">
-						<span className="rounded-[10px] bg-(--color-surface-strip) px-2 py-px text-xs tracking-[0.02em] text-(--color-foreground-secondary)">温和风险偏好</span>
+					<div className="flex items-center gap-1 whitespace-nowrap rounded-[4px] px-1 py-0.5">
+						<span className="rounded-[10px] bg-[oklch(1_0_0/0.05)] px-2 py-px text-xs font-medium tracking-[0.02em] text-(--color-foreground-secondary)">{data?.regimeType ?? "—"}</span>
 					</div>
 
 					<PulseSeparator />
 
 					{/* 5. Pending + Jobs */}
-					<div className="flex items-center gap-1 whitespace-nowrap">
+					<div className="flex items-center gap-1 whitespace-nowrap rounded-[4px] px-1 py-0.5">
 						<span>待处理</span>
 						<span className="font-data text-(--color-foreground-secondary)">{data?.pendingActions ?? 0}</span>
 						<span className="ml-2">运行中</span>

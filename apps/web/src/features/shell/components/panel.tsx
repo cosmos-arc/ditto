@@ -58,7 +58,7 @@ export function PanelHeader({ title, subtitle, count, actions }: PanelHeaderProp
 				"px-3 py-2",
 			].join(" ")}
 		>
-			<span className="flex min-w-0 flex-1 items-baseline gap-2 text-xs font-medium text-(--color-foreground)">
+			<span className="flex min-w-0 flex-1 items-baseline gap-2 text-sm font-medium text-(--color-foreground)">
 				{title}
 				{subtitle && (
 					<span
@@ -71,7 +71,7 @@ export function PanelHeader({ title, subtitle, count, actions }: PanelHeaderProp
 				{count !== undefined && (
 					<span
 						data-testid="panel-count"
-						className="flex h-4.5 items-center rounded-(--radius-sm) bg-(--color-surface-strip) px-(--spacing-1-5) font-data text-xs tabular-nums text-(--color-foreground-tertiary)"
+						className="flex h-4.5 items-center rounded-[4px] bg-(--color-surface-strip) px-2 font-data text-sm tabular-nums tracking-[-0.24px] text-(--color-foreground-tertiary)"
 					>
 						{count}
 					</span>

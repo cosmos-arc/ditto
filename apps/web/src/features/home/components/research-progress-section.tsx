@@ -48,7 +48,7 @@ export function ResearchProgressSection() {
 							{findingsData.findings.map((finding, i) => (
 								<div
 									key={`${finding.source}-${i}`}
-									className="flex gap-2 rounded-[var(--radius-sm)] px-2 py-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+									className="flex gap-2 rounded-[4px] p-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<span className={`mt-0.5 shrink-0 ${ICON_COLOR[finding.icon] ?? "text-(--color-foreground-tertiary)"}`}>
 										<svg width={14} height={14} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -62,10 +62,10 @@ export function ResearchProgressSection() {
 										</svg>
 									</span>
 									<div className="min-w-0 flex-1">
-										<p className="text-xs text-(--color-foreground)">
+										<p className="text-(--color-foreground)">
 											{finding.summary ?? finding.text}
 										</p>
-										<span className="text-xs tabular-nums text-(--color-foreground-muted)">
+										<span className="text-xs tabular-nums text-(--color-foreground-tertiary)">
 											{finding.time ?? finding.source}
 										</span>
 									</div>

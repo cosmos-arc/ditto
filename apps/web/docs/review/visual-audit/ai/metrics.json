@@ -1,12 +1,12 @@
 {
-  "capturedAt": "2026-04-11T07:19:42.367Z",
+  "capturedAt": "2026-04-12T16:26:42.361Z",
   "route": "/ai",
   "resolvedRoute": "/ai",
   "name": "ai",
   "prototypeFile": "page-ai-overview.html",
   "urls": {
-    "react": "http://127.0.0.1:5176/ai",
-    "prototype": "http://127.0.0.1:8766/page-ai-overview.html"
+    "react": "http://localhost:5173/ai",
+    "prototype": "http://localhost:8888/page-ai-overview.html"
   },
   "viewport": {
     "width": 1536,
@@ -226,17 +226,17 @@
         "x": 0,
         "y": 0,
         "width": 56,
-        "height": 368,
+        "height": 900,
         "top": 0,
         "right": 56,
-        "bottom": 368,
+        "bottom": 900,
         "left": 0
       },
       "styles": {
         "display": "flex",
         "position": "static",
         "width": "56px",
-        "height": "368px",
+        "height": "900px",
         "padding": "8px 0px",
         "gap": "4px",
         "gridTemplateRows": "none",
@@ -324,9 +324,9 @@
         "position": "static",
         "width": "1480px",
         "height": "832px",
-        "padding": "0px",
+        "padding": "0px 0px 24px",
         "gap": "normal",
-        "gridTemplateRows": "85.2031px 722.797px 24px",
+        "gridTemplateRows": "32px 776px",
         "gridTemplateColumns": "1160px 320px",
         "fontSize": "13px",
         "lineHeight": "18.85px",
@@ -350,7 +350,7 @@
       },
       "styles": {
         "display": "flex",
-        "position": "static",
+        "position": "fixed",
         "width": "1480px",
         "height": "24px",
         "padding": "0px 12px",
@@ -366,42 +366,42 @@
       }
     },
     "strip": {
-      "selector": "[data-slot='session-strip']",
+      "selector": "[data-slot='pulse']",
       "rect": {
         "x": 56,
         "y": 68,
         "width": 1480,
-        "height": 85.2,
+        "height": 32,
         "top": 68,
         "right": 1536,
-        "bottom": 153.2,
+        "bottom": 100,
         "left": 56
       },
       "styles": {
-        "display": "grid",
-        "position": "relative",
+        "display": "block",
+        "position": "static",
         "width": "1480px",
-        "height": "85.2031px",
-        "padding": "16px",
-        "gap": "12px",
-        "gridTemplateRows": "52.2031px",
-        "gridTemplateColumns": "474.656px 474.672px 474.656px",
+        "height": "32px",
+        "padding": "0px",
+        "gap": "normal",
+        "gridTemplateRows": "none",
+        "gridTemplateColumns": "none",
         "fontSize": "13px",
         "lineHeight": "18.85px",
         "borderRadius": "0px",
-        "borderWidth": "0px 0px 1px",
+        "borderWidth": "0px",
         "backgroundColor": "rgba(0, 0, 0, 0)",
         "color": "oklch(0.935 0.005 253)"
       }
     },
     "main": {
-      "selector": "#root > div > div:nth-child(3) > div > div:nth-child(2)",
+      "selector": "[data-slot='main']",
       "rect": {
         "x": 56,
-        "y": 153.2,
+        "y": 100,
         "width": 1160,
-        "height": 722.8,
-        "top": 153.2,
+        "height": 776,
+        "top": 100,
         "right": 1216,
         "bottom": 876,
         "left": 56
@@ -410,7 +410,7 @@
         "display": "block",
         "position": "static",
         "width": "1160px",
-        "height": "722.797px",
+        "height": "776px",
         "padding": "0px",
         "gap": "normal",
         "gridTemplateRows": "none",
@@ -424,22 +424,22 @@
       }
     },
     "sidebar": {
-      "selector": "#root > div > div:nth-child(3) > div > div:nth-child(3)",
+      "selector": "[data-slot='sidebar']",
       "rect": {
-        "x": 56,
-        "y": 876,
-        "width": 1480,
-        "height": 24,
-        "top": 876,
+        "x": 1216,
+        "y": 100,
+        "width": 320,
+        "height": 776,
+        "top": 100,
         "right": 1536,
-        "bottom": 900,
-        "left": 56
+        "bottom": 876,
+        "left": 1216
       },
       "styles": {
         "display": "block",
         "position": "static",
-        "width": "1480px",
-        "height": "24px",
+        "width": "320px",
+        "height": "776px",
         "padding": "0px",
         "gap": "normal",
         "gridTemplateRows": "none",
@@ -451,7 +451,8 @@
         "backgroundColor": "rgba(0, 0, 0, 0)",
         "color": "oklch(0.935 0.005 253)"
       }
-    }
+    },
+    "statusSlot": null
   },
   "warnings": {
     "targets": [
@@ -459,7 +460,8 @@
       "prototype target \"inspector\" has no matching react target",
       "react target \"content\" has no matching prototype target",
       "react target \"layout\" has no matching prototype target",
-      "react target \"sidebar\" has no matching prototype target"
+      "react target \"sidebar\" has no matching prototype target",
+      "react target \"statusSlot\" has no matching prototype target"
     ],
     "prototype": [
       "Missing selector \"queue\": .queue-panel, .agent-queue",
@@ -468,6 +470,7 @@
       "console error: Failed to load resource: net::ERR_TIMED_OUT"
     ],
     "react": [
+      "Missing selector \"statusSlot\": [data-slot='status']",
       "requestfailed stylesheet https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap: net::ERR_TIMED_OUT",
       "console error: Failed to load resource: net::ERR_TIMED_OUT",
       "requestfailed stylesheet https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap: net::ERR_TIMED_OUT",

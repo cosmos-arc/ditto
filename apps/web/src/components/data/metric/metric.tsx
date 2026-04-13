@@ -102,8 +102,8 @@ function Metric({
 			{/* Label */}
 			<span
 				className={cn(
-					"font-(--font-body) text-xs text-(--color-foreground-tertiary)",
-					variant !== "strip" && "uppercase tracking-wide",
+					"font-(--font-body) text-sm text-(--color-foreground-tertiary)",
+					variant !== "strip" && "uppercase tracking-[0.48px]",
 				)}
 			>
 				{label}

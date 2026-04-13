@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 interface StudioLayoutProps {
 	/** Mode/tab switching bar above the main content (e.g. agent tabs, copilot modes) */
@@ -9,6 +9,8 @@ interface StudioLayoutProps {
 	logs?: ReactNode;
 	/** Optional extra class names for the root grid container */
 	className?: string;
+	/** Optional inline styles — useful for overriding CSS custom properties per-page */
+	style?: CSSProperties;
 }
 
 /**
@@ -23,6 +25,7 @@ export function StudioLayout({
 	inspector,
 	logs,
 	className,
+	style,
 }: StudioLayoutProps) {
 	const hasModes = Boolean(modes);
 	const rows = hasModes
@@ -41,6 +44,7 @@ export function StudioLayout({
 				areas,
 				className,
 			].join(" ")}
+			style={style}
 		>
 			{modes && (
 				<div className="overflow-hidden [grid-area:modes]" data-slot="modes">

@@ -1,4 +1,4 @@
-import { AnalyticalLayout } from "@/features/shell";
+import { AnalyticalLayout, StatusBar } from "@/features/shell";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { RegimeCurrentView } from "./regime-current-view";
 import { RegimeHistoryList } from "./regime-history-list";
@@ -6,7 +6,16 @@ import { RegimeStrategyImpact } from "./regime-strategy-impact";
 
 export function RegimePage() {
 	return (
+		<>
 		<AnalyticalLayout
+			className="pb-(--height-status-bar)"
+			strip={
+				<div className="flex items-center gap-2 border-b border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
+					<span className="text-xs font-medium text-(--color-foreground-tertiary)">Regime Monitor</span>
+					<span className="text-xs text-(--color-foreground-muted)">|</span>
+					<span className="text-xs text-(--color-foreground-secondary)">市场状态追踪与策略影响分析</span>
+				</div>
+			}
 			main={
 				<div className="flex h-full flex-col gap-(--section-gap) overflow-y-auto p-(--density-panel-padding)">
 					<RegimeCurrentView />
@@ -21,6 +30,13 @@ export function RegimePage() {
 					</PanelBody>
 				</Panel>
 			}
+			analysis={
+				<div className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
+					<span className="text-xs text-(--color-foreground-tertiary)">分析面板 · 待实现</span>
+				</div>
+			}
 		/>
+		<StatusBar />
+		</>
 	);
 }

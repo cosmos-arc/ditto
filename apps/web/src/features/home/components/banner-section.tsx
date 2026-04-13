@@ -37,7 +37,7 @@ export function BannerSection() {
 						primary={{
 							label: "今日盈亏",
 							value: `${data.dailyPnl >= 0 ? "+" : ""}¥${data.dailyPnl.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`,
-							sub: "较昨日 +¥21,400",
+							sub: `较昨日 ${data.dailyPnlPercent >= 0 ? "+" : ""}${data.dailyPnlPercent}%`,
 							trend: data.dailyPnl >= 0 ? "up" : "down",
 							sparkline: data.equitySparkline,
 						}}
@@ -51,7 +51,7 @@ export function BannerSection() {
 								{ label: "杠杆率", value: `${data.leverage}x` },
 								{ label: "回撤", value: `${data.maxDrawdown}%`, trend: "down" },
 								{ label: "IVIX", value: `${data.ivix}`, trend: "down" },
-								{ label: "北向资金", value: "+12.4 亿", trend: "up" as const },
+								{ label: "北向资金", value: `${data.northboundFlow >= 0 ? "+" : ""}${data.northboundFlow} 亿`, trend: data.northboundFlow >= 0 ? "up" as const : "down" as const },
 							],
 						}}
 						actions={[

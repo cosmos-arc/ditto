@@ -16,6 +16,7 @@ import {
 } from "./visual-audit.config.mjs";
 
 const STYLE_PROPS = [
+	// Layout
 	"display",
 	"position",
 	"width",
@@ -24,12 +25,61 @@ const STYLE_PROPS = [
 	"gap",
 	"gridTemplateRows",
 	"gridTemplateColumns",
+	// Visual effects
+	"boxShadow",
+	"backdropFilter",
+	"WebkitBackdropFilter",
+	"borderColor",
+	"borderLeftColor",
+	"borderBottomColor",
+	"borderStyle",
+	"opacity",
+	"background",
+	"backgroundImage",
+	"filter",
+	"transform",
+	"zIndex",
+	// Typography
+	"fontFamily",
+	"fontWeight",
 	"fontSize",
-	"lineHeight",
+	"letterSpacing",
+	"fontFeatureSettings",
+	"textRendering",
+	"WebkitFontSmoothing",
+	// Existing color/token props
 	"borderRadius",
 	"borderWidth",
+	"lineHeight",
 	"backgroundColor",
 	"color",
+];
+
+/** Subset of properties relevant to pseudo-elements (::before / ::after). */
+const PSEUDO_STYLE_PROPS = [
+	"display",
+	"position",
+	"width",
+	"height",
+	"padding",
+	"content",
+	"background",
+	"backgroundImage",
+	"boxShadow",
+	"opacity",
+	"borderStyle",
+	"borderColor",
+	"borderWidth",
+	"borderRadius",
+	"filter",
+	"transform",
+	"zIndex",
+	"top",
+	"right",
+	"bottom",
+	"left",
+	"clipPath",
+	"pointerEvents",
 ];
 
 function trimTrailingSlash(value) {
@@ -95,28 +145,46 @@ async function captureTargetMetrics(page, targets) {
 			continue;
 		}
 
-		metrics[name] = await element.evaluate((node, props) => {
-			const rect = node.getBoundingClientRect();
-			const computed = window.getComputedStyle(node);
-			const styles = Object.fromEntries(
-				props.map((prop) => [prop, computed[prop]]),
-			);
+		metrics[name] = await element.evaluate(
+			(node, { props, pseudoProps }) => {
+				const rect = node.getBoundingClientRect();
+				const computed = window.getComputedStyle(node);
+				const styles = Object.fromEntries(
+					props.map((prop) => [prop, computed[prop]]),
+				);
 
-			return {
-				selector: undefined,
-				rect: {
-					x: Math.round(rect.x * 100) / 100,
-					y: Math.round(rect.y * 100) / 100,
-					width: Math.round(rect.width * 100) / 100,
-					height: Math.round(rect.height * 100) / 100,
-					top: Math.round(rect.top * 100) / 100,
-					right: Math.round(rect.right * 100) / 100,
-					bottom: Math.round(rect.bottom * 100) / 100,
-					left: Math.round(rect.left * 100) / 100,
-				},
-				styles,
-			};
-		}, STYLE_PROPS);
+				const pseudoStyles = {};
+				for (const pseudo of ["::before", "::after"]) {
+					const pseudoComputed = window.getComputedStyle(node, pseudo);
+					const pseudoMap = Object.fromEntries(
+						pseudoProps.map((prop) => [prop, pseudoComputed[prop]]),
+					);
+					const content = pseudoComputed.content;
+					const hasContent =
+						content && content !== "none" && content !== '""';
+					if (hasContent) {
+						pseudoStyles[pseudo] = pseudoMap;
+					}
+				}
+
+				return {
+					selector: undefined,
+					rect: {
+						x: Math.round(rect.x * 100) / 100,
+						y: Math.round(rect.y * 100) / 100,
+						width: Math.round(rect.width * 100) / 100,
+						height: Math.round(rect.height * 100) / 100,
+						top: Math.round(rect.top * 100) / 100,
+						right: Math.round(rect.right * 100) / 100,
+						bottom: Math.round(rect.bottom * 100) / 100,
+						left: Math.round(rect.left * 100) / 100,
+					},
+					styles,
+					pseudoStyles: Object.keys(pseudoStyles).length > 0 ? pseudoStyles : undefined,
+				};
+			},
+			{ props: STYLE_PROPS, pseudoProps: PSEUDO_STYLE_PROPS },
+		);
 		metrics[name].selector = selector;
 	}
 
@@ -150,8 +218,10 @@ async function auditPage(browser, config, options) {
 		await openPage(prototypePage, urls.prototype);
 		await prototypePage.addStyleTag({ content: PROTOTYPE_NORMALIZE_CSS });
 		await prototypePage.waitForLoadState("networkidle");
+		await prototypePage.waitForFunction(() => document.fonts.ready);
 
 		await openPage(reactPage, urls.react);
+		await reactPage.waitForFunction(() => document.fonts.ready);
 
 		const prototype = await captureTargetMetrics(
 			prototypePage,
@@ -218,7 +288,7 @@ async function main() {
 		return;
 	}
 	const pages = resolvePages(options, VISUAL_AUDIT_PAGES);
-	const browser = await chromium.launch();
+	const browser = await chromium.launch({ channel: 'chromium' });
 
 	try {
 		const results = [];

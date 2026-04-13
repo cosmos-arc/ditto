@@ -71,7 +71,7 @@ export function PriorityQueueSection() {
 										/>
 
 										{/* Body */}
-										<div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3">
+										<div className="flex min-w-0 flex-1 flex-col gap-1 px-3">
 											<div className="flex items-center gap-1.5">
 												<span className="truncate text-(length:--text-sm) font-medium text-(--color-foreground)">
 													{action.title}

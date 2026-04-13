@@ -55,13 +55,15 @@
   --purple-500: oklch(0.7324 0.1170 300.20);
   --purple-600: oklch(0.7948 0.0862 299.72);
 
-  /* ── Typography Scale (6 levels) ── */
-  /* DEPRECATED: 11px (too close to 12px), 18/20/28px (no usage) — use adjacent size */
+  /* ── Typography Scale (8 levels) ── */
+  /* DEPRECATED: 11px (too close to 12px), 28px (no usage) — use adjacent size */
   --font-size-10: 0.625rem;
   --font-size-12: 0.75rem;
   --font-size-13: 0.8125rem;
   --font-size-14: 0.875rem;
   --font-size-16: 1rem;
+  --font-size-18: 1.125rem;
+  --font-size-20: 1.25rem;
   --font-size-24: 1.5rem;
 
   --font-weight-regular: 400;
@@ -69,9 +71,10 @@
   --font-weight-semibold: 600;
 
   /* ── Font Families ── */
-  --font-family-ui: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
-  --font-family-numeric: 'JetBrains Mono', monospace;
-  --font-family-code: 'JetBrains Mono', monospace;
+  --font-family-ui:      'Inter', 'Noto Sans SC Variable', 'Source Han Sans SC', 'PingFang SC', system-ui, -apple-system, sans-serif;
+  --font-family-heading: 'Geist Sans', 'Inter', 'Noto Sans SC Variable', 'Source Han Sans SC', 'PingFang SC', system-ui, -apple-system, sans-serif;
+  --font-family-numeric: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-family-code:    'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
 
   /* ── Spacing Scale (4pt base) ── */
   --space-2:  0.125rem;

@@ -412,7 +412,7 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      │   迁移前 state-variant 总数（迁移场景）             │
 │      ├─ 检查 8: .overlay-backdrop computed display         │
 │      │   必须为 none（页面样式不得覆盖隐藏规则）           │
-│      └─ 检查 9: 全部用 DOM 解析器 / evaluate_script       │
+│      └─ 检查 9: 全部用 DOM 解析器 / Playwright page.evaluate()
 │          （禁止正则做 HTML 结构验证）                      │
 │   8. git add → commit → tag review/<task>/round-0        │
 │                                                         │
@@ -445,7 +445,7 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      │   │   vs 蓝图 overlay 注册表数量                   │
 │      │   └─ states-gallery card 数量 vs 迁移前数量       │
 │      ├─ B. CSS Token 存在性检查：                        │
-│      │   ├─ 用 evaluate_script 收集页面 var(--xxx) 引用  │
+│      │   ├─ 用 page.evaluate() 收集页面 var(--xxx) 引用│
 │      │   └─ 对比 tokens-base.css 已定义变量              │
 │      │       未定义 token → P0 阻断项                    │
 │      ├─ C. 浏览器抽检（3-5 页：首 + 尾 + 随机中间页）：  │
@@ -483,17 +483,18 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      │   数量和 label 是否匹配 State Coverage Index       │
 │      ├─ 生成「状态覆盖率报告」作为 Phase 3 审查输入       │
 │      └─ [旧格式] 标记为「旧格式原型，需迁移到三区结构」  │
-│   5. Chrome MCP: emulate(VP-STANDARD 1536x1080)          │
+│   5. Playwright: 启动浏览器（channel: 'chromium'）       │
+│      └─ page.setViewportSize({ width: 1536, height: 1080})│
 │   6. 三区截图策略（每个 zone 独立截图）：                 │
-│      ├─ evaluate_script → view-default radio checked      │
+│      ├─ page.evaluate() → view-default radio checked      │
 │      │   → 截图（默认 tab）                               │
 │      ├─ 对 default-view 中每个 tab group:                 │
-│      │   evaluate_script → 点击 tab label → 截图         │
-│      ├─ evaluate_script → view-states radio checked       │
+│      │   page.evaluate() → 点击 tab label → 截图         │
+│      ├─ page.evaluate() → view-states radio checked       │
 │      │   → 截图（状态画廊）                               │
-│      └─ evaluate_script → view-overlays radio checked     │
+│      └─ page.evaluate() → view-overlays radio checked     │
 │          → 截图（弹层画廊）                               │
-│   7. Chrome MCP: evaluate_script（提取关键元素 styles）    │
+│   7. page.evaluate()（提取关键元素 computed styles）       │
 │   8. [多视口] VP-STANDARD 内容溢出检测（详见 viewport.md） │
 │   9. [多视口] VP-COMPACT (1366x768) 抽检                 │
 │  10. [多视口] 恢复 VP-STANDARD，记录基线视口报告          │
@@ -502,8 +503,8 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      │   └─ 遍历 manifest 中 status != "done" 的页面      │
 │      │      （排除当前审查页）                             │
 │      ├─ 对每个页面执行：                                  │
-│      │   ├─ Chrome MCP: emulate(VP-STANDARD)              │
-│      │   │   → navigate → evaluate_script                 │
+│      │   ├─ Playwright: setViewport(VP-STANDARD)          │
+│      │   │   → navigate → page.evaluate()                │
 │      │   └─ 提取结构化 metrics：                          │
 │      │       shell: { railWidth, headerHeight,           │
 │      │               mainPadding }                       │
@@ -669,7 +670,7 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │ Phase 6: FIX（执行修改）                            [sonnet] │
 │                                                         │
 │   1. 按优先级执行采纳的修改                               │
-│   2. 需要验证时用 evaluate_script 提取关键 computed styles│
+│   2. 需要验证时用 Playwright page.evaluate() 提取关键 computed styles
 │      或直接在浏览器肉眼确认（不保存截图到磁盘）            │
 │   3. 如有信息架构调整，更新 spec 文档                     │
 │   4. 如有新的设计决策，记录到 decisions/                   │
@@ -698,8 +699,8 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 ├─────────────────────────────────────────────────────────┤
 │ Phase 8: FINAL（最终验证 + 气质评分）               [混合]   │
 │                                                         │
-│   1. Chrome MCP: lighthouse_audit（质量评分）    [sonnet] │
-│   2. Chrome MCP: evaluate_script（最终 Token 审计）[sonnet]│
+│   1. Playwright: lighthouse_audit（质量评分）    [sonnet] │
+│   2. Playwright: page.evaluate()（最终 Token 审计）[sonnet]│
 │   2a. [门禁] 三区结构完整性验证（复用步骤 7a 的 9 项检查）│
 │       ├─ section 平衡 / grid 直接子元素 / overlay 完整性  │
 │       ├─ state-variant 覆盖率对比蓝图                    │
@@ -734,7 +735,7 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      ├─ analyze_image 检测：                             │
 │      │   内容溢出/截断 / 元素重叠/遮挡                   │
 │      │   对齐偏移 / 留白异常                              │
-│      └─ evaluate_script 交叉验证：                       │
+│      └─ page.evaluate() 交叉验证：                       │
 │          ├─ scrollHeight > clientHeight → 溢出确认        │
 │          └─ getBoundingClientRect() → 偏移量化             │
 ├─────────────────────────────────────────────────────────┤
@@ -752,9 +753,9 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │ Edition Review                              [--edition-review] [混合] │
 │                                                         │
 │   1. 读取 manifest，获取所有 status="done" 的页面       │
-│   2. 逐页打开 Chrome MCP：                             │
-│      ├─ emulate(VP-STANDARD 1536x1080)                │
-│      ├─ navigate → take_screenshot(fullPage)           │
+│   2. 逐页使用 Playwright 打开：                        │
+│      ├─ page.setViewportSize(1536x1080)                │
+│      ├─ navigate → page.screenshot({ fullPage: true }) │
 │      └─ analyze_image 检测：                          │
 │          ├─ 布局 bug（溢出、截断、重叠）               │
 │          ├─ 风格偏差（与 Edition 整体不一致的元素）     │

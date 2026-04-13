@@ -12,8 +12,11 @@ interface AnalyticalLayoutProps {
 
 /**
  * AnalyticalLayout — /markets/*, /research/*, /trading/*.
- * Grid: scope strip + optional banner + main/activity + optional analysis band.
- * When `banner` is provided, an additional full-width row is inserted between strip and main.
+ * Grid: scope strip + optional banner + main (+ optional activity rail) + optional analysis band.
+ *
+ * Two modes:
+ * - **With activity**: 2-column grid (1fr + --width-activity)
+ * - **Without activity**: single-column full-width
  */
 export function AnalyticalLayout({
 	strip,
@@ -25,15 +28,17 @@ export function AnalyticalLayout({
 }: AnalyticalLayoutProps) {
 	const hasBanner = Boolean(banner);
 	const hasAnalysis = Boolean(analysis);
+	const hasActivity = Boolean(activity);
 
-	const rows = buildRows(hasBanner, hasAnalysis);
-	const areas = buildAreas(hasBanner, hasAnalysis);
+	const cols = hasActivity ? "grid-cols-[1fr_var(--width-activity)]" : "grid-cols-[1fr]";
+	const rows = buildRows(hasBanner, hasAnalysis, hasActivity);
+	const areas = buildAreas(hasBanner, hasAnalysis, hasActivity);
 
 	return (
 		<div
 			className={[
 				"grid h-full w-full overflow-hidden",
-				"grid-cols-[1fr_var(--width-activity)]",
+				cols,
 				rows,
 				areas,
 				className,
@@ -62,7 +67,7 @@ export function AnalyticalLayout({
 	);
 }
 
-function buildRows(hasBanner: boolean, hasAnalysis: boolean): string {
+function buildRows(hasBanner: boolean, hasAnalysis: boolean, hasActivity: boolean): string {
 	if (hasBanner && hasAnalysis) {
 		return "grid-rows-[auto_auto_1fr_var(--height-analysis-band)]";
 	}
@@ -75,15 +80,30 @@ function buildRows(hasBanner: boolean, hasAnalysis: boolean): string {
 	return "grid-rows-[auto_1fr]";
 }
 
-function buildAreas(hasBanner: boolean, hasAnalysis: boolean): string {
+function buildAreas(hasBanner: boolean, hasAnalysis: boolean, hasActivity: boolean): string {
+	if (hasActivity) {
+		const m = "main_activity";
+		const a = "analysis_activity";
+		if (hasBanner && hasAnalysis) {
+			return `[grid-template-areas:"strip_strip""banner_banner""${m}""${a}"]`;
+		}
+		if (hasBanner) {
+			return `[grid-template-areas:"strip_strip""banner_banner""${m}"]`;
+		}
+		if (hasAnalysis) {
+			return `[grid-template-areas:"strip_strip""${m}""${a}"]`;
+		}
+		return `[grid-template-areas:"strip_strip""${m}"]`;
+	}
+	// Single-column: all areas span full width
 	if (hasBanner && hasAnalysis) {
-		return '[grid-template-areas:"strip_strip""banner_banner""main_activity""analysis_activity"]';
+		return '[grid-template-areas:"strip""banner""main""analysis"]';
 	}
 	if (hasBanner) {
-		return '[grid-template-areas:"strip_strip""banner_banner""main_activity"]';
+		return '[grid-template-areas:"strip""banner""main"]';
 	}
 	if (hasAnalysis) {
-		return '[grid-template-areas:"strip_strip""main_activity""analysis_activity"]';
+		return '[grid-template-areas:"strip""main""analysis"]';
 	}
-	return '[grid-template-areas:"strip_strip""main_activity"]';
+	return '[grid-template-areas:"strip""main"]';
 }

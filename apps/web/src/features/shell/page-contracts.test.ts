@@ -180,12 +180,12 @@ describe("Pattern-to-shell mapping correctness", () => {
 		}
 	});
 
-	it("Analytical Overview pages use analytical shell", () => {
+	it("Analytical Overview pages use analytical or radar shell", () => {
 		const pages = PAGE_CONTRACTS.filter(
 			(c) => c.pagePattern === "analytical-overview",
 		);
 		for (const page of pages) {
-			expect(page.shellFamily).toBe("analytical");
+			expect(["analytical", "radar"].includes(page.shellFamily)).toBe(true);
 		}
 	});
 
@@ -250,9 +250,9 @@ describe("Spec compliance — pattern alignment per 11_ditto_page_pattern_librar
 		expect(contract?.pagePattern).toBe("ledger-execution-console");
 	});
 
-	it("/ai/agents is Studio/Builder (not Catalog)", () => {
+	it("/ai/agents is Ops Console", () => {
 		const contract = PAGE_CONTRACTS.find((c) => c.route === "/ai/agents");
-		expect(contract?.pagePattern).toBe("studio-builder");
+		expect(contract?.pagePattern).toBe("queue-ops-console");
 	});
 
 	it("/ai is Global Command Center", () => {
@@ -291,15 +291,14 @@ describe("Prototype source classification", () => {
 		"/ai/agents",
 		"/instruments/$id",
 		"/platform",
-	] as const;
-
-	const specOnlyRoutes = [
 		"/markets/a-shares",
 		"/markets/calendar",
 		"/research/backtest/$id",
 		"/research/factors/$id",
 		"/strategies/$id",
 	] as const;
+
+	const specOnlyRoutes = [] as const;
 
 	it("prototype-backed pages are correctly classified", () => {
 		for (const route of prototypeBackedRoutes) {

@@ -44,7 +44,7 @@ describe("Metric", () => {
 		// Vertical layout: flex-col
 		const label = screen.getByText("PnL");
 		expect(label.className).toContain("uppercase");
-		expect(label.className).toContain("text-xs");
+		expect(label.className).toContain("text-sm");
 	});
 
 	it("renders variant=standard with semibold value", () => {
@@ -62,7 +62,7 @@ describe("Metric", () => {
 
 		// Horizontal layout: flex-row
 		const label = screen.getByText("Vol");
-		expect(label.className).toContain("text-xs");
+		expect(label.className).toContain("text-sm");
 
 		const value = screen.getByText("1,234");
 		expect(value.className).toContain("font-medium");

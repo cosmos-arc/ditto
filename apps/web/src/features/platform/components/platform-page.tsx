@@ -1,5 +1,5 @@
 import { usePlatformHealth, useProviders, usePipelines, usePlatformAlerts } from "../hooks";
-import { OpsConsoleLayout } from "@/features/shell";
+import { OpsConsoleLayout, StatusBar } from "@/features/shell";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { HealthStrip } from "./health-strip";
 import { ProviderTable } from "./provider-table";
@@ -29,7 +29,9 @@ const MOCK_EVENTS = [
 
 export function PlatformPage() {
 	return (
+		<>
 		<OpsConsoleLayout
+			className="pb-(--height-status-bar)"
 			health={<HealthStrip />}
 			main={
 				<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
@@ -109,5 +111,7 @@ export function PlatformPage() {
 				</div>
 			}
 		/>
+		<StatusBar />
+		</>
 	);
 }

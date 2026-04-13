@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AnalyticalLayout } from "@/features/shell";
+import { AnalyticalLayout, StatusBar } from "@/features/shell";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { DecisionBanner } from "@/components/domain/decision-banner";
 import { ContextSection } from "@/components/domain/context-section";
@@ -167,7 +167,9 @@ const MOCK_SIGNALS = [
 
 export function TradingPage() {
 	return (
+		<>
 		<AnalyticalLayout
+			className="pb-(--height-status-bar)"
 			strip={<TradingSessionStrip />}
 			banner={
 				<div className="p-(--density-panel-padding) pb-0">
@@ -215,5 +217,7 @@ export function TradingPage() {
 				</Panel>
 			}
 		/>
+		<StatusBar />
+		</>
 	);
 }

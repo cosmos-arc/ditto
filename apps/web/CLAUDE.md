@@ -198,7 +198,20 @@ bun run check    # lint + type + test
 - CI/CD 配置修改
 - 修改架构边界
 - 修改环境配置文件
-- Design Token 变更（需与架构文档同步）
+- Design Token 新增档位（字号/间距等需先在 prototype 中定义，详见 [design-tokens.md](.claude/rules/design-tokens.md)）
+
+### Design Token 变更规则
+
+> Token 值的**唯一修改入口**：`src/styles/design-tokens/tokens-*.css`。修改后 Prototype 和 React 同时生效。
+
+| 操作 | 需要审批？ | 说明 |
+|------|:---:|------|
+| 修改已有 token 值（如 `--brand-500` 颜色） | ❌ | 直接改 design-tokens/ |
+| 新增 token 变量 | ❌ | 在 design-tokens/ 中新增 `:root` 变量 |
+| 新增 @theme inline 映射 | ❌ | 在 globals.css 中新增映射行 |
+| 新增字号/间距档位 | ⚠️ | 需同步更新 design-tokens.md 映射表 |
+| 修改 token 文件架构（增删文件） | ✅ | 涉及架构变更 |
+| 修改 @theme inline → :root 引用关系 | ✅ | 涉及 Tailwind v4 内部机制 |
 
 ### 🚫 Never do（硬性禁止）
 - **使用 `any` 类型**（必须用 `unknown` + type guard）
@@ -226,9 +239,13 @@ ditto-app/
 │   ├── components/ui/  # 共享 UI 组件（shadcn/ui）
 │   ├── lib/            # 工具函数 + API 层
 │   ├── styles/         # Design Tokens + 全局样式
+│   │   ├── design-tokens/  # ← 唯一真理源（Prototype + React 共享）
+│   │   ├── themes/         # 主题覆盖（dark/light/market-intl）
+│   │   ├── globals.css     # @import 共享 token + @theme inline 映射
+│   │   └── fonts.css       # 字体声明
 │   └── routes/         # 路由定义
-├── public/             # 静态资源
-└── docs/               # 文档
+├── docs/               # 文档 + Prototype
+└── public/             # 静态资源
 ```
 
 ### 工具链

@@ -38,6 +38,8 @@ export type HomePulseResponse = {
 	readonly runningJobs: number;
 	readonly pnlToday: number;
 	readonly pnlPercent: number;
+	readonly riskLevel: string;
+	readonly regimeType: string;
 };
 
 /** 决策横幅 */
