@@ -136,6 +136,41 @@
       -webkit-backdrop-filter: blur(12px);
     }
 
+    /* ── Signature gradient line under header ── */
+    .shell-radar .shell-header {
+      position: relative;
+    }
+    .shell-radar .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 20%,
+        color-mix(in oklch, var(--brand-signature-line) 40%, transparent) 50%,
+        color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── Noise texture overlay — signature graphite feel ── */
+    .shell-radar::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.02;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .shell-radar > * { position: relative; z-index: 1; }
+
     /* ══════════════════════════════════════════════
      * A-Share Header Controls
      * ══════════════════════════════════════════════ */

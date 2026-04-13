@@ -508,9 +508,9 @@
       "id": "markets-calendar",
       "file": "page-markets-calendar.html",
       "status": "done",
-      "score": 9.0,
+      "score": 9.1,
       "styleAnchor": "cross-market",
-      "rounds": 1,
+      "rounds": 2,
       "createdAt": "2026-04-12",
       "inlineStyles": {
         "before": 7,
@@ -529,15 +529,23 @@
         "overlays": 3,
         "stateVariants": 7,
         "coveragePercent": 100
+      },
+      "brandDNA": {
+        "frostedGlass": true,
+        "noiseTexture": true,
+        "signatureGradientLine": true,
+        "ambientGlow": true,
+        "verifiedAt": "2026-04-13",
+        "matchBenchmark": "markets-intelligence (9.4)"
       }
     },
     {
       "id": "a-shares",
       "file": "page-a-shares.html",
       "status": "done",
-      "score": 9.0,
+      "score": 9.1,
       "styleAnchor": "cross-market",
-      "rounds": 1,
+      "rounds": 2,
       "createdAt": "2026-04-12",
       "inlineStyles": {
         "before": 169,
@@ -557,6 +565,14 @@
         "overlays": 4,
         "stateVariants": 7,
         "coveragePercent": 100
+      },
+      "brandDNA": {
+        "frostedGlass": true,
+        "noiseTexture": true,
+        "signatureGradientLine": true,
+        "ambientGlow": true,
+        "verifiedAt": "2026-04-13",
+        "matchBenchmark": "markets-intelligence (9.4)"
       }
     },
     {
