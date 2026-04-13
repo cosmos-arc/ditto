@@ -94,7 +94,10 @@
         "iterateRounds": 1,
         "protoDeviations": [],
         "newComponents": [],
-        "modifiedComponents": ["noise-layer.tsx", "globals.css"],
+        "modifiedComponents": [
+          "noise-layer.tsx",
+          "globals.css"
+        ],
         "tests": "970 passing",
         "engineeringCheck": "PASS (biome + tsc + 970 tests)"
       }
@@ -102,10 +105,10 @@
     {
       "id": "markets-screener",
       "file": "page-markets-screener.html",
-      "status": "v5-done",
-      "score": 9.0,
+      "status": "done",
+      "score": 9.2,
       "styleAnchor": "platform",
-      "rounds": 14,
+      "rounds": 15,
       "roundsV3": 1,
       "jsModules": {
         "sparkline": 8,
@@ -262,7 +265,7 @@
       "id": "orders-ledger",
       "file": "page-orders-ledger.html",
       "status": "v5-done",
-      "score": 9.0,
+      "score": 9,
       "styleAnchor": "platform",
       "rounds": 1,
       "roundsV2": 1,
@@ -504,11 +507,23 @@
     {
       "id": "markets-calendar",
       "file": "page-markets-calendar.html",
-      "status": "v1-new",
-      "score": null,
-      "styleAnchor": null,
-      "rounds": 0,
+      "status": "done",
+      "score": 9.0,
+      "styleAnchor": "cross-market",
+      "rounds": 1,
       "createdAt": "2026-04-12",
+      "inlineStyles": {
+        "before": 7,
+        "after": 0
+      },
+      "jsModules": {
+        "reveal": 22,
+        "tooltip": 34,
+        "ticker": 2,
+        "counter": 1,
+        "mouse-glow": 4,
+        "total": 63
+      },
       "stateCoverage": {
         "tabs": 0,
         "overlays": 3,
@@ -519,11 +534,24 @@
     {
       "id": "a-shares",
       "file": "page-a-shares.html",
-      "status": "v1-new",
-      "score": null,
+      "status": "done",
+      "score": 9.0,
       "styleAnchor": "cross-market",
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-12",
+      "inlineStyles": {
+        "before": 169,
+        "after": 37
+      },
+      "jsModules": {
+        "reveal": 67,
+        "tooltip": 77,
+        "sparkline": 5,
+        "ticker": 8,
+        "counter": 6,
+        "mouse-glow": 4,
+        "total": 167
+      },
       "stateCoverage": {
         "tabs": 4,
         "overlays": 4,
@@ -535,7 +563,7 @@
       "id": "token-showcase",
       "file": "style-b-graphite-studio/token-showcase.html",
       "status": "v3-done",
-      "score": 9.0,
+      "score": 9,
       "styleAnchor": "platform",
       "rounds": 1,
       "roundsV2": 1,
@@ -564,7 +592,7 @@
   "iterationV2": {
     "startedAt": "2026-04-05",
     "phase1CompletedAt": "2026-04-05",
-    "goalScore": 9.0,
+    "goalScore": 9,
     "maxRounds": 30,
     "roundsUsed": 11,
     "phases": [
