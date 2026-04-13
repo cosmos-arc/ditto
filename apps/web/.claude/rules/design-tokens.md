@@ -114,13 +114,14 @@ src/styles/design-tokens/          ← 唯一真理源
 | Prototype | Tailwind | 值 |
 |---|---|---|
 | `--font-size-10` | `--text-xs` | 10px |
+| `--font-size-11` | 无直接映射 | 11px |
 | `--font-size-12` | `--text-sm` | 12px |
 | `--font-size-13` | `--text-base` | 13px |
 | `--font-size-14` | `--text-md` | 14px |
 | `--font-size-16` | `--text-lg` | 16px |
 | `--font-size-24` | `--text-2xl` | 24px |
 
-**注意**：Prototype 只有 6 档字号。`text-xl`/`text-3xl`/`text-4xl` 当前与已有档位重复。需要新字号时，先在 `tokens-base.css` 中新增 `:root` 变量。
+**注意**：Prototype 有 7 档核心字号（10/11/12/13/14/16/24）。`text-xl`/`text-3xl`/`text-4xl` 当前与已有档位重复。需要新字号时，先在 `tokens-base.css` 中新增 `:root` 变量。
 
 ### 间距
 

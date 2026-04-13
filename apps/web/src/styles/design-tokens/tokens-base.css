@@ -55,9 +55,9 @@
   --purple-500: oklch(0.7324 0.1170 300.20);
   --purple-600: oklch(0.7948 0.0862 299.72);
 
-  /* ── Typography Scale (8 levels) ── */
-  /* DEPRECATED: 11px (too close to 12px), 28px (no usage) — use adjacent size */
+  /* ── Typography Scale (9 levels) ── */
   --font-size-10: 0.625rem;
+  --font-size-11: 0.6875rem;
   --font-size-12: 0.75rem;
   --font-size-13: 0.8125rem;
   --font-size-14: 0.875rem;
