@@ -493,17 +493,18 @@
     {
       "id": "backtest-result",
       "file": "page-backtest-result.html",
-      "status": "v1-new",
-      "score": null,
+      "status": "v2-in-progress",
+      "score": 8.2,
       "styleAnchor": null,
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-12",
       "stateCoverage": {
         "tabs": 6,
         "overlays": 4,
         "stateVariants": 11,
         "coveragePercent": 100
-      }
+      },
+      "note": "round-1: tokens-shell + brand glow + rail glow + reduced motion. 178 inline styles remain for future CSS extraction pass"
     },
     {
       "id": "markets-calendar",
