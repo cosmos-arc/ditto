@@ -1231,6 +1231,13 @@
     .iv-badge-brand-subtle { padding: var(--space-4) var(--space-8); background: var(--brand-accent-subtle); border: 1px solid var(--brand-accent); border-radius: var(--radius-3); color: var(--brand-accent); text-align: center; }
     .iv-badge-brand-subtle-noborder { padding: var(--space-4) var(--space-8); background: var(--brand-accent-subtle); border-radius: var(--radius-3); color: var(--brand-accent); text-align: center; }
 
+    /* ── Index card sparklines ── */
+    .index-sparkline {
+      width: 100%;
+      height: 20px;
+      display: block;
+    }
+
     /* ── Inline style cleanup round 3 — data-driven CSS variables ── */
 
     /* Treemap cells */
@@ -1352,11 +1359,11 @@
           <label for="overlay-ai-analysis" class="header-action-btn cursor-pointer" title="AI 解读">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
           </label>
-          <div class="header-action-btn" title="通知" aria-label="通知">
+          <div class="header-action-btn" title="通知" aria-label="通知" data-tooltip="1 条未读预警通知">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg>
             <span class="badge-dot" aria-hidden="true"></span>
           </div>
-          <div class="header-avatar">陈</div>
+          <div class="header-avatar" data-tooltip="陈 · 策略研究员">陈</div>
         </div>
       </header>
 
@@ -1364,17 +1371,17 @@
       <div class="context-bar" role="status" aria-label="A股市场环境">
         <div class="context-bar-item">
           <span class="context-bar-label">Regime</span>
-          <span class="context-bar-value regime-on">Risk-On</span>
+          <span class="context-bar-value regime-on" data-tooltip="市场风险偏好偏强，建议适度进攻">Risk-On</span>
         </div>
         <div class="context-bar-sep"></div>
         <div class="context-bar-item">
           <span class="context-bar-label">Breadth</span>
-          <span class="context-bar-value regime-on">偏强</span>
+          <span class="context-bar-value regime-on" data-tooltip="上涨家数 > 60%，市场广度偏强">偏强</span>
         </div>
         <div class="context-bar-sep"></div>
         <label for="overlay-northbound-detail" class="context-bar-item cursor-pointer" title="查看北向资金详情">
           <span class="context-bar-label">北向</span>
-          <span class="context-bar-value inflow iv-text-up">+12 亿</span>
+          <span class="context-bar-value inflow iv-text-up" data-tooltip="点击查看北向资金分时详情">+12 亿</span>
         </label>
         <div class="context-bar-sep"></div>
         <div class="context-bar-item">
@@ -1392,11 +1399,11 @@
 
       <!-- Scope Strip -->
       <div class="scope-strip" role="status" aria-label="今日解读">
-        <div class="scope-tag lead">AI / 半导体</div>
+        <div class="scope-tag lead" data-tooltip="今日领涨板块，AI 算力 + 半导体设备">AI / 半导体</div>
         <span class="scope-sep">|</span>
-        <div class="scope-tag lag">地产 / 银行</div>
+        <div class="scope-tag lag" data-tooltip="今日领跌板块，地产风险 + 银行跟跌">地产 / 银行</div>
         <span class="scope-sep">|</span>
-        <div class="scope-tag neutral">科技扩散</div>
+        <div class="scope-tag neutral" data-tooltip="科技行情从龙头向二线扩散">科技扩散</div>
         <span class="scope-sep">|</span>
         <div class="scope-ai-text">
           <strong>主线</strong>：科技扩散，AI 算力 + 半导体领涨，成交占比升至 18%
@@ -1411,79 +1418,79 @@
         <main id="main-content" class="main-content">
 
           <!-- Market Structure Map (Treemap) -->
-          <div class="map-container">
+          <div class="map-container" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.04)">
             <div class="map-header">
               <span class="map-title">市场结构图</span>
               <div class="map-controls">
-                <button class="map-view-toggle active">Treemap</button>
-                <button class="map-view-toggle">Heatmap</button>
+                <button class="map-view-toggle active" data-tooltip="树图视图，按市值比例展示行业结构">Treemap</button>
+                <button class="map-view-toggle" data-tooltip="热力图视图，按涨跌着色">Heatmap</button>
               </div>
             </div>
             <div class="treemap">
               <!-- Row 1: Large sectors -->
-              <div class="treemap-cell-iv" style="--tm-l:0;--tm-t:0;--tm-w:35%;--tm-h:50%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 12%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="电子 — 涨幅 +2.34%，成交额占比 15.2%"fade-up" data-reveal-delay="30":0;--tm-t:0;--tm-w:35%;--tm-h:50%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 12%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">电子</span>
                 <span class="treemap-cell-change up">+2.34%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:35%;--tm-t:0;--tm-w:25%;--tm-h:50%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 8%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="计算机 — 涨幅 +1.87%，成交额占比 9.8%"fade-up" data-reveal-delay="60":35%;--tm-t:0;--tm-w:25%;--tm-h:50%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 8%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">计算机</span>
                 <span class="treemap-cell-change up">+1.87%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:60%;--tm-t:0;--tm-w:20%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 6%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="通信 — 涨幅 +1.52%，成交额占比 4.3%"fade-up" data-reveal-delay="90":60%;--tm-t:0;--tm-w:20%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 6%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">通信</span>
                 <span class="treemap-cell-change up">+1.52%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:60%;--tm-t:30%;--tm-w:20%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--market-down-fg) 6%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="医药 — 跌幅 -0.23%，成交额占比 5.1%"fade-up" data-reveal-delay="120":60%;--tm-t:30%;--tm-w:20%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--market-down-fg) 6%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">医药</span>
                 <span class="treemap-cell-change down">-0.23%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:80%;--tm-t:0;--tm-w:20%;--tm-h:50%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 4%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="新能源 — 涨幅 +0.86%，成交额占比 6.7%"fade-up" data-reveal-delay="150":80%;--tm-t:0;--tm-w:20%;--tm-h:50%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 4%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">新能源</span>
                 <span class="treemap-cell-change up">+0.86%</span>
               </div>
               <!-- Row 2: Medium + small sectors -->
-              <div class="treemap-cell-iv" style="--tm-l:0;--tm-t:50%;--tm-w:20%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-down-fg) 10%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="房地产 — 跌幅 -1.45%，成交额占比 3.2%"fade-up" data-reveal-delay="180":0;--tm-t:50%;--tm-w:20%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-down-fg) 10%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">房地产</span>
                 <span class="treemap-cell-change down">-1.45%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:20%;--tm-t:50%;--tm-w:15%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-down-fg) 8%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="银行 — 跌幅 -0.67%，成交额占比 4.8%"fade-up" data-reveal-delay="210":20%;--tm-t:50%;--tm-w:15%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-down-fg) 8%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">银行</span>
                 <span class="treemap-cell-change down">-0.67%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:35%;--tm-t:50%;--tm-w:15%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 5%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="消费 — 涨幅 +0.45%，成交额占比 5.6%"fade-up" data-reveal-delay="240":35%;--tm-t:50%;--tm-w:15%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 5%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">消费</span>
                 <span class="treemap-cell-change up">+0.45%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:50%;--tm-t:50%;--tm-w:15%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 7%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="军工 — 涨幅 +1.12%，成交额占比 3.9%"fade-up" data-reveal-delay="270":50%;--tm-t:50%;--tm-w:15%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 7%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">军工</span>
                 <span class="treemap-cell-change up">+1.12%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:65%;--tm-t:50%;--tm-w:15%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-down-fg) 4%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="传媒 — 跌幅 -0.34%，成交额占比 2.1%"fade-up" data-reveal-delay="300":65%;--tm-t:50%;--tm-w:15%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-down-fg) 4%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">传媒</span>
                 <span class="treemap-cell-change down">-0.34%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:80%;--tm-t:50%;--tm-w:20%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 3%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="有色 — 涨幅 +0.56%，成交额占比 2.8%"fade-up" data-reveal-delay="330":80%;--tm-t:50%;--tm-w:20%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 3%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">有色</span>
                 <span class="treemap-cell-change up">+0.56%</span>
               </div>
               <!-- Bottom row: small -->
-              <div class="treemap-cell-iv" style="--tm-l:0;--tm-t:80%;--tm-w:25%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--surface-panel-elevated) 80%,var(--market-up-fg))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="建材 — 涨幅 +0.18%，成交额占比 1.4%"fade-up" data-reveal-delay="360":0;--tm-t:80%;--tm-w:25%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--surface-panel-elevated) 80%,var(--market-up-fg))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">建材</span>
                 <span class="treemap-cell-change up">+0.18%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:25%;--tm-t:80%;--tm-w:25%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 3%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="汽车 — 涨幅 +0.67%，成交额占比 2.9%"fade-up" data-reveal-delay="390":25%;--tm-t:80%;--tm-w:25%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 3%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">汽车</span>
                 <span class="treemap-cell-change up">+0.67%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:50%;--tm-t:80%;--tm-w:15%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--market-down-fg) 3%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="交运 — 跌幅 -0.12%，成交额占比 1.1%"fade-up" data-reveal-delay="420":50%;--tm-t:80%;--tm-w:15%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--market-down-fg) 3%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">交运</span>
                 <span class="treemap-cell-change down">-0.12%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:65%;--tm-t:80%;--tm-w:15%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--surface-panel-elevated) 80%,var(--market-down-fg))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="煤炭 — 跌幅 -0.08%，成交额占比 1.6%"fade-up" data-reveal-delay="450":65%;--tm-t:80%;--tm-w:15%;--tm-h:20%;--tm-bg:color-mix(in oklch,var(--surface-panel-elevated) 80%,var(--market-down-fg))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">煤炭</span>
                 <span class="treemap-cell-change down">-0.08%</span>
               </div>
-              <div class="treemap-cell-iv" style="--tm-l:80%;--tm-t:70%;--tm-w:20%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 5%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv" style="--tm-l data-reveal=" data-tooltip="电力 — 涨幅 +0.91%，成交额占比 2.3%"fade-up" data-reveal-delay="480":80%;--tm-t:70%;--tm-w:20%;--tm-h:30%;--tm-bg:color-mix(in oklch,var(--market-up-fg) 5%,var(--surface-panel-elevated))" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
                 <span class="treemap-cell-name">电力</span>
                 <span class="treemap-cell-change up">+0.91%</span>
               </div>
@@ -1491,44 +1498,48 @@
           </div>
 
           <!-- Auxiliary Panels -->
-          <div class="aux-panels">
+          <div class="aux-panels" data-reveal="fade-up" data-reveal-delay="50">
 
             <!-- Index Summary -->
-            <div class="panel">
+            <div class="panel" data-reveal="fade-up" data-reveal-delay="350" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
               <div class="panel-header">
                 <span class="panel-title">指数概览</span>
               </div>
               <div class="panel-body">
                 <div class="index-grid">
-                  <div class="index-card" tabindex="0">
+                  <div class="index-card" tabindex="0" data-reveal="fade-up" data-reveal-delay="620">
                     <div class="index-card-name">沪深300</div>
-                    <div class="index-card-value">3,912.45</div>
+                    <div class="index-card-value" data-ticker="3912.45">3,912.45</div>
                     <div class="index-card-change up">+0.67%</div>
+                    <svg class="index-sparkline" viewBox="0 0 60 20" fill="none" data-sparkline='{"data":[3880,3890,3895,3900,3892,3898,3905,3912],"color":"var(--market-up-fg)","fill":false,"strokeWidth":1}' aria-hidden="true" style="margin-top:4px;opacity:0.6"></svg>
                   </div>
-                  <div class="index-card" tabindex="0">
+                  <div class="index-card" tabindex="0" data-reveal="fade-up" data-reveal-delay="780">
                     <div class="index-card-name">中证500</div>
-                    <div class="index-card-value">5,634.18</div>
+                    <div class="index-card-value" data-ticker="5634.18">5,634.18</div>
                     <div class="index-card-change up">+0.92%</div>
+                    <svg class="index-sparkline" viewBox="0 0 60 20" fill="none" data-sparkline='{"data":[5580,5590,5600,5605,5610,5618,5625,5634],"color":"var(--market-up-fg)","fill":false,"strokeWidth":1}' aria-hidden="true" style="margin-top:4px;opacity:0.6"></svg>
                   </div>
-                  <div class="index-card" tabindex="0">
+                  <div class="index-card" tabindex="0" data-reveal="fade-up" data-reveal-delay="940">
                     <div class="index-card-name">中证1000</div>
-                    <div class="index-card-value">6,128.73</div>
+                    <div class="index-card-value" data-ticker="6128.73">6,128.73</div>
                     <div class="index-card-change up">+1.34%</div>
+                    <svg class="index-sparkline" viewBox="0 0 60 20" fill="none" data-sparkline='{"data":[6050,6070,6080,6090,6095,6100,6115,6128],"color":"var(--market-up-fg)","fill":false,"strokeWidth":1}' aria-hidden="true" style="margin-top:4px;opacity:0.6"></svg>
                   </div>
-                  <div class="index-card" tabindex="0">
+                  <div class="index-card" tabindex="0" data-reveal="fade-up" data-reveal-delay="1100">
                     <div class="index-card-name">创业板指</div>
-                    <div class="index-card-value">2,056.91</div>
+                    <div class="index-card-value" data-ticker="2056.91">2,056.91</div>
                     <div class="index-card-change down">-0.18%</div>
+                    <svg class="index-sparkline" viewBox="0 0 60 20" fill="none" data-sparkline='{"data":[2065,2062,2060,2058,2055,2058,2054,2056],"color":"var(--market-down-fg)","fill":false,"strokeWidth":1}' aria-hidden="true" style="margin-top:4px;opacity:0.6"></svg>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- ETF Matrix -->
-            <div class="panel">
+            <div class="panel" data-reveal="fade-up" data-reveal-delay="410">
               <div class="panel-header">
                 <span class="panel-title">核心 ETF</span>
-                <span class="panel-link">查看全部 →</span>
+                <span class="panel-link" data-tooltip="查看全部 ETF 列表">查看全部 →</span>
               </div>
               <div class="panel-body iv-pt-0">
                 <table class="etf-table">
@@ -1540,45 +1551,45 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr><td class="name">510050 沪深300ETF</td><td class="numeric">4.236</td><td class="numeric iv-text-up">+0.68%</td></tr>
-                    <tr><td class="name">510500 中证500ETF</td><td class="numeric">6.891</td><td class="numeric iv-text-up">+0.94%</td></tr>
-                    <tr><td class="name">159915 创业板ETF</td><td class="numeric">2.187</td><td class="numeric iv-text-down">-0.15%</td></tr>
-                    <tr><td class="name">512100 中证1000ETF</td><td class="numeric">2.456</td><td class="numeric iv-text-up">+1.32%</td></tr>
-                    <tr><td class="name">512880 证券ETF</td><td class="numeric">0.987</td><td class="numeric iv-text-up">+1.56%</td></tr>
-                    <tr><td class="name">159949 创新药ETF</td><td class="numeric">0.723</td><td class="numeric iv-text-down">-0.42%</td></tr>
+                    <tr data-tooltip="510050 沪深300ETF · 最新价 4.236"><td class="name">510050 沪深300ETF</td><td class="numeric">4.236</td><td class="numeric iv-text-up">+0.68%</td></tr>
+                    <tr data-tooltip="510500 中证500ETF · 最新价 6.891"><td class="name">510500 中证500ETF</td><td class="numeric">6.891</td><td class="numeric iv-text-up">+0.94%</td></tr>
+                    <tr data-tooltip="159915 创业板ETF · 最新价 2.187"><td class="name">159915 创业板ETF</td><td class="numeric">2.187</td><td class="numeric iv-text-down">-0.15%</td></tr>
+                    <tr data-tooltip="512100 中证1000ETF · 最新价 2.456"><td class="name">512100 中证1000ETF</td><td class="numeric">2.456</td><td class="numeric iv-text-up">+1.32%</td></tr>
+                    <tr data-tooltip="512880 证券ETF · 最新价 0.987"><td class="name">512880 证券ETF</td><td class="numeric">0.987</td><td class="numeric iv-text-up">+1.56%</td></tr>
+                    <tr data-tooltip="159949 创新药ETF · 最新价 0.723"><td class="name">159949 创新药ETF</td><td class="numeric">0.723</td><td class="numeric iv-text-down">-0.42%</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
             <!-- Movers: 涨幅榜 -->
-            <div class="panel">
+            <div class="panel" data-reveal="fade-up" data-reveal-delay="470">
               <div class="panel-header">
                 <span class="panel-title">涨幅榜</span>
               </div>
               <div class="panel-body iv-pt-4">
                 <div class="movers-list">
-                  <div class="mover-item" tabindex="0"><span class="mover-rank">1</span><span class="mover-name">寒武纪-U</span><span class="mover-change up">+12.34%</span></div>
-                  <div class="mover-item" tabindex="0"><span class="mover-rank">2</span><span class="mover-name">中芯国际</span><span class="mover-change up">+8.76%</span></div>
-                  <div class="mover-item" tabindex="0"><span class="mover-rank">3</span><span class="mover-name">海光信息</span><span class="mover-change up">+7.23%</span></div>
-                  <div class="mover-item" tabindex="0"><span class="mover-rank">4</span><span class="mover-name">中际旭创</span><span class="mover-change up">+6.89%</span></div>
-                  <div class="mover-item" tabindex="0"><span class="mover-rank">5</span><span class="mover-name">北方华创</span><span class="mover-change up">+5.67%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="0" data-tooltip="寒武纪-U · 涨停 · AI芯片"><span class="mover-rank">1</span><span class="mover-name">寒武纪-U</span><span class="mover-change up">+12.34%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="30" data-tooltip="中芯国际 · 涨幅偏离 · 半导体"><span class="mover-rank">2</span><span class="mover-name">中芯国际</span><span class="mover-change up">+8.76%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="60" data-tooltip="海光信息 · GPU算力 · 半导体设备"><span class="mover-rank">3</span><span class="mover-name">海光信息</span><span class="mover-change up">+7.23%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="90" data-tooltip="中际旭创 · 光模块龙头"><span class="mover-rank">4</span><span class="mover-name">中际旭创</span><span class="mover-change up">+6.89%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="120" data-tooltip="北方华创 · 半导体设备 · 国产替代"><span class="mover-rank">5</span><span class="mover-name">北方华创</span><span class="mover-change up">+5.67%</span></div>
                 </div>
               </div>
             </div>
 
             <!-- Movers: 跌幅榜 -->
-            <div class="panel">
+            <div class="panel" data-reveal="fade-up" data-reveal-delay="530">
               <div class="panel-header">
                 <span class="panel-title">跌幅榜</span>
               </div>
               <div class="panel-body iv-pt-4">
                 <div class="movers-list">
-                  <div class="mover-item" tabindex="0"><span class="mover-rank">1</span><span class="mover-name">万科A</span><span class="mover-change down">-5.23%</span></div>
-                  <div class="mover-item" tabindex="0"><span class="mover-rank">2</span><span class="mover-name">保利发展</span><span class="mover-change down">-4.18%</span></div>
-                  <div class="mover-item" tabindex="0"><span class="mover-rank">3</span><span class="mover-name">招商蛇口</span><span class="mover-change down">-3.56%</span></div>
-                  <div class="mover-item" tabindex="0"><span class="mover-rank">4</span><span class="mover-name">兴业银行</span><span class="mover-change down">-2.34%</span></div>
-                  <div class="mover-item" tabindex="0"><span class="mover-rank">5</span><span class="mover-name">工商银行</span><span class="mover-change down">-1.89%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="150" data-tooltip="万科A · 跌幅偏离 · 地产风险"><span class="mover-rank">1</span><span class="mover-name">万科A</span><span class="mover-change down">-5.23%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="180" data-tooltip="保利发展 · 跌幅偏离 · 地产链"><span class="mover-rank">2</span><span class="mover-name">保利发展</span><span class="mover-change down">-4.18%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="210" data-tooltip="招商蛇口 · 跌幅偏离 · 地产开发"><span class="mover-rank">3</span><span class="mover-name">招商蛇口</span><span class="mover-change down">-3.56%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="240" data-tooltip="兴业银行 · 地产风险传导"><span class="mover-rank">4</span><span class="mover-name">兴业银行</span><span class="mover-change down">-2.34%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="270" data-tooltip="工商银行 · 大行跟跌"><span class="mover-rank">5</span><span class="mover-name">工商银行</span><span class="mover-change down">-1.89%</span></div>
                 </div>
               </div>
             </div>
@@ -1589,17 +1600,17 @@
         </main>
 
         <!-- Right Rail: 北向资金深度面板 -->
-        <div class="right-rail">
+        <div class="right-rail" data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
 
-          <div class="rail-section">
+          <div class="rail-section" data-reveal="fade-up" data-reveal-delay="500">
             <div class="rail-section-header">
               <span class="rail-section-title">北向资金</span>
-              <label for="overlay-northbound-detail" class="rail-section-expand cursor-pointer">展开 →</label>
+              <label for="overlay-northbound-detail" class="rail-section-expand cursor-pointer" data-tooltip="查看北向资金分时曲线与持仓明细">展开 →</label>
             </div>
             <div class="rail-section-body">
               <!-- Summary -->
               <div class="northbound-summary">
-                <span class="northbound-value inflow">+12.3</span>
+                <span class="northbound-value inflow" data-ticker="12.3" data-ticker-prefix="+" data-ticker-suffix="">+12.3</span>
                 <span class="northbound-unit">亿元（净流入）</span>
               </div>
               <div class="northbound-sub">
@@ -1613,37 +1624,28 @@
                 </div>
               </div>
               <!-- Mini flow chart -->
-              <svg class="flow-mini-chart" viewBox="0 0 200 48" fill="none" aria-hidden="true">
-                <defs>
-                  <linearGradient id="flow-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.15"/>
-                    <stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/>
-                  </linearGradient>
-                </defs>
-                <path d="M0 36 L20 32 L40 28 L60 30 L80 24 L100 20 L120 22 L140 16 L160 12 L180 14 L200 10 L200 48 L0 48 Z" fill="url(#flow-grad)"/>
-                <path d="M0 36 L20 32 L40 28 L60 30 L80 24 L100 20 L120 22 L140 16 L160 12 L180 14 L200 10" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5" opacity="0.7"/>
-              </svg>
+              <svg class="flow-mini-chart" viewBox="0 0 200 48" fill="none" aria-hidden="true" data-sparkline='{"data":[36,32,28,30,24,20,22,16,12,14,10],"color":"var(--market-up-fg)","fill":true,"fillOpacity":0.15,"strokeWidth":1.5}'></svg>
               <!-- Top holdings -->
               <div class="iv-label-uppercase-mb4">持仓变动 Top 5</div>
               <div class="holdings-list">
                 <div class="holding-item">
-                  <span class="holding-name">贵州茅台</span>
+                  <span class="holding-name" data-tooltip="北向持仓变动">贵州茅台</span>
                   <span class="holding-change inflow">+1.2 亿</span>
                 </div>
                 <div class="holding-item">
-                  <span class="holding-name">宁德时代</span>
+                  <span class="holding-name" data-tooltip="北向持仓变动">宁德时代</span>
                   <span class="holding-change inflow">+0.8 亿</span>
                 </div>
                 <div class="holding-item">
-                  <span class="holding-name">招商银行</span>
+                  <span class="holding-name" data-tooltip="北向持仓变动">招商银行</span>
                   <span class="holding-change outflow">-0.6 亿</span>
                 </div>
                 <div class="holding-item">
-                  <span class="holding-name">中芯国际</span>
+                  <span class="holding-name" data-tooltip="北向持仓变动">中芯国际</span>
                   <span class="holding-change inflow">+0.5 亿</span>
                 </div>
                 <div class="holding-item">
-                  <span class="holding-name">美的集团</span>
+                  <span class="holding-name" data-tooltip="北向持仓变动">美的集团</span>
                   <span class="holding-change inflow">+0.4 亿</span>
                 </div>
               </div>
@@ -1651,33 +1653,33 @@
           </div>
 
           <!-- Sector Preference -->
-          <div class="rail-section">
+          <div class="rail-section" data-reveal="fade-up" data-reveal-delay="580">
             <div class="rail-section-header">
               <span class="rail-section-title">北向行业偏好</span>
             </div>
             <div class="rail-section-body">
               <div class="sector-pref-item">
-                <span class="sector-pref-name">电子</span>
+                <span class="sector-pref-name" data-tooltip="电子板块北向资金流向">电子</span>
                 <div class="iv-divider-bar"><div class="iv-mini-bar-fill" style="--mb-w:65%;--mb-bg:var(--market-up-fg);border-radius:2px"></div></div>
                 <span class="sector-pref-value inflow">+3.2 亿</span>
               </div>
               <div class="sector-pref-item">
-                <span class="sector-pref-name">计算机</span>
+                <span class="sector-pref-name" data-tooltip="计算机板块北向资金流向">计算机</span>
                 <div class="iv-divider-bar"><div class="iv-mini-bar-fill" style="--mb-w:45%;--mb-bg:var(--market-up-fg);border-radius:2px"></div></div>
                 <span class="sector-pref-value inflow">+2.1 亿</span>
               </div>
               <div class="sector-pref-item">
-                <span class="sector-pref-name">新能源</span>
+                <span class="sector-pref-name" data-tooltip="新能源板块北向资金流向">新能源</span>
                 <div class="iv-divider-bar"><div class="iv-mini-bar-fill" style="--mb-w:30%;--mb-bg:var(--market-up-fg);border-radius:2px"></div></div>
                 <span class="sector-pref-value inflow">+1.5 亿</span>
               </div>
               <div class="sector-pref-item">
-                <span class="sector-pref-name">银行</span>
+                <span class="sector-pref-name" data-tooltip="银行板块北向资金流向">银行</span>
                 <div class="iv-divider-bar"><div class="iv-mini-bar-fill" style="--mb-w:35%;--mb-bg:var(--market-down-fg);border-radius:2px"></div></div>
                 <span class="sector-pref-value outflow">-1.8 亿</span>
               </div>
               <div class="sector-pref-item">
-                <span class="sector-pref-name">房地产</span>
+                <span class="sector-pref-name" data-tooltip="房地产板块北向资金流向">房地产</span>
                 <div class="iv-divider-bar"><div class="iv-mini-bar-fill" style="--mb-w:25%;--mb-bg:var(--market-down-fg);border-radius:2px"></div></div>
                 <span class="sector-pref-value outflow">-1.2 亿</span>
               </div>
@@ -1708,7 +1710,7 @@
       <!-- /shell-workspace -->
 
       <!-- Bottom Tab Band -->
-      <div class="tab-band tab-group" data-tab-group="a-shares">
+      <div class="tab-band tab-group" data-tab-group="a-shares" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.02)">
         <input type="radio" name="a-shares" id="tab-capital-flow" checked class="tab-radio sr-only">
         <input type="radio" name="a-shares" id="tab-dragon-tiger" class="tab-radio sr-only">
         <input type="radio" name="a-shares" id="tab-margin-trading" class="tab-radio sr-only">
@@ -1724,42 +1726,42 @@
         <!-- Tab 1: 资金轮动 -->
         <div class="tab-panel tab-band-body" data-panel="tab-capital-flow" role="tabpanel">
           <div class="rotation-summary-row">
-            <div class="rotation-summary-item">
+            <div class="rotation-summary-item" data-reveal="fade-up" data-reveal-delay="40">
               <span class="rotation-summary-label">北向净买入</span>
-              <span class="rotation-summary-value up">+12.3 亿</span>
+              <span class="rotation-summary-value up" data-counter="12.3" data-counter-prefix="+" data-counter-suffix=" 亿" data-counter-decimals="1">+12.3 亿</span>
             </div>
-            <div class="rotation-summary-item">
+            <div class="rotation-summary-item" data-reveal="fade-up" data-reveal-delay="80">
               <span class="rotation-summary-label">主力净流入</span>
-              <span class="rotation-summary-value up">+86.4 亿</span>
+              <span class="rotation-summary-value up" data-counter="86.4" data-counter-prefix="+" data-counter-suffix=" 亿" data-counter-decimals="1">+86.4 亿</span>
             </div>
-            <div class="rotation-summary-item">
+            <div class="rotation-summary-item" data-reveal="fade-up" data-reveal-delay="120">
               <span class="rotation-summary-label">散户净流入</span>
-              <span class="rotation-summary-value">-12.1 亿</span>
+              <span class="rotation-summary-value" data-counter="12.1" data-counter-prefix="-" data-counter-suffix=" 亿" data-counter-decimals="1">-12.1 亿</span>
             </div>
           </div>
           <div class="flow-bar-group">
-            <div class="flow-bar-item">
-              <span class="flow-bar-label">电子</span>
+            <div class="flow-bar-item" data-reveal="fade-up" data-reveal-delay="30">
+              <span class="flow-bar-label" data-tooltip="电子板块资金流向">电子</span>
               <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill" style="--fill-w:78%"></div></div>
               <span class="flow-bar-value inflow">+28.3 亿</span>
             </div>
-            <div class="flow-bar-item">
-              <span class="flow-bar-label">计算机</span>
+            <div class="flow-bar-item" data-reveal="fade-up" data-reveal-delay="60">
+              <span class="flow-bar-label" data-tooltip="计算机板块资金流向">计算机</span>
               <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill" style="--fill-w:52%"></div></div>
               <span class="flow-bar-value inflow">+18.6 亿</span>
             </div>
-            <div class="flow-bar-item">
-              <span class="flow-bar-label">军工</span>
+            <div class="flow-bar-item" data-reveal="fade-up" data-reveal-delay="90">
+              <span class="flow-bar-label" data-tooltip="军工板块资金流向">军工</span>
               <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill" style="--fill-w:35%"></div></div>
               <span class="flow-bar-value inflow">+8.7 亿</span>
             </div>
-            <div class="flow-bar-item">
-              <span class="flow-bar-label">房地产</span>
+            <div class="flow-bar-item" data-reveal="fade-up" data-reveal-delay="120">
+              <span class="flow-bar-label" data-tooltip="房地产板块资金流向">房地产</span>
               <div class="flow-bar-track"><div class="flow-bar-fill outflow iv-flow-fill" style="--fill-w:45%"></div></div>
               <span class="flow-bar-value outflow">-15.8 亿</span>
             </div>
-            <div class="flow-bar-item">
-              <span class="flow-bar-label">银行</span>
+            <div class="flow-bar-item" data-reveal="fade-up" data-reveal-delay="150">
+              <span class="flow-bar-label" data-tooltip="银行板块资金流向">银行</span>
               <div class="flow-bar-track"><div class="flow-bar-fill outflow iv-flow-fill" style="--fill-w:32%"></div></div>
               <span class="flow-bar-value outflow">-8.7 亿</span>
             </div>
@@ -1769,27 +1771,27 @@
         <!-- Tab 2: 龙虎榜 -->
         <div class="tab-panel tab-band-body" data-panel="tab-dragon-tiger" role="tabpanel">
           <div class="dragon-list">
-            <div class="dragon-item" tabindex="0">
+            <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="80" data-tooltip="寒武纪-U · 涨停 · 机构净买入 3.2 亿">
               <span class="dragon-stock">寒武纪-U</span>
               <span class="dragon-reason">涨停</span>
               <span class="dragon-net-buy inflow">+3.2 亿</span>
             </div>
-            <div class="dragon-item" tabindex="0">
+            <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="120" data-tooltip="中芯国际 · 涨幅偏离 · 北向+游资合力">
               <span class="dragon-stock">中芯国际</span>
               <span class="dragon-reason">涨幅偏离</span>
               <span class="dragon-net-buy inflow">+2.8 亿</span>
             </div>
-            <div class="dragon-item" tabindex="0">
+            <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="160" data-tooltip="中际旭创 · 换手率异常 · 交投活跃">
               <span class="dragon-stock">中际旭创</span>
               <span class="dragon-reason">换手率异常</span>
               <span class="dragon-net-buy inflow">+1.5 亿</span>
             </div>
-            <div class="dragon-item" tabindex="0">
+            <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="200" data-tooltip="万科A · 跌幅偏离 · 机构净卖出 2.1 亿">
               <span class="dragon-stock">万科A</span>
               <span class="dragon-reason">跌幅偏离</span>
               <span class="dragon-net-buy outflow">-2.1 亿</span>
             </div>
-            <div class="dragon-item" tabindex="0">
+            <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="240" data-tooltip="保利发展 · 跌幅偏离 · 地产链承压">
               <span class="dragon-stock">保利发展</span>
               <span class="dragon-reason">跌幅偏离</span>
               <span class="dragon-net-buy outflow">-1.8 亿</span>
@@ -1800,36 +1802,36 @@
         <!-- Tab 3: 两融数据 -->
         <div class="tab-panel tab-band-body" data-panel="tab-margin-trading" role="tabpanel">
           <div class="margin-stats">
-            <div class="margin-stat">
+            <div class="margin-stat" data-reveal="fade-up" data-reveal-delay="480">
               <div class="margin-stat-label">两融余额</div>
-              <div class="margin-stat-value">18,523 亿</div>
-              <div class="margin-stat-change up">+86 亿</div>
+              <div class="margin-stat-value" data-counter="18523" data-counter-suffix=" 亿" data-counter-decimals="0">18,523 亿</div>
+              <div class="margin-stat-change up" data-ticker="86" data-ticker-prefix="+" data-ticker-suffix=" 亿">+86 亿</div>
             </div>
-            <div class="margin-stat">
+            <div class="margin-stat" data-reveal="fade-up" data-reveal-delay="720">
               <div class="margin-stat-label">融资余额</div>
-              <div class="margin-stat-value">18,102 亿</div>
-              <div class="margin-stat-change up">+92 亿</div>
+              <div class="margin-stat-value" data-counter="18102" data-counter-suffix=" 亿" data-counter-decimals="0">18,102 亿</div>
+              <div class="margin-stat-change up" data-ticker="92" data-ticker-prefix="+" data-ticker-suffix=" 亿">+92 亿</div>
             </div>
-            <div class="margin-stat">
+            <div class="margin-stat" data-reveal="fade-up" data-reveal-delay="960">
               <div class="margin-stat-label">融券余额</div>
-              <div class="margin-stat-value">421 亿</div>
-              <div class="margin-stat-change down">-6 亿</div>
+              <div class="margin-stat-value" data-counter="421" data-counter-suffix=" 亿" data-counter-decimals="0">421 亿</div>
+              <div class="margin-stat-change down" data-ticker="6" data-ticker-prefix="-" data-ticker-suffix=" 亿">-6 亿</div>
             </div>
           </div>
           <div class="iv-text12-secondary-mb8">融资净买入 Top 行业</div>
           <div class="flow-bar-group">
-            <div class="flow-bar-item">
-              <span class="flow-bar-label">电子</span>
+            <div class="flow-bar-item" data-reveal="fade-up" data-reveal-delay="180">
+              <span class="flow-bar-label" data-tooltip="电子板块资金流向">电子</span>
               <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill" style="--fill-w:60%"></div></div>
               <span class="flow-bar-value inflow">+12.3 亿</span>
             </div>
-            <div class="flow-bar-item">
-              <span class="flow-bar-label">计算机</span>
+            <div class="flow-bar-item" data-reveal="fade-up" data-reveal-delay="200">
+              <span class="flow-bar-label" data-tooltip="计算机板块资金流向">计算机</span>
               <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill" style="--fill-w:42%"></div></div>
               <span class="flow-bar-value inflow">+8.6 亿</span>
             </div>
-            <div class="flow-bar-item">
-              <span class="flow-bar-label">电力</span>
+            <div class="flow-bar-item" data-reveal="fade-up" data-reveal-delay="200">
+              <span class="flow-bar-label" data-tooltip="电力板块资金流向">电力</span>
               <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill" style="--fill-w:28%"></div></div>
               <span class="flow-bar-value inflow">+5.2 亿</span>
             </div>
@@ -1839,35 +1841,35 @@
         <!-- Tab 4: 事件日历 -->
         <div class="tab-panel tab-band-body" data-panel="tab-event-calendar" role="tabpanel">
           <div class="event-calendar-list">
-            <div class="event-cal-item">
+            <div class="event-cal-item" data-reveal="fade-up" data-reveal-delay="50">
               <span class="event-cal-date">04-14 周一</span>
-              <span class="event-cal-type ipo">新股申购</span>
+              <span class="event-cal-type ipo" data-tooltip="事件类型：新股申购">新股申购</span>
               <span class="event-cal-name">金迪克 (生物制药)</span>
-              <span class="event-cal-impact">低</span>
+              <span class="event-cal-impact" data-tooltip="市场影响程度：低">低</span>
             </div>
-            <div class="event-cal-item">
+            <div class="event-cal-item" data-reveal="fade-up" data-reveal-delay="100">
               <span class="event-cal-date">04-15 周二</span>
-              <span class="event-cal-type unlock">限售解禁</span>
+              <span class="event-cal-type unlock" data-tooltip="事件类型：限售解禁">限售解禁</span>
               <span class="event-cal-name">宁德时代 · 12.6 亿股</span>
-              <span class="event-cal-impact">高</span>
+              <span class="event-cal-impact" data-tooltip="市场影响程度：高">高</span>
             </div>
-            <div class="event-cal-item">
+            <div class="event-cal-item" data-reveal="fade-up" data-reveal-delay="150">
               <span class="event-cal-date">04-17 周四</span>
-              <span class="event-cal-type report">财报披露</span>
+              <span class="event-cal-type report" data-tooltip="事件类型：财报披露">财报披露</span>
               <span class="event-cal-name">贵州茅台 Q1 业绩</span>
-              <span class="event-cal-impact">高</span>
+              <span class="event-cal-impact" data-tooltip="市场影响程度：高">高</span>
             </div>
-            <div class="event-cal-item">
+            <div class="event-cal-item" data-reveal="fade-up" data-reveal-delay="200">
               <span class="event-cal-date">04-18 周五</span>
-              <span class="event-cal-type dividend">除权除息</span>
+              <span class="event-cal-type dividend" data-tooltip="事件类型：除权除息">除权除息</span>
               <span class="event-cal-name">中国平安 · 每 10 股 4.8 元</span>
-              <span class="event-cal-impact">中</span>
+              <span class="event-cal-impact" data-tooltip="市场影响程度：中">中</span>
             </div>
-            <div class="event-cal-item">
+            <div class="event-cal-item" data-reveal="fade-up" data-reveal-delay="250">
               <span class="event-cal-date">04-20 周日</span>
-              <span class="event-cal-type ipo">新股上市</span>
+              <span class="event-cal-type ipo" data-tooltip="事件类型：新股上市">新股上市</span>
               <span class="event-cal-name">芯联集成 (半导体)</span>
-              <span class="event-cal-impact">中</span>
+              <span class="event-cal-impact" data-tooltip="市场影响程度：中">中</span>
             </div>
           </div>
         </div>
@@ -1915,7 +1917,7 @@
           <span class="overlay-title">北向资金详情</span>
           <label for="overlay-northbound-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
-        <div class="overlay-body">
+        <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
           <h4>分时净流入曲线</h4>
           <svg viewBox="0 0 300 80" class="iv-chart-area" fill="none" aria-hidden="true">
             <defs>
@@ -1962,7 +1964,7 @@
           <span class="overlay-title">行业详情 · 电子</span>
           <label for="overlay-sector-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
-        <div class="overlay-body">
+        <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
           <div class="iv-grid-3col-gap8">
             <div class="iv-panel-card">
               <div class="iv-caption-label">涨跌幅</div>
@@ -2003,7 +2005,7 @@
           <span class="overlay-title">筛选器</span>
           <label for="overlay-filter-panel" class="overlay-close" aria-label="关闭">✕</label>
         </div>
-        <div class="overlay-body">
+        <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
           <h4>板块范围</h4>
           <div class="iv-flex-wrap-gap4-mb12">
             <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 全部</label>
@@ -2039,7 +2041,7 @@
           <span class="overlay-title">AI 结构分析</span>
           <label for="overlay-ai-analysis" class="overlay-close" aria-label="关闭">✕</label>
         </div>
-        <div class="overlay-body">
+        <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
           <div class="iv-label-uppercase-mb8">生成时间 09:42 CST</div>
           <div class="iv-body-block">
             <strong>主线归因</strong>：今日 A 股科技板块延续强势，AI 算力与半导体设备领涨。驱动因素为：
