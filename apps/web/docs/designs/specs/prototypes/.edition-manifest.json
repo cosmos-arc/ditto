@@ -350,11 +350,11 @@
     {
       "id": "regime-monitor",
       "file": "page-regime-monitor.html",
-      "status": "v5-done",
-      "score": 9.1,
+      "status": "v6-done",
+      "score": 9.3,
       "styleAnchor": "platform",
       "rounds": 1,
-      "roundsV3": 1,
+      "roundsV3": 2,
       "jsModules": {
         "ticker": 1,
         "reveal": 4,
@@ -362,7 +362,7 @@
         "heatgrid": 1,
         "total": 9
       },
-      "note": "v3 subagent 引入 </span> 闭合错误导致 tab 失效，已手动修复",
+      "note": "round-3: token-shell import + confidence bar removal + brand glow + chart Y-axis + hover simplification",
       "createdAt": "2026-04-02",
       "stateCoverage": {
         "tabs": 3,
