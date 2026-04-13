@@ -24,7 +24,7 @@ class TestCreateStrategyHandler:
     """CreateStrategyHandler — 创建策略 Spec."""
 
     def test_handle_creates_new_spec(self) -> None:
-        """Handler 构建 StrategySpecRecord 并调用 save_spec."""
+        """Handler 构建 StrategySpecRecord 并调用 save_spec，返回 StrategySpecInfo."""
         from ditto_app.command.strategy import (
             CreateStrategyCommand,
             CreateStrategyHandler,
@@ -48,7 +48,9 @@ class TestCreateStrategyHandler:
         assert result.tags == ()
         assert result.created_at != ""
         assert result.updated_at != ""
-        service.save_spec.assert_called_once_with(result)
+        service.save_spec.assert_called_once()
+        saved_record = service.save_spec.call_args.args[0]
+        assert saved_record.strategy_id == "strat-1"
 
     def test_handle_with_tags(self) -> None:
         """Handler 正确传递 tags 字段."""
@@ -134,7 +136,9 @@ class TestUpdateStrategyHandler:
         assert result.status == "draft"
         assert result.created_at == "2026-01-01T00:00:00Z"
         assert result.updated_at != ""
-        service.save_spec.assert_called_once_with(result)
+        service.save_spec.assert_called_once()
+        saved_record = service.save_spec.call_args.args[0]
+        assert saved_record.strategy_id == "strat-1"
         service.get_spec.assert_called_once_with("strat-1")
 
     def test_handle_raises_on_version_conflict(self) -> None:
@@ -200,7 +204,7 @@ class TestUpdateStrategyHandler:
 
         assert result.version == 2
         assert result.name == "New Name"
-        service.save_spec.assert_called_once_with(result)
+        service.save_spec.assert_called_once()
 
     def test_handle_raises_on_missing_spec(self) -> None:
         """策略不存在时抛出 ValueError."""

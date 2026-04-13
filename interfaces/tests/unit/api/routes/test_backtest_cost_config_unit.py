@@ -28,6 +28,7 @@ from ditto_interfaces.models.backtest import (
     CostConfigRequest,
     CreateBacktestRunRequest,
 )
+from ditto_kernel.enums import ImpactModel
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -76,13 +77,13 @@ class TestCostConfigRequestCustom:
             commission_min=10.0,
             stamp_duty_rate=0.002,
             slippage_bps=3.0,
-            impact_model="linear",
+            impact_model=ImpactModel.VOLUME_SHARE,
         )
         assert cfg.commission_rate == 0.0005
         assert cfg.commission_min == 10.0
         assert cfg.stamp_duty_rate == 0.002
         assert cfg.slippage_bps == 3.0
-        assert cfg.impact_model == "linear"
+        assert cfg.impact_model == ImpactModel.VOLUME_SHARE
 
     def test_partial_override_keeps_defaults(self) -> None:
         """只覆盖部分字段，其余保持默认."""
@@ -206,7 +207,7 @@ class TestCostConfigMapping:
                 commission_min=10.0,
                 stamp_duty_rate=0.002,
                 slippage_bps=3.0,
-                impact_model="linear",
+                impact_model=ImpactModel.VOLUME_SHARE,
             ),
         )
         cost_cfg = body.cost_config
@@ -231,7 +232,7 @@ class TestCostConfigMapping:
         assert command.cost_config.commission_min == 10.0
         assert command.cost_config.stamp_duty_rate == 0.002
         assert command.cost_config.slippage_bps == 3.0
-        assert command.cost_config.impact_model == "linear"
+        assert command.cost_config.impact_model == ImpactModel.VOLUME_SHARE
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +325,7 @@ class TestTriggerBacktestCostConfigRoute:
                 commission_min=10.0,
                 stamp_duty_rate=0.002,
                 slippage_bps=3.0,
-                impact_model="linear",
+                impact_model=ImpactModel.VOLUME_SHARE,
             ),
         )
         resp = client.post(
@@ -338,7 +339,7 @@ class TestTriggerBacktestCostConfigRoute:
                     "commission_min": 10.0,
                     "stamp_duty_rate": 0.002,
                     "slippage_bps": 3.0,
-                    "impact_model": "linear",
+                    "impact_model": "volume_share",
                 },
             },
         )
@@ -352,7 +353,7 @@ class TestTriggerBacktestCostConfigRoute:
         assert command.cost_config.commission_min == 10.0
         assert command.cost_config.stamp_duty_rate == 0.002
         assert command.cost_config.slippage_bps == 3.0
-        assert command.cost_config.impact_model == "linear"
+        assert command.cost_config.impact_model == ImpactModel.VOLUME_SHARE
 
     def test_trigger_with_default_cost_config_object_handler_receives_defaults(
         self,

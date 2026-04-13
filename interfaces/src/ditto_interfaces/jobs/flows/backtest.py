@@ -16,10 +16,16 @@ from ditto_app.process.execution.fee_override import (
     build_fee_model,
     build_slippage_model,
 )
-from ditto_engine.backtest.statistics import BacktestReport
+from ditto_app.query._artifact_utils import compute_total_return
+from ditto_kernel.enums import ImpactModel, RunStatus
 from prefect import flow
 
 from ditto_interfaces.registry.contexts.strategy import create_strategy_bundle
+
+
+def _status_str(status: RunStatus) -> str:
+    """RunStatus → str，供 writer.update_status 等接受 str 的接口使用."""
+    return status.value
 
 
 @flow(
@@ -73,7 +79,7 @@ def run_backtest_flow(
     with create_strategy_bundle() as bundle:
         writer = bundle.run_writer
         if writer is not None:
-            writer.update_status(run_id, "running")
+            writer.update_status(run_id, _status_str(RunStatus.RUNNING))
 
         try:
             options = BacktestServiceOptions(
@@ -82,24 +88,38 @@ def run_backtest_flow(
                 slippage_model=slippage_model,
             )
 
-            report: BacktestReport = bundle.strategy_facade.run_backtest_from_catalog(
+            report = bundle.strategy_facade.run_backtest_from_catalog(
                 config=config,
                 options=options,
             )
 
-            total_return = _compute_total_return(report)
+            total_return = compute_total_return(
+                initial_cash=report.initial_cash,
+                final_nav=report.final_nav,
+            )
 
-            if writer is not None:
-                writer.update_status(run_id, "completed")
+            # 从 RunRecord 读取实际状态（service 内部可能已标记 cancelled）
+            actual_status: str = RunStatus.COMPLETED
+            run_svc = bundle.run_service
+            if run_svc is not None:
+                record = run_svc.get_run(run_id)
+                if record is not None and record.status == RunStatus.CANCELLED:
+                    actual_status = RunStatus.CANCELLED
+            elif writer is not None:
+                writer.update_status(run_id, _status_str(RunStatus.COMPLETED))
 
             return {
                 "run_id": run_id,
-                "status": "completed",
+                "status": actual_status,
                 "total_return": total_return,
             }
         except Exception as exc:
             if writer is not None:
-                writer.update_status(run_id, "failed", error_message=str(exc))
+                writer.update_status(
+                    run_id,
+                    _status_str(RunStatus.FAILED),
+                    error_message=str(exc),
+                )
             raise
 
 
@@ -115,7 +135,7 @@ def _deserialize_cost_config(
         commission_min=_get_float(raw, "commission_min", defaults.commission_min),
         stamp_duty_rate=_get_float(raw, "stamp_duty_rate", defaults.stamp_duty_rate),
         slippage_bps=_get_float(raw, "slippage_bps", defaults.slippage_bps),
-        impact_model=_get_str(raw, "impact_model", defaults.impact_model),
+        impact_model=_get_impact_model(raw, "impact_model", defaults.impact_model),
     )
 
 
@@ -127,16 +147,28 @@ def _get_float(data: dict[str, object], key: str, default: float) -> float:
     return default
 
 
-def _get_str(data: dict[str, object], key: str, default: str) -> str:
-    """从 dict 安全提取 str 值."""
+def _get_impact_model(
+    data: dict[str, object],
+    key: str,
+    default: ImpactModel,
+) -> ImpactModel:
+    """
+    从 dict 安全提取 impact_model 值.
+
+    Raises:
+        ValueError: 值不为空且不是合法值时抛出.
+
+    """
     val = data.get(key)
+    if val is None:
+        return default
     if isinstance(val, str):
-        return val
+        try:
+            return ImpactModel(val)
+        except ValueError:
+            msg = (
+                f"非法 impact_model 值: {val!r}, "
+                f"合法值: {[m.value for m in ImpactModel]}"
+            )
+            raise ValueError(msg) from None
     return default
-
-
-def _compute_total_return(report: BacktestReport) -> float:
-    """从 BacktestReport 计算总收益率."""
-    if report.initial_cash > 0:
-        return report.final_nav / report.initial_cash - 1
-    return 0.0

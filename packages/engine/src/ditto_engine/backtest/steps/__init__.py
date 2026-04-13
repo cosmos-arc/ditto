@@ -5,6 +5,7 @@ TradingStep Protocol + StepResult + StepContext + 所有 Step 实现。
 
 拆分为子模块:
 - types: StepResult, StepContext, TradingStep Protocol
+- _input_bundle: build_input_bundle 共享函数
 - data_fetch: DataFetchStep
 - risk_scan: RiskScanStep
 - strategy: StrategyStep
@@ -14,6 +15,7 @@ TradingStep Protocol + StepResult + StepContext + 所有 Step 实现。
 - audit: AuditStep
 """
 
+from ditto_engine.backtest.steps._input_bundle import build_input_bundle
 from ditto_engine.backtest.steps.audit import AuditStep
 from ditto_engine.backtest.steps.data_fetch import DataFetchStep
 from ditto_engine.backtest.steps.execution import ExecutionStep
@@ -34,4 +36,5 @@ __all__ = [
     "StepResult",
     "StrategyStep",
     "TradingStep",
+    "build_input_bundle",
 ]

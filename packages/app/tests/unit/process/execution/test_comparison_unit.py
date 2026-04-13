@@ -284,7 +284,7 @@ class TestComputeComparison:
         )
 
     def test_empty_actual_data(self) -> None:
-        """空 actual 数据 → 零值 / 安全默认值."""
+        """空 actual 数据 → None / 安全默认值."""
         from ditto_app.process.execution.comparison import compute_comparison
 
         report = _make_backtest_report()
@@ -297,7 +297,9 @@ class TestComputeComparison:
         )
 
         assert result.backtest_return == 10.0
-        assert result.actual_return == 0.0
+        assert result.actual_return is None
+        assert result.return_diff is None
+        assert result.return_diff_bps is None
         assert result.actual_sharpe == 0.0
         assert result.actual_total_cost == 0.0
         assert result.nav_correlation == 0.0

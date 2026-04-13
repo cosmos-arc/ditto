@@ -16,12 +16,12 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import uuid
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 
-import polars as pl
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
@@ -54,10 +54,12 @@ from ditto_engine.backtest.steps import (
     StrategyStep,
     TradingStep,
 )
+from ditto_engine.backtest.steps._input_bundle import build_input_bundle
 from ditto_engine.execution.brokerage import Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner
 from ditto_engine.execution.reality import FeeModel
 from ditto_engine.execution.rules import InstrumentRuleProvider
+from ditto_engine.execution.targets import TargetPortfolioLike
 from ditto_engine.execution.trade_builder import (
     FifoTradeBuilder,
     FlatToFlatTradeBuilder,
@@ -125,6 +127,7 @@ class EngineConfig:
     parameter_overrides: tuple[str, ...] = ()
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
+    execution_delay: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -159,6 +162,7 @@ class EngineResult:
     account_view: AccountView | None = None
     manifest: RunManifest | None = None
     skipped_dates: tuple[str, ...] = ()
+    cancelled: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +185,8 @@ class EngineOptions:
         input_bundle_builder: 自定义 input bundle 构建器
             (None = 使用默认构建器)
         random_seed: 随机种子（用于可复现性，默认 42）
+        should_stop: 协作式取消回调 (None = 不支持取消)
+        on_progress: 进度回调 (completed_days, total_days)
 
     """
 
@@ -192,6 +198,8 @@ class EngineOptions:
     event_bus: EventBus | None = None
     input_bundle_builder: Callable[[StepContext], StrategyInputBundle] | None = None
     random_seed: int = 42
+    should_stop: Callable[[], bool] | None = None
+    on_progress: Callable[[int, int], None] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -269,12 +277,16 @@ class EngineLoop:
         self._event_bus = options.event_bus
         self._input_bundle_builder = options.input_bundle_builder
         self._random_seed = options.random_seed
+        self._should_stop = options.should_stop
+        self._on_progress = options.on_progress
 
         # 跨日可变状态
         self._fills: list[FillEvent] = []
         self._orders: list[Order] = []
 
         self._strategy_context = StrategyContext()
+        self._execution_delay = config.execution_delay
+        self._signal_queue: deque[TargetPortfolioLike] = deque()
         self._rule_ref_collector = RuleRefCollector()
         self._trading_days: tuple[str, ...] = ()
         self._input_instruments: set[InstrumentId] = set()
@@ -356,14 +368,26 @@ class EngineLoop:
         """
         run_id = self._config.strategy_run_id or uuid.uuid4().hex[:8]
         days = self._data_feed.trading_days()
-        self._trading_days = tuple(days)
-        start = days[0] if days else self._config.start_date
-        end = days[-1] if days else self._config.end_date
+        # 过滤到配置区间：DataFeed 可能加载了 start_date 之前的额外数据（lookback）
+        trading_days = [d for d in days if d >= self._config.start_date]
+        self._trading_days = tuple(trading_days)
+        start = trading_days[0] if trading_days else self._config.start_date
+        end = trading_days[-1] if trading_days else self._config.end_date
 
         skipped: list[str] = []
-        for date in days:
+        cancelled = False
+        completed_days = 0
+        total_days = len(trading_days)
+        for date in trading_days:
+            if self._should_stop is not None and self._should_stop():
+                cancelled = True
+                break
             if not self._step(date):
                 skipped.append(date)
+            else:
+                completed_days += 1
+                if self._on_progress is not None:
+                    self._on_progress(completed_days, total_days)
 
         if skipped:
             logger.warning(
@@ -381,7 +405,21 @@ class EngineLoop:
                     self._audit_collector.record_closed_trade(trade)
                     self._recorded_trade_ids.add(trade.trade_id)
 
-        # 构建运行清单 -- 真实治理字段
+        manifest = self._build_manifest(run_id)
+        return self._assemble_result(
+            run_id,
+            start,
+            end,
+            account_view,
+            manifest,
+            skipped,
+            cancelled,
+        )
+
+    # -- internals ------------------------------------------------------------
+
+    def _build_manifest(self, run_id: str) -> RunManifest:
+        """构建 RunManifest — 记录运行配置、规则引用、输入依赖等治理字段."""
         input_refs = tuple(sorted(self._input_instruments))
         config_hash = hash_config(
             start_date=self._config.start_date,
@@ -396,14 +434,13 @@ class EngineLoop:
             strategy_version=self._config.strategy_version,
             rebalance_freq=self._config.rebalance_freq,
         )
-        input_ref_details = self._build_input_ref_details()
-        manifest = RunManifest(
+        return RunManifest(
             run_id=run_id,
             strategy_id=self._config.strategy_id,
             strategy_version=self._config.strategy_version,
             mode=RunMode.BACKTEST,
             input_refs=input_refs,
-            input_ref_details=input_ref_details,
+            input_ref_details=self._build_input_ref_details(),
             parameter_overrides=self._config.parameter_overrides,
             rule_refs=self._rule_ref_collector.rule_refs,
             config_hash=config_hash,
@@ -415,6 +452,17 @@ class EngineLoop:
             created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         )
 
+    def _assemble_result(
+        self,
+        run_id: str,
+        start: str,
+        end: str,
+        account_view: AccountView,
+        manifest: RunManifest,
+        skipped: list[str],
+        cancelled: bool,
+    ) -> EngineResult:
+        """组装 EngineResult — 汇总账户、成交、订单等最终状态."""
         return EngineResult(
             run_id=run_id,
             period=(start, end),
@@ -425,49 +473,20 @@ class EngineLoop:
             account_view=account_view,
             manifest=manifest,
             skipped_dates=tuple(skipped),
+            cancelled=cancelled,
         )
-
-    # -- internals ------------------------------------------------------------
 
     def _build_input_bundle(self, date: str, slice_: Slice) -> StrategyInputBundle:
         """
         构建 StrategyInputBundle -- 子类可覆盖以注入自定义列.
 
-        默认实现从 slice_.bars 提取 instrument_id / OHLCV / signal_value。
+        默认实现委托给 build_input_bundle() 共享函数。
         """
-        instrument_ids = list(slice_.bars.keys())
-
-        instruments = pl.DataFrame({"instrument_id": instrument_ids})
-
-        market_rows: list[dict[str, object]] = []
-        signal_rows: list[dict[str, object]] = []
-        for iid, bar in slice_.bars.items():
-            market_rows.append(
-                {
-                    "instrument_id": iid,
-                    "open": bar.open,
-                    "high": bar.high,
-                    "low": bar.low,
-                    "close": bar.close,
-                    "volume": bar.volume,
-                },
-            )
-            signal_rows.append(
-                {
-                    "instrument_id": iid,
-                    "signal_value": (
-                        (bar.close / bar.prev_close - 1.0) if bar.prev_close else 0.0
-                    ),
-                },
-            )
-
-        return StrategyInputBundle(
+        return build_input_bundle(
             trade_date=date,
             strategy_id=self._config.strategy_id,
             run_id=self._config.strategy_run_id,
-            instruments=instruments,
-            market_data=pl.DataFrame(market_rows),
-            signal_values=pl.DataFrame(signal_rows),
+            bars=slice_.bars,
             benchmark_close=slice_.benchmark_close,
         )
 
@@ -501,13 +520,33 @@ class EngineLoop:
             )
         return tuple(refs)
 
+    def _dequeue_delayed_signal(self) -> TargetPortfolioLike | None:
+        """取出到期的延迟信号。队列中信号数 >= execution_delay 时才有信号到期。"""
+        if (
+            self._execution_delay > 0
+            and len(self._signal_queue) >= self._execution_delay
+        ):
+            return self._signal_queue.popleft()
+        return None
+
     def _step(self, date: str) -> bool:
         """执行单日步骤 -- 通过 Step chain 编排。返回 False 表示某 step 失败。"""
         is_rebalance = self._is_rebalance_day(date)
         ctx = StepContext(date=date, is_rebalance_day=is_rebalance)
+        delay = self._execution_delay
+        deferred_signal = self._dequeue_delayed_signal()
 
         # 执行 Step chain
         for step in self._steps:
+            # execution_delay: PlanningStep 前恢复延迟信号
+            if (
+                delay > 0
+                and deferred_signal is not None
+                and isinstance(step, PlanningStep)
+            ):
+                ctx.target_portfolio = deferred_signal
+                ctx.is_rebalance_day = True
+
             result = step.execute(ctx)
             if not result.success:
                 step_name = type(step).__name__
@@ -519,6 +558,12 @@ class EngineLoop:
                     errors,
                 )
                 return False
+
+            # execution_delay: StrategyStep 后将当日信号入队并清除
+            if delay > 0 and isinstance(step, StrategyStep):
+                if ctx.target_portfolio is not None:
+                    self._signal_queue.append(ctx.target_portfolio)
+                ctx.target_portfolio = None
 
         # 累积跨日结果
         self._fills.extend(ctx.step_fills)

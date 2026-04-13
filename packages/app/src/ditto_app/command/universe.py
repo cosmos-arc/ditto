@@ -75,18 +75,22 @@ class UpdateCustomUniverseHandler:
         self._service = metadata_service
 
     def handle(self, command: UpdateCustomUniverseCommand) -> dict[str, Any]:
-        """更新自定义 universe 元数据."""
+        """更新自定义 universe 元数据（预设 universe 不可修改）."""
         existing = self._service.get_universe_detail(command.universe_id)
         if existing is None:
             msg = f"Universe not found: {command.universe_id}"
             raise ValueError(msg)
-        # UniverseWriter 没有直接 update 方法，重建实现
-        self._service.create_universe(
-            universe_id=command.universe_id,
-            name=command.name,
-            description=command.description,
-            universe_type=existing.get("universe_type", "custom"),
-            source_ref=existing.get("source_ref"),
+        universe_type = existing.get("universe_type", "custom")
+        if universe_type != "custom":
+            msg = (
+                f"Preset universe cannot be modified"
+                f" '{command.universe_id}' (type={universe_type})"
+            )
+            raise PermissionError(msg)
+        self._service.update_universe(
+            command.universe_id,
+            command.name,
+            command.description,
         )
         return self._service.get_universe_detail(command.universe_id) or existing
 

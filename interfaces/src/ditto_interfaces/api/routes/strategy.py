@@ -15,6 +15,7 @@ from ditto_app.command.strategy import (
     UpdateStrategyCommand,
     UpdateStrategyHandler,
 )
+from ditto_app.contracts import StrategySpecInfo
 from ditto_app.query.strategy import StrategyQueryFacade
 from fastapi import APIRouter, HTTPException
 
@@ -24,10 +25,23 @@ from ditto_interfaces.models.strategy import (
     PublishStrategyRequest,
     StrategyResponse,
     UpdateStrategyRequest,
-    to_strategy_response,
 )
 
 router = APIRouter(prefix="/strategies", tags=["strategies"])
+
+
+def to_strategy_response(info: StrategySpecInfo) -> StrategyResponse:
+    """将 App StrategySpecInfo 转为 API 响应."""
+    return StrategyResponse(
+        strategy_id=info.strategy_id,
+        name=info.name,
+        spec_json=dict(info.spec_json),
+        version=info.version,
+        status=info.status,
+        created_at=info.created_at,
+        updated_at=info.updated_at,
+        tags=list(info.tags),
+    )
 
 
 @router.post("", response_model=StrategyResponse)
@@ -43,8 +57,8 @@ async def create_strategy(
         spec_json=request.spec_json,
         tags=tuple(request.tags),
     )
-    record = await asyncio.to_thread(handler.handle, cmd)
-    return to_strategy_response(record)
+    info = await asyncio.to_thread(handler.handle, cmd)
+    return to_strategy_response(info)
 
 
 @router.get("", response_model=APIResponse[list[StrategyResponse]])
@@ -53,8 +67,8 @@ async def list_strategies(
     facade: Annotated[StrategyQueryFacade, FromComponent()],
 ) -> APIResponse[list[StrategyResponse]]:
     """列出策略."""
-    records = await asyncio.to_thread(facade.list_specs)
-    return APIResponse(data=[to_strategy_response(r) for r in records])
+    specs = await asyncio.to_thread(facade.list_specs)
+    return APIResponse(data=[to_strategy_response(s) for s in specs])
 
 
 @router.get("/{strategy_id}", response_model=StrategyResponse)
@@ -64,13 +78,13 @@ async def get_strategy(
     facade: Annotated[StrategyQueryFacade, FromComponent()],
 ) -> StrategyResponse:
     """获取策略详情."""
-    record = await asyncio.to_thread(facade.get_spec, strategy_id)
-    if record is None:
+    info = await asyncio.to_thread(facade.get_spec, strategy_id)
+    if info is None:
         raise HTTPException(
             status_code=404,
             detail=f"Strategy not found: {strategy_id}",
         )
-    return to_strategy_response(record)
+    return to_strategy_response(info)
 
 
 @router.put("/{strategy_id}", response_model=StrategyResponse)
@@ -88,8 +102,8 @@ async def update_strategy(
         version=request.version,
         tags=tuple(request.tags),
     )
-    record = await asyncio.to_thread(handler.handle, cmd)
-    return to_strategy_response(record)
+    info = await asyncio.to_thread(handler.handle, cmd)
+    return to_strategy_response(info)
 
 
 @router.post("/{strategy_id}/publish", response_model=APIResponse[bool])

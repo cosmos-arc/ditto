@@ -79,6 +79,22 @@ class TestUpdateUniverseRequest:
         body = UpdateUniverseRequest(name="Updated", description="New desc")
         assert body.description == "New desc"
 
+    def test_valid_with_members(self) -> None:
+        """带成分列表的合法请求."""
+        body = UpdateUniverseRequest(
+            name="Updated",
+            members=["510300.SH", "159915.SZ"],
+            effective_date="2024-01-15",
+        )
+        assert body.members == ["510300.SH", "159915.SZ"]
+        assert body.effective_date == "2024-01-15"
+
+    def test_members_default_none(self) -> None:
+        """members 默认为 None."""
+        body = UpdateUniverseRequest(name="Updated")
+        assert body.members is None
+        assert body.effective_date is None
+
     def test_empty_name_rejected(self) -> None:
         """空 name 被拒绝."""
         with pytest.raises(ValidationError):
@@ -243,12 +259,21 @@ class TestErrorHandlerMapping:
         assert http_exc.status_code == 400
         assert "already exists" in http_exc.detail
 
-    def test_update_not_found_returns_400(self) -> None:
-        """更新不存在的 universe → ValueError → HTTPException(400)."""
+    def test_update_not_found_returns_404(self) -> None:
+        """更新不存在的 universe → ValueError → HTTPException(404)."""
         exc = ValueError("Universe not found: missing")
-        http_exc = HTTPException(status_code=400, detail=str(exc))
-        assert http_exc.status_code == 400
+        http_exc = HTTPException(status_code=404, detail=str(exc))
+        assert http_exc.status_code == 404
         assert "not found" in http_exc.detail
+
+    def test_update_preset_returns_403(self) -> None:
+        """更新预设 universe → PermissionError → HTTPException(403)."""
+        exc = PermissionError(
+            "Preset universe cannot be modified 'csi300' (type=preset)"
+        )
+        http_exc = HTTPException(status_code=403, detail=str(exc))
+        assert http_exc.status_code == 403
+        assert "cannot be modified" in http_exc.detail
 
     def test_delete_preset_returns_403(self) -> None:
         """删除预设 universe → ValueError(含 'preset') → HTTPException(403)."""

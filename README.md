@@ -1,6 +1,6 @@
 # Ditto: 量化投资系统
 
-**版本**: v0.12.1 | **更新**: 2026-04-11 | **状态**: V1 Sprint 8 项偏差修复完成
+**版本**: v0.13.0 | **更新**: 2026-04-13 | **状态**: V1 Sprint Enhancement 完成
 
 ## 概要
 
@@ -21,6 +21,10 @@
 - **策略 API** — FastAPI 路由（策略 CRUD + 发布 + 回测结果查询 + 成交审计）
 - **人工执行闭环** — 信号快照 → 交易意图 → 成交录入 → 实际持仓/P&L → 回测vs实际对比
 - **交易 API** — FastAPI 路由（意图查询/成交录入/持仓查询/P&L 汇总/信号查询/对比报告）
+- **Regime 识别** — 市场状态识别（BULL/BEAR/NEUTRAL），多维复合 Regime Score + 仓位调节
+- **因子增强回测** — FactorBridge 桥接 Analytics 表达式编译器到回测引擎，声明式因子配置
+- **Universe 管理** — 预设 + 自定义 Universe CRUD + 成分股/ETF 管理 API
+- **自定义费率** — CostConfig 支持佣金/印花税/滑点可配置，API 回测触发时注入
 - **T+1 交收日历** — 交易日历注入 + settlement_date 自动计算 + 持仓冻结逻辑
 
 ## 架构
@@ -205,6 +209,7 @@ pixi run -e dev arch-check       # 分层依赖检查
 - **V1 Sprint Phase 1** — 策略/回测 API 闭环 (done)
 - **V1 Sprint Phase 2** — 人工执行闭环 (done)
 - **V1 Sprint 修复** — 8 项偏差修复: Position UPSERT/T+1 日历/基准 NAV/Comparison API/Signal API/分页/乐观锁/settlement_date (done)
+- **V1 Sprint Enhancement** — Regime 识别 + 因子增强回测 + Universe 管理 + 自定义费率 + 回测 artifact + 可复现性验证 (done)
 - **V1 Sprint Phase 3** — Run Lineage / Replayability（规划中）
 - **Phase 3** — 实盘接入：BrokerAdapter / 纸面交易（规划中）
 - **Phase 4** — App 层提取：CQRS 编排 + DI builders + engine 独立包 (done)
@@ -238,6 +243,18 @@ pixi run -e dev arch-check       # 分层依赖检查
 - [interfaces/CLAUDE.md](interfaces/CLAUDE.md) — Interfaces 层规范
 
 ## 变更记录
+
+### v0.13.0 (2026-04-13)
+**V1 Sprint Enhancement — 7 项关键能力补齐**
+- R1 Regime: 市场状态识别（BULL/BEAR/NEUTRAL），多维复合 Regime Score + 仓位调节
+- R2 FactorBridge: 因子增强回测路径，Analytics 表达式编译器桥接到回测引擎
+- R3 回测触发: POST /backtests/runs 异步触发 + 状态轮询 + 取消/重试
+- R5 Universe API: 完整 CRUD + 成分管理（预设 + 自定义双模式）
+- R6 CostConfig: 自定义费率配置（佣金/印花税/滑点可注入回测）
+- 回测 artifact 管理 + BacktestQueryFacade 增强
+- 可复现性验证（ReplayValidator + LineageQueryFacade + ManifestDiff）
+- 11 项审查问题修复 + 测试增强
+- 5244 测试通过，0 类型错误
 
 ### v0.12.1 (2026-04-11)
 **V1 Sprint 8 项偏差修复**

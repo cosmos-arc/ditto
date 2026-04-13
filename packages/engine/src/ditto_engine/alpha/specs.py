@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ditto_kernel.enums import ImpactModel
+
 from ditto_engine.execution.reality.constants import DEFAULT_COMMISSION_RATE
 
 __all__ = [
@@ -59,7 +61,7 @@ class CostModelSpec:
 
     commission_rate: float = DEFAULT_COMMISSION_RATE
     slippage_bps: float = 5.0
-    impact_model: str = "linear"
+    impact_model: ImpactModel = ImpactModel.NONE
 
 
 @dataclass(frozen=True)

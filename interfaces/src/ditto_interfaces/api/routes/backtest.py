@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import logging
-import os
 from collections.abc import Callable
 from typing import Annotated
 
@@ -22,7 +21,7 @@ from ditto_app.command.backtest import (
 )
 from ditto_app.process.execution.replay_process import ReplayProcess
 from ditto_app.process.execution.strategy_types import RunLifecycleService
-from ditto_app.query.backtest import BacktestQueryFacade
+from ditto_app.query.backtest import BacktestQueryFacade, RunSummary
 from ditto_app.query.backtest_trade import TradeRecord
 from ditto_app.query.lineage import LineageQueryFacade
 from ditto_kernel.enums import RunStatus
@@ -39,7 +38,6 @@ from ditto_interfaces.models.backtest import (
     RunResponse,
     TradeResponse,
     to_audit_record_response,
-    to_run_response,
 )
 from ditto_interfaces.models.common import APIResponse
 from ditto_interfaces.models.lineage import (
@@ -51,6 +49,38 @@ from ditto_interfaces.models.lineage import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
+
+
+def _map_backtest_error(exc: ValueError) -> int:
+    """将回测业务 ValueError 映射为 HTTP 状态码."""
+    msg = str(exc).lower()
+    if "not found" in msg:
+        return 404
+    return 409
+
+
+# ---------------------------------------------------------------------------
+# Mappers (App DTO → API Response)
+# ---------------------------------------------------------------------------
+
+
+def to_run_response(summary: RunSummary) -> RunResponse:
+    """将 App RunSummary 转为 API 响应."""
+    return RunResponse(
+        run_id=summary.run_id,
+        strategy_id=summary.strategy_id,
+        strategy_version=summary.strategy_version,
+        mode=summary.mode,
+        status=summary.status,
+        started_at=summary.started_at,
+        completed_at=summary.completed_at,
+        error_message=summary.error_message,
+        parent_run_id=summary.parent_run_id,
+        progress_pct=summary.progress_pct,
+        current_step=summary.current_step,
+        completed_days=summary.completed_days,
+        total_days=summary.total_days,
+    )
 
 
 def to_trade_response(record: TradeRecord) -> TradeResponse:
@@ -100,40 +130,23 @@ def _build_flow_params(
     return params
 
 
+# TODO(R3): Prefect Worker 异步提交 -- 通过 Prefect Client
+# create_flow_run_from_deployment 将 flow 提交到远程 Worker 执行。
+
+
 def _submit_flow(
     params: dict[str, object],
     on_failure: Callable[[str, str], None] | None = None,
 ) -> None:
     """
-    同步提交 Prefect flow（在 executor 线程中运行）.
-
-    R3 骨架: 当 PREFECT_API_URL 已设置时，通过 Prefect Client 异步提交；
-    否则回退到进程内执行（开发模式）。
+    同步提交 flow -- 进程内执行 (V1).
 
     Args:
         params: flow 参数.
-        on_failure: 异常回调 (run_id, error_message)，用于标记 RunRecord 为 failed.
+        on_failure: 异常回调 (run_id, error_message), 用于标记 RunRecord 为 failed.
 
     """
-    run_id = str(params.get("run_id", ""))
-    prefect_api_url = os.getenv("PREFECT_API_URL")
-
-    if prefect_api_url:
-        # R3: 通过 Prefect Client 提交到远程 Worker（待完整实现）
-        logger.info(
-            "Prefect Server available, submitting flow to worker",
-            extra={"run_id": run_id, "prefect_api_url": prefect_api_url},
-        )
-        # TODO(R3): async with get_client() as client:
-        #     await client.create_flow_run_from_deployment(
-        #         deployment_name="run-backtest/backtest-prod",
-        #         parameters=params,
-        #     )
-        # 当前仍回退到进程内执行
-        _run_in_process(params, on_failure)
-    else:
-        # 开发模式: 进程内同步执行
-        _run_in_process(params, on_failure)
+    _run_in_process(params, on_failure)
 
 
 def _run_in_process(
@@ -143,12 +156,12 @@ def _run_in_process(
     """进程内执行 Prefect flow（开发模式 fallback）。"""
     run_id = str(params.get("run_id", ""))
     try:
-        _prefect_fn = getattr(run_backtest_flow, "func", run_backtest_flow)
-        _prefect_fn(**params)  # type: ignore[reportCallIssue]
-    except Exception:
+        _prefect_fn = getattr(run_backtest_flow, "fn", run_backtest_flow)
+        _prefect_fn(**params)  # type: ignore[reportCallIssue] — Prefect .fn 属性类型未精确匹配 **params 展开
+    except Exception as exc:
         logger.exception("Flow execution failed", extra={"run_id": run_id})
         if on_failure is not None:
-            on_failure(run_id, "Flow execution failed")
+            on_failure(run_id, f"Flow execution failed: {exc}")
 
 
 def _restore_flow_params_from_config(
@@ -235,9 +248,8 @@ async def cancel_run(
     try:
         await asyncio.to_thread(handler.handle, run_id)
     except ValueError as exc:
-        if "not found" in str(exc):
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        status = _map_backtest_error(exc)
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
 
     return CancelRunResponse(run_id=run_id, status=RunStatus.CANCELLED)
 
@@ -254,9 +266,8 @@ async def retry_run(
     try:
         new_run_id = await asyncio.to_thread(handler.handle, run_id)
     except ValueError as exc:
-        if "not found" in str(exc):
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        status = _map_backtest_error(exc)
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
 
     # 获取 strategy_id + config_json 用于 flow 提交
     record = await asyncio.to_thread(facade.get_run, new_run_id)
@@ -293,15 +304,15 @@ async def retry_run(
 @inject
 async def list_runs(
     facade: Annotated[BacktestQueryFacade, FromComponent()],
-    strategy_id: str | None = Query(None),
-    status: str | None = Query(None),
-    start_date: str | None = Query(None),
-    end_date: str | None = Query(None),
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
+    strategy_id: str | None = Query(None, description="策略 ID"),
+    status: str | None = Query(None, description="运行状态筛选"),
+    start_date: str | None = Query(None, description="起始日期(含)"),
+    end_date: str | None = Query(None, description="结束日期(含)"),
+    limit: int = Query(100, ge=1, le=1000, description="返回条数上限"),
+    offset: int = Query(0, ge=0, description="分页偏移量"),
 ) -> APIResponse[list[RunResponse]]:
     """列出回测运行记录."""
-    records = await asyncio.to_thread(
+    summaries = await asyncio.to_thread(
         facade.list_runs,
         strategy_id=strategy_id,
         status=status,
@@ -310,7 +321,7 @@ async def list_runs(
         limit=limit,
         offset=offset,
     )
-    runs = [to_run_response(r) for r in records]
+    runs = [to_run_response(s) for s in summaries]
     return APIResponse(data=runs)
 
 
@@ -321,13 +332,13 @@ async def get_run(
     facade: Annotated[BacktestQueryFacade, FromComponent()],
 ) -> RunResponse:
     """获取回测运行详情."""
-    record = await asyncio.to_thread(facade.get_run, run_id)
-    if record is None:
+    summary = await asyncio.to_thread(facade.get_run, run_id)
+    if summary is None:
         raise HTTPException(
             status_code=404,
             detail=f"Run not found: {run_id}",
         )
-    return to_run_response(record)
+    return to_run_response(summary)
 
 
 @router.get("/runs/{run_id}/trades", response_model=APIResponse[list[TradeResponse]])
@@ -335,10 +346,10 @@ async def get_run(
 async def get_trades(
     run_id: str,
     facade: Annotated[BacktestQueryFacade, FromComponent()],
-    start_date: str | None = Query(None),
-    end_date: str | None = Query(None),
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
+    start_date: str | None = Query(None, description="起始日期(含)"),
+    end_date: str | None = Query(None, description="结束日期(含)"),
+    limit: int = Query(100, ge=1, le=1000, description="返回条数上限"),
+    offset: int = Query(0, ge=0, description="分页偏移量"),
 ) -> APIResponse[list[TradeResponse]]:
     """获取回测成交明细."""
     records = await asyncio.to_thread(
@@ -363,9 +374,9 @@ async def get_trades(
 async def get_audit(
     run_id: str,
     facade: Annotated[BacktestQueryFacade, FromComponent()],
-    record_type: str | None = Query(None),
-    start_date: str | None = Query(None),
-    end_date: str | None = Query(None),
+    record_type: str | None = Query(None, description="审计记录类型筛选"),
+    start_date: str | None = Query(None, description="起始日期(含)"),
+    end_date: str | None = Query(None, description="结束日期(含)"),
 ) -> APIResponse[list[AuditRecordResponse]]:
     """获取回测审计记录."""
     rows = await asyncio.to_thread(
@@ -377,6 +388,25 @@ async def get_audit(
     )
     records = [to_audit_record_response(row) for row in rows]
     return APIResponse(data=records)
+
+
+@router.get(
+    "/runs/{run_id}/report",
+    response_model=APIResponse[dict[str, object]],
+)
+@inject
+async def get_report(
+    run_id: str,
+    facade: Annotated[BacktestQueryFacade, FromComponent()],
+) -> APIResponse[dict[str, object]]:
+    """获取回测报告 (backtest_report.json 元数据)."""
+    report = await asyncio.to_thread(facade.get_report, run_id)
+    if report is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Report not found for run: {run_id}",
+        )
+    return APIResponse(data=report)
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +427,7 @@ async def get_lineage(
             status_code=404,
             detail=f"Run not found: {run_id}",
         )
-    runs = [to_run_response(r) for r in chain.runs]
+    runs = [to_run_response(s) for s in chain.runs]
     return LineageResponse(runs=runs, depth=chain.depth)
 
 

@@ -100,6 +100,7 @@ class TestBacktestRunWithLifecycle:
 
         mock_loop = MockEngineLoop.return_value
         mock_loop.run.return_value.run_id = "run-001"
+        mock_loop.run.return_value.cancelled = False
 
         mock_run_service = MagicMock()
         mock_run_service.get_run.return_value = None
@@ -184,6 +185,7 @@ class TestBacktestRunWithLifecycle:
 
         mock_loop = MockEngineLoop.return_value
         mock_loop.run.return_value.run_id = "generated-run"
+        mock_loop.run.return_value.cancelled = False
 
         mock_run_service = MagicMock()
         mock_run_service.get_run.return_value = None

@@ -31,7 +31,7 @@ class IngestionConfig(BaseModel):
     auto_register_securities: bool = True
 
 
-@dataclass
+@dataclass(frozen=True)
 class IngestionCoordinatorConfig:
     """IngestionCoordinator 可选依赖配置."""
 

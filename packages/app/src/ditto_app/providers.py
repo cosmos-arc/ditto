@@ -10,6 +10,7 @@ App 层 DI Provider — 应用编排服务注册。
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
@@ -42,6 +43,9 @@ from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.research_artifact_service import ResearchArtifactService
 from ditto_data.services.source_service import SourceService
+from ditto_data.services.strategy.backtest_artifact_reader import (
+    BacktestArtifactReader,
+)
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -88,7 +92,7 @@ from ditto_app.command.universe import (
 )
 from ditto_app.process.execution.factor_bridge import FactorBridge
 from ditto_app.process.execution.manual_tracker import ManualTracker
-from ditto_app.process.execution.replay_process import ReplayProcess  # noqa: RUF100
+from ditto_app.process.execution.replay_process import ReplayProcess
 from ditto_app.process.execution.strategy_run_process import StrategyFacade
 from ditto_app.process.execution.strategy_types import RunLifecycleService
 
@@ -119,7 +123,7 @@ from ditto_app.query.derived import DerivedQueryFacade
 from ditto_app.query.forward_return_service import ForwardReturnService
 from ditto_app.query.fundamental import FundamentalQueryFacade
 from ditto_app.query.fx import FXQueryFacade
-from ditto_app.query.lineage import LineageQueryFacade  # noqa: RUF100
+from ditto_app.query.lineage import LineageQueryFacade
 from ditto_app.query.macro import MacroQueryFacade
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
@@ -139,6 +143,27 @@ __all__ = [
     "AppQueryProvider",
     "get_app_providers",
 ]
+
+
+# ---------------------------------------------------------------------------
+# 日期范围配置（环境变量外部化，避免硬编码失效）
+# ---------------------------------------------------------------------------
+
+
+def get_trading_calendar_range() -> tuple[str, str]:
+    """
+    获取交易日历查询的日期范围。
+
+    通过环境变量 DITTO_TRADING_CALENDAR_START / DITTO_TRADING_CALENDAR_END
+    外部化配置，未设置时保留与原硬编码一致的默认值。
+
+    Returns:
+        (start_date, end_date) 字符串元组，格式 YYYY-MM-DD。
+
+    """
+    start = os.environ.get("DITTO_TRADING_CALENDAR_START", "2020-01-01")
+    end = os.environ.get("DITTO_TRADING_CALENDAR_END", "2030-12-31")
+    return start, end
 
 
 # ---------------------------------------------------------------------------
@@ -411,12 +436,20 @@ class AppQueryProvider(Provider):
         return StrategyQueryFacade(catalog_service=catalog_service)
 
     @provide
+    def backtest_artifact_reader(
+        self,
+    ) -> BacktestArtifactReader:
+        """回测产物文件读取服务 — 封装 JSON/Parquet 文件 I/O."""
+        return BacktestArtifactReader()
+
+    @provide
     def backtest_query_facade(
         self,
         trade_facade: BacktestTradeQueryFacade,
         run_model: RunReadModel,
         audit_service: ExecutionAuditService,
         artifact_service: StrategyArtifactService,
+        artifact_reader: BacktestArtifactReader,
     ) -> BacktestQueryFacade:
         """回测统一查询门面."""
         return BacktestQueryFacade(
@@ -424,6 +457,7 @@ class AppQueryProvider(Provider):
             run_model=run_model,
             audit_service=audit_service,
             artifact_service=artifact_service,
+            artifact_reader=artifact_reader,
         )
 
     @provide
@@ -584,7 +618,8 @@ class AppProcessProvider(Provider):
         metadata_service: MetadataService,
     ) -> ManualTracker:
         """人工持仓聚合追踪器 — 注入交易日历以支持 T+1 冻结逻辑."""
-        trading_days = metadata_service.list_trading_days("2020-01-01", "2030-12-31")
+        start_date, end_date = get_trading_calendar_range()
+        trading_days = metadata_service.list_trading_days(start_date, end_date)
         return ManualTracker(trading_calendar=tuple(trading_days))
 
     @provide

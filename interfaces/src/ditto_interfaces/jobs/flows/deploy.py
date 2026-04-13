@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -108,8 +109,25 @@ def _resolve_flow(
     return cast(Flow[Any, Any], flow)
 
 
+def _get_backfill_date_range() -> tuple[str, str]:
+    """
+    获取全量回补的日期范围。
+
+    通过环境变量 DITTO_BACKFILL_START_DATE / DITTO_BACKFILL_END_DATE
+    外部化配置，未设置时保留与原硬编码一致的默认值。
+
+    Returns:
+        (start_date, end_date) 字符串元组，格式 YYYY-MM-DD。
+
+    """
+    start = os.environ.get("DITTO_BACKFILL_START_DATE", "2020-01-01")
+    end = os.environ.get("DITTO_BACKFILL_END_DATE", "2024-12-31")
+    return start, end
+
+
 def _get_flow_configs() -> list[FlowDeploymentConfig]:
     """获取所有 flow 部署配置。"""
+    backfill_start, backfill_end = _get_backfill_date_range()
     return [
         FlowDeploymentConfig(
             flow=lambda: _get_flow("daily_ingestion_flow"),
@@ -141,8 +159,8 @@ def _get_flow_configs() -> list[FlowDeploymentConfig]:
             parameters={
                 "config": {
                     "dataset": "stock_daily",
-                    "start_date": "2020-01-01",
-                    "end_date": "2024-12-31",
+                    "start_date": backfill_start,
+                    "end_date": backfill_end,
                 }
             },
             tags=["production", "backfill", "manual"],

@@ -283,10 +283,15 @@ class TestSchemaMigration:
             pool.close()
 
     def test_old_schema_upgraded_can_read_new_fields(self, tmp_path: Path) -> None:
-        """旧 schema 升级后可正常读写新字段."""
+        """旧 schema 升级后可正常读写新字段（含 parent_run_id 迁移）.
+
+        模拟真实旧库场景：表既不含 parent_run_id 也不含 config_json 等
+        migration 列，验证 init_schema() 能正确迁移并创建索引。
+        """
         pool = _make_pool(tmp_path)
         try:
-            # 模拟旧 schema：只创建基础表（无 migration 列）
+            # 模拟最早期旧 schema：基础列，不含
+            # parent_run_id / config_json / progress 等
             conn = pool.get_connection()
             conn.executescript(
                 """
@@ -298,45 +303,49 @@ class TestSchemaMigration:
                     status            TEXT NOT NULL DEFAULT 'pending',
                     started_at        TEXT NOT NULL DEFAULT '',
                     completed_at      TEXT NOT NULL DEFAULT '',
-                    error_message     TEXT NOT NULL DEFAULT '',
-                    parent_run_id     TEXT NOT NULL DEFAULT '',
-                    config_json       TEXT NOT NULL DEFAULT ''
+                    error_message     TEXT NOT NULL DEFAULT ''
                 );
                 """
             )
             pool.commit()
 
-            # 写入一条旧记录（无 progress 字段）
+            # 写入一条旧记录
             conn.execute(
                 "INSERT INTO strategy_run (run_id, strategy_id, status) "
                 "VALUES ('legacy-run', 'test', 'completed')"
             )
             pool.commit()
 
-            # 运行 init_schema（触发 migration）
+            # 运行 init_schema（触发 migration + 索引创建）
             writer = SQLiteStrategyRunWriter(pool)
             reader = SQLiteStrategyRunReader(pool)
             writer.init_schema()
 
-            # 旧记录仍可读取
+            # 旧记录仍可读取，且 migration 新增列有默认值
             result = reader.get("legacy-run")
             assert result is not None
             assert result.run_id == "legacy-run"
             assert result.strategy_id == "test"
-
-            # migration 新增列有默认值
             assert result.progress_pct == 0.0
+            assert result.parent_run_id == ""
+            assert result.config_json == ""
 
-            # 新字段（如 config_json）可直接读写
+            # 验证索引已正确创建（包括 parent_run_id 索引）
+            indexes = {
+                row[1]
+                for row in conn.execute("PRAGMA index_list(strategy_run)").fetchall()
+            }
+            assert "idx_strategy_run_parent_run_id" in indexes
+
+            # parent_run_id 列存在且可用于查询
             conn.execute(
-                'UPDATE strategy_run SET config_json = \'{"key": "value"}\' '
-                "WHERE run_id = 'legacy-run'"
+                "INSERT INTO strategy_run "
+                "(run_id, strategy_id, status, parent_run_id) "
+                "VALUES ('child-run', 'test', 'pending', 'legacy-run')"
             )
             pool.commit()
-            row = conn.execute(
-                "SELECT config_json FROM strategy_run WHERE run_id = 'legacy-run'"
-            ).fetchone()
-            assert row is not None
-            assert row[0] == '{"key": "value"}'
+            children = reader.list_by_parent("legacy-run")
+            assert len(children) == 1
+            assert children[0].run_id == "child-run"
         finally:
             pool.close()

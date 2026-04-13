@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from datetime import date, timedelta
 
 from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.provider import DataProvider
@@ -21,7 +22,7 @@ from ditto_engine.backtest.data_feed import (
 )
 from ditto_engine.execution.brokerage import BacktestBrokerage, Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner, SimpleExecutionPlanner
-from ditto_engine.execution.reality import BrokerageModel, FeeModel, SimpleFeeModel
+from ditto_engine.execution.reality import AShareFeeModel, BrokerageModel, FeeModel
 from ditto_engine.execution.reality.slippage import FixedBpsSlippage, SlippageModel
 from ditto_engine.risk.pre_trade import (
     BuyingPowerCheck,
@@ -53,6 +54,37 @@ __all__ = [
     "PublishedBacktestRuntime",
     "StrategyServiceFactory",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+_REGIME_DEFAULT_LOOKBACK = 60
+"""Minimum lookback for regime detection (MomentumIndicator, ts_mean, ts_std)."""
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _compute_max_lookback(
+    compiled: CompiledExpressions | None,
+) -> int:
+    """计算因子表达式所需最大 lookback 天数."""
+    if compiled is None:
+        return _REGIME_DEFAULT_LOOKBACK
+    return max(
+        (expr.analysis.lookback for expr in compiled.expressions),
+        default=_REGIME_DEFAULT_LOOKBACK,
+    )
+
+
+def _shift_back_calendar_days(date_str: str, days: int) -> str:
+    """将 YYYY-MM-DD 向前偏移 days 个日历日。"""
+    d = date.fromisoformat(date_str) - timedelta(days=days)
+    return d.isoformat()
 
 
 # ===========================================================================
@@ -110,7 +142,7 @@ class BacktestRuntimeBuilder:
             config.strategy_id,
             version,
         )
-        resolved_fee_model = fee_model or SimpleFeeModel()
+        resolved_fee_model = fee_model or AShareFeeModel()
         resolved_slippage = slippage_model or FixedBpsSlippage()
         brokerage = BacktestBrokerage(
             account=Account(
@@ -148,10 +180,14 @@ class BacktestRuntimeBuilder:
         id_map = resolution.id_map
         display_map = resolution.display_map
 
+        # 计算数据加载起点：考虑因子表达式 lookback + Regime 默认 lookback
+        max_lookback = _compute_max_lookback(runtime.compiled_expressions)
+        data_start_date = _shift_back_calendar_days(config.start_date, max_lookback * 2)
+
         data_feed = ProviderBackedDataFeed(
             self._data_provider,
             tickers=tickers,
-            start_date=config.start_date,
+            start_date=data_start_date,
             end_date=config.end_date,
             id_map=id_map,
             benchmark_id=resolved_config.benchmark_id,

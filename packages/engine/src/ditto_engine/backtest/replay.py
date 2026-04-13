@@ -26,7 +26,6 @@ __all__ = [
     "NavComparison",
     "ReplayValidationResult",
     "ReplayValidator",
-    "pearson_correlation",
 ]
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+from ditto_app.contracts import StrategySpecInfo
 from ditto_app.query.strategy import StrategyQueryFacade
 from ditto_data.models.strategy import StrategySpecRecord
 
@@ -23,10 +24,25 @@ def _make_record(
     )
 
 
-class TestStrategyQueryFacadeListSpecs:
-    """StrategyQueryFacade.list_specs — 委托 catalog_service."""
+def _make_spec_info(
+    strategy_id: str = "s-1",
+    name: str = "test",
+    version: int = 1,
+    status: str = "draft",
+) -> StrategySpecInfo:
+    return StrategySpecInfo(
+        strategy_id=strategy_id,
+        name=name,
+        spec_json={},
+        version=version,
+        status=status,
+    )
 
-    def test_returns_records_from_service(self) -> None:
+
+class TestStrategyQueryFacadeListSpecs:
+    """StrategyQueryFacade.list_specs 委托 catalog_service 并转换为 StrategySpecInfo."""
+
+    def test_returns_spec_info_from_service(self) -> None:
         service = MagicMock(spec=["list_specs", "get_spec", "list_versions"])
         records = [_make_record("s-1"), _make_record("s-2")]
         service.list_specs.return_value = records
@@ -34,7 +50,8 @@ class TestStrategyQueryFacadeListSpecs:
 
         result = facade.list_specs()
 
-        assert result == records
+        expected = [_make_spec_info("s-1"), _make_spec_info("s-2")]
+        assert result == expected
         service.list_specs.assert_called_once()
 
     def test_returns_empty_list(self) -> None:
@@ -48,9 +65,9 @@ class TestStrategyQueryFacadeListSpecs:
 
 
 class TestStrategyQueryFacadeGetSpec:
-    """StrategyQueryFacade.get_spec — 委托 catalog_service."""
+    """StrategyQueryFacade.get_spec — 委托 catalog_service 并转换为 StrategySpecInfo."""
 
-    def test_returns_record(self) -> None:
+    def test_returns_spec_info(self) -> None:
         service = MagicMock(spec=["list_specs", "get_spec", "list_versions"])
         record = _make_record("s-1")
         service.get_spec.return_value = record
@@ -58,7 +75,7 @@ class TestStrategyQueryFacadeGetSpec:
 
         result = facade.get_spec("s-1")
 
-        assert result == record
+        assert result == _make_spec_info("s-1")
         service.get_spec.assert_called_once_with("s-1", None)
 
     def test_returns_none_when_not_found(self) -> None:

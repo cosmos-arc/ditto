@@ -1,4 +1,10 @@
-"""Models 包。"""
+"""
+Models 包。
+
+公共 API 仅导出 Pydantic 响应/请求模型。
+to_* 转换函数请直接从叶子模块导入，如:
+    from ditto_interfaces.models.market import to_bar, to_bar_list
+"""
 
 from __future__ import annotations
 
@@ -8,24 +14,12 @@ from ditto_interfaces.models.backtest import (
     RunResponse,
     RunsQueryParams,
     TradeResponse,
-    to_audit_record_response,
-    to_run_response,
 )
 from ditto_interfaces.models.capital import (
     Margin,
     MarginQuery,
     Valuation,
     ValuationQuery,
-    to_margin,
-    to_margin_list,
-    to_valuation,
-    to_valuation_list,
-)
-from ditto_interfaces.models.commodity import (
-    CommodityBar,
-    CommodityQuery,
-    to_commodity_bar,
-    to_commodity_bar_list,
 )
 from ditto_interfaces.models.common import (
     APIResponse,
@@ -33,52 +27,20 @@ from ditto_interfaces.models.common import (
     PaginationRequest,
     PaginationResponse,
 )
-from ditto_interfaces.models.fundamental import (
-    CorporateAction,
-    CorporateActionsQuery,
-    Dividend,
-    DividendQuery,
-    Financial,
-    FinancialQuery,
-    FinancialType,
-    to_corporate_action,
-    to_corporate_action_list,
-    to_dividend,
-    to_dividend_list,
-    to_financial,
-    to_financial_list,
-)
-from ditto_interfaces.models.fx import (
-    FxBar,
-    FxQuery,
-    to_fx_bar,
-    to_fx_bar_list,
-)
-from ditto_interfaces.models.macro import (
-    Indicator,
-    IndicatorQuery,
-    to_indicator,
-    to_indicator_list,
-)
 from ditto_interfaces.models.market import (
     Adjustment,
     Bar,
     BarsQuery,
-    to_bar,
-    to_bar_list,
 )
 from ditto_interfaces.models.metadata import (
     Instrument,
     InstrumentQuery,
-    to_instrument,
-    to_instrument_list,
 )
 from ditto_interfaces.models.strategy import (
     CreateStrategyRequest,
     PublishStrategyRequest,
     StrategyResponse,
     UpdateStrategyRequest,
-    to_strategy_response,
 )
 from ditto_interfaces.models.trade import (
     ComparisonMetricsResponse,
@@ -97,23 +59,10 @@ __all__ = [
     "Bar",
     "BarsQuery",
     "BenchmarkNavResponse",
-    "CommodityBar",
-    "CommodityQuery",
     "ComparisonMetricsResponse",
-    "CorporateAction",
-    "CorporateActionsQuery",
     "CreateStrategyRequest",
-    "Dividend",
-    "DividendQuery",
     "ErrorResponse",
     "FillResponse",
-    "Financial",
-    "FinancialQuery",
-    "FinancialType",
-    "FxBar",
-    "FxQuery",
-    "Indicator",
-    "IndicatorQuery",
     "Instrument",
     "InstrumentQuery",
     "Margin",
@@ -133,27 +82,4 @@ __all__ = [
     "UpdateStrategyRequest",
     "Valuation",
     "ValuationQuery",
-    "to_audit_record_response",
-    "to_bar",
-    "to_bar_list",
-    "to_commodity_bar",
-    "to_commodity_bar_list",
-    "to_corporate_action",
-    "to_corporate_action_list",
-    "to_dividend",
-    "to_dividend_list",
-    "to_financial",
-    "to_financial_list",
-    "to_fx_bar",
-    "to_fx_bar_list",
-    "to_indicator",
-    "to_indicator_list",
-    "to_instrument",
-    "to_instrument_list",
-    "to_margin",
-    "to_margin_list",
-    "to_run_response",
-    "to_strategy_response",
-    "to_valuation",
-    "to_valuation_list",
 ]

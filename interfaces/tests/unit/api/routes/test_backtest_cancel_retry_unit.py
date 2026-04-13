@@ -279,3 +279,49 @@ class TestRetryNotFound:
         resp = client.post("/api/v1/backtests/runs/missing/retry")
         assert resp.status_code == 404
         assert "not found" in resp.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Report endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestGetReport:
+    """GET /runs/{run_id}/report 端点测试 (F12)."""
+
+    def test_report_found(
+        self,
+        client: TestClient,
+        mock_query_facade: MagicMock,
+    ) -> None:
+        """报告存在时返回 200 + JSON data."""
+        mock_query_facade.get_report.return_value = {
+            "run_id": "run-001",
+            "alpha_stats": {"annualized_return": 12.5},
+        }
+        resp = client.get("/api/v1/backtests/runs/run-001/report")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["data"]["run_id"] == "run-001"
+        assert body["data"]["alpha_stats"]["annualized_return"] == 12.5
+
+    def test_report_not_found(
+        self,
+        client: TestClient,
+        mock_query_facade: MagicMock,
+    ) -> None:
+        """报告不存在时返回 404."""
+        mock_query_facade.get_report.return_value = None
+        resp = client.get("/api/v1/backtests/runs/nonexistent/report")
+        assert resp.status_code == 404
+        assert "not found" in resp.json()["detail"].lower()
+
+    def test_report_delegates_to_facade(
+        self,
+        client: TestClient,
+        mock_query_facade: MagicMock,
+    ) -> None:
+        """验证正确委托给 facade.get_report."""
+        mock_query_facade.get_report.return_value = {"run_id": "run-001"}
+        client.get("/api/v1/backtests/runs/run-001/report")
+        mock_query_facade.get_report.assert_called_once_with("run-001")

@@ -19,12 +19,16 @@ __all__ = ["serialize_report"]
 
 def serialize_report(
     report: BacktestReport,
+    *,
+    rebalance_freq: str = "daily",
 ) -> tuple[bytes, dict[str, pl.DataFrame]]:
     """
     将 BacktestReport 序列化为 JSON bytes + Parquet DataFrame 字典.
 
     Args:
         report: 回测报告.
+        rebalance_freq: 调仓频率 (daily / weekly / monthly).
+            写入 JSON 供 replay 反序列化时恢复配置，默认 "daily".
 
     Returns:
         (json_bytes, parquet_tables) 二元组.
@@ -36,11 +40,15 @@ def serialize_report(
     # 1. JSON 元数据
     json_data = {
         "run_id": report.run_id,
-        "period": list(report.period),
+        "period": {"start": report.period[0], "end": report.period[1]},
         "initial_cash": report.initial_cash,
         "final_nav": report.final_nav,
         "aggregated_trade_stats": dataclasses.asdict(report.aggregated_trade_stats),
         "alpha_stats": dataclasses.asdict(report.alpha_stats),
+        "rebalance_freq": rebalance_freq,
+        "nav_series": (
+            [v for _, v in report.nav_series] if report.nav_series else None
+        ),
     }
     json_bytes = orjson.dumps(json_data, option=orjson.OPT_INDENT_2)
 

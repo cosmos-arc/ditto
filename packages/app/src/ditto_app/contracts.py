@@ -3,6 +3,9 @@ App Command Contracts — 跨 CQRS 子模块共享的 Command DTO.
 
 process 和 command 子模块都需要的 Command DTO 统一定义于此，
 避免 process → command 的循环依赖。
+
+query/command/process 共享的 ReadModel/Info DTO 也定义于此，
+避免 command → query 或 process → query 的反向依赖。
 """
 
 from __future__ import annotations
@@ -11,10 +14,12 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
+from ditto_data.models.strategy import StrategySpecRecord
 from ditto_engine.execution.reality.constants import (
     DEFAULT_COMMISSION_RATE,
     DEFAULT_MIN_COMMISSION,
 )
+from ditto_kernel.enums import ImpactModel
 
 if TYPE_CHECKING:
     import polars as pl
@@ -62,11 +67,46 @@ class CostConfig:
     commission_min: float = DEFAULT_MIN_COMMISSION
     stamp_duty_rate: float = _DEFAULT_STAMP_DUTY_RATE
     slippage_bps: float = _DEFAULT_SLIPPAGE_BPS
-    impact_model: str = "none"
+    impact_model: ImpactModel = ImpactModel.NONE
+
+
+# ---------------------------------------------------------------------------
+# Shared ReadModel DTOs
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class StrategySpecInfo:
+    """App 层策略摘要 DTO — 切断 interfaces → data 直接依赖."""
+
+    strategy_id: str
+    name: str
+    spec_json: dict[str, object]
+    version: int = 1
+    status: str = "draft"
+    created_at: str = ""
+    updated_at: str = ""
+    tags: tuple[str, ...] = ()
+
+
+def to_spec_info(record: StrategySpecRecord) -> StrategySpecInfo:
+    """将 Data Record 转换为 App DTO."""
+    return StrategySpecInfo(
+        strategy_id=record.strategy_id,
+        name=record.name,
+        spec_json=dict(record.spec_json),
+        version=record.version,
+        status=record.status,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+        tags=record.tags,
+    )
 
 
 __all__ = [
     "CheckDataQualityCommand",
     "CostConfig",
     "IngestDateCommand",
+    "StrategySpecInfo",
+    "to_spec_info",
 ]

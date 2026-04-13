@@ -104,9 +104,9 @@ class ComparisonMetricsResponse(BaseModel):
     """回测 vs 实际对比指标响应."""
 
     backtest_return: float
-    actual_return: float
-    return_diff: float
-    return_diff_bps: float
+    actual_return: float | None
+    return_diff: float | None
+    return_diff_bps: float | None
     backtest_sharpe: float
     actual_sharpe: float
     backtest_total_cost: float

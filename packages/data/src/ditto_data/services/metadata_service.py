@@ -7,6 +7,8 @@ MetadataService - Metadata 域统一查询服务（门面模式）.
 CQRS 架构：使用 Reader 处理查询，Writer 处理写入。
 """
 
+from __future__ import annotations
+
 from datetime import date
 from typing import Any, Literal
 
@@ -403,6 +405,15 @@ class MetadataService:
     def delete_universe(self, universe_id: str) -> None:
         """删除证券域及其所有成分股."""
         self._universe_writer.delete_universe(universe_id)
+
+    def update_universe(
+        self,
+        universe_id: str,
+        name: str,
+        description: str | None = None,
+    ) -> bool:
+        """更新证券域元数据。返回是否成功更新."""
+        return self._universe_writer.update_metadata(universe_id, name, description)
 
     def get_universe_detail(self, universe_id: str) -> dict[str, Any] | None:
         """获取证券域定义。不存在时返回 None."""

@@ -19,6 +19,7 @@ from ditto_engine.alpha.specs import (
     SelectorSpec,
     StrategySpec,
 )
+from ditto_kernel.enums import ImpactModel
 
 
 def _make_rotation_spec() -> StrategySpec:
@@ -37,7 +38,7 @@ def _make_rotation_spec() -> StrategySpec:
             cost_model=CostModelSpec(
                 commission_rate=0.0005,
                 slippage_bps=7.5,
-                impact_model="square_root",
+                impact_model=ImpactModel.VOLUME_SHARE,
             ),
         ),
         params={

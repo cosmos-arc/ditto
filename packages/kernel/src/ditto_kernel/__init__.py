@@ -15,6 +15,7 @@ from ditto_kernel.clock import Clock, RealtimeClock, SimulatedClock
 from ditto_kernel.enums import (
     AssetClass,
     Exchange,
+    ImpactModel,
     MacroCategory,
     MacroFrequency,
     OrderSide,
@@ -77,6 +78,7 @@ __all__ = [
     "ExecutionPolicy",
     "GrainId",
     "IdentifierError",
+    "ImpactModel",
     "InstrumentId",
     "InstrumentIngestParams",
     "L3CheckResult",

@@ -93,7 +93,9 @@ class TestFactorAwareBundleBuilder:
         )
 
         # 获取 bundle builder
-        builder = service._build_factor_aware_bundle_builder(compiled)
+        builder = service._build_factor_aware_bundle_builder(
+            compiled, run_id="test-run"
+        )
 
         # 构造测试输入
         mock_slice = _make_slice_with_bars()
@@ -139,7 +141,9 @@ class TestFactorAwareBundleBuilder:
             options=BacktestServiceOptions(compiled_expressions=compiled),
         )
 
-        builder = service._build_factor_aware_bundle_builder(compiled)
+        builder = service._build_factor_aware_bundle_builder(
+            compiled, run_id="test-run"
+        )
 
         mock_slice = _make_slice_with_bars()
         ctx = _make_step_context("2024-01-02", mock_slice)

@@ -63,11 +63,22 @@ class TestUpdateCustomUniverseHandler:
     def test_update_name_and_description(self) -> None:
         """更新 universe 名称和描述."""
         service = MagicMock()
-        service.get_universe_detail.return_value = {
-            "universe_id": "my-portfolio",
-            "name": "旧名称",
-            "universe_type": "custom",
-        }
+        # 首次调用返回旧数据（用于 existence check），再次调用返回新数据
+        service.get_universe_detail.side_effect = [
+            {
+                "universe_id": "my-portfolio",
+                "name": "旧名称",
+                "universe_type": "custom",
+                "description": "旧描述",
+            },
+            {
+                "universe_id": "my-portfolio",
+                "name": "新名称",
+                "description": "新描述",
+                "universe_type": "custom",
+            },
+        ]
+        service.update_universe.return_value = True
         handler = UpdateCustomUniverseHandler(metadata_service=service)
         cmd = UpdateCustomUniverseCommand(
             universe_id="my-portfolio",
@@ -76,6 +87,64 @@ class TestUpdateCustomUniverseHandler:
         )
         result = handler.handle(cmd)
         assert result["universe_id"] == "my-portfolio"
+        assert result["name"] == "新名称"
+        service.update_universe.assert_called_once_with(
+            "my-portfolio",
+            "新名称",
+            "新描述",
+        )
+
+    def test_update_calls_update_universe_not_create(
+        self,
+    ) -> None:
+        """更新应调用 update_universe 而非 create_universe."""
+        service = MagicMock()
+        service.get_universe_detail.return_value = {
+            "universe_id": "my-portfolio",
+            "name": "旧名称",
+            "universe_type": "custom",
+            "description": "旧描述",
+        }
+        service.update_universe.return_value = True
+        service.get_universe_detail.return_value = {
+            "universe_id": "my-portfolio",
+            "name": "新名称",
+            "description": "新描述",
+            "universe_type": "custom",
+        }
+        handler = UpdateCustomUniverseHandler(metadata_service=service)
+        cmd = UpdateCustomUniverseCommand(
+            universe_id="my-portfolio",
+            name="新名称",
+            description="新描述",
+        )
+        handler.handle(cmd)
+        # 应调用 update_universe 而非 create_universe
+        service.update_universe.assert_called_once_with(
+            "my-portfolio",
+            "新名称",
+            "新描述",
+        )
+        service.create_universe.assert_not_called()
+
+    def test_update_preset_universe_raises_permission_error(
+        self,
+    ) -> None:
+        """更新预设 universe 应抛 PermissionError."""
+        service = MagicMock()
+        service.get_universe_detail.return_value = {
+            "universe_id": "csi300",
+            "name": "沪深300",
+            "universe_type": "preset",
+        }
+        handler = UpdateCustomUniverseHandler(metadata_service=service)
+        cmd = UpdateCustomUniverseCommand(
+            universe_id="csi300",
+            name="修改名称",
+        )
+        with pytest.raises(PermissionError, match="Preset universe cannot be modified"):
+            handler.handle(cmd)
+        service.update_universe.assert_not_called()
 
     def test_update_nonexistent_raises(self) -> None:
         """更新不存在的 universe 抛 ValueError."""

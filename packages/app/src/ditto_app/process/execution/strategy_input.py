@@ -62,6 +62,8 @@ def write_backtest_artifacts(
     output_dir: Path | None = None,
     manifest: RunManifest | None = None,
     display_map: dict[InstrumentId, str] | None = None,
+    *,
+    rebalance_freq: str = "daily",
 ) -> dict[str, Path]:
     """
     将 BacktestReport 序列化到磁盘，返回产物文件路径映射.
@@ -72,6 +74,7 @@ def write_backtest_artifacts(
         manifest: 运行清单（如提供则写出 manifest.json 并回填 artifacts）.
         display_map: InstrumentId → standard_ticker 映射，用于在审计日志中注入
             ``instrument_symbol`` 展示字段.
+        rebalance_freq: 调仓频率，写入 JSON 供 replay 恢复配置.
 
     Returns:
         产物类型 → 文件路径的映射，至少包含 ``backtest_report`` 条目.
@@ -83,7 +86,10 @@ def write_backtest_artifacts(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 序列化报告（纯计算在 Engine）+ 文件写入（App 层职责）
-    json_bytes, parquet_tables = serialize_report(report)
+    json_bytes, parquet_tables = serialize_report(
+        report,
+        rebalance_freq=rebalance_freq,
+    )
     atomic_bytes_write(json_bytes, output_dir / "backtest_report.json")
     for name, df in parquet_tables.items():
         atomic_write(df, output_dir / f"{name}.parquet")

@@ -284,3 +284,42 @@ class TestAppProviderIntegration:
         assert isinstance(tracker, ManualTracker)
         assert isinstance(tracker._calendar, tuple)
         assert len(tracker._calendar) > 0
+
+
+# ---------------------------------------------------------------------------
+# 日期范围配置测试
+# ---------------------------------------------------------------------------
+
+
+class TestTradingCalendarRange:
+    """测试 get_trading_calendar_range 配置外部化."""
+
+    def test_default_values(self, monkeypatch) -> None:
+        """未设置环境变量时应返回默认值."""
+        from ditto_app.providers import get_trading_calendar_range
+
+        monkeypatch.delenv("DITTO_TRADING_CALENDAR_START", raising=False)
+        monkeypatch.delenv("DITTO_TRADING_CALENDAR_END", raising=False)
+        start, end = get_trading_calendar_range()
+        assert start == "2020-01-01"
+        assert end == "2030-12-31"
+
+    def test_custom_values_via_env(self, monkeypatch) -> None:
+        """设置环境变量应覆盖默认值."""
+        from ditto_app.providers import get_trading_calendar_range
+
+        monkeypatch.setenv("DITTO_TRADING_CALENDAR_START", "2019-06-01")
+        monkeypatch.setenv("DITTO_TRADING_CALENDAR_END", "2040-06-30")
+        start, end = get_trading_calendar_range()
+        assert start == "2019-06-01"
+        assert end == "2040-06-30"
+
+    def test_only_start_set(self, monkeypatch) -> None:
+        """仅设置 START 时 END 应保持默认值."""
+        from ditto_app.providers import get_trading_calendar_range
+
+        monkeypatch.setenv("DITTO_TRADING_CALENDAR_START", "2018-01-01")
+        monkeypatch.delenv("DITTO_TRADING_CALENDAR_END", raising=False)
+        start, end = get_trading_calendar_range()
+        assert start == "2018-01-01"
+        assert end == "2030-12-31"

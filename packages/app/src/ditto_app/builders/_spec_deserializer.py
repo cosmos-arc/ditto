@@ -14,6 +14,7 @@ from ditto_engine.alpha.builtins.regime import (
 )
 
 __all__ = [
+    "_read_clamped_float",
     "as_float_tuple",
     "as_object_dict",
     "as_sequence",
@@ -87,11 +88,17 @@ def deserialize_regime_config(
 
     return RegimeConfig(
         indicators=tuple(indicators),
-        bull_threshold=read_float(
-            raw.get("bull_threshold", 0.65), field_name=f"{field_name}.bull_threshold"
+        bull_threshold=_read_clamped_float(
+            raw.get("bull_threshold", 0.65),
+            field_name=f"{field_name}.bull_threshold",
+            lo=0.0,
+            hi=1.0,
         ),
-        bear_threshold=read_float(
-            raw.get("bear_threshold", 0.35), field_name=f"{field_name}.bear_threshold"
+        bear_threshold=_read_clamped_float(
+            raw.get("bear_threshold", 0.35),
+            field_name=f"{field_name}.bear_threshold",
+            lo=0.0,
+            hi=1.0,
         ),
         position_mapping=str(raw.get("position_mapping", "stepped")),
         bull_position=read_float(
@@ -225,6 +232,21 @@ def read_float(raw_value: object, *, field_name: str) -> float:
         msg = f"{field_name} 必须是数字"
         raise ValueError(msg)
     return float(raw_value)
+
+
+def _read_clamped_float(
+    raw_value: object,
+    *,
+    field_name: str,
+    lo: float,
+    hi: float,
+) -> float:
+    """读取浮点值并校验范围是否在 [lo, hi] 内."""
+    value = read_float(raw_value, field_name=field_name)
+    if not lo <= value <= hi:
+        msg = f"{field_name} 必须在 [{lo}, {hi}] 范围内, 实际值: {value}"
+        raise ValueError(msg)
+    return value
 
 
 def read_optional_float(

@@ -350,3 +350,41 @@ class TestFlowDeploymentContracts:
         # 参数名必须是 "config"，匹配 backfill_flow 签名
         assert "config" in backfill_config.parameters
         assert "backfill_config" not in backfill_config.parameters
+
+
+@pytest.mark.unit
+class TestBackfillDateRange:
+    """测试全量回补日期范围配置外部化."""
+
+    def test_default_values(self, monkeypatch) -> None:
+        """未设置环境变量时应返回默认值."""
+        from ditto_interfaces.jobs.flows.deploy import _get_backfill_date_range
+
+        monkeypatch.delenv("DITTO_BACKFILL_START_DATE", raising=False)
+        monkeypatch.delenv("DITTO_BACKFILL_END_DATE", raising=False)
+        start, end = _get_backfill_date_range()
+        assert start == "2020-01-01"
+        assert end == "2024-12-31"
+
+    def test_custom_values_via_env(self, monkeypatch) -> None:
+        """设置环境变量应覆盖默认值."""
+        from ditto_interfaces.jobs.flows.deploy import _get_backfill_date_range
+
+        monkeypatch.setenv("DITTO_BACKFILL_START_DATE", "2019-06-01")
+        monkeypatch.setenv("DITTO_BACKFILL_END_DATE", "2025-12-31")
+        start, end = _get_backfill_date_range()
+        assert start == "2019-06-01"
+        assert end == "2025-12-31"
+
+    def test_backfill_config_uses_env_dates(self, monkeypatch) -> None:
+        """backfill 配置应使用环境变量中的日期."""
+        monkeypatch.setenv("DITTO_BACKFILL_START_DATE", "2021-01-01")
+        monkeypatch.setenv("DITTO_BACKFILL_END_DATE", "2023-06-30")
+        configs = _get_flow_configs()
+        backfill_config = next(
+            (c for c in configs if c.deployment_name == "backfill-prod"),
+            None,
+        )
+        assert backfill_config is not None
+        assert backfill_config.parameters["config"]["start_date"] == "2021-01-01"
+        assert backfill_config.parameters["config"]["end_date"] == "2023-06-30"

@@ -204,6 +204,7 @@ class TestBuildFlowParams:
 
         assert "cost_config" in params
         cost_dict = params["cost_config"]
+        assert isinstance(cost_dict, dict)
         assert cost_dict["commission_rate"] == 0.0005
         assert cost_dict["commission_min"] == 10.0
 
@@ -226,3 +227,101 @@ class TestBuildFlowParams:
         params = _build_flow_params(command, result)
 
         assert params["parameter_overrides"] == ("key1=val1", "key2=val2")
+
+
+class TestMapBacktestError:
+    """Tests for _map_backtest_error — 统一错误映射 (F21)."""
+
+    def test_not_found_maps_to_404(self) -> None:
+        """'not found' 错误映射为 404."""
+        from ditto_interfaces.api.routes.backtest import _map_backtest_error
+
+        exc = ValueError("Run not found: missing")
+        assert _map_backtest_error(exc) == 404
+
+    def test_status_conflict_maps_to_409(self) -> None:
+        """状态冲突错误映射为 409."""
+        from ditto_interfaces.api.routes.backtest import _map_backtest_error
+
+        exc = ValueError("Cannot cancel run in 'completed' status")
+        assert _map_backtest_error(exc) == 409
+
+    def test_generic_error_maps_to_409(self) -> None:
+        """非 not found 错误默认映射为 409."""
+        from ditto_interfaces.api.routes.backtest import _map_backtest_error
+
+        exc = ValueError("Some other error")
+        assert _map_backtest_error(exc) == 409
+
+    def test_case_insensitive_matching(self) -> None:
+        """大小写不敏感匹配 'Not Found'."""
+        from ditto_interfaces.api.routes.backtest import _map_backtest_error
+
+        exc = ValueError("Run Not Found: xyz")
+        assert _map_backtest_error(exc) == 404
+
+
+class TestRunInProcess:
+    """Tests for _run_in_process bypasses Prefect engine."""
+
+    def test_calls_flow_fn_not_flow_object(self) -> None:
+        """_run_in_process 应通过 .fn 调用 raw function，避免触发 Prefect engine."""
+        from unittest.mock import MagicMock, patch
+
+        from ditto_interfaces.api.routes.backtest import _run_in_process
+
+        mock_fn = MagicMock(return_value=None)
+        mock_flow = MagicMock()
+        mock_flow.fn = mock_fn
+        # 不设置 .func — Prefect 3.x 没有 .func 属性
+
+        params: dict[str, object] = {
+            "run_id": "test-run",
+            "strategy_id": "strat-1",
+            "start_date": "2025-01-01",
+            "end_date": "2025-01-31",
+        }
+
+        with patch(
+            "ditto_interfaces.api.routes.backtest.run_backtest_flow",
+            mock_flow,
+        ):
+            _run_in_process(params)
+
+        # 应调用 .fn 而非直接调用 flow 对象
+        mock_fn.assert_called_once_with(**params)
+        # flow 对象本身不应被直接调用
+        mock_flow.assert_not_called()
+
+    def test_on_failure_receives_exception_message(self) -> None:
+        """on_failure 回调应收到包含实际异常信息的字符串，而非泛化消息."""
+        from unittest.mock import MagicMock, patch
+
+        from ditto_interfaces.api.routes.backtest import _run_in_process
+
+        original_error = RuntimeError("strategy compilation failed: bad alpha expr")
+        mock_fn = MagicMock(side_effect=original_error)
+        mock_flow = MagicMock()
+        mock_flow.fn = mock_fn
+
+        params: dict[str, object] = {
+            "run_id": "fail-run",
+            "strategy_id": "strat-1",
+            "start_date": "2025-01-01",
+            "end_date": "2025-01-31",
+        }
+
+        failure_callback = MagicMock()
+        with patch(
+            "ditto_interfaces.api.routes.backtest.run_backtest_flow",
+            mock_flow,
+        ):
+            _run_in_process(params, on_failure=failure_callback)
+
+        # on_failure 应被调用，且消息包含实际异常文本
+        failure_callback.assert_called_once()
+        call_args = failure_callback.call_args
+        assert call_args[0][0] == "fail-run"
+        error_msg = call_args[0][1]
+        # 必须包含原始异常文本，而非仅有 "Flow execution failed"
+        assert "strategy compilation failed: bad alpha expr" in error_msg

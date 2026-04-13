@@ -32,7 +32,10 @@ from ditto_app.process.execution.backtest_process import (
     BacktestServiceOptions,
 )
 from ditto_app.process.execution.strategy_input import StrategyInputAssembler
-from ditto_app.process.execution.strategy_types import RunLifecycleService
+from ditto_app.process.execution.strategy_types import (
+    RunLifecycleService,
+    mark_run_failed,
+)
 
 __all__ = [
     "StrategyFacade",
@@ -176,8 +179,7 @@ class StrategyRunService:
         try:
             return self._execute_run(trade_date, slice_, run_id=run_id)
         except Exception as exc:
-            if run_svc is not None:
-                run_svc.mark_failed(run_id, str(exc))
+            mark_run_failed(run_svc, run_id, exc)
             raise
 
     def _execute_run(

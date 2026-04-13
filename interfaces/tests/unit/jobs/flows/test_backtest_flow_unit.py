@@ -2,7 +2,7 @@
 Unit tests for backtest async flow.
 
 Tests that the flow delegates lifecycle management to BacktestService
-and correctly computes total_return from BacktestReport.
+and correctly computes total_return from NAV values.
 """
 
 from __future__ import annotations
@@ -10,8 +10,8 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 import pytest
+from ditto_app.query._artifact_utils import compute_total_return
 from ditto_interfaces.jobs.flows.backtest import (
-    _compute_total_return,
     run_backtest_flow,
 )
 from pytest_mock import MockerFixture
@@ -177,22 +177,31 @@ class TestRunBacktestFlow:
 
 
 class TestComputeTotalReturn:
-    """Tests for _compute_total_return helper."""
+    """Tests for compute_total_return helper."""
 
     def test_positive_return(self) -> None:
         """Normal positive return."""
-        report = Mock(initial_cash=1_000_000.0, final_nav=1_200_000.0)
-        assert _compute_total_return(report) == pytest.approx(0.2)
+        assert compute_total_return(
+            initial_cash=1_000_000.0,
+            final_nav=1_200_000.0,
+        ) == pytest.approx(0.2)
 
     def test_negative_return(self) -> None:
         """Negative return (loss)."""
-        report = Mock(initial_cash=1_000_000.0, final_nav=800_000.0)
-        assert _compute_total_return(report) == pytest.approx(-0.2)
+        assert compute_total_return(
+            initial_cash=1_000_000.0,
+            final_nav=800_000.0,
+        ) == pytest.approx(-0.2)
 
     def test_zero_initial_cash(self) -> None:
         """Zero initial cash returns 0.0 to avoid division by zero."""
-        report = Mock(initial_cash=0.0, final_nav=100_000.0)
-        assert _compute_total_return(report) == 0.0
+        assert (
+            compute_total_return(
+                initial_cash=0.0,
+                final_nav=100_000.0,
+            )
+            == 0.0
+        )
 
 
 class TestRunBacktestFlowStateMachine:
@@ -225,9 +234,12 @@ class TestRunBacktestFlowStateMachine:
     def test_completed_status_on_success(
         self,
         mock_facade: Mock,
+        mock_run_service: Mock,
         mock_run_writer: Mock,
     ) -> None:
-        """Flow 成功完成时调用 writer.update_status(run_id, 'completed')."""
+        """Flow 成功完成时从 RunRecord 读取实际状态返回 completed."""
+        mock_run_service.get_run.return_value = None  # 无记录时默认 completed
+
         result = RUNNER(
             run_id="run-sm-002",
             strategy_id="test",
@@ -236,7 +248,6 @@ class TestRunBacktestFlowStateMachine:
         )
 
         mock_run_writer.update_status.assert_any_call("run-sm-002", "running")
-        mock_run_writer.update_status.assert_any_call("run-sm-002", "completed")
         assert result["status"] == "completed"
 
     def test_failed_status_on_exception(
@@ -282,12 +293,33 @@ class TestRunBacktestFlowStateMachine:
         mock_facade.run_backtest_from_catalog.assert_called_once()
         assert result["status"] == "completed"
 
+    def test_cancelled_status_returned_when_record_cancelled(
+        self,
+        mock_facade: Mock,
+        mock_run_service: Mock,
+        mock_run_writer: Mock,
+    ) -> None:
+        """BacktestService 内部标记 cancelled 后，flow 返回 cancelled 状态."""
+        cancelled_record = Mock()
+        cancelled_record.status = "cancelled"
+        mock_run_service.get_run.return_value = cancelled_record
+
+        result = RUNNER(
+            run_id="run-sm-006",
+            strategy_id="test",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+        )
+
+        assert result["status"] == "cancelled"
+        mock_run_writer.update_status.assert_any_call("run-sm-006", "running")
+
     def test_status_transition_order(
         self,
         mock_facade: Mock,
         mock_run_writer: Mock,
     ) -> None:
-        """状态转换顺序: running -> completed（running 先于 completed）."""
+        """状态转换: writer 只记录 running，completed 由 run_svc 内部管理."""
         call_order: list[str] = []
 
         def record_call(run_id: str, status: str, **kwargs: object) -> bool:
@@ -303,7 +335,8 @@ class TestRunBacktestFlowStateMachine:
             end_date="2025-01-31",
         )
 
-        assert call_order == ["running", "completed"]
+        # writer 只负责 running 标记，completed 由 BacktestService 内部 run_svc 处理
+        assert call_order == ["running"]
 
 
 class TestRunBacktestFlowCostConfig:

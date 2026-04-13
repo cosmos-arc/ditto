@@ -92,6 +92,52 @@ class UniverseWriter:
             universe_id=universe_id,
         )
 
+    @traced("data.universe_update_metadata")
+    def update_metadata(
+        self,
+        universe_id: str,
+        name: str,
+        description: str | None = None,
+    ) -> bool:
+        """
+        更新证券域元数据（name, description）。
+
+        Args:
+            universe_id: 证券域唯一标识符
+            name: 新名称
+            description: 新描述
+
+        Returns:
+            是否成功更新（rowcount > 0）
+
+        """
+        logger.info(
+            "Updating universe metadata",
+            event="universe_update_metadata_start",
+            universe_id=universe_id,
+            name=name,
+        )
+
+        cursor = self._client.execute(
+            "UPDATE universe SET name = ?, description = ? WHERE universe_id = ?",
+            [name, description, universe_id],
+        )
+        self._client.commit()
+
+        updated = cursor.rowcount > 0
+
+        # 失效缓存
+        self._cache.invalidate_pattern("universe:*")
+
+        logger.info(
+            "Universe metadata updated",
+            event="universe_update_metadata_complete",
+            universe_id=universe_id,
+            updated=updated,
+        )
+
+        return updated
+
     @traced("data.universe_delete")
     def delete_universe(self, universe_id: str) -> None:
         """

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from ditto_app.query.comparison import ComparisonMetrics, ComparisonQueryFacade
 from ditto_app.types import ActualPositionSnapshot, ManualExecutionFill
@@ -183,7 +183,7 @@ class TestGetComparisonEdgeCases:
         assert result.actual_total_cost == 0.0
 
     def test_returns_zero_metrics_when_no_nav(self) -> None:
-        """无 NAV 序列时返回零值指标（不返回 None）."""
+        """无 NAV 序列时 actual_return 为 None（实验性功能）."""
         backtest_facade = _make_backtest_facade(
             report=_sample_report_dict(),
             nav_rows=[],
@@ -200,6 +200,42 @@ class TestGetComparisonEdgeCases:
         )
 
         assert result is not None
-        assert result.actual_return == 0.0
+        assert result.actual_return is None
+        assert result.return_diff is None
+        assert result.return_diff_bps is None
         assert result.actual_sharpe == 0.0
         assert result.nav_correlation == 0.0
+
+
+# ========== _extract_alpha_stats — 异常日志 (F20b) ==========
+
+
+class TestExtractAlphaStatsWarning:
+    """_extract_alpha_stats 异常时记录 logger.warning (F20b)."""
+
+    def test_logs_warning_on_unparseable_alpha_stats(self) -> None:
+        """alpha_stats 类型异常时记录 warning 并返回零值."""
+        from ditto_app.query.comparison import _extract_alpha_stats
+
+        # alpha_stats 是字符串，float() 转换会失败
+        report = {"alpha_stats": "not_a_dict"}
+        with patch("ditto_app.query.comparison.logger") as mock_logger:
+            result = _extract_alpha_stats(report)
+
+        expected = {"annualized_return": 0.0, "sharpe_ratio": 0.0, "total_fees": 0.0}
+        assert result == expected
+        mock_logger.warning.assert_called_once()
+        call_args = mock_logger.warning.call_args
+        assert "无法解析 alpha_stats" in call_args[0][0]
+
+    def test_logs_warning_on_attribute_error(self) -> None:
+        """alpha_stats 字段缺少 .get 方法时记录 warning."""
+        from ditto_app.query.comparison import _extract_alpha_stats
+
+        report = {"alpha_stats": 42}
+        with patch("ditto_app.query.comparison.logger") as mock_logger:
+            result = _extract_alpha_stats(report)
+
+        expected = {"annualized_return": 0.0, "sharpe_ratio": 0.0, "total_fees": 0.0}
+        assert result == expected
+        mock_logger.warning.assert_called_once()

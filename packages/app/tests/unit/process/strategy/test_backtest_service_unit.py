@@ -59,6 +59,7 @@ def _make_minimal_service(
     config: BacktestServiceConfig | None = None,
     audit_service: MagicMock | None = None,
     artifact_service: MagicMock | None = None,
+    data_feed: MagicMock | None = None,
 ) -> BacktestService:
     """创建最小 BacktestService 实例（所有依赖均为 mock）。"""
     if config is None:
@@ -68,7 +69,7 @@ def _make_minimal_service(
     mock_planner = MagicMock()
     mock_brokerage = MagicMock()
     mock_pre_trade_check = MagicMock()
-    mock_data_feed = MagicMock()
+    mock_data_feed = data_feed if data_feed is not None else MagicMock()
 
     options = BacktestServiceOptions(
         audit_service=audit_service,
@@ -483,8 +484,8 @@ class TestArtifactPersistence:
         assert call_args[1]["output_dir"] == Path("/tmp/test/run-001")
         mock_artifact.save_artifact.assert_called_once()
         call_arg = mock_artifact.save_artifact.call_args[0][0]
-        assert call_arg.file_path != ""
-        assert "backtest_report.json" in call_arg.file_path
+        # file_path 应为目录路径，匹配读取侧 _build_path 契约
+        assert call_arg.file_path == "/tmp/test/run-001"
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
@@ -494,13 +495,13 @@ class TestArtifactPersistence:
         },
     )
     @patch("ditto_app.process.execution.backtest_process.build_report")
-    def test_run_artifact_without_dir_still_writes_file(
+    def test_run_artifact_without_dir_file_path_empty(
         self,
         mock_build_report: MagicMock,
         mock_write_artifacts: MagicMock,
         mock_engine_run: MagicMock,
     ) -> None:
-        """未提供 artifact_dir 时，artifact 仍写入默认目录，file_path 非空。"""
+        """未提供 artifact_dir 时，output_dir 为 None，file_path 为空字符串。"""
         fake_report = MagicMock(spec=BacktestReport)
         fake_report.run_id = "run-001"
         fake_report.final_nav = 1_100_000.0
@@ -530,8 +531,64 @@ class TestArtifactPersistence:
         assert call_args[1]["output_dir"] is None
         mock_artifact.save_artifact.assert_called_once()
         call_arg = mock_artifact.save_artifact.call_args[0][0]
-        assert call_arg.file_path != ""
-        assert "backtest_report" in call_arg.file_path
+        # 未指定 artifact_dir 时，file_path 为空（无目录可引用）
+        assert call_arg.file_path == ""
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch(
+        "ditto_app.process.execution.backtest_process.write_backtest_artifacts",
+        return_value={
+            "backtest_report": Path("/tmp/test/run-001/backtest_report.json"),
+        },
+    )
+    @patch("ditto_app.process.execution.backtest_process.build_report")
+    def test_artifact_file_path_is_directory_not_file(
+        self,
+        mock_build_report: MagicMock,
+        mock_write_artifacts: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """file_path 应存储目录路径（output_dir），匹配读取侧 _build_path 契约.
+
+        读取侧使用 Path(file_path) / filename 拼接，因此 file_path 必须是目录。
+        若 file_path 是文件路径，拼接后变成 dir/file.json/file.json，导致静默返回 None。
+        """
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.run_id = "run-001"
+        fake_report.final_nav = 1_100_000.0
+        fake_report.period = ("2026-01-01", "2026-03-01")
+        fake_report.initial_cash = 1_000_000.0
+        fake_report.aggregated_trade_stats = MagicMock(total_trades=42)
+        fake_report.alpha_stats = MagicMock(
+            sharpe_ratio=1.5,
+            max_drawdown=-5.2,
+        )
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_artifact = MagicMock()
+        options = BacktestServiceOptions(
+            artifact_service=mock_artifact,
+            artifact_dir="/tmp/test",
+        )
+        service = _make_minimal_service(
+            config=_make_service_config(strategy_id="momentum-etf", run_id="run-001"),
+            artifact_service=mock_artifact,
+        )
+        service._options = options  # type: ignore[misc]
+
+        service.run()
+
+        mock_artifact.save_artifact.assert_called_once()
+        call_arg = mock_artifact.save_artifact.call_args[0][0]
+        # file_path 应该是目录路径，与读取侧 _build_path 兼容
+        assert call_arg.file_path == "/tmp/test/run-001"
+        # 验证目录路径可以用 _build_path 正确拼接文件名
+        from ditto_app.query.backtest import _build_path
+
+        report_path = _build_path(call_arg.file_path, "backtest_report.json")
+        assert report_path == "/tmp/test/run-001/backtest_report.json"
 
     @patch(
         "ditto_app.process.execution.backtest_process.write_backtest_artifacts",
@@ -802,7 +859,10 @@ class TestBuildFactorAwareBundleBuilder:
             run_id="run-factor-001",
         )
         service = _make_minimal_service(config=config)
-        builder = service._build_factor_aware_bundle_builder(compiled)
+        builder = service._build_factor_aware_bundle_builder(
+            compiled,
+            run_id="run-factor-001",
+        )
 
         # builder 是可调用的
         assert callable(builder)
@@ -826,6 +886,57 @@ class TestBuildFactorAwareBundleBuilder:
         assert "signal_value" in bundle.signal_values.columns
         assert bundle.signal_values.height == 2
 
+    def test_run_id_param_propagated_to_bundle(self) -> None:
+        """传入的 run_id 参数应传递到生成的 StrategyInputBundle.run_id (F10)."""
+        import polars as pl
+        from ditto_analytics.materialization.contracts import (
+            Analysis,
+            CompiledDerivedExpression,
+            CompileIdentity,
+        )
+        from ditto_app.process.execution.factor_bridge import CompiledExpressions
+
+        compiled_expr = CompiledDerivedExpression(
+            derived_id="signal_0",
+            version=1,
+            expr=pl.col("close"),
+            analysis=Analysis(
+                dependencies=("close",),
+                operator_names=(),
+                lookback=0,
+                requires_full_day=False,
+                scope="instrument",
+            ),
+            compile_identity=CompileIdentity(
+                compile_input_hash="h1",
+                operator_fingerprint="f1",
+                compiler_fingerprint="cf1",
+                cache_key="ck1",
+                engine_codegen_version="v1",
+                analysis_version="av1",
+                polars_version="pv1",
+                expr_serialization_format="polars",
+            ),
+        )
+        compiled = CompiledExpressions(
+            expressions=(compiled_expr,),
+            weights=(1.0,),
+        )
+
+        # config.run_id 为空 — run_id 由外部传入，不应独立生成
+        config = _make_service_config(strategy_id="factor-strat", run_id="")
+        service = _make_minimal_service(config=config)
+        builder = service._build_factor_aware_bundle_builder(
+            compiled,
+            run_id="explicit-run-id",
+        )
+
+        ctx = self._make_step_context()
+        bundle = builder(ctx)
+
+        # bundle.run_id 必须使用传入的 run_id，而非 config 或随机 UUID
+        assert bundle.run_id == "explicit-run-id"
+
     def test_compiled_empty_expressions_skips_builder(self) -> None:
         """空 expressions 元组时 builder 可构建但信号为空."""
         compiled = self._make_compiled_expressions(expressions=[], weights=())
@@ -834,7 +945,10 @@ class TestBuildFactorAwareBundleBuilder:
         service = _make_minimal_service(config=config)
 
         # 空 expressions 仍返回 builder（FactorBridge 处理空 DataFrame 时返回空信号）
-        builder = service._build_factor_aware_bundle_builder(compiled)
+        builder = service._build_factor_aware_bundle_builder(
+            compiled,
+            run_id="run-empty",
+        )
         assert callable(builder)
 
         # 但实际调用 FactorBridge.compute_signals 时信号为空
@@ -886,7 +1000,10 @@ class TestBuildFactorAwareBundleBuilder:
 
         config = _make_service_config(strategy_id="error-strat", run_id="run-error")
         service = _make_minimal_service(config=config)
-        builder = service._build_factor_aware_bundle_builder(compiled)
+        builder = service._build_factor_aware_bundle_builder(
+            compiled,
+            run_id="run-error",
+        )
 
         ctx = self._make_step_context()
 
@@ -906,7 +1023,10 @@ class TestBuildFactorAwareBundleBuilder:
 
         config = _make_service_config(strategy_id="test-strat", run_id="run-test")
         service = _make_minimal_service(config=config)
-        builder = service._build_factor_aware_bundle_builder(compiled)
+        builder = service._build_factor_aware_bundle_builder(
+            compiled,
+            run_id="run-test",
+        )
 
         # 构建 slice_ 为 None 的 StepContext
         from ditto_engine.backtest.steps import StepContext
@@ -916,6 +1036,89 @@ class TestBuildFactorAwareBundleBuilder:
 
         with pytest.raises(ValueError, match="slice_ required"):
             builder(ctx)
+
+    def test_lookback_days_from_compiled_max_lookback(self) -> None:
+        """lookback_days 应取 compiled.expressions 中 analysis.lookback 的最大值."""
+        import polars as pl
+        from ditto_analytics.materialization.contracts import (
+            Analysis,
+            CompiledDerivedExpression,
+            CompileIdentity,
+        )
+        from ditto_app.process.execution.factor_bridge import CompiledExpressions
+
+        # 构建两个表达式：lookback=61 和 lookback=21
+        compiled_expr_61 = CompiledDerivedExpression(
+            derived_id="signal_0",
+            version=1,
+            expr=pl.col("close"),
+            analysis=Analysis(
+                dependencies=("close",),
+                operator_names=("ts_mean",),
+                lookback=61,
+                requires_full_day=False,
+                scope="instrument",
+            ),
+            compile_identity=CompileIdentity(
+                compile_input_hash="h1",
+                operator_fingerprint="f1",
+                compiler_fingerprint="cf1",
+                cache_key="ck1",
+                engine_codegen_version="v1",
+                analysis_version="av1",
+                polars_version="pv1",
+                expr_serialization_format="polars",
+            ),
+        )
+        compiled_expr_21 = CompiledDerivedExpression(
+            derived_id="signal_1",
+            version=1,
+            expr=pl.col("volume"),
+            analysis=Analysis(
+                dependencies=("volume",),
+                operator_names=("ts_std",),
+                lookback=21,
+                requires_full_day=False,
+                scope="instrument",
+            ),
+            compile_identity=CompileIdentity(
+                compile_input_hash="h2",
+                operator_fingerprint="f2",
+                compiler_fingerprint="cf2",
+                cache_key="ck2",
+                engine_codegen_version="v1",
+                analysis_version="av1",
+                polars_version="pv1",
+                expr_serialization_format="polars",
+            ),
+        )
+        compiled = CompiledExpressions(
+            expressions=(compiled_expr_61, compiled_expr_21),
+            weights=(0.7, 0.3),
+        )
+
+        # mock data_feed — 返回空 DataFrame，但记录调用参数
+        mock_data_feed = MagicMock()
+        mock_data_feed.get_history.return_value = pl.DataFrame()
+
+        config = _make_service_config(
+            strategy_id="lookback-strat",
+            run_id="run-lookback",
+        )
+        service = _make_minimal_service(config=config, data_feed=mock_data_feed)
+        builder = service._build_factor_aware_bundle_builder(
+            compiled,
+            run_id="run-lookback",
+        )
+
+        ctx = self._make_step_context()
+        builder(ctx)
+
+        # 验证 get_history 被调用时 lookback_days 是 61（最大值），而非 20
+        mock_data_feed.get_history.assert_called_once()
+        call_args = mock_data_feed.get_history.call_args
+        # get_history(instrument_ids, date, lookback_days)
+        assert call_args[0][2] == 61
 
 
 # ---------------------------------------------------------------------------

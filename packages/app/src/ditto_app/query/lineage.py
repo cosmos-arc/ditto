@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_data.models.strategy_run import StrategyRunRecord
 from ditto_data.services.strategy.strategy_run_service import StrategyRunService
+
+from ditto_app.query.backtest import RunSummary, to_run_summary
 
 __all__ = ["LineageChain", "LineageQueryFacade"]
 
@@ -21,7 +22,7 @@ class LineageChain:
 
     """
 
-    runs: tuple[StrategyRunRecord, ...]
+    runs: tuple[RunSummary, ...]
     depth: int
 
 
@@ -43,10 +44,10 @@ class LineageQueryFacade:
         if not chain:
             return None
         return LineageChain(
-            runs=tuple(chain),
+            runs=tuple(to_run_summary(r) for r in chain),
             depth=len(chain) - 1,
         )
 
-    def list_replays(self, run_id: str) -> list[StrategyRunRecord]:
+    def list_replays(self, run_id: str) -> list[RunSummary]:
         """列出指定运行的所有直接重放记录."""
-        return self._service.list_replays(run_id)
+        return [to_run_summary(r) for r in self._service.list_replays(run_id)]

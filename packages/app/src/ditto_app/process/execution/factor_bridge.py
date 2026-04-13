@@ -157,6 +157,21 @@ class FactorBridge:
         enriched = df.with_columns(factor_exprs)
 
         # Step 2: rank 归一化各因子列
+        # 当包含 trade_date 列（历史窗口）时，rank 只在最后一天截面上操作
+        has_trade_date = "trade_date" in enriched.columns
+        if has_trade_date:
+            # 因子表达式可能产生 null（如历史不足），取每个标的最后一天的非 null 值
+            last_day = enriched.group_by("instrument_id").last()
+            enriched = last_day
+            # 重新获取 factor_columns dtype
+            enriched = enriched.with_columns(
+                [
+                    pl.col(c).cast(pl.Float64)
+                    for c in factor_columns
+                    if enriched[c].dtype != pl.Float64
+                ],
+            )
+
         rank_exprs: list[pl.Expr] = []
         for col_name in factor_columns:
             rank_exprs.append(

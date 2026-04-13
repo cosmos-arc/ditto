@@ -228,7 +228,7 @@ class TestSerializeReportMinimal:
         assert data["run_id"] == "test-run-001"
         assert data["initial_cash"] == 1_000_000.0
         assert data["final_nav"] == 1_005_000.0
-        assert data["period"] == ["2026-03-20", "2026-03-21"]
+        assert data["period"] == {"start": "2026-03-20", "end": "2026-03-21"}
 
     def test_json_contains_aggregated_and_alpha_stats(self) -> None:
         report = _make_report(with_trades=False, with_fills=False)

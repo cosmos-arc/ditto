@@ -42,6 +42,8 @@ class UpdateUniverseRequest(BaseModel):
 
     name: str = Field(..., min_length=1, description="名称")
     description: str | None = Field(default=None, description="描述")
+    members: list[str] | None = Field(default=None, description="成分列表")
+    effective_date: str | None = Field(default=None, description="生效日期")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 

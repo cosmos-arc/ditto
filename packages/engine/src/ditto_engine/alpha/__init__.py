@@ -10,9 +10,6 @@ Note: 模板（ETFRotationConfig 等）从 ditto_engine.alpha.templates 导入�
 from ditto_engine.alpha.builtins import (
     FilterCondition,
     FilteringStage,
-    RegimeLabel,
-    RegimeMethod,
-    RegimeStage,
     RiskLockFilter,
     ScoringMethod,
     ScoringStage,
@@ -20,6 +17,11 @@ from ditto_engine.alpha.builtins import (
     SignalStage,
     TrendFilterStage,
     UniverseStage,
+)
+from ditto_engine.alpha.builtins.regime import (
+    RegimeLabel,
+    RegimeMethod,
+    RegimeStage,
 )
 from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.alpha.frame import FrameCol, validate_frame

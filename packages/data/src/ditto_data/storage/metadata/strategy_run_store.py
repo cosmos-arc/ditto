@@ -61,6 +61,11 @@ _CREATE_INDEX_PARENT_RUN_ID = (
 # ---------------------------------------------------------------------------
 
 _MIGRATIONS: list[tuple[str, str]] = [
+    # 旧库升级：parent_run_id 可能在最早期 schema 中不存在
+    (
+        "parent_run_id",
+        "ALTER TABLE strategy_run ADD COLUMN parent_run_id TEXT NOT NULL DEFAULT ''",
+    ),
     (
         "progress_pct",
         "ALTER TABLE strategy_run ADD COLUMN progress_pct REAL NOT NULL DEFAULT 0.0",
@@ -169,6 +174,28 @@ def _run_migrations(conn: sqlite3.Connection) -> None:
             )
 
 
+def _init_schema(pool: SQLitePool) -> None:
+    """
+    Create strategy_run table, run migrations, then create indexes (idempotent).
+
+    执行顺序：
+    1. CREATE TABLE IF NOT EXISTS — 建表（新库）或跳过（旧库）
+    2. _run_migrations — 补齐旧库缺失的列（parent_run_id 等）
+    3. CREATE INDEX IF NOT EXISTS — 在列存在后创建索引
+    """
+    conn = pool.get_connection()
+    conn.executescript(_CREATE_TABLE)
+    _run_migrations(conn)
+    conn.executescript(
+        _CREATE_INDEX_STRATEGY_ID + _CREATE_INDEX_STATUS + _CREATE_INDEX_PARENT_RUN_ID,
+    )
+    pool.commit()
+    logger.debug(
+        "strategy_run schema initialized",
+        event="strategy_run_schema_init",
+    )
+
+
 def _row_to_record(row: sqlite3.Row) -> StrategyRunRecord:
     """Convert a sqlite3.Row-like object to StrategyRunRecord."""
     data: dict[str, Any] = dict(row)
@@ -198,20 +225,8 @@ class SQLiteStrategyRunWriter:
 
     @traced("store.strategy_run_writer.init_schema")
     def init_schema(self) -> None:
-        """Create strategy_run table, indexes, and run migrations (idempotent)."""
-        conn = self._pool.get_connection()
-        conn.executescript(
-            _CREATE_TABLE
-            + _CREATE_INDEX_STRATEGY_ID
-            + _CREATE_INDEX_STATUS
-            + _CREATE_INDEX_PARENT_RUN_ID,
-        )
-        _run_migrations(conn)
-        self._pool.commit()
-        logger.debug(
-            "strategy_run schema initialized",
-            event="strategy_run_schema_init",
-        )
+        """Create strategy_run table + indexes (idempotent)."""
+        _init_schema(self._pool)
 
     @traced("store.strategy_run_writer.save")
     def save(self, record: StrategyRunRecord) -> None:
@@ -316,20 +331,8 @@ class SQLiteStrategyRunReader:
 
     @traced("store.strategy_run_reader.init_schema")
     def init_schema(self) -> None:
-        """Create strategy_run table, indexes, and run migrations (idempotent)."""
-        conn = self._pool.get_connection()
-        conn.executescript(
-            _CREATE_TABLE
-            + _CREATE_INDEX_STRATEGY_ID
-            + _CREATE_INDEX_STATUS
-            + _CREATE_INDEX_PARENT_RUN_ID,
-        )
-        _run_migrations(conn)
-        self._pool.commit()
-        logger.debug(
-            "strategy_run schema initialized",
-            event="strategy_run_schema_init",
-        )
+        """Create strategy_run table + indexes (idempotent)."""
+        _init_schema(self._pool)
 
     @traced("store.strategy_run_reader.get")
     def get(self, run_id: str) -> StrategyRunRecord | None:

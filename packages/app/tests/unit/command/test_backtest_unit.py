@@ -21,6 +21,7 @@ from ditto_app.command.backtest import (
 from ditto_app.process.execution.strategy_types import RunLifecycleService
 from ditto_data.models.strategy_run import StrategyRunRecord
 from ditto_data.services.strategy.strategy_run_service import StrategyRunService
+from ditto_kernel.enums import ImpactModel
 
 
 @pytest.fixture
@@ -241,7 +242,7 @@ class TestBacktestRunResultCostConfig:
             commission_min=10.0,
             stamp_duty_rate=0.002,
             slippage_bps=3.0,
-            impact_model="linear",
+            impact_model=ImpactModel.VOLUME_SHARE,
         )
         cmd = _make_command(cost_config=cost_cfg)
         result = handler.handle(cmd)
@@ -250,7 +251,7 @@ class TestBacktestRunResultCostConfig:
         assert result.cost_config.commission_min == 10.0
         assert result.cost_config.stamp_duty_rate == 0.002
         assert result.cost_config.slippage_bps == 3.0
-        assert result.cost_config.impact_model == "linear"
+        assert result.cost_config.impact_model == ImpactModel.VOLUME_SHARE
 
 
 # ---------------------------------------------------------------------------

@@ -5,6 +5,8 @@
 引擎运行 → 报告生成 → 审计日志持久化 → 策略产物持久化。
 """
 
+from __future__ import annotations
+
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -51,13 +53,20 @@ from ditto_app.process.execution.factor_bridge import (
     FactorBridge,
 )
 from ditto_app.process.execution.strategy_input import write_backtest_artifacts
-from ditto_app.process.execution.strategy_types import RunLifecycleService
+from ditto_app.process.execution.strategy_types import (
+    RunLifecycleService,
+    mark_run_failed,
+)
 
 __all__ = [
     "BacktestService",
     "BacktestServiceConfig",
     "BacktestServiceOptions",
 ]
+
+
+_REGIME_DEFAULT_LOOKBACK = 60
+"""Regime detection minimum lookback (covering MomentumIndicator etc.)."""
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +104,7 @@ class BacktestServiceConfig:
     parameter_overrides: tuple[str, ...] = ()
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
+    execution_delay: int = 0
 
 
 @dataclass(frozen=True)
@@ -204,8 +214,7 @@ class BacktestService:
         try:
             return self._execute_backtest(run_id)
         except Exception as exc:
-            if run_svc is not None:
-                run_svc.mark_failed(run_id, str(exc))
+            mark_run_failed(run_svc, run_id, exc)
             raise
 
     def _execute_backtest(self, run_id: str) -> BacktestReport:
@@ -226,6 +235,7 @@ class BacktestService:
             parameter_overrides=self._config.parameter_overrides,
             rebalance_freq=self._config.rebalance_freq,
             engine_version=self._config.engine_version,
+            execution_delay=self._config.execution_delay,
         )
 
         # 构造 SimulatedClock — 以回测起始日期为初始时刻
@@ -237,12 +247,39 @@ class BacktestService:
         # 构建自定义 input_bundle_builder (含因子信号注入)
         compiled = self._options.compiled_expressions
         input_bundle_builder = (
-            self._build_factor_aware_bundle_builder(compiled)
+            self._build_factor_aware_bundle_builder(compiled, run_id=run_id)
             if compiled is not None
             else None
         )
 
         # 构建 EngineOptions (注入 clock + event_bus + audit_collector)
+        run_svc = self._options.run_service
+
+        # 协作式取消 — 轮询 run_service.is_cancelled()
+        should_stop: Callable[[], bool] | None = None
+        if run_svc is not None:
+
+            def _check_cancelled() -> bool:
+                return run_svc.is_cancelled(run_id)
+
+            should_stop = _check_cancelled
+
+        # 进度上报 — 每日更新 run_service
+        on_progress: Callable[[int, int], None] | None = None
+        if run_svc is not None:
+
+            def _report_progress(completed: int, total: int) -> None:
+                pct = round(completed / total * 100, 1) if total > 0 else 0.0
+                run_svc.update_progress(
+                    run_id,
+                    progress_pct=pct,
+                    current_step="engine",
+                    completed_days=completed,
+                    total_days=total,
+                )
+
+            on_progress = _report_progress
+
         options = EngineOptions(
             clock=clock,
             event_bus=SimpleEventBus(),
@@ -251,6 +288,8 @@ class BacktestService:
             post_trade_guard=self._options.post_trade_guard,
             audit_collector=collector,
             input_bundle_builder=input_bundle_builder,
+            should_stop=should_stop,
+            on_progress=on_progress,
         )
 
         # 构造并运行 EngineLoop
@@ -275,60 +314,134 @@ class BacktestService:
         self._persist_artifact(run_id, report, manifest=engine_result.manifest)
 
         # 更新运行状态
-        run_svc = self._options.run_service
         if run_svc is not None:
-            run_svc.mark_completed(run_id)
+            if engine_result.cancelled:
+                run_svc.mark_cancelled(run_id)
+            else:
+                run_svc.mark_completed(run_id)
 
         return report
 
     def _build_factor_aware_bundle_builder(
         self,
         compiled: CompiledExpressions,
+        *,
+        run_id: str,
     ) -> Callable[[StepContext], StrategyInputBundle]:
-        """构建含因子信号注入的 input_bundle_builder."""
-        run_id = self._config.run_id or uuid.uuid4().hex[:8]
+        """
+        构建含因子信号注入的 input_bundle_builder.
+
+        当 data_feed 可用时，会在 market_data 中包含历史窗口，
+        使 ts_* 时间序列表达式（如 ts_mean, shift）能正确计算。
+
+        Args:
+            compiled: 编译后的因子表达式。
+            run_id: 由 run() 统一生成的运行标识，确保 bundle.run_id 与 run record 一致。
+
+        """
         strategy_id = self._config.strategy_id
         bridge = FactorBridge()
+        data_feed = self._data_feed
+        lookback_days = max(
+            (expr.analysis.lookback for expr in compiled.expressions),
+            default=_REGIME_DEFAULT_LOOKBACK,
+        )
 
-        def _build_factor_bundle(
-            ctx: StepContext,
-        ) -> StrategyInputBundle:
-            slice_ = ctx.slice_
-            if slice_ is None:
-                msg = "slice_ required"
-                raise ValueError(msg)
-            bars = slice_.bars
-            instrument_ids = list(bars.keys())
-
-            instruments = pl.DataFrame({"instrument_id": instrument_ids})
-
-            market_rows: list[dict[str, object]] = []
-            for iid, bar in bars.items():
-                market_rows.append(
-                    {
-                        "instrument_id": iid,
-                        "open": bar.open,
-                        "high": bar.high,
-                        "low": bar.low,
-                        "close": bar.close,
-                        "volume": bar.volume,
-                    },
-                )
-            market_data = pl.DataFrame(market_rows)
-
-            signal_values = bridge.compute_signals(market_data, compiled)
-
-            return StrategyInputBundle(
-                trade_date=ctx.date,
+        def _build(ctx: StepContext) -> StrategyInputBundle:
+            return self._build_factor_bundle(
+                ctx=ctx,
                 strategy_id=strategy_id,
                 run_id=run_id,
-                instruments=instruments,
-                market_data=market_data,
-                signal_values=signal_values,
-                benchmark_close=getattr(slice_, "benchmark_close", None),
+                bridge=bridge,
+                compiled=compiled,
+                data_feed=data_feed,
+                lookback_days=lookback_days,
             )
 
-        return _build_factor_bundle
+        return _build
+
+    @staticmethod
+    def _build_factor_bundle(
+        *,
+        ctx: StepContext,
+        strategy_id: str,
+        run_id: str,
+        bridge: FactorBridge,
+        compiled: CompiledExpressions,
+        data_feed: DataFeed,
+        lookback_days: int,
+    ) -> StrategyInputBundle:
+        """
+        构建单日因子感知的 StrategyInputBundle.
+
+        从 StepContext 提取当日行情，可选追加历史窗口数据，
+        通过 FactorBridge 计算信号值并组装完整的输入包。
+
+        Args:
+            ctx: 引擎步骤上下文（含 date 和 slice_）。
+            strategy_id: 策略标识。
+            run_id: 运行标识。
+            bridge: 因子桥接器。
+            compiled: 编译后的因子表达式。
+            data_feed: 市场数据源（需支持 get_history）。
+            lookback_days: 历史回溯天数。
+
+        """
+        slice_ = ctx.slice_
+        if slice_ is None:
+            msg = "slice_ required"
+            raise ValueError(msg)
+        bars = slice_.bars
+        instrument_ids = list(bars.keys())
+
+        instruments = pl.DataFrame({"instrument_id": instrument_ids})
+
+        # 构建当日 OHLCV
+        market_rows: list[dict[str, object]] = []
+        for iid, bar in bars.items():
+            market_rows.append(
+                {
+                    "instrument_id": int(iid),
+                    "open": bar.open,
+                    "high": bar.high,
+                    "low": bar.low,
+                    "close": bar.close,
+                    "volume": bar.volume,
+                    "trade_date": ctx.date,
+                },
+            )
+
+        # 追加历史窗口 — 支持 ts_* 时间序列表达式
+        if hasattr(data_feed, "get_history"):
+            history_df = data_feed.get_history(instrument_ids, ctx.date, lookback_days)
+            if not history_df.is_empty():
+                hist_rows = history_df.select(
+                    "instrument_id",
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "volume",
+                    "trade_date",
+                ).to_dicts()
+                for row in hist_rows:
+                    market_rows.append(row)
+
+        market_data = pl.DataFrame(market_rows)
+        if "trade_date" in market_data.columns:
+            market_data = market_data.sort("trade_date")
+
+        signal_values = bridge.compute_signals(market_data, compiled)
+
+        return StrategyInputBundle(
+            trade_date=ctx.date,
+            strategy_id=strategy_id,
+            run_id=run_id,
+            instruments=instruments,
+            market_data=market_data,
+            signal_values=signal_values,
+            benchmark_close=getattr(slice_, "benchmark_close", None),
+        )
 
     def _resolve_run_id(self) -> str:
         """在进入生命周期编排前固化 run_id。"""
@@ -395,13 +508,15 @@ class BacktestService:
         if self._options.artifact_dir is not None:
             output_dir = Path(self._options.artifact_dir) / run_id
 
-        written = write_backtest_artifacts(
+        write_backtest_artifacts(
             report,
             output_dir=output_dir,
             manifest=manifest,
             display_map=self._options.display_map,
+            rebalance_freq=self._config.rebalance_freq,
         )
-        file_path = str(written.get("backtest_report", ""))
+        # file_path 存储目录路径，匹配读取侧 _build_path 契约（Path(base) / filename）
+        file_path = str(output_dir) if output_dir else ""
 
         artifact = StrategyArtifactRecord(
             artifact_id=f"artifact-{run_id}",

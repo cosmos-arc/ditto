@@ -1,5 +1,7 @@
 """已发布策略 Spec 的运行时装配器."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, replace
 
 from ditto_data.models.strategy import StrategySpecRecord
@@ -36,6 +38,7 @@ from ditto_engine.alpha.templates import (
     validate_config as validate_stock_selection_config,
 )
 from ditto_engine.execution.reality.constants import DEFAULT_COMMISSION_RATE
+from ditto_kernel.enums import ImpactModel
 
 from ditto_app.builders._spec_deserializer import (
     as_float_tuple,
@@ -67,6 +70,22 @@ _DEFAULT_SLIPPAGE_BPS = 5.0
 _DEFAULT_TRAILING_STOP_PCT = 0.08
 _DEFAULT_MAX_WEIGHT = 0.15
 _DEFAULT_TOP_K = 10
+
+
+def _normalize_impact_model(raw: str | None) -> ImpactModel:
+    """
+    将 impact_model 字符串规范化为 ImpactModel 合法值.
+
+    Raises:
+        ValueError: raw 不为 None 且不是合法值时抛出.
+
+    """
+    if raw is None:
+        return ImpactModel.NONE
+    if raw in (ImpactModel.NONE, ImpactModel.VOLUME_SHARE):
+        return ImpactModel(raw)
+    msg = f"非法 impact_model 值: {raw!r}, 合法值: 'none', 'volume_share'"
+    raise ValueError(msg)
 
 
 # ===========================================================================
@@ -217,7 +236,9 @@ class StrategyRuntimeBuilder:
                 payload.get("slippage_bps", _DEFAULT_SLIPPAGE_BPS),
                 field_name="execution.cost_model.slippage_bps",
             ),
-            impact_model=(read_optional_str(payload.get("impact_model")) or "linear"),
+            impact_model=_normalize_impact_model(
+                read_optional_str(payload.get("impact_model"))
+            ),
         )
 
     def _deserialize_constraint(

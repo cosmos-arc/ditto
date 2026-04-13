@@ -157,6 +157,37 @@ LIMIT 1
 _LIST_POSITIONS_BASE = "SELECT * FROM actual_positions WHERE strategy_id = ?"
 
 
+def _build_where_clause(
+    base_sql: str,
+    strategy_id: str,
+    filters: dict[str, Any],
+    order_by: str,
+) -> tuple[str, list[Any]]:
+    """
+    构建带 WHERE 子句和排序的完整 SQL.
+
+    Args:
+        base_sql: 基础 SELECT 语句（含 WHERE strategy_id = ?）.
+        strategy_id: 策略 ID（第一个参数）.
+        filters: 额外过滤条件 {列名: 值}, None 值自动跳过.
+        order_by: ORDER BY 子句（含排序方向）.
+
+    Returns:
+        (完整 SQL, 参数列表) 元组.
+
+    """
+    clauses: list[str] = []
+    params: list[Any] = [strategy_id]
+
+    for column, value in filters.items():
+        if value is not None:
+            clauses.append(f"{column} = ?")
+            params.append(value)
+
+    where = (" AND " + " AND ".join(clauses)) if clauses else ""
+    return base_sql + where + f" ORDER BY {order_by}", params
+
+
 # ===========================================================================
 # TradeService
 # ===========================================================================
@@ -263,20 +294,12 @@ class TradeService:
             匹配的 TradeIntentRecord 列表.
 
         """
-        clauses: list[str] = []
-        params: list[Any] = [strategy_id]
-
-        if signal_date is not None:
-            clauses.append("signal_date = ?")
-            params.append(signal_date)
-
-        if status is not None:
-            clauses.append("status = ?")
-            params.append(status)
-
-        where = (" AND " + " AND ".join(clauses)) if clauses else ""
-        sql = _LIST_INTENTS_BASE + where + " ORDER BY signal_date ASC"
-
+        sql, params = _build_where_clause(
+            _LIST_INTENTS_BASE,
+            strategy_id,
+            {"signal_date": signal_date, "status": status},
+            "signal_date ASC",
+        )
         rows = self._client.fetchall(sql, params)
         return [self._row_to_intent(row) for row in rows]
 
@@ -447,16 +470,12 @@ class TradeService:
             匹配的 ActualPositionSnapshotRecord 列表.
 
         """
-        clauses: list[str] = []
-        params: list[Any] = [strategy_id]
-
-        if snapshot_date is not None:
-            clauses.append("snapshot_date = ?")
-            params.append(snapshot_date)
-
-        where = (" AND " + " AND ".join(clauses)) if clauses else ""
-        sql = _LIST_POSITIONS_BASE + where + " ORDER BY snapshot_date ASC"
-
+        sql, params = _build_where_clause(
+            _LIST_POSITIONS_BASE,
+            strategy_id,
+            {"snapshot_date": snapshot_date},
+            "snapshot_date ASC",
+        )
         rows = self._client.fetchall(sql, params)
         return [self._row_to_position(row) for row in rows]
 

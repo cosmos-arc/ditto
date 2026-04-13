@@ -101,8 +101,10 @@ class RegimeConfig:
 
     Attributes:
         indicators: 参与评分的指标元组。
-        bull_threshold: score >= bull_threshold * 100 → BULL。
-        bear_threshold: score < bear_threshold * 100 → BEAR。
+        bull_threshold: raw_score >= bull_threshold → BULL
+            （raw_score 和 threshold 范围均为 0-1）。
+        bear_threshold: raw_score < bear_threshold → BEAR
+            （raw_score 和 threshold 范围均为 0-1）。
         position_mapping: 仓位映射策略 (``"linear"`` / ``"stepped"``)。
         bull_position: BULL 状态仓位比例。
         neutral_position: NEUTRAL 状态仓位比例。

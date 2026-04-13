@@ -11,10 +11,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-import polars as pl
-
 from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_engine.backtest.steps._input_bundle import build_input_bundle
 from ditto_engine.backtest.steps.types import StepContext, StepResult
 
 __all__ = ["StrategyStep"]
@@ -67,41 +66,11 @@ class StrategyStep:
         if slice_ is None:  # guarded by execute() -- unreachable in practice
             msg = "slice_ required"
             raise ValueError(msg)
-        bars = slice_.bars
-        instrument_ids = list(bars.keys())
 
-        instruments = pl.DataFrame(
-            {"instrument_id": instrument_ids},
-        )
-
-        market_rows: list[dict[str, object]] = []
-        signal_rows: list[dict[str, object]] = []
-        for iid, bar in bars.items():
-            market_rows.append(
-                {
-                    "instrument_id": iid,
-                    "open": bar.open,
-                    "high": bar.high,
-                    "low": bar.low,
-                    "close": bar.close,
-                    "volume": bar.volume,
-                }
-            )
-            signal_rows.append(
-                {
-                    "instrument_id": iid,
-                    "signal_value": (
-                        (bar.close / bar.prev_close - 1.0) if bar.prev_close else 0.0
-                    ),
-                }
-            )
-
-        return StrategyInputBundle(
+        return build_input_bundle(
             trade_date=ctx.date,
             strategy_id=self._strategy_id,
             run_id=self._strategy_run_id,
-            instruments=instruments,
-            market_data=pl.DataFrame(market_rows),
-            signal_values=pl.DataFrame(signal_rows),
-            benchmark_close=getattr(slice_, "benchmark_close", None),
+            bars=slice_.bars,
+            benchmark_close=slice_.benchmark_close,
         )

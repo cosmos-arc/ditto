@@ -7,15 +7,19 @@ ComparisonQueryFacade — 回测 vs 实际对比查询门面 + 纯计算函数.
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
 from typing import Any
 
 from ditto_kernel.math import pearson_correlation
 
+from ditto_app.query._artifact_utils import compute_total_return
 from ditto_app.query.backtest import BacktestQueryFacade
 from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
 from ditto_app.types import ManualExecutionFill
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["ComparisonMetrics", "ComparisonQueryFacade", "compute_comparison_from_raw"]
 
@@ -46,9 +50,9 @@ class ComparisonMetrics:
     """
 
     backtest_return: float
-    actual_return: float
-    return_diff: float
-    return_diff_bps: float
+    actual_return: float | None  # 实验性: 无真实 NAV 时为 None
+    return_diff: float | None
+    return_diff_bps: float | None
     backtest_sharpe: float
     actual_sharpe: float
     backtest_total_cost: float
@@ -152,8 +156,12 @@ def compute_comparison_from_raw(
     actual_sharpe = _compute_sharpe_from_navs(actual_navs)
     actual_total_cost = sum(f.fee for f in actual_fills)
 
-    return_diff = actual_return - backtest_return
-    return_diff_bps = return_diff * 100.0
+    return_diff: float | None = (
+        actual_return - backtest_return if actual_return is not None else None
+    )
+    return_diff_bps: float | None = (
+        return_diff * 100.0 if return_diff is not None else None
+    )
 
     cost_drag_bps = (
         (actual_total_cost - backtest_total_cost) / initial_cash * 10_000.0
@@ -199,6 +207,7 @@ def _extract_alpha_stats(report: dict[str, Any]) -> dict[str, float]:
             "total_fees": float(raw.get("total_fees", 0.0) or 0.0),
         }
     except (AttributeError, TypeError, ValueError):
+        logger.warning("无法解析 alpha_stats, 返回零值: raw=%r", raw)
         return {"annualized_return": 0.0, "sharpe_ratio": 0.0, "total_fees": 0.0}
 
 
@@ -250,15 +259,15 @@ def _build_actual_navs(
     return sorted(by_date.items())
 
 
-def _compute_total_return(navs: list[tuple[str, float]]) -> float:
-    """从 NAV 序列计算总收益率 (%)."""
+def _compute_total_return(navs: list[tuple[str, float]]) -> float | None:
+    """从 NAV 序列计算总收益率 (%). 无足够数据时返回 None."""
     if len(navs) < _MIN_PAIRED_POINTS:
-        return 0.0
+        return None
     initial = navs[0][1]
     final = navs[-1][1]
     if initial == 0:
-        return 0.0
-    return (final / initial - 1) * 100.0
+        return None
+    return compute_total_return(initial_cash=initial, final_nav=final) * 100.0
 
 
 def _compute_sharpe_from_navs(navs: list[tuple[str, float]]) -> float:
@@ -282,24 +291,43 @@ def _compute_sharpe_from_navs(navs: list[tuple[str, float]]) -> float:
     return ann_ret / ann_vol if ann_vol > 0 else 0.0
 
 
-def _compute_nav_correlation(
+def _align_nav_series(
     bt_navs: tuple[tuple[str, float], ...],
     actual_navs: list[tuple[str, float]],
-) -> float:
-    """计算两条 NAV 序列的 Pearson 相关系数."""
+    min_points: int = _MIN_PAIRED_POINTS,
+) -> tuple[list[float], list[float]]:
+    """
+    对齐两条 NAV 序列到共同日期，返回 (bt_values, actual_values).
+
+    Returns:
+        空列表对齐时 (空, 空)；不足 min_points 时 (空, 空).
+
+    """
     if not bt_navs or not actual_navs:
-        return 0.0
+        return [], []
 
     bt_dict = dict(bt_navs)
     actual_dict = dict(actual_navs)
     common_dates = sorted(set(bt_dict.keys()) & set(actual_dict.keys()))
 
-    if len(common_dates) < _MIN_PAIRED_POINTS:
-        return 0.0
+    if len(common_dates) < min_points:
+        return [], []
 
-    x = [bt_dict[d] for d in common_dates]
-    y = [actual_dict[d] for d in common_dates]
-    return pearson_correlation(x, y)
+    return (
+        [bt_dict[d] for d in common_dates],
+        [actual_dict[d] for d in common_dates],
+    )
+
+
+def _compute_nav_correlation(
+    bt_navs: tuple[tuple[str, float], ...],
+    actual_navs: list[tuple[str, float]],
+) -> float:
+    """计算两条 NAV 序列的 Pearson 相关系数."""
+    bt_values, actual_values = _align_nav_series(bt_navs, actual_navs)
+    if not bt_values:
+        return 0.0
+    return pearson_correlation(bt_values, actual_values)
 
 
 def _compute_max_nav_diff_bps(
@@ -308,19 +336,20 @@ def _compute_max_nav_diff_bps(
     initial_cash: float,
 ) -> float:
     """计算最大 NAV 偏差 (基点)."""
-    if not bt_navs or not actual_navs or initial_cash <= 0:
+    if initial_cash <= 0:
         return 0.0
 
-    bt_dict = dict(bt_navs)
-    actual_dict = dict(actual_navs)
-    common_dates = sorted(set(bt_dict.keys()) & set(actual_dict.keys()))
-
-    if not common_dates:
+    bt_values, actual_values = _align_nav_series(
+        bt_navs,
+        actual_navs,
+        min_points=1,
+    )
+    if not bt_values:
         return 0.0
 
     max_diff_bps = 0.0
-    for date in common_dates:
-        diff = abs(bt_dict[date] - actual_dict[date])
+    for bt_v, actual_v in zip(bt_values, actual_values, strict=True):
+        diff = abs(bt_v - actual_v)
         bps = diff / initial_cash * 10_000.0
         max_diff_bps = max(max_diff_bps, bps)
 
@@ -331,19 +360,14 @@ def _compute_tracking_error_bps(
     bt_navs: tuple[tuple[str, float], ...],
     actual_navs: list[tuple[str, float]],
 ) -> float:
-    """计算日均跟踪误差 (基点), 年化后除以 sqrt(252) 得日均."""
-    if not bt_navs or not actual_navs:
+    """计算日均跟踪误差 (基点)."""
+    bt_values, actual_values = _align_nav_series(
+        bt_navs,
+        actual_navs,
+        min_points=_MIN_POINTS_FOR_TRACKING_ERROR,
+    )
+    if not bt_values:
         return 0.0
-
-    bt_dict = dict(bt_navs)
-    actual_dict = dict(actual_navs)
-    common_dates = sorted(set(bt_dict.keys()) & set(actual_dict.keys()))
-
-    if len(common_dates) < _MIN_POINTS_FOR_TRACKING_ERROR:
-        return 0.0
-
-    bt_values = [bt_dict[d] for d in common_dates]
-    actual_values = [actual_dict[d] for d in common_dates]
 
     bt_returns = _daily_returns(bt_values)
     actual_returns = _daily_returns(actual_values)
@@ -362,8 +386,9 @@ def _compute_tracking_error_bps(
     if te_var <= 0:
         return 0.0
 
-    annualized_te_pct = math.sqrt(te_var) * math.sqrt(_TRADING_DAYS_PER_YEAR) * 100.0
-    return annualized_te_pct * 100.0
+    # 年化标准差 → 日均基点
+    annualized_te = math.sqrt(te_var) * math.sqrt(_TRADING_DAYS_PER_YEAR)
+    return annualized_te * 10_000.0 / math.sqrt(_TRADING_DAYS_PER_YEAR)
 
 
 def _daily_returns(navs: list[float]) -> list[float]:

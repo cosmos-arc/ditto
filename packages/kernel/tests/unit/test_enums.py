@@ -3,6 +3,7 @@
 from ditto_kernel.enums import (
     AssetClass,
     Exchange,
+    ImpactModel,
     OrderSide,
     RiskScope,
     RunStatus,
@@ -81,3 +82,19 @@ class TestRiskScope:
     def test_values(self) -> None:
         assert RiskScope.INSTRUMENT == "instrument"
         assert RiskScope.PORTFOLIO == "portfolio"
+
+
+class TestImpactModel:
+    """ImpactModel 枚举测试."""
+
+    def test_members(self) -> None:
+        """应包含 2 个成员."""
+        assert len(ImpactModel) == 2
+
+    def test_values(self) -> None:
+        assert ImpactModel.NONE == "none"
+        assert ImpactModel.VOLUME_SHARE == "volume_share"
+
+    def test_is_strenum(self) -> None:
+        """应为 StrEnum，支持直接字符串比较."""
+        assert ImpactModel.NONE == "none"

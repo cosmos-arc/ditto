@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 import orjson
-from ditto_data.models.strategy_run import StrategyRunRecord
-from pydantic import BaseModel, ConfigDict, Field
+from ditto_kernel.enums import ImpactModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ditto_interfaces.models._date_helpers import DateField
 
@@ -83,25 +83,6 @@ class AuditRecordResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
-def to_run_response(record: StrategyRunRecord) -> RunResponse:
-    """将 StrategyRunRecord 转为 API 响应."""
-    return RunResponse(
-        run_id=record.run_id,
-        strategy_id=record.strategy_id,
-        strategy_version=record.strategy_version,
-        mode=record.mode,
-        status=record.status,
-        started_at=record.started_at,
-        completed_at=record.completed_at,
-        error_message=record.error_message,
-        parent_run_id=getattr(record, "parent_run_id", ""),
-        progress_pct=getattr(record, "progress_pct", 0.0),
-        current_step=getattr(record, "current_step", ""),
-        completed_days=getattr(record, "completed_days", 0),
-        total_days=getattr(record, "total_days", 0),
-    )
-
-
 def _parse_payload(raw: object) -> dict[str, Any]:
     """解析审计 payload 字段."""
     if isinstance(raw, str):
@@ -135,6 +116,21 @@ class BenchmarkNavResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+def _coerce_impact_model(v: object) -> ImpactModel:
+    """Coerce string or ImpactModel to ImpactModel (for Pydantic strict mode)."""
+    if isinstance(v, ImpactModel):
+        return v
+    if isinstance(v, str):
+        try:
+            return ImpactModel(v)
+        except ValueError:
+            valid = [m.value for m in ImpactModel]
+            msg = f"非法 impact_model 值: {v!r}, 合法值: {valid}"
+            raise ValueError(msg) from None
+    msg = f"impact_model must be str or ImpactModel, got {type(v).__name__}"
+    raise TypeError(msg)
+
+
 class CostConfigRequest(BaseModel):
     """成本模型配置请求 — A 股标准费率默认值."""
 
@@ -158,12 +154,17 @@ class CostConfigRequest(BaseModel):
         ge=0,
         description="滑点(bps)",
     )
-    impact_model: Literal["none", "linear", "square_root"] = Field(
-        default="none",
+    impact_model: ImpactModel = Field(
+        default=ImpactModel.NONE,
         description="冲击成本模型",
     )
 
     model_config = ConfigDict(strict=True, extra="ignore")
+
+    @field_validator("impact_model", mode="before")
+    @classmethod
+    def _validate_impact_model(cls, v: object) -> ImpactModel:
+        return _coerce_impact_model(v)
 
 
 class CreateBacktestRunRequest(BaseModel):
@@ -223,5 +224,4 @@ __all__ = [
     "RunsQueryParams",
     "TradeResponse",
     "to_audit_record_response",
-    "to_run_response",
 ]

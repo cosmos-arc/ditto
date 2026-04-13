@@ -63,6 +63,18 @@ class StrategyRunWriterProtocol(Protocol):
         """更新运行状态，成功返回 True."""
         ...
 
+    def update_progress(
+        self,
+        run_id: str,
+        *,
+        progress_pct: float = 0.0,
+        current_step: str = "",
+        completed_days: int = 0,
+        total_days: int = 0,
+    ) -> bool:
+        """更新运行进度，成功返回 True."""
+        ...
+
 
 class StrategyRunService:
     """策略运行服务 — 生命周期管理 (pending → running → completed/failed)."""
@@ -112,6 +124,29 @@ class StrategyRunService:
     def mark_cancelled(self, run_id: str) -> bool:
         """标记为已取消."""
         return self._writer.update_status(run_id, RunStatus.CANCELLED)
+
+    def update_progress(
+        self,
+        run_id: str,
+        *,
+        progress_pct: float = 0.0,
+        current_step: str = "",
+        completed_days: int = 0,
+        total_days: int = 0,
+    ) -> bool:
+        """更新运行进度."""
+        return self._writer.update_progress(
+            run_id,
+            progress_pct=progress_pct,
+            current_step=current_step,
+            completed_days=completed_days,
+            total_days=total_days,
+        )
+
+    def is_cancelled(self, run_id: str) -> bool:
+        """检查运行是否已被取消."""
+        record = self._reader.get(run_id)
+        return record is not None and record.status == RunStatus.CANCELLED
 
     def get_run(self, run_id: str) -> StrategyRunRecord | None:
         """获取运行记录."""

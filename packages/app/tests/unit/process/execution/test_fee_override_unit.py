@@ -24,7 +24,7 @@ from ditto_app.process.execution.fee_override import (
 from ditto_engine.accounting.order_book import Order
 from ditto_engine.execution.reality.fee import AShareFeeModel
 from ditto_engine.execution.rules import FeeSchedule
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.enums import ImpactModel, OrderSide
 from ditto_kernel.identity import InstrumentId
 
 # ---------------------------------------------------------------------------
@@ -316,7 +316,7 @@ class TestBuildSlippageModel:
         """impact_model='none' 使用 cost_config.slippage_bps."""
         from ditto_engine.execution.reality.slippage import FixedBpsSlippage
 
-        cost_config = CostConfig(slippage_bps=5.0, impact_model="none")
+        cost_config = CostConfig(slippage_bps=5.0, impact_model=ImpactModel.NONE)
         model = build_slippage_model(cost_config)
         assert isinstance(model, FixedBpsSlippage)
         assert model.bps == 5.0
@@ -325,13 +325,20 @@ class TestBuildSlippageModel:
         """impact_model='volume_share' 返回 VolumeShareSlippage."""
         from ditto_engine.execution.reality.slippage import VolumeShareSlippage
 
-        cost_config = CostConfig(slippage_bps=3.0, impact_model="volume_share")
+        cost_config = CostConfig(
+            slippage_bps=3.0,
+            impact_model=ImpactModel.VOLUME_SHARE,
+        )
         model = build_slippage_model(cost_config)
         assert isinstance(model, VolumeShareSlippage)
         assert model.base_bps == 3.0
 
     def test_unknown_impact_model_raises(self) -> None:
         """未知 impact_model 抛出 ValueError."""
-        cost_config = CostConfig(impact_model="unknown_model")
+        cost_config = CostConfig(
+            impact_model=ImpactModel.VOLUME_SHARE,
+        )
+        # Manually patch to simulate unknown value (bypass StrEnum constraint)
+        patched = dataclasses.replace(cost_config, impact_model="unknown_model")  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="Unknown impact model"):
-            build_slippage_model(cost_config)
+            build_slippage_model(patched)

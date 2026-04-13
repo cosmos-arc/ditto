@@ -103,8 +103,10 @@ async def update_universe(
     )
     try:
         row = await asyncio.to_thread(handler.handle, cmd)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return to_universe_response(row)
 
 

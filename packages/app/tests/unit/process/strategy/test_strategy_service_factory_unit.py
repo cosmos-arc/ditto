@@ -25,7 +25,7 @@ from ditto_engine.alpha.specs import StrategySpec
 from ditto_engine.backtest.data_feed import DataFeed
 from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
-from ditto_engine.execution.reality import SimpleFeeModel
+from ditto_engine.execution.reality import AShareFeeModel
 from ditto_engine.risk.pre_trade import CompositePreTradeCheck
 from ditto_kernel.identity import InstrumentId
 
@@ -60,7 +60,7 @@ def _make_runtime() -> PublishedBacktestRuntime:
             InstrumentId(2_000_001): "510300.XSHG",
             InstrumentId(2_000_002): "159919.XSHE",
         },
-        fee_model=SimpleFeeModel(),
+        fee_model=AShareFeeModel(),
         config=BacktestServiceConfig(
             strategy_id=spec.strategy_id,
             strategy_version="4",
@@ -186,7 +186,6 @@ class TestBuildPublishedRuntimeCostModels:
 
     def test_custom_fee_model_passed_to_brokerage(self) -> None:
         """自定义 fee_model 传入 BrokerageModel。"""
-        from ditto_engine.execution.reality import AShareFeeModel
 
         runtime = _make_runtime()
         runtime_builder = MagicMock(spec=BacktestRuntimeBuilder)

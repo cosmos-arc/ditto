@@ -10,6 +10,8 @@ from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
 
+from ditto_app.contracts import StrategySpecInfo, to_spec_info
+
 __all__ = [
     "CreateStrategyCommand",
     "CreateStrategyHandler",
@@ -55,7 +57,7 @@ class CreateStrategyHandler:
     def __init__(self, catalog_service: StrategyCatalogService) -> None:
         self._service = catalog_service
 
-    def handle(self, command: CreateStrategyCommand) -> StrategySpecRecord:
+    def handle(self, command: CreateStrategyCommand) -> StrategySpecInfo:
         """处理创建策略命令."""
         now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         record = StrategySpecRecord(
@@ -68,7 +70,7 @@ class CreateStrategyHandler:
             updated_at=now,
         )
         self._service.save_spec(record)
-        return record
+        return to_spec_info(record)
 
 
 class UpdateStrategyHandler:
@@ -77,7 +79,7 @@ class UpdateStrategyHandler:
     def __init__(self, catalog_service: StrategyCatalogService) -> None:
         self._service = catalog_service
 
-    def handle(self, command: UpdateStrategyCommand) -> StrategySpecRecord:
+    def handle(self, command: UpdateStrategyCommand) -> StrategySpecInfo:
         """处理更新策略命令."""
         existing = self._service.get_spec(command.strategy_id)
         if existing is None:
@@ -109,7 +111,7 @@ class UpdateStrategyHandler:
             tags=command.tags,
         )
         self._service.save_spec(record)
-        return record
+        return to_spec_info(record)
 
 
 class PublishStrategyHandler:

@@ -18,7 +18,7 @@ from ditto_engine.alpha.specs import StrategySpec
 from ditto_engine.backtest.data_feed import ProviderBackedDataFeed
 from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
-from ditto_engine.execution.reality import SimpleFeeModel
+from ditto_engine.execution.reality import AShareFeeModel
 from ditto_engine.risk.pre_trade import CompositePreTradeCheck
 
 
@@ -92,7 +92,7 @@ class TestBacktestRuntimeBuilder:
         assert isinstance(runtime.planner, SimpleExecutionPlanner)
         assert isinstance(runtime.brokerage, BacktestBrokerage)
         assert isinstance(runtime.pre_trade_check, CompositePreTradeCheck)
-        assert isinstance(runtime.fee_model, SimpleFeeModel)
+        assert isinstance(runtime.fee_model, AShareFeeModel)
         assert runtime.brokerage.get_account().cash.available == 2_000_000.0
         strategy_runtime_builder.build_published_runtime.assert_called_once_with(
             "momentum-etf",

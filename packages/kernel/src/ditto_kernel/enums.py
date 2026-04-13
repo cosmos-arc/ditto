@@ -12,12 +12,20 @@ from enum import StrEnum
 __all__ = [
     "AssetClass",
     "Exchange",
+    "ImpactModel",
     "MacroCategory",
     "MacroFrequency",
     "OrderSide",
     "RiskScope",
     "RunStatus",
 ]
+
+
+class ImpactModel(StrEnum):
+    """冲击成本模型枚举。"""
+
+    NONE = "none"
+    VOLUME_SHARE = "volume_share"
 
 
 class AssetClass(StrEnum):

@@ -1,8 +1,8 @@
 # V1 增强设计 — Regime/因子桥接/回测触发/信号推送/Universe/成本模型/数据验证
 
 > **创建**: 2026-04-11
-> **状态**: Draft
-> **前置**: V1 Sprint Phase 0-3 全部完成（4323+ 测试通过）
+> **状态**: Implemented
+> **前置**: V1 Sprint Phase 0-3 全部完成（5244+ 测试通过）
 > **目标**: 补齐 V1 发布前的 7 个关键能力缺口，实现"创建策略 → 配置因子 → 触发回测 → 信号推送 → 人工执行"完整闭环
 
 ---
@@ -149,7 +149,7 @@ class RegimeLabel(StrEnum):
 @dataclass(frozen=True)
 class RegimeResult:
     """Regime 检测结果"""
-    score: float                          # 0-100 连续分数
+    score: float                          # 0-100 连续分数（raw_score * 100）
     label: RegimeLabel                    # 离散标签
     position_ratio: float                 # 0.0-1.0 建议仓位比例
     indicators: dict[str, float] = field(default_factory=dict)  # 各指标明细
@@ -169,10 +169,13 @@ class RegimeIndicator(Protocol):
 class RegimeConfig:
     """Regime Score Engine 配置"""
     indicators: tuple[RegimeIndicator, ...] = ()
-    bull_threshold: float = 70.0          # score ≥ 此值 → BULL
-    bear_threshold: float = 30.0          # score ≤ 此值 → BEAR
-    position_mapping: str = "linear"      # linear / stepped
-    # stepped 映射: BULL=1.0, NEUTRAL=0.7, BEAR=0.3 (或 0.0 if score<20)
+    bull_threshold: float = 0.65          # raw_score ≥ 此值 → BULL（范围 0-1）
+    bear_threshold: float = 0.35          # raw_score < 此值 → BEAR（范围 0-1）
+    position_mapping: str = "stepped"     # linear / stepped（默认 stepped）
+    bull_position: float = 1.0            # BULL 仓位比例
+    neutral_position: float = 0.7         # NEUTRAL 仓位比例
+    bear_position: float = 0.3            # BEAR 仓位比例
+    default_regime: RegimeLabel = RegimeLabel.NEUTRAL
 ```
 
 ### 3.3 内置 4 个 RegimeIndicator
@@ -190,7 +193,7 @@ class RegimeConfig:
 
 行为：
 1. 从 DecisionFrame 读取 `regime_score` / `regime_label` 列
-2. 如果 `regime_label == BEAR` 且 `score < 20`: 完全空仓（所有权重置 0）
+2. 如果 `regime_label == BEAR` 且 `score < bear_cutoff`（默认 20.0，0-100 范围）: 完全空仓（所有权重置 0）
 3. 否则：缩放所有持仓权重 `new_weight = original_weight * position_ratio`
 4. 剩余权重归入现金：`cash_weight = 1 - sum(new_weights)`
 
@@ -241,15 +244,13 @@ class StrategySpec:
 ```python
 @dataclass(frozen=True)
 class CompiledExpressions:
-    """编译后的因子表达式集合"""
-    expressions: tuple[str, ...]
-    compiled: tuple[object, ...]      # 编译后的 callable
+    """编译后的因子表达式集合."""
+    expressions: tuple[CompiledDerivedExpression, ...]
     weights: tuple[float, ...]
-    diagnostics: list[str]            # 编译诊断信息
 
 
 class FactorBridge:
-    """桥接 Analytics 表达式编译器 → Engine DecisionFrame"""
+    """桥接 Analytics 表达式编译器 → Engine DecisionFrame."""
 
     def compile_and_validate(
         self,
@@ -257,18 +258,18 @@ class FactorBridge:
         weights: tuple[float, ...],
     ) -> CompiledExpressions:
         """编译表达式，验证语法和语义正确性。
-        调用 Analytics 层的 compile() 并收集 diagnostics。
-        编译失败时抛出 ValueError（含详细错误信息）。"""
+        表达式非空、权重数量匹配、权重非负、编译失败时抛出 ValueError。"""
 
     def compute_signals(
         self,
+        df: pl.DataFrame,
         compiled: CompiledExpressions,
-        data: pl.DataFrame,
     ) -> pl.DataFrame:
         """在行情数据上计算因子值。
-        对每个表达式执行编译后的 callable，得到因子列。
-        加权合成为 signal_value 列：score = sum(w_i * rank(f_i)) / sum(w_i)
-        返回追加 signal_value 列后的 DataFrame。"""
+        1. 各表达式编译为 pl.Expr 并计算因子列
+        2. 各因子列 cs_rank() 归一化
+        3. 加权合成为 signal_value 列：score = sum(rank_f_i * w_i) / sum(w_i)
+        返回包含 instrument_id + signal_value 列的 DataFrame。"""
 ```
 
 ### 4.3 端到端流程
@@ -276,7 +277,7 @@ class FactorBridge:
 ```
 1. 策略创建
    POST /strategies
-   → signal_expressions: ["rank(close / delay(close, 20))", "-tsstd(close, 20)"]
+   → signal_expressions: ["ts_mean(close, 20)", "ts_std(close, 10)"]
    → signal_weights: [0.7, 0.3]
    → StrategySpec 存储
 
@@ -658,7 +659,7 @@ class CostConfig:
     commission_min: float = 5.0          # 最低佣金（元）
     stamp_duty_rate: float = 0.001       # 印花税（千一，卖出）
     slippage_bps: float = 1.0            # 滑点（基点）
-    impact_model: str = "none"           # none / linear / square_root
+    impact_model: str = "none"           # none / volume_share
 ```
 
 ### 8.2 集成点
@@ -763,9 +764,9 @@ class CostConfig:
 
 **R1 — RegimeScoreEngine:**
 - 全部指标 BULL → score=100, label=BULL, ratio=1.0
-- 全部指标 BEAR → score=0, label=BEAR, ratio=0.0
-- score=20 → BEAR, 空仓（ratio=0.0）
-- score=50 → NEUTRAL, ratio=0.5
+- 全部指标 BEAR → score=0, label=BEAR, ratio=0.3（stepped 默认）
+- score < 20 且 label=BEAR → 完全空仓（ratio=0.0，RegimeAwareAllocationStage bear_cutoff）
+- score=50 → NEUTRAL, ratio=0.7（stepped 默认）
 - 缺失列 → graceful fallback（使用 RegimeConfig.default_regime）
 
 **R2 — FactorBridge:**
