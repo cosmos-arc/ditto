@@ -207,12 +207,12 @@
     {
       "id": "strategy-studio",
       "file": "page-strategy-studio.html",
-      "status": "v5-done",
-      "score": 9.2,
+      "status": "v6-done",
+      "score": 9.4,
       "styleAnchor": "platform",
       "rounds": 1,
       "roundsV2": 1,
-      "roundsV3": 1,
+      "roundsV3": 2,
       "inlineStyles": {
         "before": 42,
         "after": 1
@@ -230,7 +230,8 @@
         "overlays": 5,
         "stateVariants": 6,
         "coveragePercent": 100
-      }
+      },
+      "note": "round-3: underline+glow token alignment, inspector restraint, status bar brand accent, dot-pulse fix"
     },
     {
       "id": "signals-inbox",
