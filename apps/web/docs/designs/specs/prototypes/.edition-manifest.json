@@ -478,17 +478,18 @@
     {
       "id": "factor-analysis",
       "file": "page-factor-analysis.html",
-      "status": "v1-new",
-      "score": null,
+      "status": "v2-in-progress",
+      "score": 8,
       "styleAnchor": null,
-      "rounds": 0,
+      "rounds": 1,
       "createdAt": "2026-04-12",
       "stateCoverage": {
         "tabs": 4,
         "overlays": 4,
         "stateVariants": 10,
         "coveragePercent": 100
-      }
+      },
+      "note": "round-1: tokens-shell + brand glow + rail glow + reduced motion. 226 inline styles remain for future CSS extraction pass"
     },
     {
       "id": "backtest-result",
