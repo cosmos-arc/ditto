@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from ditto_engine.backtest.statistics import BacktestReport
 
-from ditto_app.query.comparison import ComparisonMetrics, compute_comparison_from_raw
-from ditto_app.types import (
+from ditto_app.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
 )
+from ditto_app.query.comparison import ComparisonMetrics, compute_comparison_from_raw
 
 __all__ = ["compute_comparison"]
 

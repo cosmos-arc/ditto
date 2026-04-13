@@ -9,15 +9,17 @@ from __future__ import annotations
 
 import logging
 import math
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
 from ditto_kernel.math import pearson_correlation
 
+from ditto_app.execution_dto import ManualExecutionFill
 from ditto_app.query._artifact_utils import compute_total_return
 from ditto_app.query.backtest import BacktestQueryFacade
+from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
-from ditto_app.types import ManualExecutionFill
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +78,11 @@ class ComparisonQueryFacade:
         self,
         backtest_facade: BacktestQueryFacade,
         actual_facade: PortfolioActualQueryFacade,
+        market_facade: MarketQueryFacade | None = None,
     ) -> None:
         self._backtest = backtest_facade
         self._actual = actual_facade
+        self._market = market_facade
 
     def get_comparison(
         self,
@@ -109,7 +113,7 @@ class ComparisonQueryFacade:
 
         fills = self._actual.get_fills(strategy_id)
 
-        actual_navs = _build_actual_navs(fills, initial_cash)
+        actual_navs = _build_actual_navs(fills, initial_cash, self._market)
 
         return compute_comparison_from_raw(
             backtest_return=alpha_stats["annualized_return"],
@@ -242,21 +246,98 @@ def _extract_nav_series(
 def _build_actual_navs(
     fills: list[ManualExecutionFill],
     initial_cash: float,
+    price_query: MarketQueryFacade | None = None,
 ) -> list[tuple[str, float]]:
     """
     从成交记录构建实际 NAV 序列.
 
-    简化实现：按 trade_date 聚合成交，
-    用 initial_cash 减去费用作为单日 NAV 估算。
-    无真实 NAV 数据源时作为占位逻辑。
+    当 price_query 为 None 时，回退到简化占位逻辑（仅扣除费用）。
+    当 price_query 可用时，逐日重建现金/持仓台账并按收盘价计算 NAV。
+
+    Args:
+        fills: 成交记录列表.
+        initial_cash: 初始资金.
+        price_query: 行情查询门面（可选）.
+
+    Returns:
+        按日期排序的 [(date_str, nav), ...] 序列.
+
     """
     if not fills:
         return []
-    by_date: dict[str, float] = {}
+
+    # 回退: 无行情数据源时使用简化逻辑
+    if price_query is None:
+        by_date: dict[str, float] = {}
+        for f in fills:
+            by_date.setdefault(f.trade_date, initial_cash)
+            by_date[f.trade_date] -= f.fee
+        return sorted(by_date.items())
+
+    # 完整 NAV 重建
+    # 1. 收集所有成交日期和标的 ID
+    all_dates: set[str] = set()
+    all_instrument_ids: set[int] = set()
+    fills_by_date: dict[str, list[ManualExecutionFill]] = defaultdict(list)
+
     for f in fills:
-        by_date.setdefault(f.trade_date, initial_cash)
-        by_date[f.trade_date] -= f.fee
-    return sorted(by_date.items())
+        all_dates.add(f.trade_date)
+        all_instrument_ids.add(f.instrument_id)
+        fills_by_date[f.trade_date].append(f)
+
+    sorted_dates = sorted(all_dates)
+
+    # 2. 查询收盘价
+    bars = price_query.find_bars(
+        instrument_ids=sorted(all_instrument_ids),
+        start=sorted_dates[0],
+        end=sorted_dates[-1],
+    )
+
+    # 构建查找表 (instrument_id, date_str) -> close_price
+    close_prices: dict[tuple[int, str], float] = {}
+    for row in bars.iter_rows(named=True):
+        iid = row["instrument_id"]
+        date_val = row["trade_date"]
+        close = row["close"]
+        if not iid or not date_val or not close:
+            continue
+        date_str = (
+            date_val.isoformat() if hasattr(date_val, "isoformat") else str(date_val)
+        )
+        close_prices[(int(iid), date_str)] = float(close)
+
+    # 3. 逐日构建现金/持仓台账
+    cash = initial_cash
+    positions: dict[int, int] = {}
+    last_fill_price: dict[int, float] = {}
+    nav_series: list[tuple[str, float]] = []
+
+    for date_str in sorted_dates:
+        for f in fills_by_date[date_str]:
+            cost = f.fill_price * f.quantity
+            if f.direction == "buy":
+                cash -= cost + f.fee
+                positions[f.instrument_id] = (
+                    positions.get(f.instrument_id, 0) + f.quantity
+                )
+            else:
+                cash += cost - f.fee
+                positions[f.instrument_id] = (
+                    positions.get(f.instrument_id, 0) - f.quantity
+                )
+            last_fill_price[f.instrument_id] = f.fill_price
+
+        position_value = sum(
+            qty * (close_prices.get((iid, date_str)) or last_fill_price.get(iid, 0.0))
+            for iid, qty in positions.items()
+            if qty
+        )
+        nav_series.append((date_str, cash + position_value))
+
+    return nav_series
+
+    return nav_series
 
 
 def _compute_total_return(navs: list[tuple[str, float]]) -> float | None:
@@ -386,9 +467,8 @@ def _compute_tracking_error_bps(
     if te_var <= 0:
         return 0.0
 
-    # 年化标准差 → 日均基点
-    annualized_te = math.sqrt(te_var) * math.sqrt(_TRADING_DAYS_PER_YEAR)
-    return annualized_te * 10_000.0 / math.sqrt(_TRADING_DAYS_PER_YEAR)
+    # 日均超额收益标准差 → 基点 (CFA Institute 标准)
+    return math.sqrt(te_var) * 10_000.0
 
 
 def _daily_returns(navs: list[float]) -> list[float]:

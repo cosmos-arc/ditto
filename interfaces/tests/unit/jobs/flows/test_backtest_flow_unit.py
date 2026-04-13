@@ -25,6 +25,23 @@ def _prefect_runner(entrypoint):
 RUNNER = _prefect_runner(run_backtest_flow)
 
 
+def _make_bundle(
+    facade: Mock,
+    run_service: Mock | None,
+    run_writer: Mock | None,
+) -> Mock:
+    """构建 mock bundle context manager（供 autouse 和手动 patch 使用）."""
+    mock_bundle = Mock()
+    mock_bundle.strategy_facade = facade
+    mock_bundle.run_service = run_service
+    mock_bundle.run_writer = run_writer
+
+    mock_ctx = Mock()
+    mock_ctx.__enter__ = Mock(return_value=mock_bundle)
+    mock_ctx.__exit__ = Mock(return_value=False)
+    return mock_ctx
+
+
 @pytest.fixture
 def mock_report() -> Mock:
     """Mock BacktestReport with initial_cash=1M and final_nav=1.1M."""
@@ -66,18 +83,9 @@ def mock_create_strategy_bundle(
     mock_run_writer: Mock | None,
 ) -> None:
     """Replace create_strategy_bundle with mock DI bundle."""
-    mock_bundle = Mock()
-    mock_bundle.strategy_facade = mock_facade
-    mock_bundle.run_service = mock_run_service
-    mock_bundle.run_writer = mock_run_writer
-
-    mock_ctx = Mock()
-    mock_ctx.__enter__ = Mock(return_value=mock_bundle)
-    mock_ctx.__exit__ = Mock(return_value=False)
-
     mocker.patch(
         "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
-        return_value=mock_ctx,
+        return_value=_make_bundle(mock_facade, mock_run_service, mock_run_writer),
     )
 
 
@@ -216,12 +224,22 @@ class TestRunBacktestFlowStateMachine:
         """状态机测试注入带有 update_status 的 mock writer."""
         return Mock()
 
-    def test_running_status_on_start(
+    def test_completed_status_written_without_run_service(
         self,
+        mocker: MockerFixture,
         mock_facade: Mock,
         mock_run_writer: Mock,
     ) -> None:
-        """Flow 开始时调用 writer.update_status(run_id, 'running')."""
+        """Flow 成功完成且无 run_svc 时，writer 记录 completed."""
+        mocker.patch(
+            "ditto_interfaces.jobs.flows.backtest.create_strategy_bundle",
+            return_value=_make_bundle(
+                mock_facade,
+                run_service=None,
+                run_writer=mock_run_writer,
+            ),
+        )
+
         RUNNER(
             run_id="run-sm-001",
             strategy_id="test",
@@ -229,16 +247,16 @@ class TestRunBacktestFlowStateMachine:
             end_date="2025-01-31",
         )
 
-        mock_run_writer.update_status.assert_any_call("run-sm-001", "running")
+        mock_run_writer.update_status.assert_any_call("run-sm-001", "completed")
 
-    def test_completed_status_on_success(
+    def test_no_writer_call_when_run_svc_available(
         self,
         mock_facade: Mock,
         mock_run_service: Mock,
         mock_run_writer: Mock,
     ) -> None:
-        """Flow 成功完成时从 RunRecord 读取实际状态返回 completed."""
-        mock_run_service.get_run.return_value = None  # 无记录时默认 completed
+        """有 run_svc 时 completed 由 Service 内部管理，writer 不重复写入."""
+        mock_run_service.get_run.return_value = None
 
         result = RUNNER(
             run_id="run-sm-002",
@@ -247,7 +265,8 @@ class TestRunBacktestFlowStateMachine:
             end_date="2025-01-31",
         )
 
-        mock_run_writer.update_status.assert_any_call("run-sm-002", "running")
+        # run_svc 存在且返回非 cancelled → 走 if 分支，不进入 elif writer
+        mock_run_writer.update_status.assert_not_called()
         assert result["status"] == "completed"
 
     def test_failed_status_on_exception(
@@ -266,7 +285,6 @@ class TestRunBacktestFlowStateMachine:
                 end_date="2025-01-31",
             )
 
-        mock_run_writer.update_status.assert_any_call("run-sm-003", "running")
         mock_run_writer.update_status.assert_any_call(
             "run-sm-003",
             "failed",
@@ -312,17 +330,22 @@ class TestRunBacktestFlowStateMachine:
         )
 
         assert result["status"] == "cancelled"
-        mock_run_writer.update_status.assert_any_call("run-sm-006", "running")
+        # cancelled 由 run_svc 管理，writer 不写入
+        mock_run_writer.update_status.assert_not_called()
 
     def test_status_transition_order(
         self,
         mock_facade: Mock,
         mock_run_writer: Mock,
     ) -> None:
-        """状态转换: writer 只记录 running，completed 由 run_svc 内部管理."""
+        """状态转换: running 由 Service 管理，flow 只在无 run_svc 时写 completed."""
         call_order: list[str] = []
 
-        def record_call(run_id: str, status: str, **kwargs: object) -> bool:
+        def record_call(
+            run_id: str,
+            status: str,
+            **kwargs: object,
+        ) -> bool:
             call_order.append(status)
             return True
 
@@ -335,8 +358,8 @@ class TestRunBacktestFlowStateMachine:
             end_date="2025-01-31",
         )
 
-        # writer 只负责 running 标记，completed 由 BacktestService 内部 run_svc 处理
-        assert call_order == ["running"]
+        # run_svc 由 autouse fixture 提供（非 None），所以 writer 不被调用
+        assert call_order == []
 
 
 class TestRunBacktestFlowCostConfig:

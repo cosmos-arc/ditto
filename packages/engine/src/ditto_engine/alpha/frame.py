@@ -42,11 +42,9 @@ def validate_frame(frame: pl.DataFrame, required: tuple[str, ...]) -> None:
         required: 必需列名元组。
 
     Raises:
-        AssertionError: debug 模式下缺少必需列时。
+        ValueError: 缺少必需列时.
 
     """
-    if not __debug__:
-        return
-
     missing = set(required) - set(frame.columns)
-    assert not missing, f"DecisionFrame missing required columns: {missing}"  # noqa: S101
+    if missing:
+        raise ValueError(f"DecisionFrame missing required columns: {missing}")

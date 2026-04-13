@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from ditto_data.services.trade_service import TradeService
 
-from ditto_app.types import TradeIntent, record_to_intent
+from ditto_app.execution_dto import TradeIntent, record_to_intent
 
 __all__ = ["SignalQueryFacade"]
 

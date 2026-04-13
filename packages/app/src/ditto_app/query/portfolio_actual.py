@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from ditto_data.services.trade_service import TradeService
 
-from ditto_app.types import (
+from ditto_app.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
     record_to_fill,

@@ -21,7 +21,7 @@ from ditto_infra.foundation import logger
 
 __all__ = ["SignalDeliveryProvider"]
 
-_BOT_TOKEN_ENV = "TELEGRAM_BOT_TOKEN"  # noqa: S105
+_BOT_TOKEN_ENV = "TELEGRAM_BOT_TOKEN"
 _CHAT_ID_ENV = "TELEGRAM_CHAT_ID"
 
 

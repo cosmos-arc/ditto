@@ -78,8 +78,6 @@ def run_backtest_flow(
 
     with create_strategy_bundle() as bundle:
         writer = bundle.run_writer
-        if writer is not None:
-            writer.update_status(run_id, _status_str(RunStatus.RUNNING))
 
         try:
             options = BacktestServiceOptions(

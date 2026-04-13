@@ -78,10 +78,10 @@ class TestValidateFrameDebug:
         validate_frame(frame, ())
 
     def test_missing_columns_raises_assertion(self) -> None:
-        """缺少必需列时应抛出 AssertionError。"""
+        """缺少必需列时应抛出 ValueError。"""
         frame = pl.DataFrame({"x": [1]})
         with pytest.raises(
-            AssertionError,
+            ValueError,
             match="DecisionFrame missing required columns",
         ):
             validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
@@ -89,7 +89,7 @@ class TestValidateFrameDebug:
     def test_missing_some_columns_reports_all(self) -> None:
         """缺少多列时，错误信息应包含所有缺失列。"""
         frame = pl.DataFrame({"x": [1]})
-        with pytest.raises(AssertionError, match="signal_value") as exc_info:
+        with pytest.raises(ValueError, match="signal_value") as exc_info:
             validate_frame(frame, (FrameCol.INSTRUMENT_ID, FrameCol.SIGNAL))
         assert "instrument_id" in str(exc_info.value)
 
@@ -176,25 +176,21 @@ class TestValidateFrameReleaseMode:
 
     def test_function_uses_debug_guard(self) -> None:
         """
-        验证 validate_frame 源码使用 ``__debug__`` 守卫。
+        验证 validate_frame 使用 ValueError 进行帧验证。
 
-        ``__debug__`` 是 Python 内置常量，在 ``python -O`` 下为 False。
-        此时 ``if not __debug__: return`` 会直接返回，零开销。
-        无法在 debug 模式的 pytest 中模拟 release 行为，
-        因此通过检查源码确认守卫存在。
+        validate_frame 通过 raise ValueError 报告缺失列，
+        替代原来的 assert + __debug__ 守卫方案，确保在所有模式下都有效。
         """
         import inspect
 
         source = inspect.getsource(validate_frame)
-        assert "__debug__" in source, (
-            "validate_frame 应包含 __debug__ 守卫以实现 release 模式零开销"
-        )
+        assert "ValueError" in source, "validate_frame 应使用 ValueError 报告缺失列"
 
     def test_debug_mode_raises_on_missing(self) -> None:
-        """debug 模式下（pytest 运行环境），缺少列应抛出 AssertionError。"""
+        """缺少列时应抛出 ValueError。"""
         frame = pl.DataFrame({"x": [1]})
         with pytest.raises(
-            AssertionError,
+            ValueError,
             match="DecisionFrame missing required columns",
         ):
             validate_frame(frame, (FrameCol.INSTRUMENT_ID,))

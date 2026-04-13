@@ -35,6 +35,7 @@ ditto_interfaces/
 │   ├── flows/         # Flow 定义
 │   └── tasks/         # Task 实现
 ├── models/            # API 数据模型（Pydantic）
+├── services/          # Port 实现（Interfaces 层适配器）
 ├── registry/          # DI 容器（Dishka Composition Root）
 │   ├── container.py   # 容器定义
 │   ├── init_providers.py  # Provider 初始化

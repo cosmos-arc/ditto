@@ -12,17 +12,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+import polars as pl
 from ditto_data.models.strategy import StrategySpecRecord
 from ditto_engine.execution.reality.constants import (
     DEFAULT_COMMISSION_RATE,
     DEFAULT_MIN_COMMISSION,
 )
 from ditto_kernel.enums import ImpactModel
-
-if TYPE_CHECKING:
-    import polars as pl
 
 
 @dataclass(frozen=True)

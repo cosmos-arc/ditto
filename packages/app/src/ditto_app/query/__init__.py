@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ditto_app.query.backtest import BacktestQueryFacade
-from ditto_app.query.backtest_trade import BacktestTradeQueryFacade, TradeRecord
+from ditto_app.query.backtest_trade import BacktestTradeQueryFacade
 from ditto_app.query.capital import CapitalQueryFacade
 from ditto_app.query.commodity import CommodityQueryFacade
 from ditto_app.query.comparison import ComparisonQueryFacade
@@ -63,5 +63,4 @@ __all__ = [
     "SourceQueryFacade",
     "StrategyQueryFacade",
     "TradeQueryFacade",
-    "TradeRecord",
 ]

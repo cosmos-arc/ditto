@@ -24,15 +24,15 @@ from ditto_app.command.trade import (
     RecordFillHandler,
     UpdateIntentStatusHandler,
 )
-from ditto_app.query.comparison import ComparisonQueryFacade
-from ditto_app.query.portfolio_actual import PnlSummary, PortfolioActualQueryFacade
-from ditto_app.query.signal import SignalQueryFacade
-from ditto_app.query.trade import TradeQueryFacade
-from ditto_app.types import (
+from ditto_app.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
     TradeIntent,
 )
+from ditto_app.query.comparison import ComparisonQueryFacade
+from ditto_app.query.portfolio_actual import PnlSummary, PortfolioActualQueryFacade
+from ditto_app.query.signal import SignalQueryFacade
+from ditto_app.query.trade import TradeQueryFacade
 from ditto_interfaces.api.routes.trade import router
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse

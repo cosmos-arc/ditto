@@ -17,9 +17,10 @@ from __future__ import annotations
 import uuid
 
 from ditto_engine.execution.targets import TargetPortfolioLike
+from ditto_kernel.identity import InstrumentId
 
+from ditto_app.execution_dto import TradeIntent
 from ditto_app.process.execution.ports import PositionReader, SignalDeliveryProtocol
-from ditto_app.types import TradeIntent
 
 __all__ = ["SignalSnapshotProcess"]
 
@@ -64,9 +65,8 @@ class SignalSnapshotProcess:
 
         intents: list[TradeIntent] = []
         for iid in all_instrument_ids:
-            # InstrumentId is NewType(int) — int() 统一转换以兼容两种 dict key 类型
             iid_int = int(iid)
-            target_weight = float(target.positions.get(iid_int, 0.0))  # type: ignore[arg-type] — InstrumentId NewType 与 int key 不兼容
+            target_weight = float(target.positions.get(InstrumentId(iid_int), 0.0))
             current_weight = float(current_positions.get(iid_int, 0.0))
 
             delta_weight = target_weight - current_weight

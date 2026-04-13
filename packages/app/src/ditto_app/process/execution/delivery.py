@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ditto_app.types import TradeIntent
+from ditto_app.execution_dto import TradeIntent
 
 logger = logging.getLogger(__name__)
 

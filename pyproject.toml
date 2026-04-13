@@ -92,6 +92,8 @@ ignore = [
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
+# SignalDelivery - 环境变量名（非实际密钥）是 Bandit S105 已知误报
+"interfaces/src/ditto_interfaces/registry/infra/signal_delivery.py" = ["S105"]
 # MetadataService.__init__ - 构造器注入 16 个依赖，参数数量不可避免
 "packages/data/src/ditto_data/services/metadata_service.py" = ["PLR0913"]
 # DerivedArtifactReader.read_frame - @overload 模式下无法拆分参数

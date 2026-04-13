@@ -6,7 +6,7 @@ import asyncio
 import dataclasses
 import logging
 from collections.abc import Callable
-from typing import Annotated
+from typing import Annotated, Any, cast
 
 import orjson as _orjson
 from dishka import FromComponent
@@ -156,8 +156,11 @@ def _run_in_process(
     """进程内执行 Prefect flow（开发模式 fallback）。"""
     run_id = str(params.get("run_id", ""))
     try:
-        _prefect_fn = getattr(run_backtest_flow, "fn", run_backtest_flow)
-        _prefect_fn(**params)  # type: ignore[reportCallIssue] — Prefect .fn 属性类型未精确匹配 **params 展开
+        _prefect_fn = cast(
+            Callable[..., Any],
+            getattr(run_backtest_flow, "fn", run_backtest_flow),
+        )
+        _prefect_fn(**params)
     except Exception as exc:
         logger.exception("Flow execution failed", extra={"run_id": run_id})
         if on_failure is not None:

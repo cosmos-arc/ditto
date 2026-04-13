@@ -387,7 +387,10 @@ class SQLiteStrategyRunReader:
         if limit is not None:
             sql += " LIMIT ?"
             params.append(limit)
-        if offset is not None and limit is not None:
+        if offset is not None:
+            if limit is None:
+                sql += " LIMIT ?"
+                params.append(1000)
             sql += " OFFSET ?"
             params.append(offset)
 

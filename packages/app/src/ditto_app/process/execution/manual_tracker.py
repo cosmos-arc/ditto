@@ -16,7 +16,7 @@ from __future__ import annotations
 import uuid
 from itertools import groupby
 
-from ditto_app.types import (
+from ditto_app.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
 )

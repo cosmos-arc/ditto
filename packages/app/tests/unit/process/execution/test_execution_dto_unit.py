@@ -111,7 +111,7 @@ class TestTradeIntent:
     """TradeIntent — 交易意图 app 层 DTO."""
 
     def test_construction_with_defaults(self) -> None:
-        from ditto_app.types import TradeIntent
+        from ditto_app.execution_dto import TradeIntent
 
         intent = TradeIntent(
             intent_id="intent-1",
@@ -129,7 +129,7 @@ class TestTradeIntent:
         assert intent.status == "pending"
 
     def test_frozen_immutability(self) -> None:
-        from ditto_app.types import TradeIntent
+        from ditto_app.execution_dto import TradeIntent
 
         intent = TradeIntent(
             intent_id="intent-1",
@@ -149,7 +149,7 @@ class TestManualExecutionFill:
     """ManualExecutionFill — 人工成交 app 层 DTO."""
 
     def test_construction_with_defaults(self) -> None:
-        from ditto_app.types import ManualExecutionFill
+        from ditto_app.execution_dto import ManualExecutionFill
 
         fill = ManualExecutionFill(
             fill_id="fill-1",
@@ -171,7 +171,7 @@ class TestActualPositionSnapshot:
     """ActualPositionSnapshot — 实际持仓快照 app 层 DTO."""
 
     def test_construction(self) -> None:
-        from ditto_app.types import ActualPositionSnapshot
+        from ditto_app.execution_dto import ActualPositionSnapshot
 
         snapshot = ActualPositionSnapshot(
             snapshot_id="snap-1",
@@ -199,7 +199,7 @@ class TestDtoRecordMapping:
     """DTO ↔ Record 跨层映射."""
 
     def test_intent_to_record(self) -> None:
-        from ditto_app.types import TradeIntent, intent_to_record
+        from ditto_app.execution_dto import TradeIntent, intent_to_record
 
         intent = TradeIntent(
             intent_id="intent-1",
@@ -219,7 +219,7 @@ class TestDtoRecordMapping:
         assert record.delta_weight == 0.2
 
     def test_fill_to_record(self) -> None:
-        from ditto_app.types import (
+        from ditto_app.execution_dto import (
             ManualExecutionFill,
             fill_to_record,
         )
@@ -242,7 +242,7 @@ class TestDtoRecordMapping:
         assert record.quantity == 1000
 
     def test_snapshot_to_record(self) -> None:
-        from ditto_app.types import (
+        from ditto_app.execution_dto import (
             ActualPositionSnapshot,
             snapshot_to_record,
         )
@@ -266,7 +266,7 @@ class TestDtoRecordMapping:
         assert record.instrument_id == 1
 
     def test_record_to_intent(self) -> None:
-        from ditto_app.types import record_to_intent
+        from ditto_app.execution_dto import record_to_intent
         from ditto_data.models.trade import TradeIntentRecord
 
         record = TradeIntentRecord(
@@ -286,7 +286,7 @@ class TestDtoRecordMapping:
         assert intent.direction == "buy"
 
     def test_record_to_fill(self) -> None:
-        from ditto_app.types import record_to_fill
+        from ditto_app.execution_dto import record_to_fill
         from ditto_data.models.trade import ManualExecutionFillRecord
 
         record = ManualExecutionFillRecord(
@@ -307,7 +307,7 @@ class TestDtoRecordMapping:
         assert fill.quantity == 1000
 
     def test_record_to_snapshot(self) -> None:
-        from ditto_app.types import record_to_snapshot
+        from ditto_app.execution_dto import record_to_snapshot
         from ditto_data.models.trade import ActualPositionSnapshotRecord
 
         record = ActualPositionSnapshotRecord(
@@ -330,7 +330,7 @@ class TestDtoRecordMapping:
 
     def test_roundtrip_intent(self) -> None:
         """DTO → Record → DTO 往返映射保持一致性."""
-        from ditto_app.types import (
+        from ditto_app.execution_dto import (
             TradeIntent,
             intent_to_record,
             record_to_intent,
@@ -359,7 +359,7 @@ class TestDtoRecordMapping:
 
     def test_roundtrip_fill(self) -> None:
         """Fill DTO → Record → DTO 往返映射保持一致性."""
-        from ditto_app.types import (
+        from ditto_app.execution_dto import (
             ManualExecutionFill,
             fill_to_record,
             record_to_fill,
@@ -388,7 +388,7 @@ class TestDtoRecordMapping:
 
     def test_roundtrip_snapshot(self) -> None:
         """Snapshot DTO → Record → DTO 往返映射保持一致性."""
-        from ditto_app.types import (
+        from ditto_app.execution_dto import (
             ActualPositionSnapshot,
             record_to_snapshot,
             snapshot_to_record,

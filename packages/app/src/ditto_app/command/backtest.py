@@ -11,6 +11,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import date
+from typing import cast
 
 import orjson
 from ditto_data.services.strategy.strategy_catalog_service import (
@@ -165,20 +166,20 @@ def _extract_signal_expressions(
     spec_json: dict[str, object],
 ) -> tuple[str, ...]:
     """从 spec_json 提取 signal_expressions."""
-    exprs = spec_json.get("signal_expressions")
-    if not isinstance(exprs, (list, tuple)):
+    raw = spec_json.get("signal_expressions")
+    if not isinstance(raw, list):
         return ()
-    return tuple(str(e) for e in exprs)  # type: ignore[reportUnknownArgumentType, reportUnknownVariableType]
+    return tuple(str(item) for item in cast(list[object], raw))
 
 
 def _extract_signal_weights(
     spec_json: dict[str, object],
 ) -> tuple[float, ...]:
     """从 spec_json 提取 signal_weights."""
-    weights = spec_json.get("signal_weights")
-    if not isinstance(weights, (list, tuple)):
+    raw = spec_json.get("signal_weights")
+    if not isinstance(raw, list):
         return ()
-    return tuple(float(w) for w in weights)  # type: ignore[reportUnknownArgumentType, reportUnknownVariableType]
+    return tuple(float(str(item)) for item in cast(list[object], raw))
 
 
 # ---------------------------------------------------------------------------

@@ -48,8 +48,8 @@ class TestGenerateIntents:
 
     def test_empty_positions_with_target_generates_all_buy(self) -> None:
         """空持仓 + 有目标 -> 全部生成 BUY intents."""
+        from ditto_app.execution_dto import TradeIntent
         from ditto_app.process.execution.signal_snapshot import SignalSnapshotProcess
-        from ditto_app.types import TradeIntent
 
         reader = _make_position_reader({})
         process = SignalSnapshotProcess(position_reader=reader)

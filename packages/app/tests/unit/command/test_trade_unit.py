@@ -12,7 +12,7 @@ from ditto_app.command.trade import (
     UpdateIntentStatusCommand,
     UpdateIntentStatusHandler,
 )
-from ditto_app.types import ActualPositionSnapshot, ManualExecutionFill
+from ditto_app.execution_dto import ActualPositionSnapshot, ManualExecutionFill
 from ditto_data.models.trade import (
     ManualExecutionFillRecord,
     TradeIntentRecord,

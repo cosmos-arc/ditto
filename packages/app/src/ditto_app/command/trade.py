@@ -7,13 +7,13 @@ from typing import Literal
 
 from ditto_data.services.trade_service import TradeService
 
-from ditto_app.process.execution.manual_tracker import ManualTracker
-from ditto_app.types import (
+from ditto_app.execution_dto import (
     ManualExecutionFill,
     fill_to_record,
     record_to_fill,
     snapshot_to_record,
 )
+from ditto_app.process.execution.manual_tracker import ManualTracker
 
 __all__ = [
     "RecordFillCommand",

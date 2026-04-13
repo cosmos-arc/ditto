@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+from ditto_app.execution_dto import ActualPositionSnapshot, ManualExecutionFill
 from ditto_app.query.comparison import ComparisonMetrics, ComparisonQueryFacade
-from ditto_app.types import ActualPositionSnapshot, ManualExecutionFill
 
 
 def _make_backtest_facade(
@@ -59,13 +59,14 @@ def _sample_nav_rows() -> list[dict[str, object]]:
 def _make_fill(
     fill_id: str = "fill-001",
     fee: float = 100.0,
+    trade_date: str = "2024-01-03",
 ) -> ManualExecutionFill:
     """构造测试用 ManualExecutionFill."""
     return ManualExecutionFill(
         fill_id=fill_id,
         intent_id="intent-001",
         strategy_id="strat-001",
-        trade_date="2024-01-03",
+        trade_date=trade_date,
         instrument_id=510300,
         direction="buy",
         quantity=1000,

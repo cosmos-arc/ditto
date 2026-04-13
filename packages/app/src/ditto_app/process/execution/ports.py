@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ditto_app.types import TradeIntent
+from ditto_app.execution_dto import TradeIntent
 
 __all__ = [
     "PositionReader",

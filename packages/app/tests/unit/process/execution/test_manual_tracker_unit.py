@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
+from ditto_app.execution_dto import ManualExecutionFill
 from ditto_app.process.execution.manual_tracker import ManualTracker
-from ditto_app.types import ManualExecutionFill
 
 # ---------------------------------------------------------------------------
 # 辅助函数
