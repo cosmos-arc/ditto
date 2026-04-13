@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
 
@@ -69,7 +70,7 @@
       color: var(--brand-signature-fg);
       background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
-      padding: 3px 8px;
+      padding: var(--space-2) var(--space-6);
       border-radius: 4px;
       pointer-events: none;
     }
@@ -202,7 +203,7 @@
         var(--brand-accent) 40%,
         transparent 100%
       );
-      background-size: 100% 2px;
+      background-size: 100% 1px;
       background-repeat: no-repeat;
       background-position: 0 100%;
       padding-bottom: 2px;
@@ -252,7 +253,8 @@
     .shell-regime .scope-strip {
       grid-area: strip;
       background: var(--surface-strip);
-      border-bottom: 1px solid var(--border-subtle);
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
+      box-shadow: 0 1px 6px -2px color-mix(in oklch, var(--brand-accent) 8%, transparent);
       display: flex;
       align-items: center;
       padding: 0 var(--density-gutter);
@@ -523,40 +525,29 @@
       line-height: 1.5;
     }
 
-    .regime-confidence {
+    .regime-meta {
       display: flex;
       align-items: center;
-      gap: var(--space-8);
+      gap: var(--space-4);
       margin-top: var(--space-4);
-    }
-
-    .regime-confidence-label {
       font-size: var(--font-size-10);
+    }
+    .regime-meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .regime-meta-label {
       color: var(--text-tertiary);
     }
-
-    .regime-confidence-bar {
-      flex: 1;
-      max-width: 120px;
-      height: 4px;
-      background: var(--border-subtle);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .regime-confidence-fill {
-      height: 100%;
-      border-radius: 2px;
-      background: var(--market-up-fg);
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
-    }
-
-    .regime-confidence-value {
+    .regime-meta-value {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-12);
-      font-weight: var(--font-weight-medium);
       font-feature-settings: 'tnum' 1;
-      color: var(--market-up-fg);
+      color: var(--text-secondary);
+    }
+    .regime-meta-sep {
+      color: var(--text-tertiary);
+      opacity: 0.4;
     }
 
     /* ── Regime Chart (CSS-only placeholder) ── */
@@ -600,6 +591,26 @@
       left: 0; right: 0; bottom: 0;
       height: 1px;
       background: var(--chart-axis-line);
+    }
+
+    /* Chart Y-axis scale labels */
+    .chart-y-labels {
+      position: absolute;
+      left: 2%;
+      top: 0;
+      bottom: 0;
+      width: 24px;
+      pointer-events: none;
+    }
+    .chart-y-label {
+      position: absolute;
+      left: 0;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--chart-axis-text);
+      opacity: 0.4;
+      transform: translateY(-50%);
+      font-feature-settings: 'tnum' 1;
     }
 
     /* Simulated regime timeline line */
@@ -983,7 +994,6 @@
       .switch-arrow, .factor-item,
       .regime-probability-item,
       .regime-strip-metric, .chart-event-marker,
-      .regime-confidence-fill,
       .heatgrid-cell {
         transition: none !important;
         animation: none !important;
@@ -1054,7 +1064,7 @@
 
     .switch-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
       gap: var(--space-12);
     }
 
@@ -1124,6 +1134,9 @@
     .factor-bar-fill--up { background: var(--market-up-fg); }
     .factor-bar-fill--ok { background: var(--risk-low-fg); }
     .factor-bar-fill--neutral { background: var(--text-secondary); }
+
+    /* Factor radial already encodes weight — horizontal bar is redundant */
+    .factor-bar-track { display: none; }
 
     /* ── Strategy table cell styles ── */
     .cell-strategy-name {
@@ -1593,13 +1606,11 @@
 
     /* ── Regime state badge transitions ── */
     .regime-state-badge {
-      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
-                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
                   filter var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: default;
     }
     .regime-state-badge:hover {
-      transform: translateY(-1px);
       box-shadow: 0 2px 8px oklch(0 0 0 / 0.2);
     }
     .regime-state-badge--bull:hover {
@@ -1641,12 +1652,11 @@
     /* ── Switch transition tag animation ── */
     .switch-from-tag,
     .switch-to-tag {
-      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
-                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .switch-from-tag:hover,
     .switch-to-tag:hover {
-      transform: scale(1.05);
+      opacity: 0.85;
     }
 
     .switch-arrow {
@@ -1686,18 +1696,13 @@
       padding-right: var(--space-6);
     }
 
-    /* ── Regime gauge confidence fill animate on load ── */
-    .regime-confidence-fill {
-      transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
     /* ── Donut probability section hover ── */
     .regime-probability-item {
-      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: default;
     }
     .regime-probability-item:hover {
-      transform: translateY(-2px);
+      opacity: 0.85;
     }
 
     /* ── Switch item timeline connector hover glow ── */
@@ -1895,35 +1900,13 @@
       transition: height var(--motion-duration-fast) var(--motion-easing-standard),
                   opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
-    .switch-item:hover .signal-bars__bar {
-      animation: signal-grow 0.4s ease-out both;
-    }
-    .switch-item:hover .signal-bars__bar:nth-child(1) { animation-delay: 0ms; }
-    .switch-item:hover .signal-bars__bar:nth-child(2) { animation-delay: 50ms; }
-    .switch-item:hover .signal-bars__bar:nth-child(3) { animation-delay: 100ms; }
-    .switch-item:hover .signal-bars__bar:nth-child(4) { animation-delay: 150ms; }
-    .switch-item:hover .signal-bars__bar:nth-child(5) { animation-delay: 200ms; }
-    @keyframes signal-grow {
-      0% { opacity: 0.5; }
-      100% { opacity: 1; }
-    }
 
     /* ── Switch transition tag enhanced ── */
     .switch-transition {
       position: relative;
     }
-    .switch-item:hover .switch-from-tag {
-      opacity: 0.7;
-      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
-    }
 
-    /* ── Mini curve hover ── */
-    .mini-curve svg path {
-      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
-    }
-    .switch-item:hover .mini-curve svg path:first-child {
-      opacity: 1;
-    }
+    /* ── Mini curve (decorative, no hover needed) ── */
 
     /* ── Regime state indicator entrance ── */
     .regime-state-badge--bull .regime-state-badge__dot {
@@ -2122,12 +2105,16 @@
                     <div class="regime-gauge-info">
                       <div class="regime-status-name">温和风险偏好 <span class="regime-state-badge regime-state-badge--bull" data-tooltip="当前 Regime 由多因子引擎判定，每 5 分钟更新"><span class="regime-state-badge__dot"></span>Moderate</span></div>
                       <span class="regime-status-desc">市场情绪偏暖，波动率处于低位，资金面宽松。北向资金持续净流入，个股涨跌比健康。</span>
-                      <div class="regime-confidence">
-                        <span class="regime-confidence-label">判定强度</span>
-                        <div class="regime-confidence-bar">
-                          <div class="regime-confidence-fill" style="width: 72%;"></div>
-                        </div>
-                        <span class="regime-confidence-value"><span data-counter="72" data-counter-decimals="0" data-counter-suffix="%">72%</span></span>
+                      <div class="regime-meta">
+                        <span class="regime-meta-item">
+                          <span class="regime-meta-label">持续</span>
+                          <span class="regime-meta-value">15天</span>
+                        </span>
+                        <span class="regime-meta-sep">·</span>
+                        <span class="regime-meta-item">
+                          <span class="regime-meta-label">上次切换</span>
+                          <span class="regime-meta-value">03-18</span>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -2148,6 +2135,12 @@
                   <div class="regime-chart">
                     <div class="chart-grid-lines"></div>
                     <div class="chart-axis-y"></div>
+                    <div class="chart-y-labels">
+                      <span class="chart-y-label" style="top: 10%;">100</span>
+                      <span class="chart-y-label" style="top: 35%;">75</span>
+                      <span class="chart-y-label" style="top: 60%;">50</span>
+                      <span class="chart-y-label" style="top: 85%;">25</span>
+                    </div>
                     <div class="chart-axis-x"></div>
                     <div class="regime-zone risk-off"></div>
                     <div class="regime-zone mixed"></div>
