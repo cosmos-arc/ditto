@@ -1115,7 +1115,7 @@
       <div class="workspace-left">
 
         <!-- Calendar Month View -->
-        <div class="calendar-section" data-reveal="fade-up" data-reveal-delay="50">
+        <div class="calendar-section" data-reveal="fade-up" data-reveal-delay="50" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
           <div class="calendar-header-row">
             <span class="calendar-title">A 股事件日历</span>
             <div class="calendar-nav">
@@ -1144,7 +1144,7 @@
             <div class="cal-day"><span class="cal-day-num">1</span></div>
             <div class="cal-day"><span class="cal-day-num">2</span></div>
             <div class="cal-day"><span class="cal-day-num">3</span></div>
-            <div class="cal-day"><span class="cal-day-num">4</span><div class="cal-dots"><span class="cal-dot cal-dot--earnings"></span></div></div>
+            <div class="cal-day" data-tooltip="04/04 · 财报披露"><span class="cal-day-num">4</span><div class="cal-dots"><span class="cal-dot cal-dot--earnings"></span></div></div>
             <div class="cal-day"><span class="cal-day-num">5</span></div>
 
             <!-- Week 2: Apr 6 - Apr 12 -->
@@ -1158,20 +1158,20 @@
 
             <!-- Week 3: Apr 13 - Apr 19 -->
             <div class="cal-day"><span class="cal-day-num">13</span></div>
-            <div class="cal-day selected"><span class="cal-day-num">14</span><div class="cal-dots"><span class="cal-dot cal-dot--ipo"></span></div></div>
-            <div class="cal-day"><span class="cal-day-num">15</span><div class="cal-dots"><span class="cal-dot cal-dot--lockup"></span></div></div>
+            <div class="cal-day selected" data-tooltip="04/14 · 新股申购: 华海半导体"><span class="cal-day-num">14</span><div class="cal-dots"><span class="cal-dot cal-dot--ipo"></span></div></div>
+            <div class="cal-day" data-tooltip="04/15 · 限售解禁: 宁德时代 ¥45.2亿"><span class="cal-day-num">15</span><div class="cal-dots"><span class="cal-dot cal-dot--lockup"></span></div></div>
             <div class="cal-day"><span class="cal-day-num">16</span></div>
-            <div class="cal-day today"><span class="cal-day-num">17</span><div class="cal-dots"><span class="cal-dot cal-dot--option"></span><span class="cal-dot cal-dot--future"></span></div></div>
-            <div class="cal-day"><span class="cal-day-num">18</span><div class="cal-dots"><span class="cal-dot cal-dot--economic"></span></div></div>
+            <div class="cal-day today" data-tooltip="04/17 · 期权交割 + 期货交割"><span class="cal-day-num">17</span><div class="cal-dots"><span class="cal-dot cal-dot--option"></span><span class="cal-dot cal-dot--future"></span></div></div>
+            <div class="cal-day" data-tooltip="04/18 · 经济数据: 一季度GDP"><span class="cal-day-num">18</span><div class="cal-dots"><span class="cal-dot cal-dot--economic"></span></div></div>
             <div class="cal-day"><span class="cal-day-num">19</span></div>
 
             <!-- Week 4: Apr 20 - Apr 26 -->
-            <div class="cal-day"><span class="cal-day-num">20</span><div class="cal-dots"><span class="cal-dot cal-dot--dividend"></span></div></div>
+            <div class="cal-day" data-tooltip="04/20 · 除权除息: 贵州茅台"><span class="cal-day-num">20</span><div class="cal-dots"><span class="cal-dot cal-dot--dividend"></span></div></div>
             <div class="cal-day"><span class="cal-day-num">21</span></div>
             <div class="cal-day"><span class="cal-day-num">22</span></div>
             <div class="cal-day"><span class="cal-day-num">23</span></div>
             <div class="cal-day"><span class="cal-day-num">24</span></div>
-            <div class="cal-day"><span class="cal-day-num">25</span><div class="cal-dots"><span class="cal-dot cal-dot--earnings"></span></div></div>
+            <div class="cal-day" data-tooltip="04/25 · 财报: 创业板业绩预告截止"><span class="cal-day-num">25</span><div class="cal-dots"><span class="cal-dot cal-dot--earnings"></span></div></div>
             <div class="cal-day"><span class="cal-day-num">26</span></div>
 
             <!-- Week 5: Apr 27 - May 3 -->
@@ -1186,10 +1186,10 @@
         </div>
 
         <!-- Event List -->
-        <div class="event-list-section" data-reveal="fade-up" data-reveal-delay="100">
+        <div class="event-list-section" data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
           <div class="event-list-header">
             <span class="event-list-title">事件列表</span>
-            <span class="event-list-count">共 7 个事件</span>
+            <span class="event-list-count">共 <span data-counter="7" data-counter-decimals="0">7</span> 个事件</span>
           </div>
 
           <!-- Event 1: 新股申购 -->
@@ -1204,7 +1204,7 @@
               <div class="event-subtitle">申购代码: 787XXX</div>
             </div>
             <div class="event-importance">
-              <span class="importance-dot importance-dot--medium"></span>
+              <span class="importance-dot importance-dot--medium" data-tooltip="中重要性事件"></span>
               <span class="importance-label">中</span>
             </div>
           </label>
@@ -1221,7 +1221,7 @@
               <div class="event-subtitle">解禁市值: ¥45.2亿</div>
             </div>
             <div class="event-importance">
-              <span class="importance-dot importance-dot--high"></span>
+              <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
               <span class="importance-label">高</span>
             </div>
           </label>
@@ -1238,7 +1238,7 @@
               <div class="event-subtitle">当月合约到期</div>
             </div>
             <div class="event-importance">
-              <span class="importance-dot importance-dot--medium"></span>
+              <span class="importance-dot importance-dot--medium" data-tooltip="中重要性事件"></span>
               <span class="importance-label">中</span>
             </div>
           </label>
@@ -1255,7 +1255,7 @@
               <div class="event-subtitle">股指期货当月合约到期</div>
             </div>
             <div class="event-importance">
-              <span class="importance-dot importance-dot--high"></span>
+              <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
               <span class="importance-label">高</span>
             </div>
           </label>
@@ -1272,7 +1272,7 @@
               <div class="event-subtitle">预期: 5.2%</div>
             </div>
             <div class="event-importance">
-              <span class="importance-dot importance-dot--high"></span>
+              <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
               <span class="importance-label">高</span>
             </div>
           </label>
@@ -1289,7 +1289,7 @@
               <div class="event-subtitle">每股派息 ¥27.53</div>
             </div>
             <div class="event-importance">
-              <span class="importance-dot importance-dot--medium"></span>
+              <span class="importance-dot importance-dot--medium" data-tooltip="中重要性事件"></span>
               <span class="importance-label">中</span>
             </div>
           </label>
@@ -1306,7 +1306,7 @@
               <div class="event-subtitle">强制披露截止日</div>
             </div>
             <div class="event-importance">
-              <span class="importance-dot importance-dot--high"></span>
+              <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
               <span class="importance-label">高</span>
             </div>
           </label>
@@ -1315,7 +1315,7 @@
 
       <!-- ─── Right Panel: Economic Data Timeline ─── -->
       <div class="workspace-right">
-        <div class="timeline-section" data-reveal="fade-up" data-reveal-delay="150">
+        <div class="timeline-section" data-reveal="fade-up" data-reveal-delay="150" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
           <div class="timeline-header">
             <div class="timeline-title">经济数据时间线</div>
             <div class="timeline-subtitle">即将发布的重要宏观数据</div>
@@ -1323,19 +1323,19 @@
           <div class="timeline-body">
 
             <!-- Timeline 1 -->
-            <div class="timeline-item" tabindex="0">
+            <div class="timeline-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="200" data-tooltip="社融规模 · 前值 2.42万亿 · 预期 2.80万亿">
               <div class="timeline-item-date">04-17 周五 09:30</div>
               <div class="timeline-item-title">中国 3月社会融资规模</div>
               <div class="timeline-item-region">CN</div>
               <div class="timeline-data">
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">前值</div>
-                  <div class="timeline-data-value">2.42万亿</div>
+                  <div class="timeline-data-value" data-ticker="2.42" data-ticker-suffix="万亿">2.42万亿</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">预期</div>
-                  <div class="timeline-data-value text-up">2.80万亿</div>
+                  <div class="timeline-data-value text-up" data-ticker="2.80" data-ticker-suffix="万亿">2.80万亿</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
@@ -1346,7 +1346,7 @@
             </div>
 
             <!-- Timeline 2 -->
-            <div class="timeline-item" tabindex="0">
+            <div class="timeline-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="240" data-tooltip="一季度 GDP · 前值 5.4% · 预期 5.2% · 高重要性">
               <div class="timeline-item-date">04-18 周六 10:00</div>
               <div class="timeline-item-title">中国 一季度 GDP</div>
               <div class="timeline-item-region">CN</div>
@@ -1369,7 +1369,7 @@
             </div>
 
             <!-- Timeline 3 -->
-            <div class="timeline-item" tabindex="0">
+            <div class="timeline-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="280" data-tooltip="美国零售销售 · 前值 -0.1% · 预期 +0.3%">
               <div class="timeline-item-date">04-20 周一 20:30</div>
               <div class="timeline-item-title">美国 3月零售销售环比</div>
               <div class="timeline-item-region">US</div>
@@ -1392,7 +1392,7 @@
             </div>
 
             <!-- Timeline 4 -->
-            <div class="timeline-item" tabindex="0">
+            <div class="timeline-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="320" data-tooltip="工业利润同比 · 前值 +3.8% · 预期 +4.2%">
               <div class="timeline-item-date">04-22 周三 09:30</div>
               <div class="timeline-item-title">中国 3月工业利润同比</div>
               <div class="timeline-item-region">CN</div>
@@ -1415,7 +1415,7 @@
             </div>
 
             <!-- Timeline 5 -->
-            <div class="timeline-item" tabindex="0">
+            <div class="timeline-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="360" data-tooltip="核心 PCE · 前值 2.8% · 预期 2.6% · 通胀关键指标">
               <div class="timeline-item-date">04-25 周六 20:30</div>
               <div class="timeline-item-title">美国 核心 PCE物价指数同比</div>
               <div class="timeline-item-region">US</div>
@@ -1456,7 +1456,7 @@
           <span class="overlay-title">事件详情</span>
           <label for="overlay-event-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
-        <div class="overlay-body">
+        <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
           <h4>限售解禁 — 宁德时代</h4>
           <div class="event-detail-desc">
             宁德时代 (300750) 限售股解禁，本次解禁股份为 2023 年定增发行的限售股份，
@@ -1510,7 +1510,7 @@
           <span class="overlay-title">日历提醒设置</span>
           <label for="overlay-reminder" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
-        <div class="overlay-body">
+        <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
           <h4>提醒事件</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">事件</span>
@@ -1566,7 +1566,7 @@
           <span class="overlay-title">AI 分析</span>
           <label for="overlay-intelligence" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
-        <div class="overlay-body">
+        <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
           <p class="ov-desc-text">
             将事件信息发送至 AI 分析模块，生成限售解禁对宁德时代股价的影响评估、
             历史类似事件统计及操作建议。
@@ -1817,7 +1817,7 @@
                 <div class="overlay-header">
                   <span class="overlay-title">事件详情</span>
                 </div>
-                <div class="overlay-body">
+                <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
                   <h4>限售解禁 — 宁德时代</h4>
                   <div class="event-detail-desc">
                     宁德时代 (300750) 限售股解禁，本次解禁股份为 2023 年定增发行的限售股份，
@@ -1861,7 +1861,7 @@
                 <div class="overlay-header">
                   <span class="overlay-title">日历提醒设置</span>
                 </div>
-                <div class="overlay-body">
+                <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
                   <h4>提醒事件</h4>
                   <div class="overlay-field">
                     <span class="overlay-field-label">事件</span>
@@ -1912,7 +1912,7 @@
                 <div class="overlay-header">
                   <span class="overlay-title">AI 分析</span>
                 </div>
-                <div class="overlay-body">
+                <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
                   <p class="ov-desc-text">
                     将事件信息发送至 AI 分析模块，生成影响评估及操作建议。
                   </p>
