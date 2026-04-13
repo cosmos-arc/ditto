@@ -1159,7 +1159,8 @@ details.context-section > .context-section-body {
   border-top: 1px solid var(--border-subtle);
 }
 
-.context-section-footer a {
+.context-section-footer a,
+.context-section-footer .panel-action {
   font-size: var(--font-size-12);
   color: var(--text-tertiary);
   text-decoration: none;
@@ -1167,7 +1168,8 @@ details.context-section > .context-section-body {
   transition: color var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
-.context-section-footer a:hover {
+.context-section-footer a:hover,
+.context-section-footer .panel-action:hover {
   color: var(--brand-accent);
 }
 
@@ -1227,8 +1229,21 @@ details.context-section > .context-section-body {
 
 /* ── Findings Feed (light insight stream) ── */
 .findings-feed {
-  padding: var(--space-8) var(--space-12);
-  border-top: 1px solid var(--border-subtle);
+  padding: var(--space-12) var(--space-12) var(--space-8);
+  border-top: none;
+  position: relative;
+}
+
+.findings-feed::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: var(--space-12);
+  right: var(--space-12);
+  height: 1px;
+  background: var(--border-subtle);
+  opacity: 0.5;
 }
 
 .findings-feed-label {
@@ -1359,8 +1374,8 @@ details.context-section > .context-section-body {
   color: var(--text-secondary);
 }
 
-.pulse-metric-value.up   { color: var(--market-up-fg); opacity: 0.85; }
-.pulse-metric-value.down { color: var(--market-down-fg); opacity: 0.85; }
+.pulse-metric-value.up   { color: var(--market-up-fg); }
+.pulse-metric-value.down { color: var(--market-down-fg); }
 
 /* ── Research Progress Item (Home bottom-left panel) ── */
 .research-item {
@@ -1418,21 +1433,31 @@ details.context-section > .context-section-body {
   line-height: 1.5;
 }
 
-/* ── Regime Tag ── */
+.research-item-summary {
+  font-size: var(--font-size-10);
+  color: var(--text-tertiary);
+  margin-top: var(--space-2);
+  line-height: 1.5;
+}
+
+/* ── Regime Tag (capsule style) ── */
 .regime-tag {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-4);
-  padding: 2px var(--space-6);
-  border-radius: var(--radius-4);
-  font-size: var(--font-size-12);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: var(--font-size-10);
   font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
 }
 
-.regime-tag.bull    { background: var(--market-up-subtle); color: var(--market-up-fg); }
-.regime-tag.bear    { background: var(--market-down-subtle); color: var(--market-down-fg); }
-.regime-tag.neutral { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
-.regime-tag.volatile { background: var(--risk-high-bg); color: var(--risk-high-fg); }
+.regime-tag.risk-on    { background: color-mix(in oklch, var(--market-strong-fg) 8%, transparent); color: var(--market-strong-fg); }
+.regime-tag.risk-off   { background: color-mix(in oklch, var(--market-weak-fg) 8%, transparent); color: var(--market-weak-fg); }
+.regime-tag.moderate   { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+.regime-tag.volatile   { background: color-mix(in oklch, var(--risk-high-fg) 8%, transparent); color: var(--risk-high-fg); }
+.regime-tag.bull       { background: var(--market-up-subtle); color: var(--market-up-fg); }
+.regime-tag.bear       { background: var(--market-down-subtle); color: var(--market-down-fg); }
+.regime-tag.neutral    { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
 
 /* ═══════════════════════════════════════════════
  * Page: Markets Screener — Dense data table + filters

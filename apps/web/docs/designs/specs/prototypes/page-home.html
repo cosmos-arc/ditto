@@ -361,35 +361,6 @@
       background: var(--text-disabled);
     }
 
-    /* ══════════════════════════════════════════════
-     * R2: Regime tag capsule — extreme restraint
-     * ══════════════════════════════════════════════ */
-    .regime-tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 1px 8px;
-      border-radius: 10px;
-      font-size: var(--font-size-10);
-      font-weight: var(--font-weight-medium);
-      letter-spacing: 0.02em;
-    }
-    .regime-tag.risk-on {
-      background: color-mix(in oklch, var(--market-strong-fg) 8%, transparent);
-      color: var(--market-strong-fg);
-    }
-    .regime-tag.risk-off {
-      background: color-mix(in oklch, var(--market-weak-fg) 8%, transparent);
-      color: var(--market-weak-fg);
-    }
-    .regime-tag.moderate {
-      background: var(--interaction-hover-subtle-bg);
-      color: var(--text-secondary);
-    }
-    .regime-tag.volatile {
-      background: color-mix(in oklch, var(--risk-high-fg) 8%, transparent);
-      color: var(--risk-high-fg);
-    }
-
     /* ── Sparkline inline SVG ── */
     .sparkline {
       display: inline-block;
@@ -425,9 +396,7 @@
     .research-item-source,
     .finding-source,
     .queue-item-source,
-    .decision-judgment-text,
-    .kpi-card-value,
-    .kpi-card-change {
+    .decision-judgment-text {
       font-feature-settings: 'tnum' 1, 'zero' 1;
       letter-spacing: -0.02em;
     }
@@ -615,47 +584,6 @@
     /* ══════════════════════════════════════════════
      * R3: Information visualization enhancements
      * ══════════════════════════════════════════════ */
-
-    /* KPI metric card with sparkline */
-    .kpi-card {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-8) var(--space-12);
-      background: var(--surface-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-4);
-      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
-    }
-    .kpi-card:hover {
-      border-color: color-mix(in oklch, var(--brand-accent) 20%, var(--border-default));
-    }
-    .kpi-card-body {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-    }
-    .kpi-card-label {
-      font-size: var(--font-size-11);
-      color: var(--text-tertiary);
-      font-weight: var(--font-weight-medium);
-      letter-spacing: 0.02em;
-    }
-    .kpi-card-value {
-      font-size: var(--font-size-20);
-      font-weight: var(--font-weight-semibold);
-      font-feature-settings: 'tnum' 1, 'zero' 1;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
-    }
-    .kpi-card-change {
-      font-size: var(--font-size-11);
-      font-feature-settings: 'tnum' 1;
-    }
-    .kpi-card-sparkline {
-      flex-shrink: 0;
-      opacity: 0.7;
-    }
 
     /* Queue item hover elevation */
     .queue-item {
