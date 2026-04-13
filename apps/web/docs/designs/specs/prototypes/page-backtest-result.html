@@ -43,6 +43,7 @@
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
 
@@ -84,7 +85,7 @@
     .btn svg { width: var(--btn-icon-size); height: var(--btn-icon-size); flex-shrink: 0; }
 
     /* ═══ Meta Strip ═══ */
-    .hub-meta { grid-area: meta; background: var(--surface-strip); border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; padding: 0 var(--space-16); gap: var(--space-8); height: var(--density-strip-height); overflow: hidden; }
+    .hub-meta { grid-area: meta; background: var(--surface-strip); border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle)); box-shadow: 0 1px 6px -2px color-mix(in oklch, var(--brand-accent) 8%, transparent); display: flex; align-items: center; padding: 0 var(--space-16); gap: var(--space-8); height: var(--density-strip-height); overflow: hidden; }
     .meta-chip { display: inline-flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-12); color: var(--text-secondary); padding: 0 var(--space-8); white-space: nowrap; cursor: default; border-radius: var(--radius-3); transition: background var(--motion-duration-fast) var(--motion-easing-standard); }
     .meta-chip:hover { background: var(--interaction-hover-subtle-bg); }
     .meta-chip-label { color: var(--text-tertiary); }
@@ -176,6 +177,21 @@
     .stat-item { flex: 1; }
     .stat-label { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2); }
     .stat-value { font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
+
+    /* ── Rail logo brand glow ── */
+    .rail-logo { text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent); }
+
+    /* ── dot-pulse ── */
+    @keyframes dot-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .btn, .hub-tab, .meta-chip, .metric-card,
+      .object-status-dot, .data-table tr:hover td {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
   </style>
 </head>
 <body>
