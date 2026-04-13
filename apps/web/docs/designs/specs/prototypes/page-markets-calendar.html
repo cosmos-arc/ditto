@@ -977,6 +977,12 @@
       .calendar-nav-btn { transition: none !important; }
       .related-instrument { transition: none !important; }
     }
+    /* ── Inline style cleanup ── */
+    .iv-text-down { color: var(--market-down-fg); }
+    .iv-risk-high { color: var(--risk-high-fg); }
+    .iv-textarea-resize { resize: vertical; }
+    .iv-flex-wrap-gap6-mb8 { display: flex; gap: var(--space-6); flex-wrap: wrap; margin-bottom: var(--space-8); }
+
   </style>
 </head>
 <body>
@@ -1467,11 +1473,11 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">事件类型</span>
-            <span class="overlay-field-value" style="color:var(--market-down-fg)">限售解禁</span>
+            <span class="overlay-field-value iv-text-down">限售解禁</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">重要性</span>
-            <span class="overlay-field-value" style="color:var(--risk-high-fg)">高</span>
+            <span class="overlay-field-value iv-risk-high">高</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">解禁市值</span>
@@ -1568,7 +1574,7 @@
 
           <h4>分析提示词</h4>
           <div class="sv-pad-section">
-            <textarea class="ov-input" rows="4" placeholder="自定义分析提示词..." style="resize:vertical;">分析宁德时代 4 月 15 日限售解禁的影响：解禁市值 45.2 亿，解禁股数 2,074 万股，请评估对股价的短期冲击、历史解禁事件后的表现统计、以及建议的操作策略。</textarea>
+            <textarea class="ov-input iv-textarea-resize" rows="4" placeholder="自定义分析提示词...">分析宁德时代 4 月 15 日限售解禁的影响：解禁市值 45.2 亿，解禁股数 2,074 万股，请评估对股价的短期冲击、历史解禁事件后的表现统计、以及建议的操作策略。</textarea>
           </div>
 
           <div class="overlay-field">
@@ -1761,7 +1767,7 @@
             <div class="gallery-card__preview">
               <div class="state-variant-content" data-state="empty">
                 <div class="sv-pad-12">
-                  <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;margin-bottom:var(--space-8);">
+                  <div class="iv-flex-wrap-gap6-mb8">
                     <span class="filter-chip">新股申购</span>
                     <span class="filter-chip">限售解禁</span>
                     <span class="filter-chip">期权交割</span>
@@ -1823,11 +1829,11 @@
                   </div>
                   <div class="overlay-field">
                     <span class="overlay-field-label">事件类型</span>
-                    <span class="overlay-field-value" style="color:var(--market-down-fg)">限售解禁</span>
+                    <span class="overlay-field-value iv-text-down">限售解禁</span>
                   </div>
                   <div class="overlay-field">
                     <span class="overlay-field-label">重要性</span>
-                    <span class="overlay-field-value" style="color:var(--risk-high-fg)">高</span>
+                    <span class="overlay-field-value iv-risk-high">高</span>
                   </div>
                   <div class="overlay-field">
                     <span class="overlay-field-label">解禁市值</span>
@@ -1912,7 +1918,7 @@
                   </p>
                   <h4>分析提示词</h4>
                   <div class="sv-pad-section">
-                    <textarea class="ov-input" rows="3" placeholder="自定义分析提示词..." style="resize:vertical;" readonly>分析宁德时代 4 月 15 日限售解禁的影响：解禁市值 45.2 亿，解禁股数 2,074 万股，请评估对股价的短期冲击及操作建议。</textarea>
+                    <textarea class="ov-input iv-textarea-resize" rows="3" placeholder="自定义分析提示词..." readonly>分析宁德时代 4 月 15 日限售解禁的影响：解禁市值 45.2 亿，解禁股数 2,074 万股，请评估对股价的短期冲击及操作建议。</textarea>
                   </div>
                   <div class="overlay-field">
                     <span class="overlay-field-label">关联事件</span>
