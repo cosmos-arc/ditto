@@ -1033,6 +1033,176 @@
     }
     .status-sep { color: var(--overlay-6); }
     .status-spacer { flex: 1; }
+  
+    /* ── Inline style cleanup classes ── */
+    .iv-text-tertiary {
+  color:var(--text-tertiary);
+    }
+
+    .iv-pad-12 {
+  padding:var(--space-12);
+    }
+
+    .iv-pad-8 {
+  padding:var(--space-8);
+    }
+
+    .iv-text-up {
+  color:var(--market-up-fg);
+    }
+
+    .iv-accent-brand {
+  accent-color:var(--brand-accent);
+    }
+
+    .iv-text-down {
+  color:var(--market-down-fg);
+    }
+
+    .iv-section-heading {
+  font-weight:var(--font-weight-semibold);
+  margin-bottom:var(--space-8);
+  color:var(--text-primary);
+    }
+
+    .iv-text-tertiary-mt8 {
+  color:var(--text-tertiary);
+  margin-top:var(--space-8);
+    }
+
+    .iv-caption-label {
+  font-size:var(--font-size-10);
+  color:var(--text-tertiary);
+  margin-bottom:var(--space-4);
+    }
+
+    .iv-body-block {
+  font-size:var(--font-size-13);
+  color:var(--text-primary);
+  line-height:1.6;
+  margin-bottom:var(--space-12);
+    }
+
+    .iv-pt-4 {
+  padding-top:var(--space-4);
+    }
+
+    .iv-text-10 {
+  font-size:var(--font-size-10);
+    }
+
+    .iv-flex-center-gap4 {
+  display:flex;
+  align-items:center;
+  gap:var(--space-4);
+    }
+
+    .iv-h-28 {
+  height:28px;
+    }
+
+    .iv-h-24 {
+  height:24px;
+    }
+
+    .iv-flex-gap4-mb12 {
+  display:flex;
+  gap:var(--space-4);
+  margin-bottom:var(--space-12);
+    }
+
+    .iv-pad-8-text12 {
+  padding:var(--space-8);
+  font-size:var(--font-size-12);
+    }
+
+    .iv-divider-bar {
+  flex:1;
+  height:4px;
+  background:var(--overlay-4);
+  border-radius:2px;
+  margin:0 var(--space-8);
+    }
+
+    .iv-thumb-60 {
+  height:60px;
+  border-radius:var(--radius-4);
+    }
+
+    .iv-elevated-card {
+  background:var(--surface-elevated);
+  border:1px solid var(--border-subtle);
+  border-radius:var(--radius-6);
+  padding:var(--space-12);
+  font-size:var(--font-size-12);
+    }
+
+    .iv-inline-chip {
+  display:inline-flex;
+  align-items:center;
+  gap:var(--space-4);
+  font-size:var(--font-size-12);
+  color:var(--text-secondary);
+    }
+
+    .iv-panel-card {
+  padding:var(--space-8);
+  background:var(--surface-panel-elevated);
+  border-radius:var(--radius-4);
+    }
+
+    .iv-numeric-lg {
+  font-family:var(--font-family-numeric);
+  font-size:var(--font-size-16);
+  font-weight:var(--font-weight-semibold);
+    }
+
+    .iv-btn-primary-sm {
+  padding:var(--space-4) var(--space-8);
+  font-size:var(--font-size-12);
+  border-radius:var(--radius-3);
+  background:var(--brand-accent);
+  color:var(--text-inverse);
+  border:none;
+  cursor:pointer;
+    }
+
+    .iv-btn-ghost-sm {
+  padding:var(--space-4) var(--space-8);
+  font-size:var(--font-size-12);
+  border-radius:var(--radius-3);
+  background:var(--surface-panel-elevated);
+  color:var(--text-secondary);
+  border:1px solid var(--border-default);
+  cursor:pointer;
+    }
+
+      /* ── Inline style cleanup round 2 ── */
+    .iv-inline-chip-interactive {
+  display:inline-flex;
+  align-items:center;
+  gap:var(--space-4);
+  font-size:var(--font-size-12);
+  color:var(--text-secondary);
+  cursor:pointer;
+    }
+
+    .iv-risk-dot-medium {
+  width:var(--status-dot-size);
+  height:var(--status-dot-size);
+  border-radius:50%;
+  background:var(--risk-medium-fg);
+  flex-shrink:0;
+    }
+
+    .iv-risk-dot-high {
+  width:var(--status-dot-size);
+  height:var(--status-dot-size);
+  border-radius:50%;
+  background:var(--risk-high-fg);
+  flex-shrink:0;
+    }
+
   </style>
 </head>
 <body>
@@ -1142,7 +1312,7 @@
         <div class="context-bar-sep"></div>
         <label for="overlay-northbound-detail" class="context-bar-item cursor-pointer" title="查看北向资金详情">
           <span class="context-bar-label">北向</span>
-          <span class="context-bar-value inflow" style="color:var(--market-up-fg)">+12 亿</span>
+          <span class="context-bar-value inflow" class="iv-text-up">+12 亿</span>
         </label>
         <div class="context-bar-sep"></div>
         <div class="context-bar-item">
@@ -1154,7 +1324,7 @@
         </div>
         <div class="context-bar-spacer"></div>
         <div class="context-bar-item context-bar-item--secondary">
-          <span class="context-bar-value" style="font-size:var(--font-size-10)">涨 <span style="color:var(--market-up-fg)">2,847</span> / 跌 <span style="color:var(--market-down-fg)">1,523</span></span>
+          <span class="context-bar-value" class="iv-text-10">涨 <span class="iv-text-up">2,847</span> / 跌 <span class="iv-text-down">1,523</span></span>
         </div>
       </div>
 
@@ -1170,7 +1340,7 @@
           <strong>主线</strong>：科技扩散，AI 算力 + 半导体领涨，成交占比升至 18%
         </div>
         <span class="scope-sep">|</span>
-        <div class="scope-tag lag" style="font-size:var(--font-size-10)">FOMC-1D</div>
+        <div class="scope-tag lag" class="iv-text-10">FOMC-1D</div>
       </div>
 
       <!-- ===== Workspace: Main + Right Rail ===== -->
@@ -1308,12 +1478,12 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr><td class="name">510050 沪深300ETF</td><td class="numeric">4.236</td><td class="numeric" style="color:var(--market-up-fg)">+0.68%</td></tr>
-                    <tr><td class="name">510500 中证500ETF</td><td class="numeric">6.891</td><td class="numeric" style="color:var(--market-up-fg)">+0.94%</td></tr>
-                    <tr><td class="name">159915 创业板ETF</td><td class="numeric">2.187</td><td class="numeric" style="color:var(--market-down-fg)">-0.15%</td></tr>
-                    <tr><td class="name">512100 中证1000ETF</td><td class="numeric">2.456</td><td class="numeric" style="color:var(--market-up-fg)">+1.32%</td></tr>
-                    <tr><td class="name">512880 证券ETF</td><td class="numeric">0.987</td><td class="numeric" style="color:var(--market-up-fg)">+1.56%</td></tr>
-                    <tr><td class="name">159949 创新药ETF</td><td class="numeric">0.723</td><td class="numeric" style="color:var(--market-down-fg)">-0.42%</td></tr>
+                    <tr><td class="name">510050 沪深300ETF</td><td class="numeric">4.236</td><td class="numeric" class="iv-text-up">+0.68%</td></tr>
+                    <tr><td class="name">510500 中证500ETF</td><td class="numeric">6.891</td><td class="numeric" class="iv-text-up">+0.94%</td></tr>
+                    <tr><td class="name">159915 创业板ETF</td><td class="numeric">2.187</td><td class="numeric" class="iv-text-down">-0.15%</td></tr>
+                    <tr><td class="name">512100 中证1000ETF</td><td class="numeric">2.456</td><td class="numeric" class="iv-text-up">+1.32%</td></tr>
+                    <tr><td class="name">512880 证券ETF</td><td class="numeric">0.987</td><td class="numeric" class="iv-text-up">+1.56%</td></tr>
+                    <tr><td class="name">159949 创新药ETF</td><td class="numeric">0.723</td><td class="numeric" class="iv-text-down">-0.42%</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1324,7 +1494,7 @@
               <div class="panel-header">
                 <span class="panel-title">涨幅榜</span>
               </div>
-              <div class="panel-body" style="padding-top:var(--space-4)">
+              <div class="panel-body" class="iv-pt-4">
                 <div class="movers-list">
                   <div class="mover-item" tabindex="0"><span class="mover-rank">1</span><span class="mover-name">寒武纪-U</span><span class="mover-change up">+12.34%</span></div>
                   <div class="mover-item" tabindex="0"><span class="mover-rank">2</span><span class="mover-name">中芯国际</span><span class="mover-change up">+8.76%</span></div>
@@ -1340,7 +1510,7 @@
               <div class="panel-header">
                 <span class="panel-title">跌幅榜</span>
               </div>
-              <div class="panel-body" style="padding-top:var(--space-4)">
+              <div class="panel-body" class="iv-pt-4">
                 <div class="movers-list">
                   <div class="mover-item" tabindex="0"><span class="mover-rank">1</span><span class="mover-name">万科A</span><span class="mover-change down">-5.23%</span></div>
                   <div class="mover-item" tabindex="0"><span class="mover-rank">2</span><span class="mover-name">保利发展</span><span class="mover-change down">-4.18%</span></div>
@@ -1426,27 +1596,27 @@
             <div class="rail-section-body">
               <div class="sector-pref-item">
                 <span class="sector-pref-name">电子</span>
-                <div style="flex:1;height:4px;background:var(--overlay-4);border-radius:2px;margin:0 var(--space-8)"><div style="height:100%;width:65%;background:var(--market-up-fg);border-radius:2px"></div></div>
+                <div class="iv-divider-bar"><div style="height:100%;width:65%;background:var(--market-up-fg);border-radius:2px"></div></div>
                 <span class="sector-pref-value inflow">+3.2 亿</span>
               </div>
               <div class="sector-pref-item">
                 <span class="sector-pref-name">计算机</span>
-                <div style="flex:1;height:4px;background:var(--overlay-4);border-radius:2px;margin:0 var(--space-8)"><div style="height:100%;width:45%;background:var(--market-up-fg);border-radius:2px"></div></div>
+                <div class="iv-divider-bar"><div style="height:100%;width:45%;background:var(--market-up-fg);border-radius:2px"></div></div>
                 <span class="sector-pref-value inflow">+2.1 亿</span>
               </div>
               <div class="sector-pref-item">
                 <span class="sector-pref-name">新能源</span>
-                <div style="flex:1;height:4px;background:var(--overlay-4);border-radius:2px;margin:0 var(--space-8)"><div style="height:100%;width:30%;background:var(--market-up-fg);border-radius:2px"></div></div>
+                <div class="iv-divider-bar"><div style="height:100%;width:30%;background:var(--market-up-fg);border-radius:2px"></div></div>
                 <span class="sector-pref-value inflow">+1.5 亿</span>
               </div>
               <div class="sector-pref-item">
                 <span class="sector-pref-name">银行</span>
-                <div style="flex:1;height:4px;background:var(--overlay-4);border-radius:2px;margin:0 var(--space-8)"><div style="height:100%;width:35%;background:var(--market-down-fg);border-radius:2px"></div></div>
+                <div class="iv-divider-bar"><div style="height:100%;width:35%;background:var(--market-down-fg);border-radius:2px"></div></div>
                 <span class="sector-pref-value outflow">-1.8 亿</span>
               </div>
               <div class="sector-pref-item">
                 <span class="sector-pref-name">房地产</span>
-                <div style="flex:1;height:4px;background:var(--overlay-4);border-radius:2px;margin:0 var(--space-8)"><div style="height:100%;width:25%;background:var(--market-down-fg);border-radius:2px"></div></div>
+                <div class="iv-divider-bar"><div style="height:100%;width:25%;background:var(--market-down-fg);border-radius:2px"></div></div>
                 <span class="sector-pref-value outflow">-1.2 亿</span>
               </div>
             </div>
@@ -1459,11 +1629,11 @@
             </div>
             <div class="rail-section-body">
               <div style="display:flex;align-items:center;gap:var(--space-6);font-size:var(--font-size-12);margin-bottom:var(--space-4)">
-                <span style="width:var(--status-dot-size);height:var(--status-dot-size);border-radius:50%;background:var(--risk-high-fg);flex-shrink:0"></span>
-                <span style="color:var(--market-down-fg)">FOMC 前夜，波动可能抬升</span>
+                <span class="iv-risk-dot-high"></span>
+                <span class="iv-text-down">FOMC 前夜，波动可能抬升</span>
               </div>
               <div style="display:flex;align-items:center;gap:var(--space-6);font-size:var(--font-size-12)">
-                <span style="width:var(--status-dot-size);height:var(--status-dot-size);border-radius:50%;background:var(--risk-medium-fg);flex-shrink:0"></span>
+                <span class="iv-risk-dot-medium"></span>
                 <span style="color:var(--amber-500)">科技成交占比 18%，拥挤度偏高</span>
               </div>
             </div>
@@ -1701,9 +1871,9 @@
             <path d="M0 48 L30 46 L60 44 L90 40 L120 38 L150 36 L180 34 L210 30 L240 28 L270 30 L300 26" fill="none" stroke="var(--amber-500)" stroke-width="1" stroke-dasharray="3" opacity="0.6"/>
           </svg>
           <div style="display:flex;gap:var(--space-12);font-size:var(--font-size-10);margin-bottom:var(--space-8);color:var(--text-tertiary)">
-            <span style="display:flex;align-items:center;gap:var(--space-4)"><span style="width:12px;height:2px;background:var(--market-up-fg)"></span> 合计</span>
-            <span style="display:flex;align-items:center;gap:var(--space-4)"><span style="width:12px;height:2px;background:var(--brand-accent)"></span> 沪股通</span>
-            <span style="display:flex;align-items:center;gap:var(--space-4)"><span style="width:12px;height:2px;background:var(--amber-500)"></span> 深股通</span>
+            <span class="iv-flex-center-gap4"><span style="width:12px;height:2px;background:var(--market-up-fg)"></span> 合计</span>
+            <span class="iv-flex-center-gap4"><span style="width:12px;height:2px;background:var(--brand-accent)"></span> 沪股通</span>
+            <span class="iv-flex-center-gap4"><span style="width:12px;height:2px;background:var(--amber-500)"></span> 深股通</span>
           </div>
           <h4>北向持仓 Top10 变动</h4>
           <div class="overlay-field"><span class="overlay-field-label">贵州茅台</span><span class="overlay-field-value val-up">+1.2 亿</span></div>
@@ -1732,17 +1902,17 @@
         </div>
         <div class="overlay-body">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-8);margin-bottom:var(--space-12)">
-            <div style="padding:var(--space-8);background:var(--surface-panel-elevated);border-radius:var(--radius-4)">
-              <div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-bottom:var(--space-4)">涨跌幅</div>
+            <div class="iv-panel-card">
+              <div class="iv-caption-label">涨跌幅</div>
               <div style="font-family:var(--font-family-numeric);font-size:var(--font-size-16);font-weight:var(--font-weight-semibold);color:var(--market-up-fg)">+2.34%</div>
             </div>
-            <div style="padding:var(--space-8);background:var(--surface-panel-elevated);border-radius:var(--radius-4)">
-              <div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-bottom:var(--space-4)">成交额</div>
-              <div style="font-family:var(--font-family-numeric);font-size:var(--font-size-16);font-weight:var(--font-weight-semibold)">1,234 亿</div>
+            <div class="iv-panel-card">
+              <div class="iv-caption-label">成交额</div>
+              <div class="iv-numeric-lg">1,234 亿</div>
             </div>
-            <div style="padding:var(--space-8);background:var(--surface-panel-elevated);border-radius:var(--radius-4)">
-              <div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-bottom:var(--space-4)">换手率</div>
-              <div style="font-family:var(--font-family-numeric);font-size:var(--font-size-16);font-weight:var(--font-weight-semibold)">3.82%</div>
+            <div class="iv-panel-card">
+              <div class="iv-caption-label">换手率</div>
+              <div class="iv-numeric-lg">3.82%</div>
             </div>
           </div>
           <h4>领涨个股</h4>
@@ -1774,22 +1944,22 @@
         <div class="overlay-body">
           <h4>板块范围</h4>
           <div style="display:flex;flex-wrap:wrap;gap:var(--space-4);margin-bottom:var(--space-12)">
-            <label style="display:inline-flex;align-items:center;gap:var(--space-4);font-size:var(--font-size-12);color:var(--text-secondary);cursor:pointer"><input type="checkbox" checked style="accent-color:var(--brand-accent)"> 全部</label>
-            <label style="display:inline-flex;align-items:center;gap:var(--space-4);font-size:var(--font-size-12);color:var(--text-secondary);cursor:pointer"><input type="checkbox" checked style="accent-color:var(--brand-accent)"> 沪市主板</label>
-            <label style="display:inline-flex;align-items:center;gap:var(--space-4);font-size:var(--font-size-12);color:var(--text-secondary);cursor:pointer"><input type="checkbox" checked style="accent-color:var(--brand-accent)"> 深市主板</label>
-            <label style="display:inline-flex;align-items:center;gap:var(--space-4);font-size:var(--font-size-12);color:var(--text-secondary);cursor:pointer"><input type="checkbox" checked style="accent-color:var(--brand-accent)"> 创业板</label>
-            <label style="display:inline-flex;align-items:center;gap:var(--space-4);font-size:var(--font-size-12);color:var(--text-secondary);cursor:pointer"><input type="checkbox" checked style="accent-color:var(--brand-accent)"> 科创板</label>
+            <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 全部</label>
+            <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 沪市主板</label>
+            <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 深市主板</label>
+            <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 创业板</label>
+            <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 科创板</label>
           </div>
           <h4>时间框架</h4>
-          <div style="display:flex;gap:var(--space-4);margin-bottom:var(--space-12)">
-            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);border-radius:var(--radius-3);background:var(--brand-accent);color:var(--text-inverse);border:none;cursor:pointer">当日</button>
-            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);border-radius:var(--radius-3);background:var(--surface-panel-elevated);color:var(--text-secondary);border:1px solid var(--border-default);cursor:pointer">5日</button>
-            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);border-radius:var(--radius-3);background:var(--surface-panel-elevated);color:var(--text-secondary);border:1px solid var(--border-default);cursor:pointer">20日</button>
+          <div class="iv-flex-gap4-mb12">
+            <button class="iv-btn-primary-sm">当日</button>
+            <button class="iv-btn-ghost-sm">5日</button>
+            <button class="iv-btn-ghost-sm">20日</button>
           </div>
           <h4>Map 视图模式</h4>
-          <div style="display:flex;gap:var(--space-4);margin-bottom:var(--space-12)">
-            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);border-radius:var(--radius-3);background:var(--brand-accent);color:var(--text-inverse);border:none;cursor:pointer">Treemap</button>
-            <button style="padding:var(--space-4) var(--space-8);font-size:var(--font-size-12);border-radius:var(--radius-3);background:var(--surface-panel-elevated);color:var(--text-secondary);border:1px solid var(--border-default);cursor:pointer">Heatmap</button>
+          <div class="iv-flex-gap4-mb12">
+            <button class="iv-btn-primary-sm">Treemap</button>
+            <button class="iv-btn-ghost-sm">Heatmap</button>
           </div>
           <div class="overlay-actions">
             <label for="overlay-filter-panel" class="overlay-btn overlay-btn-primary cursor-pointer">应用</label>
@@ -1809,7 +1979,7 @@
         </div>
         <div class="overlay-body">
           <div style="font-size:var(--font-size-10);color:var(--text-tertiary);margin-bottom:var(--space-8);text-transform:uppercase;letter-spacing:0.06em">生成时间 09:42 CST</div>
-          <div style="font-size:var(--font-size-13);color:var(--text-primary);line-height:1.6;margin-bottom:var(--space-12)">
+          <div class="iv-body-block">
             <strong>主线归因</strong>：今日 A 股科技板块延续强势，AI 算力与半导体设备领涨。驱动因素为：
           </div>
           <div style="font-size:var(--font-size-13);color:var(--text-secondary);line-height:1.6;margin-bottom:var(--space-12)">
@@ -1817,10 +1987,10 @@
             2. <strong>资金面</strong>：北向资金连续 3 日净买入电子板块<br>
             3. <strong>基本面</strong>：寒武纪 Q1 营收超预期，AI 芯片出货量环比 +40%
           </div>
-          <div style="font-size:var(--font-size-13);color:var(--text-primary);line-height:1.6;margin-bottom:var(--space-12)">
+          <div class="iv-body-block">
             <strong>异动解读</strong>：房地产板块承压，万科 -5.23% 创近 3 个月新低。万科 A 的下跌主要受销售数据不及预期影响。银行板块跟跌，兴业银行 -2.34%，与地产风险传导预期有关。
           </div>
-          <div style="font-size:var(--font-size-13);color:var(--text-primary);line-height:1.6;margin-bottom:var(--space-12)">
+          <div class="iv-body-block">
             <strong>趋势预判</strong>：短期科技主线延续概率较高，但需关注明日 FOMC 对全球风险偏好的影响。若 FOMC 偏鹰，建议降低仓位至 6 成以下。
           </div>
           <div class="overlay-actions">
@@ -1901,7 +2071,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Scope Strip — Loading</div>
             <div class="gallery-card__preview">
-              <div class="state-loading" style="padding:var(--space-8)">
+              <div class="state-loading" class="iv-pad-8">
                 <div class="skeleton skeleton-text" style="height:12px;width:40%"></div>
                 <div class="skeleton skeleton-text-sm" style="height:10px;width:70%;margin-top:var(--space-4)"></div>
               </div>
@@ -1910,7 +2080,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Scope Strip — Empty</div>
             <div class="gallery-card__preview">
-              <div class="state-empty" style="padding:var(--space-12)">
+              <div class="state-empty" class="iv-pad-12">
                 <div class="state-empty-title">AI 分析中...</div>
                 <div class="state-empty-desc">等待 AI 解读生成</div>
               </div>
@@ -1919,7 +2089,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Scope Strip — Error</div>
             <div class="gallery-card__preview">
-              <div class="state-error" style="padding:var(--space-12)">
+              <div class="state-error" class="iv-pad-12">
                 <div class="state-error-title">AI 分析失败</div>
                 <div class="state-error-desc">无法生成市场解读</div>
                 <button class="state-error-retry">重试</button>
@@ -1929,7 +2099,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Scope Strip — Stale</div>
             <div class="gallery-card__preview">
-              <div class="state-stale" style="padding:var(--space-12)">
+              <div class="state-stale" class="iv-pad-12">
                 <div class="state-stale-title">解读可能过期</div>
                 <div class="state-stale-desc">生成于 30 分钟前 · 09:16 CST</div>
                 <button class="state-stale-retry">重新生成</button>
@@ -1946,7 +2116,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Treemap — Loading</div>
             <div class="gallery-card__preview">
-              <div class="state-loading" style="padding:var(--space-12)">
+              <div class="state-loading" class="iv-pad-12">
                 <div class="skeleton skeleton-chart" style="height:100px;border-radius:var(--radius-6)"></div>
               </div>
             </div>
@@ -1954,7 +2124,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Treemap — Empty</div>
             <div class="gallery-card__preview">
-              <div class="state-empty" style="padding:var(--space-12)">
+              <div class="state-empty" class="iv-pad-12">
                 <div class="state-empty-title">暂无结构数据</div>
                 <div class="state-empty-desc">非交易时段无法展示行业结构图</div>
               </div>
@@ -1963,7 +2133,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Treemap — Error</div>
             <div class="gallery-card__preview">
-              <div class="state-error" style="padding:var(--space-12)">
+              <div class="state-error" class="iv-pad-12">
                 <div class="state-error-title">加载失败</div>
                 <button class="state-error-retry">重试</button>
               </div>
@@ -1972,7 +2142,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Treemap — Stale</div>
             <div class="gallery-card__preview">
-              <div style="padding:var(--space-8)">
+              <div class="iv-pad-8">
                 <div style="height:100px;background:var(--surface-panel-elevated);border-radius:var(--radius-6);border:1px solid;color:var(--risk-near-limit-fg);display:flex;align-items:center;justify-content:center;font-size:var(--font-size-12);color:var(--text-tertiary)">数据可能过期 · 最后更新 15 分钟前</div>
               </div>
             </div>
@@ -1980,7 +2150,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Treemap — Selected</div>
             <div class="gallery-card__preview">
-              <div style="padding:var(--space-8)">
+              <div class="iv-pad-8">
                 <div style="height:100px;background:var(--surface-panel-elevated);border-radius:var(--radius-6);border:1px solid var(--brand-accent);display:flex;align-items:center;justify-content:center;font-size:var(--font-size-12);color:var(--brand-accent)">电子 · 选中 · 触发行业详情 Sheet</div>
               </div>
             </div>
@@ -1996,17 +2166,17 @@
             <div class="gallery-card__label">Index — Loading</div>
             <div class="gallery-card__preview">
               <div class="state-loading" style="padding:var(--space-8);display:grid;grid-template-columns:1fr 1fr;gap:var(--space-8)">
-                <div class="skeleton skeleton-row" style="height:60px;border-radius:var(--radius-4)"></div>
-                <div class="skeleton skeleton-row" style="height:60px;border-radius:var(--radius-4)"></div>
-                <div class="skeleton skeleton-row" style="height:60px;border-radius:var(--radius-4)"></div>
-                <div class="skeleton skeleton-row" style="height:60px;border-radius:var(--radius-4)"></div>
+                <div class="skeleton skeleton-row" class="iv-thumb-60"></div>
+                <div class="skeleton skeleton-row" class="iv-thumb-60"></div>
+                <div class="skeleton skeleton-row" class="iv-thumb-60"></div>
+                <div class="skeleton skeleton-row" class="iv-thumb-60"></div>
               </div>
             </div>
           </div>
           <div class="gallery-card">
             <div class="gallery-card__label">Index — Empty</div>
             <div class="gallery-card__preview">
-              <div class="state-empty" style="padding:var(--space-12)">
+              <div class="state-empty" class="iv-pad-12">
                 <div class="state-empty-title">暂无指数数据</div>
               </div>
             </div>
@@ -2014,7 +2184,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Index — Selected</div>
             <div class="gallery-card__preview">
-              <div style="padding:var(--space-8)">
+              <div class="iv-pad-8">
                 <div style="padding:var(--space-8);border-radius:var(--radius-4);border:1px solid var(--brand-accent);font-size:var(--font-size-12);color:var(--brand-accent);text-align:center">沪深300 · 选中高亮</div>
               </div>
             </div>
@@ -2029,17 +2199,17 @@
           <div class="gallery-card">
             <div class="gallery-card__label">ETF — Loading</div>
             <div class="gallery-card__preview">
-              <div class="state-loading" style="padding:var(--space-8)">
-                <div class="skeleton skeleton-row" style="height:28px"></div>
-                <div class="skeleton skeleton-row" style="height:28px"></div>
-                <div class="skeleton skeleton-row" style="height:28px"></div>
+              <div class="state-loading" class="iv-pad-8">
+                <div class="skeleton skeleton-row" class="iv-h-28"></div>
+                <div class="skeleton skeleton-row" class="iv-h-28"></div>
+                <div class="skeleton skeleton-row" class="iv-h-28"></div>
               </div>
             </div>
           </div>
           <div class="gallery-card">
             <div class="gallery-card__label">ETF — Selected</div>
             <div class="gallery-card__preview">
-              <div style="padding:var(--space-8);font-size:var(--font-size-12)">
+              <div class="iv-pad-8-text12">
                 <div style="padding:var(--space-4) var(--space-8);background:var(--brand-accent-subtle);border:1px solid var(--brand-accent);border-radius:var(--radius-3);color:var(--brand-accent);text-align:center">510050 沪深300ETF · 选中 · 跳转 Instrument Hub</div>
               </div>
             </div>
@@ -2054,17 +2224,17 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Movers — Loading</div>
             <div class="gallery-card__preview">
-              <div class="state-loading" style="padding:var(--space-8)">
-                <div class="skeleton skeleton-row" style="height:24px"></div>
-                <div class="skeleton skeleton-row" style="height:24px"></div>
-                <div class="skeleton skeleton-row" style="height:24px"></div>
+              <div class="state-loading" class="iv-pad-8">
+                <div class="skeleton skeleton-row" class="iv-h-24"></div>
+                <div class="skeleton skeleton-row" class="iv-h-24"></div>
+                <div class="skeleton skeleton-row" class="iv-h-24"></div>
               </div>
             </div>
           </div>
           <div class="gallery-card">
             <div class="gallery-card__label">Movers — Empty</div>
             <div class="gallery-card__preview">
-              <div class="state-empty" style="padding:var(--space-12)">
+              <div class="state-empty" class="iv-pad-12">
                 <div class="state-empty-title">暂无涨跌数据</div>
               </div>
             </div>
@@ -2072,7 +2242,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">Movers — Selected</div>
             <div class="gallery-card__preview">
-              <div style="padding:var(--space-8);font-size:var(--font-size-12)">
+              <div class="iv-pad-8-text12">
                 <div style="padding:var(--space-4) var(--space-8);background:var(--brand-accent-subtle);border-radius:var(--radius-3);color:var(--brand-accent);text-align:center">寒武纪-U · 选中 · 跳转 Intelligence</div>
               </div>
             </div>
@@ -2087,7 +2257,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">北向面板 — Loading</div>
             <div class="gallery-card__preview">
-              <div class="state-loading" style="padding:var(--space-8)">
+              <div class="state-loading" class="iv-pad-8">
                 <div class="skeleton skeleton-heading" style="height:16px;width:40%"></div>
                 <div class="skeleton skeleton-chart" style="height:48px;margin-top:var(--space-4)"></div>
                 <div class="skeleton skeleton-text" style="height:12px;margin-top:var(--space-4)"></div>
@@ -2097,7 +2267,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">北向面板 — Empty</div>
             <div class="gallery-card__preview">
-              <div class="state-empty" style="padding:var(--space-12)">
+              <div class="state-empty" class="iv-pad-12">
                 <div class="state-empty-title">盘前暂无北向数据</div>
                 <div class="state-empty-desc">北向资金数据 09:30 后更新</div>
               </div>
@@ -2106,7 +2276,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">北向面板 — Error</div>
             <div class="gallery-card__preview">
-              <div class="state-error" style="padding:var(--space-12)">
+              <div class="state-error" class="iv-pad-12">
                 <div class="state-error-title">加载失败</div>
                 <button class="state-error-retry">重试</button>
               </div>
@@ -2115,7 +2285,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">北向面板 — Stale</div>
             <div class="gallery-card__preview">
-              <div class="state-stale" style="padding:var(--space-12)">
+              <div class="state-stale" class="iv-pad-12">
                 <div class="state-stale-title">数据可能过期</div>
                 <div class="state-stale-desc">北向数据最后更新 15 分钟前（延迟约 15 分钟）</div>
                 <button class="state-stale-retry">立即刷新</button>
@@ -2142,12 +2312,12 @@
           <div class="gallery-card">
             <div class="gallery-card__trigger">触发: 点击 Context Bar 北向指标 / Right Rail 展开按钮</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div style="background:var(--surface-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-6);padding:var(--space-12);font-size:var(--font-size-12)">
-                <div style="font-weight:var(--font-weight-semibold);margin-bottom:var(--space-8);color:var(--text-primary)">北向资金详情</div>
-                <div style="color:var(--text-tertiary)">分时净流入曲线 + 沪股通/深股通分别展示</div>
-                <div style="color:var(--text-tertiary)">持仓 Top10 变动</div>
-                <div style="color:var(--text-tertiary)">行业偏好分析</div>
-                <div style="color:var(--text-tertiary);margin-top:var(--space-8)">关闭: 遮罩 / ESC</div>
+              <div class="iv-elevated-card">
+                <div class="iv-section-heading">北向资金详情</div>
+                <div class="iv-text-tertiary">分时净流入曲线 + 沪股通/深股通分别展示</div>
+                <div class="iv-text-tertiary">持仓 Top10 变动</div>
+                <div class="iv-text-tertiary">行业偏好分析</div>
+                <div class="iv-text-tertiary-mt8">关闭: 遮罩 / ESC</div>
               </div>
             </div>
           </div>
@@ -2160,12 +2330,12 @@
           <div class="gallery-card">
             <div class="gallery-card__trigger">触发: 点击 Market Structure Map 行业节点</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div style="background:var(--surface-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-6);padding:var(--space-12);font-size:var(--font-size-12)">
-                <div style="font-weight:var(--font-weight-semibold);margin-bottom:var(--space-8);color:var(--text-primary)">行业详情 · 电子</div>
-                <div style="color:var(--text-tertiary)">行业概况 (涨跌幅/成交额/换手率)</div>
-                <div style="color:var(--text-tertiary)">领涨/领跌个股</div>
-                <div style="color:var(--text-tertiary)">资金流向 + 加入观察 CTA</div>
-                <div style="color:var(--text-tertiary);margin-top:var(--space-8)">关闭: 遮罩 / ESC / 点击标的跳转并关闭</div>
+              <div class="iv-elevated-card">
+                <div class="iv-section-heading">行业详情 · 电子</div>
+                <div class="iv-text-tertiary">行业概况 (涨跌幅/成交额/换手率)</div>
+                <div class="iv-text-tertiary">领涨/领跌个股</div>
+                <div class="iv-text-tertiary">资金流向 + 加入观察 CTA</div>
+                <div class="iv-text-tertiary-mt8">关闭: 遮罩 / ESC / 点击标的跳转并关闭</div>
               </div>
             </div>
           </div>
@@ -2178,12 +2348,12 @@
           <div class="gallery-card">
             <div class="gallery-card__trigger">触发: 点击工具栏筛选按钮</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div style="background:var(--surface-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-6);padding:var(--space-12);font-size:var(--font-size-12)">
-                <div style="font-weight:var(--font-weight-semibold);margin-bottom:var(--space-8);color:var(--text-primary)">筛选器</div>
-                <div style="color:var(--text-tertiary)">板块范围筛选</div>
-                <div style="color:var(--text-tertiary)">时间框架选择</div>
-                <div style="color:var(--text-tertiary)">Map 视图模式切换 (treemap/heatmap)</div>
-                <div style="color:var(--text-tertiary);margin-top:var(--space-8)">关闭: 遮罩 / ESC / 应用后自动关闭</div>
+              <div class="iv-elevated-card">
+                <div class="iv-section-heading">筛选器</div>
+                <div class="iv-text-tertiary">板块范围筛选</div>
+                <div class="iv-text-tertiary">时间框架选择</div>
+                <div class="iv-text-tertiary">Map 视图模式切换 (treemap/heatmap)</div>
+                <div class="iv-text-tertiary-mt8">关闭: 遮罩 / ESC / 应用后自动关闭</div>
               </div>
             </div>
           </div>
@@ -2196,12 +2366,12 @@
           <div class="gallery-card">
             <div class="gallery-card__trigger">触发: 点击 "AI 解读" 按钮</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div style="background:var(--surface-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-6);padding:var(--space-12);font-size:var(--font-size-12)">
-                <div style="font-weight:var(--font-weight-semibold);margin-bottom:var(--space-8);color:var(--text-primary)">AI 结构分析</div>
-                <div style="color:var(--text-tertiary)">A 股结构分析 + 主线归因</div>
-                <div style="color:var(--text-tertiary)">异动解读 + 趋势预判</div>
-                <div style="color:var(--text-tertiary)">发送到 Copilot CTA</div>
-                <div style="color:var(--text-tertiary);margin-top:var(--space-8)">关闭: 遮罩 / ESC</div>
+              <div class="iv-elevated-card">
+                <div class="iv-section-heading">AI 结构分析</div>
+                <div class="iv-text-tertiary">A 股结构分析 + 主线归因</div>
+                <div class="iv-text-tertiary">异动解读 + 趋势预判</div>
+                <div class="iv-text-tertiary">发送到 Copilot CTA</div>
+                <div class="iv-text-tertiary-mt8">关闭: 遮罩 / ESC</div>
               </div>
             </div>
           </div>
