@@ -21,6 +21,7 @@ from dishka import Provider, Scope, provide
 from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_data import SQLiteClient
 from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.providers.provider import ServiceBackedDataProvider
 from ditto_data.quality import QualityEngine
 from ditto_data.services import (
@@ -124,6 +125,7 @@ from ditto_app.query.derived import DerivedQueryFacade
 from ditto_app.query.forward_return_service import ForwardReturnService
 from ditto_app.query.fundamental import FundamentalQueryFacade
 from ditto_app.query.fx import FXQueryFacade
+from ditto_app.query.ingestion_status import IngestionStatusQueryFacade
 from ditto_app.query.lineage import LineageQueryFacade
 from ditto_app.query.macro import MacroQueryFacade
 from ditto_app.query.market import MarketQueryFacade
@@ -512,6 +514,14 @@ class AppQueryProvider(Provider):
     ) -> UniverseQueryFacade:
         """Universe 只读查询 facade — 封装 MetadataService universe 方法."""
         return UniverseQueryFacade(metadata_service=metadata_service)
+
+    @provide
+    def ingestion_status_query_facade(
+        self,
+        ingestion_log_service: IngestionLogService,
+    ) -> IngestionStatusQueryFacade:
+        """摄取状态查询 facade — 封装 IngestionLogService."""
+        return IngestionStatusQueryFacade(ingestion_log_service=ingestion_log_service)
 
 
 # ---------------------------------------------------------------------------
