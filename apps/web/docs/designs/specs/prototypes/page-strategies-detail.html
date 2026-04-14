@@ -314,12 +314,28 @@
       grid-area: meta;
       background: var(--surface-strip);
       border-bottom: 1px solid var(--border-subtle);
+      position: relative;
       display: flex;
       align-items: center;
       padding: 0 var(--space-16);
       gap: var(--space-8);
       height: var(--density-strip-height);
       overflow: hidden;
+    }
+    .hub-meta::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 8%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 14%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 8%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
     }
 
     .meta-chip {
@@ -467,7 +483,7 @@
       background: var(--surface-panel-base);
       border: 1px solid var(--border-subtle);
       border-radius: var(--card-radius);
-      padding: var(--space-10) var(--space-12);
+      padding: var(--space-8) var(--space-10);
       display: flex;
       flex-direction: column;
       gap: var(--space-4);
@@ -475,35 +491,28 @@
       overflow: hidden;
       transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
                   background var(--motion-duration-fast) var(--motion-easing-standard),
-                  transform var(--motion-duration-fast) var(--motion-easing-standard),
                   box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--brand-accent);
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .metric-card:hover {
       border-color: var(--border-default);
       background: var(--surface-panel-elevated);
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12),
-                  0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
+      box-shadow: 0 1px 4px oklch(0 0 0 / 0.08);
     }
+    .metric-card:hover::before { opacity: 0.6; }
 
-    .metric-card::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      opacity: 0;
-      background: radial-gradient(
-        ellipse at top right,
-        color-mix(in oklch, var(--brand-accent) 4%, transparent) 0%,
-        transparent 60%
-      );
-      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
-      pointer-events: none;
-    }
-    .metric-card:hover::after { opacity: 1; }
+    .metric-card::after { display: none; }
 
     .metric-label {
-      font-size: var(--font-size-12);
+      font-size: var(--font-size-11);
       color: var(--text-tertiary);
     }
     .metric-value {
@@ -625,6 +634,24 @@
       flex-direction: column;
       overflow: hidden;
       min-height: 0;
+      position: relative;
+    }
+    .hub-sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 32px;
+      background: linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--brand-accent) 6%, transparent) 0%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+    .hub-sidebar > * {
+      position: relative;
+      z-index: 1;
     }
 
     .sidebar-section {
@@ -693,6 +720,22 @@
       height: var(--density-strip-height);
       overflow: hidden;
       flex-shrink: 0;
+      position: relative;
+    }
+    .hub-bottom::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 6%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 6%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
     }
 
     .bottom-item {
@@ -765,6 +808,16 @@
     .compare-metric-cell.best {
       color: var(--market-up-fg);
       font-weight: var(--font-weight-semibold);
+      background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
+    }
+    .compare-best-dot {
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--market-up-fg);
+      margin-left: var(--space-4);
+      vertical-align: middle;
     }
 
     /* ══════════════════════════════════════════════
@@ -781,26 +834,44 @@
       top: 8px;
       bottom: 8px;
       width: 1px;
-      background: var(--border-subtle);
+      background: repeating-linear-gradient(
+        to bottom,
+        var(--border-subtle) 0px,
+        var(--border-subtle) 4px,
+        transparent 4px,
+        transparent 8px
+      );
     }
     .version-item {
       position: relative;
       padding-bottom: var(--space-12);
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .version-item:hover {
+      background: var(--interaction-hover-subtle-bg);
     }
     .version-item::before {
       content: '';
       position: absolute;
-      left: calc(-1 * var(--space-14) - 6px);
+      left: calc(-1 * var(--space-16) + 2px);
       top: 8px;
       width: 9px;
       height: 9px;
       border-radius: 50%;
       border: 2px solid var(--border-strong);
       background: var(--surface-app);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .version-item.current::before {
+      width: 11px;
+      height: 11px;
+      left: calc(-1 * var(--space-16) + 1px);
+      top: 7px;
       border-color: var(--brand-accent);
       background: var(--brand-accent);
+      box-shadow: 0 0 8px color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
     .version-label {
       font-size: var(--font-size-12);
@@ -909,10 +980,11 @@
     .sd-color-down { color: var(--market-down-fg); }
     .sd-color-healthy { color: var(--system-healthy-fg); }
     .sd-color-degraded { color: var(--system-degraded-fg); }
-    .sd-stat-card { flex: 1; background: var(--surface-panel-base); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); padding: var(--space-10) var(--space-12); display: flex; align-items: center; gap: var(--space-8); }
+    .sd-stat-card { flex: 1; background: var(--surface-panel-base); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); padding: var(--space-10) var(--space-12); display: flex; align-items: center; gap: var(--space-8); transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard); cursor: default; }
+    .sd-stat-card:hover { border-color: var(--border-default); background: var(--surface-panel-elevated); }
     .sd-divider-v { width: 1px; background: var(--border-subtle); }
     .sd-font-numeric { font-family: var(--font-family-numeric); }
-    .sd-text10 { font-size: 10px; }
+    .sd-text10 { font-size: var(--font-size-10); }
     .sd-shrink0 { flex-shrink: 0; }
     .sd-flex1 { flex: 1; }
     .sd-flex1-minh0 { flex: 1; min-height: 0; }
@@ -935,9 +1007,9 @@
     .sd-btn-danger { background: var(--market-down-fg); color: white; }
     .sd-btn-warning { background: var(--system-degraded-fg); color: white; }
     .sd-alert-box { padding: var(--space-8); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-4); margin-bottom: var(--space-8); }
-    .sd-wbar-20-neutral { width: 20%; background: var(--text-tertiary); }
-    .sd-wbar-15-neutral { width: 15%; background: var(--text-tertiary); }
-    .sd-wbar-10-neutral { width: 10%; background: var(--text-tertiary); }
+    .sd-wbar-20-neutral { width: 20%; background: color-mix(in oklch, var(--brand-accent) 50%, transparent); }
+    .sd-wbar-15-neutral { width: 15%; background: color-mix(in oklch, var(--brand-accent) 35%, transparent); }
+    .sd-wbar-10-neutral { width: 10%; background: color-mix(in oklch, var(--brand-accent) 25%, transparent); }
     .sd-w-35 { width: 35%; }
     .sd-w-20 { width: 20%; }
     .sd-w-15 { width: 15%; }
@@ -1128,7 +1200,7 @@
               <!-- KPI Strip: 5 metrics -->
               <div class="metrics-grid">
                 <div class="metric-card">
-                  <span class="metric-label">Sharpe Ratio</span>
+                  <span class="metric-label">Sharpe</span>
                   <span class="metric-value" data-ticker="1.82" data-ticker-prefix="" data-decimals="2">0.00</span>
                   <span class="metric-change up">
                     <svg class="sparkline-placeholder" viewBox="0 0 80 28"><path d="M0 24 L12 20 L24 16 L36 14 L48 10 L60 6 L72 8 L80 4" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5" opacity="0.6"/></svg>
@@ -1197,23 +1269,31 @@
                   <span class="sd-text10-tertiary">最近回测 v3.2</span>
                 </div>
                 <div class="panel-body sd-flex-center-justify">
-                  <svg viewBox="0 0 400 120" class="sd-w-full-opacity80">
+                  <svg viewBox="0 0 420 120" class="sd-w-full-opacity80">
                     <defs>
                       <linearGradient id="nav-gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.15"/>
+                        <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.2"/>
                         <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
                       </linearGradient>
                     </defs>
+                    <!-- Y-axis labels -->
+                    <text x="0" y="14" fill="var(--text-tertiary)" font-size="9" font-family="var(--font-family-numeric)">1.08</text>
+                    <text x="0" y="64" fill="var(--text-tertiary)" font-size="9" font-family="var(--font-family-numeric)">1.04</text>
+                    <text x="0" y="94" fill="var(--text-tertiary)" font-size="9" font-family="var(--font-family-numeric)">1.02</text>
                     <!-- Grid lines -->
-                    <line x1="0" y1="30" x2="400" y2="30" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
-                    <line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
-                    <line x1="0" y1="90" x2="400" y2="90" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                    <line x1="28" y1="15" x2="400" y2="15" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                    <line x1="28" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                    <line x1="28" y1="90" x2="400" y2="90" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
                     <!-- Area fill -->
-                    <path d="M0 90 L20 85 L40 80 L60 75 L80 70 L100 65 L120 60 L140 55 L160 50 L180 48 L200 42 L220 40 L240 35 L260 32 L280 30 L300 28 L320 25 L340 22 L360 20 L380 18 L400 15 L400 120 L0 120 Z" fill="url(#nav-gradient)"/>
+                    <path d="M28 90 L48 85 L68 80 L88 75 L108 70 L128 65 L148 60 L168 55 L188 50 L208 48 L228 42 L248 40 L268 35 L288 32 L308 30 L328 28 L348 25 L368 22 L388 20 L400 18 L400 120 L28 120 Z" fill="url(#nav-gradient)"/>
                     <!-- Line -->
-                    <path d="M0 90 L20 85 L40 80 L60 75 L80 70 L100 65 L120 60 L140 55 L160 50 L180 48 L200 42 L220 40 L240 35 L260 32 L280 30 L300 28 L320 25 L340 22 L360 20 L380 18 L400 15" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/>
+                    <path d="M28 90 L48 85 L68 80 L88 75 L108 70 L128 65 L148 60 L168 55 L188 50 L208 48 L228 42 L248 40 L268 35 L288 32 L308 30 L328 28 L348 25 L368 22 L388 20 L400 18" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/>
+                    <!-- Peak dot -->
+                    <circle cx="400" cy="18" r="2.5" fill="var(--brand-accent)"/>
                     <!-- Benchmark -->
-                    <path d="M0 85 L40 82 L80 80 L120 78 L160 76 L200 74 L240 72 L280 70 L320 68 L360 66 L400 64" fill="none" stroke="var(--text-tertiary)" stroke-width="1" stroke-dasharray="3"/>
+                    <path d="M28 85 L68 82 L108 80 L148 78 L188 76 L228 74 L268 72 L308 70 L348 68 L388 66 L400 65" fill="none" stroke="var(--text-tertiary)" stroke-width="1" stroke-dasharray="3"/>
+                    <!-- Benchmark label -->
+                    <text x="402" y="68" fill="var(--text-tertiary)" font-size="8" font-family="var(--font-family-numeric)">HS300</text>
                   </svg>
                 </div>
               </div>
@@ -1221,7 +1301,7 @@
               <!-- Top 3 Backtests -->
               <div class="panel sd-shrink0">
                 <div class="panel-header">
-                  <span class="panel-title">最近回测</span>
+                  <span class="panel-title">近期回测</span>
                 </div>
                 <div class="sd-overflow-auto">
                   <table class="data-table">
@@ -1280,23 +1360,38 @@
                   <div class="sd-flex-between-center">
                     <div>
                       <div class="sd-text12-secondary">贵州茅台</div>
-                      <div class="sd-text10-tertiary">买入 · 置信 82%</div>
+                      <div class="sd-text10-tertiary">买入 · 置信 82% · 04-10 09:45</div>
                     </div>
                     <span class="status-badge success">已确认</span>
                   </div>
                   <div class="sd-flex-between-center">
                     <div>
                       <div class="sd-text12-secondary">宁德时代</div>
-                      <div class="sd-text10-tertiary">买入 · 置信 67%</div>
+                      <div class="sd-text10-tertiary">买入 · 置信 67% · 04-10 14:32</div>
                     </div>
                     <span class="status-badge warning">待复核</span>
                   </div>
                 </div>
               </div>
               <div class="sidebar-section">
-                <div class="sidebar-title">风控事件</div>
-                <div class="sd-text12-tertiary-center-pad8">
-                  近 30 天无风控事件
+                <div class="sidebar-title">风控状态</div>
+                <div class="sd-flex-col-gap4">
+                  <div class="sd-flex-center-gap4-text12">
+                    <span class="status-badge success sd-text10">✓</span>
+                    <span class="sd-color-secondary">个股集中度</span>
+                    <span class="sd-font-numeric sd-color-tertiary">8.2%</span>
+                  </div>
+                  <div class="sd-flex-center-gap4-text12">
+                    <span class="status-badge success sd-text10">✓</span>
+                    <span class="sd-color-secondary">行业集中度</span>
+                    <span class="sd-font-numeric sd-color-tertiary">22.5%</span>
+                  </div>
+                  <div class="sd-flex-center-gap4-text12">
+                    <span class="status-badge success sd-text10">✓</span>
+                    <span class="sd-color-secondary">最大换手率</span>
+                    <span class="sd-font-numeric sd-color-tertiary">3.2x</span>
+                  </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -1519,14 +1614,14 @@
                   </div>
                   <div class="compare-metric-row">
                     <div class="compare-metric-cell sd-color-tertiary">Sharpe</div>
-                    <div class="compare-metric-cell best">1.82 ★</div>
+                    <div class="compare-metric-cell best">1.82 <span class="compare-best-dot"></span></div>
                     <div class="compare-metric-cell">1.65</div>
                     <div class="compare-metric-cell">1.58</div>
                     <div class="compare-metric-cell sd-color-tertiary">v3.2</div>
                   </div>
                   <div class="compare-metric-row">
                     <div class="compare-metric-cell sd-color-tertiary">年化收益</div>
-                    <div class="compare-metric-cell best">+18.2% ★</div>
+                    <div class="compare-metric-cell best">+18.2% <span class="compare-best-dot"></span></div>
                     <div class="compare-metric-cell">+15.8%</div>
                     <div class="compare-metric-cell">+14.5%</div>
                     <div class="compare-metric-cell sd-color-tertiary">v3.2</div>
@@ -1535,19 +1630,19 @@
                     <div class="compare-metric-cell sd-color-tertiary">最大回撤</div>
                     <div class="compare-metric-cell">-12.3%</div>
                     <div class="compare-metric-cell">-14.1%</div>
-                    <div class="compare-metric-cell best">-11.5% ★</div>
+                    <div class="compare-metric-cell best">-11.5% <span class="compare-best-dot"></span></div>
                     <div class="compare-metric-cell sd-color-tertiary">v3.0</div>
                   </div>
                   <div class="compare-metric-row">
                     <div class="compare-metric-cell sd-color-tertiary">换手率</div>
                     <div class="compare-metric-cell">3.2x</div>
                     <div class="compare-metric-cell">2.8x</div>
-                    <div class="compare-metric-cell best">2.5x ★</div>
+                    <div class="compare-metric-cell best">2.5x <span class="compare-best-dot"></span></div>
                     <div class="compare-metric-cell sd-color-tertiary">v3.0</div>
                   </div>
                   <div class="compare-metric-row">
                     <div class="compare-metric-cell sd-color-tertiary">胜率</div>
-                    <div class="compare-metric-cell best">58.2% ★</div>
+                    <div class="compare-metric-cell best">58.2% <span class="compare-best-dot"></span></div>
                     <div class="compare-metric-cell">56.1%</div>
                     <div class="compare-metric-cell">54.8%</div>
                     <div class="compare-metric-cell sd-color-tertiary">v3.2</div>
@@ -1567,7 +1662,7 @@
                       <th>版本</th>
                       <th>区间</th>
                       <th class="numeric">Sharpe</th>
-                      <th class="numeric">年化</th>
+                      <th class="numeric">年化收益</th>
                       <th class="numeric">MDD</th>
                       <th>状态</th>
                     </tr>
@@ -1661,20 +1756,20 @@
               <!-- Signal Stats -->
               <div class="sd-flex-gap12-shrink0">
                 <div class="sd-stat-card">
-                  <span class="sd-text12-tertiary">待复核</span>
-                  <span class="status-badge warning sd-text12-pad2-8">3</span>
+                  <span class="sd-text10-tertiary">待复核</span>
+                  <span class="sd-numeric-value-lg sd-color-degraded">3</span>
                 </div>
                 <div class="sd-stat-card">
-                  <span class="sd-text12-tertiary">已确认</span>
-                  <span class="status-badge success sd-text12-pad2-8">12</span>
+                  <span class="sd-text10-tertiary">已确认</span>
+                  <span class="sd-numeric-value-lg sd-color-healthy">12</span>
                 </div>
                 <div class="sd-stat-card">
-                  <span class="sd-text12-tertiary">已忽略</span>
-                  <span class="status-badge neutral sd-text12-pad2-8">5</span>
+                  <span class="sd-text10-tertiary">已忽略</span>
+                  <span class="sd-numeric-value-lg sd-color-tertiary">5</span>
                 </div>
                 <div class="sd-stat-card">
-                  <span class="sd-text12-tertiary">已转订单</span>
-                  <span class="status-badge success sd-text12-pad2-8">8</span>
+                  <span class="sd-text10-tertiary">已转订单</span>
+                  <span class="sd-numeric-value-lg sd-color-healthy">8</span>
                 </div>
               </div>
 
@@ -1802,7 +1897,7 @@
               <div class="sidebar-section">
                 <div class="sidebar-title">版本对比</div>
                 <div class="sd-text12-tertiary-center-pad8">
-                  选择两个版本查看配置 diff
+                  选择两个版本查看配置差异
                 </div>
               </div>
               <div class="sidebar-section">
@@ -2144,7 +2239,7 @@
                 </div>
                 <div class="overlay-body">
                   <h4>新策略名称</h4>
-                  <input type="text" class="form-input" placeholder="动量因子增强策略 (副本)" class="sd-w-full-mb10">
+                  <input type="text" class="form-input sd-w-full-mb10" placeholder="动量因子增强策略 (副本)">
                   <h4>描述</h4>
                   <textarea placeholder="可选：描述此副本的用途..." class="form-textarea sd-w-full"></textarea>
                   <div class="overlay-actions">
