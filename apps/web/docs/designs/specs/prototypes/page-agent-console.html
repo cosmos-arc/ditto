@@ -5,16 +5,16 @@
   Generated: 2026-04-02
 
   Tabs: 4 (radio)
-  - agent-plans (Plans) [checked, default]
-  - agent-runs (Runs) [covered]
-  - agent-findings (Findings) [covered]
-  - agent-approvals (Approvals) [covered]
+  - agent-plans (计划) [checked, default]
+  - agent-runs (执行) [covered]
+  - agent-findings (发现) [covered]
+  - agent-approvals (审批) [covered]
 
   Overlays: 4
-  - overlay-approval-confirm (Sheet: 审批确认 Confirm Dialog) [covered]
-  - overlay-plan-create (Sheet: Plan 创建) [covered]
-  - overlay-run-rerun (Sheet: Run 重跑确认 Modal) [covered]
-  - overlay-tool-trace (Drawer: Tool Trace) [covered]
+  - overlay-approval-confirm (Sheet: 审批确认) [covered]
+  - overlay-plan-create (Sheet: 新建计划) [covered]
+  - overlay-run-rerun (Sheet: 确认重跑) [covered]
+  - overlay-tool-trace (Drawer: 工具调用详情) [covered]
 
   State Variants: 6 components × multi states
   - agent-header: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
@@ -134,9 +134,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
         color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
         transparent 100%
       );
       pointer-events: none;
@@ -171,9 +169,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
         color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
         transparent 100%
       );
       pointer-events: none;
@@ -220,9 +216,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 50%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 70%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 50%, transparent) 70%,
+        color-mix(in oklch, var(--brand-accent) 60%, transparent) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -242,9 +236,7 @@
       background: linear-gradient(
         to bottom,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 20%,
         color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 80%,
         transparent 100%
       );
       pointer-events: none;
@@ -396,14 +388,14 @@
 
     /* Tab entrance — stagger */
     .agent-tab {
-      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+      animation: subtle-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
     }
     .agent-tabs .agent-tab:nth-child(1) { animation-delay: 50ms; }
     .agent-tabs .agent-tab:nth-child(2) { animation-delay: 100ms; }
     .agent-tabs .agent-tab:nth-child(3) { animation-delay: 150ms; }
     .agent-tabs .agent-tab:nth-child(4) { animation-delay: 200ms; }
 
-    @keyframes tab-fade-in {
+    @keyframes subtle-in {
       from { opacity: 0; transform: translateY(2px); }
       to   { opacity: 1; transform: translateY(0); }
     }
@@ -1028,12 +1020,8 @@
 
     /* ── Plan Card breathing for running state ── */
     .plan-card.selected {
-      animation: card-breathe 3s ease-in-out infinite;
-    }
-
-    @keyframes card-breathe {
-      0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--brand-accent) 0%, transparent); }
-      50%      { box-shadow: 0 0 0 2px color-mix(in oklch, var(--brand-accent) 8%, transparent); }
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      animation: dot-pulse 3s ease-in-out infinite;
     }
 
     /* ── Section flex proportions ── */
@@ -1438,30 +1426,9 @@
       z-index: 1;
     }
 
-    /* ── Agent chain step with micro-animation ── */
+    /* ── Agent chain step with active highlight ── */
     .agent-chain-step.active {
       position: relative;
-      overflow: hidden;
-    }
-    .agent-chain-step.active::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        color-mix(in oklch, var(--agent-running-fg) 15%, transparent),
-        transparent
-      );
-      animation: shimmer-step 2.5s ease-in-out infinite;
-    }
-
-    @keyframes shimmer-step {
-      0% { left: -100%; }
-      100% { left: 200%; }
     }
 
     /* ── Enhanced progress bar with glow ── */
@@ -1481,15 +1448,14 @@
       box-shadow: 0 0 6px color-mix(in oklch, var(--system-down-fg) 30%, transparent);
     }
 
-    /* ── Plan card scan line effect ── */
+    /* ── Plan card scan line effect (static top accent) ── */
     .plan-card.selected {
       position: relative;
-      overflow: hidden;
     }
     .plan-card.selected::after {
       content: '';
       position: absolute;
-      top: -1px;
+      top: 0;
       left: 0;
       right: 0;
       height: 1px;
@@ -1499,13 +1465,6 @@
         var(--brand-accent) 50%,
         transparent 100%
       );
-      animation: scan-line 3s ease-in-out infinite;
-    }
-
-    @keyframes scan-line {
-      0% { top: -1px; opacity: 0.8; }
-      50% { top: 50%; opacity: 0.3; }
-      100% { top: -1px; opacity: 0.8; }
     }
 
     /* ── Tool trace active indicator ── */
@@ -1519,12 +1478,7 @@
       box-shadow: 0 0 4px var(--agent-running-fg), 0 0 8px color-mix(in oklch, var(--agent-running-fg) 40%, transparent);
     }
     .agent-status-block.running .agent-status-label strong {
-      animation: label-breathe 2s ease-in-out infinite;
-    }
-
-    @keyframes label-breathe {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.85; }
+      animation: dot-pulse 2s ease-in-out infinite;
     }
 
     /* ── Terminal-style code block header ── */
@@ -1602,9 +1556,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 8%, transparent) 30%,
         color-mix(in oklch, var(--brand-accent) 12%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 8%, transparent) 70%,
         transparent 100%
       );
       pointer-events: none;
@@ -1612,13 +1564,8 @@
 
     /* ── Terminal cursor blink for LIVE indicator ── */
     .status-live::after {
-      content: '_';
-      animation: cursor-blink 1s step-end infinite;
-    }
-
-    @keyframes cursor-blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
+      content: '●';
+      animation: dot-pulse 1.5s ease-in-out infinite;
     }
 
     /* ── Detail panel enhanced glow ── */
@@ -1632,18 +1579,10 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 40%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 70%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 40%, transparent) 80%,
+        color-mix(in oklch, var(--brand-accent) 60%, transparent) 50%,
         transparent 100%
       );
       pointer-events: none;
-      animation: glow-breathe 4s ease-in-out infinite;
-    }
-
-    @keyframes glow-breathe {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
     }
 
     /* ── Frosted glass overlay for detail panel header ── */
@@ -1669,7 +1608,7 @@
       transform: translateY(-1px);
     }
 
-    /* ── Confidence badge subtle pulse for high ── */
+    /* ── Confidence badge subtle border for high ── */
     .confidence-badge.high {
       position: relative;
     }
@@ -1678,13 +1617,7 @@
       position: absolute;
       inset: -1px;
       border-radius: inherit;
-      border: 1px solid color-mix(in oklch, var(--system-healthy-fg) 20%, transparent);
-      animation: badge-glow 3s ease-in-out infinite;
-    }
-
-    @keyframes badge-glow {
-      0%, 100% { opacity: 0.4; }
-      50% { opacity: 0; }
+      border: 1px solid color-mix(in oklch, var(--system-healthy-fg) 15%, transparent);
     }
 
     /* ── Stagger card entrance ── */
@@ -1692,17 +1625,12 @@
     .agent-main > .run-card,
     .agent-main > .finding-card,
     .agent-main > .approval-card {
-      animation: card-enter var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+      animation: subtle-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
     }
     .agent-main > :nth-child(1) { animation-delay: 40ms; }
     .agent-main > :nth-child(2) { animation-delay: 80ms; }
     .agent-main > :nth-child(3) { animation-delay: 120ms; }
     .agent-main > :nth-child(4) { animation-delay: 160ms; }
-
-    @keyframes card-enter {
-      from { opacity: 0; transform: translateY(4px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
 
     /* ── Artifact item icon color on hover ── */
     .artifact-item:hover .artifact-icon {
@@ -1736,8 +1664,7 @@
       .plan-card, .run-card, .finding-card, .approval-card,
       .agent-chain-step.active, .agent-status-block.running .agent-status-label strong,
       .progress-bar-fill, .confidence-badge.high::before,
-      .status-live::after, .plan-card.selected::after,
-      .agent-detail::before {
+      .status-live::after {
         transition: none !important;
         animation: none !important;
       }
@@ -1819,9 +1746,9 @@
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
         
-        <label for="overlay-plan-create" class="btn-cta cursor-pointer" tabindex="0" aria-label="新建 Plan">
+        <label for="overlay-plan-create" class="btn-cta cursor-pointer" tabindex="0" aria-label="新建计划">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
-          新建 Plan
+          新建计划
         </label>
         <div class="theme-switcher">
           <div class="switcher-group" role="group" aria-label="密度">
@@ -1837,7 +1764,7 @@
         </div>
         <div class="header-search" tabindex="0" role="search" aria-label="搜索">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-          <span class="text-tertiary-hint">搜索 Plans...</span>
+          <span class="text-tertiary-hint">搜索计划...</span>
           <kbd>Ctrl+K</kbd>
         </div>
         <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
@@ -1855,10 +1782,10 @@
 
       <!-- Tab labels -->
       <div class="agent-tabs" role="tablist" aria-label="Agent 工作流">
-        <label for="agent-plans" class="agent-tab" role="tab">Plans</label>
-        <label for="agent-runs" class="agent-tab" role="tab">Runs</label>
-        <label for="agent-findings" class="agent-tab" role="tab">Findings <span class="agent-tab-count">3</span></label>
-        <label for="agent-approvals" class="agent-tab" role="tab">Approvals <span class="agent-tab-count">2</span></label>
+        <label for="agent-plans" class="agent-tab" role="tab">计划</label>
+        <label for="agent-runs" class="agent-tab" role="tab">执行</label>
+        <label for="agent-findings" class="agent-tab" role="tab">发现 <span class="agent-tab-count">3</span></label>
+        <label for="agent-approvals" class="agent-tab" role="tab">审批 <span class="agent-tab-count">2</span></label>
         <div class="agent-tabs-spacer"></div>
       </div>
 
@@ -2269,7 +2196,7 @@
               <span>已运行 8 分钟</span>
             </div>
             <div class="plan-card-progress-label">
-              <span class="plan-card-progress-text">Pipeline 进度</span>
+              <span class="plan-card-progress-text">流水线进度</span>
               <span class="plan-card-progress-pct">62%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100">
@@ -2309,7 +2236,7 @@
               <span>产出 2 Finding · 1 Signal</span>
             </div>
             <div class="plan-card-progress-label">
-              <span class="plan-card-progress-text">Pipeline 进度</span>
+              <span class="plan-card-progress-text">流水线进度</span>
               <span class="plan-card-progress-pct">100%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
@@ -2348,7 +2275,7 @@
               <span class="text-agent-failed">Factor 挖掘阶段异常终止</span>
             </div>
             <div class="plan-card-progress-label">
-              <span class="plan-card-progress-text">Pipeline 进度</span>
+              <span class="plan-card-progress-text">流水线进度</span>
               <span class="plan-card-progress-pct">23%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100">
@@ -2746,13 +2673,13 @@
   <!-- Status Bar -->
   <div class="status-bar" role="status" aria-label="Agent 状态">
     <span class="status-indicator" aria-hidden="true"></span>
-    <span class="status-live">LIVE</span>
+    <span class="status-live">实时</span>
     <span class="status-sep">|</span>
-    <span><span data-ticker="2" data-decimals="0">2</span> Plans 运行中</span>
+    <span><span data-ticker="2" data-decimals="0">2</span> 计划运行中</span>
     <span class="status-sep">|</span>
-    <span><span data-ticker="3" data-decimals="0">3</span> Findings 待审</span>
+    <span><span data-ticker="3" data-decimals="0">3</span> 发现待审</span>
     <span class="status-sep">|</span>
-    <span><span data-ticker="2" data-decimals="0">2</span> Approvals 待批</span>
+    <span><span data-ticker="2" data-decimals="0">2</span> 审批待批</span>
     <span class="status-sep">|</span>
     <span><span data-ticker="156" data-decimals="0">156</span> Tasks · <span data-ticker="94.7" data-decimals="1">94.7</span>% 成功率</span>
     <span class="status-sep">|</span>
@@ -2772,12 +2699,12 @@
       <div class="overlay-sheet" role="dialog" aria-label="审批确认">
         <div class="overlay-header">
           <span class="overlay-title">审批确认</span>
-          <label for="overlay-approval-confirm" class="overlay-close" aria-label="关闭">&#10005;</label>
+          <button type="button" class="overlay-close" onclick="document.getElementById('overlay-approval-confirm').checked=false" aria-label="关闭">&#10005;</button>
         </div>
         <div class="overlay-body">
           <h4>Finding 审批摘要</h4>
           <div class="overlay-field">
-            <span class="overlay-field-label">Finding</span>
+            <span class="overlay-field-label">发现</span>
             <span class="overlay-field-value">Alpha v2 合成因子</span>
           </div>
           <div class="overlay-field">
@@ -2789,7 +2716,7 @@
             <span class="overlay-field-value">Alpha 因子挖掘计划</span>
           </div>
           <div class="overlay-field">
-            <span class="overlay-field-label">Evidence</span>
+            <span class="overlay-field-label">证据</span>
             <span class="overlay-field-value">IC 0.042 · Rank IC 0.038 · 回测年化 18.2%</span>
           </div>
 
@@ -2812,8 +2739,8 @@
       <label class="overlay-dismiss" for="overlay-plan-create" aria-label="关闭"></label>
       <div class="overlay-sheet" role="dialog" aria-label="新建 Plan">
         <div class="overlay-header">
-          <span class="overlay-title">新建 Plan</span>
-          <label for="overlay-plan-create" class="overlay-close" aria-label="关闭">&#10005;</label>
+          <span class="overlay-title">新建计划</span>
+          <button type="button" class="overlay-close" onclick="document.getElementById('overlay-plan-create').checked=false" aria-label="关闭">&#10005;</button>
         </div>
         <div class="overlay-body">
           <h4>选择 Plan 模板</h4>
@@ -2865,7 +2792,7 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-plan-create" class="overlay-btn overlay-btn-primary cursor-pointer">创建 Plan</label>
+            <label for="overlay-plan-create" class="overlay-btn overlay-btn-primary cursor-pointer">创建</label>
             <label for="overlay-plan-create" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
           </div>
         </div>
@@ -2878,7 +2805,7 @@
       <div class="overlay-sheet" role="dialog" aria-label="确认重跑">
         <div class="overlay-header">
           <span class="overlay-title">确认重跑</span>
-          <label for="overlay-run-rerun" class="overlay-close" aria-label="关闭">&#10005;</label>
+          <button type="button" class="overlay-close" onclick="document.getElementById('overlay-run-rerun').checked=false" aria-label="关闭">&#10005;</button>
         </div>
         <div class="overlay-body">
           <h4>上次运行摘要</h4>
@@ -2917,7 +2844,7 @@
       <div class="overlay-drawer" role="dialog" aria-label="Tool Trace 详情">
         <div class="overlay-header">
           <span class="overlay-title">Tool 调用详情</span>
-          <label for="overlay-tool-trace" class="overlay-close" aria-label="关闭">&#10005;</label>
+          <button type="button" class="overlay-close" onclick="document.getElementById('overlay-tool-trace').checked=false" aria-label="关闭">&#10005;</button>
         </div>
         <div class="overlay-body">
           <h4>factor_compute · 计算动量因子</h4>
@@ -2990,10 +2917,10 @@
 <section id="states-gallery" class="proto-section">
       <div class="gallery-grid">
         <div class="gallery-group" data-component="Agent Header">
-          <div class="gallery-group__label">Agent Header</div>
+          <div class="gallery-group__label">Agent 顶栏</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Agent Header — State Variants</div>
+      <div class="gallery-card__label">Agent 顶栏 — 状态变体</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
           <div class="state-loading">
@@ -3005,20 +2932,20 @@
     </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__label">空状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
           <div class="state-empty">
             <div class="state-empty-icon text-healthy">AI</div>
             <div class="state-empty-title">Agent Console 就绪</div>
             <div class="state-empty-desc">暂无活跃 Plan，创建新的研究流水线开始探索</div>
-            <label for="overlay-plan-create" class="state-empty-cta cursor-pointer">新建 Plan</label>
+            <label for="overlay-plan-create" class="state-empty-cta cursor-pointer">新建计划</label>
           </div>
         </div>
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__label">错误状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
           <div class="state-error">
@@ -3031,7 +2958,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__label">过期状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
           <div class="state-stale">
@@ -3049,10 +2976,10 @@
         </div>
 
         <div class="gallery-group" data-component="Agent Tabs (structural, no state variants)">
-          <div class="gallery-group__label">Agent Tabs (structural, no state variants)</div>
+          <div class="gallery-group__label">Agent 标签页（结构组件，无状态变体）</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Agent Tabs — 仅结构展示，无额外状态</div>
+      <div class="gallery-card__label">Agent 标签页 — 仅结构展示，无额外状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content">
       <p class="text-tertiary-padded">
@@ -3065,10 +2992,10 @@
         </div>
 
         <div class="gallery-group" data-component="Main Queue + Cards">
-          <div class="gallery-group__label">Main Queue + Cards</div>
+          <div class="gallery-group__label">主队列 + 卡片</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Main Queue + Cards — State Variants</div>
+      <div class="gallery-card__label">主队列 + 卡片 — 状态变体</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
           <div class="state-loading">
@@ -3081,7 +3008,7 @@
     </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__label">空状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
           <div class="state-empty">
@@ -3090,13 +3017,13 @@
             </div>
             <div class="state-empty-title">暂无 Plan</div>
             <div class="state-empty-desc">创建新的研究流水线，让 Agent 帮你完成因子挖掘、策略验证和风控校验</div>
-            <label for="overlay-plan-create" class="state-empty-cta cursor-pointer">新建 Plan</label>
+            <label for="overlay-plan-create" class="state-empty-cta cursor-pointer">新建计划</label>
           </div>
         </div>
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__label">错误状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
           <div class="state-error">
@@ -3109,7 +3036,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__label">过期状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
           <div class="state-stale">
@@ -3124,7 +3051,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Selected State</div>
+      <div class="gallery-card__label">选中状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
           <div class="plan-card selected max-w-480">
@@ -3148,10 +3075,10 @@
         </div>
 
         <div class="gallery-group" data-component="Detail Panel">
-          <div class="gallery-group__label">Detail Panel</div>
+          <div class="gallery-group__label">详情面板</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Detail Panel — State Variants</div>
+      <div class="gallery-card__label">详情面板 — 状态变体</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
           <div class="state-loading">
@@ -3167,7 +3094,7 @@
     </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__label">错误状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
           <div class="state-error">
@@ -3180,7 +3107,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__label">过期状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
           <div class="state-stale">
@@ -3198,10 +3125,10 @@
         </div>
 
         <div class="gallery-group" data-component="Approval Flow">
-          <div class="gallery-group__label">Approval Flow</div>
+          <div class="gallery-group__label">审批流程</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Approval Flow — State Variants</div>
+      <div class="gallery-card__label">审批流程 — 状态变体</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
           <div class="state-loading">
@@ -3212,7 +3139,7 @@
     </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__label">空状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
           <div class="state-empty">
@@ -3226,7 +3153,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__label">错误状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
           <div class="state-error">
@@ -3239,7 +3166,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__label">过期状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
           <div class="state-stale">
@@ -3257,10 +3184,10 @@
         </div>
 
         <div class="gallery-group" data-component="Tool Trace">
-          <div class="gallery-group__label">Tool Trace</div>
+          <div class="gallery-group__label">工具调用</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Tool Trace — State Variants</div>
+      <div class="gallery-card__label">工具调用 — 状态变体</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
           <div class="state-loading">
@@ -3272,7 +3199,7 @@
     </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__label">错误状态</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
           <div class="state-error">
@@ -3306,7 +3233,7 @@
           <div class="overlay-body">
             <h4>Finding 审批摘要</h4>
             <div class="overlay-field">
-              <span class="overlay-field-label">Finding</span>
+              <span class="overlay-field-label">发现</span>
               <span class="overlay-field-value">Alpha v2 合成因子</span>
             </div>
             <div class="overlay-field">
@@ -3318,7 +3245,7 @@
               <span class="overlay-field-value">Alpha 因子挖掘计划</span>
             </div>
             <div class="overlay-field">
-              <span class="overlay-field-label">Evidence</span>
+              <span class="overlay-field-label">证据</span>
               <span class="overlay-field-value">IC 0.042 · Rank IC 0.038 · 回测年化 18.2%</span>
             </div>
 
@@ -3342,7 +3269,7 @@
       <div class="gallery-card__preview gallery-card__preview--overlay">
         <div class="overlay-sheet" role="dialog" aria-label="新建 Plan">
           <div class="overlay-header">
-            <span class="overlay-title">新建 Plan</span>
+            <span class="overlay-title">新建计划</span>
           </div>
           <div class="overlay-body">
             <h4>选择 Plan 模板</h4>
