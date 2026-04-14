@@ -291,6 +291,10 @@
       background: var(--brand-accent-hover);
       border-color: var(--brand-accent-hover);
     }
+    .btn.btn-primary[data-glow] {
+      box-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 25%, transparent),
+                  0 0 4px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+    }
 
     .btn.btn-danger {
       color: var(--market-down-fg);
@@ -529,6 +533,12 @@
       padding: var(--space-2) var(--space-4);
       border-radius: var(--radius-3);
       align-self: flex-start;
+      gap: var(--space-4);
+    }
+    .metric-change-time {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
     }
     .metric-change.up {
       color: var(--market-up-fg);
@@ -1209,22 +1219,22 @@
                 <div class="metric-card">
                   <span class="metric-label">年化收益</span>
                   <span class="metric-value" data-ticker="18.2" data-ticker-prefix="+" data-ticker-suffix="%" data-decimals="1">+0.0%</span>
-                  <span class="metric-change up">▲ +2.3%</span>
+                  <span class="metric-change up">▲ +2.3% <span class="metric-change-time">30D</span></span>
                 </div>
                 <div class="metric-card">
                   <span class="metric-label">最大回撤</span>
                   <span class="metric-value" data-ticker="-12.3" data-ticker-prefix="" data-ticker-suffix="%" data-decimals="1">0.0%</span>
-                  <span class="metric-change down">▼ -1.8%</span>
+                  <span class="metric-change down">▼ -1.8% <span class="metric-change-time">30D</span></span>
                 </div>
                 <div class="metric-card">
                   <span class="metric-label">胜率</span>
                   <span class="metric-value" data-ticker="58.2" data-ticker-prefix="" data-ticker-suffix="%" data-decimals="1">0.0%</span>
-                  <span class="metric-change up">▲ +1.5%</span>
+                  <span class="metric-change up">▲ +1.5% <span class="metric-change-time">30D</span></span>
                 </div>
                 <div class="metric-card">
                   <span class="metric-label">换手率</span>
                   <span class="metric-value" data-ticker="3.2" data-ticker-prefix="" data-ticker-suffix="x" data-decimals="1">0.0x</span>
-                  <span class="metric-change down">▲ +0.4x</span>
+                  <span class="metric-change down">▼ +0.4x <span class="metric-change-time">30D</span></span>
                 </div>
               </div>
 
@@ -1252,7 +1262,7 @@
                   <div class="sd-divider-v"></div>
                   <div class="sd-flex1">
                     <div class="sd-label-tertiary-mb4">风控状态</div>
-                    <span class="status-badge success">● 全部通过</span>
+                    <span class="status-badge success">✓ 3/3 通过</span>
                   </div>
                   <div class="sd-divider-v"></div>
                   <div class="sd-flex1">
@@ -1360,14 +1370,14 @@
                   <div class="sd-flex-between-center">
                     <div>
                       <div class="sd-text12-secondary">贵州茅台</div>
-                      <div class="sd-text10-tertiary">买入 · 置信 82% · 04-10 09:45</div>
+                      <div class="sd-text10-tertiary">买入 · <span class="sd-color-healthy">置信 82%</span> · 04-10 09:45</div>
                     </div>
                     <span class="status-badge success">已确认</span>
                   </div>
                   <div class="sd-flex-between-center">
                     <div>
                       <div class="sd-text12-secondary">宁德时代</div>
-                      <div class="sd-text10-tertiary">买入 · 置信 67% · 04-10 14:32</div>
+                      <div class="sd-text10-tertiary">买入 · <span class="sd-color-secondary">置信 67%</span> · 04-10 14:32</div>
                     </div>
                     <span class="status-badge warning">待复核</span>
                   </div>
@@ -1794,7 +1804,7 @@
                     <tr>
                       <td class="numeric">04-10 14:32</td>
                       <td class="sd-color-primary">宁德时代</td>
-                      <td><span class="sd-color-up">买入</span></td>
+                      <td><span class="sd-color-up">● 买入</span></td>
                       <td class="numeric">67%</td>
                       <td><span class="status-badge warning">待复核</span></td>
                       <td class="sd-color-tertiary">策略</td>
@@ -1802,7 +1812,7 @@
                     <tr>
                       <td class="numeric">04-10 09:45</td>
                       <td class="sd-color-primary">比亚迪</td>
-                      <td><span class="sd-color-up">买入</span></td>
+                      <td><span class="sd-color-up">● 买入</span></td>
                       <td class="numeric">82%</td>
                       <td><span class="status-badge success">已确认</span></td>
                       <td class="sd-color-tertiary">策略</td>
@@ -1810,7 +1820,7 @@
                     <tr>
                       <td class="numeric">04-09 15:20</td>
                       <td class="sd-color-primary">招商银行</td>
-                      <td><span class="sd-color-down">卖出</span></td>
+                      <td><span class="sd-color-down">● 卖出</span></td>
                       <td class="numeric">45%</td>
                       <td><span class="status-badge neutral">已忽略</span></td>
                       <td class="sd-color-tertiary">策略</td>
@@ -1818,7 +1828,7 @@
                     <tr>
                       <td class="numeric">04-09 10:10</td>
                       <td class="sd-color-primary">中国平安</td>
-                      <td><span class="sd-color-up">买入</span></td>
+                      <td><span class="sd-color-up">● 买入</span></td>
                       <td class="numeric">91%</td>
                       <td><span class="status-badge success">已转订单</span></td>
                       <td class="sd-color-tertiary">策略</td>
@@ -1826,7 +1836,7 @@
                     <tr>
                       <td class="numeric">04-08 14:55</td>
                       <td class="sd-color-primary">恒瑞医药</td>
-                      <td><span class="sd-color-up">买入</span></td>
+                      <td><span class="sd-color-up">● 买入</span></td>
                       <td class="numeric">73%</td>
                       <td><span class="status-badge warning">待复核</span></td>
                       <td class="sd-color-tertiary">策略</td>
@@ -1839,9 +1849,24 @@
 
             <div class="hub-sidebar">
               <div class="sidebar-section">
-                <div class="sidebar-title">信号来源分布</div>
-                <div class="sd-text12-secondary">全部为策略信号</div>
-                <div class="sd-text12-tertiary-mt4">无 AI 信号来源</div>
+                <div class="sidebar-title">置信度分布</div>
+                <div class="sd-flex-col-gap6">
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">高 (≥80%)</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-w-35"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">5</span>
+                  </div>
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">中 (50-79%)</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-wbar-20-neutral"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">2</span>
+                  </div>
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">低 (&lt;50%)</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-wbar-10-neutral"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">1</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1896,8 +1921,28 @@
             <div class="hub-sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">版本对比</div>
-                <div class="sd-text12-tertiary-center-pad8">
-                  选择两个版本查看配置差异
+                <div class="sd-text12-secondary-col-gap6">
+                  <div>
+                    <div class="sd-tertiary-text10">v3.2 相较 v3.1</div>
+                    <div class="sd-flex-center-gap4-text12">
+                      <span class="sd-color-up">+5%</span>
+                      <span class="sd-color-tertiary">波动率权重</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="sd-tertiary-text10">v3.1 相较 v3.0</div>
+                    <div class="sd-flex-center-gap4-text12">
+                      <span class="sd-color-secondary">新增</span>
+                      <span class="sd-color-tertiary">行业+市值中性化</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="sd-tertiary-text10">v3.0 相较 v2.5</div>
+                    <div class="sd-flex-center-gap4-text12">
+                      <span class="sd-color-secondary">新增</span>
+                      <span class="sd-color-tertiary">反转因子 5D</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="sidebar-section">
@@ -1932,7 +1977,7 @@
       <span class="meta-separator"></span>
       <div class="bottom-item">
         <span class="bottom-item-label">风控</span>
-        <span class="bottom-item-value sd-color-healthy">全部通过</span>
+        <span class="bottom-item-value sd-color-healthy">✓ 3/3 通过</span>
       </div>
     </div>
 
