@@ -1904,11 +1904,19 @@
       .filter-chip { transition: none !important; }
       .context-section-header { transition: none !important; }
     }
+    /* Inline style cleanup */
+    .svg-sr-only { position: absolute; width: 0; height: 0; overflow: hidden; }
+    .flow-w-65 { width: 65%; }
+    .flow-w-79 { width: 79%; }
+    .flow-w-91 { width: 91%; }
+    .skel-w-60 { width: 60%; }
+    .skel-w-45 { width: 45%; }
+    .skel-w-70 { width: 70%; }
   </style>
 </head>
 <body>
   <!-- Shared SVG defs sprite — single source of truth for gradient ids -->
-  <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <svg class="svg-sr-only" aria-hidden="true">
     <defs>
       <linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.15"/>
@@ -2496,7 +2504,7 @@
           <div class="score-row" data-tooltip="PE/PB/PS相对估值评分">
             <span class="score-label">价值</span>
             <div class="score-bar-wrap">
-              <div class="score-bar-fill ok" style="width:78%"></div>
+              <div class="score-bar-fill ok flow-w-78"></div>
             </div>
             <span class="score-value">78</span>
           </div>
@@ -2504,7 +2512,7 @@
           <div class="score-row" data-tooltip="营收/利润增速评分">
             <span class="score-label">成长</span>
             <div class="score-bar-wrap">
-              <div class="score-bar-fill warn" style="width:65%"></div>
+              <div class="score-bar-fill warn flow-w-65"></div>
             </div>
             <span class="score-value">65</span>
           </div>
@@ -2512,7 +2520,7 @@
           <div class="score-row" data-tooltip="ROE/现金流/负债率评分">
             <span class="score-label">质量</span>
             <div class="score-bar-wrap">
-              <div class="score-bar-fill ok" style="width:82%"></div>
+              <div class="score-bar-fill ok flow-w-82"></div>
             </div>
             <span class="score-value">82</span>
           </div>
@@ -2520,7 +2528,7 @@
           <div class="score-row" data-tooltip="价格动量与技术形态评分">
             <span class="score-label">动量</span>
             <div class="score-bar-wrap">
-              <div class="score-bar-fill ok" style="width:91%"></div>
+              <div class="score-bar-fill ok flow-w-91"></div>
             </div>
             <span class="score-value">91</span>
           </div>
@@ -2528,7 +2536,7 @@
           <div class="score-row composite score-row-composite-separator" data-tooltip="多维度加权综合评分">
             <span class="score-label">综合</span>
             <div class="score-bar-wrap">
-              <div class="score-bar-fill brand" style="width:79%"></div>
+              <div class="score-bar-fill brand flow-w-79"></div>
             </div>
             <span class="score-value" data-counter="79" data-counter-decimals="0">79</span>
           </div>
@@ -3117,9 +3125,9 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="state-loading">
-          <div class="skeleton skeleton-bar--sm" style="width:60%"></div>
-          <div class="skeleton skeleton-bar--sm" style="width:45%"></div>
-          <div class="skeleton skeleton-bar--sm" style="width:70%"></div>
+          <div class="skeleton skeleton-bar--sm skel-w-60"></div>
+          <div class="skeleton skeleton-bar--sm skel-w-45"></div>
+          <div class="skeleton skeleton-bar--sm skel-w-70"></div>
         </div>
       </div>
       </div>

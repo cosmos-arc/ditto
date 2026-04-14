@@ -10,6 +10,7 @@
   --shell-rail-collapsed:    0px;
   --shell-header-height:     68px;
   --shell-sidebar-width:     320px;
+  --shell-sidebar-collapsed-width: 48px;
   --shell-detail-width:      340px;
 
   /* ── Context Bar ── */
@@ -31,6 +32,8 @@
   /* Analytical */
   --shell-analytical-activity-width: 300px;
   --shell-analytical-band-height: 220px;
+  /* Radar (Cross-market) */
+  --shell-radar-right-rail-width: 300px;
   /* Catalog */
   --shell-catalog-detail-width: 320px;
   /* Ops */

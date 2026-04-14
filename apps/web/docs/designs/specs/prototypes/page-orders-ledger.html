@@ -122,9 +122,9 @@
         "rail strip  strip"
         "rail kpi    trace"
         "rail table   trace";
-      height: 100vh;
+      min-height: 100vh;
       width: 100vw;
-      overflow: hidden;
+      overflow-y: auto;
     }
 
     /* ── Frosted glass header ── */
@@ -1712,11 +1712,132 @@
     /* Inline style replacements — progress bar widths via CSS classes */
     .slippage-bar-fill.negative.low   { width: 3%; }
     .fill-progress-fill.partial-35   { width: 35%; }
+
+    /* ══════════════════════════════════════════════
+     * Round 3 Polish — Brand DNA + Visual Hierarchy
+     * ══════════════════════════════════════════════ */
+
+    /* ── A1. Tab stagger animation (matches backtest-result pattern) ── */
+    .status-tab {
+      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .status-tab:nth-child(1) { animation-delay: 30ms; }
+    .status-tab:nth-child(2) { animation-delay: 50ms; }
+    .status-tab:nth-child(3) { animation-delay: 70ms; }
+    .status-tab:nth-child(4) { animation-delay: 90ms; }
+    .status-tab:nth-child(5) { animation-delay: 110ms; }
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── A2. Active tab brand-tinted background (6% brand accent) ── */
+    :root:has(#orders-pending:checked)  label[for="orders-pending"],
+    :root:has(#orders-submitted:checked) label[for="orders-submitted"],
+    :root:has(#orders-partial:checked)  label[for="orders-partial"],
+    :root:has(#orders-done:checked)     label[for="orders-done"],
+    :root:has(#orders-failed:checked)   label[for="orders-failed"] {
+      background: color-mix(in oklch, var(--brand-accent) 6%, transparent);
+    }
+
+    /* ── A3. Session strip brand-tinted border-bottom (matches backtest-result meta-strip) ── */
+    .status-strip {
+      border-bottom-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
+      box-shadow: 0 1px 6px -2px color-mix(in oklch, var(--brand-accent) 8%, transparent);
+    }
+
+    /* ── B1. Table header subtle background treatment ── */
+    .ledger-table th {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-strip));
+      letter-spacing: 0.03em;
+    }
+
+    /* ── B2. Order status badges — enhanced visual weight ── */
+    .order-status {
+      padding: 2px var(--space-8);
+      font-size: var(--font-size-11);
+      letter-spacing: 0.01em;
+    }
+    .order-status.pending {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--execution-pending-fg) 20%, transparent);
+    }
+    .order-status.submitted {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--cyan-500) 20%, transparent);
+    }
+    .order-status.partial {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--execution-partial-fg) 20%, transparent);
+    }
+    .order-status.filled {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--execution-filled-fg) 20%, transparent);
+    }
+    .order-status.failed {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--execution-rejected-fg) 20%, transparent);
+    }
+
+    /* ── C1. P&L color coding — execution price tinted by trade direction ── */
+    .ledger-table tbody tr:has(.order-side.buy) td:nth-child(6) {
+      color: color-mix(in oklch, var(--market-up-fg) 85%, var(--text-primary));
+    }
+    .ledger-table tbody tr:has(.order-side.sell) td:nth-child(6) {
+      color: color-mix(in oklch, var(--market-down-fg) 85%, var(--text-primary));
+    }
+
+    /* ── C2. Time column de-emphasis (font-size-11, text-tertiary) ── */
+    .cell-time {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+
+    /* ── C3. Row hover with subtle brand touch (3% brand accent) ── */
+    .ledger-table tbody tr:hover {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-strong-bg));
+    }
+
+    /* ── D1. Filter group brand subtle border (matches signals-inbox pattern) ── */
+    .filter-btn.active {
+      background: var(--interaction-selected-bg);
+      border-color: color-mix(in oklch, var(--brand-accent) 20%, var(--border-default));
+      color: var(--text-primary);
+    }
+
+    /* ── D2. Status bar top accent for visual continuity ── */
+    .status-bar {
+      border-top-color: color-mix(in oklch, var(--brand-accent) 25%, var(--border-subtle));
+    }
+    .status-bar::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 70%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── D3. Batch action bar brand touch (matches signals-inbox pattern) ── */
+    .batch-action-bar {
+      border-top-color: color-mix(in oklch, var(--brand-accent) 25%, var(--border-subtle));
+    }
+
+    /* ── Reduced motion — include Round 3 animations ── */
+    @media (prefers-reduced-motion: reduce) {
+      .status-tab {
+        animation: none !important;
+      }
+    }
   </style>
 </head>
 <body>
   <!-- SVG noise filter for material texture -->
-  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <svg class="noise-svg-source" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
     </defs>

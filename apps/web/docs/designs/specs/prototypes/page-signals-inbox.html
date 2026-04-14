@@ -131,9 +131,9 @@
         "rail header  header"
         "rail scope   scope"
         "rail main    detail";
-      height: 100vh;
+      min-height: 100vh;
       width: 100vw;
-      overflow: hidden;
+      overflow-y: auto;
     }
 
     /* ── Rail ── */
@@ -1745,6 +1745,99 @@
     .related-signal-card .source-badge {
       font-size: var(--font-size-10);
     }
+
+    /* ══════════════════════════════════
+     * Round 3 polish — 9.3 → 9.5+
+     * ══════════════════════════════════ */
+
+    /* ── 1. Top Accent Line (matches backtest-result shell-hub::after) ── */
+    .shell-signals::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
+        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* ── 2. Scope Strip Brand Border (matches backtest-result meta-strip) ── */
+    .shell-signals .scope-strip {
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
+      box-shadow: 0 1px 6px -2px color-mix(in oklch, var(--brand-accent) 8%, transparent);
+    }
+
+    /* ── 3. Tab Stagger Animation (matches backtest-result tab-fade-in) ── */
+    .scope-tab {
+      animation: scope-tab-enter var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .scope-tab:nth-child(1) { animation-delay: 30ms; }
+    .scope-tab:nth-child(2) { animation-delay: 50ms; }
+    .scope-tab:nth-child(3) { animation-delay: 70ms; }
+    .scope-tab:nth-child(4) { animation-delay: 90ms; }
+    @keyframes scope-tab-enter {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── 4. Active Tab Brand Subtle Background (enhanced visual anchor) ── */
+    .scope-tab.active {
+      background: color-mix(in oklch, var(--brand-accent) 6%, transparent);
+    }
+
+    /* ── 5. Confidence Bar Medium Gradient (visual parity with .high) ── */
+    .confidence-fill.medium {
+      background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 60%, oklch(1 0 0)));
+    }
+
+    /* ── 6. Time Column De-emphasis (scannability) ── */
+    .cell-time {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+
+    /* ── 7. Side Badge Visual Weight (immediate buy/sell visibility) ── */
+    .side-badge.buy {
+      font-weight: var(--font-weight-semibold);
+    }
+    .side-badge.sell {
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* ── 8. Row Hover Enhancement (subtle brand touch) ── */
+    .data-table tbody tr.row:hover td {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-subtle-bg));
+    }
+
+    /* ── 9. Overlay Drawer Accent Border (parity with overlay-sheet) ── */
+    .overlay-drawer {
+      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+    }
+
+    /* ── 10. Batch Bar Brand Touch ── */
+    .batch-bar {
+      border-top: 1px solid color-mix(in oklch, var(--brand-accent) 20%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-elevated));
+    }
+
+    /* ── 11. Filter Group Active Brand Subtle ── */
+    .filter-group {
+      border-color: color-mix(in oklch, var(--brand-accent) 15%, var(--border-subtle));
+    }
+
+    /* ── 12. Status Bar Top Accent (brand continuity with shell top line) ── */
+    .status-bar {
+      border-top: 1px solid color-mix(in oklch, var(--brand-accent) 15%, var(--border-subtle));
+    }
   </style>
 </head>
 <body>
@@ -3225,7 +3318,7 @@
   <input type="checkbox" id="overlay-batch-confirm" class="overlay-radio sr-only">
 
   <!-- SVG noise filter (Graphite Studio material) -->
-  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <svg class="noise-svg-source" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
     </defs>

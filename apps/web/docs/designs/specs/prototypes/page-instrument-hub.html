@@ -131,9 +131,9 @@
         "rail  tabs"
         "rail  main"
         "rail  bottom";
-      height: 100vh;
+      min-height: 100vh;
       width: 100vw;
-      overflow: hidden;
+      overflow-y: auto;
       position: relative;
       padding-bottom: 1.5rem;
       box-sizing: border-box;
@@ -1993,11 +1993,92 @@
       box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
     }
 
+    /* Inline style cleanup */
+
+    /* Cursor utility */
+    .cursor-pointer { cursor: pointer; }
+
+    /* Rank bar fills */
+    .rank-bar-w-100 { width: 100%; }
+    .rank-bar-w-29 { width: 29%; }
+    .rank-bar-w-15 { width: 15%; }
+    .rank-bar-w-13 { width: 13%; }
+    .rank-bar-w-9 { width: 9%; }
+    .rank-bar-w-87 { width: 87%; }
+    .rank-bar-w-54 { width: 54%; }
+    .rank-bar-w-32 { width: 32%; }
+    .rank-bar-w-21 { width: 21%; }
+    .rank-bar-w-12 { width: 12%; }
+    .rank-bar-w-12-down { width: 12%; background: var(--market-down-fg); }
+
+    /* Flow bar fills */
+    .flow-fill-w-36 { width: 36%; }
+    .flow-fill-w-29 { width: 29%; }
+    .flow-fill-w-20 { width: 20%; }
+    .flow-fill-w-11 { width: 11%; }
+    .flow-fill-w-18 { width: 18%; }
+    .flow-fill-w-14 { width: 14%; }
+
+    /* Chip distribution bars */
+    .chip-bar--down-1 { height: 15%; opacity: 0.2; background: var(--market-down-fg); }
+    .chip-bar--down-2 { height: 25%; opacity: 0.3; background: var(--market-down-fg); }
+    .chip-bar--down-3 { height: 35%; opacity: 0.4; background: var(--market-down-fg); }
+    .chip-bar--accent-1 { height: 55%; opacity: 0.5; background: var(--brand-accent); }
+    .chip-bar--accent-2 { height: 80%; opacity: 0.7; background: var(--brand-accent); }
+    .chip-bar--accent-3 { height: 100%; opacity: 0.9; background: var(--brand-accent); }
+    .chip-bar--accent-4 { height: 70%; opacity: 0.7; background: var(--brand-accent); }
+    .chip-bar--up-1 { height: 45%; opacity: 0.5; background: var(--market-up-fg); }
+    .chip-bar--up-2 { height: 28%; opacity: 0.3; background: var(--market-up-fg); }
+    .chip-bar--up-3 { height: 12%; opacity: 0.2; background: var(--market-up-fg); }
+
+    /* Revenue bar heights */
+    .rev-bar-20a { height: 40%; opacity: 0.3; }
+    .rev-bar-21a { height: 55%; opacity: 0.45; }
+    .rev-bar-22a { height: 65%; opacity: 0.6; }
+    .rev-bar-23a { height: 78%; opacity: 0.75; }
+    .rev-bar-24a { height: 90%; opacity: 0.88; }
+    .rev-bar-25a { height: 100%; }
+
+    /* Network graph */
+    .network-container { width: 320px; height: 240px; }
+    .net-node--1 { top: 30%; left: 15%; width: 8px; height: 8px; background: var(--market-up-fg); opacity: 0.6; }
+    .net-node--2 { top: 18%; left: 60%; width: 10px; height: 10px; background: var(--text-tertiary); opacity: 0.5; }
+    .net-node--3 { top: 70%; left: 20%; width: 6px; height: 6px; background: var(--market-up-fg); opacity: 0.5; }
+    .net-node--4 { top: 75%; left: 65%; width: 10px; height: 10px; background: var(--text-tertiary); opacity: 0.6; }
+    .net-node--5 { top: 45%; left: 85%; width: 8px; height: 8px; background: var(--brand-accent); opacity: 0.4; }
+    .net-node--6 { top: 85%; left: 45%; width: 6px; height: 6px; background: var(--market-down-fg); opacity: 0.4; }
+    .net-label--1 { top: 26%; left: 2%; }
+    .net-label--2 { top: 12%; left: 55%; }
+    .net-label--3 { top: 66%; left: 7%; color: var(--text-tertiary); }
+    .net-label--4 { top: 71%; left: 60%; }
+    .net-label--5 { top: 42%; left: 82%; color: var(--brand-accent); }
+    .net-label--6 { top: 82%; left: 40%; color: var(--text-tertiary); }
+
+    /* Correlation fills */
+    .corr-w-82 { width: 82%; }
+    .corr-w-65 { width: 65%; opacity: 0.7; }
+    .corr-w-58 { width: 58%; opacity: 0.6; }
+    .corr-w-71 { width: 71%; opacity: 0.8; }
+
+    /* Skeleton widths */
+    .skel-w-120 { width: 120px; }
+    .skel-w-200 { width: 200px; }
+    .skel-w-60 { width: 60px; }
+    .skel-w-80 { width: 80px; }
+    .skel-w-70 { width: 70px; }
+    .skel-w-90 { width: 90px; }
+    .skel-w-50 { width: 50px; }
+    .skel-w-60pct { width: 60%; }
+    .skel-w-50pct { width: 50%; }
+    .skel-w-40pct { width: 40%; }
+    .skel-h-80 { height: 80px; }
+    .skel-h-200 { height: 200px; }
+
   </style>
 </head>
 <body>
   <!-- SVG noise filter for material texture -->
-  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <svg class="noise-svg-source" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
     </defs>
@@ -2067,7 +2148,7 @@
             </span>
             <!-- 停牌状态演示: 取消注释可测试 overlay-halt-detail -->
             <!--
-            <label for="overlay-halt-detail" class="object-status suspended" role="status" aria-label="停牌" style="cursor:pointer">
+            <label for="overlay-halt-detail" class="object-status suspended" role="status" aria-label="停牌" class="cursor-pointer">
               <span class="object-status-dot"></span>
               停牌
             </label>
@@ -2255,11 +2336,11 @@
         <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" data-mouse-glow-size="160px" data-mouse-glow-color="accent">
           <div class="panel-header"><span class="panel-title">行业排名</span><span class="panel-subtitle">白酒 · 市值排名</span></div>
           <div class="pad-panel-x">
-            <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">2.33万亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:100%"></div></div></div>
-            <div class="rank-row"><span class="rank-num top3">2</span><span class="rank-name">五粮液</span><span class="rank-value">6,820亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:29%"></div></div></div>
-            <div class="rank-row"><span class="rank-num">3</span><span class="rank-name">泸州老窖</span><span class="rank-value">3,460亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:15%"></div></div></div>
-            <div class="rank-row"><span class="rank-num">4</span><span class="rank-name">山西汾酒</span><span class="rank-value">3,120亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:13%"></div></div></div>
-            <div class="rank-row"><span class="rank-num">5</span><span class="rank-name">洋河股份</span><span class="rank-value">2,180亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:9%"></div></div></div>
+            <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">2.33万亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-100"></div></div></div>
+            <div class="rank-row"><span class="rank-num top3">2</span><span class="rank-name">五粮液</span><span class="rank-value">6,820亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-29"></div></div></div>
+            <div class="rank-row"><span class="rank-num">3</span><span class="rank-name">泸州老窖</span><span class="rank-value">3,460亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-15"></div></div></div>
+            <div class="rank-row"><span class="rank-num">4</span><span class="rank-name">山西汾酒</span><span class="rank-value">3,120亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-13"></div></div></div>
+            <div class="rank-row"><span class="rank-num">5</span><span class="rank-name">洋河股份</span><span class="rank-value">2,180亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-9"></div></div></div>
           </div>
         </div>
 
@@ -2297,7 +2378,7 @@
               <span class="flow-label" data-tooltip="单笔成交额 > 100万" data-tooltip-pos="top">主力净流入</span>
               <span class="flow-value inflow"><span data-counter="8.73" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+8.73亿</span></span>
               <div class="flow-bar">
-                <div class="flow-bar-fill inflow" style="width:36%"></div>
+                <div class="flow-bar-fill inflow flow-fill-w-36"></div>
                 <div class="flow-bar-center"></div>
               </div>
             </div>
@@ -2305,7 +2386,7 @@
               <span class="flow-label" data-tooltip="单笔成交额 > 500万" data-tooltip-pos="top">超大单净流入</span>
               <span class="flow-value inflow"><span data-counter="5.21" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+5.21亿</span></span>
               <div class="flow-bar">
-                <div class="flow-bar-fill inflow" style="width:29%"></div>
+                <div class="flow-bar-fill inflow flow-fill-w-29"></div>
                 <div class="flow-bar-center"></div>
               </div>
             </div>
@@ -2313,7 +2394,7 @@
               <span class="flow-label" data-tooltip="单笔成交额 4-100万" data-tooltip-pos="top">中单净流入</span>
               <span class="flow-value inflow"><span data-counter="3.52" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+3.52亿</span></span>
               <div class="flow-bar">
-                <div class="flow-bar-fill inflow" style="width:20%"></div>
+                <div class="flow-bar-fill inflow flow-fill-w-20"></div>
                 <div class="flow-bar-center"></div>
               </div>
             </div>
@@ -2321,7 +2402,7 @@
               <span class="flow-label" data-tooltip="单笔成交额 < 4万" data-tooltip-pos="top">小单净流出</span>
               <span class="flow-value outflow"><span data-counter="1.86" data-counter-prefix="-" data-counter-suffix="亿" data-counter-decimals="2">-1.86亿</span></span>
               <div class="flow-bar">
-                <div class="flow-bar-fill outflow" style="width:11%"></div>
+                <div class="flow-bar-fill outflow flow-fill-w-11"></div>
                 <div class="flow-bar-center"></div>
               </div>
             </div>
@@ -2406,32 +2487,32 @@
               <div class="flow-item">
                 <span class="flow-label" data-tooltip="单笔成交额 > 100万" data-tooltip-pos="top">主力净流入</span>
                 <span class="flow-value inflow">+8.73亿</span>
-                <div class="flow-bar"><div class="flow-bar-fill inflow" style="width:36%"></div><div class="flow-bar-center"></div></div>
+                <div class="flow-bar"><div class="flow-bar-fill inflow flow-fill-w-36"></div><div class="flow-bar-center"></div></div>
               </div>
               <div class="flow-item">
                 <span class="flow-label" data-tooltip="单笔成交额 > 500万" data-tooltip-pos="top">超大单净流入</span>
                 <span class="flow-value inflow">+5.21亿</span>
-                <div class="flow-bar"><div class="flow-bar-fill inflow" style="width:29%"></div><div class="flow-bar-center"></div></div>
+                <div class="flow-bar"><div class="flow-bar-fill inflow flow-fill-w-29"></div><div class="flow-bar-center"></div></div>
               </div>
               <div class="flow-item">
                 <span class="flow-label" data-tooltip="散户非主力资金" data-tooltip-pos="top">散户净流出</span>
                 <span class="flow-value outflow">-3.18亿</span>
-                <div class="flow-bar"><div class="flow-bar-fill outflow" style="width:18%"></div><div class="flow-bar-center"></div></div>
+                <div class="flow-bar"><div class="flow-bar-fill outflow flow-fill-w-18"></div><div class="flow-bar-center"></div></div>
               </div>
               <div class="flow-item">
                 <span class="flow-label" data-tooltip="沪深港通资金" data-tooltip-pos="top">北向资金</span>
                 <span class="flow-value inflow">+2.10亿</span>
-                <div class="flow-bar"><div class="flow-bar-fill inflow" style="width:14%"></div><div class="flow-bar-center"></div></div>
+                <div class="flow-bar"><div class="flow-bar-fill inflow flow-fill-w-14"></div><div class="flow-bar-center"></div></div>
               </div>
             </div>
             <!-- 资金流入排行 -->
             <div class="flow-col-sm">
               <div class="subsection-title">同行业资金流入排行</div>
-              <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">+8.73亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:87%"></div></div></div>
-              <div class="rank-row"><span class="rank-num top3">2</span><span class="rank-name">五粮液</span><span class="rank-value">+5.42亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:54%"></div></div></div>
-              <div class="rank-row"><span class="rank-num">3</span><span class="rank-name">泸州老窖</span><span class="rank-value">+3.18亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:32%"></div></div></div>
-              <div class="rank-row"><span class="rank-num">4</span><span class="rank-name">山西汾酒</span><span class="rank-value">+2.06亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:21%"></div></div></div>
-              <div class="rank-row"><span class="rank-num">5</span><span class="rank-name">洋河股份</span><span class="rank-value">-1.23亿</span><div class="rank-bar-track"><div class="rank-bar-fill" style="width:12%;background:var(--market-down-fg)"></div></div></div>
+              <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">+8.73亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-87"></div></div></div>
+              <div class="rank-row"><span class="rank-num top3">2</span><span class="rank-name">五粮液</span><span class="rank-value">+5.42亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-54"></div></div></div>
+              <div class="rank-row"><span class="rank-num">3</span><span class="rank-name">泸州老窖</span><span class="rank-value">+3.18亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-32"></div></div></div>
+              <div class="rank-row"><span class="rank-num">4</span><span class="rank-name">山西汾酒</span><span class="rank-value">+2.06亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-21"></div></div></div>
+              <div class="rank-row"><span class="rank-num">5</span><span class="rank-name">洋河股份</span><span class="rank-value">-1.23亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-12-down"></div></div></div>
             </div>
           </div>
         </div>
@@ -2443,16 +2524,16 @@
           </div>
           <div class="chip-bars">
             <!-- Mock chip distribution bars -->
-            <div class="chip-bar" style="height:15%;opacity:0.2;background:var(--market-down-fg)"></div>
-            <div class="chip-bar" style="height:25%;opacity:0.3;background:var(--market-down-fg)"></div>
-            <div class="chip-bar" style="height:35%;opacity:0.4;background:var(--market-down-fg)"></div>
-            <div class="chip-bar" style="height:55%;opacity:0.5;background:var(--brand-accent)"></div>
-            <div class="chip-bar" style="height:80%;opacity:0.7;background:var(--brand-accent)"></div>
-            <div class="chip-bar" style="height:100%;opacity:0.9;background:var(--brand-accent)"></div>
-            <div class="chip-bar" style="height:70%;opacity:0.7;background:var(--brand-accent)"></div>
-            <div class="chip-bar" style="height:45%;opacity:0.5;background:var(--market-up-fg)"></div>
-            <div class="chip-bar" style="height:28%;opacity:0.3;background:var(--market-up-fg)"></div>
-            <div class="chip-bar" style="height:12%;opacity:0.2;background:var(--market-up-fg)"></div>
+            <div class="chip-bar chip-bar--down-1"></div>
+            <div class="chip-bar chip-bar--down-2"></div>
+            <div class="chip-bar chip-bar--down-3"></div>
+            <div class="chip-bar chip-bar--accent-1"></div>
+            <div class="chip-bar chip-bar--accent-2"></div>
+            <div class="chip-bar chip-bar--accent-3"></div>
+            <div class="chip-bar chip-bar--accent-4"></div>
+            <div class="chip-bar chip-bar--up-1"></div>
+            <div class="chip-bar chip-bar--up-2"></div>
+            <div class="chip-bar chip-bar--up-3"></div>
           </div>
         </div>
       </div>
@@ -2489,12 +2570,12 @@
           <div class="panel">
             <div class="panel-header"><span class="panel-title">关键指标趋势</span></div>
             <div class="revenue-bars">
-              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:40%;opacity:0.3"></div><span class="revenue-bar-label">20A</span></div>
-              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:55%;opacity:0.45"></div><span class="revenue-bar-label">21A</span></div>
-              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:65%;opacity:0.6"></div><span class="revenue-bar-label">22A</span></div>
-              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:78%;opacity:0.75"></div><span class="revenue-bar-label">23A</span></div>
-              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:90%;opacity:0.88"></div><span class="revenue-bar-label">24A</span></div>
-              <div class="revenue-bar-col"><div class="revenue-bar-inner" style="height:100%"></div><span class="revenue-bar-label active">25A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner rev-bar-20a"></div><span class="revenue-bar-label">20A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner rev-bar-21a"></div><span class="revenue-bar-label">21A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner rev-bar-22a"></div><span class="revenue-bar-label">22A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner rev-bar-23a"></div><span class="revenue-bar-label">23A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner rev-bar-24a"></div><span class="revenue-bar-label">24A</span></div>
+              <div class="revenue-bar-col"><div class="revenue-bar-inner rev-bar-25a"></div><span class="revenue-bar-label active">25A</span></div>
             </div>
           </div>
           <div class="panel">
@@ -2646,16 +2727,16 @@
           </div>
           <div class="panel-grow center-content">
             <!-- Mock force-directed graph with CSS -->
-            <div class="network-container" style="width:320px;height:240px">
+            <div class="network-container">
               <!-- Central node: 贵州茅台 -->
               <div class="network-center">茅台</div>
               <!-- Connection lines (simplified with borders) -->
-              <div class="network-node" style="top:30%;left:15%;width:8px;height:8px;background:var(--market-up-fg);opacity:0.6"></div>
-              <div class="network-node" style="top:18%;left:60%;width:10px;height:10px;background:var(--text-tertiary);opacity:0.5"></div>
-              <div class="network-node" style="top:70%;left:20%;width:6px;height:6px;background:var(--market-up-fg);opacity:0.5"></div>
-              <div class="network-node" style="top:75%;left:65%;width:10px;height:10px;background:var(--text-tertiary);opacity:0.6"></div>
-              <div class="network-node" style="top:45%;left:85%;width:8px;height:8px;background:var(--brand-accent);opacity:0.4"></div>
-              <div class="network-node" style="top:85%;left:45%;width:6px;height:6px;background:var(--market-down-fg);opacity:0.4"></div>
+              <div class="network-node net-node--1"></div>
+              <div class="network-node net-node--2"></div>
+              <div class="network-node net-node--3"></div>
+              <div class="network-node net-node--4"></div>
+              <div class="network-node net-node--5"></div>
+              <div class="network-node net-node--6"></div>
               <!-- SVG lines -->
               <svg class="pos-absolute-fill" viewBox="0 0 320 240">
                 <line x1="160" y1="120" x2="48" y2="72" stroke="var(--border-default)" stroke-width="1" opacity="0.4"/>
@@ -2666,12 +2747,12 @@
                 <line x1="160" y1="120" x2="144" y2="204" stroke="var(--border-default)" stroke-width="1" opacity="0.2"/>
               </svg>
               <!-- Labels -->
-              <span class="network-label" style="top:26%;left:2%">五粮液</span>
-              <span class="network-label" style="top:12%;left:55%">泸州老窖</span>
-              <span class="network-label" style="top:66%;left:7%;color:var(--text-tertiary)">洋河</span>
-              <span class="network-label" style="top:71%;left:60%">沪深300</span>
-              <span class="network-label" style="top:42%;left:82%;color:var(--brand-accent)">白酒ETF</span>
-              <span class="network-label" style="top:82%;left:40%;color:var(--text-tertiary)">中证白酒</span>
+              <span class="network-label net-label--1">五粮液</span>
+              <span class="network-label net-label--2">泸州老窖</span>
+              <span class="network-label net-label--3">洋河</span>
+              <span class="network-label net-label--4">沪深300</span>
+              <span class="network-label net-label--5">白酒ETF</span>
+              <span class="network-label net-label--6">中证白酒</span>
             </div>
           </div>
         </div>
@@ -2679,10 +2760,10 @@
         <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="40">
           <div class="panel-header"><span class="panel-title">关联强度</span></div>
           <div class="panel-section-body">
-            <div class="corr-row"><span class="corr-name">五粮液</span><div class="corr-track"><div class="corr-fill" style="width:82%"></div></div><span class="corr-value">0.82</span></div>
-            <div class="corr-row"><span class="corr-name">沪深300</span><div class="corr-track"><div class="corr-fill" style="width:65%;opacity:0.7"></div></div><span class="corr-value">0.65</span></div>
-            <div class="corr-row"><span class="corr-name">泸州老窖</span><div class="corr-track"><div class="corr-fill" style="width:58%;opacity:0.6"></div></div><span class="corr-value">0.58</span></div>
-            <div class="corr-row"><span class="corr-name">白酒ETF</span><div class="corr-track"><div class="corr-fill" style="width:71%;opacity:0.8"></div></div><span class="corr-value">0.71</span></div>
+            <div class="corr-row"><span class="corr-name">五粮液</span><div class="corr-track"><div class="corr-fill corr-w-82"></div></div><span class="corr-value">0.82</span></div>
+            <div class="corr-row"><span class="corr-name">沪深300</span><div class="corr-track"><div class="corr-fill corr-w-65"></div></div><span class="corr-value">0.65</span></div>
+            <div class="corr-row"><span class="corr-name">泸州老窖</span><div class="corr-track"><div class="corr-fill corr-w-58"></div></div><span class="corr-value">0.58</span></div>
+            <div class="corr-row"><span class="corr-name">白酒ETF</span><div class="corr-track"><div class="corr-fill corr-w-71"></div></div><span class="corr-value">0.71</span></div>
           </div>
         </div>
       </div>
@@ -3354,8 +3435,8 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="state-loading">
-          <div class="skeleton skeleton-heading" style="width:120px"></div>
-          <div class="skeleton skeleton-text" style="width:200px"></div>
+          <div class="skeleton skeleton-heading skel-w-120"></div>
+          <div class="skeleton skeleton-text skel-w-200"></div>
         </div>
       </div>
       </div>
@@ -3390,11 +3471,11 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="state-loading skel-row">
-          <div class="skeleton skeleton-text" style="width:60px"></div>
-          <div class="skeleton skeleton-text" style="width:80px"></div>
-          <div class="skeleton skeleton-text" style="width:70px"></div>
-          <div class="skeleton skeleton-text" style="width:90px"></div>
-          <div class="skeleton skeleton-text" style="width:50px"></div>
+          <div class="skeleton skeleton-text skel-w-60"></div>
+          <div class="skeleton skeleton-text skel-w-80"></div>
+          <div class="skeleton skeleton-text skel-w-70"></div>
+          <div class="skeleton skeleton-text skel-w-90"></div>
+          <div class="skeleton skeleton-text skel-w-50"></div>
         </div>
       </div>
       </div>
@@ -3415,11 +3496,11 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
             <div class="state-loading skel-grid-5">
-              <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
-              <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
-              <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
-              <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
-              <div class="skel-col"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-heading" style="width:50%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+              <div class="skel-col"><div class="skeleton skeleton-text skel-w-60pct"></div><div class="skeleton skeleton-heading skel-w-50pct"></div><div class="skeleton skeleton-text skel-w-40pct"></div></div>
+              <div class="skel-col"><div class="skeleton skeleton-text skel-w-60pct"></div><div class="skeleton skeleton-heading skel-w-50pct"></div><div class="skeleton skeleton-text skel-w-40pct"></div></div>
+              <div class="skel-col"><div class="skeleton skeleton-text skel-w-60pct"></div><div class="skeleton skeleton-heading skel-w-50pct"></div><div class="skeleton skeleton-text skel-w-40pct"></div></div>
+              <div class="skel-col"><div class="skeleton skeleton-text skel-w-60pct"></div><div class="skeleton skeleton-heading skel-w-50pct"></div><div class="skeleton skeleton-text skel-w-40pct"></div></div>
+              <div class="skel-col"><div class="skeleton skeleton-text skel-w-60pct"></div><div class="skeleton skeleton-heading skel-w-50pct"></div><div class="skeleton skeleton-text skel-w-40pct"></div></div>
             </div>
           </div>
       </div>
@@ -3528,7 +3609,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
             <div class="state-loading">
-              <div class="skeleton skeleton-chart" style="height:80px"></div>
+              <div class="skeleton skeleton-chart skel-h-80"></div>
             </div>
           </div>
       </div>
@@ -3678,7 +3759,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
           <div class="state-loading">
-            <div class="skeleton skeleton-chart" style="height:200px"></div>
+            <div class="skeleton skeleton-chart skel-h-200"></div>
           </div>
         </div>
       </div>

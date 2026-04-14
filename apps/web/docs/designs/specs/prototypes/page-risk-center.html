@@ -1345,11 +1345,165 @@
       flex-direction: row;
       gap: var(--space-12);
     }
+
+    /* ══════════════════════════════════════════════
+     * Round 3 Polish — Cross-Page Consistency + Visual Hierarchy
+     * ══════════════════════════════════════════════ */
+
+    /* ── A. Tab stagger animation (like backtest-result tab-fade-in) ── */
+    .risk-tab {
+      animation: risk-tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .risk-tab:nth-child(1) { animation-delay: 30ms; }
+    .risk-tab:nth-child(2) { animation-delay: 55ms; }
+    .risk-tab:nth-child(3) { animation-delay: 80ms; }
+    @keyframes risk-tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── A. Active tab subtle brand tint background (6% brand accent) ── */
+    .shell-analytical:has(#risk-summary:checked) label[for="risk-summary"],
+    .shell-analytical:has(#risk-stress:checked) label[for="risk-stress"],
+    .shell-analytical:has(#risk-incidents:checked) label[for="risk-incidents"] {
+      background: color-mix(in oklch, var(--brand-accent) 6%, transparent);
+      border-radius: var(--radius-3) var(--radius-3) 0 0;
+    }
+
+    /* ── A. Active tab indicator — brand gradient ::after ── */
+    .shell-analytical:has(#risk-summary:checked) label[for="risk-summary"]::after,
+    .shell-analytical:has(#risk-stress:checked) label[for="risk-stress"]::after,
+    .shell-analytical:has(#risk-incidents:checked) label[for="risk-incidents"]::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 12%;
+      right: 12%;
+      height: 2px;
+      border-radius: 1px;
+      background: linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--brand-accent) 30%, transparent),
+        var(--brand-accent) 50%,
+        color-mix(in oklch, var(--brand-accent) 30%, transparent)
+      );
+    }
+    .risk-tab {
+      position: relative;
+    }
+
+    /* ── A. Session strip brand-tinted border-bottom ── */
+    .shell-analytical .scope-strip {
+      border-bottom-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
+      box-shadow: 0 1px 6px -2px color-mix(in oklch, var(--brand-accent) 8%, transparent);
+    }
+
+    /* ── B. Risk gauge progress bars: rounded ends, gradient fills ── */
+    .breach-progress {
+      height: 4px;
+      border-radius: 3px;
+    }
+    .breach-progress-fill {
+      border-radius: 3px;
+      transition: width 0.6s var(--motion-easing-emphasis);
+    }
+    .breach-progress-fill.ok {
+      background: linear-gradient(90deg, var(--risk-low-fg), color-mix(in oklch, var(--risk-low-fg) 70%, transparent));
+    }
+    .breach-progress-fill.warn {
+      background: linear-gradient(90deg, var(--risk-near-limit-fg), color-mix(in oklch, var(--risk-near-limit-fg) 65%, transparent));
+    }
+    .breach-progress-fill.critical {
+      background: linear-gradient(90deg, var(--risk-breach-fg), color-mix(in oklch, var(--risk-breach-fg) 60%, transparent));
+    }
+
+    /* ── B. Breach threshold indicators: clearer visual prominence ── */
+    .breach-value.warn,
+    .breach-value.critical {
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* ── C. Time column de-emphasis ── */
+    .cell-time {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+    .incident-time {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+
+    /* ── C. Risk metrics scannable — key numbers prominent ── */
+    .risk-strip-value {
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: -0.01em;
+    }
+
+    /* ── C. Status indicator iconography consistency ── */
+    .breach-dot.critical {
+      box-shadow: 0 0 6px color-mix(in oklch, var(--risk-breach-fg) 40%, transparent);
+    }
+    .breach-dot.warn {
+      box-shadow: 0 0 4px color-mix(in oklch, var(--risk-near-limit-fg) 30%, transparent);
+    }
+
+    /* ── D. Status bar top accent (brand gradient ::before) ── */
+    .status-bar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 70%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+    .status-bar {
+      position: fixed;
+    }
+
+    /* ── D. Row hover with subtle brand touch (3% brand accent) ── */
+    .breach-item:hover {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-subtle-bg));
+    }
+    .stress-row:hover {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-subtle-bg));
+    }
+    .incident-item:hover {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-subtle-bg));
+    }
+
+    /* ── D. Filter/action bar brand subtle border (18% brand accent) ── */
+    .filter-group {
+      border-color: color-mix(in oklch, var(--brand-accent) 18%, var(--border-subtle));
+    }
+
+    /* ── D. Tab section header bottom border — brand tint ── */
+    .tab-section-header {
+      border-bottom-color: color-mix(in oklch, var(--brand-accent) 15%, var(--border-subtle));
+    }
+
+    /* ── Round 3 reduced motion additions ── */
+    @media (prefers-reduced-motion: reduce) {
+      .risk-tab {
+        animation: none !important;
+      }
+      .breach-progress-fill {
+        transition: none !important;
+      }
+    }
   </style>
 </head>
 <body>
   <!-- SVG noise filter for material texture -->
-  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <svg class="noise-svg-source" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
     </defs>

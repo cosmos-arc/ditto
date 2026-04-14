@@ -1328,11 +1328,66 @@
     .py-6 { padding: var(--space-6) 0; }
     .mb-8 { margin-bottom: var(--space-8); }
     .pb-4 { padding-bottom: var(--space-4); }
+    /* Inline style cleanup */
+    .skel-h24-w60 { height: 24px; width: 60%; }
+    .skel-h24-w45 { height: 24px; width: 45%; }
+    .skel-h12-w100 { height: 12px; width: 100%; }
+    .skel-h12-w85 { height: 12px; width: 85%; }
+    .skel-h12-w92 { height: 12px; width: 92%; }
+    .skel-h12-w60 { height: 12px; width: 60%; }
+    .skel-h14-w60 { height: 14px; width: 60%; }
+    .skel-h14-w80 { height: 14px; width: 80%; }
+    .skel-h14-w50 { height: 14px; width: 50%; }
+    .filter-selected-content { padding: var(--space-8); }
+    .filter-hint { margin-top: var(--space-4); display: block; font-size: var(--font-size-10); }
+
+    /* ── Right Rail Toggle (D2) ── */
+    .intel-right-rail .rail-toggle {
+      margin-top: auto;
+      padding: var(--space-8) var(--space-12);
+      border-top: 1px solid var(--border-subtle);
+    }
+    .intel-right-rail .rail-toggle button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-4);
+      padding: var(--space-6) 0;
+      border-radius: var(--radius-4);
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-12);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .intel-right-rail .rail-toggle button:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+    }
+    .intel-right-rail.collapsed .rail-section,
+    .intel-right-rail.collapsed .state-variant {
+      display: none;
+    }
+    .intel-right-rail.collapsed {
+      width: var(--shell-sidebar-collapsed-width);
+      min-width: var(--shell-sidebar-collapsed-width);
+      align-items: center;
+      padding: var(--space-8) 0;
+      overflow: hidden;
+    }
+    .intel-right-rail.collapsed .rail-toggle {
+      margin-top: 0;
+      padding: 0;
+      border-top: none;
+    }
   </style>
 </head>
 <body>
   <!-- SVG noise filter for material texture -->
-  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <svg class="noise-svg-source" aria-hidden="true">
     <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
     <defs>
       <linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1">
@@ -2382,8 +2437,12 @@
             </div>
           </details>
 
+          <!-- Rail Toggle (D2) -->
+          <div class="rail-toggle">
+            <button aria-label="收窄侧边栏" title="收窄侧边栏" onclick="this.closest('.intel-right-rail').classList.toggle('collapsed'); this.setAttribute('aria-label', this.closest('.intel-right-rail').classList.contains('collapsed') ? '展开侧边栏' : '收窄侧边栏'); this.title = this.closest('.intel-right-rail').classList.contains('collapsed') ? '展开侧边栏' : '收窄侧边栏'; this.textContent = this.closest('.intel-right-rail').classList.contains('collapsed') ? '\u00BB' : '\u00AB';">&#x00AB;</button>
+          </div>
+
         </aside>
-      </div><!-- .intel-workspace -->
 
       <!-- ===== Analysis Band (bottom) ===== -->
       <div class="analysis-band">
@@ -2780,8 +2839,8 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
               <div class="state-loading">
-                <div class="skeleton" style="height:24px;width:60%"></div>
-                <div class="skeleton" style="height:24px;width:45%"></div>
+                <div class="skeleton skel-h24-w60"></div>
+                <div class="skeleton skel-h24-w45"></div>
               </div>
             </div>
       </div>
@@ -2831,13 +2890,13 @@
       <div class="gallery-card__label">筛选器 — Selected</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
-              <div style="padding:var(--space-8);">
+              <div class="filter-selected-content">
                 <div class="filter-tag-list">
                   <span class="filter-tag filter-tag--selected">资金面 <span class="filter-tag-remove">&times;</span></span>
                   <span class="filter-tag filter-tag--selected">沪深300 <span class="filter-tag-remove">&times;</span></span>
                   <span class="filter-tag filter-tag--selected">净流入 > 1亿 <span class="filter-tag-remove">&times;</span></span>
                 </div>
-                <span class="text-muted" style="margin-top:var(--space-4);display:block;font-size:var(--font-size-10)">↑ 激活筛选条件时边框高亮</span>
+                <span class="text-muted filter-hint">↑ 激活筛选条件时边框高亮</span>
               </div>
             </div>
       </div>
@@ -2853,10 +2912,10 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
               <div class="state-loading">
-                <div class="skeleton" style="height:12px;width:100%"></div>
-                <div class="skeleton" style="height:12px;width:85%"></div>
-                <div class="skeleton" style="height:12px;width:92%"></div>
-                <div class="skeleton" style="height:12px;width:60%"></div>
+                <div class="skeleton skel-h12-w100"></div>
+                <div class="skeleton skel-h12-w85"></div>
+                <div class="skeleton skel-h12-w92"></div>
+                <div class="skeleton skel-h12-w60"></div>
               </div>
             </div>
       </div>
@@ -2908,9 +2967,9 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
           <div class="state-loading">
-            <div class="skeleton" style="height:14px;width:60%"></div>
-            <div class="skeleton" style="height:14px;width:80%"></div>
-            <div class="skeleton" style="height:14px;width:50%"></div>
+            <div class="skeleton skel-h14-w60"></div>
+            <div class="skeleton skel-h14-w80"></div>
+            <div class="skeleton skel-h14-w50"></div>
           </div>
         </div>
       </div>

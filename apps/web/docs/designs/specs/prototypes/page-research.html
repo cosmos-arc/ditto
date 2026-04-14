@@ -1984,11 +1984,14 @@
     /* ── Page-specific utilities ── */
     .tab-panel-scroll { padding: var(--space-12); overflow: auto; }
     .research-tab-bar { gap: var(--space-4); padding: var(--space-6) var(--space-12); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
+    /* Inline style cleanup */
+    [data-tab-panel][aria-hidden="true"] { display: none; }
+    [data-tab-panel][aria-hidden="false"] { display: contents; }
   </style>
 </head>
 <body>
   <!-- SVG noise filter for material texture -->
-  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <svg class="noise-svg-source" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
       <linearGradient id="ic-spark-fill" x1="0" y1="0" x2="0" y2="1">
@@ -2159,7 +2162,7 @@
     </div>
 
     <!-- Tab Panel: Reports -->
-    <div data-tab-panel="reports" aria-hidden="true" style="display:none;">
+    <div data-tab-panel="reports" aria-hidden="true">
       <div class="tab-panel-scroll">
         <!-- Report 1: A股动量因子深度报告 -->
         <div class="report-card" data-reveal="fade-up" data-reveal-delay="0" data-glow>
@@ -2302,7 +2305,7 @@
     </div>
 
     <!-- Tab Panel: Factors (default visible) — display:contents lets grid children pass through -->
-    <div data-tab-panel="factors" aria-hidden="false" style="display:contents">
+    <div data-tab-panel="factors" aria-hidden="false">
 
     <!-- State Variants: Pulse Strip -->
 
@@ -2891,7 +2894,7 @@
     </div><!-- end data-tab-panel="factors" -->
 
     <!-- Tab Panel: Backtest -->
-    <div data-tab-panel="backtest" aria-hidden="true" style="display:none;">
+    <div data-tab-panel="backtest" aria-hidden="true">
       <div class="tab-panel-scroll">
         <!-- Backtest metrics row -->
         <div class="backtest-metrics-row">

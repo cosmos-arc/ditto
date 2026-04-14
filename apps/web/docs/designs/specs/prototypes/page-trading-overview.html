@@ -1803,11 +1803,229 @@
         animation: none !important;
       }
     }
+
+    /* Inline style cleanup */
+    .attr-w-65 { width: 65%; }
+    .attr-w-55 { width: 55%; }
+    .attr-w-45 { width: 45%; }
+    .attr-w-38 { width: 38%; }
+    .attr-w-34 { width: 34%; }
+    .attr-w-28 { width: 28%; }
+    .attr-w-16 { width: 16%; }
+    .attr-w-12 { width: 12%; }
+    .attr-w-10 { width: 10%; }
+    .risk-w-68 { width: 68.2%; }
+    .conf-bar-a span:nth-child(1) { height: 7px; }
+    .conf-bar-a span:nth-child(2) { height: 5px; }
+    .conf-bar-a span:nth-child(3) { height: 8px; }
+    .conf-bar-a span:nth-child(4) { height: 6px; }
+    .conf-bar-a span:nth-child(5) { height: 4px; }
+    .conf-bar-a span:nth-child(6) { height: 3px; }
+    .conf-bar-b span:nth-child(1) { height: 4px; }
+    .conf-bar-b span:nth-child(2) { height: 6px; }
+    .conf-bar-b span:nth-child(3) { height: 3px; }
+    .conf-bar-b span:nth-child(4) { height: 7px; }
+    .conf-bar-b span:nth-child(5) { height: 5px; }
+    .conf-bar-b span:nth-child(6) { height: 4px; }
+    .conf-bar-c span:nth-child(1) { height: 8px; }
+    .conf-bar-c span:nth-child(2) { height: 7px; }
+    .conf-bar-c span:nth-child(3) { height: 6px; }
+    .conf-bar-c span:nth-child(4) { height: 5px; }
+    .conf-bar-c span:nth-child(5) { height: 8px; }
+    .conf-bar-c span:nth-child(6) { height: 7px; }
+    .conf-bar-d span:nth-child(1) { height: 3px; }
+    .conf-bar-d span:nth-child(2) { height: 5px; }
+    .conf-bar-d span:nth-child(3) { height: 2px; }
+    .conf-bar-d span:nth-child(4) { height: 4px; }
+    .conf-bar-d span:nth-child(5) { height: 3px; }
+    .conf-bar-d span:nth-child(6) { height: 2px; }
+
+    /* ══════════════════════════════════════════════
+     * Round 3 polish — cross-page consistency
+     * ══════════════════════════════════════════════ */
+
+    /* ── A1. Rail logo brand glow (Brand DNA #2) ── */
+    .rail-logo {
+      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+    }
+
+    /* ── A2. Overlay accent border (Brand DNA #3) ── */
+    .overlay-sheet,
+    .overlay-drawer {
+      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+    }
+
+    /* ── A3. Session strip brand-tinted bottom border (30% accent + shadow) ── */
+    .shell-analytical.trading-variant .scope-strip {
+      border-bottom-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
+      box-shadow: 0 1px 6px -2px color-mix(in oklch, var(--brand-accent) 8%, transparent);
+    }
+
+    /* ── A4. Status bar top accent (brand gradient ::before) ── */
+    .status-bar {
+      position: relative;
+    }
+    .status-bar::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 70%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── B1. Tab stagger animation (matches backtest-result tab-fade-in) ── */
+    @keyframes trading-tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .trading-mode-tab {
+      animation: trading-tab-fade-in var(--motion-duration-normal, 200ms) var(--motion-easing-emphasis, cubic-bezier(0.16, 1, 0.3, 1)) both;
+    }
+    .trading-mode-tab:nth-child(2) { animation-delay: 40ms; }
+    .trading-mode-tab:nth-child(3) { animation-delay: 70ms; }
+
+    /* ── B2. Active tab subtle brand tint background (6% brand accent) ── */
+    .tab-group:has(#trading-mode:checked) label[for="trading-mode"],
+    .tab-group:has(#review-mode:checked) label[for="review-mode"] {
+      background: color-mix(in oklch, var(--brand-accent) 6%, var(--interaction-hover-subtle-bg));
+    }
+
+    /* ── B3. Active tab brand gradient indicator ::after ── */
+    .tab-group:has(#trading-mode:checked) label[for="trading-mode"]::after,
+    .tab-group:has(#review-mode:checked) label[for="review-mode"]::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      border-radius: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in oklch, var(--brand-accent) 60%, transparent),
+        var(--brand-accent),
+        color-mix(in oklch, var(--brand-accent) 60%, transparent),
+        transparent
+      );
+      pointer-events: none;
+    }
+    .trading-mode-tab {
+      position: relative;
+    }
+
+    /* ── B4. Attribution bars: gradient fill with smooth rounded ends ── */
+    .attribution-bar-fill.up {
+      background: linear-gradient(90deg,
+        color-mix(in oklch, var(--market-up-fg) 40%, transparent),
+        var(--market-up-fg) 40%,
+        color-mix(in oklch, var(--market-up-fg) 70%, transparent) 100%
+      );
+    }
+    .attribution-bar-fill.down {
+      background: linear-gradient(90deg,
+        color-mix(in oklch, var(--market-down-fg) 40%, transparent),
+        var(--market-down-fg) 40%,
+        color-mix(in oklch, var(--market-down-fg) 70%, transparent) 100%
+      );
+    }
+    .attribution-bar-track {
+      border-radius: 4px;
+    }
+    .attribution-bar-fill {
+      border-radius: 4px;
+    }
+
+    /* ── B5. Signal confidence bars: gradient treatment ── */
+    .signal-confidence-bar.high span {
+      background: linear-gradient(180deg, var(--market-up-fg), color-mix(in oklch, var(--market-up-fg) 40%, transparent));
+    }
+    .signal-confidence-bar.medium span {
+      background: linear-gradient(180deg, var(--risk-high-fg), color-mix(in oklch, var(--risk-high-fg) 40%, transparent));
+    }
+    .signal-confidence-bar.low span {
+      background: linear-gradient(180deg, var(--text-tertiary), color-mix(in oklch, var(--text-tertiary) 40%, transparent));
+    }
+
+    /* ── C1. P&L summary color coding (up/down semantic tokens) ── */
+    .equity-value {
+      color: var(--market-up-fg);
+    }
+    .equity-pct {
+      color: var(--market-up-fg);
+    }
+    .equity-value.pnl-down {
+      color: var(--market-down-fg);
+    }
+    .equity-pct.pnl-down {
+      color: var(--market-down-fg);
+    }
+
+    /* ── C2. Time column de-emphasis (font-size-11, text-tertiary) ── */
+    .order-time,
+    .fill-time {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+
+    /* ── C3. Session health indicators scannable ── */
+    .scope-metric-value.warning {
+      background: color-mix(in oklch, var(--risk-high-fg) 8%, transparent);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-3);
+    }
+    .scope-metric-value.ok {
+      background: color-mix(in oklch, var(--system-healthy-fg) 8%, transparent);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-3);
+    }
+
+    /* ── D1. Row hover with subtle brand touch (3% brand accent) ── */
+    .panel-positions .data-table tbody tr:hover td {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-subtle-bg));
+    }
+    .order-row:hover {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-subtle-bg));
+    }
+    .risk-item:hover {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-subtle-bg));
+    }
+    .signal-queue-item:hover {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-subtle-bg));
+    }
+    .health-check-item:hover {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-subtle-bg));
+    }
+
+    /* ── D2. Filter/action bar brand subtle border ── */
+    .bulk-action-bar {
+      border-top-color: color-mix(in oklch, var(--brand-accent) 15%, var(--border-subtle));
+    }
+    .panel-positions .data-table thead {
+      border-bottom: 2px solid color-mix(in oklch, var(--brand-accent) 35%, transparent);
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .trading-mode-tab {
+        animation: none !important;
+      }
+    }
   </style>
 </head>
 <body>
   <!-- SVG noise filter for material texture -->
-  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <svg class="noise-svg-source" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
     </defs>
@@ -2008,7 +2226,7 @@
       <div class="tab-group" data-tab-group="trading">
 
       <!-- Tab Panel 1: 交易模式（默认） -->
-      <div class="tab-panel" data-panel="trading-mode" style="display:block" role="tabpanel" aria-label="交易模式">
+      <div class="tab-panel" data-panel="trading-mode" role="tabpanel" aria-label="交易模式">
       <div class="trading-panels" role="group" aria-label="交易面板">
 
         <!-- Panel 1: 权益/盈亏 (~35%) -->
@@ -2336,51 +2554,51 @@
               <h4 class="section-label">行业贡献</h4>
               <div class="attribution-row">
                 <span class="attribution-label">科技</span>
-                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:65%;"></div></div>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-65"></div></div>
                 <span class="attribution-value up">+8,200</span>
               </div>
               <div class="attribution-row">
                 <span class="attribution-label">消费</span>
-                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:38%;"></div></div>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-38"></div></div>
                 <span class="attribution-value up">+3,100</span>
               </div>
               <div class="attribution-row">
                 <span class="attribution-label">金融</span>
-                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:12%;"></div></div>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-12"></div></div>
                 <span class="attribution-value up">+1,040</span>
               </div>
 
               <h4 class="section-label">个股贡献</h4>
               <div class="attribution-row">
                 <span class="attribution-label">贵州茅台</span>
-                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:45%;"></div></div>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-45"></div></div>
                 <span class="attribution-value up">+5,600</span>
               </div>
               <div class="attribution-row">
                 <span class="attribution-label">宁德时代</span>
-                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:34%;"></div></div>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-34"></div></div>
                 <span class="attribution-value up">+4,200</span>
               </div>
               <div class="attribution-row">
                 <span class="attribution-label">比亚迪</span>
-                <div class="attribution-bar-track"><div class="attribution-bar-fill down" style="width:10%;"></div></div>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill down attr-w-10"></div></div>
                 <span class="attribution-value down">-1,200</span>
               </div>
 
               <h4 class="section-label">因子贡献</h4>
               <div class="attribution-row">
                 <span class="attribution-label">动量</span>
-                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:55%;"></div></div>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-55"></div></div>
                 <span class="attribution-value up">+6,800</span>
               </div>
               <div class="attribution-row">
                 <span class="attribution-label">价值</span>
-                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:28%;"></div></div>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-28"></div></div>
                 <span class="attribution-value up">+3,500</span>
               </div>
               <div class="attribution-row">
                 <span class="attribution-label">质量</span>
-                <div class="attribution-bar-track"><div class="attribution-bar-fill up" style="width:16%;"></div></div>
+                <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-16"></div></div>
                 <span class="attribution-value up">+2,040</span>
               </div>
             </div>
@@ -2483,7 +2701,7 @@
                   <span class="risk-item-value critical">科技 37.2% <span class="risk-item-annotation">超限 +2.2%</span></span>
                 </div>
                 <div class="risk-progress">
-                  <div class="risk-progress-fill critical" style="width: 68.2%;"></div>
+                  <div class="risk-progress-fill critical risk-w-68"></div>
                 </div>
               </div>
               
@@ -2497,7 +2715,7 @@
                   <span class="risk-item-value warning">68.2%</span>
                 </div>
                 <div class="risk-progress">
-                  <div class="risk-progress-fill warning" style="width: 68.2%;"></div>
+                  <div class="risk-progress-fill warning risk-w-68"></div>
                 </div>
               </div>
             </div>
@@ -2546,7 +2764,7 @@
                 <div class="signal-queue-footer">
                   <span class="signal-queue-meta">3分钟前</span>
                   <span class="signal-queue-confidence high">置信度 87%</span>
-                  <div class="signal-confidence-bar high"><span style="height:7px"></span><span style="height:5px"></span><span style="height:8px"></span><span style="height:6px"></span><span style="height:4px"></span><span style="height:3px"></span></div>
+                  <div class="signal-confidence-bar high conf-bar-a"><span></span><span></span><span></span><span></span><span></span><span></span></div>
                 </div>
               </div>
             </div>
@@ -2561,7 +2779,7 @@
                 <div class="signal-queue-footer">
                   <span class="signal-queue-meta">12分钟前</span>
                   <span class="signal-queue-confidence medium">置信度 72%</span>
-                  <div class="signal-confidence-bar medium"><span style="height:4px"></span><span style="height:6px"></span><span style="height:3px"></span><span style="height:7px"></span><span style="height:5px"></span><span style="height:4px"></span></div>
+                  <div class="signal-confidence-bar medium conf-bar-b"><span></span><span></span><span></span><span></span><span></span><span></span></div>
                 </div>
               </div>
             </div>
@@ -2576,7 +2794,7 @@
                 <div class="signal-queue-footer">
                   <span class="signal-queue-meta">28分钟前</span>
                   <span class="signal-queue-confidence high">置信度 91%</span>
-                  <div class="signal-confidence-bar high"><span style="height:8px"></span><span style="height:7px"></span><span style="height:6px"></span><span style="height:5px"></span><span style="height:8px"></span><span style="height:7px"></span></div>
+                  <div class="signal-confidence-bar high conf-bar-c"><span></span><span></span><span></span><span></span><span></span><span></span></div>
                 </div>
               </div>
             </div>
@@ -2591,7 +2809,7 @@
                 <div class="signal-queue-footer">
                   <span class="signal-queue-meta">45分钟前</span>
                   <span class="signal-queue-confidence low">置信度 68%</span>
-                  <div class="signal-confidence-bar low"><span style="height:3px"></span><span style="height:5px"></span><span style="height:2px"></span><span style="height:4px"></span><span style="height:3px"></span><span style="height:2px"></span></div>
+                  <div class="signal-confidence-bar low conf-bar-d"><span></span><span></span><span></span><span></span><span></span><span></span></div>
                 </div>
               </div>
             </div>
@@ -3226,7 +3444,7 @@
                     <span class="risk-item-value critical">科技 37.2% <span class="risk-item-annotation">超限 +2.2%</span></span>
                   </div>
                   <div class="risk-progress">
-                    <div class="risk-progress-fill critical" style="width: 68.2%;"></div>
+                    <div class="risk-progress-fill critical risk-w-68"></div>
                   </div>
                 </div>
               </div>
@@ -3238,7 +3456,7 @@
                     <span class="risk-item-value warning">68.2%</span>
                   </div>
                   <div class="risk-progress">
-                    <div class="risk-progress-fill warning" style="width: 68.2%;"></div>
+                    <div class="risk-progress-fill warning risk-w-68"></div>
                   </div>
                 </div>
               </div>

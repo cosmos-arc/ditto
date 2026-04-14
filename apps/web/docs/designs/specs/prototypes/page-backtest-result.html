@@ -59,7 +59,7 @@
     .btn:focus-visible, .hub-tab:focus-visible, .header-action-btn:focus-visible, .meta-chip:focus-visible { outline: none; box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border); border-radius: var(--radius-4); }
 
     /* ═══ Shell Hub Layout ═══ */
-    .shell-hub { display: grid; grid-template-columns: var(--shell-rail-width) 1fr; grid-template-rows: var(--shell-header-height) auto auto 1fr auto; grid-template-areas: "rail header" "rail meta" "rail tabs" "rail main" "rail bottom"; height: 100vh; width: 100vw; overflow: hidden; position: relative; padding-bottom: 1.5rem; box-sizing: border-box; }
+    .shell-hub { display: grid; grid-template-columns: var(--shell-rail-width) 1fr; grid-template-rows: var(--shell-header-height) auto auto 1fr auto; grid-template-areas: "rail header" "rail meta" "rail tabs" "rail main" "rail bottom"; min-height: 100vh; width: 100vw; overflow-y: auto; position: relative; padding-bottom: 1.5rem; box-sizing: border-box; }
     .shell-hub::before { content: ''; position: absolute; inset: 0; background: var(--surface-app); filter: url(#noise-filter); opacity: 0.018; pointer-events: none; z-index: 0; }
     .shell-hub::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1.5px; background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%, color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%, color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%, transparent 100%); pointer-events: none; z-index: 2; }
     .shell-hub > * { position: relative; z-index: 1; }
