@@ -1629,6 +1629,89 @@
     .skel-text-80    { width: 80px; height: 14px; }
     .skel-heading-60 { width: 60%; }
     .skel-page-btn   { width: 28px; height: 28px; border-radius: var(--radius-4); }
+
+    /* ══════════════════════════════════════════════
+     * Round 2 Enhancements — Brand DNA + Visual Polish
+     * ══════════════════════════════════════════════ */
+
+    /* Brand DNA #3: Overlay accent border — all sheets and drawers */
+    .overlay-sheet {
+      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+    }
+    .overlay-drawer {
+      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+    }
+
+    /* Overlay button min-height alignment */
+    .overlay-btn {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    /* Table header brand gradient bottom border */
+    .ledger-table thead tr::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 30%,
+        color-mix(in oklch, var(--brand-accent) 30%, transparent) 50%,
+        color-mix(in oklch, var(--brand-accent) 20%, transparent) 70%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+    .ledger-table thead tr {
+      position: relative;
+    }
+
+    /* Trace section title upgrade — 11px semibold for readability */
+    .trace-section-title {
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* Status tab active — brand accent text color */
+    :root:has(#orders-pending:checked)  label[for="orders-pending"],
+    :root:has(#orders-submitted:checked) label[for="orders-submitted"],
+    :root:has(#orders-partial:checked)  label[for="orders-partial"],
+    :root:has(#orders-done:checked)     label[for="orders-done"],
+    :root:has(#orders-failed:checked)   label[for="orders-failed"] {
+      color: var(--brand-accent);
+    }
+
+    /* Batch action accent button hover shadow */
+    .batch-action-btn.accent:hover {
+      box-shadow: 0 0 0 1px var(--brand-accent), 0 2px 8px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+    }
+
+    /* Slippage bar height alignment — 4px → 6px */
+    .slippage-bar {
+      height: 6px;
+      border-radius: 3px;
+    }
+    .slippage-bar-fill {
+      border-radius: 3px;
+    }
+
+    /* Fill progress bar — 4px → 6px for visual consistency */
+    .fill-progress-track {
+      height: 6px;
+      border-radius: 3px;
+    }
+    .fill-progress-fill {
+      border-radius: 3px;
+    }
+
+    /* Inline style replacements — progress bar widths via CSS classes */
+    .slippage-bar-fill.negative.low   { width: 3%; }
+    .fill-progress-fill.partial-35   { width: 35%; }
   </style>
 </head>
 <body>
@@ -2413,7 +2496,7 @@
             </div>
             <div class="slippage-bar-container">
               <div class="slippage-bar" role="progressbar" aria-valuenow="3" aria-valuemin="0" aria-valuemax="100" aria-label="滑点幅度">
-                <div class="slippage-bar-fill negative" style="width: 3%;"></div>
+                <div class="slippage-bar-fill negative low"></div>
               </div>
             </div>
           </div>
@@ -2624,7 +2707,7 @@
               <td>
                 <div class="fill-progress">
                   <div class="fill-progress-track">
-                    <div class="fill-progress-fill" style="width:35%;"></div>
+                    <div class="fill-progress-fill partial-35"></div>
                   </div>
                   <span class="fill-progress-label">35%</span>
                 </div>
@@ -2929,7 +3012,7 @@
     <span class="status-sep">|</span>
     <span>10:22:18 CST</span>
     <span class="status-sep">|</span>
-    <span>中信建报 · 延迟 2ms</span>
+    <span>中信建投 · 延迟 2ms</span>
     <span class="status-spacer"></span>
     <span class="status-kbd">Ctrl+K</span> 搜索
   </div>

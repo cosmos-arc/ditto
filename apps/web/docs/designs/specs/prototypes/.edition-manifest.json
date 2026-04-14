@@ -267,14 +267,15 @@
       "id": "orders-ledger",
       "file": "page-orders-ledger.html",
       "status": "v5-done",
-      "score": 9,
+      "score": 9.2,
       "styleAnchor": "platform",
       "rounds": 1,
       "roundsV2": 1,
       "roundsV3": 1,
+      "roundsV6": 1,
       "inlineStyles": {
         "before": 124,
-        "after": 65
+        "after": 1
       },
       "jsModules": {
         "ticker": 5,
@@ -289,7 +290,8 @@
         "overlays": 4,
         "stateVariants": 6,
         "coveragePercent": 100
-      }
+      },
+      "note": "round-2: inline styles 65→1, Brand DNA overlay accent border, table header gradient, trace title 11px, tab accent color, batch hover shadow, slippage/fill bar 6px, typo fix"
     },
     {
       "id": "risk-center",
