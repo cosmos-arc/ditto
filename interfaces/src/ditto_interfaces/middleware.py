@@ -11,6 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .api.errors import APIError
 from .exceptions import DittoException
 from .models.common import ErrorResponse
 
@@ -42,11 +43,44 @@ def create_error_response(params: ErrorResponse) -> JSONResponse:
     )
 
 
+async def api_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """处理 API 层异常（APIError 及其子类）。"""
+    if not isinstance(exc, APIError):
+        return await general_exception_handler(request, exc)
+
+    request_id = getattr(request.state, "request_id", None)
+    is_server_error = exc.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR
+    log_level = logger.error if is_server_error else logger.warning
+    log_level(
+        "API error occurred",
+        error=exc.message,
+        error_code=exc.error_code,
+        status_code=exc.status_code,
+        path=request.url.path,
+        method=request.method,
+        request_id=request_id,
+    )
+
+    return create_error_response(
+        ErrorResponse(
+            status_code=exc.status_code,
+            error=exc.__class__.__name__,
+            detail=exc.message,
+            error_code=exc.error_code,
+            request_id=request_id,
+        )
+    )
+
+
 async def ditto_exception_handler(
     request: Request,
     exc: Exception,  # Changed from DittoException to Exception
 ) -> JSONResponse:
     """处理 Ditto 自定义异常."""
+    # APIError 子类有独立的 status_code，走专用 handler
+    if isinstance(exc, APIError):
+        return await api_error_handler(request, exc)
+
     if not isinstance(exc, DittoException):
         return await general_exception_handler(request, exc)
 

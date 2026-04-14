@@ -150,3 +150,83 @@ class TestRateLimitError:
 
         error = RateLimitError(retry_after=30)
         assert isinstance(error, APIError)
+
+
+@pytest.mark.unit
+class TestNotFoundError:
+    """测试 NotFoundError 资源不存在错误."""
+
+    def test_error_properties(self) -> None:
+        """验证错误属性: status_code=404, error_code='NOT_FOUND'."""
+        from ditto_interfaces.api.errors import NotFoundError
+
+        error = NotFoundError("Strategy not found: missing")
+        assert error.status_code == 404
+        assert error.error_code == "NOT_FOUND"
+        assert error.message == "Strategy not found: missing"
+
+    def test_inherits_from_api_error(self) -> None:
+        """验证继承自 APIError."""
+        from ditto_interfaces.api.errors import APIError, NotFoundError
+
+        assert issubclass(NotFoundError, APIError)
+
+
+@pytest.mark.unit
+class TestConflictError:
+    """测试 ConflictError 状态冲突错误."""
+
+    def test_error_properties(self) -> None:
+        """验证错误属性: status_code=409, error_code='CONFLICT'."""
+        from ditto_interfaces.api.errors import ConflictError
+
+        error = ConflictError("Cannot cancel run in 'completed' status")
+        assert error.status_code == 409
+        assert error.error_code == "CONFLICT"
+        assert error.message == "Cannot cancel run in 'completed' status"
+
+    def test_inherits_from_api_error(self) -> None:
+        """验证继承自 APIError."""
+        from ditto_interfaces.api.errors import APIError, ConflictError
+
+        assert issubclass(ConflictError, APIError)
+
+
+@pytest.mark.unit
+class TestForbiddenError:
+    """测试 ForbiddenError 禁止操作错误."""
+
+    def test_error_properties(self) -> None:
+        """验证错误属性: status_code=403, error_code='FORBIDDEN'."""
+        from ditto_interfaces.api.errors import ForbiddenError
+
+        error = ForbiddenError("Cannot modify preset universe")
+        assert error.status_code == 403
+        assert error.error_code == "FORBIDDEN"
+        assert error.message == "Cannot modify preset universe"
+
+    def test_inherits_from_api_error(self) -> None:
+        """验证继承自 APIError."""
+        from ditto_interfaces.api.errors import APIError, ForbiddenError
+
+        assert issubclass(ForbiddenError, APIError)
+
+
+@pytest.mark.unit
+class TestBadRequestError:
+    """测试 BadRequestError 参数错误."""
+
+    def test_error_properties(self) -> None:
+        """验证错误属性: status_code=400, error_code='BAD_REQUEST'."""
+        from ditto_interfaces.api.errors import BadRequestError
+
+        error = BadRequestError("Invalid parameter: limit must be positive")
+        assert error.status_code == 400
+        assert error.error_code == "BAD_REQUEST"
+        assert error.message == "Invalid parameter: limit must be positive"
+
+    def test_inherits_from_api_error(self) -> None:
+        """验证继承自 APIError."""
+        from ditto_interfaces.api.errors import APIError, BadRequestError
+
+        assert issubclass(BadRequestError, APIError)

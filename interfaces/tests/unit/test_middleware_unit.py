@@ -130,3 +130,82 @@ class TestGeneralExceptionHandler:
         response = await general_exception_handler(request, exc)
 
         assert response.status_code == 500
+
+
+@pytest.mark.unit
+class TestAPIErrorHandler:
+    """Tests for api_error_handler middleware."""
+
+    @pytest.mark.asyncio
+    async def test_not_found_error(self):
+        """NotFoundError 应返回 404."""
+        from ditto_interfaces.api.errors import NotFoundError
+        from ditto_interfaces.middleware import api_error_handler
+
+        request = create_mock_request()
+        exc = NotFoundError("Resource not found")
+        response = await api_error_handler(request, exc)
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_conflict_error(self):
+        """ConflictError 应返回 409."""
+        from ditto_interfaces.api.errors import ConflictError
+        from ditto_interfaces.middleware import api_error_handler
+
+        request = create_mock_request()
+        exc = ConflictError("Status conflict")
+        response = await api_error_handler(request, exc)
+        assert response.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_bad_request_error(self):
+        """BadRequestError 应返回 400."""
+        from ditto_interfaces.api.errors import BadRequestError
+        from ditto_interfaces.middleware import api_error_handler
+
+        request = create_mock_request()
+        exc = BadRequestError("Invalid input")
+        response = await api_error_handler(request, exc)
+        assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_forbidden_error(self):
+        """ForbiddenError 应返回 403."""
+        from ditto_interfaces.api.errors import ForbiddenError
+        from ditto_interfaces.middleware import api_error_handler
+
+        request = create_mock_request()
+        exc = ForbiddenError("Access denied")
+        response = await api_error_handler(request, exc)
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_non_api_error_delegates_to_general(self):
+        """非 APIError 异常应委托给 general_exception_handler."""
+        from ditto_interfaces.middleware import api_error_handler
+
+        request = create_mock_request()
+        exc = RuntimeError("Not an API error")
+        response = await api_error_handler(request, exc)
+        assert response.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_ditto_exception_delegates_api_error_to_api_handler(self):
+        """ditto_exception_handler 应将 APIError 委托给 api_error_handler."""
+        from ditto_interfaces.api.errors import NotFoundError
+
+        request = create_mock_request()
+        exc = NotFoundError("Not found")
+        response = await ditto_exception_handler(request, exc)
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_ditto_exception_non_api_uses_original_logic(self):
+        """非 APIError 的 DittoException 仍返回 400."""
+        from ditto_interfaces.exceptions import DataNotFoundError
+
+        request = create_mock_request()
+        exc = DataNotFoundError("strategy", "missing")
+        response = await ditto_exception_handler(request, exc)
+        assert response.status_code == 400
