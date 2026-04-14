@@ -178,6 +178,70 @@
     .stat-label { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2); }
     .stat-value { font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
 
+    /* ── Inline style extraction ── */
+    .c-up { color: var(--market-up-fg); }
+    .c-down { color: var(--market-down-fg); }
+    .c-tertiary { color: var(--text-tertiary); }
+    .c-primary { color: var(--text-primary); }
+    .c-secondary { color: var(--text-secondary); }
+    .c-healthy { color: var(--system-healthy-fg); }
+    .c-accent { color: var(--brand-accent); }
+    .c-up-4 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 4%, transparent); }
+    .c-up-6 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 6%, transparent); }
+    .c-up-8 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent); }
+    .c-up-10 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 10%, transparent); }
+    .c-up-12 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 12%, transparent); }
+    .c-up-14 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 14%, transparent); }
+    .c-down-4 { color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 4%, transparent); }
+    .c-down-6 { color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 6%, transparent); }
+    .c-down-10 { color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 10%, transparent); }
+    .c-down-14 { color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 14%, transparent); }
+    .flex-between { display: flex; justify-content: space-between; }
+    .flex-center { display: flex; align-items: center; justify-content: center; }
+    .flex-col-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-8); }
+    .flex-col-6 { display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12); }
+    .flex-col-8 { display: flex; flex-direction: column; gap: var(--space-8); }
+    .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--rhythm-breath-gap); flex-shrink: 0; }
+    .panel-flex { flex: 1; }
+    .panel-shrink { flex-shrink: 0; }
+    .chart-svg { width: 100%; opacity: 0.85; }
+    .numeric-secondary { font-family: var(--font-family-numeric); color: var(--text-secondary); }
+    .fs-10 { font-size: var(--font-size-10); }
+    .fs-11 { font-size: var(--font-size-11); }
+    .fs-12 { font-size: var(--font-size-12); }
+    .bar-track { height: 5px; border-radius: 3px; background: var(--interaction-hover-subtle-bg); }
+    .bar-accent-45 { height: 5px; border-radius: 3px; background: var(--brand-accent); width: 45%; }
+    .bar-accent-35 { height: 5px; border-radius: 3px; background: var(--brand-accent); width: 35%; }
+    .bar-tertiary-12 { height: 5px; border-radius: 3px; background: var(--text-tertiary); width: 12%; }
+    .bar-down-8 { height: 5px; border-radius: 3px; background: var(--market-down-fg); width: 8%; }
+    .attr-item { display: flex; flex-direction: column; }
+    .attr-label { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2); }
+    .dd-card { padding: var(--space-6); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-3); }
+    .dd-value { color: var(--market-down-fg); font-family: var(--font-family-numeric); font-weight: var(--font-weight-medium); }
+    .dd-date { color: var(--text-tertiary); font-size: var(--font-size-10); }
+    .sidebar-hint { font-size: var(--font-size-12); color: var(--text-tertiary); text-align: center; padding: var(--space-8); }
+    .overlay-body-text { font-size: var(--font-size-12); color: var(--text-secondary); display: flex; flex-direction: column; gap: var(--space-8); }
+    .overlay-body-text p { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-8); }
+    .overlay-confirm-box { padding: var(--space-8); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-4); margin-bottom: var(--space-8); }
+    .toast-card { background: var(--surface-panel-elevated); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); padding: var(--space-10) var(--space-12); display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-12); }
+    .toast-link { color: var(--brand-accent); cursor: pointer; margin-left: auto; }
+    .overlay-btn-default { background: var(--surface-panel-elevated); border: 1px solid var(--border-default); color: var(--text-secondary); }
+    .cursor-pointer { cursor: pointer; }
+    .format-tags { display: flex; gap: var(--space-4); margin-bottom: var(--space-10); }
+    .mt-4 { margin-top: var(--space-4); }
+    .mb-8 { margin-bottom: var(--space-8); }
+    .config-row { display: flex; justify-content: space-between; }
+    .config-label { color: var(--text-tertiary); }
+    .config-value { color: var(--text-secondary); }
+    .config-value-numeric { font-family: var(--font-family-numeric); color: var(--text-secondary); }
+    .config-value-up { color: var(--market-up-fg); font-family: var(--font-family-numeric); }
+    .config-value-down { color: var(--market-down-fg); }
+    .fw-medium { font-weight: var(--font-weight-medium); }
+    .chart-legend { font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .tbl-primary td { color: var(--text-primary); }
+    .tbl-compact { font-size: var(--font-size-10); }
+    .tbl-sm { font-size: var(--font-size-11); }
+
     /* ── Rail logo brand glow ── */
     .rail-logo { text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent); }
 
@@ -301,22 +365,22 @@
 
               <!-- KPI Strip: 6 metrics -->
               <div class="metrics-grid">
-                <div class="metric-card"><span class="metric-label">Sharpe</span><span class="metric-value" style="color: var(--market-up-fg);">1.82</span><span class="metric-change up">▲ +0.12</span></div>
+                <div class="metric-card"><span class="metric-label">Sharpe</span><span class="metric-value c-up">1.82</span><span class="metric-change up">▲ +0.12</span></div>
                 <div class="metric-card"><span class="metric-label">年化收益</span><span class="metric-value">+18.2%</span><span class="metric-change up">▲ +2.3%</span></div>
-                <div class="metric-card"><span class="metric-label">最大回撤</span><span class="metric-value" style="color: var(--market-down-fg);">-12.3%</span><span class="metric-change down">▼ -1.8%</span></div>
+                <div class="metric-card"><span class="metric-label">最大回撤</span><span class="metric-value c-down">-12.3%</span><span class="metric-change down">▼ -1.8%</span></div>
                 <div class="metric-card"><span class="metric-label">胜率</span><span class="metric-value">58.2%</span><span class="metric-change up">▲ +1.5%</span></div>
                 <div class="metric-card"><span class="metric-label">换手率</span><span class="metric-value">3.2x</span><span class="metric-change down">▲ +0.4x</span></div>
                 <div class="metric-card"><span class="metric-label">总费用</span><span class="metric-value">¥86.4K</span><span class="metric-change down">费用占比 0.86%</span></div>
               </div>
 
               <!-- NAV + Drawdown Chart -->
-              <div class="panel" style="flex: 1;">
-                <div class="panel-header" style="justify-content: space-between;">
+              <div class="panel panel-flex">
+                <div class="panel-header flex-between">
                   <span class="panel-title">净值曲线 + 回撤</span>
-                  <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">基准: 沪深300</span>
+                  <span class="chart-legend">基准: 沪深300</span>
                 </div>
-                <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
-                  <svg viewBox="0 0 400 140" style="width: 100%; opacity: 0.85;">
+                <div class="panel-body flex-center">
+                  <svg viewBox="0 0 400 140" class="chart-svg">
                     <defs>
                       <linearGradient id="nav-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.15"/><stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/></linearGradient>
                       <linearGradient id="dd-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.15"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient>
@@ -336,14 +400,14 @@
               </div>
 
               <!-- Key Stats -->
-              <div class="panel" style="flex-shrink: 0;">
+              <div class="panel panel-shrink">
                 <div class="panel-header"><span class="panel-title">关键统计</span></div>
                 <div class="panel-body">
                   <div class="stats-row">
-                    <div class="stat-item"><div class="stat-label">总收益</div><div class="stat-value" style="color: var(--market-up-fg);">+27.8%</div></div>
-                    <div class="stat-item"><div class="stat-label">最大回撤期</div><div class="stat-value" style="font-size: var(--font-size-12);">2025-08-12 → 2025-09-18</div></div>
+                    <div class="stat-item"><div class="stat-label">总收益</div><div class="stat-value c-up">+27.8%</div></div>
+                    <div class="stat-item"><div class="stat-label">最大回撤期</div><div class="stat-value fs-12">2025-08-12 → 2025-09-18</div></div>
                     <div class="stat-item"><div class="stat-label">最长连涨</div><div class="stat-value">12 天</div></div>
-                    <div class="stat-item"><div class="stat-label">最长连跌</div><div class="stat-value" style="color: var(--market-down-fg);">5 天</div></div>
+                    <div class="stat-item"><div class="stat-label">最长连跌</div><div class="stat-value c-down">5 天</div></div>
                   </div>
                 </div>
               </div>
@@ -354,33 +418,33 @@
             <div class="hub-sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">回测配置</div>
-                <div style="display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12);">
-                  <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">基准指数</span><span style="color: var(--text-secondary);">沪深300</span></div>
-                  <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">初始资金</span><span style="color: var(--text-secondary); font-family: var(--font-family-numeric);">¥10,000,000</span></div>
-                  <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">调仓频率</span><span style="color: var(--text-secondary);">月度</span></div>
-                  <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">手续费</span><span style="color: var(--text-secondary); font-family: var(--font-family-numeric);">万 2.5</span></div>
+                <div class="flex-col-6">
+                  <div class="config-row"><span class="config-label">基准指数</span><span class="config-value">沪深300</span></div>
+                  <div class="config-row"><span class="config-label">初始资金</span><span class="config-value-numeric">¥10,000,000</span></div>
+                  <div class="config-row"><span class="config-label">调仓频率</span><span class="config-value">月度</span></div>
+                  <div class="config-row"><span class="config-label">手续费</span><span class="config-value-numeric">万 2.5</span></div>
                 </div>
               </div>
               <div class="sidebar-section">
                 <div class="sidebar-title">交易成本</div>
-                <table class="data-table" style="font-size: var(--font-size-11);">
+                <table class="data-table tbl-sm">
                   <thead><tr><th>成本项</th><th class="numeric">金额</th></tr></thead>
                   <tbody>
                     <tr><td>印花税</td><td class="numeric">¥32,100</td></tr>
                     <tr><td>佣金</td><td class="numeric">¥41,800</td></tr>
                     <tr><td>滑点</td><td class="numeric">¥8,200</td></tr>
                     <tr><td>冲击成本</td><td class="numeric">¥4,300</td></tr>
-                    <tr style="font-weight: var(--font-weight-medium);"><td style="color: var(--text-primary);">合计</td><td class="numeric" style="color: var(--text-primary);">¥86,400</td></tr>
+                    <tr class="fw-medium tbl-primary"><td>合计</td><td class="numeric">¥86,400</td></tr>
                   </tbody>
                 </table>
               </div>
               <div class="sidebar-section">
                 <div class="sidebar-title">业绩归因</div>
-                <div style="display: flex; flex-direction: column; gap: var(--space-8);">
-                  <div><div style="font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2);">行业选择</div><div style="height: 5px; border-radius: 3px; background: var(--interaction-hover-subtle-bg);"><div style="height: 5px; border-radius: 3px; background: var(--brand-accent); width: 45%;"></div></div></div>
-                  <div><div style="font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2);">因子选股</div><div style="height: 5px; border-radius: 3px; background: var(--interaction-hover-subtle-bg);"><div style="height: 5px; border-radius: 3px; background: var(--brand-accent); width: 35%;"></div></div></div>
-                  <div><div style="font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2);">择时</div><div style="height: 5px; border-radius: 3px; background: var(--interaction-hover-subtle-bg);"><div style="height: 5px; border-radius: 3px; background: var(--text-tertiary); width: 12%;"></div></div></div>
-                  <div><div style="font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2);">交易成本</div><div style="height: 5px; border-radius: 3px; background: var(--interaction-hover-subtle-bg);"><div style="height: 5px; border-radius: 3px; background: var(--market-down-fg); width: 8%;"></div></div></div>
+                <div class="flex-col-8">
+                  <div class="attr-item"><div class="attr-label">行业选择</div><div class="bar-track"><div class="bar-accent-45"></div></div></div>
+                  <div class="attr-item"><div class="attr-label">因子选股</div><div class="bar-track"><div class="bar-accent-35"></div></div></div>
+                  <div class="attr-item"><div class="attr-label">择时</div><div class="bar-track"><div class="bar-tertiary-12"></div></div></div>
+                  <div class="attr-item"><div class="attr-label">交易成本</div><div class="bar-track"><div class="bar-down-8"></div></div></div>
                 </div>
               </div>
             </div>
@@ -391,40 +455,40 @@
         <div class="tab-panel" data-panel="bt-returns">
           <div class="hub-main">
             <div class="hub-object-view">
-              <div class="panel" style="flex: 1;">
-                <div class="panel-header"><span class="panel-title">超额收益曲线</span><span style="font-size: var(--font-size-10); color: var(--text-tertiary);">vs 沪深300</span></div>
-                <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
-                  <svg viewBox="0 0 400 120" style="width: 100%; opacity: 0.85;"><defs><linearGradient id="excess-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 65 L40 62 L80 58 L120 52 L160 55 L200 48 L240 42 L280 38 L320 35 L360 30 L400 25 L400 120 L0 120 Z" fill="url(#excess-g)"/><path d="M0 65 L40 62 L80 58 L120 52 L160 55 L200 48 L240 42 L280 38 L320 35 L360 30 L400 25" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5"/></svg>
+              <div class="panel panel-flex">
+                <div class="panel-header"><span class="panel-title">超额收益曲线</span><span class="chart-legend">vs 沪深300</span></div>
+                <div class="panel-body flex-center">
+                  <svg viewBox="0 0 400 120" class="chart-svg"><defs><linearGradient id="excess-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 65 L40 62 L80 58 L120 52 L160 55 L200 48 L240 42 L280 38 L320 35 L360 30 L400 25 L400 120 L0 120 Z" fill="url(#excess-g)"/><path d="M0 65 L40 62 L80 58 L120 52 L160 55 L200 48 L240 42 L280 38 L320 35 L360 30 L400 25" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5"/></svg>
                 </div>
               </div>
-              <div class="panel" style="flex-shrink: 0;">
+              <div class="panel panel-shrink">
                 <div class="panel-header"><span class="panel-title">月度收益热力图</span></div>
                 <div class="panel-body">
-                  <table class="data-table" style="font-size: var(--font-size-10);">
+                  <table class="data-table tbl-compact">
                     <thead><tr><th></th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th></tr></thead>
                     <tbody>
                       <tr>
-                        <td style="color: var(--text-tertiary);">2025</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 10%, transparent);">+3.1</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);">-1.2</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);">+2.5</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 14%, transparent);">+4.2</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);">+1.8</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 10%, transparent);">-2.1</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 12%, transparent);">+3.0</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 14%, transparent);">-2.8</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 10%, transparent);">+2.2</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 12%, transparent);">+2.8</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);">+2.0</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 4%, transparent);">-0.5</td>
+                        <td class="c-tertiary">2025</td>
+                        <td class="numeric c-up-10">+3.1</td>
+                        <td class="numeric c-down-6">-1.2</td>
+                        <td class="numeric c-up-8">+2.5</td>
+                        <td class="numeric c-up-14">+4.2</td>
+                        <td class="numeric c-up-6">+1.8</td>
+                        <td class="numeric c-down-10">-2.1</td>
+                        <td class="numeric c-up-12">+3.0</td>
+                        <td class="numeric c-down-14">-2.8</td>
+                        <td class="numeric c-up-10">+2.2</td>
+                        <td class="numeric c-up-12">+2.8</td>
+                        <td class="numeric c-up-8">+2.0</td>
+                        <td class="numeric c-down-4">-0.5</td>
                       </tr>
                       <tr>
-                        <td style="color: var(--text-tertiary);">2026</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);">+2.2</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);">+1.5</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 10%, transparent);">+2.8</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 4%, transparent);">+1.2</td>
-                        <td style="color: var(--text-tertiary);">—</td><td style="color: var(--text-tertiary);">—</td><td style="color: var(--text-tertiary);">—</td><td style="color: var(--text-tertiary);">—</td><td style="color: var(--text-tertiary);">—</td><td style="color: var(--text-tertiary);">—</td><td style="color: var(--text-tertiary);">—</td><td style="color: var(--text-tertiary);">—</td>
+                        <td class="c-tertiary">2026</td>
+                        <td class="numeric c-up-8">+2.2</td>
+                        <td class="numeric c-up-6">+1.5</td>
+                        <td class="numeric c-up-10">+2.8</td>
+                        <td class="numeric c-up-4">+1.2</td>
+                        <td class="c-tertiary">—</td><td class="c-tertiary">—</td><td class="c-tertiary">—</td><td class="c-tertiary">—</td><td class="c-tertiary">—</td><td class="c-tertiary">—</td><td class="c-tertiary">—</td><td class="c-tertiary">—</td>
                       </tr>
                     </tbody>
                   </table>
@@ -432,7 +496,7 @@
               </div>
             </div>
             <div class="hub-sidebar">
-              <div class="sidebar-section"><div class="sidebar-title">滚动收益</div><div style="display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12);"><div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">60D 收益</span><span style="color: var(--market-up-fg); font-family: var(--font-family-numeric);">+8.5%</span></div><div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">120D 收益</span><span style="color: var(--market-up-fg); font-family: var(--font-family-numeric);">+12.2%</span></div><div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">250D 收益</span><span style="color: var(--market-up-fg); font-family: var(--font-family-numeric);">+22.1%</span></div></div></div>
+              <div class="sidebar-section"><div class="sidebar-title">滚动收益</div><div class="flex-col-6"><div class="config-row"><span class="config-label">60D 收益</span><span class="config-value-up">+8.5%</span></div><div class="config-row"><span class="config-label">120D 收益</span><span class="config-value-up">+12.2%</span></div><div class="config-row"><span class="config-label">250D 收益</span><span class="config-value-up">+22.1%</span></div></div></div>
             </div>
           </div>
         </div>
@@ -440,58 +504,58 @@
         <!-- ═══ Tab 3: Risk ═══ -->
         <div class="tab-panel" data-panel="bt-risk">
           <div class="hub-main"><div class="hub-object-view">
-            <div class="panel" style="flex: 1;"><div class="panel-header"><span class="panel-title">回撤曲线</span></div><div class="panel-body" style="display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 400 100" style="width: 100%; opacity: 0.85;"><defs><linearGradient id="dd2-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="20" x2="400" y2="20" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/><path d="M0 10 L40 8 L80 12 L120 25 L160 35 L180 45 L200 40 L220 30 L240 18 L280 15 L320 20 L360 12 L400 10 L400 100 L0 100 Z" fill="url(#dd2-g)"/><path d="M0 10 L40 8 L80 12 L120 25 L160 35 L180 45 L200 40 L220 30 L240 18 L280 15 L320 20 L360 12 L400 10" fill="none" stroke="var(--market-down-fg)" stroke-width="1.5"/></svg></div></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--rhythm-breath-gap); flex-shrink: 0;">
-              <div class="panel"><div class="panel-header"><span class="panel-title">VaR / CVaR</span></div><div class="panel-body"><div class="stats-row"><div class="stat-item"><div class="stat-label">VaR (95%)</div><div class="stat-value">-1.85%</div></div><div class="stat-item"><div class="stat-label">VaR (99%)</div><div class="stat-value">-2.82%</div></div></div><div class="stats-row"><div class="stat-item"><div class="stat-label">CVaR (95%)</div><div class="stat-value" style="color: var(--market-down-fg);">-2.45%</div></div><div class="stat-item"><div class="stat-label">CVaR (99%)</div><div class="stat-value" style="color: var(--market-down-fg);">-3.52%</div></div></div></div></div>
-              <div class="panel"><div class="panel-header"><span class="panel-title">波动率</span></div><div class="panel-body"><div class="stats-row"><div class="stat-item"><div class="stat-label">年化波动</div><div class="stat-value">15.2%</div></div><div class="stat-item"><div class="stat-label">基准波动</div><div class="stat-value">18.5%</div></div></div><div class="stats-row"><div class="stat-item"><div class="stat-label">跟踪误差</div><div class="stat-value">8.3%</div></div><div class="stat-item"><div class="stat-label">信息比率</div><div class="stat-value" style="color: var(--market-up-fg);">1.92</div></div></div></div></div>
+            <div class="panel panel-flex"><div class="panel-header"><span class="panel-title">回撤曲线</span></div><div class="panel-body flex-center"><svg viewBox="0 0 400 100" class="chart-svg"><defs><linearGradient id="dd2-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="20" x2="400" y2="20" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/><path d="M0 10 L40 8 L80 12 L120 25 L160 35 L180 45 L200 40 L220 30 L240 18 L280 15 L320 20 L360 12 L400 10 L400 100 L0 100 Z" fill="url(#dd2-g)"/><path d="M0 10 L40 8 L80 12 L120 25 L160 35 L180 45 L200 40 L220 30 L240 18 L280 15 L320 20 L360 12 L400 10" fill="none" stroke="var(--market-down-fg)" stroke-width="1.5"/></svg></div></div>
+            <div class="grid-2col">
+              <div class="panel"><div class="panel-header"><span class="panel-title">VaR / CVaR</span></div><div class="panel-body"><div class="stats-row"><div class="stat-item"><div class="stat-label">VaR (95%)</div><div class="stat-value">-1.85%</div></div><div class="stat-item"><div class="stat-label">VaR (99%)</div><div class="stat-value">-2.82%</div></div></div><div class="stats-row"><div class="stat-item"><div class="stat-label">CVaR (95%)</div><div class="stat-value c-down">-2.45%</div></div><div class="stat-item"><div class="stat-label">CVaR (99%)</div><div class="stat-value c-down">-3.52%</div></div></div></div></div>
+              <div class="panel"><div class="panel-header"><span class="panel-title">波动率</span></div><div class="panel-body"><div class="stats-row"><div class="stat-item"><div class="stat-label">年化波动</div><div class="stat-value">15.2%</div></div><div class="stat-item"><div class="stat-label">基准波动</div><div class="stat-value">18.5%</div></div></div><div class="stats-row"><div class="stat-item"><div class="stat-label">跟踪误差</div><div class="stat-value">8.3%</div></div><div class="stat-item"><div class="stat-label">信息比率</div><div class="stat-value c-up">1.92</div></div></div></div></div>
             </div>
-          </div><div class="hub-sidebar"><div class="sidebar-section"><div class="sidebar-title">Top 3 回撤区间</div><div style="display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12);"><div style="padding: var(--space-6); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-3);"><div style="color: var(--market-down-fg); font-family: var(--font-family-numeric); font-weight: var(--font-weight-medium);">-12.3%</div><div style="color: var(--text-tertiary); font-size: var(--font-size-10);">2025-08-12 → 2025-09-18</div></div><div style="padding: var(--space-6); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-3);"><div style="color: var(--market-down-fg); font-family: var(--font-family-numeric); font-weight: var(--font-weight-medium);">-8.5%</div><div style="color: var(--text-tertiary); font-size: var(--font-size-10);">2026-01-15 → 2026-02-08</div></div><div style="padding: var(--space-6); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-3);"><div style="color: var(--market-down-fg); font-family: var(--font-family-numeric); font-weight: var(--font-weight-medium);">-5.2%</div><div style="color: var(--text-tertiary); font-size: var(--font-size-10);">2025-04-20 → 2025-05-10</div></div></div></div></div></div>
+          </div><div class="hub-sidebar"><div class="sidebar-section"><div class="sidebar-title">Top 3 回撤区间</div><div class="flex-col-6"><div class="dd-card"><div class="dd-value">-12.3%</div><div class="dd-date">2025-08-12 → 2025-09-18</div></div><div class="dd-card"><div class="dd-value">-8.5%</div><div class="dd-date">2026-01-15 → 2026-02-08</div></div><div class="dd-card"><div class="dd-value">-5.2%</div><div class="dd-date">2025-04-20 → 2025-05-10</div></div></div></div></div></div>
         </div>
 
         <!-- ═══ Tab 4: Trades ═══ -->
         <div class="tab-panel" data-panel="bt-trades">
           <div class="hub-main"><div class="hub-object-view">
-            <div class="panel" style="flex: 1;"><div class="panel-header" style="justify-content: space-between;"><span class="panel-title">交易明细</span><span style="font-size: var(--font-size-10); color: var(--text-tertiary);">最近 10 笔</span></div>
+            <div class="panel panel-flex"><div class="panel-header flex-between"><span class="panel-title">交易明细</span><span class="chart-legend">最近 10 笔</span></div>
               <table class="data-table"><thead><tr><th>时间</th><th>标的</th><th>方向</th><th class="numeric">数量</th><th class="numeric">价格</th><th class="numeric">金额</th><th>成本</th></tr></thead>
                 <tbody>
-                  <tr><td class="numeric">04-10</td><td style="color: var(--text-primary);">贵州茅台</td><td><span style="color: var(--market-up-fg);">买入</span></td><td class="numeric">200 股</td><td class="numeric">1,625.00</td><td class="numeric">325,000</td><td class="numeric">¥488</td></tr>
-                  <tr><td class="numeric">04-10</td><td style="color: var(--text-primary);">宁德时代</td><td><span style="color: var(--market-down-fg);">卖出</span></td><td class="numeric">500 股</td><td class="numeric">218.50</td><td class="numeric">109,250</td><td class="numeric">¥218</td></tr>
-                  <tr><td class="numeric">04-08</td><td style="color: var(--text-primary);">比亚迪</td><td><span style="color: var(--market-up-fg);">买入</span></td><td class="numeric">800 股</td><td class="numeric">285.20</td><td class="numeric">228,160</td><td class="numeric">¥342</td></tr>
-                  <tr><td class="numeric">04-08</td><td style="color: var(--text-primary);">招商银行</td><td><span style="color: var(--market-down-fg);">卖出</span></td><td class="numeric">2,000 股</td><td class="numeric">35.80</td><td class="numeric">71,600</td><td class="numeric">¥107</td></tr>
-                  <tr><td class="numeric">04-03</td><td style="color: var(--text-primary);">恒瑞医药</td><td><span style="color: var(--market-up-fg);">买入</span></td><td class="numeric">1,500 股</td><td class="numeric">48.30</td><td class="numeric">72,450</td><td class="numeric">¥109</td></tr>
+                  <tr><td class="numeric">04-10</td><td class="c-primary">贵州茅台</td><td><span class="c-up">买入</span></td><td class="numeric">200 股</td><td class="numeric">1,625.00</td><td class="numeric">325,000</td><td class="numeric">¥488</td></tr>
+                  <tr><td class="numeric">04-10</td><td class="c-primary">宁德时代</td><td><span class="c-down">卖出</span></td><td class="numeric">500 股</td><td class="numeric">218.50</td><td class="numeric">109,250</td><td class="numeric">¥218</td></tr>
+                  <tr><td class="numeric">04-08</td><td class="c-primary">比亚迪</td><td><span class="c-up">买入</span></td><td class="numeric">800 股</td><td class="numeric">285.20</td><td class="numeric">228,160</td><td class="numeric">¥342</td></tr>
+                  <tr><td class="numeric">04-08</td><td class="c-primary">招商银行</td><td><span class="c-down">卖出</span></td><td class="numeric">2,000 股</td><td class="numeric">35.80</td><td class="numeric">71,600</td><td class="numeric">¥107</td></tr>
+                  <tr><td class="numeric">04-03</td><td class="c-primary">恒瑞医药</td><td><span class="c-up">买入</span></td><td class="numeric">1,500 股</td><td class="numeric">48.30</td><td class="numeric">72,450</td><td class="numeric">¥109</td></tr>
                 </tbody>
               </table>
             </div>
-          </div><div class="hub-sidebar"><div class="sidebar-section"><div class="sidebar-title">交易统计</div><div style="display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12);"><div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">总交易笔数</span><span style="font-family: var(--font-family-numeric); color: var(--text-secondary);">842</span></div><div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">买入笔数</span><span style="font-family: var(--font-family-numeric); color: var(--text-secondary);">421</span></div><div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">卖出笔数</span><span style="font-family: var(--font-family-numeric); color: var(--text-secondary);">421</span></div><div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">平均单笔金额</span><span style="font-family: var(--font-family-numeric); color: var(--text-secondary);">¥23,750</span></div></div></div></div></div>
+          </div><div class="hub-sidebar"><div class="sidebar-section"><div class="sidebar-title">交易统计</div><div class="flex-col-6"><div class="config-row"><span class="config-label">总交易笔数</span><span class="numeric-secondary">842</span></div><div class="config-row"><span class="config-label">买入笔数</span><span class="numeric-secondary">421</span></div><div class="config-row"><span class="config-label">卖出笔数</span><span class="numeric-secondary">421</span></div><div class="config-row"><span class="config-label">平均单笔金额</span><span class="numeric-secondary">¥23,750</span></div></div></div></div></div>
         </div>
 
         <!-- ═══ Tab 5: Attribution ═══ -->
         <div class="tab-panel" data-panel="bt-attribution">
           <div class="hub-main"><div class="hub-object-view">
-            <div class="panel" style="flex: 1;"><div class="panel-header"><span class="panel-title">因子暴露时间序列</span></div><div class="panel-body" style="display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 400 100" style="width: 100%; opacity: 0.85;"><line x1="0" y1="50" x2="400" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 40 L40 38 L80 35 L120 32 L160 30 L200 28 L240 32 L280 35 L320 30 L360 28 L400 25" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/><path d="M0 55 L40 58 L80 60 L120 62 L160 58 L200 55 L240 60 L280 62 L320 58 L360 55 L400 52" fill="none" stroke="var(--text-tertiary)" stroke-width="0.8" stroke-dasharray="3"/></svg></div></div>
-            <div class="panel" style="flex-shrink: 0;"><div class="panel-header"><span class="panel-title">因子收益贡献</span></div>
+            <div class="panel panel-flex"><div class="panel-header"><span class="panel-title">因子暴露时间序列</span></div><div class="panel-body flex-center"><svg viewBox="0 0 400 100" class="chart-svg"><line x1="0" y1="50" x2="400" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 40 L40 38 L80 35 L120 32 L160 30 L200 28 L240 32 L280 35 L320 30 L360 28 L400 25" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/><path d="M0 55 L40 58 L80 60 L120 62 L160 58 L200 55 L240 60 L280 62 L320 58 L360 55 L400 52" fill="none" stroke="var(--text-tertiary)" stroke-width="0.8" stroke-dasharray="3"/></svg></div></div>
+            <div class="panel panel-shrink"><div class="panel-header"><span class="panel-title">因子收益贡献</span></div>
               <table class="data-table"><thead><tr><th>因子</th><th class="numeric">暴露</th><th class="numeric">贡献</th><th>评价</th></tr></thead>
                 <tbody>
-                  <tr><td style="color: var(--text-primary);">动量 (20D)</td><td class="numeric">0.35</td><td class="numeric" style="color: var(--market-up-fg);">+8.2%</td><td><span class="status-badge success">主要贡献</span></td></tr>
-                  <tr><td style="color: var(--text-primary);">反转 (5D)</td><td class="numeric">0.20</td><td class="numeric" style="color: var(--market-up-fg);">+4.5%</td><td><span class="status-badge success">正贡献</span></td></tr>
-                  <tr><td style="color: var(--text-primary);">波动率</td><td class="numeric">0.20</td><td class="numeric" style="color: var(--market-up-fg);">+3.1%</td><td><span class="status-badge success">正贡献</span></td></tr>
-                  <tr><td style="color: var(--text-primary);">换手率</td><td class="numeric">0.15</td><td class="numeric" style="color: var(--market-down-fg);">-1.2%</td><td><span class="status-badge error">负贡献</span></td></tr>
-                  <tr><td style="color: var(--text-primary);">质量</td><td class="numeric">0.10</td><td class="numeric" style="color: var(--market-up-fg);">+2.0%</td><td><span class="status-badge success">正贡献</span></td></tr>
+                  <tr><td class="c-primary">动量 (20D)</td><td class="numeric">0.35</td><td class="numeric c-up">+8.2%</td><td><span class="status-badge success">主要贡献</span></td></tr>
+                  <tr><td class="c-primary">反转 (5D)</td><td class="numeric">0.20</td><td class="numeric c-up">+4.5%</td><td><span class="status-badge success">正贡献</span></td></tr>
+                  <tr><td class="c-primary">波动率</td><td class="numeric">0.20</td><td class="numeric c-up">+3.1%</td><td><span class="status-badge success">正贡献</span></td></tr>
+                  <tr><td class="c-primary">换手率</td><td class="numeric">0.15</td><td class="numeric c-down">-1.2%</td><td><span class="status-badge error">负贡献</span></td></tr>
+                  <tr><td class="c-primary">质量</td><td class="numeric">0.10</td><td class="numeric c-up">+2.0%</td><td><span class="status-badge success">正贡献</span></td></tr>
                 </tbody>
               </table>
             </div>
-          </div><div class="hub-sidebar"><div class="sidebar-section"><div class="sidebar-title">风格暴露</div><div style="font-size: var(--font-size-12); color: var(--text-tertiary); text-align: center; padding: var(--space-8);">Barra 风格因子暴露热力图</div></div></div></div>
+          </div><div class="hub-sidebar"><div class="sidebar-section"><div class="sidebar-title">风格暴露</div><div class="sidebar-hint">Barra 风格因子暴露热力图</div></div></div></div>
         </div>
 
         <!-- ═══ Tab 6: Diagnostics ═══ -->
         <div class="tab-panel" data-panel="bt-diagnostics">
           <div class="hub-main"><div class="hub-object-view">
-            <div class="panel" style="flex: 1;"><div class="panel-header"><span class="panel-title">换手率分析</span><span style="font-size: var(--font-size-10); color: var(--text-tertiary);">月度</span></div><div class="panel-body" style="display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 400 100" style="width: 100%; opacity: 0.85;"><defs><linearGradient id="to-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.1"/><stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 65 L40 58 L80 52 L120 55 L160 48 L200 42 L240 45 L280 38 L320 42 L360 35 L400 38 L400 100 L0 100 Z" fill="url(#to-g)"/><path d="M0 65 L40 58 L80 52 L120 55 L160 48 L200 42 L240 45 L280 38 L320 42 L360 35 L400 38" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/></svg></div></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--rhythm-breath-gap); flex-shrink: 0;">
+            <div class="panel panel-flex"><div class="panel-header"><span class="panel-title">换手率分析</span><span class="chart-legend">月度</span></div><div class="panel-body flex-center"><svg viewBox="0 0 400 100" class="chart-svg"><defs><linearGradient id="to-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.1"/><stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 65 L40 58 L80 52 L120 55 L160 48 L200 42 L240 45 L280 38 L320 42 L360 35 L400 38 L400 100 L0 100 Z" fill="url(#to-g)"/><path d="M0 65 L40 58 L80 52 L120 55 L160 48 L200 42 L240 45 L280 38 L320 42 L360 35 L400 38" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/></svg></div></div>
+            <div class="grid-2col">
               <div class="panel"><div class="panel-header"><span class="panel-title">持仓周期分布</span></div><div class="panel-body"><div class="stats-row"><div class="stat-item"><div class="stat-label">平均持仓</div><div class="stat-value">22 天</div></div><div class="stat-item"><div class="stat-label">中位数</div><div class="stat-value">18 天</div></div></div><div class="stats-row"><div class="stat-item"><div class="stat-label">< 30天</div><div class="stat-value">68%</div></div><div class="stat-item"><div class="stat-label">> 60天</div><div class="stat-value">15%</div></div></div></div></div>
-              <div class="panel"><div class="panel-header"><span class="panel-title">异常交易</span></div><div class="panel-body" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-8);"><span class="status-badge success">无异常交易标记</span><div style="font-size: var(--font-size-12); color: var(--text-tertiary);">回测期间交易行为正常</div></div></div>
+              <div class="panel"><div class="panel-header"><span class="panel-title">异常交易</span></div><div class="panel-body flex-col-center"><span class="status-badge success">无异常交易标记</span><div class="fs-12 c-tertiary">回测期间交易行为正常</div></div></div>
             </div>
-          </div><div class="hub-sidebar"><div class="sidebar-section"><div class="sidebar-title">换手成本</div><div style="display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12);"><div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">年化换手</span><span style="font-family: var(--font-family-numeric); color: var(--text-secondary);">3.2x</span></div><div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">年化成本</span><span style="font-family: var(--font-family-numeric); color: var(--text-secondary);">0.86%</span></div><div style="display: flex; justify-content: space-between;"><span style="color: var(--text-tertiary);">对收益侵蚀</span><span style="color: var(--market-down-fg);">-4.7%</span></div></div></div></div></div>
+          </div><div class="hub-sidebar"><div class="sidebar-section"><div class="sidebar-title">换手成本</div><div class="flex-col-6"><div class="config-row"><span class="config-label">年化换手</span><span class="numeric-secondary">3.2x</span></div><div class="config-row"><span class="config-label">年化成本</span><span class="numeric-secondary">0.86%</span></div><div class="config-row"><span class="config-label">对收益侵蚀</span><span class="config-value-down">-4.7%</span></div></div></div></div></div>
         </div>
 
       </div><!-- /tab-panels -->
@@ -501,7 +565,7 @@
     <div class="hub-bottom">
       <div class="bottom-item"><span class="bottom-item-label">回测区间</span><span class="bottom-item-value">2025-01-02 → 2026-04-10</span></div>
       <span class="meta-separator"></span>
-      <div class="bottom-item"><span class="bottom-item-label">数据完整度</span><span class="bottom-item-value" style="color: var(--system-healthy-fg);">100%</span></div>
+      <div class="bottom-item"><span class="bottom-item-label">数据完整度</span><span class="bottom-item-value c-healthy">100%</span></div>
       <span class="meta-separator"></span>
       <div class="bottom-item"><span class="bottom-item-label">引擎版本</span><span class="bottom-item-value">v2.1</span></div>
     </div>
@@ -544,13 +608,13 @@
     <div class="gallery-grid gallery-grid--overlays">
       <div class="gallery-group" data-component="overlays"><div class="gallery-group__label">弹层设计</div><div class="gallery-cards">
         <!-- Export Report -->
-        <div class="gallery-card"><div class="gallery-card__label">导出报告 (Sheet)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-sheet" role="dialog" aria-label="导出报告"><div class="overlay-header"><span class="overlay-title">导出报告</span></div><div class="overlay-body"><h4>导出格式</h4><div style="display: flex; gap: var(--space-4); margin-bottom: var(--space-10);"><span class="meta-tag brand" style="cursor: pointer;">PDF</span><span class="meta-tag" style="cursor: pointer;">Excel</span><span class="meta-tag" style="cursor: pointer;">CSV</span></div><h4>内容范围</h4><div class="overlay-field"><span class="overlay-field-label">包含</span><span class="overlay-field-value">全部 Tab + 图表</span></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">导出</button></div></div></div></div></div>
+        <div class="gallery-card"><div class="gallery-card__label">导出报告 (Sheet)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-sheet" role="dialog" aria-label="导出报告"><div class="overlay-header"><span class="overlay-title">导出报告</span></div><div class="overlay-body"><h4>导出格式</h4><div class="format-tags"><span class="meta-tag brand cursor-pointer">PDF</span><span class="meta-tag cursor-pointer">Excel</span><span class="meta-tag cursor-pointer">CSV</span></div><h4>内容范围</h4><div class="overlay-field"><span class="overlay-field-label">包含</span><span class="overlay-field-value">全部 Tab + 图表</span></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">导出</button></div></div></div></div></div>
         <!-- Enable Signal -->
-        <div class="gallery-card"><div class="gallery-card__label">启用信号确认 (Modal)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-modal" role="dialog" aria-label="启用信号"><div class="overlay-header"><span class="overlay-title">确认启用信号</span></div><div class="overlay-body"><p style="font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-8);">将为策略 <strong style="color: var(--text-primary);">动量因子增强策略 v3.2</strong> 启用实时信号生成。</p><div style="padding: var(--space-8); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-4); margin-bottom: var(--space-8);"><div class="overlay-field"><span class="overlay-field-label">Sharpe</span><span class="overlay-field-value numeric" style="color: var(--market-up-fg);">1.82 ✓</span></div><div class="overlay-field"><span class="overlay-field-label">年化收益</span><span class="overlay-field-value numeric" style="color: var(--market-up-fg);">18.2% ✓</span></div><div class="overlay-field"><span class="overlay-field-label">最大回撤</span><span class="overlay-field-value numeric">-12.3% ✓</span></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">确认启用</button></div></div></div></div></div>
+        <div class="gallery-card"><div class="gallery-card__label">启用信号确认 (Modal)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-modal" role="dialog" aria-label="启用信号"><div class="overlay-header"><span class="overlay-title">确认启用信号</span></div><div class="overlay-body"><p class="fs-12 c-secondary mb-8">将为策略 <strong class="c-primary">动量因子增强策略 v3.2</strong> 启用实时信号生成。</p><div class="overlay-confirm-box"><div class="overlay-field"><span class="overlay-field-label">Sharpe</span><span class="overlay-field-value numeric c-up">1.82 ✓</span></div><div class="overlay-field"><span class="overlay-field-label">年化收益</span><span class="overlay-field-value numeric c-up">18.2% ✓</span></div><div class="overlay-field"><span class="overlay-field-label">最大回撤</span><span class="overlay-field-value numeric">-12.3% ✓</span></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">确认启用</button></div></div></div></div></div>
         <!-- AI Analysis -->
-        <div class="gallery-card"><div class="gallery-card__label">AI 解读 (Sheet)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-sheet" role="dialog" aria-label="AI 解读"><div class="overlay-header"><span class="overlay-title">AI 回测分析</span></div><div class="overlay-body"><div style="font-size: var(--font-size-12); color: var(--text-secondary); display: flex; flex-direction: column; gap: var(--space-8);"><div><strong style="color: var(--text-primary);">摘要</strong><div style="margin-top: var(--space-4);">策略 v3.2 整体表现优秀，Sharpe 1.82 显著超越基准。动量因子贡献最大（+8.2%），但换手率因子产生负贡献（-1.2%）。</div></div><div><strong style="color: var(--text-primary);">建议</strong><div style="margin-top: var(--space-4);">考虑降低换手率因子权重或移除，以减少交易成本侵蚀。</div></div></div><div class="overlay-actions"><button class="overlay-btn" style="background: var(--surface-panel-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);">复制</button><button class="overlay-btn overlay-btn-primary">关闭</button></div></div></div></div></div>
+        <div class="gallery-card"><div class="gallery-card__label">AI 解读 (Sheet)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-sheet" role="dialog" aria-label="AI 解读"><div class="overlay-header"><span class="overlay-title">AI 回测分析</span></div><div class="overlay-body"><div class="overlay-body-text"><div><strong class="c-primary">摘要</strong><div class="mt-4">策略 v3.2 整体表现优秀，Sharpe 1.82 显著超越基准。动量因子贡献最大（+8.2%），但换手率因子产生负贡献（-1.2%）。</div></div><div><strong class="c-primary">建议</strong><div class="mt-4">考虑降低换手率因子权重或移除，以减少交易成本侵蚀。</div></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-default">复制</button><button class="overlay-btn overlay-btn-primary">关闭</button></div></div></div></div></div>
         <!-- Compare Toast -->
-        <div class="gallery-card"><div class="gallery-card__label">加入对比 (Toast)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div style="background: var(--surface-panel-elevated); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); padding: var(--space-10) var(--space-12); display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-12);"><span class="status-badge success">✓</span><span style="color: var(--text-secondary);">已加入对比队列（1/5）</span><span style="color: var(--brand-accent); cursor: pointer; margin-left: auto;">查看对比 →</span></div></div></div>
+        <div class="gallery-card"><div class="gallery-card__label">加入对比 (Toast)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="toast-card"><span class="status-badge success">✓</span><span class="c-secondary">已加入对比队列（1/5）</span><span class="toast-link">查看对比 →</span></div></div></div>
       </div></div>
     </div>
   </section>
