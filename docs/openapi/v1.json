@@ -1,0 +1,6524 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ditto Quant API",
+    "description": "量化投资系统API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/backtests/runs": {
+      "post": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Trigger Backtest",
+        "description": "触发回测 — 校验参数 + 创建记录 + 后台提交 flow，返回 202 Accepted.",
+        "operationId": "trigger_backtest_api_v1_backtests_runs_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBacktestRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_BacktestRunTriggerResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "List Runs",
+        "description": "列出回测运行记录.",
+        "operationId": "list_runs_api_v1_backtests_runs_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "策略 ID",
+              "title": "Strategy Id"
+            },
+            "description": "策略 ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "运行状态筛选",
+              "title": "Status"
+            },
+            "description": "运行状态筛选"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "起始日期(含)",
+              "title": "Start Date"
+            },
+            "description": "起始日期(含)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "结束日期(含)",
+              "title": "End Date"
+            },
+            "description": "结束日期(含)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "每页数量",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "每页数量"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "偏移量",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "偏移量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_RunResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/runs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Cancel Run",
+        "description": "取消回测运行 — 检查 status in {pending, running}，更新为 cancelled.",
+        "operationId": "cancel_run_api_v1_backtests_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_CancelRunResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/runs/{run_id}/retry": {
+      "post": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Retry Run",
+        "description": "重试回测运行 — 检查 status in {failed, cancelled}，创建新 Run 并提交 flow.",
+        "operationId": "retry_run_api_v1_backtests_runs__run_id__retry_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_RetryRunResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Get Run",
+        "description": "获取回测运行详情.",
+        "operationId": "get_run_api_v1_backtests_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_RunResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/runs/{run_id}/trades": {
+      "get": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Get Trades",
+        "description": "获取回测成交明细.",
+        "operationId": "get_trades_api_v1_backtests_runs__run_id__trades_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "起始日期(含)",
+              "title": "Start Date"
+            },
+            "description": "起始日期(含)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "结束日期(含)",
+              "title": "End Date"
+            },
+            "description": "结束日期(含)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "每页数量",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "每页数量"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "偏移量",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "偏移量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_TradeResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/runs/{run_id}/audit": {
+      "get": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Get Audit",
+        "description": "获取回测审计记录.",
+        "operationId": "get_audit_api_v1_backtests_runs__run_id__audit_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "record_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "审计记录类型筛选",
+              "title": "Record Type"
+            },
+            "description": "审计记录类型筛选"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "起始日期(含)",
+              "title": "Start Date"
+            },
+            "description": "起始日期(含)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "结束日期(含)",
+              "title": "End Date"
+            },
+            "description": "结束日期(含)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_AuditRecordResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/runs/{run_id}/report": {
+      "get": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Get Report",
+        "description": "获取回测报告 (backtest_report.json 元数据).",
+        "operationId": "get_report_api_v1_backtests_runs__run_id__report_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_dict_str__object__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/runs/{run_id}/lineage": {
+      "get": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Get Lineage",
+        "description": "查询运行血统链 — 从当前运行追溯到原始运行.",
+        "operationId": "get_lineage_api_v1_backtests_runs__run_id__lineage_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_LineageResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/runs/{run_id}/replay": {
+      "post": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Replay Run",
+        "description": "基于原始 manifest 重放回测并验证复现性.",
+        "operationId": "replay_run_api_v1_backtests_runs__run_id__replay_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ReplayResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/runs/{run_id}/nav": {
+      "get": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Get Nav Series",
+        "description": "获取回测 NAV 序列.",
+        "operationId": "get_nav_series_api_v1_backtests_runs__run_id__nav_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_dict_str__object___"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/runs/{run_id}/benchmark": {
+      "get": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Get Benchmark",
+        "description": "获取回测基准 NAV 序列与基准收益率.",
+        "operationId": "get_benchmark_api_v1_backtests_runs__run_id__benchmark_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_BenchmarkNavResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/capital/margin": {
+      "get": {
+        "tags": [
+          "capital"
+        ],
+        "summary": "Get Margin",
+        "description": "获取融资融券数据.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"",
+        "operationId": "get_margin_api_v1_capital_margin_get",
+        "parameters": [
+          {
+            "name": "instrument_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Canonical 标的 ID",
+              "title": "Instrument Id"
+            },
+            "description": "Canonical 标的 ID"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "裸代码, 如 000001",
+              "title": "Ticker"
+            },
+            "description": "裸代码, 如 000001"
+          },
+          {
+            "name": "standard_ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "标准代码, 如 000001.XSHE",
+              "title": "Standard Ticker"
+            },
+            "description": "标准代码, 如 000001.XSHE"
+          },
+          {
+            "name": "as_of_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "时间点查询日期",
+              "title": "As Of Date"
+            },
+            "description": "时间点查询日期"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_Margin__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/capital/valuation": {
+      "get": {
+        "tags": [
+          "capital"
+        ],
+        "summary": "Get Valuation",
+        "description": "获取估值指标数据.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"",
+        "operationId": "get_valuation_api_v1_capital_valuation_get",
+        "parameters": [
+          {
+            "name": "instrument_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Canonical 标的 ID",
+              "title": "Instrument Id"
+            },
+            "description": "Canonical 标的 ID"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "裸代码, 如 000001",
+              "title": "Ticker"
+            },
+            "description": "裸代码, 如 000001"
+          },
+          {
+            "name": "standard_ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "标准代码, 如 000001.XSHE",
+              "title": "Standard Ticker"
+            },
+            "description": "标准代码, 如 000001.XSHE"
+          },
+          {
+            "name": "as_of_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "时间点查询日期",
+              "title": "As Of Date"
+            },
+            "description": "时间点查询日期"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_Valuation__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/commodity/bars": {
+      "post": {
+        "tags": [
+          "commodity"
+        ],
+        "summary": "Post Bars",
+        "description": "查询商品 K 线数据.\n\nArgs:\n    query: 查询参数\n        - commodity_codes: 商品代码列表 (可选)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - limit: 返回数量限制 (默认 1000, 范围 1-10000)\n    facade: CommodityQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含商品 K 线数据列表",
+        "operationId": "post_bars_api_v1_commodity_bars_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommodityQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_CommodityBar__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fundamental/financials/{report_type}": {
+      "get": {
+        "tags": [
+          "fundamental"
+        ],
+        "summary": "Get Financials",
+        "description": "获取财务报表数据.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"",
+        "operationId": "get_financials_api_v1_fundamental_financials__report_type__get",
+        "parameters": [
+          {
+            "name": "report_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/FinancialType"
+            }
+          },
+          {
+            "name": "instrument_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Canonical 标的 ID",
+              "title": "Instrument Id"
+            },
+            "description": "Canonical 标的 ID"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "裸代码, 如 000001",
+              "title": "Ticker"
+            },
+            "description": "裸代码, 如 000001"
+          },
+          {
+            "name": "standard_ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "标准代码, 如 000001.XSHE",
+              "title": "Standard Ticker"
+            },
+            "description": "标准代码, 如 000001.XSHE"
+          },
+          {
+            "name": "as_of_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "PIT 查询日期",
+              "title": "As Of Date"
+            },
+            "description": "PIT 查询日期"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_Financial__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fundamental/dividend": {
+      "get": {
+        "tags": [
+          "fundamental"
+        ],
+        "summary": "Get Dividend",
+        "description": "获取分红数据.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"",
+        "operationId": "get_dividend_api_v1_fundamental_dividend_get",
+        "parameters": [
+          {
+            "name": "instrument_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Canonical 标的 ID",
+              "title": "Instrument Id"
+            },
+            "description": "Canonical 标的 ID"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "裸代码, 如 000001",
+              "title": "Ticker"
+            },
+            "description": "裸代码, 如 000001"
+          },
+          {
+            "name": "standard_ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "标准代码, 如 000001.XSHE",
+              "title": "Standard Ticker"
+            },
+            "description": "标准代码, 如 000001.XSHE"
+          },
+          {
+            "name": "as_of_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "PIT 查询日期",
+              "title": "As Of Date"
+            },
+            "description": "PIT 查询日期"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_Dividend__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fundamental/corporate-actions": {
+      "get": {
+        "tags": [
+          "fundamental"
+        ],
+        "summary": "List Corporate Actions",
+        "description": "查询公司行动列表.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nRaises:\n    HTTPException: 400 如果 start_date > end_date",
+        "operationId": "list_corporate_actions_api_v1_fundamental_corporate_actions_get",
+        "parameters": [
+          {
+            "name": "instrument_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Canonical 标的 ID",
+              "title": "Instrument Id"
+            },
+            "description": "Canonical 标的 ID"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "裸代码, 如 000001",
+              "title": "Ticker"
+            },
+            "description": "裸代码, 如 000001"
+          },
+          {
+            "name": "standard_ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "标准代码, 如 000001.XSHE",
+              "title": "Standard Ticker"
+            },
+            "description": "标准代码, 如 000001.XSHE"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "开始日期",
+              "title": "Start Date"
+            },
+            "description": "开始日期"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "结束日期",
+              "title": "End Date"
+            },
+            "description": "结束日期"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_CorporateAction__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fx/bars": {
+      "post": {
+        "tags": [
+          "fx"
+        ],
+        "summary": "Post Bars",
+        "description": "查询外汇 K 线数据.\n\nArgs:\n    query: 查询参数\n        - currency_pairs: 货币对列表 (可选, 如 [\"USDCNH.FXCM\", \"EURUSD.FXCM\"])\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - limit: 返回数量限制 (默认 1000, 范围 1-10000)\n    facade: FXQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含外汇 K 线数据列表",
+        "operationId": "post_bars_api_v1_fx_bars_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FxQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_FxBar__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingestion/status": {
+      "get": {
+        "tags": [
+          "ingestion"
+        ],
+        "summary": "Get Ingestion Status",
+        "description": "获取各数据集最新摄取状态.",
+        "operationId": "get_ingestion_status_api_v1_ingestion_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_IngestionStatusResponse_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingestion/history": {
+      "get": {
+        "tags": [
+          "ingestion"
+        ],
+        "summary": "Get Ingestion History",
+        "description": "获取数据集摄取历史.",
+        "operationId": "get_ingestion_history_api_v1_ingestion_history_get",
+        "parameters": [
+          {
+            "name": "dataset",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "数据集名称",
+              "title": "Dataset"
+            },
+            "description": "数据集名称"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "返回条数上限",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "返回条数上限"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_IngestionHistoryItem__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingestion/dq-summary": {
+      "get": {
+        "tags": [
+          "ingestion"
+        ],
+        "summary": "Get Dq Summary",
+        "description": "获取 DQ 检查摘要.\n\nV1: 返回空列表，Sprint 5 接入 QualityPatrolService 后填充实际数据。",
+        "operationId": "get_dq_summary_api_v1_ingestion_dq_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DQSummaryResponse_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/macro/indicators": {
+      "post": {
+        "tags": [
+          "macro"
+        ],
+        "summary": "Post Indicators",
+        "description": "查询宏观指标数据.\n\nArgs:\n    query: 查询参数\n        - indicators: 指标 ID 或代码列表 (可选)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - category: 类别过滤 (economic/interest_rate/exchange_rate/money_supply)\n        - frequency: 频率过滤 (daily/monthly/quarterly)\n    facade: MacroQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含宏观指标数据列表",
+        "operationId": "post_indicators_api_v1_macro_indicators_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndicatorQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_Indicator__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/macro/indicators/metadata": {
+      "get": {
+        "tags": [
+          "macro"
+        ],
+        "summary": "Get Indicators Metadata",
+        "description": "获取指标元数据列表.\n\nArgs:\n    facade: MacroQueryFacade 依赖注入\n    start: 开始日期 (YYYY-MM-DD)\n    end: 结束日期 (YYYY-MM-DD)\n    category: 类别过滤 (可选)\n\nReturns:\n    APIResponse 包含宏观指标数据列表",
+        "operationId": "get_indicators_metadata_api_v1_macro_indicators_metadata_get",
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "开始日期 (YYYY-MM-DD)",
+              "title": "Start"
+            },
+            "description": "开始日期 (YYYY-MM-DD)"
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "结束日期 (YYYY-MM-DD)",
+              "title": "End"
+            },
+            "description": "结束日期 (YYYY-MM-DD)"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "类别过滤",
+              "title": "Category"
+            },
+            "description": "类别过滤"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_Indicator__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/market/bars": {
+      "post": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Post Bars",
+        "description": "查询 K 线数据.\n\nArgs:\n    query: 查询参数\n        - instrument_ids: 标的 ID 列表 (可选)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - adjustment: 复权类型 (none/qfq/hfq)\n        - limit: 返回数量限制 (1-10000)\n    facade: MarketQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含 K 线数据列表",
+        "operationId": "post_bars_api_v1_market_bars_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BarsQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_Bar__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metadata/instruments/{instrument_id}": {
+      "get": {
+        "tags": [
+          "metadata"
+        ],
+        "summary": "Get Instrument",
+        "description": "获取单个标的详情.\n\nArgs:\n    instrument_id: 标的 ID\n    facade: MetadataQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含 Instrument 标的信息\n\nRaises:\n    NotFoundError: 404 如果标的不存在",
+        "operationId": "get_instrument_api_v1_metadata_instruments__instrument_id__get",
+        "parameters": [
+          {
+            "name": "instrument_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Instrument Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_Instrument_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metadata/instruments": {
+      "get": {
+        "tags": [
+          "metadata"
+        ],
+        "summary": "List Instruments",
+        "description": "查询标的列表.\n\nArgs:\n    asset_class: 资产类别过滤 (可选)\n    exchange: 交易所过滤 (可选)\n    is_active: 活跃状态过滤 (可选)\n    pagination: 分页参数\n    facade: MetadataQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含 Instrument 列表 + 分页信息",
+        "operationId": "list_instruments_api_v1_metadata_instruments_get",
+        "parameters": [
+          {
+            "name": "asset_class",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AssetClass"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Asset Class"
+            }
+          },
+          {
+            "name": "exchange",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exchange"
+            }
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "每页数量",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "每页数量"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "偏移量",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "偏移量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_Instrument__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/source/{source}/{dataset}": {
+      "get": {
+        "tags": [
+          "source"
+        ],
+        "summary": "Get Source Data",
+        "description": "查询 Source 层数据.\n\n用途: 验证 ETL 逻辑、调试适配器、数据探索\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- ticker: 裸代码，如 \"000001\"\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- instrument_id: 内部 ID，如 1000001\n\n示例:\n    GET /api/source/tushare/stock_daily\n        ?ticker=000001\n        &start_date=2024-01-01\n        &end_date=2024-01-31\n\n    GET /api/source/tushare/stock_daily\n        ?standard_ticker=000001.XSHE\n        &start_date=2024-01-01\n        &end_date=2024-01-31\n\n    GET /api/source/tushare/stock_daily\n        ?instrument_id=1000001\n        &start_date=2024-01-01\n        &end_date=2024-01-31",
+        "operationId": "get_source_data_api_v1_source__source___dataset__get",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "数据源名称 (如 tushare)",
+              "title": "Source"
+            },
+            "description": "数据源名称 (如 tushare)"
+          },
+          {
+            "name": "dataset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "数据集名称 (如 stock_daily)",
+              "title": "Dataset"
+            },
+            "description": "数据集名称 (如 stock_daily)"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "standard_ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Standard Ticker"
+            }
+          },
+          {
+            "name": "instrument_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "End Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceDataResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/strategies": {
+      "post": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "Create Strategy",
+        "description": "创建策略.",
+        "operationId": "create_strategy_api_v1_strategies_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStrategyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_StrategyResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "List Strategies",
+        "description": "列出策略.",
+        "operationId": "list_strategies_api_v1_strategies_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "每页数量",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "每页数量"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "偏移量",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "偏移量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_StrategyResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/strategies/{strategy_id}": {
+      "get": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "Get Strategy",
+        "description": "获取策略详情.",
+        "operationId": "get_strategy_api_v1_strategies__strategy_id__get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_StrategyResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "Update Strategy",
+        "description": "更新策略.",
+        "operationId": "update_strategy_api_v1_strategies__strategy_id__put",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStrategyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_StrategyResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/strategies/{strategy_id}/publish": {
+      "post": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "Publish Strategy",
+        "description": "发布策略.",
+        "operationId": "publish_strategy_api_v1_strategies__strategy_id__publish_post",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishStrategyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_bool_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trade/intents": {
+      "get": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "List Intents",
+        "description": "列出交易意图.",
+        "operationId": "list_intents_api_v1_trade_intents_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "策略 ID",
+              "title": "Strategy Id"
+            },
+            "description": "策略 ID"
+          },
+          {
+            "name": "signal_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "信号日期",
+              "title": "Signal Date"
+            },
+            "description": "信号日期"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "状态过滤",
+              "title": "Status"
+            },
+            "description": "状态过滤"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "每页数量",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "每页数量"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "偏移量",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "偏移量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_TradeIntentResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trade/intents/{intent_id}/status": {
+      "put": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "Update Intent Status",
+        "description": "更新交易意图状态.",
+        "operationId": "update_intent_status_api_v1_trade_intents__intent_id__status_put",
+        "parameters": [
+          {
+            "name": "intent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Intent Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIntentStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_bool_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trade/fills": {
+      "post": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "Record Fill",
+        "description": "录入人工成交.",
+        "operationId": "record_fill_api_v1_trade_fills_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordFillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_FillResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "List Fills",
+        "description": "列出成交记录.",
+        "operationId": "list_fills_api_v1_trade_fills_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "策略 ID",
+              "title": "Strategy Id"
+            },
+            "description": "策略 ID"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "起始日期",
+              "title": "Start Date"
+            },
+            "description": "起始日期"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "结束日期",
+              "title": "End Date"
+            },
+            "description": "结束日期"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "每页数量",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "每页数量"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "偏移量",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "偏移量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_FillResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trade/positions": {
+      "get": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "List Positions",
+        "description": "列出实际持仓.",
+        "operationId": "list_positions_api_v1_trade_positions_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "策略 ID",
+              "title": "Strategy Id"
+            },
+            "description": "策略 ID"
+          },
+          {
+            "name": "snapshot_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "快照日期",
+              "title": "Snapshot Date"
+            },
+            "description": "快照日期"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_PositionSnapshotResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trade/pnl": {
+      "get": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "Compute Pnl",
+        "description": "计算 P&L 汇总.",
+        "operationId": "compute_pnl_api_v1_trade_pnl_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "策略 ID",
+              "title": "Strategy Id"
+            },
+            "description": "策略 ID"
+          },
+          {
+            "name": "snapshot_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "快照日期",
+              "title": "Snapshot Date"
+            },
+            "description": "快照日期"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_PnlSummaryResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trade/signals/latest": {
+      "get": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "Get Latest Signals",
+        "description": "获取最新信号日期的交易意图.",
+        "operationId": "get_latest_signals_api_v1_trade_signals_latest_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "策略 ID",
+              "title": "Strategy Id"
+            },
+            "description": "策略 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_TradeIntentResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trade/signals/{signal_date}/intents": {
+      "get": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "Get Signal Intents",
+        "description": "获取指定信号日期的交易意图.",
+        "operationId": "get_signal_intents_api_v1_trade_signals__signal_date__intents_get",
+        "parameters": [
+          {
+            "name": "signal_date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Signal Date"
+            }
+          },
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "策略 ID",
+              "title": "Strategy Id"
+            },
+            "description": "策略 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_TradeIntentResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trade/comparison": {
+      "get": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "Get Comparison",
+        "description": "回测 vs 实际对比.",
+        "operationId": "get_comparison_api_v1_trade_comparison_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "策略 ID",
+              "title": "Strategy Id"
+            },
+            "description": "策略 ID"
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "回测运行 ID",
+              "title": "Run Id"
+            },
+            "description": "回测运行 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ComparisonMetricsResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/universes": {
+      "get": {
+        "tags": [
+          "universes"
+        ],
+        "summary": "List Universes",
+        "description": "列出所有 Universe.",
+        "operationId": "list_universes_api_v1_universes_get",
+        "parameters": [
+          {
+            "name": "universe_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "类型过滤",
+              "title": "Universe Type"
+            },
+            "description": "类型过滤"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "每页数量",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "每页数量"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "偏移量",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "偏移量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_UniverseResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "universes"
+        ],
+        "summary": "Create Universe",
+        "description": "创建自定义 Universe.",
+        "operationId": "create_universe_api_v1_universes_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUniverseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_UniverseResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/universes/{universe_id}": {
+      "get": {
+        "tags": [
+          "universes"
+        ],
+        "summary": "Get Universe",
+        "description": "获取 Universe 详情.",
+        "operationId": "get_universe_api_v1_universes__universe_id__get",
+        "parameters": [
+          {
+            "name": "universe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Universe Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_UniverseResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "universes"
+        ],
+        "summary": "Update Universe",
+        "description": "更新自定义 Universe.",
+        "operationId": "update_universe_api_v1_universes__universe_id__put",
+        "parameters": [
+          {
+            "name": "universe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Universe Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUniverseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_UniverseResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "universes"
+        ],
+        "summary": "Delete Universe",
+        "description": "删除自定义 Universe（预设不可删）.",
+        "operationId": "delete_universe_api_v1_universes__universe_id__delete",
+        "parameters": [
+          {
+            "name": "universe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Universe Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_bool_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/universes/{universe_id}/members": {
+      "get": {
+        "tags": [
+          "universes"
+        ],
+        "summary": "Get Members",
+        "description": "获取 Universe 成分股.",
+        "operationId": "get_members_api_v1_universes__universe_id__members_get",
+        "parameters": [
+          {
+            "name": "universe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Universe Id"
+            }
+          },
+          {
+            "name": "asof",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "PIT 日期",
+              "title": "Asof"
+            },
+            "description": "PIT 日期"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_MemberResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/logs/test": {
+      "get": {
+        "tags": [
+          "debug"
+        ],
+        "summary": "Generate Test Logs",
+        "description": "测试日志记录功能（仅开发/测试环境可用）.",
+        "operationId": "generate_test_logs_api_v1_logs_test_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Generate Test Logs Api V1 Logs Test Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "根路径.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Health Check",
+        "description": "健康检查端点.",
+        "operationId": "health_check_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Check Healthz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "summary": "Get Status",
+        "description": "获取系统状态.",
+        "operationId": "get_status_api_v1_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Status Api V1 Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "APIResponse_BacktestRunTriggerResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BacktestRunTriggerResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[BacktestRunTriggerResponse]"
+      },
+      "APIResponse_BenchmarkNavResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BenchmarkNavResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[BenchmarkNavResponse]"
+      },
+      "APIResponse_CancelRunResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CancelRunResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[CancelRunResponse]"
+      },
+      "APIResponse_ComparisonMetricsResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ComparisonMetricsResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ComparisonMetricsResponse]"
+      },
+      "APIResponse_DQSummaryResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DQSummaryResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[DQSummaryResponse]"
+      },
+      "APIResponse_FillResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FillResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[FillResponse]"
+      },
+      "APIResponse_IngestionStatusResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/IngestionStatusResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[IngestionStatusResponse]"
+      },
+      "APIResponse_Instrument_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Instrument",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[Instrument]"
+      },
+      "APIResponse_LineageResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/LineageResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[LineageResponse]"
+      },
+      "APIResponse_PnlSummaryResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PnlSummaryResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[PnlSummaryResponse]"
+      },
+      "APIResponse_ReplayResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ReplayResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ReplayResponse]"
+      },
+      "APIResponse_RetryRunResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RetryRunResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[RetryRunResponse]"
+      },
+      "APIResponse_RunResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RunResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[RunResponse]"
+      },
+      "APIResponse_StrategyResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/StrategyResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[StrategyResponse]"
+      },
+      "APIResponse_UniverseResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UniverseResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[UniverseResponse]"
+      },
+      "APIResponse_bool_": {
+        "properties": {
+          "data": {
+            "type": "boolean",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[bool]"
+      },
+      "APIResponse_dict_str__object__": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[dict[str, object]]"
+      },
+      "APIResponse_list_AuditRecordResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AuditRecordResponse"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[AuditRecordResponse]]"
+      },
+      "APIResponse_list_Bar__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Bar"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[Bar]]"
+      },
+      "APIResponse_list_CommodityBar__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CommodityBar"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[CommodityBar]]"
+      },
+      "APIResponse_list_CorporateAction__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CorporateAction"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[CorporateAction]]"
+      },
+      "APIResponse_list_Dividend__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Dividend"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[Dividend]]"
+      },
+      "APIResponse_list_FillResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FillResponse"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[FillResponse]]"
+      },
+      "APIResponse_list_Financial__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Financial"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[Financial]]"
+      },
+      "APIResponse_list_FxBar__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FxBar"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[FxBar]]"
+      },
+      "APIResponse_list_Indicator__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Indicator"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[Indicator]]"
+      },
+      "APIResponse_list_IngestionHistoryItem__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/IngestionHistoryItem"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[IngestionHistoryItem]]"
+      },
+      "APIResponse_list_Instrument__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Instrument"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[Instrument]]"
+      },
+      "APIResponse_list_Margin__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Margin"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[Margin]]"
+      },
+      "APIResponse_list_MemberResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/MemberResponse"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[MemberResponse]]"
+      },
+      "APIResponse_list_PositionSnapshotResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PositionSnapshotResponse"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[PositionSnapshotResponse]]"
+      },
+      "APIResponse_list_RunResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/RunResponse"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[RunResponse]]"
+      },
+      "APIResponse_list_StrategyResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/StrategyResponse"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[StrategyResponse]]"
+      },
+      "APIResponse_list_TradeIntentResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TradeIntentResponse"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[TradeIntentResponse]]"
+      },
+      "APIResponse_list_TradeResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TradeResponse"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[TradeResponse]]"
+      },
+      "APIResponse_list_UniverseResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/UniverseResponse"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[UniverseResponse]]"
+      },
+      "APIResponse_list_Valuation__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Valuation"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[Valuation]]"
+      },
+      "APIResponse_list_dict_str__object___": {
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[dict[str, object]]]"
+      },
+      "Adjustment": {
+        "type": "string",
+        "enum": [
+          "none",
+          "qfq",
+          "hfq"
+        ],
+        "title": "Adjustment",
+        "description": "复权类型枚举.\n\nAttributes:\n    NONE: 不复权\n    QFQ: 前复权\n    HFQ: 后复权"
+      },
+      "AssetClass": {
+        "type": "string",
+        "enum": [
+          "stock",
+          "etf",
+          "index",
+          "future",
+          "bond",
+          "fund"
+        ],
+        "title": "AssetClass",
+        "description": "资产类型枚举.\n\nAttributes:\n    STOCK: 股票\n    ETF: 交易所交易基金\n    INDEX: 指数\n    FUTURE: 期货\n    BOND: 债券\n    FUND: 基金"
+      },
+      "AuditRecordResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "default": 0
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "default": ""
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date",
+            "default": ""
+          },
+          "record_type": {
+            "type": "string",
+            "title": "Record Type",
+            "default": ""
+          },
+          "instrument_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument Id"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload",
+            "default": {}
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "AuditRecordResponse",
+        "description": "审计记录响应."
+      },
+      "BacktestRunTriggerResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "strategy_id": {
+            "type": "string",
+            "title": "Strategy Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "strategy_id"
+        ],
+        "title": "BacktestRunTriggerResponse",
+        "description": "回测触发响应."
+      },
+      "Bar": {
+        "properties": {
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id",
+            "description": "标的 ID"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date",
+            "description": "交易日期"
+          },
+          "open": {
+            "type": "number",
+            "title": "Open",
+            "description": "开盘价"
+          },
+          "high": {
+            "type": "number",
+            "title": "High",
+            "description": "最高价"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low",
+            "description": "最低价"
+          },
+          "close": {
+            "type": "number",
+            "title": "Close",
+            "description": "收盘价"
+          },
+          "volume": {
+            "type": "number",
+            "title": "Volume",
+            "description": "成交量"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "成交额"
+          },
+          "turnover_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turnover Rate",
+            "description": "换手率"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "trade_date",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume",
+          "amount"
+        ],
+        "title": "Bar",
+        "description": "K 线响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    trade_date: 交易日期 (YYYY-MM-DD)\n    open: 开盘价\n    high: 最高价\n    low: 最低价\n    close: 收盘价\n    volume: 成交量 (保留2位小数)\n    amount: 成交额\n    turnover_rate: 换手率 (可选)"
+      },
+      "BarsQuery": {
+        "properties": {
+          "instrument_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument Ids",
+            "description": "标的 ID 列表"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "开始日期"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date",
+            "description": "结束日期"
+          },
+          "adjustment": {
+            "$ref": "#/components/schemas/Adjustment",
+            "description": "复权类型",
+            "default": "none"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "description": "返回数量限制",
+            "default": 1000
+          }
+        },
+        "type": "object",
+        "title": "BarsQuery",
+        "description": "K 线查询参数模型.\n\nAttributes:\n    instrument_ids: 标的 ID 列表 (可选)\n    start_date: 开始日期 (可选)\n    end_date: 结束日期 (可选)\n    adjustment: 复权类型, 默认 none\n    limit: 返回数量限制, 默认 1000, 范围 1-10000"
+      },
+      "BenchmarkNavResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "dates": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dates",
+            "default": []
+          },
+          "navs": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Navs",
+            "default": []
+          },
+          "benchmark_return": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark Return"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id"
+        ],
+        "title": "BenchmarkNavResponse",
+        "description": "基准 NAV 序列响应."
+      },
+      "CancelRunResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "cancelled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id"
+        ],
+        "title": "CancelRunResponse",
+        "description": "取消运行响应."
+      },
+      "CommodityBar": {
+        "properties": {
+          "commodity_code": {
+            "type": "string",
+            "title": "Commodity Code",
+            "description": "商品代码"
+          },
+          "trade_date_utc": {
+            "type": "string",
+            "title": "Trade Date Utc",
+            "description": "交易日期 (UTC)"
+          },
+          "open": {
+            "type": "number",
+            "title": "Open",
+            "description": "开盘价"
+          },
+          "high": {
+            "type": "number",
+            "title": "High",
+            "description": "最高价"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low",
+            "description": "最低价"
+          },
+          "close": {
+            "type": "number",
+            "title": "Close",
+            "description": "收盘价"
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume",
+            "description": "成交量"
+          }
+        },
+        "type": "object",
+        "required": [
+          "commodity_code",
+          "trade_date_utc",
+          "open",
+          "high",
+          "low",
+          "close"
+        ],
+        "title": "CommodityBar",
+        "description": "商品 K 线响应模型.\n\nAttributes:\n    symbol: 商品代码 (如 AU 表示黄金)\n    trade_date_utc: 交易日期 (UTC, YYYY-MM-DD)\n    open: 开盘价\n    high: 最高价\n    low: 最低价\n    close: 收盘价\n    volume: 成交量 (可选)"
+      },
+      "CommodityQuery": {
+        "properties": {
+          "commodity_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commodity Codes",
+            "description": "商品代码列表"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "开始日期"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date",
+            "description": "结束日期"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "description": "返回数量限制",
+            "default": 1000
+          }
+        },
+        "type": "object",
+        "title": "CommodityQuery",
+        "description": "商品 K 线查询参数模型.\n\nAttributes:\n    symbols: 商品代码列表 (可选, 如 [\"AU\", \"AG\", \"CU\"])\n    start_date: 开始日期 (可选)\n    end_date: 结束日期 (可选)\n    limit: 返回数量限制, 默认 1000, 范围 1-10000"
+      },
+      "ComparisonMetricsResponse": {
+        "properties": {
+          "backtest_return": {
+            "type": "number",
+            "title": "Backtest Return"
+          },
+          "actual_return": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Return"
+          },
+          "return_diff": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Diff"
+          },
+          "return_diff_bps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Diff Bps"
+          },
+          "backtest_sharpe": {
+            "type": "number",
+            "title": "Backtest Sharpe"
+          },
+          "actual_sharpe": {
+            "type": "number",
+            "title": "Actual Sharpe"
+          },
+          "backtest_total_cost": {
+            "type": "number",
+            "title": "Backtest Total Cost"
+          },
+          "actual_total_cost": {
+            "type": "number",
+            "title": "Actual Total Cost"
+          },
+          "cost_drag_bps": {
+            "type": "number",
+            "title": "Cost Drag Bps"
+          },
+          "nav_correlation": {
+            "type": "number",
+            "title": "Nav Correlation"
+          },
+          "max_nav_diff_bps": {
+            "type": "number",
+            "title": "Max Nav Diff Bps"
+          },
+          "avg_daily_tracking_error_bps": {
+            "type": "number",
+            "title": "Avg Daily Tracking Error Bps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "backtest_return",
+          "actual_return",
+          "return_diff",
+          "return_diff_bps",
+          "backtest_sharpe",
+          "actual_sharpe",
+          "backtest_total_cost",
+          "actual_total_cost",
+          "cost_drag_bps",
+          "nav_correlation",
+          "max_nav_diff_bps",
+          "avg_daily_tracking_error_bps"
+        ],
+        "title": "ComparisonMetricsResponse",
+        "description": "回测 vs 实际对比指标响应."
+      },
+      "CorporateAction": {
+        "properties": {
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id",
+            "description": "标的 ID"
+          },
+          "action_date": {
+            "type": "string",
+            "title": "Action Date",
+            "description": "行动日期"
+          },
+          "action_type": {
+            "type": "string",
+            "title": "Action Type",
+            "description": "行动类型"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "行动描述"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "action_date",
+          "action_type",
+          "description"
+        ],
+        "title": "CorporateAction",
+        "description": "公司行动响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    action_date: 行动日期\n    action_type: 行动类型\n    description: 行动描述"
+      },
+      "CostConfigRequest": {
+        "properties": {
+          "commission_rate": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Commission Rate",
+            "description": "佣金费率",
+            "default": 0.0003
+          },
+          "commission_min": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Commission Min",
+            "description": "最低佣金(元)",
+            "default": 5.0
+          },
+          "stamp_duty_rate": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Stamp Duty Rate",
+            "description": "印花税税率(卖出)",
+            "default": 0.001
+          },
+          "slippage_bps": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Slippage Bps",
+            "description": "滑点(bps)",
+            "default": 1.0
+          },
+          "impact_model": {
+            "$ref": "#/components/schemas/ImpactModel",
+            "description": "冲击成本模型",
+            "default": "none"
+          }
+        },
+        "type": "object",
+        "title": "CostConfigRequest",
+        "description": "成本模型配置请求 — A 股标准费率默认值."
+      },
+      "CreateBacktestRunRequest": {
+        "properties": {
+          "strategy_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Strategy Id",
+            "description": "策略 ID"
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Start Date",
+            "description": "起始日期 (YYYY-MM-DD)"
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "title": "End Date",
+            "description": "结束日期 (YYYY-MM-DD)"
+          },
+          "initial_cash": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Initial Cash",
+            "description": "初始资金",
+            "default": 1000000.0
+          },
+          "parameter_overrides": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Parameter Overrides",
+            "description": "参数覆盖"
+          },
+          "cost_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostConfigRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "成本模型配置"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strategy_id",
+          "start_date",
+          "end_date"
+        ],
+        "title": "CreateBacktestRunRequest",
+        "description": "创建回测运行请求."
+      },
+      "CreateStrategyRequest": {
+        "properties": {
+          "strategy_id": {
+            "type": "string",
+            "title": "Strategy Id",
+            "description": "策略 ID"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "策略名称"
+          },
+          "spec_json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Spec Json",
+            "description": "策略定义 JSON"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "description": "标签"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strategy_id",
+          "name",
+          "spec_json"
+        ],
+        "title": "CreateStrategyRequest",
+        "description": "创建策略请求."
+      },
+      "CreateUniverseRequest": {
+        "properties": {
+          "universe_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Universe Id",
+            "description": "Universe ID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "description": "名称"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "描述"
+          }
+        },
+        "type": "object",
+        "required": [
+          "universe_id",
+          "name"
+        ],
+        "title": "CreateUniverseRequest",
+        "description": "创建 Universe 请求."
+      },
+      "DQDatasetSummary": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "title": "Dataset",
+            "description": "数据集名称"
+          },
+          "total_checks": {
+            "type": "integer",
+            "title": "Total Checks",
+            "description": "总检查数",
+            "default": 0
+          },
+          "passed": {
+            "type": "integer",
+            "title": "Passed",
+            "description": "通过数",
+            "default": 0
+          },
+          "warnings": {
+            "type": "integer",
+            "title": "Warnings",
+            "description": "警告数",
+            "default": 0
+          },
+          "errors": {
+            "type": "integer",
+            "title": "Errors",
+            "description": "错误数",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset"
+        ],
+        "title": "DQDatasetSummary",
+        "description": "单个数据集的 DQ 检查摘要."
+      },
+      "DQSummaryResponse": {
+        "properties": {
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/DQDatasetSummary"
+            },
+            "type": "array",
+            "title": "Datasets",
+            "description": "各数据集 DQ 摘要"
+          }
+        },
+        "type": "object",
+        "required": [
+          "datasets"
+        ],
+        "title": "DQSummaryResponse",
+        "description": "DQ 检查摘要响应."
+      },
+      "DatasetStatusResponse": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "title": "Dataset",
+            "description": "数据集名称"
+          },
+          "latest_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Date",
+            "description": "最新成功摄取日期"
+          },
+          "latest_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Status",
+            "description": "最新摄取状态 (success/failed)"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count",
+            "description": "最新成功摄取的记录数",
+            "default": 0
+          },
+          "last_attempt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt",
+            "description": "最近一次尝试时间"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset"
+        ],
+        "title": "DatasetStatusResponse",
+        "description": "单个数据集的摄取状态."
+      },
+      "Dividend": {
+        "properties": {
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id",
+            "description": "标的 ID"
+          },
+          "announce_date": {
+            "type": "string",
+            "title": "Announce Date",
+            "description": "公告日期"
+          },
+          "dividend_type": {
+            "type": "string",
+            "title": "Dividend Type",
+            "description": "分红类型"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "分红金额"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "announce_date",
+          "dividend_type",
+          "amount"
+        ],
+        "title": "Dividend",
+        "description": "分红响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    announce_date: 公告日期\n    dividend_type: 分红类型\n    amount: 分红金额"
+      },
+      "FillResponse": {
+        "properties": {
+          "fill_id": {
+            "type": "string",
+            "title": "Fill Id"
+          },
+          "intent_id": {
+            "type": "string",
+            "title": "Intent Id"
+          },
+          "strategy_id": {
+            "type": "string",
+            "title": "Strategy Id"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date"
+          },
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "fill_price": {
+            "type": "number",
+            "title": "Fill Price"
+          },
+          "fee": {
+            "type": "number",
+            "title": "Fee",
+            "default": 0.0
+          },
+          "slippage": {
+            "type": "number",
+            "title": "Slippage",
+            "default": 0.0
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          },
+          "settlement_date": {
+            "type": "string",
+            "title": "Settlement Date",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "fill_id",
+          "intent_id",
+          "strategy_id",
+          "trade_date",
+          "instrument_id",
+          "direction",
+          "quantity",
+          "fill_price"
+        ],
+        "title": "FillResponse",
+        "description": "成交记录响应."
+      },
+      "Financial": {
+        "properties": {
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id",
+            "description": "标的 ID"
+          },
+          "report_date": {
+            "type": "string",
+            "title": "Report Date",
+            "description": "报告期"
+          },
+          "report_type": {
+            "type": "string",
+            "title": "Report Type",
+            "description": "报表类型"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "财务数据字典"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "report_date",
+          "report_type",
+          "data"
+        ],
+        "title": "Financial",
+        "description": "财务报表响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    report_date: 报告期\n    report_type: 报表类型\n    data: 财务数据字典"
+      },
+      "FinancialType": {
+        "type": "string",
+        "enum": [
+          "balance_sheet",
+          "income_statement",
+          "cash_flow"
+        ],
+        "title": "FinancialType",
+        "description": "财务报表类型枚举.\n\nAttributes:\n    BALANCE_SHEET: 资产负债表\n    INCOME_STATEMENT: 利润表\n    CASH_FLOW: 现金流量表"
+      },
+      "FxBar": {
+        "properties": {
+          "currency_pair": {
+            "type": "string",
+            "title": "Currency Pair",
+            "description": "货币对"
+          },
+          "trade_date_utc": {
+            "type": "string",
+            "title": "Trade Date Utc",
+            "description": "交易日期 (UTC)"
+          },
+          "open": {
+            "type": "number",
+            "title": "Open",
+            "description": "开盘价"
+          },
+          "high": {
+            "type": "number",
+            "title": "High",
+            "description": "最高价"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low",
+            "description": "最低价"
+          },
+          "close": {
+            "type": "number",
+            "title": "Close",
+            "description": "收盘价"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency_pair",
+          "trade_date_utc",
+          "open",
+          "high",
+          "low",
+          "close"
+        ],
+        "title": "FxBar",
+        "description": "外汇 K 线响应模型.\n\nAttributes:\n    currency_pair: 货币对 (如 USDCNH.FXCM)\n    trade_date_utc: 交易日期 (UTC, YYYY-MM-DD)\n    open: 开盘价\n    high: 最高价\n    low: 最低价\n    close: 收盘价"
+      },
+      "FxQuery": {
+        "properties": {
+          "currency_pairs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency Pairs",
+            "description": "货币对列表"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "开始日期"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date",
+            "description": "结束日期"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "description": "返回数量限制",
+            "default": 1000
+          }
+        },
+        "type": "object",
+        "title": "FxQuery",
+        "description": "外汇 K 线查询参数模型.\n\nAttributes:\n    pairs: 货币对列表 (可选, 如 [\"USDCNY\", \"EURCNY\"])\n    start_date: 开始日期 (可选)\n    end_date: 结束日期 (可选)\n    limit: 返回数量限制, 默认 1000, 范围 1-10000"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ImpactModel": {
+        "type": "string",
+        "enum": [
+          "none",
+          "volume_share"
+        ],
+        "title": "ImpactModel",
+        "description": "冲击成本模型枚举。"
+      },
+      "Indicator": {
+        "properties": {
+          "indicator_id": {
+            "type": "integer",
+            "title": "Indicator Id",
+            "description": "指标 ID"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "指标代码"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "指标名称"
+          },
+          "category": {
+            "$ref": "#/components/schemas/MacroCategory",
+            "description": "类别"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/MacroFrequency",
+            "description": "频率"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date",
+            "description": "数据日期"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "指标值"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "单位"
+          }
+        },
+        "type": "object",
+        "required": [
+          "indicator_id",
+          "code",
+          "name",
+          "category",
+          "frequency",
+          "date",
+          "value"
+        ],
+        "title": "Indicator",
+        "description": "宏观指标响应模型.\n\nAttributes:\n    indicator_id: 指标 ID\n    code: 指标代码\n    name: 指标名称\n    category: 类别\n    frequency: 频率\n    date: 数据日期\n    value: 指标值\n    unit: 单位 (可选)"
+      },
+      "IndicatorQuery": {
+        "properties": {
+          "indicators": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indicators",
+            "description": "指标 ID 或代码列表"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "开始日期"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date",
+            "description": "结束日期"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MacroCategory"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "类别过滤"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MacroFrequency"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "频率过滤"
+          }
+        },
+        "type": "object",
+        "title": "IndicatorQuery",
+        "description": "宏观指标查询参数模型.\n\nAttributes:\n    indicators: 指标 ID 或代码列表 (可选)\n    start_date: 开始日期 (可选)\n    end_date: 结束日期 (可选)\n    category: 类别过滤 (可选)\n    frequency: 频率过滤 (可选)"
+      },
+      "IngestionHistoryItem": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "title": "Dataset",
+            "description": "数据集名称"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date",
+            "description": "交易日期"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "摄取状态"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows",
+            "description": "记录数"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message",
+            "description": "错误信息"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts",
+            "description": "尝试次数",
+            "default": 1
+          },
+          "last_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt At",
+            "description": "最后尝试时间"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset",
+          "trade_date",
+          "status"
+        ],
+        "title": "IngestionHistoryItem",
+        "description": "单条摄取历史记录."
+      },
+      "IngestionStatusResponse": {
+        "properties": {
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetStatusResponse"
+            },
+            "type": "array",
+            "title": "Datasets",
+            "description": "各数据集状态"
+          }
+        },
+        "type": "object",
+        "required": [
+          "datasets"
+        ],
+        "title": "IngestionStatusResponse",
+        "description": "摄取状态汇总响应."
+      },
+      "Instrument": {
+        "properties": {
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id",
+            "description": "标的 ID"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker",
+            "description": "裸代码"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "证券名称"
+          },
+          "asset_class": {
+            "$ref": "#/components/schemas/AssetClass",
+            "description": "资产类别"
+          },
+          "exchange": {
+            "type": "string",
+            "title": "Exchange",
+            "description": "交易所代码"
+          },
+          "list_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Date",
+            "description": "上市日期"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "是否活跃"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "ticker",
+          "name",
+          "asset_class",
+          "exchange",
+          "is_active"
+        ],
+        "title": "Instrument",
+        "description": "标的响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    ticker: 裸代码 (如 600000)\n    name: 证券名称\n    asset_class: 资产类别\n    exchange: 交易所代码\n    list_date: 上市日期 (可选)\n    is_active: 是否活跃"
+      },
+      "LineageResponse": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/RunResponse"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "depth": {
+            "type": "integer",
+            "title": "Depth"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runs",
+          "depth"
+        ],
+        "title": "LineageResponse",
+        "description": "运行血统链响应."
+      },
+      "MacroCategory": {
+        "type": "string",
+        "enum": [
+          "economic",
+          "interest_rate",
+          "exchange_rate",
+          "money_supply",
+          "prices",
+          "employment"
+        ],
+        "title": "MacroCategory",
+        "description": "宏观指标类别枚举。\n\nAttributes:\n    ECONOMIC: 经济指标（GDP 等）\n    INTEREST_RATE: 利率指标\n    EXCHANGE_RATE: 汇率指标\n    MONEY_SUPPLY: 货币供应量指标\n    PRICES: 价格指标（CPI、PCE 等）\n    EMPLOYMENT: 就业指标（失业率、非农等）"
+      },
+      "MacroFrequency": {
+        "type": "string",
+        "enum": [
+          "daily",
+          "monthly",
+          "quarterly"
+        ],
+        "title": "MacroFrequency",
+        "description": "宏观指标频率枚举。\n\nAttributes:\n    DAILY: 日频\n    MONTHLY: 月频\n    QUARTERLY: 季频"
+      },
+      "ManifestDiffResponse": {
+        "properties": {
+          "config_diffs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Config Diffs",
+            "default": []
+          },
+          "data_diffs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Data Diffs",
+            "default": []
+          },
+          "version_diffs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Version Diffs",
+            "default": []
+          },
+          "seed_diffs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Seed Diffs",
+            "default": []
+          },
+          "has_diff": {
+            "type": "boolean",
+            "title": "Has Diff",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ManifestDiffResponse",
+        "description": "Manifest 差异报告."
+      },
+      "Margin": {
+        "properties": {
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id",
+            "description": "标的 ID"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date",
+            "description": "交易日期"
+          },
+          "margin_buy_balance": {
+            "type": "number",
+            "title": "Margin Buy Balance",
+            "description": "融资余额"
+          },
+          "short_sell_balance": {
+            "type": "number",
+            "title": "Short Sell Balance",
+            "description": "融券余额"
+          },
+          "margin_buy_volume": {
+            "type": "integer",
+            "title": "Margin Buy Volume",
+            "description": "融资买入量"
+          },
+          "short_sell_volume": {
+            "type": "integer",
+            "title": "Short Sell Volume",
+            "description": "融券卖出量"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "trade_date",
+          "margin_buy_balance",
+          "short_sell_balance",
+          "margin_buy_volume",
+          "short_sell_volume"
+        ],
+        "title": "Margin",
+        "description": "融资融券响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    trade_date: 交易日期\n    margin_buy_balance: 融资余额\n    short_sell_balance: 融券余额\n    margin_buy_volume: 融资买入量\n    short_sell_volume: 融券卖出量"
+      },
+      "MemberResponse": {
+        "properties": {
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id"
+        ],
+        "title": "MemberResponse",
+        "description": "Universe 成分股响应."
+      },
+      "PaginationResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "总记录数"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Limit",
+            "description": "每页数量"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset",
+            "description": "当前偏移量"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "description": "判断是否还有更多数据.",
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "has_more"
+        ],
+        "title": "PaginationResponse",
+        "description": "分页响应模型.\n\nAttributes:\n    total: 总记录数.\n    limit: 每页数量.\n    offset: 当前偏移量.\n    has_more: 是否有更多数据(计算字段)."
+      },
+      "PnlSummaryResponse": {
+        "properties": {
+          "total_realized_pnl": {
+            "type": "number",
+            "title": "Total Realized Pnl"
+          },
+          "total_unrealized_pnl": {
+            "type": "number",
+            "title": "Total Unrealized Pnl"
+          },
+          "total_fees": {
+            "type": "number",
+            "title": "Total Fees"
+          },
+          "net_pnl": {
+            "type": "number",
+            "title": "Net Pnl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_realized_pnl",
+          "total_unrealized_pnl",
+          "total_fees",
+          "net_pnl"
+        ],
+        "title": "PnlSummaryResponse",
+        "description": "P&L 汇总响应."
+      },
+      "PositionSnapshotResponse": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          },
+          "strategy_id": {
+            "type": "string",
+            "title": "Strategy Id"
+          },
+          "snapshot_date": {
+            "type": "string",
+            "title": "Snapshot Date"
+          },
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "available_quantity": {
+            "type": "integer",
+            "title": "Available Quantity"
+          },
+          "average_cost": {
+            "type": "number",
+            "title": "Average Cost"
+          },
+          "market_value": {
+            "type": "number",
+            "title": "Market Value"
+          },
+          "unrealized_pnl": {
+            "type": "number",
+            "title": "Unrealized Pnl"
+          },
+          "realized_pnl": {
+            "type": "number",
+            "title": "Realized Pnl"
+          },
+          "total_fees": {
+            "type": "number",
+            "title": "Total Fees"
+          }
+        },
+        "type": "object",
+        "required": [
+          "snapshot_id",
+          "strategy_id",
+          "snapshot_date",
+          "instrument_id",
+          "quantity",
+          "available_quantity",
+          "average_cost",
+          "market_value",
+          "unrealized_pnl",
+          "realized_pnl",
+          "total_fees"
+        ],
+        "title": "PositionSnapshotResponse",
+        "description": "实际持仓快照响应."
+      },
+      "PublishStrategyRequest": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version",
+            "description": "版本号"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "PublishStrategyRequest",
+        "description": "发布策略请求."
+      },
+      "RecordFillRequest": {
+        "properties": {
+          "fill_id": {
+            "type": "string",
+            "title": "Fill Id",
+            "description": "成交唯一标识"
+          },
+          "intent_id": {
+            "type": "string",
+            "title": "Intent Id",
+            "description": "关联交易意图 ID"
+          },
+          "strategy_id": {
+            "type": "string",
+            "title": "Strategy Id",
+            "description": "策略 ID"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date",
+            "description": "成交日期 (YYYY-MM-DD)"
+          },
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id",
+            "description": "标的 ID"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Direction",
+            "description": "方向 (buy/sell)"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity",
+            "description": "成交数量"
+          },
+          "fill_price": {
+            "type": "number",
+            "title": "Fill Price",
+            "description": "成交价格"
+          },
+          "fee": {
+            "type": "number",
+            "title": "Fee",
+            "description": "手续费",
+            "default": 0.0
+          },
+          "slippage": {
+            "type": "number",
+            "title": "Slippage",
+            "description": "实际滑点",
+            "default": 0.0
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "description": "人工备注",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "fill_id",
+          "intent_id",
+          "strategy_id",
+          "trade_date",
+          "instrument_id",
+          "direction",
+          "quantity",
+          "fill_price"
+        ],
+        "title": "RecordFillRequest",
+        "description": "录入成交请求."
+      },
+      "ReplayResponse": {
+        "properties": {
+          "new_run_id": {
+            "type": "string",
+            "title": "New Run Id"
+          },
+          "is_reproducible": {
+            "type": "boolean",
+            "title": "Is Reproducible"
+          },
+          "nav_correlation": {
+            "type": "number",
+            "title": "Nav Correlation"
+          },
+          "max_nav_diff_bps": {
+            "type": "number",
+            "title": "Max Nav Diff Bps"
+          },
+          "manifest_diff": {
+            "$ref": "#/components/schemas/ManifestDiffResponse"
+          },
+          "input_data_match": {
+            "type": "boolean",
+            "title": "Input Data Match"
+          }
+        },
+        "type": "object",
+        "required": [
+          "new_run_id",
+          "is_reproducible",
+          "nav_correlation",
+          "max_nav_diff_bps",
+          "manifest_diff",
+          "input_data_match"
+        ],
+        "title": "ReplayResponse",
+        "description": "重放结果响应."
+      },
+      "RetryRunResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "parent_run_id": {
+            "type": "string",
+            "title": "Parent Run Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "parent_run_id"
+        ],
+        "title": "RetryRunResponse",
+        "description": "重试运行响应."
+      },
+      "RunResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "strategy_id": {
+            "type": "string",
+            "title": "Strategy Id"
+          },
+          "strategy_version": {
+            "type": "string",
+            "title": "Strategy Version",
+            "default": ""
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "default": "backtest"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "started_at": {
+            "type": "string",
+            "title": "Started At",
+            "default": ""
+          },
+          "completed_at": {
+            "type": "string",
+            "title": "Completed At",
+            "default": ""
+          },
+          "error_message": {
+            "type": "string",
+            "title": "Error Message",
+            "default": ""
+          },
+          "parent_run_id": {
+            "type": "string",
+            "title": "Parent Run Id",
+            "default": ""
+          },
+          "benchmark_return": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark Return"
+          },
+          "progress_pct": {
+            "type": "number",
+            "title": "Progress Pct",
+            "default": 0.0
+          },
+          "current_step": {
+            "type": "string",
+            "title": "Current Step",
+            "default": ""
+          },
+          "completed_days": {
+            "type": "integer",
+            "title": "Completed Days",
+            "default": 0
+          },
+          "total_days": {
+            "type": "integer",
+            "title": "Total Days",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "strategy_id",
+          "status"
+        ],
+        "title": "RunResponse",
+        "description": "运行记录响应."
+      },
+      "SourceDataResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "dataset": {
+            "type": "string",
+            "title": "Dataset"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "standard_ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Ticker"
+          },
+          "instrument_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument Id"
+          },
+          "resolved_source_ticker": {
+            "type": "string",
+            "title": "Resolved Source Ticker"
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "title": "End Date"
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count"
+          },
+          "query_time_ms": {
+            "type": "number",
+            "title": "Query Time Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "dataset",
+          "source",
+          "resolved_source_ticker",
+          "start_date",
+          "end_date",
+          "row_count",
+          "query_time_ms"
+        ],
+        "title": "SourceDataResponse",
+        "description": "Source API 响应模型."
+      },
+      "StrategyResponse": {
+        "properties": {
+          "strategy_id": {
+            "type": "string",
+            "title": "Strategy Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "spec_json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Spec Json"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "default": ""
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "default": ""
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "strategy_id",
+          "name",
+          "spec_json",
+          "version",
+          "status"
+        ],
+        "title": "StrategyResponse",
+        "description": "策略响应."
+      },
+      "TradeIntentResponse": {
+        "properties": {
+          "intent_id": {
+            "type": "string",
+            "title": "Intent Id"
+          },
+          "strategy_id": {
+            "type": "string",
+            "title": "Strategy Id"
+          },
+          "signal_date": {
+            "type": "string",
+            "title": "Signal Date"
+          },
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          },
+          "target_weight": {
+            "type": "number",
+            "title": "Target Weight"
+          },
+          "current_weight": {
+            "type": "number",
+            "title": "Current Weight"
+          },
+          "delta_weight": {
+            "type": "number",
+            "title": "Delta Weight"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "intent_id",
+          "strategy_id",
+          "signal_date",
+          "instrument_id",
+          "direction",
+          "target_weight",
+          "current_weight",
+          "delta_weight"
+        ],
+        "title": "TradeIntentResponse",
+        "description": "交易意图响应."
+      },
+      "TradeResponse": {
+        "properties": {
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date",
+            "default": ""
+          },
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id",
+            "default": 0
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction",
+            "default": ""
+          },
+          "entry_date": {
+            "type": "string",
+            "title": "Entry Date",
+            "default": ""
+          },
+          "exit_date": {
+            "type": "string",
+            "title": "Exit Date",
+            "default": ""
+          },
+          "entry_price": {
+            "type": "number",
+            "title": "Entry Price",
+            "default": 0.0
+          },
+          "exit_price": {
+            "type": "number",
+            "title": "Exit Price",
+            "default": 0.0
+          },
+          "quantity": {
+            "type": "number",
+            "title": "Quantity",
+            "default": 0.0
+          },
+          "pnl": {
+            "type": "number",
+            "title": "Pnl",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "TradeResponse",
+        "description": "成交记录响应."
+      },
+      "UniverseResponse": {
+        "properties": {
+          "universe_id": {
+            "type": "string",
+            "title": "Universe Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "universe_type": {
+            "type": "string",
+            "title": "Universe Type",
+            "default": "custom"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          }
+        },
+        "type": "object",
+        "required": [
+          "universe_id",
+          "name"
+        ],
+        "title": "UniverseResponse",
+        "description": "Universe 响应."
+      },
+      "UpdateIntentStatusRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "filled",
+              "partially_filled",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Status",
+            "description": "新状态"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "UpdateIntentStatusRequest",
+        "description": "更新意图状态请求."
+      },
+      "UpdateStrategyRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "策略名称"
+          },
+          "spec_json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Spec Json",
+            "description": "策略定义 JSON"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "description": "标签"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version",
+            "description": "版本号(乐观锁)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "spec_json"
+        ],
+        "title": "UpdateStrategyRequest",
+        "description": "更新策略请求."
+      },
+      "UpdateUniverseRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "description": "名称"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "描述"
+          },
+          "members": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Members",
+            "description": "成分列表"
+          },
+          "effective_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Date",
+            "description": "生效日期"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "UpdateUniverseRequest",
+        "description": "更新 Universe 请求."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "Valuation": {
+        "properties": {
+          "instrument_id": {
+            "type": "integer",
+            "title": "Instrument Id",
+            "description": "标的 ID"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date",
+            "description": "交易日期"
+          },
+          "pe_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pe Ratio",
+            "description": "市盈率"
+          },
+          "pb_ratio": {
+            "type": "number",
+            "title": "Pb Ratio",
+            "description": "市净率"
+          },
+          "ps_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ps Ratio",
+            "description": "市销率"
+          },
+          "dividend_yield": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dividend Yield",
+            "description": "股息率"
+          },
+          "market_cap": {
+            "type": "number",
+            "title": "Market Cap",
+            "description": "市值"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "trade_date",
+          "pb_ratio",
+          "market_cap"
+        ],
+        "title": "Valuation",
+        "description": "估值指标响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    trade_date: 交易日期\n    pe_ratio: 市盈率 (可选)\n    pb_ratio: 市净率\n    ps_ratio: 市销率 (可选)\n    dividend_yield: 股息率 (可选)\n    market_cap: 市值"
+      }
+    }
+  }
+}

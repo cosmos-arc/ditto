@@ -746,14 +746,14 @@ Sprint 3: 数据和因子发布契约（F2 + F3 + F10）✅ Done
   └─ 因子 PIT 数据可用性 + 缺失率验证（11 测试 + 10 已知 gap 记录）
   验收: 5325 tests passed ✅ | pyright 0 errors ✅ | ruff clean ✅ | arch 24 contracts ✅
 
-Sprint 4: 产品 API 闭环（F5 + F6 + F7）
-  ├─ F6: APIResponse 统一包装（6+ 端点）
-  ├─ F6: APIError 接入（替换裸 HTTPException）
-  ├─ F5: 分页落地（7 个列表端点）
-  ├─ F7: 摄取状态 API（替换 "coming soon" 占位）
-  ├─ 决策 portfolio 路由（实现 or 移除）
-  └─ 生成 OpenAPI 快照（给前端团队稳定契约）
-  验收: API 无 "coming soon" 占位 + OpenAPI 文档一致
+Sprint 4: 产品 API 闭环（F5 + F6 + F7）✅ Done
+  ├─ F6: APIResponse 统一包装（13 个裸返回端点 → APIResponse[T]）
+  ├─ F6: APIError 接入（新增 NotFoundError/ConflictError/ForbiddenError/BadRequestError，替换全部路由 HTTPException）
+  ├─ F5: 分页落地（7 个列表端点 + PaginationRequest 默认值 20/100）
+  ├─ F7: 摄取状态 API（status/history/dq-summary 3 端点，替换 "coming soon" 占位）
+  ├─ 移除 portfolio 路由（V1 不引入实盘）
+  └─ 生成 OpenAPI 快照（docs/openapi/v1.json，45 个端点）
+  验收: 606 unit tests ✅ | pyright 0 errors ✅ | ruff clean ✅ | arch 24 contracts ✅ | 0 "coming soon" 占位 ✅
 
 Sprint 5: 人工执行闭环（F4 + 手工成交增强）
   ├─ F4: 信号推送重构（复用 infra AlertManager + 新模板）
