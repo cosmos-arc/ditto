@@ -817,7 +817,7 @@
               </div>
 
               <!-- 2x2 Diagnostics -->
-              <div class="diagnostics-grid" class="mt-merge">
+              <div class="diagnostics-grid mt-merge">
 
                 <!-- Quadrant 1: IC 时间序列 -->
                 <div class="panel" aria-label="IC 时间序列图（点击放大）">
@@ -825,7 +825,7 @@
                     <span class="panel-title">IC 时间序列</span>
                     <span class="fs-10 c-tertiary">日频 · 250D</span>
                   </div>
-                  <div class="panel-body" class="flex-center">
+                  <div class="panel-body flex-center">
                     <svg viewBox="0 0 280 100" class="chart-svg">
                       <defs>
                         <linearGradient id="ic-area" x1="0" y1="0" x2="0" y2="1">
@@ -848,7 +848,7 @@
                     <span class="panel-title">IC 分位数分布</span>
                     <span class="fs-10 c-tertiary">Q1-Q5 分组</span>
                   </div>
-                  <div class="panel-body" class="flex-center-end">
+                  <div class="panel-body flex-center-end">
                     <div class="flex-col-4">
                       <div class="sparkline-down-70"></div>
                       <span class="fs-10 c-tertiary">Q1</span>
@@ -883,7 +883,7 @@
                     <span class="panel-title">IC 滚动窗口</span>
                     <span class="fs-10 c-tertiary">60D / 120D / 250D</span>
                   </div>
-                  <div class="panel-body" class="flex-center">
+                  <div class="panel-body flex-center">
                     <svg viewBox="0 0 280 100" class="chart-svg">
                       <line x1="0" y1="50" x2="280" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
                       <!-- 250D line (blue) -->
@@ -905,7 +905,7 @@
                     <div class="stats-row">
                       <div class="stat-item">
                         <div class="stat-label">IC 均值</div>
-                        <div class="stat-value" class="c-up">0.082</div>
+                        <div class="stat-value c-up">0.082</div>
                       </div>
                       <div class="stat-item">
                         <div class="stat-label">IC 标准差</div>
@@ -913,7 +913,7 @@
                       </div>
                       <div class="stat-item">
                         <div class="stat-label">IC IR</div>
-                        <div class="stat-value" class="c-up">1.45</div>
+                        <div class="stat-value c-up">1.45</div>
                       </div>
                     </div>
                     <div class="stats-row">
@@ -933,11 +933,11 @@
                     <div class="stats-row">
                       <div class="stat-item">
                         <div class="stat-label">Rank IC</div>
-                        <div class="stat-value" class="c-up">0.091</div>
+                        <div class="stat-value c-up">0.091</div>
                       </div>
                       <div class="stat-item">
                         <div class="stat-label">Rank IC IR</div>
-                        <div class="stat-value" class="c-up">1.62</div>
+                        <div class="stat-value c-up">1.62</div>
                       </div>
                       <div class="stat-item">
                         <div class="stat-label">单调性 t 值</div>
@@ -995,17 +995,17 @@
                 <div class="sidebar-title">预处理管道</div>
                 <div class="flex-col-6">
                   <div class="flex-wrap-gap">
-                    <span class="status-badge success" class="fs-10-px">1</span>
+                    <span class="status-badge success fs-10-px">1</span>
                     <span class="c-secondary">去极值</span>
                     <span class="c-tertiary">· MAD 法</span>
                   </div>
                   <div class="flex-wrap-gap">
-                    <span class="status-badge success" class="fs-10-px">2</span>
+                    <span class="status-badge success fs-10-px">2</span>
                     <span class="c-secondary">标准化</span>
                     <span class="c-tertiary">· Z-Score</span>
                   </div>
                   <div class="flex-wrap-gap">
-                    <span class="status-badge success" class="fs-10-px">3</span>
+                    <span class="status-badge success fs-10-px">3</span>
                     <span class="c-secondary">中性化</span>
                     <span class="c-tertiary">· 行业中性</span>
                   </div>
@@ -1023,12 +1023,12 @@
             <div class="hub-object-view">
 
               <!-- Factor Group Returns -->
-              <div class="panel" class="panel-flex">
+              <div class="panel panel-flex">
                 <div class="panel-header flex-between">
                   <span class="panel-title">因子分组收益</span>
                   <span class="fs-10 c-tertiary">5 分组 · 月度调仓</span>
                 </div>
-                <div class="panel-body" class="flex-center">
+                <div class="panel-body flex-center">
                   <svg viewBox="0 0 400 120" class="chart-svg">
                     <defs>
                       <linearGradient id="ret-q5" x1="0" y1="0" x2="0" y2="1">
@@ -1051,12 +1051,12 @@
               </div>
 
               <!-- Monthly Return Heatmap -->
-              <div class="panel" class="panel-shrink">
+              <div class="panel panel-shrink">
                 <div class="panel-header">
                   <span class="panel-title">月度收益热力图（多空）</span>
                 </div>
                 <div class="panel-body">
-                  <table class="data-table" class="fs-10">
+                  <table class="data-table fs-10">
                     <thead>
                       <tr>
                         <th></th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th>
@@ -1065,33 +1065,33 @@
                     <tbody>
                       <tr>
                         <td class="c-tertiary">2024</td>
-                        <td class="numeric" class="c-up-8">+2.1</td>
-                        <td class="numeric" class="c-down-8">-0.8</td>
-                        <td class="numeric" class="c-up-12">+3.2</td>
-                        <td class="numeric" class="c-up-6">+1.5</td>
-                        <td class="numeric" class="c-down-4">-0.3</td>
-                        <td class="numeric" class="c-up-10">+2.8</td>
-                        <td class="numeric" class="c-up-4">+1.1</td>
-                        <td class="numeric" class="c-down-12">-1.5</td>
-                        <td class="numeric" class="c-up-8">+2.0</td>
-                        <td class="numeric" class="c-up-14">+3.5</td>
-                        <td class="numeric" class="c-down-6">-0.9</td>
-                        <td class="numeric" class="c-up-5">+1.2</td>
+                        <td class="numeric c-up-8">+2.1</td>
+                        <td class="numeric c-down-8">-0.8</td>
+                        <td class="numeric c-up-12">+3.2</td>
+                        <td class="numeric c-up-6">+1.5</td>
+                        <td class="numeric c-down-4">-0.3</td>
+                        <td class="numeric c-up-10">+2.8</td>
+                        <td class="numeric c-up-4">+1.1</td>
+                        <td class="numeric c-down-12">-1.5</td>
+                        <td class="numeric c-up-8">+2.0</td>
+                        <td class="numeric c-up-14">+3.5</td>
+                        <td class="numeric c-down-6">-0.9</td>
+                        <td class="numeric c-up-5">+1.2</td>
                       </tr>
                       <tr>
                         <td class="c-tertiary">2025</td>
-                        <td class="numeric" class="c-up-10">+2.5</td>
-                        <td class="numeric" class="c-down-6">-1.2</td>
-                        <td class="numeric" class="c-up-8">+2.0</td>
-                        <td class="numeric" class="c-up-16">+4.1</td>
-                        <td class="numeric" class="c-up-6">+1.8</td>
-                        <td class="numeric" class="c-down-8">-1.0</td>
-                        <td class="numeric" class="c-up-12">+3.0</td>
-                        <td class="numeric" class="c-down-4">-0.5</td>
-                        <td class="numeric" class="c-up-7">+1.6</td>
-                        <td class="numeric" class="c-up-9">+2.2</td>
-                        <td class="numeric" class="c-up-11">+2.8</td>
-                        <td class="numeric" class="c-down-3">-0.2</td>
+                        <td class="numeric c-up-10">+2.5</td>
+                        <td class="numeric c-down-6">-1.2</td>
+                        <td class="numeric c-up-8">+2.0</td>
+                        <td class="numeric c-up-16">+4.1</td>
+                        <td class="numeric c-up-6">+1.8</td>
+                        <td class="numeric c-down-8">-1.0</td>
+                        <td class="numeric c-up-12">+3.0</td>
+                        <td class="numeric c-down-4">-0.5</td>
+                        <td class="numeric c-up-7">+1.6</td>
+                        <td class="numeric c-up-9">+2.2</td>
+                        <td class="numeric c-up-11">+2.8</td>
+                        <td class="numeric c-down-3">-0.2</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1099,7 +1099,7 @@
               </div>
 
               <!-- Return Stats Table -->
-              <div class="panel" class="panel-shrink">
+              <div class="panel panel-shrink">
                 <div class="panel-header">
                   <span class="panel-title">收益统计</span>
                 </div>
@@ -1108,10 +1108,10 @@
                     <tr><th>分组</th><th class="numeric">年化收益</th><th class="numeric">年化波动</th><th class="numeric">Sharpe</th><th class="numeric">最大回撤</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td>Q1 (最差)</td><td class="numeric" class="c-down">-8.2%</td><td class="numeric">22.1%</td><td class="numeric">-0.37</td><td class="numeric">-32.5%</td></tr>
-                    <tr><td>Q2</td><td class="numeric" class="c-down">-2.1%</td><td class="numeric">18.5%</td><td class="numeric">-0.11</td><td class="numeric">-25.8%</td></tr>
+                    <tr><td>Q1 (最差)</td><td class="numeric c-down">-8.2%</td><td class="numeric">22.1%</td><td class="numeric">-0.37</td><td class="numeric">-32.5%</td></tr>
+                    <tr><td>Q2</td><td class="numeric c-down">-2.1%</td><td class="numeric">18.5%</td><td class="numeric">-0.11</td><td class="numeric">-25.8%</td></tr>
                     <tr><td>Q3</td><td class="numeric">+4.8%</td><td class="numeric">16.2%</td><td class="numeric">0.30</td><td class="numeric">-18.2%</td></tr>
-                    <tr><td>Q4</td><td class="numeric" class="c-up">+12.5%</td><td class="numeric">17.8%</td><td class="numeric">0.70</td><td class="numeric">-15.6%</td></tr>
+                    <tr><td>Q4</td><td class="numeric c-up">+12.5%</td><td class="numeric">17.8%</td><td class="numeric">0.70</td><td class="numeric">-15.6%</td></tr>
                     <tr><td>Q5 (最佳)</td><td class="numeric c-up">+22.1%</td><td class="numeric">19.5%</td><td class="numeric">1.13</td><td class="numeric">-14.2%</td></tr>
                     <tr class="fw-medium tbl-primary tbl-separator"><td>多空 (Q5-Q1)</td><td class="numeric c-up fw-medium">+30.3%</td><td class="numeric">12.8%</td><td class="numeric c-up">2.37</td><td class="numeric">-11.5%</td></tr>
                   </tbody>
@@ -1161,7 +1161,7 @@
                     <span class="panel-title">因子值分布</span>
                     <span class="fs-10 c-tertiary">正态拟合叠加</span>
                   </div>
-                  <div class="panel-body" class="flex-center">
+                  <div class="panel-body flex-center">
                     <svg viewBox="0 0 280 100" class="chart-svg">
                       <line x1="0" y1="80" x2="280" y2="80" stroke="var(--border-subtle)" stroke-width="0.5"/>
                       <!-- Histogram bars -->
@@ -1189,50 +1189,50 @@
                     <span class="fs-10 c-tertiary">|corr| > 0.3 高亮</span>
                   </div>
                   <div class="panel-body">
-                    <table class="data-table" class="fs-10">
+                    <table class="data-table fs-10">
                       <thead>
                         <tr><th></th><th>动量20D</th><th>动量60D</th><th>反转5D</th><th>波动率</th><th>换手率</th></tr>
                       </thead>
                       <tbody>
                         <tr>
                           <td class="c-primary-fw">动量20D</td>
-                          <td class="numeric" class="c-accent-bg">1.00</td>
-                          <td class="numeric" class="c-up-10">0.72</td>
-                          <td class="numeric" class="c-tertiary">-0.15</td>
-                          <td class="numeric" class="c-tertiary">-0.08</td>
-                          <td class="numeric" class="c-tertiary">0.12</td>
+                          <td class="numeric c-accent-bg">1.00</td>
+                          <td class="numeric c-up-10">0.72</td>
+                          <td class="numeric c-tertiary">-0.15</td>
+                          <td class="numeric c-tertiary">-0.08</td>
+                          <td class="numeric c-tertiary">0.12</td>
                         </tr>
                         <tr>
                           <td class="c-primary">动量60D</td>
-                          <td class="numeric" class="c-up-10">0.72</td>
-                          <td class="numeric" class="c-accent-bg">1.00</td>
-                          <td class="numeric" class="c-tertiary">-0.22</td>
-                          <td class="numeric" class="c-tertiary">-0.11</td>
-                          <td class="numeric" class="c-tertiary">0.18</td>
+                          <td class="numeric c-up-10">0.72</td>
+                          <td class="numeric c-accent-bg">1.00</td>
+                          <td class="numeric c-tertiary">-0.22</td>
+                          <td class="numeric c-tertiary">-0.11</td>
+                          <td class="numeric c-tertiary">0.18</td>
                         </tr>
                         <tr>
                           <td class="c-primary">反转5D</td>
-                          <td class="numeric" class="c-tertiary">-0.15</td>
-                          <td class="numeric" class="c-tertiary">-0.22</td>
-                          <td class="numeric" class="c-accent-bg">1.00</td>
-                          <td class="numeric" class="c-down">-0.35</td>
-                          <td class="numeric" class="c-up">0.42</td>
+                          <td class="numeric c-tertiary">-0.15</td>
+                          <td class="numeric c-tertiary">-0.22</td>
+                          <td class="numeric c-accent-bg">1.00</td>
+                          <td class="numeric c-down">-0.35</td>
+                          <td class="numeric c-up">0.42</td>
                         </tr>
                         <tr>
                           <td class="c-primary">波动率</td>
-                          <td class="numeric" class="c-tertiary">-0.08</td>
-                          <td class="numeric" class="c-tertiary">-0.11</td>
-                          <td class="numeric" class="c-down">-0.35</td>
-                          <td class="numeric" class="c-accent-bg">1.00</td>
-                          <td class="numeric" class="c-up">0.55</td>
+                          <td class="numeric c-tertiary">-0.08</td>
+                          <td class="numeric c-tertiary">-0.11</td>
+                          <td class="numeric c-down">-0.35</td>
+                          <td class="numeric c-accent-bg">1.00</td>
+                          <td class="numeric c-up">0.55</td>
                         </tr>
                         <tr>
                           <td class="c-primary">换手率</td>
-                          <td class="numeric" class="c-tertiary">0.12</td>
-                          <td class="numeric" class="c-tertiary">0.18</td>
-                          <td class="numeric" class="c-up">0.42</td>
-                          <td class="numeric" class="c-up">0.55</td>
-                          <td class="numeric" class="c-accent-bg">1.00</td>
+                          <td class="numeric c-tertiary">0.12</td>
+                          <td class="numeric c-tertiary">0.18</td>
+                          <td class="numeric c-up">0.42</td>
+                          <td class="numeric c-up">0.55</td>
+                          <td class="numeric c-accent-bg">1.00</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1245,7 +1245,7 @@
                     <span class="panel-title">因子-收益散点图</span>
                     <span class="fs-10 c-tertiary">回归线叠加</span>
                   </div>
-                  <div class="panel-body" class="flex-center">
+                  <div class="panel-body flex-center">
                     <svg viewBox="0 0 280 100" class="chart-svg">
                       <line x1="0" y1="50" x2="280" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
                       <line x1="0" y1="25" x2="280" y2="25" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
@@ -1338,12 +1338,12 @@
             <div class="hub-object-view">
 
               <!-- Turnover Time Series -->
-              <div class="panel" class="panel-flex">
+              <div class="panel panel-flex">
                 <div class="panel-header flex-between">
                   <span class="panel-title">换手率时间序列</span>
                   <span class="fs-10 c-tertiary">日频</span>
                 </div>
-                <div class="panel-body" class="flex-center">
+                <div class="panel-body flex-center">
                   <svg viewBox="0 0 400 120" class="chart-svg">
                     <defs>
                       <linearGradient id="turnover-area" x1="0" y1="0" x2="0" y2="1">
@@ -1359,7 +1359,7 @@
               </div>
 
               <!-- Turnover Breakdown -->
-              <div class="panel" class="panel-shrink">
+              <div class="panel panel-shrink">
                 <div class="panel-header">
                   <span class="panel-title">换手率分解</span>
                 </div>
@@ -1384,7 +1384,7 @@
               </div>
 
               <!-- Holding Stability -->
-              <div class="panel" class="panel-shrink">
+              <div class="panel panel-shrink">
                 <div class="panel-header">
                   <span class="panel-title">持仓稳定性</span>
                 </div>
@@ -1431,7 +1431,7 @@
       <span class="meta-separator"></span>
       <div class="bottom-item">
         <span class="bottom-item-label">数据质量</span>
-        <span class="bottom-item-value" class="c-healthy">正常</span>
+        <span class="bottom-item-value c-healthy">正常</span>
       </div>
     </div>
 
@@ -1717,13 +1717,13 @@
                 <div class="overlay-body">
                   <h4>解读维度</h4>
                   <div class="flex-wrap-gap">
-                    <span class="meta-tag brand" class="cursor-pointer">IC 分析</span>
-                    <span class="meta-tag" class="cursor-pointer">收益分析</span>
-                    <span class="meta-tag" class="cursor-pointer">风险分析</span>
-                    <span class="meta-tag" class="cursor-pointer">综合评估</span>
+                    <span class="meta-tag brand cursor-pointer">IC 分析</span>
+                    <span class="meta-tag cursor-pointer">收益分析</span>
+                    <span class="meta-tag cursor-pointer">风险分析</span>
+                    <span class="meta-tag cursor-pointer">综合评估</span>
                   </div>
                   <h4>附加上下文</h4>
-                  <textarea placeholder="可选：补充分析背景或关注点..." class="form-textarea" class="chart-min-h"></textarea>
+                  <textarea placeholder="可选：补充分析背景或关注点..." class="form-textarea chart-min-h"></textarea>
                   <div class="overlay-actions">
                     <button class="overlay-btn overlay-btn-secondary">取消</button>
                     <button class="overlay-btn overlay-btn-primary">发送解读</button>
@@ -1748,14 +1748,14 @@
                   <table class="data-table">
                     <thead><tr><th>时段</th><th class="numeric">IC 均值</th><th class="numeric">IC IR</th><th class="numeric">正占比</th></tr></thead>
                     <tbody>
-                      <tr><td>最近 60D</td><td class="numeric" class="c-up">0.095</td><td class="numeric">1.82</td><td class="numeric">68.3%</td></tr>
-                      <tr><td>最近 120D</td><td class="numeric" class="c-up">0.088</td><td class="numeric">1.62</td><td class="numeric">65.0%</td></tr>
-                      <tr><td>最近 250D</td><td class="numeric" class="c-up">0.082</td><td class="numeric">1.45</td><td class="numeric">62.8%</td></tr>
-                      <tr><td>全样本</td><td class="numeric" class="c-up">0.078</td><td class="numeric">1.38</td><td class="numeric">61.2%</td></tr>
+                      <tr><td>最近 60D</td><td class="numeric c-up">0.095</td><td class="numeric">1.82</td><td class="numeric">68.3%</td></tr>
+                      <tr><td>最近 120D</td><td class="numeric c-up">0.088</td><td class="numeric">1.62</td><td class="numeric">65.0%</td></tr>
+                      <tr><td>最近 250D</td><td class="numeric c-up">0.082</td><td class="numeric">1.45</td><td class="numeric">62.8%</td></tr>
+                      <tr><td>全样本</td><td class="numeric c-up">0.078</td><td class="numeric">1.38</td><td class="numeric">61.2%</td></tr>
                     </tbody>
                   </table>
                   <div class="overlay-actions">
-                    <button class="overlay-btn" class="overlay-btn-default">导出 CSV</button>
+                    <button class="overlay-btn overlay-btn-default">导出 CSV</button>
                     <button class="overlay-btn overlay-btn-primary">关闭</button>
                   </div>
                 </div>
