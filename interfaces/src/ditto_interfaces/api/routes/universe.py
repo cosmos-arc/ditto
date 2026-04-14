@@ -26,9 +26,15 @@ from ditto_app.command.universe import (
     UpdateCustomUniverseHandler,
 )
 from ditto_app.query.universe import UniverseQueryFacade
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
-from ditto_interfaces.models.common import APIResponse
+from ditto_interfaces.api.deps import pagination_params
+from ditto_interfaces.api.errors import BadRequestError, ForbiddenError, NotFoundError
+from ditto_interfaces.models.common import (
+    APIResponse,
+    PaginationRequest,
+    PaginationResponse,
+)
 from ditto_interfaces.models.universe import (
     CreateUniverseRequest,
     MemberResponse,
@@ -44,27 +50,33 @@ router = APIRouter(prefix="/universes", tags=["universes"])
 @inject
 async def list_universes(
     facade: Annotated[UniverseQueryFacade, FromComponent()],
+    pagination: PaginationRequest = Depends(pagination_params),
     universe_type: str | None = Query(None, description="类型过滤"),
 ) -> APIResponse[list[UniverseResponse]]:
     """列出所有 Universe."""
     rows = await asyncio.to_thread(facade.list_universes, universe_type)
-    return APIResponse(data=[to_universe_response(r) for r in rows])
+    all_responses = [to_universe_response(r) for r in rows]
+    total = len(all_responses)
+    page = all_responses[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=pagination.limit, offset=pagination.offset
+        ),
+    )
 
 
-@router.get("/{universe_id}", response_model=UniverseResponse)
+@router.get("/{universe_id}", response_model=APIResponse[UniverseResponse])
 @inject
 async def get_universe(
     universe_id: str,
     facade: Annotated[UniverseQueryFacade, FromComponent()],
-) -> UniverseResponse:
+) -> APIResponse[UniverseResponse]:
     """获取 Universe 详情."""
     row = await asyncio.to_thread(facade.get_universe_detail, universe_id)
     if row is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Universe not found: {universe_id}",
-        )
-    return to_universe_response(row)
+        raise NotFoundError(f"Universe not found: {universe_id}")
+    return APIResponse(data=to_universe_response(row))
 
 
 @router.get("/{universe_id}/members", response_model=APIResponse[list[MemberResponse]])
@@ -79,12 +91,12 @@ async def get_members(
     return APIResponse(data=[MemberResponse(instrument_id=iid) for iid in ids])
 
 
-@router.post("", status_code=201, response_model=UniverseResponse)
+@router.post("", status_code=201, response_model=APIResponse[UniverseResponse])
 @inject
 async def create_universe(
     body: CreateUniverseRequest,
     handler: Annotated[CreateCustomUniverseHandler, FromComponent()],
-) -> UniverseResponse:
+) -> APIResponse[UniverseResponse]:
     """创建自定义 Universe."""
     cmd = CreateCustomUniverseCommand(
         universe_id=body.universe_id,
@@ -94,17 +106,17 @@ async def create_universe(
     try:
         row = await asyncio.to_thread(handler.handle, cmd)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return to_universe_response(row)
+        raise BadRequestError(str(exc)) from exc
+    return APIResponse(data=to_universe_response(row))
 
 
-@router.put("/{universe_id}", response_model=UniverseResponse)
+@router.put("/{universe_id}", response_model=APIResponse[UniverseResponse])
 @inject
 async def update_universe(
     universe_id: str,
     body: UpdateUniverseRequest,
     handler: Annotated[UpdateCustomUniverseHandler, FromComponent()],
-) -> UniverseResponse:
+) -> APIResponse[UniverseResponse]:
     """更新自定义 Universe."""
     cmd = UpdateCustomUniverseCommand(
         universe_id=universe_id,
@@ -116,10 +128,10 @@ async def update_universe(
     try:
         row = await asyncio.to_thread(handler.handle, cmd)
     except PermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
+        raise ForbiddenError(str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return to_universe_response(row)
+        raise NotFoundError(str(exc)) from exc
+    return APIResponse(data=to_universe_response(row))
 
 
 @router.delete("/{universe_id}", response_model=APIResponse[bool])
@@ -135,6 +147,6 @@ async def delete_universe(
     except ValueError as exc:
         msg = str(exc)
         if "preset" in msg:
-            raise HTTPException(status_code=403, detail=msg) from exc
-        raise HTTPException(status_code=404, detail=msg) from exc
+            raise ForbiddenError(msg) from exc
+        raise NotFoundError(msg) from exc
     return APIResponse(data=result)

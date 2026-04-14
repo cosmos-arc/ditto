@@ -7,7 +7,8 @@ from datetime import date
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_infra.foundation import logger
 from ditto_kernel import AmbiguousTickerError, NoIdentifierProvidedError
-from fastapi import HTTPException
+
+from ditto_interfaces.api.errors import APIError, BadRequestError
 
 
 def resolve_identifier_for_api(
@@ -37,13 +38,13 @@ def resolve_identifier_for_api(
         解析后的 canonical instrument_id (int)，查不到返回 None.
 
     Raises:
-        HTTPException: 标识符缺失或解析失败时.
+        BadRequestError: 标识符缺失或解析失败时.
+        APIError: 内部异常时.
 
     """
     if not any([instrument_id, standard_ticker, ticker]):
-        raise HTTPException(
-            status_code=422,
-            detail="必须提供 instrument_id、standard_ticker 或 ticker 之一",
+        raise BadRequestError(
+            "必须提供 instrument_id、standard_ticker 或 ticker 之一",
         )
 
     try:
@@ -54,11 +55,13 @@ def resolve_identifier_for_api(
             asof=as_of_date.isoformat() if as_of_date else None,
         )
     except AmbiguousTickerError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise BadRequestError(str(exc)) from exc
     except NoIdentifierProvidedError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise BadRequestError(str(exc)) from exc
     except Exception as exc:
         logger.exception(f"Unexpected error resolving {domain} identifier")
-        raise HTTPException(
-            status_code=500, detail="Failed to resolve identifier"
+        raise APIError(
+            "Failed to resolve identifier",
+            status_code=500,
+            error_code="INTERNAL_ERROR",
         ) from exc

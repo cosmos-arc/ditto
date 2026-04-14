@@ -19,7 +19,7 @@ class PaginationRequest(BaseModel):
 
     """
 
-    limit: int = Field(default=100, ge=1, le=1000, description="每页数量, 范围 1-1000")
+    limit: int = Field(default=20, ge=1, le=100, description="每页数量, 范围 1-100")
     offset: int = Field(default=0, ge=0, description="偏移量, 非负整数")
 
     model_config = ConfigDict(

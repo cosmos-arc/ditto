@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated
+from typing import Annotated, Never
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
@@ -26,9 +26,15 @@ from ditto_app.command.strategy import (
 )
 from ditto_app.contracts import StrategySpecInfo
 from ditto_app.query.strategy import StrategyQueryFacade
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends
 
-from ditto_interfaces.models.common import APIResponse
+from ditto_interfaces.api.deps import pagination_params
+from ditto_interfaces.api.errors import BadRequestError, ConflictError, NotFoundError
+from ditto_interfaces.models.common import (
+    APIResponse,
+    PaginationRequest,
+    PaginationResponse,
+)
 from ditto_interfaces.models.strategy import (
     CreateStrategyRequest,
     PublishStrategyRequest,
@@ -39,14 +45,14 @@ from ditto_interfaces.models.strategy import (
 router = APIRouter(prefix="/strategies", tags=["strategies"])
 
 
-def _map_strategy_error(exc: ValueError) -> HTTPException:
-    """将 Strategy handler 的 ValueError 映射为 HTTPException."""
+def _raise_strategy_error(exc: ValueError) -> Never:
+    """将 Strategy handler 的 ValueError 映射为对应的 APIError 并抛出."""
     msg = str(exc)
     if "not found" in msg.lower():
-        return HTTPException(status_code=404, detail=msg)
+        raise NotFoundError(msg) from exc
     if "conflict" in msg.lower():
-        return HTTPException(status_code=409, detail=msg)
-    return HTTPException(status_code=400, detail=msg)
+        raise ConflictError(msg) from exc
+    raise BadRequestError(msg) from exc
 
 
 def to_strategy_response(info: StrategySpecInfo) -> StrategyResponse:
@@ -63,12 +69,12 @@ def to_strategy_response(info: StrategySpecInfo) -> StrategyResponse:
     )
 
 
-@router.post("", response_model=StrategyResponse)
+@router.post("", response_model=APIResponse[StrategyResponse])
 @inject
 async def create_strategy(
     request: CreateStrategyRequest,
     handler: Annotated[CreateStrategyHandler, FromComponent()],
-) -> StrategyResponse:
+) -> APIResponse[StrategyResponse]:
     """创建策略."""
     cmd = CreateStrategyCommand(
         strategy_id=request.strategy_id,
@@ -77,42 +83,48 @@ async def create_strategy(
         tags=tuple(request.tags),
     )
     info = await asyncio.to_thread(handler.handle, cmd)
-    return to_strategy_response(info)
+    return APIResponse(data=to_strategy_response(info))
 
 
 @router.get("", response_model=APIResponse[list[StrategyResponse]])
 @inject
 async def list_strategies(
     facade: Annotated[StrategyQueryFacade, FromComponent()],
+    pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[StrategyResponse]]:
     """列出策略."""
     specs = await asyncio.to_thread(facade.list_specs)
-    return APIResponse(data=[to_strategy_response(s) for s in specs])
+    all_responses = [to_strategy_response(s) for s in specs]
+    total = len(all_responses)
+    page = all_responses[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=pagination.limit, offset=pagination.offset
+        ),
+    )
 
 
-@router.get("/{strategy_id}", response_model=StrategyResponse)
+@router.get("/{strategy_id}", response_model=APIResponse[StrategyResponse])
 @inject
 async def get_strategy(
     strategy_id: str,
     facade: Annotated[StrategyQueryFacade, FromComponent()],
-) -> StrategyResponse:
+) -> APIResponse[StrategyResponse]:
     """获取策略详情."""
     info = await asyncio.to_thread(facade.get_spec, strategy_id)
     if info is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Strategy not found: {strategy_id}",
-        )
-    return to_strategy_response(info)
+        raise NotFoundError(f"Strategy not found: {strategy_id}")
+    return APIResponse(data=to_strategy_response(info))
 
 
-@router.put("/{strategy_id}", response_model=StrategyResponse)
+@router.put("/{strategy_id}", response_model=APIResponse[StrategyResponse])
 @inject
 async def update_strategy(
     strategy_id: str,
     request: UpdateStrategyRequest,
     handler: Annotated[UpdateStrategyHandler, FromComponent()],
-) -> StrategyResponse:
+) -> APIResponse[StrategyResponse]:
     """更新策略."""
     cmd = UpdateStrategyCommand(
         strategy_id=strategy_id,
@@ -124,8 +136,8 @@ async def update_strategy(
     try:
         info = await asyncio.to_thread(handler.handle, cmd)
     except ValueError as exc:
-        raise _map_strategy_error(exc) from exc
-    return to_strategy_response(info)
+        _raise_strategy_error(exc)
+    return APIResponse(data=to_strategy_response(info))
 
 
 @router.post("/{strategy_id}/publish", response_model=APIResponse[bool])
@@ -143,5 +155,5 @@ async def publish_strategy(
     try:
         result = await asyncio.to_thread(handler.handle, cmd)
     except ValueError as exc:
-        raise _map_strategy_error(exc) from exc
+        _raise_strategy_error(exc)
     return APIResponse(data=result)

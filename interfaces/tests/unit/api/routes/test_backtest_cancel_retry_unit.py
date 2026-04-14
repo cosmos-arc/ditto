@@ -24,7 +24,9 @@ from ditto_app.command.backtest import (
 )
 from ditto_app.process.execution.strategy_types import RunLifecycleService
 from ditto_app.query.backtest import BacktestQueryFacade, RunSummary
+from ditto_interfaces.api.errors import APIError
 from ditto_interfaces.api.routes.backtest import router
+from ditto_interfaces.middleware import api_error_handler
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -85,6 +87,10 @@ def app(
     container = make_async_container(TestProvider())
     setup_dishka(container=container, app=app)
     app.include_router(router, prefix="/api/v1")
+
+    # 注册 APIError 异常处理器
+    app.add_exception_handler(APIError, api_error_handler)
+
     return app
 
 
@@ -112,8 +118,8 @@ class TestCancelStatusGuard:
         assert resp.status_code == 200
         mock_cancel_handler.handle.assert_called_once_with("run001")
         body = resp.json()
-        assert body["run_id"] == "run001"
-        assert body["status"] == "cancelled"
+        assert body["data"]["run_id"] == "run001"
+        assert body["data"]["status"] == "cancelled"
 
     def test_cancel_pending_succeeds(
         self,
@@ -179,7 +185,7 @@ class TestCancelNotFound:
     ) -> None:
         """取消不存在的 run → 404."""
         mock_cancel_handler.handle.side_effect = ValueError("Run not found: missing")
-        resp = client.post("/api/v1/backtests/runs/missing/cancel")
+        resp = client.post("/api/v1/backtests/missing/cancel")
         assert resp.status_code == 404
         assert "not found" in resp.json()["detail"].lower()
 
@@ -208,9 +214,9 @@ class TestRetryStatusGuard:
         assert resp.status_code == 202
         mock_retry_handler.handle.assert_called_once_with("run001")
         body = resp.json()
-        assert body["run_id"] == "run002"
-        assert body["parent_run_id"] == "run001"
-        assert body["status"] == "pending"
+        assert body["data"]["run_id"] == "run002"
+        assert body["data"]["parent_run_id"] == "run001"
+        assert body["data"]["status"] == "pending"
 
     def test_retry_cancelled_succeeds(
         self,
@@ -227,7 +233,7 @@ class TestRetryStatusGuard:
         resp = client.post("/api/v1/backtests/runs/run002/retry")
         assert resp.status_code == 202
         body = resp.json()
-        assert body["run_id"] == "run003"
+        assert body["data"]["run_id"] == "run003"
 
     def test_retry_running_rejected(
         self,
@@ -282,7 +288,7 @@ class TestRetryNotFound:
     ) -> None:
         """重试不存在的 run → 404."""
         mock_retry_handler.handle.side_effect = ValueError("Run not found: missing")
-        resp = client.post("/api/v1/backtests/runs/missing/retry")
+        resp = client.post("/api/v1/backtests/missing/retry")
         assert resp.status_code == 404
         assert "not found" in resp.json()["detail"].lower()
 

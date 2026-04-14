@@ -21,7 +21,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 from collections.abc import Callable
-from typing import Annotated, Any, cast
+from typing import Annotated, Any, Never, cast
 
 import orjson as _orjson
 from dishka import FromComponent
@@ -40,9 +40,16 @@ from ditto_app.query.backtest import BacktestQueryFacade, RunSummary
 from ditto_app.query.backtest_trade import TradeRecord
 from ditto_app.query.lineage import LineageQueryFacade
 from ditto_kernel.enums import RunStatus
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from loguru import logger
 
+from ditto_interfaces.api.deps import pagination_params
+from ditto_interfaces.api.errors import (
+    APIError,
+    BadRequestError,
+    ConflictError,
+    NotFoundError,
+)
 from ditto_interfaces.jobs.flows.backtest import run_backtest_flow
 from ditto_interfaces.models.backtest import (
     AuditRecordResponse,
@@ -55,7 +62,11 @@ from ditto_interfaces.models.backtest import (
     TradeResponse,
     to_audit_record_response,
 )
-from ditto_interfaces.models.common import APIResponse
+from ditto_interfaces.models.common import (
+    APIResponse,
+    PaginationRequest,
+    PaginationResponse,
+)
 from ditto_interfaces.models.lineage import (
     LineageResponse,
     ManifestDiffResponse,
@@ -65,12 +76,12 @@ from ditto_interfaces.models.lineage import (
 router = APIRouter(prefix="/backtests", tags=["backtests"])
 
 
-def _map_backtest_error(exc: ValueError) -> int:
-    """将回测业务 ValueError 映射为 HTTP 状态码."""
+def _raise_backtest_error(exc: ValueError) -> Never:
+    """将回测业务 ValueError 映射为对应的 APIError 并抛出."""
     msg = str(exc).lower()
     if "not found" in msg:
-        return 404
-    return 409
+        raise NotFoundError(str(exc)) from exc
+    raise ConflictError(str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -210,13 +221,15 @@ def _make_failure_callback(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/runs", status_code=202, response_model=BacktestRunTriggerResponse)
+@router.post(
+    "/runs", status_code=202, response_model=APIResponse[BacktestRunTriggerResponse]
+)
 @inject
 async def trigger_backtest(
     body: CreateBacktestRunRequest,
     handler: Annotated[BacktestRunHandler, FromComponent()],
     run_service: Annotated[RunLifecycleService, FromComponent()],
-) -> BacktestRunTriggerResponse:
+) -> APIResponse[BacktestRunTriggerResponse]:
     """触发回测 — 校验参数 + 创建记录 + 后台提交 flow，返回 202 Accepted."""
     command = BacktestRunCommand(
         strategy_id=body.strategy_id,
@@ -230,7 +243,7 @@ async def trigger_backtest(
     try:
         result = await asyncio.to_thread(handler.handle, command)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise BadRequestError(str(exc)) from exc
 
     # 后台提交 flow（不阻塞响应）
     flow_params = _build_flow_params(command, result)
@@ -242,10 +255,12 @@ async def trigger_backtest(
         on_failure,
     )
 
-    return BacktestRunTriggerResponse(
-        run_id=result.run_id,
-        strategy_id=result.strategy_id,
-        status=result.status,
+    return APIResponse(
+        data=BacktestRunTriggerResponse(
+            run_id=result.run_id,
+            strategy_id=result.strategy_id,
+            status=result.status,
+        ),
     )
 
 
@@ -254,43 +269,48 @@ async def trigger_backtest(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/runs/{run_id}/cancel", response_model=CancelRunResponse)
+@router.post("/runs/{run_id}/cancel", response_model=APIResponse[CancelRunResponse])
 @inject
 async def cancel_run(
     run_id: str,
     handler: Annotated[CancelRunHandler, FromComponent()],
-) -> CancelRunResponse:
+) -> APIResponse[CancelRunResponse]:
     """取消回测运行 — 检查 status in {pending, running}，更新为 cancelled."""
     try:
         await asyncio.to_thread(handler.handle, run_id)
     except ValueError as exc:
-        status = _map_backtest_error(exc)
-        raise HTTPException(status_code=status, detail=str(exc)) from exc
+        _raise_backtest_error(exc)
 
-    return CancelRunResponse(run_id=run_id, status=RunStatus.CANCELLED)
+    return APIResponse(
+        data=CancelRunResponse(run_id=run_id, status=RunStatus.CANCELLED)
+    )
 
 
-@router.post("/runs/{run_id}/retry", status_code=202, response_model=RetryRunResponse)
+@router.post(
+    "/runs/{run_id}/retry",
+    status_code=202,
+    response_model=APIResponse[RetryRunResponse],
+)
 @inject
 async def retry_run(
     run_id: str,
     facade: Annotated[BacktestQueryFacade, FromComponent()],
     handler: Annotated[RetryRunHandler, FromComponent()],
     run_service: Annotated[RunLifecycleService, FromComponent()],
-) -> RetryRunResponse:
+) -> APIResponse[RetryRunResponse]:
     """重试回测运行 — 检查 status in {failed, cancelled}，创建新 Run 并提交 flow."""
     try:
         new_run_id = await asyncio.to_thread(handler.handle, run_id)
     except ValueError as exc:
-        status = _map_backtest_error(exc)
-        raise HTTPException(status_code=status, detail=str(exc)) from exc
+        _raise_backtest_error(exc)
 
     # 获取 strategy_id + config_json 用于 flow 提交
     record = await asyncio.to_thread(facade.get_run, new_run_id)
     if record is None:
-        raise HTTPException(
+        raise APIError(
+            f"Retry created run {new_run_id} but record not found",
             status_code=500,
-            detail=f"Retry created run {new_run_id} but record not found",
+            error_code="INTERNAL_ERROR",
         )
 
     # 后台提交 flow（不阻塞响应）
@@ -309,10 +329,12 @@ async def retry_run(
         on_failure,
     )
 
-    return RetryRunResponse(
-        run_id=new_run_id,
-        parent_run_id=run_id,
-        status=RunStatus.PENDING,
+    return APIResponse(
+        data=RetryRunResponse(
+            run_id=new_run_id,
+            parent_run_id=run_id,
+            status=RunStatus.PENDING,
+        ),
     )
 
 
@@ -329,8 +351,7 @@ async def list_runs(
     status: str | None = Query(None, description="运行状态筛选"),
     start_date: str | None = Query(None, description="起始日期(含)"),
     end_date: str | None = Query(None, description="结束日期(含)"),
-    limit: int = Query(100, ge=1, le=1000, description="返回条数上限"),
-    offset: int = Query(0, ge=0, description="分页偏移量"),
+    pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[RunResponse]]:
     """列出回测运行记录."""
     summaries = await asyncio.to_thread(
@@ -339,27 +360,29 @@ async def list_runs(
         status=status,
         start_date=start_date,
         end_date=end_date,
-        limit=limit,
-        offset=offset,
     )
-    runs = [to_run_response(s) for s in summaries]
-    return APIResponse(data=runs)
+    all_runs = [to_run_response(s) for s in summaries]
+    total = len(all_runs)
+    page = all_runs[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=pagination.limit, offset=pagination.offset
+        ),
+    )
 
 
-@router.get("/runs/{run_id}", response_model=RunResponse)
+@router.get("/runs/{run_id}", response_model=APIResponse[RunResponse])
 @inject
 async def get_run(
     run_id: str,
     facade: Annotated[BacktestQueryFacade, FromComponent()],
-) -> RunResponse:
+) -> APIResponse[RunResponse]:
     """获取回测运行详情."""
     summary = await asyncio.to_thread(facade.get_run, run_id)
     if summary is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Run not found: {run_id}",
-        )
-    return to_run_response(summary)
+        raise NotFoundError(f"Run not found: {run_id}")
+    return APIResponse(data=to_run_response(summary))
 
 
 @router.get("/runs/{run_id}/trades", response_model=APIResponse[list[TradeResponse]])
@@ -369,8 +392,7 @@ async def get_trades(
     facade: Annotated[BacktestQueryFacade, FromComponent()],
     start_date: str | None = Query(None, description="起始日期(含)"),
     end_date: str | None = Query(None, description="结束日期(含)"),
-    limit: int = Query(100, ge=1, le=1000, description="返回条数上限"),
-    offset: int = Query(0, ge=0, description="分页偏移量"),
+    pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[TradeResponse]]:
     """获取回测成交明细."""
     records = await asyncio.to_thread(
@@ -378,13 +400,23 @@ async def get_trades(
         run_id=run_id,
         start_date=start_date,
         end_date=end_date,
-        limit=limit,
-        offset=offset,
     )
     if not records:
-        return APIResponse(data=[])
-    trades = [to_trade_response(r) for r in records]
-    return APIResponse(data=trades)
+        return APIResponse(
+            data=[],
+            pagination=PaginationResponse(
+                total=0, limit=pagination.limit, offset=pagination.offset
+            ),
+        )
+    all_trades = [to_trade_response(r) for r in records]
+    total = len(all_trades)
+    page = all_trades[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=pagination.limit, offset=pagination.offset
+        ),
+    )
 
 
 @router.get(
@@ -423,10 +455,7 @@ async def get_report(
     """获取回测报告 (backtest_report.json 元数据)."""
     report = await asyncio.to_thread(facade.get_report, run_id)
     if report is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Report not found for run: {run_id}",
-        )
+        raise NotFoundError(f"Report not found for run: {run_id}")
     return APIResponse(data=report)
 
 
@@ -435,51 +464,50 @@ async def get_report(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/runs/{run_id}/lineage", response_model=LineageResponse)
+@router.get("/runs/{run_id}/lineage", response_model=APIResponse[LineageResponse])
 @inject
 async def get_lineage(
     run_id: str,
     lineage_facade: Annotated[LineageQueryFacade, FromComponent()],
-) -> LineageResponse:
+) -> APIResponse[LineageResponse]:
     """查询运行血统链 — 从当前运行追溯到原始运行."""
     chain = await asyncio.to_thread(lineage_facade.get_lineage, run_id)
     if chain is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Run not found: {run_id}",
-        )
+        raise NotFoundError(f"Run not found: {run_id}")
     runs = [to_run_response(s) for s in chain.runs]
-    return LineageResponse(runs=runs, depth=chain.depth)
+    return APIResponse(data=LineageResponse(runs=runs, depth=chain.depth))
 
 
-@router.post("/runs/{run_id}/replay", response_model=ReplayResponse)
+@router.post("/runs/{run_id}/replay", response_model=APIResponse[ReplayResponse])
 @inject
 async def replay_run(
     run_id: str,
     replay_process: Annotated[ReplayProcess, FromComponent()],
-) -> ReplayResponse:
+) -> APIResponse[ReplayResponse]:
     """基于原始 manifest 重放回测并验证复现性."""
     try:
         result = await asyncio.to_thread(replay_process.replay, run_id)
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise NotFoundError(str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise BadRequestError(str(exc)) from exc
 
     validation = result.validation
-    return ReplayResponse(
-        new_run_id=result.new_run_id,
-        is_reproducible=validation.is_reproducible,
-        nav_correlation=validation.nav_correlation,
-        max_nav_diff_bps=validation.max_nav_diff_bps,
-        manifest_diff=ManifestDiffResponse(
-            config_diffs=list(validation.manifest_diff.config_diffs),
-            data_diffs=list(validation.manifest_diff.data_diffs),
-            version_diffs=list(validation.manifest_diff.version_diffs),
-            seed_diffs=list(validation.manifest_diff.seed_diffs),
-            has_diff=validation.manifest_diff.has_diff,
+    return APIResponse(
+        data=ReplayResponse(
+            new_run_id=result.new_run_id,
+            is_reproducible=validation.is_reproducible,
+            nav_correlation=validation.nav_correlation,
+            max_nav_diff_bps=validation.max_nav_diff_bps,
+            manifest_diff=ManifestDiffResponse(
+                config_diffs=list(validation.manifest_diff.config_diffs),
+                data_diffs=list(validation.manifest_diff.data_diffs),
+                version_diffs=list(validation.manifest_diff.version_diffs),
+                seed_diffs=list(validation.manifest_diff.seed_diffs),
+                has_diff=validation.manifest_diff.has_diff,
+            ),
+            input_data_match=validation.input_data_match,
         ),
-        input_data_match=validation.input_data_match,
     )
 
 
@@ -518,10 +546,7 @@ async def get_benchmark(
     benchmark_return = await asyncio.to_thread(facade.get_benchmark_return, run_id)
 
     if nav_series is None and benchmark_return is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No benchmark data for run: {run_id}",
-        )
+        raise NotFoundError(f"No benchmark data for run: {run_id}")
 
     dates: list[str] = []
     navs: list[float] = []

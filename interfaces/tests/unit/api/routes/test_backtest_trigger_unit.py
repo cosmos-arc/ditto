@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import pytest
 from ditto_app.command.backtest import BacktestRunCommand, BacktestRunResult
+from ditto_interfaces.api.errors import BadRequestError
 from ditto_interfaces.models.backtest import (
     BacktestRunTriggerResponse,
     CreateBacktestRunRequest,
 )
-from fastapi import HTTPException
 from pydantic import ValidationError
 
 
@@ -125,28 +125,28 @@ class TestResultToResponseMapping:
 
 
 class TestErrorHandlerMapping:
-    """Tests for ValueError → HTTPException(400) mapping."""
+    """Tests for ValueError → BadRequestError(400) mapping."""
 
     def test_strategy_not_found(self) -> None:
         """Strategy not found → 400."""
         exc = ValueError("Strategy not found: missing")
-        http_exc = HTTPException(status_code=400, detail=str(exc))
-        assert http_exc.status_code == 400
-        assert "Strategy not found" in http_exc.detail
+        api_exc = BadRequestError(str(exc))
+        assert api_exc.status_code == 400
+        assert "Strategy not found" in api_exc.message
 
     def test_invalid_dates(self) -> None:
         """Invalid dates → 400."""
         exc = ValueError("日期范围无效: start_date=2025-06-30 > end_date=2025-01-01")
-        http_exc = HTTPException(status_code=400, detail=str(exc))
-        assert http_exc.status_code == 400
-        assert "日期范围无效" in http_exc.detail
+        api_exc = BadRequestError(str(exc))
+        assert api_exc.status_code == 400
+        assert "日期范围无效" in api_exc.message
 
     def test_factor_compile_failure(self) -> None:
         """Factor compile failure → 400."""
         exc = ValueError("编译失败 (signal_0): bad expr")
-        http_exc = HTTPException(status_code=400, detail=str(exc))
-        assert http_exc.status_code == 400
-        assert "编译失败" in http_exc.detail
+        api_exc = BadRequestError(str(exc))
+        assert api_exc.status_code == 400
+        assert "编译失败" in api_exc.message
 
 
 class TestBuildFlowParams:
@@ -229,36 +229,48 @@ class TestBuildFlowParams:
         assert params["parameter_overrides"] == ("key1=val1", "key2=val2")
 
 
-class TestMapBacktestError:
-    """Tests for _map_backtest_error — 统一错误映射 (F21)."""
+class TestRaiseBacktestError:
+    """Tests for _raise_backtest_error — 统一错误映射 (F21)."""
 
-    def test_not_found_maps_to_404(self) -> None:
+    def test_not_found_raises_404(self) -> None:
         """'not found' 错误映射为 404."""
-        from ditto_interfaces.api.routes.backtest import _map_backtest_error
+        from ditto_interfaces.api.errors import NotFoundError
+        from ditto_interfaces.api.routes.backtest import _raise_backtest_error
 
         exc = ValueError("Run not found: missing")
-        assert _map_backtest_error(exc) == 404
+        with pytest.raises(NotFoundError) as exc_info:
+            _raise_backtest_error(exc)
+        assert exc_info.value.status_code == 404
 
-    def test_status_conflict_maps_to_409(self) -> None:
+    def test_status_conflict_raises_409(self) -> None:
         """状态冲突错误映射为 409."""
-        from ditto_interfaces.api.routes.backtest import _map_backtest_error
+        from ditto_interfaces.api.errors import ConflictError
+        from ditto_interfaces.api.routes.backtest import _raise_backtest_error
 
         exc = ValueError("Cannot cancel run in 'completed' status")
-        assert _map_backtest_error(exc) == 409
+        with pytest.raises(ConflictError) as exc_info:
+            _raise_backtest_error(exc)
+        assert exc_info.value.status_code == 409
 
-    def test_generic_error_maps_to_409(self) -> None:
+    def test_generic_error_raises_409(self) -> None:
         """非 not found 错误默认映射为 409."""
-        from ditto_interfaces.api.routes.backtest import _map_backtest_error
+        from ditto_interfaces.api.errors import ConflictError
+        from ditto_interfaces.api.routes.backtest import _raise_backtest_error
 
         exc = ValueError("Some other error")
-        assert _map_backtest_error(exc) == 409
+        with pytest.raises(ConflictError) as exc_info:
+            _raise_backtest_error(exc)
+        assert exc_info.value.status_code == 409
 
     def test_case_insensitive_matching(self) -> None:
         """大小写不敏感匹配 'Not Found'."""
-        from ditto_interfaces.api.routes.backtest import _map_backtest_error
+        from ditto_interfaces.api.errors import NotFoundError
+        from ditto_interfaces.api.routes.backtest import _raise_backtest_error
 
         exc = ValueError("Run Not Found: xyz")
-        assert _map_backtest_error(exc) == 404
+        with pytest.raises(NotFoundError) as exc_info:
+            _raise_backtest_error(exc)
+        assert exc_info.value.status_code == 404
 
 
 class TestRunInProcess:

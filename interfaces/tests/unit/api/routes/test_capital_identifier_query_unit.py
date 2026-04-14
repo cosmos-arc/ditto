@@ -97,19 +97,19 @@ class TestResolveIdentifier:
         )
         assert result == 2_000_001
 
-    def test_no_identifier_raises_422(self) -> None:
-        """No identifier provided should raise HTTPException 422."""
-        from fastapi import HTTPException
+    def test_no_identifier_raises_400(self) -> None:
+        """No identifier provided should raise BadRequestError 400."""
+        from ditto_interfaces.api.errors import BadRequestError
 
         mock_meta = MagicMock()
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BadRequestError) as exc_info:
             _resolve_identifier(
                 mock_meta,
                 instrument_id=None,
                 standard_ticker=None,
                 ticker=None,
             )
-        assert exc_info.value.status_code == 422
+        assert exc_info.value.status_code == 400
 
     def test_identifier_not_found_returns_none(self) -> None:
         """IdentifierNotFoundError resolved to None should return None."""
@@ -124,14 +124,14 @@ class TestResolveIdentifier:
         assert result is None
 
     def test_ambiguous_ticker_raises_400(self) -> None:
-        """AmbiguousTickerError should raise HTTPException 400."""
-        from fastapi import HTTPException
+        """AmbiguousTickerError should raise BadRequestError 400."""
+        from ditto_interfaces.api.errors import BadRequestError
 
         mock_meta = MagicMock()
         mock_meta.resolve_instrument_identifier.side_effect = AmbiguousTickerError(
             ticker="000001", matches=[]
         )
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(BadRequestError) as exc_info:
             _resolve_identifier(
                 mock_meta,
                 instrument_id=None,

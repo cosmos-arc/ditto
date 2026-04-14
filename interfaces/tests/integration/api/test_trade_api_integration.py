@@ -33,9 +33,10 @@ from ditto_app.query.comparison import ComparisonQueryFacade
 from ditto_app.query.portfolio_actual import PnlSummary, PortfolioActualQueryFacade
 from ditto_app.query.signal import SignalQueryFacade
 from ditto_app.query.trade import TradeQueryFacade
+from ditto_interfaces.api.errors import APIError
 from ditto_interfaces.api.routes.trade import router
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from ditto_interfaces.middleware import api_error_handler
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 # ---------------------------------------------------------------------------
@@ -111,17 +112,13 @@ def app(
         def status_handler(self) -> UpdateIntentStatusHandler:
             return mock_status_handler
 
-    @app.exception_handler(ValueError)
-    async def value_error_handler(request: Request, exc: ValueError):
-        return JSONResponse(status_code=500, content={"detail": str(exc)})
-
-    @app.exception_handler(Exception)
-    async def general_error_handler(request: Request, exc: Exception):
-        return JSONResponse(status_code=500, content={"detail": str(exc)})
-
     container = make_async_container(TestProvider())
     setup_dishka(container=container, app=app)
     app.include_router(router, prefix="/api/v1")
+
+    # 注册 APIError 异常处理器
+    app.add_exception_handler(APIError, api_error_handler)
+
     return app
 
 

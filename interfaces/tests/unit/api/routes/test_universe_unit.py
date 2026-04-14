@@ -15,6 +15,7 @@ from ditto_app.command.universe import (
     DeleteCustomUniverseCommand,
     UpdateCustomUniverseCommand,
 )
+from ditto_interfaces.api.errors import BadRequestError, ForbiddenError, NotFoundError
 from ditto_interfaces.models.common import APIResponse
 from ditto_interfaces.models.universe import (
     CreateUniverseRequest,
@@ -22,7 +23,6 @@ from ditto_interfaces.models.universe import (
     UpdateUniverseRequest,
     to_universe_response,
 )
-from fastapi import HTTPException
 from pydantic import ValidationError
 
 # ---------------------------------------------------------------------------
@@ -262,61 +262,58 @@ class TestAPIResponseWrapping:
 
 
 # ---------------------------------------------------------------------------
-# Error handler mapping (ValueError → HTTPException)
+# Error handler mapping (ValueError → APIError)
 # ---------------------------------------------------------------------------
 
 
 class TestErrorHandlerMapping:
-    """Tests for ValueError → HTTPException mapping."""
+    """Tests for ValueError → APIError mapping."""
 
     def test_create_duplicate_id_returns_400(self) -> None:
-        """创建重复 universe_id → ValueError → HTTPException(400)."""
+        """创建重复 universe_id → ValueError → BadRequestError(400)."""
         exc = ValueError("Universe already exists: my-u")
-        http_exc = HTTPException(status_code=400, detail=str(exc))
-        assert http_exc.status_code == 400
-        assert "already exists" in http_exc.detail
+        api_exc = BadRequestError(str(exc))
+        assert api_exc.status_code == 400
+        assert "already exists" in api_exc.message
 
     def test_update_not_found_returns_404(self) -> None:
-        """更新不存在的 universe → ValueError → HTTPException(404)."""
+        """更新不存在的 universe → ValueError → NotFoundError(404)."""
         exc = ValueError("Universe not found: missing")
-        http_exc = HTTPException(status_code=404, detail=str(exc))
-        assert http_exc.status_code == 404
-        assert "not found" in http_exc.detail
+        api_exc = NotFoundError(str(exc))
+        assert api_exc.status_code == 404
+        assert "not found" in api_exc.message
 
     def test_update_preset_returns_403(self) -> None:
-        """更新预设 universe → PermissionError → HTTPException(403)."""
+        """更新预设 universe → PermissionError → ForbiddenError(403)."""
         exc = PermissionError(
             "Preset universe cannot be modified 'csi300' (type=preset)"
         )
-        http_exc = HTTPException(status_code=403, detail=str(exc))
-        assert http_exc.status_code == 403
-        assert "cannot be modified" in http_exc.detail
+        api_exc = ForbiddenError(str(exc))
+        assert api_exc.status_code == 403
+        assert "cannot be modified" in api_exc.message
 
     def test_delete_preset_returns_403(self) -> None:
-        """删除预设 universe → ValueError(含 'preset') → HTTPException(403)."""
+        """删除预设 universe → ValueError(含 'preset') → ForbiddenError(403)."""
         exc = ValueError("Cannot delete preset universe 'hs300' (type=preset)")
         msg = str(exc)
         # 路由层判断: "preset" in msg → 403
         assert "preset" in msg
-        http_exc = HTTPException(status_code=403, detail=msg)
-        assert http_exc.status_code == 403
-        assert "preset" in http_exc.detail
+        api_exc = ForbiddenError(msg)
+        assert api_exc.status_code == 403
+        assert "preset" in api_exc.message
 
     def test_delete_not_found_returns_404(self) -> None:
-        """删除不存在的 universe → ValueError(不含 'preset') → HTTPException(404)."""
+        """删除不存在的 universe → ValueError(不含 'preset') → NotFoundError(404)."""
         exc = ValueError("Universe not found: missing")
         msg = str(exc)
         assert "preset" not in msg
-        http_exc = HTTPException(status_code=404, detail=msg)
-        assert http_exc.status_code == 404
-        assert "not found" in http_exc.detail
+        api_exc = NotFoundError(msg)
+        assert api_exc.status_code == 404
+        assert "not found" in api_exc.message
 
     def test_get_universe_not_found_returns_404(self) -> None:
-        """get_universe 不存在 → HTTPException(404) 直接构造."""
+        """get_universe 不存在 → NotFoundError(404) 直接构造."""
         universe_id = "nonexistent"
-        http_exc = HTTPException(
-            status_code=404,
-            detail=f"Universe not found: {universe_id}",
-        )
-        assert http_exc.status_code == 404
-        assert http_exc.detail == "Universe not found: nonexistent"
+        api_exc = NotFoundError(f"Universe not found: {universe_id}")
+        assert api_exc.status_code == 404
+        assert api_exc.message == "Universe not found: nonexistent"

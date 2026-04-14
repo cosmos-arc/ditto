@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated
+from typing import Annotated, Never
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
@@ -35,9 +35,15 @@ from ditto_app.query.comparison import ComparisonMetrics, ComparisonQueryFacade
 from ditto_app.query.portfolio_actual import PnlSummary, PortfolioActualQueryFacade
 from ditto_app.query.signal import SignalQueryFacade
 from ditto_app.query.trade import TradeQueryFacade
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
-from ditto_interfaces.models.common import APIResponse
+from ditto_interfaces.api.deps import pagination_params
+from ditto_interfaces.api.errors import BadRequestError, ConflictError, NotFoundError
+from ditto_interfaces.models.common import (
+    APIResponse,
+    PaginationRequest,
+    PaginationResponse,
+)
 from ditto_interfaces.models.trade import (
     ComparisonMetricsResponse,
     FillResponse,
@@ -51,14 +57,14 @@ from ditto_interfaces.models.trade import (
 router = APIRouter(prefix="/trade", tags=["trade"])
 
 
-def _map_trade_error(exc: ValueError) -> int:
-    """将 Trade 业务 ValueError 映射为 HTTP 状态码."""
+def _raise_trade_error(exc: ValueError) -> Never:
+    """将 Trade 业务 ValueError 映射为对应的 APIError 并抛出."""
     msg = str(exc).lower()
     if "not found" in msg:
-        return 404
+        raise NotFoundError(str(exc)) from exc
     if "transition" in msg:
-        return 409
-    return 400
+        raise ConflictError(str(exc)) from exc
+    raise BadRequestError(str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +163,7 @@ async def list_intents(
     strategy_id: str = Query(..., description="策略 ID"),
     signal_date: str | None = Query(None, description="信号日期"),
     status: str | None = Query(None, description="状态过滤"),
+    pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[TradeIntentResponse]]:
     """列出交易意图."""
     intents = await asyncio.to_thread(
@@ -165,7 +172,15 @@ async def list_intents(
         signal_date=signal_date,
         status=status,
     )
-    return APIResponse(data=[to_intent_response(i) for i in intents])
+    all_intents = [to_intent_response(i) for i in intents]
+    total = len(all_intents)
+    page = all_intents[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=pagination.limit, offset=pagination.offset
+        ),
+    )
 
 
 @router.put("/intents/{intent_id}/status", response_model=APIResponse[bool])
@@ -183,7 +198,7 @@ async def update_intent_status(
     try:
         result = await asyncio.to_thread(handler.handle, cmd)
     except ValueError as exc:
-        raise HTTPException(status_code=_map_trade_error(exc), detail=str(exc)) from exc
+        _raise_trade_error(exc)
     return APIResponse(data=result)
 
 
@@ -215,7 +230,7 @@ async def record_fill(
     try:
         fill = await asyncio.to_thread(handler.handle, cmd)
     except ValueError as exc:
-        raise HTTPException(status_code=_map_trade_error(exc), detail=str(exc)) from exc
+        _raise_trade_error(exc)
     return APIResponse(data=to_fill_response(fill))
 
 
@@ -226,6 +241,7 @@ async def list_fills(
     strategy_id: str = Query(..., description="策略 ID"),
     start_date: str | None = Query(None, description="起始日期"),
     end_date: str | None = Query(None, description="结束日期"),
+    pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[FillResponse]]:
     """列出成交记录."""
     fills = await asyncio.to_thread(
@@ -234,7 +250,15 @@ async def list_fills(
         start_date=start_date,
         end_date=end_date,
     )
-    return APIResponse(data=[to_fill_response(f) for f in fills])
+    all_fills = [to_fill_response(f) for f in fills]
+    total = len(all_fills)
+    page = all_fills[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=pagination.limit, offset=pagination.offset
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -336,8 +360,5 @@ async def get_comparison(
         run_id=run_id,
     )
     if metrics is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Backtest report not found for run_id={run_id}",
-        )
+        raise NotFoundError(f"Backtest report not found for run_id={run_id}")
     return APIResponse(data=to_comparison_response(metrics))

@@ -13,7 +13,9 @@ from ditto_app.command.strategy import (
     UpdateStrategyHandler,
 )
 from ditto_app.query.strategy import StrategyQueryFacade
+from ditto_interfaces.api.errors import APIError
 from ditto_interfaces.api.routes.strategy import router
+from ditto_interfaces.middleware import api_error_handler
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -70,6 +72,10 @@ def app(
     container = make_async_container(TestProvider())
     setup_dishka(container=container, app=app)
     app.include_router(router, prefix="/api/v1")
+
+    # 注册 APIError 异常处理器，确保 APIError 被正确处理
+    app.add_exception_handler(APIError, api_error_handler)
+
     return app
 
 

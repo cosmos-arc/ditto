@@ -9,9 +9,15 @@ from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_kernel.enums import AssetClass
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends
 
-from ditto_interfaces.models.common import APIResponse
+from ditto_interfaces.api.deps import pagination_params
+from ditto_interfaces.api.errors import NotFoundError
+from ditto_interfaces.models.common import (
+    APIResponse,
+    PaginationRequest,
+    PaginationResponse,
+)
 from ditto_interfaces.models.metadata import (
     Instrument,
     to_instrument,
@@ -21,12 +27,12 @@ from ditto_interfaces.models.metadata import (
 router = APIRouter(prefix="/metadata", tags=["metadata"])
 
 
-@router.get("/instruments/{instrument_id}", response_model=Instrument)
+@router.get("/instruments/{instrument_id}", response_model=APIResponse[Instrument])
 @inject
 async def get_instrument(
     instrument_id: int,
     facade: Annotated[MetadataQueryFacade, FromComponent()],
-) -> Instrument:
+) -> APIResponse[Instrument]:
     """
     获取单个标的详情.
 
@@ -35,17 +41,17 @@ async def get_instrument(
         facade: MetadataQueryFacade 依赖注入
 
     Returns:
-        Instrument 标的信息
+        APIResponse 包含 Instrument 标的信息
 
     Raises:
-        HTTPException: 404 如果标的不存在
+        NotFoundError: 404 如果标的不存在
 
     """
     # 调用 facade（在线程池中执行，避免阻塞事件循环）
     row = await asyncio.to_thread(facade.get_instrument, instrument_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Instrument not found")
-    return to_instrument(row)
+        raise NotFoundError("Instrument not found")
+    return APIResponse(data=to_instrument(row))
 
 
 @router.get("/instruments", response_model=APIResponse[list[Instrument]])
@@ -55,7 +61,7 @@ async def list_instruments(
     asset_class: AssetClass | None = None,
     exchange: str | None = None,
     is_active: bool | None = None,
-    limit: int = Query(default=100, ge=1, le=1000, description="返回数量限制"),
+    pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[Instrument]]:
     """
     查询标的列表.
@@ -64,11 +70,11 @@ async def list_instruments(
         asset_class: 资产类别过滤 (可选)
         exchange: 交易所过滤 (可选)
         is_active: 活跃状态过滤 (可选)
-        limit: 返回数量限制, 默认 100, 范围 1-1000
+        pagination: 分页参数
         facade: MetadataQueryFacade 依赖注入
 
     Returns:
-        APIResponse 包含 Instrument 列表
+        APIResponse 包含 Instrument 列表 + 分页信息
 
     """
     # 构建查询参数
@@ -83,9 +89,15 @@ async def list_instruments(
     )
 
     # 转换为模型列表
-    instruments = to_instrument_list(df)
+    all_instruments = to_instrument_list(df)
 
-    # 应用 limit
-    instruments = instruments[:limit]
+    # 应用分页
+    total = len(all_instruments)
+    page = all_instruments[pagination.offset : pagination.offset + pagination.limit]
 
-    return APIResponse(data=instruments)
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=pagination.limit, offset=pagination.offset
+        ),
+    )
