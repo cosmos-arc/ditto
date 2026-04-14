@@ -9,12 +9,30 @@ from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_data.models import Dataset
 from ditto_infra.foundation import Metrics, logger
+from ditto_infra.services.notification import AlertManager, alert_dq_failure
 from ditto_kernel.quality import DQIssue
 from prefect import task
 
 from ditto_interfaces.jobs.context import create_prefect_host
 
-_DEFAULT_DATASETS = ["etf_daily", "index_daily", "stock_daily", "adj_factor"]
+_DEFAULT_DATASETS = [
+    "etf_daily",
+    "index_daily",
+    "stock_daily",
+    "adj_factor",
+    "index_weight",
+    "balance_sheet",
+    "income_statement",
+    "cash_flow",
+    "dividend",
+    "corporate_actions",
+    "valuation_metrics",
+    "margin_trading",
+    "pledge_ratio",
+    "macro_indicators",
+    "fx_daily",
+    "commodity_daily",
+]
 
 
 @task(
@@ -254,7 +272,9 @@ def _build_batch_summary(
 
 def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
     """
-    发送 DQ 告警通知。
+    发送 DQ 告警通知.
+
+    通过 AlertManager 发送多渠道告警；获取失败时退化为日志记录。
 
     Args:
         trade_date: 交易日期
@@ -266,11 +286,23 @@ def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
         event="dq_alert",
         trade_date=trade_date,
         issue_count=len(issues),
-        issues=[
-            {"level": i.level.value, "rule": i.rule_name, "message": i.message}
-            for i in issues
-        ],
     )
+    try:
+        with create_prefect_host() as container:
+            manager = container.get(AlertManager)
+            failed_rules = [i.rule_name for i in issues]
+            alert_dq_failure(
+                manager=manager,
+                dataset="batch",
+                trade_date=trade_date,
+                failed_rules=failed_rules,
+                error_count=len(issues),
+            )
+    except Exception:
+        logger.warning(
+            "Failed to send DQ alert via AlertManager",
+            event="dq_alert_failed",
+        )
 
 
 @task(

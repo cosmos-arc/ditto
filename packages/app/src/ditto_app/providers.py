@@ -56,6 +56,7 @@ from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunService as StrategyRunLifecycleService,
 )
 from ditto_data.services.trade_service import TradeService
+from ditto_infra.services.notification import AlertManager
 
 # ---------------------------------------------------------------------------
 # App Builder 层
@@ -604,12 +605,14 @@ class AppProcessProvider(Provider):
         dq_engine: QualityEngine,
         market_facade: MarketQueryFacade,
         metadata_facade: MetadataQueryFacade,
+        alert_manager: AlertManager,
     ) -> QualityPatrolService:
         """质量巡检服务（原 L3 批量统计检查）."""
         return QualityPatrolService(
             engine=dq_engine,
             market_facade=market_facade,
             metadata_facade=metadata_facade,
+            alert_manager=alert_manager,
         )
 
     @provide

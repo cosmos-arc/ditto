@@ -1,0 +1,9 @@
+{
+  "alert_type": "dq_failure",
+  "level": "{{ level }}",
+  "timestamp": "{{ timestamp }}",
+  "dataset": "{{ dataset }}",
+  "trade_date": "{{ trade_date }}",
+  "error_count": {{ error_count }},
+  "failed_rules": {{ failed_rules | tojson }}
+}

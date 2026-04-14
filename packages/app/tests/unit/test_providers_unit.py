@@ -50,6 +50,7 @@ from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_infra.foundation.cache import DataCache
 from ditto_infra.foundation.config.environment import Environment
+from ditto_infra.services.notification import AlertManager
 
 # ---------------------------------------------------------------------------
 # Test fixtures: 辅助 Provider（替代 Interfaces 层 ConfigProvider）
@@ -130,6 +131,19 @@ def _runtime_deps_provider() -> Provider:
             return MagicMock(spec=MarketService)
 
     return RuntimeDepsProvider()
+
+
+def _notification_provider() -> Provider:
+    """测试用通知 Provider — 提供 mock AlertManager."""
+
+    class NotificationProvider(Provider):
+        scope = Scope.APP
+
+        @provide
+        def alert_manager(self) -> AlertManager:
+            return MagicMock(spec=AlertManager)
+
+    return NotificationProvider()
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +237,7 @@ class TestAppProviderIntegration:
             MacroProvider(),
             DerivedProvider(),
             TradeProvider(),
+            _notification_provider(),
             *get_app_providers(),
             _runtime_deps_provider(),
         )

@@ -13,6 +13,7 @@ import polars as pl
 import polars.exceptions as pl_exceptions
 from ditto_data.quality.protocols import QualityEngineProtocol
 from ditto_infra.foundation import logger
+from ditto_infra.services.notification import AlertManager, alert_dq_failure
 from ditto_kernel.quality import DQIssue, DQResult
 
 from ditto_app.query.market import MarketQueryFacade
@@ -41,6 +42,7 @@ class QualityPatrolService:
         engine: QualityEngineProtocol,
         market_facade: MarketQueryFacade,
         metadata_facade: MetadataQueryFacade,
+        alert_manager: AlertManager | None = None,
     ) -> None:
         """
         初始化质量巡检服务.
@@ -49,11 +51,13 @@ class QualityPatrolService:
             engine: 质量引擎实例
             market_facade: 行情查询 facade，用于数据访问
             metadata_facade: 元数据查询 facade，用于数据访问
+            alert_manager: 告警管理器，可选。未配置时退化为日志告警。
 
         """
         self._engine = engine
         self._market_facade = market_facade
         self._metadata_facade = metadata_facade
+        self._alert_manager = alert_manager
 
     def check_dataset(
         self,
@@ -258,20 +262,28 @@ class QualityPatrolService:
         """
         发送 DQ 告警通知.
 
+        通过 AlertManager 发送多渠道告警；未配置时退化为日志记录。
+
         Args:
             trade_date: 交易日期
             dataset: 数据集名称
             issues: DQ 问题列表
 
         """
+        failed_rules = [i.rule_name for i in issues]
         logger.warning(
             "DQ alert notification",
             event="dq_alert",
             trade_date=trade_date,
             dataset=dataset,
             issue_count=len(issues),
-            issues=[
-                {"level": i.level.value, "rule": i.rule_name, "message": i.message}
-                for i in issues
-            ],
+        )
+        if self._alert_manager is None:
+            return
+        alert_dq_failure(
+            manager=self._alert_manager,
+            dataset=dataset,
+            trade_date=trade_date,
+            failed_rules=failed_rules,
+            error_count=len(issues),
         )

@@ -738,13 +738,13 @@ Sprint 2: V1 策略包（F1 部分 + F9）✅ Done
   └─ 策略 seed specs（ETF 行业轮动 + ETF 趋势择时 + 个股选股轮动）
   验收: 116 因子 (105 expression + 11 python) ✅ | 3 seed specs ✅ | CI gate 0 errors ✅
 
-Sprint 3: 数据和因子发布契约（F2 + F3 + F10）
+Sprint 3: 数据和因子发布契约（F2 + F3 + F10）✅ Done
   ├─ F3: DQ 规则 YAML 文件（11 个数据集）
-  ├─ F2: daily_ingestion_flow 扩展至全部 T1 数据集
-  ├─ F10: DQ 告警集成（接入 AlertManager）
+  ├─ F2: dq_batch_check 扩展至全部有 DQ 规则的数据集（16 个）
+  ├─ F10: DQ 告警集成 AlertManager（patrol.py + dq_batch.py + 3 通知模板）
   ├─ F1.6: 3 个代表因子 IC/分层收益验证（价值/动量/质量各 1）
-  └─ 因子 PIT 数据可用性 + 缺失率验证
-  验收: DQ 覆盖全数据集 + 告警可触达 + 3 因子 IC 验证
+  └─ 因子 PIT 数据可用性 + 缺失率验证（11 测试 + 10 已知 gap 记录）
+  验收: 5325 tests passed ✅ | pyright 0 errors ✅ | ruff clean ✅ | arch 24 contracts ✅
 
 Sprint 4: 产品 API 闭环（F5 + F6 + F7）
   ├─ F6: APIResponse 统一包装（6+ 端点）

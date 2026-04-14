@@ -28,6 +28,7 @@ from ditto_data.services import DerivedQueryService
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_interfaces.registry import ConfigProvider
+from ditto_interfaces.registry.infra import NotificationProvider
 
 
 def _sources_provider() -> Provider:
@@ -64,6 +65,7 @@ def _make_full_container():
         MacroProvider(),
         DerivedProvider(),
         TradeProvider(),
+        NotificationProvider(),
         *get_app_providers(),
     )
 

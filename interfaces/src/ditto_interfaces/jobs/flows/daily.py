@@ -4,7 +4,7 @@
 该模块实现 T0 → T1 → T3 的依赖编排：
 - T0: 元数据任务（calendar, stock_basic, etf_basic）
 - T1: 增量任务（etf_daily, stock_daily, stock_status, adj_factor, fund_adj）
-- T3: 数据质量检查
+- T3: 数据质量检查（覆盖所有有 DQ 规则的数据集）
 
 Flow 功能：
 - 非交易日跳过逻辑
@@ -89,7 +89,7 @@ def daily_ingestion_flow(
     1. 验证交易日
     2. 执行 T0 元数据任务（并行）
     3. 执行 T1 增量任务（并行，依赖 T0）
-    4. 触发 T3 数据质量检查
+    4. 触发 T3 数据质量检查（覆盖所有有 DQ 规则的数据集）
 
     使用 Prefect 原生依赖机制（@task + wait_for）实现声明式编排。
 
@@ -185,7 +185,6 @@ def daily_ingestion_flow(
     # 5. 触发 DQC（等待 T1 任务完成）
     dqc_future: PrefectFuture[dict[str, Any]] = dq_batch_check.submit(  # pyright: ignore[reportCallIssue, reportUnknownMemberType, reportUnknownVariableType]
         trade_date=trade_date,
-        datasets=["etf_daily", "index_daily", "stock_daily", "adj_factor"],
         wait_for=t1_futures,
     )
     dqc_results: dict[str, Any] = dqc_future.result()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]

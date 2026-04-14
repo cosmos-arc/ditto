@@ -22,8 +22,8 @@ ditto_app 禁止 → ditto_interfaces ❌
 
 ## App→Infra Scope 限制
 
-App 层仅允许使用 `ditto_infra.foundation`（缓存、配置、日志、工具），**禁止**直接使用 `ditto_infra.services`（通知等）。
-通知编排应在 Interfaces 层完成。
+App 层允许使用 `ditto_infra.foundation` 和 `ditto_infra.services`（通知、告警等），**禁止**直接使用 `ditto_infra.config`。
+配置加载由 Interfaces 层负责。
 
 ## CQRS 模块结构
 

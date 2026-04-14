@@ -1,0 +1,34 @@
+# 公司行为 DQ 规则
+dataset: corporate_actions
+description: "公司行为数据质量检查规则"
+
+# 技术类: 技术校验（写入时强制阻断）
+technical:
+  - rule: not_null
+    columns: [instrument_id, action_type, announcement_date]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, action_type, announcement_date]
+    message: "主键 (instrument_id, action_type, announcement_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      action_type: str
+      announcement_date: date
+      effective_date: date
+      description: str
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business:
+  - rule: expression
+    name: valid_action_type
+    expr: "action_type IN ('split', 'dividend', 'rights_issue', 'bonus_share', 'spinoff', 'merger', 'delisting')"
+    message: "公司行为类型不在已知范围内"
