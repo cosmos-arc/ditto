@@ -478,34 +478,42 @@
     {
       "id": "factor-analysis",
       "file": "page-factor-analysis.html",
-      "status": "v2-in-progress",
-      "score": 8,
+      "status": "v6-done",
+      "score": 9.0,
       "styleAnchor": null,
-      "rounds": 1,
+      "rounds": 7,
       "createdAt": "2026-04-12",
+      "inlineStyles": {
+        "before": 221,
+        "after": 1
+      },
       "stateCoverage": {
         "tabs": 4,
         "overlays": 4,
         "stateVariants": 10,
         "coveragePercent": 100
       },
-      "note": "round-1: tokens-shell + brand glow + rail glow + reduced motion. 226 inline styles remain for future CSS extraction pass"
+      "note": "221→1 inline styles, heatmap token convergence 18→4, 86 duplicate class fixes, context strip, 4-tab sidebar balance (3 sections each), mini ratio bars, overlay accent border"
     },
     {
       "id": "backtest-result",
       "file": "page-backtest-result.html",
-      "status": "v2-in-progress",
-      "score": 8.2,
+      "status": "v6-done",
+      "score": 9.6,
       "styleAnchor": null,
-      "rounds": 1,
+      "rounds": 2,
       "createdAt": "2026-04-12",
+      "inlineStyles": {
+        "before": 79,
+        "after": 1
+      },
       "stateCoverage": {
         "tabs": 6,
         "overlays": 4,
         "stateVariants": 11,
         "coveragePercent": 100
       },
-      "note": "round-1: tokens-shell + brand glow + rail glow + reduced motion. 178 inline styles remain for future CSS extraction pass"
+      "note": "79→1 inline styles, attribution bar value labels, KPI change semantics, overlay activation rule"
     },
     {
       "id": "markets-calendar",
