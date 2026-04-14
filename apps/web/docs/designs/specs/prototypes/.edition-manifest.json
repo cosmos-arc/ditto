@@ -297,14 +297,15 @@
       "id": "risk-center",
       "file": "page-risk-center.html",
       "status": "v5-done",
-      "score": 9.3,
+      "score": 9.4,
       "styleAnchor": "platform",
       "rounds": 1,
       "roundsV2": 1,
       "roundsV3": 1,
+      "roundsV6": 1,
       "inlineStyles": {
         "before": 101,
-        "after": 20
+        "after": 1
       },
       "jsModules": {
         "ticker": 7,
@@ -320,7 +321,8 @@
         "overlays": 3,
         "stateVariants": 5,
         "coveragePercent": 100
-      }
+      },
+      "note": "round-2: inline styles 20→1, Brand DNA overlay accent border, tab accent color, tab bar brand gradient, breach bar 4px, overlay btn min-height"
     },
     {
       "id": "ai-overview",

@@ -1269,6 +1269,82 @@
     /* ── Page-specific utilities ── */
     .py-4 { padding: var(--space-4) 0; }
     .mb-4 { margin-bottom: var(--space-4); }
+
+    /* ══════════════════════════════════════════════
+     * Round 2 Enhancements — Brand DNA + Inline Cleanup
+     * ══════════════════════════════════════════════ */
+
+    /* Brand DNA #3: Overlay accent border */
+    .overlay-sheet {
+      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+    }
+    .overlay-drawer {
+      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+    }
+
+    /* Overlay button min-height alignment */
+    .overlay-btn {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    /* Tab active text color → brand-accent */
+    .shell-analytical:has(#risk-summary:checked) label[for="risk-summary"],
+    .shell-analytical:has(#risk-stress:checked) label[for="risk-stress"],
+    .shell-analytical:has(#risk-incidents:checked) label[for="risk-incidents"] {
+      color: var(--brand-accent);
+    }
+
+    /* Risk tab bar brand gradient bottom line */
+    .risk-tab-bar::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--brand-accent) 35%, transparent) 50%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+    .risk-tab-bar {
+      position: relative;
+    }
+
+    /* Breach progress bar — 3px → 4px */
+    .breach-progress {
+      height: 4px;
+      border-radius: 2px;
+    }
+
+    /* Inline style replacements */
+    .risk-strip-band {
+      padding: var(--space-12) var(--density-gutter);
+    }
+    .risk-activity-tabs-col {
+      min-height: 0;
+    }
+    .breach-fill-warn-69 { width: 69%; }
+    .breach-fill-warn-80 { width: 80.2%; }
+    .breach-fill-ok-49 { width: 49.2%; }
+    .stress-bar-h55 { height: 55%; }
+    .stress-bar-h21 { height: 21%; }
+    .stress-bar-h99 { height: 99%; }
+    .stress-bar-h77 { height: 77%; }
+    .stress-bar-h100 { height: 100%; }
+    .stress-bar-h66 { height: 66%; }
+    .incident-grid-single {
+      grid-template-columns: 1fr;
+    }
+    .state-loading-row {
+      flex-direction: row;
+      gap: var(--space-12);
+    }
   </style>
 </head>
 <body>
@@ -1441,7 +1517,7 @@
     </div>
 
     <!-- ═══ Risk Gauges — DonutGauge ═══ -->
-    <div class="flex-row-center gap-16 border-b-subtle" style="padding:var(--space-12) var(--density-gutter);" data-mouse-glow="true" data-mouse-glow-size="180px">
+    <div class="flex-row-center gap-16 border-b-subtle risk-strip-band" data-mouse-glow="true" data-mouse-glow-size="180px">
       <div class="flex-row-center gap-10" data-tooltip="VaR 额度使用率，当前 68% 安全" data-tooltip-delay="500">
         <svg data-donut='{"value":0.68,"label":"68%","color":"oklch(0.746 0.165 50)","size":72}' aria-label="风险利用率"></svg>
         <div class="flex-col gap-1">
@@ -1552,7 +1628,7 @@
           <div class="context-rail risk-activity">
 
             <!-- JS Tabs: Breaches / Stress -->
-            <div data-tabs="risk-activity-tabs" class="flex-col col-auto" style="min-height:0;">
+            <div data-tabs="risk-activity-tabs" class="flex-col col-auto risk-activity-tabs-col">
               <div class="flex-row-center gap-2 border-b-subtle py-4 mb-4">
                 <button data-tab-target="breaches" class="filter-btn active" aria-selected="true">Breaches</button>
                 <button data-tab-target="stress-test" class="filter-btn" aria-selected="false">Stress Test</button>
@@ -1588,7 +1664,7 @@
                         <div class="breach-label">最大回撤</div>
                         <div class="breach-detail">当前 3.45% / 阈值 5.00%</div>
                         <div class="breach-progress">
-                          <div class="breach-progress-fill warn" style="width: 69%;"></div>
+                          <div class="breach-progress-fill warn breach-fill-warn-69"></div>
                         </div>
                       </div>
                       <span class="breach-value warn">69%</span>
@@ -1606,7 +1682,7 @@
                         <div class="breach-label">科技行业集中度</div>
                         <div class="breach-detail">当前 32.1% / 限制 40.00%</div>
                         <div class="breach-progress">
-                          <div class="breach-progress-fill warn" style="width: 80.2%;"></div>
+                          <div class="breach-progress-fill warn breach-fill-warn-80"></div>
                         </div>
                       </div>
                       <span class="breach-value warn">80.2%</span>
@@ -1624,7 +1700,7 @@
                         <div class="breach-label">VaR(95%)</div>
                         <div class="breach-detail">当前 1.23% / 阈值 2.50%</div>
                         <div class="breach-progress">
-                          <div class="breach-progress-fill ok" style="width: 49.2%;"></div>
+                          <div class="breach-progress-fill ok breach-fill-ok-49"></div>
                         </div>
                       </div>
                       <span class="breach-value ok">49.2%</span>
@@ -1871,42 +1947,42 @@
           <div class="stress-bar-chart">
             <div class="stress-bar-item" data-tooltip="极端下跌 -15%: 预计亏损 -8.23%，未突破风控线" data-tooltip-delay="300">
               <span class="stress-bar-value"><span data-counter="-8.23" data-counter-decimals="2" data-counter-suffix="%">-8.23%</span></span>
-              <div class="stress-bar pass" style="height:55%;">
+              <div class="stress-bar pass stress-bar-h55">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">极端下跌</span>
             </div>
             <div class="stress-bar-item" data-tooltip="利率上行 +100bp: 预计亏损 -3.17%，未突破风控线" data-tooltip-delay="300">
               <span class="stress-bar-value"><span data-counter="-3.17" data-counter-decimals="2" data-counter-suffix="%">-3.17%</span></span>
-              <div class="stress-bar pass" style="height:21%;">
+              <div class="stress-bar pass stress-bar-h21">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">利率上行</span>
             </div>
             <div class="stress-bar-item" data-tooltip="流动性危机: 预计亏损 -14.82%，突破风控线 -12%" data-tooltip-delay="300">
               <span class="stress-bar-value fail"><span data-counter="-14.82" data-counter-decimals="2" data-counter-suffix="%">-14.82%</span></span>
-              <div class="stress-bar fail" style="height:99%;">
+              <div class="stress-bar fail stress-bar-h99">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">流动性危机</span>
             </div>
             <div class="stress-bar-item" data-tooltip="黑天鹅事件: 预计亏损 -11.50%，临界接近风控线" data-tooltip-delay="300">
               <span class="stress-bar-value"><span data-counter="-11.50" data-counter-decimals="2" data-counter-suffix="%">-11.50%</span></span>
-              <div class="stress-bar pass" style="height:77%;">
+              <div class="stress-bar pass stress-bar-h77">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">黑天鹅</span>
             </div>
             <div class="stress-bar-item" data-tooltip="行业崩盘 -20%: 预计亏损 -16.33%，大幅突破风控线" data-tooltip-delay="300">
               <span class="stress-bar-value fail"><span data-counter="-16.33" data-counter-decimals="2" data-counter-suffix="%">-16.33%</span></span>
-              <div class="stress-bar fail" style="height:100%;">
+              <div class="stress-bar fail stress-bar-h100">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">行业崩盘</span>
             </div>
             <div class="stress-bar-item" data-tooltip="尾部风险 +3σ: 预计亏损 -9.87%，未突破风控线" data-tooltip-delay="300">
               <span class="stress-bar-value"><span data-counter="-9.87" data-counter-decimals="2" data-counter-suffix="%">-9.87%</span></span>
-              <div class="stress-bar pass" style="height:66%;">
+              <div class="stress-bar pass stress-bar-h66">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">尾部风险</span>
@@ -1945,7 +2021,7 @@
 
         <!-- Incident Detail View -->
         <div class="tab-section-content">
-          <div class="incident-timeline-list" style="grid-template-columns: 1fr;">
+          <div class="incident-timeline-list incident-grid-single">
 
             <!-- Incident 1 — with breach detail trigger -->
             <div class="incident-item">
@@ -2241,7 +2317,7 @@
       <div class="gallery-card__label">Risk Strip — Loading State</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
-        <div class="state-loading" style="flex-direction:row;gap:var(--space-12);">
+        <div class="state-loading state-loading-row">
           <div class="skeleton skeleton-badge"></div>
           <div class="skeleton skeleton-badge"></div>
           <div class="skeleton skeleton-badge"></div>
