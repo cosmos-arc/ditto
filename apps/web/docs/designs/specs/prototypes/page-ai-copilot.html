@@ -262,7 +262,7 @@
     .mode-tab.active {
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
-      border-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+      border-color: var(--brand-accent-subtle);
     }
 
     .mode-tab svg {
@@ -591,8 +591,8 @@
                   box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .structured-card:hover {
-      border-color: color-mix(in oklch, var(--brand-accent) 25%, var(--border-subtle));
-      box-shadow: 0 2px 12px color-mix(in oklch, var(--agent-running-fg) 6%, transparent);
+      border-color: var(--border-default);
+      box-shadow: 0 2px 12px var(--brand-accent-subtle);
     }
     .structured-card:hover .structured-card-title {
       color: var(--brand-accent);
@@ -789,7 +789,7 @@
     }
     .input-send-btn:hover {
       background: var(--brand-accent-hover);
-      box-shadow: 0 0 12px color-mix(in oklch, var(--agent-running-fg) 25%, transparent);
+      box-shadow: 0 0 12px var(--brand-accent-subtle);
     }
     .input-send-btn:active {
       transform: scale(0.92);
@@ -1029,7 +1029,7 @@
     .action-card:hover {
       background: var(--interaction-hover-subtle-bg);
       border-color: var(--border-default);
-      box-shadow: 0 1px 6px color-mix(in oklch, var(--text-primary) 3%, transparent);
+      box-shadow: 0 1px 6px oklch(0 0 0 / 0.08);
     }
 
     .action-card-icon {
@@ -1386,7 +1386,7 @@
       [data-tab="copilot-market-analysis"] {
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
-      border-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+      border-color: var(--brand-accent-subtle);
     }
 
     /* Stock Discovery */
@@ -1396,7 +1396,7 @@
       [data-tab="copilot-stock-discovery"] {
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
-      border-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+      border-color: var(--brand-accent-subtle);
     }
 
     /* Strategy Draft */
@@ -1406,7 +1406,7 @@
       [data-tab="copilot-strategy-draft"] {
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
-      border-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+      border-color: var(--brand-accent-subtle);
     }
 
     /* Factor Discovery */
@@ -1416,7 +1416,7 @@
       [data-tab="copilot-factor-discovery"] {
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
-      border-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+      border-color: var(--brand-accent-subtle);
     }
 
     /* Panel base — hide all panels by default, show only checked */
@@ -1675,8 +1675,8 @@
       padding: var(--space-6) var(--space-12);
       margin-bottom: var(--space-12);
       margin-left: 36px;
-      background: color-mix(in oklch, var(--agent-running-fg) 6%, transparent);
-      border: 1px solid color-mix(in oklch, var(--agent-running-fg) 12%, transparent);
+      background: var(--agent-running-bg);
+      border: 1px solid var(--brand-accent-subtle);
       border-radius: var(--radius-6);
       position: relative;
       overflow: hidden;
@@ -1771,7 +1771,7 @@
     }
     .thinking-step-icon--active {
       background: var(--agent-running-fg);
-      box-shadow: 0 0 6px color-mix(in oklch, var(--agent-running-fg) 30%, transparent);
+      box-shadow: 0 0 6px var(--agent-running-fg);
       animation: dot-pulse 2.5s ease-in-out infinite;
     }
 
@@ -1839,7 +1839,7 @@
       background: linear-gradient(
         90deg,
         transparent,
-        color-mix(in oklch, currentColor 40%, transparent)
+        oklch(from currentColor l c h / 0.4)
       );
       opacity: 0;
       transition: opacity var(--motion-duration-normal) var(--motion-easing-standard);
@@ -2020,7 +2020,7 @@
       position: relative;
     }
     .analysis-step--muted {
-      border-left-color: color-mix(in oklch, var(--brand-accent) 40%, transparent);
+      border-left-color: oklch(from var(--brand-accent) l c h / 0.4);
     }
     .analysis-step--subtle {
       border-left-color: var(--border-subtle);
@@ -2082,8 +2082,8 @@
                   box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .rec-card:hover {
-      border-color: color-mix(in oklch, var(--brand-accent) 20%, var(--border-subtle));
-      box-shadow: 0 2px 8px color-mix(in oklch, var(--text-primary) 4%, transparent);
+      border-color: var(--border-default);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.10);
     }
     .rec-card-header {
       display: flex;
