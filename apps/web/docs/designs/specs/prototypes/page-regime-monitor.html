@@ -51,7 +51,7 @@
   <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <!-- Noise Texture (SVG filter) -->
-  <svg style="position:absolute;width:0;height:0;">
+  <svg class="noise-svg-source">
     <filter id="noise-filter">
       <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
       <feColorMatrix type="saturate" values="0"/>
@@ -1916,6 +1916,48 @@
       from { transform: scale(0); opacity: 0; }
       to { transform: scale(1); opacity: 1; }
     }
+
+    /* Inline style cleanup */
+
+    /* SVG noise source */
+    .noise-svg-source { position: absolute; width: 0; height: 0; }
+
+    /* Chart Y-axis label positions */
+    .chart-y-label--top-10 { top: 10%; }
+    .chart-y-label--top-35 { top: 35%; }
+    .chart-y-label--top-60 { top: 60%; }
+    .chart-y-label--top-85 { top: 85%; }
+
+    /* Regime timeline segment flex ratios */
+    .tl-seg--risk-off { flex: 40; position: relative; }
+    .tl-seg--mixed { flex: 22; }
+    .tl-seg--risk-on { flex: 15; }
+
+    /* Factor bar widths */
+    .factor-bar-w-78 { width: 78%; }
+    .factor-bar-w-71 { width: 71%; }
+    .factor-bar-w-82 { width: 82%; }
+    .factor-bar-w-55 { width: 55%; }
+
+    /* Signal bar heights */
+    .sb-h-12 { height: 12px; }
+    .sb-h-14 { height: 14px; }
+    .sb-h-16 { height: 16px; }
+    .sb-h-18 { height: 18px; }
+    .sb-h-20 { height: 20px; }
+    .sb-h-22 { height: 22px; }
+    .sb-h-24 { height: 24px; }
+    .sb-h-26 { height: 26px; }
+    .sb-h-28 { height: 28px; }
+    .sb-h-30 { height: 30px; }
+    .sb-h-32 { height: 32px; }
+
+    /* Fit bar widths */
+    .fit-bar-w-88 { width: 88%; }
+    .fit-bar-w-82 { width: 82%; }
+    .fit-bar-w-58 { width: 58%; }
+    .fit-bar-w-32 { width: 32%; }
+
   </style>
 </head>
 <body>
@@ -2136,10 +2178,10 @@
                     <div class="chart-grid-lines"></div>
                     <div class="chart-axis-y"></div>
                     <div class="chart-y-labels">
-                      <span class="chart-y-label" style="top: 10%;">100</span>
-                      <span class="chart-y-label" style="top: 35%;">75</span>
-                      <span class="chart-y-label" style="top: 60%;">50</span>
-                      <span class="chart-y-label" style="top: 85%;">25</span>
+                      <span class="chart-y-label chart-y-label--top-10">100</span>
+                      <span class="chart-y-label chart-y-label--top-35">75</span>
+                      <span class="chart-y-label chart-y-label--top-60">50</span>
+                      <span class="chart-y-label chart-y-label--top-85">25</span>
                     </div>
                     <div class="chart-axis-x"></div>
                     <div class="regime-zone risk-off"></div>
@@ -2166,11 +2208,11 @@
 
                     <!-- Mini timeline bar at bottom of chart -->
                     <div class="regime-timeline-viz regime-timeline-viz--chart">
-                      <div class="regime-timeline-segment regime-timeline-segment--risk-off" style="flex:40; position:relative;">
+                      <div class="regime-timeline-segment regime-timeline-segment--risk-off tl-seg--risk-off">
                         <span class="regime-timeline-date">01-15</span>
                       </div>
-                      <div class="regime-timeline-segment regime-timeline-segment--mixed" style="flex:22;"></div>
-                      <div class="regime-timeline-segment regime-timeline-segment--risk-on regime-timeline-segment--active" style="flex:15;"></div>
+                      <div class="regime-timeline-segment regime-timeline-segment--mixed tl-seg--mixed"></div>
+                      <div class="regime-timeline-segment regime-timeline-segment--risk-on regime-timeline-segment--active tl-seg--risk-on"></div>
                     </div>
                   </div>
                 </div>
@@ -2246,7 +2288,7 @@
                             <span class="factor-item__value factor-item__value--up">78%</span>
                           </div>
                           <div class="factor-bar-track">
-                            <div class="factor-bar-fill factor-bar-fill--up" style="width: 78%;"></div>
+                            <div class="factor-bar-fill factor-bar-fill--up factor-bar-w-78"></div>
                           </div>
                         </div>
                       </div>
@@ -2267,7 +2309,7 @@
                             <span class="factor-item__value factor-item__value--up">71%</span>
                           </div>
                           <div class="factor-bar-track">
-                            <div class="factor-bar-fill factor-bar-fill--up" style="width: 71%;"></div>
+                            <div class="factor-bar-fill factor-bar-fill--up factor-bar-w-71"></div>
                           </div>
                         </div>
                       </div>
@@ -2288,7 +2330,7 @@
                             <span class="factor-item__value factor-item__value--ok">82%</span>
                           </div>
                           <div class="factor-bar-track">
-                            <div class="factor-bar-fill factor-bar-fill--ok" style="width: 82%;"></div>
+                            <div class="factor-bar-fill factor-bar-fill--ok factor-bar-w-82"></div>
                           </div>
                         </div>
                       </div>
@@ -2309,7 +2351,7 @@
                             <span class="factor-item__value factor-item__value--neutral">55%</span>
                           </div>
                           <div class="factor-bar-track">
-                            <div class="factor-bar-fill factor-bar-fill--neutral" style="width: 55%;"></div>
+                            <div class="factor-bar-fill factor-bar-fill--neutral factor-bar-w-55"></div>
                           </div>
                         </div>
                       </div>
@@ -2395,11 +2437,11 @@
                   <span class="switch-to-tag risk-on">Risk-On</span>
                   <!-- Signal strength bars -->
                   <div class="signal-bars">
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:18px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:24px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:28px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:22px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:30px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-18"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-24"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-28"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-22"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-30"></div>
                   </div>
                 </div>
                 <div class="switch-trigger">触发因子：北向资金连续 5 日净流入，IVIX 降至 20 以下</div>
@@ -2432,11 +2474,11 @@
                   <span class="switch-arrow">→</span>
                   <span class="switch-to-tag mixed">Mixed</span>
                   <div class="signal-bars">
-                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:12px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--neutral" style="height:16px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:20px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:18px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--neutral" style="height:14px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear sb-h-12"></div>
+                    <div class="signal-bars__bar signal-bars__bar--neutral sb-h-16"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-20"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-18"></div>
+                    <div class="signal-bars__bar signal-bars__bar--neutral sb-h-14"></div>
                   </div>
                 </div>
                 <div class="switch-trigger">触发因子：两会政策落地，央行降准 50bp，市场情绪回暖</div>
@@ -2456,11 +2498,11 @@
                   <span class="switch-arrow">→</span>
                   <span class="switch-from-tag">Risk-Off</span>
                   <div class="signal-bars">
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:24px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:20px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:28px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:30px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:26px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-24"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-20"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear sb-h-28"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear sb-h-30"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear sb-h-26"></div>
                   </div>
                 </div>
                 <div class="switch-trigger">触发因子：美联储鹰派发言、人民币快速贬值、北向资金大幅流出</div>
@@ -2480,11 +2522,11 @@
                   <span class="switch-arrow">→</span>
                   <span class="switch-to-tag risk-on">Risk-On</span>
                   <div class="signal-bars">
-                    <div class="signal-bars__bar signal-bars__bar--neutral" style="height:14px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:20px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:26px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:28px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:32px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--neutral sb-h-14"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-20"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-26"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-28"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-32"></div>
                   </div>
                 </div>
                 <div class="switch-trigger">触发因子：年末机构调仓完成，增量资金入场，涨跌比持续 > 2:1</div>
@@ -2504,11 +2546,11 @@
                   <span class="switch-arrow">→</span>
                   <span class="switch-to-tag mixed">Mixed</span>
                   <div class="signal-bars">
-                    <div class="signal-bars__bar signal-bars__bar--bull" style="height:26px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--neutral" style="height:22px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:18px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--bear" style="height:24px;"></div>
-                    <div class="signal-bars__bar signal-bars__bar--neutral" style="height:16px;"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bull sb-h-26"></div>
+                    <div class="signal-bars__bar signal-bars__bar--neutral sb-h-22"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear sb-h-18"></div>
+                    <div class="signal-bars__bar signal-bars__bar--bear sb-h-24"></div>
+                    <div class="signal-bars__bar signal-bars__bar--neutral sb-h-16"></div>
                   </div>
                 </div>
                 <div class="switch-trigger">触发因子：三季报密集披露期，科技板块业绩不及预期，波动率上升</div>
@@ -2557,7 +2599,7 @@
                   <div class="fit-bar">
                     <span class="strategy-fit good">良好</span>
                     <div class="fit-bar__track">
-                      <div class="fit-bar__fill fit-bar__fill--good" style="width: 88%;"></div>
+                      <div class="fit-bar__fill fit-bar__fill--good fit-bar-w-88"></div>
                     </div>
                     <span class="fit-bar__value" data-counter="88" data-counter-decimals="0">88</span>
                   </div>
@@ -2574,7 +2616,7 @@
                   <div class="fit-bar">
                     <span class="strategy-fit good">良好</span>
                     <div class="fit-bar__track">
-                      <div class="fit-bar__fill fit-bar__fill--good" style="width: 82%;"></div>
+                      <div class="fit-bar__fill fit-bar__fill--good fit-bar-w-82"></div>
                     </div>
                     <span class="fit-bar__value" data-counter="82" data-counter-decimals="0">82</span>
                   </div>
@@ -2591,7 +2633,7 @@
                   <div class="fit-bar">
                     <span class="strategy-fit moderate">一般</span>
                     <div class="fit-bar__track">
-                      <div class="fit-bar__fill fit-bar__fill--moderate" style="width: 58%;"></div>
+                      <div class="fit-bar__fill fit-bar__fill--moderate fit-bar-w-58"></div>
                     </div>
                     <span class="fit-bar__value" data-counter="58" data-counter-decimals="0">58</span>
                   </div>
@@ -2608,7 +2650,7 @@
                   <div class="fit-bar">
                     <span class="strategy-fit poor">不佳</span>
                     <div class="fit-bar__track">
-                      <div class="fit-bar__fill fit-bar__fill--poor" style="width: 32%;"></div>
+                      <div class="fit-bar__fill fit-bar__fill--poor fit-bar-w-32"></div>
                     </div>
                     <span class="fit-bar__value" data-counter="32" data-counter-decimals="0">32</span>
                   </div>
