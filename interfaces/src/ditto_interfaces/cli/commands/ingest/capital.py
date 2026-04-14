@@ -8,6 +8,9 @@ from ditto_interfaces.cli.commands.factory import (
     create_daily_command,
     create_instrument_command,
 )
+from ditto_interfaces.cli.context import create_executor
+from ditto_interfaces.cli.utils.output import print_ingestion_result
+from ditto_interfaces.cli.utils.validation import validate_date_format
 
 app = typer.Typer(help="资本面数据摄取")
 
@@ -39,3 +42,24 @@ def pledge(
 ) -> None:
     """摄取股权质押."""
     return _pledge_impl(ctx, date, force)
+
+
+@app.command("index-weight")
+def index_weight(
+    ctx: typer.Context,
+    index_code: str = typer.Argument(..., help="指数代码 (e.g., 000300.SH)"),
+    date: str = typer.Argument(..., help="交易日期 (YYYY-MM-DD)"),
+    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
+) -> None:
+    """
+    摄取指数成分股权重.
+
+    按指数代码+日期摄取成分股权重:
+
+        pixi run ingest capital index-weight 000300.SH 2024-01-15
+    """
+    validate_date_format(date)
+
+    with create_executor() as executor:
+        result = executor.ingest_daily("index_weight", date, force)
+        print_ingestion_result(result, ctx.obj["verbose"])

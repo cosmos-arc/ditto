@@ -24,6 +24,10 @@ from ditto_engine.alpha.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
 )
+from ditto_engine.alpha.templates.etf_trend_swing import (
+    ETFTrendSwingConfig,
+    build_etf_trend_swing_pipeline,
+)
 from ditto_engine.backtest.data_feed import DataFeed, ProviderBackedDataFeed
 from ditto_engine.backtest.engine import (
     EngineConfig,
@@ -405,6 +409,18 @@ def etf_rotation_pipeline() -> Any:
     """etf_rotation 策略 Pipeline — top_k=3, equal_weight。"""
     config = ETFRotationConfig(top_k=3, cash_target=0.0)
     return build_etf_rotation_pipeline(config)
+
+
+@pytest.fixture
+def etf_trend_swing_pipeline() -> Any:
+    """etf_trend_swing 策略 Pipeline — top_k=3, equal_weight, trailing_stop=8%。"""
+    config = ETFTrendSwingConfig(
+        max_positions=3,
+        cash_target=0.0,
+        trailing_stop_pct=0.08,
+        signal_column="signal_value",
+    )
+    return build_etf_trend_swing_pipeline(config)
 
 
 @pytest.fixture

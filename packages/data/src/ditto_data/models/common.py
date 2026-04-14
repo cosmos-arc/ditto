@@ -94,6 +94,9 @@ class Dataset(StrEnum):
     # Capital 域扩展
     CORPORATE_ACTIONS = "corporate_actions"
 
+    # Index 域（参考类数据）
+    INDEX_WEIGHT = "index_weight"
+
     @property
     def asset_class(self) -> AssetClass | None:
         """
@@ -121,7 +124,7 @@ class Dataset(StrEnum):
         if self in (Dataset.ETF_DAILY, Dataset.FUND_ADJ):
             return AssetClass.ETF
         # Index 数据集
-        if self == Dataset.INDEX_DAILY:
+        if self in (Dataset.INDEX_DAILY, Dataset.INDEX_WEIGHT):
             return AssetClass.INDEX
         return None
 
@@ -139,6 +142,7 @@ class Dataset(StrEnum):
             Dataset.STOCK_DAILY,
             Dataset.ETF_DAILY,
             Dataset.INDEX_DAILY,
+            Dataset.INDEX_WEIGHT,
             Dataset.STOCK_STATUS,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,

@@ -7,6 +7,7 @@ StrategySpec — 策略定义的核心语义契约.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from ditto_kernel.enums import ImpactModel
@@ -166,3 +167,64 @@ class StrategySpec:
     tags: tuple[str, ...] = ()
     signal_expressions: tuple[str, ...] = ()
     signal_weights: tuple[float, ...] = ()
+
+    _VALID_TEMPLATES = frozenset(
+        {"etf_rotation", "etf_trend_swing", "stock_selection", "stock_sector_rotation"},
+    )
+    _VALID_FREQUENCIES = frozenset({"D", "W", "M", "Q"})
+    _BENCHMARK_RE = re.compile(r"^\d{6}\.(SH|SZ)$")
+
+    def __post_init__(self) -> None:
+        """验证 StrategySpec 各字段的合法性。"""
+        # 必填字段非空
+        required = ("strategy_id", "name", "template", "universe", "asset_class")
+        for field_name in required:
+            value = getattr(self, field_name)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"StrategySpec.{field_name} must be non-empty")
+
+        # template 枚举
+        if self.template not in self._VALID_TEMPLATES:
+            valid = sorted(self._VALID_TEMPLATES)
+            raise ValueError(
+                f"StrategySpec.template must be one of {valid}, got '{self.template}'"
+            )
+
+        # benchmark 格式
+        if self.benchmark is not None and not self._BENCHMARK_RE.match(self.benchmark):
+            raise ValueError(
+                "StrategySpec.benchmark must match 'NNNNNN.SH|SZ', "
+                + f" got '{self.benchmark}'"
+            )
+
+        # execution.frequency 枚举
+        if self.execution.frequency not in self._VALID_FREQUENCIES:
+            valid_freq = sorted(self._VALID_FREQUENCIES)
+            raise ValueError(
+                "StrategySpec.execution.frequency must be one of "
+                + f"{valid_freq}, got '{self.execution.frequency}'"
+            )
+
+        # cost_model 边界
+        cm = self.execution.cost_model
+        if not (0.0 <= cm.commission_rate <= 1.0):
+            raise ValueError(
+                "StrategySpec.commission_rate must be in [0, 1], "
+                + f"got {cm.commission_rate}"
+            )
+        if cm.slippage_bps < 0:
+            raise ValueError(
+                "StrategySpec.slippage_bps must be >= 0, " + f"got {cm.slippage_bps}"
+            )
+
+        # signal_expressions / signal_weights 长度一致性
+        if (
+            self.signal_expressions
+            and self.signal_weights
+            and len(self.signal_expressions) != len(self.signal_weights)
+        ):
+            raise ValueError(
+                f"StrategySpec.signal_weights length ({len(self.signal_weights)}) "
+                + "must match signal_expressions length "
+                + f"({len(self.signal_expressions)})"
+            )

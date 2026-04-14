@@ -39,6 +39,7 @@ from ditto_analytics.evaluation.report import (
 )
 
 __all__ = [
+    "ClosePriceProvider",
     "EvaluationConfig",
     "FactorEvaluator",
     "ForwardReturnProvider",
@@ -85,6 +86,20 @@ class ForwardReturnProvider(Protocol):
         ...
 
 
+class ClosePriceProvider(Protocol):
+    """Protocol for providing close price data for IC decay computation."""
+
+    def get_close_prices(
+        self,
+        asset_class: str,
+        start: str,
+        end: str,
+        adj: str = "none",
+    ) -> pl.DataFrame:
+        """Return close prices as ``[date, entity, close]``."""
+        ...
+
+
 class RiskFactorProvider(Protocol):
     """Provide risk factor data for Fama-MacBeth and factor exposure."""
 
@@ -116,10 +131,12 @@ class FactorEvaluator:
         self,
         forward_return_provider: ForwardReturnProvider,
         *,
+        close_price_provider: ClosePriceProvider | None = None,
         risk_factor_provider: RiskFactorProvider | None = None,
         risk_factor_ids: list[str] | None = None,
     ) -> None:
         self._fr_provider = forward_return_provider
+        self._cp_provider = close_price_provider
         self._rf_provider = risk_factor_provider
         self._rf_ids = risk_factor_ids or []
 
@@ -197,10 +214,18 @@ class FactorEvaluator:
         pearson_ic_summary = ic_summary(pearson_ic_df)
 
         # IC decay + half-life
-        # ic_decay needs close prices; use factor values as proxy
+        close_df = None
+        if self._cp_provider is not None:
+            close_df = self._cp_provider.get_close_prices(
+                asset_class=config.asset_class,
+                start=effective_start,
+                end=effective_end,
+                adj=config.adj,
+            )
         decay_results, half_life = _compute_ic_decay_safe(
             factor_df_clean,
             effective_lags,
+            close_df=close_df,
         )
 
         # IC autocorrelation
@@ -411,10 +436,26 @@ def _prepare_data(
 def _compute_ic_decay_safe(
     factor_df: pl.DataFrame,
     lags: list[int],
+    *,
+    close_df: pl.DataFrame | None = None,
 ) -> tuple[list[tuple[int, float]], float | None]:
-    """Safely compute IC decay, returning empty list on failure."""
+    """
+    Safely compute IC decay, returning empty list on failure.
+
+    When *close_df* is provided, forward returns are derived from actual
+    close prices (correct IC decay).  When omitted, factor values are
+    used as pseudo-close (computes factor autocorrelation, not true IC
+    decay) — kept for backward compatibility but semantically wrong.
+    """
     try:
-        # Use factor values as a pseudo-close for IC decay estimation
+        if close_df is not None:
+            return ic_decay(
+                factor_df,
+                close_df,
+                lags=lags,
+                factor_col="value",
+            )
+        # Fallback: use factor values as pseudo-close (legacy behavior)
         pseudo_close = factor_df.select(
             pl.col("trade_date"),
             pl.col("instrument_id"),

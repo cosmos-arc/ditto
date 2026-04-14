@@ -184,3 +184,240 @@ class TestStrategySpec:
         )
         with pytest.raises(FrozenInstanceError):
             spec.name = "Changed"  # type: ignore[misc]
+
+
+class TestStrategySpecValidation:
+    """F0.4: StrategySpec.__post_init__ 参数校验测试."""
+
+    # -- 必填字段非空 --
+
+    @pytest.mark.parametrize(
+        ("field_name", "value"),
+        [
+            ("strategy_id", ""),
+            ("name", ""),
+            ("template", ""),
+            ("universe", ""),
+            ("asset_class", ""),
+        ],
+    )
+    def test_required_field_non_empty(self, field_name: str, value: str) -> None:
+        from ditto_engine.alpha.specs import StrategySpec
+
+        with pytest.raises(ValueError, match="must be non-empty"):
+            StrategySpec(
+                strategy_id=value if field_name == "strategy_id" else "id",
+                name=value if field_name == "name" else "Name",
+                template=value if field_name == "template" else "etf_rotation",
+                universe=value if field_name == "universe" else "csi_etf_broad",
+                asset_class=value if field_name == "asset_class" else "etf",
+            )
+
+    # -- template 枚举值 --
+
+    def test_template_valid_values(self) -> None:
+        from ditto_engine.alpha.specs import StrategySpec
+
+        valid_templates = (
+            "etf_rotation",
+            "etf_trend_swing",
+            "stock_selection",
+            "stock_sector_rotation",
+        )
+        for tpl in valid_templates:
+            spec = StrategySpec(
+                strategy_id="id",
+                name="N",
+                template=tpl,
+                universe="u",
+                asset_class="etf",
+            )
+            assert spec.template == tpl
+
+    def test_template_invalid_raises(self) -> None:
+        from ditto_engine.alpha.specs import StrategySpec
+
+        with pytest.raises(ValueError, match="template"):
+            StrategySpec(
+                strategy_id="id",
+                name="N",
+                template="bad_template",
+                universe="u",
+                asset_class="etf",
+            )
+
+    # -- benchmark 格式 --
+
+    def test_benchmark_none_ok(self) -> None:
+        from ditto_engine.alpha.specs import StrategySpec
+
+        spec = StrategySpec(
+            strategy_id="id",
+            name="N",
+            template="etf_rotation",
+            universe="u",
+            asset_class="etf",
+            benchmark=None,
+        )
+        assert spec.benchmark is None
+
+    def test_benchmark_valid_format(self) -> None:
+        from ditto_engine.alpha.specs import StrategySpec
+
+        for code in ("000300.SH", "399006.SZ", "510300.SH"):
+            spec = StrategySpec(
+                strategy_id="id",
+                name="N",
+                template="etf_rotation",
+                universe="u",
+                asset_class="etf",
+                benchmark=code,
+            )
+            assert spec.benchmark == code
+
+    def test_benchmark_invalid_format_raises(self) -> None:
+        from ditto_engine.alpha.specs import StrategySpec
+
+        for bad in ("INVALID", "000300", "000300.SH.SZ", "SH000300"):
+            with pytest.raises(ValueError, match="benchmark"):
+                StrategySpec(
+                    strategy_id="id",
+                    name="N",
+                    template="etf_rotation",
+                    universe="u",
+                    asset_class="etf",
+                    benchmark=bad,
+                )
+
+    # -- execution.frequency 枚举值 --
+
+    @pytest.mark.parametrize("freq", ["D", "W", "M", "Q"])
+    def test_execution_frequency_valid(self, freq: str) -> None:
+        from ditto_engine.alpha.specs import ExecutionSpec, StrategySpec
+
+        spec = StrategySpec(
+            strategy_id="id",
+            name="N",
+            template="etf_rotation",
+            universe="u",
+            asset_class="etf",
+            execution=ExecutionSpec(frequency=freq),
+        )
+        assert spec.execution.frequency == freq
+
+    def test_execution_frequency_invalid_raises(self) -> None:
+        from ditto_engine.alpha.specs import ExecutionSpec, StrategySpec
+
+        with pytest.raises(ValueError, match="frequency"):
+            StrategySpec(
+                strategy_id="id",
+                name="N",
+                template="etf_rotation",
+                universe="u",
+                asset_class="etf",
+                execution=ExecutionSpec(frequency="Y"),
+            )
+
+    # -- cost_model 边界 --
+
+    def test_commission_rate_negative_raises(self) -> None:
+        from ditto_engine.alpha.specs import CostModelSpec, ExecutionSpec, StrategySpec
+
+        with pytest.raises(ValueError, match="commission_rate"):
+            StrategySpec(
+                strategy_id="id",
+                name="N",
+                template="etf_rotation",
+                universe="u",
+                asset_class="etf",
+                execution=ExecutionSpec(
+                    cost_model=CostModelSpec(commission_rate=-0.01),
+                ),
+            )
+
+    def test_commission_rate_exceeds_one_raises(self) -> None:
+        from ditto_engine.alpha.specs import CostModelSpec, ExecutionSpec, StrategySpec
+
+        with pytest.raises(ValueError, match="commission_rate"):
+            StrategySpec(
+                strategy_id="id",
+                name="N",
+                template="etf_rotation",
+                universe="u",
+                asset_class="etf",
+                execution=ExecutionSpec(
+                    cost_model=CostModelSpec(commission_rate=1.5),
+                ),
+            )
+
+    def test_commission_rate_zero_and_one_ok(self) -> None:
+        from ditto_engine.alpha.specs import CostModelSpec, ExecutionSpec, StrategySpec
+
+        for rate in (0.0, 1.0):
+            spec = StrategySpec(
+                strategy_id="id",
+                name="N",
+                template="etf_rotation",
+                universe="u",
+                asset_class="etf",
+                execution=ExecutionSpec(cost_model=CostModelSpec(commission_rate=rate)),
+            )
+            assert spec.execution.cost_model.commission_rate == rate
+
+    def test_slippage_bps_negative_raises(self) -> None:
+        from ditto_engine.alpha.specs import CostModelSpec, ExecutionSpec, StrategySpec
+
+        with pytest.raises(ValueError, match="slippage_bps"):
+            StrategySpec(
+                strategy_id="id",
+                name="N",
+                template="etf_rotation",
+                universe="u",
+                asset_class="etf",
+                execution=ExecutionSpec(
+                    cost_model=CostModelSpec(slippage_bps=-1.0),
+                ),
+            )
+
+    def test_slippage_bps_zero_ok(self) -> None:
+        from ditto_engine.alpha.specs import CostModelSpec, ExecutionSpec, StrategySpec
+
+        spec = StrategySpec(
+            strategy_id="id",
+            name="N",
+            template="etf_rotation",
+            universe="u",
+            asset_class="etf",
+            execution=ExecutionSpec(cost_model=CostModelSpec(slippage_bps=0.0)),
+        )
+        assert spec.execution.cost_model.slippage_bps == 0.0
+
+    # -- signal_expressions / signal_weights 一致性 --
+
+    def test_signal_weights_mismatch_raises(self) -> None:
+        from ditto_engine.alpha.specs import StrategySpec
+
+        with pytest.raises(ValueError, match="signal_weights"):
+            StrategySpec(
+                strategy_id="id",
+                name="N",
+                template="etf_rotation",
+                universe="u",
+                asset_class="etf",
+                signal_expressions=("expr1", "expr2"),
+                signal_weights=(0.5,),
+            )
+
+    def test_signal_weights_matching_ok(self) -> None:
+        from ditto_engine.alpha.specs import StrategySpec
+
+        spec = StrategySpec(
+            strategy_id="id",
+            name="N",
+            template="etf_rotation",
+            universe="u",
+            asset_class="etf",
+            signal_expressions=("expr1", "expr2"),
+            signal_weights=(0.6, 0.4),
+        )
+        assert len(spec.signal_expressions) == len(spec.signal_weights)

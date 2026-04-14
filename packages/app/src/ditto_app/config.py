@@ -511,6 +511,15 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
         task_name="ingest_corporate_actions",
         priority=65,
     ),
+    Dataset.INDEX_WEIGHT: create_t1_config(
+        dataset=Dataset.INDEX_WEIGHT,
+        description="指数成分股权重",
+        typical_available_time=time(19, 0),
+        depends_on=[Dataset.INDEX_BASIC],
+        critical_fields=["index_code", "con_code", "weight", "trade_date"],
+        task_name="ingest_index_weight",
+        priority=50,
+    ),
 }
 
 

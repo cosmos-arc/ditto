@@ -245,6 +245,29 @@ class TestMaxDrawdownRule:
 
         assert actions == []
 
+    def test_reset_clears_peak_nav_state(self) -> None:
+        """reset() 应清除 _peak_nav，使后续回测从零开始。"""
+        rule = MaxDrawdownRule(warning_threshold=0.10, emergency_threshold=0.20)
+        sl = _make_slice()
+
+        # Backtest 1: peak reaches 110k, then drops to 99k -> alert
+        rule.scan(_make_account_view(nav=100000.0), sl)
+        rule.scan(_make_account_view(nav=110000.0), sl)
+        actions = rule.scan(_make_account_view(nav=99000.0), sl)
+        assert len(actions) == 1
+
+        # Reset
+        rule.reset()
+
+        # Backtest 2: start from scratch, peak=50k, drop to 45k -> 10% alert
+        rule.scan(_make_account_view(nav=50000.0), sl)
+        actions = rule.scan(_make_account_view(nav=45000.0), sl)
+        assert len(actions) == 1
+
+        # Without reset, the old peak (110k) would pollute: drawdown would be
+        # (110k - 45k) / 110k = 59%, far above threshold.
+        # With reset, drawdown is (50k - 45k) / 50k = 10%.
+
     def test_negative_peak_nav_impossible(self) -> None:
         """NAV cannot be negative, but even if somehow set, peak stays 0."""
         rule = MaxDrawdownRule()

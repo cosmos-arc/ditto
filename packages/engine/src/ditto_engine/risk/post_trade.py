@@ -126,6 +126,11 @@ class PostTradeRiskGuard(Protocol):
         """扫描当前组合状态，返回所有触发的风控行为。"""
         ...
 
+    def reset(self) -> None:
+        """重置内部状态，确保跨回测隔离。"""
+        ...
+        ...
+
 
 # ---------------------------------------------------------------------------
 # MaxDrawdownRule — stateful, 追踪峰值 NAV
@@ -159,6 +164,10 @@ class MaxDrawdownRule:
         self._warning_threshold = warning_threshold
         self._emergency_threshold = emergency_threshold
         self._peak_nav: float = 0.0
+
+    def reset(self) -> None:
+        """重置内部峰值 NAV 状态，确保跨回测隔离。"""
+        self._peak_nav = 0.0
 
     def scan(
         self,
@@ -274,6 +283,9 @@ class SingleLossLimitRule:
 
         return actions
 
+    def reset(self) -> None:
+        """无状态规则，no-op。"""
+
 
 # ---------------------------------------------------------------------------
 # ConcentrationLimitRule — stateless
@@ -326,6 +338,9 @@ class ConcentrationLimitRule:
                 )
 
         return actions
+
+    def reset(self) -> None:
+        """无状态规则，no-op。"""
 
 
 # ---------------------------------------------------------------------------
@@ -411,3 +426,8 @@ class CompositePostTradeGuard:
         for rule in self._rules:
             actions.extend(rule.scan(account_view, slice_))
         return actions
+
+    def reset(self) -> None:
+        """重置所有子规则的状态。"""
+        for rule in self._rules:
+            rule.reset()

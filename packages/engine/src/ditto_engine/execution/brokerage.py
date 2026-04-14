@@ -294,6 +294,17 @@ class BacktestBrokerage:
         order = ticket.order
 
         fill_qty = ticket.leaves_quantity
+
+        # 防御性检查：V1 fill model 合约为 all-or-nothing，
+        # filled.fill_event.filled_quantity 应等于 leaves_quantity。
+        # 如 V2 引入部分成交模型，需重构 fill model contract。
+        model_qty = filled.fill_event.filled_quantity
+        if model_qty != fill_qty:
+            raise AssertionError(
+                f"Fill model returned qty {model_qty} != leaves qty {fill_qty} "
+                + f"for order {order.order_id}. V1 fill model is all-or-nothing; "
+                + "partial fills require fill model contract refactoring."
+            )
         cumulative = ticket.filled_quantity + fill_qty
         leaves = order.quantity - cumulative
 
