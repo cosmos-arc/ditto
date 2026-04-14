@@ -10,17 +10,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import TYPE_CHECKING
 
 from ditto_data.models.ingestion import BackfillResult, IngestionResult
 from ditto_infra.foundation import logger
 
 from ditto_app.contracts import IngestDateCommand
-
-if TYPE_CHECKING:
-    from ditto_app.process.ingestion.backfill_manager import BackfillManager
-    from ditto_app.process.ingestion.ports import IngestDateHandlerProtocol
-
+from ditto_app.process.ingestion.backfill_manager import BackfillManager
+from ditto_app.process.ingestion.ports import IngestDateHandlerProtocol
 
 # ---------------------------------------------------------------------------
 # Trigger DTOs

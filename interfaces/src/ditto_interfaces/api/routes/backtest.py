@@ -1,10 +1,25 @@
-"""回测 API 路由."""
+"""
+回测 API 路由.
+
+端点:
+- POST   /backtests/runs                    触发回测
+- POST   /backtests/runs/{id}/cancel         取消回测
+- POST   /backtests/runs/{id}/retry          重试回测
+- GET    /backtests/runs                     列出运行记录
+- GET    /backtests/runs/{id}                获取运行详情
+- GET    /backtests/runs/{id}/trades         成交明细
+- GET    /backtests/runs/{id}/audit          审计记录
+- GET    /backtests/runs/{id}/report         回测报告
+- GET    /backtests/runs/{id}/lineage        运行血统
+- POST   /backtests/runs/{id}/replay         重放验证
+- GET    /backtests/runs/{id}/nav            NAV 序列
+- GET    /backtests/runs/{id}/benchmark      基准 NAV
+"""
 
 from __future__ import annotations
 
 import asyncio
 import dataclasses
-import logging
 from collections.abc import Callable
 from typing import Annotated, Any, cast
 
@@ -26,6 +41,7 @@ from ditto_app.query.backtest_trade import TradeRecord
 from ditto_app.query.lineage import LineageQueryFacade
 from ditto_kernel.enums import RunStatus
 from fastapi import APIRouter, HTTPException, Query
+from loguru import logger
 
 from ditto_interfaces.jobs.flows.backtest import run_backtest_flow
 from ditto_interfaces.models.backtest import (
@@ -45,8 +61,6 @@ from ditto_interfaces.models.lineage import (
     ManifestDiffResponse,
     ReplayResponse,
 )
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
 
@@ -130,8 +144,7 @@ def _build_flow_params(
     return params
 
 
-# TODO(R3): Prefect Worker 异步提交 -- 通过 Prefect Client
-# create_flow_run_from_deployment 将 flow 提交到远程 Worker 执行。
+# V1 使用进程内同步执行，远程 Worker 异步提交待后续迭代实现。
 
 
 def _submit_flow(
@@ -274,14 +287,19 @@ async def retry_run(
 
     # 获取 strategy_id + config_json 用于 flow 提交
     record = await asyncio.to_thread(facade.get_run, new_run_id)
+    if record is None:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Retry created run {new_run_id} but record not found",
+        )
 
     # 后台提交 flow（不阻塞响应）
     flow_params: dict[str, object] = {
         "run_id": new_run_id,
-        "strategy_id": record.strategy_id if record else "",
+        "strategy_id": record.strategy_id,
     }
     # 从 config_json 恢复回测参数（start_date, end_date, initial_cash 等）
-    if record is not None and record.config_json:
+    if record.config_json:
         flow_params.update(_restore_flow_params_from_config(record.config_json))
     on_failure = _make_failure_callback(run_service)
     asyncio.get_running_loop().run_in_executor(

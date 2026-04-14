@@ -128,6 +128,15 @@ ditto_interfaces/
 | 直接返回 dict | Pydantic Model |
 | 裸 try/except | 自定义异常处理 |
 
+### API 路由分组
+
+| Prefix | Tag | 模块 | 说明 |
+|--------|-----|------|------|
+| `/backtests` | backtests | `api/routes/backtest.py` | 回测运行/报告/重放 |
+| `/trade` | trade | `api/routes/trade.py` | 交易闭环（意图/成交/持仓/盈亏/对比） |
+| `/strategies` | strategies | `api/routes/strategy.py` | 策略 CRUD + 发布 |
+| `/universes` | universes | `api/routes/universe.py` | Universe 管理 |
+
 ## Prefect 规范
 
 | 要求 | 说明 |

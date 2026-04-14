@@ -48,6 +48,7 @@ from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import SimpleEventBus
 from ditto_kernel.identity import InstrumentId
 
+from ditto_app.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_app.process.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
@@ -63,10 +64,6 @@ __all__ = [
     "BacktestServiceConfig",
     "BacktestServiceOptions",
 ]
-
-
-_REGIME_DEFAULT_LOOKBACK = 60
-"""Regime detection minimum lookback (covering MomentumIndicator etc.)."""
 
 
 # ---------------------------------------------------------------------------
@@ -344,7 +341,7 @@ class BacktestService:
         data_feed = self._data_feed
         lookback_days = max(
             (expr.analysis.lookback for expr in compiled.expressions),
-            default=_REGIME_DEFAULT_LOOKBACK,
+            default=REGIME_DEFAULT_LOOKBACK,
         )
 
         def _build(ctx: StepContext) -> StrategyInputBundle:
@@ -508,7 +505,7 @@ class BacktestService:
         if self._options.artifact_dir is not None:
             output_dir = Path(self._options.artifact_dir) / run_id
 
-        write_backtest_artifacts(
+        artifacts_map = write_backtest_artifacts(
             report,
             output_dir=output_dir,
             manifest=manifest,
@@ -516,7 +513,9 @@ class BacktestService:
             rebalance_freq=self._config.rebalance_freq,
         )
         # file_path 存储目录路径，匹配读取侧 _build_path 契约（Path(base) / filename）
-        file_path = str(output_dir) if output_dir else ""
+        # 从返回值推导实际目录（artifact_dir=None 时内部解析到系统临时目录）
+        resolved_dir = next(iter(artifacts_map.values())).parent
+        file_path = str(resolved_dir)
 
         artifact = StrategyArtifactRecord(
             artifact_id=f"artifact-{run_id}",

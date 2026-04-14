@@ -14,6 +14,7 @@ ManualTracker — 从 Fill 聚合 → 实际持仓/P&L (含 T+1 交收).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from itertools import groupby
 
 from ditto_app.execution_dto import (
@@ -28,6 +29,61 @@ def _deterministic_uuid(*parts: str) -> str:
     """基于输入部件生成确定性 UUID v5."""
     name = ":".join(parts)
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, name))
+
+
+def _apply_buy_fill(
+    quantity: int,
+    avg_cost: float,
+    fill: ManualExecutionFill,
+    compute_settlement: Callable[[str], str],
+    snapshot_date: str,
+) -> tuple[int, float, int]:
+    """
+    处理买入成交: 加权平均成本计算 + T+1 交收检查.
+
+    Returns:
+        (new_quantity, new_avg_cost, unsettled_buy_increment)
+
+    """
+    old_qty = quantity
+    new_qty = fill.quantity
+    total_qty = old_qty + new_qty
+    if total_qty > 0:
+        avg_cost = (avg_cost * old_qty + fill.fill_price * new_qty) / total_qty
+
+    # T+1: 买入当天冻结
+    settlement = compute_settlement(fill.trade_date)
+    unsettled_buy_increment = new_qty if settlement > snapshot_date else 0
+
+    return total_qty, avg_cost, unsettled_buy_increment
+
+
+def _apply_sell_fill(
+    quantity: int,
+    avg_cost: float,
+    fill: ManualExecutionFill,
+    instrument_id: int,
+) -> tuple[int, float]:
+    """
+    处理卖出成交: 超卖验证 + 已实现盈亏计算.
+
+    Returns:
+        (remaining_quantity, realized_pnl_increment)
+
+    Raises:
+        ValueError: 卖出数量超过当前持仓.
+
+    """
+    sell_qty = fill.quantity
+    if sell_qty > quantity:
+        msg = (
+            f"oversold instrument_id={instrument_id}: "
+            f"trying to sell {sell_qty} but holding {quantity}"
+        )
+        raise ValueError(msg)
+
+    realized_pnl_increment = (fill.fill_price - avg_cost) * sell_qty
+    return quantity - sell_qty, realized_pnl_increment
 
 
 class ManualTracker:
@@ -136,31 +192,26 @@ class ManualTracker:
             total_fees += fill.fee
 
             if fill.direction == "buy":
-                old_qty = quantity
-                new_qty = fill.quantity
-                total_qty = old_qty + new_qty
-                if total_qty > 0:
-                    avg_cost = (
-                        avg_cost * old_qty + fill.fill_price * new_qty
-                    ) / total_qty
-                quantity = total_qty
-
-                # T+1: 买入当天冻结
-                settlement = self.compute_settlement_date(fill.trade_date, cycle=1)
-                if settlement > snapshot_date:
-                    unsettled_buy_quantity += new_qty
+                quantity, avg_cost, unsettled_inc = _apply_buy_fill(
+                    quantity,
+                    avg_cost,
+                    fill,
+                    lambda trade_date: self.compute_settlement_date(
+                        trade_date,
+                        cycle=1,
+                    ),
+                    snapshot_date,
+                )
+                unsettled_buy_quantity += unsettled_inc
 
             elif fill.direction == "sell":
-                sell_qty = fill.quantity
-                if sell_qty > quantity:
-                    msg = (
-                        f"oversold instrument_id={instrument_id}: "
-                        f"trying to sell {sell_qty} but holding {quantity}"
-                    )
-                    raise ValueError(msg)
-                # 已实现盈亏 = (卖出价 - 平均成本) * 卖出数量
-                realized_pnl += (fill.fill_price - avg_cost) * sell_qty
-                quantity -= sell_qty
+                quantity, pnl_inc = _apply_sell_fill(
+                    quantity,
+                    avg_cost,
+                    fill,
+                    instrument_id,
+                )
+                realized_pnl += pnl_inc
 
         # 仅返回 quantity != 0 的持仓
         if quantity == 0:

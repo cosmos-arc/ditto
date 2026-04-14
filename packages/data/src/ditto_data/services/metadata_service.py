@@ -415,6 +415,17 @@ class MetadataService:
         """更新证券域元数据。返回是否成功更新."""
         return self._universe_writer.update_metadata(universe_id, name, description)
 
+    def replace_constituents(
+        self,
+        universe_id: str,
+        records: list[dict[str, Any]],
+        effective_date: str,
+    ) -> int:
+        """原子替换证券域所有当前成分股。返回新增成分数量。"""
+        return self._universe_writer.replace_constituents(
+            universe_id, records, effective_date
+        )
+
     def get_universe_detail(self, universe_id: str) -> dict[str, Any] | None:
         """获取证券域定义。不存在时返回 None."""
         return self._universe_reader.get_universe(universe_id)

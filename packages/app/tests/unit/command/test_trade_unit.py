@@ -495,7 +495,20 @@ class TestRecordFillPartialFillDetection:
 
         intent = _make_intent_record(quantity=1000)
         service.get_intent.return_value = intent
-        service.list_fills.return_value = []
+        # _determine_fill_status 查询累积 fills，save_fill 后数据库含当前 fill
+        service.list_fills.return_value = [
+            ManualExecutionFillRecord(
+                fill_id="fill-full",
+                intent_id="intent-001",
+                strategy_id="strat-alpha",
+                trade_date="2026-04-11",
+                instrument_id=510050,
+                direction="buy",
+                quantity=1000,
+                fill_price=4.15,
+                fee=2.0,
+            ),
+        ]
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
@@ -525,7 +538,19 @@ class TestRecordFillPartialFillDetection:
 
         intent = _make_intent_record(quantity=1000)
         service.get_intent.return_value = intent
-        service.list_fills.return_value = []
+        service.list_fills.return_value = [
+            ManualExecutionFillRecord(
+                fill_id="fill-partial",
+                intent_id="intent-001",
+                strategy_id="strat-alpha",
+                trade_date="2026-04-11",
+                instrument_id=510050,
+                direction="buy",
+                quantity=500,
+                fill_price=4.15,
+                fee=2.0,
+            ),
+        ]
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
@@ -555,7 +580,19 @@ class TestRecordFillPartialFillDetection:
 
         intent = _make_intent_record(quantity=1000)
         service.get_intent.return_value = intent
-        service.list_fills.return_value = []
+        service.list_fills.return_value = [
+            ManualExecutionFillRecord(
+                fill_id="fill-over",
+                intent_id="intent-001",
+                strategy_id="strat-alpha",
+                trade_date="2026-04-11",
+                instrument_id=510050,
+                direction="buy",
+                quantity=1500,
+                fill_price=4.15,
+                fee=2.0,
+            ),
+        ]
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
@@ -575,6 +612,116 @@ class TestRecordFillPartialFillDetection:
         service.update_intent_status.assert_called_once_with(
             "intent-001",
             "filled",
+        )
+
+    def test_cumulative_fills_reach_intent_quantity_returns_filled(self) -> None:
+        """已有部分成交 + 新 fill 使累积量达到 intent 数量 → filled."""
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+
+        intent = _make_intent_record(quantity=1000)
+        service.get_intent.return_value = intent
+
+        # 模拟已有一次部分成交 600 股
+        existing_fill = ManualExecutionFillRecord(
+            fill_id="fill-prev",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=600,
+            fill_price=4.10,
+            fee=2.5,
+        )
+        # list_fills 需要同时返回历史 fill + 新 fill
+        service.list_fills.return_value = [
+            existing_fill,
+            ManualExecutionFillRecord(
+                fill_id="fill-new",
+                intent_id="intent-001",
+                strategy_id="strat-alpha",
+                trade_date="2026-04-11",
+                instrument_id=510050,
+                direction="buy",
+                quantity=400,
+                fill_price=4.15,
+                fee=2.0,
+            ),
+        ]
+        tracker.compute_positions.return_value = []
+        tracker.compute_settlement_date.return_value = "2026-04-14"
+
+        handler = RecordFillHandler(trade_service=service, manual_tracker=tracker)
+        cmd = RecordFillCommand(
+            fill_id="fill-new",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=400,  # 600 + 400 = 1000 == intent quantity
+            fill_price=4.15,
+        )
+        handler.handle(cmd)
+
+        service.update_intent_status.assert_called_once_with(
+            "intent-001",
+            "filled",
+        )
+
+    def test_cumulative_fills_still_below_intent_returns_partial(self) -> None:
+        """已有部分成交 + 新 fill 累积量仍低于 intent → partially_filled."""
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+
+        intent = _make_intent_record(quantity=1000)
+        service.get_intent.return_value = intent
+
+        existing_fill = ManualExecutionFillRecord(
+            fill_id="fill-prev",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=300,
+            fill_price=4.10,
+            fee=1.5,
+        )
+        service.list_fills.return_value = [
+            existing_fill,
+            ManualExecutionFillRecord(
+                fill_id="fill-new",
+                intent_id="intent-001",
+                strategy_id="strat-alpha",
+                trade_date="2026-04-11",
+                instrument_id=510050,
+                direction="buy",
+                quantity=200,
+                fill_price=4.15,
+                fee=1.0,
+            ),
+        ]
+        tracker.compute_positions.return_value = []
+        tracker.compute_settlement_date.return_value = "2026-04-14"
+
+        handler = RecordFillHandler(trade_service=service, manual_tracker=tracker)
+        cmd = RecordFillCommand(
+            fill_id="fill-new",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=200,  # 300 + 200 = 500 < 1000
+            fill_price=4.15,
+        )
+        handler.handle(cmd)
+
+        service.update_intent_status.assert_called_once_with(
+            "intent-001",
+            "partially_filled",
         )
 
     def test_fill_on_terminal_intent_rejected(self) -> None:

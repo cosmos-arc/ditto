@@ -33,6 +33,8 @@ class UpdateCustomUniverseCommand:
     universe_id: str
     name: str
     description: str | None = None
+    members: list[str] | None = None
+    effective_date: str | None = None
 
 
 @dataclass(frozen=True)
@@ -75,7 +77,7 @@ class UpdateCustomUniverseHandler:
         self._service = metadata_service
 
     def handle(self, command: UpdateCustomUniverseCommand) -> dict[str, Any]:
-        """更新自定义 universe 元数据（预设 universe 不可修改）."""
+        """更新自定义 universe 元数据（预设 universe 不可修改）。"""
         existing = self._service.get_universe_detail(command.universe_id)
         if existing is None:
             msg = f"Universe not found: {command.universe_id}"
@@ -92,6 +94,18 @@ class UpdateCustomUniverseHandler:
             command.name,
             command.description,
         )
+        # 成分替换（可选）
+        if command.members is not None:
+            eff_date = command.effective_date or ""
+            records = [
+                {"instrument_id": int(m), "effective_from": eff_date}
+                for m in command.members
+            ]
+            self._service.replace_constituents(
+                command.universe_id,
+                records,
+                command.effective_date or "",
+            )
         return self._service.get_universe_detail(command.universe_id) or existing
 
 

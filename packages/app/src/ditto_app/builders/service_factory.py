@@ -36,6 +36,7 @@ from ditto_app.builders._resolution import (
     resolve_instrument_display,
 )
 from ditto_app.builders.runtime_builder import StrategyRuntimeBuilder
+from ditto_app.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_app.process.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
@@ -60,9 +61,6 @@ __all__ = [
 # Constants
 # ---------------------------------------------------------------------------
 
-_REGIME_DEFAULT_LOOKBACK = 60
-"""Minimum lookback for regime detection (MomentumIndicator, ts_mean, ts_std)."""
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -74,10 +72,10 @@ def _compute_max_lookback(
 ) -> int:
     """计算因子表达式所需最大 lookback 天数."""
     if compiled is None:
-        return _REGIME_DEFAULT_LOOKBACK
+        return REGIME_DEFAULT_LOOKBACK
     return max(
         (expr.analysis.lookback for expr in compiled.expressions),
-        default=_REGIME_DEFAULT_LOOKBACK,
+        default=REGIME_DEFAULT_LOOKBACK,
     )
 
 

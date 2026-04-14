@@ -158,6 +158,52 @@ class TestUpdateCustomUniverseHandler:
         with pytest.raises(ValueError, match="Universe not found"):
             handler.handle(cmd)
 
+    def test_update_with_members_calls_replace_constituents(self) -> None:
+        """更新时传入 members 应调用 replace_constituents."""
+        service = MagicMock()
+        service.get_universe_detail.return_value = {
+            "universe_id": "my-portfolio",
+            "name": "新名称",
+            "universe_type": "custom",
+        }
+        service.update_universe.return_value = True
+        service.replace_constituents.return_value = 3
+        handler = UpdateCustomUniverseHandler(metadata_service=service)
+        cmd = UpdateCustomUniverseCommand(
+            universe_id="my-portfolio",
+            name="新名称",
+            members=["1", "2", "3"],
+            effective_date="2026-04-14",
+        )
+        handler.handle(cmd)
+
+        service.replace_constituents.assert_called_once()
+        call_args = service.replace_constituents.call_args
+        assert call_args[0][0] == "my-portfolio"
+        records = call_args[0][1]
+        assert len(records) == 3
+        assert records[0]["instrument_id"] == 1
+        assert records[0]["effective_from"] == "2026-04-14"
+        assert call_args[0][2] == "2026-04-14"
+
+    def test_update_without_members_skips_replace(self) -> None:
+        """未传 members 时不应调用 replace_constituents."""
+        service = MagicMock()
+        service.get_universe_detail.return_value = {
+            "universe_id": "my-portfolio",
+            "name": "新名称",
+            "universe_type": "custom",
+        }
+        service.update_universe.return_value = True
+        handler = UpdateCustomUniverseHandler(metadata_service=service)
+        cmd = UpdateCustomUniverseCommand(
+            universe_id="my-portfolio",
+            name="新名称",
+        )
+        handler.handle(cmd)
+
+        service.replace_constituents.assert_not_called()
+
 
 class TestDeleteCustomUniverseHandler:
     """Tests for DeleteCustomUniverseHandler."""

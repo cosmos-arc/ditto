@@ -495,13 +495,13 @@ class TestArtifactPersistence:
         },
     )
     @patch("ditto_app.process.execution.backtest_process.build_report")
-    def test_run_artifact_without_dir_file_path_empty(
+    def test_run_artifact_without_dir_file_path_resolved(
         self,
         mock_build_report: MagicMock,
         mock_write_artifacts: MagicMock,
         mock_engine_run: MagicMock,
     ) -> None:
-        """未提供 artifact_dir 时，output_dir 为 None，file_path 为空字符串。"""
+        """未提供 artifact_dir 时，file_path 从 write_backtest_artifacts 返回值推导。"""
         fake_report = MagicMock(spec=BacktestReport)
         fake_report.run_id = "run-001"
         fake_report.final_nav = 1_100_000.0
@@ -531,8 +531,8 @@ class TestArtifactPersistence:
         assert call_args[1]["output_dir"] is None
         mock_artifact.save_artifact.assert_called_once()
         call_arg = mock_artifact.save_artifact.call_args[0][0]
-        # 未指定 artifact_dir 时，file_path 为空（无目录可引用）
-        assert call_arg.file_path == ""
+        # file_path 从 write_backtest_artifacts 返回值的产物目录推导
+        assert call_arg.file_path == "/tmp/ditto/run-001"
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(

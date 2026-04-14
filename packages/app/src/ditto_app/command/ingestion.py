@@ -4,15 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import TYPE_CHECKING
 
 from ditto_data.models.ingestion import IngestionResult
 
 from ditto_app.contracts import IngestDateCommand
-
-if TYPE_CHECKING:
-    from ditto_app.process.ingestion.coordinator import IngestionCoordinator
-
+from ditto_app.process.ingestion.coordinator import IngestionCoordinator
 
 __all__ = [
     "BackfillRangeCommand",

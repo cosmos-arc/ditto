@@ -22,6 +22,9 @@ from ditto_engine.execution.reality.constants import (
 )
 from ditto_kernel.enums import ImpactModel
 
+REGIME_DEFAULT_LOOKBACK = 60
+"""Regime detection minimum lookback days (MomentumIndicator, ts_mean, ts_std)."""
+
 
 @dataclass(frozen=True)
 class IngestDateCommand:

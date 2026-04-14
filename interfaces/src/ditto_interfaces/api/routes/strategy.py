@@ -1,4 +1,13 @@
-"""策略 API 路由."""
+"""
+策略 API 路由.
+
+端点:
+- POST   /strategies                          创建策略
+- GET    /strategies                          列出策略
+- GET    /strategies/{id}                     获取策略详情
+- PUT    /strategies/{id}                     更新策略
+- POST   /strategies/{id}/publish             发布策略
+"""
 
 from __future__ import annotations
 
@@ -28,6 +37,16 @@ from ditto_interfaces.models.strategy import (
 )
 
 router = APIRouter(prefix="/strategies", tags=["strategies"])
+
+
+def _map_strategy_error(exc: ValueError) -> HTTPException:
+    """将 Strategy handler 的 ValueError 映射为 HTTPException."""
+    msg = str(exc)
+    if "not found" in msg.lower():
+        return HTTPException(status_code=404, detail=msg)
+    if "conflict" in msg.lower():
+        return HTTPException(status_code=409, detail=msg)
+    return HTTPException(status_code=400, detail=msg)
 
 
 def to_strategy_response(info: StrategySpecInfo) -> StrategyResponse:
@@ -102,7 +121,10 @@ async def update_strategy(
         version=request.version,
         tags=tuple(request.tags),
     )
-    info = await asyncio.to_thread(handler.handle, cmd)
+    try:
+        info = await asyncio.to_thread(handler.handle, cmd)
+    except ValueError as exc:
+        raise _map_strategy_error(exc) from exc
     return to_strategy_response(info)
 
 
@@ -118,5 +140,8 @@ async def publish_strategy(
         strategy_id=strategy_id,
         version=request.version,
     )
-    result = await asyncio.to_thread(handler.handle, cmd)
+    try:
+        result = await asyncio.to_thread(handler.handle, cmd)
+    except ValueError as exc:
+        raise _map_strategy_error(exc) from exc
     return APIResponse(data=result)

@@ -1,9 +1,21 @@
-"""交易闭环 API 路由."""
+"""
+交易闭环 API 路由.
+
+端点:
+- GET    /trade/intents                       列出交易意图
+- PUT    /trade/intents/{id}/status           更新意图状态
+- POST   /trade/fills                          录入成交
+- GET    /trade/fills                          列出成交记录
+- GET    /trade/positions                      查询持仓快照
+- GET    /trade/pnl                            盈亏汇总
+- GET    /trade/signals/latest                 最新信号
+- GET    /trade/signals/{strategy_id}/intents  信号意图明细
+- GET    /trade/comparison                     回测 vs 实际对比
+"""
 
 from __future__ import annotations
 
 import asyncio
-import logging
 from typing import Annotated
 
 from dishka import FromComponent
@@ -37,8 +49,6 @@ from ditto_interfaces.models.trade import (
 )
 
 router = APIRouter(prefix="/trade", tags=["trade"])
-
-_logger = logging.getLogger(__name__)
 
 
 def _map_trade_error(exc: ValueError) -> int:

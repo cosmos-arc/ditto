@@ -7,21 +7,19 @@ ComparisonQueryFacade — 回测 vs 实际对比查询门面 + 纯计算函数.
 
 from __future__ import annotations
 
-import logging
 import math
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
 from ditto_kernel.math import pearson_correlation
+from loguru import logger
 
 from ditto_app.execution_dto import ManualExecutionFill
 from ditto_app.query._artifact_utils import compute_total_return
 from ditto_app.query.backtest import BacktestQueryFacade
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
-
-logger = logging.getLogger(__name__)
 
 __all__ = ["ComparisonMetrics", "ComparisonQueryFacade", "compute_comparison_from_raw"]
 
@@ -265,16 +263,29 @@ def _build_actual_navs(
     """
     if not fills:
         return []
-
-    # 回退: 无行情数据源时使用简化逻辑
     if price_query is None:
-        by_date: dict[str, float] = {}
-        for f in fills:
-            by_date.setdefault(f.trade_date, initial_cash)
-            by_date[f.trade_date] -= f.fee
-        return sorted(by_date.items())
+        return _build_actual_navs_simple(fills, initial_cash)
+    return _build_actual_navs_full(fills, initial_cash, price_query)
 
-    # 完整 NAV 重建
+
+def _build_actual_navs_simple(
+    fills: list[ManualExecutionFill],
+    initial_cash: float,
+) -> list[tuple[str, float]]:
+    """回退逻辑：无行情数据源时，仅扣除费用生成简化 NAV 序列."""
+    by_date: dict[str, float] = {}
+    for f in fills:
+        by_date.setdefault(f.trade_date, initial_cash)
+        by_date[f.trade_date] -= f.fee
+    return sorted(by_date.items())
+
+
+def _build_actual_navs_full(
+    fills: list[ManualExecutionFill],
+    initial_cash: float,
+    price_query: MarketQueryFacade,
+) -> list[tuple[str, float]]:
+    """完整 NAV 重建：逐日构建现金/持仓台账并按收盘价计算 NAV."""
     # 1. 收集所有成交日期和标的 ID
     all_dates: set[str] = set()
     all_instrument_ids: set[int] = set()
@@ -334,8 +345,6 @@ def _build_actual_navs(
             if qty
         )
         nav_series.append((date_str, cash + position_value))
-
-    return nav_series
 
     return nav_series
 

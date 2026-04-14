@@ -299,15 +299,17 @@ def _compare_input_ref_details(
     a_map = {ref.instrument_id: ref for ref in a}
     b_map = {ref.instrument_id: ref for ref in b}
 
-    all_ids = set(a_map) | set(b_map)
-    for iid in sorted(all_ids):
+    all_ids = sorted(set(a_map) | set(b_map))
+    for iid in all_ids:
         a_ref = a_map.get(iid)
         b_ref = b_map.get(iid)
         if a_ref is None:
             diffs.append(f"input_ref_details: {iid} only in replay")
-        elif b_ref is None:
+            continue
+        if b_ref is None:
             diffs.append(f"input_ref_details: {iid} only in original")
-        elif a_ref.data_hash != b_ref.data_hash:
+            continue
+        if a_ref.data_hash != b_ref.data_hash:
             diffs.append(
                 f"data_hash mismatch for {iid}: {a_ref.data_hash} vs {b_ref.data_hash}",
             )

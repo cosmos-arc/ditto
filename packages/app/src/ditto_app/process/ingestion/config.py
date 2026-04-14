@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from ditto_data.services import (
     FreezeService,
@@ -14,8 +13,7 @@ from ditto_data.services import (
 from ditto_data.sources.base import DataSource
 from pydantic import BaseModel, ConfigDict, Field
 
-if TYPE_CHECKING:
-    from ditto_app.process.ingestion.ports import QualityCheckerProtocol
+from ditto_app.process.ingestion.ports import QualityCheckerProtocol
 
 
 class IngestionConfig(BaseModel):

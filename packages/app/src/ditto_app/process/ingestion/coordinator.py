@@ -378,6 +378,48 @@ class IngestionCoordinator:
             dataset, date_identifier, error
         )
 
+    def _write_data_safe(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        trade_date: str,
+        on_duplicate: OnDuplicate,
+        *,
+        source_ticker: str | None = None,
+        event_suffix: str = "",
+    ) -> WriteResult | IngestionResult:
+        """安全写入数据，统一异常处理。"""
+        try:
+            return self._data_writer.write_data(dataset, df, trade_date, on_duplicate)
+        except (
+            pl.exceptions.ComputeError,
+            pl.exceptions.SchemaError,
+            ValueError,
+            KeyError,
+            TypeError,
+            OSError,
+        ) as e:
+            logger.warning(
+                f"write_data_failed{event_suffix}",
+                event="write_data_error",
+                dataset=dataset,
+                trade_date=trade_date,
+                **({"source_ticker": source_ticker} if source_ticker else {}),
+                error_type=type(e).__name__,
+                error=str(e),
+            )
+            return self._result_handler.handle_unknown_error(dataset, trade_date, e)
+        except Exception as e:
+            logger.exception(
+                f"write_data_failed{event_suffix}_unexpected",
+                event="write_data_error",
+                dataset=dataset,
+                trade_date=trade_date,
+                **({"source_ticker": source_ticker} if source_ticker else {}),
+                error_type=type(e).__name__,
+            )
+            return self._result_handler.handle_unknown_error(dataset, trade_date, e)
+
     def _process_fetched_data(
         self, df: pl.DataFrame, dataset: str, trade_date: str, force: bool
     ) -> IngestionResult:
@@ -411,36 +453,9 @@ class IngestionCoordinator:
         # 将 force 映射到 on_duplicate
         on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
 
-        try:
-            write_result = self._data_writer.write_data(
-                dataset, df, trade_date, on_duplicate
-            )
-        except (
-            pl.exceptions.ComputeError,
-            pl.exceptions.SchemaError,
-            ValueError,
-            KeyError,
-            TypeError,
-            OSError,
-        ) as e:
-            logger.warning(
-                "write_data_failed",
-                event="write_data_error",
-                dataset=dataset,
-                trade_date=trade_date,
-                error_type=type(e).__name__,
-                error=str(e),
-            )
-            return self._result_handler.handle_unknown_error(dataset, trade_date, e)
-        except Exception as e:
-            logger.exception(
-                "write_data_failed_unexpected",
-                event="write_data_error",
-                dataset=dataset,
-                trade_date=trade_date,
-                error_type=type(e).__name__,
-            )
-            return self._result_handler.handle_unknown_error(dataset, trade_date, e)
+        write_result = self._write_data_safe(dataset, df, trade_date, on_duplicate)
+        if isinstance(write_result, IngestionResult):
+            return write_result
 
         # 检查 DQ 阻断
         if write_result.blocked:
@@ -631,40 +646,16 @@ class IngestionCoordinator:
 
         on_duplicate = OnDuplicate.KEEP_LAST
 
-        try:
-            write_result = self._data_writer.write_data(
-                dataset, df, params.start_date, on_duplicate
-            )
-        except (
-            pl.exceptions.ComputeError,
-            pl.exceptions.SchemaError,
-            ValueError,
-            KeyError,
-            TypeError,
-            OSError,
-        ) as e:
-            logger.warning(
-                "write_data_failed_by_instrument",
-                event="write_data_error_by_instrument",
-                dataset=dataset,
-                source_ticker=source_ticker,
-                error_type=type(e).__name__,
-                error=str(e),
-            )
-            return self._result_handler.handle_unknown_error(
-                dataset, params.start_date, e
-            )
-        except Exception as e:
-            logger.exception(
-                "write_data_failed_by_instrument_unexpected",
-                event="write_data_error_by_instrument",
-                dataset=dataset,
-                source_ticker=source_ticker,
-                error_type=type(e).__name__,
-            )
-            return self._result_handler.handle_unknown_error(
-                dataset, params.start_date, e
-            )
+        write_result = self._write_data_safe(
+            dataset,
+            df,
+            params.start_date,
+            on_duplicate,
+            source_ticker=source_ticker,
+            event_suffix="_by_instrument",
+        )
+        if isinstance(write_result, IngestionResult):
+            return write_result
 
         if write_result.blocked:
             return self._result_handler.handle_dq_blocked(

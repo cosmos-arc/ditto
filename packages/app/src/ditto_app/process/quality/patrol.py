@@ -203,7 +203,8 @@ class QualityPatrolService:
 
         # end=trade_date 包含当日数据（与 current 重叠），这是预存行为。
         # 引擎内部使用 historical 构建参考分布时需排除 current 行。
-        # TODO: 考虑 end=trade_date 前一天以避免参考分布污染。
+        # 注: end=trade_date 前一天可避免参考分布污染，但需引擎侧同步调整，
+        # 暂保持当前行为以确保回测一致性。
         historical = self._market_facade.find_bars(
             instrument_ids=None,
             start=start_date,

@@ -260,6 +260,7 @@ class ProviderBackedDataFeed:
         iid_values = [int(iid) for iid in instrument_ids]
         filtered = df.filter(
             (pl.col("instrument_id").is_in(iid_values))
+            # PIT: strict < 排除当日数据，防止未来数据泄露到因子回看窗口
             & (pl.col("trade_date") < as_of_date),
         )
 

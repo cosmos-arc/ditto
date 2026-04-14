@@ -23,7 +23,7 @@ from ditto_app.command.backtest import (
     RetryRunHandler,
 )
 from ditto_app.process.execution.strategy_types import RunLifecycleService
-from ditto_app.query.backtest import BacktestQueryFacade
+from ditto_app.query.backtest import BacktestQueryFacade, RunSummary
 from ditto_interfaces.api.routes.backtest import router
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -200,7 +200,10 @@ class TestRetryStatusGuard:
     ) -> None:
         """status=failed → 202, handler 返回新 run_id."""
         mock_retry_handler.handle.return_value = "run002"
-        mock_query_facade.get_run.return_value = None
+        mock_query_facade.get_run.return_value = RunSummary(
+            run_id="run002",
+            strategy_id="momentum-etf",
+        )
         resp = client.post("/api/v1/backtests/runs/run001/retry")
         assert resp.status_code == 202
         mock_retry_handler.handle.assert_called_once_with("run001")
@@ -217,7 +220,10 @@ class TestRetryStatusGuard:
     ) -> None:
         """status=cancelled → 202."""
         mock_retry_handler.handle.return_value = "run003"
-        mock_query_facade.get_run.return_value = None
+        mock_query_facade.get_run.return_value = RunSummary(
+            run_id="run003",
+            strategy_id="momentum-etf",
+        )
         resp = client.post("/api/v1/backtests/runs/run002/retry")
         assert resp.status_code == 202
         body = resp.json()

@@ -167,13 +167,15 @@ class StrategyRunService:
         run_id = self._resolve_run_id()
         run_svc = self._run_service
         if run_svc is not None:
-            run_svc.create_run(
-                run_id=run_id,
-                strategy_id=self._config.strategy_id,
-                strategy_version=self._config.strategy_version,
-                mode=str(self._config.mode),
-                parent_run_id="",
-            )
+            existing = run_svc.get_run(run_id)
+            if existing is None:
+                run_svc.create_run(
+                    run_id=run_id,
+                    strategy_id=self._config.strategy_id,
+                    strategy_version=self._config.strategy_version,
+                    mode=str(self._config.mode),
+                    parent_run_id="",
+                )
             run_svc.mark_running(run_id)
 
         try:

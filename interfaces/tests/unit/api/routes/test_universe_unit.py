@@ -137,6 +137,23 @@ class TestBodyToCommandMapping:
         assert cmd.name == "Renamed"
         assert cmd.description == "New desc"
 
+    def test_update_mapping_with_members(self) -> None:
+        """UpdateUniverseRequest 含 members → Command 传递 members/effective_date."""
+        body = UpdateUniverseRequest(
+            name="Renamed",
+            members=["1", "2", "3"],
+            effective_date="2026-04-14",
+        )
+        cmd = UpdateCustomUniverseCommand(
+            universe_id="target-id",
+            name=body.name,
+            description=body.description,
+            members=body.members,
+            effective_date=body.effective_date,
+        )
+        assert cmd.members == ["1", "2", "3"]
+        assert cmd.effective_date == "2026-04-14"
+
     def test_delete_mapping(self) -> None:
         """路径参数 → DeleteCustomUniverseCommand."""
         universe_id = "to-delete"

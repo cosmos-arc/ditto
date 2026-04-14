@@ -9,18 +9,17 @@ App 层仅定义 NotificationPort Protocol，具体通知实现在 Interfaces �
 
 from __future__ import annotations
 
-import logging
-from typing import Any
+from typing import Any, Protocol
+
+from loguru import logger
 
 from ditto_app.execution_dto import TradeIntent
-
-logger = logging.getLogger(__name__)
 
 __all__ = ["DeliveryRouter", "NotificationPort"]
 
 
-class NotificationPort:
-    """通知发送协议 — App 层定义，Interfaces 层注入 AlertManager 适配器."""
+class NotificationPort(Protocol):
+    """通知发送协议 — App 层定义，Interfaces 层注入适配器."""
 
     def send(
         self,
@@ -54,8 +53,9 @@ class DeliveryRouter:
             return self._sender.send("signal_delivery", context, "info")
         except Exception:
             logger.exception(
-                "Signal delivery failed (fire-and-forget)",
-                extra={"strategy_id": strategy_id, "signal_date": signal_date},
+                "Signal delivery failed, strategy_id={}, signal_date={}",
+                strategy_id,
+                signal_date,
             )
             return {}
 

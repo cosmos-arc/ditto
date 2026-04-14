@@ -1,4 +1,14 @@
-"""Universe API 路由."""
+"""
+Universe API 路由.
+
+端点:
+- GET    /universes                           列出 Universe
+- GET    /universes/{id}                      获取 Universe 详情
+- GET    /universes/{id}/members              查询成分列表
+- POST   /universes                           创建自定义 Universe
+- PUT    /universes/{id}                      更新 Universe
+- DELETE /universes/{id}                      删除 Universe
+"""
 
 from __future__ import annotations
 
@@ -100,6 +110,8 @@ async def update_universe(
         universe_id=universe_id,
         name=body.name,
         description=body.description,
+        members=body.members,
+        effective_date=body.effective_date,
     )
     try:
         row = await asyncio.to_thread(handler.handle, cmd)

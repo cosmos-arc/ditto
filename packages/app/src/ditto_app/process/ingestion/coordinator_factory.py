@@ -5,10 +5,6 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ditto_app.process.ingestion.ports import QualityCheckerProtocol
 
 from ditto_data.models import Source
 from ditto_data.services import (
@@ -30,6 +26,7 @@ from ditto_app.process.ingestion.coordinator import (
     IngestionCoordinator,
     MarketServices,
 )
+from ditto_app.process.ingestion.ports import QualityCheckerProtocol
 
 
 @dataclass(frozen=True)

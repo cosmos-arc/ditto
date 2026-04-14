@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from ditto_data.models.trade import TradeIntentRecord
 from ditto_data.services.trade_service import TradeService
 
 from ditto_app.execution_dto import (
@@ -83,15 +84,42 @@ class RecordFillHandler:
         2. 构建 ManualExecutionFill DTO
         3. 映射为 Record 并持久化
         4. 更新 intent 状态（支持部分成交）
-        5. 触发 ManualTracker 重新聚合 → 更新持仓
+        5. 触发 ManualTracker 重新聚合 -> 更新持仓
         """
-        # 1. 验证 intent 存在
+        # 1. Validate
         intent_record = self._service.get_intent(command.intent_id)
+        self._validate_intent_match(intent_record, command)
+        # _validate_intent_match raises when None; narrow for type checker
+        if intent_record is None:
+            raise ValueError(f"Intent not found: {command.intent_id}")
+
+        # 2. Build DTO
+        fill = self._build_fill_dto(command, self._tracker)
+
+        # 3. Persist
+        record = fill_to_record(fill)
+        self._service.save_fill(record)
+
+        # 4. Update intent status (累积同 intent 所有 fill 后判断)
+        new_status = self._determine_fill_status(
+            intent_record.quantity, command.intent_id, intent_record.strategy_id
+        )
+        self._service.update_intent_status(command.intent_id, new_status)
+
+        # 5. Recompute positions
+        self._recompute_positions(intent_record.strategy_id, command.trade_date)
+        return fill
+
+    @staticmethod
+    def _validate_intent_match(
+        intent_record: TradeIntentRecord | None,
+        command: RecordFillCommand,
+    ) -> None:
+        """验证 intent 存在且身份信息匹配."""
         if intent_record is None:
             msg = f"Intent not found: {command.intent_id}"
             raise ValueError(msg)
 
-        # 身份校验：strategy_id / instrument_id / direction 必须一致
         if intent_record.strategy_id != command.strategy_id:
             msg = (
                 f"Strategy mismatch: intent={intent_record.strategy_id}, "
@@ -113,7 +141,6 @@ class RecordFillHandler:
             )
             raise ValueError(msg)
 
-        # 状态校验：只允许 pending/partially_filled 状态录入成交
         if intent_record.status not in {"pending", "partially_filled"}:
             msg = (
                 f"Intent {command.intent_id} status is '{intent_record.status}', "
@@ -121,9 +148,14 @@ class RecordFillHandler:
             )
             raise ValueError(msg)
 
-        # 2. 构建 DTO（含交收日期）
-        settlement_date = self._tracker.compute_settlement_date(command.trade_date)
-        fill = ManualExecutionFill(
+    @staticmethod
+    def _build_fill_dto(
+        command: RecordFillCommand,
+        tracker: ManualTracker,
+    ) -> ManualExecutionFill:
+        """构建 ManualExecutionFill DTO（含交收日期计算）."""
+        settlement_date = tracker.compute_settlement_date(command.trade_date)
+        return ManualExecutionFill(
             fill_id=command.fill_id,
             intent_id=command.intent_id,
             strategy_id=command.strategy_id,
@@ -138,28 +170,16 @@ class RecordFillHandler:
             settlement_date=settlement_date,
         )
 
-        # 3. 映射为 Record 并持久化
-        record = fill_to_record(fill)
-        self._service.save_fill(record)
-
-        # 4. 更新 intent 状态（部分成交判断）
-        new_status = self._determine_fill_status(
-            intent_record.quantity, command.quantity
-        )
-        self._service.update_intent_status(command.intent_id, new_status)
-
-        # 5. 触发 ManualTracker 重新聚合（使用 intent 的 strategy_id）
-        self._recompute_positions(intent_record.strategy_id, command.trade_date)
-
-        return fill
-
-    @staticmethod
     def _determine_fill_status(
+        self,
         intent_quantity: int | None,
-        fill_quantity: int,
+        intent_id: str,
+        strategy_id: str,
     ) -> Literal["filled", "partially_filled"]:
-        """判断完全成交还是部分成交."""
-        if intent_quantity is None or fill_quantity >= intent_quantity:
+        """判断完全成交还是部分成交（累积同 intent 所有 fill）。"""
+        fills = self._service.list_fills(strategy_id=strategy_id, intent_id=intent_id)
+        cumulative_qty = sum(f.quantity for f in fills)
+        if intent_quantity is None or cumulative_qty >= intent_quantity:
             return "filled"
         return "partially_filled"
 
