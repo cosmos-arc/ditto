@@ -1427,6 +1427,23 @@
 
     /* ── Page-specific utilities ── */
     .agent-status-label { margin-left: auto; font-size: var(--font-size-10); }
+
+    /* Inline style cleanup */
+    .svg-sprite-source { position: absolute; }
+    .ai-tab-nav { padding-bottom: var(--space-4); flex-shrink: 0; }
+    .plan-w-43 { width: 43%; }
+    .plan-w-83 { width: 83%; }
+    .plan-w-100 { width: 100%; }
+    .plan-w-35 { width: 35%; }
+    .conf-w-92 { width: 92%; }
+    .conf-w-67 { width: 67%; }
+    .conf-w-45 { width: 45%; }
+    .pt-8 { padding-top: var(--space-8); }
+    .agent-status-label.ic-decay { color: var(--agent-waiting-approval-fg); }
+    .agent-status-label.running { color: var(--ai-accent); }
+    .signal-stat-value.primary { color: var(--text-primary); }
+    .signal-stat-value.agent-running { color: var(--agent-running-fg); }
+    .signal-stat-value.agent-waiting { color: var(--agent-waiting-approval-fg); }
   </style>
 </head>
 <body>
@@ -1445,7 +1462,7 @@
   <div class="style-label">AI Overview — Command Center Light · Brand Purple</div>
 
   <!-- SVG Filters (noise texture) -->
-  <svg width="0" height="0" style="position:absolute">
+  <svg width="0" height="0" class="svg-sprite-source">
     <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
   </svg>
 
@@ -1562,7 +1579,7 @@
     <div class="ai-main">
 
       <!-- Tab Navigation Bar -->
-      <div data-tabs="ai-tabs" class="flex-row-center gap-4 border-b-subtle" style="padding-bottom:var(--space-4);flex-shrink:0;">
+      <div data-tabs="ai-tabs" class="flex-row-center gap-4 border-b-subtle ai-tab-nav">
         <button data-tab-target="overview" class="ai-status-badge online tab-button" aria-selected="true">
           <span class="ai-status-dot"></span>
           概览
@@ -1602,7 +1619,7 @@
                 <span class="ai-plan-meta">步骤 3/7 · 当前: 财报数据采集</span>
               </div>
               <div class="ai-plan-progress">
-                <div class="ai-plan-progress-fill active" style="width: 43%;"></div>
+                <div class="ai-plan-progress-fill active plan-w-43"></div>
               </div>
               <span class="ai-plan-time">~15min 剩余</span>
             </div>
@@ -1614,7 +1631,7 @@
                 <span class="ai-plan-meta">步骤 5/6 · 当前: 生成报告</span>
               </div>
               <div class="ai-plan-progress">
-                <div class="ai-plan-progress-fill active" style="width: 83%;"></div>
+                <div class="ai-plan-progress-fill active plan-w-83"></div>
               </div>
               <span class="ai-plan-time">~3min 剩余</span>
             </div>
@@ -1633,7 +1650,7 @@
                   <span class="confidence-badge high" data-tooltip="多因子共振信号 · RSI+放量+北向资金" data-tooltip-pos="right">92%</span>
                 </div>
                 <span class="ai-finding-evidence">RSI 背离 + 放量下跌 + 北向连续 3 日净卖出，多因子共振信号。</span>
-                <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill high" style="width:92%"></div></div>
+                <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill high conf-w-92"></div></div>
                 <div class="ai-finding-footer">
                   <span class="ai-finding-source" data-tooltip="由 Alpha v3 信号策略自动生成" data-tooltip-pos="bottom">Alpha v3 策略 · 3分钟前</span>
                   <span class="ai-finding-action">审批 →</span>
@@ -1649,7 +1666,7 @@
                   <span class="confidence-badge medium" data-tooltip="换手率 98.5% + 估值 92% 分位数" data-tooltip-pos="right">67%</span>
                 </div>
                 <span class="ai-finding-evidence">换手率分位数 98.5%，估值分位数 92%，建议关注回调风险。</span>
-                <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill medium" style="width:67%"></div></div>
+                <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill medium conf-w-67"></div></div>
                 <div class="ai-finding-footer">
                   <span class="ai-finding-source" data-tooltip="由风控巡检 Agent 自动发现" data-tooltip-pos="bottom">风控巡检 · 18分钟前</span>
                   <span class="ai-finding-action">审批 →</span>
@@ -1665,7 +1682,7 @@
                   <span class="confidence-badge low" data-tooltip="IC 从 0.041 下滑至 0.028" data-tooltip-pos="right">45%</span>
                 </div>
                 <span class="ai-finding-evidence">近 5 日 IC 从 0.041 持续下滑，可能存在短期模型退化。</span>
-                <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill low" style="width:45%"></div></div>
+                <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill low conf-w-45"></div></div>
                 <div class="ai-finding-footer">
                   <span class="ai-finding-source" data-tooltip="由模型监控 Agent 持续跟踪" data-tooltip-pos="bottom">模型监控 · 2小时前</span>
                   <span class="ai-finding-action">审批 →</span>
@@ -1686,7 +1703,7 @@
                 <span class="ai-plan-meta">Sharpe 1.42 · 最大回撤 -8.3% · 产出 2 条 Finding</span>
               </div>
               <div class="ai-plan-progress">
-                <div class="ai-plan-progress-fill done" style="width: 100%;"></div>
+                <div class="ai-plan-progress-fill done plan-w-100"></div>
               </div>
               <span class="ai-plan-time">1小时前</span>
             </div>
@@ -1698,7 +1715,7 @@
                 <span class="ai-plan-meta">无异常 · 4 只股票触发阈值 · 产出 0 条 Finding</span>
               </div>
               <div class="ai-plan-progress">
-                <div class="ai-plan-progress-fill done" style="width: 100%;"></div>
+                <div class="ai-plan-progress-fill done plan-w-100"></div>
               </div>
               <span class="ai-plan-time">3小时前</span>
             </div>
@@ -1710,7 +1727,7 @@
                 <span class="ai-plan-meta">数据源超时 · Tushare API 限频</span>
               </div>
               <div class="ai-plan-progress">
-                <div class="ai-plan-progress-fill failed" style="width: 35%;"></div>
+                <div class="ai-plan-progress-fill failed plan-w-35"></div>
               </div>
               <span class="ai-plan-time">5小时前</span>
             </div>
@@ -1895,7 +1912,7 @@
 
       <!-- Tab Panel: Models -->
       <div data-tab-panel="models" aria-hidden="true">
-        <div class="grid-2col" style="padding-top:var(--space-8);">
+        <div class="grid-2col pt-8">
           <!-- Model Card 1 -->
           <div data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" class="panel-base">
             <div class="model-card-header">
@@ -1916,7 +1933,7 @@
           <div data-reveal="fade-up" data-reveal-delay="50" data-mouse-glow="true" class="panel-base">
             <div class="model-card-header">
               <span class="ai-status-badge online"><span class="ai-status-dot"></span>情绪 Alpha v2</span>
-              <span class="agent-status-label" style="color:var(--agent-waiting-approval-fg);">IC 衰减</span>
+              <span class="agent-status-label ic-decay">IC 衰减</span>
             </div>
             <div class="model-card-value">
               <span data-ticker="0.028" data-decimals="3" data-counter="0.028" data-counter-decimals="3">0.028</span>
@@ -1932,7 +1949,7 @@
           <div data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" class="panel-base">
             <div class="model-card-header">
               <span class="ai-status-badge processing"><span class="ai-status-dot"></span>Factor Discovery</span>
-              <span class="agent-status-label" style="color:var(--ai-accent);">运行中</span>
+              <span class="agent-status-label running">运行中</span>
             </div>
             <div class="model-card-value">
               <span data-ticker="42" data-decimals="0">42</span>
@@ -1964,20 +1981,20 @@
 
       <!-- Tab Panel: Signals -->
       <div data-tab-panel="signals" aria-hidden="true">
-        <div class="flex-col gap-8" style="padding-top:var(--space-8);">
+        <div class="flex-col gap-8 pt-8">
           <!-- Signal Summary Bar -->
           <div data-reveal="fade-up" data-reveal-delay="0" class="signal-summary-bar">
             <div class="signal-stat">
               <span class="signal-stat-label">信号总数</span>
-              <span class="signal-stat-value" style="color:var(--text-primary);"><span data-ticker="127" data-decimals="0">127</span></span>
+              <span class="signal-stat-value primary"><span data-ticker="127" data-decimals="0">127</span></span>
             </div>
             <div class="signal-stat">
               <span class="signal-stat-label">本周产出</span>
-              <span class="signal-stat-value" style="color:var(--agent-running-fg);"><span data-ticker="12" data-decimals="0">12</span></span>
+              <span class="signal-stat-value agent-running"><span data-ticker="12" data-decimals="0">12</span></span>
             </div>
             <div class="signal-stat">
               <span class="signal-stat-label">待审批</span>
-              <span class="signal-stat-value" style="color:var(--agent-waiting-approval-fg);"><span data-ticker="3" data-decimals="0">3</span></span>
+              <span class="signal-stat-value agent-waiting"><span data-ticker="3" data-decimals="0">3</span></span>
             </div>
           </div>
 
@@ -1990,7 +2007,7 @@
                 <span class="confidence-badge high" data-tooltip="多因子共振信号 · RSI+放量+北向资金" data-tooltip-pos="right">92%</span>
               </div>
               <span class="ai-finding-evidence">RSI 背离 + 放量下跌 + 北向连续 3 日净卖出</span>
-              <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill high" style="width:92%"></div></div>
+              <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill high conf-w-92"></div></div>
             </div>
           </div>
           <div data-reveal="fade-up" data-reveal-delay="100" class="ai-finding-row">
@@ -2001,7 +2018,7 @@
                 <span class="confidence-badge medium" data-tooltip="换手率 98.5% + 估值 92% 分位数" data-tooltip-pos="right">67%</span>
               </div>
               <span class="ai-finding-evidence">换手率分位数 98.5%，估值分位数 92%</span>
-              <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill medium" style="width:67%"></div></div>
+              <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill medium conf-w-67"></div></div>
             </div>
           </div>
           <div data-reveal="fade-up" data-reveal-delay="150" class="ai-finding-row">
@@ -2012,7 +2029,7 @@
                 <span class="confidence-badge low" data-tooltip="IC 从 0.041 下滑至 0.028" data-tooltip-pos="right">45%</span>
               </div>
               <span class="ai-finding-evidence">近 5 日 IC 从 0.041 持续下滑，可能存在短期模型退化</span>
-              <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill low" style="width:45%"></div></div>
+              <div class="ai-confidence-bar"><div class="ai-confidence-bar-fill low conf-w-45"></div></div>
             </div>
           </div>
         </div>
