@@ -184,7 +184,7 @@
       z-index: 0;
     }
 
-    /* Top-edge AI ambient glow — purple-tinted */
+    /* Top-edge AI ambient glow — 3-stop bloom */
     .ai-shell::after {
       content: '';
       position: absolute;
@@ -195,11 +195,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--ai-accent) 20%, transparent) 15%,
-        color-mix(in oklch, var(--ai-accent) 35%, transparent) 35%,
         color-mix(in oklch, var(--ai-accent) 40%, transparent) 50%,
-        color-mix(in oklch, var(--ai-accent) 35%, transparent) 65%,
-        color-mix(in oklch, var(--ai-accent) 20%, transparent) 85%,
         transparent 100%
       );
       pointer-events: none;
@@ -211,6 +207,27 @@
       z-index: 1;
     }
 
+    /* Rail right-edge ambient light */
+    .ai-shell .shell-rail {
+      position: relative;
+    }
+    .ai-shell .shell-rail::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -1px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in oklch, var(--ai-accent) 20%, transparent) 50%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 5;
+    }
+
     /* ── Frosted glass header ── */
     .ai-shell .shell-header {
       background: var(--surface-frosted);
@@ -218,6 +235,20 @@
       -webkit-backdrop-filter: blur(12px);
       border-bottom: none;
       position: relative;
+    }
+
+    /* Header title brand underline */
+    .ai-shell .header-title {
+      background: linear-gradient(
+        to right,
+        var(--ai-accent) 0%,
+        var(--ai-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 2px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: 2px;
     }
     .ai-shell .shell-header::after {
       content: '';
@@ -229,12 +260,31 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--ai-accent) 18%, transparent) 20%,
-        color-mix(in oklch, var(--ai-accent) 30%, transparent) 50%,
-        color-mix(in oklch, var(--ai-accent) 18%, transparent) 80%,
+        color-mix(in oklch, var(--ai-accent) 25%, transparent) 50%,
         transparent 100%
       );
       pointer-events: none;
+    }
+
+    /* Sidebar left-edge ambient light */
+    .ai-shell .shell-sidebar {
+      position: relative;
+    }
+    .ai-shell .shell-sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -1px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in oklch, var(--ai-accent) 20%, transparent) 50%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 5;
     }
 
     /* ── AI Main Content (2-col: Agent + Copilot Quick Views) ── */
@@ -292,6 +342,7 @@
 
     .ai-action-card.primary-action:hover {
       background: var(--ai-accent-strong);
+      border-color: oklch(from var(--ai-accent) l c h / 0.35);
     }
 
     .ai-action-icon {
@@ -1411,7 +1462,7 @@
       width: 200px;
       height: 200px;
       border-radius: 50%;
-      background: radial-gradient(circle, oklch(from var(--ai-accent) l c h / 0.06) 0%, transparent 70%);
+      background: radial-gradient(circle, var(--ai-glow-strong) 0%, transparent 70%);
       pointer-events: none;
       opacity: 0;
       transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
