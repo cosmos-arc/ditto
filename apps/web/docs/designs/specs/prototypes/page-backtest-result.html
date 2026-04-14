@@ -120,6 +120,7 @@
     .metric-change { display: inline-flex; font-family: var(--font-family-numeric); font-size: var(--font-size-11); padding: var(--space-1) var(--space-3); border-radius: var(--radius-3); align-self: flex-start; }
     .metric-change.up { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 6%, transparent); }
     .metric-change.down { color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 6%, transparent); }
+    .metric-change.neutral { color: var(--text-tertiary); background: var(--interaction-hover-subtle-bg); }
 
     .panel { background: var(--surface-panel-base); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
     .panel-header { display: flex; align-items: center; padding: var(--space-8) var(--space-12); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
@@ -170,6 +171,7 @@
     :root:has(#overlay-export:checked) [data-overlay="overlay-export"] { display: flex; }
     :root:has(#overlay-enable-signal:checked) [data-overlay="overlay-enable-signal"] { display: flex; }
     :root:has(#overlay-ai-analysis:checked) [data-overlay="overlay-ai-analysis"] { display: flex; }
+    :root:has(#overlay-compare-toast:checked) [data-overlay="overlay-compare-toast"] { display: flex; }
 
     /* ── Inline stats ── */
     .stats-row { display: flex; gap: var(--space-12); padding: var(--space-8) 0; border-bottom: 1px solid var(--border-subtle); }
@@ -215,7 +217,8 @@
     .bar-tertiary-12 { height: 5px; border-radius: 3px; background: var(--text-tertiary); width: 12%; }
     .bar-down-8 { height: 5px; border-radius: 3px; background: var(--market-down-fg); width: 8%; }
     .attr-item { display: flex; flex-direction: column; }
-    .attr-label { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2); }
+    .attr-label { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2); display: flex; justify-content: space-between; }
+    .attr-label-value { font-family: var(--font-family-numeric); color: var(--text-secondary); }
     .dd-card { padding: var(--space-6); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-3); }
     .dd-value { color: var(--market-down-fg); font-family: var(--font-family-numeric); font-weight: var(--font-weight-medium); }
     .dd-date { color: var(--text-tertiary); font-size: var(--font-size-10); }
@@ -369,8 +372,8 @@
                 <div class="metric-card"><span class="metric-label">年化收益</span><span class="metric-value">+18.2%</span><span class="metric-change up">▲ +2.3%</span></div>
                 <div class="metric-card"><span class="metric-label">最大回撤</span><span class="metric-value c-down">-12.3%</span><span class="metric-change down">▼ -1.8%</span></div>
                 <div class="metric-card"><span class="metric-label">胜率</span><span class="metric-value">58.2%</span><span class="metric-change up">▲ +1.5%</span></div>
-                <div class="metric-card"><span class="metric-label">换手率</span><span class="metric-value">3.2x</span><span class="metric-change down">▲ +0.4x</span></div>
-                <div class="metric-card"><span class="metric-label">总费用</span><span class="metric-value">¥86.4K</span><span class="metric-change down">费用占比 0.86%</span></div>
+                <div class="metric-card"><span class="metric-label">换手率</span><span class="metric-value">3.2x</span><span class="metric-change neutral">+0.4x</span></div>
+                <div class="metric-card"><span class="metric-label">总费用</span><span class="metric-value">¥86.4K</span><span class="metric-change neutral">占比 0.86%</span></div>
               </div>
 
               <!-- NAV + Drawdown Chart -->
@@ -441,10 +444,10 @@
               <div class="sidebar-section">
                 <div class="sidebar-title">业绩归因</div>
                 <div class="flex-col-8">
-                  <div class="attr-item"><div class="attr-label">行业选择</div><div class="bar-track"><div class="bar-accent-45"></div></div></div>
-                  <div class="attr-item"><div class="attr-label">因子选股</div><div class="bar-track"><div class="bar-accent-35"></div></div></div>
-                  <div class="attr-item"><div class="attr-label">择时</div><div class="bar-track"><div class="bar-tertiary-12"></div></div></div>
-                  <div class="attr-item"><div class="attr-label">交易成本</div><div class="bar-track"><div class="bar-down-8"></div></div></div>
+                  <div class="attr-item"><div class="attr-label">行业选择<span class="attr-label-value">+45%</span></div><div class="bar-track"><div class="bar-accent-45"></div></div></div>
+                  <div class="attr-item"><div class="attr-label">因子选股<span class="attr-label-value">+35%</span></div><div class="bar-track"><div class="bar-accent-35"></div></div></div>
+                  <div class="attr-item"><div class="attr-label">择时<span class="attr-label-value">+12%</span></div><div class="bar-track"><div class="bar-tertiary-12"></div></div></div>
+                  <div class="attr-item"><div class="attr-label">交易成本<span class="attr-label-value">-8%</span></div><div class="bar-track"><div class="bar-down-8"></div></div></div>
                 </div>
               </div>
             </div>
