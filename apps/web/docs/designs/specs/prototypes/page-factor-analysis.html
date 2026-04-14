@@ -589,11 +589,9 @@
     .context-strip-item { display: flex; align-items: center; gap: var(--space-4); }
     .context-sep { color: var(--border-subtle); }
 
-    /* Mini indicator bar (10-cell) */
-    .mini-bar { display: flex; gap: 2px; }
-    .mini-bar-cell { width: 8px; height: 8px; border-radius: 1px; }
-    .mini-bar-fill { background: var(--market-up-fg); opacity: 0.6; }
-    .mini-bar-empty { background: color-mix(in oklch, var(--border-subtle) 50%, transparent); }
+    /* Mini ratio bar (continuous) */
+    .mini-bar { width: 48px; height: 3px; border-radius: 1px; background: color-mix(in oklch, var(--border-subtle) 50%, transparent); overflow: hidden; }
+    .mini-bar-fill { height: 100%; border-radius: 1px; background: var(--market-up-fg); opacity: 0.6; }
     .tbl-primary td { color: var(--text-primary); }
     .mt-4 { margin-top: var(--space-4); }
     .mt-merge { margin-top: var(--rhythm-merge-gap); }
@@ -609,6 +607,7 @@
     .chart-min-h { width: 100%; min-height: 60px; }
     .chart-mt-svg { width: 100%; margin-top: var(--space-8); opacity: 0.8; }
     .overlay-btn-default { background: var(--surface-panel-elevated); border: 1px solid var(--border-default); color: var(--text-secondary); }
+    .overlay-sheet { border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent); }
     .tbl-separator { border-top: 2px solid var(--border-subtle); }
 
     /* ── Rail logo brand glow ── */
@@ -993,14 +992,14 @@
                     <span class="c-tertiary">ICIR</span>
                     <div class="flex-center-end">
                       <span class="numeric-up-12">0.266</span>
-                      <div class="mini-bar"><span class="mini-bar-cell mini-bar-fill"></span><span class="mini-bar-cell mini-bar-fill"></span><span class="mini-bar-cell mini-bar-fill"></span><span class="mini-bar-cell mini-bar-empty"></span><span class="mini-bar-cell mini-bar-empty"></span><span class="mini-bar-cell mini-bar-empty"></span><span class="mini-bar-cell mini-bar-empty"></span><span class="mini-bar-cell mini-bar-empty"></span><span class="mini-bar-cell mini-bar-empty"></span><span class="mini-bar-cell mini-bar-empty"></span></div>
+                      <div class="mini-bar"><div class="mini-bar-fill" style="width:27%"></div></div>
                     </div>
                   </div>
                   <div class="flex-between">
                     <span class="c-tertiary">IC > 0 占比</span>
                     <div class="flex-center-end">
                       <span class="c-secondary">68.2%</span>
-                      <div class="mini-bar"><span class="mini-bar-cell mini-bar-fill"></span><span class="mini-bar-cell mini-bar-fill"></span><span class="mini-bar-cell mini-bar-fill"></span><span class="mini-bar-cell mini-bar-fill"></span><span class="mini-bar-cell mini-bar-fill"></span><span class="mini-bar-cell mini-bar-fill"></span><span class="mini-bar-cell mini-bar-fill"></span><span class="mini-bar-cell mini-bar-empty"></span><span class="mini-bar-cell mini-bar-empty"></span><span class="mini-bar-cell mini-bar-empty"></span></div>
+                      <div class="mini-bar"><div class="mini-bar-fill" style="width:68%"></div></div>
                     </div>
                   </div>
                 </div>
@@ -1211,7 +1210,7 @@
                   </div>
                   <div class="panel-body flex-center">
                     <svg viewBox="0 0 280 100" class="chart-svg">
-                      <line x1="0" y1="80" x2="280" y2="80" stroke="var(--border-subtle)" stroke-width="0.5"/>
+                      <line x1="0" y1="80" x2="280" y2="80" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="3"/>
                       <!-- Histogram bars -->
                       <rect x="20" y="72" width="15" height="8" fill="color-mix(in oklch, var(--brand-accent) 30%, transparent)" rx="1"/>
                       <rect x="38" y="60" width="15" height="20" fill="color-mix(in oklch, var(--brand-accent) 40%, transparent)" rx="1"/>
