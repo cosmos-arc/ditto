@@ -1745,11 +1745,24 @@
 
     /* ── Page-specific utilities ── */
     .mb-6 { margin-bottom: var(--space-6); }
+
+    /* Inline style cleanup */
+    .progress-w-62 { width: 62%; }
+    .progress-w-100 { width: 100%; }
+    .progress-w-23 { width: 23%; }
+    .progress-w-38 { width: 38%; }
+    .resource-w-45 { width: 45%; }
+    .resource-w-72 { width: 72%; }
+    .resource-w-38 { width: 38%; }
+    .resource-w-23 { width: 23%; }
+    .resource-center-row { justify-content: center; margin-bottom: var(--space-8); }
+    .sk-w-60 { width: 60%; }
+    .sk-w-80 { width: 80%; }
   </style>
 </head>
 <body>
   <!-- SVG noise filter for material texture -->
-  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <svg class="noise-svg-source" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
     </defs>
@@ -1885,7 +1898,7 @@
               <span class="plan-card-progress-pct">62%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 62%">
-              <div class="progress-bar-fill brand" style="width: 62%;"></div>
+              <div class="progress-bar-fill brand progress-w-62"></div>
             </div>
             <div class="agent-chain">
               <span class="agent-chain-step done">
@@ -1928,7 +1941,7 @@
               <span class="plan-card-progress-pct">100%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 100%">
-              <div class="progress-bar-fill ok" style="width: 100%;"></div>
+              <div class="progress-bar-fill ok progress-w-100"></div>
             </div>
             <div class="agent-chain">
               <span class="agent-chain-step done">
@@ -1977,7 +1990,7 @@
               <span class="plan-card-progress-pct">23%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 23%">
-              <div class="progress-bar-fill critical" style="width: 23%;"></div>
+              <div class="progress-bar-fill critical progress-w-23"></div>
             </div>
             <div class="agent-chain">
               <span class="agent-chain-step done">
@@ -2018,7 +2031,7 @@
               <span class="plan-card-progress-pct">38%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 38%">
-              <div class="progress-bar-fill brand" style="width: 38%;"></div>
+              <div class="progress-bar-fill brand progress-w-38"></div>
             </div>
             <div class="agent-chain">
               <span class="agent-chain-step done">
@@ -2068,7 +2081,7 @@
               <span class="plan-card-progress-pct">62%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 62%">
-              <div class="progress-bar-fill brand" style="width: 62%;"></div>
+              <div class="progress-bar-fill brand progress-w-62"></div>
             </div>
             <div class="agent-chain">
               <span class="agent-chain-step done">
@@ -2110,7 +2123,7 @@
               <span class="plan-card-progress-pct">38%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 38%">
-              <div class="progress-bar-fill brand" style="width: 38%;"></div>
+              <div class="progress-bar-fill brand progress-w-38"></div>
             </div>
             <div class="agent-chain">
               <span class="agent-chain-step done">
@@ -2159,7 +2172,7 @@
               <span class="plan-card-progress-pct">100%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 100%">
-              <div class="progress-bar-fill ok" style="width: 100%;"></div>
+              <div class="progress-bar-fill ok progress-w-100"></div>
             </div>
             <div class="agent-chain">
               <span class="agent-chain-step done">
@@ -2211,7 +2224,7 @@
               <span class="plan-card-progress-pct">23%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 23%">
-              <div class="progress-bar-fill critical" style="width: 23%;"></div>
+              <div class="progress-bar-fill critical progress-w-23"></div>
             </div>
             <div class="agent-chain">
               <span class="agent-chain-step done">
@@ -2260,7 +2273,7 @@
               <span class="plan-card-progress-pct">62%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100">
-              <div class="progress-bar-fill brand" style="width: 62%;"></div>
+              <div class="progress-bar-fill brand progress-w-62"></div>
             </div>
             <div class="agent-chain">
               <span class="agent-chain-step done">
@@ -2300,7 +2313,7 @@
               <span class="plan-card-progress-pct">100%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
-              <div class="progress-bar-fill ok" style="width: 100%;"></div>
+              <div class="progress-bar-fill ok progress-w-100"></div>
             </div>
             <div class="agent-chain">
               <span class="agent-chain-step done">
@@ -2339,7 +2352,7 @@
               <span class="plan-card-progress-pct">23%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100">
-              <div class="progress-bar-fill critical" style="width: 23%;"></div>
+              <div class="progress-bar-fill critical progress-w-23"></div>
             </div>
             <div class="run-card-meta mt-space-6">
               
@@ -2522,7 +2535,7 @@
         </div>
         <div class="detail-section-body">
           <!-- Donut Gauge Visual -->
-          <div class="flex-row-center gap-12" style="justify-content:center;margin-bottom:var(--space-8);">
+          <div class="flex-row-center gap-12 resource-center-row">
             <div class="metric-center">
               <svg data-donut='{"value":0.45,"label":"45%","color":"oklch(0.55 0.15 155)","size":56}' aria-label="CPU使用率"></svg>
               <span class="resource-label">CPU</span>
@@ -2543,28 +2556,28 @@
           <div class="resource-monitor">
             <span class="resource-label">CPU</span>
             <div class="resource-bar">
-              <div class="resource-bar-fill normal" style="width: 45%;"></div>
+              <div class="resource-bar-fill normal resource-w-45"></div>
             </div>
             <span class="resource-value">45%</span>
           </div>
           <div class="resource-monitor">
             <span class="resource-label">MEM</span>
             <div class="resource-bar">
-              <div class="resource-bar-fill warning" style="width: 72%;"></div>
+              <div class="resource-bar-fill warning resource-w-72"></div>
             </div>
             <span class="resource-value">72%</span>
           </div>
           <div class="resource-monitor">
             <span class="resource-label">GPU</span>
             <div class="resource-bar">
-              <div class="resource-bar-fill normal" style="width: 38%;"></div>
+              <div class="resource-bar-fill normal resource-w-38"></div>
             </div>
             <span class="resource-value">38%</span>
           </div>
           <div class="resource-monitor">
             <span class="resource-label">API</span>
             <div class="resource-bar">
-              <div class="resource-bar-fill normal" style="width: 23%;"></div>
+              <div class="resource-bar-fill normal resource-w-23"></div>
             </div>
             <span class="resource-value">23/100</span>
           </div>
@@ -3142,8 +3155,8 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
           <div class="state-loading">
-            <div class="skeleton skeleton-heading" style="width:60%"></div>
-            <div class="skeleton skeleton-text" style="width:80%"></div>
+            <div class="skeleton skeleton-heading sk-w-60"></div>
+            <div class="skeleton skeleton-text sk-w-80"></div>
             <div class="skeleton skeleton-text-sm"></div>
             <div class="spacer-height"></div>
             <div class="skeleton skeleton-row"></div>
