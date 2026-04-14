@@ -134,7 +134,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
+        oklch(from var(--brand-accent) l c h / 0.18) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -169,7 +169,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
+        oklch(from var(--brand-signature-line) l c h / 0.25) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -216,7 +216,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 60%, transparent) 50%,
+        oklch(from var(--brand-accent) l c h / 0.60) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -236,7 +236,7 @@
       background: linear-gradient(
         to bottom,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
+        oklch(from var(--brand-accent) l c h / 0.20) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -252,7 +252,7 @@
       bottom: 6px;
       width: 3px;
       border-radius: 0 2px 2px 0;
-      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
+      background: oklch(from var(--brand-accent) l c h / 0.80);
     }
 
     /* ── Style label for comparison ── */
@@ -580,19 +580,19 @@
     .agent-chain-step.active {
       color: var(--agent-running-fg);
       background: var(--agent-running-bg);
-      border-color: color-mix(in oklch, var(--agent-running-fg) 30%, transparent);
+      border-color: oklch(from var(--agent-running-fg) l c h / 0.30);
     }
 
     .agent-chain-step.done {
       color: var(--system-healthy-fg);
       background: var(--system-healthy-bg);
-      border-color: color-mix(in oklch, var(--system-healthy-fg) 20%, transparent);
+      border-color: oklch(from var(--system-healthy-fg) l c h / 0.20);
     }
 
     .agent-chain-step.failed {
       color: var(--agent-failed-fg);
       background: var(--agent-failed-bg);
-      border-color: color-mix(in oklch, var(--agent-failed-fg) 20%, transparent);
+      border-color: oklch(from var(--agent-failed-fg) l c h / 0.20);
     }
 
     .agent-chain-arrow {
@@ -1020,7 +1020,7 @@
 
     /* ── Plan Card breathing for running state ── */
     .plan-card.selected {
-      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      box-shadow: 0 0 0 1px var(--brand-accent-subtle);
       animation: dot-pulse 3s ease-in-out infinite;
     }
 
@@ -1439,13 +1439,13 @@
       position: relative;
     }
     .progress-bar-fill.brand {
-      box-shadow: 0 0 6px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+      box-shadow: 0 0 6px oklch(from var(--brand-accent) l c h / 0.30);
     }
     .progress-bar-fill.ok {
-      box-shadow: 0 0 6px color-mix(in oklch, var(--system-healthy-fg) 30%, transparent);
+      box-shadow: 0 0 6px oklch(from var(--system-healthy-fg) l c h / 0.30);
     }
     .progress-bar-fill.critical {
-      box-shadow: 0 0 6px color-mix(in oklch, var(--system-down-fg) 30%, transparent);
+      box-shadow: 0 0 6px oklch(from var(--system-down-fg) l c h / 0.30);
     }
 
     /* ── Plan card scan line effect (static top accent) ── */
@@ -1475,7 +1475,7 @@
 
     /* ── Agent status block enhanced pulse ── */
     .agent-status-block.running .agent-status-dot {
-      box-shadow: 0 0 4px var(--agent-running-fg), 0 0 8px color-mix(in oklch, var(--agent-running-fg) 40%, transparent);
+      box-shadow: 0 0 4px var(--agent-running-fg), 0 0 8px oklch(from var(--agent-running-fg) l c h / 0.40);
     }
     .agent-status-block.running .agent-status-label strong {
       animation: dot-pulse 2s ease-in-out infinite;
@@ -1488,7 +1488,7 @@
       height: 2px;
       background: linear-gradient(
         90deg,
-        color-mix(in oklch, var(--brand-accent) 30%, transparent),
+        oklch(from var(--brand-accent) l c h / 0.30),
         transparent
       );
       margin-bottom: var(--space-4);
@@ -1541,7 +1541,7 @@
 
     /* ── Enhanced status bar with terminal vibe ── */
     .status-bar {
-      background: color-mix(in oklch, var(--surface-app) 92%, transparent);
+      background: oklch(from var(--surface-app) l c h / 0.92);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-top: 1px solid var(--border-subtle);
@@ -1556,7 +1556,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 50%,
+        oklch(from var(--brand-accent) l c h / 0.12) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -1579,7 +1579,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 60%, transparent) 50%,
+        oklch(from var(--brand-accent) l c h / 0.60) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -1617,7 +1617,7 @@
       position: absolute;
       inset: -1px;
       border-radius: inherit;
-      border: 1px solid color-mix(in oklch, var(--system-healthy-fg) 15%, transparent);
+      border: 1px solid oklch(from var(--system-healthy-fg) l c h / 0.15);
     }
 
     /* ── Stagger card entrance ── */
