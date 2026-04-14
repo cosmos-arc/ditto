@@ -720,23 +720,23 @@ for result in dq_results:
 ### 13.1 执行顺序
 
 ```
-Sprint 1: V1 正确性硬化（F0）
-  ├─ F0.1: IC decay 修复（factor value → forward returns）
-  ├─ F0.2: 部分成交数量覆盖防御性检查
-  ├─ F0.3: MaxDrawdown 状态隔离
-  ├─ F0.4: StrategySpec 参数最小校验
-  └─ F0.5: 回测 golden tests（ETF 行业轮动 + ETF 趋势）
-  验收: IC decay golden test 通过 + 2 策略回测可复现
+Sprint 1: V1 正确性硬化（F0）✅ Done
+  ├─ F0.1: IC decay 修复 — ClosePriceProvider 替代 factor value pseudo-close
+  ├─ F0.2: 部分成交数量覆盖防御性检查 (brokerage.py)
+  ├─ F0.3: MaxDrawdown/CompositePostTradeGuard reset() 状态隔离
+  ├─ F0.4: StrategySpec __post_init__ 参数最小校验
+  └─ F0.5: golden tests 迁移 inline-snapshot + ETF 趋势择时基线
+  验收: 5305 tests passed ✅ | pyright 0 errors ✅ | ruff clean ✅
 
-Sprint 2: V1 策略包（F1 部分 + F9）
+Sprint 2: V1 策略包（F1 部分 + F9）✅ Done
   ├─ F1.1: 新建因子类别文件（size/liquidity/volatility/value/momentum/quality/growth/alternative）
-  ├─ F1.2: 扩展 technical.py（+10 因子）
-  ├─ F1.3: 更新 factor_specs.py 聚合
-  ├─ F1.4: 单元测试
-  ├─ F1.5: validate_factor_specs() CI gate
-  ├─ F9: 指数成分股注册
-  └─ 策略 seed specs（ETF 行业轮动 + ETF 趋势 + 个股选股轮动）
-  验收: 3 策略 seed specs 可运行 + factor specs CI gate 通过
+  ├─ F1.2: 扩展 technical.py（+11 因子: CCI/Williams%/VWAP/OBV/CHOP/ElderRay/KDJ/SuperTrend/EMA13/OBV_MA20）
+  ├─ F1.3: 更新 factor_specs.py 聚合（12 类别 dict 合并）
+  ├─ F1.4: 单元测试（TestFactorCategoryCoverage 9 类 + TestPythonFactors）
+  ├─ F1.5: validate_factor_specs() CI gate（编译+环检测+依赖+Python约束）
+  ├─ F9: 指数成分股注册（Dataset enum + IngestionSpec + CLI）
+  └─ 策略 seed specs（ETF 行业轮动 + ETF 趋势择时 + 个股选股轮动）
+  验收: 116 因子 (105 expression + 11 python) ✅ | 3 seed specs ✅ | CI gate 0 errors ✅
 
 Sprint 3: 数据和因子发布契约（F2 + F3 + F10）
   ├─ F3: DQ 规则 YAML 文件（11 个数据集）
