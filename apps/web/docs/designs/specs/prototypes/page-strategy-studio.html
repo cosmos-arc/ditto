@@ -1973,7 +1973,7 @@
 </head>
 <body>
   <!-- SVG noise filter for material texture -->
-  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <svg class="noise-svg-source" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
     </defs>
@@ -2615,7 +2615,7 @@
         </div>
 
         <!-- Tab Panel: 参数 -->
-        <div data-tab-panel="params" class="inspector-tab-panel" style="display:none;">
+        <div data-tab-panel="params" class="inspector-tab-panel" aria-hidden="true">
           <!-- Portfolio Optimization Config -->
           <div class="inspector-section">
             <div class="inspector-section-title">组合优化</div>
@@ -2695,7 +2695,7 @@
         </div>
 
         <!-- Tab Panel: 绩效 -->
-        <div data-tab-panel="performance" class="inspector-tab-panel" style="display:none;">
+        <div data-tab-panel="performance" class="inspector-tab-panel" aria-hidden="true">
           <!-- Equity Curve (last backtest) -->
           <div class="inspector-section" data-reveal="fade-up" data-reveal-delay="0">
             <div class="inspector-section-title">权益曲线</div>

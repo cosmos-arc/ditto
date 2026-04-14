@@ -11,7 +11,7 @@
     {
       "id": "cross-market",
       "file": "page-cross-market.html",
-      "status": "v5-done",
+      "status": "reviewed",
       "score": 9.3,
       "styleAnchor": null,
       "rounds": 3,
@@ -41,7 +41,7 @@
     {
       "id": "platform",
       "file": "page-platform.html",
-      "status": "v5-done",
+      "status": "reviewed",
       "score": 9.1,
       "styleAnchor": "platform",
       "rounds": 7,
@@ -63,7 +63,7 @@
     {
       "id": "home",
       "file": "page-home.html",
-      "status": "implemented",
+      "status": "reviewed",
       "score": 9.2,
       "styleAnchor": "platform",
       "rounds": 3,
@@ -105,7 +105,7 @@
     {
       "id": "markets-screener",
       "file": "page-markets-screener.html",
-      "status": "done",
+      "status": "reviewed",
       "score": 9.2,
       "styleAnchor": "platform",
       "rounds": 15,
@@ -128,7 +128,7 @@
     {
       "id": "research",
       "file": "page-research.html",
-      "status": "v5-done",
+      "status": "reviewed",
       "score": 9.2,
       "styleAnchor": "cross-market",
       "rounds": 10,
@@ -152,7 +152,7 @@
     {
       "id": "trading-overview",
       "file": "page-trading-overview.html",
-      "status": "v6-done",
+      "status": "reviewed",
       "score": 9.5,
       "styleAnchor": "platform",
       "rounds": 4,
@@ -182,7 +182,7 @@
     {
       "id": "instrument-hub",
       "file": "page-instrument-hub.html",
-      "status": "v5-done",
+      "status": "reviewed",
       "score": 9.3,
       "styleAnchor": "platform",
       "rounds": 7,
@@ -208,7 +208,7 @@
     {
       "id": "strategy-studio",
       "file": "page-strategy-studio.html",
-      "status": "v6-done",
+      "status": "reviewed",
       "score": 9.4,
       "styleAnchor": "platform",
       "rounds": 1,
@@ -237,7 +237,7 @@
     {
       "id": "signals-inbox",
       "file": "page-signals-inbox.html",
-      "status": "v6-done",
+      "status": "reviewed",
       "score": 9.5,
       "roundsV6": 2,
       "styleAnchor": "platform",
@@ -267,7 +267,7 @@
     {
       "id": "orders-ledger",
       "file": "page-orders-ledger.html",
-      "status": "v6-done",
+      "status": "reviewed",
       "score": 9.5,
       "styleAnchor": "platform",
       "rounds": 1,
@@ -297,7 +297,7 @@
     {
       "id": "risk-center",
       "file": "page-risk-center.html",
-      "status": "v6-done",
+      "status": "reviewed",
       "score": 9.5,
       "styleAnchor": "platform",
       "rounds": 1,
@@ -328,7 +328,7 @@
     {
       "id": "ai-overview",
       "file": "page-ai-overview.html",
-      "status": "done",
+      "status": "reviewed",
       "score": 9.6,
       "styleAnchor": "platform",
       "rounds": 1,
@@ -359,7 +359,7 @@
     {
       "id": "regime-monitor",
       "file": "page-regime-monitor.html",
-      "status": "v6-done",
+      "status": "reviewed",
       "score": 9.3,
       "styleAnchor": "platform",
       "rounds": 1,
@@ -383,7 +383,7 @@
     {
       "id": "markets-intelligence",
       "file": "page-markets-intelligence.html",
-      "status": "v5-done",
+      "status": "reviewed",
       "score": 9.4,
       "styleAnchor": "platform",
       "rounds": 1,
@@ -413,7 +413,7 @@
     {
       "id": "ai-copilot",
       "file": "page-ai-copilot.html",
-      "status": "v5-done",
+      "status": "reviewed",
       "score": 9.2,
       "styleAnchor": "platform",
       "rounds": 1,
@@ -442,7 +442,7 @@
     {
       "id": "agent-console",
       "file": "page-agent-console.html",
-      "status": "v5-done",
+      "status": "reviewed",
       "score": 9.2,
       "styleAnchor": "platform",
       "rounds": 1,
@@ -472,7 +472,7 @@
     {
       "id": "strategies-detail",
       "file": "page-strategies-detail.html",
-      "status": "v1-new",
+      "status": "reviewed",
       "score": null,
       "styleAnchor": null,
       "rounds": 0,
@@ -487,7 +487,7 @@
     {
       "id": "factor-analysis",
       "file": "page-factor-analysis.html",
-      "status": "v6-done",
+      "status": "reviewed",
       "score": 9.5,
       "styleAnchor": null,
       "rounds": 7,
@@ -507,7 +507,7 @@
     {
       "id": "backtest-result",
       "file": "page-backtest-result.html",
-      "status": "v6-done",
+      "status": "reviewed",
       "score": 9.6,
       "styleAnchor": null,
       "rounds": 2,
@@ -527,7 +527,7 @@
     {
       "id": "markets-calendar",
       "file": "page-markets-calendar.html",
-      "status": "done",
+      "status": "reviewed",
       "score": 9.1,
       "styleAnchor": "cross-market",
       "rounds": 2,
@@ -562,7 +562,7 @@
     {
       "id": "a-shares",
       "file": "page-a-shares.html",
-      "status": "done",
+      "status": "reviewed",
       "score": 9.1,
       "styleAnchor": "cross-market",
       "rounds": 2,
@@ -832,5 +832,6 @@
       "tabSwitchingBugs": 0,
       "buttonColorInconsistencies": 0
     }
-  }
+  },
+  "editionReviewedAt": "2026-04-14"
 }
