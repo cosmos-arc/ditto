@@ -448,9 +448,10 @@
       "rounds": 1,
       "roundsV2": 1,
       "roundsV3": 1,
+      "roundsV5": 1,
       "inlineStyles": {
         "before": 123,
-        "after": 17
+        "after": 0
       },
       "jsModules": {
         "ticker": 6,
