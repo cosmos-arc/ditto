@@ -103,7 +103,14 @@
     .header-avatar:focus-visible,
     .mode-tab:focus-visible,
     .session-item:focus-visible,
-    .action-card:focus-visible {
+    .action-card:focus-visible,
+    .overlay-btn:focus-visible,
+    .state-empty-cta:focus-visible,
+    .state-error-retry:focus-visible,
+    .state-stale-retry:focus-visible,
+    .category-pill:focus-visible,
+    .radio-option:focus-visible,
+    .copilot-tab:focus-visible {
       outline: none;
       box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
       border-radius: var(--radius-4);
@@ -169,11 +176,10 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
+        var(--brand-signature-line) 50%,
         transparent 100%
       );
+      opacity: 0.25;
       pointer-events: none;
     }
 
@@ -198,9 +204,9 @@
       margin-left: var(--space-8);
     }
 
-    /* Rail logo subtle brand glow */
+    /* Rail logo */
     .rail-logo {
-      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+      color: var(--brand-accent);
     }
 
     /* Brand anchor: rail active indicator */
@@ -602,9 +608,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 40%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 60%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 40%, transparent) 70%,
+        var(--brand-accent) 50%,
         transparent 100%
       );
       border-radius: var(--card-radius) var(--card-radius) 0 0;
@@ -670,7 +674,7 @@
     .confidence-tag.medium .confidence-tag-dot { background: var(--risk-medium-fg); }
     .confidence-tag.low .confidence-tag-dot { background: var(--risk-high-fg); }
 
-    /* ── Factor Hypothesis Table ── */
+    /* ── 因子假设表格 ── */
     .factor-table {
       width: 100%;
       border-collapse: collapse;
@@ -749,6 +753,7 @@
       margin: 0 auto;
       display: flex;
       flex-direction: column;
+      position: relative;
       background: var(--surface-panel-elevated);
       border: 1px solid var(--border-default);
       border-radius: var(--input-radius);
@@ -821,9 +826,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 40%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 60%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 40%, transparent) 70%,
+        var(--brand-accent) 50%,
         transparent 100%
       );
       z-index: 1;
@@ -1309,9 +1312,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
+        var(--brand-accent) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -1323,16 +1324,22 @@
     }
 
     /* ══════════════════════════════════════════════
-     * Animations
+     * Animations (3 total: dot-pulse, card-subtle-in, thinking-shimmer)
      * ══════════════════════════════════════════════ */
     @keyframes dot-pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.6; }
     }
 
-    /* Message entrance animation */
+    /* Reusable entrance animation — shared by messages, cards, tabs, steps */
+    @keyframes card-subtle-in {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Message entrance */
     .message {
-      animation: msg-fade-in var(--motion-duration-slow) var(--motion-easing-emphasis) both;
+      animation: card-subtle-in var(--motion-duration-slow) var(--motion-easing-emphasis) both;
     }
     .message:nth-child(1) { animation-delay: 100ms; }
     .message:nth-child(2) { animation-delay: 200ms; }
@@ -1341,34 +1348,19 @@
     .message:nth-child(5) { animation-delay: 500ms; }
     .message:nth-child(6) { animation-delay: 600ms; }
 
-    @keyframes msg-fade-in {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Structured card subtle breathing */
+    /* Structured card entrance */
     .structured-card {
       animation: card-subtle-in var(--motion-duration-slow) var(--motion-easing-emphasis) both;
     }
 
-    @keyframes card-subtle-in {
-      from { opacity: 0; transform: scale(0.98); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-
     /* Mode tab entrance — stagger */
     .mode-tab {
-      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+      animation: card-subtle-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
     }
     .mode-tabs .mode-tab:nth-child(1) { animation-delay: 50ms; }
     .mode-tabs .mode-tab:nth-child(2) { animation-delay: 100ms; }
     .mode-tabs .mode-tab:nth-child(3) { animation-delay: 150ms; }
     .mode-tabs .mode-tab:nth-child(4) { animation-delay: 200ms; }
-
-    @keyframes tab-fade-in {
-      from { opacity: 0; transform: translateY(2px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
 
     /* Respect reduced motion */
     @media (prefers-reduced-motion: reduce) {
@@ -1649,8 +1641,7 @@
       background: linear-gradient(
         to bottom,
         transparent,
-        color-mix(in oklch, var(--agent-running-fg) 30%, transparent) 15%,
-        color-mix(in oklch, var(--agent-running-fg) 20%, transparent) 85%,
+        var(--agent-running-fg) 30%,
         transparent
       );
       pointer-events: none;
@@ -1722,7 +1713,7 @@
       height: 6px;
       border-radius: 50%;
       background: var(--agent-running-fg);
-      animation: thinking-pulse 1.4s ease-in-out infinite;
+      animation: dot-pulse 1.4s ease-in-out infinite;
     }
     .ai-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
     .ai-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
@@ -1730,11 +1721,6 @@
       font-size: var(--font-size-11);
       color: var(--text-quaternary);
       font-style: italic;
-    }
-
-    @keyframes thinking-pulse {
-      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-      40% { opacity: 1; transform: scale(1); }
     }
 
     /* ── Thinking chain / reasoning collapsible ── */
@@ -1758,28 +1744,6 @@
         var(--border-subtle)
       );
     }
-    /* Animated scanning beam on the thinking chain rail */
-    .thinking-chain::after {
-      content: '';
-      position: absolute;
-      left: -3px;
-      top: -8px;
-      width: 4px;
-      height: 8px;
-      border-radius: 2px;
-      background: var(--agent-running-fg);
-      opacity: 0.6;
-      animation: thinking-scan 3s ease-in-out infinite;
-      pointer-events: none;
-    }
-
-    @keyframes thinking-scan {
-      0%   { top: -8px; opacity: 0; }
-      10%  { opacity: 0.6; }
-      90%  { opacity: 0.6; }
-      100% { top: calc(100% + 8px); opacity: 0; }
-    }
-
     .thinking-step {
       display: flex;
       align-items: flex-start;
@@ -1789,16 +1753,11 @@
       color: var(--text-tertiary);
       line-height: 1.5;
       opacity: 0;
-      animation: thinking-step-in 0.4s var(--motion-easing-emphasis) forwards;
+      animation: card-subtle-in 0.4s var(--motion-easing-emphasis) forwards;
     }
     .thinking-step:nth-child(1) { animation-delay: 0.1s; }
     .thinking-step:nth-child(2) { animation-delay: 0.3s; }
     .thinking-step:nth-child(3) { animation-delay: 0.5s; }
-
-    @keyframes thinking-step-in {
-      from { opacity: 0; transform: translateX(-4px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
 
     .thinking-step-icon {
       width: 6px;
@@ -1813,12 +1772,7 @@
     .thinking-step-icon--active {
       background: var(--agent-running-fg);
       box-shadow: 0 0 6px color-mix(in oklch, var(--agent-running-fg) 30%, transparent);
-      animation: step-dot-breathe 2.5s ease-in-out infinite;
-    }
-
-    @keyframes step-dot-breathe {
-      0%, 100% { box-shadow: 0 0 4px color-mix(in oklch, var(--agent-running-fg) 20%, transparent); }
-      50%      { box-shadow: 0 0 8px color-mix(in oklch, var(--agent-running-fg) 45%, transparent); }
+      animation: dot-pulse 2.5s ease-in-out infinite;
     }
 
     /* ── Code block formatting ── */
@@ -1904,9 +1858,6 @@
     }
 
     /* ── Enhanced input area ── */
-    .input-wrapper {
-      position: relative;
-    }
     .input-wrapper::before {
       content: '';
       position: absolute;
@@ -1914,9 +1865,8 @@
       border-radius: calc(var(--input-radius) + 1px);
       background: linear-gradient(
         135deg,
-        color-mix(in oklch, var(--brand-accent) 8%, transparent) 0%,
-        transparent 50%,
-        color-mix(in oklch, var(--brand-accent) 5%, transparent) 100%
+        var(--brand-accent) 0%,
+        transparent 50%
       );
       opacity: 0;
       transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
@@ -2271,19 +2221,19 @@
       <div class="mode-tabs">
         <label for="copilot-market-analysis" class="mode-tab active" role="tab" data-tab="copilot-market-analysis" tabindex="0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
-          Market Analysis
+          市场分析
         </label>
         <label for="copilot-stock-discovery" class="mode-tab" role="tab" data-tab="copilot-stock-discovery" tabindex="0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-          Stock Discovery
+          个股发现
         </label>
         <label for="copilot-strategy-draft" class="mode-tab" role="tab" data-tab="copilot-strategy-draft" tabindex="0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
-          Strategy Draft
+          策略草案
         </label>
         <label for="copilot-factor-discovery" class="mode-tab" role="tab" data-tab="copilot-factor-discovery" tabindex="0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
-          Factor Discovery
+          因子发现
         </label>
       </div>
       <div class="mode-spacer"></div>
@@ -2321,27 +2271,27 @@
         <div class="sessions-group-label">历史会话</div>
         <div class="session-item active" tabindex="0" role="button" data-tooltip="当前会话 · 沪深300风格因子分析">
           <span class="session-item-title">沪深300风格因子分析</span>
-          <span class="session-item-meta">今天 14:20 · Market Analysis</span>
+          <span class="session-item-meta">今天 14:20 · 市场分析</span>
         </div>
-        <div class="session-item" tabindex="0" role="button" data-tooltip="Factor Discovery · 6 条消息">
+        <div class="session-item" tabindex="0" role="button" data-tooltip="因子发现 · 6 条消息">
           <span class="session-item-title">北向资金流入预测模型</span>
-          <span class="session-item-meta">今天 11:05 · Factor Discovery</span>
+          <span class="session-item-meta">今天 11:05 · 因子发现</span>
         </div>
-        <div class="session-item" tabindex="0" role="button" data-tooltip="Market Analysis · 8 条消息">
+        <div class="session-item" tabindex="0" role="button" data-tooltip="市场分析 · 8 条消息">
           <span class="session-item-title">新能源板块拥挤度评估</span>
-          <span class="session-item-meta">昨天 16:30 · Market Analysis</span>
+          <span class="session-item-meta">昨天 16:30 · 市场分析</span>
         </div>
-        <div class="session-item" tabindex="0" role="button" data-tooltip="Strategy Draft · 4 条消息">
+        <div class="session-item" tabindex="0" role="button" data-tooltip="策略草案 · 4 条消息">
           <span class="session-item-title">动量反转策略初稿</span>
-          <span class="session-item-meta">昨天 10:15 · Strategy Draft</span>
+          <span class="session-item-meta">昨天 10:15 · 策略草案</span>
         </div>
-        <div class="session-item" tabindex="0" role="button" data-tooltip="Stock Discovery · 3 条消息">
+        <div class="session-item" tabindex="0" role="button" data-tooltip="个股发现 · 3 条消息">
           <span class="session-item-title">高股息选股筛选</span>
-          <span class="session-item-meta">3月29日 · Stock Discovery</span>
+          <span class="session-item-meta">3月29日 · 个股发现</span>
         </div>
-        <div class="session-item" tabindex="0" role="button" data-tooltip="Market Analysis · 12 条消息">
+        <div class="session-item" tabindex="0" role="button" data-tooltip="市场分析 · 12 条消息">
           <span class="session-item-title">量价背离信号复盘</span>
-          <span class="session-item-meta">3月28日 · Market Analysis</span>
+          <span class="session-item-meta">3月28日 · 市场分析</span>
         </div>
 
         <!-- Saved Notes -->
@@ -2448,7 +2398,7 @@
               <div class="structured-card-header">
                 <span class="structured-card-title">
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
-                  Factor Hypothesis — 低波动率溢价
+                  因子假设 — 低波动率溢价
                 </span>
                 <span class="confidence-tag high" data-tooltip="AI 置信度: 92% — 基于 IC/IR 交叉验证">
                   <span class="confidence-tag-dot"></span>
@@ -2573,7 +2523,7 @@
               <div class="structured-card-header">
                 <span class="structured-card-title">
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
-                  Factor Hypothesis — ROE 稳定性溢价
+                  因子假设 — ROE 稳定性溢价
                 </span>
                 <span class="confidence-tag medium" data-tooltip="AI 置信度: 68% — 需更多数据验证">
                   <span class="confidence-tag-dot"></span>
@@ -2653,35 +2603,35 @@
 
             <div data-reveal="fade-up" data-reveal-delay="0" class="analysis-step">
               <div class="analysis-step-dot"></div>
-              <div class="analysis-step-title">Step 1 — 数据检索</div>
+              <div class="analysis-step-title">步骤 1 — 数据检索</div>
               <div class="analysis-step-desc">检索沪深300成分股近 5 日风格因子暴露度，获取价值、动量、质量三大因子维度的截面数据</div>
               <div class="analysis-step-source">数据源：Wind 因子库 · 聚宽因子库</div>
             </div>
 
             <div data-reveal="fade-up" data-reveal-delay="100" class="analysis-step">
               <div class="analysis-step-dot"></div>
-              <div class="analysis-step-title">Step 2 — IC/IR 计算</div>
+              <div class="analysis-step-title">步骤 2 — IC/IR 计算</div>
               <div class="analysis-step-desc">计算 IC/IR 滚动窗口指标（60日/120日），识别偏离历史均值的异常信号（波动率、换手率）</div>
               <div class="analysis-step-source">方法：Fama-MacBeth 回归 · 分层回测</div>
             </div>
 
             <div data-reveal="fade-up" data-reveal-delay="200" class="analysis-step">
               <div class="analysis-step-dot"></div>
-              <div class="analysis-step-title">Step 3 — 宏观关联验证</div>
+              <div class="analysis-step-title">步骤 3 — 宏观关联验证</div>
               <div class="analysis-step-desc">关联宏观指标 PMI、A50 隐含波动率与因子假设，交叉验证北向资金偏好与低 Beta 防御性配置</div>
               <div class="analysis-step-source">数据源：Wind 宏观数据 · 东方财富 Choice</div>
             </div>
 
             <div data-reveal="fade-up" data-reveal-delay="300" class="analysis-step analysis-step--muted">
               <div class="analysis-step-dot analysis-step-dot--muted"></div>
-              <div class="analysis-step-title">Step 4 — ROE 质量拆解</div>
+              <div class="analysis-step-title">步骤 4 — ROE 质量拆解</div>
               <div class="analysis-step-desc">拆解 ROE 质量因子至稳定性（5年标准差）、动量（QoQ 变化率）、资产周转率三维度</div>
               <div class="analysis-step-source">结果：ROE 稳定性 IC=0.061 IR=0.97 最优</div>
             </div>
 
             <div data-reveal="fade-up" data-reveal-delay="400" class="analysis-step analysis-step--subtle">
               <div class="analysis-step-dot analysis-step-dot--subtle"></div>
-              <div class="analysis-step-title">Step 5 — 假设生成与置信度评估</div>
+              <div class="analysis-step-title">步骤 5 — 假设生成与置信度评估</div>
               <div class="analysis-step-desc">生成 LOWVOL_PREM（高置信 92%）和 ROE_STABILITY（中置信 68%）两个因子假设卡片</div>
               <div class="analysis-step-source">令牌消耗：3,847 · 推理耗时 4.2s</div>
             </div>
@@ -2932,7 +2882,7 @@
       <div class="overlay-sheet" role="dialog" aria-label="保存结论">
         <div class="overlay-header">
           <span class="overlay-title">保存结论</span>
-          <label for="overlay-save-conclusion" class="overlay-close" aria-label="关闭">&#10005;</label>
+          <button onclick="document.getElementById('overlay-save-conclusion').checked=false" class="overlay-close" aria-label="关闭">&#10005;</button>
         </div>
         <div class="overlay-body">
           <h4>结论内容预览</h4>
@@ -2972,7 +2922,7 @@
       <div class="overlay-drawer" role="dialog" aria-label="发送到工作区">
         <div class="overlay-header">
           <span class="overlay-title">发送到工作区</span>
-          <label for="overlay-send-workspace" class="overlay-close" aria-label="关闭">&#10005;</label>
+          <button onclick="document.getElementById('overlay-send-workspace').checked=false" class="overlay-close" aria-label="关闭">&#10005;</button>
         </div>
         <div class="overlay-body">
           <h4>选择目标工作区</h4>
@@ -2980,28 +2930,28 @@
             <label class="radio-option radio-option--selected">
               <input type="radio" name="workspace-target" checked>
               <div>
-                <div class="radio-option__title radio-option__title--brand">Factor Analysis</div>
+                <div class="radio-option__title radio-option__title--brand">因子分析</div>
                 <div class="radio-option__desc">因子验证工作台</div>
               </div>
             </label>
             <label class="radio-option radio-option--unselected">
               <input type="radio" name="workspace-target">
               <div>
-                <div class="radio-option__title">Strategy Studio</div>
+                <div class="radio-option__title">策略工作室</div>
                 <div class="radio-option__desc">策略构建与回测</div>
               </div>
             </label>
             <label class="radio-option radio-option--unselected">
               <input type="radio" name="workspace-target">
               <div>
-                <div class="radio-option__title">Research Workspace</div>
+                <div class="radio-option__title">研究工作区</div>
                 <div class="radio-option__desc">研究报告工作区</div>
               </div>
             </label>
             <label class="radio-option radio-option--unselected">
               <input type="radio" name="workspace-target">
               <div>
-                <div class="radio-option__title">Intelligence</div>
+                <div class="radio-option__title">情报中心</div>
                 <div class="radio-option__desc">情报中心</div>
               </div>
             </label>
@@ -3026,7 +2976,7 @@
       <div class="overlay-sheet" role="dialog" aria-label="会话模板">
         <div class="overlay-header">
           <span class="overlay-title">新建对话</span>
-          <label for="overlay-session-template" class="overlay-close" aria-label="关闭">&#10005;</label>
+          <button onclick="document.getElementById('overlay-session-template').checked=false" class="overlay-close" aria-label="关闭">&#10005;</button>
         </div>
         <div class="overlay-body">
           <h4>选择对话模板</h4>
@@ -3106,13 +3056,13 @@
   <!-- Status Bar -->
   <div class="status-bar" role="status" aria-label="系统状态">
     <span class="status-indicator" aria-hidden="true" data-tooltip="系统运行正常"></span>
-    <span class="status-live">LIVE</span>
+    <span class="status-live">在线</span>
     <span class="status-sep">|</span>
     <span>AI 模型 GPT-4o</span>
     <span class="status-sep">|</span>
     <span>令牌 <span class="status-token-highlight" data-counter="3847" data-counter-decimals="0" data-counter-duration="1200">0</span></span>
     <span class="status-sep">|</span>
-    <span>Market Analysis 模式</span>
+    <span>市场分析模式</span>
     <span class="status-sep">|</span>
     <span>14:22 CST</span>
     <span class="status-spacer"></span>
@@ -3130,14 +3080,14 @@
 <section id="states-gallery" class="proto-section">
       <div class="gallery-grid">
         <div class="gallery-group" data-component="Sessions">
-          <div class="gallery-group__label">Sessions</div>
+          <div class="gallery-group__label">会话列表</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Sessions — Empty State</div>
+      <div class="gallery-card__label">会话列表 — 空状态</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="empty">
       <div class="state-empty">
-        <div class="state-empty-icon">💬</div>
+        <div class="state-empty-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12a1 1 0 011 1v8a1 1 0 01-1 1H7l-3 3V5a1 1 0 011-1z"/></svg></div>
         <div class="state-empty-title">暂无历史会话</div>
         <div class="state-empty-desc">开始新的 AI 分析对话，会话记录将自动保存到此处</div>
         <label for="overlay-session-template" class="state-empty-cta overlay-label-btn">新建对话</label>
@@ -3146,7 +3096,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Sessions — Loading State</div>
+      <div class="gallery-card__label">会话列表 — 加载中</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="loading">
       <div class="state-loading">
@@ -3160,7 +3110,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Sessions — Error State</div>
+      <div class="gallery-card__label">会话列表 — 错误</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="failed">
       <div class="state-error">
@@ -3173,7 +3123,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Sessions — Stale State</div>
+      <div class="gallery-card__label">会话列表 — 数据过期</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="stale">
         <div class="state-stale">
@@ -3191,14 +3141,14 @@
         </div>
 
         <div class="gallery-group" data-component="Conversation">
-          <div class="gallery-group__label">Conversation</div>
+          <div class="gallery-group__label">对话</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Conversation — Empty State</div>
+      <div class="gallery-card__label">对话 — 空状态</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="empty">
       <div class="state-empty">
-        <div class="state-empty-icon">🤖</div>
+        <div class="state-empty-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="7" r="3"/><path d="M4 14v-1a6 6 0 0112 0v1"/><circle cx="10" cy="7" r="1"/><path d="M7 5v-1M13 5v-1"/></svg></div>
         <div class="state-empty-title">开始新的分析</div>
         <div class="state-empty-desc">输入你的问题，AI Copilot 将从数据中提取洞察、生成因子假设或策略草案</div>
       </div>
@@ -3206,7 +3156,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Conversation — Loading State</div>
+      <div class="gallery-card__label">对话 — 加载中</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="loading">
       <div class="state-loading">
@@ -3223,7 +3173,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Conversation — Error State</div>
+      <div class="gallery-card__label">对话 — 错误</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="failed">
       <div class="state-error">
@@ -3236,7 +3186,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Conversation — Stale State</div>
+      <div class="gallery-card__label">对话 — 数据过期</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="stale">
         <div class="state-stale">
@@ -3254,14 +3204,14 @@
         </div>
 
         <div class="gallery-group" data-component="Context Panel">
-          <div class="gallery-group__label">Context Panel</div>
+          <div class="gallery-group__label">上下文面板</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Context Panel — Empty State</div>
+      <div class="gallery-card__label">上下文面板 — 空状态</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="empty">
       <div class="state-empty">
-        <div class="state-empty-icon">📎</div>
+        <div class="state-empty-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.5 5.5l-9 9M15.5 5.5l-3-3-9 9 3 3 9-9M15.5 5.5l-3 3"/></svg></div>
         <div class="state-empty-title">暂无关联上下文</div>
         <div class="state-empty-desc">对话中引用的数据对象、证据链和操作建议将自动出现在此处</div>
       </div>
@@ -3269,7 +3219,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Context Panel — Loading State</div>
+      <div class="gallery-card__label">上下文面板 — 加载中</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="loading">
       <div class="state-loading">
@@ -3284,7 +3234,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Context Panel — Error State</div>
+      <div class="gallery-card__label">上下文面板 — 错误</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="failed">
       <div class="state-error">
@@ -3297,7 +3247,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Context Panel — Stale State</div>
+      <div class="gallery-card__label">上下文面板 — 数据过期</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="stale">
         <div class="state-stale">
@@ -3315,14 +3265,14 @@
         </div>
 
         <div class="gallery-group" data-component="Copilot Header">
-          <div class="gallery-group__label">Copilot Header</div>
+          <div class="gallery-group__label">Copilot 头部</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Copilot Header — Empty State</div>
+      <div class="gallery-card__label">Copilot 头部 — 空状态</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="empty">
       <div class="state-empty">
-        <div class="state-empty-icon">✨</div>
+        <div class="state-empty-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.93 4.93l2.12 2.12M12.95 12.95l2.12 2.12M4.93 15.07l2.12-2.12M12.95 7.05l2.12-2.12"/></svg></div>
         <div class="state-empty-title">AI Copilot 就绪</div>
         <div class="state-empty-desc">选择一个分析模式，开始使用 AI 辅助投资研究</div>
       </div>
@@ -3330,7 +3280,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Copilot Header — Loading State</div>
+      <div class="gallery-card__label">Copilot 头部 — 加载中</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="loading">
       <div class="state-loading">
@@ -3341,7 +3291,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Copilot Header — Error State</div>
+      <div class="gallery-card__label">Copilot 头部 — 错误</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="failed">
       <div class="state-error">
@@ -3354,7 +3304,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Copilot Header — Stale State</div>
+      <div class="gallery-card__label">Copilot 头部 — 数据过期</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="stale">
         <div class="state-stale">
@@ -3372,14 +3322,14 @@
         </div>
 
         <div class="gallery-group" data-component="Mode Switch">
-          <div class="gallery-group__label">Mode Switch</div>
+          <div class="gallery-group__label">模式切换</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Mode Switch — Default (only state)</div>
+      <div class="gallery-card__label">模式切换 — 默认状态</div>
       <div class="gallery-card__preview">
 	<div class="state-variant-content" data-state="default">
       <div class="mode-switch-default">
-        模式切换为纯交互组件，仅有 default 状态。通过 radio tab 系统切换。
+        模式切换为纯交互组件，仅有默认状态。通过单选标签系统切换。
       </div>
     </div>
       </div>
@@ -3447,34 +3397,30 @@
             <h4>选择目标工作区</h4>
             <div class="radio-option-stack">
               <label class="radio-option radio-option--selected">
-              <label class="radio-option radio-option--selected">
                 <input type="radio" name="workspace-target" checked>
                 <div>
-                  <div class="radio-option__title radio-option__title--brand">Factor Analysis</div>
+                  <div class="radio-option__title radio-option__title--brand">因子分析</div>
                   <div class="radio-option__desc">因子验证工作台</div>
                 </div>
               </label>
               <label class="radio-option radio-option--unselected">
-              <label class="radio-option radio-option--unselected">
                 <input type="radio" name="workspace-target">
                 <div>
-                  <div class="radio-option__title">Strategy Studio</div>
+                  <div class="radio-option__title">策略工作室</div>
                   <div class="radio-option__desc">策略构建与回测</div>
                 </div>
               </label>
               <label class="radio-option radio-option--unselected">
-              <label class="radio-option radio-option--unselected">
                 <input type="radio" name="workspace-target">
                 <div>
-                  <div class="radio-option__title">Research Workspace</div>
+                  <div class="radio-option__title">研究工作区</div>
                   <div class="radio-option__desc">研究报告工作区</div>
                 </div>
               </label>
               <label class="radio-option radio-option--unselected">
-              <label class="radio-option radio-option--unselected">
                 <input type="radio" name="workspace-target">
                 <div>
-                  <div class="radio-option__title">Intelligence</div>
+                  <div class="radio-option__title">情报中心</div>
                   <div class="radio-option__desc">情报中心</div>
                 </div>
               </label>
@@ -3504,7 +3450,6 @@
           <div class="overlay-body">
             <h4>选择对话模板</h4>
             <div class="radio-option-stack">
-              <label class="radio-option radio-option--lg radio-option--unselected">
               <label class="radio-option radio-option--lg radio-option--selected">
                 <input type="radio" name="session-template" checked>
                 <div>
@@ -3513,14 +3458,12 @@
                 </div>
               </label>
               <label class="radio-option radio-option--lg radio-option--unselected">
-              <label class="radio-option radio-option--lg radio-option--unselected">
                 <input type="radio" name="session-template">
                 <div>
                   <div class="radio-option__title">市场日报</div>
                   <div class="radio-option__desc">每日市场概览与关键数据解读</div>
                 </div>
               </label>
-              <label class="radio-option radio-option--lg radio-option--unselected">
               <label class="radio-option radio-option--lg radio-option--unselected">
                 <input type="radio" name="session-template">
                 <div>
@@ -3529,14 +3472,12 @@
                 </div>
               </label>
               <label class="radio-option radio-option--lg radio-option--unselected">
-              <label class="radio-option radio-option--lg radio-option--unselected">
                 <input type="radio" name="session-template">
                 <div>
                   <div class="radio-option__title">行业比较</div>
                   <div class="radio-option__desc">跨行业横向对比与轮动分析</div>
                 </div>
               </label>
-              <label class="radio-option radio-option--lg radio-option--unselected">
               <label class="radio-option radio-option--lg radio-option--unselected">
                 <input type="radio" name="session-template">
                 <div>
