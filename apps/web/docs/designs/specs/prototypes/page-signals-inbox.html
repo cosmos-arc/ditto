@@ -1610,6 +1610,141 @@
 
     /* Progress bar fill override for order execution */
     .confidence-fill.progress { background: var(--system-healthy-fg); }
+
+    /* ══════════════════════════════════
+     * Round 2 Enhancements
+     * ══════════════════════════════════ */
+
+    /* ── 1. Shell Noise Texture (Graphite Studio material) ── */
+    .shell-signals {
+      position: relative;
+    }
+    .shell-signals::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .shell-signals > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── 2. Rail Logo Brand Glow (matches factor-analysis) ── */
+    .rail-logo {
+      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+    }
+
+    /* ── 3. Overlay Accent Border (matches factor-analysis) ── */
+    .overlay-sheet {
+      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+    }
+
+    /* ── 4. Confidence Bar Gradient Enhancement ── */
+    .confidence-fill.high {
+      background: linear-gradient(90deg, var(--brand-accent), color-mix(in oklch, var(--brand-accent) 60%, oklch(1 0 0)));
+    }
+    .confidence-fill.low {
+      opacity: 0.7;
+    }
+
+    /* ── 5. Detail Panel Section Hierarchy ── */
+    .detail-section-title {
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-secondary);
+      letter-spacing: 0.03em;
+    }
+
+    /* ── 6. Blocked Row — Background instead of opacity ── */
+    .row.blocked {
+      opacity: 1;
+      background: color-mix(in oklch, var(--system-down-fg) 6%, transparent);
+    }
+    .row.blocked .risk-badge.block {
+      animation: none;
+    }
+
+    /* ── 7. Table Header Gradient Border ── */
+    .data-table thead tr {
+      position: relative;
+    }
+    .data-table thead tr::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--border-default) 15%,
+        var(--border-default) 85%,
+        transparent 100%
+      );
+    }
+    .data-table thead th {
+      border-bottom: none;
+    }
+
+    /* ── 8. Impact Grid Color Encoding ── */
+    .impact-card {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .impact-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--text-primary) 5%, transparent);
+    }
+    .impact-card-value.up {
+      text-shadow: 0 0 8px color-mix(in oklch, var(--market-up-fg) 20%, transparent);
+    }
+    .impact-card-value.down {
+      text-shadow: 0 0 8px color-mix(in oklch, var(--market-down-fg) 20%, transparent);
+    }
+
+    /* ── 9. Batch Button Hover Shadow (match detail-action.primary) ── */
+    .batch-btn.primary:hover {
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+    }
+
+    /* ── 10. Status Bar Brand Touch ── */
+    .status-live {
+      color: var(--brand-accent);
+    }
+
+    /* ── 11. Scope Strip Warn Dot Pulse ── */
+    .scope-status-dot.warn {
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    /* ── 12. Overlay Button Height Alignment ── */
+    .overlay-btn {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    /* ── 13. Detail Confidence Bar Height Enhancement ── */
+    .detail-confidence-bar {
+      height: 8px;
+      border-radius: 4px;
+    }
+
+    /* ── 14. Signal Strength Bar Gradient ── */
+    .signal-strength-bar.active {
+      background: linear-gradient(to top, var(--brand-accent), color-mix(in oklch, var(--brand-accent) 70%, oklch(1 0 0)));
+    }
+
+    /* ── 15. font-size-9 fallback fix ── */
+    .related-signal-card .source-badge {
+      font-size: var(--font-size-10);
+    }
   </style>
 </head>
 <body>
@@ -1710,7 +1845,7 @@
         已转订单 <span class="tab-count">156</span>
       </label>
 
-      <div class="scope-status" role="status" aria-label="涨跌停校验">
+      <div class="scope-status" role="status" aria-label="涨跌停">
         <div class="scope-status-item">
           <span class="scope-status-dot pass"></span>
           涨跌停: 正常
@@ -1804,7 +1939,7 @@
                   <span class="cell-ticker">300750</span>
                   <span class="cell-name">宁德时代</span>
                 </td>
-                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
+                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI 信号</span></td>
                 <td>
                   <div aria-label="优先级 P2" class="priority-badge p2">P2</div>
                   <span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span>
@@ -1858,7 +1993,7 @@
                   <span class="cell-ticker">002594</span>
                   <span class="cell-name">比亚迪</span>
                 </td>
-                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
+                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI 信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-numeric">2.8%</td>
                 <td>
@@ -1892,7 +2027,7 @@
                   <span class="cell-ticker">600036</span>
                   <span class="cell-name">招商银行</span>
                 </td>
-                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
+                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI 信号</span></td>
                 <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
                 <td class="cell-numeric">-2.1%</td>
                 <td>
@@ -1934,7 +2069,7 @@
           <div class="batch-bar-actions">
             <label for="overlay-batch-confirm" class="batch-btn primary">批量确认</label>
             <button class="batch-btn">批量忽略</button>
-            <label for="overlay-ai-read" class="batch-btn">AI 解读</label>
+            <label for="overlay-ai-read" class="batch-btn">AI 分析</label>
           </div>
         </div>
 
@@ -1961,7 +2096,7 @@
             </div>
             <div class="signal-item">
               <span class="text-brand-medium">▲ 买入</span>
-              <span class="col-auto">比亚迪 002594 — AI信号</span>
+              <span class="col-auto">比亚迪 002594 — AI 信号</span>
               <span class="cell-numeric">2.8%</span>
               <span class="status-healthy">置信度 78%</span>
             </div>
@@ -1978,7 +2113,7 @@
           <div class="flex-col gap-8">
             <div class="signal-item">
               <span class="text-danger-medium">▼ 卖出</span>
-              <span class="col-auto">宁德时代 300750 — AI信号</span>
+              <span class="col-auto">宁德时代 300750 — AI 信号</span>
               <span class="cell-numeric">-3.2%</span>
               <span class="status-degraded">置信度 65%</span>
             </div>
@@ -1990,7 +2125,7 @@
             </div>
             <div class="signal-item">
               <span class="text-danger-medium">▼ 卖出</span>
-              <span class="col-auto">招商银行 600036 — AI信号</span>
+              <span class="col-auto">招商银行 600036 — AI 信号</span>
               <span class="cell-numeric">-2.1%</span>
               <span class="status-degraded">置信度 58%</span>
             </div>
@@ -1998,7 +2133,7 @@
         </div>
 
         <div data-tab-panel="hold" aria-hidden="true" class="tab-panel-empty">
-          当前无持有信号
+          当前无持有方向的信号
         </div>
       </div>
 
@@ -2038,7 +2173,7 @@
                   <span class="cell-ticker">600036</span>
                   <span class="cell-name">招商银行</span>
                 </td>
-                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
+                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI 信号</span></td>
                 <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
                 <td class="cell-numeric">-2.1%</td>
                 <td class="cell-operator">C</td>
@@ -2104,7 +2239,7 @@
                   <span class="cell-ticker">002594</span>
                   <span class="cell-name">比亚迪</span>
                 </td>
-                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI信号</span></td>
+                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI 信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-reason danger">涨跌停阻断：涨停价买入</td>
                 <td><button class="filter-btn">恢复</button></td>
@@ -2269,7 +2404,7 @@
                 <span class="risk-check-icon pass">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8l3 3 5-5"/></svg>
                 </span>
-                <span class="risk-check-label">涨跌停校验</span>
+                <span class="risk-check-label">涨跌停</span>
               </div>
               <span class="risk-check-status pass">未触及</span>
             </div>
@@ -2278,7 +2413,7 @@
                 <span class="risk-check-icon warn">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v5m0 3v0.5"/></svg>
                 </span>
-                <span class="risk-check-label">T+1 约束</span>
+                <span class="risk-check-label">T+1 可卖</span>
               </div>
               <span class="risk-check-status warn">今日已买入</span>
             </div>
@@ -2287,7 +2422,7 @@
                 <span class="risk-check-icon pass">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8l3 3 5-5"/></svg>
                 </span>
-                <span class="risk-check-label">两融约束</span>
+                <span class="risk-check-label">两融检查</span>
               </div>
               <span class="risk-check-status pass">合规</span>
             </div>
@@ -2383,18 +2518,18 @@
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
             生成订单复核
           </label>
-          <!-- Overlay trigger: 交给 AI 解读 → 弹出 AI 解读 Modal -->
-          <label for="overlay-ai-read" class="detail-action secondary" tabindex="0" aria-label="交给 AI 解读">
+          <!-- Overlay trigger: AI 分析信号 → 弹出 AI 解读 Modal -->
+          <label for="overlay-ai-read" class="detail-action secondary" tabindex="0" aria-label="AI 分析信号">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l2 4.5L15 7.5l-3.5 3.5.8 5L8 13.5 3.7 16l.8-5L1 7.5l5-1L8 2z"/></svg>
-            交给 AI 解读
+            AI 分析信号
           </label>
           <button class="detail-action ghost" tabindex="0" aria-label="查看来源回测">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 2 5-6"/><circle cx="14" cy="4" r="1.5" fill="currentColor"/></svg>
-            查看来源回测
+            查看策略回测
           </button>
           <button class="detail-action ghost" tabindex="0" aria-label="查看来源策略">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M6 3v10"/></svg>
-            查看来源策略
+            查看策略详情
           </button>
         </div>
       </div>
@@ -2441,7 +2576,7 @@
             <span class="overlay-field-value color-pass">✓ 确认（非当日买入标的）</span>
           </div>
           <div class="overlay-field">
-            <span class="overlay-field-label">两融约束</span>
+            <span class="overlay-field-label">两融检查</span>
             <span class="overlay-field-value color-pass">✓ 担保比例充足</span>
           </div>
 
@@ -2514,7 +2649,7 @@
             <span class="overlay-field-value color-pass">低（日成交额 > 50 亿）</span>
           </div>
           <div class="overlay-field">
-            <span class="overlay-field-label">T+1 约束</span>
+            <span class="overlay-field-label">T+1 可卖</span>
             <span class="overlay-field-value color-warn">今日已买入</span>
           </div>
 
@@ -2727,7 +2862,7 @@
       <div class="state-error">
         <div class="state-error-icon">!</div>
         <div class="state-error-title">信号数据加载失败</div>
-        <div class="state-error-desc">无法获取信号列表，请检查网络连接或 Signal Engine 状态后重试</div>
+        <div class="state-error-desc">无法获取信号列表，请检查网络连接或信号引擎状态后重试</div>
         <button class="state-error-retry">重试</button>
       </div>
     </div>
@@ -2932,7 +3067,7 @@
               <span class="overlay-field-value color-pass">✓ 确认（非当日买入标的）</span>
             </div>
             <div class="overlay-field">
-              <span class="overlay-field-label">两融约束</span>
+              <span class="overlay-field-label">两融检查</span>
               <span class="overlay-field-value color-pass">✓ 担保比例充足</span>
             </div>
 
@@ -3006,7 +3141,7 @@
               <span class="overlay-field-value color-pass">低（日成交额 > 50 亿）</span>
             </div>
             <div class="overlay-field">
-              <span class="overlay-field-label">T+1 约束</span>
+              <span class="overlay-field-label">T+1 可卖</span>
               <span class="overlay-field-value color-warn">今日已买入</span>
             </div>
 
@@ -3088,5 +3223,12 @@
   <input type="checkbox" id="overlay-order-confirm" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-ai-read" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-batch-confirm" class="overlay-radio sr-only">
+
+  <!-- SVG noise filter (Graphite Studio material) -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
 </body>
 </html>
