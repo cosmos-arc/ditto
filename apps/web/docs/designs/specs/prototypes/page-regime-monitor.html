@@ -349,6 +349,7 @@
       display: none;
       height: 100%;
       overflow-y: auto;
+      padding-bottom: 2rem;
     }
 
     /* ══════════════════════════════════════════════
@@ -439,6 +440,7 @@
       cursor: pointer;
       transition: all var(--motion-duration-fast) var(--motion-easing-standard);
       background: transparent;
+      appearance: none;
     }
     .regime-time-btn:hover { border-color: var(--border-default); color: var(--text-secondary); }
     .regime-time-btn.active {
@@ -1958,6 +1960,89 @@
     .fit-bar-w-58 { width: 58%; }
     .fit-bar-w-32 { width: 32%; }
 
+    /* ══════════════════════════════════════════════
+     * Round 4 — Visual Elevation & Anchor Enhancement
+     * ══════════════════════════════════════════════ */
+
+    /* ── A: Surface Elevation Depth System ── */
+    .panel {
+      box-shadow: inset 0 1px 0 color-mix(in oklch, var(--text-primary) 3%, transparent);
+    }
+
+    /* Regime Indicator: focal panel — elevated surface + brand ambient glow */
+    .panel[data-mouse-glow] {
+      background: color-mix(in oklch, var(--surface-panel-base) 98%, var(--brand-accent));
+      box-shadow:
+        inset 0 1px 0 color-mix(in oklch, var(--text-primary) 4%, transparent),
+        0 0 40px -12px color-mix(in oklch, var(--brand-accent) 6%, transparent);
+    }
+
+    /* Context-rail sections: slightly recessed surface */
+    .context-section {
+      background: color-mix(in oklch, var(--surface-panel-base) 97%, var(--surface-app));
+    }
+
+    /* ── B: Regime Indicator Visual Anchor ── */
+    .regime-atmosphere--bull::before {
+      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--market-up-fg) 8%, transparent) 0%, transparent 70%);
+    }
+    .regime-atmosphere--bear::before {
+      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--market-down-fg) 8%, transparent) 0%, transparent 70%);
+    }
+    .regime-atmosphere--range::before {
+      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--risk-near-limit-fg) 6%, transparent) 0%, transparent 70%);
+    }
+
+    /* Gauge center glow */
+    .regime-gauge-svg-center {
+      box-shadow: 0 0 20px -6px color-mix(in oklch, var(--market-up-fg) 12%, transparent);
+    }
+
+    /* Regime status name: tighter letter-spacing for anchor feel */
+    .regime-status-name {
+      letter-spacing: -0.01em;
+    }
+
+    /* Status strip: subtle brand tint background */
+    .scope-strip {
+      background:
+        linear-gradient(180deg, color-mix(in oklch, var(--brand-accent) 2%, transparent) 0%, transparent 100%),
+        var(--surface-strip);
+    }
+
+    /* Strip key metrics: subtle live-data glow */
+    .regime-strip-value.up,
+    .regime-strip-value.ok {
+      text-shadow: 0 0 8px color-mix(in oklch, currentColor 15%, transparent);
+    }
+
+    /* ── C: Micro-interaction Consistency ── */
+    /* Unified list-row hover: background + subtle indent */
+    .driver-item:hover,
+    .factor-item:hover,
+    .switch-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+      padding-left: var(--space-6);
+      margin-left: calc(var(--space-6) * -1);
+      padding-right: var(--space-6);
+      margin-right: calc(var(--space-6) * -1);
+    }
+
+    /* Strategy row: same hover pattern but without indent shift (table context) */
+    .strategy-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Timeline connector hover: opacity instead of brand color */
+    .switch-item:hover::before {
+      opacity: 0.5;
+    }
+
+    /* Signal bars: full opacity by default for scannability */
+    .signal-bars:not(:hover) .signal-bars__bar {
+      opacity: 0.85;
+    }
+
   </style>
 </head>
 <body>
@@ -2056,12 +2141,12 @@
     <div class="scope-strip">
       <div class="regime-strip-metric" data-tooltip="Regime Engine 实时判定当前市场处于风险偏好状态">
         <span class="regime-strip-label">当前 Regime</span>
-        <span class="regime-strip-value up">温和风险偏好</span>
+        <span class="regime-strip-value up">温和 Risk-On</span>
       </div>
       <div class="regime-strip-separator"></div>
       <div class="regime-strip-metric" data-tooltip="多因子加权置信度，>70% 为高置信">
         <span class="regime-strip-label">置信度</span>
-        <span class="regime-strip-value up" data-ticker="72" data-decimals="0" data-ticker-suffix="%">0%</span>
+        <span class="regime-strip-value up" data-counter="72" data-counter-decimals="0" data-counter-suffix="%">0%</span>
       </div>
       <div class="regime-strip-separator"></div>
       <div class="regime-strip-metric" data-tooltip="中国版 VIX，反映市场恐慌程度，<20 为低波动">
@@ -2092,7 +2177,7 @@
 
     <!-- ═══ Tab Bar ═══ -->
     <div class="regime-tab-bar">
-      <div class="tab-group" data-tab-group="regime">
+      <div class="tab-group" data-tab-group="regime" role="tablist" aria-label="Regime Monitor">
 
         <!-- Tab radios -->
         <input type="radio" name="regime-tab" id="regime-status" checked class="tab-radio sr-only">
@@ -2100,9 +2185,9 @@
         <input type="radio" name="regime-tab" id="strategy-impact" class="tab-radio sr-only">
 
         <!-- Tab labels -->
-        <label for="regime-status" class="regime-tab" role="tab">Regime Status</label>
-        <label for="switch-history" class="regime-tab" role="tab">Switch History</label>
-        <label for="strategy-impact" class="regime-tab" role="tab">Strategy Impact</label>
+        <label for="regime-status" class="regime-tab" role="tab" aria-selected="true" aria-controls="panel-regime-status">Regime Status</label>
+        <label for="switch-history" class="regime-tab" role="tab" aria-selected="false" aria-controls="panel-switch-history">Switch History</label>
+        <label for="strategy-impact" class="regime-tab" role="tab" aria-selected="false" aria-controls="panel-strategy-impact">Strategy Impact</label>
       </div>
     </div>
 
@@ -2110,7 +2195,7 @@
     <div class="tab-panels">
 
       <!-- ─── Tab Panel: Regime Status (default) ─── -->
-      <div class="tab-panel" data-panel="regime-status">
+      <div class="tab-panel" data-panel="regime-status" role="tabpanel" id="panel-regime-status" aria-labelledby="regime-status" tabindex="0">
         <div class="main-content">
           <div class="regime-layout">
 
@@ -2123,10 +2208,10 @@
                   <span class="panel-title">Regime Indicator</span>
                   <span class="panel-subtitle panel-subtitle--offset">Regime Engine 实时判定</span>
                   <div class="panel-actions">
-                    <span class="regime-time-btn">1M</span>
-                    <span class="regime-time-btn active">3M</span>
-                    <span class="regime-time-btn">6M</span>
-                    <span class="regime-time-btn">1Y</span>
+                    <button class="regime-time-btn" aria-pressed="false">1M</button>
+                    <button class="regime-time-btn active" aria-pressed="true">3M</button>
+                    <button class="regime-time-btn" aria-pressed="false">6M</button>
+                    <button class="regime-time-btn" aria-pressed="false">1Y</button>
                   </div>
                 </div>
                 <div class="regime-indicator">
@@ -2145,7 +2230,7 @@
                       </div>
                     </div>
                     <div class="regime-gauge-info">
-                      <div class="regime-status-name">温和风险偏好 <span class="regime-state-badge regime-state-badge--bull" data-tooltip="当前 Regime 由多因子引擎判定，每 5 分钟更新"><span class="regime-state-badge__dot"></span>Moderate</span></div>
+                      <div class="regime-status-name">温和 Risk-On <span class="regime-state-badge regime-state-badge--bull" data-tooltip="当前 Regime 由多因子引擎判定，每 5 分钟更新"><span class="regime-state-badge__dot"></span>Moderate</span></div>
                       <span class="regime-status-desc">市场情绪偏暖，波动率处于低位，资金面宽松。北向资金持续净流入，个股涨跌比健康。</span>
                       <div class="regime-meta">
                         <span class="regime-meta-item">
@@ -2380,20 +2465,20 @@
                 <div class="context-section" data-reveal="fade-right" data-reveal-delay="300">
                   <div class="context-section-header">
                     <span class="context-section-title" data-tooltip="多因子模型预测未来 5 个交易日的 Regime 状态概率分布">Regime Probability</span>
-                    <span class="context-section-count">体制概率</span>
+                    <span class="context-section-count">状态概率</span>
                   </div>
                   <div class="context-section-body probability-body">
                     <div class="regime-probability-item">
-                      <svg data-donut='{"value":0.72,"label":"72%","color":"oklch(from var(--market-up-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Bull概率" data-tooltip="Risk-On 概率 72%，由情绪+资金+波动率三因子驱动"></svg>
-                      <span class="probability-label--bull">Bull</span>
+                      <svg data-donut='{"value":0.72,"label":"72%","color":"oklch(from var(--market-up-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Risk-On概率" data-tooltip="Risk-On 概率 72%，由情绪+资金+波动率三因子驱动"></svg>
+                      <span class="probability-label--bull">Risk-On</span>
                     </div>
                     <div class="regime-probability-item">
-                      <svg data-donut='{"value":0.18,"label":"18%","color":"oklch(from var(--market-down-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Bear概率" data-tooltip="Risk-Off 概率 18%，若 IVIX >22 或北向连续流出将触发"></svg>
-                      <span class="probability-label--bear">Bear</span>
+                      <svg data-donut='{"value":0.18,"label":"18%","color":"oklch(from var(--market-down-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Risk-Off概率" data-tooltip="Risk-Off 概率 18%，若 IVIX >22 或北向连续流出将触发"></svg>
+                      <span class="probability-label--bear">Risk-Off</span>
                     </div>
                     <div class="regime-probability-item">
-                      <svg data-donut='{"value":0.10,"label":"10%","color":"oklch(from var(--risk-near-limit-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Neutral概率" data-tooltip="Mixed 概率 10%，市场信号矛盾时的中性区间"></svg>
-                      <span class="probability-label--neutral">Neutral</span>
+                      <svg data-donut='{"value":0.10,"label":"10%","color":"oklch(from var(--risk-near-limit-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Mixed概率" data-tooltip="Mixed 概率 10%，市场信号矛盾时的中性区间"></svg>
+                      <span class="probability-label--neutral">Mixed</span>
                     </div>
                   </div>
                 </div>
@@ -2406,17 +2491,17 @@
       </div><!-- /tab-panel: regime-status -->
 
       <!-- ─── Tab Panel: Switch History ─── -->
-      <div class="tab-panel" data-panel="switch-history">
+      <div class="tab-panel" data-panel="switch-history" role="tabpanel" id="panel-switch-history" aria-labelledby="switch-history" tabindex="0">
         <div class="section-header">
           <div class="section-header-row">
             <span class="section-header__title" data-tooltip="记录所有 Regime 状态切换事件，包含触发因子和持续时间">Regime 切换历史</span>
             <span class="section-header__subtitle">市场状态变迁时间线</span>
             <div class="section-header__spacer"></div>
             <div class="filter-group" role="group" aria-label="事件筛选">
-              <button class="filter-btn active" data-tooltip="显示所有 Regime 切换事件">全部</button>
-              <button class="filter-btn" data-tooltip="仅显示切换至 Risk-On 的事件">Risk-On</button>
-              <button class="filter-btn" data-tooltip="仅显示切换至 Risk-Off 的事件">Risk-Off</button>
-              <button class="filter-btn" data-tooltip="仅显示切换至 Mixed 的事件">Mixed</button>
+              <button class="filter-btn active" aria-pressed="true" data-tooltip="显示所有 Regime 切换事件">全部</button>
+              <button class="filter-btn" aria-pressed="false" data-tooltip="仅显示切换至 Risk-On 的事件">Risk-On</button>
+              <button class="filter-btn" aria-pressed="false" data-tooltip="仅显示切换至 Risk-Off 的事件">Risk-Off</button>
+              <button class="filter-btn" aria-pressed="false" data-tooltip="仅显示切换至 Mixed 的事件">Mixed</button>
             </div>
           </div>
         </div>
@@ -2496,7 +2581,7 @@
                 <div class="switch-transition">
                   <span class="switch-from-tag risk-on">Risk-On</span>
                   <span class="switch-arrow">→</span>
-                  <span class="switch-from-tag">Risk-Off</span>
+                  <span class="switch-to-tag risk-off">Risk-Off</span>
                   <div class="signal-bars">
                     <div class="signal-bars__bar signal-bars__bar--bull sb-h-24"></div>
                     <div class="signal-bars__bar signal-bars__bar--bull sb-h-20"></div>
@@ -2563,14 +2648,14 @@
       </div><!-- /tab-panel: switch-history -->
 
       <!-- ─── Tab Panel: Strategy Impact ─── -->
-      <div class="tab-panel" data-panel="strategy-impact">
+      <div class="tab-panel" data-panel="strategy-impact" role="tabpanel" id="panel-strategy-impact" aria-labelledby="strategy-impact" tabindex="0">
         <div class="section-header">
           <div class="section-header-row">
             <span class="section-header__title" data-tooltip="各策略在当前 Regime 下的表现对比与适配度评估">策略表现对比</span>
             <span class="section-header__subtitle">不同 Regime 下的策略适配度</span>
             <div class="section-header__spacer"></div>
             <span class="section-header__badge">当前 Regime: </span>
-            <span class="section-header__badge--accent">温和风险偏好</span>
+            <span class="section-header__badge--accent">温和 Risk-On</span>
           </div>
         </div>
 
@@ -2709,7 +2794,7 @@
           <h4>当前 Regime 判定</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">Regime 状态</span>
-            <span class="overlay-field-value overlay-field-value--up">温和风险偏好 (Moderate)</span>
+            <span class="overlay-field-value overlay-field-value--up">温和 Risk-On</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">判定置信度</span>
@@ -3018,7 +3103,7 @@
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
           </div>
           <div class="state-stale-title">因子数据过期</div>
-          <div class="state-empty-desc">部分因子数据延迟更新，可能影响 Regime 判定准确性</div>
+          <div class="state-stale-desc">部分因子数据延迟更新，可能影响 Regime 判定准确性</div>
           <button class="state-stale-retry">刷新因子数据</button>
         </div>
       </div>
@@ -3079,7 +3164,7 @@
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
           </div>
           <div class="state-stale-title">切换记录可能不完整</div>
-          <div class="state-empty-desc">切换记录最后同步于 1 小时前，最新切换事件可能未显示</div>
+          <div class="state-stale-desc">切换记录最后同步于 1 小时前，最新切换事件可能未显示</div>
           <button class="state-stale-retry">立即同步</button>
         </div>
       </div>
@@ -3141,7 +3226,7 @@
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
           </div>
           <div class="state-stale-title">策略数据过期</div>
-          <div class="state-empty-desc">策略表现数据延迟更新，收益和回撤数值可能非最新值</div>
+          <div class="state-stale-desc">策略表现数据延迟更新，收益和回撤数值可能非最新值</div>
           <button class="state-stale-retry">刷新策略数据</button>
         </div>
       </div>
@@ -3170,7 +3255,7 @@
             <h4>当前 Regime 判定</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">Regime 状态</span>
-              <span class="overlay-field-value overlay-field-value--up">温和风险偏好 (Moderate)</span>
+              <span class="overlay-field-value overlay-field-value--up">温和 Risk-On</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">判定置信度</span>
