@@ -64,7 +64,7 @@
 :root:has(#view-default:checked) #default-view {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 35px);
+  height: calc(100vh - 43px);
   overflow: hidden;
 }
 

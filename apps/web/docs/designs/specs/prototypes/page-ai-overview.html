@@ -101,12 +101,7 @@
       border-radius: 50%;
       border: 1.5px solid var(--ai-accent);
       opacity: 0;
-      animation: ai-pulse-ring var(--ai-pulse-duration) ease-out infinite;
-    }
-
-    @keyframes ai-pulse-ring {
-      0%   { transform: scale(0.8); opacity: 0.6; }
-      100% { transform: scale(1.6); opacity: 0; }
+      animation: dot-pulse var(--ai-pulse-duration) ease-out infinite;
     }
 
     /* ── AI Pulse Strip (domain-specific status line) ── */
@@ -170,11 +165,10 @@
         "rail pulse    pulse"
         "rail main     sidebar"
         "rail status   status";
-      height: 100vh;
+      height: 100%;
       width: 100vw;
       overflow: hidden;
       position: relative;
-      padding-bottom: var(--status-bar-height, 22px);
       box-sizing: border-box;
     }
 
@@ -197,15 +191,15 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 1.5px;
+      height: 2px;
       background: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in oklch, var(--ai-accent) 15%, transparent) 15%,
-        color-mix(in oklch, var(--ai-accent) 28%, transparent) 35%,
-        color-mix(in oklch, var(--ai-accent) 35%, transparent) 50%,
-        color-mix(in oklch, var(--ai-accent) 28%, transparent) 65%,
-        color-mix(in oklch, var(--ai-accent) 15%, transparent) 85%,
+        color-mix(in oklch, var(--ai-accent) 20%, transparent) 15%,
+        color-mix(in oklch, var(--ai-accent) 35%, transparent) 35%,
+        color-mix(in oklch, var(--ai-accent) 40%, transparent) 50%,
+        color-mix(in oklch, var(--ai-accent) 35%, transparent) 65%,
+        color-mix(in oklch, var(--ai-accent) 20%, transparent) 85%,
         transparent 100%
       );
       pointer-events: none;
@@ -875,16 +869,18 @@
       color: var(--text-tertiary);
     }
 
-    .toast-card label.toast-close {
+    .toast-card .toast-close {
       color: var(--text-tertiary);
       cursor: pointer;
       font-size: var(--font-size-14);
       padding: var(--space-2);
       line-height: 1;
       flex-shrink: 0;
+      background: none;
+      border: none;
     }
 
-    .toast-card label.toast-close:hover { color: var(--text-secondary); }
+    .toast-card .toast-close:hover { color: var(--text-secondary); }
 
     /* ── Overlay content refinement ── */
     .overlay-sheet .overlay-header,
@@ -979,11 +975,11 @@
     .ai-confidence-bar-segment {
       height: 6px;
       border-radius: 3px;
-      opacity: 0.6;
+      opacity: 0.8;
     }
-    .ai-confidence-bar-segment.high   { background: var(--green-500); flex: 3; }
-    .ai-confidence-bar-segment.medium { background: var(--amber-500); flex: 2; }
-    .ai-confidence-bar-segment.low    { background: var(--red-500); flex: 2; }
+    .ai-confidence-bar-segment.high   { background: var(--green-500); flex: 42; }
+    .ai-confidence-bar-segment.medium { background: var(--amber-500); flex: 33; }
+    .ai-confidence-bar-segment.low    { background: var(--red-500); flex: 25; }
 
     .ai-confidence-label-row {
       display: flex;
@@ -996,9 +992,9 @@
     .ai-confidence-label-segment {
       text-align: center;
     }
-    .ai-confidence-label-segment.high   { flex: 3; }
-    .ai-confidence-label-segment.medium { flex: 2; }
-    .ai-confidence-label-segment.low    { flex: 2; }
+    .ai-confidence-label-segment.high   { flex: 42; }
+    .ai-confidence-label-segment.medium { flex: 33; }
+    .ai-confidence-label-segment.low    { flex: 25; }
 
     /* ── AI Model Card ── */
     .model-card-header {
@@ -1164,12 +1160,9 @@
     .ai-confidence-bar-fill.low    { background: var(--red-500); }
 
     /* ── AI Panel Glow ──
-     * Subtle border glow on active AI panels */
+     * Subtle border accent on active AI panels */
     .panel.ai-active-panel {
-      border-color: oklch(from var(--ai-accent) l c h / 0.25);
-      box-shadow:
-        0 0 0 1px oklch(from var(--ai-accent) l c h / 0.08),
-        inset 0 1px 0 oklch(from var(--ai-accent) l c h / 0.06);
+      border-color: oklch(from var(--ai-accent) l c h / 0.20);
     }
 
     /* ── AI Activity Timeline ──
@@ -1237,18 +1230,23 @@
     }
 
     /* ── AI Copilot Thinking State ──
-     * Special state for active copilot session */
+     * Subtle border opacity pulse for active copilot session */
     .ai-copilot-session.thinking {
-      border-color: oklch(from var(--ai-accent) l c h / 0.30);
-      box-shadow: 0 0 12px oklch(from var(--ai-accent) l c h / 0.06);
+      border-color: oklch(from var(--ai-accent) l c h / 0.25);
+      animation: ai-copilot-border-pulse 2.5s ease-in-out infinite;
     }
     .ai-copilot-session.thinking .ai-copilot-session-indicator {
-      animation: ai-copilot-pulse 2s ease-in-out infinite;
+      animation: ai-copilot-dot-pulse 2s ease-in-out infinite;
     }
 
-    @keyframes ai-copilot-pulse {
-      0%, 100% { box-shadow: 0 0 6px var(--ai-accent); }
-      50% { box-shadow: 0 0 12px var(--ai-accent), 0 0 24px oklch(from var(--ai-accent) l c h / 0.15); }
+    @keyframes ai-copilot-border-pulse {
+      0%, 100% { border-color: oklch(from var(--ai-accent) l c h / 0.18); }
+      50% { border-color: oklch(from var(--ai-accent) l c h / 0.35); }
+    }
+
+    @keyframes ai-copilot-dot-pulse {
+      0%, 100% { box-shadow: 0 0 4px var(--ai-accent); }
+      50% { box-shadow: 0 0 8px var(--ai-accent); }
     }
 
     /* ══════════════════════════════════════════════
@@ -1306,7 +1304,10 @@
     .btn:focus-visible,
     .header-action-btn:focus-visible,
     .ai-action-card:focus-visible,
-    .ai-nav-link:focus-visible {
+    .ai-nav-link:focus-visible,
+    .ai-plan-row:focus-visible,
+    .ai-finding-row:focus-visible,
+    .ai-output-row:focus-visible {
       outline: none;
       box-shadow: 0 0 0 1.5px var(--ai-accent), 0 0 0 4px oklch(from var(--ai-accent) l c h / 0.20);
       border-radius: var(--radius-4);
@@ -1318,6 +1319,7 @@
       .ai-pulse-dot,
       .ai-pulse-dot::after,
       .ai-thinking-dots span,
+      .ai-copilot-session.thinking,
       .ai-copilot-session.thinking .ai-copilot-session-indicator,
       .ai-plan-status.running,
       .status-indicator,
@@ -1431,6 +1433,34 @@
     /* Inline style cleanup */
     .svg-sprite-source { position: absolute; }
     .ai-tab-nav { padding-bottom: var(--space-4); flex-shrink: 0; }
+
+    /* ── AI Tab Navigation (distinct from status badges) ── */
+    .ai-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-6) var(--space-12);
+      border-radius: var(--radius-6);
+      border: none;
+      background: none;
+      cursor: pointer;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+    .ai-tab-btn:hover { color: var(--text-secondary); background: var(--interaction-hover-subtle-bg); }
+    .ai-tab-btn[aria-selected="true"] {
+      color: var(--ai-accent);
+      background: var(--ai-accent-subtle);
+    }
+    .ai-tab-btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--ai-accent), 0 0 0 4px oklch(from var(--ai-accent) l c h / 0.20);
+      border-radius: var(--radius-6);
+    }
     .plan-w-43 { width: 43%; }
     .plan-w-83 { width: 83%; }
     .plan-w-100 { width: 100%; }
@@ -1580,16 +1610,13 @@
 
       <!-- Tab Navigation Bar -->
       <div data-tabs="ai-tabs" class="flex-row-center gap-4 border-b-subtle ai-tab-nav">
-        <button data-tab-target="overview" class="ai-status-badge online tab-button" aria-selected="true">
-          <span class="ai-status-dot"></span>
+        <button data-tab-target="overview" class="ai-tab-btn tab-button" aria-selected="true">
           概览
         </button>
-        <button data-tab-target="models" class="ai-status-badge idle tab-button" aria-selected="false">
-          <span class="ai-status-dot"></span>
+        <button data-tab-target="models" class="ai-tab-btn tab-button" aria-selected="false">
           模型
         </button>
-        <button data-tab-target="signals" class="ai-status-badge idle tab-button" aria-selected="false">
-          <span class="ai-status-dot"></span>
+        <button data-tab-target="signals" class="ai-tab-btn tab-button" aria-selected="false">
           信号
         </button>
       </div>
@@ -1856,7 +1883,7 @@
                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M8 8h4M8 11h4"/></svg>
               </span>
               <div class="ai-output-body">
-                <span class="ai-output-title">API 频率优化方案 — 峰值错开请求</span>
+                <span class="ai-output-title">沪深300 成分股权重偏离分析</span>
                 <div class="ai-output-meta">
                   <span class="ai-output-time">3天前</span>
                 </div>
@@ -1903,7 +1930,7 @@
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 3v14M3 10h14M5.3 5.3l9.4 9.4M14.7 5.3L5.3 14.7"/></svg>
           </div>
           <div class="ai-action-content">
-            <span class="ai-action-title">Factor Discovery</span>
+            <span class="ai-action-title">因子探索</span>
             <span class="ai-action-desc">AI 驱动的新因子探索</span>
           </div>
         </div>
@@ -2172,28 +2199,16 @@
           </div>
           <div class="context-section-body">
             <div class="ai-activity-timeline">
-              <div class="ai-activity-item running">
-                <div class="ai-activity-body">
-                  <div class="ai-activity-title">行业轮动扫描 — Q1 季报因子验证</div>
-                  <div class="ai-activity-time">进行中 · 步骤 3/7</div>
-                </div>
-              </div>
-              <div class="ai-activity-item running">
-                <div class="ai-activity-body">
-                  <div class="ai-activity-title">持仓集中度监控 — 每日巡检</div>
-                  <div class="ai-activity-time">进行中 · 步骤 5/6</div>
-                </div>
-              </div>
               <div class="ai-activity-item completed">
                 <div class="ai-activity-body">
-                  <div class="ai-activity-title">价值因子 Q1 回测完成</div>
-                  <div class="ai-activity-time">1小时前 · Sharpe 1.42</div>
+                  <div class="ai-activity-title">价值因子 Q1 回测完成 · Sharpe 1.42</div>
+                  <div class="ai-activity-time">1小时前</div>
                 </div>
               </div>
               <div class="ai-activity-item failed">
                 <div class="ai-activity-body">
                   <div class="ai-activity-title">期权波动率曲面校准失败</div>
-                  <div class="ai-activity-time">5小时前 · API 超时</div>
+                  <div class="ai-activity-time">5小时前</div>
                 </div>
               </div>
             </div>
@@ -2208,16 +2223,16 @@
           <div class="context-section-body ai-sidebar-nav-body">
             <div class="ai-nav-links">
               <a href="#" class="ai-nav-link">
-                <span class="ai-nav-arrow">→</span>/ai/agent — Agent 管理中心
+                <span class="ai-nav-arrow">→</span>Agent 管理中心
               </a>
               <a href="#" class="ai-nav-link">
-                <span class="ai-nav-arrow">→</span>/ai/copilot — Copilot 对话
+                <span class="ai-nav-arrow">→</span>Copilot 对话
               </a>
               <a href="#" class="ai-nav-link">
-                <span class="ai-nav-arrow">→</span>/trading/signals — 待审批信号
+                <span class="ai-nav-arrow">→</span>待审批信号
               </a>
               <a href="#" class="ai-nav-link">
-                <span class="ai-nav-arrow">→</span>/research/factors — Factor Discovery
+                <span class="ai-nav-arrow">→</span>因子探索
               </a>
             </div>
           </div>
@@ -2260,7 +2275,7 @@
           <span class="toast-title">已创建新会话</span>
           <span class="toast-desc">正在跳转到 Copilot 对话...</span>
         </div>
-        <label for="overlay-new-session-toast" class="toast-close" aria-label="关闭">✕</label>
+        <button class="toast-close" aria-label="关闭" onclick="document.getElementById('overlay-new-session-toast').checked=false">✕</button>
       </div>
     </div>
 
@@ -2274,7 +2289,7 @@
           <span class="toast-title">已创建新 Plan</span>
           <span class="toast-desc">正在跳转到 Agent 管理中心...</span>
         </div>
-        <label for="overlay-new-plan-toast" class="toast-close" aria-label="关闭">✕</label>
+        <button class="toast-close" aria-label="关闭" onclick="document.getElementById('overlay-new-plan-toast').checked=false">✕</button>
       </div>
     </div>
 
@@ -2316,7 +2331,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
       <div class="state-empty">
-        <div class="state-empty-icon">✦</div>
+        <div class="state-empty-icon"><svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg></div>
         <div class="state-empty-title">暂无 AI 活动</div>
         <div class="state-empty-desc">开始你的第一次 Copilot 对话或创建 Agent Plan，AI 产出状态将在此实时展示</div>
         <button class="state-empty-cta">新建 Copilot 会话</button>
@@ -2377,7 +2392,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
       <div class="state-empty">
-        <div class="state-empty-icon">⏳</div>
+        <div class="state-empty-icon"><svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg></div>
         <div class="state-empty-title">暂无 Agent 活动</div>
         <div class="state-empty-desc">创建 Agent Plan 后，运行中的任务、待审批 Finding 和已完成记录将在此展示</div>
         <button class="state-empty-cta">新建 Agent Plan</button>
@@ -2437,7 +2452,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="empty">
       <div class="state-empty">
-        <div class="state-empty-icon">💬</div>
+        <div class="state-empty-icon"><svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10a7 7 0 0113.9 1.5M17 10a7 7 0 01-13.9-1.5M10 3v3m0 8v3"/></svg></div>
         <div class="state-empty-title">暂无 Copilot 活动</div>
         <div class="state-empty-desc">开始第一次 AI 对话，进行市场分析、因子研究或组合诊断</div>
         <button class="state-empty-cta">新建 Copilot 会话</button>
