@@ -529,6 +529,80 @@
       color: var(--text-primary);
     }
 
+    /* ── Inline style extraction ── */
+    .c-up { color: var(--market-up-fg); }
+    .c-down { color: var(--market-down-fg); }
+    .c-tertiary { color: var(--text-tertiary); }
+    .c-primary { color: var(--text-primary); }
+    .c-secondary { color: var(--text-secondary); }
+    .c-healthy { color: var(--system-healthy-fg); }
+    .c-degraded { color: var(--system-degraded-fg); }
+    .c-accent { color: var(--brand-accent); }
+    .c-up-3 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 3%, transparent); }
+    .c-up-4 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 4%, transparent); }
+    .c-up-5 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 5%, transparent); }
+    .c-up-7 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 7%, transparent); }
+    .c-up-8 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent); }
+    .c-up-9 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 9%, transparent); }
+    .c-up-11 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 11%, transparent); }
+    .c-up-14 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 14%, transparent); }
+    .c-up-16 { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 16%, transparent); }
+    .c-down-3 { color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 3%, transparent); }
+    .c-down-12 { color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 12%, transparent); }
+    .c-accent-bg { background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent); }
+    .flex-between { display: flex; justify-content: space-between; }
+    .flex-between-center { display: flex; justify-content: space-between; align-items: center; }
+    .flex-between-12 { display: flex; justify-content: space-between; font-size: var(--font-size-12); }
+    .flex-center { display: flex; align-items: center; justify-content: center; }
+    .flex-center-end { display: flex; align-items: flex-end; justify-content: center; gap: var(--space-8); padding-bottom: var(--space-16); }
+    .flex-col-4 { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
+    .flex-col-6 { display: flex; flex-direction: column; gap: var(--space-6); }
+    .flex-col-10 { display: flex; flex-direction: column; gap: var(--space-10); }
+    .flex-col-6-12 { display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12); }
+    .flex-col-8 { display: flex; flex-direction: column; gap: var(--space-8); }
+    .flex-wrap-gap { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-10); }
+    .panel-flex { flex: 1; }
+    .panel-shrink { flex-shrink: 0; }
+    .chart-svg { width: 100%; opacity: 0.8; }
+    .chart-svg-85 { width: 100%; opacity: 0.85; }
+    .numeric-secondary { font-family: var(--font-family-numeric); color: var(--text-secondary); }
+    .numeric-up-12 { font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-up-fg); }
+    .numeric-down-12 { font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-down-fg); }
+    .numeric-tertiary-10 { font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .numeric-up-10 { font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--market-up-fg); }
+    .numeric-down-10 { font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--market-down-fg); }
+    .fs-10 { font-size: var(--font-size-10); }
+    .fs-12 { font-size: var(--font-size-12); }
+    .fs-10-px { font-size: 10px; }
+    .bar-track-full { height: 6px; border-radius: 3px; background: var(--interaction-hover-subtle-bg); width: 100%; }
+    .bar-accent-63 { height: 6px; border-radius: 3px; background: var(--brand-accent); width: 63%; }
+    .bar-tertiary-37 { height: 6px; border-radius: 3px; background: var(--text-tertiary); width: 37%; }
+    .chart-legend { font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .config-row { display: flex; justify-content: space-between; }
+    .config-label { color: var(--text-tertiary); }
+    .config-value { color: var(--text-secondary); }
+    .config-value-numeric { font-family: var(--font-family-numeric); color: var(--text-secondary); }
+    .config-value-up { color: var(--market-up-fg); font-family: var(--font-family-numeric); }
+    .cursor-pointer { cursor: pointer; }
+    .fw-medium { font-weight: var(--font-weight-medium); }
+    .c-primary-fw { color: var(--text-primary); font-weight: var(--font-weight-medium); }
+    .stat-value-numeric { font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
+    .mt-4 { margin-top: var(--space-4); }
+    .mt-merge { margin-top: var(--rhythm-merge-gap); }
+    .mb-8 { margin-bottom: var(--space-8); }
+    .mt-8 { margin-top: var(--space-8); }
+    .mt-8-desc { margin-top: var(--space-8); font-size: var(--font-size-12); color: var(--text-tertiary); }
+    .mb-8-text { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-8); }
+    .sparkline-box { width: 32px; height: 22px; background: var(--border-subtle); border-radius: var(--radius-2); }
+    .sparkline-up-70 { width: 32px; height: 72px; background: color-mix(in oklch, var(--market-up-fg) 70%, transparent); border-radius: var(--radius-2); }
+    .sparkline-down-70 { width: 32px; height: 55px; background: color-mix(in oklch, var(--market-down-fg) 70%, transparent); border-radius: var(--radius-2); }
+    .sparkline-up-40 { width: 32px; height: 45px; background: color-mix(in oklch, var(--market-up-fg) 40%, transparent); border-radius: var(--radius-2); }
+    .sparkline-down-40 { width: 32px; height: 38px; background: color-mix(in oklch, var(--market-down-fg) 40%, transparent); border-radius: var(--radius-2); }
+    .chart-min-h { width: 100%; min-height: 60px; }
+    .chart-mt-svg { width: 100%; margin-top: var(--space-8); opacity: 0.8; }
+    .overlay-btn-default { background: var(--surface-panel-elevated); border: 1px solid var(--border-default); color: var(--text-secondary); }
+    .tbl-separator { border-top: 2px solid var(--border-subtle); }
+
     /* ── Rail logo brand glow ── */
     .rail-logo { text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent); }
 
@@ -743,16 +817,16 @@
               </div>
 
               <!-- 2x2 Diagnostics -->
-              <div class="diagnostics-grid" style="margin-top: var(--rhythm-merge-gap);">
+              <div class="diagnostics-grid" class="mt-merge">
 
                 <!-- Quadrant 1: IC 时间序列 -->
                 <div class="panel" aria-label="IC 时间序列图（点击放大）">
                   <div class="panel-header">
                     <span class="panel-title">IC 时间序列</span>
-                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">日频 · 250D</span>
+                    <span class="fs-10 c-tertiary">日频 · 250D</span>
                   </div>
-                  <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
-                    <svg viewBox="0 0 280 100" style="width: 100%; opacity: 0.8;">
+                  <div class="panel-body" class="flex-center">
+                    <svg viewBox="0 0 280 100" class="chart-svg">
                       <defs>
                         <linearGradient id="ic-area" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.12"/>
@@ -772,33 +846,33 @@
                 <div class="panel" aria-label="IC 分位数分布（点击放大）">
                   <div class="panel-header">
                     <span class="panel-title">IC 分位数分布</span>
-                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q1-Q5 分组</span>
+                    <span class="fs-10 c-tertiary">Q1-Q5 分组</span>
                   </div>
-                  <div class="panel-body" style="display: flex; align-items: flex-end; justify-content: center; gap: var(--space-8); padding-bottom: var(--space-16);">
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
-                      <div style="width: 32px; height: 55px; background: color-mix(in oklch, var(--market-down-fg) 70%, transparent); border-radius: var(--radius-2);"></div>
-                      <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q1</span>
-                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--market-down-fg);">-0.042</span>
+                  <div class="panel-body" class="flex-center-end">
+                    <div class="flex-col-4">
+                      <div class="sparkline-down-70"></div>
+                      <span class="fs-10 c-tertiary">Q1</span>
+                      <span class="numeric-down-10">-0.042</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
-                      <div style="width: 32px; height: 38px; background: color-mix(in oklch, var(--market-down-fg) 40%, transparent); border-radius: var(--radius-2);"></div>
-                      <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q2</span>
-                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--text-tertiary);">-0.008</span>
+                    <div class="flex-col-4">
+                      <div class="sparkline-down-40"></div>
+                      <span class="fs-10 c-tertiary">Q2</span>
+                      <span class="numeric-tertiary-10">-0.008</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
-                      <div style="width: 32px; height: 22px; background: var(--border-subtle); border-radius: var(--radius-2);"></div>
-                      <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q3</span>
-                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--text-tertiary);">+0.001</span>
+                    <div class="flex-col-4">
+                      <div class="sparkline-box"></div>
+                      <span class="fs-10 c-tertiary">Q3</span>
+                      <span class="numeric-tertiary-10">+0.001</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
-                      <div style="width: 32px; height: 45px; background: color-mix(in oklch, var(--market-up-fg) 40%, transparent); border-radius: var(--radius-2);"></div>
-                      <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q4</span>
-                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--market-up-fg);">+0.035</span>
+                    <div class="flex-col-4">
+                      <div class="sparkline-up-40"></div>
+                      <span class="fs-10 c-tertiary">Q4</span>
+                      <span class="numeric-up-10">+0.035</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
-                      <div style="width: 32px; height: 72px; background: color-mix(in oklch, var(--market-up-fg) 70%, transparent); border-radius: var(--radius-2);"></div>
-                      <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">Q5</span>
-                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--market-up-fg);">+0.078</span>
+                    <div class="flex-col-4">
+                      <div class="sparkline-up-70"></div>
+                      <span class="fs-10 c-tertiary">Q5</span>
+                      <span class="numeric-up-10">+0.078</span>
                     </div>
                   </div>
                 </div>
@@ -807,10 +881,10 @@
                 <div class="panel" aria-label="IC 滚动窗口分析（点击放大）">
                   <div class="panel-header">
                     <span class="panel-title">IC 滚动窗口</span>
-                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">60D / 120D / 250D</span>
+                    <span class="fs-10 c-tertiary">60D / 120D / 250D</span>
                   </div>
-                  <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
-                    <svg viewBox="0 0 280 100" style="width: 100%; opacity: 0.8;">
+                  <div class="panel-body" class="flex-center">
+                    <svg viewBox="0 0 280 100" class="chart-svg">
                       <line x1="0" y1="50" x2="280" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
                       <!-- 250D line (blue) -->
                       <path d="M0 60 L20 58 L40 55 L60 52 L80 48 L100 45 L120 42 L140 40 L160 38 L180 36 L200 34 L220 32 L240 30 L260 28 L280 26" fill="none" stroke="var(--brand-accent)" stroke-width="1.2"/>
@@ -831,7 +905,7 @@
                     <div class="stats-row">
                       <div class="stat-item">
                         <div class="stat-label">IC 均值</div>
-                        <div class="stat-value" style="color: var(--market-up-fg);">0.082</div>
+                        <div class="stat-value" class="c-up">0.082</div>
                       </div>
                       <div class="stat-item">
                         <div class="stat-label">IC 标准差</div>
@@ -839,7 +913,7 @@
                       </div>
                       <div class="stat-item">
                         <div class="stat-label">IC IR</div>
-                        <div class="stat-value" style="color: var(--market-up-fg);">1.45</div>
+                        <div class="stat-value" class="c-up">1.45</div>
                       </div>
                     </div>
                     <div class="stats-row">
@@ -859,11 +933,11 @@
                     <div class="stats-row">
                       <div class="stat-item">
                         <div class="stat-label">Rank IC</div>
-                        <div class="stat-value" style="color: var(--market-up-fg);">0.091</div>
+                        <div class="stat-value" class="c-up">0.091</div>
                       </div>
                       <div class="stat-item">
                         <div class="stat-label">Rank IC IR</div>
-                        <div class="stat-value" style="color: var(--market-up-fg);">1.62</div>
+                        <div class="stat-value" class="c-up">1.62</div>
                       </div>
                       <div class="stat-item">
                         <div class="stat-label">单调性 t 值</div>
@@ -881,59 +955,59 @@
             <div class="hub-sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">因子概要</div>
-                <div style="display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12);">
-                  <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-tertiary);">家族</span>
-                    <span style="color: var(--text-secondary);">动量</span>
+                <div class="flex-col-6-12">
+                  <div class="flex-between">
+                    <span class="c-tertiary">家族</span>
+                    <span class="c-secondary">动量</span>
                   </div>
-                  <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-tertiary);">频率</span>
-                    <span style="color: var(--text-secondary);">日频</span>
+                  <div class="flex-between">
+                    <span class="c-tertiary">频率</span>
+                    <span class="c-secondary">日频</span>
                   </div>
-                  <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-tertiary);">Universe</span>
-                    <span style="color: var(--text-secondary);">沪深300</span>
+                  <div class="flex-between">
+                    <span class="c-tertiary">Universe</span>
+                    <span class="c-secondary">沪深300</span>
                   </div>
-                  <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-tertiary);">数据区间</span>
-                    <span style="color: var(--text-secondary); font-family: var(--font-family-numeric);">2020-01 → 2026-04</span>
+                  <div class="flex-between">
+                    <span class="c-tertiary">数据区间</span>
+                    <span class="numeric-secondary">2020-01 → 2026-04</span>
                   </div>
                 </div>
               </div>
               <div class="sidebar-section">
                 <div class="sidebar-title">相关因子</div>
-                <div style="display: flex; flex-direction: column; gap: var(--space-6);">
-                  <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: var(--font-size-12); color: var(--text-secondary);">动量 (60D)</span>
-                    <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-up-fg);">0.075</span>
+                <div class="flex-col-6">
+                  <div class="flex-between-center">
+                    <span class="fs-12 c-secondary">动量 (60D)</span>
+                    <span class="numeric-up-12">0.075</span>
                   </div>
-                  <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: var(--font-size-12); color: var(--text-secondary);">反转 (5D)</span>
-                    <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-up-fg);">0.054</span>
+                  <div class="flex-between-center">
+                    <span class="fs-12 c-secondary">反转 (5D)</span>
+                    <span class="numeric-up-12">0.054</span>
                   </div>
-                  <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: var(--font-size-12); color: var(--text-secondary);">波动率</span>
-                    <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-down-fg);">-0.031</span>
+                  <div class="flex-between-center">
+                    <span class="fs-12 c-secondary">波动率</span>
+                    <span class="numeric-down-12">-0.031</span>
                   </div>
                 </div>
               </div>
               <div class="sidebar-section">
                 <div class="sidebar-title">预处理管道</div>
-                <div style="display: flex; flex-direction: column; gap: var(--space-6);">
-                  <div style="display: flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-12);">
-                    <span class="status-badge success" style="font-size: 10px;">1</span>
-                    <span style="color: var(--text-secondary);">去极值</span>
-                    <span style="color: var(--text-tertiary);">· MAD 法</span>
+                <div class="flex-col-6">
+                  <div class="flex-wrap-gap">
+                    <span class="status-badge success" class="fs-10-px">1</span>
+                    <span class="c-secondary">去极值</span>
+                    <span class="c-tertiary">· MAD 法</span>
                   </div>
-                  <div style="display: flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-12);">
-                    <span class="status-badge success" style="font-size: 10px;">2</span>
-                    <span style="color: var(--text-secondary);">标准化</span>
-                    <span style="color: var(--text-tertiary);">· Z-Score</span>
+                  <div class="flex-wrap-gap">
+                    <span class="status-badge success" class="fs-10-px">2</span>
+                    <span class="c-secondary">标准化</span>
+                    <span class="c-tertiary">· Z-Score</span>
                   </div>
-                  <div style="display: flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-12);">
-                    <span class="status-badge success" style="font-size: 10px;">3</span>
-                    <span style="color: var(--text-secondary);">中性化</span>
-                    <span style="color: var(--text-tertiary);">· 行业中性</span>
+                  <div class="flex-wrap-gap">
+                    <span class="status-badge success" class="fs-10-px">3</span>
+                    <span class="c-secondary">中性化</span>
+                    <span class="c-tertiary">· 行业中性</span>
                   </div>
                 </div>
               </div>
@@ -949,13 +1023,13 @@
             <div class="hub-object-view">
 
               <!-- Factor Group Returns -->
-              <div class="panel" style="flex: 1;">
-                <div class="panel-header" style="justify-content: space-between;">
+              <div class="panel" class="panel-flex">
+                <div class="panel-header flex-between">
                   <span class="panel-title">因子分组收益</span>
-                  <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">5 分组 · 月度调仓</span>
+                  <span class="fs-10 c-tertiary">5 分组 · 月度调仓</span>
                 </div>
-                <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
-                  <svg viewBox="0 0 400 120" style="width: 100%; opacity: 0.8;">
+                <div class="panel-body" class="flex-center">
+                  <svg viewBox="0 0 400 120" class="chart-svg">
                     <defs>
                       <linearGradient id="ret-q5" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.1"/>
@@ -977,12 +1051,12 @@
               </div>
 
               <!-- Monthly Return Heatmap -->
-              <div class="panel" style="flex-shrink: 0;">
+              <div class="panel" class="panel-shrink">
                 <div class="panel-header">
                   <span class="panel-title">月度收益热力图（多空）</span>
                 </div>
                 <div class="panel-body">
-                  <table class="data-table" style="font-size: var(--font-size-10);">
+                  <table class="data-table" class="fs-10">
                     <thead>
                       <tr>
                         <th></th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th>
@@ -990,34 +1064,34 @@
                     </thead>
                     <tbody>
                       <tr>
-                        <td style="color: var(--text-tertiary);">2024</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);">+2.1</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 8%, transparent);">-0.8</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 12%, transparent);">+3.2</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);">+1.5</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 4%, transparent);">-0.3</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 10%, transparent);">+2.8</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 4%, transparent);">+1.1</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 12%, transparent);">-1.5</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);">+2.0</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 14%, transparent);">+3.5</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);">-0.9</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 5%, transparent);">+1.2</td>
+                        <td class="c-tertiary">2024</td>
+                        <td class="numeric" class="c-up-8">+2.1</td>
+                        <td class="numeric" class="c-down-8">-0.8</td>
+                        <td class="numeric" class="c-up-12">+3.2</td>
+                        <td class="numeric" class="c-up-6">+1.5</td>
+                        <td class="numeric" class="c-down-4">-0.3</td>
+                        <td class="numeric" class="c-up-10">+2.8</td>
+                        <td class="numeric" class="c-up-4">+1.1</td>
+                        <td class="numeric" class="c-down-12">-1.5</td>
+                        <td class="numeric" class="c-up-8">+2.0</td>
+                        <td class="numeric" class="c-up-14">+3.5</td>
+                        <td class="numeric" class="c-down-6">-0.9</td>
+                        <td class="numeric" class="c-up-5">+1.2</td>
                       </tr>
                       <tr>
-                        <td style="color: var(--text-tertiary);">2025</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 10%, transparent);">+2.5</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);">-1.2</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);">+2.0</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 16%, transparent);">+4.1</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);">+1.8</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 8%, transparent);">-1.0</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 12%, transparent);">+3.0</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 4%, transparent);">-0.5</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 7%, transparent);">+1.6</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 9%, transparent);">+2.2</td>
-                        <td class="numeric" style="color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 11%, transparent);">+2.8</td>
-                        <td class="numeric" style="color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 3%, transparent);">-0.2</td>
+                        <td class="c-tertiary">2025</td>
+                        <td class="numeric" class="c-up-10">+2.5</td>
+                        <td class="numeric" class="c-down-6">-1.2</td>
+                        <td class="numeric" class="c-up-8">+2.0</td>
+                        <td class="numeric" class="c-up-16">+4.1</td>
+                        <td class="numeric" class="c-up-6">+1.8</td>
+                        <td class="numeric" class="c-down-8">-1.0</td>
+                        <td class="numeric" class="c-up-12">+3.0</td>
+                        <td class="numeric" class="c-down-4">-0.5</td>
+                        <td class="numeric" class="c-up-7">+1.6</td>
+                        <td class="numeric" class="c-up-9">+2.2</td>
+                        <td class="numeric" class="c-up-11">+2.8</td>
+                        <td class="numeric" class="c-down-3">-0.2</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1025,7 +1099,7 @@
               </div>
 
               <!-- Return Stats Table -->
-              <div class="panel" style="flex-shrink: 0;">
+              <div class="panel" class="panel-shrink">
                 <div class="panel-header">
                   <span class="panel-title">收益统计</span>
                 </div>
@@ -1034,12 +1108,12 @@
                     <tr><th>分组</th><th class="numeric">年化收益</th><th class="numeric">年化波动</th><th class="numeric">Sharpe</th><th class="numeric">最大回撤</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td>Q1 (最差)</td><td class="numeric" style="color: var(--market-down-fg);">-8.2%</td><td class="numeric">22.1%</td><td class="numeric">-0.37</td><td class="numeric">-32.5%</td></tr>
-                    <tr><td>Q2</td><td class="numeric" style="color: var(--market-down-fg);">-2.1%</td><td class="numeric">18.5%</td><td class="numeric">-0.11</td><td class="numeric">-25.8%</td></tr>
+                    <tr><td>Q1 (最差)</td><td class="numeric" class="c-down">-8.2%</td><td class="numeric">22.1%</td><td class="numeric">-0.37</td><td class="numeric">-32.5%</td></tr>
+                    <tr><td>Q2</td><td class="numeric" class="c-down">-2.1%</td><td class="numeric">18.5%</td><td class="numeric">-0.11</td><td class="numeric">-25.8%</td></tr>
                     <tr><td>Q3</td><td class="numeric">+4.8%</td><td class="numeric">16.2%</td><td class="numeric">0.30</td><td class="numeric">-18.2%</td></tr>
-                    <tr><td>Q4</td><td class="numeric" style="color: var(--market-up-fg);">+12.5%</td><td class="numeric">17.8%</td><td class="numeric">0.70</td><td class="numeric">-15.6%</td></tr>
-                    <tr><td>Q5 (最佳)</td><td class="numeric" style="color: var(--market-up-fg);">+22.1%</td><td class="numeric">19.5%</td><td class="numeric">1.13</td><td class="numeric">-14.2%</td></tr>
-                    <tr style="border-top: 2px solid var(--border-subtle);"><td style="font-weight: var(--font-weight-medium); color: var(--text-primary);">多空 (Q5-Q1)</td><td class="numeric" style="color: var(--market-up-fg); font-weight: var(--font-weight-semibold);">+30.3%</td><td class="numeric">12.8%</td><td class="numeric" style="color: var(--market-up-fg);">2.37</td><td class="numeric">-11.5%</td></tr>
+                    <tr><td>Q4</td><td class="numeric" class="c-up">+12.5%</td><td class="numeric">17.8%</td><td class="numeric">0.70</td><td class="numeric">-15.6%</td></tr>
+                    <tr><td>Q5 (最佳)</td><td class="numeric c-up">+22.1%</td><td class="numeric">19.5%</td><td class="numeric">1.13</td><td class="numeric">-14.2%</td></tr>
+                    <tr class="fw-medium tbl-primary tbl-separator"><td>多空 (Q5-Q1)</td><td class="numeric c-up fw-medium">+30.3%</td><td class="numeric">12.8%</td><td class="numeric c-up">2.37</td><td class="numeric">-11.5%</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1049,23 +1123,23 @@
             <div class="hub-sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">分组配置</div>
-                <div style="font-size: var(--font-size-12); color: var(--text-secondary);">5 分组 · 等权</div>
-                <div style="font-size: var(--font-size-12); color: var(--text-tertiary); margin-top: var(--space-4);">月度调仓 · T+1 执行</div>
+                <div class="fs-12 c-secondary">5 分组 · 等权</div>
+                <div class="mt-8-desc">月度调仓 · T+1 执行</div>
               </div>
               <div class="sidebar-section">
                 <div class="sidebar-title">收益稳定性</div>
-                <div style="display: flex; flex-direction: column; gap: var(--space-6);">
-                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
-                    <span style="color: var(--text-tertiary);">月度胜率</span>
-                    <span style="color: var(--market-up-fg); font-family: var(--font-family-numeric);">68.2%</span>
+                <div class="flex-col-6">
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">月度胜率</span>
+                    <span class="c-up numeric-secondary">68.2%</span>
                   </div>
-                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
-                    <span style="color: var(--text-tertiary);">季度胜率</span>
-                    <span style="color: var(--market-up-fg); font-family: var(--font-family-numeric);">75.0%</span>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">季度胜率</span>
+                    <span class="c-up numeric-secondary">75.0%</span>
                   </div>
-                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
-                    <span style="color: var(--text-tertiary);">年度胜率</span>
-                    <span style="color: var(--market-up-fg); font-family: var(--font-family-numeric);">100%</span>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">年度胜率</span>
+                    <span class="c-up numeric-secondary">100%</span>
                   </div>
                 </div>
               </div>
@@ -1085,10 +1159,10 @@
                 <div class="panel">
                   <div class="panel-header">
                     <span class="panel-title">因子值分布</span>
-                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">正态拟合叠加</span>
+                    <span class="fs-10 c-tertiary">正态拟合叠加</span>
                   </div>
-                  <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
-                    <svg viewBox="0 0 280 100" style="width: 100%; opacity: 0.8;">
+                  <div class="panel-body" class="flex-center">
+                    <svg viewBox="0 0 280 100" class="chart-svg">
                       <line x1="0" y1="80" x2="280" y2="80" stroke="var(--border-subtle)" stroke-width="0.5"/>
                       <!-- Histogram bars -->
                       <rect x="20" y="72" width="15" height="8" fill="color-mix(in oklch, var(--brand-accent) 30%, transparent)" rx="1"/>
@@ -1112,53 +1186,53 @@
                 <div class="panel">
                   <div class="panel-header">
                     <span class="panel-title">因子相关性矩阵</span>
-                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">|corr| > 0.3 高亮</span>
+                    <span class="fs-10 c-tertiary">|corr| > 0.3 高亮</span>
                   </div>
                   <div class="panel-body">
-                    <table class="data-table" style="font-size: var(--font-size-10);">
+                    <table class="data-table" class="fs-10">
                       <thead>
                         <tr><th></th><th>动量20D</th><th>动量60D</th><th>反转5D</th><th>波动率</th><th>换手率</th></tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td style="color: var(--text-primary); font-weight: var(--font-weight-medium);">动量20D</td>
-                          <td class="numeric" style="background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent);">1.00</td>
-                          <td class="numeric" style="background: color-mix(in oklch, var(--market-up-fg) 10%, transparent); color: var(--market-up-fg);">0.72</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">-0.15</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">-0.08</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">0.12</td>
+                          <td class="c-primary-fw">动量20D</td>
+                          <td class="numeric" class="c-accent-bg">1.00</td>
+                          <td class="numeric" class="c-up-10">0.72</td>
+                          <td class="numeric" class="c-tertiary">-0.15</td>
+                          <td class="numeric" class="c-tertiary">-0.08</td>
+                          <td class="numeric" class="c-tertiary">0.12</td>
                         </tr>
                         <tr>
-                          <td style="color: var(--text-primary);">动量60D</td>
-                          <td class="numeric" style="background: color-mix(in oklch, var(--market-up-fg) 10%, transparent); color: var(--market-up-fg);">0.72</td>
-                          <td class="numeric" style="background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent);">1.00</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">-0.22</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">-0.11</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">0.18</td>
+                          <td class="c-primary">动量60D</td>
+                          <td class="numeric" class="c-up-10">0.72</td>
+                          <td class="numeric" class="c-accent-bg">1.00</td>
+                          <td class="numeric" class="c-tertiary">-0.22</td>
+                          <td class="numeric" class="c-tertiary">-0.11</td>
+                          <td class="numeric" class="c-tertiary">0.18</td>
                         </tr>
                         <tr>
-                          <td style="color: var(--text-primary);">反转5D</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">-0.15</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">-0.22</td>
-                          <td class="numeric" style="background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent);">1.00</td>
-                          <td class="numeric" style="color: var(--market-down-fg);">-0.35</td>
-                          <td class="numeric" style="color: var(--market-up-fg);">0.42</td>
+                          <td class="c-primary">反转5D</td>
+                          <td class="numeric" class="c-tertiary">-0.15</td>
+                          <td class="numeric" class="c-tertiary">-0.22</td>
+                          <td class="numeric" class="c-accent-bg">1.00</td>
+                          <td class="numeric" class="c-down">-0.35</td>
+                          <td class="numeric" class="c-up">0.42</td>
                         </tr>
                         <tr>
-                          <td style="color: var(--text-primary);">波动率</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">-0.08</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">-0.11</td>
-                          <td class="numeric" style="color: var(--market-down-fg);">-0.35</td>
-                          <td class="numeric" style="background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent);">1.00</td>
-                          <td class="numeric" style="color: var(--market-up-fg);">0.55</td>
+                          <td class="c-primary">波动率</td>
+                          <td class="numeric" class="c-tertiary">-0.08</td>
+                          <td class="numeric" class="c-tertiary">-0.11</td>
+                          <td class="numeric" class="c-down">-0.35</td>
+                          <td class="numeric" class="c-accent-bg">1.00</td>
+                          <td class="numeric" class="c-up">0.55</td>
                         </tr>
                         <tr>
-                          <td style="color: var(--text-primary);">换手率</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">0.12</td>
-                          <td class="numeric" style="color: var(--text-tertiary);">0.18</td>
-                          <td class="numeric" style="color: var(--market-up-fg);">0.42</td>
-                          <td class="numeric" style="color: var(--market-up-fg);">0.55</td>
-                          <td class="numeric" style="background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent);">1.00</td>
+                          <td class="c-primary">换手率</td>
+                          <td class="numeric" class="c-tertiary">0.12</td>
+                          <td class="numeric" class="c-tertiary">0.18</td>
+                          <td class="numeric" class="c-up">0.42</td>
+                          <td class="numeric" class="c-up">0.55</td>
+                          <td class="numeric" class="c-accent-bg">1.00</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1169,10 +1243,10 @@
                 <div class="panel">
                   <div class="panel-header">
                     <span class="panel-title">因子-收益散点图</span>
-                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">回归线叠加</span>
+                    <span class="fs-10 c-tertiary">回归线叠加</span>
                   </div>
-                  <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
-                    <svg viewBox="0 0 280 100" style="width: 100%; opacity: 0.8;">
+                  <div class="panel-body" class="flex-center">
+                    <svg viewBox="0 0 280 100" class="chart-svg">
                       <line x1="0" y1="50" x2="280" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
                       <line x1="0" y1="25" x2="280" y2="25" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
                       <line x1="0" y1="75" x2="280" y2="75" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
@@ -1202,28 +1276,28 @@
                 <div class="panel">
                   <div class="panel-header">
                     <span class="panel-title">衰减分析</span>
-                    <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">IC 半衰期</span>
+                    <span class="fs-10 c-tertiary">IC 半衰期</span>
                   </div>
                   <div class="panel-body">
-                    <div style="display: flex; flex-direction: column; gap: var(--space-10);">
-                      <div style="display: flex; align-items: center; justify-content: space-between;">
-                        <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">IC 半衰期</span>
-                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">5.2 天</span>
+                    <div class="flex-col-10">
+                      <div class="flex-between-center">
+                        <span class="fs-12 c-tertiary">IC 半衰期</span>
+                        <span class="stat-value-numeric">5.2 天</span>
                       </div>
-                      <div style="display: flex; align-items: center; justify-content: space-between;">
-                        <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">IC 衰减至 50%</span>
-                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary);">T+3</span>
+                      <div class="flex-between-center">
+                        <span class="fs-12 c-tertiary">IC 衰减至 50%</span>
+                        <span class="numeric-secondary fs-12">T+3</span>
                       </div>
-                      <div style="display: flex; align-items: center; justify-content: space-between;">
-                        <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">IC 衰减至 0</span>
-                        <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary);">T+8</span>
+                      <div class="flex-between-center">
+                        <span class="fs-12 c-tertiary">IC 衰减至 0</span>
+                        <span class="numeric-secondary fs-12">T+8</span>
                       </div>
-                      <div style="display: flex; align-items: center; justify-content: space-between;">
-                        <span style="font-size: var(--font-size-12); color: var(--text-tertiary);">建议调仓频率</span>
-                        <span style="font-size: var(--font-size-12); color: var(--market-up-fg);">周度</span>
+                      <div class="flex-between-center">
+                        <span class="fs-12 c-tertiary">建议调仓频率</span>
+                        <span class="fs-12 c-up">周度</span>
                       </div>
                     </div>
-                    <svg viewBox="0 0 280 50" style="width: 100%; margin-top: var(--space-8); opacity: 0.8;">
+                    <svg viewBox="0 0 280 50" class="chart-mt-svg">
                       <path d="M0 8 L40 12 L80 18 L120 25 L160 32 L200 38 L240 42 L280 45" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/>
                       <line x1="0" y1="25" x2="280" y2="25" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="3"/>
                       <text x="130" y="22" fill="var(--text-tertiary)" font-size="8">50%</text>
@@ -1237,18 +1311,18 @@
             <div class="hub-sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">分布特征</div>
-                <div style="display: flex; flex-direction: column; gap: var(--space-6);">
-                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
-                    <span style="color: var(--text-tertiary);">偏度</span>
-                    <span style="font-family: var(--font-family-numeric); color: var(--text-secondary);">0.15</span>
+                <div class="flex-col-6">
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">偏度</span>
+                    <span class="numeric-secondary">0.15</span>
                   </div>
-                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
-                    <span style="color: var(--text-tertiary);">峰度</span>
-                    <span style="font-family: var(--font-family-numeric); color: var(--text-secondary);">3.28</span>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">峰度</span>
+                    <span class="numeric-secondary">3.28</span>
                   </div>
-                  <div style="display: flex; justify-content: space-between; font-size: var(--font-size-12);">
-                    <span style="color: var(--text-tertiary);">JB 正态检验</span>
-                    <span style="font-size: var(--font-size-12); color: var(--system-degraded-fg);">拒绝</span>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">JB 正态检验</span>
+                    <span class="fs-12 c-degraded">拒绝</span>
                   </div>
                 </div>
               </div>
@@ -1264,13 +1338,13 @@
             <div class="hub-object-view">
 
               <!-- Turnover Time Series -->
-              <div class="panel" style="flex: 1;">
-                <div class="panel-header" style="justify-content: space-between;">
+              <div class="panel" class="panel-flex">
+                <div class="panel-header flex-between">
                   <span class="panel-title">换手率时间序列</span>
-                  <span style="font-size: var(--font-size-10); color: var(--text-tertiary);">日频</span>
+                  <span class="fs-10 c-tertiary">日频</span>
                 </div>
-                <div class="panel-body" style="display: flex; align-items: center; justify-content: center;">
-                  <svg viewBox="0 0 400 120" style="width: 100%; opacity: 0.8;">
+                <div class="panel-body" class="flex-center">
+                  <svg viewBox="0 0 400 120" class="chart-svg">
                     <defs>
                       <linearGradient id="turnover-area" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.12"/>
@@ -1285,32 +1359,32 @@
               </div>
 
               <!-- Turnover Breakdown -->
-              <div class="panel" style="flex-shrink: 0;">
+              <div class="panel" class="panel-shrink">
                 <div class="panel-header">
                   <span class="panel-title">换手率分解</span>
                 </div>
                 <div class="panel-body">
-                  <div style="display: flex; flex-direction: column; gap: var(--space-10);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <span style="font-size: var(--font-size-12); color: var(--text-secondary);">进入换手</span>
-                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">0.22</span>
+                  <div class="flex-col-10">
+                    <div class="flex-between-center">
+                      <span class="fs-12 c-secondary">进入换手</span>
+                      <span class="stat-value-numeric">0.22</span>
                     </div>
-                    <div style="height: 6px; border-radius: 3px; background: var(--interaction-hover-subtle-bg); width: 100%;">
-                      <div style="height: 6px; border-radius: 3px; background: var(--brand-accent); width: 63%;"></div>
+                    <div class="bar-track-full">
+                      <div class="bar-accent-63"></div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <span style="font-size: var(--font-size-12); color: var(--text-secondary);">退出换手</span>
-                      <span style="font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary);">0.13</span>
+                    <div class="flex-between-center">
+                      <span class="fs-12 c-secondary">退出换手</span>
+                      <span class="stat-value-numeric">0.13</span>
                     </div>
-                    <div style="height: 6px; border-radius: 3px; background: var(--interaction-hover-subtle-bg); width: 100%;">
-                      <div style="height: 6px; border-radius: 3px; background: var(--text-tertiary); width: 37%;"></div>
+                    <div class="bar-track-full">
+                      <div class="bar-tertiary-37"></div>
                     </div>
                   </div>
                 </div>
               </div>
 
               <!-- Holding Stability -->
-              <div class="panel" style="flex-shrink: 0;">
+              <div class="panel" class="panel-shrink">
                 <div class="panel-header">
                   <span class="panel-title">持仓稳定性</span>
                 </div>
@@ -1319,9 +1393,9 @@
                     <tr><th>指标</th><th class="numeric">值</th><th>评价</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td style="color: var(--text-primary);">平均持仓周期</td><td class="numeric">18.5 天</td><td><span class="status-badge success">良好</span></td></tr>
-                    <tr><td style="color: var(--text-primary);">30D 持仓留存率</td><td class="numeric">72.3%</td><td><span class="status-badge success">良好</span></td></tr>
-                    <tr><td style="color: var(--text-primary);">换手成本估算</td><td class="numeric">0.42%/年</td><td><span class="status-badge success">可控</span></td></tr>
+                    <tr><td class="c-primary">平均持仓周期</td><td class="numeric">18.5 天</td><td><span class="status-badge success">良好</span></td></tr>
+                    <tr><td class="c-primary">30D 持仓留存率</td><td class="numeric">72.3%</td><td><span class="status-badge success">良好</span></td></tr>
+                    <tr><td class="c-primary">换手成本估算</td><td class="numeric">0.42%/年</td><td><span class="status-badge success">可控</span></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1331,8 +1405,8 @@
             <div class="hub-sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">频率切换</div>
-                <div style="font-size: var(--font-size-12); color: var(--text-tertiary);">当前：日频</div>
-                <div style="margin-top: var(--space-4); font-size: var(--font-size-12); color: var(--text-tertiary);">可切换：周频 / 月频</div>
+                <div class="fs-12 c-tertiary">当前：日频</div>
+                <div class="mt-8-desc">可切换：周频 / 月频</div>
               </div>
             </div>
           </div>
@@ -1357,7 +1431,7 @@
       <span class="meta-separator"></span>
       <div class="bottom-item">
         <span class="bottom-item-label">数据质量</span>
-        <span class="bottom-item-value" style="color: var(--system-healthy-fg);">正常</span>
+        <span class="bottom-item-value" class="c-healthy">正常</span>
       </div>
     </div>
 
@@ -1642,14 +1716,14 @@
                 </div>
                 <div class="overlay-body">
                   <h4>解读维度</h4>
-                  <div style="display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-10);">
-                    <span class="meta-tag brand" style="cursor: pointer;">IC 分析</span>
-                    <span class="meta-tag" style="cursor: pointer;">收益分析</span>
-                    <span class="meta-tag" style="cursor: pointer;">风险分析</span>
-                    <span class="meta-tag" style="cursor: pointer;">综合评估</span>
+                  <div class="flex-wrap-gap">
+                    <span class="meta-tag brand" class="cursor-pointer">IC 分析</span>
+                    <span class="meta-tag" class="cursor-pointer">收益分析</span>
+                    <span class="meta-tag" class="cursor-pointer">风险分析</span>
+                    <span class="meta-tag" class="cursor-pointer">综合评估</span>
                   </div>
                   <h4>附加上下文</h4>
-                  <textarea placeholder="可选：补充分析背景或关注点..." class="form-textarea" style="width: 100%; min-height: 60px;"></textarea>
+                  <textarea placeholder="可选：补充分析背景或关注点..." class="form-textarea" class="chart-min-h"></textarea>
                   <div class="overlay-actions">
                     <button class="overlay-btn overlay-btn-secondary">取消</button>
                     <button class="overlay-btn overlay-btn-primary">发送解读</button>
@@ -1668,20 +1742,20 @@
                   <span class="overlay-title">IC 时间序列 · 详情</span>
                 </div>
                 <div class="overlay-body">
-                  <p style="font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-8);">
-                    IC 均值 <strong style="color: var(--text-primary);">0.082</strong> · IR <strong style="color: var(--text-primary);">1.45</strong> · 正占比 <strong style="color: var(--text-primary);">62.8%</strong>
+                  <p class="mb-8-text">
+                    IC 均值 <strong class="c-primary">0.082</strong> · IR <strong class="c-primary">1.45</strong> · 正占比 <strong class="c-primary">62.8%</strong>
                   </p>
                   <table class="data-table">
                     <thead><tr><th>时段</th><th class="numeric">IC 均值</th><th class="numeric">IC IR</th><th class="numeric">正占比</th></tr></thead>
                     <tbody>
-                      <tr><td>最近 60D</td><td class="numeric" style="color: var(--market-up-fg);">0.095</td><td class="numeric">1.82</td><td class="numeric">68.3%</td></tr>
-                      <tr><td>最近 120D</td><td class="numeric" style="color: var(--market-up-fg);">0.088</td><td class="numeric">1.62</td><td class="numeric">65.0%</td></tr>
-                      <tr><td>最近 250D</td><td class="numeric" style="color: var(--market-up-fg);">0.082</td><td class="numeric">1.45</td><td class="numeric">62.8%</td></tr>
-                      <tr><td>全样本</td><td class="numeric" style="color: var(--market-up-fg);">0.078</td><td class="numeric">1.38</td><td class="numeric">61.2%</td></tr>
+                      <tr><td>最近 60D</td><td class="numeric" class="c-up">0.095</td><td class="numeric">1.82</td><td class="numeric">68.3%</td></tr>
+                      <tr><td>最近 120D</td><td class="numeric" class="c-up">0.088</td><td class="numeric">1.62</td><td class="numeric">65.0%</td></tr>
+                      <tr><td>最近 250D</td><td class="numeric" class="c-up">0.082</td><td class="numeric">1.45</td><td class="numeric">62.8%</td></tr>
+                      <tr><td>全样本</td><td class="numeric" class="c-up">0.078</td><td class="numeric">1.38</td><td class="numeric">61.2%</td></tr>
                     </tbody>
                   </table>
                   <div class="overlay-actions">
-                    <button class="overlay-btn" style="background: var(--surface-panel-elevated); border: 1px solid var(--border-default); color: var(--text-secondary);">导出 CSV</button>
+                    <button class="overlay-btn" class="overlay-btn-default">导出 CSV</button>
                     <button class="overlay-btn overlay-btn-primary">关闭</button>
                   </div>
                 </div>
