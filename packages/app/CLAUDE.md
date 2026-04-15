@@ -92,7 +92,9 @@ ditto_app/
 │   ├── _resolution.py       # 依赖解析工具
 │   └── _spec_deserializer.py # 衍生规格反序列化
 ├── providers.py        # DI Provider 注册（4 个 Provider）
-└── config.py           # 数据集配置
+├── config.py           # 数据集配置
+├── contracts.py        # 共享契约类型（Command/Process 间传递的 DTO）
+└── execution_dto.py    # 执行层 DTO（策略运行/回测输入输出）
 ```
 
 ## DI Provider（4 个）

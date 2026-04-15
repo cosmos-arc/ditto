@@ -75,6 +75,16 @@ from ditto_infra.config import ...  # 应为 ditto_infra.foundation.config
 └─────────────────────────────────────┘
 ```
 
+## 各层 Infra Scope 限制
+
+| 层 | 允许范围 | 说明 |
+|----|---------|------|
+| interfaces | `foundation` + `services` | 完整访问（Composition Root） |
+| app | `foundation` + `services` | 禁止 `config`（配置加载走 interfaces） |
+| data | 仅 `foundation` | 存储通过 foundation.db / foundation.util |
+| analytics | 仅 `foundation` | 配置、日志等基础能力 |
+| engine | 禁止 | 不依赖 infra |
+
 ## 配置规范
 
 详见 [config.md](/.claude/rules/config.md)

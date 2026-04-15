@@ -26,6 +26,7 @@ ditto_data/
 │   ├── source_codes.py         # 数据源代码
 │   ├── publication_safety.py   # 发布安全模型
 ├── provider.py          # DataProvider Protocol 定义
+├── providers/           # DataProvider 实现（ServiceBackedDataProvider）
 ├── quality/             # 数据质量引擎
 │   ├── checkers/        # L1-L4 检查器（技术/业务/统计/跨源）
 │   ├── config.py        # DQ 配置加载
@@ -98,7 +99,7 @@ ditto_data/
 | storage (Reader/Writer) | 数据读写操作（CQRS 分离） | 包含业务逻辑 | 类型注解 |
 | services | 域服务（Facade 模式） | 直接访问文件系统 | 通过 storage |
 | sources | 外部数据源接入 | 包含业务逻辑 | 重试、限流、监控埋点 |
-| query | 查询服务与 Provider 路由 | 包含写入逻辑 | 类型注解 |
+| providers | DataProvider 实现（Facade 模式） | 包含业务逻辑 | 通过 services |
 | ingestion | 数据摄入编排 | 绕过质量检查 | 游标管理 |
 | quality | 数据质量引擎 | 包含业务逻辑 | L1-L4 检查 |
 | runtime | 运行时基础设施 | 包含业务逻辑 | SQL/PIT/Freeze |

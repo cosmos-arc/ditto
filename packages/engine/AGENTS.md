@@ -29,7 +29,7 @@ ditto_engine/
 **职责**：因子计算算法（RS、动量、波动率）
 
 **关键点**：
-- 计算逻辑在 Engine（纯函数、无状态）
+- 因子计算在 Analytics 层（ditto_analytics.factors/），Engine 层无独立因子计算模块
 - 编排流程在 Application（获取数据、调用计算、保存结果）
 - 存储在 Data 层（parquet 文件）
 

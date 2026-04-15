@@ -501,7 +501,7 @@ def process_data(data):
 
 #### 目录示例
 - `packages/foo/src/foo/py.typed`
-- `apps/xxx/src/xxx/py.typed`（若该 app 也会作为库被引用）
+- `interfaces/src/ditto_interfaces/py.typed`（interfaces 也会作为库被引用）
 
 #### 实施检查清单
 
@@ -651,11 +651,14 @@ from ditto_data.storage.sqlite_client import SQLiteClient
 
 ### 代码重复检测
 
-在实现新功能前，必须检查 Data Service 是否已有类似实现"```bash
+在实现新功能前，必须检查 Data Service 是否已有类似实现：
+
+```bash
 # 检查 MetadataService 是否已有相关方法
-grep -r "def.*register" packages/data/src/ditto_data/domains/metadata/
+grep -r "def.*register" packages/data/src/ditto_data/services/metadata/
 ```
 
 **禁止重复实现：**
 - ❌ Interfaces 层重复实现 Service 已有的数据访问逻辑
 - ❌ 多个地方重复实现相同的映射/转换规则
+```

@@ -1,6 +1,6 @@
 # Ditto: 量化投资系统
 
-**版本**: v0.13.0 | **更新**: 2026-04-13 | **状态**: V1 Sprint Enhancement 完成
+**版本**: v0.14.0 | **更新**: 2026-04-15 | **状态**: V1 RC Closeout 完成
 
 ## 概要
 
@@ -112,7 +112,6 @@ ditto/
 │   │       ├── storage/         # 存储引擎
 │   │       ├── runtime/         # 运行时（SQL/PIT/Freeze）
 │   │       ├── quality/         # 数据质量
-│   │       ├── query/           # 查询服务
 │   │       ├── helpers/         # 辅助工具
 │   │       ├── config/          # 数据层配置
 │   │       └── di/              # DI 注册
@@ -122,7 +121,12 @@ ditto/
 │   │       ├── enums.py         # 枚举
 │   │       ├── clock.py         # 时钟
 │   │       ├── events.py        # 事件
-│   │       └── specs.py         # 规约
+│   │       ├── specs.py         # 规约
+│   │       ├── quality.py       # 数据质量值对象
+│   │       ├── research.py      # 研究数据集类型
+│   │       ├── exceptions.py    # 共享异常
+│   │       ├── types.py         # 工具类型
+│   │       └── math.py          # 数学工具函数
 │   └── infra/                   # 基础设施
 │       └── src/ditto_infra/
 │           ├── foundation/      # cache/checksum/concurrency/config/db/observability/util
@@ -210,7 +214,9 @@ pixi run -e dev arch-check       # 分层依赖检查
 - **V1 Sprint Phase 2** — 人工执行闭环 (done)
 - **V1 Sprint 修复** — 8 项偏差修复: Position UPSERT/T+1 日历/基准 NAV/Comparison API/Signal API/分页/乐观锁/settlement_date (done)
 - **V1 Sprint Enhancement** — Regime 识别 + 因子增强回测 + Universe 管理 + 自定义费率 + 回测 artifact + 可复现性验证 (done)
-- **V1 Sprint Phase 3** — Run Lineage / Replayability（done）
+- **V1 Sprint Phase 3** — Run Lineage / Replayability (done)
+- **Sprint 5** — 交易 API 分页 + 成交幂等 + 偏差报告 + CORS 配置 (done)
+- **V1 RC Closeout** — 6 维度代码审查修复 (done)
 - **Phase 3** — 实盘接入：BrokerAdapter / 纸面交易（规划中）
 - **Phase 4** — App 层提取：CQRS 编排 + DI builders + engine 独立包 (done)
 - **Phase 5** — ML 增强：因子权重学习 / 多策略组合（远期规划）
@@ -243,6 +249,16 @@ pixi run -e dev arch-check       # 分层依赖检查
 - [interfaces/CLAUDE.md](interfaces/CLAUDE.md) — Interfaces 层规范
 
 ## 变更记录
+
+### v0.14.0 (2026-04-15)
+**Sprint 5 交易 API 增强 + V1 RC Closeout**
+- 交易 API 分页（limit/offset 统一下沉至 SQL 层）
+- 成交幂等（trade_fill UNIQUE 约束 + INSERT OR IGNORE）
+- 偏差报告 API（comparison query facade 增强）
+- CORS 配置（可配置允许的 origins）
+- 6 维度代码审查修复（25 files, +948/-418）
+- 数据源调研文档（宏观/商品/舆情增量评估）
+- 全量文档审计与同步
 
 ### v0.13.0 (2026-04-13)
 **V1 Sprint Enhancement — 7 项关键能力补齐**

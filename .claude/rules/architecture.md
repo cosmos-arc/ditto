@@ -73,6 +73,9 @@ ditto_infra       → (无业务依赖)                                         
 ditto_engine      → ditto_data (仅 errors/provider)                        ❌ (beyond)
 ditto_data        → ditto_engine                                            ❌
 ditto_data        → ditto_interfaces                                        ❌
+ditto_analytics   → ditto_engine                                            ❌
+ditto_analytics   → ditto_interfaces                                        ❌
+ditto_analytics   → ditto_app                                               ❌
 ditto_infra       → 其他层                                                  ❌
 ```
 
@@ -174,7 +177,7 @@ from ditto_kernel.enums import AssetClass
 5. **纯值语义**：不含序列化、持久化关注点
 
 **红线**：
-- kernel 类型数量控制在 20 个以内
+- 不设硬性数量上限（每个新增类型须在 PR 中说明理由）
 - 不允许 `import polars` / `import orjson` 等第三方库
 - pyproject.toml 不声明运行时依赖
 

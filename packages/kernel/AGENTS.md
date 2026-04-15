@@ -16,7 +16,7 @@ Kernel 层是 **Shared Kernel — 类型 + Protocol 抽象 + 薄实现**，提�
 | # | 标准 | 说明 |
 |---|------|------|
 | 1 | 跨层使用 | 至少被 2 个业务包直接导入 |
-| 2 | 零业务行为 | 纯值对象 / 枚举 / NewType，不含方法 |
+| 2 | 零业务行为 | 纯值对象 / 枚举 / NewType。frozen dataclass 允许纯计算型 `@property`（无副作用、无 I/O、仅基于自身字段） |
 | 3 | 稳定性高 | 不会随某个子域的迭代频繁变更 |
 | 4 | 无外部依赖 | 只依赖 Python 标准库 |
 | 5 | 纯值语义 | 不含序列化、持久化关注点 |
@@ -52,7 +52,12 @@ ditto_kernel/
 ├── enums.py           # 共享枚举类型（StrEnum）
 ├── clock.py           # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
 ├── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
-└── specs.py           # 衍生规格数据类（DerivedSpec / DerivedRole / TimeSpec 等，Phase 5 从 Engine 迁入）
+├── specs.py           # 衍生规格数据类（DerivedSpec / DerivedRole / TimeSpec 等，Phase 5 从 Engine 迁入）
+├── research.py        # 研究数据集记录类型（frozen dataclass × 4）
+├── quality.py         # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult / L3CheckResult / ReconciliationResult）
+├── exceptions.py      # 共享异常层级（DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
+├── types.py           # 共享工具类型（InstrumentIngestParams）
+└── math.py            # 共享数学工具（pearson_correlation 等纯计算函数）
 ```
 
 ## 当前类型清单
@@ -64,13 +69,32 @@ ditto_kernel/
 | `Exchange` | enums.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
 | `OrderSide` | enums.py | `StrEnum`（BUY/SELL） | Data, Engine |
 | `RunStatus` | enums.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | Data |
-| `DerivedRole` | specs.py | `StrEnum`（FACTOR/FEATURE/COMPOSITE） | Analytics, Engine |
+| `RiskScope` | enums.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Engine |
+| `MacroCategory` | enums.py | `StrEnum`（ECONOMIC/INTEREST_RATE/EXCHANGE_RATE/MONEY_SUPPLY/PRICES/EMPLOYMENT） | Data, App |
+| `MacroFrequency` | enums.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, App |
+| `DerivedRole` | specs.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analytics, Engine |
 | `DerivedSpec` | specs.py | frozen dataclass | Analytics, Engine |
-| `MaterializationProfile` | specs.py | `StrEnum`（SERIES/STATE） | Analytics, Engine |
+| `MaterializationProfile` | specs.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Engine |
 | `TimeSpec` | specs.py | frozen dataclass | Analytics, Engine |
 | `ExecutionPolicy` | specs.py | frozen dataclass（含默认值） | Analytics, Engine |
 | `CalendarId` | specs.py | `Literal["cn_stock"]` | Analytics |
 | `GrainId` | specs.py | `Literal["1d", "1m"]` | Analytics |
+| `ResearchSpineSpecRecord` | research.py | frozen dataclass | Data, App |
+| `ResearchDatasetSpecRecord` | research.py | frozen dataclass | Data, App |
+| `ResearchSpineSnapshotRecord` | research.py | frozen dataclass | Data, App |
+| `ResearchDatasetSnapshotRecord` | research.py | frozen dataclass | Data, App |
+| `DQLevel` | quality.py | `Enum`（TECHNICAL/BUSINESS/STATISTICAL） | Data, App, Interfaces |
+| `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, App, Interfaces |
+| `DQIssue` | quality.py | frozen dataclass | Data, App, Interfaces |
+| `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
+| `L3CheckResult` | quality.py | frozen dataclass（L3 统计巡检结果） | App, Interfaces |
+| `ReconciliationResult` | quality.py | frozen dataclass（数据源对账结果） | App, Interfaces |
+| `DataError` | exceptions.py | `Exception`（基类） | Data, App, Interfaces |
+| `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
+| `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | App |
+| `AmbiguousTickerError` | exceptions.py | `IdentifierError` | App |
+| `InstrumentIngestParams` | types.py | frozen dataclass | Data, App |
+| `pearson_correlation` | math.py | 纯函数 | Engine, App |
 
 ## 导入规范
 
@@ -130,8 +154,10 @@ packages/kernel/
 ├── src/ditto_kernel/
 └── tests/
     └── unit/           # 单元测试
-        ├── test_identity.py
-        └── test_enums.py
+        ├── test_clock.py
+        ├── test_enums.py
+        ├── test_events.py
+        └── test_identity.py
 ```
 
 ### 运行测试
@@ -165,8 +191,3 @@ pixi run -e dev pytest packages/kernel/tests/
    YES → ✅ 可以放入 Kernel
    NO → ❌ 放在对应的业务包里
 ```
-
-## 相关文档
-
-- 共享内核设计：[shared-kernel-and-model-governance-design](../../docs/plans/2026-03-24-shared-kernel-and-model-governance-design.md)
-- Kernel 包创建计划：[kernel-package-creation](../../docs/plans/2026-03-24-kernel-package-creation.md)

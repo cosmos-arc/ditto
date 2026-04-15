@@ -56,7 +56,8 @@ ditto_kernel/
 ├── research.py        # 研究数据集记录类型（frozen dataclass × 4）
 ├── quality.py         # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult / L3CheckResult / ReconciliationResult）
 ├── exceptions.py      # 共享异常层级（DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
-└── types.py           # 共享工具类型（InstrumentIngestParams）
+├── types.py           # 共享工具类型（InstrumentIngestParams）
+└── math.py            # 共享数学工具（pearson_correlation 等纯计算函数）
 ```
 
 ## 当前类型清单
@@ -93,6 +94,7 @@ ditto_kernel/
 | `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | App |
 | `AmbiguousTickerError` | exceptions.py | `IdentifierError` | App |
 | `InstrumentIngestParams` | types.py | frozen dataclass | Data, App |
+| `pearson_correlation` | math.py | 纯函数 | Engine, App |
 
 ## 导入规范
 
