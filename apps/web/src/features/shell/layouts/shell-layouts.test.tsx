@@ -564,9 +564,21 @@ describe("OpsConsoleLayout", () => {
 		expect(screen.queryByText("Detail")).not.toBeInTheDocument();
 	});
 
-	it("applies grid layout classes", () => {
+	it("applies single-column grid when detail is not provided", () => {
 		const { container } = render(
 			<OpsConsoleLayout main={<span>Main</span>} />,
+		);
+		const root = expectGridRoot(container);
+		expect(root.className).toContain("grid-cols-[1fr]");
+		expect(root.className).toContain("grid-rows-[auto_1fr]");
+	});
+
+	it("applies two-column grid when detail is provided", () => {
+		const { container } = render(
+			<OpsConsoleLayout
+				main={<span>Main</span>}
+				detail={<span>Detail</span>}
+			/>,
 		);
 		const root = expectGridRoot(container);
 		expect(root.className).toContain(

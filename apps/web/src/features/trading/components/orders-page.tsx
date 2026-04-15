@@ -1,24 +1,28 @@
+import { useState } from "react";
 import { OpsConsoleLayout, StatusBar } from "@/features/shell";
-import { OrdersList } from "./orders-list";
+import { Drawer } from "@/components/indicator/overlay/drawer";
 import { OrdersHealthStrip } from "./orders-health-strip";
+import { OrdersList } from "./orders-list";
 import { OrderDetailPanel } from "./order-detail-panel";
 
-const DEFAULT_ORDER_ID = "ord-003";
-
 export function OrdersPage() {
+	const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
 	return (
 		<>
 			<OpsConsoleLayout
 				className="pb-(--height-status-bar)"
 				health={<OrdersHealthStrip />}
-				main={<OrdersList />}
-				detail={
-					<div className="h-full overflow-y-auto">
-						<OrderDetailPanel orderId={DEFAULT_ORDER_ID} />
-					</div>
-				}
+				main={<OrdersList onSelectOrder={setSelectedOrderId} />}
 			/>
 			<StatusBar />
+			<Drawer
+				open={selectedOrderId !== null}
+				onClose={() => setSelectedOrderId(null)}
+				title="订单详情"
+			>
+				{selectedOrderId && <OrderDetailPanel orderId={selectedOrderId} />}
+			</Drawer>
 		</>
 	);
 }

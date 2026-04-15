@@ -51,20 +51,7 @@ describe("Drawer", () => {
 
 	// ── Props ──
 
-	it("accepts custom width", async () => {
-		render(
-			<Drawer open={true} onClose={() => {}} title="Test" width="480px">
-				Content
-			</Drawer>,
-		);
-		await waitFor(() => {
-			const content = document.querySelector("[data-slot='sheet-content']") as HTMLElement;
-			expect(content).toBeInTheDocument();
-			expect(content.style.width).toBe("480px");
-		});
-	});
-
-	it("uses default width 340px when not specified", async () => {
+	it("applies default 340px width via className", async () => {
 		render(
 			<Drawer open={true} onClose={() => {}} title="Test">
 				Content
@@ -73,7 +60,25 @@ describe("Drawer", () => {
 		await waitFor(() => {
 			const content = document.querySelector("[data-slot='sheet-content']") as HTMLElement;
 			expect(content).toBeInTheDocument();
-			expect(content.style.width).toBe("340px");
+			expect(content.className).toContain("w-[340px]");
+			expect(content.className).toContain("max-w-[340px]");
+			// No inline style
+			expect(content.style.width).toBe("");
+		});
+	});
+
+	it("allows custom width via className override", async () => {
+		render(
+			<Drawer open={true} onClose={() => {}} title="Test" className="w-[480px] max-w-[480px]">
+				Content
+			</Drawer>,
+		);
+		await waitFor(() => {
+			const content = document.querySelector("[data-slot='sheet-content']") as HTMLElement;
+			expect(content).toBeInTheDocument();
+			expect(content.className).toContain("w-[480px]");
+			expect(content.className).toContain("max-w-[480px]");
+			expect(content.style.width).toBe("");
 		});
 	});
 

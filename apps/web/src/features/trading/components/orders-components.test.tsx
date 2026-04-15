@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { server } from "@/mocks/server";
@@ -144,11 +145,48 @@ describe("OrdersPage", () => {
 		).resolves.toBeInTheDocument();
 	});
 
-	it("渲染订单详情面板（detail slot）", async () => {
+	it("默认不显示订单详情 Drawer", async () => {
 		render(<OrdersPage />, { wrapper: createWrapper() });
 
 		await expect(
+			screen.findByText("订单台账"),
+		).resolves.toBeInTheDocument();
+
+		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+	});
+
+	it("点击订单行后打开 Drawer 显示订单详情", async () => {
+		const user = userEvent.setup();
+		render(<OrdersPage />, { wrapper: createWrapper() });
+
+		// Wait for orders to load
+		await expect(screen.findByText("000001.SZ")).resolves.toBeInTheDocument();
+
+		// Click the first order row
+		await user.click(screen.getByText("000001.SZ"));
+
+		// Drawer should open with order detail
+		await expect(screen.findByRole("dialog")).resolves.toBeInTheDocument();
+		await expect(
 			screen.findByText("信号确认"),
 		).resolves.toBeInTheDocument();
+	});
+
+	it("关闭 Drawer 后回到全宽表格", async () => {
+		const user = userEvent.setup();
+		render(<OrdersPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("000001.SZ")).resolves.toBeInTheDocument();
+
+		// Open drawer
+		await user.click(screen.getByText("000001.SZ"));
+		await expect(screen.findByRole("dialog")).resolves.toBeInTheDocument();
+
+		// Close drawer via close button
+		const closeBtn = screen.getByRole("button", { name: /close/i });
+		await user.click(closeBtn);
+
+		// Drawer should be gone
+		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 	});
 });

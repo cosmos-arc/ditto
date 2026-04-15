@@ -269,7 +269,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		shellFamily: "ops-console",
 		prototypeSource: "prototype-backed",
 		prototypeRef: "docs/designs/specs/prototypes/page-orders-ledger.html",
-		requiredSlots: ["health", "main", "detail"],
+		requiredSlots: ["health", "main"],
 		requiredStates: [
 			...UNIVERSAL_STATES,
 			"selected-row",

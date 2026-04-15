@@ -16,7 +16,11 @@ const STATUS_VARIANT: Record<string, "healthy" | "warning" | "default" | "degrad
 	filled: "healthy",
 };
 
-export function OrdersList() {
+interface OrdersListProps {
+	readonly onSelectOrder?: (orderId: string) => void;
+}
+
+export function OrdersList({ onSelectOrder }: OrdersListProps) {
 	const { data, isLoading, isError, refetch } = useOrders();
 
 	return (
@@ -28,7 +32,20 @@ export function OrdersList() {
 						{data.items.map((order) => (
 							<div
 								key={order.id}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+								className={[
+									"flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)",
+									onSelectOrder ? "cursor-pointer" : "",
+								].join(" ")}
+								onClick={() => onSelectOrder?.(order.id)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										e.preventDefault();
+										onSelectOrder?.(order.id);
+									}
+								}}
+								{...(onSelectOrder
+									? { role: "button", tabIndex: 0 }
+									: {})}
 							>
 								<div className="flex items-center gap-3">
 									<StatusBadge

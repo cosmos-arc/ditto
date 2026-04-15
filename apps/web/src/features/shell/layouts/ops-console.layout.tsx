@@ -11,6 +11,7 @@ interface OpsConsoleLayoutProps {
 /**
  * OpsConsoleLayout — /platform/*.
  * Grid: health strip + main/detail.
+ * When detail is not provided, main takes full width (single-column grid).
  */
 export function OpsConsoleLayout({
 	health,
@@ -18,13 +19,19 @@ export function OpsConsoleLayout({
 	detail,
 	className,
 }: OpsConsoleLayoutProps) {
+	const hasDetail = Boolean(detail);
+
 	return (
 		<div
 			className={[
 				"grid h-full w-full overflow-hidden",
-				"grid-cols-[1fr_var(--width-ops-detail)]",
+				hasDetail
+					? "grid-cols-[1fr_var(--width-ops-detail)]"
+					: "grid-cols-[1fr]",
 				"grid-rows-[auto_1fr]",
-				'[grid-template-areas:"health_health""main_detail"]',
+				hasDetail
+					? '[grid-template-areas:"health_health""main_detail"]'
+					: '[grid-template-areas:"health""main"]',
 				className,
 			].join(" ")}
 		>

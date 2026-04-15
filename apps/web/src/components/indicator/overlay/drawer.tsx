@@ -11,7 +11,6 @@ interface DrawerProps {
 	readonly onClose: () => void;
 	readonly title: string;
 	readonly children: React.ReactNode;
-	readonly width?: string;
 	readonly className?: string;
 }
 
@@ -20,35 +19,33 @@ function Drawer({
 	onClose,
 	title,
 	children,
-	width = "340px",
 	className,
 }: DrawerProps) {
 	return (
 		<Sheet open={open} onOpenChange={(isOpen) => {
-			if (!isOpen) onClose();
-		}}>
-			<SheetContent
-				side="right"
-				showClose
-				aria-label={title}
-				aria-describedby={undefined}
-				className={cn("p-0", className)}
-				style={{ width, maxWidth: width }}
-			>
-				<SheetHeader className="flex-row items-center justify-between border-b border-(--color-border-subtle) px-4 py-3 mb-3 space-y-0">
-					<SheetTitle className="text-md text-(--color-foreground-primary)">
-						{title}
-					</SheetTitle>
-				</SheetHeader>
-
-				<div
-					data-slot="drawer-body"
-					className="flex-1 overflow-y-auto px-4 text-sm text-(--color-foreground-secondary) leading-relaxed"
+				if (!isOpen) onClose();
+			}}>
+				<SheetContent
+					side="right"
+					showClose
+					aria-label={title}
+					aria-describedby={undefined}
+					className={cn("w-[340px] max-w-[340px] p-0", className)}
 				>
-					{children}
-				</div>
-			</SheetContent>
-		</Sheet>
+					<SheetHeader className="flex-row items-center justify-between border-b border-(--color-border-subtle) px-4 py-3 mb-3 space-y-0">
+						<SheetTitle className="text-md text-(--color-foreground-primary)">
+							{title}
+						</SheetTitle>
+					</SheetHeader>
+
+					<div
+						data-slot="drawer-body"
+						className="flex-1 overflow-y-auto px-4 text-sm text-(--color-foreground-secondary) leading-relaxed"
+					>
+						{children}
+					</div>
+				</SheetContent>
+			</Sheet>
 	);
 }
 
