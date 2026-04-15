@@ -44,65 +44,71 @@ export function FactorOverview({ id }: FactorOverviewProps) {
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 			{data && (
-				<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
-					<ContextSection title="因子属性">
-						<dl className="grid grid-cols-2 gap-2">
-							{(
-								[
-									["ic", data.factor.ic],
-									["ir", data.factor.ir],
-									["decay", data.factor.decay],
-									["turnover", data.factor.turnover],
-									["coverage", data.factor.coverage],
-								] as const
-							).map(([key, value]) => (
-								<div key={key} className="flex justify-between hover:bg-(--color-interaction-hover-subtle-bg) rounded px-2 py-1">
-									<dt className="text-(--color-foreground-tertiary)">
-										{ATTR_LABELS[key]}
-									</dt>
-									<dd>{formatAttrValue(key, value)}</dd>
-								</div>
-							))}
-						</dl>
-					</ContextSection>
+				<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
+					<div data-info-level="l2" data-info-unit="factor-attributes">
+						<ContextSection title="因子属性">
+							<dl className="grid grid-cols-2 gap-2">
+								{(
+									[
+										["ic", data.factor.ic],
+										["ir", data.factor.ir],
+										["decay", data.factor.decay],
+										["turnover", data.factor.turnover],
+										["coverage", data.factor.coverage],
+									] as const
+								).map(([key, value]) => (
+									<div key={key} className="flex justify-between hover:bg-(--color-interaction-hover-subtle-bg) rounded px-2 py-1">
+										<dt className="text-(--color-foreground-tertiary)">
+											{ATTR_LABELS[key]}
+										</dt>
+										<dd>{formatAttrValue(key, value)}</dd>
+									</div>
+								))}
+							</dl>
+						</ContextSection>
+					</div>
 
-					<ContextSection title="诊断检查">
-						<div className="mb-2 text-sm">
-							{(() => {
-								const counts = data.diagnostics.reduce(
-									(acc, d) => {
-										acc[d.result] = (acc[d.result] ?? 0) + 1;
-										return acc;
-									},
-									{} as Record<string, number>,
-								);
-								const parts = [
-									counts.pass ? `${counts.pass} pass` : null,
-									counts.warning ? `${counts.warning} warning` : null,
-									counts.fail ? `${counts.fail} fail` : null,
-								].filter(Boolean);
-								return parts.join(", ");
-							})()}
-						</div>
-						<ul className="flex flex-col gap-1">
-							{data.diagnostics.map((diag) => (
-								<li
-									key={diag.name}
-									className="flex items-center justify-between hover:bg-(--color-interaction-hover-subtle-bg) rounded px-2 py-1"
-								>
-									<span className="flex items-center gap-2">
-										<span
-											className={`inline-block size-2 rounded-full ${RESULT_STYLE[diag.result]}`}
-										/>
-										{diag.name}
-									</span>
-									<span className="text-(--color-foreground-tertiary)">
-										{diag.value} vs {diag.threshold}
-									</span>
-								</li>
-							))}
-						</ul>
-					</ContextSection>
+					<div data-info-level="l2" data-info-unit="factor-diagnostics">
+						<ContextSection title="诊断检查">
+							<div className="mb-2 text-sm">
+								{(() => {
+									const counts = data.diagnostics.reduce(
+										(acc, d) => {
+											acc[d.result] = (acc[d.result] ?? 0) + 1;
+											return acc;
+										},
+										{} as Record<string, number>,
+									);
+									const parts = [
+										counts.pass ? `${counts.pass} pass` : null,
+										counts.warning ? `${counts.warning} warning` : null,
+										counts.fail ? `${counts.fail} fail` : null,
+									].filter(Boolean);
+									return parts.join(", ");
+								})()}
+							</div>
+							<ul className="flex flex-col gap-1">
+								{data.diagnostics.map((diag) => (
+									<li
+										key={diag.name}
+										data-info-level="l3"
+										data-info-unit="diagnostic-item"
+										className="flex items-center justify-between hover:bg-(--color-interaction-hover-subtle-bg) rounded px-2 py-1"
+									>
+										<span className="flex items-center gap-2">
+											<span
+												className={`inline-block size-2 rounded-full ${RESULT_STYLE[diag.result]}`}
+											/>
+											{diag.name}
+										</span>
+										<span className="text-(--color-foreground-tertiary)">
+											{diag.value} vs {diag.threshold}
+										</span>
+									</li>
+								))}
+							</ul>
+						</ContextSection>
+					</div>
 				</div>
 			)}
 		</DittoErrorBoundary>

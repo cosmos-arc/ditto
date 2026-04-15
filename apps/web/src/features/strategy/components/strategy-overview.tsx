@@ -19,60 +19,68 @@ function StrategyOverviewContent({ id }: StrategyOverviewProps) {
 	}
 
 	return (
-		<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
-			<ContextSection title="策略流程">
-				<ul className="flex flex-col gap-[var(--section-gap)]">
-					{data.pipeline.nodes.map((node) => (
-						<li
-							key={node.id}
-							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
-						>
-							<span>{node.name}</span>
-							<span className="text-(--color-foreground-tertiary) text-sm">
-								{node.type}
-							</span>
-						</li>
-					))}
-				</ul>
-			</ContextSection>
-
-			<ContextSection title="因子权重">
-				<ul className="flex flex-col gap-[var(--section-gap)]">
-					{Object.entries(data.weightConfig).map(([factor, weight]) => (
-						<li
-							key={factor}
-							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
-						>
-							<span>{factor}</span>
-							<span className="text-(--color-foreground-tertiary)">
-								{(weight * 100).toFixed(0)}%
-							</span>
-						</li>
-					))}
-				</ul>
-			</ContextSection>
-
-			<ContextSection title="风控规则">
-				<ul className="flex flex-col gap-[var(--section-gap)]">
-					{data.riskRules.map((rule) => (
-						<li
-							key={rule.name}
-							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
-						>
-							<span>{rule.name}</span>
-							<span
-								className={
-									rule.enabled
-										? "text-(--color-led-success)"
-										: "text-(--color-foreground-tertiary)"
-								}
+		<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
+			<div data-info-level="l2" data-info-unit="strategy-pipeline">
+				<ContextSection title="策略流程">
+					<ul className="flex flex-col gap-(--section-gap)">
+						{data.pipeline.nodes.map((node) => (
+							<li
+								key={node.id}
+								data-info-level="l3"
+								data-info-unit="pipeline-node"
+								className="flex items-center justify-between p-(--density-panel-padding) hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
 							>
-								{rule.enabled ? "启用" : "禁用"}
-							</span>
-						</li>
-					))}
-				</ul>
-			</ContextSection>
+								<span>{node.name}</span>
+								<span className="text-(--color-foreground-tertiary) text-sm">
+									{node.type}
+								</span>
+							</li>
+						))}
+					</ul>
+				</ContextSection>
+			</div>
+
+			<div data-info-level="l2" data-info-unit="factor-weights">
+				<ContextSection title="因子权重">
+					<ul className="flex flex-col gap-(--section-gap)">
+						{Object.entries(data.weightConfig).map(([factor, weight]) => (
+							<li
+								key={factor}
+								className="flex items-center justify-between p-(--density-panel-padding) hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
+							>
+								<span>{factor}</span>
+								<span className="text-(--color-foreground-tertiary)">
+									{(weight * 100).toFixed(0)}%
+								</span>
+							</li>
+						))}
+					</ul>
+				</ContextSection>
+			</div>
+
+			<div data-info-level="l2" data-info-unit="risk-rules">
+				<ContextSection title="风控规则">
+					<ul className="flex flex-col gap-(--section-gap)">
+						{data.riskRules.map((rule) => (
+							<li
+								key={rule.name}
+								className="flex items-center justify-between p-(--density-panel-padding) hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
+							>
+								<span>{rule.name}</span>
+								<span
+									className={
+										rule.enabled
+											? "text-(--color-led-success)"
+											: "text-(--color-foreground-tertiary)"
+									}
+								>
+									{rule.enabled ? "启用" : "禁用"}
+								</span>
+							</li>
+						))}
+					</ul>
+				</ContextSection>
+			</div>
 		</div>
 	);
 }

@@ -13,24 +13,36 @@ export function BacktestPage() {
 	return (
 		<Tabs defaultValue="overview">
 			<ObjectHubLayout
-				meta={<BacktestKpiStrip jobId={jobId} />}
+				meta={
+					<div data-info-level="l1" data-info-unit="backtest-kpi-strip">
+						<BacktestKpiStrip jobId={jobId} />
+					</div>
+				}
 				tabs={
-					<TabsList>
-						<TabsTrigger value="overview">概览</TabsTrigger>
-						<TabsTrigger value="returns">收益</TabsTrigger>
-						<TabsTrigger value="trades">交易</TabsTrigger>
-					</TabsList>
+					<div data-info-level="l1" data-info-unit="backtest-tabs">
+						<TabsList>
+							<TabsTrigger value="overview">概览</TabsTrigger>
+							<TabsTrigger value="returns">收益</TabsTrigger>
+							<TabsTrigger value="trades">交易</TabsTrigger>
+						</TabsList>
+					</div>
 				}
 				main={
 					<>
 						<TabsContent value="overview">
-							<BacktestOverview jobId={jobId} />
+							<div data-info-level="l1" data-info-unit="backtest-overview">
+								<BacktestOverview jobId={jobId} />
+							</div>
 						</TabsContent>
 						<TabsContent value="returns">
-							<BacktestReturnsView jobId={jobId} />
+							<div data-info-level="l1" data-info-unit="backtest-returns">
+								<BacktestReturnsView jobId={jobId} />
+							</div>
 						</TabsContent>
 						<TabsContent value="trades">
-							<BacktestTrades jobId={jobId} />
+							<div data-info-level="l1" data-info-unit="backtest-trades">
+								<BacktestTrades jobId={jobId} />
+							</div>
 						</TabsContent>
 					</>
 				}

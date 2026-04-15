@@ -8,10 +8,21 @@ export function CopilotPage() {
 		<>
 			<StudioLayout
 				className="pb-(--height-status-bar)"
-				style={{ "--width-studio-source": "220px", "--width-studio-inspector": "280px" }}
-				source={<CopilotSessionList />}
-				main={<CopilotChatView sessionId="session-001" />}
-				inspector={<CopilotContextPanel />}
+				source={
+					<div data-info-level="l1" data-info-unit="copilot-session-list">
+						<CopilotSessionList />
+					</div>
+				}
+				main={
+					<div data-info-level="l1" data-info-unit="copilot-chat">
+						<CopilotChatView sessionId="session-001" />
+					</div>
+				}
+				inspector={
+					<div data-info-level="l2" data-info-unit="copilot-context-panel">
+						<CopilotContextPanel />
+					</div>
+				}
 			/>
 			<StatusBar />
 		</>

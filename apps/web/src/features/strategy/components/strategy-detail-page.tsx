@@ -13,24 +13,36 @@ export function StrategyDetailPage() {
 	return (
 		<Tabs defaultValue="overview">
 			<ObjectHubLayout
-				meta={<StrategyDetailMeta id={strategyId} />}
+				meta={
+					<div data-info-level="l1" data-info-unit="strategy-meta">
+						<StrategyDetailMeta id={strategyId} />
+					</div>
+				}
 				tabs={
-					<TabsList>
-						<TabsTrigger value="overview">概览</TabsTrigger>
-						<TabsTrigger value="versions">版本</TabsTrigger>
-						<TabsTrigger value="factors">因子</TabsTrigger>
-					</TabsList>
+					<div data-info-level="l1" data-info-unit="strategy-detail-tabs">
+						<TabsList>
+							<TabsTrigger value="overview">概览</TabsTrigger>
+							<TabsTrigger value="versions">版本</TabsTrigger>
+							<TabsTrigger value="factors">因子</TabsTrigger>
+						</TabsList>
+					</div>
 				}
 				main={
 					<>
 						<TabsContent value="overview">
-							<StrategyOverview id={strategyId} />
+							<div data-info-level="l1" data-info-unit="strategy-overview">
+								<StrategyOverview id={strategyId} />
+							</div>
 						</TabsContent>
 						<TabsContent value="versions">
-							<StrategyVersionsView id={strategyId} />
+							<div data-info-level="l1" data-info-unit="strategy-versions">
+								<StrategyVersionsView id={strategyId} />
+							</div>
 						</TabsContent>
 						<TabsContent value="factors">
-							<StrategyFactorsView id={strategyId} />
+							<div data-info-level="l1" data-info-unit="strategy-factors">
+								<StrategyFactorsView id={strategyId} />
+							</div>
 						</TabsContent>
 					</>
 				}

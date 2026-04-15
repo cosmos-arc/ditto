@@ -9,9 +9,9 @@ import { AnalysisBand } from "./analysis-band";
 export function ResearchPage() {
 	return (
 		<AnalyticalLayout
-			strip={<ResearchPulseStrip />}
+			strip={<div data-info-level="l1" data-info-unit="research-pulse-strip"><ResearchPulseStrip /></div>}
 			main={
-				<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
+				<div data-info-level="l1" data-info-unit="factor-table" className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
 					<FactorTable />
 				</div>
 			}
@@ -27,7 +27,9 @@ export function ResearchPage() {
 							}
 						/>
 						<PanelBody className="p-3">
-							<RecentRuns />
+							<div data-info-level="l1" data-info-unit="recent-runs">
+								<RecentRuns />
+							</div>
 						</PanelBody>
 					</Panel>
 					<Panel className="flex-1">
@@ -40,15 +42,19 @@ export function ResearchPage() {
 							}
 						/>
 						<PanelBody className="p-3">
-							<ExperimentQueue />
+							<div data-info-level="l1" data-info-unit="experiment-queue">
+								<ExperimentQueue />
+							</div>
 						</PanelBody>
 					</Panel>
 				</div>
 			}
 			analysis={
-				<Panel>
-					<AnalysisBand />
-				</Panel>
+				<div data-info-level="l2" data-info-unit="analysis-band">
+					<Panel>
+						<AnalysisBand />
+					</Panel>
+				</div>
 			}
 		/>
 	);

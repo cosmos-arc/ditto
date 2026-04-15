@@ -12,20 +12,30 @@ export function FactorPage() {
 	return (
 		<Tabs defaultValue="overview">
 			<ObjectHubLayout
-				meta={<FactorDetailHeader id={factorId} />}
+				meta={
+					<div data-info-level="l1" data-info-unit="factor-meta">
+						<FactorDetailHeader id={factorId} />
+					</div>
+				}
 				tabs={
-					<TabsList>
-						<TabsTrigger value="overview">概览</TabsTrigger>
-						<TabsTrigger value="analysis">分析</TabsTrigger>
-					</TabsList>
+					<div data-info-level="l1" data-info-unit="factor-tabs">
+						<TabsList>
+							<TabsTrigger value="overview">概览</TabsTrigger>
+							<TabsTrigger value="analysis">分析</TabsTrigger>
+						</TabsList>
+					</div>
 				}
 				main={
 					<>
 						<TabsContent value="overview">
-							<FactorOverview id={factorId} />
+							<div data-info-level="l1" data-info-unit="factor-overview">
+								<FactorOverview id={factorId} />
+							</div>
 						</TabsContent>
 						<TabsContent value="analysis">
-							<FactorAnalysisView id={factorId} />
+							<div data-info-level="l1" data-info-unit="factor-analysis">
+								<FactorAnalysisView id={factorId} />
+							</div>
 						</TabsContent>
 					</>
 				}

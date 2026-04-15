@@ -14,24 +14,36 @@ export function InstrumentHubPage() {
 		<Tabs defaultValue="overview" className="h-full">
 			<ObjectHubLayout
 				className="pb-(--height-status-bar)"
-				meta={<InstrumentMetaStrip id={instrumentId} />}
+				meta={
+					<div data-info-level="l1" data-info-unit="instrument-meta">
+						<InstrumentMetaStrip id={instrumentId} />
+					</div>
+				}
 				tabs={
-					<TabsList>
-						<TabsTrigger value="overview">概览</TabsTrigger>
-						<TabsTrigger value="chart">行情</TabsTrigger>
-						<TabsTrigger value="fundamentals">基本面</TabsTrigger>
-					</TabsList>
+					<div data-info-level="l1" data-info-unit="instrument-tabs">
+						<TabsList>
+							<TabsTrigger value="overview">概览</TabsTrigger>
+							<TabsTrigger value="chart">行情</TabsTrigger>
+							<TabsTrigger value="fundamentals">基本面</TabsTrigger>
+						</TabsList>
+					</div>
 				}
 				main={
 					<>
 						<TabsContent value="overview">
-							<InstrumentOverview id={instrumentId} />
+							<div data-info-level="l1" data-info-unit="instrument-overview">
+								<InstrumentOverview id={instrumentId} />
+							</div>
 						</TabsContent>
 						<TabsContent value="chart">
-							<InstrumentChartView id={instrumentId} />
+							<div data-info-level="l1" data-info-unit="instrument-chart">
+								<InstrumentChartView id={instrumentId} />
+							</div>
 						</TabsContent>
 						<TabsContent value="fundamentals">
-							<InstrumentOverview id={instrumentId} />
+							<div data-info-level="l1" data-info-unit="instrument-fundamentals">
+								<InstrumentOverview id={instrumentId} />
+							</div>
 						</TabsContent>
 					</>
 				}

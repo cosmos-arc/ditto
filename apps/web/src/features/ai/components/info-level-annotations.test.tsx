@@ -7,6 +7,7 @@ import { server } from "@/mocks/server";
 import { aiHandlers } from "@/mocks/handlers/ai";
 import { AiMainContent } from "./ai-main-content";
 import { AgentsPage } from "./agents-page";
+import { CopilotPage } from "./copilot-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -101,5 +102,49 @@ describe("AgentsPage info-level annotations", () => {
 		expect(l2UnitNames).toContain("agent-related-findings");
 		expect(l2UnitNames).toContain("agent-findings-list");
 		expect(l2Units).toHaveLength(2);
+	});
+});
+
+// ── CopilotPage: 2 L1, 1 L2 ──
+
+describe("CopilotPage info-level annotations", () => {
+	beforeEach(() => server.use(...aiHandlers));
+
+	it("annotates 2 L1 information units", async () => {
+		render(<CopilotPage />, { wrapper: createWrapper() });
+
+		await screen.findByText("会话列表");
+
+		const l1Units = document.querySelectorAll("[data-info-level='l1']");
+		const l1UnitNames = Array.from(l1Units).map(
+			(el) => el.getAttribute("data-info-unit"),
+		);
+
+		expect(l1UnitNames).toContain("copilot-session-list");
+		expect(l1UnitNames).toContain("copilot-chat");
+		expect(l1Units).toHaveLength(2);
+	});
+
+	it("annotates 1 L2 information unit", async () => {
+		render(<CopilotPage />, { wrapper: createWrapper() });
+
+		await screen.findByText("会话列表");
+
+		const l2Units = document.querySelectorAll("[data-info-level='l2']");
+		const l2UnitNames = Array.from(l2Units).map(
+			(el) => el.getAttribute("data-info-unit"),
+		);
+
+		expect(l2UnitNames).toContain("copilot-context-panel");
+		expect(l2Units).toHaveLength(1);
+	});
+
+	it("annotates 0 L3 information units", async () => {
+		render(<CopilotPage />, { wrapper: createWrapper() });
+
+		await screen.findByText("会话列表");
+
+		const l3Units = document.querySelectorAll("[data-info-level='l3']");
+		expect(l3Units).toHaveLength(0);
 	});
 });
