@@ -720,6 +720,58 @@
       box-shadow: 0 0 0 1.5px var(--brand-accent);
       border-radius: var(--radius-4);
     }
+
+    /* ── Collapsed Sidebar Gallery Mock ── */
+    .gallery-collapsed-sidebar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: var(--shell-sidebar-collapsed-width);
+      gap: var(--space-8, 8px);
+      padding: var(--space-12, 12px) 0;
+      background: var(--surface-1);
+      border-left: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      overflow: hidden;
+    }
+    .gallery-collapsed-btn {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .gallery-collapsed-btn svg { width: 20px; height: 20px; }
+    .gallery-badge-count {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--risk-critical-fg);
+      color: white;
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3px;
+      line-height: 1;
+    }
+    .gallery-led-dot {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+    }
   </style>
 </head>
 <body>
@@ -1753,6 +1805,37 @@
           </div>
       </div>
     </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="collapsed-sidebar">
+          <div class="gallery-group__label">Collapsed Sidebar</div>
+          <div class="gallery-cards">
+            <div class="gallery-card">
+              <div class="gallery-card__label">折叠态侧边栏 — 56px 浓缩信息栏</div>
+              <div class="gallery-card__preview">
+                <div class="gallery-collapsed-sidebar">
+                  <div class="gallery-collapsed-btn" title="市场脉搏" aria-label="市场脉搏">
+                    <svg data-sparkline='{"data":[3380,3395,3388,3402,3410,3420,3432],"series":"up","width":24,"height":12}'></svg>
+                  </div>
+                  <div class="gallery-collapsed-btn" title="全局预警 (3)" aria-label="全局预警 (3)">
+                    <svg viewBox="0 0 20 20" fill="none">
+                      <path d="M10 3L10 10M10 10L7 7M10 10L13 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 17H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <span class="gallery-badge-count">3</span>
+                  </div>
+                  <div class="gallery-collapsed-btn" title="数据健康 (healthy)" aria-label="数据健康 (healthy)">
+                    <svg viewBox="0 0 20 20" fill="none">
+                      <path d="M10 3C5.58 3 2 6.58 2 11H10V3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M10 3C14.42 3 18 6.58 18 11H10V3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <rect x="2" y="13" width="16" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    <span class="gallery-led-dot"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
