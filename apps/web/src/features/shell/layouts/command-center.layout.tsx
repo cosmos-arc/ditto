@@ -4,7 +4,8 @@ interface CommandCenterLayoutProps {
 	pulse?: ReactNode;
 	main: ReactNode;
 	sidebar?: ReactNode;
-	/** Optional extra class names for the root grid container */
+	/** Whether the sidebar is collapsed (v3 interaction framework) */
+	sidebarCollapsed?: boolean;
 	className?: string;
 }
 
@@ -18,13 +19,14 @@ export function CommandCenterLayout({
 	pulse,
 	main,
 	sidebar,
+	sidebarCollapsed,
 	className,
 }: CommandCenterLayoutProps) {
 	return (
 		<div
 			className={[
-				"grid h-full w-full overflow-hidden",
-				"grid-cols-[1fr_var(--width-sidebar)]",
+				"grid h-full w-full overflow-hidden grid-sidebar-transition",
+				"grid-cols-[1fr_var(--sidebar-width)]",
 				"grid-rows-[auto_1fr]",
 				'[grid-template-areas:"pulse_pulse""main_sidebar"]',
 				className,
@@ -35,7 +37,13 @@ export function CommandCenterLayout({
 				{main}
 			</div>
 			{sidebar && (
-				<div className="min-h-0 overflow-hidden [grid-area:sidebar]" data-slot="sidebar">
+				<div
+					className={[
+						"min-h-0 overflow-hidden [grid-area:sidebar]",
+						sidebarCollapsed && "w-(--width-sidebar-collapsed)",
+					].filter(Boolean).join(" ")}
+					data-slot="sidebar"
+				>
 					{sidebar}
 				</div>
 			)}

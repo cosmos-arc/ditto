@@ -61,8 +61,40 @@ describe("CommandCenterLayout", () => {
 			<CommandCenterLayout main={<span>Main</span>} />,
 		);
 		const root = expectGridRoot(container);
-		expect(root.className).toContain("grid-cols-[1fr_var(--width-sidebar)]");
+		expect(root.className).toContain("grid-cols-[1fr_var(--sidebar-width)]");
 		expect(root.className).toContain("grid-rows-[auto_1fr]");
+	});
+
+	it("adds grid-sidebar-transition class for smooth collapse animation", () => {
+		const { container } = render(
+			<CommandCenterLayout main={<span>Main</span>} />,
+		);
+		const root = expectGridRoot(container);
+		expect(root.className).toContain("grid-sidebar-transition");
+	});
+
+	it("applies collapsed width class when sidebarCollapsed is true", () => {
+		const { container } = render(
+			<CommandCenterLayout
+				main={<span>Main</span>}
+				sidebar={<span>Sidebar</span>}
+				sidebarCollapsed
+			/>,
+		);
+		const sidebar = container.querySelector("[data-slot='sidebar']");
+		expect(sidebar?.className).toContain("w-(--width-sidebar-collapsed)");
+	});
+
+	it("does not apply collapsed width class when sidebarCollapsed is false", () => {
+		const { container } = render(
+			<CommandCenterLayout
+				main={<span>Main</span>}
+				sidebar={<span>Sidebar</span>}
+				sidebarCollapsed={false}
+			/>,
+		);
+		const sidebar = container.querySelector("[data-slot='sidebar']");
+		expect(sidebar?.className).not.toContain("w-(--width-sidebar-collapsed)");
 	});
 
 	it("applies className prop to root", () => {
@@ -562,7 +594,7 @@ describe("RadarLayout", () => {
 		expect(workspace).toBeTruthy();
 		expect(workspace?.className).toContain("grid");
 		expect(workspace?.className).toContain(
-			"grid-cols-[1fr_var(--width-activity)]",
+			"grid-cols-[1fr_var(--width-radar-right-rail)]",
 		);
 	});
 

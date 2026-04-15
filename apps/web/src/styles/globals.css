@@ -373,6 +373,9 @@
   --color-status-error:     var(--system-down-fg);
   --color-status-warning:   var(--risk-medium-fg);
   --color-border-primary:   var(--border-strong);
+
+  /* ── Sidebar Collapse (v3) ── */
+  --sidebar-width: var(--shell-sidebar-width);
 }
 
 /* Theme overrides — 最后加载 */
@@ -660,6 +663,16 @@ body {
 [data-slot="home-primary"] > * {
   position: relative;
   z-index: 1;
+}
+
+/* ── Sidebar Collapse Transition (v3) ── */
+[data-sidebar-collapsed] {
+  --sidebar-width: var(--shell-sidebar-collapsed-width);
+}
+
+/* Sidebar grid-template-columns transition */
+.grid-sidebar-transition {
+  transition: grid-template-columns var(--duration-sidebar-collapse) var(--ease-default);
 }
 
 /* ── Respect reduced motion ── */
