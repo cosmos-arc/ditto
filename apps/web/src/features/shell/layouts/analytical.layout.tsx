@@ -6,6 +6,8 @@ interface AnalyticalLayoutProps {
 	main: ReactNode;
 	activity?: ReactNode;
 	analysis?: ReactNode;
+	/** Whether the activity panel is collapsed (v3 interaction framework) */
+	activityCollapsed?: boolean;
 	/** Optional extra class names for the root grid container */
 	className?: string;
 }
@@ -24,20 +26,25 @@ export function AnalyticalLayout({
 	main,
 	activity,
 	analysis,
+	activityCollapsed,
 	className,
 }: AnalyticalLayoutProps) {
 	const hasBanner = Boolean(banner);
 	const hasAnalysis = Boolean(analysis);
 	const hasActivity = Boolean(activity);
 
-	const cols = hasActivity ? "grid-cols-[1fr_var(--width-activity)]" : "grid-cols-[1fr]";
+	const cols = hasActivity
+		? activityCollapsed
+			? "grid-cols-[1fr_var(--activity-width)]"
+			: "grid-cols-[1fr_var(--width-activity)]"
+		: "grid-cols-[1fr]";
 	const rows = buildRows(hasBanner, hasAnalysis, hasActivity);
 	const areas = buildAreas(hasBanner, hasAnalysis, hasActivity);
 
 	return (
 		<div
 			className={[
-				"grid h-full w-full overflow-hidden",
+				"grid h-full w-full overflow-hidden grid-sidebar-transition",
 				cols,
 				rows,
 				areas,
@@ -54,7 +61,13 @@ export function AnalyticalLayout({
 			)}
 			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">{main}</div>
 			{activity && (
-				<div className="min-h-0 overflow-hidden [grid-area:activity]" data-slot="activity">
+				<div
+					className={[
+						"min-h-0 overflow-hidden [grid-area:activity]",
+						activityCollapsed && "w-(--width-sidebar-collapsed)",
+					].filter(Boolean).join(" ")}
+					data-slot="activity"
+				>
 					{activity}
 				</div>
 			)}

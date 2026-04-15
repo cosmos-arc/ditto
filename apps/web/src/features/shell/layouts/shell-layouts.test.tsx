@@ -247,8 +247,69 @@ describe("AnalyticalLayout", () => {
 			(el) => (el as HTMLElement).className,
 		);
 		expect(areas.some((c) => c.includes("[grid-area:banner]"))).toBe(true);
+		});
+
+		it("applies collapsed activity width grid cols when activityCollapsed is true", () => {
+			const { container } = render(
+				<AnalyticalLayout
+					strip={<span>Strip</span>}
+					main={<span>Main</span>}
+					activity={<span>Activity</span>}
+					activityCollapsed
+				/>,
+			);
+			const root = expectGridRoot(container);
+			expect(root.className).toContain("grid-cols-[1fr_var(--activity-width)]");
+		});
+
+		it("applies normal activity width grid cols when activityCollapsed is false", () => {
+			const { container } = render(
+				<AnalyticalLayout
+					strip={<span>Strip</span>}
+					main={<span>Main</span>}
+					activity={<span>Activity</span>}
+					activityCollapsed={false}
+				/>,
+			);
+			const root = expectGridRoot(container);
+			expect(root.className).toContain("grid-cols-[1fr_var(--width-activity)]");
+		});
+
+		it("applies collapsed width class to activity div when activityCollapsed is true", () => {
+			const { container } = render(
+				<AnalyticalLayout
+					main={<span>Main</span>}
+					activity={<span>Activity</span>}
+					activityCollapsed
+				/>,
+			);
+			const activityEl = container.querySelector("[data-slot='activity']");
+			expect(activityEl?.className).toContain("w-(--width-sidebar-collapsed)");
+		});
+
+		it("does not apply collapsed width class to activity div when activityCollapsed is false", () => {
+			const { container } = render(
+				<AnalyticalLayout
+					main={<span>Main</span>}
+					activity={<span>Activity</span>}
+					activityCollapsed={false}
+				/>,
+			);
+			const activityEl = container.querySelector("[data-slot='activity']");
+			expect(activityEl?.className).not.toContain("w-(--width-sidebar-collapsed)");
+		});
+
+		it("adds grid-sidebar-transition class for smooth collapse animation", () => {
+			const { container } = render(
+				<AnalyticalLayout
+					main={<span>Main</span>}
+					activity={<span>Activity</span>}
+				/>,
+			);
+			const root = expectGridRoot(container);
+			expect(root.className).toContain("grid-sidebar-transition");
+		});
 	});
-});
 
 /* ------------------------------------------------------------------ */
 /*  3. CatalogLayout                                                   */

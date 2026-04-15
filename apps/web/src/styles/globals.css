@@ -376,6 +376,7 @@
 
   /* ── Sidebar Collapse (v3) ── */
   --sidebar-width: var(--shell-sidebar-width);
+  --activity-width: var(--shell-analytical-activity-width);
 }
 
 /* Theme overrides — 最后加载 */
@@ -668,6 +669,7 @@ body {
 /* ── Sidebar Collapse Transition (v3) ── */
 [data-sidebar-collapsed] {
   --sidebar-width: var(--shell-sidebar-collapsed-width);
+  --activity-width: var(--shell-sidebar-collapsed-width);
 }
 
 /* Sidebar grid-template-columns transition */
