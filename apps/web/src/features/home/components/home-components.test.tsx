@@ -1,10 +1,12 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { server } from "@/mocks/server";
 import { homeHandlers } from "@/mocks/handlers/home";
 import { mockDecisionBanner } from "@/mocks/fixtures/home";
+import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
 
 import { PulseSection } from "./pulse-section";
 import { BannerSection } from "./banner-section";
@@ -224,5 +226,34 @@ describe("ResearchProgressSection", () => {
 		render(<ResearchProgressSection />, { wrapper: createWrapper() });
 
 		await expect(screen.findByText("研究动态")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("HomePage sidebar collapse", () => {
+	beforeEach(() => {
+		useUIPreferences.setState({ sidebarCollapsed: false });
+	});
+
+	it("renders expanded sidebar by default", async () => {
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("市场脉搏")).resolves.toBeInTheDocument();
+	});
+
+	it("renders collapsed sidebar when sidebarCollapsed is true", async () => {
+		useUIPreferences.setState({ sidebarCollapsed: true });
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		expect(screen.getByLabelText("市场脉搏")).toBeInTheDocument();
+		expect(screen.getByLabelText("展开侧边栏")).toBeInTheDocument();
+	});
+
+	it("toggles sidebar on click", async () => {
+		const user = userEvent.setup();
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		await screen.findByText("今日优先事项");
+		await user.click(screen.getByLabelText("折叠侧边栏"));
+		expect(useUIPreferences.getState().sidebarCollapsed).toBe(true);
 	});
 });
