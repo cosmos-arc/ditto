@@ -30,7 +30,7 @@ function Drawer({
 					showClose
 					aria-label={title}
 					aria-describedby={undefined}
-					className={cn("w-[340px] max-w-[340px] p-0", className)}
+					className={cn("w-(--width-detail) max-w-(--width-detail) p-0", className)}
 				>
 					<SheetHeader className="flex-row items-center justify-between border-b border-(--color-border-subtle) px-4 py-3 mb-3 space-y-0">
 						<SheetTitle className="text-md text-(--color-foreground-primary)">

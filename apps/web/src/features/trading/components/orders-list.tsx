@@ -3,6 +3,7 @@ import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { cn } from "@/lib/utils";
 
 const SIDE_VARIANT: Record<string, "trade" | "risk"> = {
 	BUY: "trade",
@@ -32,20 +33,19 @@ export function OrdersList({ onSelectOrder }: OrdersListProps) {
 						{data.items.map((order) => (
 							<div
 								key={order.id}
-								className={[
+								className={cn(
 									"flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)",
-									onSelectOrder ? "cursor-pointer" : "",
-								].join(" ")}
-								onClick={() => onSelectOrder?.(order.id)}
-								onKeyDown={(e) => {
+									onSelectOrder && "cursor-pointer",
+								)}
+								onClick={onSelectOrder ? () => onSelectOrder(order.id) : undefined}
+								onKeyDown={onSelectOrder ? (e) => {
 									if (e.key === "Enter" || e.key === " ") {
 										e.preventDefault();
-										onSelectOrder?.(order.id);
+										onSelectOrder(order.id);
 									}
-								}}
-								{...(onSelectOrder
-									? { role: "button", tabIndex: 0 }
-									: {})}
+								} : undefined}
+								role={onSelectOrder ? "button" : undefined}
+								tabIndex={onSelectOrder ? 0 : undefined}
 							>
 								<div className="flex items-center gap-3">
 									<StatusBadge

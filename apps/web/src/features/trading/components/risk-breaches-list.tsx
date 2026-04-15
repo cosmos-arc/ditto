@@ -32,6 +32,12 @@ export function RiskBreachesList({ onSelectBreach }: RiskBreachesListProps) {
 									onSelectBreach && "cursor-pointer",
 								)}
 								onClick={onSelectBreach ? () => onSelectBreach(breach.id) : undefined}
+								onKeyDown={onSelectBreach ? (e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										e.preventDefault();
+										onSelectBreach(breach.id);
+									}
+								} : undefined}
 								role={onSelectBreach ? "button" : undefined}
 								tabIndex={onSelectBreach ? 0 : undefined}
 							>

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Drawer } from "./drawer";
@@ -51,7 +51,7 @@ describe("Drawer", () => {
 
 	// ── Props ──
 
-	it("applies default 340px width via className", async () => {
+	it("applies default width via design token", async () => {
 		render(
 			<Drawer open={true} onClose={() => {}} title="Test">
 				Content
@@ -60,9 +60,8 @@ describe("Drawer", () => {
 		await waitFor(() => {
 			const content = document.querySelector("[data-slot='sheet-content']") as HTMLElement;
 			expect(content).toBeInTheDocument();
-			expect(content.className).toContain("w-[340px]");
-			expect(content.className).toContain("max-w-[340px]");
-			// No inline style
+			expect(content.className).toContain("w-(--width-detail)");
+			expect(content.className).toContain("max-w-(--width-detail)");
 			expect(content.style.width).toBe("");
 		});
 	});
