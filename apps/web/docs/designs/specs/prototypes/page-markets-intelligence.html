@@ -4,12 +4,10 @@
   Edition: v1
   Generated: 2026-04-02
 
-  Tabs: 5
-  - tab-capital-flow (资金面) [covered]
-  - tab-macro (宏观) [covered]
+  Tabs: 3
+  - tab-capital-flow (资金流向) [covered]
+  - tab-macro (宏观指标) [covered]
   - tab-fundamental (基本面) [covered]
-  - tab-news (新闻) [covered]
-  - tab-network (关联网络) [covered]
 
   Overlays: 5
   - overlay-intelligence-detail (Drawer: 情报详情) [covered]
@@ -753,8 +751,6 @@
     :root:has(#tab-capital-flow:checked) [data-panel="tab-capital-flow"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
     :root:has(#tab-macro:checked) [data-panel="tab-macro"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
     :root:has(#tab-fundamental:checked) [data-panel="tab-fundamental"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
-    :root:has(#tab-news:checked) [data-panel="tab-news"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
-    :root:has(#tab-network:checked) [data-panel="tab-network"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
 
     /* Tab label active state (tab strip uses buttons + :has) */
     .intel-tab-strip:has(#tab-capital-flow:checked) label[for="tab-capital-flow"] {
@@ -768,16 +764,6 @@
       box-shadow: 0 1px 0 var(--brand-accent);
     }
     .intel-tab-strip:has(#tab-fundamental:checked) label[for="tab-fundamental"] {
-      color: var(--text-primary);
-      background: var(--overlay-4);
-      box-shadow: 0 1px 0 var(--brand-accent);
-    }
-    .intel-tab-strip:has(#tab-news:checked) label[for="tab-news"] {
-      color: var(--text-primary);
-      background: var(--overlay-4);
-      box-shadow: 0 1px 0 var(--brand-accent);
-    }
-    .intel-tab-strip:has(#tab-network:checked) label[for="tab-network"] {
       color: var(--text-primary);
       background: var(--overlay-4);
       box-shadow: 0 1px 0 var(--brand-accent);
@@ -1383,6 +1369,49 @@
       padding: 0;
       border-top: none;
     }
+
+    /* ── Collapsed Sidebar Gallery Mock ── */
+    .gallery-collapsed-sidebar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: var(--shell-sidebar-collapsed-width);
+      gap: var(--space-8, 8px);
+      padding: var(--space-12, 12px) 0;
+      background: var(--surface-1);
+      border-left: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      overflow: hidden;
+    }
+    .gallery-collapsed-btn {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .gallery-collapsed-btn svg { width: 20px; height: 20px; }
+    .gallery-badge-accent {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--brand-500);
+      color: white;
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3px;
+      line-height: 1;
+    }
   </style>
 </head>
 <body>
@@ -1490,16 +1519,12 @@
         <input type="radio" name="intel-tab" id="tab-capital-flow" checked class="tab-radio sr-only">
         <input type="radio" name="intel-tab" id="tab-macro" class="tab-radio sr-only">
         <input type="radio" name="intel-tab" id="tab-fundamental" class="tab-radio sr-only">
-        <input type="radio" name="intel-tab" id="tab-news" class="tab-radio sr-only">
-        <input type="radio" name="intel-tab" id="tab-network" class="tab-radio sr-only">
         <!-- Tab labels -->
-        <label for="tab-capital-flow" class="intel-tab active" role="tab">资金面</label>
-        <label for="tab-macro" class="intel-tab" role="tab">宏观</label>
+        <label for="tab-capital-flow" class="intel-tab active" role="tab">资金流向</label>
+        <label for="tab-macro" class="intel-tab" role="tab">宏观指标</label>
         <label for="tab-fundamental" class="intel-tab" role="tab">基本面</label>
-        <label for="tab-news" class="intel-tab" role="tab">新闻</label>
-        <label for="tab-network" class="intel-tab" role="tab">关联网络</label>
         <div class="tab-strip-spacer"></div>
-        <span class="tab-strip-meta">资金面</span>
+        <span class="tab-strip-meta">资金流向</span>
         <span class="tab-strip-meta">1D</span>
         <span class="tab-strip-meta">09:46</span>
       </div>
@@ -1992,312 +2017,6 @@
                     </tr>
                   </tbody>
                 </table>
-              </div>
-            </div>
-
-            <!-- ═══ Tab 4: 新闻 (News) ═══ -->
-            <div class="tab-panel" data-panel="tab-news">
-
-              <!-- Hot Topics -->
-              <div data-reveal="fade-up" data-reveal-delay="0">
-                <div class="section-title">热点追踪</div>
-                <div class="topic-tag-list">
-                  <span class="topic-tag topic-tag--hot">AI芯片国产替代</span>
-                  <span class="topic-tag topic-tag--accent">PMI超预期回升</span>
-                  <span class="topic-tag topic-tag--default">北向资金持续流入</span>
-                  <span class="topic-tag topic-tag--default">房地产政策优化</span>
-                </div>
-              </div>
-
-              <!-- News / Research / Announcements Tabs -->
-              <div data-tabs="intelligence-tabs" class="flex-col gap-8">
-                <div class="flex-row-center gap-2 border-b-subtle pb-4">
-                  <button class="intel-tab active" data-tab-target="panel-news-flash" aria-selected="true">快讯</button>
-                  <button class="intel-tab" data-tab-target="panel-research" aria-selected="false">研报</button>
-                  <button class="intel-tab" data-tab-target="panel-announcement" aria-selected="false">公告</button>
-                </div>
-
-                <!-- Panel: 快讯 -->
-                <div data-tab-panel="panel-news-flash" aria-hidden="false">
-                  <div data-reveal="fade-up" data-reveal-delay="50">
-                    <div class="section-title">实时快讯</div>
-                  </div>
-                </div>
-
-                <!-- Panel: 研报 -->
-                <div data-tab-panel="panel-research" aria-hidden="true">
-                  <div data-reveal="fade-up" data-reveal-delay="50">
-                    <div class="section-title">最新研报</div>
-                    <div class="news-item">
-                      <div class="news-time">09:40</div>
-                      <div class="news-body">
-                        <div class="news-headline">中金公司：科技板块Q2展望——AI算力需求持续爆发 <span class="news-tag report">研报</span></div>
-                        <div class="news-source">中金研究</div>
-                      </div>
-                    </div>
-                    <div class="news-item">
-                      <div class="news-time">09:15</div>
-                      <div class="news-body">
-                        <div class="news-headline">国泰君安：新能源行业深度——钠电池产业链投资机会 <span class="news-tag report">研报</span></div>
-                        <div class="news-source">国泰君安研究</div>
-                      </div>
-                    </div>
-                    <div class="news-item">
-                      <div class="news-time">08:50</div>
-                      <div class="news-body">
-                        <div class="news-headline">华泰证券：PMI数据点评——经济复苏节奏加快，制造业景气延续</div>
-                        <div class="news-source">华泰研究</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Panel: 公告 -->
-                <div data-tab-panel="panel-announcement" aria-hidden="true">
-                  <div data-reveal="fade-up" data-reveal-delay="50">
-                    <div class="section-title">公司公告</div>
-                    <div class="news-item">
-                      <div class="news-time">09:30</div>
-                      <div class="news-body">
-                        <div class="news-headline">贵州茅台：2025年年度报告（已披露）</div>
-                        <div class="news-source">上交所公告</div>
-                      </div>
-                    </div>
-                    <div class="news-item">
-                      <div class="news-time">08:00</div>
-                      <div class="news-body">
-                        <div class="news-headline">宁德时代：关于新一代钠离子电池发布的自愿性信息披露</div>
-                        <div class="news-source">创业板公告</div>
-                      </div>
-                    </div>
-                    <div class="news-item">
-                      <div class="news-time">07:45</div>
-                      <div class="news-body">
-                        <div class="news-headline">美的集团：2026年第一季度业绩预告</div>
-                        <div class="news-source">深交所公告</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- News Flow -->
-              <div data-reveal="fade-up" data-reveal-delay="50">
-                <div class="section-title">实时新闻流</div>
-                <div data-mouse-glow="true">
-                  <label for="overlay-intelligence-detail" class="cursor-pointer">
-                  <div class="news-item">
-                    <div class="news-time">09:45</div>
-                    <div class="news-body">
-                      <div class="news-headline">PMI连续3个月回升，经济复苏动能增强 <span class="news-tag hot">热点</span></div>
-                      <div class="news-source">新华财经 <span class="news-tag policy">政策</span></div>
-                    </div>
-                  </div>
-                  </label>
-                  <div class="news-item">
-                    <div class="news-time">09:38</div>
-                    <div class="news-body">
-                      <div class="news-headline">北向资金早盘净买入12.4亿，沪股通占主导 <span class="news-tag hot">热点</span></div>
-                      <div class="news-source">东方财富</div>
-                    </div>
-                  </div>
-                  <div class="news-item">
-                    <div class="news-time">09:32</div>
-                    <div class="news-body">
-                      <div class="news-headline">半导体设备国产化率突破30%，中芯国际获大额订单</div>
-                      <div class="news-source">证券时报 <span class="news-tag report">研报</span></div>
-                    </div>
-                  </div>
-                  <div class="news-item">
-                    <div class="news-time">09:25</div>
-                    <div class="news-body">
-                      <div class="news-headline">央行开展1000亿7天逆回购，流动性保持合理充裕 <span class="news-tag policy">政策</span></div>
-                      <div class="news-source">央行公告</div>
-                    </div>
-                  </div>
-                  <div class="news-item">
-                    <div class="news-time">09:18</div>
-                    <div class="news-body">
-                      <div class="news-headline">宁德时代发布新一代钠离子电池，能量密度提升40%</div>
-                      <div class="news-source">中国证券报 <span class="news-tag report">研报</span></div>
-                    </div>
-                  </div>
-                  <div class="news-item">
-                    <div class="news-time">09:12</div>
-                    <div class="news-body">
-                      <div class="news-headline">国务院常务会议：加大科技创新支持力度</div>
-                      <div class="news-source">中国政府网 <span class="news-tag policy">政策</span></div>
-                    </div>
-                  </div>
-                  <div class="news-item">
-                    <div class="news-time">09:05</div>
-                    <div class="news-body">
-                      <div class="news-headline">贵州茅台2025年报：营收同比增长15.2%，拟每股派现51.91元</div>
-                      <div class="news-source">上交所公告</div>
-                    </div>
-                  </div>
-                  <div class="news-item">
-                    <div class="news-time">08:58</div>
-                    <div class="news-body">
-                      <div class="news-headline">美国对华芯片出口限制新规即将生效，半导体板块承压</div>
-                      <div class="news-source">路透社 <span class="news-tag hot">热点</span></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- ═══ Tab 5: 关联网络 (Network) ═══ -->
-            <div class="tab-panel" data-panel="tab-network">
-
-              <!-- Correlation KPI -->
-              <div class="kpi-row kpi-row--3col" data-reveal="fade-up" data-reveal-delay="0">
-                <div class="kpi-card">
-                  <div class="kpi-label" data-tooltip="相关系数 > 0.8 的标的配对数量" data-tooltip-pos="top">强关联对</div>
-                  <div class="kpi-value text-up">12对</div>
-                  <div class="kpi-change up">相关系数 &gt; 0.8</div>
-                </div>
-                <div class="kpi-card">
-                  <div class="kpi-label" data-tooltip="跨板块资金共振联动组数" data-tooltip-pos="top">板块联动</div>
-                  <div class="kpi-value">5组</div>
-                  <div class="kpi-change up">活跃联动</div>
-                </div>
-                <div class="kpi-card">
-                  <div class="kpi-label" data-tooltip="标的价格与板块走势出现背离的预警信号" data-tooltip-pos="top">异常信号</div>
-                  <div class="kpi-value text-warning">3条</div>
-                  <div class="kpi-change down">背离预警</div>
-                </div>
-              </div>
-
-              <!-- Correlation Matrix -->
-              <div data-reveal="fade-up" data-reveal-delay="50">
-                <div class="section-title">标的相关性矩阵</div>
-                <div class="panel scroll-x" data-mouse-glow="true">
-                  <div class="correlation-grid">
-                    <div class="correlation-cell header"></div>
-                    <div class="correlation-cell header">贵州茅台</div>
-                    <div class="correlation-cell header">宁德时代</div>
-                    <div class="correlation-cell header">招商银行</div>
-                    <div class="correlation-cell header">中芯国际</div>
-                    <div class="correlation-cell header">比亚迪</div>
-
-                    <div class="correlation-cell label">贵州茅台</div>
-                    <div class="correlation-cell strong">1.00</div>
-                    <div class="correlation-cell moderate">0.52</div>
-                    <div class="correlation-cell weak">0.28</div>
-                    <div class="correlation-cell weak">0.15</div>
-                    <div class="correlation-cell weak">0.22</div>
-
-                    <div class="correlation-cell label">宁德时代</div>
-                    <div class="correlation-cell moderate">0.52</div>
-                    <div class="correlation-cell strong">1.00</div>
-                    <div class="correlation-cell weak">0.18</div>
-                    <div class="correlation-cell strong">0.78</div>
-                    <div class="correlation-cell strong">0.85</div>
-
-                    <div class="correlation-cell label">招商银行</div>
-                    <div class="correlation-cell weak">0.28</div>
-                    <div class="correlation-cell weak">0.18</div>
-                    <div class="correlation-cell strong">1.00</div>
-                    <div class="correlation-cell weak">0.08</div>
-                    <div class="correlation-cell weak">0.12</div>
-
-                    <div class="correlation-cell label">中芯国际</div>
-                    <div class="correlation-cell weak">0.15</div>
-                    <div class="correlation-cell strong">0.78</div>
-                    <div class="correlation-cell weak">0.08</div>
-                    <div class="correlation-cell strong">1.00</div>
-                    <div class="correlation-cell moderate">0.62</div>
-
-                    <div class="correlation-cell label">比亚迪</div>
-                    <div class="correlation-cell weak">0.22</div>
-                    <div class="correlation-cell strong">0.85</div>
-                    <div class="correlation-cell weak">0.12</div>
-                    <div class="correlation-cell moderate">0.62</div>
-                    <div class="correlation-cell strong">1.00</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Sector Linkage -->
-              <div data-reveal="fade-up" data-reveal-delay="100">
-                <div class="section-title">板块联动分析</div>
-                <table class="intel-table" aria-label="板块联动">
-                  <thead>
-                    <tr>
-                      <th scope="col" class="text-left">联动组</th>
-                      <th scope="col">板块</th>
-                      <th scope="col">联动系数</th>
-                      <th scope="col">资金共振</th>
-                      <th scope="col">信号</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>组1</td>
-                      <td>新能源 + 科技</td>
-                      <td class="up">0.85</td>
-                      <td class="up">+18.5亿</td>
-                      <td><span class="cell-badge up">强联动</span></td>
-                    </tr>
-                    <tr>
-                      <td>组2</td>
-                      <td>消费 + 医药</td>
-                      <td class="up">0.72</td>
-                      <td class="up">+12.6亿</td>
-                      <td><span class="cell-badge up">协同流入</span></td>
-                    </tr>
-                    <tr>
-                      <td>组3</td>
-                      <td>金融 + 地产</td>
-                      <td class="down">0.68</td>
-                      <td class="down">-4.4亿</td>
-                      <td><span class="cell-badge down">共振流出</span></td>
-                    </tr>
-                    <tr>
-                      <td>组4</td>
-                      <td>钢铁 + 煤炭</td>
-                      <td class="up">0.78</td>
-                      <td class="down">-3.9亿</td>
-                      <td><span class="cell-badge neutral">观望</span></td>
-                    </tr>
-                    <tr>
-                      <td>组5</td>
-                      <td>制造 + 公用</td>
-                      <td class="up">0.45</td>
-                      <td class="up">+4.3亿</td>
-                      <td><span class="cell-badge neutral">弱联动</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- Divergence Alerts -->
-              <div data-reveal="fade-up" data-reveal-delay="150">
-                <div class="section-title">背离预警</div>
-                <div class="panel">
-                  <div class="alert-item">
-                    <span class="alert-dot alert-dot--warning"></span>
-                    <div>
-                      <div class="alert-title">立讯精密 vs 科技板块</div>
-                      <div class="alert-desc">个股走势与板块指数出现 3 日背离，资金持续流出但板块整体偏强</div>
-                    </div>
-                  </div>
-                  <div class="alert-item">
-                    <span class="alert-dot alert-dot--warning"></span>
-                    <div>
-                      <div class="alert-title">中国平安 vs 金融板块</div>
-                      <div class="alert-desc">个股逆板块上涨，北向资金净买入 1.2 亿，可能存在独立逻辑</div>
-                    </div>
-                  </div>
-                  <div class="alert-item">
-                    <span class="alert-dot alert-dot--danger"></span>
-                    <div>
-                      <div class="alert-title">美的集团 vs 制造板块</div>
-                      <div class="alert-desc">大单持续流出但股价未跌，分析师下调评级，资金链路异常</div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div><!-- .tab-group -->
@@ -3010,6 +2729,38 @@
         </div>
       </div>
     </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="collapsed-sidebar">
+          <div class="gallery-group__label">Collapsed Sidebar</div>
+          <div class="gallery-cards">
+            <div class="gallery-card">
+              <div class="gallery-card__label">折叠态侧边栏 — 筛选器 badge</div>
+              <div class="gallery-card__preview">
+                <div class="gallery-collapsed-sidebar">
+                  <div class="gallery-collapsed-btn" title="AI 解读" aria-label="AI 解读">
+                    <svg viewBox="0 0 20 20" fill="none">
+                      <path d="M10 2L10 10M10 10L7 7M10 10L13 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="10" cy="16" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                  </div>
+                  <div class="gallery-collapsed-btn" title="筛选器 (3 激活)" aria-label="筛选器 (3 激活)">
+                    <svg viewBox="0 0 20 20" fill="none">
+                      <path d="M3 5H17M3 10H17M3 15H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <span class="gallery-badge-accent">3</span>
+                  </div>
+                  <div class="gallery-collapsed-btn" title="关联标的 (5)" aria-label="关联标的 (5)">
+                    <svg viewBox="0 0 20 20" fill="none">
+                      <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/>
+                      <path d="M10 7V10M10 13H10.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <span class="gallery-badge-accent">5</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
