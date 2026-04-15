@@ -9,8 +9,9 @@ import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_app.query.fx import FXQueryFacade
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
+from ditto_interfaces.api.errors import BadRequestError
 from ditto_interfaces.models.common import APIResponse
 from ditto_interfaces.models.fx import FxBar, FxQuery, to_fx_bar_list
 
@@ -43,14 +44,11 @@ async def post_bars(
     if query.currency_pairs:
         invalid_pairs = [p for p in query.currency_pairs if p not in valid_pairs]
         if invalid_pairs:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_currency_pairs",
-                    "message": f"Invalid currency pairs: {invalid_pairs}",
-                    "valid_pairs": list(valid_pairs),
-                },
+            msg = (
+                f"Invalid currency pairs: {invalid_pairs}. "
+                f"Valid pairs: {sorted(valid_pairs)}"
             )
+            raise BadRequestError(msg)
 
         instrument_ids = [
             facade.pair_to_instrument_id(pair) for pair in query.currency_pairs

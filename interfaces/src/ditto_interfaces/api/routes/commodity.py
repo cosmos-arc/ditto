@@ -9,8 +9,9 @@ import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_app.query.commodity import CommodityQueryFacade
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
+from ditto_interfaces.api.errors import BadRequestError
 from ditto_interfaces.models.commodity import (
     CommodityBar,
     CommodityQuery,
@@ -47,14 +48,11 @@ async def post_bars(
     if query.commodity_codes:
         invalid_codes = [c for c in query.commodity_codes if c not in valid_codes]
         if invalid_codes:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_commodity_codes",
-                    "message": f"Invalid commodity codes: {invalid_codes}",
-                    "valid_codes": list(valid_codes),
-                },
+            msg = (
+                f"Invalid commodity codes: {invalid_codes}. "
+                f"Valid codes: {sorted(valid_codes)}"
             )
+            raise BadRequestError(msg)
 
         instrument_ids = [
             facade.code_to_instrument_id(code) for code in query.commodity_codes

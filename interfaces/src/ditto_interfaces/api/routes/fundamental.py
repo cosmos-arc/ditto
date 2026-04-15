@@ -10,8 +10,9 @@ from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_app.query.fundamental import FundamentalQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
+from ditto_interfaces.api.errors import DateRangeError
 from ditto_interfaces.api.utils.identifier import resolve_identifier_for_api
 from ditto_interfaces.models.common import APIResponse
 from ditto_interfaces.models.fundamental import (
@@ -156,17 +157,14 @@ async def list_corporate_actions(
     - ticker: 裸代码，如 "000001"
 
     Raises:
-        HTTPException: 400 如果 start_date > end_date
+        DateRangeError: 400 如果 start_date > end_date
 
     """
     # 验证日期范围
     if start_date > end_date:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"start_date ({start_date}) cannot be greater than "
-                f"end_date ({end_date})"
-            ),
+        raise DateRangeError(
+            start_date=start_date.isoformat(),
+            end_date=end_date.isoformat(),
         )
 
     resolved_id = resolve_identifier_for_api(

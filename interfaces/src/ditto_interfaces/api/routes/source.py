@@ -12,9 +12,10 @@ from dishka.integrations.fastapi import inject
 from ditto_app.query.source import SourceQueryFacade
 from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
 
+from ditto_interfaces.api.errors import APIError, BadRequestError
 from ditto_interfaces.models.common import APIResponse
 
 router = APIRouter(prefix="/source", tags=["source"])
@@ -96,21 +97,16 @@ async def get_source_data(
 
     # 验证必须提供至少一个标识符
     if not any([params.ticker, params.standard_ticker, params.instrument_id]):
-        raise HTTPException(
-            status_code=400,
-            detail="必须提供 ticker、standard_ticker 或 instrument_id 之一",
-        )
+        raise BadRequestError("必须提供 ticker、standard_ticker 或 instrument_id 之一")
 
     # 从数据集推断资产类型
     try:
         asset_class = facade.get_dataset_asset_class(dataset)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise BadRequestError(str(exc)) from exc
 
     if asset_class is None:
-        raise HTTPException(
-            status_code=400, detail=f"数据集 {dataset} 不支持按标的查询"
-        )
+        raise BadRequestError(f"数据集 {dataset} 不支持按标的查询")
 
     # 解析标识符为 source_ticker
     try:
@@ -125,16 +121,16 @@ async def get_source_data(
         # 业务异常返回友好消息，未预期异常返回通用错误
         exc_name = type(exc).__name__
         if exc_name in ("AmbiguousTickerError", "IdentifierNotFoundError"):
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise BadRequestError(str(exc)) from exc
         # 未预期异常，记录日志并返回通用错误
         logger.exception("Unexpected error resolving ticker")
-        raise HTTPException(status_code=500, detail="Failed to resolve ticker") from exc
+        raise APIError("Failed to resolve ticker") from exc
 
     # 获取数据源
     try:
         data_source = _get_data_source(facade, source)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise BadRequestError(str(exc)) from exc
 
     # 调用 Source 获取数据
     try:
@@ -147,7 +143,7 @@ async def get_source_data(
             params.end_date,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise BadRequestError(str(exc)) from exc
 
     query_time_ms = (time.monotonic() - start_time) * 1000
 
