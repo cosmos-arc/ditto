@@ -9,12 +9,14 @@ interface CollapsedItem {
 
 interface IntelligenceCollapsedSidebarProps {
 	readonly targetCount?: number;
+	readonly activeFilterCount?: number;
 	readonly onExpand?: () => void;
 	readonly className?: string;
 }
 
 export function IntelligenceCollapsedSidebar({
 	targetCount = 0,
+	activeFilterCount = 0,
 	onExpand,
 	className,
 }: IntelligenceCollapsedSidebarProps) {
@@ -33,6 +35,15 @@ export function IntelligenceCollapsedSidebar({
 				</svg>
 			),
 			"aria-label": "AI 解读",
+		},
+		{
+			icon: (
+				<svg className="size-5" viewBox="0 0 20 20" fill="none">
+					<path d="M3 5H17M3 10H17M3 15H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+				</svg>
+			),
+			badge: activeFilterCount > 0 ? activeFilterCount : undefined,
+			"aria-label": `筛选器 (${activeFilterCount} 激活)`,
 		},
 		{
 			icon: (

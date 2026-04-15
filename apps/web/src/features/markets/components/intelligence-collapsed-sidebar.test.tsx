@@ -52,4 +52,14 @@ describe("IntelligenceCollapsedSidebar", () => {
 		render(<IntelligenceCollapsedSidebar />);
 		expect(screen.getByLabelText("展开侧边栏")).toBeInTheDocument();
 	});
+
+	it("renders filter active count badge when activeFilterCount > 0", () => {
+		render(<IntelligenceCollapsedSidebar activeFilterCount={3} />);
+		expect(screen.getByText("3")).toBeInTheDocument();
+	});
+
+	it("does not render filter badge when activeFilterCount is 0", () => {
+		render(<IntelligenceCollapsedSidebar activeFilterCount={0} />);
+		expect(screen.queryByText("0")).not.toBeInTheDocument();
+	});
 });
