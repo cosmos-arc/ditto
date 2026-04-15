@@ -12,6 +12,7 @@
   --shell-sidebar-width:     320px;
   --shell-sidebar-collapsed-width: 56px;
   --shell-detail-width:      340px;
+  --shell-drawer-width:      440px;
 
   /* ── Context Bar ── */
   --shell-context-bar-height: 2rem;

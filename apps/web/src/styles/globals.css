@@ -305,6 +305,7 @@
   --width-sidebar:           var(--shell-sidebar-width);
   --width-sidebar-collapsed: var(--shell-sidebar-collapsed-width);
   --width-detail:            var(--shell-detail-width);
+  --width-drawer:            var(--shell-drawer-width);
   --height-header:        var(--shell-header-height);
   --height-context-bar:   var(--shell-context-bar-height);
   --height-scope-strip:   var(--shell-scope-strip-height);

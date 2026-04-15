@@ -51,7 +51,7 @@ describe("Drawer", () => {
 
 	// ── Props ──
 
-	it("applies default width via design token", async () => {
+	it("applies default width via v3 drawer design token (440px)", async () => {
 		render(
 			<Drawer open={true} onClose={() => {}} title="Test">
 				Content
@@ -60,8 +60,8 @@ describe("Drawer", () => {
 		await waitFor(() => {
 			const content = document.querySelector("[data-slot='sheet-content']") as HTMLElement;
 			expect(content).toBeInTheDocument();
-			expect(content.className).toContain("w-(--width-detail)");
-			expect(content.className).toContain("max-w-(--width-detail)");
+			expect(content.className).toContain("w-(--width-drawer)");
+			expect(content.className).toContain("max-w-(--width-drawer)");
 			expect(content.style.width).toBe("");
 		});
 	});
