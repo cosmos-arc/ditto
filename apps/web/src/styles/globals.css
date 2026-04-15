@@ -277,8 +277,9 @@
   /* ── 动效 ── */
   --duration-fast:   var(--motion-duration-fast);
   --duration-normal: var(--motion-duration-normal);
-  --duration-slow:   var(--motion-duration-slow);
-  --ease-default:    var(--motion-easing-standard);
+  --duration-slow:             var(--motion-duration-slow);
+  --duration-sidebar-collapse: var(--shell-sidebar-collapse-duration);
+  --ease-default:              var(--motion-easing-standard);
   --ease-in:         var(--motion-easing-emphasis);
   --ease-out:        var(--motion-easing-standard);
 
@@ -301,14 +302,16 @@
   /* ── Shell 布局 ── */
   --width-rail:           var(--shell-rail-width);
   --width-rail-collapsed: var(--shell-rail-collapsed);
-  --width-sidebar:        var(--shell-sidebar-width);
-  --width-detail:         var(--shell-detail-width);
+  --width-sidebar:           var(--shell-sidebar-width);
+  --width-sidebar-collapsed: var(--shell-sidebar-collapsed-width);
+  --width-detail:            var(--shell-detail-width);
   --height-header:        var(--shell-header-height);
   --height-context-bar:   var(--shell-context-bar-height);
   --height-scope-strip:   var(--shell-scope-strip-height);
   --height-status-bar:    var(--shell-status-bar-height);
   --width-activity:       var(--shell-analytical-activity-width);
   --height-analysis-band: var(--shell-analytical-band-height);
+  --width-radar-right-rail: var(--shell-radar-right-rail-width);
   --width-catalog-detail: var(--shell-catalog-detail-width);
   --width-ops-detail:     var(--shell-ops-detail-width);
   --width-signals-detail: var(--shell-signals-detail-width);
