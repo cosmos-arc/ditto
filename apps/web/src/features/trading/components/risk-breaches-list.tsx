@@ -3,6 +3,7 @@ import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { cn } from "@/lib/utils";
 
 const BREACH_STATUS_VARIANT: Record<string, "healthy" | "warning" | "default" | "degraded"> = {
 	active: "degraded",
@@ -10,7 +11,11 @@ const BREACH_STATUS_VARIANT: Record<string, "healthy" | "warning" | "default" | 
 	resolved: "healthy",
 };
 
-export function RiskBreachesList() {
+interface RiskBreachesListProps {
+	readonly onSelectBreach?: (breachId: string) => void;
+}
+
+export function RiskBreachesList({ onSelectBreach }: RiskBreachesListProps) {
 	const { data, isLoading, isError, refetch } = useRiskBreaches();
 
 	return (
@@ -22,7 +27,13 @@ export function RiskBreachesList() {
 						{data.items.map((breach) => (
 							<div
 								key={breach.id}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+								className={cn(
+									"flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)",
+									onSelectBreach && "cursor-pointer",
+								)}
+								onClick={onSelectBreach ? () => onSelectBreach(breach.id) : undefined}
+								role={onSelectBreach ? "button" : undefined}
+								tabIndex={onSelectBreach ? 0 : undefined}
 							>
 								<div className="flex items-center gap-3">
 									<span className="font-medium">{breach.ruleName}</span>

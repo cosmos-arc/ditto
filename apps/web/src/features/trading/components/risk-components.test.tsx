@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { server } from "@/mocks/server";
@@ -42,6 +43,31 @@ describe("RiskBreachesList", () => {
 		await expect(screen.findByText("active")).resolves.toBeInTheDocument();
 		await expect(screen.findByText("acknowledged")).resolves.toBeInTheDocument();
 	});
+
+	it("点击告警行时调用 onSelectBreach", async () => {
+		const user = userEvent.setup();
+		const onSelectBreach = vi.fn();
+		render(<RiskBreachesList onSelectBreach={onSelectBreach} />, {
+			wrapper: createWrapper(),
+		});
+
+		const breachRow = await screen.findByText("单日 VaR 超限");
+		await user.click(breachRow.closest("div")!);
+
+		expect(onSelectBreach).toHaveBeenCalledOnce();
+		expect(onSelectBreach).toHaveBeenCalledWith("rb-001");
+	});
+
+	it("未传 onSelectBreach 时点击不报错", async () => {
+		const user = userEvent.setup();
+		render(<RiskBreachesList />, { wrapper: createWrapper() });
+
+		const breachRow = await screen.findByText("单日 VaR 超限");
+		await user.click(breachRow.closest("div")!);
+
+		// No error thrown — component still renders
+		await expect(screen.findByText("风控告警")).resolves.toBeInTheDocument();
+	});
 });
 
 describe("RiskExposureSummary", () => {
@@ -80,5 +106,56 @@ describe("RiskPage", () => {
 		render(<RiskPage />, { wrapper: createWrapper() });
 		await expect(screen.findByText("敞口概览")).resolves.toBeInTheDocument();
 		await expect(screen.findByText("VaR(95%)")).resolves.toBeInTheDocument();
+	});
+
+	it("显示风控告警列表", async () => {
+		render(<RiskPage />, { wrapper: createWrapper() });
+		await expect(screen.findByText("风控告警")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("单日 VaR 超限")).resolves.toBeInTheDocument();
+	});
+
+	it("点击告警行打开 Drawer", async () => {
+		const user = userEvent.setup();
+		render(<RiskPage />, { wrapper: createWrapper() });
+
+		const breachRow = await screen.findByText("单日 VaR 超限");
+		await user.click(breachRow.closest("div")!);
+
+		await waitFor(() => {
+			expect(screen.getByText("告警详情")).toBeInTheDocument();
+		});
+	});
+
+	it("Drawer 中显示告警 ID", async () => {
+		const user = userEvent.setup();
+		render(<RiskPage />, { wrapper: createWrapper() });
+
+		const breachRow = await screen.findByText("单日 VaR 超限");
+		await user.click(breachRow.closest("div")!);
+
+		await waitFor(() => {
+			expect(screen.getByText("ID: rb-001")).toBeInTheDocument();
+		});
+	});
+
+	it("关闭 Drawer 后告警详情消失", async () => {
+		const user = userEvent.setup();
+		render(<RiskPage />, { wrapper: createWrapper() });
+
+		// Open drawer
+		const breachRow = await screen.findByText("单日 VaR 超限");
+		await user.click(breachRow.closest("div")!);
+
+		await waitFor(() => {
+			expect(screen.getByText("告警详情")).toBeInTheDocument();
+		});
+
+		// Close drawer via the close button
+		const closeButton = screen.getByRole("button", { name: "Close" });
+		await user.click(closeButton);
+
+		await waitFor(() => {
+			expect(screen.queryByText("告警详情")).not.toBeInTheDocument();
+		});
 	});
 });
