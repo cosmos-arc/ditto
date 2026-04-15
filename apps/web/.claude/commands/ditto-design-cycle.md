@@ -1,7 +1,7 @@
 ---
 name: ditto-design-cycle
 description: Use when creating UI prototypes from blueprints, reviewing HTML prototypes or UI pages for visual quality, UX interaction, feature completeness, copy clarity, brand temperament, or information architecture. Supports --create mode (from blueprint to prototype), --create-all (batch Edition creation with style anchoring), --edition-review (Edition-level acceptance), 6-role parallel review, autonomous iteration, and doc sync.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # /ditto-design-cycle
@@ -42,6 +42,7 @@ UI 创建与设计审查编排。支持两种模式：**创建模式**（`--crea
 - **设计决策**: [docs/designs/decisions/](../../docs/designs/decisions/)（**Art Director 刚性锚点** — 9 项关键决策定义了 Graphite Studio 的审美方向）
 - **品牌 DNA**: Style B Graphite Studio — Linear/Vercel/Raycast 的克制感 + Bloomberg/quant desk 的专业终端感
 - **架构规范**: [architecture.md](../rules/architecture.md)
+- **零 Inline Style**: [no-inline-style.md](../rules/no-inline-style.md)（**P0 门禁** — `style="..."` 属性必须为零）
 
 ---
 
@@ -699,9 +700,13 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 ├─────────────────────────────────────────────────────────┤
 │ Phase 8: FINAL（最终验证 + 气质评分）               [混合]   │
 │                                                         │
-│   1. Playwright: lighthouse_audit（质量评分）    [sonnet] │
-│   2. Playwright: page.evaluate()（最终 Token 审计）[sonnet]│
-│   2a. [门禁] 三区结构完整性验证（复用步骤 7a 的 9 项检查）│
+│   1. [门禁] 零 Inline Style 验证：                     │
+│      ├─ grep 所有 style="..." 属性（排除 CSS 注释）     │
+│      ├─ 命中数 > 0 → P0 级阻断，不进入后续步骤         │
+│      └─ 修复方式：替换为 CSS class（详见 no-inline-style.md）│
+│   2. Playwright: lighthouse_audit（质量评分）    [sonnet] │
+│   3. Playwright: page.evaluate()（最终 Token 审计）[sonnet]│
+│   3a. [门禁] 三区结构完整性验证（复用步骤 7a 的 9 项检查）│
 │       ├─ section 平衡 / grid 直接子元素 / overlay 完整性  │
 │       ├─ state-variant 覆盖率对比蓝图                    │
 │       └─ 任一检查失败 → P0 级阻断，不进入 AD 气质评分    │

@@ -28,8 +28,8 @@ export function ASharesOverview() {
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 			{data && (
-				<div className="flex flex-col gap-4">
-					<ContextSection title="指数概览">
+				<div data-info-level="l2" data-info-unit="overview-container" className="flex flex-col gap-4">
+					<ContextSection title="指数概览" data-info-level="l1" data-info-unit="index-overview">
 						{data.summary.map((idx) => (
 							<div
 								key={idx.index}
@@ -58,7 +58,7 @@ export function ASharesOverview() {
 						))}
 					</ContextSection>
 
-					<ContextSection title="板块涨幅">
+					<ContextSection title="板块涨幅" data-info-level="l1" data-info-unit="sector-performance">
 						{data.sectors.map((s) => (
 							<div
 								key={s.sector}

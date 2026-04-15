@@ -229,4 +229,63 @@ v2 交互范式（`docs/designs/decisions/2026-04-15-v2-interaction-paradigm.md`
 | **P4** | Intelligence/Hub 页面浓缩态 | P2 |
 | **P5** | Orders Ledger trace → Drawer | P2 |
 | **P6** | Risk Center activity → Drawer | P2 |
-| **P7** | 各页面 L1/L2/L3 信息分配（需产品确认） | P1-P6 完成后 |
+| **P7** | 各页面 L1/L2/L3 信息分配 ✅ 已确认 | P1-P6 完成后 |
+
+---
+
+## P7：L1/L2/L3 信息分配（产品经理已确认）
+
+### 分配原则
+
+| 规则 | 说明 |
+|------|------|
+| L1 准入 | 打开页面即可见 + 直接影响决策 + ≤N 个（按页面类型） |
+| L2 准入 | 帮助理解 L1 的上下文 + 滚动即可见 + 视觉权重递减 |
+| L3 准入 | 需主动触发（点击/Tab/Drawer）+ 信息量大 + 不丢失 L1 上下文 |
+| Tab 规则 | 默认 Tab 内容 = L1/L2；非默认 Tab = L3（一次点击切换） |
+| 异常 badge | 非 Tab 有异常时，在默认 Tab L1 区域显示 count badge |
+| Strip 计数 | 一条 strip 含多个指标 → 计为 1 个信息单元（认知 chunking） |
+| 导航 chrome | Tab 栏、Filter bar、Pagination、View Switcher 不计入信息单元 |
+
+### 页面类型 → L1 预算
+
+| 页面类型 | 对应 Pattern | L1 预算 |
+|----------|-------------|---------|
+| 决策型 | command-center, ops-console | 5-7 |
+| 分析型 | analytical-overview, radar | 6-9 |
+| 浏览型 | catalog-screener | 3-5 |
+| 详情型 | object-hub, studio-builder | 5-7 |
+
+### 确认分配表
+
+| # | 页面 | 类型 | 信息单元 | L1 | L2 | L3 |
+|---|------|------|---------|-----|-----|-----|
+| 1 | Home `/` | 决策 | 8 | 5 | 3 | — |
+| 2 | AI Overview `/ai` | 决策 | 7 | 7 | 0 | — |
+| 3 | Platform `/platform` | 决策 | 6 | 3 | 3 | — |
+| 4 | Signals `/trading/signals` | 决策 | 5 | 5 | 0 | 1 |
+| 5 | Orders `/trading/orders` | 决策 | 7 | 3 | 2 | 1 |
+| 6 | Agent Console `/ai/agents` | 决策 | 6 | 4 | 2 | — |
+| 7 | Cross Market `/markets` | 分析 | 11 | 4 | 3 | 4 |
+| 8 | Intelligence `/markets/intelligence` | 分析 | 10 | 4 | 1 | 4 |
+| 9 | Trading `/trading` | 分析 | 9 | 5 | 4 | — |
+| 10 | Risk Center `/trading/risk` | 分析 | 6 | 4 | 2 | — |
+| 11 | Research `/research` | 分析 | 6 | 4 | 2 | — |
+| 12 | Regime `/research/regime` | 分析 | 6 | 3 | 2 | — |
+| 13 | A-Shares `/markets/a-shares` | 分析 | 8 | 4 | 3 | 1 |
+| 14 | Screener `/markets/screener` | 浏览 | 8 | 3 | 2 | 3 |
+| 15 | Calendar `/markets/calendar` | 浏览 | 7 | 3 | 1 | — |
+| 16 | Instrument Hub `/instruments/$id` | 详情 | 13 | 4 | 2 | 7 |
+| 17 | Backtest `/research/backtest/$id` | 详情 | 10 | 4 | 2 | 3 |
+| 18 | Factor `/research/factors/$id` | 详情 | 8 | 4 | 2 | 1 |
+| 19 | Strategy Detail `/strategies/$id` | 详情 | 13 | 4 | 2 | 6 |
+| 20 | Studio `/research/strategy-studio` | 详情 | 7 | 4 | 2 | — |
+| 21 | Copilot `/ai/copilot` | 详情 | 5 | 3 | 1 | — |
+
+### 关键决策记录
+
+1. **Strip 计数规则**：一条 strip 含多个指标（如 risk-strip 7 个、regime-indicator 7 个）计为 1 个信息单元，基于认知 chunking 原则
+2. **Signals 修正**：signal-detail 依赖选中项，按 D3 规则归为 L3（Drawer），scope-status + count-badge 提升 L1
+3. **Risk Center 修正**：scope-strip 作为操作入口提升 L1（3→4）
+4. **Platform 补充**：health-strip 增加 alert count badge，确保非默认 Tab 的异常在首屏可感知
+5. **详情型 L1=4**：header + meta + metrics + default chart，不额外提升（价值在纵向深度）

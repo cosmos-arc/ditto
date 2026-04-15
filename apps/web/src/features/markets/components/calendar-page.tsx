@@ -15,8 +15,8 @@ function CalendarToolbar() {
 export function CalendarPage() {
 	return (
 		<CatalogLayout
-			toolbar={<CalendarToolbar />}
-			main={<MarketCalendarList />}
+			toolbar={<div data-info-level="l1" data-info-unit="calendar-toolbar"><CalendarToolbar /></div>}
+			main={<div data-info-level="l2" data-info-unit="calendar-main"><MarketCalendarList /></div>}
 		/>
 	);
 }

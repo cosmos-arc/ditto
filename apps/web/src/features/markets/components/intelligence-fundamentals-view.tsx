@@ -16,7 +16,7 @@ export function IntelligenceFundamentalsView() {
 
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			<ContextSection title="基本面">
+			<ContextSection title="基本面" data-info-level="l1" data-info-unit="intelligence-fundamentals">
 				{data && (
 					<div className="flex flex-col gap-3">
 						<div className="flex flex-col gap-1">

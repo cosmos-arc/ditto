@@ -16,7 +16,7 @@ export function IntelligenceMacroView() {
 
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			<ContextSection title="宏观指标">
+			<ContextSection title="宏观指标" data-info-level="l1" data-info-unit="intelligence-macro">
 				{data && (
 					<div className="flex flex-col gap-3">
 						<div className="grid grid-cols-2 gap-2">
@@ -42,6 +42,8 @@ export function IntelligenceMacroView() {
 							{data.calendar.slice(0, 4).map((ev, i) => (
 								<div
 									key={`${ev.date}-${ev.event}-${i}`}
+									data-info-level="l3"
+									data-info-unit="macro-calendar-item"
 									className="flex items-center justify-between py-1 border-b border-(--color-border) last:border-b-0"
 								>
 									<div className="flex flex-col gap-0.5 min-w-0">

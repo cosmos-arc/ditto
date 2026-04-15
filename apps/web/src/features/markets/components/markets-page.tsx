@@ -8,10 +8,13 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { ContextBar, ContextBarItem, ContextBarSep } from "@/components/indicator/context-bar";
 import { ContextSection } from "@/components/domain/context-section";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 /* ── Context Bar ── */
 
 function MarketContextBar() {
+	// L1: first-screen primary context metrics
+
 	const { data, isLoading, isError, refetch } = useMarketContext();
 
 	if (isLoading) return <LoadingSkeleton variant="metric" className="h-8" />;
@@ -77,6 +80,8 @@ function ScopeStrip() {
 		<div
 			data-slot="scope-strip"
 			data-testid="scope-strip"
+			data-info-level="l1"
+			data-info-unit="scope-strip"
 			className="rounded-(--radius-sm) border-l-2 border-l-(--color-accent) bg-(--color-surface-1) px-3 py-2"
 		>
 			<span className="mb-1 block text-xs font-medium uppercase tracking-wide text-(--color-foreground-tertiary)">
@@ -93,7 +98,7 @@ function ScopeStrip() {
 
 function CrossMarketMatrix() {
 	return (
-		<ContextSection title="跨市场相关性">
+		<ContextSection title="跨市场相关性" data-info-level="l2" data-info-unit="cross-market-matrix">
 			<div
 				data-slot="cross-market-matrix"
 				data-testid="cross-market-matrix"
@@ -139,7 +144,7 @@ function CrossMarketMatrix() {
 function MarketRightRail() {
 	return (
 		<div className="flex flex-col">
-			<Panel>
+			<Panel data-info-level="l1" data-info-unit="market-events">
 				<PanelHeader
 					title="市场事件"
 					actions={
@@ -153,6 +158,8 @@ function MarketRightRail() {
 						{MOCK_EVENTS.map((event, i) => (
 							<div
 								key={i}
+								data-info-level="l3"
+								data-info-unit="market-event-item"
 								className="flex items-center justify-between rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<span
@@ -169,7 +176,7 @@ function MarketRightRail() {
 					</div>
 				</PanelBody>
 			</Panel>
-			<Panel>
+			<Panel data-info-level="l1" data-info-unit="capital-flows">
 				<PanelHeader title="资金流向" />
 				<PanelBody className="p-3">
 					<div className="flex flex-col gap-1">
@@ -207,9 +214,22 @@ export function MarketsPage() {
 			main={
 				<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
 					<MarketCardGrid />
-					<MacroDriversBar />
-					<CapitalRotationTable />
-					<CrossMarketMatrix />
+					<Tabs defaultValue="macro" className="flex flex-col gap-(--section-gap)">
+						<TabsList>
+							<TabsTrigger value="macro">宏观驱动</TabsTrigger>
+							<TabsTrigger value="rotation">资金轮动</TabsTrigger>
+							<TabsTrigger value="correlation">跨市场相关性</TabsTrigger>
+						</TabsList>
+						<TabsContent value="macro">
+							<MacroDriversBar />
+						</TabsContent>
+						<TabsContent value="rotation">
+							<CapitalRotationTable />
+						</TabsContent>
+						<TabsContent value="correlation">
+							<CrossMarketMatrix />
+						</TabsContent>
+					</Tabs>
 				</div>
 			}
 			rightRail={<MarketRightRail />}

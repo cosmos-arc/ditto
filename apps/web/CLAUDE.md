@@ -117,7 +117,7 @@ bunx biome check --write . # lint + format 自动修复
 |---------|-----------|
 | `any` 类型 | 使用 `unknown` + type guard |
 | `@ts-ignore` / `@ts-expect-error` | 修正类型（详见 no-any-ignore.md） |
-| inline styles | 使用 Tailwind CSS |
+| inline styles | 使用 Tailwind CSS / CSS class（详见 no-inline-style.md） |
 | `@apply`（非 globals.css/shadcn） | 使用 utility classes |
 | 直接提交 main | 必须通过 PR |
 | 绕过 biome/tsc/vitest | 必须通过检测 |

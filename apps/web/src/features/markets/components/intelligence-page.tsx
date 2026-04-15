@@ -6,6 +6,7 @@ import { IntelligenceFlowView } from "./intelligence-flow-view";
 import { IntelligenceMacroView } from "./intelligence-macro-view";
 import { IntelligenceFundamentalsView } from "./intelligence-fundamentals-view";
 import { IntelligenceCollapsedSidebar } from "./intelligence-collapsed-sidebar";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export function IntelligencePage() {
 	const { sidebarCollapsed, toggleSidebarCollapsed } = useUIPreferences();
@@ -23,11 +24,22 @@ export function IntelligencePage() {
 				}
 				main={
 					<div className="flex h-full flex-col gap-(--section-gap) overflow-y-auto p-(--density-panel-padding)">
-						<IntelligenceFlowView />
-						<div className="grid grid-cols-2 gap-(--density-gutter)">
-							<IntelligenceMacroView />
-							<IntelligenceFundamentalsView />
-						</div>
+						<Tabs defaultValue="flow" className="flex flex-col gap-(--section-gap)">
+							<TabsList>
+								<TabsTrigger value="flow">资金流向</TabsTrigger>
+								<TabsTrigger value="macro">宏观指标</TabsTrigger>
+								<TabsTrigger value="fundamentals">基本面</TabsTrigger>
+							</TabsList>
+							<TabsContent value="flow">
+								<IntelligenceFlowView />
+							</TabsContent>
+							<TabsContent value="macro">
+								<IntelligenceMacroView />
+							</TabsContent>
+							<TabsContent value="fundamentals">
+								<IntelligenceFundamentalsView />
+							</TabsContent>
+						</Tabs>
 					</div>
 				}
 				activity={
@@ -35,7 +47,7 @@ export function IntelligencePage() {
 						<IntelligenceCollapsedSidebar onExpand={toggleSidebarCollapsed} />
 					) : (
 						<div className="flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden border-l border-(--color-border-subtle)">
-							<Panel>
+							<Panel data-info-level="l1" data-info-unit="ai-interpretation">
 								<PanelHeader title="AI 解读" />
 								<PanelBody className="p-3">
 									<div className="space-y-3 text-sm text-(--color-foreground-secondary)">
@@ -49,7 +61,7 @@ export function IntelligencePage() {
 					)
 				}
 				analysis={
-					<div className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
+					<div data-info-level="l2" data-info-unit="analysis-panel" className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
 						<span className="text-xs text-(--color-foreground-tertiary)">市场分析 · 待实现</span>
 					</div>
 				}

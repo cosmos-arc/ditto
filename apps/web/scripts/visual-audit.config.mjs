@@ -27,7 +27,6 @@ const REACT_APP_TARGETS = {
 	header: "header",
 	content: "#root > div > div:nth-child(3)",
 	layout: "#root > div > div:nth-child(3) > div",
-	status: "[data-slot='status-bar']",
 };
 
 const COMMAND_CENTER_REACT_TARGETS = {
@@ -36,6 +35,7 @@ const COMMAND_CENTER_REACT_TARGETS = {
 	main: "[data-slot='main']",
 	sidebar: "[data-slot='sidebar-rail']",
 	statusSlot: "[data-slot='status']",
+	status: "[data-slot='status-bar']",
 };
 
 const ANALYTICAL_REACT_TARGETS = {
@@ -45,6 +45,7 @@ const ANALYTICAL_REACT_TARGETS = {
 	main: "[data-slot='main']",
 	activity: "[data-slot='activity']",
 	analysis: "[data-slot='analysis']",
+	status: "[data-slot='status-bar']",
 };
 
 const RADAR_REACT_TARGETS = {
@@ -53,6 +54,7 @@ const RADAR_REACT_TARGETS = {
 	scopeStrip: "[data-slot='scope-strip']",
 	main: "[data-slot='main']",
 	rightRail: "[data-slot='right-rail']",
+	status: "[data-slot='status-bar']",
 };
 
 const CATALOG_REACT_TARGETS = {
@@ -68,6 +70,7 @@ const OPS_REACT_TARGETS = {
 	health: "[data-slot='health']",
 	main: "[data-slot='main']",
 	detail: "[data-slot='detail']",
+	status: "[data-slot='status-bar']",
 };
 
 const STUDIO_REACT_TARGETS = {
@@ -76,6 +79,7 @@ const STUDIO_REACT_TARGETS = {
 	main: "[data-slot='main']",
 	inspector: "[data-slot='inspector']",
 	logs: "[data-slot='logs']",
+	status: "[data-slot='status-bar']",
 };
 
 const OBJECT_REACT_TARGETS = {
@@ -84,6 +88,7 @@ const OBJECT_REACT_TARGETS = {
 	tabs: "[data-slot='tabs']",
 	main: "[data-slot='main']",
 	bottom: "[data-slot='bottom']",
+	status: "[data-slot='status-bar']",
 };
 
 /* ── Prototype selectors (CSS class-based from HTML files) ── */
@@ -91,7 +96,16 @@ const OBJECT_REACT_TARGETS = {
 const PROTOTYPE_APP_TARGETS = {
 	rail: ".shell-rail",
 	header: ".shell-header, .studio-header, .object-header",
+};
+
+/** Prototype pages that have a `.status-bar` element — include `status` selector */
+const PROTOTYPE_WITH_STATUS_BAR = {
 	status: ".status-bar",
+};
+
+/** React pages without StatusBar — use to override group-level status selector */
+const REACT_NO_STATUS_BAR = {
+	status: undefined,
 };
 
 /* ── Page configs ── */
@@ -112,10 +126,7 @@ export const VISUAL_AUDIT_PAGES = [
 			secondary: ".shell-secondary",
 		},
 		reactTargets: {
-			shell: "#root > div",
-			rail: "nav[aria-label='主导航']",
-			header: "header",
-			status: "[data-slot='status-bar']",
+			...REACT_APP_TARGETS,
 			strip: "[data-slot='pulse-strip']",
 			main: "[data-slot='main']",
 			sidebar: "[data-slot='sidebar-rail']",
@@ -130,6 +141,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-trading-overview.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-analytical.trading-variant",
 			strip: ".scope-strip",
 			main: ".main-grid, .trading-main",
@@ -149,6 +161,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-platform.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-ops",
 			health: ".ops-health",
 			main: ".ops-main",
@@ -163,6 +176,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-ai-overview.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".ai-shell",
 			strip: ".ai-pulse",
 			main: ".ai-main",
@@ -177,6 +191,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-cross-market.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-radar",
 			body: ".shell-body",
 			context: ".context-bar",
@@ -200,7 +215,10 @@ export const VISUAL_AUDIT_PAGES = [
 			main: ".main-grid, .research-main",
 			analysis: ".analysis-band",
 		},
-		reactTargets: ANALYTICAL_REACT_TARGETS,
+		reactTargets: {
+			...ANALYTICAL_REACT_TARGETS,
+			...REACT_NO_STATUS_BAR,
+		},
 	},
 	{
 		route: "/trading/signals",
@@ -208,6 +226,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-signals-inbox.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-signals",
 			toolbar: ".scope-strip",
 			main: ".signals-main",
@@ -222,6 +241,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-orders-ledger.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-ledger",
 			health: ".status-strip",
 			main: ".orders-main, .ledger-main",
@@ -236,6 +256,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-risk-center.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-analytical",
 			tabs: ".risk-tab-bar",
 			strip: ".scope-strip",
@@ -264,6 +285,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-markets-intelligence.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-intel",
 			body: ".shell-body",
 			tabs: ".intel-tab-strip",
@@ -278,6 +300,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-regime-monitor.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-regime",
 			strip: ".scope-strip",
 			tabs: ".regime-tab-bar",
@@ -292,6 +315,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-strategy-studio.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-studio",
 			header: ".studio-header",
 			mode: ".studio-mode-bar",
@@ -307,6 +331,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-ai-copilot.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-copilot",
 			modes: ".copilot-modes",
 			source: ".copilot-sessions",
@@ -321,6 +346,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-agent-console.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-agent",
 			tabs: ".agent-tabs",
 			main: ".agent-main",
@@ -336,6 +362,7 @@ export const VISUAL_AUDIT_PAGES = [
 		resolvedRoute: "/instruments/600519",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-hub",
 			header: ".object-header",
 			meta: ".hub-meta",
@@ -351,6 +378,7 @@ export const VISUAL_AUDIT_PAGES = [
 		prototype: "page-a-shares.html",
 		prototypeTargets: {
 			...PROTOTYPE_APP_TARGETS,
+			...PROTOTYPE_WITH_STATUS_BAR,
 			shell: ".shell-radar",
 			body: ".shell-body",
 			context: ".context-bar",
@@ -378,7 +406,10 @@ export const VISUAL_AUDIT_PAGES = [
 			tabs: ".hub-tabs",
 			main: ".hub-main",
 		},
-		reactTargets: OBJECT_REACT_TARGETS,
+		reactTargets: {
+			...OBJECT_REACT_TARGETS,
+			...REACT_NO_STATUS_BAR,
+		},
 	},
 	{
 		route: "/research/factors/$id",
@@ -393,7 +424,10 @@ export const VISUAL_AUDIT_PAGES = [
 			tabs: ".hub-tabs",
 			main: ".hub-main",
 		},
-		reactTargets: OBJECT_REACT_TARGETS,
+		reactTargets: {
+			...OBJECT_REACT_TARGETS,
+			...REACT_NO_STATUS_BAR,
+		},
 	},
 	{
 		route: "/markets/calendar",
@@ -422,6 +456,9 @@ export const VISUAL_AUDIT_PAGES = [
 			tabs: ".hub-tabs",
 			main: ".hub-main",
 		},
-		reactTargets: OBJECT_REACT_TARGETS,
+		reactTargets: {
+			...OBJECT_REACT_TARGETS,
+			...REACT_NO_STATUS_BAR,
+		},
 	},
 ];

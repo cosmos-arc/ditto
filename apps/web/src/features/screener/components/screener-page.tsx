@@ -8,11 +8,11 @@ export function ScreenerPage() {
 		<CatalogLayout
 			toolbar={<ScreenerToolbar />}
 			main={
-				<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
+				<div data-info-level="l1" data-info-unit="screener-main" className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
 					<ScreenerResults />
 				</div>
 			}
-			detail={<CompareCart />}
+			detail={<div data-info-level="l2" data-info-unit="screener-detail"><CompareCart /></div>}
 		/>
 	);
 }

@@ -9,14 +9,16 @@ export function ScreenerResults() {
 	const { selectedIds, toggleSelect } = useScreenerStore();
 
 	return (
-		<ContextSection title="筛选结果" count={data?.total}>
+		<ContextSection title="筛选结果" count={data?.total} data-info-level="l1" data-info-unit="screener-results">
 			{isLoading && <LoadingSkeleton variant="table" rows={8} />}
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 				{data && (
-					<div className="space-y-1">
+					<div data-info-level="l2" data-info-unit="screener-list" className="space-y-1">
 						{data.results.map((item) => (
 							<div
 								key={item.code}
+								data-info-level="l3"
+								data-info-unit="screener-result-item"
 								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-3">

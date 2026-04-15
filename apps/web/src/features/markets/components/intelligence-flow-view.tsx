@@ -16,7 +16,7 @@ export function IntelligenceFlowView() {
 
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			<ContextSection title="资金流向">
+			<ContextSection title="资金流向" data-info-level="l1" data-info-unit="intelligence-flow">
 				{data && (
 					<div className="flex flex-col gap-3">
 						<div className="flex flex-col gap-1">

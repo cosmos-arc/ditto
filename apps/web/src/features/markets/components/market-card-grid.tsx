@@ -20,7 +20,7 @@ export function MarketCardGrid() {
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 			{data && (
-				<div className="grid grid-cols-3 gap-3">
+			<div className="grid grid-cols-3 gap-3" data-info-level="l1" data-info-unit="market-cards">
 					{data.cards.map((card, index) => (
 						<ScrollReveal key={card.indexCode} stagger={index % 3}>
 							<MarketCard

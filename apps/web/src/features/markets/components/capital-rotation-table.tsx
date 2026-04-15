@@ -11,7 +11,7 @@ export function CapitalRotationTable() {
 	const { data, isLoading, refetch } = useCapitalRotation();
 
 	return (
-		<ContextSection title="资金轮动">
+		<ContextSection title="资金轮动" data-info-level="l2" data-info-unit="capital-rotation">
 			{isLoading && <LoadingSkeleton variant="table" rows={5} />}
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 				{data && (

@@ -138,6 +138,7 @@ async function captureTargetMetrics(page, targets) {
 	const warnings = [];
 
 	for (const [name, selector] of Object.entries(targets)) {
+		if (!selector) continue;
 		const element = await page.$(selector);
 		if (!element) {
 			metrics[name] = null;

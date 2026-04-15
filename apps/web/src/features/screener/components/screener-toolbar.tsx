@@ -11,7 +11,7 @@ export function ScreenerToolbar() {
 
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			<FilterToolbar>
+			<FilterToolbar data-info-level="l1" data-info-unit="screener-toolbar">
 				<span className="px-2 text-sm font-medium text-(--color-foreground-secondary)">
 					筛选条件
 				</span>

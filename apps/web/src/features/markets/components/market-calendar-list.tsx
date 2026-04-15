@@ -13,8 +13,8 @@ export function MarketCalendarList() {
 
 	if (isLoading) {
 		return (
-			<div className="flex flex-col gap-1 p-4">
-				<h2 className="text-lg font-medium text-(--color-foreground) mb-3">市场日历</h2>
+			<div data-info-level="l1" data-info-unit="calendar-content" className="flex flex-col gap-1 p-4">
+				<h2 data-info-level="l1" data-info-unit="calendar-title" className="text-lg font-medium text-(--color-foreground) mb-3">市场日历</h2>
 				<LoadingSkeleton variant="table" rows={8} columns={4} />
 			</div>
 		);
@@ -22,7 +22,7 @@ export function MarketCalendarList() {
 
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			<div className="flex flex-col gap-1 p-4">
+			<div data-info-level="l1" data-info-unit="calendar-content" className="flex flex-col gap-1 p-4">
 				<h2 className="text-lg font-medium text-(--color-foreground) mb-3">市场日历</h2>
 				{data?.items.map((item, i) => (
 					<div

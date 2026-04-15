@@ -43,7 +43,7 @@ export function RadarLayout({
 					{scopeStrip}
 				</div>
 			)}
-			<div className="grid grid-cols-[1fr_var(--width-activity)]">
+			<div className="grid grid-cols-[1fr_var(--width-radar-right-rail)]">
 				<div data-slot="main">{main}</div>
 				{rightRail && (
 					<div

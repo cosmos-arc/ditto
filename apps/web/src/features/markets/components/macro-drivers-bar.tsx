@@ -8,7 +8,7 @@ export function MacroDriversBar() {
 	const { data, isLoading, isError, refetch } = useMacroDrivers();
 
 	return (
-		<ContextSection title="宏观驱动">
+		<ContextSection title="宏观驱动" data-info-level="l2" data-info-unit="macro-drivers">
 			{isLoading && <LoadingSkeleton variant="metric" />}
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 				{data && (
