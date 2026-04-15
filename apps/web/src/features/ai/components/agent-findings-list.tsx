@@ -40,7 +40,7 @@ export function AgentFindingsList() {
 	} = useAgentFindings();
 
 	return (
-		<ContextSection title="Agent 发现" count={data?.total}>
+		<ContextSection title="Agent 发现" count={data?.total} data-info-level="l2" data-info-unit="agent-findings-list">
 			{isLoading && <LoadingSkeleton variant="table" rows={5} />}
 			<DittoErrorBoundary
 				fallbackProps={{

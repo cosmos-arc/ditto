@@ -12,7 +12,7 @@ export function RiskExposureSummary() {
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 				{data && (
 					<div className="space-y-4">
-						<div className="grid grid-cols-2 gap-3">
+						<div data-info-level="l1" data-info-unit="exposure-metrics" className="grid grid-cols-2 gap-3">
 							<div className="rounded-md border border-(--color-border-subtle) p-3">
 								<span className="text-xs text-(--color-foreground-tertiary)">总敞口</span>
 								<span className="ml-2 font-medium tabular-nums">{data.grossExposure}%</span>
@@ -22,7 +22,7 @@ export function RiskExposureSummary() {
 								<span className="ml-2 font-medium tabular-nums">{data.netExposure}%</span>
 							</div>
 						</div>
-						<div className="space-y-1">
+						<div data-info-level="l1" data-info-unit="sector-breakdown" className="space-y-1">
 							<span className="text-xs font-medium text-(--color-foreground-tertiary)">板块分布</span>
 							{data.bySector.map((sector) => (
 								<div

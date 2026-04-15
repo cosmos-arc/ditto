@@ -34,31 +34,39 @@ export function OrdersHealthStrip() {
 			fallbackProps={{ onRetry: () => void refetch() }}
 		>
 			<div className="flex gap-3 px-4 py-2">
-				<Metric
-					variant="strip"
-					label="待提交"
-					value={data?.pending ?? "—"}
-				/>
-				<Metric
-					variant="strip"
-					label="已提交"
-					value={data?.submitted ?? "—"}
-				/>
+				<div data-info-level="l1" data-info-unit="order-metric-pending">
+					<Metric
+						variant="strip"
+						label="待提交"
+						value={data?.pending ?? "—"}
+					/>
+				</div>
+				<div data-info-level="l1" data-info-unit="order-metric-submitted">
+					<Metric
+						variant="strip"
+						label="已提交"
+						value={data?.submitted ?? "—"}
+					/>
+				</div>
 				<Metric
 					variant="strip"
 					label="部分成交"
 					value={data?.partial ?? "—"}
 				/>
-				<Metric
-					variant="strip"
-					label="已成交"
-					value={data?.filled ?? "—"}
-				/>
-				<Metric
-					variant="strip"
-					label="失败"
-					value={data?.failed ?? "—"}
-				/>
+				<div data-info-level="l2" data-info-unit="order-metric-filled">
+					<Metric
+						variant="strip"
+						label="已成交"
+						value={data?.filled ?? "—"}
+					/>
+				</div>
+				<div data-info-level="l2" data-info-unit="order-metric-failed">
+					<Metric
+						variant="strip"
+						label="失败"
+						value={data?.failed ?? "—"}
+					/>
+				</div>
 			</div>
 		</DittoErrorBoundary>
 	);

@@ -1,7 +1,7 @@
 import { useRiskSummary } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { Metric } from "@/components/data/metric";
+import { Metric } from "@/components/data/metric/metric";
 
 export function RiskScopeStrip() {
 	const { data, isLoading, isError, refetch } = useRiskSummary();
@@ -23,7 +23,7 @@ export function RiskScopeStrip() {
 				onRetry: () => void refetch(),
 			}}
 		>
-			<div className="flex h-9 items-center gap-3 px-4 py-1.5">
+			<div data-info-level="l1" data-info-unit="risk-scope-strip" className="flex h-9 items-center gap-3 px-4 py-1.5">
 				<Metric
 					variant="strip"
 					label="VaR(95%)"

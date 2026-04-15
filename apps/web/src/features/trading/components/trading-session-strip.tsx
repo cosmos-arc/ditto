@@ -8,7 +8,7 @@ export function TradingSessionStrip() {
 
 	if (isLoading) {
 		return (
-			<div data-slot="session-strip" className="flex gap-3 px-4 py-2">
+			<div className="flex gap-3 px-4 py-2">
 				{Array.from({ length: 4 }).map((_, i) => (
 					<LoadingSkeleton key={i} variant="metric" className="flex-1" />
 				))}
@@ -18,7 +18,7 @@ export function TradingSessionStrip() {
 
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			<div data-slot="session-strip" className="flex gap-3 px-4 py-2">
+			<div data-info-level="l2" data-info-unit="session-strip" className="flex gap-3 px-4 py-2">
 				<Metric variant="strip" label="交易阶段" value={data?.phase ?? "—"} />
 				<Metric
 					variant="strip"

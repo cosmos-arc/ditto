@@ -76,7 +76,7 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 				<PanelHeader title={plan.name} />
 				<PanelBody>
 					<div className="flex flex-col gap-(--density-gutter) p-3">
-						<section>
+						<section data-info-level="l1" data-info-unit="agent-objective">
 							<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
 								目标
 							</h4>
@@ -86,7 +86,7 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 						</section>
 
 						{plan.constraints.length > 0 && (
-							<section>
+							<section data-info-level="l1" data-info-unit="agent-constraints">
 								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
 									约束条件
 								</h4>
@@ -104,7 +104,7 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 						)}
 
 						{plan.scope.length > 0 && (
-							<section>
+							<section data-info-level="l1" data-info-unit="agent-scope">
 								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
 									范围
 								</h4>
@@ -122,7 +122,7 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 						)}
 
 						{relatedRuns.length > 0 && (
-							<section>
+							<section data-info-level="l1" data-info-unit="agent-run-status">
 								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
 									运行状态
 								</h4>
@@ -151,7 +151,7 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 						)}
 
 						{relatedFindings.length > 0 && (
-							<section>
+							<section data-info-level="l2" data-info-unit="agent-related-findings">
 								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
 									相关发现
 								</h4>

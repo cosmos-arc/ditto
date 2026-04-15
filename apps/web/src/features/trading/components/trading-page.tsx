@@ -103,54 +103,56 @@ function OrdersPanel() {
 	const orders = ORDERS[activeTab];
 
 	return (
-		<ContextSection title="委托订单" count={orders.length}>
-			<div className="flex gap-1 py-2">
-				{(Object.keys(TAB_LABELS) as OrderTab[]).map((tab) => (
-					<button
-						key={tab}
-						type="button"
-						className={`rounded-(--radius-sm) px-2.5 py-1 text-xs font-medium transition-colors ${
-							activeTab === tab
-								? "bg-(--color-surface-2) text-(--color-foreground)"
-								: "text-(--color-foreground-tertiary) hover:text-(--color-foreground-secondary)"
-						}`}
-						onClick={() => setActiveTab(tab)}
-					>
-						{TAB_LABELS[tab]}
-					</button>
-				))}
-			</div>
-			<div className="flex flex-col gap-0.5">
-				{orders.map((order) => (
-					<div
-						key={`${order.code}-${order.time}`}
-						className="flex items-center gap-2 rounded-(--radius-sm) px-2 py-1.5 hover:bg-(--color-interaction-hover-subtle-bg)"
-					>
-						<span
-							className={`shrink-0 rounded-(--radius-sm) px-1 py-px text-xs font-semibold ${
-								order.side === "buy"
-									? "bg-(--color-market-up-bg) text-(--color-market-up-fg)"
-									: "bg-(--color-market-down-bg) text-(--color-market-down-fg)"
+		<div data-info-level="l1" data-info-unit="orders-panel">
+			<ContextSection title="委托订单" count={orders.length}>
+				<div className="flex gap-1 py-2">
+					{(Object.keys(TAB_LABELS) as OrderTab[]).map((tab) => (
+						<button
+							key={tab}
+							type="button"
+							className={`rounded-(--radius-sm) px-2.5 py-1 text-xs font-medium transition-colors ${
+								activeTab === tab
+									? "bg-(--color-surface-2) text-(--color-foreground)"
+									: "text-(--color-foreground-tertiary) hover:text-(--color-foreground-secondary)"
 							}`}
+							onClick={() => setActiveTab(tab)}
 						>
-							{order.side === "buy" ? "买" : "卖"}
-						</span>
-						<span className="flex-1 truncate text-xs font-medium text-(--color-foreground)">
-							{order.name}
-						</span>
-						<span className="font-data text-xs tabular-nums text-(--color-foreground-tertiary)">
-							{order.qty}股
-						</span>
-						<span className="font-data text-xs tabular-nums text-(--color-foreground-secondary)">
-							@{order.price.toFixed(2)}
-						</span>
-						<span className="font-data text-xs tabular-nums text-(--color-foreground-muted)">
-							{order.time}
-						</span>
-					</div>
-				))}
-			</div>
-		</ContextSection>
+							{TAB_LABELS[tab]}
+						</button>
+					))}
+				</div>
+				<div className="flex flex-col gap-0.5">
+					{orders.map((order) => (
+						<div
+							key={`${order.code}-${order.time}`}
+							className="flex items-center gap-2 rounded-(--radius-sm) px-2 py-1.5 hover:bg-(--color-interaction-hover-subtle-bg)"
+						>
+							<span
+								className={`shrink-0 rounded-(--radius-sm) px-1 py-px text-xs font-semibold ${
+									order.side === "buy"
+										? "bg-(--color-market-up-bg) text-(--color-market-up-fg)"
+										: "bg-(--color-market-down-bg) text-(--color-market-down-fg)"
+								}`}
+							>
+								{order.side === "buy" ? "买" : "卖"}
+							</span>
+							<span className="flex-1 truncate text-xs font-medium text-(--color-foreground)">
+								{order.name}
+							</span>
+							<span className="font-data text-xs tabular-nums text-(--color-foreground-tertiary)">
+								{order.qty}股
+							</span>
+							<span className="font-data text-xs tabular-nums text-(--color-foreground-secondary)">
+								@{order.price.toFixed(2)}
+							</span>
+							<span className="font-data text-xs tabular-nums text-(--color-foreground-muted)">
+								{order.time}
+							</span>
+						</div>
+					))}
+				</div>
+			</ContextSection>
+		</div>
 	);
 }
 
@@ -172,7 +174,7 @@ export function TradingPage() {
 			className="pb-(--height-status-bar)"
 			strip={<TradingSessionStrip />}
 			banner={
-				<div className="p-(--density-panel-padding) pb-0">
+				<div className="p-(--density-panel-padding) pb-0" data-info-level="l1" data-info-unit="decision-banner">
 					<DecisionBanner {...DECISION_BANNER_PROPS} />
 				</div>
 			}
@@ -185,7 +187,7 @@ export function TradingPage() {
 				</div>
 			}
 			activity={
-				<Panel>
+				<Panel data-info-level="l2" data-info-unit="signals-queue">
 					<PanelHeader title="信号队列" />
 					<PanelBody className="p-3">
 						<div className="flex flex-col gap-1">

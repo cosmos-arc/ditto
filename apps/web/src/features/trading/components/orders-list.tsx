@@ -25,7 +25,7 @@ export function OrdersList({ onSelectOrder }: OrdersListProps) {
 	const { data, isLoading, isError, refetch } = useOrders();
 
 	return (
-		<ContextSection title="订单台账" count={data?.total}>
+		<ContextSection title="订单台账" count={data?.total} data-info-level="l1" data-info-unit="orders-list">
 			{isLoading && <LoadingSkeleton variant="table" rows={5} />}
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 				{data && (

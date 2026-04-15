@@ -13,7 +13,7 @@ export function SignalsPage() {
 				health={<SignalsHealthStrip />}
 				main={<SignalsList />}
 				detail={
-					<div className="h-full overflow-y-auto">
+					<div className="h-full overflow-y-auto" data-info-level="l3" data-info-unit="signal-detail">
 						<SignalDetailPanel signalId={DEFAULT_SIGNAL_ID} />
 					</div>
 				}

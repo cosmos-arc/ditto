@@ -8,7 +8,7 @@ export function EquityPnlBlock() {
 	const { data, isLoading, isError, refetch } = useEquity();
 
 	return (
-		<ContextSection title="权益 & 盈亏">
+		<ContextSection title="权益 & 盈亏" data-info-level="l1" data-info-unit="equity-pnl">
 			{isLoading && <LoadingSkeleton variant="chart" />}
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 				{data && (

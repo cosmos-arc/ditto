@@ -21,7 +21,9 @@ export function OrdersPage() {
 				onClose={() => setSelectedOrderId(null)}
 				title="订单详情"
 			>
-				{selectedOrderId && <OrderDetailPanel orderId={selectedOrderId} />}
+				<div data-info-level="l3" data-info-unit="order-detail">
+					{selectedOrderId && <OrderDetailPanel orderId={selectedOrderId} />}
+				</div>
 			</Drawer>
 		</>
 	);

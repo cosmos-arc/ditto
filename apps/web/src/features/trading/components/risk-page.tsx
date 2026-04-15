@@ -21,7 +21,7 @@ export function RiskPage() {
 					</div>
 				}
 				analysis={
-					<div className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
+					<div data-info-level="l2" data-info-unit="risk-analysis-panel" className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
 						<span className="text-xs text-(--color-foreground-tertiary)">风控分析面板 · 待实现</span>
 					</div>
 				}
@@ -32,7 +32,9 @@ export function RiskPage() {
 				onClose={() => setSelectedBreachId(null)}
 				title="告警详情"
 			>
-				{selectedBreachId && <BreachDetailContent breachId={selectedBreachId} />}
+				<div data-info-level="l2" data-info-unit="breach-detail">
+					{selectedBreachId && <BreachDetailContent breachId={selectedBreachId} />}
+				</div>
 			</Drawer>
 		</>
 	);

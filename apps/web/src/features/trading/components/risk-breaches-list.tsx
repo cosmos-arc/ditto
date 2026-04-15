@@ -19,7 +19,7 @@ export function RiskBreachesList({ onSelectBreach }: RiskBreachesListProps) {
 	const { data, isLoading, isError, refetch } = useRiskBreaches();
 
 	return (
-		<ContextSection title="风控告警" count={data?.total}>
+		<ContextSection title="风控告警" count={data?.total} data-info-level="l1" data-info-unit="risk-breaches-list">
 			{isLoading && <LoadingSkeleton variant="table" rows={3} />}
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 				{data && (

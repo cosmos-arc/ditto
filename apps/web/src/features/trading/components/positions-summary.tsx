@@ -149,7 +149,7 @@ export function PositionsSummary() {
 	const { data, isLoading, isError, refetch } = usePositions();
 
 	return (
-		<div data-slot="positions-summary">
+		<div data-slot="positions-summary" data-info-level="l1" data-info-unit="positions-summary">
 			<ContextSection title="持仓汇总" count={data?.positions.length}>
 				{isLoading && <LoadingSkeleton variant="table" rows={5} />}
 				<DittoErrorBoundary

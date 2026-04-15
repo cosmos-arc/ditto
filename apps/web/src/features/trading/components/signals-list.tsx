@@ -21,7 +21,7 @@ export function SignalsList() {
 	const { data, isLoading, isError, refetch } = useSignals({ tab: "pending" });
 
 	return (
-		<ContextSection title="信号队列" count={data?.total}>
+		<ContextSection title="信号队列" count={data?.total} data-info-level="l1" data-info-unit="signals-list">
 			{isLoading && <LoadingSkeleton variant="table" rows={5} />}
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 				{data && (
