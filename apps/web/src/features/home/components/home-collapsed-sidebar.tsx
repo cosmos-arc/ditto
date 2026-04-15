@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { MiniSparkline } from "@/components/data-viz";
 import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
 
 interface CollapsedItem {
@@ -11,6 +12,7 @@ interface CollapsedItem {
 interface HomeCollapsedSidebarProps {
 	readonly alertCount?: number;
 	readonly healthStatus?: "healthy" | "degraded" | "warning" | "critical";
+	readonly marketTrendData?: readonly number[];
 	readonly onExpand?: () => void;
 	readonly className?: string;
 }
@@ -25,12 +27,19 @@ const INDICATOR_COLORS = {
 export function HomeCollapsedSidebar({
 	alertCount = 0,
 	healthStatus = "healthy",
+	marketTrendData,
 	onExpand,
 	className,
 }: HomeCollapsedSidebarProps) {
+	const marketTrend = marketTrendData
+		? marketTrendData[marketTrendData.length - 1] >= marketTrendData[0] ? "up" : "down"
+		: undefined;
+
 	const items: CollapsedItem[] = [
 		{
-			icon: (
+			icon: marketTrendData ? (
+				<MiniSparkline data={marketTrendData} trend={marketTrend} ariaLabel="市场脉搏趋势" />
+			) : (
 				<svg className="size-5" viewBox="0 0 20 20" fill="none">
 					<path
 						d="M2 14L6 10L10 13L14 6L18 8"

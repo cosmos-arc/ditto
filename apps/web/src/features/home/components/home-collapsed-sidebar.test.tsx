@@ -49,4 +49,19 @@ describe("HomeCollapsedSidebar", () => {
 		render(<HomeCollapsedSidebar />);
 		expect(screen.getByLabelText("展开侧边栏")).toBeInTheDocument();
 	});
+
+	it("renders MiniSparkline in market pulse item when marketTrendData provided", () => {
+		render(<HomeCollapsedSidebar marketTrendData={[1, 3, 2, 5, 4]} />);
+		const svg = document.querySelector("svg[role='img']");
+		expect(svg).toBeInTheDocument();
+	});
+
+	it("renders default trend icon when no marketTrendData", () => {
+		render(<HomeCollapsedSidebar />);
+		const pulseButton = screen.getByLabelText("市场脉搏");
+		expect(pulseButton).toBeInTheDocument();
+		// Should still have the inline SVG path, not a sparkline
+		const sparkline = document.querySelector("polyline");
+		expect(sparkline).not.toBeInTheDocument();
+	});
 });
