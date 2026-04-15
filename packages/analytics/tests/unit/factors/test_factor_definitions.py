@@ -157,9 +157,9 @@ class TestTopologicalOrder:
                 )
 
     def test_minimum_spec_count(self) -> None:
-        """There should be at least 80 factor specs defined (Sprint 2 target)."""
-        assert len(ALL_FACTOR_SPECS) >= 80, (
-            f"Expected >= 80 factor specs, got {len(ALL_FACTOR_SPECS)}"
+        """There should be at least 119 factor specs defined (V1 RC target)."""
+        assert len(ALL_FACTOR_SPECS) >= 119, (
+            f"Expected >= 119 factor specs, got {len(ALL_FACTOR_SPECS)}"
         )
 
 
@@ -204,7 +204,7 @@ class TestFactorCategoryCoverage:
         )
 
     def test_has_volatility_factors(self) -> None:
-        """Volatility category should have at least 3 factors."""
+        """Volatility category should have at least 10 factors."""
         prefixes = (
             "volatility_",
             "cmra",
@@ -213,10 +213,14 @@ class TestFactorCategoryCoverage:
             "downside_",
             "realized_",
             "vol_ratio",
+            "parkinson_",
+            "garman_",
+            "overnight_",
+            "intraday_",
         )
         vol_ids = [k for k in ALL_FACTOR_SPECS if k.startswith(prefixes)]
-        assert len(vol_ids) >= 3, (
-            f"Expected >= 3 volatility factors, got {len(vol_ids)}"
+        assert len(vol_ids) >= 10, (
+            f"Expected >= 10 volatility factors, got {len(vol_ids)}"
         )
 
     def test_has_liquidity_factors(self) -> None:

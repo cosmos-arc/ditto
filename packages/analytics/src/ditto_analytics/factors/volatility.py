@@ -47,4 +47,42 @@ VOLATILITIES: dict[str, FactorSpec] = {
         dependencies=("volatility_20", "volatility_60"),
         description="Volatility ratio: short-term vs long-term return volatility",
     ),
+    "volatility_60": FactorSpec(
+        id="volatility_60",
+        expression="ts_std(returns_1, 60) * sqrt(252)",
+        dependencies=("returns_1",),
+        description="Annualized 60-day return volatility",
+    ),
+    "volatility_120": FactorSpec(
+        id="volatility_120",
+        expression="ts_std(returns_1, 120) * sqrt(252)",
+        dependencies=("returns_1",),
+        description="Annualized 120-day return volatility",
+    ),
+    "parkinson_vol": FactorSpec(
+        id="parkinson_vol",
+        expression="",
+        dependencies=("market.high", "market.low"),
+        description="Parkinson volatility: high-low range estimator",
+        computation_type="python",
+    ),
+    "garman_klass_vol": FactorSpec(
+        id="garman_klass_vol",
+        expression="",
+        dependencies=("market.open", "market.high", "market.low", "market.close"),
+        description="Garman-Klass volatility: OHLC-based estimator",
+        computation_type="python",
+    ),
+    "overnight_vol": FactorSpec(
+        id="overnight_vol",
+        expression="ts_std(market.open / market.close - 1, 20) * sqrt(252)",
+        dependencies=("market.open", "market.close"),
+        description="Annualized overnight (close-to-open) return volatility",
+    ),
+    "intraday_vol": FactorSpec(
+        id="intraday_vol",
+        expression="ts_std(market.high / market.low - 1, 20) * sqrt(252)",
+        dependencies=("market.high", "market.low"),
+        description="Annualized intraday (high/low range) return volatility",
+    ),
 }
