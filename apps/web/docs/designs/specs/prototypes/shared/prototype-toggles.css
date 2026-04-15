@@ -379,7 +379,7 @@
   border-radius: var(--panel-radius, 8px) 0 0 var(--panel-radius, 8px);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
   padding: var(--space-16, 24px);
-  width: 380px;
+  width: var(--shell-drawer-width, 440px);
   max-height: 100%;
   overflow-y: auto;
   position: relative;
