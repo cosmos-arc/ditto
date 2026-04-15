@@ -28,7 +28,7 @@ export function MarketPulseSection() {
 	const { data, isLoading } = useMarketPulseMetrics();
 
 	return (
-		<ContextSection title="市场脉搏" defaultOpen>
+		<ContextSection title="市场脉搏" defaultOpen data-info-level="l1" data-info-unit="market-pulse">
 			{isLoading && <LoadingSkeleton variant="table" rows={4} />}
 			{data && (
 				<ScrollReveal>

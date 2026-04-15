@@ -16,7 +16,7 @@ export function AgentFindingsSection() {
 	const { data, isLoading, refetch } = useAgentFindings();
 
 	return (
-		<div className="flex min-h-0 flex-col overflow-hidden">
+		<div className="flex min-h-0 flex-col overflow-hidden" data-info-level="l2" data-info-unit="agent-findings">
 			<div className="flex items-center justify-between border-b border-(--color-border-subtle) px-3 py-2">
 				<span className="text-sm font-medium text-(--color-foreground)">
 					Agent 洞察

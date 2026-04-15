@@ -34,7 +34,7 @@ export function PriorityQueueSection() {
 	const { data, isLoading, isError, refetch } = usePendingActions();
 
 	return (
-		<Panel data-testid="priority-queue" className="h-[192px] flex-none">
+		<Panel data-testid="priority-queue" data-info-level="l1" data-info-unit="priority-queue" className="h-[192px] flex-none">
 			<PanelHeader
 				title="今日优先事项"
 				subtitle="跨域关注项"

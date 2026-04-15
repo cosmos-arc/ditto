@@ -8,7 +8,7 @@ export function ProviderTable() {
 	const { data, isLoading, isError, refetch } = useProviders();
 
 	return (
-		<ContextSection title="Data Providers" count={data?.providers.length}>
+		<ContextSection title="Data Providers" count={data?.providers.length} data-info-level="l1" data-info-unit="providers">
 			{isLoading && <LoadingSkeleton variant="table" rows={3} />}
 			<DittoErrorBoundary
 				fallbackProps={{

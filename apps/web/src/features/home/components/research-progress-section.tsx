@@ -22,7 +22,7 @@ export function ResearchProgressSection() {
 	} = useAgentFindings();
 
 	return (
-		<Panel className="min-h-0 overflow-hidden">
+		<Panel className="min-h-0 overflow-hidden" data-info-level="l2" data-info-unit="research-progress">
 			<PanelHeader
 				title="研究进展"
 				subtitle="研究动态"

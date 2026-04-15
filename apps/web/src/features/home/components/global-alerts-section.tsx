@@ -17,7 +17,7 @@ export function GlobalAlertsSection() {
 	} = useHomeAlerts();
 
 	return (
-		<ContextSection title="全局预警" count={alertsData?.alerts.length} defaultOpen>
+		<ContextSection title="全局预警" count={alertsData?.alerts.length} defaultOpen data-info-level="l1" data-info-unit="global-alerts">
 			{isLoading && <LoadingSkeleton variant="table" rows={3} />}
 			<DittoErrorBoundary
 				fallbackProps={{

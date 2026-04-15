@@ -74,7 +74,7 @@ export function AiMainContent() {
 
 function OverviewPanel() {
 	return (
-		<div className="grid grid-cols-2 gap-4">
+		<div data-info-level="l1" data-info-unit="ai-overview" className="grid grid-cols-2 gap-4">
 			<AgentQuickView />
 			<CopilotQuickView />
 		</div>
@@ -83,7 +83,7 @@ function OverviewPanel() {
 
 function AgentsPanel() {
 	return (
-		<div className="flex flex-col gap-3">
+		<div data-info-level="l1" data-info-unit="ai-agents" className="flex flex-col gap-3">
 			<p className="text-sm text-(--color-foreground-secondary)">
 				查看和管理所有 Agent 计划的运行状态、发现和审批流程。
 			</p>
@@ -99,7 +99,7 @@ function AgentsPanel() {
 
 function CopilotPanel() {
 	return (
-		<div className="flex flex-col gap-3">
+		<div data-info-level="l1" data-info-unit="ai-copilot" className="flex flex-col gap-3">
 			<p className="text-sm text-(--color-foreground-secondary)">
 				查看和继续 Copilot 研究对话、交易分析和代码辅助会话。
 			</p>
@@ -115,7 +115,7 @@ function CopilotPanel() {
 
 function SettingsPanel() {
 	return (
-		<div className="flex flex-col gap-3">
+		<div data-info-level="l1" data-info-unit="ai-settings" className="flex flex-col gap-3">
 			<p className="text-sm text-(--color-foreground-secondary)">
 				配置 AI Agent 和 Copilot 的运行参数、模型偏好和资源限制。
 			</p>

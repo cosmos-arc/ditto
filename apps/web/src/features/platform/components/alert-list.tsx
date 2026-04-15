@@ -18,7 +18,7 @@ export function AlertList() {
 	const activeAlerts = data?.items.filter((a) => a.status === "active") ?? [];
 
 	return (
-		<ContextSection title="System Alerts" count={activeAlerts.length}>
+		<ContextSection title="System Alerts" count={activeAlerts.length} data-info-level="l1" data-info-unit="alerts">
 			{isLoading && <LoadingSkeleton variant="table" rows={3} />}
 			<DittoErrorBoundary
 				fallbackProps={{

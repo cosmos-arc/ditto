@@ -43,7 +43,7 @@ export function PlatformPage() {
 			detail={
 				<div className="flex flex-col overflow-hidden">
 					{/* 管道与任务 */}
-					<Panel className="flex-1">
+					<Panel className="flex-1" data-info-level="l2" data-info-unit="tasks">
 						<PanelHeader title="管道与任务" count={2} />
 						<PanelBody className="p-3">
 							<div className="flex flex-col gap-1">
@@ -68,7 +68,7 @@ export function PlatformPage() {
 						</PanelBody>
 					</Panel>
 					{/* 资源与配额 */}
-					<Panel className="flex-1">
+					<Panel className="flex-1" data-info-level="l2" data-info-unit="resources">
 						<PanelHeader title="资源与配额" />
 						<PanelBody className="p-3">
 							<div className="flex flex-col gap-2">
@@ -92,7 +92,7 @@ export function PlatformPage() {
 						</PanelBody>
 					</Panel>
 					{/* 最近事件 */}
-					<Panel className="flex-1">
+					<Panel className="flex-1" data-info-level="l2" data-info-unit="events">
 						<PanelHeader title="最近事件" />
 						<PanelBody className="p-3">
 							<div className="flex flex-col gap-1">

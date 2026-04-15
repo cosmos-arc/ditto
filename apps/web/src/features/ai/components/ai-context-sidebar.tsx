@@ -64,7 +64,7 @@ export function AiContextSidebar() {
 			className="flex h-full flex-col overflow-y-auto"
 		>
 			{/* AI 状态概览 */}
-			<ContextSection title="AI 状态概览">
+			<ContextSection title="AI 状态概览" data-info-level="l1" data-info-unit="ai-status-overview">
 				<div className="space-y-2 py-1">
 					{STATUS_STATS.map((stat) => (
 						<div key={stat.label} className="rounded-md bg-(--color-surface-panel-base) px-3 py-2">
@@ -85,7 +85,7 @@ export function AiContextSidebar() {
 			</ContextSection>
 
 			{/* 置信度分布 */}
-			<ContextSection title="置信度分布">
+			<ContextSection title="置信度分布" data-info-level="l1" data-info-unit="ai-confidence-distribution">
 				<div className="space-y-2 py-1">
 					{CONFIDENCE_TIERS.map((tier) => (
 						<div key={tier.level} className="flex items-center gap-2 text-xs">
@@ -112,7 +112,7 @@ export function AiContextSidebar() {
 			</ContextSection>
 
 			{/* AI 预警 */}
-			<ContextSection title="AI 预警" count={2}>
+			<ContextSection title="AI 预警" count={2} data-info-level="l1" data-info-unit="ai-alerts">
 				<div className="space-y-1.5 py-1">
 					{ALERTS.map((alert) => (
 						<div key={alert.title} className="flex items-start gap-2 text-xs">

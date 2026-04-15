@@ -25,7 +25,7 @@ export function PipelineTable() {
 	const { data, isLoading, isError, refetch } = usePipelines();
 
 	return (
-		<ContextSection title="Pipelines & Jobs" count={data?.total}>
+		<ContextSection title="Pipelines & Jobs" count={data?.total} data-info-level="l1" data-info-unit="pipelines">
 			{isLoading && <LoadingSkeleton variant="table" rows={3} />}
 			<DittoErrorBoundary
 				fallbackProps={{
