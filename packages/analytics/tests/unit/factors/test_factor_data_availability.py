@@ -41,6 +41,7 @@ class TestFactorDataAvailability:
             "market.volume",
             "market.high",
             "market.low",
+            "market.open",
         }
     )
 
@@ -188,7 +189,13 @@ class TestFactorDependencyCoverage:
 
     def test_market_deps_only_use_known_columns(self) -> None:
         """market.* 依赖仅使用已知的行情列."""
-        known_market = {"market.close", "market.volume", "market.high", "market.low"}
+        known_market = {
+            "market.close",
+            "market.volume",
+            "market.high",
+            "market.low",
+            "market.open",
+        }
         actual_market: set[str] = set()
         for spec in ALL_FACTOR_SPECS.values():
             for dep in spec.dependencies:
